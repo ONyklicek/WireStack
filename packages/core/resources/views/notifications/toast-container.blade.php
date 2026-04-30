@@ -12,7 +12,7 @@
             this.toasts = this.toasts.filter(t => t.id !== id);
         }
     }"
-    @{{ $eventName }}.window="add($event.detail)"
+    x-on:{{ $eventName }}.window="add($event.detail)"
     class="fixed z-[99] {{ $positionClasses() }} flex flex-col gap-2 pointer-events-none"
     style="max-width: 24rem;"
 >

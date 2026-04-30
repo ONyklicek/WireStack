@@ -5,12 +5,12 @@
     <button
         type="button"
         x-on:click="
-            navigator.clipboard.writeText('{{ str_replace("'", "\\'", (string) $copyValue) }}');
+            navigator.clipboard.writeText(@js((string) $copyValue));
             copied = true;
             setTimeout(() => copied = false, 2000);
         "
         class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-        title="Kopírovat"
+        title="{{ __('Copy') }}"
     >
         <template x-if="!copied">
             <svg class="w-4 h-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">

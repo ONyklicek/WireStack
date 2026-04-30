@@ -25,7 +25,7 @@
         </button>
 
         @if($field->getOnLabel() || $field->getOffLabel())
-            <span class="text-sm text-gray-700 dark:text-gray-300" x-text="enabled ? '{{ $field->getOnLabel() }}' : '{{ $field->getOffLabel() }}'"></span>
+            <span class="text-sm text-gray-700 dark:text-gray-300" x-text="enabled ? @js($field->getOnLabel()) : @js($field->getOffLabel())"></span>
         @endif
     </div>
 

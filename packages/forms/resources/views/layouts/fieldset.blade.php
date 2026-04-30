@@ -1,4 +1,8 @@
-@php /** @var \NyonCode\WireForms\Components\Layout\Fieldset $layout */
+@php
+    use NyonCode\WireForms\Components\Layout\Fieldset;
+
+    assert($layout instanceof Fieldset);
+
     $columns = $layout->getColumns();
 @endphp
 

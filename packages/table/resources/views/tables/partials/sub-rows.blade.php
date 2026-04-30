@@ -14,7 +14,7 @@
             {{-- Sub-row filters --}}
             @if($isFilterable && count($subColumns) > 0)
                 <div class="flex items-center gap-2 px-4 py-2 border-b border-gray-100 dark:border-gray-700/50">
-                    <span class="text-xs font-medium text-gray-500 dark:text-gray-400 mr-1">Filtr:</span>
+                    <span class="text-xs font-medium text-gray-500 dark:text-gray-400 mr-1">{{ __('Filter:') }}</span>
                     @foreach($subColumns as $subCol)
                         @if($subCol->isFilterable())
                             <div class="w-40">
@@ -24,7 +24,7 @@
                     @endforeach
                     @if(!empty($component->subRowFilters))
                         <button type="button" wire:click="resetSubRowFilters" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                            ✕ Reset
+                            ✕ {{ __('Reset') }}
                         </button>
                     @endif
                 </div>
@@ -58,7 +58,7 @@
                     @empty
                         <tr>
                             <td colspan="{{ count($subColumns) + 1 }}" class="px-3 py-4 text-center text-xs text-gray-400 dark:text-gray-500 italic">
-                                Žádné podřízené záznamy
+                                {{ __('No sub-rows found') }}
                             </td>
                         </tr>
                     @endforelse

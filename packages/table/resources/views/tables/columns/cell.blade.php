@@ -7,7 +7,7 @@
     $url = $column->getUrl($record);
     $openInNewTab = $column->shouldOpenUrlInNewTab();
     $isCopyable = $column->isCopyable();
-    $copyMessage = $column->getCopyMessage() ?? 'Zkopírováno!';
+    $copyMessage = $column->getCopyMessage() ?? __('Copied!');
     $tooltip = $column->getTooltipText();
     $description = $column->getDescriptionText($record);
     $descriptionPosition = $column->getDescriptionPosition();
@@ -25,29 +25,25 @@
     }
 @endphp
 
-@if($icon)
-    @if($iconPosition === 'after')
-        {!! $displayContent !!} {!! $column->renderIcon($icon) !!}
-    @else
-        {!! $column->renderIcon($icon) !!} {!! $displayContent !!}
-    @endif
-    @php $displayContent = '' @endphp
-@endif
+@php
+    $iconHtml = $icon ? $column->renderIcon($icon) : '';
+    $innerContent = $displayContent;
+    if ($icon) {
+        $innerContent = $iconPosition === 'after'
+            ? $displayContent . ' ' . $iconHtml
+            : $iconHtml . ' ' . $displayContent;
+    }
+@endphp
 
 @if($url)
     <a href="{{ $url }}"
        @if($openInNewTab) target="_blank" @endif
        class="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 hover:underline">
-        @if($icon && $displayContent === '')
-            @if($iconPosition === 'after')
-                {!! $content !!} {!! $column->renderIcon($icon) !!}
-            @else
-                {!! $column->renderIcon($icon) !!} {!! $content !!}
-            @endif
-        @else
-            {!! $displayContent !!}
-        @endif
+        {!! $innerContent !!}
     </a>
+    @php $displayContent = '' @endphp
+@elseif($icon)
+    {!! $innerContent !!}
     @php $displayContent = '' @endphp
 @endif
 

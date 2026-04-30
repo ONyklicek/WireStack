@@ -37,7 +37,7 @@
             @if($disabledTooltip) title="{{ $disabledTooltip }}" @endif
             @foreach($extraAttributes as $key => $value) {{ $key }}="{{ $value }}" @endforeach
     >
-        <span wire:loading.remove wire:target="{{ $livewireAction }}">
+        <span @if($showLoading) wire:loading.remove wire:target="{{ $livewireAction }}" @endif>
             @if($iconHtml && $iconPosition === 'before') {!! $iconHtml !!} @endif
             @unless($iconOnly) <span>{{ $buttonLabel }}</span> @endunless
             @if($iconHtml && $iconPosition === 'after') {!! $iconHtml !!} @endif

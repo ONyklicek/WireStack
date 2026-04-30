@@ -2,7 +2,7 @@
 {{-- Variables: $column --}}
 @php
     $name = $column->getName();
-    $placeholder = $column->getFilterPlaceholder() ?? 'Filtrovat...';
+    $placeholder = $column->getFilterPlaceholder() ?? __('Filter...');
 @endphp
 
 <input

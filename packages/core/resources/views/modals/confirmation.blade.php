@@ -78,7 +78,7 @@
                 @unless($isInformative)
                     <button
                         type="button"
-                        {{ $attributes->wire('click') }}
+                        @if($attributes->wire('click')->value()) {{ $attributes->wire('click') }} @endif
                         class="{{ $submitButtonClasses() }}"
                     >
                         {{ $submitLabel }}

@@ -21,7 +21,7 @@
 @endforeach
 >
 
-@include('WireTable::tables.action.partials.button-content', ['data' => $data])
+@include('WireTable::tables.actions.partials.button-content', ['data' => $data])
 </a>
 
 @else

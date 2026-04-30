@@ -1,6 +1,6 @@
 <div
     x-data="{ open: false }"
-    x-on:click.away="open = false"
+    x-on:click.outside="open = false"
     class="relative inline-block text-left"
     {{ $attributes }}
 >
@@ -17,8 +17,8 @@
         x-transition:leave-start="opacity-100 scale-100"
         x-transition:leave-end="opacity-0 scale-95"
         x-cloak
-        class="{{ $width }} absolute z-50 mt-2 origin-top-right rounded-lg bg-white shadow-lg ring-1 ring-black/5 dark:bg-gray-800 dark:ring-white/10"
         @class([
+            $width . ' absolute z-50 mt-2 origin-top-right rounded-lg bg-white shadow-lg ring-1 ring-black/5 dark:bg-gray-800 dark:ring-white/10',
             'right-0' => $position === 'bottom-end',
             'left-0' => $position === 'bottom-start',
         ])

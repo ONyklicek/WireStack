@@ -49,7 +49,7 @@
                 @foreach($options as $value => $label)
                     <div
                         class="flex items-center gap-2"
-                        @if($field->isSearchable()) x-show="!search || '{{ strtolower($label) }}'.includes(search.toLowerCase())" @endif
+                        @if($field->isSearchable()) x-show="!search || @js(strtolower($label)).includes(search.toLowerCase())" @endif
                     >
                         <input
                             type="checkbox"

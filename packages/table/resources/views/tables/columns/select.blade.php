@@ -3,7 +3,7 @@
 @php
     $recordKey = $record->getKey();
     $columnName = $column->getName();
-    $placeholder = $column->getPlaceholder() ?? 'Vyberte...';
+    $placeholder = $column->getPlaceholder() ?? __('Select...');
     $options = $column->getOptions();
     $disabled = $column->isDisabled($record);
 @endphp
@@ -18,6 +18,6 @@
     @endif
 
     @foreach($options as $value => $label)
-        <option value="{{ $value }}" @if($state == $value) selected @endif>{{ $label }}</option>
+        <option value="{{ $value }}" @if((string) $state === (string) $value) selected @endif>{{ $label }}</option>
     @endforeach
 </select>

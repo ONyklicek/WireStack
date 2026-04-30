@@ -3,7 +3,7 @@
     /** @var \Illuminate\Database\Eloquent\Model|null $record */
 
     $url = $record ? $action->getUrl($record) : null;
-    $label = e($record ? $action->getLabel($record) : $action->getLabel());
+    $label = $record ? $action->getLabel($record) : $action->getLabel();
     $disabled = $record ? $action->isDisabled($record) : false;
     $icon = $record ? $action->getIcon($record) : $action->getIcon();
     $color = $record ? $action->getColor($record) : $action->getColor();
