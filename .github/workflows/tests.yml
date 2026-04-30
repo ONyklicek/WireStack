@@ -39,6 +39,10 @@ jobs:
         run: |
           composer require "illuminate/support:${{ matrix.laravel }}" "illuminate/database:${{ matrix.laravel }}" --no-interaction --no-update
 
+      - name: Adjust Pest version for Laravel 10
+        if: matrix.laravel == '10.*'
+        run: composer require "pestphp/pest:^2.0" --no-interaction --no-update
+
       - name: Install dependencies
         run: composer update --prefer-dist --no-interaction --no-progress
 
