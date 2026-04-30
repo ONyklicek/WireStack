@@ -1,0 +1,7 @@
+parameters:
+    level: 6
+    paths:
+        - packages/core/src
+        - packages/forms/src
+        - packages/table/src
+    tmpDir: build/phpstan

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Core Unit">
+            <directory>packages/core/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Core Feature">
+            <directory>packages/core/tests/Feature</directory>
+        </testsuite>
+        <testsuite name="Forms Unit">
+            <directory>packages/forms/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Forms Feature">
+            <directory>packages/forms/tests/Feature</directory>
+        </testsuite>
+        <testsuite name="Table Unit">
+            <directory>packages/table/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Table Feature">
+            <directory>packages/table/tests/Feature</directory>
+        </testsuite>
+        <testsuite name="Forms Standalone">
+            <directory>packages/forms/tests/Standalone</directory>
+        </testsuite>
+        <testsuite name="Integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>packages/core/src</directory>
+            <directory>packages/forms/src</directory>
+            <directory>packages/table/src</directory>
+        </include>
+    </source>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="CACHE_DRIVER" value="array"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="QUEUE_DRIVER" value="sync"/>
+        <env name="DB_CONNECTION" value="sqlite"/>
+        <env name="DB_DATABASE" value=":memory:"/>
+    </php>
+</phpunit>

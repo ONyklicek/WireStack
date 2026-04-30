@@ -1,0 +1,154 @@
+<?php
+
+declare(strict_types=1);
+
+use Livewire\Component;
+use NyonCode\WireForms\Forms\Runtime\StateManager;
+
+test('initial state is empty array', function () {
+    $manager = new StateManager;
+
+    expect($manager->getState())->toBe([]);
+});
+
+test('fill sets state', function () {
+    $manager = new StateManager;
+    $manager->fill(['name' => 'John', 'email' => 'john@test.com']);
+
+    expect($manager->getState())->toBe(['name' => 'John', 'email' => 'john@test.com']);
+});
+
+test('fill overwrites previous state', function () {
+    $manager = new StateManager;
+    $manager->fill(['a' => 1]);
+    $manager->fill(['b' => 2]);
+
+    expect($manager->getState())->toBe(['b' => 2]);
+});
+
+test('setState sets state', function () {
+    $manager = new StateManager;
+    $manager->setState(['key' => 'value']);
+
+    expect($manager->getState())->toBe(['key' => 'value']);
+});
+
+test('setStatePath stores path', function () {
+    $manager = new StateManager;
+    $manager->setStatePath('data');
+
+    expect($manager->getStatePath())->toBe('data');
+});
+
+test('getStatePath returns null by default', function () {
+    $manager = new StateManager;
+
+    expect($manager->getStatePath())->toBeNull();
+});
+
+test('hasLivewire returns false without livewire', function () {
+    $manager = new StateManager;
+
+    expect($manager->hasLivewire())->toBeFalse();
+});
+
+test('getLivewire returns null without livewire', function () {
+    $manager = new StateManager;
+
+    expect($manager->getLivewire())->toBeNull();
+});
+
+test('setLivewire stores component', function () {
+    $manager = new StateManager;
+    $mock = Mockery::mock(Component::class);
+
+    $manager->setLivewire($mock);
+
+    expect($manager->hasLivewire())->toBeTrue()
+        ->and($manager->getLivewire())->toBe($mock);
+});
+
+test('setLivewire with null clears livewire', function () {
+    $manager = new StateManager;
+    $mock = Mockery::mock(Component::class);
+
+    $manager->setLivewire($mock);
+    $manager->setLivewire(null);
+
+    expect($manager->hasLivewire())->toBeFalse();
+});
+
+test('fill syncs to livewire when bound', function () {
+    $manager = new StateManager;
+    $component = new class extends Component
+    {
+        public array $data = [];
+
+        public function render()
+        {
+            return '';
+        }
+    };
+
+    $manager->setLivewire($component);
+    $manager->setStatePath('data');
+    $manager->fill(['name' => 'John']);
+
+    expect($component->data)->toBe(['name' => 'John']);
+});
+
+test('getState reads from livewire when bound', function () {
+    $manager = new StateManager;
+    $component = new class extends Component
+    {
+        public array $data = ['name' => 'FromLivewire'];
+
+        public function render()
+        {
+            return '';
+        }
+    };
+
+    $manager->setLivewire($component);
+    $manager->setStatePath('data');
+
+    expect($manager->getState())->toBe(['name' => 'FromLivewire']);
+});
+
+test('setState syncs to livewire when bound', function () {
+    $manager = new StateManager;
+    $component = new class extends Component
+    {
+        public array $data = [];
+
+        public function render()
+        {
+            return '';
+        }
+    };
+
+    $manager->setLivewire($component);
+    $manager->setStatePath('data');
+    $manager->setState(['email' => 'test@test.com']);
+
+    expect($component->data)->toBe(['email' => 'test@test.com']);
+});
+
+test('getState uses local state without livewire even with statePath', function () {
+    $manager = new StateManager;
+    $manager->setStatePath('data');
+    $manager->fill(['name' => 'Local']);
+
+    expect($manager->getState())->toBe(['name' => 'Local']);
+});
+
+test('getState uses local state without statePath even with livewire', function () {
+    $manager = new StateManager;
+    $mock = Mockery::mock(Component::class);
+
+    $manager->setLivewire($mock);
+    // No statePath set
+    $manager->fill(['name' => 'Local']);
+
+    expect($manager->getState())->toBe(['name' => 'Local']);
+});

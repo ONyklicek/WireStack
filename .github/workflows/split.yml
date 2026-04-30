@@ -1,0 +1,34 @@
+name: Split Monorepo
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  split:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        package:
+          - { local_path: 'packages/core', split_repository: 'wire-core' }
+          - { local_path: 'packages/forms', split_repository: 'wire-forms' }
+          - { local_path: 'packages/table', split_repository: 'wire-table' }
+
+    name: Split ${{ matrix.package.split_repository }}
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Split and push
+        uses: danharrin/monorepo-split-github-action@v2.3.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.SPLIT_TOKEN }}
+        with:
+          package_directory: ${{ matrix.package.local_path }}
+          repository_organization: NyonCode
+          repository_name: ${{ matrix.package.split_repository }}
+          tag: ${{ github.ref_name }}

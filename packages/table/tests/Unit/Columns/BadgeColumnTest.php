@@ -1,0 +1,99 @@
+<?php
+
+declare(strict_types=1);
+
+use NyonCode\WireTable\Columns\BadgeColumn;
+
+it('can be created', function () {
+    expect(BadgeColumn::make('status'))->toBeInstanceOf(BadgeColumn::class);
+});
+
+// ─── Colors ─────────────────────────────────────────────────────────────────
+
+it('can set color map', function () {
+    $column = BadgeColumn::make('status')->colors([
+        'active' => 'success',
+        'inactive' => 'danger',
+    ]);
+
+    expect($column->getColorForState('active'))->toBe('success')
+        ->and($column->getColorForState('inactive'))->toBe('danger')
+        ->and($column->getColorForState('unknown'))->toBe('gray');
+});
+
+it('can use color callback', function () {
+    $column = BadgeColumn::make('status')->colorUsing(fn ($state) => match ($state) {
+        'active' => 'success',
+        default => 'gray',
+    });
+
+    expect($column->getColorForState('active'))->toBe('success');
+});
+
+// ─── Icons ──────────────────────────────────────────────────────────────────
+
+it('can set icon map', function () {
+    $column = BadgeColumn::make('status')->icons([
+        'active' => 'check',
+        'inactive' => 'x',
+    ]);
+
+    expect($column->getIconForState('active'))->toBe('check')
+        ->and($column->getIconForState('inactive'))->toBe('x')
+        ->and($column->getIconForState('unknown'))->toBeNull();
+});
+
+it('can use icon callback', function () {
+    $column = BadgeColumn::make('status')->iconUsing(fn ($state) => $state === 'active' ? 'check' : 'x');
+
+    expect($column->getIconForState('active'))->toBe('check');
+});
+
+// ─── Size ───────────────────────────────────────────────────────────────────
+
+it('has default md size', function () {
+    expect(BadgeColumn::make('status')->getSize())->toBe('md');
+});
+
+it('can set custom size', function () {
+    expect(BadgeColumn::make('status')->size('xs')->getSize())->toBe('xs');
+});
+
+it('generates correct size classes', function () {
+    expect(BadgeColumn::make('status')->size('xs')->getSizeClasses())
+        ->toContain('text-[10px]')
+        ->and(BadgeColumn::make('status')->size('lg')->getSizeClasses())
+        ->toContain('text-sm');
+});
+
+// ─── Color Classes ──────────────────────────────────────────────────────────
+
+it('generates correct color classes for known colors', function () {
+    $column = BadgeColumn::make('status');
+
+    expect($column->getColorClasses('success'))->toContain('bg-emerald-100')
+        ->and($column->getColorClasses('danger'))->toContain('bg-red-100')
+        ->and($column->getColorClasses('warning'))->toContain('bg-amber-100')
+        ->and($column->getColorClasses('info'))->toContain('bg-sky-100')
+        ->and($column->getColorClasses('gray'))->toContain('bg-gray-100');
+});
+
+it('falls back to gray for unknown colors', function () {
+    expect(BadgeColumn::make('status')->getColorClasses('nonexistent'))
+        ->toContain('bg-gray-100');
+});
+
+// ─── Icon SVG ───────────────────────────────────────────────────────────────
+
+it('returns svg path for known icons', function () {
+    $column = BadgeColumn::make('status');
+
+    expect($column->getIconSvg('check'))->toContain('path')
+        ->and($column->getIconSvg('x'))->toContain('path')
+        ->and($column->getIconSvg('clock'))->toContain('path')
+        ->and($column->getIconSvg('exclamation'))->toContain('path');
+});
+
+it('returns empty string for unknown icons', function () {
+    expect(BadgeColumn::make('status')->getIconSvg('nonexistent'))->toBe('');
+});
