@@ -13,7 +13,8 @@
         "php": "^8.2",
         "nyoncode/wire-core": "@dev",
         "nyoncode/wire-forms": "@dev",
-        "nyoncode/wire-table": "@dev"
+        "nyoncode/wire-table": "@dev",
+	    "illuminate/support": "^10.0|^11.0|^12.0|^13.0"
     },
     "require-dev": {
         "orchestra/testbench": "^8.0|^9.0|^10.0",

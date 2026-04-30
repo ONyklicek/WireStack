@@ -13,8 +13,8 @@
         "php": "^8.2",
         "nyoncode/wire-core": "^0.1|dev-main",
         "nyoncode/wire-forms": "^0.1|dev-main",
-        "illuminate/support": "^10.0|^11.0|^12.0",
-        "illuminate/database": "^10.0|^11.0|^12.0",
+        "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
+        "illuminate/database": "^10.0|^11.0|^12.0|^13.0",
         "livewire/livewire": "^3.0",
         "nyoncode/laravel-package-toolkit": "^2.0.1"
     },
