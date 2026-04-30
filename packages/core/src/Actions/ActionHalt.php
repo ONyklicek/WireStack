@@ -50,7 +50,6 @@ final class ActionHalt
 {
     use HasIcons;
 
-
     protected ?string $modalHeading = null;
 
     protected ?string $modalDescription = null;
@@ -101,7 +100,7 @@ final class ActionHalt
 
     public static function make(): static
     {
-        return new static();
+        return new self;
     }
 
     // ─── Presets ────────────────────────────────────────────────
