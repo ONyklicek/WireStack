@@ -118,6 +118,8 @@ trait HasLoadingState
 
     /**
      * Get loading state data for Blade templates.
+     *
+     * @return array<string, mixed>
      */
     public function getLoadingStateData(): array
     {

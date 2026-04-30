@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Livewire\Component;
-
 use Livewire\Livewire;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Components\Toggle;

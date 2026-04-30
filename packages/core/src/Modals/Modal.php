@@ -21,6 +21,8 @@ use NyonCode\WireCore\Modals\Contracts\ModalContract;
  *       ->description('Update the record details below.')
  *       ->width('lg')
  *       ->closeOnClickAway(false);
+ *
+ * @phpstan-consistent-constructor
  */
 class Modal implements ModalContract
 {

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use NyonCode\WireForms\Components\TextInput;
-
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\ViewErrorBag;
+use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Forms\Config\FormConfig;
 use NyonCode\WireForms\Forms\Runtime\FormRuntime;
 use NyonCode\WireForms\Forms\Runtime\StateManager;
@@ -62,7 +62,7 @@ test('render passes null statePath when not set', function () {
 
 test('toHtml returns string', function () {
     // Share $errors variable as Laravel middleware normally does
-    view()->share('errors', new \Illuminate\Support\ViewErrorBag);
+    view()->share('errors', new ViewErrorBag);
 
     $config = new FormConfig(
         schema: [TextInput::make('name')],

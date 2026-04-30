@@ -45,7 +45,7 @@
             </div>
         </div>
     @else
-        @php $currentValue = $value ?? ($filter->getDefault() ?? '') @endphp
+        @php $currentValue = $value ?? ($filter->getDefault() ?? ''); @endphp
         <input
             type="date"
             id="filter-{{ $name }}"

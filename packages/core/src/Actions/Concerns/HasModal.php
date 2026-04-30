@@ -38,18 +38,22 @@ trait HasModal
 
     protected bool $modalCloseOnEscape = true;
 
+    /** @var array<int, mixed> */
     protected array $modalFormFields = [];
 
     protected ?Closure $modalFormFieldsCallback = null;
 
+    /** @var array<string, mixed>|null */
     protected ?array $modalFormValidation = null;
 
     protected ?Closure $modalFormValidationCallback = null;
 
+    /** @var array<string, string>|null */
     protected ?array $modalFormValidationMessages = null;
 
     protected ?Closure $modalFormValidationMessagesCallback = null;
 
+    /** @var array<string, string>|null */
     protected ?array $modalFormValidationAttributes = null;
 
     protected ?Closure $modalFormValidationAttributesCallback = null;
@@ -172,6 +176,9 @@ trait HasModal
         return $this;
     }
 
+    /**
+     * @param  array<int, mixed>|Closure  $fields
+     */
     public function form(array|Closure $fields): static
     {
         if ($fields instanceof Closure) {
@@ -184,6 +191,9 @@ trait HasModal
         return $this;
     }
 
+    /**
+     * @param  array<string, mixed>|Closure  $rules
+     */
     public function formValidation(array|Closure $rules): static
     {
         if ($rules instanceof Closure) {
@@ -195,6 +205,9 @@ trait HasModal
         return $this;
     }
 
+    /**
+     * @param  array<string, string>|Closure  $messages
+     */
     public function validationMessages(array|Closure $messages): static
     {
         if ($messages instanceof Closure) {
@@ -206,6 +219,9 @@ trait HasModal
         return $this;
     }
 
+    /**
+     * @param  array<string, string>|Closure  $attributes
+     */
     public function validationAttributes(array|Closure $attributes): static
     {
         if ($attributes instanceof Closure) {
@@ -313,7 +329,9 @@ trait HasModal
         return $this->hasModal && (! empty($this->modalFormFields) || $this->modalFormFieldsCallback);
     }
 
-    // Form fields
+    /**
+     * @return array<int, array<string, mixed>>
+     */
     public function getFormFields(mixed $context = null): array
     {
         $fields = ($this->modalFormFieldsCallback && $context)
@@ -323,6 +341,10 @@ trait HasModal
         return $this->normalizeFormFields($fields, $context);
     }
 
+    /**
+     * @param  array<int, mixed>  $fields
+     * @return array<int, array<string, mixed>>
+     */
     protected function normalizeFormFields(array $fields, mixed $context = null): array
     {
         $normalized = [];
@@ -340,12 +362,17 @@ trait HasModal
         return $normalized;
     }
 
-    // Validation
+    /**
+     * @return array<string, mixed>
+     */
     public function getFormValidation(mixed $context = null): array
     {
         return $this->prefixValidationRules($this->getRawFormValidation($context));
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getRawFormValidation(mixed $context = null): array
     {
         if ($this->modalFormValidationCallback && $context) {
@@ -355,6 +382,10 @@ trait HasModal
         return $this->modalFormValidation ?? [];
     }
 
+    /**
+     * @param  array<string, mixed>  $rules
+     * @return array<string, mixed>
+     */
     protected function prefixValidationRules(array $rules, string $prefix = 'actionModalFormData.'): array
     {
         $prefixed = [];
@@ -365,6 +396,9 @@ trait HasModal
         return $prefixed;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getValidationMessages(mixed $context = null): array
     {
         $messages = ($this->modalFormValidationMessagesCallback && $context)
@@ -374,6 +408,9 @@ trait HasModal
         return $this->prefixValidationRules($messages);
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function getRawValidationMessages(mixed $context = null): array
     {
         if ($this->modalFormValidationMessagesCallback && $context) {
@@ -383,6 +420,9 @@ trait HasModal
         return $this->modalFormValidationMessages ?? [];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getValidationAttributes(mixed $context = null): array
     {
         $attributes = ($this->modalFormValidationAttributesCallback && $context)
@@ -392,6 +432,9 @@ trait HasModal
         return $this->prefixValidationRules($attributes);
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function getRawValidationAttributes(mixed $context = null): array
     {
         if ($this->modalFormValidationAttributesCallback && $context) {
@@ -401,7 +444,9 @@ trait HasModal
         return $this->modalFormValidationAttributes ?? [];
     }
 
-    // Defaults
+    /**
+     * @return array<string, mixed>
+     */
     public function getFormDefaults(mixed $context = null): array
     {
         if ($this->fillFormUsing && $context) {
@@ -411,6 +456,10 @@ trait HasModal
         return $this->extractDefaults($this->getFormFields($context));
     }
 
+    /**
+     * @param  array<int, array<string, mixed>>  $fields
+     * @return array<string, mixed>
+     */
     protected function extractDefaults(array $fields): array
     {
         $defaults = [];
@@ -426,6 +475,10 @@ trait HasModal
         return $defaults;
     }
 
+    /**
+     * @param  array<int, array<string, mixed>>  $fields
+     * @return array<int, string>
+     */
     protected function extractFieldNames(array $fields): array
     {
         $names = [];
@@ -441,7 +494,9 @@ trait HasModal
         return $names;
     }
 
-    // Modal config
+    /**
+     * @return array<string, mixed>
+     */
     public function getModalConfig(mixed $context = null): array
     {
         return [
@@ -478,6 +533,7 @@ trait HasModal
 
     // ─── Multi-step modal support ───────────────────────────────
 
+    /** @var array<int, mixed> */
     protected array $modalSteps = [];
 
     protected bool $stickyFooter = false;
@@ -486,8 +542,10 @@ trait HasModal
 
     protected ?string $modalMaxHeight = null;
 
+    /** @var array<int, mixed> */
     protected array $modalFooterActions = [];
 
+    /** @var array<int, mixed> */
     protected array $modalHeaderActions = [];
 
     /**
@@ -507,6 +565,9 @@ trait HasModal
      *               Select::make('role')->options([...]),
      *           ]),
      *   ])
+     */
+    /**
+     * @param  array<int, mixed>  $steps
      */
     public function steps(array $steps): static
     {
@@ -557,6 +618,9 @@ trait HasModal
      *           ->action(fn ($data) => ...),
      *   ])
      */
+    /**
+     * @param  array<int, mixed>  $actions
+     */
     public function modalFooterActions(array $actions): static
     {
         $this->modalFooterActions = $actions;
@@ -566,6 +630,9 @@ trait HasModal
 
     /**
      * Add action buttons to modal header (next to close button).
+     */
+    /**
+     * @param  array<int, mixed>  $actions
      */
     public function modalHeaderActions(array $actions): static
     {
@@ -579,11 +646,17 @@ trait HasModal
         return ! empty($this->modalSteps);
     }
 
+    /**
+     * @return array<int, mixed>
+     */
     public function getModalSteps(): array
     {
         return $this->modalSteps;
     }
 
+    /**
+     * @return array<int, mixed>
+     */
     public function getStepsConfig(mixed $context = null): array
     {
         return array_map(function ($step) use ($context) {
@@ -602,6 +675,9 @@ trait HasModal
         }, $this->modalSteps);
     }
 
+    /**
+     * @return array<int, mixed>
+     */
     public function getModalFooterActionsConfig(): array
     {
         return array_map(function ($action) {
@@ -613,6 +689,9 @@ trait HasModal
         }, $this->modalFooterActions);
     }
 
+    /**
+     * @return array<int, mixed>
+     */
     public function getModalHeaderActionsConfig(): array
     {
         return array_map(function ($action) {

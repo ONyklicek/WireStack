@@ -64,7 +64,7 @@
     @if($field->getDatalistOptions())
         <datalist id="{{ $field->getId() }}-datalist">
             @foreach($field->getDatalistOptions() as $option)
-                <option value="{{ $option }}">
+                <option value="{{ $option }}"></option>
             @endforeach
         </datalist>
     @endif

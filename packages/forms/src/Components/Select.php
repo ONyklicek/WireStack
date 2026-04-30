@@ -11,6 +11,7 @@ use Closure;
  */
 class Select extends Field
 {
+    /** @var array<string|int, string>|Closure */
     protected array|Closure $options = [];
 
     protected bool $searchable = false;
@@ -35,6 +36,9 @@ class Select extends Field
 
     protected ?string $titleAttribute = null;
 
+    /**
+     * @param  array<string|int, string>|Closure  $options
+     */
     public function options(array|Closure $options): static
     {
         $this->options = $options;
@@ -135,6 +139,9 @@ class Select extends Field
 
     // ─── Getters ───────────────────────────────────────────────────
 
+    /**
+     * @return array<string|int, string>
+     */
     public function getOptions(): array
     {
         return $this->evaluate($this->options);

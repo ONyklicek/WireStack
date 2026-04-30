@@ -30,6 +30,7 @@ class DateTimePicker extends Field
 
     protected ?int $firstDayOfWeek = null;
 
+    /** @var array<int, string>|Closure */
     protected array|Closure $disabledDates = [];
 
     protected bool $closeOnDateSelection = false;
@@ -114,6 +115,9 @@ class DateTimePicker extends Field
         return $this;
     }
 
+    /**
+     * @param  array<int, string>|Closure  $dates
+     */
     public function disabledDates(array|Closure $dates): static
     {
         $this->disabledDates = $dates;
@@ -228,6 +232,9 @@ class DateTimePicker extends Field
         }
     }
 
+    /**
+     * @return array<int, string>
+     */
     public function getDisabledDates(): array
     {
         return $this->evaluate($this->disabledDates);

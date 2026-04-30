@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Actions\Concerns;
 
 use Closure;
+use Illuminate\Contracts\Auth\Guard;
 
 /**
  * Trait HasVisibility
@@ -92,13 +93,17 @@ trait HasVisibility
             return true;
         }
 
-        $user = auth()->user();
+        /** @var Guard $guard */
+        $guard = auth()->guard();
+        $user = $guard->user();
         if (! $user) {
             return false;
         }
+
         if ($user->hasRole('Super Admin')) {
             return true;
         }
+
         if (method_exists($user, 'hasPermissionTo')) {
             return $user->hasPermissionTo($this->permission);
         }

@@ -17,8 +17,11 @@ use Illuminate\Database\Eloquent\Model;
  */
 final class FormConfig
 {
+    /**
+     * @param  array<int, mixed>  $schema  Schema components
+     * @param  array<string, string>  $validationMessages
+     */
     public function __construct(
-        /** @var array<int, mixed> Schema components */
         public readonly array $schema = [],
         public readonly ?string $statePath = null,
         public readonly string|Model|null $model = null,
@@ -33,7 +36,7 @@ final class FormConfig
 
     public function isCreating(): bool
     {
-        return is_string($this->model) && ! $this->model instanceof Model;
+        return is_string($this->model);
     }
 
     public function isEditing(): bool

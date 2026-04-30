@@ -17,6 +17,8 @@ use Illuminate\Support\Str;
  *       ->outlined()
  *       ->action(fn ($data, $component) => $component->dispatch('preview', $data))
  *       ->position('before')  // 'before' or 'after' the main submit/cancel buttons
+ *
+ * @phpstan-consistent-constructor
  */
 class ModalFooterAction
 {
@@ -151,6 +153,9 @@ class ModalFooterAction
         return $this->submitsForm;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(): array
     {
         return [

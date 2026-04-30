@@ -75,7 +75,7 @@
                     setTimeout(() => this.success = false, 1500);
                 }
             } catch (e) {
-                this.error = 'Chyba při ukládání';
+                this.error = 'Save failed';
             } finally {
                 this.saving = false;
             }

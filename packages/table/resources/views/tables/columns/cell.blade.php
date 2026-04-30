@@ -41,10 +41,10 @@
        class="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 hover:underline">
         {!! $innerContent !!}
     </a>
-    @php $displayContent = '' @endphp
+    @php $displayContent = ''; @endphp
 @elseif($icon)
     {!! $innerContent !!}
-    @php $displayContent = '' @endphp
+    @php $displayContent = ''; @endphp
 @endif
 
 @if($isCopyable)
@@ -53,12 +53,12 @@
         'copyValue' => $state,
         'copyMessage' => $copyMessage,
     ])
-    @php $displayContent = '' @endphp
+    @php $displayContent = ''; @endphp
 @endif
 
 @if($tooltip && $displayContent)
     <span title="{{ $tooltip }}" class="cursor-help">{!! $displayContent !!}</span>
-    @php $displayContent = '' @endphp
+    @php $displayContent = ''; @endphp
 @endif
 
 @if($description)

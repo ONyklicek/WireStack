@@ -43,12 +43,13 @@ use NyonCode\WireCore\Actions\Concerns\HasIcons;
  *   return ActionHalt::info('Hotovo', 'Operace proběhla úspěšně.');
  *
  * @author Ondřej Nyklíček
+ *
+ * @phpstan-consistent-constructor
  */
-class ActionHalt
+final class ActionHalt
 {
     use HasIcons;
 
-    // ─── Properties ─────────────────────────────────────────────
 
     protected ?string $modalHeading = null;
 
@@ -71,14 +72,19 @@ class ActionHalt
     protected bool $isInformative = false;
 
     // Form
+    /** @var array<int, mixed> */
     protected array $formFields = [];
 
+    /** @var array<string, mixed>|null */
     protected ?array $formValidation = null;
 
+    /** @var array<string, string>|null */
     protected ?array $formValidationMessages = null;
 
+    /** @var array<string, string>|null */
     protected ?array $formValidationAttributes = null;
 
+    /** @var array<string, mixed>|null */
     protected ?array $formData = null;
 
     // Context – tracks where halt was triggered
@@ -95,7 +101,7 @@ class ActionHalt
 
     public static function make(): static
     {
-        return new static;
+        return new static();
     }
 
     // ─── Presets ────────────────────────────────────────────────
@@ -279,7 +285,9 @@ class ActionHalt
         return $this->informative($noSubmit);
     }
 
-    // Form
+    /**
+     * @param  array<int, mixed>  $fields
+     */
     public function form(array $fields): static
     {
         $this->formFields = $fields;
@@ -287,6 +295,11 @@ class ActionHalt
         return $this;
     }
 
+    /**
+     * @param  array<string, mixed>  $rules
+     * @param  array<string, string>|null  $messages
+     * @param  array<string, string>|null  $attributes
+     */
     public function validation(array $rules, ?array $messages = null, ?array $attributes = null): static
     {
         $this->formValidation = $rules;
@@ -296,12 +309,21 @@ class ActionHalt
         return $this;
     }
 
-    /** @deprecated Use validation() instead */
+    /**
+     * @deprecated Use validation() instead
+     *
+     * @param  array<string, mixed>  $rules
+     * @param  array<string, string>|null  $messages
+     * @param  array<string, string>|null  $attributes
+     */
     public function formValidation(array $rules, ?array $messages = null, ?array $attributes = null): static
     {
         return $this->validation($rules, $messages, $attributes);
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function fillForm(array $data): static
     {
         $this->formData = $data;
@@ -389,26 +411,41 @@ class ActionHalt
         return ! $this->isInformative && ! empty($this->formFields);
     }
 
+    /**
+     * @return array<int, mixed>
+     */
     public function getModalFormFields(): array
     {
         return $this->formFields;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function getModalFormData(): ?array
     {
         return $this->formData;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function getModalFormValidation(): ?array
     {
         return $this->formValidation;
     }
 
+    /**
+     * @return array<string, string>|null
+     */
     public function getModalFormValidationMessages(): ?array
     {
         return $this->formValidationMessages;
     }
 
+    /**
+     * @return array<string, string>|null
+     */
     public function getModalFormValidationAttributes(): ?array
     {
         return $this->formValidationAttributes;
@@ -438,6 +475,8 @@ class ActionHalt
 
     /**
      * Convert to array for frontend / Livewire state.
+     *
+     * @return array<string, mixed>
      */
     public function toArray(): array
     {

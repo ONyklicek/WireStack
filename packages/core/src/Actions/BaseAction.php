@@ -24,6 +24,8 @@ use NyonCode\WireCore\Actions\Concerns\HasVisibility;
  * actionCallback, and all trait wiring across all three action types.
  *
  * @author Ondřej Nyklíček
+ *
+ * @phpstan-consistent-constructor
  */
 abstract class BaseAction implements Htmlable
 {
@@ -55,6 +57,7 @@ abstract class BaseAction implements Htmlable
 
     protected ?string $tooltip = null;
 
+    /** @var array<string, string> */
     protected array $extraAttributes = [];
 
     public function __construct(string $name)

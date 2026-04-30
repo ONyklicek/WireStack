@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Columns;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
 
 class TextColumn extends Column
 {
@@ -101,7 +102,7 @@ class TextColumn extends Column
         return $this;
     }
 
-    public function formatValue(mixed $value, $record): string
+    public function formatValue(mixed $value, Model $record): string
     {
         if ($value === null || $value === '') {
             return $this->getPlaceholder();

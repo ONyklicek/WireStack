@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Filters;
 
 use Closure;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
+/** @phpstan-consistent-constructor */
 class Filter implements Htmlable
 {
     public string $name;
@@ -169,9 +172,11 @@ class Filter implements Htmlable
         $column = $this->getColumn();
 
         if ($this->multiple && is_array($value)) {
+            /** @var Builder<Model> */
             return $query->whereIn($column, $value);
         }
 
+        /** @var Builder<Model> */
         return $query->where($column, $value);
     }
 
@@ -235,7 +240,8 @@ class Filter implements Htmlable
             return true;
         }
 
-        $user = auth()->user();
+        /** @var Authenticatable|null $user */
+        $user = auth()->guard()->user();
         if (! $user) {
             return false;
         }

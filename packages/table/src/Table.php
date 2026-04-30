@@ -6,15 +6,19 @@ namespace NyonCode\WireTable;
 
 use Closure;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Concerns\HasSqlDebug;
+use NyonCode\WireTable\Filters\Filter;
 use RuntimeException;
 
+/** @phpstan-consistent-constructor */
 class Table implements Htmlable
 {
     use Concerns\HasSubRows;
@@ -26,18 +30,24 @@ class Table implements Htmlable
 
     protected ?Closure $modifyQueryCallback = null;
 
+    /** @var array<int, Column> */
     protected array $columns = [];
 
+    /** @var array<int, Filter> */
     protected array $filters = [];
 
+    /** @var array<int, Action|ActionGroup> */
     protected array $actions = [];
 
+    /** @var array<int, Action> */
     protected array $bulkActions = [];
 
+    /** @var array<int, Action> */
     protected array $headerActions = [];
 
     protected int $perPage = 10;
 
+    /** @var array<int, int> */
     protected array $perPageOptions = [10, 25, 50, 100];
 
     protected bool $searchable = true;
@@ -237,6 +247,8 @@ class Table implements Htmlable
 
     /**
      * Get column names only.
+     *
+     * @return array<int, string>
      */
     public function getColumnNames(): array
     {
@@ -258,6 +270,8 @@ class Table implements Htmlable
 
     /**
      * Get all defined table columns with their configuration.
+     *
+     * @return array<string, array<string, mixed>>
      */
     public function getColumnsInfo(): array
     {
@@ -291,10 +305,14 @@ class Table implements Htmlable
     /**
      * Get database table columns (from the model's table).
      */
+    /**
+     * @return array<int, string>
+     */
     public function getDatabaseColumns(): array
     {
         $query = $this->getQuery();
         $table = $query->getModel()->getTable();
+        /** @var Connection $connection */
         $connection = $query->getConnection();
 
         return $connection->getSchemaBuilder()->getColumnListing($table);
@@ -315,11 +333,15 @@ class Table implements Htmlable
     /**
      * Get detailed database column information.
      */
+    /**
+     * @return array<string, array{name: string, type: string}>
+     */
     public function getDatabaseColumnsInfo(): array
     {
         $query = $this->getQuery();
         $model = $query->getModel();
         $table = $model->getTable();
+        /** @var Connection $connection */
         $connection = $query->getConnection();
 
         $columns = [];

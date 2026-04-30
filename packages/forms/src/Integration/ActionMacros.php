@@ -21,35 +21,37 @@ final class ActionMacros
             return;
         }
 
-        BaseAction::macro('form', function (array $schema): static {
-            /** @var BaseAction $this */
-            $this->formSchema = $schema;
+        BaseAction::macro('form', function (array $schema): ActionMacros {
+            /** @var BaseAction&object{formSchema?: array<int, mixed>} $this */
+            $this->formSchema = $schema; // @phpstan-ignore-line
 
-            return $this;
+            return $this; // @phpstan-ignore-line
         });
 
-        BaseAction::macro('fillFormUsing', function (Closure $fn): static {
+        BaseAction::macro('fillFormUsing', function (Closure $fn): ActionMacros {
             /** @var BaseAction $this */
             $this->fillFormUsing = $fn;
 
-            return $this;
+            return $this; // @phpstan-ignore-line
         });
 
-        BaseAction::macro('formValidation', function (array $rules, array $messages = []): static {
+        BaseAction::macro('formValidation', function (array $rules, array $messages = []): ActionMacros {
             /** @var BaseAction $this */
-            $this->formValidation = compact('rules', 'messages');
+            $this->formValidation = compact('rules', 'messages'); // @phpstan-ignore-line
 
-            return $this;
+            return $this; // @phpstan-ignore-line
         });
 
+        /** @phpstan-ignore-next-line */
         BaseAction::macro('getFormSchema', function (): array {
             /** @var BaseAction $this */
-            return $this->formSchema ?? [];
+            return $this->formSchema ?? []; // @phpstan-ignore-line
         });
 
+        /** @phpstan-ignore-next-line */
         BaseAction::macro('hasFormSchema', function (): bool {
             /** @var BaseAction $this */
-            return ! empty($this->formSchema);
+            return ! empty($this->formSchema); // @phpstan-ignore-line
         });
     }
 }

@@ -14,6 +14,7 @@ class ViewField extends ViewComponent
 {
     protected ?string $view = null;
 
+    /** @var array<string, mixed>|Closure */
     protected array|Closure $viewData = [];
 
     protected string|Closure|null $content = null;
@@ -27,6 +28,9 @@ class ViewField extends ViewComponent
         return $this;
     }
 
+    /**
+     * @param  array<string, mixed>|Closure  $data
+     */
     public function viewData(array|Closure $data): static
     {
         $this->viewData = $data;
@@ -53,6 +57,9 @@ class ViewField extends ViewComponent
         return $this->view;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getViewData(): array
     {
         return $this->evaluate($this->viewData);

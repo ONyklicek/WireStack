@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Columns;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Storage;
 
 class ImageColumn extends Column
@@ -142,7 +143,10 @@ class ImageColumn extends Column
 
         // If using disk storage
         if ($this->disk) {
-            return Storage::disk($this->disk)->url($state);
+            /** @var FilesystemAdapter $diskInstance */
+            $diskInstance = Storage::disk($this->disk);
+
+            return $diskInstance->url($state);
         }
 
         // Assume it's a path in public storage

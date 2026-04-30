@@ -11,6 +11,7 @@ use Closure;
  */
 class FileUpload extends Field
 {
+    /** @var array<int, string>|Closure */
     protected array|Closure $acceptedFileTypes = [];
 
     protected ?int $maxSize = null;
@@ -41,6 +42,9 @@ class FileUpload extends Field
 
     protected ?string $imageCropAspectRatio = null;
 
+    /**
+     * @param  array<int, string>|Closure  $types
+     */
     public function acceptedFileTypes(array|Closure $types): static
     {
         $this->acceptedFileTypes = $types;
@@ -156,6 +160,9 @@ class FileUpload extends Field
 
     // ─── Getters ───────────────────────────────────────────────────
 
+    /**
+     * @return array<int, string>
+     */
     public function getAcceptedFileTypes(): array
     {
         return $this->evaluate($this->acceptedFileTypes);

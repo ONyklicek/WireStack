@@ -2,7 +2,7 @@
 {{-- Variables: $column, $value --}}
 @php
     $name = $column->getName();
-    $placeholder = $column->getFilterPlaceholder() ?? 'Vše';
+    $placeholder = $column->getFilterPlaceholder() ?? __('All');
     $options = $column->getFilterOptions();
 @endphp
 

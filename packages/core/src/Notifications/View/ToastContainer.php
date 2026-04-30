@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Notifications\View;
 
+use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
-use Illuminate\View\View;
 
 /**
  * Toast notification container Blade component.

@@ -26,6 +26,8 @@ use NyonCode\WireCore\Modals\Contracts\ModalContract;
  *           ModalStep::make('Settings')
  *               ->schema([...]),
  *       ]);
+ *
+ * @phpstan-consistent-constructor
  */
 class Wizard implements ModalContract
 {

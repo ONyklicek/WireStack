@@ -184,6 +184,8 @@ trait HasDynamicProperties
     /**
      * Set extra attributes as array or Closure.
      * Closure signature: fn(Model $record): array
+     *
+     * @param  array<string, string>|Closure  $attributes
      */
     public function extraAttributes(array|Closure $attributes): static
     {
@@ -199,6 +201,8 @@ trait HasDynamicProperties
 
     /**
      * Resolve extra attributes - evaluates Closure if set.
+     *
+     * @return array<string, string>
      */
     public function getExtraAttributes(mixed $context = null): array
     {

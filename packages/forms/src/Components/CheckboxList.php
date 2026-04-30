@@ -11,6 +11,7 @@ use Closure;
  */
 class CheckboxList extends Field
 {
+    /** @var array<string, string>|Closure */
     protected array|Closure $options = [];
 
     protected int $columns = 1;
@@ -27,8 +28,12 @@ class CheckboxList extends Field
 
     protected bool $grouped = false;
 
+    /** @var array<string, array<string, string>>|Closure */
     protected array|Closure $groups = [];
 
+    /**
+     * @param  array<string, string>|Closure  $options
+     */
     public function options(array|Closure $options): static
     {
         $this->options = $options;
@@ -85,6 +90,9 @@ class CheckboxList extends Field
         return $this;
     }
 
+    /**
+     * @param  array<string, array<string, string>>|Closure  $groups
+     */
     public function groups(array|Closure $groups): static
     {
         $this->groups = $groups;
@@ -93,6 +101,9 @@ class CheckboxList extends Field
         return $this;
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function getOptions(): array
     {
         return $this->evaluate($this->options);
@@ -133,6 +144,9 @@ class CheckboxList extends Field
         return $this->grouped;
     }
 
+    /**
+     * @return array<string, array<string, string>>
+     */
     public function getGroups(): array
     {
         return $this->evaluate($this->groups);

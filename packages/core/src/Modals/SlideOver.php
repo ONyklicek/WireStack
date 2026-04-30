@@ -21,6 +21,8 @@ use NyonCode\WireCore\Modals\Contracts\ModalContract;
  *       ->description('View and edit user information.')
  *       ->width('lg')
  *       ->position('right');
+ *
+ * @phpstan-consistent-constructor
  */
 class SlideOver implements ModalContract
 {

@@ -11,14 +11,19 @@ use Closure;
  */
 class Radio extends Field
 {
+    /** @var array<string, string>|Closure */
     protected array|Closure $options = [];
 
+    /** @var array<string, string>|Closure */
     protected array|Closure $descriptions = [];
 
     protected bool $inline = false;
 
     protected bool $boolean = false;
 
+    /**
+     * @param  array<mixed, string>|Closure  $options
+     */
     public function options(array|Closure $options): static
     {
         $this->options = $options;
@@ -26,6 +31,9 @@ class Radio extends Field
         return $this;
     }
 
+    /**
+     * @param  array<string, string>|Closure  $descriptions
+     */
     public function descriptions(array|Closure $descriptions): static
     {
         $this->descriptions = $descriptions;
@@ -54,11 +62,17 @@ class Radio extends Field
         return $this;
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function getOptions(): array
     {
         return $this->evaluate($this->options);
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function getDescriptions(): array
     {
         return $this->evaluate($this->descriptions);

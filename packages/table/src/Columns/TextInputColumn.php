@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Columns;
 
 use Closure;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Validator;
 use NyonCode\WireTable\Concerns\HasView;
@@ -39,10 +40,13 @@ class TextInputColumn extends Column
 
     protected ?string $editPermission = null;
 
+    /** @var array<int|string, mixed>|Closure|null */
     protected array|Closure|null $rules = null;
 
+    /** @var array<string, string> */
     protected array $validationMessages = [];
 
+    /** @var array<string, string> */
     protected array $validationAttributes = [];
 
     protected bool $saveOnBlur = true;
@@ -232,6 +236,9 @@ class TextInputColumn extends Column
         return $this;
     }
 
+    /**
+     * @param  array<int|string, mixed>|Closure  $rules
+     */
     public function rules(array|Closure $rules): static
     {
         $this->rules = $rules;
@@ -261,6 +268,9 @@ class TextInputColumn extends Column
         return $this;
     }
 
+    /**
+     * @param  array<string, string>  $messages
+     */
     public function validationMessages(array $messages): static
     {
         $this->validationMessages = $messages;
@@ -275,6 +285,9 @@ class TextInputColumn extends Column
         return $this;
     }
 
+    /**
+     * @return array{valid: bool, errors: array<int, string>}
+     */
     public function validate(mixed $value, Model $record): array
     {
         $rules = $this->getRules($record);
@@ -306,6 +319,9 @@ class TextInputColumn extends Column
         return ['valid' => true, 'errors' => []];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function getRules(Model $record): array
     {
         if ($this->rules instanceof Closure) {
@@ -574,14 +590,15 @@ class TextInputColumn extends Column
         }
 
         if ($this->editPermission) {
-            $user = auth()->user();
+            /** @var Authenticatable|null $user */
+            $user = auth()->guard()->user();
 
             if (! $user) {
                 return false;
             }
 
             // Super Admin persistence
-            if ($user->hasRole('Super Admin')) {
+            if (method_exists($user, 'hasRole') && $user->hasRole('Super Admin')) {
                 return true;
             }
 
@@ -771,6 +788,9 @@ class TextInputColumn extends Column
     // Configuration Export
     // ==========================================
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getConfig(Model $record): array
     {
         return [

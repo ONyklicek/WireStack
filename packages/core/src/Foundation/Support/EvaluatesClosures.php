@@ -17,6 +17,8 @@ trait EvaluatesClosures
 {
     /**
      * Evaluate a value, resolving Closures with optional named parameters.
+     *
+     * @param  array<string, mixed>  $namedArgs
      */
     protected function evaluate(mixed $value, array $namedArgs = []): mixed
     {

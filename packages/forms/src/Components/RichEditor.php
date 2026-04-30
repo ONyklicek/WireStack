@@ -9,14 +9,19 @@ namespace NyonCode\WireForms\Components;
  */
 class RichEditor extends Field
 {
+    /** @var array<int, string>|null */
     protected ?array $toolbarButtons = null;
 
+    /** @var array<int, string> */
     protected array $disabledToolbarButtons = [];
 
     protected ?int $maxLength = null;
 
     protected ?string $fileAttachmentsDirectory = null;
 
+    /**
+     * @param  array<int, string>  $buttons
+     */
     public function toolbarButtons(array $buttons): static
     {
         $this->toolbarButtons = $buttons;
@@ -24,6 +29,9 @@ class RichEditor extends Field
         return $this;
     }
 
+    /**
+     * @param  array<int, string>  $buttons
+     */
     public function disableToolbarButtons(array $buttons): static
     {
         $this->disabledToolbarButtons = $buttons;
@@ -52,6 +60,9 @@ class RichEditor extends Field
         return $this;
     }
 
+    /**
+     * @return array<int, string>
+     */
     public function getToolbarButtons(): array
     {
         $buttons = $this->toolbarButtons ?? config('wire-forms.rich_editor.toolbar', [

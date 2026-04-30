@@ -27,12 +27,15 @@ use NyonCode\WireCore\Actions\Concerns\HasIcons;
  *   ->dropdownPosition('bottom-end')
  *
  * @author Ondřej Nyklíček
+ *
+ * @phpstan-consistent-constructor
  */
 class ActionGroup implements Htmlable
 {
     use HasColor;
     use HasIcons;
 
+    /** @var array<int, Action|ActionGroup> */
     public array $actions = [];
 
     public ?string $label = null;
@@ -56,11 +59,17 @@ class ActionGroup implements Htmlable
 
     protected ?string $badgeColor = null;
 
+    /**
+     * @param  array<int, Action|ActionGroup>  $actions
+     */
     public function __construct(array $actions)
     {
         $this->actions = $actions;
     }
 
+    /**
+     * @param  array<int, Action|ActionGroup>  $actions
+     */
     public static function make(array $actions): static
     {
         return new static($actions);
@@ -191,6 +200,9 @@ class ActionGroup implements Htmlable
         return $this->dropdownWidth;
     }
 
+    /**
+     * @return array<int, Action|ActionGroup>
+     */
     public function getActions(): array
     {
         return $this->actions;
@@ -223,6 +235,9 @@ class ActionGroup implements Htmlable
      * Get visible actions for a record.
      * Filters out hidden actions but preserves dividers.
      */
+    /**
+     * @return array<int, Action|ActionGroup>
+     */
     public function getVisibleActions(Model $record): array
     {
         $visible = [];
@@ -245,6 +260,9 @@ class ActionGroup implements Htmlable
 
     /**
      * Get visible actions with auto-dividers inserted if $this->divided is true.
+     */
+    /**
+     * @return array<int, Action|ActionGroup>
      */
     public function getVisibleActionsWithDividers(Model $record): array
     {
@@ -274,6 +292,10 @@ class ActionGroup implements Htmlable
 
     /**
      * Remove orphaned dividers (leading, trailing, consecutive).
+     */
+    /**
+     * @param  array<int, Action|ActionGroup>  $actions
+     * @return array<int, Action|ActionGroup>
      */
     protected function cleanDividers(array $actions): array
     {

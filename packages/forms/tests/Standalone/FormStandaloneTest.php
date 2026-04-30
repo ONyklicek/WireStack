@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-use Illuminate\Validation\ValidationException;
-
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\ValidationException;
 use NyonCode\WireForms\Components\Layout\Grid;
 use NyonCode\WireForms\Components\Layout\Section;
 use NyonCode\WireForms\Components\Select;

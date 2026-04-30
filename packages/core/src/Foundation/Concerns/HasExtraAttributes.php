@@ -11,10 +11,15 @@ use Closure;
  */
 trait HasExtraAttributes
 {
+    /** @var array<string, mixed>|Closure */
     protected array|Closure $extraAttributes = [];
 
+    /** @var array<string, mixed>|Closure */
     protected array|Closure $extraInputAttributes = [];
 
+    /**
+     * @param  array<string, mixed>|Closure  $attributes
+     */
     public function extraAttributes(array|Closure $attributes): static
     {
         $this->extraAttributes = $attributes;
@@ -22,6 +27,9 @@ trait HasExtraAttributes
         return $this;
     }
 
+    /**
+     * @param  array<string, mixed>|Closure  $attributes
+     */
     public function extraInputAttributes(array|Closure $attributes): static
     {
         $this->extraInputAttributes = $attributes;

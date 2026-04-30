@@ -25,6 +25,7 @@ final class Notification
         public readonly ?int $duration = null,
         public readonly ?string $icon = null,
         public readonly ?string $position = null,
+        /** @var array<string, mixed> */
         public readonly array $extra = [],
     ) {}
 
@@ -84,6 +85,9 @@ final class Notification
             $this->extra);
     }
 
+    /**
+     * @param  array<string, mixed>  $extra
+     */
     public function extra(array $extra): self
     {
         return new self($this->type, $this->message, $this->title, $this->duration, $this->icon, $this->position,
@@ -92,6 +96,9 @@ final class Notification
 
     // ─── Serialization ─────────────────────────────────────────
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(): array
     {
         return array_filter([

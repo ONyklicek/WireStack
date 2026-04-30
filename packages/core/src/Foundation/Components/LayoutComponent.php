@@ -14,6 +14,8 @@ use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
  *
  * Layout components contain child components in their schema
  * and propagate state paths to children.
+ *
+ * @phpstan-consistent-constructor
  */
 abstract class LayoutComponent implements Htmlable
 {

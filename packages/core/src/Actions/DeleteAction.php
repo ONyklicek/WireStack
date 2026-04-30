@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Actions;
 
+/** @phpstan-consistent-constructor */
 class DeleteAction extends Action
 {
     public function __construct(string $name = 'delete')

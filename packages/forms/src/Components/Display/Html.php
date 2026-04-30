@@ -9,6 +9,8 @@ use NyonCode\WireCore\Foundation\Components\ViewComponent;
 
 /**
  * Raw HTML display component with static helper factories.
+ *
+ * @phpstan-consistent-constructor
  */
 class Html extends ViewComponent
 {

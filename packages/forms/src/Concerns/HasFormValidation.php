@@ -13,12 +13,17 @@ use Closure;
  */
 trait HasFormValidation
 {
+    /** @var array<int, mixed> */
     protected array $rules = [];
 
     protected bool|Closure $isRequired = false;
 
+    /** @var array<string, string> */
     protected array $validationMessages = [];
 
+    /**
+     * @param  array<int, mixed>|string  $rules
+     */
     public function rules(array|string $rules): static
     {
         $this->rules = is_array($rules) ? $rules : [$rules];
@@ -33,6 +38,9 @@ trait HasFormValidation
         return $this;
     }
 
+    /**
+     * @param  array<string, string>  $messages
+     */
     public function validationMessages(array $messages): static
     {
         $this->validationMessages = $messages;

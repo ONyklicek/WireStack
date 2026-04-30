@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Model;
  * Now extends BaseAction which provides shared traits and properties.
  *
  * @author Ondřej Nyklíček
+ *
+ * @phpstan-consistent-constructor
  */
 class Action extends BaseAction
 {
@@ -127,6 +129,8 @@ class Action extends BaseAction
 
     /**
      * Get all render data for Blade template. Resolves all dynamic properties per-record.
+     *
+     * @return array<string, mixed>
      */
     public function getRenderData(Model $record): array
     {

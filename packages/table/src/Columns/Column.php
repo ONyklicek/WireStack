@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Columns;
 
 use Closure;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Str;
 use NyonCode\WireTable\Concerns\HasSummary;
 
+/** @phpstan-consistent-constructor */
 class Column implements Htmlable
 {
     use HasSummary;
@@ -26,7 +29,7 @@ class Column implements Htmlable
     /** @var bool Whether the column is included in search */
     protected bool $searchable = false;
 
-    /** @var array Explicit DB columns to search (Filament-style: searchable(['first_name', 'last_name'])) */
+    /** @var array<int, string> Explicit DB columns to search (Filament-style: searchable(['first_name', 'last_name'])) */
     protected array $searchColumns = [];
 
     /** @var Closure|null Custom search query callback: fn(Builder, string) => */
@@ -83,7 +86,7 @@ class Column implements Htmlable
     /** @var string|null Additional HTML attributes for the cell */
     protected ?string $extraAttributes = null;
 
-    /** @var array Additional HTML attributes for the column header */
+    /** @var array<string, string> Additional HTML attributes for the column header */
     protected array $extraHeaderAttributes = [];
 
     /** @var bool Whether to wrap text in the cell */
@@ -138,7 +141,7 @@ class Column implements Htmlable
     /** @var string|null Type of input for inline editing (e.g., 'text', 'select', 'date') */
     protected ?string $editableType = 'text';
 
-    /** @var array Options for editable fields (e.g., select options) */
+    /** @var array<string, string> Options for editable fields (e.g., select options) */
     protected array $editableOptions = [];
 
     /** @var Closure|null Validation rules for inline editing */
@@ -157,7 +160,7 @@ class Column implements Htmlable
      */
     protected ?string $filterType = 'text';
 
-    /** @var array Options for filter dropdowns */
+    /** @var array<string, string> Options for filter dropdowns */
     protected array $filterOptions = [];
 
     /** @var string|null Placeholder text for filter input */
@@ -304,6 +307,8 @@ class Column implements Htmlable
      *   ->searchable()                                    // auto-detect
      *   ->searchable(['first_name', 'last_name'])         // explicit DB columns
      *   ->searchable(query: fn($query, $search) => ...)   // custom query callback
+     *
+     * @param  bool|array<int, string>  $searchable
      */
     public function searchable(bool|array $searchable = true, ?Closure $query = null): static
     {
@@ -331,6 +336,8 @@ class Column implements Htmlable
 
     /**
      * Get explicit search columns (empty = use auto-detection).
+     *
+     * @return array<int, string>
      */
     public function getSearchColumns(): array
     {
@@ -741,12 +748,13 @@ class Column implements Htmlable
             return true;
         }
 
-        $user = auth()->user();
+        /** @var Authenticatable|null $user */
+        $user = auth()->guard()->user();
         if (! $user) {
             return false;
         }
 
-        if ($user->hasRole('Super Admin')) {
+        if (method_exists($user, 'hasRole') && $user->hasRole('Super Admin')) {
             return true;
         }
 
@@ -793,10 +801,12 @@ class Column implements Htmlable
         $name = $this->name;
 
         // Handle pivot data
-        if ($this->isPivot && $record->pivot) {
+        /** @var Pivot|null $pivot */
+        $pivot = $record->getAttribute('pivot');
+        if ($this->isPivot && $pivot) {
             $attribute = Str::afterLast($name, '.');
 
-            return $record->pivot->{$attribute};
+            return $pivot->{$attribute};
         }
 
         // Handle dot notation for relations

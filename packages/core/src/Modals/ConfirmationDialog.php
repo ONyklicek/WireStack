@@ -24,6 +24,8 @@ use NyonCode\WireCore\Modals\Contracts\ModalContract;
  * Presets:
  *   ConfirmationDialog::delete('User');
  *   ConfirmationDialog::danger('Are you sure?', 'This is dangerous.');
+ *
+ * @phpstan-consistent-constructor
  */
 class ConfirmationDialog implements ModalContract
 {

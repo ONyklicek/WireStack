@@ -14,6 +14,8 @@ final class ArrayDotHelper
 {
     /**
      * Get a value from a nested array using dot notation.
+     *
+     * @param  array<string, mixed>  $data
      */
     public static function get(array $data, string $path, mixed $default = null): mixed
     {
@@ -25,6 +27,9 @@ final class ArrayDotHelper
      *
      * @return array<string, mixed>
      */
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public static function set(array &$data, string $path, mixed $value): array
     {
         Arr::set($data, $path, $value);
@@ -34,6 +39,8 @@ final class ArrayDotHelper
 
     /**
      * Check if a key exists in a nested array using dot notation.
+     *
+     * @param  array<string, mixed>  $data
      */
     public static function has(array $data, string $path): bool
     {
@@ -42,6 +49,8 @@ final class ArrayDotHelper
 
     /**
      * Remove a key from a nested array using dot notation.
+     *
+     * @param  array<string, mixed>  $data
      */
     public static function forget(array &$data, string $path): void
     {

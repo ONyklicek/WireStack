@@ -123,7 +123,7 @@
                         </div>
                     </div>
 
-                    <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">Načítání tabulky...</p>
+                    <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">{{ __('Loading table...') }}</p>
                 @endif
             </div>
         </div>
@@ -259,7 +259,7 @@
                                                 @click="checkPosition(); open = !open"
                                                 type="button"
                                                 class="inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                                title="Zobrazit/skrýt sloupce"
+                                                title="{{ __('Toggle columns') }}"
                                         >
                                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -327,7 +327,7 @@
                                         class="text-sm font-semibold text-primary-700 dark:text-primary-300">{{ count($component->selectedRecords) }}</span>
                                     </div>
                                     <span class="text-sm font-medium text-primary-700 dark:text-primary-300">
-                            {{ count($component->selectedRecords) === 1 ? 'záznam vybrán' : (count($component->selectedRecords) < 5 ? 'záznamy vybrány' : 'záznamů vybráno') }}
+                            {{ trans_choice('{1} record selected|[2,*] records selected', count($component->selectedRecords)) }}
                         </span>
                                 </div>
 
@@ -351,7 +351,7 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                   d="M6 18L18 6M6 6l12 12"/>
                                         </svg>
-                                        Zrušit výběr
+                                        {{ __('Deselect') }}
                                     </button>
                                 </div>
                             </div>
@@ -506,7 +506,7 @@
                                                             type="button"
                                                             wire:click="resetColumnFilters"
                                                             class="inline-flex items-center justify-center p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-                                                            title="Resetovat filtry sloupců"
+                                                            title="{{ __('Reset column filters') }}"
                                                     >
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                              viewBox="0 0 24 24">
@@ -632,9 +632,7 @@
                                                     </h3>
                                                     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                                                         @if($isEmptyDueToFilter)
-                                                            Vašemu vyhledávání neodpovídají žádné záznamy. Zkuste
-                                                            upravit
-                                                            filtry.
+                                                            {{ __('No records match your search. Try adjusting the filters.') }}
                                                         @else
                                                             {{ $table->getEmptyStateDescription() }}
                                                         @endif
@@ -674,10 +672,10 @@
                                     </div>
                                     <div>
                                         <h3 class="text-base font-medium text-gray-900 dark:text-white">
-                                            Žádné sloupce k zobrazení
+                                            {{ __('No columns to display') }}
                                         </h3>
                                         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                            Vyberte alespoň jeden sloupec k zobrazení pomocí tlačítka nahoře.
+                                            {{ __('Select at least one column to display using the button above.') }}
                                         </p>
                                     </div>
                                 </div>
@@ -784,7 +782,7 @@
                                             </svg>
                                         </div>
                                         <p class="text-sm text-gray-500 dark:text-gray-400">
-                                            {{ $table->getEmptyStateHeading() ?? 'Žádné záznamy' }}
+                                            {{ $table->getEmptyStateHeading() ?? __('No records') }}
                                         </p>
                                     </div>
                                 </div>
@@ -807,7 +805,7 @@
                             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 {{-- Per Page Selector - Always visible when paginated --}}
                                 <div class="flex items-center gap-2">
-                                    <span class="text-sm text-gray-500 dark:text-gray-400">Zobrazit</span>
+                                    <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('Show') }}</span>
                                     <select
                                             wire:model.live="tablePerPage"
                                             class="rounded-lg border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 focus:border-primary-500 focus:ring-primary-500 py-1.5"
@@ -816,16 +814,16 @@
                                             <option value="{{ $option }}">{{ $option }}</option>
                                         @endforeach
                                     </select>
-                                    <span class="text-sm text-gray-500 dark:text-gray-400">záznamů</span>
+                                    <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('records') }}</span>
                                 </div>
 
                                 {{-- Results Info - Always visible when paginated --}}
                                 <div class="text-sm text-gray-500 dark:text-gray-400">
-                                    Zobrazeno <span
+                                    {{ __('Showing') }} <span
                                             class="font-medium text-gray-700 dark:text-gray-300">{{ $from }}</span> -
-                                    <span class="font-medium text-gray-700 dark:text-gray-300">{{ $to }}</span> z <span
+                                    <span class="font-medium text-gray-700 dark:text-gray-300">{{ $to }}</span> {{ __('of') }} <span
                                             class="font-medium text-gray-700 dark:text-gray-300">{{ $total }}</span>
-                                    záznamů
+                                    {{ __('records') }}
                                 </div>
 
                                 {{-- Pagination Links - Only when multiple pages --}}
@@ -1134,8 +1132,8 @@
                                             @endif
                                         </div>
                                     </div>
-                                    @endif
                                 </div>
+                            @endif
                             @endif {{-- End modalData check --}}
                             @endif
 

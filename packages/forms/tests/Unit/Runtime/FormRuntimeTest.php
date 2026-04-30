@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Illuminate\Validation\ValidationException;
-
 use NyonCode\WireForms\Components\Layout\Grid;
 use NyonCode\WireForms\Components\Layout\Section;
 use NyonCode\WireForms\Components\TextInput;

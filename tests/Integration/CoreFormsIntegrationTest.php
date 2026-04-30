@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 use NyonCode\WireCore\WireCoreServiceProvider;
 use NyonCode\WireForms\Components\Checkbox;
@@ -146,7 +148,7 @@ test('standalone form fill and getState roundtrip', function () {
 
 test('standalone form model detection', function () {
     $createForm = Form::make()->model('App\\Models\\User');
-    $editForm = Form::make()->model(Mockery::mock(\Illuminate\Database\Eloquent\Model::class));
+    $editForm = Form::make()->model(Mockery::mock(Model::class));
     $noModelForm = Form::make();
 
     expect($createForm->isCreating())->toBeTrue()
@@ -160,7 +162,7 @@ test('standalone form implements Htmlable', function () {
     $form = Form::make()
         ->schema([TextInput::make('name')]);
 
-    expect($form)->toBeInstanceOf(\Illuminate\Contracts\Support\Htmlable::class);
+    expect($form)->toBeInstanceOf(Htmlable::class);
 });
 
 test('standalone form disabled propagates to fields', function () {

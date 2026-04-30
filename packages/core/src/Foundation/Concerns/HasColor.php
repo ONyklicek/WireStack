@@ -12,6 +12,7 @@ namespace NyonCode\WireCore\Foundation\Concerns;
  */
 trait HasColor
 {
+    /** @var array<string, string> */
     protected static array $colorClassCache = [];
 
     /**

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Filters;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 class DateFilter extends Filter
 {
@@ -101,6 +102,7 @@ class DateFilter extends Filter
             return $query;
         }
 
+        /** @var Builder<Model> */
         return $query->whereDate($column, $value);
     }
 

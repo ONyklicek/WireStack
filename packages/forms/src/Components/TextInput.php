@@ -31,6 +31,7 @@ class TextInput extends Field
 
     protected ?string $autocomplete = null;
 
+    /** @var array<int, string>|null */
     protected ?array $datalistOptions = null;
 
     protected bool $isRevealable = false;
@@ -152,6 +153,9 @@ class TextInput extends Field
         return $this;
     }
 
+    /**
+     * @param  array<int, string>  $options
+     */
     public function datalist(array $options): static
     {
         $this->datalistOptions = $options;
@@ -213,6 +217,9 @@ class TextInput extends Field
         return $this->autocomplete;
     }
 
+    /**
+     * @return array<int, string>|null
+     */
     public function getDatalistOptions(): ?array
     {
         return $this->datalistOptions;

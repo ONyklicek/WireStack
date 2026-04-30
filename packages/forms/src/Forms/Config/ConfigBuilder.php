@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 final class ConfigBuilder
 {
+    /** @var array<int, mixed> */
     private array $schema = [];
 
     private ?string $statePath = null;

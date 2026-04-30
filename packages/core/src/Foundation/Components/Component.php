@@ -15,6 +15,8 @@ use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
  *
  * Provides shared functionality: name, label, state management,
  * visibility, validation, extra attributes, size, and rendering.
+ *
+ * @phpstan-consistent-constructor
  */
 abstract class Component implements Htmlable
 {

@@ -22,6 +22,8 @@ use Closure;
  *           'email' => 'required|email',
  *       ])
  *       ->afterValidation(fn ($data) => /* custom validation logic *​/)
+ *
+ * @phpstan-consistent-constructor
  */
 class ModalStep
 {
@@ -31,14 +33,17 @@ class ModalStep
 
     protected ?string $icon = null;
 
+    /** @var array<int, mixed> */
     protected array $schema = [];
 
     protected ?Closure $schemaCallback = null;
 
+    /** @var array<string, mixed>|null */
     protected ?array $validation = null;
 
     protected ?Closure $validationCallback = null;
 
+    /** @var array<string, string>|null */
     protected ?array $validationMessages = null;
 
     protected ?Closure $afterValidationCallback = null;
@@ -70,6 +75,9 @@ class ModalStep
         return $this;
     }
 
+    /**
+     * @param  array<int, mixed>|Closure  $schema
+     */
     public function schema(array|Closure $schema): static
     {
         if ($schema instanceof Closure) {
@@ -81,6 +89,9 @@ class ModalStep
         return $this;
     }
 
+    /**
+     * @param  array<string, mixed>|Closure  $rules
+     */
     public function validation(array|Closure $rules): static
     {
         if ($rules instanceof Closure) {
@@ -92,6 +103,9 @@ class ModalStep
         return $this;
     }
 
+    /**
+     * @param  array<string, string>|null  $messages
+     */
     public function validationMessages(?array $messages): static
     {
         $this->validationMessages = $messages;
@@ -137,6 +151,9 @@ class ModalStep
         return $this->icon;
     }
 
+    /**
+     * @return array<int, mixed>
+     */
     public function getSchema(mixed $context = null): array
     {
         if ($this->schemaCallback && $context) {
@@ -146,6 +163,9 @@ class ModalStep
         return $this->schema;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getValidation(mixed $context = null): array
     {
         if ($this->validationCallback && $context) {
@@ -155,6 +175,9 @@ class ModalStep
         return $this->validation ?? [];
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function getValidationMessages(): array
     {
         return $this->validationMessages ?? [];
@@ -172,6 +195,8 @@ class ModalStep
 
     /**
      * Convert step to array for frontend config.
+     *
+     * @return array<string, mixed>
      */
     public function toArray(mixed $context = null): array
     {
