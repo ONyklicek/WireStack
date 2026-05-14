@@ -116,8 +116,8 @@ it('returns relation segments', function () {
 });
 
 it('converts to string', function () {
-    expect((string) RelationPath::parse('user.email'))->toBe('user.email')
-        ->and((string) RelationPath::parse('email'))->toBe('email');
+    expect((string) RelationPath::parse('user.email')->__toString())->toBe('user.email')
+        ->and((string) RelationPath::parse('email')->__toString())->toBe('email');
 });
 
 // ─── Edge cases ─────────────────────────────────────────────────────────────

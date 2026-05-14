@@ -8,6 +8,7 @@ use NyonCode\WireCore\Actions\ActionHalt;
 use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Notifications\Notification;
+use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireTable\Columns\BadgeColumn;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Columns\TextColumn;
@@ -355,7 +356,7 @@ it('serializes ActionHalt quickly', function () {
             ->submitLabel('Smazat')
             ->cancelLabel('Zrušit')
             ->danger()
-            ->form([\NyonCode\WireForms\Components\TextInput::make('reason')])
+            ->form([TextInput::make('reason')])
             ->validation(['reason' => 'required'])
             ->source('action', 0)
             ->toArray();

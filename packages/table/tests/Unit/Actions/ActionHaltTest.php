@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use NyonCode\WireCore\Actions\ActionHalt;
+use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireForms\Forms\Form;
 
 // ─── Factory ─────────────────────────────���───────────────────────────���──────
 
@@ -72,15 +74,15 @@ it('noSubmit is alias for informative', function () {
 
 it('can set form with component array', function () {
     $halt = ActionHalt::make()
-        ->form([\NyonCode\WireForms\Components\TextInput::make('reason')]);
+        ->form([TextInput::make('reason')]);
 
     expect($halt->hasForm())->toBeTrue()
-        ->and($halt->getFormInstance())->toBeInstanceOf(\NyonCode\WireForms\Forms\Form::class);
+        ->and($halt->getFormInstance())->toBeInstanceOf(Form::class);
 });
 
 it('informative clears form', function () {
     $halt = ActionHalt::make()
-        ->form([\NyonCode\WireForms\Components\TextInput::make('reason')])
+        ->form([TextInput::make('reason')])
         ->informative();
 
     expect($halt->hasForm())->toBeFalse()

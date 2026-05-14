@@ -74,7 +74,7 @@ final class ActionHalt
     protected bool $isInformative = false;
 
     // Form
-    protected Form|null $formInstance = null;
+    protected ?Form $formInstance = null;
 
     /** @var array<string, mixed>|null */
     protected ?array $formValidation = null;

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use NyonCode\WireCore\Actions\ModalStep;
+use NyonCode\WireForms\Components\TextInput;
 
 it('can be created via make()', function () {
     $step = ModalStep::make('details');
@@ -24,8 +25,8 @@ it('can set icon', function () {
 
 it('can set schema with components', function () {
     $schema = [
-        \NyonCode\WireForms\Components\TextInput::make('name'),
-        \NyonCode\WireForms\Components\TextInput::make('email'),
+        TextInput::make('name'),
+        TextInput::make('email'),
     ];
 
     $step = ModalStep::make('details')->schema($schema);
@@ -36,7 +37,7 @@ it('can set schema with components', function () {
 it('supports dynamic schema via closure', function () {
     $step = ModalStep::make('details')
         ->schema(fn ($record) => [
-            \NyonCode\WireForms\Components\TextInput::make('name'),
+            TextInput::make('name'),
         ]);
 
     $record = (object) ['name' => 'Jan'];
@@ -75,7 +76,7 @@ it('serializes to array', function () {
     $step = ModalStep::make('Details')
         ->description('Enter details')
         ->icon('user')
-        ->schema([\NyonCode\WireForms\Components\TextInput::make('name')]);
+        ->schema([TextInput::make('name')]);
 
     $array = $step->toArray();
 

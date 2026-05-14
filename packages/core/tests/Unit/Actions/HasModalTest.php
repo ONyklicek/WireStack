@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireForms\Forms\Form;
 
 // ─── Basic Modal ───────────────────────────────────────────────────────────
 
@@ -153,7 +155,7 @@ it('can set form via component array', function () {
     $action = Action::make('edit')
         ->requiresConfirmation()
         ->form([
-            \NyonCode\WireForms\Components\TextInput::make('reason'),
+            TextInput::make('reason'),
         ]);
 
     expect($action->hasFormModal())->toBeTrue()
@@ -164,7 +166,7 @@ it('supports dynamic form fields via closure', function () {
     $action = Action::make('edit')
         ->requiresConfirmation()
         ->form(fn ($record) => [
-            \NyonCode\WireForms\Components\TextInput::make('name'),
+            TextInput::make('name'),
         ]);
 
     expect($action->hasFormModal())->toBeTrue()
@@ -172,7 +174,7 @@ it('supports dynamic form fields via closure', function () {
 
     $record = (object) ['name' => 'Jan'];
     $form = $action->getFormInstance(context: $record);
-    expect($form)->toBeInstanceOf(\NyonCode\WireForms\Forms\Form::class);
+    expect($form)->toBeInstanceOf(Form::class);
 });
 
 // ─── Form Validation ──────────────────────────────────────────────────────
@@ -181,7 +183,7 @@ it('can set form validation rules', function () {
     $action = Action::make('submit')
         ->requiresConfirmation()
         ->form([
-            \NyonCode\WireForms\Components\TextInput::make('reason'),
+            TextInput::make('reason'),
         ])
         ->formValidation(['reason' => 'required|min:10']);
 
