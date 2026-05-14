@@ -7,7 +7,7 @@
     $url = $column->getUrl($record);
     $openInNewTab = $column->shouldOpenUrlInNewTab();
     $isCopyable = $column->isCopyable();
-    $copyMessage = $column->getCopyMessage() ?? __('Copied!');
+    $copyMessage = $column->getCopyMessage() ?? __('wire-table::messages.copied');
     $tooltip = $column->getTooltipText();
     $description = $column->getDescriptionText($record);
     $descriptionPosition = $column->getDescriptionPosition();
@@ -48,7 +48,7 @@
 @endif
 
 @if($isCopyable)
-    @include('tables.columns.partials.copyable', [
+    @include('wire-table::tables.columns.partials.copyable', [
         'content' => $displayContent ?: ($icon ? ($iconPosition === 'after' ? $content . ' ' . $column->renderIcon($icon) : $column->renderIcon($icon) . ' ' . $content) : $content),
         'copyValue' => $state,
         'copyMessage' => $copyMessage,

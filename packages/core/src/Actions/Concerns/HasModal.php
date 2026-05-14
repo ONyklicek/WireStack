@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Actions\Concerns;
 
 use Closure;
+use Livewire\Component;
+use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireForms\Forms\Form;
 
 /**
  * Trait HasModal
  *
  * Extracts ALL modal-related properties and methods shared across Action, BulkAction, HeaderAction.
- * Eliminates ~400 lines of duplicated code across 3 classes.
  */
 trait HasModal
 {
@@ -38,10 +40,8 @@ trait HasModal
 
     protected bool $modalCloseOnEscape = true;
 
-    /** @var array<int, mixed> */
-    protected array $modalFormFields = [];
-
-    protected ?Closure $modalFormFieldsCallback = null;
+    /** @var Form|Closure|null Form instance or closure returning Form */
+    protected Form|Closure|null $formInstance = null;
 
     /** @var array<string, mixed>|null */
     protected ?array $modalFormValidation = null;
@@ -177,14 +177,24 @@ trait HasModal
     }
 
     /**
-     * @param  array<int, mixed>|Closure  $fields
+     * Define form for this action's modal.
+     *
+     * Accepts:
+     * - Form instance: ->form(Form::make()->schema([...]))
+     * - Array of field components: ->form([TextInput::make('name'), Select::make('role')])
+     * - Closure returning Form: ->form(fn ($record) => Form::make()->schema([...]))
+     * - Closure returning array of components: ->form(fn ($record) => [TextInput::make('name')])
+     *
+     * @param  array<int, mixed>|Form|Closure  $fields
      */
-    public function form(array|Closure $fields): static
+    public function form(array|Form|Closure $fields): static
     {
-        if ($fields instanceof Closure) {
-            $this->modalFormFieldsCallback = $fields;
+        if ($fields instanceof Form) {
+            $this->formInstance = $fields;
+        } elseif ($fields instanceof Closure) {
+            $this->formInstance = $fields;
         } else {
-            $this->modalFormFields = $fields;
+            $this->formInstance = Form::make()->schema($fields);
         }
         $this->hasModal = true;
 
@@ -252,7 +262,7 @@ trait HasModal
             return call_user_func($this->modalHeadingCallback, $context);
         }
 
-        return $this->modalHeading ?? 'Potvrdit akci';
+        return $this->modalHeading ?? Trans::get('wire-core::actions.confirm_heading');
     }
 
     public function getModalDescription(mixed $context = null): ?string
@@ -261,12 +271,12 @@ trait HasModal
             return call_user_func($this->modalDescriptionCallback, $context);
         }
 
-        return $this->modalDescription ?? ($this->doesRequireConfirmation() ? 'Opravdu chcete provést tuto akci?' : null);
+        return $this->modalDescription ?? ($this->doesRequireConfirmation() ? Trans::get('wire-core::actions.confirm_description') : null);
     }
 
     public function doesRequireConfirmation(): bool
     {
-        return $this->hasModal && empty($this->modalFormFields) && ! $this->modalFormFieldsCallback;
+        return $this->hasModal && $this->formInstance === null;
     }
 
     public function getModalIcon(): ?string
@@ -281,12 +291,12 @@ trait HasModal
 
     public function getModalSubmitActionLabel(): string
     {
-        return $this->modalSubmitLabel ?? 'Potvrdit';
+        return $this->modalSubmitLabel ?? Trans::get('wire-core::actions.confirm_submit');
     }
 
     public function getModalCancelActionLabel(): string
     {
-        return $this->modalCancelLabel ?? 'Zrušit';
+        return $this->modalCancelLabel ?? Trans::get('wire-core::actions.confirm_cancel');
     }
 
     public function getModalWidth(): string
@@ -326,40 +336,60 @@ trait HasModal
 
     public function hasFormModal(): bool
     {
-        return $this->hasModal && (! empty($this->modalFormFields) || $this->modalFormFieldsCallback);
+        return $this->hasModal && $this->formInstance !== null;
     }
 
     /**
-     * @return array<int, array<string, mixed>>
+     * Resolve the Form instance for this action's modal.
+     *
+     * When a closure was passed to form(), it will be resolved here.
+     * The Form is automatically configured with statePath and livewire binding.
      */
-    public function getFormFields(mixed $context = null): array
+    public function getFormInstance(?Component $livewire = null, mixed $context = null): ?Form
     {
-        $fields = ($this->modalFormFieldsCallback && $context)
-            ? call_user_func($this->modalFormFieldsCallback, $context)
-            : $this->modalFormFields;
+        $form = null;
 
-        return $this->normalizeFormFields($fields, $context);
-    }
+        if ($this->formInstance instanceof Closure) {
+            $resolved = call_user_func($this->formInstance, $context);
+            if ($resolved instanceof Form) {
+                $form = $resolved;
+            } elseif (is_array($resolved)) {
+                $form = Form::make()->schema($resolved);
+            }
+        } elseif ($this->formInstance instanceof Form) {
+            $form = $this->formInstance;
+        }
 
-    /**
-     * @param  array<int, mixed>  $fields
-     * @return array<int, array<string, mixed>>
-     */
-    protected function normalizeFormFields(array $fields, mixed $context = null): array
-    {
-        $normalized = [];
-        foreach ($fields as $field) {
-            if (is_object($field) && method_exists($field, 'toArray')) {
-                $normalized[] = $field->toArray($context);
-            } elseif (is_array($field)) {
-                if (isset($field['schema']) && is_array($field['schema'])) {
-                    $field['schema'] = $this->normalizeFormFields($field['schema'], $context);
+        if ($form === null) {
+            return null;
+        }
+
+        $form->statePath('actionModalFormData');
+
+        if ($livewire) {
+            $form->livewire($livewire);
+        }
+
+        // Fill form with defaults from fillFormUsing callback only if Livewire state is empty
+        if ($this->fillFormUsing && $context && $livewire) {
+            $currentState = data_get($livewire, 'actionModalFormData', []);
+            if (empty($currentState)) {
+                $defaults = call_user_func($this->fillFormUsing, $context);
+                if (is_array($defaults) && ! empty($defaults)) {
+                    $form->fill($defaults);
                 }
-                $normalized[] = $field;
             }
         }
 
-        return $normalized;
+        return $form;
+    }
+
+    /**
+     * Check if this action has a Form instance configured.
+     */
+    public function hasFormInstance(): bool
+    {
+        return $this->formInstance !== null;
     }
 
     /**
@@ -453,45 +483,7 @@ trait HasModal
             return call_user_func($this->fillFormUsing, $context);
         }
 
-        return $this->extractDefaults($this->getFormFields($context));
-    }
-
-    /**
-     * @param  array<int, array<string, mixed>>  $fields
-     * @return array<string, mixed>
-     */
-    protected function extractDefaults(array $fields): array
-    {
-        $defaults = [];
-        foreach ($fields as $field) {
-            if (isset($field['name'])) {
-                $defaults[$field['name']] = $field['default'] ?? null;
-            }
-            if (isset($field['schema']) && is_array($field['schema'])) {
-                $defaults = array_merge($defaults, $this->extractDefaults($field['schema']));
-            }
-        }
-
-        return $defaults;
-    }
-
-    /**
-     * @param  array<int, array<string, mixed>>  $fields
-     * @return array<int, string>
-     */
-    protected function extractFieldNames(array $fields): array
-    {
-        $names = [];
-        foreach ($fields as $field) {
-            if (isset($field['name'])) {
-                $names[] = $field['name'];
-            }
-            if (isset($field['schema']) && is_array($field['schema'])) {
-                $names = array_merge($names, $this->extractFieldNames($field['schema']));
-            }
-        }
-
-        return $names;
+        return [];
     }
 
     /**
@@ -513,10 +505,8 @@ trait HasModal
             'slideOverOnMobile' => $this->isSlideOverOnMobile(),
             'fullScreenOnMobile' => $this->isFullScreenOnMobile(),
             'mobileWidth' => $this->getMobileModalWidth(),
-            'fields' => $this->getFormFields($context),
-            'validation' => $this->getRawFormValidation($context),
-            'defaults' => $this->getFormDefaults($context),
             'hasForm' => $this->hasFormModal(),
+            'hasFormInstance' => $this->hasFormInstance(),
             'isConfirmation' => $this->doesRequireConfirmation(),
             'actionColor' => $this->getColor(),
             // Enhanced modal features
@@ -551,22 +541,6 @@ trait HasModal
     /**
      * Define multi-step modal wizard.
      *
-     * Usage:
-     *   ->steps([
-     *       ModalStep::make('Základní údaje')
-     *           ->description('Vyplňte základní informace')
-     *           ->icon('user')
-     *           ->schema([
-     *               TextInput::make('name')->required(),
-     *               TextInput::make('email')->required(),
-     *           ]),
-     *       ModalStep::make('Nastavení')
-     *           ->schema([
-     *               Select::make('role')->options([...]),
-     *           ]),
-     *   ])
-     */
-    /**
      * @param  array<int, mixed>  $steps
      */
     public function steps(array $steps): static
@@ -577,9 +551,6 @@ trait HasModal
         return $this;
     }
 
-    /**
-     * Sticky footer (stays visible when scrolling long forms).
-     */
     public function stickyFooter(bool $sticky = true): static
     {
         $this->stickyFooter = $sticky;
@@ -587,9 +558,6 @@ trait HasModal
         return $this;
     }
 
-    /**
-     * Sticky header (stays visible when scrolling long forms).
-     */
     public function stickyHeader(bool $sticky = true): static
     {
         $this->stickyHeader = $sticky;
@@ -597,9 +565,6 @@ trait HasModal
         return $this;
     }
 
-    /**
-     * Set max height for scrollable modal body.
-     */
     public function modalMaxHeight(string $maxHeight): static
     {
         $this->modalMaxHeight = $maxHeight;
@@ -607,17 +572,6 @@ trait HasModal
         return $this;
     }
 
-    /**
-     * Add extra action buttons to modal footer.
-     *
-     * Usage:
-     *   ->modalFooterActions([
-     *       ModalFooterAction::make('preview')
-     *           ->label('Náhled')
-     *           ->color('gray')
-     *           ->action(fn ($data) => ...),
-     *   ])
-     */
     /**
      * @param  array<int, mixed>  $actions
      */
@@ -628,9 +582,6 @@ trait HasModal
         return $this;
     }
 
-    /**
-     * Add action buttons to modal header (next to close button).
-     */
     /**
      * @param  array<int, mixed>  $actions
      */
@@ -662,13 +613,6 @@ trait HasModal
         return array_map(function ($step) use ($context) {
             if (is_object($step) && method_exists($step, 'toArray')) {
                 return $step->toArray($context);
-            }
-            if (is_array($step)) {
-                if (isset($step['schema'])) {
-                    $step['schema'] = $this->normalizeFormFields($step['schema'], $context);
-                }
-
-                return $step;
             }
 
             return $step;

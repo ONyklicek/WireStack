@@ -141,12 +141,12 @@ it('can set sticky header', function () {
 
 // ─── Footer Labels ─────────────────────────────────────────────────────
 
-it('has default Czech submit label', function () {
-    expect(Modal::make()->getSubmitLabel())->toBe('Potvrdit');
+it('has default submit label from translation', function () {
+    expect(Modal::make()->getSubmitLabel())->toBe('confirm_submit');
 });
 
-it('has default Czech cancel label', function () {
-    expect(Modal::make()->getCancelLabel())->toBe('Zrušit');
+it('has default cancel label from translation', function () {
+    expect(Modal::make()->getCancelLabel())->toBe('confirm_cancel');
 });
 
 it('can set custom submit label', function () {

@@ -17,6 +17,7 @@ use NyonCode\WireForms\Validation\FormValidationResolver;
  */
 final class FormRuntime
 {
+    /** @var array<int, Component>|null */
     private ?array $cachedFlatComponents = null;
 
     private bool $isPrepared = false;
@@ -32,6 +33,8 @@ final class FormRuntime
     }
 
     /**
+     * @return array<string, mixed>
+     *
      * @throws ValidationException
      */
     public function validate(): array
@@ -72,11 +75,17 @@ final class FormRuntime
         return $handler->save();
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function fill(array $data): void
     {
         $this->stateManager->fill($data);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getState(): array
     {
         return $this->stateManager->getState();
@@ -124,6 +133,7 @@ final class FormRuntime
     }
 
     /**
+     * @param  array<int, mixed>  $components
      * @return array<int, Component>
      */
     private function flattenComponents(array $components): array

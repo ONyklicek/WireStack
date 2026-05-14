@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Livewire\Component;
+use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireForms\Forms\Runtime\StateManager;
 
 test('initial state is empty array', function () {
@@ -151,4 +152,67 @@ test('getState uses local state without statePath even with livewire', function 
     $manager->fill(['name' => 'Local']);
 
     expect($manager->getState())->toBe(['name' => 'Local']);
+});
+
+// ─── Core StateContainer Integration (Phase 4) ─────────────────────────────
+
+test('getContainer returns StateContainer instance', function () {
+    $manager = new StateManager;
+
+    $container = $manager->getContainer();
+    expect($container)->toBeInstanceOf(StateContainer::class);
+});
+
+test('get reads dot-notation paths from state', function () {
+    $manager = new StateManager;
+    $manager->fill(['user' => ['name' => 'Alice', 'email' => 'alice@test.com']]);
+
+    expect($manager->get('user.name'))->toBe('Alice')
+        ->and($manager->get('user.email'))->toBe('alice@test.com')
+        ->and($manager->get('user.missing', 'default'))->toBe('default');
+});
+
+test('set writes dot-notation paths to state', function () {
+    $manager = new StateManager;
+    $manager->fill(['user' => ['name' => 'Alice']]);
+
+    $manager->set('user.name', 'Bob');
+
+    expect($manager->getState()['user']['name'])->toBe('Bob');
+});
+
+test('isDirty returns false on fresh state', function () {
+    $manager = new StateManager;
+    $manager->fill(['name' => 'Alice']);
+
+    expect($manager->isDirty())->toBeFalse();
+});
+
+test('isDirty returns true after set()', function () {
+    $manager = new StateManager;
+    $manager->fill(['name' => 'Alice']);
+
+    $manager->set('name', 'Bob');
+
+    expect($manager->isDirty())->toBeTrue()
+        ->and($manager->getDirtyPaths())->toContain('name');
+});
+
+test('set syncs to livewire when bound', function () {
+    $manager = new StateManager;
+    $component = new class extends Component
+    {
+        public array $data = ['name' => 'Old'];
+
+        public function render()
+        {
+            return '';
+        }
+    };
+
+    $manager->setLivewire($component);
+    $manager->setStatePath('data');
+    $manager->set('name', 'New');
+
+    expect($component->data['name'])->toBe('New');
 });

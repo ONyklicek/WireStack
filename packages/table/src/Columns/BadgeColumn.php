@@ -9,8 +9,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class BadgeColumn extends Column
 {
+    /** @var array<string, string> */
     protected array $colors = [];
 
+    /** @var array<string, string> */
     protected array $icons = [];
 
     protected ?Closure $colorCallback = null;
@@ -19,6 +21,9 @@ class BadgeColumn extends Column
 
     protected string $size = 'md';
 
+    /**
+     * @param  array<string, string>  $colors
+     */
     public function colors(array $colors): static
     {
         $this->colors = $colors;
@@ -33,6 +38,9 @@ class BadgeColumn extends Column
         return $this;
     }
 
+    /**
+     * @param  array<string, string>  $icons
+     */
     public function icons(array $icons): static
     {
         $this->icons = $icons;

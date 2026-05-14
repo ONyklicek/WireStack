@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Integration;
 
-use Closure;
 use NyonCode\WireCore\Actions\BaseAction;
 
 /**
  * Registers Action macros for form integration.
  *
- * Actions module in core does not know about Forms.
- * This class injects form capabilities via macros at runtime.
+ * Note: Core form methods (form, fillFormUsing, formValidation, getFormInstance,
+ * hasFormModal) are provided natively by HasModal trait on BaseAction.
+ * This class only registers macros that add forms-package-specific behavior
+ * beyond what core provides.
  */
 final class ActionMacros
 {
@@ -21,37 +22,10 @@ final class ActionMacros
             return;
         }
 
-        BaseAction::macro('form', function (array $schema): ActionMacros {
-            /** @var BaseAction&object{formSchema?: array<int, mixed>} $this */
-            $this->formSchema = $schema; // @phpstan-ignore-line
-
-            return $this; // @phpstan-ignore-line
-        });
-
-        BaseAction::macro('fillFormUsing', function (Closure $fn): ActionMacros {
-            /** @var BaseAction $this */
-            $this->fillFormUsing = $fn;
-
-            return $this; // @phpstan-ignore-line
-        });
-
-        BaseAction::macro('formValidation', function (array $rules, array $messages = []): ActionMacros {
-            /** @var BaseAction $this */
-            $this->formValidation = compact('rules', 'messages'); // @phpstan-ignore-line
-
-            return $this; // @phpstan-ignore-line
-        });
-
-        /** @phpstan-ignore-next-line */
-        BaseAction::macro('getFormSchema', function (): array {
-            /** @var BaseAction $this */
-            return $this->formSchema ?? []; // @phpstan-ignore-line
-        });
-
-        /** @phpstan-ignore-next-line */
-        BaseAction::macro('hasFormSchema', function (): bool {
-            /** @var BaseAction $this */
-            return ! empty($this->formSchema); // @phpstan-ignore-line
-        });
+        // Core already provides: form(), fillFormUsing(), formValidation(),
+        // validationMessages(), validationAttributes(), getFormInstance(),
+        // hasFormModal(), getFillFormCallback() via HasModal trait.
+        //
+        // Register only forms-package-specific extensions here.
     }
 }

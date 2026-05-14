@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Modals\View;
 
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
+use NyonCode\WireCore\Core\Support\Trans;
 
 /**
  * Blade component: <x-wire-modals::confirmation>
@@ -32,8 +33,8 @@ class ConfirmationComponent extends Component
         public string $width = 'md',
         public ?string $icon = null,
         public string $iconColor = 'warning',
-        public string $submitLabel = 'Potvrdit',
-        public string $cancelLabel = 'Zrušit',
+        public ?string $submitLabel = null,
+        public ?string $cancelLabel = null,
         public ?string $color = null,
         public bool $isDanger = false,
         public bool $isInformative = false,
@@ -41,6 +42,9 @@ class ConfirmationComponent extends Component
         public bool $closeOnEscape = true,
         public ?string $id = null,
     ) {
+        $this->submitLabel ??= Trans::get('wire-core::actions.confirm_submit');
+        $this->cancelLabel ??= Trans::get('wire-core::actions.confirm_cancel');
+
         if ($this->isDanger && $this->color === null) {
             $this->color = 'danger';
         }

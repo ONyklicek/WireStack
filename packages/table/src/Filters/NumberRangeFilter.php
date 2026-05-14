@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Filters;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Support\Trans;
 
 class NumberRangeFilter extends Filter
 {
@@ -14,9 +16,9 @@ class NumberRangeFilter extends Filter
 
     protected ?float $step = null;
 
-    protected ?string $minLabel = 'Od';
+    protected ?string $minLabel = null;
 
-    protected ?string $maxLabel = 'Do';
+    protected ?string $maxLabel = null;
 
     protected ?string $inputType = 'number';
 
@@ -65,7 +67,7 @@ class NumberRangeFilter extends Filter
 
     public function getMinLabel(): string
     {
-        return $this->minLabel ?? 'Od';
+        return $this->minLabel ?? Trans::get('wire-table::messages.from');
     }
 
     public function maxLabel(?string $label): static
@@ -77,9 +79,13 @@ class NumberRangeFilter extends Filter
 
     public function getMaxLabel(): string
     {
-        return $this->maxLabel ?? 'Do';
+        return $this->maxLabel ?? Trans::get('wire-table::messages.to');
     }
 
+    /**
+     * @param  Builder<Model>  $query
+     * @return Builder<Model>
+     */
     public function apply(Builder $query, mixed $value): Builder
     {
         if ($value === null || $value === '' || $value === []) {

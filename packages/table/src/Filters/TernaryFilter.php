@@ -5,14 +5,16 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Filters;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Support\Trans;
 
 class TernaryFilter extends Filter
 {
-    protected ?string $trueLabel = 'Ano';
+    protected ?string $trueLabel = null;
 
-    protected ?string $falseLabel = 'Ne';
+    protected ?string $falseLabel = null;
 
-    protected ?string $allLabel = 'Vše';
+    protected ?string $allLabel = null;
 
     protected bool $nullable = false;
 
@@ -49,6 +51,10 @@ class TernaryFilter extends Filter
         return $this->nullable;
     }
 
+    /**
+     * @param  Builder<Model>  $query
+     * @return Builder<Model>
+     */
     public function apply(Builder $query, mixed $value): Builder
     {
         if ($value === null || $value === '') {
@@ -92,16 +98,16 @@ class TernaryFilter extends Filter
 
     public function getAllLabel(): string
     {
-        return $this->allLabel ?? 'Vše';
+        return $this->allLabel ?? Trans::get('wire-table::messages.filter_all');
     }
 
     public function getTrueLabel(): string
     {
-        return $this->trueLabel ?? 'Ano';
+        return $this->trueLabel ?? Trans::get('wire-table::messages.filter_yes');
     }
 
     public function getFalseLabel(): string
     {
-        return $this->falseLabel ?? 'Ne';
+        return $this->falseLabel ?? Trans::get('wire-table::messages.filter_no');
     }
 }

@@ -21,7 +21,7 @@
 @endforeach
 >
 
-@include('tables.actions.partials.button-content', ['data' => $data])
+@include('wire-table::tables.actions.partials.button-content', ['data' => $data])
 </a>
 
 @else
@@ -71,7 +71,7 @@
             @endif
             class="inline-flex items-center gap-1.5"
     >
-                @include('tables.actions.partials.button-content', ['data' => $data])
+                @include('wire-table::tables.actions.partials.button-content', ['data' => $data])
             </span>
     @if($data['loadingText'])
         <span
@@ -84,7 +84,7 @@
                 >{{ $data['loadingText'] }}</span>
         @endif
         @else
-            @include('tables.actions.partials.button-content', ['data' => $data])
+            @include('wire-table::tables.actions.partials.button-content', ['data' => $data])
         @endif
         </button>
     @endif

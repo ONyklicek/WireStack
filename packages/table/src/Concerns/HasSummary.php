@@ -6,7 +6,9 @@ namespace NyonCode\WireTable\Concerns;
 
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use NyonCode\WireCore\Core\Support\Trans;
 
 /**
  * Trait HasSummary
@@ -35,6 +37,8 @@ trait HasSummary
     /**
      * Summary definitions.
      * Each entry: ['type' => string|Closure, 'label' => ?string, 'scope' => string, 'format' => ?Closure]
+     *
+     * @var array<int, array<string, mixed>>
      */
     protected array $summaries = [];
 
@@ -67,7 +71,7 @@ trait HasSummary
      */
     public function summarizeSum(?string $label = null, string $scope = 'query'): static
     {
-        return $this->summarize('sum', $label ?? 'Součet', $scope);
+        return $this->summarize('sum', $label ?? Trans::get('wire-table::messages.summary_sum'), $scope);
     }
 
     /**
@@ -75,7 +79,7 @@ trait HasSummary
      */
     public function summarizeAvg(?string $label = null, string $scope = 'query'): static
     {
-        return $this->summarize('avg', $label ?? 'Průměr', $scope);
+        return $this->summarize('avg', $label ?? Trans::get('wire-table::messages.summary_avg'), $scope);
     }
 
     /**
@@ -83,7 +87,7 @@ trait HasSummary
      */
     public function summarizeCount(?string $label = null, string $scope = 'query'): static
     {
-        return $this->summarize('count', $label ?? 'Počet', $scope);
+        return $this->summarize('count', $label ?? Trans::get('wire-table::messages.summary_count'), $scope);
     }
 
     /**
@@ -91,7 +95,7 @@ trait HasSummary
      */
     public function summarizeMin(?string $label = null, string $scope = 'query'): static
     {
-        return $this->summarize('min', $label ?? 'Min', $scope);
+        return $this->summarize('min', $label ?? Trans::get('wire-table::messages.summary_min'), $scope);
     }
 
     /**
@@ -99,7 +103,7 @@ trait HasSummary
      */
     public function summarizeMax(?string $label = null, string $scope = 'query'): static
     {
-        return $this->summarize('max', $label ?? 'Max', $scope);
+        return $this->summarize('max', $label ?? Trans::get('wire-table::messages.summary_max'), $scope);
     }
 
     /**
@@ -107,7 +111,7 @@ trait HasSummary
      */
     public function summarizeRange(?string $label = null, string $scope = 'query'): static
     {
-        return $this->summarize('range', $label ?? 'Rozsah', $scope);
+        return $this->summarize('range', $label ?? Trans::get('wire-table::messages.summary_range'), $scope);
     }
 
     public function hasSummary(): bool
@@ -115,6 +119,9 @@ trait HasSummary
         return ! empty($this->summaries);
     }
 
+    /**
+     * @return array<int, array<string, mixed>>
+     */
     public function getSummaries(): array
     {
         return $this->summaries;
@@ -123,11 +130,11 @@ trait HasSummary
     /**
      * Compute all summaries for this column.
      *
-     * @param  Collection  $pageRecords  Records on current page
-     * @param  Builder|null  $query  Full query (for 'query' scope)
-     * @return array [['label' => string, 'value' => mixed], ...]
+     * @param  Collection<int, mixed>  $pageRecords  Records on current page
+     * @param  Builder<Model>|null  $query  Full query (for 'query' scope)
+     * @return array<int, array<string, mixed>>
      */
-    public function computeSummaries($pageRecords, $query = null): array
+    public function computeSummaries(Collection $pageRecords, ?Builder $query = null): array
     {
         $results = [];
 
@@ -154,12 +161,15 @@ trait HasSummary
 
     /**
      * Compute a single summary value.
+     *
+     * @param  Collection<int, mixed>  $pageRecords
+     * @param  Builder<Model>|null  $query
      */
     protected function computeSingleSummary(
         string|Closure $type,
         string $scope,
-        $pageRecords,
-        $query,
+        Collection $pageRecords,
+        ?Builder $query,
     ): mixed {
         $columnName = $this->getName();
 
@@ -183,8 +193,10 @@ trait HasSummary
 
     /**
      * Compute summary using DB aggregation (efficient for large datasets).
+     *
+     * @param  Builder<Model>  $query
      */
-    protected function computeQuerySummary(string $type, string $column, $query): mixed
+    protected function computeQuerySummary(string $type, string $column, Builder $query): mixed
     {
         // Clone to not affect original query
         $q = clone $query;
@@ -202,8 +214,10 @@ trait HasSummary
 
     /**
      * Compute summary from in-memory collection.
+     *
+     * @param  Collection<int, mixed>  $values
      */
-    protected function computeCollectionSummary(string $type, $values): mixed
+    protected function computeCollectionSummary(string $type, Collection $values): mixed
     {
         if ($values->isEmpty()) {
             return match ($type) {
@@ -230,16 +244,16 @@ trait HasSummary
     protected function getDefaultSummaryLabel(string|Closure $type): string
     {
         if ($type instanceof Closure) {
-            return 'Celkem';
+            return Trans::get('wire-table::messages.summary_total');
         }
 
         return match ($type) {
-            'sum' => 'Součet',
-            'avg' => 'Průměr',
-            'count' => 'Počet',
-            'min' => 'Min',
-            'max' => 'Max',
-            'range' => 'Rozsah',
+            'sum' => Trans::get('wire-table::messages.summary_sum'),
+            'avg' => Trans::get('wire-table::messages.summary_avg'),
+            'count' => Trans::get('wire-table::messages.summary_count'),
+            'min' => Trans::get('wire-table::messages.summary_min'),
+            'max' => Trans::get('wire-table::messages.summary_max'),
+            'range' => Trans::get('wire-table::messages.summary_range'),
             default => ucfirst($type),
         };
     }

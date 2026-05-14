@@ -55,6 +55,9 @@ class Form implements Htmlable
 
     // ─── Schema & state ────────────────────────────────────────────
 
+    /**
+     * @param  array<int, mixed>  $components
+     */
     public function schema(array $components): static
     {
         $this->configBuilder->schema($components);
@@ -72,6 +75,9 @@ class Form implements Htmlable
         return $this;
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function fill(array $data): static
     {
         $this->getRuntime()->fill($data);
@@ -79,11 +85,17 @@ class Form implements Htmlable
         return $this;
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function state(array $data): static
     {
         return $this->fill($data);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getState(): array
     {
         return $this->getRuntime()->getState();
@@ -151,6 +163,9 @@ class Form implements Htmlable
 
     // ─── Validation ────────────────────────────────────────────────
 
+    /**
+     * @param  array<string, string>  $messages
+     */
     public function validationMessages(array $messages): static
     {
         $this->configBuilder->validationMessages($messages);
@@ -159,6 +174,9 @@ class Form implements Htmlable
         return $this;
     }
 
+    /**
+     * @return array<string, array<int, mixed>>
+     */
     public function getValidationRules(): array
     {
         $resolver = new FormValidationResolver(
@@ -170,6 +188,9 @@ class Form implements Htmlable
         return $resolver->getRules();
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function validate(): array
     {
         return $this->getRuntime()->validate();
@@ -210,6 +231,9 @@ class Form implements Htmlable
         return $this->getRuntime()->getFlatComponents();
     }
 
+    /**
+     * @return array<int, mixed>
+     */
     public function getSchema(): array
     {
         return $this->configBuilder->getSchema();

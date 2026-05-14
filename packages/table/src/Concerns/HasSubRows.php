@@ -6,6 +6,8 @@ namespace NyonCode\WireTable\Concerns;
 
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireTable\Columns\Column;
 
 /**
  * Trait HasSubRows
@@ -33,7 +35,11 @@ trait HasSubRows
     /** Eloquent relationship name for sub-rows */
     protected ?string $subRowRelation = null;
 
-    /** Columns to display in sub-rows */
+    /**
+     * Columns to display in sub-rows
+     *
+     * @var array<int, Column>
+     */
     protected array $subRowColumns = [];
 
     /** Custom query modifier for sub-rows */
@@ -77,6 +83,8 @@ trait HasSubRows
     /**
      * Set columns to display in sub-rows.
      * These can differ from the parent table columns.
+     *
+     * @param  array<int, Column>  $columns
      */
     public function subRowColumns(array $columns): static
     {
@@ -173,7 +181,7 @@ trait HasSubRows
 
     public function hasSubRows(): bool
     {
-        return $this->subRowRelation !== null;
+        return $this->subRowRelation !== null || ! empty($this->subRowColumns);
     }
 
     public function getSubRowRelation(): ?string
@@ -181,6 +189,9 @@ trait HasSubRows
         return $this->subRowRelation;
     }
 
+    /**
+     * @return array<int, Column>
+     */
     public function getSubRowColumns(): array
     {
         return $this->subRowColumns;
@@ -228,6 +239,8 @@ trait HasSubRows
 
     /**
      * Build the sub-rows query for a parent record.
+     *
+     * @return Builder<Model>
      */
     public function getSubRowsQuery(mixed $record): Builder
     {

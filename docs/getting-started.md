@@ -1,0 +1,270 @@
+# Getting Started
+
+## Requirements
+
+| Dependency | Version |
+|------------|---------|
+| PHP | ^8.2 |
+| Laravel | 10, 11, or 12 |
+| Livewire | 3.x |
+| Tailwind CSS | 3.x+ |
+| Alpine.js | 3.x+ (included with Livewire) |
+
+## Installation
+
+### Full ecosystem (table + forms + core)
+
+```bash
+composer require nyoncode/wire-table
+```
+
+### Only forms (forms + core)
+
+```bash
+composer require nyoncode/wire-forms
+```
+
+### Only core
+
+```bash
+composer require nyoncode/wire-core
+```
+
+### Sortable plugin (drag & drop row reordering)
+
+```bash
+composer require nyoncode/wire-sortable
+```
+
+Service providers register automatically via Laravel auto-discovery.
+
+## Tailwind CSS Configuration
+
+Add Wire view paths to your `tailwind.config.js`:
+
+```js
+module.exports = {
+    content: [
+        // ...your paths
+        './vendor/nyoncode/wire-core/resources/views/**/*.blade.php',
+        './vendor/nyoncode/wire-forms/resources/views/**/*.blade.php',
+        './vendor/nyoncode/wire-table/resources/views/**/*.blade.php',
+        './vendor/nyoncode/wire-sortable/resources/views/**/*.blade.php',
+    ],
+}
+```
+
+### Primary Color
+
+Wire components use `primary` as the default accent color (buttons, badges, focus rings, etc.). You must define it in your Tailwind config:
+
+**Tailwind 3** (`tailwind.config.js`):
+
+```js
+const colors = require('tailwindcss/colors')
+
+module.exports = {
+    theme: {
+        extend: {
+            colors: {
+                primary: colors.blue, // or any color palette
+            },
+        },
+    },
+}
+```
+
+**Tailwind 4** (`app.css`):
+
+```css
+@theme {
+    --color-primary-50: var(--color-blue-50);
+    --color-primary-100: var(--color-blue-100);
+    --color-primary-200: var(--color-blue-200);
+    --color-primary-300: var(--color-blue-300);
+    --color-primary-400: var(--color-blue-400);
+    --color-primary-500: var(--color-blue-500);
+    --color-primary-600: var(--color-blue-600);
+    --color-primary-700: var(--color-blue-700);
+    --color-primary-800: var(--color-blue-800);
+    --color-primary-900: var(--color-blue-900);
+    --color-primary-950: var(--color-blue-950);
+}
+```
+
+> Without a `primary` color defined, buttons and other interactive elements will be invisible (white text on a transparent background).
+
+## Config Publishing (optional)
+
+```bash
+php artisan vendor:publish --tag=wire-core-config
+php artisan vendor:publish --tag=wire-table-config
+php artisan vendor:publish --tag=wire-sortable-config
+```
+
+## View Publishing (optional)
+
+```bash
+php artisan vendor:publish --tag=wire-core-views
+php artisan vendor:publish --tag=wire-forms-views
+php artisan vendor:publish --tag=wire-table-views
+php artisan vendor:publish --tag=wire-sortable-views
+```
+
+---
+
+## Quick Start: Table
+
+```php
+use Livewire\Component;
+use NyonCode\WireTable\Concerns\WithTable;
+use NyonCode\WireTable\Table;
+use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\Columns\BadgeColumn;
+use NyonCode\WireTable\Filters\SelectFilter;
+use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Actions\DeleteAction;
+use NyonCode\WireCore\Actions\DeleteBulkAction;
+
+class UserTable extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(User::class)
+            ->columns([
+                TextColumn::make('name')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('email')
+                    ->searchable(),
+
+                BadgeColumn::make('role')
+                    ->colors([
+                        'primary' => 'admin',
+                        'success' => 'editor',
+                        'gray' => 'viewer',
+                    ]),
+
+                TextColumn::make('created_at')
+                    ->dateTime('d.m.Y')
+                    ->sortable(),
+            ])
+            ->filters([
+                SelectFilter::make('role')
+                    ->options([
+                        'admin' => 'Admin',
+                        'editor' => 'Editor',
+                        'viewer' => 'Viewer',
+                    ]),
+            ])
+            ->actions([
+                Action::make('edit')
+                    ->icon('pencil')
+                    ->url(fn (User $r) => route('users.edit', $r)),
+                DeleteAction::make(),
+            ])
+            ->bulkActions([
+                DeleteBulkAction::make(),
+            ])
+            ->defaultSort('name')
+            ->searchable()
+            ->paginated();
+    }
+}
+```
+
+```blade
+<div>
+    {{ $this->table }}
+</div>
+```
+
+---
+
+## Quick Start: Form
+
+```php
+use Livewire\Component;
+use NyonCode\WireForms\Forms\Form;
+use NyonCode\WireForms\Forms\WithForms;
+use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireForms\Components\Select;
+use NyonCode\WireForms\Components\Toggle;
+
+class EditUser extends Component
+{
+    use WithForms;
+
+    public array $data = [];
+
+    public function mount(User $user): void
+    {
+        $this->form()->model($user)->fill($user->toArray());
+    }
+
+    public function form(Form $form): Form
+    {
+        return $form
+            ->statePath('data')
+            ->model(User::class)
+            ->schema([
+                TextInput::make('name')->required()->maxLength(255),
+                TextInput::make('email')->email()->required(),
+                Select::make('role')
+                    ->options(['admin' => 'Admin', 'editor' => 'Editor', 'viewer' => 'Viewer'])
+                    ->required(),
+                Toggle::make('active'),
+            ])
+            ->successMessage('User saved.');
+    }
+
+    public function save(): void
+    {
+        $this->form()->save();
+    }
+}
+```
+
+```blade
+<form wire:submit="save">
+    {{ $this->form }}
+    <button type="submit">Save</button>
+</form>
+```
+
+---
+
+## Development (monorepo)
+
+```bash
+git clone ...
+composer install
+
+# Run all tests
+composer test
+
+# Per-package
+composer test:core    # 793 tests
+composer test:forms   # 212 tests
+composer test:table    # 369 tests
+composer test:sortable # 10 tests
+
+# Code style
+composer lint          # Pint (Laravel preset)
+
+# Static analysis
+composer analyse       # PHPStan level 6
+```
+
+## Next Steps
+
+- [Architecture](architecture.md) — understand the package structure
+- [Table columns](table/columns.md) — all 13 column types
+- [Form fields](forms/overview.md) — all field types and Form API
+- [Actions](core/actions.md) — row, bulk, header actions
+- [Plugin development](core/plugins.md) — extend the ecosystem
+- [Sortable rows](sortable/overview.md) — drag & drop row reordering

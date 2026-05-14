@@ -198,11 +198,11 @@ it('can set and get filters', function () {
 
 // ─── Empty State ────────────────────────────────────────────────────────────
 
-it('has default empty state texts in Czech', function () {
+it('has default empty state texts from translation', function () {
     $table = Table::make();
 
-    expect($table->getEmptyStateHeading())->toBe('Žádné záznamy')
-        ->and($table->getEmptyStateDescription())->toBe('Nebyly nalezeny žádné záznamy odpovídající vašemu vyhledávání.');
+    expect($table->getEmptyStateHeading())->toBe('empty_heading')
+        ->and($table->getEmptyStateDescription())->toBe('empty_description');
 });
 
 it('can set custom empty state', function () {

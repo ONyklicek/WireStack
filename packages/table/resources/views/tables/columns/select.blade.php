@@ -3,7 +3,7 @@
 @php
     $recordKey = $record->getKey();
     $columnName = $column->getName();
-    $placeholder = $column->getPlaceholder() ?? __('Select...');
+    $placeholder = $column->getPlaceholder() ?? __('wire-table::messages.select_placeholder');
     $options = $column->getOptions();
     $disabled = $column->isDisabled($record);
 @endphp

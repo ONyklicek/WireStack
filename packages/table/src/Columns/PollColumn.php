@@ -48,13 +48,13 @@ class PollColumn extends Column
     /** @var bool Whether to keep last content visible while loading */
     protected bool $keepContentWhileLoading = true;
 
-    /** @var array|Closure CSS classes for different states */
+    /** @var array<string, string>|Closure CSS classes for different states */
     protected array|Closure $stateClasses = [];
 
-    /** @var array|Closure Icons for different states */
+    /** @var array<string, string>|Closure Icons for different states */
     protected array|Closure $stateIcons = [];
 
-    /** @var array|Closure Colors for different states */
+    /** @var array<string, string>|Closure Colors for different states */
     protected array|Closure $stateColors = [];
 
     /** @var bool Whether to animate state transitions */
@@ -68,6 +68,7 @@ class PollColumn extends Column
 
     protected bool $isBadge = false;
 
+    /** @var array<string, string> */
     protected array $colors = [];
 
     protected string $size = 'md';
@@ -121,6 +122,9 @@ class PollColumn extends Column
         return $this;
     }
 
+    /**
+     * @param  array<string, string>  $colors
+     */
     public function colors(array $colors): static
     {
         $this->colors = $colors;
@@ -144,6 +148,8 @@ class PollColumn extends Column
 
     /**
      * Stop when status reaches a final state.
+     *
+     * @param  array<int, string>  $completeStates
      */
     public function stopOnComplete(
         string $statusColumn = 'status',
@@ -164,6 +170,8 @@ class PollColumn extends Column
 
     /**
      * Define multiple state displays at once.
+     *
+     * @param  array<string, Closure>  $displays
      */
     public function stateDisplays(array $displays): static
     {
@@ -186,6 +194,8 @@ class PollColumn extends Column
 
     /**
      * Set CSS classes for different states.
+     *
+     * @param  array<string, string>|Closure  $classes
      */
     public function stateClasses(array|Closure $classes): static
     {
@@ -304,6 +314,8 @@ class PollColumn extends Column
 
     /**
      * Set icons for different states.
+     *
+     * @param  array<string, string>|Closure  $icons
      */
     public function stateIcons(array|Closure $icons): static
     {
@@ -314,6 +326,8 @@ class PollColumn extends Column
 
     /**
      * Set colors for different states.
+     *
+     * @param  array<string, string>|Closure  $colors
      */
     public function stateColors(array|Closure $colors): static
     {
@@ -324,6 +338,8 @@ class PollColumn extends Column
 
     /**
      * Poll while status is "pending" or "processing".
+     *
+     * @param  array<int, string>  $pendingStates
      */
     public function pollWhilePending(
         string $statusColumn = 'status',
@@ -403,7 +419,7 @@ class PollColumn extends Column
 
         // Check for default state
         if ($this->defaultState !== null) {
-            $content = $this->evaluate($this->defaultState, $record);
+            $content = $this->evaluateForRecord($this->defaultState, $record);
 
             return $this->html ? (string) $content : e((string) $content);
         }
@@ -413,9 +429,9 @@ class PollColumn extends Column
     }
 
     /**
-     * Evaluate a value that may be a Closure.
+     * Evaluate a value that may be a Closure with record context.
      */
-    protected function evaluate(mixed $value, Model $record): mixed
+    protected function evaluateForRecord(mixed $value, Model $record): mixed
     {
         if ($value instanceof Closure) {
             return $value($record, $this);
@@ -447,7 +463,7 @@ class PollColumn extends Column
         $loadingIndicator = $this->renderLoadingIndicator($record);
 
         // Build the cell content
-        $position = $this->evaluate($this->loadingPosition, $record);
+        $position = $this->evaluateForRecord($this->loadingPosition, $record);
 
         $innerContent = '';
         if ($stateIconHtml) {
@@ -668,7 +684,7 @@ class PollColumn extends Column
             return '';
         }
 
-        $customIndicator = $this->evaluate($this->loadingIndicator, $record);
+        $customIndicator = $this->evaluateForRecord($this->loadingIndicator, $record);
         if ($customIndicator) {
             return (string) $customIndicator;
         }
@@ -691,6 +707,6 @@ class PollColumn extends Column
      */
     protected function getInterval(Model $record): int
     {
-        return (int) $this->evaluate($this->interval, $record);
+        return (int) $this->evaluateForRecord($this->interval, $record);
     }
 }

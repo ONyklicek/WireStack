@@ -26,7 +26,11 @@
     $hasVisibleColumns = count($visibleColumns) > 0;
     $filterableColumns = array_filter($table->getColumns(), fn($c) => $c->canView() && $c->isFilterable() && $component->isColumnVisible($c->getName()));
     $hasColumnFilters = count($filterableColumns) > 0;
-    $colSpan = ($isSelectable ? 1 : 0) + count($visibleColumns) + ($hasActions ? 1 : 0);
+    $hasSubRows = $table->hasSubRows();
+    $isSubRowsExpandable = $hasSubRows && $table->isSubRowsExpandable();
+    $subRowColumns = $hasSubRows ? $table->getSubRowColumns() : [];
+    $visibleSubRowColumns = $hasSubRows ? array_filter($subRowColumns, fn($c) => $c->canView()) : [];
+    $colSpan = ($isSelectable ? 1 : 0) + count($visibleColumns) + ($hasActions ? 1 : 0) + ($hasSubRows ? 1 : 0);
     $toggleableColumns = array_filter($table->getColumns(), fn($c) => $c->isToggleable() && $c->canView());
     $visibleToggleableCount = count(array_filter($toggleableColumns, fn($c) => $component->isColumnVisible($c->getName())));
 
@@ -123,7 +127,7 @@
                         </div>
                     </div>
 
-                    <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">{{ __('Loading table...') }}</p>
+                    <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">{{ __('wire-table::messages.loading_table') }}</p>
                 @endif
             </div>
         </div>
@@ -156,7 +160,7 @@
                                         <input
                                                 type="search"
                                                 wire:model.live.debounce.300ms="tableSearch"
-                                                placeholder="Hledat..."
+                                                placeholder="{{ __('wire-table::messages.search') }}..."
                                                 class="block w-full rounded-lg border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 pl-9 pr-3 py-2 text-sm placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 dark:text-white dark:placeholder-gray-500"
                                         >
                                     </div>
@@ -218,7 +222,12 @@
                             {{-- Right side: Polling, Header Actions, Column Toggle --}}
                             <div class="flex items-center gap-2">
                                 {{-- Polling Indicator --}}
-                                @include('tables.partials.polling-indicator')
+                                @include('wire-table::tables.partials.polling-indicator')
+
+                                {{-- Sub-rows Toolbar --}}
+                                @if($hasSubRows)
+                                    @include('wire-table::tables.partials.sub-rows-toolbar', ['table' => $table, 'component' => $component])
+                                @endif
 
                                 {{-- Header Actions --}}
                                 @if($hasHeaderActions)
@@ -259,7 +268,7 @@
                                                 @click="checkPosition(); open = !open"
                                                 type="button"
                                                 class="inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                                title="{{ __('Toggle columns') }}"
+                                                title="{{ __('wire-table::messages.toggle_columns') }}"
                                         >
                                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -351,7 +360,7 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                   d="M6 18L18 6M6 6l12 12"/>
                                         </svg>
-                                        {{ __('Deselect') }}
+                                        {{ __('wire-table::messages.deselect') }}
                                     </button>
                                 </div>
                             </div>
@@ -399,6 +408,13 @@
                                                     @endif
                                                 </button>
                                             </div>
+                                        </th>
+                                    @endif
+
+                                    {{-- Sub-row Toggle Header --}}
+                                    @if($hasSubRows)
+                                        <th scope="col" class="w-10 {{ $headerPadding }}">
+                                            {{ $table->getSubRowsToggleLabel() ?? '' }}
                                         </th>
                                     @endif
 
@@ -483,6 +499,11 @@
                                             <th class="{{ $headerPadding }}"></th>
                                         @endif
 
+                                        {{-- Sub-row Toggle Filter Cell --}}
+                                        @if($hasSubRows)
+                                            <th class="{{ $headerPadding }}"></th>
+                                        @endif
+
                                         {{-- Actions Filter Cell (Start Position) --}}
                                         @if($hasActions && $actionsPosition === 'start')
                                             <th class="{{ $headerPadding }}"></th>
@@ -506,7 +527,7 @@
                                                             type="button"
                                                             wire:click="resetColumnFilters"
                                                             class="inline-flex items-center justify-center p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-                                                            title="{{ __('Reset column filters') }}"
+                                                            title="{{ __('wire-table::messages.filter_reset_column') }}"
                                                     >
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                              viewBox="0 0 24 24">
@@ -557,6 +578,18 @@
                                             </td>
                                         @endif
 
+                                        {{-- Sub-row Toggle Cell --}}
+                                        @if($hasSubRows)
+                                            <td class="w-10 {{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }}">
+                                                @if($isSubRowsExpandable)
+                                                    @include('wire-table::tables.partials.sub-row-toggle', [
+                                                        'recordKey' => $recordKey,
+                                                        'isExpanded' => $component->isRowExpanded($recordKey),
+                                                    ])
+                                                @endif
+                                            </td>
+                                        @endif
+
                                         {{-- Actions Cell (Start Position) --}}
                                         @if($hasActions && $actionsPosition === 'start')
                                             <td class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }}">
@@ -597,6 +630,23 @@
                                             </td>
                                         @endif
                                     </tr>
+
+                                    {{-- Sub-rows --}}
+                                    @if($hasSubRows && ($component->isRowExpanded($recordKey) || $component->flattenMode))
+                                        @php
+                                            $subRows = $component->getSubRows($record);
+                                        @endphp
+                                        @include('wire-table::tables.partials.sub-rows', [
+                                            'table' => $table,
+                                            'component' => $component,
+                                            'record' => $record,
+                                            'recordKey' => $recordKey,
+                                            'subRows' => $subRows,
+                                            'colSpan' => $colSpan,
+                                            'cellPadding' => $cellPadding,
+                                            'isBordered' => $isBordered,
+                                        ])
+                                    @endif
                                 @empty
                                     <tr>
                                         <td colspan="{{ $colSpan }}" class="px-6 py-16 text-center">
@@ -625,14 +675,14 @@
                                                 <div>
                                                     <h3 class="text-base font-medium text-gray-900 dark:text-white">
                                                         @if($isEmptyDueToFilter)
-                                                            Nic nenalezeno
+                                                            {{ __('wire-table::messages.empty_filter_heading') }}
                                                         @else
                                                             {{ $table->getEmptyStateHeading() }}
                                                         @endif
                                                     </h3>
                                                     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                                                         @if($isEmptyDueToFilter)
-                                                            {{ __('No records match your search. Try adjusting the filters.') }}
+                                                            {{ __('wire-table::messages.empty_no_records_match') }}
                                                         @else
                                                             {{ $table->getEmptyStateDescription() }}
                                                         @endif
@@ -650,7 +700,7 @@
                                                                   stroke-width="2"
                                                                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                                                         </svg>
-                                                        Resetovat filtry
+                                                        {{ __('wire-table::messages.filter_reset') }}
                                                     </button>
                                                 @endif
                                             </div>
@@ -672,10 +722,10 @@
                                     </div>
                                     <div>
                                         <h3 class="text-base font-medium text-gray-900 dark:text-white">
-                                            {{ __('No columns to display') }}
+                                            {{ __('wire-table::messages.empty_no_columns') }}
                                         </h3>
                                         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                            {{ __('Select at least one column to display using the button above.') }}
+                                            {{ __('wire-table::messages.empty_no_columns_hint') }}
                                         </p>
                                     </div>
                                 </div>
@@ -686,16 +736,16 @@
                     {{-- Mobile Cards (Stacked Layout) --}}
                     @if($isStackedOnMobile && $hasVisibleColumns)
                         <div class="{{ $cardsVisibleClass }}">
+                            @php
+                                $mobileColumns = array_values($visibleColumns);
+                                $firstColumn = $mobileColumns[0] ?? null;
+                                $restColumns = array_slice($mobileColumns, 1);
+                            @endphp
                             @forelse($records as $record)
                                 @php
-                                    $primaryKey = $table->getPrimaryKey();
-                                    $recordKey = $record->{$primaryKey};
+                                    $recordKey = $record->{$table->getPrimaryKey()};
                                     $isSelected = in_array((string) $recordKey, $component->selectedRecords);
                                     $recordUrl = $table->getRecordUrl($record);
-                                    $columns = $table->getColumns();
-                                    $visibleColumns = array_values(array_filter($columns, fn($c) => $c->canView() && $component->isColumnVisible($c->getName())));
-                                    $firstColumn = $visibleColumns[0] ?? null;
-                                    $restColumns = array_slice($visibleColumns, 1);
                                 @endphp
                                 <div
                                         class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 {{ $isSelected ? 'ring-2 ring-primary-500 ring-inset bg-primary-50/50 dark:bg-primary-900/30' : '' }}">
@@ -750,13 +800,13 @@
                                     @if(count($restColumns) > 0)
                                         <div class="px-4 pb-4 {{ $isSelectable ? 'pl-12' : '' }}">
                                             <dl class="grid grid-cols-2 gap-x-4 gap-y-2">
+                                                @php $restCount = count($restColumns); @endphp
                                                 @foreach($restColumns as $index => $column)
                                                     @php
                                                         $colContent = $column->hasResponsiveDisplay()
                                                             ? $column->renderMobileCell($record)
                                                             : $column->renderCell($record);
-                                                        // Span full width if it's the last item and odd number
-                                                        $isLastOdd = ($index === count($restColumns) - 1) && (count($restColumns) % 2 === 1);
+                                                        $isLastOdd = ($index === $restCount - 1) && ($restCount % 2 === 1);
                                                     @endphp
                                                     <div class="{{ $isLastOdd ? 'col-span-2' : 'col-span-1' }}">
                                                         <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">
@@ -768,6 +818,56 @@
                                                     </div>
                                                 @endforeach
                                             </dl>
+                                        </div>
+                                    @endif
+
+                                    {{-- Sub-rows (Mobile) --}}
+                                    @if($hasSubRows && ($component->isRowExpanded($recordKey) || $component->flattenMode))
+                                        @php $subRows = $component->getSubRows($record); @endphp
+                                        @if($subRows->isNotEmpty())
+                                            <div class="border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/80 dark:bg-gray-800/50">
+                                                {{-- Toggle header --}}
+                                                @if($isSubRowsExpandable)
+                                                    <button
+                                                        type="button"
+                                                        wire:click="toggleRowExpansion('{{ $recordKey }}')"
+                                                        class="w-full flex items-center gap-2 px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400"
+                                                    >
+                                                        <svg class="w-3 h-3 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                                        </svg>
+                                                        {{ $table->getSubRowsToggleLabel() ?? __('wire-table::messages.details') }}
+                                                    </button>
+                                                @endif
+
+                                                <dl class="px-4 pb-3 grid grid-cols-2 gap-x-4 gap-y-2 {{ $isSelectable ? 'pl-12' : '' }}">
+                                                    @foreach($subRows as $subRow)
+                                                        @foreach($visibleSubRowColumns as $subCol)
+                                                            <div class="col-span-1">
+                                                                <dt class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">
+                                                                    {{ $subCol->getLabel() }}
+                                                                </dt>
+                                                                <dd class="text-sm text-gray-700 dark:text-gray-300">
+                                                                    {!! $subCol->renderCell($subRow) !!}
+                                                                </dd>
+                                                            </div>
+                                                        @endforeach
+                                                    @endforeach
+                                                </dl>
+                                            </div>
+                                        @endif
+                                    @elseif($hasSubRows && $isSubRowsExpandable)
+                                        <div class="border-t border-gray-100 dark:border-gray-700/50">
+                                            <button
+                                                type="button"
+                                                wire:click="toggleRowExpansion('{{ $recordKey }}')"
+                                                class="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                                            >
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                                </svg>
+                                                {{ $table->getSubRowsToggleLabel() ?? __('wire-table::messages.details') }}
+                                            </button>
                                         </div>
                                     @endif
                                 </div>
@@ -782,7 +882,7 @@
                                             </svg>
                                         </div>
                                         <p class="text-sm text-gray-500 dark:text-gray-400">
-                                            {{ $table->getEmptyStateHeading() ?? __('No records') }}
+                                            {{ $table->getEmptyStateHeading() ?? __('wire-table::messages.empty_heading') }}
                                         </p>
                                     </div>
                                 </div>
@@ -805,7 +905,7 @@
                             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 {{-- Per Page Selector - Always visible when paginated --}}
                                 <div class="flex items-center gap-2">
-                                    <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('Show') }}</span>
+                                    <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('wire-table::messages.show') }}</span>
                                     <select
                                             wire:model.live="tablePerPage"
                                             class="rounded-lg border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 focus:border-primary-500 focus:ring-primary-500 py-1.5"
@@ -814,22 +914,22 @@
                                             <option value="{{ $option }}">{{ $option }}</option>
                                         @endforeach
                                     </select>
-                                    <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('records') }}</span>
+                                    <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('wire-table::messages.records') }}</span>
                                 </div>
 
                                 {{-- Results Info - Always visible when paginated --}}
                                 <div class="text-sm text-gray-500 dark:text-gray-400">
-                                    {{ __('Showing') }} <span
+                                    {{ __('wire-table::messages.showing') }} <span
                                             class="font-medium text-gray-700 dark:text-gray-300">{{ $from }}</span> -
-                                    <span class="font-medium text-gray-700 dark:text-gray-300">{{ $to }}</span> {{ __('of') }} <span
+                                    <span class="font-medium text-gray-700 dark:text-gray-300">{{ $to }}</span> {{ __('wire-table::messages.of') }} <span
                                             class="font-medium text-gray-700 dark:text-gray-300">{{ $total }}</span>
-                                    {{ __('records') }}
+                                    {{ __('wire-table::messages.records') }}
                                 </div>
 
                                 {{-- Pagination Links - Only when multiple pages --}}
                                 @if($hasMultiplePages)
                                     <div>
-                                        {{ $records->links('tables.partials.pagination') }}
+                                        {{ $records->links('wire-table::tables.partials.pagination') }}
                                     </div>
                                 @endif
                             </div>
@@ -841,6 +941,7 @@
                 @if($component->showActionModal)
                     @php
                         $modalData = $component->getActionModalData();
+                        $actionFormInstance = $component->getActionModalFormInstance();
                         $isSlideOver = $modalData['slideOver'] ?? false;
                         $isSlideOverOnMobile = $modalData['slideOverOnMobile'] ?? false;
                         $isFullScreenMobile = $modalData['fullScreenOnMobile'] ?? false;
@@ -914,7 +1015,9 @@
 
                                                 {{-- Content --}}
                                                 <div class="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-                                                    @include('tables.partials.modal-form', ['modalData' => $modalData])
+                                                    @if($actionFormInstance)
+                                                        {!! $actionFormInstance->toHtml() !!}
+                                                    @endif
                                                 </div>
 
                                                 {{-- Footer --}}
@@ -1101,7 +1204,9 @@
                                                     {{-- Content - scrollable --}}
                                                     <div
                                                             class="mt-4 flex-1 overflow-y-auto -mx-4 px-4 sm:-mx-6 sm:px-6">
-                                                        @include('tables.partials.modal-form', ['modalData' => $modalData])
+                                                        @if($actionFormInstance)
+                                                            {!! $actionFormInstance->toHtml() !!}
+                                                        @endif
                                                     </div>
 
                                                     {{-- Footer Buttons - fixed --}}
@@ -1137,92 +1242,8 @@
                             @endif {{-- End modalData check --}}
                             @endif
 
-                            {{-- Legacy Confirmation Modal (Backwards Compatibility) --}}
-                            @if($component->showConfirmationModal)
-                                @php $modalData = $component->getConfirmationModalData(); @endphp
-                                <div
-                                        x-data="{ show: @entangle('showConfirmationModal') }"
-                                        x-show="show"
-                                        x-cloak
-                                        class="fixed inset-0 z-50 overflow-y-auto"
-                                        aria-labelledby="modal-title"
-                                        role="dialog"
-                                        aria-modal="true"
-                                >
-                                    <div
-                                            class="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-                                        {{-- Backdrop --}}
-                                        <div
-                                                x-show="show"
-                                                x-transition:enter="ease-out duration-300"
-                                                x-transition:enter-start="opacity-0"
-                                                x-transition:enter-end="opacity-100"
-                                                x-transition:leave="ease-in duration-200"
-                                                x-transition:leave-start="opacity-100"
-                                                x-transition:leave-end="opacity-0"
-                                                class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/80 backdrop-blur-sm transition-opacity"
-                                                @click="show = false; $wire.closeConfirmationModal()"
-                                        ></div>
-
-                                        <span class="hidden sm:inline-block sm:h-screen sm:align-middle"
-                                              aria-hidden="true">&#8203;</span>
-
-                                        {{-- Modal Panel --}}
-                                        <div
-                                                x-show="show"
-                                                x-transition:enter="ease-out duration-300"
-                                                x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                                                x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-                                                x-transition:leave="ease-in duration-200"
-                                                x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-                                                x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                                                class="relative inline-block transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 sm:align-middle"
-                                        >
-                                            <div class="sm:flex sm:items-start">
-                                                <div
-                                                        class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30 sm:mx-0 sm:h-10 sm:w-10">
-                                                    <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none"
-                                                         stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                              stroke-width="2"
-                                                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                                                    </svg>
-                                                </div>
-                                                <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white"
-                                                        id="modal-title">
-                                                        {{ $modalData['title'] }}
-                                                    </h3>
-                                                    <div class="mt-2">
-                                                        <p class="text-sm text-gray-500 dark:text-gray-400">
-                                                            {{ $modalData['description'] }}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse gap-3">
-                                                <button
-                                                        type="button"
-                                                        wire:click="executeConfirmedAction"
-                                                        class="inline-flex w-full justify-center rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:w-auto"
-                                                >
-                                                    {{ $modalData['confirmLabel'] }}
-                                                </button>
-                                                <button
-                                                        type="button"
-                                                        wire:click="closeConfirmationModal"
-                                                        class="mt-3 inline-flex w-full justify-center rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 sm:mt-0 sm:w-auto"
-                                                >
-                                                    {{ $modalData['cancelLabel'] }}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endif
-
                             {{-- Halt Modal (Dynamic Confirmation) --}}
-                            @include('tables.partials.halt-modal')
+                            @include('wire-table::tables.partials.halt-modal')
                         </div>
 
                         {{-- Close polling wrapper --}}

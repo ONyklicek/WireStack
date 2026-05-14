@@ -39,7 +39,7 @@ class BulkAction extends BaseAction
             return '';
         }
 
-        return view('tables.actions.bulk-action', ['action' => $this])->render();
+        return view('wire-table::tables.actions.bulk-action', ['action' => $this])->render();
     }
 
     /**

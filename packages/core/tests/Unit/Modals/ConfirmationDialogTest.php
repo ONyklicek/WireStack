@@ -63,18 +63,18 @@ it('has no submit label when informative', function () {
     expect(ConfirmationDialog::make()->informative()->getSubmitLabel())->toBeNull();
 });
 
-it('uses Zavřít as cancel label when informative', function () {
-    expect(ConfirmationDialog::make()->informative()->getCancelLabel())->toBe('Zavřít');
+it('uses close label when informative', function () {
+    expect(ConfirmationDialog::make()->informative()->getCancelLabel())->toBe('confirm_close');
 });
 
 // ─── Labels ────────────────────────────────────────────────────────────
 
-it('has default Czech submit label', function () {
-    expect(ConfirmationDialog::make()->getSubmitLabel())->toBe('Potvrdit');
+it('has default submit label from translation', function () {
+    expect(ConfirmationDialog::make()->getSubmitLabel())->toBe('confirm_submit');
 });
 
-it('has default Czech cancel label', function () {
-    expect(ConfirmationDialog::make()->getCancelLabel())->toBe('Zrušit');
+it('has default cancel label from translation', function () {
+    expect(ConfirmationDialog::make()->getCancelLabel())->toBe('confirm_cancel');
 });
 
 it('can set custom labels', function () {
@@ -91,18 +91,18 @@ it('can set custom labels', function () {
 it('creates delete preset', function () {
     $dialog = ConfirmationDialog::delete('User');
 
-    expect($dialog->getHeading())->toBe('Smazat záznam')
-        ->and($dialog->getDescription())->toContain('User')
+    expect($dialog->getHeading())->toBe('delete_heading')
+        ->and($dialog->getDescription())->toBe('delete_description_named')
         ->and($dialog->getIcon())->toBe('trash')
         ->and($dialog->getIconColor())->toBe('danger')
-        ->and($dialog->getSubmitLabel())->toBe('Smazat')
+        ->and($dialog->getSubmitLabel())->toBe('delete_submit')
         ->and($dialog->isDanger())->toBeTrue();
 });
 
 it('creates delete preset without record name', function () {
     $dialog = ConfirmationDialog::delete();
 
-    expect($dialog->getDescription())->toContain('tento záznam');
+    expect($dialog->getDescription())->toBe('delete_description');
 });
 
 it('creates danger preset', function () {
@@ -172,5 +172,5 @@ it('serializes informative dialog correctly', function () {
 
     expect($array['submitLabel'])->toBeNull()
         ->and($array['isInformative'])->toBeTrue()
-        ->and($array['cancelLabel'])->toBe('Zavřít');
+        ->and($array['cancelLabel'])->toBe('confirm_close');
 });

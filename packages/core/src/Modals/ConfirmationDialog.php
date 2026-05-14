@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Modals;
 
+use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Modals\Concerns\HasFooterActions;
 use NyonCode\WireCore\Modals\Concerns\HasModalProperties;
 use NyonCode\WireCore\Modals\Contracts\ModalContract;
@@ -64,14 +65,14 @@ class ConfirmationDialog implements ModalContract
     public static function delete(?string $recordName = null): static
     {
         $description = $recordName
-            ? "Opravdu chcete smazat \"{$recordName}\"? Tato akce je nevratná."
-            : 'Opravdu chcete smazat tento záznam? Tato akce je nevratná.';
+            ? Trans::get('wire-core::actions.delete_description_named', ['name' => $recordName])
+            : Trans::get('wire-core::actions.delete_description');
 
         return static::make()
-            ->heading('Smazat záznam')
+            ->heading(Trans::get('wire-core::actions.delete_heading'))
             ->description($description)
             ->icon('trash', 'danger')
-            ->submitLabel('Smazat')
+            ->submitLabel(Trans::get('wire-core::actions.delete_submit'))
             ->danger();
     }
 
@@ -155,7 +156,7 @@ class ConfirmationDialog implements ModalContract
     {
         $this->isInformative = $informative;
         if ($informative) {
-            $this->cancelLabel = $this->cancelLabel ?? 'Zavřít';
+            $this->cancelLabel = $this->cancelLabel ?? Trans::get('wire-core::actions.confirm_close');
         }
 
         return $this;
@@ -194,16 +195,16 @@ class ConfirmationDialog implements ModalContract
             return null;
         }
 
-        return $this->submitLabel ?? 'Potvrdit';
+        return $this->submitLabel ?? Trans::get('wire-core::actions.confirm_submit');
     }
 
     public function getCancelLabel(): string
     {
         if ($this->isInformative) {
-            return $this->cancelLabel ?? 'Zavřít';
+            return $this->cancelLabel ?? Trans::get('wire-core::actions.confirm_close');
         }
 
-        return $this->cancelLabel ?? 'Zrušit';
+        return $this->cancelLabel ?? Trans::get('wire-core::actions.confirm_cancel');
     }
 
     /**

@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
+use NyonCode\WireCore\Core\Support\Deprecation;
+use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Concerns\HasSqlDebug;
@@ -26,6 +28,7 @@ class Table implements Htmlable
 
     protected ?string $model = null;
 
+    /** @var Builder<Model>|null */
     protected ?Builder $query = null;
 
     protected ?Closure $modifyQueryCallback = null;
@@ -123,12 +126,20 @@ class Table implements Htmlable
 
     protected bool $pollingVisible = true; // Only poll when tab is visible
 
+    // Pagination mode: 'standard' | 'simple' | 'cursor'
+    protected string $paginationMode = 'standard';
+
+    // Query caching
+    protected ?int $queryCacheTtl = null;
+
+    protected ?string $queryCacheKey = null;
+
     // Notification driver
     protected ?NotificationDriver $notificationDriver = null;
 
     public static function make(): static
     {
-        return new static;
+        return new static; // @phpstan-ignore new.static
     }
 
     public function model(string $model): static
@@ -169,7 +180,7 @@ class Table implements Htmlable
     /**
      * Get raw SQL and bindings separately.
      *
-     * @return array{sql: string, bindings: array}
+     * @return array{sql: string, bindings: array<int, mixed>}
      */
     public function toRawSql(): array
     {
@@ -181,6 +192,9 @@ class Table implements Htmlable
         ];
     }
 
+    /**
+     * @return Builder<Model>
+     */
     public function getQuery(): Builder
     {
         $query = null;
@@ -201,6 +215,9 @@ class Table implements Htmlable
         return $query;
     }
 
+    /**
+     * @param  Builder<Model>  $query
+     */
     public function query(Builder $query): static
     {
         $this->query = $query;
@@ -357,6 +374,8 @@ class Table implements Htmlable
 
     /**
      * Get debug information about the table configuration.
+     *
+     * @return array<string, mixed>
      */
     public function debug(): array
     {
@@ -377,6 +396,90 @@ class Table implements Htmlable
         ];
     }
 
+    /**
+     * Debug the QueryPlan for the current table configuration.
+     *
+     * Shows the planned joins, filters, search, sorting, eager loads, and aggregates
+     * that the QueryPlanner would produce. Dev-only, disabled in production.
+     *
+     * @param  string|null  $search  Simulated search term
+     * @param  array<string, mixed>  $filterValues  Simulated filter values
+     * @param  string|null  $sortColumn  Simulated sort column
+     * @param  string  $sortDirection  Simulated sort direction
+     * @return array<string, mixed> QueryPlan debug info
+     */
+    public function debugQueryPlan(
+        ?string $search = null,
+        array $filterValues = [],
+        ?string $sortColumn = null,
+        string $sortDirection = 'asc',
+    ): array {
+        $service = new Concerns\TableQueryService;
+        $baseQuery = $this->getQuery();
+
+        // Build query to populate the plan
+        $modifiedQuery = $service->buildQuery(
+            baseQuery: $baseQuery,
+            table: $this,
+            search: $search,
+            filterValues: $filterValues,
+            sortColumn: $sortColumn ?? $this->defaultSort,
+            sortDirection: $sortDirection,
+        );
+
+        $plan = $service->getLastPlan();
+
+        if ($plan === null) {
+            return ['error' => 'No QueryPlan generated'];
+        }
+
+        return [
+            'query_plan' => [
+                'joins' => array_map(fn ($j) => [
+                    'table' => $j->table,
+                    'alias' => $j->alias,
+                    'type' => $j->type,
+                    'first' => $j->firstColumn,
+                    'operator' => $j->operator,
+                    'second' => $j->secondColumn,
+                ], $plan->joins),
+                'eager_loads' => $plan->eagerLoads,
+                'aggregates' => array_map(fn ($a) => [
+                    'relation' => $a->relation,
+                    'function' => $a->function,
+                    'column' => $a->column,
+                ], $plan->aggregates),
+                'filters' => array_map(fn ($f) => [
+                    'column' => $f->column,
+                    'operator' => $f->operator,
+                    'value' => $f->value,
+                    'table_alias' => $f->tableAlias ?? null,
+                    'is_relation' => $f->isRelation,
+                ], $plan->filters),
+                'search_clauses' => array_map(fn ($s) => [
+                    'column' => $s->column,
+                    'table_alias' => $s->tableAlias,
+                    'is_relation' => $s->isRelation,
+                ], $plan->searchClauses),
+                'sort_clauses' => array_map(fn ($s) => [
+                    'column' => $s->column,
+                    'direction' => $s->direction,
+                    'table_alias' => $s->tableAlias ?? null,
+                    'is_relation' => $s->isRelation,
+                ], $plan->sortClauses),
+                'selected_columns' => $plan->selectedColumns,
+                'scopes' => $plan->scopes,
+                'with_soft_deletes' => $plan->withSoftDeletes,
+            ],
+            'final_sql' => static::builderToSql($modifiedQuery),
+            'raw_sql' => $modifiedQuery->toSql(),
+            'bindings' => $modifiedQuery->getBindings(),
+        ];
+    }
+
+    /**
+     * @param  array<int, Column>  $columns
+     */
     public function columns(array $columns): static
     {
         $this->columns = $columns;
@@ -384,11 +487,17 @@ class Table implements Htmlable
         return $this;
     }
 
+    /**
+     * @return array<int, Column>
+     */
     public function getColumns(): array
     {
         return $this->columns;
     }
 
+    /**
+     * @param  array<int, Filter>  $filters
+     */
     public function filters(array $filters): static
     {
         $this->filters = $filters;
@@ -396,11 +505,17 @@ class Table implements Htmlable
         return $this;
     }
 
+    /**
+     * @return array<int, Filter>
+     */
     public function getFilters(): array
     {
         return $this->filters;
     }
 
+    /**
+     * @param  array<int, Action|ActionGroup>  $actions
+     */
     public function actions(array $actions): static
     {
         $this->actions = $actions;
@@ -418,6 +533,8 @@ class Table implements Htmlable
 
     /**
      * Get flat list of all actions (expanding ActionGroups)
+     *
+     * @return array<int, Action>
      */
     public function getAllActions(): array
     {
@@ -434,11 +551,17 @@ class Table implements Htmlable
         return $allActions;
     }
 
+    /**
+     * @return array<int, Action|ActionGroup>
+     */
     public function getActions(): array
     {
         return $this->actions;
     }
 
+    /**
+     * @param  array<int, Action>  $bulkActions
+     */
     public function bulkActions(array $bulkActions): static
     {
         $this->bulkActions = $bulkActions;
@@ -446,11 +569,17 @@ class Table implements Htmlable
         return $this;
     }
 
+    /**
+     * @return array<int, Action>
+     */
     public function getBulkActions(): array
     {
         return $this->bulkActions;
     }
 
+    /**
+     * @param  array<int, Action>  $headerActions
+     */
     public function headerActions(array $headerActions): static
     {
         $this->headerActions = $headerActions;
@@ -458,6 +587,9 @@ class Table implements Htmlable
         return $this;
     }
 
+    /**
+     * @return array<int, Action>
+     */
     public function getHeaderActions(): array
     {
         return $this->headerActions;
@@ -475,6 +607,9 @@ class Table implements Htmlable
         return $this->perPage;
     }
 
+    /**
+     * @param  array<int, int>  $options
+     */
     public function perPageOptions(array $options): static
     {
         $this->perPageOptions = $options;
@@ -482,6 +617,9 @@ class Table implements Htmlable
         return $this;
     }
 
+    /**
+     * @return array<int, int>
+     */
     public function getPerPageOptions(): array
     {
         return $this->perPageOptions;
@@ -554,12 +692,12 @@ class Table implements Htmlable
 
     public function getEmptyStateHeading(): ?string
     {
-        return $this->emptyStateHeading ?? 'Žádné záznamy';
+        return $this->emptyStateHeading ?? Trans::get('wire-table::messages.empty_heading');
     }
 
     public function getEmptyStateDescription(): ?string
     {
-        return $this->emptyStateDescription ?? 'Nebyly nalezeny žádné záznamy odpovídající vašemu vyhledávání.';
+        return $this->emptyStateDescription ?? Trans::get('wire-table::messages.empty_description');
     }
 
     public function getEmptyStateIcon(): ?string
@@ -839,10 +977,12 @@ class Table implements Htmlable
     // ==========================================
 
     /**
-     * Alias for poll().
+     * @deprecated Use poll() instead. Will be removed in v2.0.
      */
     public function polling(string $interval = '5s'): static
     {
+        Deprecation::method('polling', 'poll');
+
         return $this->poll($interval);
     }
 
@@ -953,6 +1093,8 @@ class Table implements Htmlable
 
     /**
      * Get full polling config for view.
+     *
+     * @return array<string, mixed>
      */
     public function getPollingConfig(): array
     {
@@ -993,6 +1135,104 @@ class Table implements Htmlable
     }
 
     // ==========================================
+    // Pagination Mode
+    // ==========================================
+
+    /**
+     * Use simple pagination (no total count query).
+     *
+     * More efficient for large datasets where you don't need to know
+     * the total number of records.
+     */
+    public function simplePagination(): static
+    {
+        $this->paginationMode = 'simple';
+
+        return $this;
+    }
+
+    /**
+     * Use cursor-based pagination.
+     *
+     * Most efficient for very large datasets with sequential access.
+     * Note: cursor pagination does not support jumping to arbitrary pages.
+     */
+    public function cursorPagination(): static
+    {
+        $this->paginationMode = 'cursor';
+
+        return $this;
+    }
+
+    /**
+     * Use standard pagination (default).
+     */
+    public function standardPagination(): static
+    {
+        $this->paginationMode = 'standard';
+
+        return $this;
+    }
+
+    public function getPaginationMode(): string
+    {
+        return $this->paginationMode;
+    }
+
+    // ==========================================
+    // Query Caching
+    // ==========================================
+
+    /**
+     * Cache query results for the given TTL (seconds).
+     *
+     * Uses Laravel's query cache via remember().
+     *
+     * @param  int  $ttl  Cache duration in seconds
+     * @param  string|null  $key  Custom cache key (auto-generated if null)
+     */
+    public function cacheQuery(int $ttl, ?string $key = null): static
+    {
+        $this->queryCacheTtl = $ttl;
+        $this->queryCacheKey = $key;
+
+        return $this;
+    }
+
+    public function getQueryCacheTtl(): ?int
+    {
+        return $this->queryCacheTtl;
+    }
+
+    public function getQueryCacheKey(): ?string
+    {
+        return $this->queryCacheKey;
+    }
+
+    public function isQueryCached(): bool
+    {
+        return $this->queryCacheTtl !== null;
+    }
+
+    // ==========================================
+    // Chunking for Bulk Operations
+    // ==========================================
+
+    /**
+     * Process all matching records in chunks.
+     *
+     * Useful for exports, bulk updates, or any operation that
+     * needs to process all records without loading them all at once.
+     *
+     * @param  int  $chunkSize  Number of records per chunk
+     * @param  Closure  $callback  Receives Collection of records per chunk
+     */
+    public function chunk(int $chunkSize, Closure $callback): bool
+    {
+        return $this->getQuery()->chunkById($chunkSize, $callback);
+    }
+
+    // ==========================================
     // Notification Driver
     // ==========================================
 
@@ -1020,14 +1260,20 @@ class Table implements Htmlable
         return $this->notificationDriver;
     }
 
+    /**
+     * @return array<int, Column>
+     */
     public function getSearchableColumns(): array
     {
-        return array_filter($this->columns, fn (Column $column) => $column->isSearchable());
+        return array_values(array_filter($this->columns, fn (Column $column) => $column->isSearchable()));
     }
 
+    /**
+     * @return array<int, Column>
+     */
     public function getSortableColumns(): array
     {
-        return array_filter($this->columns, fn (Column $column) => $column->isSortable());
+        return array_values(array_filter($this->columns, fn (Column $column) => $column->isSortable()));
     }
 
     public function __toString(): string

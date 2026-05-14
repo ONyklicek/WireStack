@@ -86,11 +86,10 @@
                         {{-- Form Fields --}}
                         @if($haltModal['hasForm'] ?? false)
                             <div class="mt-4">
-                                @php $haltFields = $haltModal['formFields'] ?? []; @endphp
-                                @include('tables.partials.modal-form', [
-                                    'modalData' => ['fields' => $haltFields],
-                                    'wireModel' => 'haltModalFormData'
-                                ])
+                                @php $haltFormInstance = $component->getHaltModalFormInstance(); @endphp
+                                @if($haltFormInstance)
+                                    {!! $haltFormInstance->toHtml() !!}
+                                @endif
                             </div>
                         @endif
                     </div>
@@ -111,7 +110,7 @@
                                 'bg-primary-600 hover:bg-primary-500 focus:ring-primary-500' => !in_array($haltModal['color'] ?? null, ['danger', 'success', 'warning']),
                             ])
                         >
-                            {{ $haltModal['submitLabel'] ?? __('Confirm') }}
+                            {{ $haltModal['submitLabel'] ?? __('wire-table::messages.confirm_submit') }}
                         </button>
                     @endunless
 
@@ -121,7 +120,7 @@
                         wire:click="closeHaltModal"
                         class="mt-3 inline-flex w-full justify-center rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 sm:mt-0 sm:w-auto"
                     >
-                        {{ $haltModal['informative'] ?? false ? __('Close') : ($haltModal['cancelLabel'] ?? __('Cancel')) }}
+                        {{ $haltModal['informative'] ?? false ? __('wire-table::messages.confirm_close') : ($haltModal['cancelLabel'] ?? __('wire-table::messages.confirm_cancel')) }}
                     </button>
                 </div>
             </div>

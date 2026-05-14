@@ -44,7 +44,7 @@
             <div class="py-1" role="menu">
                 @foreach($visibleActions as $dropAction)
                     @if($dropAction instanceof Action)
-                        @include('tables.actions.dropdown-item', ['action' => $dropAction, 'record' => $record])
+                        @include('wire-table::tables.actions.dropdown-item', ['action' => $dropAction, 'record' => $record])
                     @endif
                 @endforeach
             </div>

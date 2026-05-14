@@ -49,17 +49,17 @@ class ButtonColumn extends Column
     /** @var bool|Closure Whether to show confirmation dialog */
     protected bool|Closure $requiresConfirmation = false;
 
-    /** @var string|Closure Confirmation modal title */
-    protected string|Closure $confirmationTitle = 'Potvrdit akci';
+    /** @var string|Closure|null Confirmation modal title */
+    protected string|Closure|null $confirmationTitle = null;
 
-    /** @var string|Closure Confirmation modal description */
-    protected string|Closure $confirmationDescription = 'Opravdu chcete provést tuto akci?';
+    /** @var string|Closure|null Confirmation modal description */
+    protected string|Closure|null $confirmationDescription = null;
 
-    /** @var string|Closure Confirm button text */
-    protected string|Closure $confirmButtonText = 'Potvrdit';
+    /** @var string|Closure|null Confirm button text */
+    protected string|Closure|null $confirmButtonText = null;
 
-    /** @var string|Closure Cancel button text */
-    protected string|Closure $cancelButtonText = 'Zrušit';
+    /** @var string|Closure|null Cancel button text */
+    protected string|Closure|null $cancelButtonText = null;
 
     /** @var bool|Closure Whether button is disabled */
     protected bool|Closure $disabled = false;
@@ -79,7 +79,7 @@ class ButtonColumn extends Column
     /** @var Closure|null Condition for enabled state */
     protected ?Closure $enabledWhen = null;
 
-    /** @var array|Closure Extra attributes for the button */
+    /** @var array<string, mixed>|Closure Extra attributes for the button */
     protected array|Closure $extraButtonAttributes = [];
 
     /** @var string|null Icon position (before, after) */
@@ -228,6 +228,8 @@ class ButtonColumn extends Column
 
     /**
      * Set extra button attributes.
+     *
+     * @param  array<string, mixed>|Closure  $attributes
      */
     public function extraButtonAttributes(array|Closure $attributes): static
     {
@@ -314,24 +316,24 @@ class ButtonColumn extends Column
             return '';
         }
 
-        $buttonLabel = $this->evaluate($this->buttonLabel, $record) ?? $this->getLabel();
+        $buttonLabel = $this->evaluateForRecord($this->buttonLabel, $record) ?? $this->getLabel();
         $isDisabled = $this->isDisabledForRecord($record);
-        $showLoading = $this->evaluate($this->showLoading, $record);
-        $loadingText = $this->evaluate($this->loadingText, $record);
-        $url = $this->evaluate($this->urlCallback, $record);
-        $openInNewTab = $this->evaluate($this->openUrlInNewTab, $record);
+        $showLoading = $this->evaluateForRecord($this->showLoading, $record);
+        $loadingText = $this->evaluateForRecord($this->loadingText, $record);
+        $url = $this->evaluateForRecord($this->urlCallback, $record);
+        $openInNewTab = $this->evaluateForRecord($this->openUrlInNewTab, $record);
 
         $classes = $this->getButtonClasses($record);
         $iconHtml = $this->renderButtonIcon($record);
 
-        $extraAttributes = $this->evaluate($this->extraButtonAttributes, $record);
+        $extraAttributes = $this->evaluateForRecord($this->extraButtonAttributes, $record);
         $attributesString = '';
         foreach ($extraAttributes as $key => $value) {
             $attributesString .= ' '.e($key).'="'.e($value).'"';
         }
 
         // Disabled tooltip
-        $disabledTooltip = $isDisabled ? $this->evaluate($this->disabledTooltip, $record) : null;
+        $disabledTooltip = $isDisabled ? $this->evaluateForRecord($this->disabledTooltip, $record) : null;
         if ($disabledTooltip) {
             $attributesString .= ' title="'.e($disabledTooltip).'"';
         }
@@ -410,9 +412,9 @@ class ButtonColumn extends Column
     }
 
     /**
-     * Resolve a value that may be a Closure.
+     * Resolve a value that may be a Closure with record context.
      */
-    protected function evaluate(mixed $value, Model $record): mixed
+    protected function evaluateForRecord(mixed $value, Model $record): mixed
     {
         if ($value instanceof Closure) {
             return $value($record, $this);
@@ -430,7 +432,7 @@ class ButtonColumn extends Column
             return ! ($this->enabledWhen)($record, $this);
         }
 
-        return (bool) $this->evaluate($this->disabled, $record);
+        return (bool) $this->evaluateForRecord($this->disabled, $record);
     }
 
     /**
@@ -438,9 +440,9 @@ class ButtonColumn extends Column
      */
     protected function getButtonClasses(Model $record): string
     {
-        $color = $this->evaluate($this->buttonColor, $record);
-        $size = $this->evaluate($this->buttonSize, $record);
-        $variant = $this->evaluate($this->buttonVariant, $record);
+        $color = $this->evaluateForRecord($this->buttonColor, $record);
+        $size = $this->evaluateForRecord($this->buttonSize, $record);
+        $variant = $this->evaluateForRecord($this->buttonVariant, $record);
         $isDisabled = $this->isDisabledForRecord($record);
 
         $baseClasses =
@@ -496,12 +498,12 @@ class ButtonColumn extends Column
      */
     protected function renderButtonIcon(Model $record): string
     {
-        $icon = $this->evaluate($this->buttonIcon, $record);
+        $icon = $this->evaluateForRecord($this->buttonIcon, $record);
         if (! $icon) {
             return '';
         }
 
-        $size = $this->evaluate($this->buttonSize, $record);
+        $size = $this->evaluateForRecord($this->buttonSize, $record);
         $iconSize = match ($size) {
             'xs' => 'w-3.5 h-3.5',
             'sm' => 'w-4 h-4',
@@ -520,7 +522,7 @@ class ButtonColumn extends Column
      */
     protected function getWireClick(Model $record): string
     {
-        $requiresConfirmation = $this->evaluate($this->requiresConfirmation, $record);
+        $requiresConfirmation = $this->evaluateForRecord($this->requiresConfirmation, $record);
 
         if ($this->livewireAction) {
             $action = $this->livewireAction;
@@ -531,16 +533,16 @@ class ButtonColumn extends Column
                     action: '$action',
                     recordKey: '$recordKey',
                     title: '".
-                    addslashes($this->evaluate($this->confirmationTitle, $record)).
+                    addslashes($this->evaluateForRecord($this->confirmationTitle, $record)).
                     "',
                     description: '".
-                    addslashes($this->evaluate($this->confirmationDescription, $record)).
+                    addslashes($this->evaluateForRecord($this->confirmationDescription, $record)).
                     "',
                     confirmText: '".
-                    addslashes($this->evaluate($this->confirmButtonText, $record)).
+                    addslashes($this->evaluateForRecord($this->confirmButtonText, $record)).
                     "',
                     cancelText: '".
-                    addslashes($this->evaluate($this->cancelButtonText, $record)).
+                    addslashes($this->evaluateForRecord($this->cancelButtonText, $record)).
                     "'
                 })\"";
             }
@@ -558,16 +560,16 @@ class ButtonColumn extends Column
                     recordKey: '$recordKey',
                     column: '$columnName',
                     title: '".
-                    addslashes($this->evaluate($this->confirmationTitle, $record)).
+                    addslashes($this->evaluateForRecord($this->confirmationTitle, $record)).
                     "',
                     description: '".
-                    addslashes($this->evaluate($this->confirmationDescription, $record)).
+                    addslashes($this->evaluateForRecord($this->confirmationDescription, $record)).
                     "',
                     confirmText: '".
-                    addslashes($this->evaluate($this->confirmButtonText, $record)).
+                    addslashes($this->evaluateForRecord($this->confirmButtonText, $record)).
                     "',
                     cancelText: '".
-                    addslashes($this->evaluate($this->cancelButtonText, $record)).
+                    addslashes($this->evaluateForRecord($this->cancelButtonText, $record)).
                     "'
                 })\"";
             }

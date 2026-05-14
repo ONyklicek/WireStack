@@ -10,18 +10,15 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Str;
+use NyonCode\WireCore\Core\Capabilities\Capability;
+use NyonCode\WireCore\Core\Components\DataComponent;
+use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireTable\Concerns\HasSummary;
 
 /** @phpstan-consistent-constructor */
-class Column implements Htmlable
+class Column extends DataComponent implements Htmlable
 {
     use HasSummary;
-
-    /** @var string The name of the column (corresponds to model attribute or relationship) */
-    protected string $name;
-
-    /** @var string|null The display label for the column header */
-    protected ?string $label = null;
 
     /** @var bool Whether the column can be sorted */
     protected bool $sortable = false;
@@ -128,9 +125,6 @@ class Column implements Htmlable
     /** @var string|null Required permission to view this column */
     protected ?string $permission = null;
 
-    /** @var string|null Relationship name for related model attributes */
-    protected ?string $relation = null;
-
     /** @var bool Whether this column is for a pivot table */
     protected bool $isPivot = false;
 
@@ -226,35 +220,16 @@ class Column implements Htmlable
      */
     public function __construct(string $name)
     {
-        $this->name = $name;
-        $this->parseRelation($name);
-    }
-
-    /**
-     * Parse the relation from the column name.
-     */
-    private function parseRelation(string $name): void
-    {
-        if (Str::contains($name, '.')) {
-            $parts = explode('.', $name);
-            $this->relation = implode('.', array_slice($parts, 0, -1));
-        }
-    }
-
-    /**
-     * Create a new instance of the column.
-     */
-    public static function make(string $name): static
-    {
-        return new static($name);
+        parent::__construct($name);
     }
 
     /**
      * Get the relation of the column.
+     * Delegates to DataComponent's RelationPath infrastructure.
      */
     public function getRelation(): ?string
     {
-        return $this->relation;
+        return $this->getRelationName();
     }
 
     /**
@@ -278,7 +253,7 @@ class Column implements Htmlable
     /**
      * Set the label of the column.
      */
-    public function label(?string $label): static
+    public function label(string|Closure|null $label): static
     {
         $this->label = $label;
 
@@ -322,6 +297,11 @@ class Column implements Htmlable
         if ($query !== null) {
             $this->searchCallback = $query;
         }
+
+        // Bridge to capability system
+        $this->capabilities = $this->searchable
+            ? $this->capabilities->add(Capability::Searchable)
+            : $this->capabilities->remove(Capability::Searchable);
 
         return $this;
     }
@@ -379,6 +359,11 @@ class Column implements Htmlable
         if ($query !== null) {
             $this->sortCallback = $query;
         }
+
+        // Bridge to capability system
+        $this->capabilities = $this->sortable
+            ? $this->capabilities->add(Capability::Sortable)
+            : $this->capabilities->remove(Capability::Sortable);
 
         return $this;
     }
@@ -674,7 +659,8 @@ class Column implements Htmlable
         // Add copyable button if enabled
         if ($this->copyable) {
             $copyValue = e(str_replace("'", "\\'", (string) $state));
-            $copyMessage = e($this->copyMessage ?? 'Zkopírováno!');
+            $copyMessage = e($this->copyMessage ?? Trans::get('wire-table::messages.copied'));
+            $copyTitle = e(Trans::get('wire-table::messages.copy'));
             $content = <<<HTML
             <span class="inline-flex items-center gap-1.5 group" x-data="{ copied: false }">
                 {$content}
@@ -686,7 +672,7 @@ class Column implements Htmlable
                         setTimeout(() => copied = false, 2000);
                     "
                     class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-                    title="Kopírovat"
+                    title="{$copyTitle}"
                 >
                     <template x-if="!copied">
                         <svg class="w-4 h-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1127,7 +1113,7 @@ class Column implements Htmlable
     public function copyable(bool $copyable = true, ?string $copyMessage = null): static
     {
         $this->copyable = $copyable;
-        $this->copyMessage = $copyMessage ?? 'Zkopírováno!';
+        $this->copyMessage = $copyMessage ?? Trans::get('wire-table::messages.copied');
 
         return $this;
     }
@@ -1161,6 +1147,9 @@ class Column implements Htmlable
         return $this->extraAttributes;
     }
 
+    /**
+     * @param  array<string, string>  $attributes
+     */
     public function extraHeaderAttributes(array $attributes): static
     {
         $this->extraHeaderAttributes = $attributes;
@@ -1168,6 +1157,9 @@ class Column implements Htmlable
         return $this;
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function getExtraHeaderAttributes(): array
     {
         return $this->extraHeaderAttributes;
@@ -1306,11 +1298,19 @@ class Column implements Htmlable
         return $this->permission;
     }
 
+    /**
+     * @param  array<string, string>  $options
+     */
     public function editable(bool $editable = true, string $type = 'text', array $options = []): static
     {
         $this->editable = $editable;
         $this->editableType = $type;
         $this->editableOptions = $options;
+
+        // Bridge to capability system
+        $this->capabilities = $this->editable
+            ? $this->capabilities->add(Capability::Editable)
+            : $this->capabilities->remove(Capability::Editable);
 
         return $this;
     }
@@ -1327,6 +1327,9 @@ class Column implements Htmlable
 
     // Text styling methods
 
+    /**
+     * @return array<string, string>
+     */
     public function getEditableOptions(): array
     {
         return $this->editableOptions;
@@ -1339,7 +1342,10 @@ class Column implements Htmlable
         return $this;
     }
 
-    public function getEditableRules(Model $record): array
+    /**
+     * @return array<int, mixed>
+     */
+    public function getEditableRules(?Model $record): array
     {
         if ($this->editableRules) {
             return call_user_func($this->editableRules, $record);
@@ -1414,17 +1420,27 @@ class Column implements Htmlable
         return $this->description;
     }
 
+    /**
+     * @param  array<string, string>  $options
+     */
     public function filterable(bool $filterable = true, string $type = 'text', array $options = []): static
     {
         $this->filterable = $filterable;
         $this->filterType = $type;
         $this->filterOptions = $options;
 
+        // Bridge to capability system
+        $this->capabilities = $this->filterable
+            ? $this->capabilities->add(Capability::Filterable)
+            : $this->capabilities->remove(Capability::Filterable);
+
         return $this;
     }
 
     /**
      * Configure as a select column filter.
+     *
+     * @param  array<string, string>  $options
      */
     public function filterAsSelect(array $options, ?string $placeholder = null): static
     {
@@ -1481,7 +1497,7 @@ class Column implements Htmlable
     /**
      * Configure as a boolean (yes/no/all) column filter.
      */
-    public function filterAsBoolean(?string $trueLabel = 'Ano', ?string $falseLabel = 'Ne'): static
+    public function filterAsBoolean(?string $trueLabel = null, ?string $falseLabel = null): static
     {
         $this->filterable = true;
         $this->filterType = 'boolean';
@@ -1549,12 +1565,12 @@ class Column implements Htmlable
 
     public function getFilterTrueLabel(): string
     {
-        return $this->filterTrueLabel ?? 'Ano';
+        return $this->filterTrueLabel ?? Trans::get('wire-table::messages.filter_yes');
     }
 
     public function getFilterFalseLabel(): string
     {
-        return $this->filterFalseLabel ?? 'Ne';
+        return $this->filterFalseLabel ?? Trans::get('wire-table::messages.filter_no');
     }
 
     public function isFilterable(): bool
@@ -1567,6 +1583,9 @@ class Column implements Htmlable
         return $this->filterType;
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function getFilterOptions(): array
     {
         return $this->filterOptions;
@@ -1610,8 +1629,8 @@ class Column implements Htmlable
         $column = $this->name;
 
         // 2. Handle relation columns
-        if ($this->relation) {
-            $relation = $this->relation;
+        if ($this->hasRelation()) {
+            $relation = $this->getRelation();
             $attribute = $this->getRelationshipAttribute();
 
             return $query->whereHas($relation, function ($q) use ($attribute, $value) {
@@ -1717,16 +1736,15 @@ class Column implements Htmlable
 
     /**
      * Get the relationship attribute of the column.
+     * Delegates to DataComponent's column name resolution.
      */
     public function getRelationshipAttribute(): ?string
     {
-        if (! $this->relation) {
+        if (! $this->hasRelation()) {
             return null;
         }
 
-        $parts = explode('.', $this->name);
-
-        return end($parts);
+        return $this->getColumnName();
     }
 
     public function renderFilter(mixed $value = null): string
@@ -1753,14 +1771,6 @@ class Column implements Htmlable
         ])->render();
     }
 
-    /**
-     * Get the name of the column.
-     */
-    public function getName(): string
-    {
-        return $this->name;
-    }
-
     public function toHtml(): string
     {
         return $this->getLabel();
@@ -1768,17 +1778,17 @@ class Column implements Htmlable
 
     /**
      * Get the label of the column.
+     * Overrides DataComponent to use Str::headline for prettier labels.
      */
     public function getLabel(): string
     {
         if ($this->label !== null) {
-            return $this->label;
+            return $this->evaluate($this->label);
         }
 
-        $name = $this->name;
-        if (Str::contains($name, '.')) {
-            $name = Str::afterLast($name, '.');
-        }
+        $name = $this->relationPath !== null
+            ? $this->relationPath->getColumnName()
+            : $this->name;
 
         return Str::headline($name);
     }

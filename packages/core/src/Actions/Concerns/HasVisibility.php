@@ -100,6 +100,7 @@ trait HasVisibility
             return false;
         }
 
+        /** @phpstan-ignore-next-line */
         if ($user->hasRole('Super Admin')) {
             return true;
         }

@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Actions;
 
 use NyonCode\WireCore\Actions\Concerns\HasIcons;
+use NyonCode\WireCore\Core\Support\Deprecation;
+use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireForms\Forms\Form;
 
 /**
  * ActionHalt – stops execution pipeline and shows a dynamic modal.
@@ -71,8 +74,7 @@ final class ActionHalt
     protected bool $isInformative = false;
 
     // Form
-    /** @var array<int, mixed> */
-    protected array $formFields = [];
+    protected Form|null $formInstance = null;
 
     /** @var array<string, mixed>|null */
     protected ?array $formValidation = null;
@@ -111,14 +113,14 @@ final class ActionHalt
     public static function confirmDelete(?string $recordName = null): static
     {
         $description = $recordName
-            ? "Opravdu chcete smazat \"{$recordName}\"? Tato akce je nevratná."
-            : 'Opravdu chcete smazat tento záznam? Tato akce je nevratná.';
+            ? Trans::get('wire-core::actions.delete_description_named', ['name' => $recordName])
+            : Trans::get('wire-core::actions.delete_description');
 
         return static::make()
-            ->heading('Smazat záznam')
+            ->heading(Trans::get('wire-core::actions.delete_heading'))
             ->body($description)
             ->icon('trash', 'danger')
-            ->submitLabel('Smazat')
+            ->submitLabel(Trans::get('wire-core::actions.delete_submit'))
             ->danger();
     }
 
@@ -221,39 +223,51 @@ final class ActionHalt
         return $this;
     }
 
-    /** @deprecated Use heading() instead */
+    /** @deprecated Use heading() instead. Will be removed in v2.0. */
     public function modalHeading(?string $heading): static
     {
+        Deprecation::method('modalHeading', 'heading');
+
         return $this->heading($heading);
     }
 
-    /** @deprecated Use body() instead */
+    /** @deprecated Use body() instead. Will be removed in v2.0. */
     public function modalDescription(?string $description): static
     {
+        Deprecation::method('modalDescription', 'body');
+
         return $this->body($description);
     }
 
-    /** @deprecated Use icon() instead */
+    /** @deprecated Use icon() instead. Will be removed in v2.0. */
     public function modalIcon(?string $icon, ?string $color = null): static
     {
+        Deprecation::method('modalIcon', 'icon');
+
         return $this->icon($icon, $color);
     }
 
-    /** @deprecated Use submitLabel() instead */
+    /** @deprecated Use submitLabel() instead. Will be removed in v2.0. */
     public function modalSubmitLabel(?string $label): static
     {
+        Deprecation::method('modalSubmitLabel', 'submitLabel');
+
         return $this->submitLabel($label);
     }
 
-    /** @deprecated Use cancelLabel() instead */
+    /** @deprecated Use cancelLabel() instead. Will be removed in v2.0. */
     public function modalCancelLabel(?string $label): static
     {
+        Deprecation::method('modalCancelLabel', 'cancelLabel');
+
         return $this->cancelLabel($label);
     }
 
-    /** @deprecated Use width() instead */
+    /** @deprecated Use width() instead. Will be removed in v2.0. */
     public function modalWidth(?string $width): static
     {
+        Deprecation::method('modalWidth', 'width');
+
         return $this->width($width);
     }
 
@@ -272,7 +286,7 @@ final class ActionHalt
         $this->isInformative = $informative;
         if ($informative) {
             $this->modalSubmitLabel = null;
-            $this->formFields = [];
+            $this->formInstance = null;
             $this->formValidation = null;
         }
 
@@ -285,11 +299,15 @@ final class ActionHalt
     }
 
     /**
-     * @param  array<int, mixed>  $fields
+     * @param  array<int, mixed>|Form  $fields
      */
-    public function form(array $fields): static
+    public function form(array|Form $fields): static
     {
-        $this->formFields = $fields;
+        if ($fields instanceof Form) {
+            $this->formInstance = $fields;
+        } else {
+            $this->formInstance = Form::make()->schema($fields);
+        }
 
         return $this;
     }
@@ -309,7 +327,7 @@ final class ActionHalt
     }
 
     /**
-     * @deprecated Use validation() instead
+     * @deprecated Use validation() instead. Will be removed in v2.0.
      *
      * @param  array<string, mixed>  $rules
      * @param  array<string, string>|null  $messages
@@ -317,6 +335,8 @@ final class ActionHalt
      */
     public function formValidation(array $rules, ?array $messages = null, ?array $attributes = null): static
     {
+        Deprecation::method('formValidation', 'validation');
+
         return $this->validation($rules, $messages, $attributes);
     }
 
@@ -377,12 +397,12 @@ final class ActionHalt
 
     public function getModalSubmitLabel(): ?string
     {
-        return $this->isInformative ? null : ($this->modalSubmitLabel ?? 'Potvrdit');
+        return $this->isInformative ? null : ($this->modalSubmitLabel ?? Trans::get('wire-core::actions.confirm_submit'));
     }
 
     public function getModalCancelLabel(): string
     {
-        return $this->modalCancelLabel ?? ($this->isInformative ? 'Zavřít' : 'Zrušit');
+        return $this->modalCancelLabel ?? ($this->isInformative ? Trans::get('wire-core::actions.confirm_close') : Trans::get('wire-core::actions.confirm_cancel'));
     }
 
     public function getModalWidth(): string
@@ -407,15 +427,12 @@ final class ActionHalt
 
     public function hasForm(): bool
     {
-        return ! $this->isInformative && ! empty($this->formFields);
+        return ! $this->isInformative && $this->formInstance !== null;
     }
 
-    /**
-     * @return array<int, mixed>
-     */
-    public function getModalFormFields(): array
+    public function getFormInstance(): ?Form
     {
-        return $this->formFields;
+        return $this->formInstance;
     }
 
     /**
@@ -494,7 +511,6 @@ final class ActionHalt
                 'informative' => $this->isInformative,
                 'hasSubmit' => ! $this->isInformative,
                 'hasForm' => $this->hasForm(),
-                'formFields' => $this->isInformative ? [] : $this->formFields,
                 'formValidation' => $this->formValidation,
                 'formValidationMessages' => $this->formValidationMessages,
                 'formValidationAttributes' => $this->formValidationAttributes,

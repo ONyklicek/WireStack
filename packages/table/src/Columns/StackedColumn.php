@@ -23,8 +23,10 @@ class StackedColumn extends Column
 
     protected ?string $avatarBackground = null;
 
+    /** @var array<int, array<string, mixed>> */
     protected array $stack = [];
 
+    /** @var array<int, string> */
     protected array $searchColumns = [];
 
     /**
@@ -126,6 +128,8 @@ class StackedColumn extends Column
     /**
      * Define custom stack of items
      * Each item: ['column' => 'name', 'class' => 'font-bold', 'format' => fn($value) => ...]
+     *
+     * @param  array<int, array<string, mixed>>  $items
      */
     public function stack(array $items): static
     {
@@ -155,6 +159,8 @@ class StackedColumn extends Column
 
     /**
      * Set which columns should be searched
+     *
+     * @param  array<int, string>  $columns
      */
     public function searchColumns(array $columns): static
     {

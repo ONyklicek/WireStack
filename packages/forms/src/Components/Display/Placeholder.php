@@ -30,6 +30,11 @@ class Placeholder extends ViewComponent
         return $this;
     }
 
+    /**
+     * Set content as raw HTML. Content is rendered unescaped.
+     *
+     * WARNING: Never pass untrusted user input. Sanitize before use.
+     */
     public function html(string|Closure $content): static
     {
         $this->content = $content;

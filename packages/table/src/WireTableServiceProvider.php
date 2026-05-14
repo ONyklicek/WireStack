@@ -21,6 +21,7 @@ class WireTableServiceProvider extends PackageServiceProvider
             ->hasShortName('wire-table')
             ->hasConfig()
             ->hasViews()
+            ->hasTranslations()
             ->hasAbout();
     }
 }

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class SplitColumn extends Column
 {
+    /** @var array<int, Column> */
     protected array $columns = [];
 
     protected string $layout = 'horizontal'; // horizontal, vertical
@@ -26,6 +27,8 @@ class SplitColumn extends Column
 
     /**
      * Shorthand for creating with columns
+     *
+     * @param  array<int, Column>  $columns
      */
     public static function split(array $columns, string $name = 'split'): static
     {
@@ -37,6 +40,8 @@ class SplitColumn extends Column
 
     /**
      * Set columns to split
+     *
+     * @param  array<int, Column>  $columns
      */
     public function columns(array $columns): static
     {
@@ -97,6 +102,8 @@ class SplitColumn extends Column
 
     /**
      * Get columns
+     *
+     * @return array<int, Column>
      */
     public function getColumns(): array
     {

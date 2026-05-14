@@ -19,6 +19,10 @@
 
     $wireKey = "tic-{$recordKey}-{$columnName}";
     $recordVersion = $record->updated_at ? (string) $record->updated_at->getTimestamp() : '0';
+
+    $msgError = __('wire-table::messages.error');
+    $msgSaveFailed = __('wire-table::messages.save_failed');
+    $msgInvalid = __('wire-table::messages.invalid');
 @endphp
 
 <div wire:key="{{ $wireKey }}"
@@ -62,7 +66,7 @@
             try {
                 const r = await $wire.updateTableCell('{{ $recordKey }}', '{{ $columnName }}', this.value, this.recordVersion);
                 if (r?.success === false) {
-                    this.error = r.message || r.errors?.[0] || 'Chyba';
+                    this.error = r.message || r.errors?.[0] || this.$el.dataset.msgError;
                     if (r?.conflict) {
                         this.original = r.currentValue ?? this.original;
                         this.recordVersion = r.currentVersion ?? this.recordVersion;
@@ -75,7 +79,7 @@
                     setTimeout(() => this.success = false, 1500);
                 }
             } catch (e) {
-                this.error = 'Save failed';
+                this.error = this.$el.dataset.msgSaveFailed;
             } finally {
                 this.saving = false;
             }
@@ -83,13 +87,16 @@
         async doValidate() {
             try {
                 const r = await $wire.validateTableCell('{{ $recordKey }}', '{{ $columnName }}', this.value);
-                this.error = (r && !r.valid) ? (r.errors?.[0] || 'Neplatné') : null;
+                this.error = (r && !r.valid) ? (r.errors?.[0] || this.$el.dataset.msgInvalid) : null;
             } catch (e) {}
         }
      }"
      x-effect="let sv = $el.dataset.serverValue, rv = $el.dataset.recordVersion; if (sv !== undefined && sv !== serverValue) syncFromServer(sv, rv)"
      data-server-value="{{ $value }}"
      data-record-version="{{ $recordVersion }}"
+     data-msg-error="{{ $msgError }}"
+     data-msg-save-failed="{{ $msgSaveFailed }}"
+     data-msg-invalid="{{ $msgInvalid }}"
      class="relative"
 >
     {{-- Prefix --}}
@@ -115,12 +122,12 @@
 
         {{-- Saving spinner --}}
         <span x-show="saving" x-cloak class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-            @include('tables.columns.partials.spinner')
+            @include('wire-table::tables.columns.partials.spinner')
         </span>
 
         {{-- Success check --}}
         <span x-show="success" x-cloak x-transition class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-            @include('tables.columns.partials.check-icon')
+            @include('wire-table::tables.columns.partials.check-icon')
         </span>
 
         {{-- Suffix --}}

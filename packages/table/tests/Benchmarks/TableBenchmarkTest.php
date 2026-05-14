@@ -355,7 +355,7 @@ it('serializes ActionHalt quickly', function () {
             ->submitLabel('Smazat')
             ->cancelLabel('Zrušit')
             ->danger()
-            ->form([['name' => 'reason', 'type' => 'text']])
+            ->form([\NyonCode\WireForms\Components\TextInput::make('reason')])
             ->validation(['reason' => 'required'])
             ->source('action', 0)
             ->toArray();

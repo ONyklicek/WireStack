@@ -1,24 +1,68 @@
 # Notifications
 
-Pluggable notification system with multiple drivers. Lives inside `wire-core` as a separate module, prepared for future extraction (see [ADR 0006](../decisions/0006-modular-core-extraction-strategy.md)).
+Pluggable notification system with multiple drivers. Lives inside `wire-core` as a separate module, prepared for future extraction ([ADR 0006](../decisions/0006-modular-core-extraction-strategy.md)).
 
 ## Drivers
 
-| Driver | Description | Requirements |
-|--------|-------------|--------------|
-| `SessionDriver` | Laravel `session()->flash()` | None (default) |
-| `LivewireEventDriver` | Livewire `$dispatch()` browser events | Frontend listener |
-| `FlasherDriver` | [PHP Flasher](https://php-flasher.io) integration | `php-flasher/flasher-laravel` |
-| `NullDriver` | No-op (disables notifications) | None |
+| Driver | Class | Description | Requirements |
+|--------|-------|-------------|--------------|
+| Session | `SessionDriver` | Laravel `session()->flash()` | None (default) |
+| Livewire | `LivewireEventDriver` | Livewire `$dispatch()` browser events | Frontend listener |
+| Flasher | `FlasherDriver` | [PHP Flasher](https://php-flasher.io) integration | `php-flasher/flasher-laravel` |
+| Log | `LogDriver` | Logs notifications for debugging | None |
+| Null | `NullDriver` | No-op (disables notifications) | None |
 
 See [ADR 0004](../decisions/0004-notification-driver-defaults.md) for default driver selection.
 
-## Usage
+## Notification Builder
 
-### In Actions
 ```php
-use NyonCode\WireCore\Notifications\TableNotification;
+use NyonCode\WireCore\Notifications\Notification;
 
+// Fluent builder
+Notification::make()
+    ->title('Record Saved')
+    ->body('The user was successfully updated.')
+    ->success()
+    ->send();
+
+// Shorthand factories
+Notification::success('User saved');
+Notification::error('Failed to delete');
+Notification::warning('Disk space low');
+Notification::info('3 new messages');
+
+// Full customization
+Notification::make()
+    ->title('Custom')
+    ->body('Detailed message...')
+    ->icon('check')
+    ->duration(5000)            // ms, 0 = persistent
+    ->position('top-right')     // top-right, top-left, bottom-right, bottom-left
+    ->extra(['link' => '/details'])
+    ->send();
+```
+
+### Notification API
+
+```php
+->title(?string $title)
+->body(?string $body)
+->success()                      // color: success
+->danger()                       // color: danger
+->warning()                      // color: warning
+->info()                         // color: info
+->icon(?string $icon)
+->duration(?int $ms)             // auto-dismiss time, 0 = persistent
+->position(?string $position)    // toast position
+->extra(array $data)             // arbitrary extra data
+->send()                         // dispatch via active driver
+->toArray(): array               // serialize to array
+```
+
+## Usage in Actions
+
+```php
 Action::make('save')
     ->action(function ($record, Action $action) {
         $record->save();
@@ -26,16 +70,17 @@ Action::make('save')
     })
     ->successNotification('Saved!');
 
-// Custom notification
+// Custom notification from action
 $action->sendNotification(
-    TableNotification::success('Done')
+    Notification::success('Done')
         ->title('Processed')
         ->duration(3000)
         ->icon('check')
 );
 ```
 
-### In Components
+## Usage in Components
+
 ```php
 use NyonCode\WireCore\Notifications\Concerns\InteractsWithNotifications;
 
@@ -51,19 +96,25 @@ class MyComponent extends Component
 }
 ```
 
-### Notification Builder
+## Usage in Forms
+
+Forms automatically send a success notification after `save()` unless disabled:
 
 ```php
-TableNotification::success('Message')
-    ->title('Title')
-    ->icon('check')
-    ->duration(5000)    // milliseconds, 0 = persistent
-    ->position('top-right');
+Form::make()
+    ->schema([...])
+    ->model(User::class)
+    ->successMessage('User saved!')          // custom message
+    ->save();
 
-TableNotification::danger('Error occurred')
-    ->title('Error')
-    ->icon('exclamation');
+// Disable
+Form::make()
+    ->schema([...])
+    ->disableSuccessNotification()
+    ->save();
 ```
+
+See [ADR 0010](../decisions/0010-form-save-notifications-integration.md).
 
 ## Configuration
 
@@ -71,24 +122,17 @@ TableNotification::danger('Error occurred')
 // config/wire-core.php
 return [
     'notifications' => [
-        'driver' => 'session', // session, livewire, flasher, null
+        'driver' => 'session', // session, livewire, flasher, log, null
     ],
 ];
 ```
 
-### Resolution Order
-1. Per-table driver (`$table->notificationDriver()`)
-2. Global default (`TableNotificationManager::setDefaultDriver()`)
+### Driver Resolution Order
+
+1. Per-table/per-component driver override
+2. Global default (`NotificationManager::setDefaultDriver()`)
 3. Config value (`wire-core.notifications.driver`)
 4. Fallback: `SessionDriver`
-
-## Blade Component
-
-```blade
-<x-wire-notifications::toast-container />
-```
-
-Place this in your layout to display notifications.
 
 ## Custom Drivers
 
@@ -96,17 +140,43 @@ Implement the `NotificationDriver` contract:
 
 ```php
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
+use NyonCode\WireCore\Notifications\Notification;
 
-class CustomDriver implements NotificationDriver
+class SlackDriver implements NotificationDriver
 {
-    public function send(TableNotification $notification): void
+    public function send(Notification $notification): void
     {
-        // Your notification logic
+        Http::post('https://hooks.slack.com/...', [
+            'text' => $notification->title . ': ' . $notification->body,
+        ]);
     }
 }
 ```
 
 Register in a service provider:
+
 ```php
-TableNotificationManager::registerDriver('custom', CustomDriver::class);
+use NyonCode\WireCore\Notifications\NotificationManager;
+
+NotificationManager::registerDriver('slack', SlackDriver::class);
 ```
+
+Then set in config:
+
+```php
+'notifications' => [
+    'driver' => 'slack',
+],
+```
+
+## Blade Component
+
+Place the toast container in your layout:
+
+```blade
+<x-wire-notifications::toast-container />
+```
+
+## Module Dependencies
+
+Notifications depends only on Foundation. It does not depend on Actions, Modals, or Forms ([ADR 0007](../decisions/0007-internal-module-dependencies.md)).

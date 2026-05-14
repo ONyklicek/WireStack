@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Actions;
 
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Support\Deprecation;
 
 /**
  * Class Action - Row-level action with lifecycle hooks, dynamic properties, and more.
@@ -59,10 +60,12 @@ class Action extends BaseAction
     }
 
     /**
-     * @deprecated Use hideLabel() instead. Kept for backwards compatibility.
+     * @deprecated Use hideLabel() instead. Will be removed in v2.0.
      */
     public function hiddeLabel(bool $hiddeLabel = true): static
     {
+        Deprecation::method('hiddeLabel', 'hideLabel');
+
         return $this->hideLabel($hiddeLabel);
     }
 
@@ -121,7 +124,7 @@ class Action extends BaseAction
             return '';
         }
 
-        return view('tables.actions.action', [
+        return view('wire-table::tables.actions.action', [
             'action' => $this,
             'record' => $record,
         ])->render();

@@ -45,7 +45,7 @@
 
         @if($showLoading)
             <span wire:loading wire:target="{{ $livewireAction }}" class="inline-flex items-center gap-1.5">
-                @include('tables.columns.partials.spinner')
+                @include('wire-table::tables.columns.partials.spinner')
                 @if($loadingText)
                     <span>{{ $loadingText }}</span>
                 @elseif(!$iconOnly)

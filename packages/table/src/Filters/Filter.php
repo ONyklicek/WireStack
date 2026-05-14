@@ -10,6 +10,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use NyonCode\WireCore\Core\Support\Trans;
 
 /** @phpstan-consistent-constructor */
 class Filter implements Htmlable
@@ -144,6 +145,10 @@ class Filter implements Htmlable
         return $this->multiple;
     }
 
+    /**
+     * @param  Builder<Model>  $query
+     * @return Builder<Model>
+     */
     public function apply(Builder $query, mixed $value): Builder
     {
         if ($value === null || $value === '' || $value === []) {
@@ -279,6 +284,6 @@ class Filter implements Htmlable
 
     public function getPlaceholder(): ?string
     {
-        return $this->placeholder ?? 'Vyberte...';
+        return $this->placeholder ?? Trans::get('wire-table::messages.select_placeholder');
     }
 }

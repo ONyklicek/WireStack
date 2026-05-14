@@ -10,6 +10,10 @@ use NyonCode\WireCore\Foundation\Components\ViewComponent;
 /**
  * Raw HTML display component with static helper factories.
  *
+ * WARNING: Content is rendered unescaped. Never pass untrusted user input
+ * directly to content(). Use the static factories (heading, paragraph)
+ * which auto-escape text, or sanitize input before passing it.
+ *
  * @phpstan-consistent-constructor
  */
 class Html extends ViewComponent

@@ -31,10 +31,14 @@ final class ConfigBuilder
 
     private string|Closure|null $successMessage = '__default__';
 
+    /** @var array<string, string> */
     private array $validationMessages = [];
 
     private bool $isDisabled = false;
 
+    /**
+     * @param  array<int, mixed>  $components
+     */
     public function schema(array $components): self
     {
         $this->schema = $components;
@@ -91,6 +95,9 @@ final class ConfigBuilder
         return $this;
     }
 
+    /**
+     * @param  array<string, string>  $messages
+     */
     public function validationMessages(array $messages): self
     {
         $this->validationMessages = $messages;
@@ -121,6 +128,9 @@ final class ConfigBuilder
         );
     }
 
+    /**
+     * @return array<int, mixed>
+     */
     public function getSchema(): array
     {
         return $this->schema;

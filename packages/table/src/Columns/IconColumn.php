@@ -9,8 +9,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class IconColumn extends Column
 {
+    /** @var array<string, string> */
     protected array $icons = [];
 
+    /** @var array<string, string> */
     protected array $colors = [];
 
     protected ?Closure $iconCallback = null;
@@ -29,6 +31,9 @@ class IconColumn extends Column
 
     protected string $falseColor = 'danger';
 
+    /**
+     * @param  array<string, string>  $icons
+     */
     public function icons(array $icons): static
     {
         $this->icons = $icons;
@@ -43,6 +48,9 @@ class IconColumn extends Column
         return $this;
     }
 
+    /**
+     * @param  array<string, string>  $colors
+     */
     public function colors(array $colors): static
     {
         $this->colors = $colors;

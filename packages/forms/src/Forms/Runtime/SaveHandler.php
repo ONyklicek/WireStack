@@ -53,6 +53,9 @@ final class SaveHandler
         return $record;
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     private function persist(array $data): mixed
     {
         // Custom persistence

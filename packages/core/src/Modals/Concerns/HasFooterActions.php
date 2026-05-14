@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Modals\Concerns;
 
+use NyonCode\WireCore\Core\Support\Trans;
+
 /**
  * Provides submit/cancel button labels and sticky footer support.
  */
@@ -47,12 +49,12 @@ trait HasFooterActions
 
     public function getSubmitLabel(): string
     {
-        return $this->submitLabel ?? 'Potvrdit';
+        return $this->submitLabel ?? Trans::get('wire-core::actions.confirm_submit');
     }
 
     public function getCancelLabel(): string
     {
-        return $this->cancelLabel ?? 'Zrušit';
+        return $this->cancelLabel ?? Trans::get('wire-core::actions.confirm_cancel');
     }
 
     public function hasStickyFooter(): bool

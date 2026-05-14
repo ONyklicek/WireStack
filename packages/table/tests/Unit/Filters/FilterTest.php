@@ -67,8 +67,8 @@ it('can set default value', function () {
 
 // ─── Placeholder ────────────────────────────────────────────────────────────
 
-it('has default Czech placeholder', function () {
-    expect(Filter::make('status')->getPlaceholder())->toBe('Vyberte...');
+it('has default placeholder from translation', function () {
+    expect(Filter::make('status')->getPlaceholder())->toBe('select_placeholder');
 });
 
 it('can set custom placeholder', function () {

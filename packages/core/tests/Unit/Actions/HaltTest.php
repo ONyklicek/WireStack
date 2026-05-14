@@ -32,8 +32,8 @@ it('has correct defaults', function () {
     $halt = ActionHalt::make();
 
     expect($halt->getModalHeading())->toBeNull()
-        ->and($halt->getModalSubmitLabel())->toBe('Potvrdit')
-        ->and($halt->getModalCancelLabel())->toBe('Zrušit')
+        ->and($halt->getModalSubmitLabel())->toBe('confirm_submit')
+        ->and($halt->getModalCancelLabel())->toBe('confirm_cancel')
         ->and($halt->getModalWidth())->toBe('md')
         ->and($halt->isDanger())->toBeFalse()
         ->and($halt->isInformative())->toBeFalse();
@@ -41,20 +41,20 @@ it('has correct defaults', function () {
 
 it('informative mode clears form and submit', function () {
     $halt = ActionHalt::make()
-        ->form([['name' => 'reason', 'type' => 'text']])
+        ->form([\NyonCode\WireForms\Components\TextInput::make('reason')])
         ->informative();
 
     expect($halt->isInformative())->toBeTrue()
         ->and($halt->getModalSubmitLabel())->toBeNull()
-        ->and($halt->getModalFormFields())->toBe([])
-        ->and($halt->getModalCancelLabel())->toBe('Zavřít');
+        ->and($halt->getFormInstance())->toBeNull()
+        ->and($halt->getModalCancelLabel())->toBe('confirm_close');
 });
 
 it('has confirmDelete preset', function () {
     $halt = ActionHalt::confirmDelete('Test Record');
 
-    expect($halt->getModalHeading())->toBe('Smazat záznam')
-        ->and($halt->getModalDescription())->toContain('Test Record')
+    expect($halt->getModalHeading())->toBe('delete_heading')
+        ->and($halt->getModalDescription())->toBe('delete_description_named')
         ->and($halt->isDanger())->toBeTrue();
 });
 
@@ -80,7 +80,7 @@ it('serializes to array', function () {
 
 it('can set form with validation', function () {
     $halt = ActionHalt::make()
-        ->form([['name' => 'reason', 'type' => 'text']])
+        ->form([\NyonCode\WireForms\Components\TextInput::make('reason')])
         ->validation(['reason' => 'required'], ['reason.required' => 'Povinné']);
 
     expect($halt->hasForm())->toBeTrue()

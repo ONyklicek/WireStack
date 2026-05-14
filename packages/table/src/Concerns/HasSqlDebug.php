@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Concerns;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * Trait HasSqlDebug
@@ -20,6 +21,9 @@ trait HasSqlDebug
      *
      * Uses str_replace with limit=1 (via strpos+substr_replace) instead of
      * preg_replace('/\?/') which fails when a binding value itself contains '?'.
+     */
+    /**
+     * @param  array<int, mixed>  $bindings
      */
     protected static function interpolateSql(string $sql, array $bindings): string
     {
@@ -43,6 +47,9 @@ trait HasSqlDebug
 
     /**
      * Get interpolated SQL from a Builder instance.
+     */
+    /**
+     * @param  Builder<Model>  $query
      */
     protected static function builderToSql(Builder $query): string
     {

@@ -10,12 +10,12 @@ it('can be created', function () {
 
 // ─── Labels ─────────────────────────────────────────────────────────────────
 
-it('has default Czech labels', function () {
+it('has default labels from translation', function () {
     $filter = TernaryFilter::make('active');
 
-    expect($filter->getTrueLabel())->toBe('Ano')
-        ->and($filter->getFalseLabel())->toBe('Ne')
-        ->and($filter->getAllLabel())->toBe('Vše');
+    expect($filter->getTrueLabel())->toBe('filter_yes')
+        ->and($filter->getFalseLabel())->toBe('filter_no')
+        ->and($filter->getAllLabel())->toBe('filter_all');
 });
 
 it('can set custom labels', function () {

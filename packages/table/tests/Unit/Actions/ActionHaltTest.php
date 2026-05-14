@@ -42,8 +42,8 @@ it('has correct defaults', function () {
     expect($halt->getModalHeading())->toBeNull()
         ->and($halt->getModalDescription())->toBeNull()
         ->and($halt->getModalIcon())->toBeNull()
-        ->and($halt->getModalSubmitLabel())->toBe('Potvrdit')
-        ->and($halt->getModalCancelLabel())->toBe('Zrušit')
+        ->and($halt->getModalSubmitLabel())->toBe('confirm_submit')
+        ->and($halt->getModalCancelLabel())->toBe('confirm_cancel')
         ->and($halt->getModalWidth())->toBe('md')
         ->and($halt->isDanger())->toBeFalse()
         ->and($halt->isInformative())->toBeFalse()
@@ -59,7 +59,7 @@ it('can be set to informative (no submit button)', function () {
 
     expect($halt->isInformative())->toBeTrue()
         ->and($halt->getModalSubmitLabel())->toBeNull()
-        ->and($halt->getModalCancelLabel())->toBe('Zavřít');
+        ->and($halt->getModalCancelLabel())->toBe('confirm_close');
 });
 
 it('noSubmit is alias for informative', function () {
@@ -70,20 +70,21 @@ it('noSubmit is alias for informative', function () {
 
 // ─── Form ──────────────��───────────────────────���────────────────────────────
 
-it('can set form fields', function () {
+it('can set form with component array', function () {
     $halt = ActionHalt::make()
-        ->form([['name' => 'reason', 'type' => 'text']]);
+        ->form([\NyonCode\WireForms\Components\TextInput::make('reason')]);
 
     expect($halt->hasForm())->toBeTrue()
-        ->and($halt->getModalFormFields())->toHaveCount(1);
+        ->and($halt->getFormInstance())->toBeInstanceOf(\NyonCode\WireForms\Forms\Form::class);
 });
 
-it('informative clears form fields', function () {
+it('informative clears form', function () {
     $halt = ActionHalt::make()
-        ->form([['name' => 'reason', 'type' => 'text']])
+        ->form([\NyonCode\WireForms\Components\TextInput::make('reason')])
         ->informative();
 
-    expect($halt->hasForm())->toBeFalse();
+    expect($halt->hasForm())->toBeFalse()
+        ->and($halt->getFormInstance())->toBeNull();
 });
 
 it('can set validation rules', function () {
@@ -135,8 +136,8 @@ it('can set redirect after confirm', function () {
 it('has confirmDelete preset', function () {
     $halt = ActionHalt::confirmDelete('Test Record');
 
-    expect($halt->getModalHeading())->toBe('Smazat záznam')
-        ->and($halt->getModalDescription())->toContain('Test Record')
+    expect($halt->getModalHeading())->toBe('delete_heading')
+        ->and($halt->getModalDescription())->toBe('delete_description_named')
         ->and($halt->isDanger())->toBeTrue()
         ->and($halt->getModalIcon())->toBe('trash');
 });
@@ -144,7 +145,7 @@ it('has confirmDelete preset', function () {
 it('has confirmDelete preset without name', function () {
     $halt = ActionHalt::confirmDelete();
 
-    expect($halt->getModalDescription())->toContain('tento záznam');
+    expect($halt->getModalDescription())->toBe('delete_description');
 });
 
 it('has confirmDanger preset', function () {

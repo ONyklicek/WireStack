@@ -64,6 +64,8 @@ trait HasView
 
     /**
      * Render a Blade view with given data.
+     *
+     * @param  array<string, mixed>  $data
      */
     protected function renderView(string $defaultView, array $data = []): string
     {

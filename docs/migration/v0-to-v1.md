@@ -1,11 +1,13 @@
-# Migration Guide: Wire Table → Wire Ecosystem v0.1.0
+# Migration Guide: v0 → v1.0
 
-This guide covers migrating from the monolithic `nyoncode/wire-table` to the new three-package ecosystem.
+This guide covers migrating from the monolithic `nyoncode/wire-table` v0.x to the Wire Ecosystem v1.0 (three-package architecture).
+
+For the complete v1.0 documentation, see the [Documentation Index](../index.md).
 
 ## 1. Update Composer
 
 ```bash
-composer require nyoncode/wire-table:^0.1
+composer require nyoncode/wire-table:^1.0
 ```
 
 This automatically installs `wire-core` and `wire-forms` as dependencies.
@@ -126,7 +128,61 @@ php artisan vendor:publish --tag=wire-core-config --force
 php artisan vendor:publish --tag=wire-table-config --force
 ```
 
-## 6. View Publishing
+## 6. Deprecated Methods
+
+The following methods now emit `E_USER_DEPRECATED` warnings and will be removed in v2.0:
+
+### Table
+| Deprecated | Use Instead |
+|------------|-------------|
+| `polling()` | `poll()` |
+
+### ActionHalt
+| Deprecated | Use Instead |
+|------------|-------------|
+| `modalHeading()` | `heading()` |
+| `modalDescription()` | `body()` |
+| `modalIcon()` | `icon()` |
+| `modalSubmitLabel()` | `submitLabel()` |
+| `modalCancelLabel()` | `cancelLabel()` |
+| `modalWidth()` | `width()` |
+| `formValidation()` | `validation()` |
+
+### Action
+| Deprecated | Use Instead |
+|------------|-------------|
+| `hiddeLabel()` | `hideLabel()` |
+
+## 7. New Features (v1.0)
+
+### Plugin System
+Register plugins via config to extend tables, forms, and queries:
+
+```php
+// config/wire-core.php
+'plugins' => [
+    App\Plugins\ExportPlugin::class,
+],
+```
+
+### Performance
+```php
+// Simple pagination (no COUNT query)
+Table::make()->simplePagination();
+
+// Cursor pagination (for large sequential datasets)
+Table::make()->cursorPagination();
+
+// Query result caching
+Table::make()->cacheQuery(ttl: 60); // 60 seconds
+
+// Chunked processing for bulk operations
+$table->chunk(500, function ($records) {
+    // process batch
+});
+```
+
+## 8. View Publishing
 
 If you published views, republish from the new packages:
 

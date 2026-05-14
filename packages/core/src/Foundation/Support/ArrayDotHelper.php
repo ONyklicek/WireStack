@@ -25,10 +25,8 @@ final class ArrayDotHelper
     /**
      * Set a value in a nested array using dot notation.
      *
-     * @return array<string, mixed>
-     */
-    /**
      * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
      */
     public static function set(array &$data, string $path, mixed $value): array
     {

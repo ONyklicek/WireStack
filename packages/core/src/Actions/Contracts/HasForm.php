@@ -4,28 +4,25 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Actions\Contracts;
 
-use NyonCode\WireForms\Integration\ActionMacros;
+use Livewire\Component;
+use NyonCode\WireForms\Forms\Form;
 
 /**
  * Contract for actions that support form integration.
  *
- * Implementation is provided by wire-forms package via Action::macro().
- * This interface serves as a marker for actions that can display
- * form fields in their modal dialogs.
- *
- * @see ActionMacros
+ * Implementation is provided by HasModal trait on BaseAction,
+ * which offers form(), fillFormUsing(), getFormInstance(),
+ * and hasFormModal() methods.
  */
 interface HasForm
 {
     /**
-     * Get the form schema for this action's modal.
-     *
-     * @return array<int, mixed>
-     */
-    public function getFormSchema(): array;
-
-    /**
      * Determine if this action has a form configured.
      */
-    public function hasForm(): bool;
+    public function hasFormInstance(): bool;
+
+    /**
+     * Resolve the Form instance for this action's modal.
+     */
+    public function getFormInstance(?Component $livewire = null, mixed $context = null): ?Form;
 }

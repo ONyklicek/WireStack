@@ -10,6 +10,12 @@ use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Actions\View\BulkButtonComponent;
 use NyonCode\WireCore\Actions\View\ButtonComponent;
 use NyonCode\WireCore\Actions\View\GroupComponent;
+use NyonCode\WireCore\Core\Actions\ActionPipeline;
+use NyonCode\WireCore\Core\Actions\ActionRegistry;
+use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
+use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Modals\View\ConfirmationComponent;
 use NyonCode\WireCore\Modals\View\ModalComponent;
@@ -33,6 +39,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
             ->hasShortName('wire-core')
             ->hasConfig()
             ->hasViews()
+            ->hasTranslations('resources/lang')
             ->hasAbout();
     }
 
@@ -41,7 +48,9 @@ class WireCoreServiceProvider extends PackageServiceProvider
         parent::register();
 
         $this->registerFoundation();
+        $this->registerCore();
         $this->registerNotifications();
+        $this->registerPlugins();
     }
 
     public function boot(): void
@@ -52,6 +61,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
         $this->bootActions();
         $this->bootNotifications();
         $this->bootModals();
+        $this->bootPlugins();
     }
 
     // ─── Foundation ─────────────────────────────────────────────
@@ -67,6 +77,18 @@ class WireCoreServiceProvider extends PackageServiceProvider
     {
         // Register <x-wire::icon />, <x-wire::badge />, etc.
         Blade::componentNamespace('NyonCode\\WireCore\\Foundation\\View', 'wire');
+    }
+
+    // ─── Core Infrastructure ──────────────────────────────────
+
+    protected function registerCore(): void
+    {
+        $this->app->singleton(ValidationPipeline::class);
+        $this->app->singleton(ActionRegistry::class);
+        $this->app->singleton(MetadataRegistry::class);
+
+        // ActionPipeline is transient — each execution gets a fresh instance
+        $this->app->bind(ActionPipeline::class);
     }
 
     // ─── Actions ────────────────────────────────────────────────
@@ -117,5 +139,29 @@ class WireCoreServiceProvider extends PackageServiceProvider
         Blade::component('wire-modals::modal', ModalComponent::class);
         Blade::component('wire-modals::confirmation', ConfirmationComponent::class);
         Blade::component('wire-modals::slide-over', SlideOverComponent::class);
+    }
+
+    // ─── Plugins ────────────────────────────────────────────────
+
+    protected function registerPlugins(): void
+    {
+        $this->app->singleton(PluginManager::class);
+
+        // Register plugins from config
+        $this->app->afterResolving(PluginManager::class, function (PluginManager $manager) {
+            /** @var array<int, class-string<Plugin>> $plugins */
+            $plugins = $this->app['config']->get('wire-core.plugins', []);
+
+            foreach ($plugins as $pluginClass) {
+                $manager->register($this->app->make($pluginClass));
+            }
+        });
+    }
+
+    protected function bootPlugins(): void
+    {
+        if ($this->app->bound(PluginManager::class)) {
+            $this->app->make(PluginManager::class)->boot();
+        }
     }
 }

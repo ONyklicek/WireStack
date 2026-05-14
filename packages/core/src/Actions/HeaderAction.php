@@ -104,7 +104,7 @@ class HeaderAction extends BaseAction
             return '';
         }
 
-        return view('tables.actions.header-action', ['action' => $this])->render();
+        return view('wire-table::tables.actions.header-action', ['action' => $this])->render();
     }
 
     public function toHtml(): string

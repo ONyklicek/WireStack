@@ -8,12 +8,16 @@ use Closure;
 
 class SelectFilter extends Filter
 {
+    /** @var array<string, string> */
     protected array $options = [];
 
     protected bool $native = true;
 
     protected bool $searchable = false;
 
+    /**
+     * @param  array<string, string>|Closure  $options
+     */
     public function options(array|Closure $options): static
     {
         $this->options = $options;
@@ -21,6 +25,9 @@ class SelectFilter extends Filter
         return $this;
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function getOptions(): array
     {
         return $this->options;

@@ -149,28 +149,30 @@ it('has no form modal by default', function () {
     expect(Action::make('test')->hasFormModal())->toBeFalse();
 });
 
-it('can set form fields', function () {
+it('can set form via component array', function () {
     $action = Action::make('edit')
         ->requiresConfirmation()
         ->form([
-            ['name' => 'reason', 'type' => 'textarea', 'label' => 'Důvod'],
+            \NyonCode\WireForms\Components\TextInput::make('reason'),
         ]);
 
     expect($action->hasFormModal())->toBeTrue()
-        ->and($action->getFormFields())->toHaveCount(1);
+        ->and($action->hasFormInstance())->toBeTrue();
 });
 
 it('supports dynamic form fields via closure', function () {
     $action = Action::make('edit')
         ->requiresConfirmation()
         ->form(fn ($record) => [
-            ['name' => 'name', 'type' => 'text', 'default' => $record->name],
+            \NyonCode\WireForms\Components\TextInput::make('name'),
         ]);
 
-    $record = (object) ['name' => 'Jan'];
-    $fields = $action->getFormFields($record);
+    expect($action->hasFormModal())->toBeTrue()
+        ->and($action->hasFormInstance())->toBeTrue();
 
-    expect($fields)->toHaveCount(1);
+    $record = (object) ['name' => 'Jan'];
+    $form = $action->getFormInstance(context: $record);
+    expect($form)->toBeInstanceOf(\NyonCode\WireForms\Forms\Form::class);
 });
 
 // ─── Form Validation ──────────────────────────────────────────────────────
@@ -178,7 +180,9 @@ it('supports dynamic form fields via closure', function () {
 it('can set form validation rules', function () {
     $action = Action::make('submit')
         ->requiresConfirmation()
-        ->form([['name' => 'reason', 'type' => 'text']])
+        ->form([
+            \NyonCode\WireForms\Components\TextInput::make('reason'),
+        ])
         ->formValidation(['reason' => 'required|min:10']);
 
     // getFormValidation() prefixes keys with 'actionModalFormData.'

@@ -6,6 +6,7 @@ namespace NyonCode\WireTable\Filters;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Support\Trans;
 
 class DateFilter extends Filter
 {
@@ -15,9 +16,9 @@ class DateFilter extends Filter
 
     protected ?string $maxDate = null;
 
-    protected ?string $fromLabel = 'Od';
+    protected ?string $fromLabel = null;
 
-    protected ?string $toLabel = 'Do';
+    protected ?string $toLabel = null;
 
     public function range(bool $range = true): static
     {
@@ -64,7 +65,7 @@ class DateFilter extends Filter
 
     public function getFromLabel(): string
     {
-        return $this->fromLabel ?? 'Od';
+        return $this->fromLabel ?? Trans::get('wire-table::messages.from');
     }
 
     public function toLabel(?string $label): static
@@ -76,9 +77,13 @@ class DateFilter extends Filter
 
     public function getToLabel(): string
     {
-        return $this->toLabel ?? 'Do';
+        return $this->toLabel ?? Trans::get('wire-table::messages.to');
     }
 
+    /**
+     * @param  Builder<Model>  $query
+     * @return Builder<Model>
+     */
     public function apply(Builder $query, mixed $value): Builder
     {
         if ($value === null || $value === '' || $value === []) {

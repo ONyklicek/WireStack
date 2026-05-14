@@ -1,6 +1,6 @@
 # Modals
 
-Modal system for confirmation dialogs, slide-overs, and multi-step wizards. Lives inside `wire-core` as a separate module, prepared for future extraction (see [ADR 0006](../decisions/0006-modular-core-extraction-strategy.md)).
+Modal system for confirmation dialogs, slide-overs, and multi-step wizards. Lives inside `wire-core` as a separate module, prepared for future extraction ([ADR 0006](../decisions/0006-modular-core-extraction-strategy.md)).
 
 ## Modal Types
 
@@ -28,6 +28,8 @@ Action::make('delete')
 
 ## Slide-Over
 
+Panel slides in from the right:
+
 ```php
 Action::make('details')
     ->slideOver()
@@ -36,32 +38,69 @@ Action::make('details')
     ->modalMaxHeight('60vh');
 ```
 
-## Modal Appearance
+## Modal Configuration
 
 ```php
 Action::make('edit')
+    // Size
     ->modalWidth('2xl')              // sm, md, lg, xl, 2xl, 3xl, 4xl, 5xl
+
+    // Alignment
     ->modalAlignment('center')       // center, start
+
+    // Close behavior
     ->closeModalOnClickAway()
     ->closeModalOnEscape()
+
+    // Mobile adaptations
     ->slideOverOnMobile()            // slide-over on mobile, modal on desktop
     ->fullScreenOnMobile();          // full screen on mobile
 ```
 
+## Modal Object
+
+For advanced use cases, the `Modal` class provides a standalone configuration object:
+
+```php
+use NyonCode\WireCore\Modals\Modal;
+
+$modal = Modal::make()
+    ->icon('user', 'primary')
+    ->color('primary')
+    ->fullScreenOnMobile()
+    ->mobileWidth('full');
+
+$modal->getIcon();             // 'user'
+$modal->getIconColor();        // 'primary'
+$modal->getColor();            // 'primary'
+$modal->isFullScreenOnMobile(); // true
+$modal->toArray();             // serialized config
+```
+
 ## Footer Actions
+
+Custom buttons in the modal footer:
 
 ```php
 use NyonCode\WireCore\Actions\ModalFooterAction;
 
 Action::make('edit')
+    ->form([...])
     ->modalFooterActions([
         ModalFooterAction::make('save')
             ->label('Save')
             ->color('primary')
             ->submit(),
+
         ModalFooterAction::make('save-and-close')
             ->label('Save & Close')
             ->action(fn () => $this->saveAndClose()),
+
+        ModalFooterAction::make('cancel')
+            ->label('Cancel')
+            ->color('gray')
+            ->outlined()
+            ->close(),                       // closes the modal
     ]);
 ```
 
@@ -74,19 +113,62 @@ Action::make('create')
     ->steps([
         ModalStep::make('info')
             ->label('Basic Info')
-            ->description('Enter details')
+            ->description('Enter user details')
             ->icon('user')
-            ->fields([...]),
+            ->fields([
+                TextInput::make('name')->required(),
+                TextInput::make('email')->email()->required(),
+            ]),
 
         ModalStep::make('settings')
             ->label('Settings')
-            ->fields([...]),
+            ->fields([
+                Select::make('role')->options([...]),
+                Toggle::make('active'),
+            ]),
 
         ModalStep::make('review')
             ->label('Review')
-            ->fields([...]),
+            ->fields([
+                Placeholder::make('summary')
+                    ->content(fn ($data) => "Creating {$data['name']}"),
+            ]),
     ])
-    ->action(fn ($record, $data) => $record->update($data));
+    ->action(fn ($record, $data) => User::create($data));
+```
+
+Steps show a progress indicator and allow forward/backward navigation. Each step validates its own fields before advancing.
+
+## Halt Modal
+
+`ActionHalt` creates a secondary confirmation modal mid-execution:
+
+```php
+Action::make('process')
+    ->before(function ($record, Action $action) {
+        if ($record->has_warnings) {
+            $action->halt()
+                ->heading('Warnings Detected')
+                ->body('There are unresolved warnings. Continue anyway?')
+                ->icon('exclamation', 'warning')
+                ->submitLabel('Continue')
+                ->cancelLabel('Cancel')
+                ->width('md');
+        }
+    })
+    ->action(fn ($record) => $record->process());
+```
+
+### ActionHalt API
+
+```php
+->heading(string $heading)
+->body(string $body)
+->icon(string $icon, ?string $color)
+->submitLabel(string $label)
+->cancelLabel(string $label)
+->width(string $width)
+->validation(array $rules)          // validate form data before continue
 ```
 
 ## Blade Components
@@ -98,4 +180,4 @@ Action::make('create')
 
 ## Module Dependencies
 
-Modals depends only on Foundation. It does not depend on Actions or Notifications (see [ADR 0007](../decisions/0007-internal-module-dependencies.md)).
+Modals depends only on Foundation. It does not depend on Actions or Notifications ([ADR 0007](../decisions/0007-internal-module-dependencies.md)).

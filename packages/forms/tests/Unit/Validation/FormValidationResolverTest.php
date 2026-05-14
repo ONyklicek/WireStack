@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use Illuminate\Translation\ArrayLoader;
+use Illuminate\Translation\Translator;
+use Illuminate\Validation\Factory;
+use NyonCode\WireCore\Core\Validation\ValidationResult;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Validation\FormValidationResolver;
 
@@ -66,4 +70,56 @@ test('skips components without validation interface', function () {
     expect($resolver->getRules())->toBe([])
         ->and($resolver->getMessages())->toBe([])
         ->and($resolver->getAttributes())->toBe([]);
+});
+
+// ─── Core ValidationPipeline Integration (Phase 4) ─────────────────────────
+
+test('validateUsing delegates to Core ValidationPipeline and returns ValidationResult', function () {
+    // Register the Validator Factory in the container (required for ValidationPipeline)
+    app()->singleton(
+        Illuminate\Contracts\Validation\Factory::class,
+        fn ($app) => new Factory(
+            new Translator(
+                new ArrayLoader, 'en'
+            ),
+            $app,
+        ),
+    );
+
+    $fields = [
+        TextInput::make('name')->required(),
+        TextInput::make('email')->rules(['email']),
+    ];
+
+    $resolver = new FormValidationResolver($fields, 'data');
+
+    $result = $resolver->validateUsing(['data' => ['name' => 'Alice', 'email' => 'alice@test.com']]);
+    expect($result)->toBeInstanceOf(ValidationResult::class)
+        ->and($result->passed())->toBeTrue()
+        ->and($result->errors())->toBeEmpty();
+});
+
+test('validateUsing returns failure for invalid data', function () {
+    // Register the Validator Factory in the container
+    app()->singleton(
+        Illuminate\Contracts\Validation\Factory::class,
+        fn ($app) => new Factory(
+            new Translator(
+                new ArrayLoader, 'en'
+            ),
+            $app,
+        ),
+    );
+
+    $fields = [
+        TextInput::make('name')->required(),
+    ];
+
+    $resolver = new FormValidationResolver($fields, 'data');
+
+    $result = $resolver->validateUsing(['data' => ['name' => '']]);
+    expect($result)->toBeInstanceOf(ValidationResult::class)
+        ->and($result->failed())->toBeTrue()
+        ->and($result->errors())->not->toBeEmpty()
+        ->and($result->hasError('data.name'))->toBeTrue();
 });

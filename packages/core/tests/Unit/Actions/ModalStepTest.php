@@ -22,21 +22,21 @@ it('can set icon', function () {
     expect($step->getIcon())->toBe('user');
 });
 
-it('can set schema as array', function () {
+it('can set schema with components', function () {
     $schema = [
-        ['name' => 'name', 'type' => 'text'],
-        ['name' => 'email', 'type' => 'email'],
+        \NyonCode\WireForms\Components\TextInput::make('name'),
+        \NyonCode\WireForms\Components\TextInput::make('email'),
     ];
 
     $step = ModalStep::make('details')->schema($schema);
 
-    expect($step->getSchema())->toBe($schema);
+    expect($step->getSchema())->toHaveCount(2);
 });
 
 it('supports dynamic schema via closure', function () {
     $step = ModalStep::make('details')
         ->schema(fn ($record) => [
-            ['name' => 'name', 'type' => 'text', 'default' => $record->name],
+            \NyonCode\WireForms\Components\TextInput::make('name'),
         ]);
 
     $record = (object) ['name' => 'Jan'];
@@ -75,7 +75,7 @@ it('serializes to array', function () {
     $step = ModalStep::make('Details')
         ->description('Enter details')
         ->icon('user')
-        ->schema([['name' => 'name', 'type' => 'text']]);
+        ->schema([\NyonCode\WireForms\Components\TextInput::make('name')]);
 
     $array = $step->toArray();
 

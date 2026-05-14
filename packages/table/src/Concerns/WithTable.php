@@ -5,13 +5,15 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Concerns;
 
 use Exception;
+use Illuminate\Contracts\Pagination\CursorPaginator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Contracts\Pagination\Paginator;
+use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\WithPagination;
 use NyonCode\WireCore\Actions\Action;
@@ -19,13 +21,26 @@ use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Actions\ActionHalt;
 use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireCore\Actions\HeaderAction;
+use NyonCode\WireCore\Core\Actions\ActionContext;
+use NyonCode\WireCore\Core\Actions\ActionPipeline;
+use NyonCode\WireCore\Core\Actions\ActionResult;
+use NyonCode\WireCore\Core\Events\ActionExecuted;
+use NyonCode\WireCore\Core\Events\ActionExecuting;
+use NyonCode\WireCore\Core\Events\CellUpdated;
+use NyonCode\WireCore\Core\Events\CellUpdating;
+use NyonCode\WireCore\Core\Events\TableFiltered;
+use NyonCode\WireCore\Core\Events\TableFiltering;
+use NyonCode\WireCore\Core\Events\TableRefreshed;
+use NyonCode\WireCore\Core\Events\TableSearched;
+use NyonCode\WireCore\Core\Events\TableSearching;
+use NyonCode\WireCore\Core\Support\Deprecation;
+use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationManager;
+use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Table;
-use ReflectionException;
 use ReflectionFunction;
-use ReflectionMethod;
 
 trait WithTable
 {
@@ -68,9 +83,14 @@ trait WithTable
 
     public array $actionModalFormData = [];
 
+    /** @var Form|null Resolved Form instance for the current action modal */
+    protected ?Form $actionModalFormInstance = null;
+
     public bool $actionModalIsHeaderAction = false;
 
     // Dynamic halt modal state
+    protected ?Form $haltModalFormInstance = null;
+
     public bool $showHaltModal = false;
 
     public ?string $haltActionName = null;
@@ -88,15 +108,6 @@ trait WithTable
 
     public array $haltContext = [];  // skipBeforeOnConfirm, source, index, redirectAfterConfirm
 
-    // Legacy confirmation modal (for backwards compatibility)
-    public bool $showConfirmationModal = false;
-
-    public ?string $confirmActionName = null;
-
-    public ?string $confirmRecordKey = null;
-
-    public bool $isBulkAction = false;
-
     // Lazy loading state
     public bool $tableReady = false;
 
@@ -108,17 +119,11 @@ trait WithTable
     /** @var array Modal config - not a public Livewire property */
     protected array $actionModalConfigCache = [];
 
-    /** @var array Cached column metadata for accessors */
-    protected array $columnMetadata = [];
+    /** @var LengthAwarePaginator|Paginator|CursorPaginator|Collection|null Cached records for current request lifecycle */
+    protected LengthAwarePaginator|Paginator|CursorPaginator|Collection|null $cachedRecords = null;
 
-    /** @var array Cached filter metadata for accessors */
-    protected array $filterMetadata = [];
-
-    /** @var array Cached database columns */
-    protected ?array $databaseColumns = null;
-
-    /** @var LengthAwarePaginator|Collection|null Cached records for current request lifecycle */
-    protected LengthAwarePaginator|Collection|null $cachedRecords = null;
+    /** @var TableQueryService|null Shared query service instance */
+    protected ?TableQueryService $queryService = null;
 
     /**
      * Initialize table state
@@ -158,7 +163,7 @@ trait WithTable
     }
 
     // ==========================================
-    // Table Polling
+    // Table Configuration & Query Building
     // ==========================================
 
     /**
@@ -169,9 +174,6 @@ trait WithTable
         if ($this->tableInstance === null) {
             $this->tableInstance = $this->table(Table::make());
             $this->tableInstance->livewireComponent($this);
-
-            // Auto-detect accessors and configure virtual columns
-            $this->configureVirtualColumns();
         }
 
         return $this->tableInstance;
@@ -183,443 +185,20 @@ trait WithTable
     abstract public function table(Table $table): Table;
 
     /**
-     * Analyze columns and build metadata for accessors
+     * Get or create the TableQueryService.
      */
-    protected function configureVirtualColumns(): void
+    protected function getQueryService(): TableQueryService
     {
-        $table = $this->tableInstance;
-        $model = $this->getTableModel();
-
-        if (! $model) {
-            return;
+        if ($this->queryService === null) {
+            $this->queryService = new TableQueryService;
         }
 
-        $modelInstance = new $model;
-        $this->databaseColumns = $this->getModelTableColumns($modelInstance);
-
-        // Configure column metadata
-        foreach ($table->getColumns() as $column) {
-            $columnName = $column->getName();
-
-            // If column has explicit searchColumns or a custom search callback,
-            // use those directly (Filament-style: searchable(['first_name', 'last_name']))
-            $explicitSearchColumns = $column->getSearchColumns();
-            $hasSearchCallback = $column->getSearchCallback() !== null;
-
-            if (! empty($explicitSearchColumns) || $hasSearchCallback) {
-                $this->columnMetadata[$columnName] = [
-                    'isAccessor' => ! in_array($columnName, $this->databaseColumns),
-                    'isDbColumn' => in_array($columnName, $this->databaseColumns),
-                    'isRelation' => $column->getRelation() !== null,
-                    'searchColumns' => $explicitSearchColumns,
-                    'sortColumn' => ! empty($explicitSearchColumns) ? $explicitSearchColumns[0] : $columnName,
-                    'hasSearchCallback' => $hasSearchCallback,
-                    'hasSortCallback' => $column->getSortCallback() !== null,
-                ];
-
-                continue;
-            }
-
-            // Handle relation columns (contains dot)
-            if ($column->getRelation()) {
-                $relation = $column->getRelation();
-                $attribute = $column->getRelationshipAttribute();
-
-                // Get related model and its columns
-                $relatedModel = $this->getRelatedModel($modelInstance, $relation);
-                $relatedColumns = $this->getRelatedModelColumns($modelInstance, $relation);
-
-                if (in_array($attribute, $relatedColumns)) {
-                    // It's a real DB column on related model
-                    $this->columnMetadata[$columnName] = [
-                        'isAccessor' => false,
-                        'isDbColumn' => true,
-                        'isRelation' => true,
-                        'searchColumns' => [$columnName],
-                        'sortColumn' => $columnName,
-                    ];
-                } else {
-                    // Attribute is accessor on related model - use reflection
-                    $searchCols = $relatedModel
-                        ? $this->resolveAccessorColumns($relatedModel, $attribute, $relatedColumns)
-                        : $this->guessColumnsFromName($attribute, $relatedColumns);
-
-                    // Prefix with relation name
-                    $searchCols = array_map(fn ($col) => "{$relation}.{$col}", $searchCols);
-
-                    $this->columnMetadata[$columnName] = [
-                        'isAccessor' => true,
-                        'isDbColumn' => false,
-                        'isRelation' => true,
-                        'searchColumns' => $searchCols,
-                        'sortColumn' => ! empty($searchCols) ? $searchCols[0] : null,
-                    ];
-                }
-
-                continue;
-            }
-
-            // Check if column exists in database
-            if (in_array($columnName, $this->databaseColumns)) {
-                $this->columnMetadata[$columnName] = [
-                    'isAccessor' => false,
-                    'isDbColumn' => true,
-                    'isRelation' => false,
-                    'searchColumns' => [$columnName],
-                    'sortColumn' => $columnName,
-                ];
-
-                continue;
-            }
-
-            // Check if it's an accessor - use reflection to find columns
-            if ($this->isAccessor($modelInstance, $columnName)) {
-                $searchCols = $this->resolveAccessorColumns($modelInstance, $columnName, $this->databaseColumns);
-
-                $this->columnMetadata[$columnName] = [
-                    'isAccessor' => true,
-                    'isDbColumn' => false,
-                    'isRelation' => false,
-                    'searchColumns' => $searchCols,
-                    'sortColumn' => ! empty($searchCols) ? $searchCols[0] : null,
-                ];
-            } else {
-                // Unknown column - might be added via state() callback
-                $this->columnMetadata[$columnName] = [
-                    'isAccessor' => false,
-                    'isDbColumn' => false,
-                    'isRelation' => false,
-                    'searchColumns' => [],
-                    'sortColumn' => null,
-                ];
-            }
-        }
-
-        // Configure filter metadata
-        foreach ($table->getFilters() as $filter) {
-            $filterName = $filter->getName();
-
-            // Handle relation filters (contains dot)
-            if (method_exists($filter, 'getRelation') && $filter->getRelation()) {
-                $relation = $filter->getRelation();
-                $attribute = $filter->getRelationshipAttribute();
-
-                // Get related model and its columns
-                $relatedModel = $this->getRelatedModel($modelInstance, $relation);
-                $relatedColumns = $this->getRelatedModelColumns($modelInstance, $relation);
-
-                if (in_array($attribute, $relatedColumns)) {
-                    // It's a real DB column on related model
-                    $this->filterMetadata[$filterName] = [
-                        'isAccessor' => false,
-                        'isDbColumn' => true,
-                        'isRelation' => true,
-                        'filterColumns' => [$attribute],
-                    ];
-                } else {
-                    // Attribute is accessor on related model
-                    $filterCols = $relatedModel
-                        ? $this->resolveAccessorColumns($relatedModel, $attribute, $relatedColumns)
-                        : $this->guessColumnsFromName($attribute, $relatedColumns);
-
-                    $this->filterMetadata[$filterName] = [
-                        'isAccessor' => true,
-                        'isDbColumn' => false,
-                        'isRelation' => true,
-                        'filterColumns' => $filterCols,
-                    ];
-                }
-
-                continue;
-            }
-
-            // Check if filter column exists in database
-            if (in_array($filterName, $this->databaseColumns)) {
-                $this->filterMetadata[$filterName] = [
-                    'isAccessor' => false,
-                    'isDbColumn' => true,
-                    'isRelation' => false,
-                    'filterColumns' => [$filterName],
-                ];
-
-                continue;
-            }
-
-            // Check if it's an accessor - use reflection to find columns
-            if ($this->isAccessor($modelInstance, $filterName)) {
-                $filterCols = $this->resolveAccessorColumns($modelInstance, $filterName, $this->databaseColumns);
-
-                $this->filterMetadata[$filterName] = [
-                    'isAccessor' => true,
-                    'isDbColumn' => false,
-                    'isRelation' => false,
-                    'filterColumns' => $filterCols,
-                ];
-            } else {
-                // Unknown filter or has custom query callback
-                $this->filterMetadata[$filterName] = [
-                    'isAccessor' => false,
-                    'isDbColumn' => false,
-                    'isRelation' => false,
-                    'filterColumns' => [],
-                ];
-            }
-        }
+        return $this->queryService;
     }
 
-    /**
-     * Get the model class for the table
-     */
-    protected function getTableModel(): ?string
-    {
-        $table = $this->tableInstance;
-
-        // Try to get model from table configuration
-        $query = $table->getQuery();
-
-        return get_class($query->getModel());
-    }
-
-    /**
-     * Get database table columns for a model
-     */
-    protected function getModelTableColumns($model): array
-    {
-        try {
-            $table = $model->getTable();
-            $connection = $model->getConnection();
-
-            return $connection->getSchemaBuilder()->getColumnListing($table);
-        } catch (Exception $e) {
-            return [];
-        }
-    }
-
-    /**
-     * Get related model instance for a relation
-     */
-    protected function getRelatedModel($model, string $relation)
-    {
-        try {
-            $parts = explode('.', $relation);
-            $current = $model;
-
-            foreach ($parts as $part) {
-                $methodName = Str::camel($part);
-                if (! method_exists($current, $methodName)) {
-                    return null;
-                }
-                $relationInstance = $current->{$methodName}();
-                $current = $relationInstance->getRelated();
-            }
-
-            return $current;
-        } catch (Exception $e) {
-            return null;
-        }
-    }
-
-    /**
-     * Get database columns for a related model
-     */
-    protected function getRelatedModelColumns($model, string $relation): array
-    {
-        try {
-            // Handle nested relations (e.g., "user.role")
-            $parts = explode('.', $relation);
-            $current = $model;
-
-            foreach ($parts as $part) {
-                $methodName = Str::camel($part);
-                if (! method_exists($current, $methodName)) {
-                    return [];
-                }
-                $relationInstance = $current->{$methodName}();
-                $current = $relationInstance->getRelated();
-            }
-
-            return $current->getConnection()->getSchemaBuilder()->getColumnListing($current->getTable());
-        } catch (Exception $e) {
-            return [];
-        }
-    }
-
-    /**
-     * Resolve columns used by an accessor - primary method using reflection
-     */
-    protected function resolveAccessorColumns($model, string $accessorName, array $tableColumns): array
-    {
-        // 1. Try reflection-based extraction from source code
-        $columns = $this->extractColumnsFromAccessor($model, $accessorName, $tableColumns);
-
-        if (! empty($columns)) {
-            return $columns;
-        }
-
-        // 2. Fallback: pattern-based guessing for common names
-        return $this->guessColumnsFromName($accessorName, $tableColumns);
-    }
-
-    /**
-     * Extract database columns used by an accessor via reflection and source analysis
-     */
-    protected function extractColumnsFromAccessor($model, string $accessorName, array $tableColumns): array
-    {
-        // Try new-style Attribute accessor (Laravel 9+)
-        $methodName = Str::camel($accessorName);
-        if (method_exists($model, $methodName)) {
-            $columns = $this->extractColumnsFromMethodSource($model, $methodName, $tableColumns);
-            if (! empty($columns)) {
-                return $columns;
-            }
-        }
-
-        // Try old-style accessor (getXxxAttribute)
-        $oldStyleMethod = 'get'.Str::studly($accessorName).'Attribute';
-        if (method_exists($model, $oldStyleMethod)) {
-            $columns = $this->extractColumnsFromMethodSource($model, $oldStyleMethod, $tableColumns);
-            if (! empty($columns)) {
-                return $columns;
-            }
-        }
-
-        return [];
-    }
-
-    /**
-     * Extract column references from a method's source code using reflection
-     */
-    protected function extractColumnsFromMethodSource($model, string $methodName, array $tableColumns): array
-    {
-        try {
-            $reflection = new ReflectionMethod($model, $methodName);
-            $filename = $reflection->getFileName();
-            $startLine = $reflection->getStartLine();
-            $endLine = $reflection->getEndLine();
-
-            if (! $filename || ! $startLine || ! $endLine) {
-                return [];
-            }
-
-            // Read the method source code
-            $lines = file($filename);
-            $methodSource = implode('', array_slice($lines, $startLine - 1, $endLine - $startLine + 1));
-
-            return $this->findColumnsInSource($methodSource, $tableColumns);
-        } catch (Exception $e) {
-            return [];
-        }
-    }
-
-    /**
-     * Find column names in source code by matching against known table columns
-     */
-    protected function findColumnsInSource(string $source, array $tableColumns): array
-    {
-        $foundColumns = [];
-
-        foreach ($tableColumns as $column) {
-            // Match various patterns where column might be referenced:
-            // $this->column_name, $this->columnName
-            // $this->first_name, $this->firstName
-            // "first_name", 'first_name'
-            // $record->column_name
-            $patterns = [
-                '/\$this->'.preg_quote($column, '/')."\b/",
-                '/\$this->'.preg_quote(Str::camel($column), '/')."\b/",
-                '/["\']'.preg_quote($column, '/').'["\']/',
-            ];
-
-            foreach ($patterns as $pattern) {
-                if (preg_match($pattern, $source)) {
-                    $foundColumns[] = $column;
-                    break;
-                }
-            }
-        }
-
-        return array_unique($foundColumns);
-    }
-
-    /**
-     * Fallback: guess columns from accessor name for common patterns
-     */
-    protected function guessColumnsFromName(string $accessorName, array $tableColumns): array
-    {
-        $searchColumns = [];
-        $snakeName = Str::snake($accessorName);
-
-        // Common patterns for composite columns
-        $patterns = [
-            'full_name' => ['first_name', 'last_name', 'name'],
-            'name' => ['first_name', 'last_name'],
-            'full_address' => ['street', 'city', 'zip', 'address', 'address_line_1', 'address_line_2'],
-            'address' => ['street', 'city', 'zip', 'address_line_1'],
-            'contact' => ['email', 'phone', 'name'],
-            'contact_info' => ['email', 'phone', 'mobile'],
-            'full_paid' => ['paid_amount', 'total_amount'],
-            'fully_paid' => ['paid_amount', 'total_amount'],
-            'is_paid' => ['paid_amount', 'total_amount'],
-        ];
-
-        // Check if accessor matches a known pattern
-        if (isset($patterns[$snakeName])) {
-            foreach ($patterns[$snakeName] as $col) {
-                if (in_array($col, $tableColumns)) {
-                    $searchColumns[] = $col;
-                }
-            }
-            if (! empty($searchColumns)) {
-                return $searchColumns;
-            }
-        }
-
-        // Try to find columns containing parts of accessor name
-        $parts = explode('_', $snakeName);
-
-        foreach ($tableColumns as $col) {
-            foreach ($parts as $part) {
-                if (strlen($part) > 2 && Str::contains($col, $part)) {
-                    $searchColumns[] = $col;
-                    break;
-                }
-            }
-        }
-
-        return array_unique($searchColumns);
-    }
-
-    /**
-     * Check if a column name corresponds to a Laravel Attribute accessor
-     */
-    protected function isAccessor($model, string $name): bool
-    {
-        // Check for new-style Attribute accessor (Laravel 9+)
-        $methodName = Str::camel($name);
-
-        if (method_exists($model, $methodName)) {
-            $reflection = new ReflectionMethod($model, $methodName);
-            $returnType = $reflection->getReturnType();
-
-            if ($returnType && $returnType->getName() === "Illuminate\Database\Eloquent\Casts\Attribute") {
-                return true;
-            }
-        }
-
-        // Check for old-style accessor (getXxxAttribute)
-        $oldStyleMethod = 'get'.Str::studly($name).'Attribute';
-        if (method_exists($model, $oldStyleMethod)) {
-            return true;
-        }
-
-        // Check if it's in model's appends array (usually means it's an accessor)
-        $appends = $model->getAppends();
-        if (in_array($name, $appends) || in_array(Str::snake($name), $appends)) {
-            return true;
-        }
-
-        return false;
-    }
+    // ==========================================
+    // Table Polling
+    // ==========================================
 
     /**
      * Refresh table data (called by wire:poll).
@@ -728,25 +307,32 @@ trait WithTable
     }
 
     /**
-     * Render the table as HTML
+     * Render the table view.
      */
-    public function getTableProperty(): string
+    public function getTableProperty(): View
     {
-        return view('tables.index', [
+        return view('wire-table::tables.index', [
             'table' => $this->getTable(),
             'records' => $this->getTableRecords(),
             'component' => $this,
-        ])->render();
+        ]);
     }
+
+    // ==========================================
+    // Query Building (delegated to TableQueryService)
+    // ==========================================
 
     /**
      * Get paginated records for the table.
+     *
+     * Delegates query building to TableQueryService which uses
+     * QueryPlanner + QueryExecutor from wire-core.
      *
      * Results are cached within the current request lifecycle to prevent
      * duplicate queries when areAllVisibleSelected() or selectAllRecords()
      * call this method after the initial render.
      */
-    public function getTableRecords(): LengthAwarePaginator|Collection
+    public function getTableRecords(): LengthAwarePaginator|Paginator|CursorPaginator|Collection
     {
         if ($this->cachedRecords !== null) {
             return $this->cachedRecords;
@@ -759,23 +345,13 @@ trait WithTable
             return collect();
         }
 
-        $query = $table->getQuery();
+        $query = $this->buildTableQuery();
 
-        // Apply eager loading for relations
-        $query = $this->applyEagerLoading($query);
-
-        // Apply global search
-        $query = $this->applySearch($query);
-
-        // Apply filters
-        $query = $this->applyFilters($query);
-
-        // Apply sorting
-        $query = $this->applySorting($query);
-
-        // Return paginated or all
-        if ($table->isPaginated()) {
-            $this->cachedRecords = $query->paginate($this->tablePerPage);
+        // Apply query caching if configured
+        if ($table->isQueryCached()) {
+            $this->cachedRecords = $this->executeWithCache($table, $query);
+        } elseif ($table->isPaginated()) {
+            $this->cachedRecords = $this->paginateQuery($table, $query);
         } else {
             $this->cachedRecords = $query->get();
         }
@@ -784,432 +360,108 @@ trait WithTable
     }
 
     /**
-     * Apply eager loading for relation columns
+     * Execute query with the appropriate pagination mode.
+     *
+     * @param  Builder<Model>  $query
      */
-    protected function applyEagerLoading(Builder $query): Builder
+    protected function paginateQuery(Table $table, Builder $query): LengthAwarePaginator|Paginator|CursorPaginator
     {
-        $table = $this->getTable();
-        $relations = [];
-
-        foreach ($table->getColumns() as $column) {
-            $relation = $column->getRelation();
-            if ($relation && ! in_array($relation, $relations)) {
-                $relations[] = $relation;
-            }
-        }
-
-        if (! empty($relations)) {
-            $query->with($relations);
-        }
-
-        return $query;
+        return match ($table->getPaginationMode()) {
+            'simple' => $query->simplePaginate($this->tablePerPage),
+            'cursor' => $query->cursorPaginate($this->tablePerPage),
+            default => $query->paginate($this->tablePerPage),
+        };
     }
 
     /**
-     * Apply global search to query
+     * Execute query with caching.
+     *
+     * @param  Builder<Model>  $query
      */
-    protected function applySearch(Builder $query): Builder
+    protected function executeWithCache(Table $table, Builder $query): LengthAwarePaginator|Paginator|CursorPaginator|Collection
     {
-        if (empty($this->tableSearch)) {
-            return $query;
-        }
+        $ttl = $table->getQueryCacheTtl();
+        $key = $table->getQueryCacheKey() ?? $this->generateQueryCacheKey($query);
 
-        $table = $this->getTable();
-        $searchableColumns = $table->getSearchableColumns();
-
-        if (empty($searchableColumns)) {
-            return $query;
-        }
-
-        $search = $this->tableSearch;
-
-        return $query->where(function (Builder $query) use ($searchableColumns, $search) {
-            foreach ($searchableColumns as $column) {
-                $columnName = $column->getName();
-
-                // 1. Custom search callback takes highest priority (Filament-style)
-                $searchCallback = $column->getSearchCallback();
-                if ($searchCallback !== null) {
-                    $query->orWhere(function (Builder $q) use ($searchCallback, $search) {
-                        call_user_func($searchCallback, $q, $search);
-                    });
-
-                    continue;
-                }
-
-                // 2. Explicit searchColumns (Column: searchable(['col1', 'col2']), StackedColumn: auto-detected)
-                $searchCols = $column->getSearchColumns();
-                if (! empty($searchCols)) {
-                    foreach ($searchCols as $searchCol) {
-                        $this->applySearchToColumn($query, $searchCol, $search);
-                    }
-
-                    continue;
-                }
-
-                // 3. Use metadata (auto-detected via reflection)
-                $metadata = $this->getColumnMetadata($columnName);
-
-                // Check if it's a real DB column
-                $isRealDbColumn =
-                    $metadata['isDbColumn'] ||
-                    ($this->databaseColumns !== null && in_array($columnName, $this->databaseColumns));
-
-                if ($isRealDbColumn) {
-                    // Search directly by column name
-                    $this->applySearchToColumn($query, $columnName, $search);
-                } elseif (! empty($metadata['searchColumns'])) {
-                    // Search by mapped columns (from reflection or metadata)
-                    foreach ($metadata['searchColumns'] as $searchCol) {
-                        $this->applySearchToColumn($query, $searchCol, $search);
-                    }
-                }
-                // else: skip - non-DB column without searchColumns and no callback
+        return Cache::remember($key, $ttl, function () use ($table, $query) {
+            if ($table->isPaginated()) {
+                return $this->paginateQuery($table, $query);
             }
+
+            return $query->get();
         });
     }
 
     /**
-     * Apply search to a single column
+     * Generate a cache key from the query state.
+     *
+     * @param  Builder<Model>  $query
      */
-    protected function applySearchToColumn(Builder $query, string $columnName, string $search): void
+    protected function generateQueryCacheKey(Builder $query): string
     {
-        // Check if it's a relation column (contains dot)
-        if (str_contains($columnName, '.')) {
-            $parts = explode('.', $columnName);
-            $attribute = array_pop($parts);
-            $relation = implode('.', $parts);
-
-            $query->orWhereHas($relation, function (Builder $q) use ($attribute, $search) {
-                $q->where($attribute, 'like', "%$search%");
-            });
-        } else {
-            $query->orWhere($columnName, 'like', "%{$search}%");
-        }
+        return 'wire_table:'.md5(
+            $query->toSql().
+            serialize($query->getBindings()).
+            $this->tablePerPage.
+            $this->tableSortColumn.
+            $this->tableSortDirection
+        );
     }
 
     /**
-     * Get metadata for a column
+     * Build the complete query with all modifications applied.
+     *
+     * Delegates to TableQueryService which uses the Core QueryPlanner
+     * and QueryExecutor infrastructure. This replaces ~500 lines of
+     * inline query building, accessor reflection, and metadata analysis.
+     *
+     * @return Builder<Model>
      */
-    protected function getColumnMetadata(string $columnName): array
-    {
-        return $this->columnMetadata[$columnName] ?? [
-            'isAccessor' => false,
-            'isDbColumn' => false,
-            'isRelation' => false,
-            'searchColumns' => [],
-            'sortColumn' => null,
-            'hasSearchCallback' => false,
-            'hasSortCallback' => false,
-        ];
-    }
-
-    /**
-     * Apply filters to query
-     */
-    protected function applyFilters(Builder $query): Builder
+    protected function buildTableQuery(): Builder
     {
         $table = $this->getTable();
+        $baseQuery = $table->getQuery();
+        $tableId = static::class;
 
-        // Apply global filters
-        foreach ($table->getFilters() as $filter) {
-            $filterName = $filter->getName();
-            $value = $this->tableFilters[$filterName] ?? null;
-
-            if (! $filter->canView()) {
-                continue;
-            }
-
-            // Skip if no value
-            if ($value === null || $value === '' || $value === []) {
-                continue;
-            }
-
-            // If filter has custom query callback, use it
-            if (method_exists($filter, 'getQueryCallback') && $filter->getQueryCallback()) {
-                $query = call_user_func($filter->getQueryCallback(), $query, $value);
-
-                continue;
-            }
-
-            // Get filter metadata
-            $metadata = $this->getFilterMetadata($filterName);
-
-            // Handle relation filters
-            if (method_exists($filter, 'getRelation') && $filter->getRelation()) {
-                $relation = $filter->getRelation();
-                $attribute = $filter->getRelationshipAttribute();
-
-                $query = $query->whereHas($relation, function ($q) use ($attribute, $value, $filter, $metadata) {
-                    if ($metadata['isAccessor'] && ! empty($metadata['filterColumns'])) {
-                        // Accessor on related model - filter by underlying columns
-                        $q->where(function ($subQuery) use ($metadata, $value, $filter) {
-                            foreach ($metadata['filterColumns'] as $col) {
-                                if (method_exists($filter, 'isMultiple') && $filter->isMultiple() && is_array($value)) {
-                                    $subQuery->orWhereIn($col, $value);
-                                } else {
-                                    $subQuery->orWhere($col, 'like', "%$value%");
-                                }
-                            }
-                        });
-                    } else {
-                        // Real DB column on related model
-                        if (method_exists($filter, 'isMultiple') && $filter->isMultiple() && is_array($value)) {
-                            $q->whereIn($attribute, $value);
-                        } else {
-                            $q->where($attribute, $value);
-                        }
-                    }
-                });
-
-                continue;
-            }
-
-            // Handle local accessors
-            if ($metadata['isAccessor'] && ! empty($metadata['filterColumns'])) {
-                // Special handling for boolean/comparison accessors with exactly 2 columns
-                if (
-                    count($metadata['filterColumns']) === 2 &&
-                    in_array($value, ['true', 'false', '1', '0', true, false, 1, 0], true)
-                ) {
-                    $cols = $metadata['filterColumns'];
-
-                    // Try to intelligently determine which column is "paid" vs "total"
-                    // Common patterns: paid_amount vs total_amount, current vs target, etc.
-                    $paidCol = null;
-                    $totalCol = null;
-
-                    foreach ($cols as $col) {
-                        if (str_contains($col, 'paid')) {
-                            $paidCol = $col;
-                        } elseif (str_contains($col, 'total')) {
-                            $totalCol = $col;
-                        }
-                    }
-
-                    // If we found both paid and total columns, use comparison logic
-                    if ($paidCol && $totalCol) {
-                        $isTrueValue = in_array($value, ['true', '1', true, 1], true);
-
-                        if ($isTrueValue) {
-                            // For "true": paid >= total (fully paid)
-                            $query = $query->whereRaw("$paidCol >= $totalCol");
-                        } else {
-                            // For "false": paid < total (not fully paid)
-                            $query = $query->whereRaw("$paidCol < $totalCol");
-                        }
-                    } else {
-                        // Fallback: use first column for comparison (less reliable)
-                        $col1 = $cols[0];
-                        $col2 = $cols[1];
-                        $isTrueValue = in_array($value, ['true', '1', true, 1], true);
-
-                        if ($isTrueValue) {
-                            $query = $query->whereRaw("$col1 >= $col2");
-                        } else {
-                            $query = $query->whereRaw("$col1 < $col2");
-                        }
-                    }
-                } else {
-                    // Standard accessor filtering - search across all underlying columns
-                    $query = $query->where(function ($q) use ($metadata, $value, $filter) {
-                        foreach ($metadata['filterColumns'] as $col) {
-                            if (method_exists($filter, 'isMultiple') && $filter->isMultiple() && is_array($value)) {
-                                $q->orWhereIn($col, $value);
-                            } else {
-                                $q->orWhere($col, 'like', "%$value%");
-                            }
-                        }
-                    });
+        // Dispatch search event
+        if ($this->tableSearch) {
+            $searchableColumns = [];
+            foreach ($table->getColumns() as $col) {
+                if ($col->isSearchable()) {
+                    $searchableColumns[] = $col->getName();
                 }
-
-                continue;
             }
-
-            // Standard filter application for DB columns
-            $query = $filter->apply($query, $value);
+            event(new TableSearching($tableId, $this->tableSearch, $searchableColumns));
         }
 
-        // Apply column filters (row filters)
-        foreach ($table->getColumns() as $column) {
-            if ($column->isFilterable()) {
-                $columnName = $column->getName();
-                $value = $this->columnFilters[$columnName] ?? null;
+        // Dispatch filter event
+        $activeFilters = array_filter($this->tableFilters, fn ($v) => $v !== null && $v !== '' && $v !== []);
+        if (! empty($activeFilters)) {
+            event(new TableFiltering($tableId, $activeFilters));
+        }
 
-                if ($value !== null && $value !== '') {
-                    $query = $this->applyColumnFilter($query, $column, $value);
-                }
-            }
+        $query = $this->getQueryService()->buildQuery(
+            baseQuery: $baseQuery,
+            table: $table,
+            search: $this->tableSearch,
+            filterValues: $this->tableFilters,
+            sortColumn: ! empty($this->tableSortColumn) ? $this->tableSortColumn : null,
+            sortDirection: $this->tableSortDirection,
+            columnFilterValues: $this->columnFilters,
+        );
+
+        // Post-search event
+        if ($this->tableSearch) {
+            // Count is deferred — we dispatch with -1 as a signal that count is not yet known
+            event(new TableSearched($tableId, $this->tableSearch, -1));
+        }
+
+        // Post-filter event
+        if (! empty($activeFilters)) {
+            event(new TableFiltered($tableId, $activeFilters, -1));
         }
 
         return $query;
-    }
-
-    /**
-     * Get metadata for a filter
-     */
-    protected function getFilterMetadata(string $filterName): array
-    {
-        return $this->filterMetadata[$filterName] ?? [
-            'isAccessor' => false,
-            'isDbColumn' => false,
-            'isRelation' => false,
-            'filterColumns' => [],
-        ];
-    }
-
-    /**
-     * Apply filter for a single column using metadata
-     */
-    protected function applyColumnFilter(Builder $query, Column $column, mixed $value): Builder
-    {
-        // Empty array values (e.g. date_range with both empty) should be skipped
-        if (is_array($value) && empty(array_filter($value, fn ($v) => $v !== null && $v !== ''))) {
-            return $query;
-        }
-
-        // Custom filter callback takes priority
-        if ($column->getFilterQueryCallback()) {
-            return call_user_func($column->getFilterQueryCallback(), $query, $value);
-        }
-
-        $columnName = $column->getName();
-
-        // For relation columns — Column::applyFilter handles this
-        if ($column->getRelation()) {
-            return $column->applyFilter($query, $value);
-        }
-
-        // Check explicit searchColumns on Column first (Filament-style)
-        // These override the column name for filtering purposes
-        $explicitColumns = $column->getSearchColumns();
-        if (! empty($explicitColumns)) {
-            return $query->where(function ($q) use ($column, $explicitColumns, $value) {
-                foreach ($explicitColumns as $col) {
-                    if (str_contains($col, '.')) {
-                        $parts = explode('.', $col);
-                        $attr = array_pop($parts);
-                        $rel = implode('.', $parts);
-                        $q->orWhereHas($rel, function ($subQ) use ($column, $attr, $value) {
-                            $column->applyFilterCondition($subQ, $attr, $value);
-                        });
-                    } else {
-                        $q->orWhere(function ($subQ) use ($column, $col, $value) {
-                            $column->applyFilterCondition($subQ, $col, $value);
-                        });
-                    }
-                }
-            });
-        }
-
-        // Check metadata for non-DB columns (accessor columns with searchColumns)
-        $metadata = $this->getColumnMetadata($columnName);
-        $isRealDbColumn =
-            $metadata['isDbColumn'] ||
-            ($this->databaseColumns !== null && in_array($columnName, $this->databaseColumns));
-
-        if (! $isRealDbColumn) {
-            if (! empty($metadata['searchColumns'])) {
-                return $query->where(function ($q) use ($column, $metadata, $value) {
-                    foreach ($metadata['searchColumns'] as $col) {
-                        $q->orWhere(function ($subQ) use ($column, $col, $value) {
-                            $column->applyFilterCondition($subQ, $col, $value);
-                        });
-                    }
-                });
-            }
-
-            // Non-DB column without searchColumns — skip
-            return $query;
-        }
-
-        // Standard DB column — delegate to Column::applyFilter
-        return $column->applyFilter($query, $value);
-    }
-
-    /**
-     * Apply sorting to query
-     */
-    protected function applySorting(Builder $query): Builder
-    {
-        if (empty($this->tableSortColumn)) {
-            return $query;
-        }
-
-        $table = $this->getTable();
-        $column = $this->findColumn($this->tableSortColumn);
-
-        if (! $column || ! $column->isSortable()) {
-            return $query;
-        }
-
-        $columnName = $column->getName();
-        $direction = $this->tableSortDirection;
-
-        // 1. Custom sort callback takes highest priority
-        $sortCallback = $column->getSortCallback();
-        if ($sortCallback !== null) {
-            return call_user_func($sortCallback, $query, $direction);
-        }
-
-        // 2. Get metadata for this column
-        $metadata = $this->getColumnMetadata($columnName);
-
-        // Determine sort column from metadata
-        $sortColumn = $metadata['sortColumn'];
-
-        // Cannot sort if no sort column available (accessor without mapped columns)
-        if ($sortColumn === null) {
-            return $query;
-        }
-
-        // Check if sort column contains relation (dot notation)
-        if (str_contains($sortColumn, '.')) {
-            // Create a temporary column object for relation sorting
-            $tempColumn = new Column($sortColumn);
-
-            return $this->applySortingWithRelation($query, $tempColumn, $direction);
-        }
-
-        return $query->orderBy($sortColumn, $direction);
-    }
-
-    /**
-     * Find a column by name
-     */
-    protected function findColumn(string $name): ?Column
-    {
-        $table = $this->getTable();
-
-        foreach ($table->getColumns() as $column) {
-            if ($column->getName() === $name) {
-                return $column;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Apply sorting for relation columns
-     */
-    protected function applySortingWithRelation(Builder $query, Column $column, string $direction): Builder
-    {
-        $relation = $column->getRelation();
-        $attribute = $column->getRelationshipAttribute();
-
-        // Get the related table name
-        $model = $query->getModel();
-        $relationInstance = $model->{Str::camel($relation)}();
-        $relatedTable = $relationInstance->getRelated()->getTable();
-        $foreignKey = $relationInstance->getForeignKeyName();
-        $ownerKey = $relationInstance->getOwnerKeyName();
-        $table = $model->getTable();
-
-        return $query
-            ->leftJoin($relatedTable, "{$table}.{$foreignKey}", '=', "{$relatedTable}.{$ownerKey}")
-            ->orderBy("{$relatedTable}.{$attribute}", $direction)
-            ->select("{$table}.*");
     }
 
     /**
@@ -1219,6 +471,10 @@ trait WithTable
     {
         return $this->tableReady;
     }
+
+    // ==========================================
+    // Sort, Search, Filter State Management
+    // ==========================================
 
     /**
      * Sort table by column
@@ -1287,6 +543,22 @@ trait WithTable
         $this->resetPage();
     }
 
+    /**
+     * Find a column by name
+     */
+    protected function findColumn(string $name): ?Column
+    {
+        $table = $this->getTable();
+
+        foreach ($table->getColumns() as $column) {
+            if ($column->getName() === $name) {
+                return $column;
+            }
+        }
+
+        return null;
+    }
+
     // ─── Sub-Rows ────────────────────────────────────────
 
     /**
@@ -1313,10 +585,15 @@ trait WithTable
             return;
         }
 
-        $records = $this->getTableRecords();
-        $this->expandedRows = $records->pluck($table->getPrimaryKey())
-            ->map(fn ($k) => (string) $k)
-            ->all();
+        if ($table->isSubRowsDefaultExpanded()) {
+            // Default expanded: clear the "collapsed" list
+            $this->expandedRows = [];
+        } else {
+            $records = $this->getTableRecords();
+            $this->expandedRows = $records->pluck($table->getPrimaryKey())
+                ->map(fn ($k) => (string) $k)
+                ->all();
+        }
     }
 
     /**
@@ -1324,7 +601,17 @@ trait WithTable
      */
     public function collapseAllRows(): void
     {
-        $this->expandedRows = [];
+        $table = $this->getTable();
+
+        if ($table->hasSubRows() && $table->isSubRowsDefaultExpanded()) {
+            // Default expanded: add all to "collapsed" list
+            $records = $this->getTableRecords();
+            $this->expandedRows = $records->pluck($table->getPrimaryKey())
+                ->map(fn ($k) => (string) $k)
+                ->all();
+        } else {
+            $this->expandedRows = [];
+        }
     }
 
     /**
@@ -1332,7 +619,14 @@ trait WithTable
      */
     public function isRowExpanded(mixed $recordKey): bool
     {
-        return in_array((string) $recordKey, $this->expandedRows, true);
+        $isInList = in_array((string) $recordKey, $this->expandedRows, true);
+
+        // When default expanded, the expandedRows list tracks *collapsed* rows
+        if ($this->getTable()->isSubRowsDefaultExpanded()) {
+            return ! $isInList;
+        }
+
+        return $isInList;
     }
 
     /**
@@ -1346,12 +640,18 @@ trait WithTable
     /**
      * Get sub-rows for a parent record.
      * Applies sub-row filters if enabled.
+     * When no relation is set, returns the record itself as a single-item collection.
      */
     public function getSubRows(mixed $record): Collection
     {
         $table = $this->getTable();
         if (! $table->hasSubRows()) {
             return collect();
+        }
+
+        // No relation — detail row mode: show the record itself
+        if ($table->getSubRowRelation() === null) {
+            return collect([$record]);
         }
 
         $query = $table->getSubRowsQuery($record);
@@ -1450,6 +750,8 @@ trait WithTable
         return false;
     }
 
+    // ─── Column Visibility ───────────────────────────────
+
     /**
      * Toggle column visibility
      */
@@ -1493,6 +795,8 @@ trait WithTable
     {
         return ! in_array($column, $this->hiddenColumns, true);
     }
+
+    // ─── Record Selection ────────────────────────────────
 
     /**
      * Toggle record selection
@@ -1576,6 +880,42 @@ trait WithTable
     }
 
     /**
+     * Get array of selected record keys
+     */
+    public function getSelectedRecordKeys(): array
+    {
+        return $this->selectedRecords;
+    }
+
+    /**
+     * Deselect all records
+     */
+    public function deselectAllRecords(): void
+    {
+        $this->selectedRecords = [];
+    }
+
+    /**
+     * Get Collection of selected records (fetched from database)
+     */
+    public function getSelectedRecords(): Collection
+    {
+        $selectedKeys = $this->getSelectedRecordKeys();
+
+        if (empty($selectedKeys)) {
+            return collect();
+        }
+
+        $table = $this->getTable();
+
+        return $table->getQuery()->whereIn($table->getPrimaryKey(), $selectedKeys)->get();
+    }
+
+    // ==========================================
+    // Action System
+    // ==========================================
+
+    /**
      * Open action modal (confirmation or form)
      */
     public function openActionModal(string $recordKey, string $actionName): void
@@ -1602,6 +942,7 @@ trait WithTable
         $this->actionModalIsHeaderAction = false;
         $this->actionModalConfigCache = $action->getModalConfig($record);
         $this->actionModalFormData = $action->getFormDefaults($record);
+        $this->actionModalFormInstance = $action->getFormInstance($this, $record);
         $this->showActionModal = true;
     }
 
@@ -1630,8 +971,6 @@ trait WithTable
 
     /**
      * Execute table action
-     *
-     * @throws ReflectionException
      */
     public function executeTableAction(string $recordKey, string $actionName, bool $confirmed = false): void
     {
@@ -1654,9 +993,6 @@ trait WithTable
         ], $recordKey, 'row', $confirmed);
     }
 
-    /**
-     * @throws ReflectionException
-     */
     protected function invokeActionCallback(callable $callback, array $payload): mixed
     {
         $reflection = new ReflectionFunction($callback);
@@ -1678,10 +1014,10 @@ trait WithTable
     /**
      * Generalized action execution pipeline.
      *
-     * Handles the before → action → after lifecycle for all action types
-     * (row, bulk, header), eliminating ~400 lines of duplicated code.
+     * Delegates to Core ActionPipeline with adapter closures that bridge
+     * ActionContext to the named-parameter reflection-based callbacks.
      *
-     * @param  BaseAction  $action  The action to execute
+     * @param  mixed  $action  The action to execute
      * @param  array  $payload  Named arguments for callbacks (record/records/data/etc.)
      * @param  string  $haltKey  Record key for halt modal ('__bulk__', '__header__', or record key)
      * @param  string  $actionType  'row', 'bulk', or 'header'
@@ -1695,83 +1031,167 @@ trait WithTable
         bool $confirmed = false,
     ): void {
         $data = $payload['data'] ?? [];
+        $tableId = static::class;
 
-        // ── Before hooks ──────────────────────────────────────
-        if (! $confirmed && $action->hasBeforeCallbacks()) {
-            foreach ($action->getBeforeCallbacks() as $i => $beforeCallback) {
-                $this->invokeActionCallback($beforeCallback, array_merge($payload, [
-                    'action' => $action,
-                    'confirmed' => $confirmed,
-                    'component' => $this,
-                ]));
-
-                $pendingHalt = $action->consumePendingHalt();
-                if ($pendingHalt) {
-                    $pendingHalt->source('before', $i);
-                    $this->showHaltModal($haltKey, $action->getName(), $pendingHalt, $data, $actionType);
-
-                    return;
-                }
-            }
+        // Collect record IDs for events
+        $recordIds = [];
+        if (isset($payload['record'])) {
+            $pk = $this->getTable()->getPrimaryKey();
+            $recordIds = [$payload['record']->{$pk}];
+        } elseif (isset($payload['records'])) {
+            $pk = $this->getTable()->getPrimaryKey();
+            $recordIds = $payload['records']->pluck($pk)->all();
         }
 
-        // ── Main action ───────────────────────────────────────
-        $callback = $action->getActionCallback();
-        $result = null;
+        // Dispatch ActionExecuting event
+        event(new ActionExecuting($tableId, $action->getName(), $recordIds));
 
-        if ($callback) {
+        // Build ActionContext
+        $context = $this->payloadToContext($payload, $action->getName());
+        $context->set('confirmed', $confirmed);
+        $context->set('actionType', $actionType);
+        $context->set('haltKey', $haltKey);
+        $context->set('component', $this);
+
+        // Wrap before callbacks as adapter closures
+        if (! $confirmed && $action->hasBeforeCallbacks()) {
+            $wrappedBefore = [];
+            foreach ($action->getBeforeCallbacks() as $i => $beforeCallback) {
+                $wrappedBefore[] = function (ActionContext $ctx) use ($action, $beforeCallback, $i): mixed {
+                    $this->invokeActionCallback($beforeCallback, array_merge(
+                        $this->contextToPayload($ctx),
+                        ['action' => $action, 'confirmed' => false, 'component' => $this],
+                    ));
+
+                    $pendingHalt = $action->consumePendingHalt();
+                    if ($pendingHalt) {
+                        $pendingHalt->source('before', $i);
+                        $ctx->set('pendingHalt', $pendingHalt);
+
+                        return false; // Signals BeforeCallbacksStage to halt
+                    }
+
+                    return true;
+                };
+            }
+            $context->set('beforeCallbacks', $wrappedBefore);
+        }
+
+        // Wrap after callbacks
+        if ($action->hasAfterCallbacks()) {
+            $wrappedAfter = [];
+            foreach ($action->getAfterCallbacks() as $i => $afterCallback) {
+                $wrappedAfter[] = function (ActionContext $ctx, ActionResult $result) use ($action, $afterCallback, $i): void {
+                    $this->invokeActionCallback($afterCallback, array_merge(
+                        $this->contextToPayload($ctx),
+                        ['action' => $action, 'result' => $result, 'confirmed' => $ctx->get('confirmed', false), 'component' => $this],
+                    ));
+
+                    $pendingHalt = $action->consumePendingHalt();
+                    if ($pendingHalt) {
+                        $pendingHalt->source('after', $i);
+                        $ctx->set('pendingHalt', $pendingHalt);
+                    }
+                };
+            }
+            $context->set('afterCallbacks', $wrappedAfter);
+        }
+
+        // Main action closure for the pipeline
+        $mainAction = function (ActionContext $ctx) use ($action): mixed {
+            $callback = $action->getActionCallback();
+            if (! $callback) {
+                return ActionResult::success();
+            }
+
             $halt = fn () => ActionHalt::make();
-
-            $result = $this->invokeActionCallback($callback, array_merge($payload, [
-                'halt' => $halt,
-                'confirmed' => $confirmed,
-                'component' => $this,
-            ]));
+            $result = $this->invokeActionCallback($callback, array_merge(
+                $this->contextToPayload($ctx),
+                ['halt' => $halt, 'confirmed' => $ctx->get('confirmed', false), 'component' => $this],
+            ));
 
             if ($result instanceof ActionHalt) {
                 $result->source('action');
-                $this->showHaltModal($haltKey, $action->getName(), $result, $data, $actionType);
+                $ctx->set('pendingHalt', $result);
 
-                return;
+                return ActionResult::halt();
             }
+
+            return $result instanceof ActionResult ? $result : ActionResult::success();
+        };
+
+        // Execute through Core ActionPipeline
+        $pipeline = app(ActionPipeline::class);
+        $pipelineResult = $pipeline->execute($context, $mainAction);
+
+        // Check for pending halt
+        $pendingHalt = $context->get('pendingHalt');
+        if ($pendingHalt instanceof ActionHalt) {
+            $this->showHaltModal($haltKey, $action->getName(), $pendingHalt, $data, $actionType);
+
+            return;
         }
 
-        // ── After hooks ───────────────────────────────────────
-        if ($action->hasAfterCallbacks()) {
-            foreach ($action->getAfterCallbacks() as $i => $afterCallback) {
-                $this->invokeActionCallback($afterCallback, array_merge($payload, [
-                    'action' => $action,
-                    'result' => $result,
-                    'confirmed' => $confirmed,
-                    'component' => $this,
-                ]));
-
-                $pendingHalt = $action->consumePendingHalt();
-                if ($pendingHalt) {
-                    $pendingHalt->source('after', $i);
-                    $this->showHaltModal($haltKey, $action->getName(), $pendingHalt, $data, $actionType);
-
-                    return;
-                }
-            }
+        // Handle notification from pipeline
+        $notification = $context->get('notification');
+        if ($notification) {
+            $this->sendNotification(
+                Notification::make()
+                    ->title($notification['message'])
+                    ->type($notification['type'] ?? 'success'),
+            );
         }
 
-        // ── Post-action ───────────────────────────────────────
+        // Handle redirect from pipeline
+        $redirect = $context->get('redirect');
+        if ($redirect) {
+            $this->redirect($redirect);
+        }
+
+        // Post-action
         if ($actionType === 'bulk' && method_exists($action, 'shouldDeselectRecordsAfterCompletion') && $action->shouldDeselectRecordsAfterCompletion()) {
             $this->deselectAllRecords();
         }
 
         $this->handleActionSuccess($action, $payload['record'] ?? $payload['records'] ?? null);
+
+        // Dispatch ActionExecuted event
+        event(new ActionExecuted($tableId, $action->getName(), $recordIds, $pipelineResult->isSuccess()));
+    }
+
+    /**
+     * Convert action payload to Core ActionContext.
+     */
+    private function payloadToContext(array $payload, string $actionName): ActionContext
+    {
+        return new ActionContext(
+            record: $payload['record'] ?? null,
+            records: isset($payload['records']) ? $payload['records'] : null,
+            formData: $payload['data'] ?? [],
+            actionName: $actionName,
+        );
+    }
+
+    /**
+     * Convert ActionContext back to named-parameter payload for reflection-based callbacks.
+     */
+    private function contextToPayload(ActionContext $ctx): array
+    {
+        $payload = [];
+
+        if ($ctx->record !== null) {
+            $payload['record'] = $ctx->record;
+        }
+        if ($ctx->records !== null) {
+            $payload['records'] = $ctx->records;
+        }
+        $payload['data'] = $ctx->formData;
+
+        return $payload;
     }
 
     /**
      * Show halt modal with dynamic configuration.
-     *
-     * @param  string  $recordKey  Record key (or '__bulk__' / '__header__' for non-row actions)
-     * @param  string  $actionName  Action name
-     * @param  ActionHalt  $halt  The halt object with modal configuration
-     * @param  array  $formData  Current form data to preserve
-     * @param  string  $actionType  'row', 'bulk', or 'header'
      */
     protected function showHaltModal(
         string $recordKey,
@@ -1786,22 +1206,22 @@ trait WithTable
         $this->haltModalFormData = $halt->getModalFormData() ?? $formData;
         $this->haltActionType = $actionType;
         $this->haltContext = $halt->toArray()['context'] ?? [];
+
+        // Resolve Form instance for halt modal
+        $formInstance = $halt->getFormInstance();
+        if ($formInstance) {
+            $formInstance->statePath('haltModalFormData');
+            $formInstance->livewire($this);
+            $this->haltModalFormInstance = $formInstance;
+            // Store in session so it survives Livewire re-renders
+            session()->put('wire.halt_form_instance', serialize($formInstance));
+        }
+
         $this->showHaltModal = true;
     }
 
     /**
      * Handle post-action success: table invalidation and redirects.
-     *
-     * Called after action + after hooks complete without halting.
-     *
-     * NOTE: Notifications are NOT sent here automatically — action callbacks
-     * are responsible for their own notifications (via $this->flash(),
-     * $component->sendNotification(), etc.). This avoids double
-     * notifications and gives full control to the action author.
-     *
-     * If you need an automatic notification, use ->successNotification('...')
-     * on the action and handle it in your component's action callback,
-     * or use the HasLifecycle::sendSuccessNotification() method.
      */
     protected function handleActionSuccess(mixed $action, mixed $record = null): void
     {
@@ -1819,49 +1239,18 @@ trait WithTable
 
     /**
      * Invalidate cached table instance so that the next render fetches fresh data.
-     *
-     * Livewire's `protected` properties (like $tableInstance) are NOT
-     * automatically serialised between requests — they're rebuilt from
-     * scratch on each subsequent request via `getTable()`.  However,
-     * within the *same* request (e.g. after an action executes and
-     * the component re-renders in the same lifecycle) the cached
-     * instance still holds the old Builder with stale results.
-     *
-     * Calling this method forces `getTable()` to rebuild everything,
-     * ensuring filters, counts, and records reflect the latest DB state.
      */
     public function invalidateTable(): void
     {
         $this->tableInstance = null;
-        $this->columnMetadata = [];
-        $this->filterMetadata = [];
-        $this->databaseColumns = null;
         $this->cachedRecords = null;
+        $this->queryService = null;
+
+        event(new TableRefreshed(static::class));
     }
 
     /**
      * Send a notification through the resolved notification driver.
-     *
-     * Resolution order:
-     *   1. Per-table driver (Table::notificationDriver())
-     *   2. Global default (NotificationManager::setDefaultDriver())
-     *   3. Built-in SessionDriver (backward compatible)
-     *
-     * Can be called from action closures or component methods:
-     *
-     *   // Inside action callback via $component:
-     *   ->action(function ($record, $component) {
-     *       $record->approve();
-     *       $component->sendNotification(Notification::success('Schváleno'));
-     *   })
-     *
-     *   // With rich notification:
-     *   $this->sendNotification(
-     *       Notification::warning('Pozor!')
-     *           ->title('Omezená kapacita')
-     *           ->duration(8000)
-     *           ->icon('exclamation-triangle')
-     *   );
      */
     public function sendNotification(Notification $notification): void
     {
@@ -1893,6 +1282,7 @@ trait WithTable
         $this->actionModalIsHeaderAction = false;
         $this->actionModalConfigCache = $action->getModalConfig($selectedRecords);
         $this->actionModalFormData = $action->getFormDefaults($selectedRecords);
+        $this->actionModalFormInstance = $action->getFormInstance($this, $selectedRecords);
         $this->showActionModal = true;
     }
 
@@ -1943,38 +1333,6 @@ trait WithTable
     }
 
     /**
-     * Get array of selected record keys
-     */
-    public function getSelectedRecordKeys(): array
-    {
-        return $this->selectedRecords;
-    }
-
-    /**
-     * Deselect all records
-     */
-    public function deselectAllRecords(): void
-    {
-        $this->selectedRecords = [];
-    }
-
-    /**
-     * Get Collection of selected records (fetched from database)
-     */
-    public function getSelectedRecords(): Collection
-    {
-        $selectedKeys = $this->getSelectedRecordKeys();
-
-        if (empty($selectedKeys)) {
-            return collect();
-        }
-
-        $table = $this->getTable();
-
-        return $table->getQuery()->whereIn($table->getPrimaryKey(), $selectedKeys)->get();
-    }
-
-    /**
      * Submit action modal (execute action with form data)
      */
     public function submitActionModal(): void
@@ -1982,46 +1340,17 @@ trait WithTable
         $isHeaderAction = $this->actionModalIsHeaderAction;
         $isBulkAction = $this->actionModalIsBulk;
 
-        $validation = [];
-        $messages = [];
-        $attributes = [];
-        $fields = [];
-
         if (! $this->actionModalName) {
             $this->closeActionModal();
 
             return;
         }
 
-        if ($isHeaderAction) {
-            $action = $this->findHeaderAction($this->actionModalName);
-            if ($action) {
-                $validation = $action->getFormValidation();
-                $messages = $action->getValidationMessages();
-                $attributes = $action->getValidationAttributes();
-                $fields = $action->getFormFields();
-            }
-        } elseif ($isBulkAction) {
-            $action = $this->findBulkAction($this->actionModalName);
-            if ($action) {
-                // Get selected records for dynamic validation rules
-                $selectedRecords = $this->getSelectedRecords();
-                $validation = $action->getFormValidation($selectedRecords);
-                $messages = $action->getValidationMessages($selectedRecords);
-                $attributes = $action->getValidationAttributes($selectedRecords);
-                $fields = $action->getFormFields($selectedRecords);
-            }
-        } else {
-            $action = $this->findAction($this->actionModalName);
-            if ($action) {
-                // Get record for row actions to support dynamic validation rules
-                $record = $this->actionModalRecordKey ? $this->getRecord($this->actionModalRecordKey) : null;
-                $validation = $action->getFormValidation($record);
-                $messages = $action->getValidationMessages($record);
-                $attributes = $action->getValidationAttributes($record);
-                $fields = $action->getFormFields($record);
-            }
-        }
+        $action = match (true) {
+            $isHeaderAction => $this->findHeaderAction($this->actionModalName),
+            $isBulkAction => $this->findBulkAction($this->actionModalName),
+            default => $this->findAction($this->actionModalName),
+        };
 
         if (! $action) {
             $this->closeActionModal();
@@ -2029,15 +1358,15 @@ trait WithTable
             return;
         }
 
-        // Auto-generate attributes from field labels if not explicitly set
-        if (empty($attributes) && ! empty($fields)) {
-            $attributes = $this->extractAttributesFromFields($fields);
+        // Re-resolve Form instance (not serialized between Livewire requests)
+        if ($this->actionModalFormInstance === null) {
+            $context = $isBulkAction ? ($this->getSelectedRecords()) : ($this->actionModalRecordKey ? $this->getRecord($this->actionModalRecordKey) : null);
+            $this->actionModalFormInstance = $action->getFormInstance($this, $context);
         }
 
-        // Validate form data if validation rules exist
-        // Note: getFormValidation() automatically adds 'actionModalFormData.' prefix
-        if (! empty($validation)) {
-            $this->validateActionModalForm($validation, $messages, $attributes);
+        // Validate via Form instance
+        if ($this->actionModalFormInstance !== null) {
+            $this->actionModalFormInstance->validate();
         }
 
         // Execute action
@@ -2067,6 +1396,7 @@ trait WithTable
         $this->actionModalIsBulk = false;
         $this->actionModalIsHeaderAction = false;
         $this->actionModalFormData = [];
+        $this->actionModalFormInstance = null;
         $this->actionModalConfigCache = [];
 
         // Invalidate table cache so next render fetches fresh data
@@ -2101,54 +1431,6 @@ trait WithTable
         $table = $this->getTable();
 
         return $table->getQuery()->where($table->getPrimaryKey(), $key)->first();
-    }
-
-    /**
-     * Extract validation attributes from field definitions
-     *
-     * This auto-generates attribute names from field labels so that
-     * validation messages show "Název" instead of "actionModalFormData.name"
-     */
-    protected function extractAttributesFromFields(array $fields, string $prefix = 'actionModalFormData.'): array
-    {
-        $attributes = [];
-
-        foreach ($fields as $field) {
-            // Get field name and label
-            $name = $field['name'] ?? null;
-            $label = $field['label'] ?? null;
-
-            if ($name && $label) {
-                $attributes[$prefix.$name] = $label;
-            }
-
-            // Process nested schema (sections, grids, fieldsets)
-            if (isset($field['schema']) && is_array($field['schema'])) {
-                $nestedAttributes = $this->extractAttributesFromFields($field['schema'], $prefix);
-                $attributes = array_merge($attributes, $nestedAttributes);
-            }
-        }
-
-        return $attributes;
-    }
-
-    /**
-     * Validate action modal form data with custom messages and attributes
-     *
-     * Uses Laravel Validator directly for better control over validation messages
-     */
-    protected function validateActionModalForm(array $rules, array $messages = [], array $attributes = []): void
-    {
-        // Prepare data in the format expected by validation rules
-        // Rules use 'actionModalFormData.field' format
-        $data = ['actionModalFormData' => $this->actionModalFormData];
-
-        $validator = Validator::make($data, $rules, $messages, $attributes);
-
-        if ($validator->fails()) {
-            // Re-throw with errors that Livewire can handle
-            throw new ValidationException($validator);
-        }
     }
 
     // ==========================================
@@ -2227,9 +1509,6 @@ trait WithTable
 
     /**
      * Get current modal data for view
-     *
-     * If cache is empty but modal should be shown (e.g., after validation failure),
-     * regenerate the config from the action.
      */
     public function getActionModalData(): array
     {
@@ -2242,8 +1521,47 @@ trait WithTable
     }
 
     /**
+     * Get the resolved Form instance for the current action modal, if any.
+     * Re-resolves on demand since the Form instance is not serialized between Livewire requests.
+     */
+    public function getActionModalFormInstance(): ?Form
+    {
+        if ($this->actionModalFormInstance === null && $this->showActionModal && $this->actionModalName) {
+            $this->resolveActionModalFormInstance();
+        }
+
+        return $this->actionModalFormInstance;
+    }
+
+    /**
+     * Resolve the Form instance from the current action.
+     */
+    protected function resolveActionModalFormInstance(): void
+    {
+        if (! $this->actionModalName) {
+            return;
+        }
+
+        $action = null;
+        $context = null;
+
+        if ($this->actionModalIsHeaderAction) {
+            $action = $this->findHeaderAction($this->actionModalName);
+        } elseif ($this->actionModalIsBulk) {
+            $action = $this->findBulkAction($this->actionModalName);
+            $context = $this->getSelectedRecords();
+        } else {
+            $action = $this->findAction($this->actionModalName);
+            $context = $this->actionModalRecordKey ? $this->getRecord($this->actionModalRecordKey) : null;
+        }
+
+        if ($action) {
+            $this->actionModalFormInstance = $action->getFormInstance($this, $context);
+        }
+    }
+
+    /**
      * Regenerate modal config from action
-     * Used when validation fails and component re-renders
      */
     protected function regenerateModalConfig(): void
     {
@@ -2272,61 +1590,32 @@ trait WithTable
     }
 
     /**
-     * Show confirmation modal for action (legacy)
+     * @deprecated Use halt modal system instead. Will be removed in v2.0.
      */
     public function confirmTableAction(string $recordKey, string $actionName): void
     {
-        $this->confirmActionName = $actionName;
-        $this->confirmRecordKey = $recordKey;
-        $this->isBulkAction = false;
-        $this->showConfirmationModal = true;
+        Deprecation::method('confirmTableAction', 'executeActionPipeline with halt');
     }
 
     /**
-     * Execute confirmed action (legacy)
+     * @deprecated Use halt modal system instead. Will be removed in v2.0.
      */
     public function executeConfirmedAction(): void
     {
-        if (! $this->confirmActionName) {
-            $this->closeConfirmationModal();
-
-            return;
-        }
-
-        if ($this->isBulkAction) {
-            $this->executeConfirmedBulkAction();
-        } elseif ($this->confirmRecordKey !== null) {
-            $this->executeTableAction($this->confirmRecordKey, $this->confirmActionName, true);
-        }
-
-        $this->closeConfirmationModal();
+        Deprecation::method('executeConfirmedAction', 'submitHaltModal');
     }
 
     /**
-     * Close confirmation modal (legacy)
+     * @deprecated Use halt modal system instead. Will be removed in v2.0.
      */
     public function closeConfirmationModal(): void
     {
-        $this->showConfirmationModal = false;
-        $this->confirmActionName = null;
-        $this->confirmRecordKey = null;
-        $this->isBulkAction = false;
-
-        // Invalidate table cache so next render fetches fresh data
-        $this->invalidateTable();
+        Deprecation::method('closeConfirmationModal', 'closeHaltModal');
     }
 
     // ==========================================
     // Halt Modal System (Dynamic Confirmation)
     // ==========================================
-
-    /**
-     * Execute confirmed bulk action (legacy)
-     */
-    protected function executeConfirmedBulkAction(): void
-    {
-        $this->executeBulkAction($this->confirmActionName);
-    }
 
     /**
      * Get halt modal configuration for view.
@@ -2337,10 +1626,25 @@ trait WithTable
     }
 
     /**
+     * Get the resolved Form instance for the halt modal.
+     * Re-hydrates from session since it's not serialized between Livewire requests.
+     */
+    public function getHaltModalFormInstance(): ?Form
+    {
+        if ($this->haltModalFormInstance !== null) {
+            return $this->haltModalFormInstance;
+        }
+
+        if ($this->showHaltModal && session()->has('wire.halt_form_instance')) {
+            $this->haltModalFormInstance = unserialize(session()->get('wire.halt_form_instance'));
+            $this->haltModalFormInstance->livewire($this);
+        }
+
+        return $this->haltModalFormInstance;
+    }
+
+    /**
      * Submit halt modal (confirm and re-execute action).
-     *
-     * Routes to the correct execution method based on halt context.
-     * Respects skipBeforeOnConfirm setting from the ActionHalt that triggered this.
      */
     public function submitHaltModal(array $formData = []): void
     {
@@ -2353,15 +1657,15 @@ trait WithTable
         // Validate form if present
         $validation = $this->haltModalConfig['formValidation'] ?? null;
         if ($validation && ! empty($formData)) {
-            $validator = Validator::make(
+            $result = app(ValidationPipeline::class)->validate(
                 $formData,
                 $validation,
                 $this->haltModalConfig['formValidationMessages'] ?? [],
                 $this->haltModalConfig['formValidationAttributes'] ?? [],
             );
 
-            if ($validator->fails()) {
-                throw ValidationException::withMessages($validator->errors()->toArray());
+            if ($result->failed()) {
+                throw ValidationException::withMessages($result->errors());
             }
         }
 
@@ -2401,6 +1705,8 @@ trait WithTable
         $this->haltRecordKey = null;
         $this->haltModalConfig = [];
         $this->haltModalFormData = [];
+        $this->haltModalFormInstance = null;
+        session()->forget('wire.halt_form_instance');
         $this->haltActionType = null;
         $this->haltContext = [];
 
@@ -2409,13 +1715,11 @@ trait WithTable
     }
 
     /**
-     * Confirm bulk action (legacy)
+     * @deprecated Use halt modal system instead. Will be removed in v2.0.
      */
     public function confirmBulkAction(string $actionName): void
     {
-        $this->confirmActionName = $actionName;
-        $this->isBulkAction = true;
-        $this->showConfirmationModal = true;
+        Deprecation::method('confirmBulkAction', 'executeBulkAction with halt');
     }
 
     /**
@@ -2438,6 +1742,7 @@ trait WithTable
         $this->actionModalIsHeaderAction = true;
         $this->actionModalConfigCache = $action->getModalConfig();
         $this->actionModalFormData = $action->getFormDefaults();
+        $this->actionModalFormInstance = $action->getFormInstance($this);
         $this->showActionModal = true;
     }
 
@@ -2449,17 +1754,14 @@ trait WithTable
         $this->executeHeaderActionWithData($actionName, [], $confirmed);
     }
 
-    /**
-     * Update table cell (inline editing)
-     */
+    // ==========================================
+    // Inline Editing
+    // ==========================================
 
     /**
      * Update a single cell in the table.
      *
      * Supports optimistic locking via $recordVersion parameter.
-     * If provided, the record's updated_at timestamp is checked before saving.
-     * If another user modified the record in the meantime, a conflict error is returned
-     * with the current value so the client can reconcile.
      *
      * @param  mixed  $recordKey  The primary key of the record
      * @param  string  $columnName  The name of the column
@@ -2473,21 +1775,21 @@ trait WithTable
         $column = $this->findColumn($columnName);
 
         if (! $column) {
-            return ['success' => false, 'message' => 'Sloupec nenalezen'];
+            return ['success' => false, 'message' => __('wire-table::messages.column_not_found')];
         }
 
         if (! $column->isEditable()) {
-            return ['success' => false, 'message' => 'Sloupec není editovatelný'];
+            return ['success' => false, 'message' => __('wire-table::messages.column_not_editable')];
         }
 
         // ── Permission checks (before transaction — read-only) ──
         if ($column->getPermission()) {
             $user = auth()->user();
             if (! $user) {
-                return ['success' => false, 'message' => 'Nemáte oprávnění'];
+                return ['success' => false, 'message' => __('wire-table::messages.no_permission')];
             }
             if (method_exists($user, 'hasPermissionTo') && ! $user->hasPermissionTo($column->getPermission())) {
-                return ['success' => false, 'message' => 'Nemáte oprávnění pro zobrazení'];
+                return ['success' => false, 'message' => __('wire-table::messages.no_permission_view')];
             }
         }
 
@@ -2499,48 +1801,47 @@ trait WithTable
         // Pre-validate without record context (basic rules)
         $rules = $column->getEditableRules(null);
         if (! empty($rules)) {
-            try {
-                $validator = Validator::make([$columnName => $value], [$columnName => $rules]);
-                if ($validator->fails()) {
-                    return [
-                        'success' => false,
-                        'message' => $validator->errors()->first($columnName),
-                        'errors' => $validator->errors()->get($columnName),
-                    ];
-                }
-            } catch (ValidationException $e) {
+            $validationResult = app(ValidationPipeline::class)->validate(
+                [$columnName => $value],
+                [$columnName => $rules],
+            );
+
+            if ($validationResult->failed()) {
+                $errors = $validationResult->getError($columnName) ?? [];
+
                 return [
                     'success' => false,
-                    'message' => $e->getMessage(),
-                    'errors' => $e->errors()[$columnName] ?? [],
+                    'message' => $errors[0] ?? __('wire-table::messages.validation_failed'),
+                    'errors' => $errors,
                 ];
             }
         }
 
+        // Dispatch CellUpdating event
+        event(new CellUpdating(static::class, $columnName, $recordKey, $value));
+
         // ── Atomic update with optimistic locking ───────────────
-        // Uses DB::transaction + lockForUpdate to eliminate TOCTOU race.
-        // The SELECT ... FOR UPDATE ensures no other transaction can modify
-        // the row between our check and our write.
         try {
             $result = DB::transaction(function () use ($table, $column, $columnName, $recordKey, $value, $recordVersion) {
-                // Lock the row — blocks concurrent writes until this transaction commits
+                // Lock the row
                 $record = $table->getQuery()
                     ->where($table->getPrimaryKey(), $recordKey)
                     ->lockForUpdate()
                     ->first();
 
                 if (! $record) {
-                    return ['success' => false, 'message' => 'Záznam nenalezen'];
+                    return ['success' => false, 'message' => __('wire-table::messages.record_not_found')];
                 }
+
+                // Capture old value for event
+                $oldValue = $record->{$columnName};
 
                 // ── Edit permission (record-aware) ──
                 if (method_exists($column, 'canEdit') && ! $column->canEdit($record)) {
-                    return ['success' => false, 'message' => 'Nemáte oprávnění pro editaci'];
+                    return ['success' => false, 'message' => __('wire-table::messages.no_permission_edit')];
                 }
 
                 // ── Optimistic locking ──
-                // Compare client's version (updated_at timestamp from render time)
-                // with the locked row's current version.
                 if ($recordVersion !== null && $recordVersion !== '0' && $record->updated_at) {
                     $currentVersion = (string) $record->updated_at->getTimestamp();
                     if ($currentVersion !== $recordVersion) {
@@ -2551,7 +1852,7 @@ trait WithTable
 
                         return [
                             'success' => false,
-                            'message' => 'Záznam byl mezitím změněn jiným uživatelem. Aktuální hodnota byla načtena.',
+                            'message' => __('wire-table::messages.record_conflict'),
                             'conflict' => true,
                             'currentValue' => (string) ($currentValue ?? ''),
                             'currentVersion' => $currentVersion,
@@ -2570,7 +1871,7 @@ trait WithTable
                     if (! $validation['valid']) {
                         return [
                             'success' => false,
-                            'message' => $validation['errors'][0] ?? 'Validace selhala',
+                            'message' => $validation['errors'][0] ?? __('wire-table::messages.validation_failed'),
                             'errors' => $validation['errors'],
                         ];
                     }
@@ -2583,7 +1884,7 @@ trait WithTable
                     $record->refresh();
                     $newVersion = $record->updated_at ? (string) $record->updated_at->getTimestamp() : null;
 
-                    return ['success' => true, 'version' => $newVersion, 'record' => $record, 'value' => $value];
+                    return ['success' => true, 'version' => $newVersion, 'record' => $record, 'value' => $value, 'oldValue' => $oldValue];
                 }
 
                 // Custom update callback (legacy)
@@ -2593,7 +1894,7 @@ trait WithTable
                     $record->refresh();
                     $newVersion = $record->updated_at ? (string) $record->updated_at->getTimestamp() : null;
 
-                    return ['success' => true, 'version' => $newVersion, 'record' => $record, 'value' => $value];
+                    return ['success' => true, 'version' => $newVersion, 'record' => $record, 'value' => $value, 'oldValue' => $oldValue];
                 }
 
                 // Pivot update
@@ -2604,7 +1905,7 @@ trait WithTable
                         $record->pivot->save();
                     }
 
-                    return ['success' => true, 'record' => $record, 'value' => $value];
+                    return ['success' => true, 'record' => $record, 'value' => $value, 'oldValue' => $oldValue];
                 }
 
                 // Relation update
@@ -2617,7 +1918,7 @@ trait WithTable
                         $related->save();
                     }
 
-                    return ['success' => true, 'record' => $record, 'value' => $value];
+                    return ['success' => true, 'record' => $record, 'value' => $value, 'oldValue' => $oldValue];
                 }
 
                 // Direct update
@@ -2633,50 +1934,25 @@ trait WithTable
             if ($result['success'] ?? false) {
                 $record = $result['record'] ?? null;
                 $savedValue = $result['value'] ?? $value;
+                $oldValue = $result['oldValue'] ?? null;
 
                 if ($record && method_exists($column, 'getAfterStateUpdatedCallback') && $column->getAfterStateUpdatedCallback()) {
                     call_user_func($column->getAfterStateUpdatedCallback(), $record, $savedValue);
                 }
 
+                // Dispatch CellUpdated event
+                event(new CellUpdated(static::class, $columnName, $recordKey, $oldValue, $savedValue));
+
                 $this->invalidateTable();
 
                 // Clean internal keys before returning to client
-                unset($result['record'], $result['value']);
+                unset($result['record'], $result['value'], $result['oldValue']);
             }
 
             return $result;
 
         } catch (Exception $e) {
-            return ['success' => false, 'message' => 'Chyba při ukládání: '.$e->getMessage()];
-        }
-    }
-
-    /**
-     * Update pivot table cell
-     */
-    protected function updatePivotCell(Model $record, Column $column, mixed $value): void
-    {
-        $attribute = $column->getRelationshipAttribute();
-
-        if ($record->pivot) {
-            $record->pivot->{$attribute} = $value;
-            $record->pivot->save();
-        }
-    }
-
-    /**
-     * Update related model cell
-     */
-    protected function updateRelationCell(Model $record, Column $column, mixed $value): void
-    {
-        $relation = $column->getRelation();
-        $attribute = $column->getRelationshipAttribute();
-
-        $related = data_get($record, $relation);
-
-        if ($related instanceof Model) {
-            $related->{$attribute} = $value;
-            $related->save();
+            return ['success' => false, 'message' => __('wire-table::messages.save_error', ['error' => $e->getMessage()])];
         }
     }
 
@@ -2694,13 +1970,13 @@ trait WithTable
         $column = $this->findColumn($columnName);
 
         if (! $column) {
-            return ['valid' => false, 'errors' => ['Sloupec nenalezen']];
+            return ['valid' => false, 'errors' => [__('wire-table::messages.column_not_found')]];
         }
 
         $record = $table->getQuery()->find($recordKey);
 
         if (! $record) {
-            return ['valid' => false, 'errors' => ['Záznam nenalezen']];
+            return ['valid' => false, 'errors' => [__('wire-table::messages.record_not_found')]];
         }
 
         // Apply formatters before validation (for TextInputColumn)
@@ -2713,15 +1989,18 @@ trait WithTable
             return $column->validate($value, $record);
         }
 
-        // Validate using editable rules (legacy support)
+        // Validate using editable rules
         $rules = $column->getEditableRules($record);
         if (! empty($rules)) {
-            $validator = Validator::make([$columnName => $value], [$columnName => $rules]);
+            $validationResult = app(ValidationPipeline::class)->validate(
+                [$columnName => $value],
+                [$columnName => $rules],
+            );
 
-            if ($validator->fails()) {
+            if ($validationResult->failed()) {
                 return [
                     'valid' => false,
-                    'errors' => $validator->errors()->get($columnName),
+                    'errors' => $validationResult->getError($columnName) ?? [],
                 ];
             }
         }
@@ -2730,43 +2009,23 @@ trait WithTable
     }
 
     /**
-     * Get confirmation modal data
+     * @deprecated Use halt modal system instead. Will be removed in v2.0.
      */
     public function getConfirmationModalData(): array
     {
-        if (! $this->confirmActionName) {
-            return [
-                'title' => 'Potvrdit akci',
-                'description' => 'Opravdu chcete provést tuto akci?',
-                'confirmLabel' => 'Potvrdit',
-                'cancelLabel' => 'Zrušit',
-            ];
-        }
-
-        if ($this->isBulkAction) {
-            $action = $this->findBulkAction($this->confirmActionName);
-            $record = null;
-        } else {
-            $action = $this->findAction($this->confirmActionName);
-            $record = $this->confirmRecordKey ? $this->getRecord($this->confirmRecordKey) : null;
-        }
-
-        if (! $action) {
-            return [
-                'title' => 'Potvrdit akci',
-                'description' => 'Opravdu chcete provést tuto akci?',
-                'confirmLabel' => 'Potvrdit',
-                'cancelLabel' => 'Zrušit',
-            ];
-        }
+        Deprecation::method('getConfirmationModalData', 'getHaltModalData');
 
         return [
-            'title' => $action->getModalHeading($record),
-            'description' => $action->getModalDescription($record),
-            'confirmLabel' => $action->getModalSubmitActionLabel(),
-            'cancelLabel' => $action->getModalCancelActionLabel(),
+            'title' => __('wire-table::messages.confirm_heading'),
+            'description' => __('wire-table::messages.confirm_description'),
+            'confirmLabel' => __('wire-table::messages.confirm_submit'),
+            'cancelLabel' => __('wire-table::messages.confirm_cancel'),
         ];
     }
+
+    // ==========================================
+    // Debug & SQL Inspection
+    // ==========================================
 
     /**
      * Get raw SQL and bindings for the table query.
@@ -2784,48 +2043,13 @@ trait WithTable
     }
 
     /**
-     * Build the complete query with all modifications applied.
-     * Useful for debugging.
+     * Get the final SQL query with all filters, search, and sorting applied.
+     *
+     * @return string The complete SQL query
      */
-    protected function buildTableQuery(): Builder
+    public function getTableSql(): string
     {
-        $table = $this->getTable();
-        $query = $table->getQuery();
-
-        // Apply search
-        $query = $this->applySearch($query);
-
-        // Apply filters
-        $query = $this->applyFilters($query);
-
-        // Apply column filters (respecting accessor/relation columns)
-        foreach ($this->columnFilters ?? [] as $columnName => $filterValue) {
-            if ($filterValue === null || $filterValue === '') {
-                continue;
-            }
-
-            $column = $this->findColumn($columnName);
-            if ($column && $column->getRelation()) {
-                // Filter through relation
-                $relation = $column->getRelation();
-                $attribute = $column->getRelationshipAttribute() ?? $columnName;
-                $query->whereHas($relation, function (Builder $q) use ($attribute, $filterValue) {
-                    $q->where($attribute, $filterValue);
-                });
-            } else {
-                $query->where($columnName, $filterValue);
-            }
-        }
-
-        // Apply sorting
-        $sortColumn = $this->tableSortColumn ?: $table->getDefaultSort();
-        $sortDirection = $this->tableSortDirection ?: $table->getDefaultSortDirection();
-
-        if ($sortColumn) {
-            $query->orderBy($sortColumn, $sortDirection);
-        }
-
-        return $query;
+        return static::builderToSql($this->buildTableQuery());
     }
 
     /**
@@ -2843,16 +2067,6 @@ trait WithTable
             'sort_column' => $this->tableSortColumn,
             'sort_direction' => $this->tableSortDirection,
         ]);
-    }
-
-    /**
-     * Get the final SQL query with all filters, search, and sorting applied.
-     *
-     * @return string The complete SQL query
-     */
-    public function getTableSql(): string
-    {
-        return static::builderToSql($this->buildTableQuery());
     }
 
     /**
@@ -2940,8 +2154,6 @@ trait WithTable
     /**
      * Refresh a specific row in the table.
      * This is called by PollColumn for row-level polling.
-     *
-     * Invalidates cached records so re-render fetches fresh data from DB.
      *
      * @param  mixed  $recordKey  The primary key of the record to refresh
      */

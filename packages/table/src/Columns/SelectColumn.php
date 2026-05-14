@@ -6,12 +6,14 @@ namespace NyonCode\WireTable\Columns;
 
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireTable\Concerns\HasView;
 
 class SelectColumn extends Column
 {
     use HasView;
 
+    /** @var array<string, string> */
     protected array $options = [];
 
     protected bool $native = true;
@@ -25,9 +27,12 @@ class SelectColumn extends Column
         parent::__construct($name);
         $this->editable = true;
         $this->editableType = 'select';
-        $this->placeholder = 'Vyberte...';
+        $this->placeholder = Trans::get('wire-table::messages.select_placeholder');
     }
 
+    /**
+     * @param  array<string, string>|Closure  $options
+     */
     public function options(array|Closure $options): static
     {
         $this->options = is_callable($options) ? $options() : $options;
@@ -36,6 +41,9 @@ class SelectColumn extends Column
         return $this;
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function getOptions(): array
     {
         return $this->options;
@@ -74,7 +82,7 @@ class SelectColumn extends Column
 
         // If not editable, just show the display value
         if (! $this->isEditable()) {
-            $displayValue = $this->options[$state] ?? ($state ?? ($this->getPlaceholder() ?? 'Vyberte...'));
+            $displayValue = $this->options[$state] ?? ($state ?? ($this->getPlaceholder() ?? Trans::get('wire-table::messages.select_placeholder')));
 
             return e((string) $displayValue);
         }

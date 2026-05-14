@@ -11,6 +11,7 @@
         @include($field->getView(), $field->getViewData())
     @elseif($field->getContent())
         @if($field->isHtmlContent())
+            {{-- WARNING: Raw HTML — only use with trusted content. --}}
             {!! $field->getContent() !!}
         @else
             <div class="text-sm text-gray-900 dark:text-white">{{ $field->getContent() }}</div>

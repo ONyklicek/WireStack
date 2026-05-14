@@ -2,7 +2,7 @@
 {{-- Variables: $column, $value --}}
 @php
     $name = $column->getName();
-    $placeholder = $column->getFilterPlaceholder() ?? __('All');
+    $placeholder = $column->getFilterPlaceholder() ?? __('wire-table::messages.filter_all');
     $options = $column->getFilterOptions();
 @endphp
 

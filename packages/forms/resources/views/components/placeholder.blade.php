@@ -9,6 +9,7 @@
 
     <div class="text-sm text-gray-900 dark:text-white">
         @if($field->isHtmlContent())
+            {{-- WARNING: Raw HTML — only use with trusted content (allowHtml/html). --}}
             {!! $field->getContent() !!}
         @else
             {{ $field->getContent() }}

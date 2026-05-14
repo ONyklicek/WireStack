@@ -402,7 +402,7 @@ class ActionGroup implements Htmlable
             return '';
         }
 
-        return view('tables.actions.action-group', [
+        return view('wire-table::tables.actions.action-group', [
             'group' => $this,
             'record' => $record,
         ])->render();

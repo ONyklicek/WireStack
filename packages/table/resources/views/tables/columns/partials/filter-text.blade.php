@@ -2,7 +2,7 @@
 {{-- Variables: $column --}}
 @php
     $name = $column->getName();
-    $placeholder = $column->getFilterPlaceholder() ?? __('Filter...');
+    $placeholder = $column->getFilterPlaceholder() ?? __('wire-table::messages.filter_placeholder');
 @endphp
 
 <input

@@ -38,11 +38,11 @@ it('can set min and max date', function () {
 
 // ─── Labels ─────────────────────────────────────────────────────────────────
 
-it('has default Czech labels', function () {
+it('has default labels from translation', function () {
     $filter = DateFilter::make('created_at');
 
-    expect($filter->getFromLabel())->toBe('Od')
-        ->and($filter->getToLabel())->toBe('Do');
+    expect($filter->getFromLabel())->toBe('from')
+        ->and($filter->getToLabel())->toBe('to');
 });
 
 it('can set custom labels', function () {
