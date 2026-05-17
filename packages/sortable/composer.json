@@ -1,0 +1,50 @@
+{
+    "name": "nyoncode/wire-sortable",
+    "description": "Drag & drop row reordering plugin for wire-table.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Ondrej Nyklicek",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "nyoncode/wire-core": "^0.1|dev-main|@dev",
+        "nyoncode/wire-table": "^0.1|dev-main|@dev",
+        "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
+        "illuminate/database": "^10.0|^11.0|^12.0|^13.0",
+        "livewire/livewire": "^3.0",
+        "nyoncode/laravel-package-toolkit": "^2.0.1"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
+        "laravel/pint": "^1.29",
+        "pestphp/pest": "^2.0|^3.0|^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "NyonCode\\WireSortable\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "NyonCode\\WireSortable\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "NyonCode\\WireSortable\\WireSortableServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}
