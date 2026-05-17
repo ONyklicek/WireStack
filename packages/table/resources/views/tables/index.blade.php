@@ -229,6 +229,13 @@
                                     @include('wire-table::tables.partials.sub-rows-toolbar', ['table' => $table, 'component' => $component])
                                 @endif
 
+                                {{-- Plugin Toolbar Widgets --}}
+                                @if(method_exists($component, 'getTableToolbarWidgets'))
+                                    @foreach($component->getTableToolbarWidgets() as $widget)
+                                        {!! $widget !!}
+                                    @endforeach
+                                @endif
+
                                 {{-- Header Actions --}}
                                 @if($hasHeaderActions)
                                     @foreach($table->getHeaderActions() as $headerAction)
