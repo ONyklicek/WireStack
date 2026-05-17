@@ -14,6 +14,7 @@ use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Core\Components\DataComponent;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireTable\Concerns\HasSummary;
+use Throwable;
 
 /** @phpstan-consistent-constructor */
 class Column extends DataComponent implements Htmlable
@@ -672,7 +673,7 @@ class Column extends DataComponent implements Htmlable
                         setTimeout(() => copied = false, 2000);
                     "
                     class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-                    title="{$copyTitle}"
+                    title="$copyTitle"
                 >
                     <template x-if="!copied">
                         <svg class="w-4 h-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1671,10 +1672,10 @@ class Column extends DataComponent implements Htmlable
     {
         return match ($this->filterOperator) {
             'equals', '=' => $query->where($column, $value),
-            'starts_with' => $query->where($column, 'like', "{$value}%"),
-            'ends_with' => $query->where($column, 'like', "%{$value}"),
+            'starts_with' => $query->where($column, 'like', "$value%"),
+            'ends_with' => $query->where($column, 'like', "%$value"),
             '>', '>=', '<', '<=', '!=' => $query->where($column, $this->filterOperator, $value),
-            default => $query->where($column, 'like', "%{$value}%"),
+            default => $query->where($column, 'like', "%$value%"),
         };
     }
 
@@ -1747,6 +1748,9 @@ class Column extends DataComponent implements Htmlable
         return $this->getColumnName();
     }
 
+    /**
+     * @throws Throwable
+     */
     public function renderFilter(mixed $value = null): string
     {
         if (! $this->filterable) {
@@ -1762,7 +1766,7 @@ class Column extends DataComponent implements Htmlable
             default => 'tables.columns.partials.filter-text',
         };
 
-        $namespacedView = "wire-table::{$viewName}";
+        $namespacedView = "wire-table::$viewName";
         $resolvedView = view()->exists($namespacedView) ? $namespacedView : $viewName;
 
         return view($resolvedView, [
