@@ -10,6 +10,7 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use Illuminate\Support\Traits\Macroable;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Core\Support\Deprecation;
@@ -25,6 +26,7 @@ class Table implements Htmlable
 {
     use Concerns\HasSubRows;
     use HasSqlDebug;
+    use Macroable;
 
     protected ?string $model = null;
 
