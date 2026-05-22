@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use NyonCode\WireCore\Actions\ActionHalt;
+use NyonCode\WireForms\Components\TextInput;
 
 it('can be created via make()', function () {
     expect(ActionHalt::make())->toBeInstanceOf(ActionHalt::class);
@@ -41,7 +42,7 @@ it('has correct defaults', function () {
 
 it('informative mode clears form and submit', function () {
     $halt = ActionHalt::make()
-        ->form([\NyonCode\WireForms\Components\TextInput::make('reason')])
+        ->form([TextInput::make('reason')])
         ->informative();
 
     expect($halt->isInformative())->toBeTrue()
@@ -80,7 +81,7 @@ it('serializes to array', function () {
 
 it('can set form with validation', function () {
     $halt = ActionHalt::make()
-        ->form([\NyonCode\WireForms\Components\TextInput::make('reason')])
+        ->form([TextInput::make('reason')])
         ->validation(['reason' => 'required'], ['reason.required' => 'Povinné']);
 
     expect($halt->hasForm())->toBeTrue()

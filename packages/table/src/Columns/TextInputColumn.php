@@ -145,7 +145,7 @@ class TextInputColumn extends Column
      */
     public function czk(int $decimals = 0): static
     {
-        return $this->money($decimals, ' ', ',');
+        return $this->money($decimals);
     }
 
     /**
@@ -444,7 +444,7 @@ class TextInputColumn extends Column
         return $this;
     }
 
-    public function formatForSave(mixed $value, Model $record): mixed
+    public function formatForSave(mixed $value, Model|null $record): mixed
     {
         if ($this->trim && is_string($value)) {
             $value = trim($value);
@@ -464,11 +464,11 @@ class TextInputColumn extends Column
             $value = $value !== '' ? (float) $value : null;
         }
 
-        if ($this->uppercase && is_string($value) && $value !== null) {
+        if ($this->uppercase && is_string($value)) {
             $value = mb_strtoupper($value);
         }
 
-        if ($this->lowercase && is_string($value) && $value !== null) {
+        if ($this->lowercase && is_string($value)) {
             $value = mb_strtolower($value);
         }
 

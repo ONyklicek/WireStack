@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireForms\Components\TextInput;
 
 // Using Action as a concrete class that uses HasModal trait
 
@@ -25,7 +26,7 @@ it('can check if it requires confirmation', function () {
 it('does not require confirmation when form is set', function () {
     $action = Action::make('edit')
         ->requiresConfirmation()
-        ->form([\NyonCode\WireForms\Components\TextInput::make('reason')]);
+        ->form([TextInput::make('reason')]);
 
     expect($action->doesRequireConfirmation())->toBeFalse()
         ->and($action->hasFormModal())->toBeTrue();
@@ -166,7 +167,7 @@ it('can be full screen on mobile', function () {
 
 it('can set form with component array', function () {
     $action = Action::make('edit')
-        ->form([\NyonCode\WireForms\Components\TextInput::make('title')]);
+        ->form([TextInput::make('title')]);
 
     expect($action->hasFormModal())->toBeTrue()
         ->and($action->hasModal())->toBeTrue();
@@ -174,14 +175,14 @@ it('can set form with component array', function () {
 
 it('can set form via closure', function () {
     $action = Action::make('edit')
-        ->form(fn ($record) => [\NyonCode\WireForms\Components\TextInput::make('title')]);
+        ->form(fn ($record) => [TextInput::make('title')]);
 
     expect($action->hasFormModal())->toBeTrue();
 });
 
 it('can set validation rules', function () {
     $action = Action::make('edit')
-        ->form([\NyonCode\WireForms\Components\TextInput::make('title')])
+        ->form([TextInput::make('title')])
         ->formValidation(['title' => 'required']);
 
     expect($action->getRawFormValidation())->toBe(['title' => 'required']);
@@ -189,7 +190,7 @@ it('can set validation rules', function () {
 
 it('prefixes validation rules with actionModalFormData', function () {
     $action = Action::make('edit')
-        ->form([\NyonCode\WireForms\Components\TextInput::make('title')])
+        ->form([TextInput::make('title')])
         ->formValidation(['title' => 'required']);
 
     $rules = $action->getFormValidation();
@@ -214,7 +215,7 @@ it('can set validation attributes', function () {
 it('returns empty defaults without fillFormUsing', function () {
     $action = Action::make('edit')
         ->form([
-            \NyonCode\WireForms\Components\TextInput::make('title'),
+            TextInput::make('title'),
         ]);
 
     expect($action->getFormDefaults())->toBe([]);
@@ -222,7 +223,7 @@ it('returns empty defaults without fillFormUsing', function () {
 
 it('can use fillFormUsing to provide defaults', function () {
     $action = Action::make('edit')
-        ->form([\NyonCode\WireForms\Components\TextInput::make('title')])
+        ->form([TextInput::make('title')])
         ->fillFormUsing(fn ($record) => ['title' => $record->title]);
 
     $record = (object) ['title' => 'Hello World'];

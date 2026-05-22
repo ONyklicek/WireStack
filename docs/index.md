@@ -91,11 +91,11 @@ Enterprise Livewire table component.
 
 ## wire-sortable
 
-Drag & drop row reordering plugin for wire-table.
+Drag & drop row and column reordering plugin for wire-table.
 
 | Document | Description |
 |----------|-------------|
-| [Sortable Rows](sortable/overview.md) | Installation, SortableTable API, WithSortableRows trait, config, frontend |
+| [Sortable](sortable/overview.md) | Installation, row sorting, column sorting, SortableTable API, WithSortable trait, config, frontend |
 
 ---
 

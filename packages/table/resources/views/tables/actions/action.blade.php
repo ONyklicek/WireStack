@@ -21,7 +21,7 @@
 @endforeach
 >
 
-@include('wire-table::tables.actions.partials.button-content', ['data' => $data])
+    @include('wire-table::tables.actions.partials.button-content', ['data' => $data])
 </a>
 
 @else
@@ -80,11 +80,11 @@
                     wire:target="openActionModal('{{ $data['recordKey'] }}', '{{ $data['actionName'] }}')"
                 @else
                     wire:target="executeTableAction('{{ $data['recordKey'] }}', '{{ $data['actionName'] }}')"
-                    @endif
-                >{{ $data['loadingText'] }}</span>
-        @endif
+                @endif
+        >{{ $data['loadingText'] }}</span>
+    @endif
         @else
             @include('wire-table::tables.actions.partials.button-content', ['data' => $data])
         @endif
-        </button>
-    @endif
+    </button>
+@endif

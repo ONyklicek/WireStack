@@ -114,6 +114,8 @@ trait WithTable
     // Polling state
     public bool $tablePollingActive = true;
 
+    protected string $wireTableClass = Table::class;
+
     protected ?Table $tableInstance = null;
 
     /** @var array Modal config - not a public Livewire property */
@@ -172,7 +174,7 @@ trait WithTable
     public function getTable(): Table
     {
         if ($this->tableInstance === null) {
-            $this->tableInstance = $this->table(Table::make());
+            $this->tableInstance = $this->table(($this->wireTableClass)::make());
             $this->tableInstance->livewireComponent($this);
         }
 
@@ -311,8 +313,14 @@ trait WithTable
      */
     public function getTableProperty(): View
     {
-        return view('wire-table::tables.index', [
-            'table' => $this->getTable(),
+        $table = $this->getTable();
+
+        $viewName = method_exists($this, 'getTableView')
+            ? $this->getTableView()
+            : (method_exists($table, 'getViewName') ? $table->getViewName() : 'wire-table::tables.index');
+
+        return view($viewName, [
+            'table' => $table,
             'records' => $this->getTableRecords(),
             'component' => $this,
         ]);
@@ -338,6 +346,16 @@ trait WithTable
             return $this->cachedRecords;
         }
 
+        // Allow plugin traits to intercept record fetching (e.g. reorder mode)
+        if (method_exists($this, 'interceptTableRecords')) {
+            $intercepted = $this->interceptTableRecords();
+            if ($intercepted !== null) {
+                $this->cachedRecords = $intercepted;
+
+                return $this->cachedRecords;
+            }
+        }
+
         $table = $this->getTable();
 
         // If lazy loading is enabled and not ready, return empty collection
@@ -358,6 +376,7 @@ trait WithTable
 
         return $this->cachedRecords;
     }
+
 
     /**
      * Execute query with the appropriate pagination mode.

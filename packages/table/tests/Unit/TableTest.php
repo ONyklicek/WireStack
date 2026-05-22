@@ -280,7 +280,7 @@ it('can set record url as string', function () {
     $table = Table::make()->recordUrl('/users/{id}');
 
     $model = Mockery::mock(Model::class);
-    $model->shouldReceive('getKey')->andReturn(42);
+    $model->allows('getKey')->andReturns(42);
 
     expect($table->getRecordUrl($model))->toBe('/users/42');
 });
@@ -289,7 +289,7 @@ it('can set record url as closure', function () {
     $table = Table::make()->recordUrl(fn ($record) => '/users/'.$record->getKey());
 
     $model = Mockery::mock(Model::class);
-    $model->shouldReceive('getKey')->andReturn(5);
+    $model->allows('getKey')->andReturns(5);
 
     expect($table->getRecordUrl($model))->toBe('/users/5');
 });

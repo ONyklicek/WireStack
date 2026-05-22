@@ -10,15 +10,20 @@ composer require nyoncode/wire-forms
 
 Add to Tailwind content paths:
 ```js
-'./vendor/nyoncode/wire-core/resources/views/**/*.blade.php',
-'./vendor/nyoncode/wire-forms/resources/views/**/*.blade.php',
+export default {
+    content: [
+        ///... Curent code
+        './vendor/nyoncode/wire-core/resources/views/**/*.blade.php',
+        './vendor/nyoncode/wire-forms/resources/views/**/*.blade.php',
+    ]
+}
 ```
 
 ---
 
 ## Architecture
 
-Forms use Config + Runtime separation internally ([ADR 0011](../decisions/0011-form-config-runtime-separation.md)):
+Forms use Config + Runtime separation internally:
 
 ```
 Form (public API, Htmlable)

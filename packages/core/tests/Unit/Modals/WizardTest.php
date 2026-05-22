@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use NyonCode\WireCore\Actions\ModalStep;
 use NyonCode\WireCore\Modals\Wizard;
+use NyonCode\WireForms\Components\TextInput;
 
 // ─── Factory ───────────────────────────────────────────────────────────
 
@@ -44,9 +45,9 @@ it('can set steps as ModalStep objects', function () {
         ModalStep::make('Basic Info')
             ->description('Enter basic details')
             ->icon('user')
-            ->schema([\NyonCode\WireForms\Components\TextInput::make('name')]),
+            ->schema([TextInput::make('name')]),
         ModalStep::make('Settings')
-            ->schema([\NyonCode\WireForms\Components\TextInput::make('role')]),
+            ->schema([TextInput::make('role')]),
     ]);
 
     expect($wizard->getSteps())->toHaveCount(2)
@@ -58,7 +59,7 @@ it('serializes ModalStep objects in steps config', function () {
         ModalStep::make('Step 1')
             ->description('First step')
             ->icon('user')
-            ->schema([\NyonCode\WireForms\Components\TextInput::make('name')]),
+            ->schema([TextInput::make('name')]),
     ]);
 
     $config = $wizard->getStepsConfig();
