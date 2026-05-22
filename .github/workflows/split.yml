@@ -32,4 +32,8 @@ jobs:
           package_directory: ${{ matrix.package.local_path }}
           repository_organization: NyonCode
           repository_name: ${{ matrix.package.split_repository }}
+
+          user_name: "Ondřej Nyklíček"
+          user_email: "ondrejnyklicek@icloud.com"
+
           tag: ${{ github.ref_name }}
