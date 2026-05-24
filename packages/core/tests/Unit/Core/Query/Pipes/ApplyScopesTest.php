@@ -8,9 +8,6 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Core\Query\Pipes\ApplyScopes;
 use NyonCode\WireCore\Core\Query\QueryPlan;
-use NyonCode\WireCore\Tests\TestCase;
-
-uses(TestCase::class);
 
 beforeEach(function () {
     Schema::create('scope_test_users', function (Blueprint $table) {

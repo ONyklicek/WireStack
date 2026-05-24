@@ -9,9 +9,6 @@ use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Core\Query\Pipes\ApplySorting;
 use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireCore\Core\Query\SortClause;
-use NyonCode\WireCore\Tests\TestCase;
-
-uses(TestCase::class);
 
 beforeEach(function () {
     Schema::create('sort_test_users', function (Blueprint $table) {

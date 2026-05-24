@@ -10,9 +10,6 @@ use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Core\Query\AggregateClause;
 use NyonCode\WireCore\Core\Query\Pipes\ApplyAggregates;
 use NyonCode\WireCore\Core\Query\QueryPlan;
-use NyonCode\WireCore\Tests\TestCase;
-
-uses(TestCase::class);
 
 beforeEach(function () {
     Schema::create('agg_test_users', function (Blueprint $table) {

@@ -10,9 +10,6 @@ use NyonCode\WireCore\Core\Query\Pipes\ApplySearch;
 use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireCore\Core\Query\SearchClause;
 use NyonCode\WireCore\Core\Query\Strategies\SqliteSearchStrategy;
-use NyonCode\WireCore\Tests\TestCase;
-
-uses(TestCase::class);
 
 beforeEach(function () {
     Schema::create('search_test_users', function (Blueprint $table) {
