@@ -9,9 +9,6 @@ use NyonCode\WireForms\Forms\Config\FormConfig;
 use NyonCode\WireForms\Forms\Runtime\FormRuntime;
 use NyonCode\WireForms\Forms\Runtime\StateManager;
 use NyonCode\WireForms\Rendering\FormRenderer;
-use NyonCode\WireForms\Tests\TestCase;
-
-uses(TestCase::class);
 
 test('render returns a View instance', function () {
     $config = new FormConfig(

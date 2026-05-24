@@ -16,9 +16,6 @@ use NyonCode\WireCore\Core\Events\TableSearching;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Table;
-use NyonCode\WireTable\Tests\TestCase;
-
-uses(TestCase::class);
 
 // ─── Test Model ──────────────────────────────────────────────────────────────
 

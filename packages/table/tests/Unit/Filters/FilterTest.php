@@ -68,7 +68,7 @@ it('can set default value', function () {
 // ─── Placeholder ────────────────────────────────────────────────────────────
 
 it('has default placeholder from translation', function () {
-    expect(Filter::make('status')->getPlaceholder())->toBe('select_placeholder');
+    expect(Filter::make('status')->getPlaceholder())->toBe('Select...');
 });
 
 it('can set custom placeholder', function () {

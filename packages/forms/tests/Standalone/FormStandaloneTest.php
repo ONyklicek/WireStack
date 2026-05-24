@@ -10,9 +10,6 @@ use NyonCode\WireForms\Components\Layout\Section;
 use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Forms\Form;
-use NyonCode\WireForms\Tests\TestCase;
-
-uses(TestCase::class);
 
 test('Form::make() creates a new instance', function () {
     $form = Form::make();

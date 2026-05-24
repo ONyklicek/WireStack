@@ -9,9 +9,6 @@ use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Forms\Config\FormConfig;
 use NyonCode\WireForms\Forms\Runtime\FormRuntime;
 use NyonCode\WireForms\Forms\Runtime\StateManager;
-use NyonCode\WireForms\Tests\TestCase;
-
-uses(TestCase::class);
 
 test('validate returns validated data on success', function () {
     $config = new FormConfig(

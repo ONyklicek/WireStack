@@ -23,6 +23,9 @@
         <testsuite name="Table Feature">
             <directory>packages/table/tests/Feature</directory>
         </testsuite>
+        <testsuite name="Sortable Unit">
+            <directory>packages/sortable/tests/Unit</directory>
+        </testsuite>
         <testsuite name="Forms Standalone">
             <directory>packages/forms/tests/Standalone</directory>
         </testsuite>
@@ -35,6 +38,7 @@
             <directory>packages/core/src</directory>
             <directory>packages/forms/src</directory>
             <directory>packages/table/src</directory>
+            <directory>packages/sortable/src</directory>
         </include>
     </source>
     <php>

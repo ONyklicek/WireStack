@@ -2,6 +2,5 @@
 
 declare(strict_types=1);
 
-use NyonCode\WireCore\Tests\TestCase;
-
-uses(TestCase::class)->in('Unit', 'Feature');
+// TestCase binding is configured in tests/Pest.php at the monorepo root.
+// When running from the package directory, use: php ../../vendor/bin/pest --configuration ../../phpunit.xml --testsuite "Core Unit"

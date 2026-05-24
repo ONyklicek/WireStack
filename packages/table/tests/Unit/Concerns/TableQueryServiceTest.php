@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use NyonCode\WireTable\Columns\Column;
@@ -11,9 +12,6 @@ use NyonCode\WireTable\Concerns\TableQueryService;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Table;
-use NyonCode\WireTable\Tests\TestCase;
-
-uses(TestCase::class);
 
 // ─── Test Models ─────────────────────────────────────────────────────────────
 
@@ -27,11 +25,23 @@ class TqsUser extends Model
     {
         return $this->belongsTo(TqsCompany::class, 'company_id');
     }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(TqsOrder::class, 'user_id');
+    }
 }
 
 class TqsCompany extends Model
 {
     protected $table = 'tqs_companies';
+
+    protected $guarded = [];
+}
+
+class TqsOrder extends Model
+{
+    protected $table = 'tqs_orders';
 
     protected $guarded = [];
 }
@@ -54,15 +64,27 @@ beforeEach(function () {
         $table->timestamps();
     });
 
+    Schema::create('tqs_orders', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('user_id');
+        $table->integer('total');
+        $table->timestamps();
+    });
+
     TqsCompany::create(['id' => 1, 'name' => 'Acme Corp']);
     TqsCompany::create(['id' => 2, 'name' => 'Evil Corp']);
 
     TqsUser::create(['id' => 1, 'name' => 'Alice', 'email' => 'alice@example.com', 'age' => 30, 'company_id' => 1]);
     TqsUser::create(['id' => 2, 'name' => 'Bob', 'email' => 'bob@example.com', 'age' => 25, 'company_id' => 2]);
     TqsUser::create(['id' => 3, 'name' => 'Charlie', 'email' => 'charlie@example.com', 'age' => 35, 'company_id' => 1]);
+
+    TqsOrder::create(['id' => 1, 'user_id' => 1, 'total' => 10]);
+    TqsOrder::create(['id' => 2, 'user_id' => 1, 'total' => 20]);
+    TqsOrder::create(['id' => 3, 'user_id' => 2, 'total' => 50]);
 });
 
 afterEach(function () {
+    Schema::dropIfExists('tqs_orders');
     Schema::dropIfExists('tqs_users');
     Schema::dropIfExists('tqs_companies');
 });
@@ -263,6 +285,34 @@ it('handles relation columns with eager loading', function () {
     // Should have either joins or eager loads for the company relation
     $hasJoinsOrEagerLoads = $plan->hasJoins() || $plan->hasEagerLoads();
     expect($hasJoinsOrEagerLoads)->toBeTrue();
+});
+
+// ─── Aggregate Columns ──────────────────────────────────────────────────────
+
+it('applies aggregate columns to the built query', function () {
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->columns([
+            Column::make('orders_count')->counts('orders'),
+            Column::make('orders_sum_total')->sums('orders', 'total'),
+            Column::make('orders_avg_total')->averages('orders', 'total'),
+            Column::make('orders_min_total')->mins('orders', 'total'),
+            Column::make('orders_max_total')->maxes('orders', 'total'),
+        ]);
+
+    $service = new TableQueryService;
+    $query = $service->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+    );
+
+    $alice = $query->where('name', 'Alice')->firstOrFail();
+
+    expect((int) $alice->orders_count)->toBe(2)
+        ->and((float) $alice->orders_sum_total)->toBe(30.0)
+        ->and((float) $alice->orders_avg_total)->toBe(15.0)
+        ->and((float) $alice->orders_min_total)->toBe(10.0)
+        ->and((float) $alice->orders_max_total)->toBe(20.0);
 });
 
 // ─── Combined Operations ─────────────────────────────────────────────────────

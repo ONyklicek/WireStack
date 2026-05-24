@@ -201,8 +201,8 @@ it('can set and get filters', function () {
 it('has default empty state texts from translation', function () {
     $table = Table::make();
 
-    expect($table->getEmptyStateHeading())->toBe('empty_heading')
-        ->and($table->getEmptyStateDescription())->toBe('empty_description');
+    expect($table->getEmptyStateHeading())->toBe('No records')
+        ->and($table->getEmptyStateDescription())->toBe('No records found matching your search.');
 });
 
 it('can set custom empty state', function () {

@@ -8,9 +8,6 @@ use NyonCode\WireForms\Forms\Config\FormConfig;
 use NyonCode\WireForms\Forms\Runtime\FormRuntime;
 use NyonCode\WireForms\Forms\Runtime\SaveHandler;
 use NyonCode\WireForms\Forms\Runtime\StateManager;
-use NyonCode\WireForms\Tests\TestCase;
-
-uses(TestCase::class);
 
 function createRuntimeWithState(FormConfig $config, array $state = []): FormRuntime
 {

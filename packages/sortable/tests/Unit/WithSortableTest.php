@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
+namespace NyonCode\WireSortable\Tests\Unit;
+
 use NyonCode\WireSortable\Concerns\WithSortable;
 use NyonCode\WireSortable\SortableTable;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Table;
+use ReflectionMethod;
 
 // Minimal stub to test the trait in isolation
 class WithSortableTestStub
