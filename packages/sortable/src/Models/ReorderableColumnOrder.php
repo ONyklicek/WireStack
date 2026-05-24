@@ -8,11 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Stores user-specific column ordering per model type.
+ * Stores user-specific column ordering per model type and table.
  *
  * @property int $id
  * @property int $user_id
  * @property string $model_type
+ * @property string $table_identifier
  * @property array $column_order
  */
 class ReorderableColumnOrder extends Model
@@ -22,6 +23,7 @@ class ReorderableColumnOrder extends Model
     protected $fillable = [
         'user_id',
         'model_type',
+        'table_identifier',
         'column_order',
     ];
 
@@ -40,41 +42,43 @@ class ReorderableColumnOrder extends Model
     }
 
     /**
-     * Get column order for a user + model combination.
+     * Get column order for a user + model + table combination.
      *
      * @return array<int, string>|null
      */
-    public static function getOrder(int $userId, string $modelType): ?array
+    public static function getOrder(int $userId, string $modelType, string $tableIdentifier): ?array
     {
         $record = static::query()
             ->where('user_id', $userId)
             ->where('model_type', $modelType)
+            ->where('table_identifier', $tableIdentifier)
             ->first();
 
         return $record?->column_order;
     }
 
     /**
-     * Save column order for a user + model combination.
+     * Save column order for a user + model + table combination.
      *
      * @param  array<int, string>  $columnOrder
      */
-    public static function saveOrder(int $userId, string $modelType, array $columnOrder): void
+    public static function saveOrder(int $userId, string $modelType, string $tableIdentifier, array $columnOrder): void
     {
         static::query()->updateOrCreate(
-            ['user_id' => $userId, 'model_type' => $modelType],
+            ['user_id' => $userId, 'model_type' => $modelType, 'table_identifier' => $tableIdentifier],
             ['column_order' => $columnOrder],
         );
     }
 
     /**
-     * Delete column order for a user + model combination.
+     * Delete column order for a user + model + table combination.
      */
-    public static function deleteOrder(int $userId, string $modelType): void
+    public static function deleteOrder(int $userId, string $modelType, string $tableIdentifier): void
     {
         static::query()
             ->where('user_id', $userId)
             ->where('model_type', $modelType)
+            ->where('table_identifier', $tableIdentifier)
             ->delete();
     }
 }
