@@ -1,6 +1,6 @@
 # Actions
 
-The Actions module provides a complete action system for row, bulk, and header actions. It lives inside `wire-core` as a separate module, prepared for future extraction ([ADR 0006](../decisions/0006-modular-core-extraction-strategy.md)).
+The Actions module provides row, bulk, and header actions for tables and related UI flows.
 
 ## Action Types
 
@@ -143,7 +143,7 @@ Action::make('edit')
 
 ## Form Modal
 
-When `wire-forms` is installed, actions can display form modals ([ADR 0001](../decisions/0001-action-form-integration.md)):
+When `wire-forms` is installed, actions can display form modals:
 
 ```php
 use NyonCode\WireForms\Components\TextInput;
@@ -334,7 +334,3 @@ Shared across Action, BulkAction, HeaderAction:
 <x-wire-actions::button :action="$action" />
 <x-wire-actions::group :group="$group" />
 ```
-
-## Module Dependencies
-
-Actions depends only on Foundation. Cross-module communication with Notifications uses service container resolution ([ADR 0007](../decisions/0007-internal-module-dependencies.md)).

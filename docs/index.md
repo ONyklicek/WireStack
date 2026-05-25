@@ -7,8 +7,9 @@ User-facing documentation for the Wire ecosystem.
 | Document | Description |
 |----------|-------------|
 | [Getting Started](getting-started.md) | Install Wire, configure Tailwind and Livewire, build the first table and form |
-| [Architecture Overview](architecture.md) | Package boundaries, dependency graph, and design rules |
-| [Migration v0 to v1](migration/v0-to-v1.md) | Upgrade path from the monolithic package |
+| [Project Map](project-map.md) | Package overview, install paths, source layout, and test commands |
+| [Configuration](configuration.md) | Published config files, environment variables, and package defaults |
+| [Authorization](authorization.md) | Gates, policies, permissions, table rules, and form rules |
 
 ## wire-table
 
@@ -18,6 +19,7 @@ User-facing documentation for the Wire ecosystem.
 | [Columns](table/columns.md) | Column types, formatting, search, sort, responsive visibility |
 | [Filters](table/filters.md) | Built-in filters and custom query behavior |
 | [Actions](table/actions.md) | Row, bulk, and header actions with modal forms |
+| [Exports](table/exports.md) | CSV, Excel, and PDF exports for the current table query |
 | [Sub-Rows](table/sub-rows.md) | Related child records rendered inside a table row |
 | [Notifications](table/notifications.md) | Toasts, action feedback, and delivery drivers |
 | [Advanced Features](table/advanced.md) | Polling, summaries, performance, and debugging |
@@ -29,7 +31,7 @@ User-facing documentation for the Wire ecosystem.
 | [Forms Overview](forms/overview.md) | Single form, multi-form, standalone usage, and save flow |
 | [Validation](forms/validation.md) | Rules, messages, and custom validation behavior |
 | [Save Lifecycle](forms/save-lifecycle.md) | Validation, mutation, persistence, and notifications |
-| [Field Reference](forms/fields/index.md) | Input, layout, and display components |
+| [Field Reference](forms/fields/index.md) | Input, layout, display, relationship, and repeater components |
 
 ## wire-sortable
 
@@ -39,23 +41,14 @@ User-facing documentation for the Wire ecosystem.
 | [Installation](sortable/installation.md) | Package setup and frontend requirements |
 | [API Reference](sortable/api-reference.md) | Sortable table and trait API |
 
-## Core and Extension Docs
+## Core API
 
 | Document | Description |
 |----------|-------------|
 | [Core Foundation](core/foundation.md) | Shared traits, icons, colors, and Blade helpers |
-| [Core Actions](core/actions.md) | Full action system internals and advanced API |
+| [Core Actions](core/actions.md) | Row, bulk, header actions, action groups |
 | [Core Notifications](core/notifications.md) | Notification value objects and drivers |
-| [Core Modals](core/modals.md) | Confirmation, slide-over, and wizard internals |
-| [Unified Engine](core/unified-engine.md) | Internal architecture of the metadata and query engine |
-| [Plugin Development](core/plugins.md) | Plugin interfaces and extension points |
-
-## Internal Design Records
-
-| Document | Description |
-|----------|-------------|
-| [ADR Index](decisions/0001-action-form-integration.md) | Architectural decisions for package internals |
-| [Unified Engine Spec](unified-engine-spec.md) | Technical specification |
-| [Unified Engine Plan](unified-engine-plan.md) | Implementation plan |
-| [Unified Engine Assessment](unified-engine-assessment.md) | Gap analysis |
-| [Future Ideas](future-ideas.md) | Roadmap candidates |
+| [Core Modals](core/modals.md) | Confirmation, slide-over, and wizard components |
+| [Core Widgets](core/widgets.md) | Dashboard widgets and widget layout |
+| [Core Plugins](core/plugins.md) | App and package extension points |
+| [Audit Log](core/audit.md) | Record model changes and table-related events |

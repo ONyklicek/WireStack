@@ -1,6 +1,6 @@
 # DateTimePicker
 
-Unified date/time picker with mode selector. Replaces the old `DatePicker`, `DateTimePicker`, and `TimePicker` classes (see [ADR 0008](../../decisions/0008-datetimepicker-unification.md)).
+Unified date/time picker with date, time, and datetime modes.
 
 ```php
 use NyonCode\WireForms\Components\DateTimePicker;

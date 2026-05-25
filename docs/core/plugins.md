@@ -1,807 +1,369 @@
-# Plugin Development
+# Core Plugins
 
-The Wire plugin system allows extending tables, forms, queries, and other components through a unified registration and lifecycle model.
+Wire Core includes a small plugin API for applications and companion packages that need reusable extension points. Plugins are useful when you want to register macros, shared presets, type registries, query pipes, or hook callbacks in one place.
 
-See [ADR 0014](../decisions/0014-plugin-architecture.md) for the decision record.
+For normal tables and forms, prefer the public fluent APIs first. Reach for a plugin when the same extension should be available across multiple components or projects.
 
----
+## What A Plugin Can Do
 
-## Table of Contents
+| Capability | API |
+|------------|-----|
+| Register a plugin instance | `PluginManager::register()` |
+| Run startup code after all plugins are registered | `Plugin::boot()` |
+| Add table/action macros | Laravel `Macroable` classes such as `Table` and `Action` |
+| Register query pipes | `PluginManager::addQueryPipe()` |
+| Register column classes by name | `PluginManager::addColumnType()` |
+| Register filter classes by name | `PluginManager::addFilterType()` |
+| Register custom hook callbacks | `PluginManager::hook()` |
+| Run custom hook callbacks | `PluginManager::runHook()` |
 
-1. [Plugin Interface](#plugin-interface)
-2. [Plugin Lifecycle](#plugin-lifecycle)
-3. [Registering Plugins](#registering-plugins)
-4. [Hook System](#hook-system)
-5. [Custom Query Pipes](#custom-query-pipes)
-6. [Custom Column Types](#custom-column-types)
-7. [Custom Filter Types](#custom-filter-types)
-8. [PluginManager API](#pluginmanager-api)
-9. [Complete Example: Export Plugin](#complete-example-export-plugin)
-10. [Complete Example: Audit Plugin](#complete-example-audit-plugin)
-11. [Complete Example: Multi-Tenancy Plugin](#complete-example-multi-tenancy-plugin)
-12. [Testing Plugins](#testing-plugins)
+## Plugin Contract
 
----
-
-## Plugin Interface
-
-Every plugin implements `NyonCode\WireCore\Core\Plugin\Contracts\Plugin`:
+Every plugin implements `NyonCode\WireCore\Core\Plugin\Contracts\Plugin`.
 
 ```php
-namespace NyonCode\WireCore\Core\Plugin\Contracts;
+<?php
 
-use NyonCode\WireCore\Core\Plugin\PluginManager;
-
-interface Plugin
-{
-    /**
-     * Unique plugin identifier (e.g., 'export', 'audit', 'multi-tenancy').
-     */
-    public function getId(): string;
-
-    /**
-     * Register bindings, pipes, strategies, types.
-     * Called during service provider register phase.
-     * Do NOT resolve services here — they may not be available yet.
-     */
-    public function register(PluginManager $manager): void;
-
-    /**
-     * Boot the plugin after all plugins are registered.
-     * Called during service provider boot phase.
-     * Safe to resolve services, register views, publish assets.
-     */
-    public function boot(PluginManager $manager): void;
-}
-```
-
-### Minimal Plugin
-
-```php
 namespace App\Wire\Plugins;
 
 use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 
-class MyPlugin implements Plugin
+final class ExamplePlugin implements Plugin
 {
     public function getId(): string
     {
-        return 'my-plugin';
+        return 'example';
     }
 
     public function register(PluginManager $manager): void
     {
-        // Register extensions here
+        // Register hooks, query pipes, type aliases, or lightweight metadata.
     }
 
     public function boot(PluginManager $manager): void
     {
-        // Boot-time logic here
+        // Register macros or resolve services after all plugins are registered.
     }
 }
 ```
 
----
+The `getId()` value must be unique. Registering two plugins with the same ID throws an exception.
 
-## Plugin Lifecycle
+## Lifecycle
 
+| Step | Method | Use for |
+|------|--------|---------|
+| Registration | `register(PluginManager $manager)` | Add hooks, query pipes, column types, filter types |
+| Boot | `boot(PluginManager $manager)` | Register macros, resolve services, perform setup that depends on the Laravel container |
+
+`PluginManager::boot()` runs each plugin's `boot()` method once.
+
+## Register Plugins In Config
+
+Publish the core config:
+
+```bash
+php artisan vendor:publish --tag=wire-core-config
 ```
-1. Service Provider register()
-   └── PluginManager::register($plugin)
-       └── $plugin->register($manager)      ← register bindings, pipes, types
 
-2. Service Provider boot()
-   └── PluginManager::boot()
-       └── foreach plugin: $plugin->boot($manager)  ← resolve services, register views
-```
-
-**Rules:**
-- `register()` — register extensions (pipes, types, hooks). Do NOT resolve services from the container.
-- `boot()` — safe to resolve services, register Blade views, publish config/assets.
-- Plugin IDs must be unique. Duplicate registration throws `RuntimeException`.
-- `boot()` is called exactly once. Subsequent calls are no-ops.
-
----
-
-## Registering Plugins
-
-### Via Config (recommended)
+Add your plugin class to `config/wire-core.php`:
 
 ```php
-// config/wire-core.php
-return [
-    'plugins' => [
-        \App\Wire\Plugins\ExportPlugin::class,
-        \App\Wire\Plugins\AuditPlugin::class,
-    ],
-];
+'plugins' => [
+    App\Wire\Plugins\TenantPlugin::class,
+],
 ```
 
-The `WireCoreServiceProvider` automatically instantiates and registers these.
+Wire resolves config-registered plugins through Laravel's container when the plugin manager is resolved.
 
-### Manual Registration
+## Register Plugins From A Package
+
+If you are building a companion package, register your plugin from the package service provider.
 
 ```php
-// In a service provider
+use Illuminate\Support\ServiceProvider;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 
-public function register(): void
+final class AcmeWireServiceProvider extends ServiceProvider
 {
-    $this->app->resolving(PluginManager::class, function (PluginManager $manager) {
-        $manager->register(new ExportPlugin());
-    });
+    public function register(): void
+    {
+        $this->app->resolving(PluginManager::class, function (PluginManager $manager) {
+            if (! $manager->has('acme')) {
+                $manager->register($this->app->make(AcmePlugin::class));
+            }
+        });
+    }
 }
 ```
 
-### Checking Plugin State
+The `has()` guard prevents duplicate registration if the application also lists the plugin in config.
+
+## Practical Example: Tenant Table Macro
+
+This plugin adds a reusable `tenantScoped()` table macro.
 
 ```php
-$manager = app(PluginManager::class);
+<?php
 
-$manager->has('export');              // bool
-$manager->get('export');              // ?Plugin
-$manager->all();                      // ['export' => Plugin, ...]
+namespace App\Wire\Plugins;
+
+use Illuminate\Database\Eloquent\Builder;
+use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireTable\Table;
+
+final class TenantPlugin implements Plugin
+{
+    public function getId(): string
+    {
+        return 'tenant';
+    }
+
+    public function register(PluginManager $manager): void
+    {
+        //
+    }
+
+    public function boot(PluginManager $manager): void
+    {
+        Table::macro('tenantScoped', function (?int $tenantId = null): static {
+            $tenantId ??= auth()->user()?->tenant_id;
+
+            return $this->modifyQueryUsing(
+                fn (Builder $query) => $query->where('tenant_id', $tenantId)
+            );
+        });
+    }
+}
 ```
 
----
+Use it in any table:
 
-## Hook System
+```php
+public function table(Table $table): Table
+{
+    return $table
+        ->model(Order::class)
+        ->tenantScoped()
+        ->columns([
+            // ...
+        ]);
+}
+```
 
-Hooks allow plugins to tap into key lifecycle events without modifying core code.
+## Practical Example: Action Preset
 
-### Available Hooks
+Actions are macroable through their base action class. This plugin adds a reusable admin-only preset.
 
-| Hook Name | When Fired | Payload |
-|-----------|------------|---------|
-| `table.configuring` | Before table config is finalized | `['table' => Table]` |
-| `table.querying` | Before query execution | `['query' => Builder, 'plan' => QueryPlan]` |
-| `table.queried` | After query execution | `['query' => Builder, 'results' => Collection]` |
-| `form.saving` | Before form save | `['form' => Form, 'data' => array]` |
-| `form.saved` | After form save | `['form' => Form, 'model' => Model]` |
-| `action.executing` | Before action execution | `['action' => Action, 'context' => ActionContext]` |
-| `action.executed` | After action execution | `['action' => Action, 'result' => ActionResult]` |
+```php
+use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
 
-### Registering Hooks
+final class AdminActionPlugin implements Plugin
+{
+    public function getId(): string
+    {
+        return 'admin-actions';
+    }
+
+    public function register(PluginManager $manager): void
+    {
+        //
+    }
+
+    public function boot(PluginManager $manager): void
+    {
+        Action::macro('adminOnly', function (): static {
+            return $this->authorizeUsing(
+                fn ($user) => method_exists($user, 'isAdmin') && $user->isAdmin()
+            );
+        });
+    }
+}
+```
+
+Use it on an action:
+
+```php
+Action::make('impersonate')
+    ->label('Impersonate')
+    ->adminOnly()
+    ->requiresConfirmation()
+    ->action(fn (User $record) => auth()->user()->impersonate($record));
+```
+
+## Hook Registry
+
+The hook registry lets plugins and your own application code communicate through named payload callbacks.
 
 ```php
 public function register(PluginManager $manager): void
 {
-    // Simple hook
-    $manager->hook('table.querying', function (array $payload) {
-        Log::debug('Query plan', ['plan' => $payload['plan']]);
-        return $payload; // return modified payload (or null to keep unchanged)
-    });
+    $manager->hook('orders.exporting', function (array $payload): array {
+        $payload['query']->where('tenant_id', auth()->user()->tenant_id);
 
-    // Hook that modifies payload
-    $manager->hook('form.saving', function (array $payload) {
-        $payload['data']['updated_by'] = auth()->id();
-        return $payload;
-    });
-
-    // Multiple hooks on the same event (executed in registration order)
-    $manager->hook('action.executed', function (array $payload) {
-        if ($payload['result']->isSuccess()) {
-            Audit::log($payload['action'], $payload['result']);
-        }
         return $payload;
     });
 }
 ```
 
-### Hook Execution
-
-Hooks execute sequentially in registration order. Each callback receives the payload array and can:
-- Return a **modified array** to update the payload for subsequent hooks
-- Return **null** to keep the payload unchanged
-- Throw an exception to abort (use with care)
+Run the hook from your own service or component:
 
 ```php
-// How hooks run internally
-$payload = $manager->runHook('table.querying', [
-    'query' => $builder,
-    'plan' => $queryPlan,
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+
+$payload = app(PluginManager::class)->runHook('orders.exporting', [
+    'query' => Order::query(),
 ]);
-// $payload now contains any modifications from registered hooks
+
+$query = $payload['query'];
 ```
 
-### Checking Hooks
+Hook callbacks run in registration order. A callback may return a modified payload array. If it returns `null` or another non-array value, the current payload is kept.
+
+### Suggested Hook Names
+
+Wire does not enforce hook names. Use names that describe your application boundary.
+
+| Pattern | Example |
+|---------|---------|
+| Before an operation | `orders.exporting` |
+| After an operation | `orders.exported` |
+| Before saving | `orders.saving` |
+| After saving | `orders.saved` |
+| Before authorization | `orders.authorizing` |
+
+Core also reserves broad ecosystem names such as `table.configuring`, `table.querying`, `table.queried`, `form.saving`, `form.saved`, `action.executing`, and `action.executed` for plugin-aware integrations.
+
+Important: registering a hook only stores the callback. The hook affects runtime behavior only when some code calls `runHook()` for that hook name.
+
+## Column And Filter Type Registries
+
+Plugins can register class aliases for column and filter types.
 
 ```php
-$manager->hasHook('table.querying'); // true if any callbacks registered
+public function register(PluginManager $manager): void
+{
+    $manager->addColumnType('money', \App\Tables\Columns\MoneyColumn::class);
+    $manager->addFilterType('date-range', \App\Tables\Filters\DateRangeFilter::class);
+}
 ```
 
----
-
-## Custom Query Pipes
-
-Add custom query pipeline steps that execute alongside the built-in 8 pipes.
-
-### Creating a Query Pipe
+Read them from the manager when building plugin-aware tooling:
 
 ```php
-namespace App\Wire\Pipes;
+$columns = app(PluginManager::class)->getColumnTypes();
+$filters = app(PluginManager::class)->getFilterTypes();
+```
 
-use Closure;
-use Illuminate\Database\Eloquent\Builder;
+Wire Table components still accept normal column and filter instances directly:
+
+```php
+return $table
+    ->columns([
+        MoneyColumn::make('total'),
+    ])
+    ->filters([
+        DateRangeFilter::make('created_at'),
+    ]);
+```
+
+## Query Pipes
+
+Plugins can register query pipe instances with the manager.
+
+```php
 use NyonCode\WireCore\Core\Query\Contracts\QueryPipe;
 use NyonCode\WireCore\Core\Query\QueryPlan;
-
-class TenantScopePipe implements QueryPipe
-{
-    public function handle(Builder $query, QueryPlan $plan, Closure $next): Builder
-    {
-        // Add tenant filtering to every query
-        $query->where('tenant_id', auth()->user()->tenant_id);
-
-        return $next($query);
-    }
-}
-```
-
-### Registering
-
-```php
-public function register(PluginManager $manager): void
-{
-    $manager->addQueryPipe('tenant-scope', new TenantScopePipe());
-}
-```
-
-Plugin pipes are appended after the default 8 pipes in the QueryExecutor pipeline.
-
-### Conditional Pipes
-
-```php
-class ConditionalPipe implements QueryPipe
-{
-    public function handle(Builder $query, QueryPlan $plan, Closure $next): Builder
-    {
-        // Only modify if search is active
-        if ($plan->hasSearch()) {
-            $query->withCount('search_hits');
-        }
-
-        return $next($query);
-    }
-}
-```
-
-### Pipe Ordering
-
-Default pipeline (in order):
-1. `ApplyScopes`
-2. `ApplySoftDeletes`
-3. `ApplyRelations`
-4. `ApplySearch`
-5. `ApplyFilters`
-6. `ApplyAggregates`
-7. `ApplySorting`
-8. `ApplyEagerLoads`
-9. *Your custom pipes (appended)*
-
----
-
-## Custom Column Types
-
-Register new column types that can be used in table definitions.
-
-### Creating a Column
-
-```php
-namespace App\Wire\Columns;
-
-use NyonCode\WireTable\Columns\Column;
-
-class SparklineColumn extends Column
-{
-    protected array $dataPoints = [];
-    protected string $chartColor = 'primary';
-    protected int $height = 32;
-
-    public function dataPoints(array|Closure $points): static
-    {
-        $this->dataPoints = $points;
-        return $this;
-    }
-
-    public function chartColor(string $color): static
-    {
-        $this->chartColor = $color;
-        return $this;
-    }
-
-    public function height(int $height): static
-    {
-        $this->height = $height;
-        return $this;
-    }
-
-    public function getDataPoints(): array
-    {
-        return $this->evaluate($this->dataPoints);
-    }
-
-    public function getChartColor(): string
-    {
-        return $this->chartColor;
-    }
-
-    public function getHeight(): int
-    {
-        return $this->height;
-    }
-}
-```
-
-### Registering
-
-```php
-public function register(PluginManager $manager): void
-{
-    $manager->addColumnType('sparkline', SparklineColumn::class);
-}
-```
-
-### Usage
-
-```php
-$table->columns([
-    TextColumn::make('name'),
-    SparklineColumn::make('views_over_time')
-        ->dataPoints(fn ($record) => $record->daily_views->pluck('count'))
-        ->chartColor('success')
-        ->height(24),
-]);
-```
-
-### Publishing Views
-
-In the plugin's `boot()` method, publish the Blade view for the column:
-
-```php
-public function boot(PluginManager $manager): void
-{
-    $this->loadViewsFrom(__DIR__ . '/../resources/views', 'wire-sparkline');
-}
-```
-
-Create `resources/views/columns/sparkline.blade.php`:
-
-```blade
-<div
-    class="inline-flex items-center"
-    style="height: {{ $getHeight() }}px"
-    x-data="sparkline({ points: @js($getDataPoints()), color: '{{ $getChartColor() }}' })"
->
-    <canvas x-ref="chart"></canvas>
-</div>
-```
-
----
-
-## Custom Filter Types
-
-Register new filter types.
-
-### Creating a Filter
-
-```php
-namespace App\Wire\Filters;
-
-use NyonCode\WireTable\Filters\Filter;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 
-class GeoRadiusFilter extends Filter
+final class ApplyTenantScope implements QueryPipe
 {
-    protected float $defaultRadius = 10.0;
-    protected string $unit = 'km';
-    protected ?string $latColumn = null;
-    protected ?string $lngColumn = null;
-
-    public function radius(float $radius): static
+    public function handle(Builder $builder, QueryPlan $plan, Closure $next): Builder
     {
-        $this->defaultRadius = $radius;
-        return $this;
-    }
+        $builder->where('tenant_id', auth()->user()->tenant_id);
 
-    public function unit(string $unit): static
-    {
-        $this->unit = $unit;
-        return $this;
-    }
-
-    public function coordinates(string $latColumn, string $lngColumn): static
-    {
-        $this->latColumn = $latColumn;
-        $this->lngColumn = $lngColumn;
-        return $this;
-    }
-
-    public function apply(Builder $query, mixed $value): Builder
-    {
-        if (empty($value['lat']) || empty($value['lng'])) {
-            return $query;
-        }
-
-        $lat = $value['lat'];
-        $lng = $value['lng'];
-        $radius = $value['radius'] ?? $this->defaultRadius;
-
-        return $query->whereRaw(
-            'ST_Distance_Sphere(point(?, ?), point(??, ??)) <= ?',
-            [$lng, $lat, $this->lngColumn, $this->latColumn, $radius * 1000]
-        );
-    }
-
-    public function getDefaultRadius(): float
-    {
-        return $this->defaultRadius;
-    }
-
-    public function getUnit(): string
-    {
-        return $this->unit;
+        return $next($builder, $plan);
     }
 }
 ```
 
-### Registering
+Register it:
 
 ```php
 public function register(PluginManager $manager): void
 {
-    $manager->addFilterType('geo-radius', GeoRadiusFilter::class);
+    $manager->addQueryPipe('tenant', new ApplyTenantScope());
 }
 ```
 
-### Usage
+Retrieve registered pipes for a custom query executor:
 
 ```php
-$table->filters([
-    GeoRadiusFilter::make('location')
-        ->coordinates('latitude', 'longitude')
-        ->radius(25)
-        ->unit('km'),
-]);
+$pipes = app(PluginManager::class)->getQueryPipes();
 ```
 
----
+Use table `modifyQueryUsing()` when you only need to change one table query. Use query pipes when you are building a reusable query integration.
 
 ## PluginManager API
 
-### Plugin Management
-
-```php
-$manager->register(Plugin $plugin): void       // Register a plugin (calls $plugin->register())
-$manager->boot(): void                         // Boot all plugins (calls $plugin->boot())
-$manager->has(string $id): bool                // Check if plugin registered
-$manager->get(string $id): ?Plugin             // Get plugin by ID
-$manager->all(): array<string, Plugin>         // All registered plugins
-```
-
-### Extension Points
-
-```php
-// Query Pipes
-$manager->addQueryPipe(string $name, QueryPipe $pipe): void
-$manager->getQueryPipes(): array<string, QueryPipe>
-
-// Column Types
-$manager->addColumnType(string $name, string $columnClass): void
-$manager->getColumnTypes(): array<string, class-string>
-
-// Filter Types
-$manager->addFilterType(string $name, string $filterClass): void
-$manager->getFilterTypes(): array<string, class-string>
-
-// Hooks
-$manager->hook(string $name, callable $callback): void
-$manager->runHook(string $name, array $payload = []): array
-$manager->hasHook(string $name): bool
-```
-
----
-
-## Complete Example: Export Plugin
-
-A plugin that adds CSV export to any table.
-
-```php
-namespace App\Wire\Plugins;
-
-use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
-use NyonCode\WireCore\Core\Plugin\PluginManager;
-
-class ExportPlugin implements Plugin
-{
-    public function getId(): string
-    {
-        return 'export';
-    }
-
-    public function register(PluginManager $manager): void
-    {
-        // Add export header action column type
-        $manager->addColumnType('export-button', ExportButtonColumn::class);
-
-        // Hook into query results
-        $manager->hook('table.queried', function (array $payload) {
-            // Store last results for export (if export requested)
-            if (session()->has('wire.export_requested')) {
-                session(['wire.export_data' => $payload['results']]);
-            }
-            return $payload;
-        });
-    }
-
-    public function boot(PluginManager $manager): void
-    {
-        // Register views
-        // Register export route
-    }
-}
-```
-
-Usage in table:
-
-```php
-use NyonCode\WireCore\Actions\HeaderAction;
-
-$table->headerActions([
-    HeaderAction::make('export')
-        ->label('Export CSV')
-        ->icon('download')
-        ->action(function () {
-            session(['wire.export_requested' => true]);
-            // trigger download...
-        }),
-]);
-```
-
----
-
-## Complete Example: Audit Plugin
-
-Logs all table actions and inline edits.
-
-```php
-namespace App\Wire\Plugins;
-
-use App\Models\AuditLog;
-use NyonCode\WireCore\Core\Events\ActionExecuted;
-use NyonCode\WireCore\Core\Events\CellUpdated;
-use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
-use NyonCode\WireCore\Core\Plugin\PluginManager;
-use Illuminate\Support\Facades\Event;
-
-class AuditPlugin implements Plugin
-{
-    public function getId(): string
-    {
-        return 'audit';
-    }
-
-    public function register(PluginManager $manager): void
-    {
-        // Hook into action execution
-        $manager->hook('action.executed', function (array $payload) {
-            AuditLog::create([
-                'user_id' => auth()->id(),
-                'action' => $payload['action']->getName(),
-                'success' => $payload['result']->isSuccess(),
-                'context' => json_encode($payload['result']),
-            ]);
-            return $payload;
-        });
-
-        // Hook into form saves
-        $manager->hook('form.saved', function (array $payload) {
-            AuditLog::create([
-                'user_id' => auth()->id(),
-                'action' => 'form.save',
-                'model_type' => get_class($payload['model']),
-                'model_id' => $payload['model']->getKey(),
-            ]);
-            return $payload;
-        });
-    }
-
-    public function boot(PluginManager $manager): void
-    {
-        // Also listen to Laravel events for inline edits
-        Event::listen(CellUpdated::class, function (CellUpdated $event) {
-            AuditLog::create([
-                'user_id' => auth()->id(),
-                'action' => 'cell.update',
-                'table_id' => $event->tableId,
-                'column' => $event->column,
-                'record_id' => $event->recordId,
-                'old_value' => $event->oldValue,
-                'new_value' => $event->newValue,
-            ]);
-        });
-    }
-}
-```
-
----
-
-## Complete Example: Multi-Tenancy Plugin
-
-Automatically scopes all table queries to the current tenant.
-
-```php
-namespace App\Wire\Plugins;
-
-use App\Wire\Pipes\TenantScopePipe;
-use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
-use NyonCode\WireCore\Core\Plugin\PluginManager;
-
-class MultiTenancyPlugin implements Plugin
-{
-    public function getId(): string
-    {
-        return 'multi-tenancy';
-    }
-
-    public function register(PluginManager $manager): void
-    {
-        // Add tenant scope to every table query
-        $manager->addQueryPipe('tenant-scope', new TenantScopePipe());
-
-        // Inject tenant_id into form saves
-        $manager->hook('form.saving', function (array $payload) {
-            $payload['data']['tenant_id'] = auth()->user()->tenant_id;
-            return $payload;
-        });
-
-        // Add tenant filter to table config
-        $manager->hook('table.configuring', function (array $payload) {
-            // Could add a hidden filter or modify the base query
-            return $payload;
-        });
-    }
-
-    public function boot(PluginManager $manager): void
-    {
-        // Nothing to boot
-    }
-}
-```
-
-The `TenantScopePipe`:
-
-```php
-namespace App\Wire\Pipes;
-
-use Closure;
-use Illuminate\Database\Eloquent\Builder;
-use NyonCode\WireCore\Core\Query\Contracts\QueryPipe;
-use NyonCode\WireCore\Core\Query\QueryPlan;
-
-class TenantScopePipe implements QueryPipe
-{
-    public function handle(Builder $query, QueryPlan $plan, Closure $next): Builder
-    {
-        $model = $query->getModel();
-
-        // Only apply if model has tenant_id column
-        if (in_array('tenant_id', $model->getFillable())) {
-            $query->where(
-                $model->getTable() . '.tenant_id',
-                auth()->user()->tenant_id
-            );
-        }
-
-        return $next($query);
-    }
-}
-```
-
----
+| Method | Description |
+|--------|-------------|
+| `register(Plugin $plugin): void` | Register a plugin and call its `register()` method |
+| `boot(): void` | Boot every registered plugin once |
+| `has(string $id): bool` | Check whether a plugin ID is registered |
+| `get(string $id): ?Plugin` | Return a plugin by ID |
+| `all(): array` | Return all registered plugins keyed by ID |
+| `addQueryPipe(string $name, QueryPipe $pipe): void` | Register a query pipe |
+| `getQueryPipes(): array` | Return registered query pipes |
+| `addColumnType(string $name, string $columnClass): void` | Register a column class alias |
+| `getColumnTypes(): array` | Return column aliases |
+| `addFilterType(string $name, string $filterClass): void` | Register a filter class alias |
+| `getFilterTypes(): array` | Return filter aliases |
+| `hook(string $name, callable $callback): void` | Register a hook callback |
+| `runHook(string $name, array $payload = []): array` | Run hook callbacks and return the final payload |
+| `hasHook(string $name): bool` | Check whether a hook has callbacks |
 
 ## Testing Plugins
 
-### Unit Testing
+Test plugin behavior by instantiating `PluginManager` directly.
 
 ```php
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 
-it('registers the plugin', function () {
+it('registers tenant hook', function () {
     $manager = new PluginManager();
-    $plugin = new ExportPlugin();
+    $plugin = new TenantPlugin();
 
     $manager->register($plugin);
 
-    expect($manager->has('export'))->toBeTrue();
-    expect($manager->get('export'))->toBe($plugin);
+    expect($manager->has('tenant'))->toBeTrue();
 });
+```
 
-it('adds query pipes', function () {
+For macros, boot the plugin first:
+
+```php
+it('adds tenant table macro', function () {
     $manager = new PluginManager();
-    $manager->register(new MultiTenancyPlugin());
-
-    expect($manager->getQueryPipes())->toHaveKey('tenant-scope');
-});
-
-it('registers hooks', function () {
-    $manager = new PluginManager();
-    $manager->register(new AuditPlugin());
-
-    expect($manager->hasHook('action.executed'))->toBeTrue();
-    expect($manager->hasHook('form.saved'))->toBeTrue();
-});
-
-it('runs hooks and modifies payload', function () {
-    $manager = new PluginManager();
-
-    $manager->hook('form.saving', function (array $payload) {
-        $payload['data']['modified'] = true;
-        return $payload;
-    });
-
-    $result = $manager->runHook('form.saving', [
-        'data' => ['name' => 'John'],
-    ]);
-
-    expect($result['data']['modified'])->toBeTrue();
-    expect($result['data']['name'])->toBe('John');
-});
-
-it('prevents duplicate plugin registration', function () {
-    $manager = new PluginManager();
-    $manager->register(new ExportPlugin());
-
-    expect(fn () => $manager->register(new ExportPlugin()))
-        ->toThrow(RuntimeException::class, "Plugin 'export' is already registered.");
-});
-
-it('boots only once', function () {
-    $manager = new PluginManager();
-    $callCount = 0;
-
-    $plugin = new class implements Plugin {
-        public function getId(): string { return 'test'; }
-        public function register(PluginManager $m): void {}
-        public function boot(PluginManager $m): void {
-            // track externally
-        }
-    };
+    $plugin = new TenantPlugin();
 
     $manager->register($plugin);
     $manager->boot();
-    $manager->boot(); // second call is no-op
+
+    expect(\NyonCode\WireTable\Table::hasMacro('tenantScoped'))->toBeTrue();
 });
 ```
 
-### Integration Testing
+## Best Practices
 
-```php
-it('applies tenant scope in query execution', function () {
-    $manager = new PluginManager();
-    $manager->register(new MultiTenancyPlugin());
-    $manager->boot();
-
-    // Verify the pipe is in the pipeline
-    $pipes = $manager->getQueryPipes();
-    expect($pipes)->toHaveKey('tenant-scope');
-    expect($pipes['tenant-scope'])->toBeInstanceOf(TenantScopePipe::class);
-});
-```
-
-### Testing Custom Columns
-
-```php
-it('creates sparkline column', function () {
-    $column = SparklineColumn::make('views')
-        ->dataPoints([1, 5, 3, 8, 2])
-        ->chartColor('success')
-        ->height(24);
-
-    expect($column->getName())->toBe('views');
-    expect($column->getDataPoints())->toBe([1, 5, 3, 8, 2]);
-    expect($column->getChartColor())->toBe('success');
-    expect($column->getHeight())->toBe(24);
-});
-```
+- Use stable, lowercase plugin IDs such as `tenant`, `audit-export`, or `acme-billing`.
+- Keep `register()` lightweight; do not resolve request-scoped services there.
+- Put Laravel macros and service-dependent setup in `boot()`.
+- Prefer table/form fluent APIs for one-off behavior.
+- Return a payload array from hook callbacks when you want to modify hook data.
+- Guard package registration with `PluginManager::has()` to avoid duplicate IDs.

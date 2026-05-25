@@ -1,6 +1,6 @@
 # Wire Core
 
-Shared foundation for the [Wire ecosystem](https://github.com/NyonCode/wire) – traits, actions, modals, notifications, icons, and colors.
+Shared foundation for the [Wire ecosystem](https://github.com/NyonCode/wire) - traits, actions, modals, notifications, widgets, audit logging, icons, and colors.
 
 ## Requirements
 
@@ -72,12 +72,64 @@ Pluggable notification system with three built-in drivers:
 - `LivewireEventDriver` – Livewire browser events
 - `FlasherDriver` – PHP Flasher integration
 
+### Modals
+Reusable modal primitives for actions and custom UI:
+
+- Confirmation dialogs
+- Slide-overs
+- Multi-step wizards
+
+### Widgets
+Dashboard building blocks:
+
+- Stats overview widgets
+- Chart widgets
+- Table widgets
+- Custom Blade-backed widgets
+
+### Plugins
+Application and package extension points:
+
+- Plugin lifecycle with `register()` and `boot()`
+- Table and action macros
+- Hook callbacks
+- Column and filter type registries
+- Query pipe registry
+
+### Audit Log
+Optional audit logging for Eloquent model changes and table-related events:
+
+- `HasAuditable` model trait
+- `AuditEntry` model and `audit_logs` migration
+- `AuditTrailAction` row action for tables
+- `AuditLogger::withoutAuditing()` for imports and maintenance jobs
+
 ### Configuration
 Publish the config file:
 
 ```bash
 php artisan vendor:publish --tag=wire-core-config
 ```
+
+Publish audit migrations when you use the audit log:
+
+```bash
+php artisan vendor:publish --tag=wire-core-migrations
+php artisan migrate
+```
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Core Foundation](../../docs/core/foundation.md) | Shared traits, icons, colors, and Blade helpers |
+| [Actions](../../docs/core/actions.md) | Row, bulk, header actions, and action groups |
+| [Notifications](../../docs/core/notifications.md) | Notification value objects and drivers |
+| [Modals](../../docs/core/modals.md) | Confirmations, slide-overs, and wizards |
+| [Widgets](../../docs/core/widgets.md) | Dashboard widgets |
+| [Plugins](../../docs/core/plugins.md) | App and package extension points |
+| [Audit Log](../../docs/core/audit.md) | Audit setup and usage |
+| [Configuration](../../docs/configuration.md) | Config files and environment variables |
 
 ## License
 

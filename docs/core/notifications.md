@@ -1,6 +1,6 @@
 # Notifications
 
-Pluggable notification system with multiple drivers. Lives inside `wire-core` as a separate module, prepared for future extraction ([ADR 0006](../decisions/0006-modular-core-extraction-strategy.md)).
+Pluggable notification system with multiple drivers.
 
 ## Drivers
 
@@ -12,7 +12,7 @@ Pluggable notification system with multiple drivers. Lives inside `wire-core` as
 | Log | `LogDriver` | Logs notifications for debugging | None |
 | Null | `NullDriver` | No-op (disables notifications) | None |
 
-See [ADR 0004](../decisions/0004-notification-driver-defaults.md) for default driver selection.
+The session driver is the default.
 
 ## Notification Builder
 
@@ -114,8 +114,6 @@ Form::make()
     ->save();
 ```
 
-See [ADR 0010](../decisions/0010-form-save-notifications-integration.md).
-
 ## Configuration
 
 ```php
@@ -176,7 +174,3 @@ Place the toast container in your layout:
 ```blade
 <x-wire-notifications::toast-container />
 ```
-
-## Module Dependencies
-
-Notifications depends only on Foundation. It does not depend on Actions, Modals, or Forms ([ADR 0007](../decisions/0007-internal-module-dependencies.md)).

@@ -2,7 +2,7 @@
 
 The `Form::save()` method executes a strict 6-step pipeline. Each step is clearly defined with hooks for customization.
 
-See [ADR 0010](../decisions/0010-form-save-notifications-integration.md) for the notification integration decision.
+This page describes what happens when a form is saved.
 
 ---
 
@@ -186,7 +186,7 @@ Receives:
 
 ## Step 6: Notify
 
-Sends a success notification via the Notifications module ([ADR 0010](../decisions/0010-form-save-notifications-integration.md)):
+Sends a success notification via the Notifications module:
 
 ```php
 // Custom message

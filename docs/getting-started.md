@@ -32,7 +32,7 @@ composer require nyoncode/wire-forms
 composer require nyoncode/wire-core
 ```
 
-### Sortable plugin (drag & drop row reordering)
+### Sortable package (drag and drop row reordering)
 
 ```bash
 composer require nyoncode/wire-sortable
@@ -135,6 +135,7 @@ Do not install Alpine separately. Livewire 3 already ships it.
 
 ```bash
 php artisan vendor:publish --tag=wire-core-config
+php artisan vendor:publish --tag=wire-forms-config
 php artisan vendor:publish --tag=wire-table-config
 php artisan vendor:publish --tag=wire-sortable-config
 ```
@@ -322,9 +323,12 @@ composer analyse       # PHPStan level 6
 
 ## Next Steps
 
-- [Architecture](architecture.md) — understand the package structure
 - [Table columns](table/columns.md) — all 13 column types
 - [Form fields](forms/overview.md) — all field types and Form API
 - [Actions](core/actions.md) — row, bulk, header actions
-- [Plugin development](core/plugins.md) — extend the ecosystem
+- [Core plugins](core/plugins.md) — reusable app and package extensions
+- [Configuration](configuration.md) — config files and environment variables
+- [Authorization](authorization.md) — Gates, policies, permissions
+- [Table exports](table/exports.md) — CSV, Excel, PDF downloads
+- [Audit log](core/audit.md) — model change history
 - [Sortable rows](sortable/overview.md) — drag & drop row reordering

@@ -270,7 +270,7 @@ See [Actions](../core/actions.md) for the full Actions API.
 ->searchPlaceholder(string $text = 'Search...')
 ```
 
-Search uses the Core Unified Engine's database-aware strategy:
+Search uses a database-aware strategy:
 - **MySQL**: `MATCH ... AGAINST` fulltext (if index exists) or `LIKE`
 - **PostgreSQL**: `to_tsvector / ts_query`
 - **SQLite**: `LIKE '%term%'` fallback
@@ -546,42 +546,6 @@ TextInputColumn::make('name')
 
 ---
 
-## Table Query Flow
-
-Internally, `WithTable` delegates query building to `TableQueryService`, which bridges the Table configuration to the Core Unified Engine:
-
-```
-1. WithTable.getRecords()
-   └── TableQueryService::buildQuery()
-       ├── buildMetadataRegistry()      → Introspect model + relations
-       ├── convertToPlannerInputs()     → Columns → DataComponent[]
-       │                                   Filters → FilterDefinition[]
-       │                                   Sorts → SortDefinition[]
-       ├── QueryPlanner::plan()         → Produces QueryPlan (immutable)
-       └── QueryExecutor::execute()     → Applies plan via 8 pipes
-                                        → Returns Builder
-
-2. Builder.paginate() / simplePaginate() / cursorPaginate()
-   └── Results returned to WithTable for rendering
-```
-
-The query pipeline applies these steps in order:
-
-| # | Pipe | What It Does |
-|---|------|--------------|
-| 1 | `ApplyScopes` | Named model scopes |
-| 2 | `ApplySoftDeletes` | `withTrashed()` if configured |
-| 3 | `ApplyRelations` | JOINs from relation path analysis |
-| 4 | `ApplySearch` | Global search (DB-specific strategy) |
-| 5 | `ApplyFilters` | WHERE conditions from active filters |
-| 6 | `ApplyAggregates` | `withCount()`, `withSum()`, etc. |
-| 7 | `ApplySorting` | ORDER BY with qualified column names |
-| 8 | `ApplyEagerLoads` | `with()` for display-only relations |
-
-Custom query pipes can be added via the [Plugin System](../core/plugins.md).
-
----
-
 ## Real-World Patterns
 
 ### Multi-Tenant Table
@@ -678,6 +642,6 @@ class UserTable extends Component
 |----------|---------------|
 | [Columns](columns.md) | All 13 column types — TextColumn, BadgeColumn, BooleanColumn, IconColumn, ImageColumn, ButtonColumn, ToggleColumn, SelectColumn, TextInputColumn, StackedColumn, SplitColumn, PollColumn |
 | [Filters](filters.md) | SelectFilter, DateFilter, NumberRangeFilter, TernaryFilter, custom filters, column-level filters |
+| [Exports](exports.md) | CSV, Excel, and PDF exports for the current table query |
 | [Advanced](advanced.md) | Sub-rows, summary footer, polling, lazy loading, caching, debug, responsive |
 | [Actions](../core/actions.md) | Full Action system — modals, forms, wizard steps, lifecycle |
-| [Plugins](../core/plugins.md) | Custom query pipes, column types, filter types |

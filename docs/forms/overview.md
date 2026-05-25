@@ -12,7 +12,7 @@ Add to Tailwind content paths:
 ```js
 export default {
     content: [
-        ///... Curent code
+        // ...current app paths
         './vendor/nyoncode/wire-core/resources/views/**/*.blade.php',
         './vendor/nyoncode/wire-forms/resources/views/**/*.blade.php',
     ]
@@ -21,24 +21,9 @@ export default {
 
 ---
 
-## Architecture
+## How Forms Work
 
-Forms use Config + Runtime separation internally:
-
-```
-Form (public API, Htmlable)
-├── ConfigBuilder      → accumulates fluent calls
-├── FormConfig         → immutable snapshot
-├── FormRuntime        → validate, save, getState
-├── StateManager       → wire:model binding, fill, dirty tracking
-│   └── delegates to Core StateContainer
-├── SaveHandler        → validate → mutate → persist → notify
-├── FormValidationResolver → collect rules from fields
-│   └── delegates to Core ValidationPipeline
-└── FormRenderer       → Blade output
-```
-
-Users interact **only** with `Form`. Internal classes are never exposed.
+Define a `Form` schema on your Livewire component, bind it to a state path, and render it with `{{ $this->form }}`.
 
 ---
 
@@ -85,7 +70,7 @@ class CreateUser extends Component
 
 ## Multi-Form
 
-Methods ending with `Form` are auto-detected ([ADR 0009](../decisions/0009-single-multi-form-coexistence.md)):
+Methods ending with `Form` are auto-detected:
 
 ```php
 class UserSettings extends Component
@@ -179,7 +164,7 @@ $form->getModel();     // Model instance or null
 
 ## Standalone Usage (without Livewire)
 
-Works for server-side validation and data processing ([ADR 0012](../decisions/0012-form-make-standalone-usage.md)):
+Works for server-side validation and data processing:
 
 ```php
 $form = Form::make()
@@ -305,7 +290,7 @@ class MyComponent extends Component
 - [CheckboxList](fields/checkbox-list.md) — multi-checkbox group
 - [Radio](fields/radio.md) — radio button group
 - [Toggle](fields/toggle.md) — on/off switch
-- [DateTimePicker](fields/date-time-picker.md) — unified date/time/datetime ([ADR 0008](../decisions/0008-datetimepicker-unification.md))
+- [DateTimePicker](fields/date-time-picker.md) — unified date/time/datetime
 - [ColorPicker](fields/color-picker.md) — color selector
 - [FileUpload](fields/file-upload.md) — file/image upload
 - [RichEditor](fields/rich-editor.md) — WYSIWYG editor

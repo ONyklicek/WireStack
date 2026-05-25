@@ -6,7 +6,7 @@ Wire Table provides 4 built-in filter types plus the ability to build custom fil
 
 ## Table of Contents
 
-1. [Filter Architecture](#filter-architecture)
+1. [Filter Flow](#filter-flow)
 2. [Shared Filter API](#shared-filter-api)
 3. [SelectFilter](#selectfilter)
 4. [DateFilter](#datefilter)
@@ -19,7 +19,7 @@ Wire Table provides 4 built-in filter types plus the ability to build custom fil
 
 ---
 
-## Filter Architecture
+## Filter Flow
 
 ```
 Table::filters([...])
@@ -695,17 +695,6 @@ class GeoRadiusFilter extends Filter
     }
 }
 ```
-
-### Registering via Plugin
-
-```php
-use NyonCode\WireCore\Core\Plugin\PluginManager;
-
-$manager->addFilterType('geo-radius', GeoRadiusFilter::class);
-$manager->addFilterType('json-contains', JsonContainsFilter::class);
-```
-
----
 
 ## Patterns & Recipes
 

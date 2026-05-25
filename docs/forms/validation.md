@@ -137,64 +137,6 @@ try {
 }
 ```
 
----
-
-## FormValidationResolver
-
-Internally, `FormValidationResolver` collects rules from all field components and delegates to the Core `ValidationPipeline`:
-
-```
-FormValidationResolver
-├── Iterate form schema (flat)
-├── Collect rules from each Field (->getRules())
-├── Merge form-level rules
-├── Merge custom messages
-└── Delegate to Core ValidationPipeline
-    └── Returns ValidationResult
-```
-
-### Core ValidationPipeline
-
-The shared `ValidationPipeline` from wire-core is used by both forms and inline table editing:
-
-```php
-use NyonCode\WireCore\Core\Validation\ValidationPipeline;
-use NyonCode\WireCore\Core\Validation\ValidationResult;
-
-$pipeline = new ValidationPipeline();
-
-$result = $pipeline->validate(
-    data: ['name' => '', 'email' => 'bad'],
-    rules: ['name' => 'required', 'email' => 'email'],
-    messages: ['name.required' => 'Name is mandatory'],
-    attributes: ['name' => 'Full Name'],
-);
-
-$result->passed();          // false
-$result->failed();          // true
-$result->errors();          // ['name' => ['Name is mandatory'], 'email' => [...]]
-$result->hasError('name');  // true
-$result->getError('name');  // ['Name is mandatory']
-$result->validatedData();   // [] (empty on failure)
-```
-
-### Validatable Contract
-
-Components can implement `Validatable` to participate in pipeline validation:
-
-```php
-use NyonCode\WireCore\Core\Validation\Contracts\Validatable;
-
-interface Validatable
-{
-    public function getValidationRules(): array;
-    public function getValidationMessages(): array;
-    public function getValidationAttributes(): array;
-}
-```
-
----
-
 ## Conditional Rules
 
 Rules can use Closures for dynamic validation:

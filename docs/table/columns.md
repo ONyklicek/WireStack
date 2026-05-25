@@ -1,6 +1,6 @@
 # Columns
 
-Wire Table provides 13 column types. All extend the base `Column` class (1793 lines) which itself extends `DataComponent` from wire-core.
+Wire Table provides 13 column types. All share the same base column API for labels, visibility, authorization, sorting, formatting, and inline editing.
 
 ---
 
