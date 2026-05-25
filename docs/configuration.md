@@ -83,7 +83,21 @@ Register application or package plugins in the `plugins` array:
 ],
 ```
 
-See [Core Plugins](core/plugins.md) for plugin classes, lifecycle, macros, hooks, type registries, and query pipes.
+Plugins that implement `HasConfiguration` can also read merged options from `wire-core.plugins.config.{pluginId}`:
+
+```php
+'plugins' => [
+    App\Wire\Plugins\ExportPlugin::class,
+
+    'config' => [
+        'export' => [
+            'format' => 'xlsx',
+        ],
+    ],
+],
+```
+
+See [Core Plugins](core/plugins.md) for plugin classes, lifecycle, dependencies, macros, hooks, type registries, query pipes, and plugin configuration.
 
 ### Modals
 
