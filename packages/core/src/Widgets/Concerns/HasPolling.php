@@ -45,7 +45,7 @@ trait HasPolling
             return null;
         }
 
-        $directive = 'wire:poll.' . $this->pollingInterval;
+        $directive = 'wire:poll.'.$this->pollingInterval;
 
         if ($this->pollingOnlyVisible) {
             $directive .= '.visible';

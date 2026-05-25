@@ -1856,12 +1856,9 @@ class Column extends DataComponent implements Htmlable
         return $this->getColumnName();
     }
 
-    /**
-     * @throws Throwable
-     */
     public function renderFilter(mixed $value = null): string
     {
-        if (! $this->filterable) {
+        if (! $this->isFilterable()) {
             return '';
         }
 

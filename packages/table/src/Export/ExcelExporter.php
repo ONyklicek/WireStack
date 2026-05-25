@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Export\Contracts\Exporter;
-use RuntimeException;
+use OpenSpout\Common\Entity\Cell;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Writer\XLSX\Writer;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -24,7 +26,7 @@ class ExcelExporter implements Exporter
 
     public static function isAvailable(): bool
     {
-        return class_exists(\OpenSpout\Writer\XLSX\Writer::class);
+        return class_exists(Writer::class);
     }
 
     /**
@@ -42,36 +44,36 @@ class ExcelExporter implements Exporter
         }
 
         return new StreamedResponse(function () use ($query, $columns) {
-            /** @var \OpenSpout\Writer\XLSX\Writer $writer */
-            $writer = new \OpenSpout\Writer\XLSX\Writer;
+            /** @var Writer $writer */
+            $writer = new Writer;
             $writer->openToFile('php://output');
 
             if ($this->withHeadings) {
                 $headerCells = array_map(
-                    fn (Column $col) => \OpenSpout\Common\Entity\Cell::fromValue(
-                        $col->getLabel() ?? $col->getName()
+                    fn (Column $col) => Cell::fromValue(
+                        $col->getLabel()
                     ),
                     $columns
                 );
-                $writer->addRow(new \OpenSpout\Common\Entity\Row($headerCells));
+                $writer->addRow(new Row($headerCells));
             }
 
             $query->chunkById(1000, function ($records) use ($writer, $columns) {
                 foreach ($records as $record) {
                     $cells = [];
                     foreach ($columns as $column) {
-                        $cells[] = \OpenSpout\Common\Entity\Cell::fromValue(
+                        $cells[] = Cell::fromValue(
                             $this->resolveColumnValue($column, $record)
                         );
                     }
-                    $writer->addRow(new \OpenSpout\Common\Entity\Row($cells));
+                    $writer->addRow(new Row($cells));
                 }
             });
 
             $writer->close();
         }, 200, [
             'Content-Type' => ExportFormat::Excel->mimeType(),
-            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
             'Cache-Control' => 'no-cache, no-store, must-revalidate',
         ]);
     }

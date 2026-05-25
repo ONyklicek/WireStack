@@ -91,8 +91,8 @@ class ButtonColumn extends Column
     public function __construct(string $name)
     {
         parent::__construct($name);
-        $this->sortable = false;
-        $this->searchable = false;
+        $this->sortable(false);
+        $this->searchable(false);
     }
 
     /**

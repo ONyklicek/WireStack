@@ -150,10 +150,14 @@ class WireCoreServiceProvider extends PackageServiceProvider
 
         // Register plugins from config
         $this->app->afterResolving(PluginManager::class, function (PluginManager $manager) {
-            /** @var array<int, class-string<Plugin>> $plugins */
+            /** @var list<mixed> $plugins */
             $plugins = $this->app['config']->get('wire-core.plugins', []);
 
             foreach ($plugins as $pluginClass) {
+                if (! is_string($pluginClass) || ! is_subclass_of($pluginClass, Plugin::class)) {
+                    continue;
+                }
+
                 $manager->register($this->app->make($pluginClass));
             }
         });

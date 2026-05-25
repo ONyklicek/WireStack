@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Carbon;
 
 /**
  * Eloquent model for audit log entries.
@@ -22,7 +23,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property array<string, mixed>|null $old_values
  * @property array<string, mixed>|null $new_values
  * @property array<string, mixed>|null $metadata
- * @property \Illuminate\Support\Carbon $created_at
+ * @property Carbon $created_at
  */
 class AuditEntry extends Model
 {
@@ -48,7 +49,7 @@ class AuditEntry extends Model
     /**
      * The auditable (polymorphic) record.
      *
-     * @return MorphTo<Model, self>
+     * @return MorphTo<Model, $this>
      */
     public function auditable(): MorphTo
     {
@@ -58,10 +59,11 @@ class AuditEntry extends Model
     /**
      * The user who performed the action.
      *
-     * @return BelongsTo<Model, self>
+     * @return BelongsTo<Model, $this>
      */
     public function user(): BelongsTo
     {
+        /** @var class-string<Model> $userModel */
         $userModel = config('wire-core.audit.user_model', 'App\\Models\\User');
 
         return $this->belongsTo($userModel, 'user_id');

@@ -51,6 +51,9 @@ final class RelationshipSaveHandler
         return $repeaters;
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     private function saveRepeater(Model $record, Repeater $repeater, array $data): void
     {
         $relationName = $repeater->getRelationship();

@@ -144,14 +144,10 @@ class StackedColumn extends Column
     public function searchable(bool|array $searchable = true, ?Closure $query = null): static
     {
         if (is_array($searchable)) {
-            $this->searchable = true;
             $this->searchColumns = $searchable;
+            parent::searchable(true, $query);
         } else {
-            $this->searchable = $searchable;
-        }
-
-        if ($query !== null) {
-            $this->searchCallback = $query;
+            parent::searchable($searchable, $query);
         }
 
         return $this;

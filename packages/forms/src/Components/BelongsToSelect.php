@@ -154,7 +154,7 @@ class BelongsToSelect extends Select
             return null;
         }
 
-        return $relatedModel::create($data);
+        return $relatedModel->newQuery()->create($data);
     }
 
     /**

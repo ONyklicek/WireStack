@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Audit\Events;
 
-use Illuminate\Support\Collection;
 use NyonCode\WireCore\Audit\Contracts\AuditableEvent;
 
 /**

@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Core\Query\Contracts\QueryPipe;
 use NyonCode\WireCore\Core\Query\FilterDefinition;
 use NyonCode\WireCore\Core\Query\JoinRegistry;
 use NyonCode\WireCore\Core\Query\QueryExecutor;
@@ -63,9 +65,21 @@ final class TableQueryService
     ): Builder {
         $modelClass = get_class($baseQuery->getModel());
         $this->registry = $this->buildMetadataRegistry($baseQuery, $modelClass, $table);
+        $pluginManager = $this->resolvePluginManager();
 
         $columns = $table->getColumns();
         $filters = $table->getFilters();
+
+        // ── 0. Plugin hook: table.configuring ──
+        if ($pluginManager !== null) {
+            $payload = $pluginManager->runHook('table.configuring', [
+                'table' => $table,
+                'columns' => $columns,
+                'filters' => $filters,
+            ]);
+            $columns = $payload['columns'] ?? $columns;
+            $filters = $payload['filters'] ?? $filters;
+        }
 
         // ── 1. Collect custom callbacks that bypass the planner ──
         $customSearchCallbacks = [];
@@ -106,6 +120,27 @@ final class TableQueryService
         $plannerSorts = $this->buildPlannerSorts($sortColumn, $sortDirection, $columns, $customSortCallback !== null);
         $searchTerm = ! empty($search) && ! empty($customSearchCallbacks) ? null : $search;
 
+        // ── 2.5 Plugin hook: table.querying (pre-plan, can force sort override) ──
+        if ($pluginManager !== null) {
+            $queryingPayload = $pluginManager->runHook('table.querying', [
+                'table' => $table,
+                'columns' => $columns,
+                'filters' => $filters,
+                'sort_column' => $sortColumn,
+                'sort_direction' => $sortDirection,
+                'search' => $search,
+            ]);
+
+            // Plugins can force sort override (e.g. SortablePlugin in reorder mode)
+            if (isset($queryingPayload['force_sort_column'])) {
+                $plannerSorts = [SortDefinition::make(
+                    column: $queryingPayload['force_sort_column'],
+                    direction: $queryingPayload['force_sort_direction'] ?? 'asc',
+                )];
+                $customSortCallback = null;
+            }
+        }
+
         // ── 3. Plan ──
         $joinRegistry = new JoinRegistry;
         $planner = new QueryPlanner($this->registry, $joinRegistry);
@@ -117,8 +152,19 @@ final class TableQueryService
             search: ! empty($search) ? $searchTerm : null,
         );
 
-        // ── 4. Execute plan ──
+        // ── 4. Execute plan (with plugin pipes appended) ──
         $executor = new QueryExecutor;
+
+        if ($pluginManager !== null) {
+            $pluginPipes = $pluginManager->getQueryPipes();
+            if ($pluginPipes !== []) {
+                $executor = $executor->withPipes([
+                    ...$this->getDefaultExecutorPipes($executor, $baseQuery, $searchTerm),
+                    ...array_values($pluginPipes),
+                ]);
+            }
+        }
+
         $query = $executor->execute($baseQuery, $this->lastPlan, $searchTerm);
 
         // ── 4.5 Apply aggregate subqueries (withCount, withSum, etc.) ──
@@ -161,6 +207,15 @@ final class TableQueryService
             }
         }
 
+        // ── 6. Plugin hook: table.queried (post-execution observation) ──
+        if ($pluginManager !== null) {
+            $pluginManager->runHook('table.queried', [
+                'table' => $table,
+                'query' => $query,
+                'plan' => $this->lastPlan,
+            ]);
+        }
+
         return $query;
     }
 
@@ -179,6 +234,29 @@ final class TableQueryService
     public function getLastRegistry(): ?MetadataRegistry
     {
         return $this->registry;
+    }
+
+    /**
+     * Resolve the PluginManager if it is registered in the container.
+     */
+    private function resolvePluginManager(): ?PluginManager
+    {
+        if (! app()->bound(PluginManager::class)) {
+            return null;
+        }
+
+        return app(PluginManager::class);
+    }
+
+    /**
+     * Get default executor pipes to merge with plugin pipes.
+     *
+     * @param  Builder<Model>  $builder
+     * @return array<int, QueryPipe>
+     */
+    private function getDefaultExecutorPipes(QueryExecutor $executor, Builder $builder, ?string $searchTerm): array
+    {
+        return $executor->getDefaultPipes($builder, $searchTerm);
     }
 
     /**

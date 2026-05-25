@@ -33,6 +33,7 @@ use NyonCode\WireCore\Core\Events\TableFiltering;
 use NyonCode\WireCore\Core\Events\TableRefreshed;
 use NyonCode\WireCore\Core\Events\TableSearched;
 use NyonCode\WireCore\Core\Events\TableSearching;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Notifications\Notification;
@@ -44,6 +45,7 @@ use NyonCode\WireTable\Export\ExportFormat;
 use NyonCode\WireTable\Export\TableExport;
 use NyonCode\WireTable\Table;
 use ReflectionFunction;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 trait WithTable
 {
@@ -1067,6 +1069,18 @@ trait WithTable
         // Dispatch ActionExecuting event
         event(new ActionExecuting($tableId, $action->getName(), $recordIds));
 
+        // Plugin hook: action.executing
+        if (app()->bound(PluginManager::class)) {
+            app(PluginManager::class)->runHook('action.executing', [
+                'action' => $action,
+                'actionName' => $action->getName(),
+                'actionType' => $actionType,
+                'recordIds' => $recordIds,
+                'data' => $data,
+                'component' => $this,
+            ]);
+        }
+
         // Build ActionContext
         $context = $this->payloadToContext($payload, $action->getName());
         $context->set('confirmed', $confirmed);
@@ -1175,6 +1189,18 @@ trait WithTable
         }
 
         $this->handleActionSuccess($action, $payload['record'] ?? $payload['records'] ?? null);
+
+        // Plugin hook: action.executed
+        if (app()->bound(PluginManager::class)) {
+            app(PluginManager::class)->runHook('action.executed', [
+                'action' => $action,
+                'actionName' => $action->getName(),
+                'actionType' => $actionType,
+                'recordIds' => $recordIds,
+                'result' => $pipelineResult,
+                'component' => $this,
+            ]);
+        }
 
         // Dispatch ActionExecuted event
         event(new ActionExecuted($tableId, $action->getName(), $recordIds, $pipelineResult->isSuccess()));
@@ -2193,7 +2219,7 @@ trait WithTable
      *
      * Uses the current filtered/sorted query and visible columns.
      */
-    public function exportTable(string $format = 'csv'): \Symfony\Component\HttpFoundation\StreamedResponse
+    public function exportTable(string $format = 'csv'): StreamedResponse
     {
         $exportFormat = ExportFormat::from($format);
         $table = $this->getTable();

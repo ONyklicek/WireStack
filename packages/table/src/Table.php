@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
@@ -1419,6 +1420,58 @@ class Table implements Htmlable
     public function getSortableColumns(): array
     {
         return array_values(array_filter($this->columns, fn (Column $column) => $column->isSortable()));
+    }
+
+    // ==========================================
+    // Plugin Type Resolution
+    // ==========================================
+
+    /**
+     * Resolve a custom column class registered by a plugin.
+     *
+     * @return class-string|null
+     */
+    public static function resolveColumnType(string $type): ?string
+    {
+        if (! app()->bound(PluginManager::class)) {
+            return null;
+        }
+
+        $types = app(PluginManager::class)->getColumnTypes();
+
+        return $types[$type] ?? null;
+    }
+
+    /**
+     * Resolve a custom filter class registered by a plugin.
+     *
+     * @return class-string|null
+     */
+    public static function resolveFilterType(string $type): ?string
+    {
+        if (! app()->bound(PluginManager::class)) {
+            return null;
+        }
+
+        $types = app(PluginManager::class)->getFilterTypes();
+
+        return $types[$type] ?? null;
+    }
+
+    /**
+     * Resolve a custom action class registered by a plugin.
+     *
+     * @return class-string|null
+     */
+    public static function resolveActionType(string $type): ?string
+    {
+        if (! app()->bound(PluginManager::class)) {
+            return null;
+        }
+
+        $types = app(PluginManager::class)->getActionTypes();
+
+        return $types[$type] ?? null;
     }
 
     public function __toString(): string

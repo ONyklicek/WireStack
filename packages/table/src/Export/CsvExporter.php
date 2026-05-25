@@ -37,7 +37,7 @@ class CsvExporter implements Exporter
             if ($this->withHeadings) {
                 fputcsv(
                     $handle,
-                    array_map(fn (Column $col) => $col->getLabel() ?? $col->getName(), $columns),
+                    array_map(fn (Column $col) => $col->getLabel(), $columns),
                     $this->delimiter,
                     $this->enclosure,
                 );
@@ -56,7 +56,7 @@ class CsvExporter implements Exporter
             fclose($handle);
         }, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
             'Cache-Control' => 'no-cache, no-store, must-revalidate',
         ]);
     }

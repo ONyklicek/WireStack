@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use NyonCode\WireCore\Widgets\Concerns\WithWidgets;
 use NyonCode\WireCore\Widgets\CustomWidget;
-use NyonCode\WireCore\Widgets\StatsOverviewWidget;
 use NyonCode\WireCore\Widgets\Stat;
+use NyonCode\WireCore\Widgets\StatsOverviewWidget;
 
 // ─── WithWidgets trait ───────────────────────────────────────────────────────
 

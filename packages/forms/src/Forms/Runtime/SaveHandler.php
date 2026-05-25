@@ -7,6 +7,7 @@ namespace NyonCode\WireForms\Forms\Runtime;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireForms\Forms\Config\FormConfig;
 
 /**
@@ -34,26 +35,43 @@ final class SaveHandler
             }
         }
 
-        // 3. beforeSave hook (void)
+        // 3. Plugin hook: form.saving (can modify data)
+        if (app()->bound(PluginManager::class)) {
+            $payload = app(PluginManager::class)->runHook('form.saving', [
+                'config' => $this->config,
+                'data' => $data,
+            ]);
+            $data = $payload['data'] ?? $data;
+        }
+
+        // 4. beforeSave hook (void)
         if ($this->config->beforeSave) {
             ($this->config->beforeSave)($data);
         }
 
-        // 4. Persist
+        // 5. Persist
         $record = $this->persist($data);
 
-        // 5. Save relationships (Repeater cascade)
+        // 6. Save relationships (Repeater cascade)
         if ($record instanceof Model) {
             $relationHandler = new RelationshipSaveHandler;
             $relationHandler->save($record, $this->config->schema, $data);
         }
 
-        // 6. afterSave hook (void)
+        // 7. afterSave hook (void)
         if ($this->config->afterSave) {
             ($this->config->afterSave)($record);
         }
 
-        // 7. Success notification
+        // 8. Plugin hook: form.saved (observation)
+        if (app()->bound(PluginManager::class)) {
+            app(PluginManager::class)->runHook('form.saved', [
+                'config' => $this->config,
+                'record' => $record,
+            ]);
+        }
+
+        // 9. Success notification
         $this->notifySuccess($record);
 
         return $record;

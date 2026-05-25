@@ -7,7 +7,7 @@ use NyonCode\WireCore\Audit\AuditEntry;
 // ─── Factory ─────────────────────────────────────────────────────────────────
 
 it('uses the audit_logs table', function () {
-    $entry = new AuditEntry();
+    $entry = new AuditEntry;
 
     expect($entry->getTable())->toBe('audit_logs');
 });
@@ -35,7 +35,7 @@ it('casts values correctly', function () {
 // ─── getChanges() ────────────────────────────────────────────────────────────
 
 it('computes changes diff from old and new values', function () {
-    $entry = new AuditEntry();
+    $entry = new AuditEntry;
     $entry->old_values = ['name' => 'Alice', 'email' => 'alice@example.com'];
     $entry->new_values = ['name' => 'Bob', 'email' => 'alice@example.com'];
 
@@ -47,7 +47,7 @@ it('computes changes diff from old and new values', function () {
 });
 
 it('handles null old values (created event)', function () {
-    $entry = new AuditEntry();
+    $entry = new AuditEntry;
     $entry->old_values = null;
     $entry->new_values = ['name' => 'Alice', 'status' => 'active'];
 
@@ -59,7 +59,7 @@ it('handles null old values (created event)', function () {
 });
 
 it('handles null new values (deleted event)', function () {
-    $entry = new AuditEntry();
+    $entry = new AuditEntry;
     $entry->old_values = ['name' => 'Alice'];
     $entry->new_values = null;
 
@@ -70,7 +70,7 @@ it('handles null new values (deleted event)', function () {
 });
 
 it('returns empty changes when both values are null', function () {
-    $entry = new AuditEntry();
+    $entry = new AuditEntry;
     $entry->old_values = null;
     $entry->new_values = null;
 
@@ -78,7 +78,7 @@ it('returns empty changes when both values are null', function () {
 });
 
 it('returns empty changes when values are identical', function () {
-    $entry = new AuditEntry();
+    $entry = new AuditEntry;
     $entry->old_values = ['name' => 'Alice'];
     $entry->new_values = ['name' => 'Alice'];
 

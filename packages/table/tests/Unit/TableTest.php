@@ -7,6 +7,7 @@ use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireCore\Actions\HeaderAction;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Columns\TextColumn;
@@ -194,6 +195,22 @@ it('can set and get filters', function () {
     $table = Table::make()->filters($filters);
 
     expect($table->getFilters())->toHaveCount(1);
+});
+
+// ─── Plugin Type Resolution ────────────────────────────────────────────────
+
+it('resolves plugin registered column filter and action types', function () {
+    $manager = app(PluginManager::class);
+    $manager->addColumnType('text', Column::class);
+    $manager->addFilterType('select', SelectFilter::class);
+    $manager->addActionType('default', Action::class);
+
+    expect(Table::resolveColumnType('text'))->toBe(Column::class)
+        ->and(Table::resolveFilterType('select'))->toBe(SelectFilter::class)
+        ->and(Table::resolveActionType('default'))->toBe(Action::class)
+        ->and(Table::resolveColumnType('missing'))->toBeNull()
+        ->and(Table::resolveFilterType('missing'))->toBeNull()
+        ->and(Table::resolveActionType('missing'))->toBeNull();
 });
 
 // ─── Empty State ────────────────────────────────────────────────────────────

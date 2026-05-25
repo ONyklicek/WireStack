@@ -38,7 +38,7 @@ class TableExport
 
     public static function make(): static
     {
-        return new static;
+        return new static; // @phpstan-ignore new.static
     }
 
     /**
@@ -209,7 +209,7 @@ class TableExport
 
         $exporter = $this->resolveExporter();
 
-        $fullFileName = $this->fileName . '.' . $this->format->extension();
+        $fullFileName = $this->fileName.'.'.$this->format->extension();
 
         return $exporter->export($query, $columns, $fullFileName);
     }

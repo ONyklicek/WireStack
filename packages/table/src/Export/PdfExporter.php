@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Export;
 
+use Barryvdh\DomPDF\PDF;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Export\Contracts\Exporter;
-use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -48,7 +48,7 @@ class PdfExporter implements Exporter
         $records = $query->get();
 
         $headings = $this->withHeadings
-            ? array_map(fn (Column $col) => $col->getLabel() ?? $col->getName(), $columns)
+            ? array_map(fn (Column $col) => $col->getLabel(), $columns)
             : [];
 
         $rows = $records->map(function (Model $record) use ($columns) {
@@ -62,7 +62,7 @@ class PdfExporter implements Exporter
 
         $viewName = $this->view ?? 'wire-table::export.pdf';
 
-        /** @var \Barryvdh\DomPDF\PDF $pdf */
+        /** @var PDF $pdf */
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($viewName, [
             'headings' => $headings,
             'rows' => $rows,
@@ -75,7 +75,7 @@ class PdfExporter implements Exporter
             echo $pdf->output();
         }, 200, [
             'Content-Type' => ExportFormat::Pdf->mimeType(),
-            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
             'Cache-Control' => 'no-cache, no-store, must-revalidate',
         ]);
     }

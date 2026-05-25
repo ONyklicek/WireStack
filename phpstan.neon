@@ -5,3 +5,5 @@ parameters:
         - packages/forms/src
         - packages/table/src
     tmpDir: build/phpstan
+    scanFiles:
+        - stubs/phpstan/optional-exporters.php

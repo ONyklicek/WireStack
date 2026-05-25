@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireSortable;
 
+use NyonCode\WireCore\Core\Plugin\Contracts\HasDependencies;
 use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireTable\Table;
@@ -14,11 +15,19 @@ use NyonCode\WireTable\Table;
  * Registers a table.querying hook that forces ordering by the sort column
  * when the table is in reorder mode (isReordering on the component).
  */
-class SortablePlugin implements Plugin
+class SortablePlugin implements HasDependencies, Plugin
 {
     public function getId(): string
     {
         return 'sortable';
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function dependencies(): array
+    {
+        return [];
     }
 
     public function register(PluginManager $manager): void

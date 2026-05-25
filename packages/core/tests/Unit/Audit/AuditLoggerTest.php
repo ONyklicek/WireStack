@@ -8,7 +8,7 @@ use NyonCode\WireCore\Audit\Contracts\AuditableEvent;
 // ─── withoutAuditing ─────────────────────────────────────────────────────────
 
 it('withoutAuditing suppresses logging', function () {
-    $logger = new AuditLogger();
+    $logger = new AuditLogger;
     $event = createMockAuditEvent();
 
     $result = AuditLogger::withoutAuditing(function () use ($logger, $event) {
@@ -55,7 +55,7 @@ it('withoutAuditing restores state even on exception', function () {
 it('respects enabled config', function () {
     config(['wire-core.audit.enabled' => false]);
 
-    $logger = new AuditLogger();
+    $logger = new AuditLogger;
     $result = $logger->log(createMockAuditEvent());
 
     expect($result)->toBeNull();
@@ -66,7 +66,7 @@ it('respects enabled config', function () {
 it('respects event type filter config', function () {
     config(['wire-core.audit.events' => ['created', 'deleted']]);
 
-    $logger = new AuditLogger();
+    $logger = new AuditLogger;
     // 'updated' is not in the allowed list
     $event = createMockAuditEvent('updated');
     $result = $logger->log($event);
@@ -79,7 +79,7 @@ it('respects event type filter config', function () {
 it('allows all events when events config is null', function () {
     config(['wire-core.audit.events' => null]);
 
-    $logger = new AuditLogger();
+    $logger = new AuditLogger;
 
     expect($logger->isEnabled())->toBeTrue();
 });

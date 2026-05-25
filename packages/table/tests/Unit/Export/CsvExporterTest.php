@@ -132,7 +132,7 @@ function createMockRecord(array $attributes): Model
 function createMockQuery(array $records): Builder
 {
     $query = Mockery::mock(Builder::class);
-    $query->shouldReceive('chunkById')->andReturnUsing(function (int $size, \Closure $callback) use ($records) {
+    $query->shouldReceive('chunkById')->andReturnUsing(function (int $size, Closure $callback) use ($records) {
         if (! empty($records)) {
             $callback(collect($records));
         }

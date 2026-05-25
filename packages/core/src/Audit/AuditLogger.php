@@ -47,7 +47,7 @@ class AuditLogger
         $modelClass = $this->getAuditEntryModel();
 
         /** @var AuditEntry $entry */
-        $entry = new $modelClass();
+        $entry = new $modelClass;
         $entry->event = $event->getAuditEventType();
         $entry->auditable_type = $event->getAuditableType() ?? '';
         $entry->auditable_id = $event->getAuditableId();
@@ -95,7 +95,9 @@ class AuditLogger
 
         $modelClass = $this->getAuditEntryModel();
 
-        return $modelClass::olderThan($days)->delete();
+        return $modelClass::query()
+            ->where('created_at', '<', now()->subDays($days))
+            ->delete();
     }
 
     /**

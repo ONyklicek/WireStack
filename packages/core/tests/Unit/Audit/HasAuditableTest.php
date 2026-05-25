@@ -3,12 +3,13 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use NyonCode\WireCore\Audit\Concerns\HasAuditable;
 
 // ─── filterAuditAttributes ──────────────────────────────────────────────────
 
 it('filters excluded attributes', function () {
-    $model = new AuditableTestModel();
+    $model = new AuditableTestModel;
 
     $filtered = $model->publicFilterAuditAttributes([
         'name' => 'Alice',
@@ -23,7 +24,7 @@ it('filters excluded attributes', function () {
 });
 
 it('filters to include-only attributes when set', function () {
-    $model = new AuditableIncludeTestModel();
+    $model = new AuditableIncludeTestModel;
 
     $filtered = $model->publicFilterAuditAttributes([
         'name' => 'Alice',
@@ -38,7 +39,7 @@ it('filters to include-only attributes when set', function () {
 });
 
 it('applies both include and exclude filters', function () {
-    $model = new AuditableBothTestModel();
+    $model = new AuditableBothTestModel;
 
     $filtered = $model->publicFilterAuditAttributes([
         'name' => 'Alice',
@@ -53,7 +54,7 @@ it('applies both include and exclude filters', function () {
 });
 
 it('returns all attributes when no include/exclude configured', function () {
-    $model = new AuditableNoFilterTestModel();
+    $model = new AuditableNoFilterTestModel;
 
     $filtered = $model->publicFilterAuditAttributes([
         'name' => 'Alice',
@@ -77,12 +78,12 @@ it('registers created event listener via bootHasAuditable', function () {
 });
 
 it('has audits relationship defined', function () {
-    $model = new AuditableNoFilterTestModel();
+    $model = new AuditableNoFilterTestModel;
 
     // Verify the relationship method exists and returns MorphMany
     $relation = $model->audits();
 
-    expect($relation)->toBeInstanceOf(\Illuminate\Database\Eloquent\Relations\MorphMany::class);
+    expect($relation)->toBeInstanceOf(MorphMany::class);
 });
 
 // ─── Test Models ─────────────────────────────────────────────────────────────

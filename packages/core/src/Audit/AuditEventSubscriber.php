@@ -31,7 +31,6 @@ class AuditEventSubscriber
     /**
      * Register listeners for the subscriber.
      *
-     * @param  Dispatcher  $events
      * @return array<string, string>
      */
     public function subscribe(Dispatcher $events): array
