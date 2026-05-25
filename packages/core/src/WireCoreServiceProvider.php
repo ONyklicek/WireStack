@@ -39,6 +39,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
             ->hasShortName('wire-core')
             ->hasConfig()
             ->hasViews()
+            ->hasMigrations()
             ->hasTranslations('resources/lang')
             ->hasAbout();
     }
