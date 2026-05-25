@@ -27,18 +27,39 @@
                     this.$nextTick(() => this.setup());
                 });
 
-                // Block Livewire morph during drag to prevent DOM disruption
+                // Block Livewire morph during drag or inline editing to prevent DOM disruption.
+                // setup() re-creates drag-handle <td> cells which collapses the table
+                // layout and kills focus, and morphing itself can replace the focused
+                // input element.
                 Livewire.hook('morph.updating', ({ el, skip }) => {
-                    if (this.isDragging && this.$root.contains(el)) {
+                    if (!this.$root.contains(el)) return;
+
+                    if (this.isDragging) {
+                        skip();
+                        return;
+                    }
+
+                    const active = document.activeElement;
+                    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')
+                        && this.$root.contains(active)) {
                         skip();
                     }
                 });
 
                 // Re-initialize after Livewire morphs (pagination, filters, etc.)
                 Livewire.hook('morph.updated', ({ el }) => {
-                    if (!this.isDragging && this.$root.contains(el)) {
-                        this.$nextTick(() => this.setup());
+                    if (this.isDragging || !this.$root.contains(el)) return;
+
+                    // Skip re-init when a table input is focused — setup() destroys
+                    // and re-creates drag-handle <td> cells which collapses the table
+                    // layout and kills focus on editable columns.
+                    const active = document.activeElement;
+                    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')
+                        && this.$root.contains(active)) {
+                        return;
                     }
+
+                    this.$nextTick(() => this.setup());
                 });
             },
 

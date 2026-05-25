@@ -26,6 +26,7 @@
 @endphp
 
 <div wire:key="{{ $wireKey }}"
+     wire:ignore.self
      x-data="{
         value: {{ $valueJson }},
         original: {{ $valueJson }},
