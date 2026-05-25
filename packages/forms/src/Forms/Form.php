@@ -7,6 +7,7 @@ namespace NyonCode\WireForms\Forms;
 use Closure;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 use NyonCode\WireForms\Forms\Config\ConfigBuilder;
 use NyonCode\WireForms\Forms\Config\FormConfig;
@@ -32,6 +33,10 @@ class Form implements Htmlable
     private StateManager $stateManager;
 
     private ?FormRenderer $renderer = null;
+
+    private bool $usePolicy = false;
+
+    private ?Closure $authorizeUsingCallback = null;
 
     public function __construct()
     {
@@ -204,6 +209,76 @@ class Form implements Htmlable
         $this->invalidateConfig();
 
         return $this;
+    }
+
+    // ─── Authorization ────────────────────────────────────────────
+
+    /**
+     * Enable model policy auto-resolution.
+     *
+     * When enabled, the form auto-detects if the user has 'create' or 'update'
+     * permission on the model. If denied, the form becomes read-only and
+     * the save button is hidden.
+     */
+    public function authorize(bool $usePolicy = true): static
+    {
+        $this->usePolicy = $usePolicy;
+
+        return $this;
+    }
+
+    /**
+     * Override authorization with a custom callback.
+     *
+     * Example: ->authorizeUsing(fn (User $user) => $user->hasRole('editor'))
+     */
+    public function authorizeUsing(?Closure $callback): static
+    {
+        $this->authorizeUsingCallback = $callback;
+
+        return $this;
+    }
+
+    /**
+     * Check if the current user can save the form (create or update).
+     */
+    public function canSave(): bool
+    {
+        // Custom callback takes highest priority
+        if ($this->authorizeUsingCallback) {
+            $user = auth()->guard()->user();
+
+            return $user ? (bool) call_user_func($this->authorizeUsingCallback, $user) : false;
+        }
+
+        if (! $this->usePolicy) {
+            return true;
+        }
+
+        $model = $this->getModel();
+        if (! $model) {
+            return true;
+        }
+
+        if ($model instanceof Model && $model->exists) {
+            return Gate::allows('update', $model);
+        }
+
+        $modelClass = $model instanceof Model ? $model::class : $model;
+
+        return Gate::allows('create', $modelClass);
+    }
+
+    /**
+     * Check if the form is read-only due to authorization.
+     */
+    public function isReadOnly(): bool
+    {
+        if ($this->authorizeUsingCallback) {
+            return ! $this->canSave();
+        }
+
+        return $this->usePolicy && ! $this->canSave();
     }
 
     // ─── Introspection ─────────────────────────────────────────────

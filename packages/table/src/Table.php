@@ -9,6 +9,8 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Model as EloquentModel;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
 use NyonCode\WireCore\Actions\Action;
@@ -62,6 +64,17 @@ class Table implements Htmlable
     protected bool $paginated = true;
 
     protected bool $selectable = false;
+
+    // Policy-based authorization
+    protected bool $usePolicy = false;
+
+    protected bool|Closure|null $authorizeCreate = null;
+
+    protected bool|Closure|null $authorizeUpdate = null;
+
+    protected bool|Closure|null $authorizeDelete = null;
+
+    protected bool|Closure|null $authorizeView = null;
 
     protected ?string $defaultSort = null;
 
@@ -663,6 +676,136 @@ class Table implements Htmlable
     public function isSelectable(): bool
     {
         return $this->selectable || ! empty($this->bulkActions);
+    }
+
+    /**
+     * Enable model policy auto-resolution.
+     *
+     * When enabled, create/update/delete/view permissions are resolved
+     * automatically from the model's Laravel Policy.
+     */
+    public function authorize(bool $usePolicy = true): static
+    {
+        $this->usePolicy = $usePolicy;
+
+        return $this;
+    }
+
+    public function usesPolicy(): bool
+    {
+        return $this->usePolicy;
+    }
+
+    /**
+     * Override create authorization (hides "New" button when denied).
+     */
+    public function authorizeCreate(bool|Closure $authorize = true): static
+    {
+        $this->authorizeCreate = $authorize;
+
+        return $this;
+    }
+
+    /**
+     * Override update authorization (per-row, hides edit action when denied).
+     */
+    public function authorizeUpdate(bool|Closure $authorize = true): static
+    {
+        $this->authorizeUpdate = $authorize;
+
+        return $this;
+    }
+
+    /**
+     * Override delete authorization (per-row, hides delete action when denied).
+     */
+    public function authorizeDelete(bool|Closure $authorize = true): static
+    {
+        $this->authorizeDelete = $authorize;
+
+        return $this;
+    }
+
+    /**
+     * Override view authorization (per-row, hides view action when denied).
+     */
+    public function authorizeView(bool|Closure $authorize = true): static
+    {
+        $this->authorizeView = $authorize;
+
+        return $this;
+    }
+
+    /**
+     * Check if the current user can create a new record.
+     */
+    public function canCreate(): bool
+    {
+        if ($this->authorizeCreate !== null) {
+            return $this->authorizeCreate instanceof Closure
+                ? (bool) call_user_func($this->authorizeCreate)
+                : $this->authorizeCreate;
+        }
+
+        if ($this->usePolicy && $this->model) {
+            return Gate::allows('create', $this->model);
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if the current user can update the given record.
+     */
+    public function canUpdate(EloquentModel $record): bool
+    {
+        if ($this->authorizeUpdate !== null) {
+            return $this->authorizeUpdate instanceof Closure
+                ? (bool) call_user_func($this->authorizeUpdate, $record)
+                : $this->authorizeUpdate;
+        }
+
+        if ($this->usePolicy) {
+            return Gate::allows('update', $record);
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if the current user can delete the given record.
+     */
+    public function canDelete(EloquentModel $record): bool
+    {
+        if ($this->authorizeDelete !== null) {
+            return $this->authorizeDelete instanceof Closure
+                ? (bool) call_user_func($this->authorizeDelete, $record)
+                : $this->authorizeDelete;
+        }
+
+        if ($this->usePolicy) {
+            return Gate::allows('delete', $record);
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if the current user can view the given record.
+     */
+    public function canView(EloquentModel $record): bool
+    {
+        if ($this->authorizeView !== null) {
+            return $this->authorizeView instanceof Closure
+                ? (bool) call_user_func($this->authorizeView, $record)
+                : $this->authorizeView;
+        }
+
+        if ($this->usePolicy) {
+            return Gate::allows('view', $record);
+        }
+
+        return true;
     }
 
     public function defaultSort(?string $column, string $direction = 'asc'): static

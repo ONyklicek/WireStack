@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Validator;
+use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireTable\Concerns\HasView;
 
 class TextInputColumn extends Column
@@ -97,7 +98,7 @@ class TextInputColumn extends Column
     public function __construct(string $name)
     {
         parent::__construct($name);
-        $this->editable = true;
+        $this->capabilities = $this->capabilities->add(Capability::Editable);
         $this->editableType = 'text';
     }
 
@@ -444,7 +445,7 @@ class TextInputColumn extends Column
         return $this;
     }
 
-    public function formatForSave(mixed $value, Model|null $record): mixed
+    public function formatForSave(mixed $value, ?Model $record): mixed
     {
         if ($this->trim && is_string($value)) {
             $value = trim($value);

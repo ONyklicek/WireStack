@@ -10,10 +10,14 @@ use Closure;
  * Trait HasVisibility
  *
  * Shared visibility, disabled, and read-only state logic.
- * Used across form components, actions, columns, and filters.
+ * Used across form components, actions, columns, filters, and widgets.
+ *
+ * Includes HasAuthorization for permission/gate checks on all components.
  */
 trait HasVisibility
 {
+    use HasAuthorization;
+
     protected bool|Closure $isHidden = false;
 
     protected bool|Closure $isVisible = true;
@@ -48,6 +52,10 @@ trait HasVisibility
 
     public function isVisible(): bool
     {
+        if (! $this->isAuthorized()) {
+            return false;
+        }
+
         return (bool) $this->evaluate($this->isVisible) && ! $this->isHidden();
     }
 

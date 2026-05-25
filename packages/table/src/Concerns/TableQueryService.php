@@ -121,6 +121,9 @@ final class TableQueryService
         $executor = new QueryExecutor;
         $query = $executor->execute($baseQuery, $this->lastPlan, $searchTerm);
 
+        // ── 4.5 Apply aggregate subqueries (withCount, withSum, etc.) ──
+        $query = $this->applyAggregates($query, $columns);
+
         // ── 5. Apply custom callbacks (these bypass the planner) ──
 
         // Custom search callbacks
@@ -362,6 +365,37 @@ final class TableQueryService
             column: $columnObj->getName(),
             direction: $sortDirection,
         )];
+    }
+
+    /**
+     * Apply withCount / withSum / withAvg / withMin / withMax for aggregate columns.
+     *
+     * @param  Builder<Model>  $query
+     * @param  array<int, Column>  $columns
+     * @return Builder<Model>
+     */
+    private function applyAggregates(Builder $query, array $columns): Builder
+    {
+        foreach ($columns as $column) {
+            if (! $column->isAggregate()) {
+                continue;
+            }
+
+            $relation = $column->getAggregateRelation();
+            $function = $column->getAggregateFunction();
+            $aggregateCol = $column->getAggregateColumn();
+
+            match ($function) {
+                'count' => $query->withCount($relation),
+                'sum' => $query->withSum($relation, $aggregateCol),
+                'avg' => $query->withAvg($relation, $aggregateCol),
+                'min' => $query->withMin($relation, $aggregateCol),
+                'max' => $query->withMax($relation, $aggregateCol),
+                default => null,
+            };
+        }
+
+        return $query;
     }
 
     /**

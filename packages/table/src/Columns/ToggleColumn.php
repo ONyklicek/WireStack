@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Columns;
 
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Capabilities\Capability;
 
 class ToggleColumn extends Column
 {
@@ -23,7 +24,7 @@ class ToggleColumn extends Column
     public function __construct(string $name)
     {
         parent::__construct($name);
-        $this->editable = true;
+        $this->capabilities = $this->capabilities->add(Capability::Editable);
         $this->editableType = 'toggle';
     }
 

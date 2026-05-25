@@ -5,15 +5,18 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Actions\Concerns;
 
 use Closure;
-use Illuminate\Contracts\Auth\Guard;
+use NyonCode\WireCore\Foundation\Concerns\HasAuthorization;
 
 /**
  * Trait HasVisibility
  *
  * Shared visibility, permission, and disabled state logic for all Action types.
+ * Authorization is delegated to HasAuthorization trait.
  */
 trait HasVisibility
 {
+    use HasAuthorization;
+
     protected bool $hidden = false;
 
     protected ?Closure $hiddenCallback = null;
@@ -21,8 +24,6 @@ trait HasVisibility
     protected bool $disabled = false;
 
     protected ?Closure $disabledCallback = null;
-
-    protected ?string $permission = null;
 
     public function visible(bool|Closure $visible = true): static
     {
@@ -51,18 +52,6 @@ trait HasVisibility
         return $this;
     }
 
-    public function permission(?string $permission): static
-    {
-        $this->permission = $permission;
-
-        return $this;
-    }
-
-    public function getPermission(): ?string
-    {
-        return $this->permission;
-    }
-
     public function isHidden(mixed $context = null): bool
     {
         if ($this->hiddenCallback && $context) {
@@ -89,26 +78,7 @@ trait HasVisibility
         if ($this->isHidden($context)) {
             return false;
         }
-        if (! $this->permission) {
-            return true;
-        }
 
-        /** @var Guard $guard */
-        $guard = auth()->guard();
-        $user = $guard->user();
-        if (! $user) {
-            return false;
-        }
-
-        /** @phpstan-ignore-next-line */
-        if ($user->hasRole('Super Admin')) {
-            return true;
-        }
-
-        if (method_exists($user, 'hasPermissionTo')) {
-            return $user->hasPermissionTo($this->permission);
-        }
-
-        return true;
+        return $this->isAuthorized($context);
     }
 }

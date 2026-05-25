@@ -5,16 +5,18 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Filters;
 
 use Closure;
-use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireCore\Foundation\Concerns\HasAuthorization;
 
 /** @phpstan-consistent-constructor */
 class Filter implements Htmlable
 {
+    use HasAuthorization;
+
     public string $name;
 
     public ?string $label = null;
@@ -28,8 +30,6 @@ class Filter implements Htmlable
     public bool $hidden = false;
 
     public ?Closure $hiddenCallback = null;
-
-    public ?string $permission = null;
 
     public ?string $placeholder = null;
 
@@ -112,18 +112,6 @@ class Filter implements Htmlable
         }
 
         return $this;
-    }
-
-    public function permission(?string $permission): static
-    {
-        $this->permission = $permission;
-
-        return $this;
-    }
-
-    public function getPermission(): ?string
-    {
-        return $this->permission;
     }
 
     public function placeholder(?string $placeholder): static
@@ -241,21 +229,7 @@ class Filter implements Htmlable
             return false;
         }
 
-        if (! $this->permission) {
-            return true;
-        }
-
-        /** @var Authenticatable|null $user */
-        $user = auth()->guard()->user();
-        if (! $user) {
-            return false;
-        }
-
-        if (method_exists($user, 'hasPermissionTo')) {
-            return $user->hasPermissionTo($this->permission);
-        }
-
-        return true;
+        return $this->isAuthorized();
     }
 
     public function isHidden(): bool

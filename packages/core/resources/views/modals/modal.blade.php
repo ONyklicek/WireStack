@@ -3,7 +3,7 @@
     x-data="{ show: @entangle($attributes->wire('model')) }"
     x-show="show"
     x-cloak
-    @if($closeOnEscape) x-on:keydown.escape.window="show = false" @endif
+    @if($closeOnEscape) x-on:keydown.escape.window="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}" @endif
     class="fixed inset-0 z-50 overflow-y-auto"
     @if($id) id="{{ $id }}" @endif
     aria-labelledby="modal-title"
@@ -21,7 +21,7 @@
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
             class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/80 backdrop-blur-sm transition-opacity"
-            @if($closeOnClickAway) @click="show = false" @endif
+            @if($closeOnClickAway) @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}" @endif
         ></div>
 
         <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
@@ -74,7 +74,7 @@
                         {{-- Close button --}}
                         <button
                             type="button"
-                            @click="show = false"
+                            @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}"
                             class="ml-auto -mr-1.5 rounded-lg p-1.5 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
                         >
                             <span class="sr-only">{{ __('Close') }}</span>

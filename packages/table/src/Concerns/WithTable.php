@@ -39,6 +39,9 @@ use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Export\ExportAction;
+use NyonCode\WireTable\Export\ExportFormat;
+use NyonCode\WireTable\Export\TableExport;
 use NyonCode\WireTable\Table;
 use ReflectionFunction;
 
@@ -376,7 +379,6 @@ trait WithTable
 
         return $this->cachedRecords;
     }
-
 
     /**
      * Execute query with the appropriate pagination mode.
@@ -2180,5 +2182,63 @@ trait WithTable
     {
         // Invalidate cached records so next render fetches fresh data
         $this->cachedRecords = null;
+    }
+
+    // ==========================================
+    // Export
+    // ==========================================
+
+    /**
+     * Export the current table data.
+     *
+     * Uses the current filtered/sorted query and visible columns.
+     */
+    public function exportTable(string $format = 'csv'): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $exportFormat = ExportFormat::from($format);
+        $table = $this->getTable();
+
+        // Find ExportAction config if defined
+        $exportConfig = null;
+        foreach ($table->getHeaderActions() as $action) {
+            if ($action instanceof ExportAction) {
+                $exportConfig = $action->getExportConfig();
+                break;
+            }
+        }
+
+        $export = ($exportConfig ?? TableExport::make())->format($exportFormat);
+
+        // Use current filtered query
+        $query = $this->getFilteredTableQuery();
+
+        // Use visible columns
+        $columns = array_values(array_filter(
+            $export->getColumns() ?? $table->getColumns(),
+            fn (Column $col) => $col->canView() && ! in_array($col->getName(), $this->hiddenColumns ?? [], true),
+        ));
+
+        return $export->download($query, $columns);
+    }
+
+    /**
+     * Get the filtered (but not paginated) query for the current table state.
+     *
+     * @return Builder<Model>
+     */
+    protected function getFilteredTableQuery(): Builder
+    {
+        $table = $this->getTable();
+        $service = new TableQueryService;
+
+        return $service->buildQuery(
+            baseQuery: $table->getQuery(),
+            table: $table,
+            search: $this->tableSearch,
+            filterValues: $this->tableFilters,
+            sortColumn: $this->tableSortColumn ?: $table->getDefaultSort(),
+            sortDirection: $this->tableSortDirection ?: $table->getDefaultSortDirection(),
+            columnFilterValues: $this->columnFilters,
+        );
     }
 }

@@ -42,12 +42,18 @@ final class SaveHandler
         // 4. Persist
         $record = $this->persist($data);
 
-        // 5. afterSave hook (void)
+        // 5. Save relationships (Repeater cascade)
+        if ($record instanceof Model) {
+            $relationHandler = new RelationshipSaveHandler;
+            $relationHandler->save($record, $this->config->schema, $data);
+        }
+
+        // 6. afterSave hook (void)
         if ($this->config->afterSave) {
             ($this->config->afterSave)($record);
         }
 
-        // 6. Success notification
+        // 7. Success notification
         $this->notifySuccess($record);
 
         return $record;
