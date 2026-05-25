@@ -7,14 +7,6 @@ use NyonCode\WireCore\Tests\TestCase as CoreTestCase;
 use NyonCode\WireForms\Tests\TestCase as FormsTestCase;
 use NyonCode\WireTable\Tests\TestCase as TableTestCase;
 
-pest()->in(
-    __DIR__.'/../packages/core/tests',
-    __DIR__.'/../packages/forms/tests',
-    __DIR__.'/../packages/table/tests',
-    __DIR__.'/../packages/sortable/tests',
-    __DIR__.'/Integration',
-);
-
 uses(TestCase::class)->in(__DIR__.'/Integration');
 
 uses(CoreTestCase::class)->in(
