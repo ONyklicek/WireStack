@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
+use InvalidArgumentException;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
@@ -1139,6 +1140,10 @@ class Table implements Htmlable
      */
     public function poll(string $interval = '5s'): static
     {
+        if (! preg_match('/^\d+(ms|s|m|h)$/', $interval)) {
+            throw new InvalidArgumentException('Interval must be like "5s", "500ms", "10m" or "1h".');
+        }
+
         $this->polling = true;
         $this->pollingInterval = $interval;
 
