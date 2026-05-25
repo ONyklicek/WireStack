@@ -1,0 +1,12 @@
+# Auto-detect text files
+* text=auto
+
+# Export ignores (not included in dist archives)
+/.github          export-ignore
+/tests            export-ignore
+/docs             export-ignore
+/.gitattributes   export-ignore
+/.gitignore       export-ignore
+/phpstan.neon     export-ignore
+/pint.json        export-ignore
+/monorepo-builder.php export-ignore
