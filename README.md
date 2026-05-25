@@ -64,7 +64,7 @@ composer require nyoncode/wire-table
 composer require nyoncode/wire-forms
 ```
 
-After installing, configure Tailwind CSS to scan Wire package views. See the [full installation guide](packages/table/docs/installation.md) for Vite setup, Tailwind content paths, layout template, and troubleshooting.
+After installing, configure Tailwind CSS to scan Wire package views. See the [Getting Started guide](docs/getting-started.md) for Vite setup, Tailwind content paths, layout template, and troubleshooting.
 
 ## Development
 
@@ -107,8 +107,11 @@ composer analyse
 | [Core: Notifications](docs/core/notifications.md) | Notification drivers and customization |
 | [Core: Modals](docs/core/modals.md) | Modals, confirmations, slide-overs, wizards |
 | [Forms: Overview](docs/forms/overview.md) | Form architecture, WithForms trait, save lifecycle |
-| [Forms: Field Reference](docs/forms/fields/) | Per-field documentation (20 types) |
+| [Forms: Field Reference](docs/forms/fields/index.md) | Per-field documentation (20 types) |
 | [Table: Overview](docs/table/overview.md) | Table features and configuration |
+| [Table: Actions](docs/table/actions.md) | Row, bulk, and header actions |
+| [Table: Notifications](docs/table/notifications.md) | User feedback and notification drivers |
+| [Table: Sub-Rows](docs/table/sub-rows.md) | Child rows and grouped detail views |
 | [Migration Guide](docs/migration/v0-to-v1.md) | Migrating from monolithic wire-table |
 | [Future Ideas](docs/future-ideas.md) | Planned features for future releases |
 
