@@ -19,7 +19,7 @@
             id="{{ $field->getId() }}"
             x-model="color"
             @if($field->isDisabled()) disabled @endif
-            class="h-10 w-14 rounded border-gray-300 p-1 cursor-pointer dark:border-gray-600"
+            class="h-10 w-14 rounded border-gray-300 p-1 cursor-pointer dark:border-gray-600 transition-colors duration-150"
     />
     <input
             type="text"
@@ -27,7 +27,7 @@
             @if($field->getPlaceholder()) placeholder="{{ $field->getPlaceholder() }}" @endif
             @if($field->isDisabled()) disabled @endif
             @if($field->isReadOnly()) readonly @endif
-            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
+            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150 dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
     />
 </div>
 

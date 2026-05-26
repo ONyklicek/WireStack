@@ -25,7 +25,7 @@
             @if($field->isDisabled())
                 disabled
             @endif
-            class="mt-0.5 border-gray-300 text-primary-600 focus:ring-primary-500 dark:bg-gray-800 dark:border-gray-600"
+            class="mt-0.5 border-gray-300 text-primary-600 focus:ring-primary-500 transition-colors duration-150 dark:bg-gray-800 dark:border-gray-600"
             />
             <div>
                 <label for="{{ $field->getId() }}-{{ $value }}" class="text-sm text-gray-700 dark:text-gray-300">
