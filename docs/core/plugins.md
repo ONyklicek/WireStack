@@ -1,3 +1,7 @@
+---
+order: 60
+---
+
 # Core Plugins
 
 Wire Core includes a plugin API for application-level extensions and companion packages. A plugin groups reusable setup in one place: macros, type registries, query pipes, hook callbacks, default configuration, and package integration.

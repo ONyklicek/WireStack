@@ -1,5 +1,6 @@
 ---
 title: Row Reordering
+order: 30
 ---
 
 # Row Reordering

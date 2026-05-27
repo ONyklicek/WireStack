@@ -1,6 +1,10 @@
+---
+order: 30
+---
+
 # Save Lifecycle
 
-The `Form::save()` method executes a strict 6-step pipeline. Each step is clearly defined with hooks for customization.
+The `Form::save()` method executes a strict 9-step pipeline. Each step is clearly defined with hooks for customization.
 
 This page describes what happens when a form is saved.
 
@@ -21,19 +25,28 @@ Form::save()
 │   └── mutateDataBeforeSave(Closure $fn)
 │       Transform validated data before persistence
 │
-├── 3. BEFORE SAVE
+├── 3. PLUGIN HOOK: form.saving
+│   └── Plugins may inspect or modify $data
+│
+├── 4. BEFORE SAVE
 │   └── beforeSave(Closure $fn)
 │       Void hook — side effects, external calls
 │
-├── 4. PERSIST
+├── 5. PERSIST
 │   ├── Default: Model::create($data) or $model->update($data)
 │   └── Custom: using(Closure $fn)
 │
-├── 5. AFTER SAVE
+├── 6. SAVE RELATIONSHIPS
+│   └── RelationshipSaveHandler cascades Repeater data to model relations
+│
+├── 7. AFTER SAVE
 │   └── afterSave(Closure $fn)
 │       Void hook — side effects, cache clear, events
 │
-└── 6. NOTIFY
+├── 8. PLUGIN HOOK: form.saved
+│   └── Plugins observe the persisted $record
+│
+└── 9. NOTIFY
     ├── Send success notification via Notifications module
     └── Skip if disableSuccessNotification()
 ```
@@ -50,7 +63,7 @@ Collects rules from all field components and validates the current state.
 $data = $form->validate();
 ```
 
-If validation fails, `Illuminate\Validation\ValidationException` is thrown. Steps 2-6 are skipped entirely.
+If validation fails, `Illuminate\Validation\ValidationException` is thrown. Steps 2-9 are skipped entirely.
 
 See [Validation](validation.md) for details on field rules, custom messages, and the ValidationPipeline.
 
@@ -88,7 +101,13 @@ $form
 
 ---
 
-## Step 3: Before Save
+## Step 3: Plugin Hook — form.saving
+
+Fires automatically when plugins are registered via `PluginManager`. Plugins may inspect or modify `$data` before persistence. User code does not interact with this step directly.
+
+---
+
+## Step 4: Before Save
 
 A void hook that runs after mutation but before persistence:
 
@@ -106,11 +125,11 @@ $form->beforeSave(function (array $data): void {
 
 The Closure receives the mutated data but does **not** return it.
 
-If this hook throws an exception, persistence (step 4) is skipped.
+If this hook throws an exception, persistence (step 5) is skipped.
 
 ---
 
-## Step 4: Persist
+## Step 5: Persist
 
 ### Default Behavior
 
@@ -131,14 +150,7 @@ $form->model($user);
 Override the default with `using()`:
 
 ```php
-$form->using(function (array $data, ?Model $model) {
-    if ($model) {
-        // Edit
-        $model->update($data);
-        $model->syncRelations($data);
-        return $model;
-    }
-
+$form->using(function (array $data): mixed {
     // Create
     $user = User::create($data);
     $user->assignRole($data['role']);
@@ -146,45 +158,50 @@ $form->using(function (array $data, ?Model $model) {
 });
 ```
 
-The `using()` callback replaces the entire default create/update logic. It receives:
-- `$data` — mutated data array
-- `$model` — Model instance (edit mode) or `null` (create mode)
-
-The return value becomes the result of `save()`.
+The `using()` callback replaces the entire default create/update logic. It receives `$data` (the mutated data array). The return value becomes the result of `save()`.
 
 ### No Model
 
-If `model(null)` is set and no `using()` callback is provided, `save()` throws a `RuntimeException`.
+If `model(null)` is set and no `using()` callback is provided, `save()` throws an `InvalidArgumentException`.
 
 ---
 
-## Step 5: After Save
+## Step 6: Save Relationships
+
+After the model is persisted, `RelationshipSaveHandler` cascades any Repeater field data to the model's relations. This step only runs when the persist result is an Eloquent `Model` instance.
+
+User code does not interact with this step directly; it is handled automatically for Repeater fields with `->relationship()` configured.
+
+---
+
+## Step 7: After Save
 
 A void hook that runs after successful persistence:
 
 ```php
-$form->afterSave(function (array $data, ?Model $model): void {
-    // Clear cache
-    Cache::forget("user:{$model->id}");
+$form->afterSave(function (mixed $record): void {
+    // $record is the created/updated Model (or using() return value)
+    Cache::forget("user:{$record->id}");
 
     // Dispatch event
-    event(new UserSaved($model));
-
-    // Sync related data
-    $model->tags()->sync($data['tag_ids'] ?? []);
+    event(new UserSaved($record));
 
     // Send notification
-    $model->notify(new WelcomeNotification());
+    $record->notify(new WelcomeNotification());
 });
 ```
 
-Receives:
-- `$data` — the mutated data
-- `$model` — the persisted model instance (or `using()` return value)
+Receives `$record` — the return value of the persist step (typically the Model instance).
 
 ---
 
-## Step 6: Notify
+## Step 8: Plugin Hook — form.saved
+
+Fires after `afterSave` to let plugins observe the persisted record. User code does not interact with this step directly.
+
+---
+
+## Step 9: Notify
 
 Sends a success notification via the Notifications module:
 
@@ -218,7 +235,7 @@ class EditUser extends Component
     public function mount(User $user): void
     {
         $this->user = $user;
-        $this->form()->fill($user->toArray());
+        $this->form->fill($user->toArray());
     }
 
     public function form(Form $form): Form
@@ -241,16 +258,16 @@ class EditUser extends Component
             ->beforeSave(function (array $data): void {
                 Log::info('Updating user', ['id' => $this->user->id]);
             })
-            ->afterSave(function (array $data, Model $model): void {
-                Cache::forget("user:{$model->id}");
-                event(new UserUpdated($model));
+            ->afterSave(function (mixed $record): void {
+                Cache::forget("user:{$record->id}");
+                event(new UserUpdated($record));
             })
             ->successMessage('User updated.');
     }
 
     public function save(): void
     {
-        $this->form()->save();
+        $this->form->save();
         $this->redirect(route('users.index'));
     }
 }
@@ -262,15 +279,15 @@ class EditUser extends Component
 
 | Exception | When | Effect |
 |-----------|------|--------|
-| `ValidationException` | Step 1 fails | Steps 2-6 skipped, errors shown in UI |
-| Any `Throwable` | Steps 2-5 throw | Pipeline aborts, no notification sent |
-| `RuntimeException` | No model + no `using()` | Step 4 fails |
+| `ValidationException` | Step 1 fails | Steps 2-9 skipped, errors shown in UI |
+| Any `Throwable` | Steps 2-8 throw | Pipeline aborts, no notification sent |
+| `InvalidArgumentException` | No model + no `using()` | Step 5 fails |
 
 The save pipeline does **not** wrap in a database transaction by default. If you need atomicity, wrap in `DB::transaction()`:
 
 ```php
 public function save(): void
 {
-    DB::transaction(fn () => $this->form()->save());
+    DB::transaction(fn () => $this->form->save());
 }
 ```

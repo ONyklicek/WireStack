@@ -1,5 +1,6 @@
 ---
 title: Column Reordering
+order: 40
 ---
 
 # Column Reordering

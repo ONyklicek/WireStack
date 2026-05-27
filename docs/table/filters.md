@@ -1,3 +1,7 @@
+---
+order: 30
+---
+
 # Filters
 
 Wire Table provides 4 built-in filter types plus the ability to build custom filters. Filters live in the filter bar above the table and persist in Livewire state via `$tableFilters`.
@@ -12,10 +16,9 @@ Wire Table provides 4 built-in filter types plus the ability to build custom fil
 4. [DateFilter](#datefilter)
 5. [NumberRangeFilter](#numberrangefilter)
 6. [TernaryFilter](#ternaryfilter)
-7. [Relationship Filters](#relationship-filters)
-8. [Column-Level Filters](#column-level-filters)
-9. [Custom Filter Class](#custom-filter-class)
-10. [Patterns & Recipes](#patterns--recipes)
+7. [Column-Level Filters](#column-level-filters)
+8. [Custom Filter Class](#custom-filter-class)
+9. [Patterns & Recipes](#patterns--recipes)
 
 ---
 
@@ -113,35 +116,6 @@ SelectFilter::make('internal_status')
 SelectFilter::make('status')
     ->options([...])
     ->default('active')              // "active" pre-selected
-```
-
-### Indicator (Active Badge)
-
-```php
-->indicator(string|Closure $indicator)
-```
-
-The indicator label appears as a badge when the filter is active, so users can see at a glance which filters are applied.
-
-```php
-SelectFilter::make('role')
-    ->options([...])
-    ->indicator(fn (string $value) => "Role: " . ucfirst($value))
-```
-
-### Relationship
-
-```php
-->relationship(string $relationName, string $titleColumn)
-```
-
-Loads options from a related model and applies `whereHas()`:
-
-```php
-SelectFilter::make('category')
-    ->relationship('category', 'name')
-    // Loads: Category::pluck('name', 'id')
-    // Applies: $query->whereHas('category', fn ($q) => $q->where('id', $value))
 ```
 
 ### Multiple Selection
@@ -468,54 +442,31 @@ TernaryFilter::make('overdue')
 
 ---
 
-## Relationship Filters
+## Filtering by Relationships
 
-Filter by related model attributes using `whereHas()`.
-
-### BelongsTo / HasOne
+Use `->query()` with `whereHas()` to filter by related model attributes:
 
 ```php
+// BelongsTo — filter by related model
 SelectFilter::make('category')
-    ->relationship('category', 'name')
-    ->searchable()
-// Loads options from Category model
-// Applies: whereHas('category', fn($q) => $q->where('id', $value))
-```
+    ->options(Category::orderBy('name')->pluck('name', 'id')->toArray())
+    ->query(fn (Builder $query, string $value) =>
+        $query->whereHas('category', fn ($q) => $q->where('id', $value))
+    )
 
-### BelongsToMany
-
-```php
+// BelongsToMany
 SelectFilter::make('tags')
-    ->relationship('tags', 'name')
+    ->options(Tag::orderBy('name')->pluck('name', 'id')->toArray())
     ->multiple()
-    ->searchable()
-// Loads options from Tag model
-// Applies: whereHas('tags', fn($q) => $q->whereIn('id', $values))
-```
+    ->query(fn (Builder $query, array $values) =>
+        $query->whereHas('tags', fn ($q) => $q->whereIn('id', $values))
+    )
 
-### HasMany (Existence)
-
-```php
+// HasMany (existence) — use TernaryFilter
 TernaryFilter::make('has_comments')
     ->label('Has Comments')
     ->trueQuery(fn ($q) => $q->has('comments'))
     ->falseQuery(fn ($q) => $q->doesntHave('comments'))
-```
-
-### Relationship with Custom Query
-
-```php
-SelectFilter::make('active_subscription')
-    ->options([
-        'monthly' => 'Monthly',
-        'yearly' => 'Yearly',
-        'lifetime' => 'Lifetime',
-    ])
-    ->query(fn (Builder $query, string $value) =>
-        $query->whereHas('subscriptions', fn ($q) =>
-            $q->where('plan', $value)->where('active', true)
-        )
-    )
 ```
 
 ---
@@ -703,8 +654,9 @@ class GeoRadiusFilter extends Filter
 ```php
 $table->filters([
     SelectFilter::make('category')
-        ->relationship('category', 'name')
-        ->searchable(),
+        ->options(Category::orderBy('name')->pluck('name', 'id')->toArray())
+        ->searchable()
+        ->query(fn (Builder $q, string $v) => $q->whereHas('category', fn ($q) => $q->where('id', $v))),
 
     SelectFilter::make('brand')
         ->options(Brand::orderBy('name')->pluck('name', 'id')->toArray())

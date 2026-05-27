@@ -1,3 +1,7 @@
+---
+order: 40
+---
+
 # Configuration
 
 Wire works out of the box after installation. Publish config files only when you need to change defaults for notifications, date formats, uploads, table behavior, sortable behavior, or audit logging.

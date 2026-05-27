@@ -1,5 +1,6 @@
 ---
 title: Customization
+order: 50
 ---
 
 # Customization

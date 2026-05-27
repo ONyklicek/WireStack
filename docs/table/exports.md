@@ -1,3 +1,7 @@
+---
+order: 50
+---
+
 # Table Exports
 
 Wire Table can export the current table query as CSV, Excel, or PDF. Exports use the current search, filters, sorting, and visible columns.

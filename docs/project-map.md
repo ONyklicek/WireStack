@@ -1,3 +1,7 @@
+---
+order: 30
+---
+
 # Project Map
 
 Wire is a Laravel Livewire package ecosystem split into four Composer packages. Install only the package that matches the UI you need; dependencies are pulled in automatically.

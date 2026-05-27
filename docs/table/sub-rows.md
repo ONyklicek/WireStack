@@ -1,3 +1,7 @@
+---
+order: 60
+---
+
 # Sub-Rows
 
 Sub-rows render related child records below each parent row. Use them when users need detail without leaving the table.

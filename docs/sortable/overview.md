@@ -1,5 +1,6 @@
 ---
 title: Introduction
+order: 10
 ---
 
 # Wire Sortable

@@ -1,5 +1,6 @@
 ---
 title: API Reference
+order: 70
 ---
 
 # API Reference
@@ -116,15 +117,11 @@ Returns whether the table is currently in row reorder mode. Alias for `$this->is
 
 These methods override `WithTable`'s protected factory/hook methods. No `insteadof` clause is needed — PHP resolves them automatically because `WithSortable` is listed after `WithTable`.
 
-#### `makeTableInstance(): Table`
-
-Returns a `SortableTable` instance instead of a base `Table`.
-
 #### `getTableView(): string`
 
 Returns `'wire-sortable::tables.index'` when row or column reordering is enabled. Falls through to `'wire-table::tables.index'` otherwise.
 
-#### `resolveTableRecords(): LengthAwarePaginator|Paginator|CursorPaginator|Collection|null`
+#### `interceptTableRecords(): LengthAwarePaginator|Paginator|CursorPaginator|Collection|null`
 
 In reorder mode (without `paginatedWhileReordering`): bypasses search, filters, sorting, and pagination. Returns all records ordered by the sort column ascending.
 
@@ -205,17 +202,17 @@ Belongs to the user model configured in `wire-sortable.user_model`.
 
 ### Static methods
 
-#### `getOrder(int $userId, string $modelType): ?array`
+#### `getOrder(int $userId, string $modelType, string $tableIdentifier): ?array`
 
-Get the saved column order for a user + model combination. Returns `null` if no record exists.
+Get the saved column order for a user + model + table combination. Returns `null` if no record exists.
 
-#### `saveOrder(int $userId, string $modelType, array $columnOrder): void`
+#### `saveOrder(int $userId, string $modelType, string $tableIdentifier, array $columnOrder): void`
 
-Create or update the column order for a user + model combination (upsert).
+Create or update the column order for a user + model + table combination (upsert).
 
-#### `deleteOrder(int $userId, string $modelType): void`
+#### `deleteOrder(int $userId, string $modelType, string $tableIdentifier): void`
 
-Delete the column order record for a user + model combination.
+Delete the column order record for a user + model + table combination.
 
 ## Configuration
 

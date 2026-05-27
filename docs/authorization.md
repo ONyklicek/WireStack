@@ -1,3 +1,7 @@
+---
+order: 50
+---
+
 # Authorization
 
 Wire uses Laravel Gate and policies. This keeps authorization compatible with native Laravel policies, Spatie Permission, and packages that register abilities into Gate.

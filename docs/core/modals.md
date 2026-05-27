@@ -1,3 +1,7 @@
+---
+order: 40
+---
+
 # Modals
 
 Modal system for confirmation dialogs, slide-overs, and multi-step wizards.

@@ -1,3 +1,7 @@
+---
+order: 70
+---
+
 # Audit Log
 
 Wire Core includes an audit log for recording model changes and table-related events. It stores the event type, auditable record, user, old values, new values, metadata, and timestamp.

@@ -1,3 +1,7 @@
+---
+order: 20
+---
+
 # Form Validation
 
 Wire Forms provides validation at three levels: field-level rules, form-level rules, and programmatic validation via the Core ValidationPipeline.
@@ -40,9 +44,8 @@ Some fields provide fluent helpers that map to Laravel rules:
 | `->integer()` | `integer` |
 | `->maxLength(255)` | `max:255` |
 | `->minLength(3)` | `min:3` |
-| `->confirmed()` | `confirmed` |
 | `->url()` | `url` |
-| `->tel()` | custom telephone pattern |
+| `->tel()` | sets `tel` HTML input type (no validation rule) |
 
 ### Custom Validation Messages
 
@@ -84,7 +87,7 @@ Validates state against all collected rules and returns validated data:
 // In a Livewire component
 public function save(): void
 {
-    $data = $this->form()->validate();
+    $data = $this->form->validate();
     // $data contains only validated fields
     // Throws Illuminate\Validation\ValidationException on failure
 }
@@ -95,7 +98,7 @@ public function save(): void
 Inspect the collected rules without validating:
 
 ```php
-$rules = $this->form()->getValidationRules();
+$rules = $this->form->getValidationRules();
 // ['name' => ['required', 'string', 'max:255'], 'email' => ['required', 'email'], ...]
 ```
 
@@ -109,13 +112,16 @@ When calling `$form->save()`, validation happens automatically as the first step
 save()
 ├── 1. Validate ← all field + form rules
 ├── 2. mutateDataBeforeSave()
-├── 3. beforeSave()
-├── 4. Persist (create/update)
-├── 5. afterSave()
-└── 6. Success notification
+├── 3. Plugin hook: form.saving
+├── 4. beforeSave()
+├── 5. Persist (create/update)
+├── 6. Save relationships
+├── 7. afterSave()
+├── 8. Plugin hook: form.saved
+└── 9. Success notification
 ```
 
-If validation fails, `save()` throws `ValidationException` and steps 2-6 are skipped.
+If validation fails, `save()` throws `ValidationException` and steps 2-9 are skipped.
 
 ---
 

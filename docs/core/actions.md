@@ -1,3 +1,7 @@
+---
+order: 10
+---
+
 # Actions
 
 The Actions module provides row, bulk, and header actions for tables and related UI flows.

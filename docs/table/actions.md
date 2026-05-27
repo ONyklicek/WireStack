@@ -1,3 +1,7 @@
+---
+order: 40
+---
+
 # Table Actions
 
 Use actions for record-level operations, bulk operations, and toolbar commands.

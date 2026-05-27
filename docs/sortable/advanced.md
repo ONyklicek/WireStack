@@ -1,5 +1,6 @@
 ---
 title: Advanced Usage
+order: 60
 ---
 
 # Advanced Usage
@@ -135,10 +136,11 @@ You can use the `ReorderableColumnOrder` model directly:
 ```php
 use NyonCode\WireSortable\Models\ReorderableColumnOrder;
 
-// Get a user's column order for a model
+// Get a user's column order for a model + table
 $order = ReorderableColumnOrder::getOrder(
     userId: $user->id,
     modelType: Task::class,
+    tableIdentifier: TaskTable::class,
 );
 // Returns: ['status', 'name', 'priority'] or null
 
@@ -146,6 +148,7 @@ $order = ReorderableColumnOrder::getOrder(
 ReorderableColumnOrder::saveOrder(
     userId: $user->id,
     modelType: Task::class,
+    tableIdentifier: TaskTable::class,
     columnOrder: ['priority', 'status', 'name'],
 );
 
@@ -153,6 +156,7 @@ ReorderableColumnOrder::saveOrder(
 ReorderableColumnOrder::deleteOrder(
     userId: $user->id,
     modelType: Task::class,
+    tableIdentifier: TaskTable::class,
 );
 ```
 
@@ -163,8 +167,7 @@ When row reorder mode is enabled, the table is ordered by the configured order c
 ```php
 SortableTable::make()
     ->model(Task::class)
-    ->reorderable()
-    ->orderColumn('sort_order');
+    ->reorderable('sort_order');
 ```
 
 Use a visible sortable handle or reorder button in your table UI so users know when they are changing persistent order rather than sorting the current view.

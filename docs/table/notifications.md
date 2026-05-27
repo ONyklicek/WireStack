@@ -1,3 +1,7 @@
+---
+order: 70
+---
+
 # Table Notifications
 
 Wire uses notifications to confirm completed actions, report failures, and surface background work to the user.

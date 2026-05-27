@@ -1,3 +1,7 @@
+---
+order: 50
+---
+
 # Widgets
 
 The Widget module provides dashboard components — stats cards, charts, embedded tables, and custom views. Widgets live in `wire-core` and can be composed into grid layouts on any Livewire component.

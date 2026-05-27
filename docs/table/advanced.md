@@ -1,3 +1,7 @@
+---
+order: 80
+---
+
 # Advanced Features
 
 ---
@@ -37,7 +41,7 @@ $table
         TextColumn::make('total')->money('CZK')->sortable(),
         BadgeColumn::make('status')->colors([...]),
     ])
-    ->subRows(fn (Order $record) => $record->items)
+    ->subRows('items')
     ->subRowColumns([
         TextColumn::make('product.name'),
         TextColumn::make('quantity')->alignRight(),
@@ -66,42 +70,28 @@ $table->flattenSubRows()
 
 Users can toggle flatten mode via `toggleFlattenMode()` Livewire method.
 
-### Custom Expand Icon
+### Sub-Row Relation with Eager Loading
+
+`->subRows()` accepts dot-notation for eager-loaded relations:
 
 ```php
-$table->subRowIcon('chevron-down')     // default: 'chevron-right' → rotates on expand
-```
-
-### Sub-Row Relation
-
-```php
-// Explicit relation name (instead of Closure)
-$table->subRowRelation('items')
-
-// With eager loading
-$table->subRowRelation('items.product')
+$table->subRows('items.product')
 ```
 
 ### Independent Sub-Row Filtering
 
 ```php
-$table->subRowFilters([
-    SelectFilter::make('status')
-        ->options(['pending' => 'Pending', 'shipped' => 'Shipped', 'delivered' => 'Delivered']),
-])
+$table->subRowsFilterable()
 ```
 
-Sub-row filters are stored in `$subRowFilters` and apply only to the child records.
+When enabled, the table renders separate filter controls for sub-rows alongside the main filters.
 
 ### Custom Sub-Row View
 
 Instead of sub-row columns, render a completely custom Blade view:
 
 ```php
-$table->subRowView('components.order-items-detail', [
-    'showTotals' => true,
-    'currency' => 'CZK',
-])
+$table->subRowView('components.order-items-detail')
 ```
 
 ```blade
@@ -133,19 +123,19 @@ $table->subRowView('components.order-items-detail', [
 |----------|------|-------------|
 | `$expandedRows` | `array` | Keys of expanded parent records |
 | `$flattenMode` | `bool` | Flat view toggle |
-| `$subRowFilters` | `array` | Filter values for sub-rows |
 
 ### Sub-Rows API
 
 ```php
-->subRows(Closure $fn)                   // fn($record) => Collection|array
-->subRowRelation(string $relation)       // Eloquent relation name
+->subRows(string $relation)              // Eloquent relation name (dot notation supported)
 ->subRowColumns(array $columns)          // Column[] for sub-rows
-->subRowView(string $view, array $data)  // custom Blade view
-->subRowFilters(array $filters)          // Filter[] for sub-rows
+->subRowView(string $view)              // custom Blade view (replaces columns)
+->subRowsFilterable(bool $filterable = true)
 ->subRowsDefaultExpanded(bool $expanded = true)
+->subRowsExpandable(bool $expandable = true)
+->subRowsLimit(?int $limit)             // max sub-rows before "show more"
+->subRowsToggleLabel(?string $label)
 ->flattenSubRows(bool $flatten = true)
-->subRowIcon(string $icon)               // expand/collapse icon
 ->hasSubRows(): bool
 ->getSubRowColumns(): array
 ```

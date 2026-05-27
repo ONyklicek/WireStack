@@ -1,3 +1,7 @@
+---
+order: 20
+---
+
 # Getting Started
 
 This guide covers the production setup for Wire in a Laravel application.

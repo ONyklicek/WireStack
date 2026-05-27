@@ -1,3 +1,7 @@
+---
+order: 10
+---
+
 # Wire Documentation
 
 User-facing documentation for the Wire ecosystem.

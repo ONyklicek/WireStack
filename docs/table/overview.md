@@ -1,3 +1,7 @@
+---
+order: 10
+---
+
 # Wire Table
 
 Enterprise-grade Livewire table component for Laravel. Depends on `wire-core` and `wire-forms`.
@@ -262,12 +266,6 @@ See [Actions](../core/actions.md) for the full Actions API.
 ```php
 // Enable global search across all searchable columns
 ->searchable(bool $searchable = true)
-
-// Debounce search input (ms)
-->searchDebounce(int $ms = 350)
-
-// Placeholder text
-->searchPlaceholder(string $text = 'Search...')
 ```
 
 Search uses a database-aware strategy:
@@ -368,10 +366,6 @@ Dynamic row classes:
 ```php
 // With Closure
 ->recordUrl(fn (User $record) => route('users.show', $record))
-
-// Open in new tab
-->recordUrl(fn ($r) => route('users.show', $r))
-->recordUrlInNewTab()
 ```
 
 ### Responsive Layout
@@ -387,16 +381,15 @@ Dynamic row classes:
 ### Empty State
 
 ```php
-->emptyStateHeading(string $heading)
-->emptyStateDescription(string $description)
-->emptyStateIcon(string $icon)
+->emptyState(?string $heading = null, ?string $description = null, ?string $icon = null)
 ```
 
 ```php
-$table
-    ->emptyStateHeading('No users found')
-    ->emptyStateDescription('Try adjusting your filters or search term.')
-    ->emptyStateIcon('users')
+$table->emptyState(
+    heading: 'No users found',
+    description: 'Try adjusting your filters or search term.',
+    icon: 'users',
+)
 ```
 
 ### Polling (Auto-Refresh)
