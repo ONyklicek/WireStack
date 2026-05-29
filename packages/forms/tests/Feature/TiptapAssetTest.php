@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use NyonCode\WireForms\WireFormsServiceProvider;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 test('the tiptap bundle is shipped inside the package', function () {
     $bundle = WireFormsServiceProvider::ASSETS_PATH.'/wire-forms-tiptap.js';
@@ -16,7 +17,8 @@ test('the package serves the tiptap bundle without publishing or a build step', 
 
     $response->assertOk();
     expect($response->headers->get('Content-Type'))->toContain('javascript');
-    expect($response->streamedContent())->toContain('tiptapEditor');
+    expect($response->baseResponse)->toBeInstanceOf(BinaryFileResponse::class)
+        ->and(file_get_contents($response->baseResponse->getFile()->getPathname()))->toContain('tiptapEditor');
 });
 
 test('the named asset route resolves', function () {
