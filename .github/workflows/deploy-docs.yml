@@ -14,7 +14,7 @@ name: Deploy Docs Site
 
 on:
   push:
-    branches: [main]
+    branches: [1.0.x]
     paths:
       - 'docs/**'
       - 'docs-site/**'
