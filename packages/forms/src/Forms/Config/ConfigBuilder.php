@@ -36,6 +36,8 @@ final class ConfigBuilder
 
     private bool $isDisabled = false;
 
+    private bool $isLive = false;
+
     /**
      * @param  array<int, mixed>  $components
      */
@@ -112,6 +114,13 @@ final class ConfigBuilder
         return $this;
     }
 
+    public function live(bool $condition = true): self
+    {
+        $this->isLive = $condition;
+
+        return $this;
+    }
+
     public function build(): FormConfig
     {
         return new FormConfig(
@@ -125,6 +134,7 @@ final class ConfigBuilder
             successMessage: $this->successMessage,
             validationMessages: $this->validationMessages,
             isDisabled: $this->isDisabled,
+            isLive: $this->isLive,
         );
     }
 

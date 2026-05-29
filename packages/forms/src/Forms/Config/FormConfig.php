@@ -32,6 +32,7 @@ final class FormConfig
         public readonly string|Closure|null $successMessage = '__default__',
         public readonly array $validationMessages = [],
         public readonly bool $isDisabled = false,
+        public readonly bool $isLive = false,
     ) {}
 
     public function isCreating(): bool

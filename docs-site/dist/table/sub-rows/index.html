@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en" data-search-index="../../search-index.json">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sub-Rows | Wire Docs</title>
+    <meta name="description" content="Sub-rows render related child records below each parent row. Use them when users need detail without leaving the table.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../../assets/site.css">
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem('wire-docs-theme');
+                var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+    <script defer src="../../assets/site.js"></script>
+</head>
+<body class="docs-body">
+    <div class="site-shell">
+        <aside class="site-sidebar" data-sidebar>
+            <div class="sidebar-header">
+                <a class="brand-link" href="../../">
+                    <span class="brand-mark">W</span>
+                    <span class="brand-name">WireStack<span class="brand-badge">Docs</span></span>
+                </a>
+                <button class="icon-button sidebar-close" type="button" data-nav-close aria-label="Close navigation" style="display:none">×</button>
+            </div>
+
+            <nav class="sidebar-nav">
+                                    <section class="nav-section">
+                        <h2>Start Here</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../documentation/">
+                                        Wire Documentation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../getting-started/">
+                                        Getting Started                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../project-map/">
+                                        Project Map                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../configuration/">
+                                        Configuration                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../authorization/">
+                                        Authorization                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Forms</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../forms/overview/">
+                                        Wire Forms                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/validation/">
+                                        Form Validation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/save-lifecycle/">
+                                        Save Lifecycle                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Fields</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/">
+                                        Form Fields                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/alert/">
+                                        Alert                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/belongs-to-select/">
+                                        BelongsToSelect                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/checkbox/">
+                                        Checkbox                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/checkbox-list/">
+                                        CheckboxList                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/code-editor/">
+                                        CodeEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/color-picker/">
+                                        ColorPicker                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/date-time-picker/">
+                                        DateTimePicker                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/fieldset/">
+                                        Fieldset                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/file-upload/">
+                                        FileUpload                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/grid/">
+                                        Grid                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/hidden/">
+                                        Hidden                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/html/">
+                                        Html                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/key-value/">
+                                        KeyValue                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/markdown-editor/">
+                                        MarkdownEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/morph-to-select/">
+                                        MorphToSelect                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/otp-input/">
+                                        OtpInput                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/placeholder/">
+                                        Placeholder                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/radio/">
+                                        Radio                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/rating/">
+                                        Rating                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/repeater/">
+                                        Repeater                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/rich-editor/">
+                                        RichEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/section/">
+                                        Section                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/select/">
+                                        Select                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/slider/">
+                                        Slider                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/tags/">
+                                        Tags                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/textarea/">
+                                        Textarea                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/text-input/">
+                                        TextInput                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/tiptap-editor/">
+                                        TiptapEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/toggle/">
+                                        Toggle                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/view-field/">
+                                        ViewField                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Table</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../overview/">
+                                        Wire Table                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../columns/">
+                                        Columns                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../filters/">
+                                        Filters                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../actions/">
+                                        Table Actions                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../exports/">
+                                        Table Exports                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="is-active" href="./">
+                                        Sub-Rows                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../notifications/">
+                                        Table Notifications                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../advanced/">
+                                        Advanced Features                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Sortable</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../sortable/overview/">
+                                        Introduction                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/installation/">
+                                        Installation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/row-sorting/">
+                                        Row Reordering                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/column-sorting/">
+                                        Column Reordering                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/customization/">
+                                        Customization                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/advanced/">
+                                        Advanced Usage                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/api-reference/">
+                                        API Reference                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Core</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../core/actions/">
+                                        Actions                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/foundation/">
+                                        Foundation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/notifications/">
+                                        Notifications                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/modals/">
+                                        Modals                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/widgets/">
+                                        Widgets                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/plugins/">
+                                        Core Plugins                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/audit/">
+                                        Audit Log                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                            </nav>
+        </aside>
+
+        <div class="site-overlay" data-nav-close></div>
+
+        <main class="site-main">
+            <header class="topbar">
+                <button class="nav-toggle" type="button" data-nav-toggle aria-label="Open navigation">
+                    <span></span><span></span><span></span>
+                </button>
+
+                <div class="search-shell" data-search-root>
+                    <input
+                        type="search"
+                        class="search-input"
+                        placeholder="Search documentation…"
+                        autocomplete="off"
+                        spellcheck="false"
+                        data-search-input
+                    >
+                    <span class="search-kbd"><kbd>⌘</kbd><kbd>K</kbd></span>
+                    <div class="search-results" data-search-results hidden></div>
+                </div>
+
+                <div class="topbar-actions">
+                    <button class="icon-button theme-toggle" type="button" data-theme-toggle aria-label="Toggle theme">
+                        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                    </button>
+                    <a class="icon-button" href="https://github.com/ONyklicek/WireStack" target="_blank" rel="noreferrer" aria-label="GitHub repository">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2c-3.2.7-3.88-1.54-3.88-1.54-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.56-.29-5.26-1.28-5.26-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.18 1.18a11.02 11.02 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.58.23 2.75.12 3.04.74.81 1.18 1.83 1.18 3.09 0 4.42-2.7 5.39-5.28 5.68.42.36.79 1.06.79 2.14v3.17c0 .31.21.68.8.56A11.52 11.52 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5Z"/></svg>
+                    </a>
+                </div>
+            </header>
+
+            <div class="page-body">
+                <div class="content-shell">
+                    <article class="docs-article">
+                        <div class="page-hero">
+                            <nav class="breadcrumb" aria-label="Breadcrumb">
+                                <a href="../../">Docs</a>
+                                <span class="sep">/</span>
+                                <span class="current">Table</span>
+                            </nav>
+                            <p class="eyebrow">Table</p>
+                            <h1>Sub-Rows</h1>
+                                                            <p class="lead">Sub-rows render related child records below each parent row. Use them when users need detail without leaving the table.</p>
+                            
+                            
+                                                                                </div>
+
+                        
+<p>Sub-rows render related child records below each parent row. Use them when users need detail without leaving the table.</p>
+<h2 id="basic-setup">Basic Setup</h2>
+<pre><code class="language-php">use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\Table;
+
+public function table(Table $table): Table
+{
+    return $table
+        -&gt;model(Order::class)
+        -&gt;columns([
+            TextColumn::make('order_number')-&gt;sortable(),
+            TextColumn::make('customer.name')-&gt;label('Customer'),
+            TextColumn::make('total')-&gt;money(),
+        ])
+        -&gt;subRows('items')
+        -&gt;subRowColumns([
+            TextColumn::make('product_name'),
+            TextColumn::make('quantity')-&gt;numeric(),
+            TextColumn::make('unit_price')-&gt;money(),
+        ]);
+}
+</code></pre>
+<p><code>subRows('items')</code> expects an Eloquent relationship method on the parent model.</p>
+<h2 id="when-to-use-them">When to Use Them</h2>
+<p>Use sub-rows when:</p>
+<ul>
+<li>a parent record owns a small set of child records</li>
+<li>users need quick drill-down without route changes</li>
+<li>the child data shares the same decision context as the parent row</li>
+</ul>
+<p>Avoid them when the child data is large enough that it deserves its own table, filters, or pagination.</p>
+<h2 id="expand-and-collapse">Expand and Collapse</h2>
+<pre><code class="language-php">-&gt;subRowsExpandable()
+-&gt;subRowsDefaultExpanded()
+-&gt;subRowsToggleLabel('Show items')
+</code></pre>
+<p>The table tracks expanded rows in Livewire state, so the user can open only the records they care about.</p>
+<h2 id="filter-and-limit-child-rows">Filter and Limit Child Rows</h2>
+<pre><code class="language-php">-&gt;subRowsLimit(5)
+-&gt;subRowQuery(fn (Builder $query) =&gt; $query
+    -&gt;where('active', true)
+    -&gt;orderBy('sort_order')
+)
+</code></pre>
+<p>Use <code>subRowsLimit()</code> when the child relationship can be noisy. Use <code>subRowQuery()</code> when the UI should only show a filtered slice of the relationship.</p>
+<h2 id="flatten-mode">Flatten Mode</h2>
+<p>Flatten mode removes the hierarchy and shows all child rows inline.</p>
+<pre><code class="language-php">-&gt;flattenSubRows()
+</code></pre>
+<p>This is useful for review workflows where grouping is less important than scanning all detail rows together.</p>
+<h2 id="summaries">Summaries</h2>
+<p>Sub-row columns can render per-parent summaries.</p>
+<pre><code class="language-php">-&gt;subRowColumns([
+    TextColumn::make('product_name'),
+    TextColumn::make('quantity')
+        -&gt;numeric()
+        -&gt;summarizeSum(scope: 'subRows'),
+    TextColumn::make('line_total')
+        -&gt;money()
+        -&gt;summarizeSum(scope: 'subRows'),
+])
+</code></pre>
+<h2 id="custom-view">Custom View</h2>
+<p>Replace the default sub-row renderer when you need a custom layout.</p>
+<pre><code class="language-php">-&gt;subRowView('components.orders.sub-rows')
+</code></pre>
+<p>Use a custom view when the child records are not naturally tabular or when you need domain-specific formatting.</p>
+<h2 id="related-docs">Related Docs</h2>
+<ul>
+<li><a href="../overview/">Table Overview</a></li>
+<li><a href="../columns/">Columns</a></li>
+<li><a href="../advanced/">Advanced Features</a></li>
+</ul>
+
+                                                    <nav class="page-nav" aria-label="Pagination">
+                                                                    <a class="page-nav-link is-prev" href="../exports/">
+                                        <span>← Previous</span>
+                                        <strong>Table Exports</strong>
+                                    </a>
+                                
+                                                                    <a class="page-nav-link is-next" href="../notifications/">
+                                        <span>Next →</span>
+                                        <strong>Table Notifications</strong>
+                                    </a>
+                                                            </nav>
+                                            </article>
+
+                                            <aside class="page-toc">
+                            <p class="toc-title">On this page</p>
+                            <ul>
+                                                                    <li class="level-2">
+                                        <a href="#basic-setup">
+                                            Basic Setup                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#when-to-use-them">
+                                            When to Use Them                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#expand-and-collapse">
+                                            Expand and Collapse                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#filter-and-limit-child-rows">
+                                            Filter and Limit Child Rows                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#flatten-mode">
+                                            Flatten Mode                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#summaries">
+                                            Summaries                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#custom-view">
+                                            Custom View                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#related-docs">
+                                            Related Docs                                        </a>
+                                    </li>
+                                                            </ul>
+                        </aside>
+                                    </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

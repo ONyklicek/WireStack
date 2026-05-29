@@ -15,6 +15,7 @@ use NyonCode\WireCore\Actions\Concerns\HasLifecycle;
 use NyonCode\WireCore\Actions\Concerns\HasLoadingState;
 use NyonCode\WireCore\Actions\Concerns\HasModal;
 use NyonCode\WireCore\Actions\Concerns\HasVisibility;
+use NyonCode\WireCore\Foundation\Colors\Color;
 
 /**
  * Abstract BaseAction
@@ -27,6 +28,7 @@ use NyonCode\WireCore\Actions\Concerns\HasVisibility;
  *
  * @phpstan-consistent-constructor
  */
+#[\AllowDynamicProperties]
 abstract class BaseAction implements Htmlable
 {
     use HasColor;
@@ -47,7 +49,7 @@ abstract class BaseAction implements Htmlable
 
     protected ?string $iconPosition = 'before';
 
-    protected ?string $color = 'primary';
+    protected ?string $color = Color::Primary->value;
 
     protected ?string $size = 'sm';
 

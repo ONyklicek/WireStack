@@ -22,7 +22,7 @@
                 <input
                     type="date"
                     id="filter-{{ $name }}-from"
-                    wire:model.live="tableFilters.{{ $name }}.from"
+                    wire:model.live="tableState.filters.{{ $name }}.from"
                     value="{{ $fromValue }}"
                     @if($minDate) min="{{ $minDate }}" @endif
                     @if($maxDate) max="{{ $maxDate }}" @endif
@@ -35,7 +35,7 @@
                 <input
                     type="date"
                     id="filter-{{ $name }}-to"
-                    wire:model.live="tableFilters.{{ $name }}.to"
+                    wire:model.live="tableState.filters.{{ $name }}.to"
                     value="{{ $toValue }}"
                     @if($minDate) min="{{ $minDate }}" @endif
                     @if($maxDate) max="{{ $maxDate }}" @endif
@@ -49,7 +49,7 @@
         <input
             type="date"
             id="filter-{{ $name }}"
-            wire:model.live="tableFilters.{{ $name }}"
+            wire:model.live="tableState.filters.{{ $name }}"
             value="{{ $currentValue }}"
             @if($minDate) min="{{ $minDate }}" @endif
             @if($maxDate) max="{{ $maxDate }}" @endif

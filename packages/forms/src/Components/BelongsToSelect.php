@@ -132,7 +132,7 @@ class BelongsToSelect extends Select
             ->limit(50);
 
         if ($this->modifyOptionsQueryUsing) {
-            $query = call_user_func($this->modifyOptionsQueryUsing, $query) ?? $query;
+            $query = ($this->modifyOptionsQueryUsing)($query) ?? $query;
         }
 
         return $query->pluck($titleAttribute, $relatedModel->getKeyName())->all();
@@ -146,7 +146,7 @@ class BelongsToSelect extends Select
     public function createOption(array $data): ?Model
     {
         if ($this->createOptionUsing) {
-            return call_user_func($this->createOptionUsing, $data);
+            return ($this->createOptionUsing)($data);
         }
 
         $relatedModel = $this->resolveRelatedModel();
@@ -184,7 +184,7 @@ class BelongsToSelect extends Select
         $query = $relatedModel::query();
 
         if ($this->modifyOptionsQueryUsing) {
-            $query = call_user_func($this->modifyOptionsQueryUsing, $query) ?? $query;
+            $query = ($this->modifyOptionsQueryUsing)($query) ?? $query;
         }
 
         return $query->pluck($titleAttribute, $relatedModel->getKeyName())->all();

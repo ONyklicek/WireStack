@@ -7,6 +7,8 @@ namespace NyonCode\WireCore\Actions;
 use NyonCode\WireCore\Actions\Concerns\HasIcons;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireForms\Forms\Form;
 
 /**
@@ -119,7 +121,7 @@ final class ActionHalt
         return static::make()
             ->heading(Trans::get('wire-core::actions.delete_heading'))
             ->body($description)
-            ->icon('trash', 'danger')
+            ->icon('trash', Color::Danger)
             ->submitLabel(Trans::get('wire-core::actions.delete_submit'))
             ->danger();
     }
@@ -132,7 +134,7 @@ final class ActionHalt
         return static::make()
             ->heading($heading)
             ->body($description)
-            ->icon('warning', 'danger')
+            ->icon('warning', Color::Danger)
             ->danger();
     }
 
@@ -144,7 +146,7 @@ final class ActionHalt
         return static::make()
             ->heading($heading)
             ->body($description)
-            ->icon('warning', 'warning');
+            ->icon('warning', Color::Warning);
     }
 
     /**
@@ -155,7 +157,7 @@ final class ActionHalt
         return static::make()
             ->heading($heading)
             ->body($description)
-            ->icon('info', 'info')
+            ->icon('info', Color::Info)
             ->informative();
     }
 
@@ -167,7 +169,7 @@ final class ActionHalt
         return static::make()
             ->heading($heading)
             ->body($description)
-            ->icon('check-circle', 'success')
+            ->icon('check-circle', Color::Success)
             ->informative();
     }
 
@@ -187,10 +189,10 @@ final class ActionHalt
         return $this;
     }
 
-    public function icon(?string $icon, ?string $color = null): static
+    public function icon(string|Icon|null $icon, string|Color|null $color = null): static
     {
-        $this->modalIcon = $icon;
-        $this->modalIconColor = $color;
+        $this->modalIcon = $icon instanceof Icon ? $icon->value() : $icon;
+        $this->modalIconColor = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
@@ -216,9 +218,9 @@ final class ActionHalt
         return $this;
     }
 
-    public function color(?string $color): static
+    public function color(string|Color|null $color): static
     {
-        $this->color = $color;
+        $this->color = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
@@ -240,7 +242,7 @@ final class ActionHalt
     }
 
     /** @deprecated Use icon() instead. Will be removed in v2.0. */
-    public function modalIcon(?string $icon, ?string $color = null): static
+    public function modalIcon(string|Icon|null $icon, string|Color|null $color = null): static
     {
         Deprecation::method('modalIcon', 'icon');
 
@@ -275,7 +277,7 @@ final class ActionHalt
     {
         $this->isDanger = $danger;
         if ($danger) {
-            $this->color = 'danger';
+            $this->color = Color::Danger->value;
         }
 
         return $this;
@@ -392,7 +394,7 @@ final class ActionHalt
 
     public function getModalIconColor(): ?string
     {
-        return $this->modalIconColor ?? ($this->isDanger ? 'danger' : null);
+        return $this->modalIconColor ?? ($this->isDanger ? Color::Danger->value : null);
     }
 
     public function getModalSubmitLabel(): ?string

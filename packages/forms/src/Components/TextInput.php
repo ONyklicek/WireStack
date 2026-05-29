@@ -93,6 +93,13 @@ class TextInput extends Field
         return $this;
     }
 
+    public function search(): static
+    {
+        $this->inputType = 'search';
+
+        return $this;
+    }
+
     // ─── Constraints ───────────────────────────────────────────────
 
     public function minLength(?int $length): static

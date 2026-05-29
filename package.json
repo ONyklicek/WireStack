@@ -1,0 +1,38 @@
+{
+  "name": "wire-preview-workbench",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "docs:refresh": "bash scripts/refresh-docs-site.sh",
+    "docs:build": "php docs-site/build.php && npm run docs:highlight",
+    "docs:highlight": "node node_modules/@torchlight-api/torchlight-cli/dist/bin/torchlight.cjs.js -c torchlight.config.cjs -i docs-site/dist",
+    "docs:changed": "bash scripts/docs-changed.sh",
+    "build:forms-assets": "esbuild packages/forms/resources/js/tiptap-editor.js --bundle --minify --format=iife --legal-comments=none --outfile=packages/forms/dist/wire-forms-tiptap.js"
+  },
+  "dependencies": {
+    "@tiptap/core": "^2.0",
+    "@tiptap/extension-character-count": "^2.0",
+    "@tiptap/extension-highlight": "^2.0",
+    "@tiptap/extension-image": "^2.0",
+    "@tiptap/extension-link": "^2.0",
+    "@tiptap/extension-placeholder": "^2.0",
+    "@tiptap/extension-table": "^2.0",
+    "@tiptap/extension-table-cell": "^2.0",
+    "@tiptap/extension-table-header": "^2.0",
+    "@tiptap/extension-table-row": "^2.0",
+    "@tiptap/extension-text-align": "^2.0",
+    "@tiptap/extension-underline": "^2.0",
+    "@tiptap/starter-kit": "^2.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/vite": "^4.1.8",
+    "@torchlight-api/torchlight-cli": "^0.1.7",
+    "esbuild": "^0.27.0",
+    "laravel-vite-plugin": "^2.0.1",
+    "tailwindcss": "^4.1.8",
+    "vite": "^7.1.3"
+  }
+}

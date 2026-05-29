@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en" data-search-index="../../search-index.json">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Advanced Features | Wire Docs</title>
+    <meta name="description" content="The HasSubRows trait enables expandable child rows for hierarchical data — orders → items, categories → products, departments → employees.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../../assets/site.css">
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem('wire-docs-theme');
+                var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+    <script defer src="../../assets/site.js"></script>
+</head>
+<body class="docs-body">
+    <div class="site-shell">
+        <aside class="site-sidebar" data-sidebar>
+            <div class="sidebar-header">
+                <a class="brand-link" href="../../">
+                    <span class="brand-mark">W</span>
+                    <span class="brand-name">WireStack<span class="brand-badge">Docs</span></span>
+                </a>
+                <button class="icon-button sidebar-close" type="button" data-nav-close aria-label="Close navigation" style="display:none">×</button>
+            </div>
+
+            <nav class="sidebar-nav">
+                                    <section class="nav-section">
+                        <h2>Start Here</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../documentation/">
+                                        Wire Documentation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../getting-started/">
+                                        Getting Started                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../project-map/">
+                                        Project Map                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../configuration/">
+                                        Configuration                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../authorization/">
+                                        Authorization                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Forms</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../forms/overview/">
+                                        Wire Forms                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/validation/">
+                                        Form Validation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/save-lifecycle/">
+                                        Save Lifecycle                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Fields</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/">
+                                        Form Fields                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/alert/">
+                                        Alert                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/belongs-to-select/">
+                                        BelongsToSelect                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/checkbox/">
+                                        Checkbox                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/checkbox-list/">
+                                        CheckboxList                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/code-editor/">
+                                        CodeEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/color-picker/">
+                                        ColorPicker                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/date-time-picker/">
+                                        DateTimePicker                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/fieldset/">
+                                        Fieldset                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/file-upload/">
+                                        FileUpload                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/grid/">
+                                        Grid                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/hidden/">
+                                        Hidden                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/html/">
+                                        Html                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/key-value/">
+                                        KeyValue                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/markdown-editor/">
+                                        MarkdownEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/morph-to-select/">
+                                        MorphToSelect                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/otp-input/">
+                                        OtpInput                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/placeholder/">
+                                        Placeholder                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/radio/">
+                                        Radio                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/rating/">
+                                        Rating                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/repeater/">
+                                        Repeater                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/rich-editor/">
+                                        RichEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/section/">
+                                        Section                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/select/">
+                                        Select                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/slider/">
+                                        Slider                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/tags/">
+                                        Tags                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/textarea/">
+                                        Textarea                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/text-input/">
+                                        TextInput                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/tiptap-editor/">
+                                        TiptapEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/toggle/">
+                                        Toggle                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/view-field/">
+                                        ViewField                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Table</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../overview/">
+                                        Wire Table                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../columns/">
+                                        Columns                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../filters/">
+                                        Filters                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../actions/">
+                                        Table Actions                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../exports/">
+                                        Table Exports                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../sub-rows/">
+                                        Sub-Rows                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../notifications/">
+                                        Table Notifications                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="is-active" href="./">
+                                        Advanced Features                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Sortable</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../sortable/overview/">
+                                        Introduction                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/installation/">
+                                        Installation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/row-sorting/">
+                                        Row Reordering                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/column-sorting/">
+                                        Column Reordering                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/customization/">
+                                        Customization                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/advanced/">
+                                        Advanced Usage                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/api-reference/">
+                                        API Reference                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Core</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../core/actions/">
+                                        Actions                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/foundation/">
+                                        Foundation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/notifications/">
+                                        Notifications                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/modals/">
+                                        Modals                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/widgets/">
+                                        Widgets                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/plugins/">
+                                        Core Plugins                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/audit/">
+                                        Audit Log                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                            </nav>
+        </aside>
+
+        <div class="site-overlay" data-nav-close></div>
+
+        <main class="site-main">
+            <header class="topbar">
+                <button class="nav-toggle" type="button" data-nav-toggle aria-label="Open navigation">
+                    <span></span><span></span><span></span>
+                </button>
+
+                <div class="search-shell" data-search-root>
+                    <input
+                        type="search"
+                        class="search-input"
+                        placeholder="Search documentation…"
+                        autocomplete="off"
+                        spellcheck="false"
+                        data-search-input
+                    >
+                    <span class="search-kbd"><kbd>⌘</kbd><kbd>K</kbd></span>
+                    <div class="search-results" data-search-results hidden></div>
+                </div>
+
+                <div class="topbar-actions">
+                    <button class="icon-button theme-toggle" type="button" data-theme-toggle aria-label="Toggle theme">
+                        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                    </button>
+                    <a class="icon-button" href="https://github.com/ONyklicek/WireStack" target="_blank" rel="noreferrer" aria-label="GitHub repository">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2c-3.2.7-3.88-1.54-3.88-1.54-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.56-.29-5.26-1.28-5.26-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.18 1.18a11.02 11.02 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.58.23 2.75.12 3.04.74.81 1.18 1.83 1.18 3.09 0 4.42-2.7 5.39-5.28 5.68.42.36.79 1.06.79 2.14v3.17c0 .31.21.68.8.56A11.52 11.52 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5Z"/></svg>
+                    </a>
+                </div>
+            </header>
+
+            <div class="page-body">
+                <div class="content-shell">
+                    <article class="docs-article">
+                        <div class="page-hero">
+                            <nav class="breadcrumb" aria-label="Breadcrumb">
+                                <a href="../../">Docs</a>
+                                <span class="sep">/</span>
+                                <span class="current">Table</span>
+                            </nav>
+                            <p class="eyebrow">Table</p>
+                            <h1>Advanced Features</h1>
+                                                            <p class="lead">The HasSubRows trait enables expandable child rows for hierarchical data — orders → items, categories → products, departments → employees.</p>
+                            
+                            
+                                                                                </div>
+
+                        
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#sub-rows-expandable-rows">Sub-Rows (Expandable Rows)</a></li>
+<li><a href="#summary-footer-aggregates">Summary Footer (Aggregates)</a></li>
+<li><a href="#polling-auto-refresh">Polling (Auto-Refresh)</a></li>
+<li><a href="#lazy-loading">Lazy Loading</a></li>
+<li><a href="#performance-optimization">Performance Optimization</a></li>
+<li><a href="#query-debugging">Query Debugging</a></li>
+<li><a href="#sql-debug">SQL Debug</a></li>
+<li><a href="#responsive-layout">Responsive Layout</a></li>
+<li><a href="#column-toggling">Column Toggling</a></li>
+<li><a href="#notifications-per-table">Notifications Per-Table</a></li>
+<li><a href="#url-state-persistence">URL State Persistence</a></li>
+<li><a href="#custom-views">Custom Views</a></li>
+</ol>
+<hr>
+<h2 id="sub-rows-expandable-rows">Sub-Rows (Expandable Rows)</h2>
+<p>The <code>HasSubRows</code> trait enables expandable child rows for hierarchical data — orders → items, categories → products, departments → employees.</p>
+<h3 id="basic-sub-rows">Basic Sub-Rows</h3>
+<pre><code class="language-php">use NyonCode\WireTable\Table;
+use NyonCode\WireTable\Columns\TextColumn;
+
+$table
+    -&gt;model(Order::class)
+    -&gt;columns([
+        TextColumn::make('number')-&gt;searchable()-&gt;sortable(),
+        TextColumn::make('customer.name')-&gt;searchable(),
+        TextColumn::make('total')-&gt;money('CZK')-&gt;sortable(),
+        BadgeColumn::make('status')-&gt;colors([...]),
+    ])
+    -&gt;subRows('items')
+    -&gt;subRowColumns([
+        TextColumn::make('product.name'),
+        TextColumn::make('quantity')-&gt;alignRight(),
+        TextColumn::make('unit_price')-&gt;money('CZK'),
+        TextColumn::make('subtotal')-&gt;money('CZK')-&gt;weight('bold'),
+    ])
+</code></pre>
+<p>Users see a chevron icon on the left. Clicking expands the row to show child rows below.</p>
+<h3 id="expand-all-by-default">Expand All by Default</h3>
+<pre><code class="language-php">$table-&gt;subRowsDefaultExpanded()
+</code></pre>
+<p>All rows start expanded.</p>
+<h3 id="flatten-mode">Flatten Mode</h3>
+<p>Show all sub-rows inline without expand/collapse — flat view:</p>
+<pre><code class="language-php">$table-&gt;flattenSubRows()
+</code></pre>
+<p>Users can toggle flatten mode via <code>toggleFlattenMode()</code> Livewire method.</p>
+<h3 id="sub-row-relation-with-eager-loading">Sub-Row Relation with Eager Loading</h3>
+<p><code>-&gt;subRows()</code> accepts dot-notation for eager-loaded relations:</p>
+<pre><code class="language-php">$table-&gt;subRows('items.product')
+</code></pre>
+<h3 id="independent-sub-row-filtering">Independent Sub-Row Filtering</h3>
+<pre><code class="language-php">$table-&gt;subRowsFilterable()
+</code></pre>
+<p>When enabled, the table renders separate filter controls for sub-rows alongside the main filters.</p>
+<h3 id="custom-sub-row-view">Custom Sub-Row View</h3>
+<p>Instead of sub-row columns, render a completely custom Blade view:</p>
+<pre><code class="language-php">$table-&gt;subRowView('components.order-items-detail')
+</code></pre>
+<pre><code class="language-blade">{{-- resources/views/components/order-items-detail.blade.php --}}
+&lt;div class="p-4 bg-gray-50"&gt;
+    &lt;table class="w-full text-sm"&gt;
+        @foreach($record-&gt;items as $item)
+            &lt;tr&gt;
+                &lt;td&gt;{{ $item-&gt;product-&gt;name }}&lt;/td&gt;
+                &lt;td class="text-right"&gt;{{ $item-&gt;quantity }}×&lt;/td&gt;
+                &lt;td class="text-right font-bold"&gt;
+                    {{ number_format($item-&gt;subtotal, 2) }} {{ $currency }}
+                &lt;/td&gt;
+            &lt;/tr&gt;
+        @endforeach
+        @if($showTotals)
+            &lt;tr class="border-t font-bold"&gt;
+                &lt;td colspan="2"&gt;Total&lt;/td&gt;
+                &lt;td class="text-right"&gt;{{ number_format($record-&gt;total, 2) }} {{ $currency }}&lt;/td&gt;
+            &lt;/tr&gt;
+        @endif
+    &lt;/table&gt;
+&lt;/div&gt;
+</code></pre>
+<h3 id="sub-row-livewire-state">Sub-Row Livewire State</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>$expandedRows</code></td>
+<td><code>array</code></td>
+<td>Keys of expanded parent records</td>
+</tr>
+<tr>
+<td><code>$flattenMode</code></td>
+<td><code>bool</code></td>
+<td>Flat view toggle</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sub-rows-api">Sub-Rows API</h3>
+<pre><code class="language-php">-&gt;subRows(string $relation)              // Eloquent relation name (dot notation supported)
+-&gt;subRowColumns(array $columns)          // Column[] for sub-rows
+-&gt;subRowView(string $view)              // custom Blade view (replaces columns)
+-&gt;subRowsFilterable(bool $filterable = true)
+-&gt;subRowsDefaultExpanded(bool $expanded = true)
+-&gt;subRowsExpandable(bool $expandable = true)
+-&gt;subRowsLimit(?int $limit)             // max sub-rows before "show more"
+-&gt;subRowsToggleLabel(?string $label)
+-&gt;flattenSubRows(bool $flatten = true)
+-&gt;hasSubRows(): bool
+-&gt;getSubRowColumns(): array
+</code></pre>
+<hr>
+<h2 id="summary-footer-aggregates">Summary Footer (Aggregates)</h2>
+<p>The <code>HasSummary</code> trait adds aggregate footer rows — sum, avg, count, min, max, range.</p>
+<h3 id="column-level-summary">Column-Level Summary</h3>
+<pre><code class="language-php">TextColumn::make('amount')
+    -&gt;money('CZK')
+    -&gt;summarize('sum', 'Total')
+
+TextColumn::make('price')
+    -&gt;money('CZK')
+    -&gt;summarize('avg', 'Average')
+
+TextColumn::make('id')
+    -&gt;summarize('count', 'Records')
+
+TextColumn::make('rating')
+    -&gt;numeric(decimalPlaces: 1)
+    -&gt;summarize('min', 'Lowest')
+
+TextColumn::make('score')
+    -&gt;numeric()
+    -&gt;summarize('max', 'Highest')
+
+TextColumn::make('salary')
+    -&gt;money('CZK')
+    -&gt;summarize('range')          // shows "min - max"
+</code></pre>
+<h3 id="table-level-summary">Table-Level Summary</h3>
+<pre><code class="language-php">$table
+    -&gt;summarizeSum('amount', 'Total Amount')
+    -&gt;summarizeAvg('price', 'Avg Price')
+    -&gt;summarizeCount('id', 'Total Records')
+    -&gt;summarizeMin('rating', 'Min Rating')
+    -&gt;summarizeMax('score', 'Max Score')
+    -&gt;summarizeRange('salary', 'Salary Range')
+</code></pre>
+<h3 id="summary-scopes">Summary Scopes</h3>
+<p>By default, summaries are computed over the <strong>current page</strong> of results (in-memory). For a <strong>full query</strong> aggregate (additional DB query):</p>
+<pre><code class="language-php">TextColumn::make('amount')
+    -&gt;money('CZK')
+    -&gt;summarize('sum', 'Page Total')           // current page (default)
+    -&gt;summaryQuery('sum', 'Grand Total')       // full query aggregate
+</code></pre>
+<h3 id="custom-summary-formatting">Custom Summary Formatting</h3>
+<pre><code class="language-php">TextColumn::make('revenue')
+    -&gt;summarize('sum')
+    -&gt;summaryFormatUsing(fn (float $value) =&gt; number_format($value, 0, ',', ' ') . ' CZK')
+</code></pre>
+<h3 id="how-it-works">How It Works</h3>
+<ol>
+<li><strong>Page-level</strong>: After query results are fetched, <code>HasSummary</code> iterates the Collection and computes aggregates in PHP</li>
+<li><strong>Query-level</strong>: A separate <code>$query-&gt;sum('amount')</code> (or avg/count/min/max) query is executed against the filtered (but unpaginated) dataset</li>
+</ol>
+<h3 id="summary-api">Summary API</h3>
+<pre><code class="language-php">// Column-level
+-&gt;summarize(string $aggregate, ?string $label = null)
+-&gt;summaryQuery(string $aggregate, ?string $label = null)
+-&gt;summaryFormatUsing(Closure $fn)
+
+// Table-level shortcuts
+-&gt;summarizeSum(string $column, ?string $label = null)
+-&gt;summarizeAvg(string $column, ?string $label = null)
+-&gt;summarizeCount(string $column, ?string $label = null)
+-&gt;summarizeMin(string $column, ?string $label = null)
+-&gt;summarizeMax(string $column, ?string $label = null)
+-&gt;summarizeRange(string $column, ?string $label = null)
+</code></pre>
+<hr>
+<h2 id="polling-auto-refresh">Polling (Auto-Refresh)</h2>
+<p>Wire Table supports two polling modes: <strong>table-level</strong> (refreshes entire table) and <strong>row/column-level</strong> (refreshes specific cells via <code>PollColumn</code>).</p>
+<h3 id="table-level-polling">Table-Level Polling</h3>
+<pre><code class="language-php">$table-&gt;poll('5s')                       // refresh every 5 seconds
+</code></pre>
+<p>Supported intervals: <code>'1s'</code>, <code>'2s'</code>, <code>'3s'</code>, <code>'5s'</code>, <code>'10s'</code>, <code>'15s'</code>, <code>'30s'</code>, <code>'60s'</code>.</p>
+<h3 id="keep-alive-background-tabs">Keep Alive (Background Tabs)</h3>
+<pre><code class="language-php">$table-&gt;poll('5s')-&gt;pollKeepAlive()
+</code></pre>
+<p>By default, Livewire stops polling when the browser tab is hidden. <code>pollKeepAlive()</code> overrides this.</p>
+<h3 id="only-visible-viewport">Only Visible (Viewport)</h3>
+<pre><code class="language-php">$table-&gt;poll('5s')-&gt;pollOnlyVisible()
+</code></pre>
+<p>Only poll when the table element is in the viewport (uses IntersectionObserver).</p>
+<h3 id="conditional-polling">Conditional Polling</h3>
+<pre><code class="language-php">$table-&gt;poll('5s')
+      -&gt;pollWhen(fn () =&gt; Job::where('status', 'running')-&gt;exists())
+</code></pre>
+<p>Polling starts/stops based on the condition. Checked on each interval.</p>
+<h3 id="custom-poll-method">Custom Poll Method</h3>
+<pre><code class="language-php">$table-&gt;poll('10s')-&gt;pollMethod('refreshData')
+</code></pre>
+<p>Instead of full re-render, calls a specific Livewire method.</p>
+<h3 id="row-column-polling">Row/Column Polling</h3>
+<p>Use <code>PollColumn</code> for per-cell live updates without refreshing the entire table:</p>
+<pre><code class="language-php">PollColumn::make('job_status')
+    -&gt;interval('3s')
+    -&gt;stateDisplays([...])
+    -&gt;stopWhen(fn ($state) =&gt; $state === 'completed')
+    -&gt;rowLevelPolling()
+</code></pre>
+<p>See <a href="../columns/#pollcolumn">Columns — PollColumn</a> for the complete PollColumn API.</p>
+<h3 id="polling-api">Polling API</h3>
+<pre><code class="language-php">-&gt;poll(string|Closure $interval)         // interval string or Closure returning ?string
+-&gt;pollKeepAlive(bool $keepAlive = true)
+-&gt;pollOnlyVisible(bool $onlyVisible = true)
+-&gt;pollWhen(Closure $condition)           // fn() =&gt; bool
+-&gt;pollMethod(string $method)             // Livewire method name
+</code></pre>
+<hr>
+<h2 id="lazy-loading">Lazy Loading</h2>
+<p>Defers the initial table render for faster page load. The table loads asynchronously after the page is visible.</p>
+<pre><code class="language-php">$table-&gt;lazy()
+</code></pre>
+<h3 id="custom-placeholder">Custom Placeholder</h3>
+<pre><code class="language-php">$table-&gt;lazy()
+      -&gt;lazyPlaceholder(
+          '&lt;div class="flex items-center justify-center p-16 text-gray-400"&gt;
+              &lt;svg class="w-8 h-8 animate-spin" ...&gt;...&lt;/svg&gt;
+              &lt;span class="ml-3"&gt;Loading table...&lt;/span&gt;
+          &lt;/div&gt;'
+      )
+</code></pre>
+<h3 id="how-it-works-2">How It Works</h3>
+<ol>
+<li>Page renders immediately with the placeholder HTML</li>
+<li>Livewire dispatches an async call to load table content</li>
+<li>Placeholder is replaced with the fully rendered table</li>
+<li>Subsequent interactions (sort, filter, paginate) are normal Livewire calls</li>
+</ol>
+<h3 id="when-to-use">When to Use</h3>
+<ul>
+<li>Dashboard pages with multiple tables — load each lazily</li>
+<li>Tables with complex queries — don't block initial paint</li>
+<li>Below-the-fold tables — load only when scrolled to (combine with <code>pollOnlyVisible</code>)</li>
+</ul>
+<hr>
+<h2 id="performance-optimization">Performance Optimization</h2>
+<h3 id="simple-pagination">Simple Pagination</h3>
+<p>Eliminates the <code>COUNT(*)</code> query:</p>
+<pre><code class="language-php">$table-&gt;simplePagination()
+</code></pre>
+<p>Trade-offs:</p>
+<ul>
+<li>No "Showing X of Y" text</li>
+<li>No page number links (only Previous / Next)</li>
+<li>Saves one query per page load on large tables</li>
+</ul>
+<h3 id="cursor-pagination">Cursor Pagination</h3>
+<p>Offset-free, constant-time pagination:</p>
+<pre><code class="language-php">$table-&gt;cursorPagination()
+</code></pre>
+<p>Requirements:</p>
+<ul>
+<li>Table must have a unique, orderable column (usually <code>id</code> or <code>created_at</code>)</li>
+<li>Default sort must be set</li>
+</ul>
+<p>Trade-offs:</p>
+<ul>
+<li>No random page access (Previous / Next only)</li>
+<li>URL cursors are opaque strings</li>
+<li>Cannot combine with <code>count()</code> operations</li>
+</ul>
+<p>Best for: real-time data feeds, infinite scroll UIs, tables &gt; 1M rows.</p>
+<h3 id="query-caching">Query Caching</h3>
+<p>Cache query results for a configured TTL:</p>
+<pre><code class="language-php">$table-&gt;cacheQuery(ttl: 60)                    // 60 seconds, auto-generated key
+$table-&gt;cacheQuery(ttl: 300, key: 'users')     // 5 minutes, custom key
+</code></pre>
+<p>Cache key includes a hash of the current state (search, filters, sort, page), so different states cache independently.</p>
+<p>Uses <code>Cache::remember()</code> — works with any Laravel cache driver.</p>
+<h3 id="chunked-bulk-processing">Chunked Bulk Processing</h3>
+<p>Process records in batches for memory-efficient bulk operations:</p>
+<pre><code class="language-php">$table-&gt;chunk(500, function (Collection $records) {
+    foreach ($records as $record) {
+        $record-&gt;process();
+    }
+})
+</code></pre>
+<p>Uses <code>chunkById()</code> internally for consistent ordering.</p>
+<h3 id="performance-comparison">Performance Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Queries</th>
+<th>Best For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Standard pagination</td>
+<td>2 (count + select)</td>
+<td>&lt; 100k rows</td>
+</tr>
+<tr>
+<td>Simple pagination</td>
+<td>1 (select)</td>
+<td>100k – 1M rows</td>
+</tr>
+<tr>
+<td>Cursor pagination</td>
+<td>1 (select)</td>
+<td>&gt; 1M rows</td>
+</tr>
+<tr>
+<td>Cached + standard</td>
+<td>0-2 (cache hit/miss)</td>
+<td>Frequently viewed, rarely updated</td>
+</tr>
+<tr>
+<td>Lazy loading</td>
+<td>Same as above (deferred)</td>
+<td>Faster initial paint</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="query-debugging">Query Debugging</h2>
+<h3 id="queryplan-inspection">QueryPlan Inspection</h3>
+<p>Get the immutable <code>QueryPlan</code> to see exactly what the engine will do:</p>
+<pre><code class="language-php">$plan = $table-&gt;debugQueryPlan();
+
+// Joins
+foreach ($plan-&gt;joins as $join) {
+    echo "{$join-&gt;type} JOIN {$join-&gt;table} ON {$join-&gt;first} {$join-&gt;operator} {$join-&gt;second}\n";
+}
+
+// Eager loads
+dump($plan-&gt;eagerLoads);     // ['author', 'tags', 'category']
+
+// Aggregates
+dump($plan-&gt;aggregates);      // [AggregateClause(relation: 'comments', function: 'count')]
+
+// Filters
+dump($plan-&gt;filters);         // [FilterClause(column: 'role', operator: '=', value: 'admin')]
+
+// Search
+dump($plan-&gt;searchClauses);   // [SearchClause(columns: ['name','email'], term: 'john')]
+
+// Sorts
+dump($plan-&gt;sortClauses);     // [SortClause(column: 'name', direction: 'asc')]
+</code></pre>
+<h3 id="raw-sql">Raw SQL</h3>
+<pre><code class="language-php">$sql = $table-&gt;toSql();
+// "SELECT users.* FROM users LEFT JOIN departments ON ... WHERE ... ORDER BY ..."
+</code></pre>
+<h3 id="column-metadata">Column Metadata</h3>
+<pre><code class="language-php">$info = $table-&gt;getColumnsInfo();
+// Array of column metadata: DB type, nullable, capabilities, relation paths
+
+$dbColumns = $table-&gt;getDatabaseColumns();
+// ['id', 'name', 'email', 'role', 'created_at', ...]
+
+$dbInfo = $table-&gt;getDatabaseColumnsInfo();
+// ['name' =&gt; ['type' =&gt; 'varchar', 'nullable' =&gt; false, ...], ...]
+</code></pre>
+<hr>
+<h2 id="sql-debug">SQL Debug</h2>
+<p>The <code>HasSqlDebug</code> trait (included in <code>WithTable</code>) provides SQL interpolation utilities:</p>
+<pre><code class="language-php">// Get raw SQL with bindings interpolated (for debugging only!)
+$rawSql = $this-&gt;builderToSql($query);
+// "SELECT * FROM users WHERE role = 'admin' AND created_at &gt;= '2024-01-01'"
+
+// Interpolate bindings into a prepared statement
+$interpolated = $this-&gt;interpolateSql($sql, $bindings);
+</code></pre>
+<p><strong>Warning</strong>: Interpolated SQL is for debugging only. Never execute it directly — use parameterized queries.</p>
+<h3 id="development-usage">Development Usage</h3>
+<pre><code class="language-php">class UserTable extends Component
+{
+    use WithTable;
+
+    public function debugQuery(): void
+    {
+        $table = $this-&gt;table(Table::make());
+        $query = $this-&gt;buildTableQuery($table);
+
+        logger()-&gt;debug('Table SQL', [
+            'sql' =&gt; $this-&gt;builderToSql($query),
+            'plan' =&gt; $table-&gt;debugQueryPlan(),
+        ]);
+    }
+}
+</code></pre>
+<hr>
+<h2 id="responsive-layout">Responsive Layout</h2>
+<h3 id="stacked-on-mobile">Stacked on Mobile</h3>
+<p>Below a breakpoint, columns stack vertically as label-value pairs:</p>
+<pre><code class="language-php">$table-&gt;stackedOnMobile()
+      -&gt;stackedBreakpoint('md')    // stack below 'md' (default)
+</code></pre>
+<p>In stacked mode:</p>
+<ul>
+<li>Each row becomes a card</li>
+<li>Each column renders as <code>Label: Value</code></li>
+<li>Column <code>visibleFrom()</code>/<code>hiddenFrom()</code> still applies</li>
+</ul>
+<h3 id="column-breakpoints">Column Breakpoints</h3>
+<pre><code class="language-php">// Visible from md up (hidden on mobile)
+TextColumn::make('email')-&gt;visibleFrom('md')
+
+// Hidden from lg up (visible only on mobile/tablet)
+TextColumn::make('phone')-&gt;hiddenFrom('lg')
+
+// Shortcuts
+TextColumn::make('address')-&gt;onlyOnDesktop()       // ≥lg
+TextColumn::make('avatar')-&gt;onlyOnMobile()          // &lt;md
+TextColumn::make('subtitle')-&gt;onlyOnTabletAndUp()   // ≥md
+TextColumn::make('metadata')-&gt;onlyOnLargeScreens()  // ≥xl
+</code></pre>
+<h3 id="per-record-mobile-display">Per-Record Mobile Display</h3>
+<pre><code class="language-php">TextColumn::make('user')
+    -&gt;mobileDisplayUsing(fn ($record) =&gt; $record-&gt;name)
+    -&gt;desktopDisplayUsing(fn ($record) =&gt; "{$record-&gt;name} ({$record-&gt;email})")
+</code></pre>
+<hr>
+<h2 id="column-toggling">Column Toggling</h2>
+<p>Users can show/hide toggleable columns via a column picker dropdown:</p>
+<pre><code class="language-php">// Mark specific columns as toggleable
+TextColumn::make('phone')
+    -&gt;toggleable()                  // user can hide/show
+    -&gt;hidden()                      // start hidden (user can enable)
+
+TextColumn::make('notes')
+    -&gt;toggleable()
+    -&gt;visibleFrom('lg')             // default visible from lg, but user can override
+</code></pre>
+<p>State is stored in <code>$hiddenColumns</code> (Livewire property). Persists for the session.</p>
+<hr>
+<h2 id="notifications-per-table">Notifications Per-Table</h2>
+<p>Override the global notification driver for a specific table:</p>
+<pre><code class="language-php">$table-&gt;notificationDriver('livewire')   // use Livewire events for this table
+</code></pre>
+<p>Useful when different parts of your app use different notification UIs.</p>
+<hr>
+<h2 id="url-state-persistence">URL State Persistence</h2>
+<p>Persist table state (search, sort, filters, page) in the URL for bookmarkable/shareable links:</p>
+<pre><code class="language-php">class UserTable extends Component
+{
+    use WithTable;
+
+    protected $queryString = [
+        'tableSearch' =&gt; ['except' =&gt; '', 'as' =&gt; 'q'],
+        'tableSortColumn' =&gt; ['except' =&gt; '', 'as' =&gt; 'sort'],
+        'tableSortDirection' =&gt; ['except' =&gt; 'asc', 'as' =&gt; 'dir'],
+        'tablePerPage' =&gt; ['except' =&gt; 10, 'as' =&gt; 'per_page'],
+        'tableFilters' =&gt; ['except' =&gt; [], 'as' =&gt; 'filters'],
+    ];
+}
+</code></pre>
+<p>Now URLs look like: <code>/users?q=john&amp;sort=name&amp;dir=asc&amp;per_page=25&amp;filters[role]=admin</code></p>
+<hr>
+<h2 id="custom-views">Custom Views</h2>
+<h3 id="custom-table-view">Custom Table View</h3>
+<pre><code class="language-php">$table-&gt;view('my-custom-table-view')
+</code></pre>
+<p>Wire Table resolves views with namespace support. You can publish and override the default views:</p>
+<pre><code class="language-bash">php artisan vendor:publish --tag=wire-table-views
+</code></pre>
+<p>Published to <code>resources/views/vendor/wire-table/</code>.</p>
+<h3 id="hasview-trait">HasView Trait</h3>
+<p>The <code>HasView</code> trait provides view resolution logic:</p>
+<pre><code class="language-php">// Resolves in order:
+// 1. Explicit view set via -&gt;view()
+// 2. Package view: wire-table::table
+$table-&gt;getView();
+</code></pre>
+<hr>
+<h2 id="complete-real-world-example">Complete Real-World Example</h2>
+<pre><code class="language-php">class OrderTable extends Component
+{
+    use WithTable;
+
+    protected $queryString = [
+        'tableSearch' =&gt; ['except' =&gt; '', 'as' =&gt; 'q'],
+        'tableSortColumn' =&gt; ['except' =&gt; '', 'as' =&gt; 'sort'],
+        'tableFilters' =&gt; ['except' =&gt; [], 'as' =&gt; 'f'],
+    ];
+
+    public function table(Table $table): Table
+    {
+        return $table
+            -&gt;model(Order::class)
+            -&gt;modifyQueryUsing(fn ($q) =&gt; $q-&gt;where('tenant_id', auth()-&gt;user()-&gt;tenant_id))
+            -&gt;columns([
+                TextColumn::make('number')
+                    -&gt;fontFamily('mono')
+                    -&gt;searchable()
+                    -&gt;sortable()
+                    -&gt;copyable(),
+
+                StackedColumn::make('customer')
+                    -&gt;avatar('customer.avatar_url')
+                    -&gt;primary('customer.name')
+                    -&gt;secondary('customer.email')
+                    -&gt;circular()
+                    -&gt;searchable()
+                    -&gt;searchColumns(['customer.name', 'customer.email']),
+
+                TextColumn::make('items.count')
+                    -&gt;label('Items')
+                    -&gt;alignCenter()
+                    -&gt;sortable(),
+
+                TextColumn::make('total')
+                    -&gt;money('CZK')
+                    -&gt;sortable()
+                    -&gt;alignRight()
+                    -&gt;weight('bold')
+                    -&gt;summarize('sum', 'Page Total')
+                    -&gt;summaryQuery('sum', 'Grand Total'),
+
+                BadgeColumn::make('status')
+                    -&gt;colors([
+                        'gray' =&gt; 'draft',
+                        'warning' =&gt; 'pending',
+                        'info' =&gt; 'processing',
+                        'success' =&gt; 'shipped',
+                        'primary' =&gt; 'delivered',
+                        'danger' =&gt; 'cancelled',
+                    ])
+                    -&gt;icons([
+                        'clock' =&gt; 'pending',
+                        'refresh' =&gt; 'processing',
+                        'truck' =&gt; 'shipped',
+                        'check' =&gt; 'delivered',
+                        'x' =&gt; 'cancelled',
+                    ]),
+
+                TextColumn::make('created_at')
+                    -&gt;dateTime('d.m.Y H:i')
+                    -&gt;sortable()
+                    -&gt;size('sm')
+                    -&gt;textColor('gray')
+                    -&gt;visibleFrom('lg'),
+
+                PollColumn::make('shipping_status')
+                    -&gt;interval('30s')
+                    -&gt;badge()
+                    -&gt;colors(['success' =&gt; 'delivered', 'info' =&gt; 'in_transit', 'gray' =&gt; 'waiting'])
+                    -&gt;pollWhile(fn ($state) =&gt; $state === 'in_transit')
+                    -&gt;visibleFrom('md'),
+            ])
+            -&gt;filters([
+                SelectFilter::make('status')
+                    -&gt;options([
+                        'pending' =&gt; 'Pending',
+                        'processing' =&gt; 'Processing',
+                        'shipped' =&gt; 'Shipped',
+                        'delivered' =&gt; 'Delivered',
+                        'cancelled' =&gt; 'Cancelled',
+                    ])
+                    -&gt;multiple()
+                    -&gt;default(['pending', 'processing']),
+
+                DateFilter::make('created_at')
+                    -&gt;from()-&gt;until()
+                    -&gt;fromLabel('From')
+                    -&gt;untilLabel('Until'),
+
+                NumberRangeFilter::make('total')
+                    -&gt;min(0)-&gt;max(1000000)-&gt;step(100),
+
+                TernaryFilter::make('has_invoice')
+                    -&gt;label('Invoice Generated')
+                    -&gt;trueQuery(fn ($q) =&gt; $q-&gt;whereNotNull('invoice_id'))
+                    -&gt;falseQuery(fn ($q) =&gt; $q-&gt;whereNull('invoice_id')),
+            ])
+            -&gt;actions([
+                Action::make('view')
+                    -&gt;icon('eye')
+                    -&gt;url(fn ($r) =&gt; route('orders.show', $r)),
+
+                ActionGroup::make('more', [
+                    Action::make('invoice')
+                        -&gt;icon('document')
+                        -&gt;visible(fn ($r) =&gt; $r-&gt;status !== 'draft')
+                        -&gt;action(fn ($r) =&gt; $r-&gt;generateInvoice()),
+                    Action::make('duplicate')
+                        -&gt;icon('copy')
+                        -&gt;action(fn ($r) =&gt; $r-&gt;replicate()-&gt;save()),
+                    Action::divider(),
+                    Action::make('cancel')
+                        -&gt;icon('x')
+                        -&gt;color('danger')
+                        -&gt;visible(fn ($r) =&gt; ! in_array($r-&gt;status, ['delivered', 'cancelled']))
+                        -&gt;requiresConfirmation()
+                        -&gt;modalHeading('Cancel this order?')
+                        -&gt;action(fn ($r) =&gt; $r-&gt;cancel()),
+                ]),
+            ])
+            -&gt;bulkActions([
+                BulkAction::make('export')
+                    -&gt;icon('download')
+                    -&gt;action(fn ($records) =&gt; $this-&gt;export($records)),
+                DeleteBulkAction::make(),
+            ])
+            -&gt;headerActions([
+                HeaderAction::make('create')
+                    -&gt;label('New Order')
+                    -&gt;icon('plus')
+                    -&gt;url(route('orders.create')),
+            ])
+            -&gt;subRows(fn ($record) =&gt; $record-&gt;items)
+            -&gt;subRowColumns([
+                TextColumn::make('product.name'),
+                TextColumn::make('quantity')-&gt;alignCenter(),
+                TextColumn::make('unit_price')-&gt;money('CZK'),
+                TextColumn::make('subtotal')-&gt;money('CZK')-&gt;weight('bold'),
+            ])
+            -&gt;defaultSort('created_at', 'desc')
+            -&gt;searchable()
+            -&gt;searchDebounce(400)
+            -&gt;paginated()
+            -&gt;perPage(25)
+            -&gt;perPageOptions([10, 25, 50, 100])
+            -&gt;selectable()
+            -&gt;striped()
+            -&gt;hoverable()
+            -&gt;stackedOnMobile()
+            -&gt;emptyStateHeading('No orders found')
+            -&gt;emptyStateDescription('Create your first order to get started.')
+            -&gt;emptyStateIcon('shopping-cart');
+    }
+}
+</code></pre>
+
+                                                    <nav class="page-nav" aria-label="Pagination">
+                                                                    <a class="page-nav-link is-prev" href="../notifications/">
+                                        <span>← Previous</span>
+                                        <strong>Table Notifications</strong>
+                                    </a>
+                                
+                                                                    <a class="page-nav-link is-next" href="../../sortable/overview/">
+                                        <span>Next →</span>
+                                        <strong>Introduction</strong>
+                                    </a>
+                                                            </nav>
+                                            </article>
+
+                                            <aside class="page-toc">
+                            <p class="toc-title">On this page</p>
+                            <ul>
+                                                                    <li class="level-2">
+                                        <a href="#table-of-contents">
+                                            Table of Contents                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#sub-rows-expandable-rows">
+                                            Sub-Rows (Expandable Rows)                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#basic-sub-rows">
+                                            Basic Sub-Rows                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#expand-all-by-default">
+                                            Expand All by Default                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#flatten-mode">
+                                            Flatten Mode                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#sub-row-relation-with-eager-loading">
+                                            Sub-Row Relation with Eager Loading                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#independent-sub-row-filtering">
+                                            Independent Sub-Row Filtering                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#custom-sub-row-view">
+                                            Custom Sub-Row View                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#sub-row-livewire-state">
+                                            Sub-Row Livewire State                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#sub-rows-api">
+                                            Sub-Rows API                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#summary-footer-aggregates">
+                                            Summary Footer (Aggregates)                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#column-level-summary">
+                                            Column-Level Summary                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#table-level-summary">
+                                            Table-Level Summary                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#summary-scopes">
+                                            Summary Scopes                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#custom-summary-formatting">
+                                            Custom Summary Formatting                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#how-it-works">
+                                            How It Works                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#summary-api">
+                                            Summary API                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#polling-auto-refresh">
+                                            Polling (Auto-Refresh)                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#table-level-polling">
+                                            Table-Level Polling                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#keep-alive-background-tabs">
+                                            Keep Alive (Background Tabs)                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#only-visible-viewport">
+                                            Only Visible (Viewport)                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#conditional-polling">
+                                            Conditional Polling                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#custom-poll-method">
+                                            Custom Poll Method                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#row-column-polling">
+                                            Row/Column Polling                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#polling-api">
+                                            Polling API                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#lazy-loading">
+                                            Lazy Loading                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#custom-placeholder">
+                                            Custom Placeholder                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#how-it-works-2">
+                                            How It Works                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#when-to-use">
+                                            When to Use                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#performance-optimization">
+                                            Performance Optimization                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#simple-pagination">
+                                            Simple Pagination                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#cursor-pagination">
+                                            Cursor Pagination                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#query-caching">
+                                            Query Caching                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#chunked-bulk-processing">
+                                            Chunked Bulk Processing                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#performance-comparison">
+                                            Performance Comparison                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#query-debugging">
+                                            Query Debugging                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#queryplan-inspection">
+                                            QueryPlan Inspection                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#raw-sql">
+                                            Raw SQL                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#column-metadata">
+                                            Column Metadata                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#sql-debug">
+                                            SQL Debug                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#development-usage">
+                                            Development Usage                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#responsive-layout">
+                                            Responsive Layout                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#stacked-on-mobile">
+                                            Stacked on Mobile                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#column-breakpoints">
+                                            Column Breakpoints                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#per-record-mobile-display">
+                                            Per-Record Mobile Display                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#column-toggling">
+                                            Column Toggling                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#notifications-per-table">
+                                            Notifications Per-Table                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#url-state-persistence">
+                                            URL State Persistence                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#custom-views">
+                                            Custom Views                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#custom-table-view">
+                                            Custom Table View                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#hasview-trait">
+                                            HasView Trait                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#complete-real-world-example">
+                                            Complete Real-World Example                                        </a>
+                                    </li>
+                                                            </ul>
+                        </aside>
+                                    </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

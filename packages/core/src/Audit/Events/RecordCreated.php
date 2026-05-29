@@ -42,7 +42,7 @@ final readonly class RecordCreated implements AuditableEvent
         return null;
     }
 
-    public function getNewValues(): ?array
+    public function getNewValues(): array
     {
         return $this->newValues ?: $this->record->getAttributes();
     }

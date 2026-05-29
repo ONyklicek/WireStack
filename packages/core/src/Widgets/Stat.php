@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Widgets;
 
+use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasExtraAttributes;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 
 /**
@@ -53,9 +55,9 @@ class Stat
         return $this->description;
     }
 
-    public function descriptionIcon(?string $icon): static
+    public function descriptionIcon(string|Icon|null $icon): static
     {
-        $this->descriptionIcon = $icon;
+        $this->descriptionIcon = $icon instanceof Icon ? $icon->value() : $icon;
 
         return $this;
     }
@@ -65,9 +67,9 @@ class Stat
         return $this->descriptionIcon;
     }
 
-    public function color(?string $color): static
+    public function color(string|Color|null $color): static
     {
-        $this->color = $color;
+        $this->color = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
@@ -100,9 +102,9 @@ class Stat
         return $this->chart !== null && count($this->chart) > 0;
     }
 
-    public function icon(?string $icon): static
+    public function icon(string|Icon|null $icon): static
     {
-        $this->icon = $icon;
+        $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
 
         return $this;
     }

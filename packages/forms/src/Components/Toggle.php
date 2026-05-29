@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
  * Toggle switch field with customizable colors, icons, and labels.
@@ -39,30 +41,30 @@ class Toggle extends Field
         return $this;
     }
 
-    public function onColor(string $color): static
+    public function onColor(string|Color $color): static
     {
-        $this->onColor = $color;
+        $this->onColor = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
 
-    public function offColor(string $color): static
+    public function offColor(string|Color $color): static
     {
-        $this->offColor = $color;
+        $this->offColor = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
 
-    public function onIcon(?string $icon): static
+    public function onIcon(string|Icon|null $icon): static
     {
-        $this->onIcon = $icon;
+        $this->onIcon = $icon instanceof Icon ? $icon->value() : $icon;
 
         return $this;
     }
 
-    public function offIcon(?string $icon): static
+    public function offIcon(string|Icon|null $icon): static
     {
-        $this->offIcon = $icon;
+        $this->offIcon = $icon instanceof Icon ? $icon->value() : $icon;
 
         return $this;
     }
@@ -107,6 +109,11 @@ class Toggle extends Field
     public function isInline(): bool
     {
         return $this->inline;
+    }
+
+    public function getStateType(): string
+    {
+        return 'bool';
     }
 
     protected function viewName(): string

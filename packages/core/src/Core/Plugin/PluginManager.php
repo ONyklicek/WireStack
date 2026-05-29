@@ -8,6 +8,7 @@ use NyonCode\WireCore\Core\Plugin\Contracts\HasConfiguration;
 use NyonCode\WireCore\Core\Plugin\Contracts\HasDependencies;
 use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
 use NyonCode\WireCore\Core\Query\Contracts\QueryPipe;
+use ReflectionFunction;
 use RuntimeException;
 
 /**
@@ -234,13 +235,20 @@ final class PluginManager
     public function hook(string $name, callable $callback, int $priority = 0): void
     {
         $this->hooks[$name][] = ['callback' => $callback, 'priority' => $priority];
+
+        // Keep the list sorted by priority so runHook/runTypedHook never need to sort.
+        usort(
+            $this->hooks[$name],
+            static fn (array $a, array $b): int => $a['priority'] <=> $b['priority'],
+        );
     }
 
     /**
-     * Run all callbacks for a hook, sorted by priority.
+     * Run all array-based callbacks for a hook, sorted by priority.
      *
      * Callbacks can return a modified payload array to pass downstream.
      * Non-array returns are ignored (payload passes through unchanged).
+     * Callbacks that type-hint an object parameter are skipped (they belong to runTypedHook).
      *
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed> Modified payload
@@ -253,9 +261,12 @@ final class PluginManager
             return $payload;
         }
 
-        usort($hooks, static fn (array $a, array $b): int => $a['priority'] <=> $b['priority']);
-
         foreach ($hooks as $hook) {
+            if ($this->callbackExpectsObject($hook['callback'])) {
+                $this->warnSkippedCallback($name, $hook['callback'], 'runHook', 'runTypedHook');
+                continue;
+            }
+
             $result = ($hook['callback'])($payload);
             if (is_array($result)) {
                 $payload = $result;
@@ -270,6 +281,7 @@ final class PluginManager
      *
      * Each callback receives the payload object and may return a modified instance.
      * If a callback returns null or a non-object, the original payload continues.
+     * Callbacks that type-hint an array parameter are skipped (they belong to runHook).
      *
      * @template T of object
      *
@@ -284,9 +296,12 @@ final class PluginManager
             return $payload;
         }
 
-        usort($hooks, static fn (array $a, array $b): int => $a['priority'] <=> $b['priority']);
-
         foreach ($hooks as $hook) {
+            if ($this->callbackExpectsArray($hook['callback'])) {
+                $this->warnSkippedCallback($name, $hook['callback'], 'runTypedHook', 'runHook');
+                continue;
+            }
+
             $result = ($hook['callback'])($payload);
             if ($result !== null && is_object($result)) {
                 $payload = $result;
@@ -294,6 +309,72 @@ final class PluginManager
         }
 
         return $payload;
+    }
+
+    /**
+     * Log a debug warning when a callback is skipped because it was registered
+     * against the wrong dispatcher (runHook vs runTypedHook).
+     * Only logs in debug mode to keep production logs clean.
+     */
+    private function warnSkippedCallback(string $hook, callable $callback, string $calledVia, string $correctMethod): void
+    {
+        if (! function_exists('config') || ! config('app.debug')) {
+            return;
+        }
+
+        try {
+            $ref = new ReflectionFunction($callback(...));
+            $location = $ref->getFileName().':'.$ref->getStartLine();
+        } catch (\ReflectionException) {
+            $location = 'unknown';
+        }
+
+        if (function_exists('logger')) {
+            logger()->debug("[WireCore] Hook '{$hook}' callback skipped in {$calledVia}(). "
+                ."Use {$correctMethod}() for this type hint. Registered at {$location}.");
+        }
+    }
+
+    /**
+     * Check if a callback's first parameter type-hints an object (non-array).
+     */
+    private function callbackExpectsObject(callable $callback): bool
+    {
+        $type = $this->getFirstParameterTypeName($callback);
+
+        return $type !== null && $type !== 'array';
+    }
+
+    /**
+     * Check if a callback's first parameter type-hints 'array'.
+     */
+    private function callbackExpectsArray(callable $callback): bool
+    {
+        return $this->getFirstParameterTypeName($callback) === 'array';
+    }
+
+    /**
+     * Get the type name of a callback's first parameter, or null if untyped.
+     */
+    private function getFirstParameterTypeName(callable $callback): ?string
+    {
+        try {
+            $ref = new ReflectionFunction($callback(...));
+        } catch (\ReflectionException) {
+            return null;
+        }
+
+        $params = $ref->getParameters();
+        if ($params === []) {
+            return null;
+        }
+
+        $type = $params[0]->getType();
+        if ($type === null) {
+            return null;
+        }
+
+        return $type instanceof \ReflectionNamedType ? $type->getName() : null;
     }
 
     /**

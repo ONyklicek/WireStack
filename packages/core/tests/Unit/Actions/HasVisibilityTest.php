@@ -77,6 +77,18 @@ it('supports dynamic disabled via closure', function () {
         ->and($action->isDisabled($active))->toBeFalse();
 });
 
+it('calls disabled closure even without context', function () {
+    $action = Action::make('test')->disabled(fn () => true);
+
+    expect($action->isDisabled())->toBeTrue();
+});
+
+it('disabled closure without context returns false when callback returns false', function () {
+    $action = Action::make('test')->disabled(fn () => false);
+
+    expect($action->isDisabled())->toBeFalse();
+});
+
 // ─── Permission ────────────────────────────────────────────────────────────
 
 it('has no permission by default', function () {

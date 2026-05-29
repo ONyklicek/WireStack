@@ -6,6 +6,7 @@ namespace NyonCode\WireForms\Components\Layout;
 
 use Closure;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
  * Section layout with heading, description, icon, collapsible behavior, and aside mode.
@@ -33,9 +34,9 @@ class Section extends LayoutComponent
         return $this;
     }
 
-    public function icon(?string $icon): static
+    public function icon(string|Icon|null $icon): static
     {
-        $this->icon = $icon;
+        $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
 
         return $this;
     }

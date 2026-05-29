@@ -2,3 +2,5 @@
 /.claude
 /vendor
 composer.lock
+# Torchlight highlight cache
+docs-site/.torchlight-cache/

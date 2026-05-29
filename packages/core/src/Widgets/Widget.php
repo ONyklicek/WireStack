@@ -33,7 +33,7 @@ abstract class Widget implements Htmlable
 
     public static function make(): static
     {
-        return new static; // @phpstan-ignore new.static
+        return new static;
     }
 
     public function heading(?string $heading): static

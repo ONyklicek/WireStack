@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Audit\Concerns;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use NyonCode\WireCore\Audit\AuditEntry;
 use NyonCode\WireCore\Audit\Events\RecordCreated;
@@ -12,6 +13,8 @@ use NyonCode\WireCore\Audit\Events\RecordUpdated;
 
 /**
  * Trait HasAuditable
+ *
+ * @phpstan-require-extends Model
  *
  * Add to any Eloquent model to enable automatic audit logging
  * via Eloquent model events (created, updated, deleted).

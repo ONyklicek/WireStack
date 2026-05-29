@@ -154,7 +154,7 @@ class SelectColumn extends Column
     public function isDisabled(Model $record): bool
     {
         if ($this->disabledCallback) {
-            return call_user_func($this->disabledCallback, $record);
+            return ($this->disabledCallback)($record);
         }
 
         return $this->disabled;

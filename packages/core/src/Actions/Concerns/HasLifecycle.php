@@ -294,7 +294,7 @@ trait HasLifecycle
     public function getSuccessNotificationMessage(mixed $context = null): ?string
     {
         if ($this->successNotificationCallback) {
-            return call_user_func($this->successNotificationCallback, $context);
+            return ($this->successNotificationCallback)($context);
         }
 
         return $this->successNotificationMessage;
@@ -303,7 +303,7 @@ trait HasLifecycle
     public function getFailureNotificationMessage(mixed $context = null): ?string
     {
         if ($this->failureNotificationCallback) {
-            return call_user_func($this->failureNotificationCallback, $context);
+            return ($this->failureNotificationCallback)($context);
         }
 
         return $this->failureNotificationMessage;
@@ -312,7 +312,7 @@ trait HasLifecycle
     public function getSuccessRedirectUrl(mixed $context = null): ?string
     {
         if ($this->successRedirectUrl instanceof Closure) {
-            return call_user_func($this->successRedirectUrl, $context);
+            return ($this->successRedirectUrl)($context);
         }
 
         return $this->successRedirectUrl;

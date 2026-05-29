@@ -49,7 +49,16 @@ Repeater::make('contacts')
 | `collapsible()` | Let users collapse item blocks |
 | `collapsed()` | Start items collapsed |
 | `minItems()` / `maxItems()` | Constrain collection size |
-| `mutateRelationshipDataBeforeSaveUsing()` | Transform item data before persistence |
+| `addable(bool)` | Allow adding new items (default `true`) |
+| `deletable(bool)` | Allow removing items (default `true`) |
+| `reorderable(bool)` | Allow drag-to-reorder (default `false`) |
+| `collapsible(bool)` | Allow collapsing item blocks |
+| `collapsed(bool)` | Start all items collapsed (implies `collapsible`) |
+| `minItems(int\|null)` | Minimum item count |
+| `maxItems(int\|null)` | Maximum item count |
+| `addButtonLabel(string\|null)` | Label on the add button |
+| `disabled(bool\|Closure)` | Disable add/delete/reorder controls |
+| `mutateRelationshipDataBeforeSaveUsing(Closure)` | Transform item data before persistence |
 
 ## When to Use It
 

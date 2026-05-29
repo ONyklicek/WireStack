@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Forms\Runtime;
 
 use Illuminate\Validation\ValidationException;
+use NyonCode\WireCore\Core\State\StateHydrator;
 use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
+use NyonCode\WireForms\Components\Field;
 use NyonCode\WireForms\Forms\Config\FormConfig;
 use NyonCode\WireForms\Validation\FormValidationResolver;
 
@@ -58,10 +60,13 @@ final class FormRuntime
             );
         }
 
-        // In standalone mode, wrap state under statePath so rules like "data.name" match
-        $validationData = $this->config->statePath
-            ? [$this->config->statePath => $state]
-            : $state;
+        // In standalone mode, nest state under statePath so rules like "data.name" match
+        if ($this->config->statePath) {
+            $validationData = [];
+            data_set($validationData, $this->config->statePath, $state);
+        } else {
+            $validationData = $state;
+        }
 
         return app('validator')->make($validationData, $rules, $messages)
             ->setAttributeNames($attributes)
@@ -80,7 +85,36 @@ final class FormRuntime
      */
     public function fill(array $data): void
     {
+        $definitions = $this->buildStateDefinitions();
+
+        if (! empty($definitions)) {
+            $data = (new StateHydrator)->hydrate($data, $definitions);
+        }
+
         $this->stateManager->fill($data);
+    }
+
+    /**
+     * Collect state type hints from all field components in the schema.
+     *
+     * @return array<string, string>
+     */
+    private function buildStateDefinitions(): array
+    {
+        $definitions = [];
+
+        foreach ($this->getFlatComponents() as $component) {
+            if ($component instanceof Field) {
+                $name = $component->getName();
+                $type = $component->getStateType();
+
+                if ($name !== '' && $type !== 'string') {
+                    $definitions[$name] = $type;
+                }
+            }
+        }
+
+        return $definitions;
     }
 
     /**
@@ -102,13 +136,16 @@ final class FormRuntime
 
         foreach ($this->config->schema as $component) {
             if ($component instanceof LayoutComponent) {
-                $component->prepareChildren($this->config->statePath ?? '');
+                $component->prepareChildren($this->config->statePath ?? '', $this->config->isLive);
             } elseif ($component instanceof Component) {
                 if ($this->config->statePath) {
                     $component->statePath($this->config->statePath);
                 }
                 if ($this->config->isDisabled) {
                     $component->disabled();
+                }
+                if ($this->config->isLive && method_exists($component, 'live')) {
+                    $component->live();
                 }
             }
         }

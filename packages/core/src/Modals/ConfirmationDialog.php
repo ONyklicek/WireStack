@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Modals;
 
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Modals\Concerns\HasFooterActions;
 use NyonCode\WireCore\Modals\Concerns\HasModalProperties;
 use NyonCode\WireCore\Modals\Contracts\ModalContract;
@@ -35,7 +37,7 @@ class ConfirmationDialog implements ModalContract
 
     protected ?string $icon = null;
 
-    protected ?string $iconColor = 'warning';
+    protected ?string $iconColor = Color::Warning->value;
 
     protected ?string $color = null;
 
@@ -71,7 +73,7 @@ class ConfirmationDialog implements ModalContract
         return static::make()
             ->heading(Trans::get('wire-core::actions.delete_heading'))
             ->description($description)
-            ->icon('trash', 'danger')
+            ->icon('trash', Color::Danger)
             ->submitLabel(Trans::get('wire-core::actions.delete_submit'))
             ->danger();
     }
@@ -84,7 +86,7 @@ class ConfirmationDialog implements ModalContract
         return static::make()
             ->heading($heading)
             ->description($description)
-            ->icon('warning', 'danger')
+            ->icon('warning', Color::Danger)
             ->danger();
     }
 
@@ -96,7 +98,7 @@ class ConfirmationDialog implements ModalContract
         return static::make()
             ->heading($heading)
             ->description($description)
-            ->icon('warning', 'warning');
+            ->icon('warning', Color::Warning);
     }
 
     /**
@@ -107,7 +109,7 @@ class ConfirmationDialog implements ModalContract
         return static::make()
             ->heading($heading)
             ->description($description)
-            ->icon('info', 'info')
+            ->icon('info', Color::Info)
             ->informative();
     }
 
@@ -119,25 +121,25 @@ class ConfirmationDialog implements ModalContract
         return static::make()
             ->heading($heading)
             ->description($description)
-            ->icon('check-circle', 'success')
+            ->icon('check-circle', Color::Success)
             ->informative();
     }
 
     // ─── Fluent setters ─────────────────────────────────────────
 
-    public function icon(?string $icon, ?string $color = null): static
+    public function icon(string|Icon|null $icon, string|Color|null $color = null): static
     {
-        $this->icon = $icon;
+        $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
         if ($color !== null) {
-            $this->iconColor = $color;
+            $this->iconColor = $color instanceof Color ? $color->value : $color;
         }
 
         return $this;
     }
 
-    public function color(?string $color): static
+    public function color(string|Color|null $color): static
     {
-        $this->color = $color;
+        $this->color = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
@@ -146,7 +148,7 @@ class ConfirmationDialog implements ModalContract
     {
         $this->isDanger = $danger;
         if ($danger) {
-            $this->color = 'danger';
+            $this->color = Color::Danger->value;
         }
 
         return $this;
@@ -171,7 +173,7 @@ class ConfirmationDialog implements ModalContract
 
     public function getIconColor(): string
     {
-        return $this->iconColor ?? 'warning';
+        return $this->iconColor ?? Color::Warning->value;
     }
 
     public function getColor(): ?string

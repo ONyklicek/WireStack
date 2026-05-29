@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Filters;
 
 use Closure;
+use NyonCode\WireForms\Components\Select;
 
 class SelectFilter extends Filter
 {
@@ -55,6 +56,16 @@ class SelectFilter extends Filter
     public function isSearchable(): bool
     {
         return $this->searchable;
+    }
+
+    public function getFormFields(): array
+    {
+        return [
+            Select::make('value')
+                ->options($this->getOptions())
+                ->placeholder($this->getPlaceholder())
+                ->searchable($this->isSearchable()),
+        ];
     }
 
     public function render(mixed $value = null): string

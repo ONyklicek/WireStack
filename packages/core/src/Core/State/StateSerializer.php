@@ -147,15 +147,16 @@ final class StateSerializer
      */
     private function castToEnum(mixed $value, string $type): mixed
     {
-        if (! is_string($type) || ! enum_exists($type)) {
+        if (! enum_exists($type)) {
             return $value;
         }
 
         if (is_subclass_of($type, BackedEnum::class)) {
-            /** @var int|string $enumValue */
-            $enumValue = $value;
+            if (! is_int($value) && ! is_string($value)) {
+                return $value;
+            }
 
-            return $type::tryFrom($enumValue) ?? $value;
+            return $type::tryFrom($value) ?? $value;
         }
 
         // Unit enum - match by name

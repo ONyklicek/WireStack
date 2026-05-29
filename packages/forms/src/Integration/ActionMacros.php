@@ -9,10 +9,9 @@ use NyonCode\WireCore\Actions\BaseAction;
 /**
  * Registers Action macros for form integration.
  *
- * Note: Core form methods (form, fillFormUsing, formValidation, getFormInstance,
- * hasFormModal) are provided natively by HasModal trait on BaseAction.
- * This class only registers macros that add forms-package-specific behavior
- * beyond what core provides.
+ * All form methods (form, fillFormUsing, formValidation, getFormInstance,
+ * hasFormModal, etc.) are provided natively by HasModal trait on BaseAction.
+ * This registration point exists for future forms-package-specific extensions.
  */
 final class ActionMacros
 {
@@ -21,11 +20,5 @@ final class ActionMacros
         if (! class_exists(BaseAction::class)) {
             return;
         }
-
-        // Core already provides: form(), fillFormUsing(), formValidation(),
-        // validationMessages(), validationAttributes(), getFormInstance(),
-        // hasFormModal(), getFillFormCallback() via HasModal trait.
-        //
-        // Register only forms-package-specific extensions here.
     }
 }

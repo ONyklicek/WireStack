@@ -32,6 +32,9 @@ class Select extends Field
 
     protected bool $allowHtml = false;
 
+    /** @var array<string|int>|Closure */
+    protected array|Closure $disabledOptionValues = [];
+
     protected ?string $relationship = null;
 
     protected ?string $titleAttribute = null;
@@ -105,6 +108,16 @@ class Select extends Field
     public function allowHtml(bool $condition = true): static
     {
         $this->allowHtml = $condition;
+
+        return $this;
+    }
+
+    /**
+     * @param  array<string|int>|Closure  $values  Option keys that should be rendered as disabled.
+     */
+    public function disabledOptions(array|Closure $values): static
+    {
+        $this->disabledOptionValues = $values;
 
         return $this;
     }
@@ -190,6 +203,14 @@ class Select extends Field
     public function isAllowHtml(): bool
     {
         return $this->allowHtml;
+    }
+
+    /**
+     * @return array<string|int>
+     */
+    public function getDisabledOptionValues(): array
+    {
+        return $this->evaluate($this->disabledOptionValues);
     }
 
     public function getRelationship(): ?string

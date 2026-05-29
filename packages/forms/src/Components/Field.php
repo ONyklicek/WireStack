@@ -31,4 +31,35 @@ abstract class Field extends Component implements HasValidation
     use HasPlaceholder;
     use HasPrefixAndSuffix;
     use HasTooltip;
+
+    /**
+     * Default debounce for live text fields (ms) — prevents DOM morph from
+     * overwriting a partially-typed value when a Livewire response arrives
+     * mid-keystroke.
+     */
+    protected int $defaultLiveDebounce = 250;
+
+    public function getDebounceModifier(): string
+    {
+        if ($this->debounce !== null) {
+            return ".debounce.{$this->debounce}ms";
+        }
+
+        if ($this->isLive) {
+            return ".debounce.{$this->defaultLiveDebounce}ms";
+        }
+
+        return '';
+    }
+
+    /**
+     * Return the StateHydrator type hint for this field.
+     *
+     * Used when hydrating incoming state so raw request values are cast
+     * to the correct PHP type before being stored in the StateContainer.
+     */
+    public function getStateType(): string
+    {
+        return 'string';
+    }
 }

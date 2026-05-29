@@ -1,9 +1,9 @@
 {{-- Halt Modal (Dynamic Confirmation from Action) - uses wire-core confirmation component --}}
-@if($component->showHaltModal ?? false)
+@if($component->tableState->get('modal.halt.show'))
     @php $haltModal = $component->getHaltModalData(); @endphp
 
     <x-wire-modals::confirmation
-        wire:model="showHaltModal"
+        wire:model="tableState.modal.halt.show"
         wire:click="submitHaltModal"
         :heading="$haltModal['heading'] ?? null"
         :description="$haltModal['description'] ?? null"

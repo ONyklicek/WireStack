@@ -98,10 +98,10 @@ final class RelationshipSaveHandler
             }
         }
 
-        // Delete removed items — use fresh query
+        // Delete removed items individually to fire model events and respect SoftDeletes
         $toDelete = array_diff($existingIds, $keptIds);
         if (! empty($toDelete)) {
-            $record->{$relationName}()->whereIn($primaryKey, $toDelete)->delete();
+            $record->{$relationName}()->whereIn($primaryKey, $toDelete)->get()->each->delete();
         }
     }
 }

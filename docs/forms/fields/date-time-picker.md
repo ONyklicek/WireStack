@@ -62,22 +62,28 @@ DateTimePicker::make('date')
 
 ## Methods
 
-| Method | Description |
-|--------|-------------|
-| `mode(string)` | Set mode: `date`, `time`, `datetime` |
-| `asDate()` | Alias for `mode('date')` |
-| `asTime()` | Alias for `mode('time')` |
-| `asDateTime()` | Alias for `mode('datetime')` |
-| `format(string)` | Storage format (Carbon compatible) |
-| `displayFormat(string)` | Display format |
-| `minDate(string)` | Minimum selectable date |
-| `maxDate(string)` | Maximum selectable date |
-| `disabledDates(array)` | Dates that cannot be selected |
-| `firstDayOfWeek(int)` | 0=Sunday, 1=Monday |
-| `closeOnDateSelection()` | Close picker after date selection |
-| `withSeconds()` | Show seconds in time picker |
-| `hoursStep(int)` | Hour increment step |
-| `minutesStep(int)` | Minute increment step |
-| `secondsStep(int)` | Second increment step |
-| `timezone(string)` | Timezone for display |
-| `native()` | Use browser native picker |
+| Method | Type | Description |
+|--------|------|-------------|
+| `mode(string)` | string | Set mode: `date`, `time`, `datetime` |
+| `asDate()` | — | Alias for `mode('date')` |
+| `asTime()` | — | Alias for `mode('time')` |
+| `asDateTime()` | — | Alias for `mode('datetime')` |
+| `format(string)` | string | Storage format (Carbon compatible) |
+| `displayFormat(string)` | string | Display format shown to the user |
+| `minDate(string\|Closure)` | string | Minimum selectable date |
+| `maxDate(string\|Closure)` | string | Maximum selectable date |
+| `disabledDates(array\|Closure)` | array | Dates that cannot be selected |
+| `firstDayOfWeek(int)` | int | 0=Sunday, 1=Monday |
+| `closeOnDateSelection()` | bool | Close picker after a date is selected |
+| `withSeconds()` | bool | Show seconds column in time picker |
+| `hoursStep(int)` | int | Hour increment step |
+| `minutesStep(int)` | int | Minute increment step |
+| `secondsStep(int)` | int | Second increment step |
+| `timezone(string)` | string | Timezone used for display |
+| `native()` | bool | Use the browser-native picker |
+| `disabled(bool\|Closure)` | bool | Disable the picker |
+| `readOnly(bool\|Closure)` | bool | Read-only mode |
+| `required()` | — | Mark as required |
+| `live()` | — | Trigger Livewire update on change |
+
+See [Common Field API](index.md#common-field-api) for label, hint, tooltip, and other shared methods.

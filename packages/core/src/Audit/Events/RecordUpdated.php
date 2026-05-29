@@ -39,12 +39,12 @@ final readonly class RecordUpdated implements AuditableEvent
         return $this->record->getKey();
     }
 
-    public function getOldValues(): ?array
+    public function getOldValues(): array
     {
         return $this->oldValues;
     }
 
-    public function getNewValues(): ?array
+    public function getNewValues(): array
     {
         return $this->newValues;
     }

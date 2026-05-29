@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Forms;
 
 use InvalidArgumentException;
+use Livewire\Component;
 use ReflectionMethod;
 use ReflectionNamedType;
 
 /**
+ * @phpstan-require-extends Component
+ *
  * Livewire trait for form integration.
  *
  * Supports single form ($this->form) and multi-form ($this->profileForm).

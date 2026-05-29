@@ -201,7 +201,7 @@ class TableExport
         }
 
         if ($this->modifyQueryCallback) {
-            $query = call_user_func($this->modifyQueryCallback, $query) ?? $query;
+            $query = ($this->modifyQueryCallback)($query) ?? $query;
         }
 
         // Filter to only visible columns

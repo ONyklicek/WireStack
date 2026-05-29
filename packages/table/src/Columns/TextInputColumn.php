@@ -326,7 +326,7 @@ class TextInputColumn extends Column
     public function getRules(Model $record): array
     {
         if ($this->rules instanceof Closure) {
-            return call_user_func($this->rules, $record);
+            return ($this->rules)($record);
         }
 
         return $this->rules ?? [];
@@ -474,7 +474,7 @@ class TextInputColumn extends Column
         }
 
         if ($this->beforeSaveFormatter) {
-            $value = call_user_func($this->beforeSaveFormatter, $value, $record);
+            $value = ($this->beforeSaveFormatter)($value, $record);
         }
 
         return $value;
@@ -578,7 +578,7 @@ class TextInputColumn extends Column
         }
 
         if ($this->afterLoadFormatter) {
-            $value = call_user_func($this->afterLoadFormatter, $value, $record);
+            $value = ($this->afterLoadFormatter)($value, $record);
         }
 
         return $value;
@@ -620,7 +620,7 @@ class TextInputColumn extends Column
     public function isDisabled(Model $record): bool
     {
         if ($this->disabledCallback) {
-            return call_user_func($this->disabledCallback, $record);
+            return ($this->disabledCallback)($record);
         }
 
         return $this->disabled;
@@ -629,7 +629,7 @@ class TextInputColumn extends Column
     public function isReadonly(Model $record): bool
     {
         if ($this->readonlyCallback) {
-            return call_user_func($this->readonlyCallback, $record);
+            return ($this->readonlyCallback)($record);
         }
 
         return $this->readonly;
@@ -651,7 +651,7 @@ class TextInputColumn extends Column
     public function formatForDisplay(mixed $value, Model $record): string
     {
         if ($this->displayFormatter) {
-            return (string) call_user_func($this->displayFormatter, $value, $record);
+            return (string) ($this->displayFormatter)($value, $record);
         }
 
         // Format number for readonly display

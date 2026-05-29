@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Concerns\HasAuthorization;
+use NyonCode\WireForms\Components\TextInput;
 
 /** @phpstan-consistent-constructor */
 class Filter implements Htmlable
@@ -144,7 +145,7 @@ class Filter implements Htmlable
         }
 
         if ($this->queryCallback) {
-            return call_user_func($this->queryCallback, $query, $value);
+            return ($this->queryCallback)($query, $value);
         }
 
         // If filter has a relation, it should be handled by WithTable::applyFilters
@@ -203,10 +204,41 @@ class Filter implements Htmlable
             return '';
         }
 
-        return view($this->resolveFilterView('tables.filters.text'), [
+        return view($this->resolveFilterView('tables.filters.form-field'), [
             'filter' => $this,
             'value' => $value,
         ])->render();
+    }
+
+    /**
+     * Extract the value to compare against from raw filter state.
+     *
+     * Single-field filters store state as {value: 'x'} and unwrap to 'x'.
+     * Multi-field filters (NumberRange {min, max}, DateFilter range {from, to})
+     * keep the full array. Plain scalar inputs are returned as-is so programmatic
+     * callers (and tests) can pass raw values without wrapping.
+     */
+    public function extractValue(mixed $raw): mixed
+    {
+        if (is_array($raw) && array_key_exists('value', $raw)) {
+            return $raw['value'];
+        }
+
+        return $raw;
+    }
+
+    /**
+     * Inverse of extractValue(): wrap a default/programmatic value into the
+     * state shape used by the form-field wire:model paths. Multi-field filters
+     * override this since their state is already a keyed array.
+     */
+    public function wrapValue(mixed $value): mixed
+    {
+        if (is_array($value) && array_key_exists('value', $value)) {
+            return $value;
+        }
+
+        return ['value' => $value];
     }
 
     /**
@@ -235,7 +267,7 @@ class Filter implements Htmlable
     public function isHidden(): bool
     {
         if ($this->hiddenCallback) {
-            return call_user_func($this->hiddenCallback);
+            return ($this->hiddenCallback)();
         }
 
         return $this->hidden;
@@ -259,5 +291,22 @@ class Filter implements Htmlable
     public function getPlaceholder(): ?string
     {
         return $this->placeholder ?? Trans::get('wire-table::messages.select_placeholder');
+    }
+
+    /**
+     * Return the form field component(s) used to render this filter.
+     *
+     * Wire:model binding paths are relative to tableState.filters.{name}.
+     * The base implementation returns a single text input named "value",
+     * matching the {value: 'x'} state shape used by extractValue().
+     *
+     * @return array<int, mixed>
+     */
+    public function getFormFields(): array
+    {
+        return [
+            TextInput::make('value')
+                ->placeholder($this->placeholder ?? ''),
+        ];
     }
 }

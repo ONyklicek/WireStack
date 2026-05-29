@@ -7,6 +7,7 @@ namespace NyonCode\WireTable\Filters;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireForms\Components\DateTimePicker;
 
 class DateFilter extends Filter
 {
@@ -91,7 +92,7 @@ class DateFilter extends Filter
         }
 
         if ($this->queryCallback) {
-            return call_user_func($this->queryCallback, $query, $value);
+            return ($this->queryCallback)($query, $value);
         }
 
         $column = $this->getColumn();
@@ -111,15 +112,49 @@ class DateFilter extends Filter
         return $query->whereDate($column, $value);
     }
 
+    public function getFormFields(): array
+    {
+        if ($this->range) {
+            return [
+                DateTimePicker::make('from')
+                    ->asDate()
+                    ->placeholder($this->getFromLabel())
+                    ->minDate($this->minDate)
+                    ->maxDate($this->maxDate),
+                DateTimePicker::make('to')
+                    ->asDate()
+                    ->placeholder($this->getToLabel())
+                    ->minDate($this->minDate)
+                    ->maxDate($this->maxDate),
+            ];
+        }
+
+        return [
+            DateTimePicker::make('value')
+                ->asDate()
+                ->minDate($this->minDate)
+                ->maxDate($this->maxDate),
+        ];
+    }
+
     public function render(mixed $value = null): string
     {
         if (! $this->canView()) {
             return '';
         }
 
-        return view($this->resolveFilterView('tables.filters.date'), [
+        return view($this->resolveFilterView('tables.filters.form-field'), [
             'filter' => $this,
             'value' => $value,
         ])->render();
+    }
+
+    public function wrapValue(mixed $value): mixed
+    {
+        if ($this->range) {
+            return $value;
+        }
+
+        return parent::wrapValue($value);
     }
 }

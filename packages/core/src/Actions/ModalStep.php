@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Actions;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
  * ModalStep - Defines a step in a multi-step modal wizard.
@@ -68,9 +69,9 @@ class ModalStep
         return $this;
     }
 
-    public function icon(?string $icon): static
+    public function icon(string|Icon|null $icon): static
     {
-        $this->icon = $icon;
+        $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
 
         return $this;
     }
@@ -157,7 +158,7 @@ class ModalStep
     public function getSchema(mixed $context = null): array
     {
         if ($this->schemaCallback && $context) {
-            return call_user_func($this->schemaCallback, $context);
+            return ($this->schemaCallback)($context);
         }
 
         return $this->schema;
@@ -169,7 +170,7 @@ class ModalStep
     public function getValidation(mixed $context = null): array
     {
         if ($this->validationCallback && $context) {
-            return call_user_func($this->validationCallback, $context);
+            return ($this->validationCallback)($context);
         }
 
         return $this->validation ?? [];

@@ -18,7 +18,7 @@
             <input
                 type="number"
                 id="filter-{{ $name }}-min"
-                wire:model.live.debounce.500ms="tableFilters.{{ $name }}.min"
+                wire:model.live.debounce.500ms="tableState.filters.{{ $name }}.min"
                 value="{{ $fromValue }}"
                 @if($minValue !== null) min="{{ $minValue }}" @endif
                 @if($maxValue !== null) max="{{ $maxValue }}" @endif
@@ -33,7 +33,7 @@
             <input
                 type="number"
                 id="filter-{{ $name }}-max"
-                wire:model.live.debounce.500ms="tableFilters.{{ $name }}.max"
+                wire:model.live.debounce.500ms="tableState.filters.{{ $name }}.max"
                 value="{{ $toValue }}"
                 @if($minValue !== null) min="{{ $minValue }}" @endif
                 @if($maxValue !== null) max="{{ $maxValue }}" @endif

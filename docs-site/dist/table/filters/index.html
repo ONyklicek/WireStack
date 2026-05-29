@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en" data-search-index="../../search-index.json">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Filters | Wire Docs</title>
+    <meta name="description" content="Wire Table provides 4 built-in filter types plus the ability to build custom filters. Filters live in the filter bar above the table and persist in Livewire state via $tableFilters.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../../assets/site.css">
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem('wire-docs-theme');
+                var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+    <script defer src="../../assets/site.js"></script>
+</head>
+<body class="docs-body">
+    <div class="site-shell">
+        <aside class="site-sidebar" data-sidebar>
+            <div class="sidebar-header">
+                <a class="brand-link" href="../../">
+                    <span class="brand-mark">W</span>
+                    <span class="brand-name">WireStack<span class="brand-badge">Docs</span></span>
+                </a>
+                <button class="icon-button sidebar-close" type="button" data-nav-close aria-label="Close navigation" style="display:none">×</button>
+            </div>
+
+            <nav class="sidebar-nav">
+                                    <section class="nav-section">
+                        <h2>Start Here</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../documentation/">
+                                        Wire Documentation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../getting-started/">
+                                        Getting Started                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../project-map/">
+                                        Project Map                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../configuration/">
+                                        Configuration                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../authorization/">
+                                        Authorization                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Forms</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../forms/overview/">
+                                        Wire Forms                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/validation/">
+                                        Form Validation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/save-lifecycle/">
+                                        Save Lifecycle                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Fields</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/">
+                                        Form Fields                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/alert/">
+                                        Alert                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/belongs-to-select/">
+                                        BelongsToSelect                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/checkbox/">
+                                        Checkbox                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/checkbox-list/">
+                                        CheckboxList                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/code-editor/">
+                                        CodeEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/color-picker/">
+                                        ColorPicker                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/date-time-picker/">
+                                        DateTimePicker                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/fieldset/">
+                                        Fieldset                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/file-upload/">
+                                        FileUpload                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/grid/">
+                                        Grid                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/hidden/">
+                                        Hidden                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/html/">
+                                        Html                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/key-value/">
+                                        KeyValue                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/markdown-editor/">
+                                        MarkdownEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/morph-to-select/">
+                                        MorphToSelect                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/otp-input/">
+                                        OtpInput                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/placeholder/">
+                                        Placeholder                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/radio/">
+                                        Radio                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/rating/">
+                                        Rating                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/repeater/">
+                                        Repeater                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/rich-editor/">
+                                        RichEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/section/">
+                                        Section                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/select/">
+                                        Select                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/slider/">
+                                        Slider                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/tags/">
+                                        Tags                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/textarea/">
+                                        Textarea                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/text-input/">
+                                        TextInput                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/tiptap-editor/">
+                                        TiptapEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/toggle/">
+                                        Toggle                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/view-field/">
+                                        ViewField                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Table</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../overview/">
+                                        Wire Table                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../columns/">
+                                        Columns                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="is-active" href="./">
+                                        Filters                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../actions/">
+                                        Table Actions                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../exports/">
+                                        Table Exports                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../sub-rows/">
+                                        Sub-Rows                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../notifications/">
+                                        Table Notifications                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../advanced/">
+                                        Advanced Features                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Sortable</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../sortable/overview/">
+                                        Introduction                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/installation/">
+                                        Installation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/row-sorting/">
+                                        Row Reordering                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/column-sorting/">
+                                        Column Reordering                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/customization/">
+                                        Customization                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/advanced/">
+                                        Advanced Usage                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/api-reference/">
+                                        API Reference                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Core</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../core/actions/">
+                                        Actions                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/foundation/">
+                                        Foundation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/notifications/">
+                                        Notifications                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/modals/">
+                                        Modals                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/widgets/">
+                                        Widgets                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/plugins/">
+                                        Core Plugins                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/audit/">
+                                        Audit Log                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                            </nav>
+        </aside>
+
+        <div class="site-overlay" data-nav-close></div>
+
+        <main class="site-main">
+            <header class="topbar">
+                <button class="nav-toggle" type="button" data-nav-toggle aria-label="Open navigation">
+                    <span></span><span></span><span></span>
+                </button>
+
+                <div class="search-shell" data-search-root>
+                    <input
+                        type="search"
+                        class="search-input"
+                        placeholder="Search documentation…"
+                        autocomplete="off"
+                        spellcheck="false"
+                        data-search-input
+                    >
+                    <span class="search-kbd"><kbd>⌘</kbd><kbd>K</kbd></span>
+                    <div class="search-results" data-search-results hidden></div>
+                </div>
+
+                <div class="topbar-actions">
+                    <button class="icon-button theme-toggle" type="button" data-theme-toggle aria-label="Toggle theme">
+                        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                    </button>
+                    <a class="icon-button" href="https://github.com/ONyklicek/WireStack" target="_blank" rel="noreferrer" aria-label="GitHub repository">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2c-3.2.7-3.88-1.54-3.88-1.54-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.56-.29-5.26-1.28-5.26-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.18 1.18a11.02 11.02 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.58.23 2.75.12 3.04.74.81 1.18 1.83 1.18 3.09 0 4.42-2.7 5.39-5.28 5.68.42.36.79 1.06.79 2.14v3.17c0 .31.21.68.8.56A11.52 11.52 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5Z"/></svg>
+                    </a>
+                </div>
+            </header>
+
+            <div class="page-body">
+                <div class="content-shell">
+                    <article class="docs-article">
+                        <div class="page-hero">
+                            <nav class="breadcrumb" aria-label="Breadcrumb">
+                                <a href="../../">Docs</a>
+                                <span class="sep">/</span>
+                                <span class="current">Table</span>
+                            </nav>
+                            <p class="eyebrow">Table</p>
+                            <h1>Filters</h1>
+                                                            <p class="lead">Wire Table provides 4 built-in filter types plus the ability to build custom filters. Filters live in the filter bar above the table and persist in Livewire state via $tableFilters.</p>
+                            
+                            
+                                                                                </div>
+
+                        
+<p>Wire Table provides 4 built-in filter types plus the ability to build custom filters. Filters live in the filter bar above the table and persist in Livewire state via <code>$tableFilters</code>.</p>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#filter-flow">Filter Flow</a></li>
+<li><a href="#shared-filter-api">Shared Filter API</a></li>
+<li><a href="#selectfilter">SelectFilter</a></li>
+<li><a href="#datefilter">DateFilter</a></li>
+<li><a href="#numberrangefilter">NumberRangeFilter</a></li>
+<li><a href="#ternaryfilter">TernaryFilter</a></li>
+<li><a href="#column-level-filters">Column-Level Filters</a></li>
+<li><a href="#custom-filter-class">Custom Filter Class</a></li>
+<li><a href="#patterns--recipes">Patterns &amp; Recipes</a></li>
+</ol>
+<hr>
+<h2 id="filter-flow">Filter Flow</h2>
+<pre><code>Table::filters([...])
+│
+├── Render: Filter components in sidebar/header bar
+│   └── Each filter renders its own Blade view
+│
+├── State: $tableFilters array ['name' =&gt; 'value', ...]
+│   └── Persisted in Livewire component state
+│
+└── Apply: When state changes
+    ├── Each filter's apply() or query() callback is called
+    ├── Conditions added to Eloquent Builder
+    └── Table re-queries with filters applied
+</code></pre>
+<p>Filter application flows through the Core <code>ApplyFilters</code> pipe in the QueryExecutor pipeline.</p>
+<hr>
+<h2 id="shared-filter-api">Shared Filter API</h2>
+<p>Every filter inherits from the base <code>Filter</code> class (289 lines).</p>
+<h3 id="factory-identity">Factory &amp; Identity</h3>
+<pre><code class="language-php">Filter::make(string $name)           // static factory
+-&gt;label(string|Closure $label)        // display label (auto-generated from name)
+-&gt;getName(): string
+-&gt;getLabel(): string
+</code></pre>
+<h3 id="column-binding">Column Binding</h3>
+<pre><code class="language-php">-&gt;column(string $column)             // DB column to filter on (defaults to $name)
+-&gt;getColumn(): string
+</code></pre>
+<p>When <code>column()</code> is not called, the filter uses its <code>$name</code> as the database column.</p>
+<h3 id="custom-query-logic">Custom Query Logic</h3>
+<pre><code class="language-php">-&gt;query(Closure $fn)                 // custom query callback
+</code></pre>
+<p>The callback signature: <code>function (Builder $query, mixed $value): void</code></p>
+<pre><code class="language-php">SelectFilter::make('activity_level')
+    -&gt;options([...])
+    -&gt;query(function (Builder $query, string $value) {
+        match ($value) {
+            'active' =&gt; $query-&gt;where('last_active_at', '&gt;=', now()-&gt;subDays(7)),
+            'inactive' =&gt; $query-&gt;where('last_active_at', '&lt;', now()-&gt;subDays(30)),
+            'new' =&gt; $query-&gt;where('created_at', '&gt;=', now()-&gt;subDays(7)),
+        };
+    })
+</code></pre>
+<h3 id="visibility-permissions">Visibility &amp; Permissions</h3>
+<pre><code class="language-php">-&gt;hidden(bool|Closure $hidden = true)
+-&gt;visible(bool|Closure $visible = true)
+-&gt;isHidden(): bool
+-&gt;permission(string $permission)     // visible only if user has permission
+</code></pre>
+<pre><code class="language-php">DateFilter::make('deleted_at')
+    -&gt;from()
+    -&gt;until()
+    -&gt;permission('view-deleted-records')
+
+SelectFilter::make('internal_status')
+    -&gt;options([...])
+    -&gt;visible(fn () =&gt; auth()-&gt;user()-&gt;is_admin)
+</code></pre>
+<h3 id="default-value">Default Value</h3>
+<pre><code class="language-php">-&gt;default(mixed $value)              // pre-selected on initial load
+-&gt;getDefault(): mixed
+</code></pre>
+<pre><code class="language-php">SelectFilter::make('status')
+    -&gt;options([...])
+    -&gt;default('active')              // "active" pre-selected
+</code></pre>
+<h3 id="multiple-selection">Multiple Selection</h3>
+<pre><code class="language-php">-&gt;multiple(bool $multiple = true)
+</code></pre>
+<p>When enabled, the filter accepts an array of values and applies <code>whereIn()</code>.</p>
+<h3 id="view-customization">View Customization</h3>
+<pre><code class="language-php">-&gt;view(string $view)                 // custom Blade view for the filter UI
+</code></pre>
+<hr>
+<h2 id="selectfilter">SelectFilter</h2>
+<p>Dropdown filter for predefined options. The most common filter type.</p>
+<pre><code class="language-php">use NyonCode\WireTable\Filters\SelectFilter;
+</code></pre>
+<h3 id="basic-usage">Basic Usage</h3>
+<pre><code class="language-php">SelectFilter::make('status')
+    -&gt;options([
+        'active' =&gt; 'Active',
+        'inactive' =&gt; 'Inactive',
+        'banned' =&gt; 'Banned',
+    ])
+</code></pre>
+<h3 id="with-placeholder">With Placeholder</h3>
+<p>The first item is always an empty "All" option. To customize:</p>
+<pre><code class="language-php">SelectFilter::make('role')
+    -&gt;options([
+        '' =&gt; 'All Roles',           // explicit placeholder
+        'admin' =&gt; 'Admin',
+        'editor' =&gt; 'Editor',
+        'viewer' =&gt; 'Viewer',
+    ])
+</code></pre>
+<h3 id="multiple-selection-2">Multiple Selection</h3>
+<pre><code class="language-php">SelectFilter::make('tags')
+    -&gt;options(Tag::pluck('name', 'id')-&gt;toArray())
+    -&gt;multiple()
+    -&gt;label('Tags')
+</code></pre>
+<p>When <code>multiple()</code>, applies <code>whereIn()</code> instead of <code>where()</code>.</p>
+<h3 id="searchable-dropdown">Searchable Dropdown</h3>
+<pre><code class="language-php">SelectFilter::make('country')
+    -&gt;options(Country::pluck('name', 'code')-&gt;toArray())
+    -&gt;searchable()
+    -&gt;label('Country')
+</code></pre>
+<p>Renders a searchable dropdown (Alpine.js powered) instead of native <code>&lt;select&gt;</code>.</p>
+<h3 id="native-html-select">Native HTML Select</h3>
+<pre><code class="language-php">SelectFilter::make('type')
+    -&gt;options([...])
+    -&gt;native()                       // native &lt;select&gt; element (faster render)
+</code></pre>
+<h3 id="from-database">From Database</h3>
+<pre><code class="language-php">SelectFilter::make('department')
+    -&gt;options(fn () =&gt; Department::orderBy('name')-&gt;pluck('name', 'id')-&gt;toArray())
+</code></pre>
+<p>Options can be a Closure — evaluated lazily on render.</p>
+<h3 id="custom-query">Custom Query</h3>
+<pre><code class="language-php">SelectFilter::make('has_avatar')
+    -&gt;options([
+        'yes' =&gt; 'With Avatar',
+        'no' =&gt; 'Without Avatar',
+    ])
+    -&gt;query(fn (Builder $query, string $value) =&gt; match($value) {
+        'yes' =&gt; $query-&gt;whereNotNull('avatar_url'),
+        'no' =&gt; $query-&gt;whereNull('avatar_url'),
+    })
+</code></pre>
+<h3 id="selectfilter-api">SelectFilter API</h3>
+<pre><code class="language-php">-&gt;options(array|Closure $options)    // ['value' =&gt; 'Label', ...]
+-&gt;multiple(bool $multiple = true)    // multi-select mode
+-&gt;searchable(bool $searchable = true) // searchable dropdown
+-&gt;native(bool $native = true)        // native &lt;select&gt;
+</code></pre>
+<hr>
+<h2 id="datefilter">DateFilter</h2>
+<p>Date filter with single date or date range mode. Renders native date input(s).</p>
+<pre><code class="language-php">use NyonCode\WireTable\Filters\DateFilter;
+</code></pre>
+<h3 id="single-date">Single Date</h3>
+<pre><code class="language-php">DateFilter::make('created_at')
+// Applies: WHERE created_at = '2024-01-15'
+</code></pre>
+<h3 id="date-range-from-until">Date Range (From/Until)</h3>
+<pre><code class="language-php">DateFilter::make('created_at')
+    -&gt;from()
+    -&gt;until()
+// Renders two date inputs: "From" and "Until"
+// Applies: WHERE created_at &gt;= '2024-01-01' AND created_at &lt;= '2024-01-31'
+</code></pre>
+<h3 id="only-from-or-only-until">Only "From" or Only "Until"</h3>
+<pre><code class="language-php">// Only "from" — open-ended upper bound
+DateFilter::make('published_after')
+    -&gt;column('published_at')
+    -&gt;from()
+// Applies: WHERE published_at &gt;= value
+
+// Only "until" — open-ended lower bound
+DateFilter::make('expires_before')
+    -&gt;column('expires_at')
+    -&gt;until()
+// Applies: WHERE expires_at &lt;= value
+</code></pre>
+<h3 id="custom-labels">Custom Labels</h3>
+<pre><code class="language-php">DateFilter::make('period')
+    -&gt;column('created_at')
+    -&gt;from()
+    -&gt;until()
+    -&gt;fromLabel('Created after')
+    -&gt;untilLabel('Created before')
+</code></pre>
+<h3 id="date-constraints">Date Constraints</h3>
+<pre><code class="language-php">DateFilter::make('birth_date')
+    -&gt;minDate('1900-01-01')
+    -&gt;maxDate(now()-&gt;format('Y-m-d'))
+</code></pre>
+<h3 id="datefilter-api">DateFilter API</h3>
+<pre><code class="language-php">-&gt;from(bool $from = true)           // enable "from" date input
+-&gt;until(bool $until = true)         // enable "until" date input
+-&gt;fromLabel(string $label)          // label for "from" input (default: 'From')
+-&gt;untilLabel(string $label)         // label for "until" input (default: 'Until')
+-&gt;minDate(string $date)             // min selectable date
+-&gt;maxDate(string $date)             // max selectable date
+</code></pre>
+<h3 id="range-behavior">Range Behavior</h3>
+<table>
+<thead>
+<tr>
+<th>from</th>
+<th>until</th>
+<th>Condition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>set</td>
+<td>null</td>
+<td><code>WHERE column &gt;= from</code></td>
+</tr>
+<tr>
+<td>null</td>
+<td>set</td>
+<td><code>WHERE column &lt;= until</code></td>
+</tr>
+<tr>
+<td>set</td>
+<td>set</td>
+<td><code>WHERE column &gt;= from AND column &lt;= until</code></td>
+</tr>
+<tr>
+<td>null</td>
+<td>null</td>
+<td>No filter applied</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="numberrangefilter">NumberRangeFilter</h2>
+<p>Numeric range filter with min/max inputs. Renders two number inputs.</p>
+<pre><code class="language-php">use NyonCode\WireTable\Filters\NumberRangeFilter;
+</code></pre>
+<h3 id="basic-usage-2">Basic Usage</h3>
+<pre><code class="language-php">NumberRangeFilter::make('price')
+    -&gt;min(0)
+    -&gt;max(10000)
+    -&gt;step(0.01)
+</code></pre>
+<h3 id="integer-range">Integer Range</h3>
+<pre><code class="language-php">NumberRangeFilter::make('age')
+    -&gt;min(18)
+    -&gt;max(100)
+    -&gt;step(1)
+</code></pre>
+<h3 id="custom-labels-2">Custom Labels</h3>
+<pre><code class="language-php">NumberRangeFilter::make('salary')
+    -&gt;min(0)
+    -&gt;max(500000)
+    -&gt;step(1000)
+    -&gt;minLabel('Minimum Salary')
+    -&gt;maxLabel('Maximum Salary')
+</code></pre>
+<h3 id="range-behavior-2">Range Behavior</h3>
+<table>
+<thead>
+<tr>
+<th>min</th>
+<th>max</th>
+<th>Condition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>set</td>
+<td>null</td>
+<td><code>WHERE column &gt;= min</code></td>
+</tr>
+<tr>
+<td>null</td>
+<td>set</td>
+<td><code>WHERE column &lt;= max</code></td>
+</tr>
+<tr>
+<td>set</td>
+<td>set</td>
+<td><code>WHERE column &gt;= min AND column &lt;= max</code></td>
+</tr>
+<tr>
+<td>null</td>
+<td>null</td>
+<td>No filter applied</td>
+</tr>
+</tbody>
+</table>
+<h3 id="numberrangefilter-api">NumberRangeFilter API</h3>
+<pre><code class="language-php">-&gt;min(float $min)                    // minimum allowed value
+-&gt;max(float $max)                    // maximum allowed value
+-&gt;step(float $step)                  // input step increment
+-&gt;minLabel(string $label)            // label for min input (default: 'Min')
+-&gt;maxLabel(string $label)            // label for max input (default: 'Max')
+</code></pre>
+<hr>
+<h2 id="ternaryfilter">TernaryFilter</h2>
+<p>Three-state filter: Yes / No / All. Perfect for boolean columns and "has/doesn't have" relationships.</p>
+<pre><code class="language-php">use NyonCode\WireTable\Filters\TernaryFilter;
+</code></pre>
+<h3 id="basic-boolean">Basic Boolean</h3>
+<pre><code class="language-php">TernaryFilter::make('is_active')
+// Shows: All | Yes | No
+// Yes: WHERE is_active = 1
+// No: WHERE is_active = 0
+</code></pre>
+<h3 id="nullable-column">Nullable Column</h3>
+<pre><code class="language-php">TernaryFilter::make('email_verified_at')
+    -&gt;nullable()
+// Yes: WHERE email_verified_at IS NOT NULL
+// No: WHERE email_verified_at IS NULL
+</code></pre>
+<h3 id="custom-labels-3">Custom Labels</h3>
+<pre><code class="language-php">TernaryFilter::make('verified')
+    -&gt;label('Verification Status')
+    -&gt;trueLabel('Verified Only')
+    -&gt;falseLabel('Unverified Only')
+</code></pre>
+<h3 id="custom-query-logic-2">Custom Query Logic</h3>
+<pre><code class="language-php">TernaryFilter::make('has_orders')
+    -&gt;label('Has Orders')
+    -&gt;trueQuery(fn (Builder $query) =&gt; $query-&gt;has('orders'))
+    -&gt;falseQuery(fn (Builder $query) =&gt; $query-&gt;doesntHave('orders'))
+</code></pre>
+<pre><code class="language-php">TernaryFilter::make('overdue')
+    -&gt;label('Overdue')
+    -&gt;trueQuery(fn (Builder $query) =&gt; $query-&gt;where('due_at', '&lt;', now()))
+    -&gt;falseQuery(fn (Builder $query) =&gt; $query-&gt;where('due_at', '&gt;=', now()))
+</code></pre>
+<h3 id="ternaryfilter-api">TernaryFilter API</h3>
+<pre><code class="language-php">-&gt;trueLabel(string $label)          // default: 'Yes'
+-&gt;falseLabel(string $label)         // default: 'No'
+-&gt;nullable(bool $nullable = true)   // treat as IS NULL / IS NOT NULL
+-&gt;trueQuery(Closure $fn)            // custom query for "Yes"
+-&gt;falseQuery(Closure $fn)           // custom query for "No"
+</code></pre>
+<h3 id="state-values">State Values</h3>
+<table>
+<thead>
+<tr>
+<th>UI State</th>
+<th>Internal Value</th>
+<th>Default Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>All</td>
+<td><code>null</code></td>
+<td>No filter</td>
+</tr>
+<tr>
+<td>Yes</td>
+<td><code>true</code></td>
+<td><code>WHERE column = 1</code> or <code>IS NOT NULL</code> (if nullable)</td>
+</tr>
+<tr>
+<td>No</td>
+<td><code>false</code></td>
+<td><code>WHERE column = 0</code> or <code>IS NULL</code> (if nullable)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="filtering-by-relationships">Filtering by Relationships</h2>
+<p>Use <code>-&gt;query()</code> with <code>whereHas()</code> to filter by related model attributes:</p>
+<pre><code class="language-php">// BelongsTo — filter by related model
+SelectFilter::make('category')
+    -&gt;options(Category::orderBy('name')-&gt;pluck('name', 'id')-&gt;toArray())
+    -&gt;query(fn (Builder $query, string $value) =&gt;
+        $query-&gt;whereHas('category', fn ($q) =&gt; $q-&gt;where('id', $value))
+    )
+
+// BelongsToMany
+SelectFilter::make('tags')
+    -&gt;options(Tag::orderBy('name')-&gt;pluck('name', 'id')-&gt;toArray())
+    -&gt;multiple()
+    -&gt;query(fn (Builder $query, array $values) =&gt;
+        $query-&gt;whereHas('tags', fn ($q) =&gt; $q-&gt;whereIn('id', $values))
+    )
+
+// HasMany (existence) — use TernaryFilter
+TernaryFilter::make('has_comments')
+    -&gt;label('Has Comments')
+    -&gt;trueQuery(fn ($q) =&gt; $q-&gt;has('comments'))
+    -&gt;falseQuery(fn ($q) =&gt; $q-&gt;doesntHave('comments'))
+</code></pre>
+<hr>
+<h2 id="column-level-filters">Column-Level Filters</h2>
+<p>In addition to dedicated filter components, any column can have an inline filter directly in its header cell. See <a href="../columns/#column-level-filtering">Columns — Column-Level Filtering</a>.</p>
+<pre><code class="language-php">TextColumn::make('status')
+    -&gt;filterable()
+    -&gt;filterAsSelect(['active' =&gt; 'Active', 'inactive' =&gt; 'Inactive'])
+
+TextColumn::make('price')
+    -&gt;filterable()
+    -&gt;filterAsNumberRange()
+    -&gt;filterMinValue(0)
+    -&gt;filterMaxValue(10000)
+
+TextColumn::make('created_at')
+    -&gt;filterable()
+    -&gt;filterAsDateRange()
+</code></pre>
+<p>Column filters use the <code>$columnFilters</code> Livewire property (separate from <code>$tableFilters</code>).</p>
+<hr>
+<h2 id="custom-filter-class">Custom Filter Class</h2>
+<p>For reusable, complex filters, extend the base <code>Filter</code> class.</p>
+<h3 id="skeleton">Skeleton</h3>
+<pre><code class="language-php">namespace App\Wire\Filters;
+
+use NyonCode\WireTable\Filters\Filter;
+use Illuminate\Database\Eloquent\Builder;
+
+class MyFilter extends Filter
+{
+    // Custom properties
+    protected string $myOption = 'default';
+
+    // Fluent setter
+    public function myOption(string $value): static
+    {
+        $this-&gt;myOption = $value;
+        return $this;
+    }
+
+    // Getter (for Blade view)
+    public function getMyOption(): string
+    {
+        return $this-&gt;myOption;
+    }
+
+    // Override apply logic
+    public function apply(Builder $query, mixed $value): Builder
+    {
+        if (empty($value)) {
+            return $query;
+        }
+
+        // Your custom query logic
+        return $query-&gt;where(...);
+    }
+
+    // Custom Blade view (optional)
+    public function getView(): string
+    {
+        return 'filters.my-filter';
+    }
+}
+</code></pre>
+<h3 id="example-json-contains-filter">Example: JSON Contains Filter</h3>
+<pre><code class="language-php">namespace App\Wire\Filters;
+
+use NyonCode\WireTable\Filters\Filter;
+use Illuminate\Database\Eloquent\Builder;
+
+class JsonContainsFilter extends Filter
+{
+    protected string $jsonPath = '';
+
+    public function jsonPath(string $path): static
+    {
+        $this-&gt;jsonPath = $path;
+        return $this;
+    }
+
+    public function apply(Builder $query, mixed $value): Builder
+    {
+        if (empty($value)) {
+            return $query;
+        }
+
+        $column = $this-&gt;getColumn();
+
+        if ($this-&gt;jsonPath) {
+            return $query-&gt;whereJsonContains("{$column}-&gt;{$this-&gt;jsonPath}", $value);
+        }
+
+        return $query-&gt;whereJsonContains($column, $value);
+    }
+}
+</code></pre>
+<p>Usage:</p>
+<pre><code class="language-php">JsonContainsFilter::make('permissions')
+    -&gt;column('settings')
+    -&gt;jsonPath('permissions')
+    -&gt;options(['admin' =&gt; 'Admin', 'edit' =&gt; 'Edit', 'view' =&gt; 'View'])
+</code></pre>
+<h3 id="example-geo-radius-filter">Example: Geo Radius Filter</h3>
+<pre><code class="language-php">namespace App\Wire\Filters;
+
+use NyonCode\WireTable\Filters\Filter;
+use Illuminate\Database\Eloquent\Builder;
+
+class GeoRadiusFilter extends Filter
+{
+    protected float $defaultRadius = 10.0;
+    protected string $latColumn = 'latitude';
+    protected string $lngColumn = 'longitude';
+
+    public function radius(float $km): static
+    {
+        $this-&gt;defaultRadius = $km;
+        return $this;
+    }
+
+    public function coordinates(string $lat, string $lng): static
+    {
+        $this-&gt;latColumn = $lat;
+        $this-&gt;lngColumn = $lng;
+        return $this;
+    }
+
+    public function apply(Builder $query, mixed $value): Builder
+    {
+        if (empty($value['lat']) || empty($value['lng'])) {
+            return $query;
+        }
+
+        $lat = (float) $value['lat'];
+        $lng = (float) $value['lng'];
+        $radius = (float) ($value['radius'] ?? $this-&gt;defaultRadius);
+
+        // Haversine formula (returns km)
+        $haversine = "(6371 * acos(
+            cos(radians(?)) * cos(radians({$this-&gt;latColumn})) *
+            cos(radians({$this-&gt;lngColumn}) - radians(?)) +
+            sin(radians(?)) * sin(radians({$this-&gt;latColumn}))
+        ))";
+
+        return $query
+            -&gt;whereRaw("{$haversine} &lt;= ?", [$lat, $lng, $lat, $radius]);
+    }
+
+    public function getDefaultRadius(): float
+    {
+        return $this-&gt;defaultRadius;
+    }
+
+    public function getView(): string
+    {
+        return 'filters.geo-radius';
+    }
+}
+</code></pre>
+<h2 id="patterns-recipes">Patterns &amp; Recipes</h2>
+<h3 id="e-commerce-product-filters">E-commerce Product Filters</h3>
+<pre><code class="language-php">$table-&gt;filters([
+    SelectFilter::make('category')
+        -&gt;options(Category::orderBy('name')-&gt;pluck('name', 'id')-&gt;toArray())
+        -&gt;searchable()
+        -&gt;query(fn (Builder $q, string $v) =&gt; $q-&gt;whereHas('category', fn ($q) =&gt; $q-&gt;where('id', $v))),
+
+    SelectFilter::make('brand')
+        -&gt;options(Brand::orderBy('name')-&gt;pluck('name', 'id')-&gt;toArray())
+        -&gt;searchable()
+        -&gt;multiple(),
+
+    NumberRangeFilter::make('price')
+        -&gt;min(0)
+        -&gt;max(100000)
+        -&gt;step(100)
+        -&gt;minLabel('Min Price')
+        -&gt;maxLabel('Max Price'),
+
+    TernaryFilter::make('in_stock')
+        -&gt;label('Availability')
+        -&gt;trueLabel('In Stock')
+        -&gt;falseLabel('Out of Stock')
+        -&gt;trueQuery(fn ($q) =&gt; $q-&gt;where('stock_quantity', '&gt;', 0))
+        -&gt;falseQuery(fn ($q) =&gt; $q-&gt;where('stock_quantity', '&lt;=', 0)),
+
+    SelectFilter::make('rating')
+        -&gt;options([
+            '5' =&gt; '★★★★★',
+            '4' =&gt; '★★★★☆ and up',
+            '3' =&gt; '★★★☆☆ and up',
+        ])
+        -&gt;query(fn (Builder $q, string $v) =&gt; $q-&gt;where('avg_rating', '&gt;=', (int)$v)),
+
+    TernaryFilter::make('has_discount')
+        -&gt;label('Discounted')
+        -&gt;trueQuery(fn ($q) =&gt; $q-&gt;whereNotNull('discount_percent'))
+        -&gt;falseQuery(fn ($q) =&gt; $q-&gt;whereNull('discount_percent')),
+]);
+</code></pre>
+<h3 id="admin-user-filters">Admin User Filters</h3>
+<pre><code class="language-php">$table-&gt;filters([
+    SelectFilter::make('role')
+        -&gt;options(Role::pluck('display_name', 'name')-&gt;toArray())
+        -&gt;multiple(),
+
+    TernaryFilter::make('email_verified_at')
+        -&gt;label('Email Verified')
+        -&gt;nullable(),
+
+    DateFilter::make('created_at')
+        -&gt;from()
+        -&gt;until()
+        -&gt;fromLabel('Registered after')
+        -&gt;untilLabel('Registered before'),
+
+    TernaryFilter::make('two_factor_enabled')
+        -&gt;label('2FA Enabled'),
+
+    SelectFilter::make('last_activity')
+        -&gt;label('Activity')
+        -&gt;options([
+            'today' =&gt; 'Active today',
+            'week' =&gt; 'Active this week',
+            'month' =&gt; 'Active this month',
+            'inactive' =&gt; 'Inactive (30+ days)',
+        ])
+        -&gt;query(fn (Builder $q, string $v) =&gt; match($v) {
+            'today' =&gt; $q-&gt;whereDate('last_active_at', today()),
+            'week' =&gt; $q-&gt;where('last_active_at', '&gt;=', now()-&gt;subWeek()),
+            'month' =&gt; $q-&gt;where('last_active_at', '&gt;=', now()-&gt;subMonth()),
+            'inactive' =&gt; $q-&gt;where('last_active_at', '&lt;', now()-&gt;subMonth()),
+        }),
+]);
+</code></pre>
+<h3 id="order-management-filters">Order Management Filters</h3>
+<pre><code class="language-php">$table-&gt;filters([
+    SelectFilter::make('status')
+        -&gt;options([
+            'pending' =&gt; 'Pending',
+            'processing' =&gt; 'Processing',
+            'shipped' =&gt; 'Shipped',
+            'delivered' =&gt; 'Delivered',
+            'cancelled' =&gt; 'Cancelled',
+            'refunded' =&gt; 'Refunded',
+        ])
+        -&gt;multiple()
+        -&gt;default(['pending', 'processing']),   // pre-select active orders
+
+    DateFilter::make('ordered_at')
+        -&gt;from()
+        -&gt;until(),
+
+    NumberRangeFilter::make('total')
+        -&gt;min(0)
+        -&gt;max(1000000)
+        -&gt;step(100)
+        -&gt;minLabel('Min Total')
+        -&gt;maxLabel('Max Total'),
+
+    SelectFilter::make('payment_method')
+        -&gt;options([
+            'card' =&gt; 'Credit Card',
+            'bank' =&gt; 'Bank Transfer',
+            'cash' =&gt; 'Cash on Delivery',
+        ]),
+
+    TernaryFilter::make('has_notes')
+        -&gt;label('Has Notes')
+        -&gt;trueQuery(fn ($q) =&gt; $q-&gt;whereNotNull('notes')-&gt;where('notes', '!=', ''))
+        -&gt;falseQuery(fn ($q) =&gt; $q-&gt;where(fn ($q2) =&gt;
+            $q2-&gt;whereNull('notes')-&gt;orWhere('notes', '')
+        )),
+]);
+</code></pre>
+<h3 id="filter-with-dependent-options">Filter with Dependent Options</h3>
+<pre><code class="language-php">// Country → City cascade (requires Livewire re-render)
+SelectFilter::make('country')
+    -&gt;options(Country::pluck('name', 'id')-&gt;toArray())
+    -&gt;searchable(),
+
+SelectFilter::make('city')
+    -&gt;options(function () {
+        $countryId = $this-&gt;tableFilters['country'] ?? null;
+        if (! $countryId) {
+            return [];
+        }
+        return City::where('country_id', $countryId)-&gt;pluck('name', 'id')-&gt;toArray();
+    })
+    -&gt;searchable()
+    -&gt;visible(fn () =&gt; ! empty($this-&gt;tableFilters['country'])),
+</code></pre>
+
+                                                    <nav class="page-nav" aria-label="Pagination">
+                                                                    <a class="page-nav-link is-prev" href="../columns/">
+                                        <span>← Previous</span>
+                                        <strong>Columns</strong>
+                                    </a>
+                                
+                                                                    <a class="page-nav-link is-next" href="../actions/">
+                                        <span>Next →</span>
+                                        <strong>Table Actions</strong>
+                                    </a>
+                                                            </nav>
+                                            </article>
+
+                                            <aside class="page-toc">
+                            <p class="toc-title">On this page</p>
+                            <ul>
+                                                                    <li class="level-2">
+                                        <a href="#table-of-contents">
+                                            Table of Contents                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#filter-flow">
+                                            Filter Flow                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#shared-filter-api">
+                                            Shared Filter API                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#factory-identity">
+                                            Factory &amp; Identity                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#column-binding">
+                                            Column Binding                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#custom-query-logic">
+                                            Custom Query Logic                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#visibility-permissions">
+                                            Visibility &amp; Permissions                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#default-value">
+                                            Default Value                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#multiple-selection">
+                                            Multiple Selection                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#view-customization">
+                                            View Customization                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#selectfilter">
+                                            SelectFilter                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#basic-usage">
+                                            Basic Usage                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#with-placeholder">
+                                            With Placeholder                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#multiple-selection-2">
+                                            Multiple Selection                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#searchable-dropdown">
+                                            Searchable Dropdown                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#native-html-select">
+                                            Native HTML Select                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#from-database">
+                                            From Database                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#custom-query">
+                                            Custom Query                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#selectfilter-api">
+                                            SelectFilter API                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#datefilter">
+                                            DateFilter                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#single-date">
+                                            Single Date                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#date-range-from-until">
+                                            Date Range (From/Until)                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#only-from-or-only-until">
+                                            Only &quot;From&quot; or Only &quot;Until&quot;                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#custom-labels">
+                                            Custom Labels                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#date-constraints">
+                                            Date Constraints                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#datefilter-api">
+                                            DateFilter API                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#range-behavior">
+                                            Range Behavior                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#numberrangefilter">
+                                            NumberRangeFilter                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#basic-usage-2">
+                                            Basic Usage                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#integer-range">
+                                            Integer Range                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#custom-labels-2">
+                                            Custom Labels                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#range-behavior-2">
+                                            Range Behavior                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#numberrangefilter-api">
+                                            NumberRangeFilter API                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#ternaryfilter">
+                                            TernaryFilter                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#basic-boolean">
+                                            Basic Boolean                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#nullable-column">
+                                            Nullable Column                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#custom-labels-3">
+                                            Custom Labels                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#custom-query-logic-2">
+                                            Custom Query Logic                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#ternaryfilter-api">
+                                            TernaryFilter API                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#state-values">
+                                            State Values                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#filtering-by-relationships">
+                                            Filtering by Relationships                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#column-level-filters">
+                                            Column-Level Filters                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#custom-filter-class">
+                                            Custom Filter Class                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#skeleton">
+                                            Skeleton                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#example-json-contains-filter">
+                                            Example: JSON Contains Filter                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#example-geo-radius-filter">
+                                            Example: Geo Radius Filter                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#patterns-recipes">
+                                            Patterns &amp; Recipes                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#e-commerce-product-filters">
+                                            E-commerce Product Filters                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#admin-user-filters">
+                                            Admin User Filters                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#order-management-filters">
+                                            Order Management Filters                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#filter-with-dependent-options">
+                                            Filter with Dependent Options                                        </a>
+                                    </li>
+                                                            </ul>
+                        </aside>
+                                    </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

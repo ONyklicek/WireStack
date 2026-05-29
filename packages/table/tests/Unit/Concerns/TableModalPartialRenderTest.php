@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Livewire\Component;
 use Livewire\Livewire;
+use NyonCode\WireCore\Core\State\StateContainer;
 
 beforeEach(function () {
     config()->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
@@ -11,12 +12,17 @@ beforeEach(function () {
 
 class ActionModalPartialRenderComponent extends Component
 {
-    public bool $showActionModal = true;
+    public StateContainer $tableState;
 
     public array $modalData = [];
 
     public function mount(array $modalData): void
     {
+        $this->tableState = new StateContainer([
+            'modal' => [
+                'action' => ['show' => true],
+            ],
+        ]);
         $this->modalData = $modalData;
     }
 
@@ -36,13 +42,26 @@ class ActionModalPartialRenderComponent extends Component
 
     public function render()
     {
-        return view('wire-table::tables.partials.action-modal', ['component' => $this]);
+        return <<<'BLADE'
+<div>
+    @include('wire-table::tables.partials.action-modal', ['component' => $this])
+</div>
+BLADE;
     }
 }
 
 class HaltModalPartialRenderComponent extends Component
 {
-    public bool $showHaltModal = true;
+    public StateContainer $tableState;
+
+    public function mount(): void
+    {
+        $this->tableState = new StateContainer([
+            'modal' => [
+                'halt' => ['show' => true],
+            ],
+        ]);
+    }
 
     public function getHaltModalData(): array
     {
@@ -65,7 +84,11 @@ class HaltModalPartialRenderComponent extends Component
 
     public function render()
     {
-        return view('wire-table::tables.partials.halt-modal', ['component' => $this]);
+        return <<<'BLADE'
+<div>
+    @include('wire-table::tables.partials.halt-modal', ['component' => $this])
+</div>
+BLADE;
     }
 }
 
@@ -79,8 +102,11 @@ it('passes close action through action modal variants', function (array $modalDa
             'actionColor' => 'primary',
         ], $modalData),
     ])
+        ->assertSeeHtml("entangle('tableState.modal.action.show')")
         ->assertSeeHtml('$wire.closeActionModal()')
-        ->assertSeeHtml('wire:click="submitActionModal"');
+        ->assertSeeHtml('wire:click="submitActionModal"')
+        ->set('tableState.modal.action.show', false)
+        ->assertDontSeeHtml('wire:click="submitActionModal"');
 })->with([
     'confirmation' => [['isConfirmation' => true]],
     'slide over' => [['slideOver' => true]],
@@ -89,6 +115,9 @@ it('passes close action through action modal variants', function (array $modalDa
 
 it('passes close action through halt modal partial', function () {
     Livewire::test(HaltModalPartialRenderComponent::class)
+        ->assertSeeHtml("entangle('tableState.modal.halt.show')")
         ->assertSeeHtml('$wire.closeHaltModal()')
-        ->assertSeeHtml('wire:click="submitHaltModal"');
+        ->assertSeeHtml('wire:click="submitHaltModal"')
+        ->set('tableState.modal.halt.show', false)
+        ->assertDontSeeHtml('wire:click="submitHaltModal"');
 });

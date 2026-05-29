@@ -55,10 +55,10 @@ trait HasVisibility
     public function isHidden(mixed $context = null): bool
     {
         if ($this->hiddenCallback && $context) {
-            return call_user_func($this->hiddenCallback, $context);
+            return ($this->hiddenCallback)($context);
         }
-        if ($this->hiddenCallback && ! $context) {
-            return call_user_func($this->hiddenCallback);
+        if ($this->hiddenCallback) {
+            return ($this->hiddenCallback)();
         }
 
         return $this->hidden;
@@ -67,7 +67,10 @@ trait HasVisibility
     public function isDisabled(mixed $context = null): bool
     {
         if ($this->disabledCallback && $context) {
-            return call_user_func($this->disabledCallback, $context);
+            return ($this->disabledCallback)($context);
+        }
+        if ($this->disabledCallback) {
+            return ($this->disabledCallback)();
         }
 
         return $this->disabled;

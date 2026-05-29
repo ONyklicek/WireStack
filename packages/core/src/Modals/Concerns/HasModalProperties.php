@@ -91,7 +91,7 @@ trait HasModalProperties
     public function getHeading(mixed $context = null): ?string
     {
         if ($this->headingCallback && $context) {
-            return call_user_func($this->headingCallback, $context);
+            return ($this->headingCallback)($context);
         }
 
         return $this->heading;
@@ -100,7 +100,7 @@ trait HasModalProperties
     public function getDescription(mixed $context = null): ?string
     {
         if ($this->descriptionCallback && $context) {
-            return call_user_func($this->descriptionCallback, $context);
+            return ($this->descriptionCallback)($context);
         }
 
         return $this->description;

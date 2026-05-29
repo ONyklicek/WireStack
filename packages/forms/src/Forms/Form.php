@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Forms;
 
 use Closure;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
@@ -116,8 +117,15 @@ class Form implements Htmlable
         return $this;
     }
 
+    /**
+     * @throws AuthorizationException
+     */
     public function save(): mixed
     {
+        if (! $this->canSave()) {
+            throw new AuthorizationException('This action is unauthorized.');
+        }
+
         return $this->getRuntime()->save();
     }
 
@@ -211,6 +219,21 @@ class Form implements Htmlable
         return $this;
     }
 
+    /**
+     * Force wire:model.live on all fields.
+     *
+     * Required when the form is embedded in a component with polling — deferred
+     * wire:model values are not included in poll requests, so Livewire re-renders
+     * with empty server state and morphdom resets the inputs.
+     */
+    public function live(bool $condition = true): static
+    {
+        $this->configBuilder->live($condition);
+        $this->invalidateConfig();
+
+        return $this;
+    }
+
     // ─── Authorization ────────────────────────────────────────────
 
     /**
@@ -248,7 +271,7 @@ class Form implements Htmlable
         if ($this->authorizeUsingCallback) {
             $user = auth()->guard()->user();
 
-            return $user ? (bool) call_user_func($this->authorizeUsingCallback, $user) : false;
+            return $user ? (bool) ($this->authorizeUsingCallback)($user) : false;
         }
 
         if (! $this->usePolicy) {

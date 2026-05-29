@@ -332,6 +332,33 @@ test('save with closure successMessage resolves it', function () {
     expect($result)->toBe(['name' => 'John']);
 });
 
+// ─── statePath unwrapping ─────────────────────────────────────
+
+test('save unwraps statePath prefix from validated data before persisting', function () {
+    $persisted = null;
+
+    $config = new FormConfig(
+        schema: [
+            TextInput::make('name'),
+        ],
+        statePath: 'data',
+        using: function (array $data) use (&$persisted) {
+            $persisted = $data;
+
+            return $data;
+        },
+        successMessage: null,
+    );
+
+    $runtime = createRuntimeWithState($config, ['name' => 'John']);
+
+    $handler = new SaveHandler($config, $runtime);
+    $handler->save();
+
+    // persist() must receive flat attributes, not ['data' => ['name' => 'John']]
+    expect($persisted)->toBe(['name' => 'John']);
+});
+
 // ─── Complete lifecycle ───────────────────────────────────────
 
 test('full save lifecycle with all hooks', function () {

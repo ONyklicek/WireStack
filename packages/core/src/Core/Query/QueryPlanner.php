@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Core\Query;
 
+use Illuminate\Support\Str;
 use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Core\Components\DataComponent;
 use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
@@ -382,7 +383,9 @@ final class QueryPlanner
                 ? $this->metadataRegistry->getModelMetadata($relation->relatedModel)
                 : null;
 
-            $relatedTable = $relatedMetadata?->table ?? $this->guessTableName($relation->relatedModel);
+            $relatedTable = $relatedMetadata !== null
+                ? $relatedMetadata->table
+                : $this->guessTableName($relation->relatedModel);
 
             $lastAlias = $this->registerJoinForRelation(
                 $relation, $baseTable, $pathSoFar, $currentTable, $relatedTable,
@@ -439,14 +442,12 @@ final class QueryPlanner
 
     /**
      * Guess table name from model class (fallback when model not registered in registry).
+     *
+     * Uses Laravel's Str::snake + Str::plural to match Eloquent's own convention,
+     * producing correct forms like "categories" (not "categorys") and "lives" (not "lifes").
      */
     private function guessTableName(string $modelClass): string
     {
-        $basename = class_basename($modelClass);
-
-        // Simple snake_case + plural convention
-        $snake = strtolower(preg_replace('/[A-Z]/', '_$0', lcfirst($basename)) ?? $basename);
-
-        return $snake.'s';
+        return Str::plural(Str::snake(class_basename($modelClass)));
     }
 }

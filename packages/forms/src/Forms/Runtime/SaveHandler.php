@@ -7,6 +7,11 @@ namespace NyonCode\WireForms\Forms\Runtime;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
+use NyonCode\WireCore\Core\Hydration\CastResolver;
+use NyonCode\WireCore\Core\Hydration\Dehydrator;
+use NyonCode\WireCore\Core\Hydration\ValueTransformer;
+use NyonCode\WireCore\Core\Plugin\Hooks\FormSavedPayload;
+use NyonCode\WireCore\Core\Plugin\Hooks\FormSavingPayload;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireForms\Forms\Config\FormConfig;
 
@@ -27,6 +32,12 @@ final class SaveHandler
         // 1. Validate
         $data = $this->runtime->validate();
 
+        // Livewire's validate() returns the full component state keyed by statePath
+        // (e.g. ['data' => ['name' => '...']]).  Unwrap so persist() gets flat attributes.
+        if ($this->config->statePath && array_key_exists($this->config->statePath, $data)) {
+            $data = (array) $data[$this->config->statePath];
+        }
+
         // 2. Mutate data
         if ($this->config->mutateDataBeforeSave) {
             $data = ($this->config->mutateDataBeforeSave)($data);
@@ -37,11 +48,20 @@ final class SaveHandler
 
         // 3. Plugin hook: form.saving (can modify data)
         if (app()->bound(PluginManager::class)) {
-            $payload = app(PluginManager::class)->runHook('form.saving', [
+            $manager = app(PluginManager::class);
+
+            $payload = $manager->runHook('form.saving', [
                 'config' => $this->config,
                 'data' => $data,
             ]);
-            $data = $payload['data'] ?? $data;
+            $hookData = $payload['data'] ?? $data;
+            $data = is_array($hookData) ? $hookData : $data;
+
+            $typedPayload = $manager->runTypedHook(
+                'form.saving',
+                new FormSavingPayload($this->config, $data),
+            );
+            $data = is_array($typedPayload->data) ? $typedPayload->data : $data;
         }
 
         // 4. beforeSave hook (void)
@@ -65,10 +85,17 @@ final class SaveHandler
 
         // 8. Plugin hook: form.saved (observation)
         if (app()->bound(PluginManager::class)) {
-            app(PluginManager::class)->runHook('form.saved', [
+            $manager = app(PluginManager::class);
+
+            $manager->runHook('form.saved', [
                 'config' => $this->config,
                 'record' => $record,
             ]);
+
+            $manager->runTypedHook(
+                'form.saved',
+                new FormSavedPayload($this->config, $record),
+            );
         }
 
         // 9. Success notification
@@ -93,15 +120,22 @@ final class SaveHandler
             throw new InvalidArgumentException('Form has no model configured. Call ->model() or ->using() before save().');
         }
 
+        $dehydrator = new Dehydrator(new ValueTransformer, new CastResolver);
+
         // Update mode
         if ($model instanceof Model) {
-            $model->update($data);
+            $dehydrator->dehydrate($data, $model);
+            $model->save();
 
             return $model;
         }
 
         // Create mode (model is class-string)
-        return $model::create($data);
+        $instance = new $model;
+        $dehydrator->dehydrate($data, $instance);
+        $instance->save();
+
+        return $instance;
     }
 
     private function notifySuccess(mixed $record): void

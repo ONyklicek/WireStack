@@ -140,6 +140,9 @@ class WireCoreServiceProvider extends PackageServiceProvider
         Blade::component('wire-modals::modal', ModalComponent::class);
         Blade::component('wire-modals::confirmation', ConfirmationComponent::class);
         Blade::component('wire-modals::slide-over', SlideOverComponent::class);
+
+        // Universal alias: <x-wire::modal />
+        Blade::component('wire::modal', ModalComponent::class);
     }
 
     // ─── Plugins ────────────────────────────────────────────────

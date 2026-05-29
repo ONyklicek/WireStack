@@ -40,6 +40,9 @@
 @if($field->isRequired())
     required
 @endif
+@if($field->getSpellcheck() !== null)
+    spellcheck="{{ $field->getSpellcheck() ? 'true' : 'false' }}"
+@endif
 @if($field->isAutosize())
     x-data="{ resize() { $el.style.height = 'auto'; $el.style.height = $el.scrollHeight + 'px' } }" x-init="resize()" @input="resize()"
 @endif

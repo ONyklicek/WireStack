@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components\Display;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Components\ViewComponent;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
  * Alert/notification display component with color, icon, title, and dismissible options.
@@ -41,36 +43,36 @@ class Alert extends ViewComponent
         return $this;
     }
 
-    public function color(string $color): static
+    public function color(string|Color $color): static
     {
-        $this->color = $color;
+        $this->color = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
 
     public function info(): static
     {
-        return $this->color('info');
+        return $this->color(Color::Info);
     }
 
     public function success(): static
     {
-        return $this->color('success');
+        return $this->color(Color::Success);
     }
 
     public function warning(): static
     {
-        return $this->color('warning');
+        return $this->color(Color::Warning);
     }
 
     public function danger(): static
     {
-        return $this->color('danger');
+        return $this->color(Color::Danger);
     }
 
-    public function icon(?string $icon): static
+    public function icon(string|Icon|null $icon): static
     {
-        $this->icon = $icon;
+        $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
 
         return $this;
     }

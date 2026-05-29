@@ -30,7 +30,15 @@ final class ArrayDotHelper
      */
     public static function set(array &$data, string $path, mixed $value): array
     {
-        Arr::set($data, $path, $value);
+        $keys = explode('.', $path);
+        $ref = &$data;
+        foreach ($keys as $key) {
+            if (! is_array($ref[$key] ?? null)) {
+                $ref[$key] = [];
+            }
+            $ref = &$ref[$key];
+        }
+        $ref = $value;
 
         return $data;
     }
@@ -52,7 +60,16 @@ final class ArrayDotHelper
      */
     public static function forget(array &$data, string $path): void
     {
-        Arr::forget($data, $path);
+        $keys = explode('.', $path);
+        $ref = &$data;
+        $last = array_pop($keys);
+        foreach ($keys as $key) {
+            if (! isset($ref[$key]) || ! is_array($ref[$key])) {
+                return;
+            }
+            $ref = &$ref[$key];
+        }
+        unset($ref[$last]);
     }
 
     /**

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Foundation\Concerns;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
  * Hint text/icon displayed alongside the field label.
@@ -24,16 +26,16 @@ trait HasHint
         return $this;
     }
 
-    public function hintIcon(string|Closure|null $icon): static
+    public function hintIcon(string|Icon|Closure|null $icon): static
     {
-        $this->hintIcon = $icon;
+        $this->hintIcon = $icon instanceof Icon ? $icon->value() : $icon;
 
         return $this;
     }
 
-    public function hintColor(string|Closure|null $color): static
+    public function hintColor(string|Color|Closure|null $color): static
     {
-        $this->hintColor = $color;
+        $this->hintColor = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
@@ -45,11 +47,15 @@ trait HasHint
 
     public function getHintIcon(): ?string
     {
-        return $this->evaluate($this->hintIcon);
+        $value = $this->evaluate($this->hintIcon);
+
+        return $value instanceof Icon ? $value->value() : $value;
     }
 
     public function getHintColor(): ?string
     {
-        return $this->evaluate($this->hintColor);
+        $value = $this->evaluate($this->hintColor);
+
+        return $value instanceof Color ? $value->value : $value;
     }
 }

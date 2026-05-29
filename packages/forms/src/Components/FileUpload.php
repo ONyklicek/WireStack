@@ -238,6 +238,11 @@ class FileUpload extends Field
         return $this->imageCropAspectRatio;
     }
 
+    public function getStateType(): string
+    {
+        return 'array';
+    }
+
     protected function viewName(): string
     {
         return 'wire-forms::components.file-upload';

@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Notifications\Concerns;
 
+use Livewire\Component;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationManager;
 
 /**
+ * @phpstan-require-extends Component
+ *
  * Trait for Livewire components that send notifications.
  *
  * Provides convenience methods for sending notifications through

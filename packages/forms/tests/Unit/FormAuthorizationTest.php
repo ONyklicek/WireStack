@@ -146,3 +146,50 @@ it('authorizeUsing(null) clears the callback', function () {
     expect($form->canSave())->toBeTrue()
         ->and($form->isReadOnly())->toBeFalse();
 });
+
+// ─── save() authorization enforcement ────────────────────────
+
+it('save throws AuthorizationException when authorizeUsing denies', function () {
+    actAsFormAuthorizationUser();
+
+    $form = Form::make()
+        ->schema([])
+        ->authorizeUsing(fn ($user) => false)
+        ->using(fn (array $data) => $data);
+
+    expect(fn () => $form->save())
+        ->toThrow(\Illuminate\Auth\Access\AuthorizationException::class);
+});
+
+it('save throws AuthorizationException when policy denies', function () {
+    actAsFormAuthorizationUser();
+    Gate::define('create', fn (): bool => false);
+
+    $form = Form::make()
+        ->schema([])
+        ->model(FormAuthorizationRecord::class)
+        ->authorize()
+        ->using(fn (array $data) => $data);
+
+    expect(fn () => $form->save())
+        ->toThrow(\Illuminate\Auth\Access\AuthorizationException::class);
+});
+
+it('save proceeds when canSave returns true', function () {
+    actAsFormAuthorizationUser();
+
+    $called = false;
+
+    $form = Form::make()
+        ->schema([])
+        ->authorizeUsing(fn ($user) => true)
+        ->using(function (array $data) use (&$called) {
+            $called = true;
+
+            return $data;
+        });
+
+    $form->save();
+
+    expect($called)->toBeTrue();
+});

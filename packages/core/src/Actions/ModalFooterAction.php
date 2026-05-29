@@ -6,6 +6,8 @@ namespace NyonCode\WireCore\Actions;
 
 use Closure;
 use Illuminate\Support\Str;
+use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
  * ModalFooterAction - Extra button in modal footer.
@@ -28,7 +30,7 @@ class ModalFooterAction
 
     protected ?string $icon = null;
 
-    protected ?string $color = 'gray';
+    protected ?string $color = Color::Gray->value;
 
     protected bool $outlined = false;
 
@@ -58,16 +60,16 @@ class ModalFooterAction
         return $this;
     }
 
-    public function icon(?string $icon): static
+    public function icon(string|Icon|null $icon): static
     {
-        $this->icon = $icon;
+        $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
 
         return $this;
     }
 
-    public function color(?string $color): static
+    public function color(string|Color|null $color): static
     {
-        $this->color = $color;
+        $this->color = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
@@ -125,7 +127,7 @@ class ModalFooterAction
 
     public function getColor(): string
     {
-        return $this->color ?? 'gray';
+        return $this->color ?? Color::Gray->value;
     }
 
     public function isOutlined(): bool

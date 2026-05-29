@@ -35,8 +35,9 @@
         <option value="">{{ $field->getPlaceholder() }}</option>
     @endif
 
+    @php $disabledValues = $field->getDisabledOptionValues(); @endphp
         @foreach($options as $value => $label)
-            <option value="{{ $value }}">{{ $label }}</option>
+            <option value="{{ $value }}" @if(in_array($value, $disabledValues, true)) disabled @endif>{{ $label }}</option>
         @endforeach
 </select>
 

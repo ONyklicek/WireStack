@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="en" data-search-index="../../search-index.json">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Core Plugins | Wire Docs</title>
+    <meta name="description" content="Wire Core includes a plugin API for application-level extensions and companion packages. A plugin groups reusable setup in one place: macros, type registries, query pipes, hook callbacks, default configuration, and package integration.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../../assets/site.css">
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem('wire-docs-theme');
+                var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+    <script defer src="../../assets/site.js"></script>
+</head>
+<body class="docs-body">
+    <div class="site-shell">
+        <aside class="site-sidebar" data-sidebar>
+            <div class="sidebar-header">
+                <a class="brand-link" href="../../">
+                    <span class="brand-mark">W</span>
+                    <span class="brand-name">WireStack<span class="brand-badge">Docs</span></span>
+                </a>
+                <button class="icon-button sidebar-close" type="button" data-nav-close aria-label="Close navigation" style="display:none">×</button>
+            </div>
+
+            <nav class="sidebar-nav">
+                                    <section class="nav-section">
+                        <h2>Start Here</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../documentation/">
+                                        Wire Documentation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../getting-started/">
+                                        Getting Started                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../project-map/">
+                                        Project Map                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../configuration/">
+                                        Configuration                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../authorization/">
+                                        Authorization                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Forms</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../forms/overview/">
+                                        Wire Forms                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/validation/">
+                                        Form Validation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/save-lifecycle/">
+                                        Save Lifecycle                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Fields</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/">
+                                        Form Fields                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/alert/">
+                                        Alert                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/belongs-to-select/">
+                                        BelongsToSelect                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/checkbox/">
+                                        Checkbox                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/checkbox-list/">
+                                        CheckboxList                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/code-editor/">
+                                        CodeEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/color-picker/">
+                                        ColorPicker                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/date-time-picker/">
+                                        DateTimePicker                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/fieldset/">
+                                        Fieldset                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/file-upload/">
+                                        FileUpload                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/grid/">
+                                        Grid                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/hidden/">
+                                        Hidden                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/html/">
+                                        Html                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/key-value/">
+                                        KeyValue                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/markdown-editor/">
+                                        MarkdownEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/morph-to-select/">
+                                        MorphToSelect                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/otp-input/">
+                                        OtpInput                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/placeholder/">
+                                        Placeholder                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/radio/">
+                                        Radio                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/rating/">
+                                        Rating                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/repeater/">
+                                        Repeater                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/rich-editor/">
+                                        RichEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/section/">
+                                        Section                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/select/">
+                                        Select                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/slider/">
+                                        Slider                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/tags/">
+                                        Tags                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/textarea/">
+                                        Textarea                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/text-input/">
+                                        TextInput                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/tiptap-editor/">
+                                        TiptapEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/toggle/">
+                                        Toggle                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/view-field/">
+                                        ViewField                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Table</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../table/overview/">
+                                        Wire Table                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../table/columns/">
+                                        Columns                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../table/filters/">
+                                        Filters                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../table/actions/">
+                                        Table Actions                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../table/exports/">
+                                        Table Exports                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../table/sub-rows/">
+                                        Sub-Rows                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../table/notifications/">
+                                        Table Notifications                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../table/advanced/">
+                                        Advanced Features                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Sortable</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../sortable/overview/">
+                                        Introduction                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/installation/">
+                                        Installation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/row-sorting/">
+                                        Row Reordering                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/column-sorting/">
+                                        Column Reordering                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/customization/">
+                                        Customization                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/advanced/">
+                                        Advanced Usage                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/api-reference/">
+                                        API Reference                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Core</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../actions/">
+                                        Actions                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../foundation/">
+                                        Foundation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../notifications/">
+                                        Notifications                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../modals/">
+                                        Modals                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../widgets/">
+                                        Widgets                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="is-active" href="./">
+                                        Core Plugins                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../audit/">
+                                        Audit Log                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                            </nav>
+        </aside>
+
+        <div class="site-overlay" data-nav-close></div>
+
+        <main class="site-main">
+            <header class="topbar">
+                <button class="nav-toggle" type="button" data-nav-toggle aria-label="Open navigation">
+                    <span></span><span></span><span></span>
+                </button>
+
+                <div class="search-shell" data-search-root>
+                    <input
+                        type="search"
+                        class="search-input"
+                        placeholder="Search documentation…"
+                        autocomplete="off"
+                        spellcheck="false"
+                        data-search-input
+                    >
+                    <span class="search-kbd"><kbd>⌘</kbd><kbd>K</kbd></span>
+                    <div class="search-results" data-search-results hidden></div>
+                </div>
+
+                <div class="topbar-actions">
+                    <button class="icon-button theme-toggle" type="button" data-theme-toggle aria-label="Toggle theme">
+                        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                    </button>
+                    <a class="icon-button" href="https://github.com/ONyklicek/WireStack" target="_blank" rel="noreferrer" aria-label="GitHub repository">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2c-3.2.7-3.88-1.54-3.88-1.54-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.56-.29-5.26-1.28-5.26-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.18 1.18a11.02 11.02 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.58.23 2.75.12 3.04.74.81 1.18 1.83 1.18 3.09 0 4.42-2.7 5.39-5.28 5.68.42.36.79 1.06.79 2.14v3.17c0 .31.21.68.8.56A11.52 11.52 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5Z"/></svg>
+                    </a>
+                </div>
+            </header>
+
+            <div class="page-body">
+                <div class="content-shell">
+                    <article class="docs-article">
+                        <div class="page-hero">
+                            <nav class="breadcrumb" aria-label="Breadcrumb">
+                                <a href="../../">Docs</a>
+                                <span class="sep">/</span>
+                                <span class="current">Core</span>
+                            </nav>
+                            <p class="eyebrow">Core</p>
+                            <h1>Core Plugins</h1>
+                                                            <p class="lead">Wire Core includes a plugin API for application-level extensions and companion packages. A plugin groups reusable setup in one place: macros, type registries, query pipes, hook callbacks, default configuration, and package integration.</p>
+                            
+                            
+                                                                                </div>
+
+                        
+<p>Wire Core includes a plugin API for application-level extensions and companion packages. A plugin groups reusable setup in one place: macros, type registries, query pipes, hook callbacks, default configuration, and package integration.</p>
+<p>For a single table, form, or action, prefer the public fluent API first. Use a plugin when the same behavior should be installed once and reused across multiple components, projects, or packages.</p>
+<h2 id="when-to-use-a-plugin">When To Use A Plugin</h2>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>Prefer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Change one table query</td>
+<td><code>Table::modifyQueryUsing()</code></td>
+</tr>
+<tr>
+<td>Add one form save callback</td>
+<td>Form lifecycle callbacks</td>
+</tr>
+<tr>
+<td>Add one action behavior</td>
+<td>Action fluent API</td>
+</tr>
+<tr>
+<td>Reuse a table/action macro everywhere</td>
+<td>Plugin <code>boot()</code></td>
+</tr>
+<tr>
+<td>Add the same table button to many tables</td>
+<td>Plugin table macro that merges actions</td>
+</tr>
+<tr>
+<td>Add a query rule to many tables</td>
+<td>Plugin query pipe or <code>table.querying</code> hook</td>
+</tr>
+<tr>
+<td>Share a custom column/filter/action class by name</td>
+<td>Plugin type registry</td>
+</tr>
+<tr>
+<td>Build a companion package</td>
+<td>Plugin plus package service provider</td>
+</tr>
+<tr>
+<td>Add audit, telemetry, tenant scope, or policy integration</td>
+<td>Plugin hooks</td>
+</tr>
+</tbody>
+</table>
+<h2 id="what-a-plugin-can-do">What A Plugin Can Do</h2>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>API</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Register a plugin instance</td>
+<td><code>PluginManager::register()</code></td>
+</tr>
+<tr>
+<td>Run startup code after all plugins are registered</td>
+<td><code>Plugin::boot()</code></td>
+</tr>
+<tr>
+<td>Add table/action macros</td>
+<td>Laravel <code>Macroable</code> classes such as <code>Table</code> and <code>Action</code></td>
+</tr>
+<tr>
+<td>Register query pipes</td>
+<td><code>PluginManager::addQueryPipe()</code></td>
+</tr>
+<tr>
+<td>Register column classes by name</td>
+<td><code>PluginManager::addColumnType()</code></td>
+</tr>
+<tr>
+<td>Register filter classes by name</td>
+<td><code>PluginManager::addFilterType()</code></td>
+</tr>
+<tr>
+<td>Register action classes by name</td>
+<td><code>PluginManager::addActionType()</code></td>
+</tr>
+<tr>
+<td>Register hook callbacks</td>
+<td><code>PluginManager::hook()</code></td>
+</tr>
+<tr>
+<td>Run array payload hooks</td>
+<td><code>PluginManager::runHook()</code></td>
+</tr>
+<tr>
+<td>Run object payload hooks</td>
+<td><code>PluginManager::runTypedHook()</code></td>
+</tr>
+<tr>
+<td>Read merged plugin config</td>
+<td><code>PluginManager::getPluginConfig()</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="quick-start">Quick Start</h2>
+<p>Create a plugin class:</p>
+<pre><code class="language-php">&lt;?php
+
+namespace App\Wire\Plugins;
+
+use Illuminate\Database\Eloquent\Builder;
+use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireTable\Table;
+
+final class TenantPlugin implements Plugin
+{
+    public function getId(): string
+    {
+        return 'tenant';
+    }
+
+    public function register(PluginManager $manager): void
+    {
+        //
+    }
+
+    public function boot(PluginManager $manager): void
+    {
+        Table::macro('tenantScoped', function (?int $tenantId = null): static {
+            $tenantId ??= auth()-&gt;user()?-&gt;tenant_id;
+
+            return $this-&gt;modifyQueryUsing(
+                fn (Builder $query) =&gt; $query-&gt;where('tenant_id', $tenantId)
+            );
+        });
+    }
+}
+</code></pre>
+<p>Register it in <code>config/wire-core.php</code>:</p>
+<pre><code class="language-php">'plugins' =&gt; [
+    App\Wire\Plugins\TenantPlugin::class,
+],
+</code></pre>
+<p>Use the macro from any table:</p>
+<pre><code class="language-php">public function table(Table $table): Table
+{
+    return $table
+        -&gt;model(Order::class)
+        -&gt;tenantScoped()
+        -&gt;columns([
+            // ...
+        ]);
+}
+</code></pre>
+<h2 id="plugin-contract">Plugin Contract</h2>
+<p>Every plugin implements <code>NyonCode\WireCore\Core\Plugin\Contracts\Plugin</code>.</p>
+<pre><code class="language-php">&lt;?php
+
+namespace App\Wire\Plugins;
+
+use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+
+final class ExamplePlugin implements Plugin
+{
+    public function getId(): string
+    {
+        return 'example';
+    }
+
+    public function register(PluginManager $manager): void
+    {
+        // Register hooks, query pipes, type aliases, or lightweight metadata.
+    }
+
+    public function boot(PluginManager $manager): void
+    {
+        // Register macros or resolve services after all plugins are registered.
+    }
+}
+</code></pre>
+<p>The <code>getId()</code> value must be unique. Registering two plugins with the same ID throws a <code>RuntimeException</code>.</p>
+<h2 id="lifecycle">Lifecycle</h2>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Method</th>
+<th>Use for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Registration</td>
+<td><code>register(PluginManager $manager)</code></td>
+<td>Hooks, query pipes, column/filter/action types, lightweight metadata</td>
+</tr>
+<tr>
+<td>Boot</td>
+<td><code>boot(PluginManager $manager)</code></td>
+<td>Macros, resolved services, views, package setup that depends on the Laravel container</td>
+</tr>
+</tbody>
+</table>
+<p><code>PluginManager::register()</code> calls the plugin's <code>register()</code> method immediately. <code>PluginManager::boot()</code> runs each plugin's <code>boot()</code> method once.</p>
+<p>Keep <code>register()</code> lightweight. Do not resolve request-scoped services or assume every Laravel service has already booted. Use <code>boot()</code> for work that needs the container, views, macros, or other registered plugins.</p>
+<h2 id="register-plugins-in-config">Register Plugins In Config</h2>
+<p>Publish the core config:</p>
+<pre><code class="language-bash">php artisan vendor:publish --tag=wire-core-config
+</code></pre>
+<p>Add plugin classes to <code>config/wire-core.php</code>:</p>
+<pre><code class="language-php">'plugins' =&gt; [
+    App\Wire\Plugins\TenantPlugin::class,
+    App\Wire\Plugins\AuditExportPlugin::class,
+],
+</code></pre>
+<p>Wire resolves config-registered plugins through Laravel's container when the plugin manager is resolved. Invalid entries are ignored, so only class names implementing <code>Plugin</code> are registered.</p>
+<h2 id="register-plugins-from-a-package">Register Plugins From A Package</h2>
+<p>If you are building a companion package, register your plugin from the package service provider.</p>
+<pre><code class="language-php">use Illuminate\Support\ServiceProvider;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+
+final class AcmeWireServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        $this-&gt;app-&gt;resolving(PluginManager::class, function (PluginManager $manager) {
+            if (! $manager-&gt;has('acme')) {
+                $manager-&gt;register($this-&gt;app-&gt;make(AcmePlugin::class));
+            }
+        });
+    }
+}
+</code></pre>
+<p>The <code>has()</code> guard prevents duplicate registration if the application also lists the plugin in config.</p>
+<h2 id="plugin-configuration">Plugin Configuration</h2>
+<p>Plugins that accept user options can implement <code>HasConfiguration</code>.</p>
+<pre><code class="language-php">&lt;?php
+
+namespace App\Wire\Plugins;
+
+use NyonCode\WireCore\Core\Plugin\Contracts\HasConfiguration;
+use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+
+final class ExportPlugin implements HasConfiguration, Plugin
+{
+    public function getId(): string
+    {
+        return 'export';
+    }
+
+    public function defaultConfig(): array
+    {
+        return [
+            'format' =&gt; 'csv',
+            'chunk_size' =&gt; 500,
+        ];
+    }
+
+    public function register(PluginManager $manager): void
+    {
+        //
+    }
+
+    public function boot(PluginManager $manager): void
+    {
+        $config = $manager-&gt;getPluginConfig($this-&gt;getId());
+
+        // $config is the merged default and user configuration.
+    }
+}
+</code></pre>
+<p>User overrides live under <code>wire-core.plugins.config.{pluginId}</code>:</p>
+<pre><code class="language-php">'plugins' =&gt; [
+    App\Wire\Plugins\ExportPlugin::class,
+
+    'config' =&gt; [
+        'export' =&gt; [
+            'format' =&gt; 'xlsx',
+        ],
+    ],
+],
+</code></pre>
+<p>The manager merges the plugin defaults with user config using <code>array_merge()</code>. Top-level keys from user config replace default keys.</p>
+<h2 id="plugin-dependencies">Plugin Dependencies</h2>
+<p>Plugins that require other plugins can implement <code>HasDependencies</code>.</p>
+<pre><code class="language-php">&lt;?php
+
+namespace App\Wire\Plugins;
+
+use NyonCode\WireCore\Core\Plugin\Contracts\HasDependencies;
+use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+
+final class BillingExportPlugin implements HasDependencies, Plugin
+{
+    public function getId(): string
+    {
+        return 'billing-export';
+    }
+
+    public function dependencies(): array
+    {
+        return ['export'];
+    }
+
+    public function register(PluginManager $manager): void
+    {
+        //
+    }
+
+    public function boot(PluginManager $manager): void
+    {
+        //
+    }
+}
+</code></pre>
+<p>Dependencies must already be registered. If a dependency is missing, <code>PluginManager::register()</code> throws a <code>RuntimeException</code>.</p>
+<p>Register dependent plugins after their dependencies:</p>
+<pre><code class="language-php">'plugins' =&gt; [
+    App\Wire\Plugins\ExportPlugin::class,
+    App\Wire\Plugins\BillingExportPlugin::class,
+],
+</code></pre>
+<h2 id="hook-system">Hook System</h2>
+<p>Hooks let plugins and application code communicate through named callbacks.</p>
+<pre><code class="language-php">public function register(PluginManager $manager): void
+{
+    $manager-&gt;hook('orders.exporting', function (array $payload): array {
+        $payload['query']-&gt;where('tenant_id', auth()-&gt;user()-&gt;tenant_id);
+
+        return $payload;
+    });
+}
+</code></pre>
+<p>Run the hook from your own service or component:</p>
+<pre><code class="language-php">use NyonCode\WireCore\Core\Plugin\PluginManager;
+
+$payload = app(PluginManager::class)-&gt;runHook('orders.exporting', [
+    'query' =&gt; Order::query(),
+]);
+
+$query = $payload['query'];
+</code></pre>
+<p>A hook only affects runtime behavior when some code calls <code>runHook()</code> or <code>runTypedHook()</code> for that hook name. Registering a hook stores the callback; it does not automatically patch table, form, or action behavior.</p>
+<h3 id="hook-return-values">Hook Return Values</h3>
+<p>Array hooks receive the current payload array.</p>
+<table>
+<thead>
+<tr>
+<th>Callback return</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>array</code></td>
+<td>Replaces the payload for the next callback</td>
+</tr>
+<tr>
+<td><code>null</code> or another non-array value</td>
+<td>Keeps the current payload unchanged</td>
+</tr>
+<tr>
+<td>exception</td>
+<td>Bubbles up to the caller</td>
+</tr>
+</tbody>
+</table>
+<h3 id="hook-priority">Hook Priority</h3>
+<p>Callbacks run by ascending priority. Lower numbers run earlier.</p>
+<pre><code class="language-php">public function register(PluginManager $manager): void
+{
+    $manager-&gt;hook('table.querying', fn (array $payload) =&gt; $payload, priority: -100);
+    $manager-&gt;hook('table.querying', fn (array $payload) =&gt; $payload);
+    $manager-&gt;hook('table.querying', fn (array $payload) =&gt; $payload, priority: 100);
+}
+</code></pre>
+<p>Suggested ranges:</p>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Use for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-100</code></td>
+<td>Security, tenancy, scoping</td>
+</tr>
+<tr>
+<td><code>0</code></td>
+<td>Normal feature behavior</td>
+</tr>
+<tr>
+<td><code>100</code></td>
+<td>Audit, logging, telemetry</td>
+</tr>
+</tbody>
+</table>
+<p>Callbacks with the same priority keep their registration order.</p>
+<h3 id="runtime-hooks">Runtime Hooks</h3>
+<p>These hooks are emitted by the current packages:</p>
+<table>
+<thead>
+<tr>
+<th>Hook</th>
+<th>Package</th>
+<th>When</th>
+<th>Payload</th>
+<th>Consumes returned payload</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>table.querying</code></td>
+<td>Table</td>
+<td>Before the table query is planned</td>
+<td><code>table</code>, <code>columns</code>, <code>filters</code>, <code>sort_column</code>, <code>sort_direction</code>, <code>search</code></td>
+<td>Yes, reads <code>force_sort_column</code> and <code>force_sort_direction</code></td>
+</tr>
+<tr>
+<td><code>form.saving</code></td>
+<td>Forms</td>
+<td>After mutation and before persistence</td>
+<td><code>config</code>, <code>data</code></td>
+<td>Yes, reads modified <code>data</code></td>
+</tr>
+<tr>
+<td><code>form.saved</code></td>
+<td>Forms</td>
+<td>After persistence and relationship save</td>
+<td><code>config</code>, <code>record</code></td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>action.executing</code></td>
+<td>Table</td>
+<td>Before the action pipeline runs</td>
+<td><code>action</code>, <code>actionName</code>, <code>actionType</code>, <code>recordIds</code>, <code>data</code>, <code>component</code></td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>action.executed</code></td>
+<td>Table</td>
+<td>After the action pipeline runs</td>
+<td><code>action</code>, <code>actionName</code>, <code>actionType</code>, <code>recordIds</code>, <code>result</code>, <code>component</code></td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<p>The plugin manager does not enforce hook names. For application hooks, use names that describe your boundary, such as <code>orders.exporting</code>, <code>orders.exported</code>, <code>billing.invoice.saving</code>, or <code>crm.customer.synced</code>.</p>
+<h3 id="example-force-table-sort-in-a-hook">Example: Force Table Sort In A Hook</h3>
+<p>The sortable package uses <code>table.querying</code> to force a sort while a table is in reorder mode. The same pattern works for application-specific query rules.</p>
+<pre><code class="language-php">public function register(PluginManager $manager): void
+{
+    $manager-&gt;hook('table.querying', function (array $payload): array {
+        $table = $payload['table'] ?? null;
+
+        if (! $table instanceof OrdersTable) {
+            return $payload;
+        }
+
+        $payload['force_sort_column'] = 'position';
+        $payload['force_sort_direction'] = 'asc';
+
+        return $payload;
+    }, priority: -100);
+}
+</code></pre>
+<p>Use <code>modifyQueryUsing()</code> when you only need to change one table. Use <code>table.querying</code> when the rule belongs to a reusable integration.</p>
+<h2 id="typed-hooks">Typed Hooks</h2>
+<p><code>runTypedHook()</code> is available for extension points that prefer object payloads instead of arrays.</p>
+<pre><code class="language-php">final class ExportingOrders
+{
+    public function __construct(
+        public Builder $query,
+        public string $format,
+    ) {}
+}
+
+$payload = app(PluginManager::class)-&gt;runTypedHook(
+    'orders.exporting',
+    new ExportingOrders(Order::query(), 'csv')
+);
+</code></pre>
+<p>Callbacks receive the payload object. Returning an object replaces the payload for the next callback; returning <code>null</code> or another non-object keeps the current payload.</p>
+<pre><code class="language-php">$manager-&gt;hook('orders.exporting', function (ExportingOrders $payload): ExportingOrders {
+    $payload-&gt;query-&gt;where('tenant_id', auth()-&gt;user()-&gt;tenant_id);
+
+    return $payload;
+});
+</code></pre>
+<p>Core also ships typed payload DTOs under <code>NyonCode\WireCore\Core\Plugin\Hooks</code> for common table, form, and action hook shapes. The current runtime hooks use array payloads, so these DTOs are most useful when building your own typed extension points or plugin-aware services.</p>
+<h2 id="column-filter-and-action-type-registries">Column, Filter, And Action Type Registries</h2>
+<p>Plugins can register class aliases for plugin-aware builders, admin tooling, schema importers, or package integrations.</p>
+<pre><code class="language-php">public function register(PluginManager $manager): void
+{
+    $manager-&gt;addColumnType('money', \App\Tables\Columns\MoneyColumn::class);
+    $manager-&gt;addFilterType('date-range', \App\Tables\Filters\DateRangeFilter::class);
+    $manager-&gt;addActionType('workflow', \App\Tables\Actions\WorkflowAction::class);
+}
+</code></pre>
+<p>Read the registries from the manager:</p>
+<pre><code class="language-php">$columns = app(PluginManager::class)-&gt;getColumnTypes();
+$filters = app(PluginManager::class)-&gt;getFilterTypes();
+$actions = app(PluginManager::class)-&gt;getActionTypes();
+</code></pre>
+<p>Wire Table components still accept normal instances directly:</p>
+<pre><code class="language-php">return $table
+    -&gt;columns([
+        MoneyColumn::make('total'),
+    ])
+    -&gt;filters([
+        DateRangeFilter::make('created_at'),
+    ]);
+</code></pre>
+<p>Type registries are metadata registries. They do not automatically render a column, filter, or action by alias unless your own builder or package consumes the registry.</p>
+<h2 id="adding-buttons-and-actions">Adding Buttons And Actions</h2>
+<p>Most buttons in Wire tables are actions:</p>
+<table>
+<thead>
+<tr>
+<th>UI placement</th>
+<th>Class/API</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Row button</td>
+<td><code>Action</code> in <code>Table::actions()</code></td>
+</tr>
+<tr>
+<td>Bulk toolbar button</td>
+<td><code>BulkAction</code> in <code>Table::bulkActions()</code></td>
+</tr>
+<tr>
+<td>Header toolbar button</td>
+<td><code>HeaderAction</code> in <code>Table::headerActions()</code></td>
+</tr>
+<tr>
+<td>Button inside a table cell</td>
+<td><code>ButtonColumn</code> in <code>Table::columns()</code></td>
+</tr>
+<tr>
+<td>Plain Blade button</td>
+<td><code>&lt;x-wire::button&gt;</code></td>
+</tr>
+</tbody>
+</table>
+<p>Plugins do not automatically inject buttons into every table. The usual pattern is to register a table macro in <code>boot()</code> and let each table opt in. The macro should merge with existing actions instead of replacing them.</p>
+<h3 id="header-button-macro">Header Button Macro</h3>
+<pre><code class="language-php">use App\Services\InvoiceExportService;
+use NyonCode\WireCore\Actions\HeaderAction;
+use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireTable\Table;
+
+final class BillingPlugin implements Plugin
+{
+    public function getId(): string
+    {
+        return 'billing';
+    }
+
+    public function register(PluginManager $manager): void
+    {
+        //
+    }
+
+    public function boot(PluginManager $manager): void
+    {
+        Table::macro('withInvoiceExportButton', function (): static {
+            return $this-&gt;headerActions([
+                ...$this-&gt;getHeaderActions(),
+
+                HeaderAction::make('export-invoices')
+                    -&gt;label('Export invoices')
+                    -&gt;icon('download')
+                    -&gt;action(fn () =&gt; app(InvoiceExportService::class)-&gt;queue()),
+            ]);
+        });
+    }
+}
+</code></pre>
+<p>Use the button on the tables that need it:</p>
+<pre><code class="language-php">public function table(Table $table): Table
+{
+    return $table
+        -&gt;model(Invoice::class)
+        -&gt;withInvoiceExportButton()
+        -&gt;columns([
+            // ...
+        ]);
+}
+</code></pre>
+<h3 id="row-button-macro">Row Button Macro</h3>
+<pre><code class="language-php">use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireTable\Table;
+
+Table::macro('withAuditTrailButton', function (): static {
+    return $this-&gt;actions([
+        ...$this-&gt;getActions(),
+
+        Action::make('audit-trail')
+            -&gt;label('Audit')
+            -&gt;icon('history')
+            -&gt;url(fn ($record) =&gt; route('audit.show', [
+                'type' =&gt; get_class($record),
+                'id' =&gt; $record-&gt;getKey(),
+            ])),
+    ]);
+});
+</code></pre>
+<h3 id="bulk-button-macro">Bulk Button Macro</h3>
+<pre><code class="language-php">use Illuminate\Support\Collection;
+use NyonCode\WireCore\Actions\BulkAction;
+use NyonCode\WireTable\Table;
+
+Table::macro('withBulkArchiveButton', function (): static {
+    return $this-&gt;bulkActions([
+        ...$this-&gt;getBulkActions(),
+
+        BulkAction::make('archive-selected')
+            -&gt;label('Archive selected')
+            -&gt;icon('archive')
+            -&gt;requiresConfirmation()
+            -&gt;action(fn (Collection $records) =&gt; $records-&gt;each-&gt;archive()),
+    ]);
+});
+</code></pre>
+<h3 id="cell-button-column-macro">Cell Button Column Macro</h3>
+<p>Use <code>ButtonColumn</code> when the button is part of each row's visible columns rather than the row action area.</p>
+<pre><code class="language-php">use NyonCode\WireTable\Columns\ButtonColumn;
+use NyonCode\WireTable\Table;
+
+Table::macro('withPreviewButtonColumn', function (): static {
+    return $this-&gt;columns([
+        ...$this-&gt;getColumns(),
+
+        ButtonColumn::make('preview')
+            -&gt;buttonIcon('eye')
+            -&gt;buttonLabel('Preview')
+            -&gt;actionUrl(fn ($record) =&gt; route('records.preview', $record)),
+    ]);
+});
+</code></pre>
+<p>Prefer actions for commands. Use <code>ButtonColumn</code> when the button needs to sit among other columns or when its state is naturally column-like. For cell links, use <code>actionUrl()</code>. For cell Livewire calls, use <code>livewireAction()</code> and implement that method on the Livewire table component.</p>
+<h2 id="query-pipes">Query Pipes</h2>
+<p>Plugins can register query pipe instances with the manager. Table query execution appends plugin pipes after the default query pipeline.</p>
+<pre><code class="language-php">use Closure;
+use Illuminate\Database\Eloquent\Builder;
+use NyonCode\WireCore\Core\Query\Contracts\QueryPipe;
+use NyonCode\WireCore\Core\Query\QueryPlan;
+
+final class ApplyTenantScope implements QueryPipe
+{
+    public function handle(Builder $builder, QueryPlan $plan, Closure $next): Builder
+    {
+        $builder-&gt;where('tenant_id', auth()-&gt;user()-&gt;tenant_id);
+
+        return $next($builder, $plan);
+    }
+}
+</code></pre>
+<p>Register it from the plugin:</p>
+<pre><code class="language-php">public function register(PluginManager $manager): void
+{
+    $manager-&gt;addQueryPipe('tenant', new ApplyTenantScope());
+}
+</code></pre>
+<p>Retrieve registered pipes for a custom query executor:</p>
+<pre><code class="language-php">$pipes = app(PluginManager::class)-&gt;getQueryPipes();
+</code></pre>
+<p>Default table query pipe order:</p>
+<table>
+<thead>
+<tr>
+<th>Order</th>
+<th>Pipe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>ApplyScopes</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>ApplySoftDeletes</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>ApplyRelations</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>ApplySearch</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>ApplyFilters</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>ApplySorting</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>ApplyAggregates</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>ApplyEagerLoads</code></td>
+</tr>
+<tr>
+<td>9+</td>
+<td>Plugin pipes</td>
+</tr>
+</tbody>
+</table>
+<p>Use table <code>modifyQueryUsing()</code> when the change belongs to one table. Use a query pipe when you are building reusable query behavior that should run as part of the shared query planner/executor pipeline.</p>
+<h2 id="practical-example-action-preset">Practical Example: Action Preset</h2>
+<p>Actions are macroable through their base action class. This plugin adds a reusable admin-only preset.</p>
+<pre><code class="language-php">use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+
+final class AdminActionPlugin implements Plugin
+{
+    public function getId(): string
+    {
+        return 'admin-actions';
+    }
+
+    public function register(PluginManager $manager): void
+    {
+        //
+    }
+
+    public function boot(PluginManager $manager): void
+    {
+        Action::macro('adminOnly', function (): static {
+            return $this-&gt;authorizeUsing(
+                fn ($user) =&gt; method_exists($user, 'isAdmin') &amp;&amp; $user-&gt;isAdmin()
+            );
+        });
+    }
+}
+</code></pre>
+<p>Use it on an action:</p>
+<pre><code class="language-php">Action::make('impersonate')
+    -&gt;label('Impersonate')
+    -&gt;adminOnly()
+    -&gt;requiresConfirmation()
+    -&gt;action(fn (User $record) =&gt; auth()-&gt;user()-&gt;impersonate($record));
+</code></pre>
+<h2 id="practical-example-form-audit">Practical Example: Form Audit</h2>
+<p>This plugin adds a small audit hook around form persistence.</p>
+<pre><code class="language-php">use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+
+final class FormAuditPlugin implements Plugin
+{
+    public function getId(): string
+    {
+        return 'form-audit';
+    }
+
+    public function register(PluginManager $manager): void
+    {
+        $manager-&gt;hook('form.saving', function (array $payload): array {
+            $payload['data']['updated_by'] ??= auth()-&gt;id();
+
+            return $payload;
+        });
+
+        $manager-&gt;hook('form.saved', function (array $payload): void {
+            logger()-&gt;info('Form saved', [
+                'record' =&gt; $payload['record'] ?? null,
+            ]);
+        }, priority: 100);
+    }
+
+    public function boot(PluginManager $manager): void
+    {
+        //
+    }
+}
+</code></pre>
+<p><code>form.saving</code> can modify the data that will be persisted. <code>form.saved</code> is observational in the current runtime because the save handler does not consume its returned payload.</p>
+<h2 id="pluginmanager-api">PluginManager API</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>register(Plugin $plugin): void</code></td>
+<td>Register a plugin and call its <code>register()</code> method</td>
+</tr>
+<tr>
+<td><code>boot(): void</code></td>
+<td>Boot every registered plugin once</td>
+</tr>
+<tr>
+<td><code>has(string $id): bool</code></td>
+<td>Check whether a plugin ID is registered</td>
+</tr>
+<tr>
+<td><code>get(string $id): ?Plugin</code></td>
+<td>Return a plugin by ID</td>
+</tr>
+<tr>
+<td><code>all(): array</code></td>
+<td>Return all registered plugins keyed by ID</td>
+</tr>
+<tr>
+<td><code>getPluginConfig(string $pluginId): array</code></td>
+<td>Return merged config for a configurable plugin</td>
+</tr>
+<tr>
+<td><code>addQueryPipe(string $name, QueryPipe $pipe): void</code></td>
+<td>Register a query pipe</td>
+</tr>
+<tr>
+<td><code>getQueryPipes(): array</code></td>
+<td>Return registered query pipes</td>
+</tr>
+<tr>
+<td><code>addColumnType(string $name, string $columnClass): void</code></td>
+<td>Register a column class alias</td>
+</tr>
+<tr>
+<td><code>getColumnTypes(): array</code></td>
+<td>Return column aliases</td>
+</tr>
+<tr>
+<td><code>addFilterType(string $name, string $filterClass): void</code></td>
+<td>Register a filter class alias</td>
+</tr>
+<tr>
+<td><code>getFilterTypes(): array</code></td>
+<td>Return filter aliases</td>
+</tr>
+<tr>
+<td><code>addActionType(string $name, string $actionClass): void</code></td>
+<td>Register an action class alias</td>
+</tr>
+<tr>
+<td><code>getActionTypes(): array</code></td>
+<td>Return action aliases</td>
+</tr>
+<tr>
+<td><code>hook(string $name, callable $callback, int $priority = 0): void</code></td>
+<td>Register a hook callback</td>
+</tr>
+<tr>
+<td><code>runHook(string $name, array $payload = []): array</code></td>
+<td>Run array hook callbacks and return the final payload</td>
+</tr>
+<tr>
+<td><code>runTypedHook(string $name, object $payload): object</code></td>
+<td>Run object hook callbacks and return the final payload</td>
+</tr>
+<tr>
+<td><code>hasHook(string $name): bool</code></td>
+<td>Check whether a hook has callbacks</td>
+</tr>
+</tbody>
+</table>
+<h2 id="testing-plugins">Testing Plugins</h2>
+<p>Test plugin behavior by instantiating <code>PluginManager</code> directly.</p>
+<pre><code class="language-php">use NyonCode\WireCore\Core\Plugin\PluginManager;
+
+it('registers tenant plugin', function () {
+    $manager = new PluginManager();
+    $plugin = new TenantPlugin();
+
+    $manager-&gt;register($plugin);
+
+    expect($manager-&gt;has('tenant'))-&gt;toBeTrue();
+});
+</code></pre>
+<p>For macros, boot the plugin first:</p>
+<pre><code class="language-php">it('adds tenant table macro', function () {
+    $manager = new PluginManager();
+    $plugin = new TenantPlugin();
+
+    $manager-&gt;register($plugin);
+    $manager-&gt;boot();
+
+    expect(\NyonCode\WireTable\Table::hasMacro('tenantScoped'))-&gt;toBeTrue();
+});
+</code></pre>
+<p>For hook behavior, run the hook with the payload your runtime code emits:</p>
+<pre><code class="language-php">it('adds updated_by before form save', function () {
+    $manager = new PluginManager();
+    $plugin = new FormAuditPlugin();
+
+    $manager-&gt;register($plugin);
+
+    $payload = $manager-&gt;runHook('form.saving', [
+        'data' =&gt; ['name' =&gt; 'Jane'],
+    ]);
+
+    expect($payload['data'])-&gt;toHaveKey('updated_by');
+});
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<ul>
+<li>Use stable, lowercase plugin IDs such as <code>tenant</code>, <code>audit-export</code>, or <code>acme-billing</code>.</li>
+<li>Keep <code>register()</code> lightweight; do not resolve request-scoped services there.</li>
+<li>Put Laravel macros and service-dependent setup in <code>boot()</code>.</li>
+<li>Prefer table/form/action fluent APIs for one-off behavior.</li>
+<li>Return a payload array from array hook callbacks when you want to modify hook data.</li>
+<li>Use hook priorities sparingly and document why a callback must run early or late.</li>
+<li>Guard package registration with <code>PluginManager::has()</code> to avoid duplicate IDs.</li>
+<li>Treat type registries as metadata unless your package explicitly consumes them.</li>
+</ul>
+
+                                                    <nav class="page-nav" aria-label="Pagination">
+                                                                    <a class="page-nav-link is-prev" href="../widgets/">
+                                        <span>← Previous</span>
+                                        <strong>Widgets</strong>
+                                    </a>
+                                
+                                                                    <a class="page-nav-link is-next" href="../audit/">
+                                        <span>Next →</span>
+                                        <strong>Audit Log</strong>
+                                    </a>
+                                                            </nav>
+                                            </article>
+
+                                            <aside class="page-toc">
+                            <p class="toc-title">On this page</p>
+                            <ul>
+                                                                    <li class="level-2">
+                                        <a href="#when-to-use-a-plugin">
+                                            When To Use A Plugin                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#what-a-plugin-can-do">
+                                            What A Plugin Can Do                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#quick-start">
+                                            Quick Start                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#plugin-contract">
+                                            Plugin Contract                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#lifecycle">
+                                            Lifecycle                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#register-plugins-in-config">
+                                            Register Plugins In Config                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#register-plugins-from-a-package">
+                                            Register Plugins From A Package                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#plugin-configuration">
+                                            Plugin Configuration                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#plugin-dependencies">
+                                            Plugin Dependencies                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#hook-system">
+                                            Hook System                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#hook-return-values">
+                                            Hook Return Values                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#hook-priority">
+                                            Hook Priority                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#runtime-hooks">
+                                            Runtime Hooks                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#example-force-table-sort-in-a-hook">
+                                            Example: Force Table Sort In A Hook                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#typed-hooks">
+                                            Typed Hooks                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#column-filter-and-action-type-registries">
+                                            Column, Filter, And Action Type Registries                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#adding-buttons-and-actions">
+                                            Adding Buttons And Actions                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#header-button-macro">
+                                            Header Button Macro                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#row-button-macro">
+                                            Row Button Macro                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#bulk-button-macro">
+                                            Bulk Button Macro                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#cell-button-column-macro">
+                                            Cell Button Column Macro                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#query-pipes">
+                                            Query Pipes                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#practical-example-action-preset">
+                                            Practical Example: Action Preset                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#practical-example-form-audit">
+                                            Practical Example: Form Audit                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#pluginmanager-api">
+                                            PluginManager API                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#testing-plugins">
+                                            Testing Plugins                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#best-practices">
+                                            Best Practices                                        </a>
+                                    </li>
+                                                            </ul>
+                        </aside>
+                                    </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

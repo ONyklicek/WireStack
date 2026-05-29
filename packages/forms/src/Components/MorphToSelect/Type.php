@@ -102,7 +102,7 @@ final class Type
         $query = $model::query();
 
         if ($this->modifyOptionsQueryUsing) {
-            $query = call_user_func($this->modifyOptionsQueryUsing, $query) ?? $query;
+            $query = ($this->modifyOptionsQueryUsing)($query) ?? $query;
         }
 
         return $query->pluck($titleAttribute, $model->getKeyName())->all();

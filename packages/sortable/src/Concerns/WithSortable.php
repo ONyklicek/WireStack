@@ -355,10 +355,6 @@ trait WithSortable
 
     private function resolveModelClass(Table $table): ?string
     {
-        try {
-            return get_class($table->getQuery()->getModel());
-        } catch (\RuntimeException) {
-            return null;
-        }
+        return $this->getReorderableModelType();
     }
 }

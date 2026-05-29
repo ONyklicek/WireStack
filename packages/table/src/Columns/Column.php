@@ -13,7 +13,9 @@ use Illuminate\Support\Str;
 use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Core\Components\DataComponent;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasAuthorization;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireTable\Concerns\HasSummary;
 
 /** @phpstan-consistent-constructor */
@@ -109,7 +111,7 @@ class Column extends DataComponent implements Htmlable
     /** @var string|null Text/icon color (e.g., 'primary', 'danger', '#FF0000') */
     protected ?string $color = null;
 
-    /** @var string|null Icon class or name */
+    /** @var string|null Icon name */
     protected ?string $icon = null;
 
     /** @var string|null Icon position relative to text ('before' or 'after') */
@@ -722,7 +724,7 @@ class Column extends DataComponent implements Htmlable
         $state = $this->getState($record);
 
         if ($this->displayUsing) {
-            $content = (string) call_user_func($this->displayUsing, $state, $record);
+            $content = (string) ($this->displayUsing)($state, $record);
         } else {
             $content = $this->formatValue($state, $record);
         }
@@ -813,7 +815,7 @@ class Column extends DataComponent implements Htmlable
         // Add description if set
         if ($this->description) {
             $descriptionText = is_callable($this->description)
-                ? call_user_func($this->description, $record)
+                ? ($this->description)($record)
                 : $this->description;
 
             if ($descriptionText) {
@@ -860,7 +862,7 @@ class Column extends DataComponent implements Htmlable
             $value = $attr !== null ? $record->getAttribute($attr) : null;
 
             if ($this->formatStateUsing) {
-                $value = call_user_func($this->formatStateUsing, $value, $record);
+                $value = ($this->formatStateUsing)($value, $record);
             }
 
             return $value ?? $this->default;
@@ -870,7 +872,7 @@ class Column extends DataComponent implements Htmlable
         $value = $this->resolveValue($record);
 
         if ($this->formatStateUsing) {
-            $value = call_user_func($this->formatStateUsing, $value, $record);
+            $value = ($this->formatStateUsing)($value, $record);
         }
 
         if ($value === null || $value === '') {
@@ -1056,7 +1058,7 @@ class Column extends DataComponent implements Htmlable
     public function getUrl(Model $record): ?string
     {
         if ($this->urlCallback) {
-            return call_user_func($this->urlCallback, $record);
+            return ($this->urlCallback)($record);
         }
 
         return null;
@@ -1069,7 +1071,7 @@ class Column extends DataComponent implements Htmlable
     {
         if ($this->mobileDisplayUsing) {
             $state = $this->getState($record);
-            $content = call_user_func($this->mobileDisplayUsing, $state, $record, $this);
+            $content = ($this->mobileDisplayUsing)($state, $record, $this);
 
             return $this->html ? (string) $content : e((string) $content);
         }
@@ -1084,7 +1086,7 @@ class Column extends DataComponent implements Htmlable
     {
         if ($this->desktopDisplayUsing) {
             $state = $this->getState($record);
-            $content = call_user_func($this->desktopDisplayUsing, $state, $record, $this);
+            $content = ($this->desktopDisplayUsing)($state, $record, $this);
 
             return $this->html ? (string) $content : e((string) $content);
         }
@@ -1324,9 +1326,9 @@ class Column extends DataComponent implements Htmlable
         return $this->openUrlInNewTab;
     }
 
-    public function color(?string $color): static
+    public function color(string|Color|null $color): static
     {
-        $this->color = $color;
+        $this->color = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
@@ -1336,9 +1338,9 @@ class Column extends DataComponent implements Htmlable
         return $this->color;
     }
 
-    public function icon(?string $icon, ?string $position = 'before'): static
+    public function icon(string|Icon|null $icon, ?string $position = 'before'): static
     {
-        $this->icon = $icon;
+        $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
         $this->iconPosition = $position;
 
         return $this;
@@ -1378,7 +1380,7 @@ class Column extends DataComponent implements Htmlable
     public function isVisible(): bool
     {
         if ($this->visibleCallback) {
-            return call_user_func($this->visibleCallback);
+            return ($this->visibleCallback)();
         }
 
         return ! $this->hidden;
@@ -1459,7 +1461,7 @@ class Column extends DataComponent implements Htmlable
     public function getEditableRules(?Model $record): array
     {
         if ($this->editableRules) {
-            return call_user_func($this->editableRules, $record);
+            return ($this->editableRules)($record);
         }
 
         return [];
@@ -1503,9 +1505,9 @@ class Column extends DataComponent implements Htmlable
 
     // Column filtering methods
 
-    public function textColor(string $color): static
+    public function textColor(string|Color $color): static
     {
-        $this->textColor = $color;
+        $this->textColor = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
@@ -1732,7 +1734,7 @@ class Column extends DataComponent implements Htmlable
 
         // 1. Custom filter callback takes priority
         if ($this->filterQueryCallback) {
-            return call_user_func($this->filterQueryCallback, $query, $value);
+            return ($this->filterQueryCallback)($query, $value);
         }
 
         $column = $this->name;

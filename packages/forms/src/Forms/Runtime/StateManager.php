@@ -61,7 +61,7 @@ final class StateManager
         $this->container->replaceClean($data);
 
         if ($this->livewire && $this->statePath) {
-            data_set($this->livewire, $this->statePath, $data);
+            $this->writeLivewireState($this->statePath, $data);
         }
     }
 
@@ -97,7 +97,7 @@ final class StateManager
         $this->container->set($path, $value);
 
         if ($this->livewire && $this->statePath) {
-            data_set($this->livewire, $this->statePath.'.'.$path, $value);
+            $this->writeLivewireState($this->statePath.'.'.$path, $value);
         }
     }
 
@@ -111,8 +111,46 @@ final class StateManager
         $this->container->replace($data);
 
         if ($this->livewire && $this->statePath) {
-            data_set($this->livewire, $this->statePath, $data);
+            $this->writeLivewireState($this->statePath, $data);
         }
+    }
+
+    /**
+     * Write a value to the Livewire component at the given dot-notation path.
+     *
+     * Traverses the path segment by segment. When a StateContainer is encountered
+     * at any depth, delegates the remaining sub-path to its set() method — which
+     * uses Arr::set internally — instead of data_set(), which cannot write through
+     * non-array PHP objects.
+     */
+    private function writeLivewireState(string $path, mixed $value): void
+    {
+        $segments = explode('.', $path);
+        $current = $this->livewire;
+
+        foreach ($segments as $index => $segment) {
+            $child = match (true) {
+                is_object($current) => $current->{$segment} ?? null,
+                is_array($current) => $current[$segment] ?? null,
+                default => null,
+            };
+
+            if ($child instanceof StateContainer) {
+                $subPath = implode('.', array_slice($segments, $index + 1));
+
+                if ($subPath !== '') {
+                    $child->set($subPath, $value);
+                } else {
+                    $child->replace(is_array($value) ? $value : []);
+                }
+
+                return;
+            }
+
+            $current = $child;
+        }
+
+        data_set($this->livewire, $path, $value);
     }
 
     /**

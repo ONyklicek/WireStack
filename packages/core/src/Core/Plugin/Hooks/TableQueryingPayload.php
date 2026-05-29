@@ -12,7 +12,11 @@ use NyonCode\WireCore\Core\Query\QueryPlan;
  * Typed payload for the 'table.querying' hook.
  *
  * Dispatched after the QueryPlan is built but before the QueryExecutor runs.
- * Plugins can inspect/modify the plan or set force overrides (e.g. force_sort_column).
+ * Use this hook for read-only plan inspection or observation (e.g. logging, metrics).
+ *
+ * To force a sort override, use the array-based 'table.querying' hook instead
+ * and set 'force_sort_column' in the returned payload. That hook runs before
+ * QueryPlanner, so the sort is applied in a single planning pass.
  */
 final class TableQueryingPayload
 {
@@ -20,8 +24,9 @@ final class TableQueryingPayload
      * @param  object  $table  The table configuration object
      * @param  QueryPlan  $plan  The compiled query plan
      * @param  Builder<Model>  $query  The base Eloquent builder
-     * @param  string|null  $forceSortColumn  Override sort column (set by plugins like Sortable)
-     * @param  string|null  $forceSortDirection  Override sort direction
+     * @param  string|null  $forceSortColumn  @deprecated Not consumed by the built-in pipeline.
+     *                                        Use the array hook's 'force_sort_column' key instead.
+     * @param  string|null  $forceSortDirection  @deprecated See $forceSortColumn.
      */
     public function __construct(
         public readonly object $table,

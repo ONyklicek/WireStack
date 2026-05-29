@@ -37,7 +37,7 @@ final readonly class RecordDeleted implements AuditableEvent
         return $this->record->getKey();
     }
 
-    public function getOldValues(): ?array
+    public function getOldValues(): array
     {
         return $this->oldValues ?: $this->record->getOriginal();
     }

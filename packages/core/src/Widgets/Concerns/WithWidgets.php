@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Widgets\Concerns;
 
+use Livewire\Component;
 use NyonCode\WireCore\Widgets\Widget;
 
+/** @phpstan-require-extends Component */
 trait WithWidgets
 {
     /**

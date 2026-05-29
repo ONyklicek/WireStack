@@ -38,12 +38,12 @@ final readonly class InlineCellUpdated implements AuditableEvent
         return $this->recordId;
     }
 
-    public function getOldValues(): ?array
+    public function getOldValues(): array
     {
         return [$this->column => $this->oldValue];
     }
 
-    public function getNewValues(): ?array
+    public function getNewValues(): array
     {
         return [$this->column => $this->newValue];
     }

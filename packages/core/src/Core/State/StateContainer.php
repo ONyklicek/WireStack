@@ -10,7 +10,8 @@ namespace NyonCode\WireCore\Core\State;
  * Provides a unified interface for managing component state
  * with dot-notation path access and automatic dirty tracking.
  */
-final class StateContainer
+/** @implements \ArrayAccess<string, mixed> */
+final class StateContainer implements \ArrayAccess
 {
     /** @var array<string, mixed> */
     private array $state;
@@ -115,8 +116,12 @@ final class StateContainer
     /**
      * Replace the entire state array without dirty tracking.
      *
-     * Use this for initial state population (e.g., fill) where
-     * the new state should be considered the clean baseline.
+     * Intended ONLY for initial state population at hydration time
+     * (e.g. Livewire synthesizer restoring state from a previous request).
+     * Calling this mid-request discards any pending dirty changes silently.
+     * Use replace() for mutations that should be tracked.
+     *
+     * @internal
      *
      * @param  array<string, mixed>  $state
      */
@@ -129,10 +134,22 @@ final class StateContainer
     /**
      * Merge state recursively using array_replace_recursive.
      *
+     * Tracks top-level keys that actually changed as dirty so that dirty
+     * tracking consumers (e.g. audit log, form change detection) see the
+     * same information as after an equivalent set() call.
+     *
      * @param  array<string, mixed>  $state
      */
     public function merge(array $state): void
     {
+        foreach ($state as $key => $value) {
+            if (! $this->dirtyTracker->isDirty($key)) {
+                $this->dirtyTracker->setOriginal($key, $this->state[$key] ?? null);
+            }
+
+            $this->dirtyTracker->markDirty($key);
+        }
+
         $this->state = array_replace_recursive($this->state, $state);
     }
 
@@ -142,5 +159,51 @@ final class StateContainer
     public function getDirtyTracker(): DirtyStateTracker
     {
         return $this->dirtyTracker;
+    }
+
+    /**
+     * Allow data_get() to traverse top-level state keys as if they were properties.
+     */
+    public function __get(string $key): mixed
+    {
+        return $this->state[$key] ?? null;
+    }
+
+    /**
+     * Allow data_get() / isset() checks on top-level state keys.
+     */
+    public function __isset(string $key): bool
+    {
+        return isset($this->state[$key]);
+    }
+
+    // ─── ArrayAccess ────────────────────────────────────────────────
+    // Allows Arr::get() / Arr::set() (used by Laravel Validator) to traverse
+    // top-level keys. Arr::accessible() returns true for ArrayAccess objects,
+    // enabling the Validator to read nested paths like
+    // "tableState.modal.action.formData.title" through this container.
+
+    public function offsetExists(mixed $offset): bool
+    {
+        return isset($this->state[$offset]);
+    }
+
+    public function offsetGet(mixed $offset): mixed
+    {
+        return $this->state[$offset] ?? null;
+    }
+
+    public function offsetSet(mixed $offset, mixed $value): void
+    {
+        if ($offset === null) {
+            $this->state[] = $value;
+        } else {
+            $this->set((string) $offset, $value);
+        }
+    }
+
+    public function offsetUnset(mixed $offset): void
+    {
+        $this->forget((string) $offset);
     }
 }

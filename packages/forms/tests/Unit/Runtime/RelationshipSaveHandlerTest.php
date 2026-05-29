@@ -179,6 +179,54 @@ test('handles missing data key gracefully', function () {
     expect($parent->children()->count())->toBe(0);
 });
 
+test('delete fires model deleting and deleted events', function () {
+    $parent = createRshParent();
+    $child1 = $parent->children()->create(['label' => 'Keep', 'sort_order' => 0]);
+    $parent->children()->create(['label' => 'Delete', 'sort_order' => 1]);
+
+    $deletedIds = [];
+    RshChildModel::deleting(function (RshChildModel $model) use (&$deletedIds) {
+        $deletedIds[] = $model->getKey();
+    });
+
+    $handler = new RelationshipSaveHandler;
+    $repeater = Repeater::make('children')->relationship('children');
+
+    $handler->save($parent, [$repeater], [
+        'children' => [
+            ['id' => $child1->id, 'label' => 'Keep', 'sort_order' => 0],
+        ],
+    ]);
+
+    expect($deletedIds)->toHaveCount(1);
+});
+
+test('soft-deleted children are soft-deleted not hard-deleted', function () {
+    Schema::dropIfExists('rsh_soft_children');
+    Schema::create('rsh_soft_children', function (\Illuminate\Database\Schema\Blueprint $table) {
+        $table->id();
+        $table->unsignedBigInteger('rsh_soft_parent_id');
+        $table->string('label');
+        $table->integer('sort_order')->default(0);
+        $table->timestamps();
+        $table->softDeletes();
+    });
+
+    $parent = RshSoftParentModel::create(['name' => 'Soft Parent']);
+    $toRemove = $parent->softChildren()->create(['label' => 'Remove', 'sort_order' => 0]);
+
+    $handler = new RelationshipSaveHandler;
+    $repeater = Repeater::make('softChildren')->relationship('softChildren');
+
+    $handler->save($parent, [$repeater], ['softChildren' => []]);
+
+    // Record still exists in DB (soft-deleted, not hard-deleted)
+    expect(RshSoftChildModel::withTrashed()->find($toRemove->id))->not->toBeNull()
+        ->and(RshSoftChildModel::withTrashed()->find($toRemove->id)->trashed())->toBeTrue();
+
+    Schema::dropIfExists('rsh_soft_children');
+});
+
 // ─── Helpers ──────────────────────────────────────────────────────────
 
 function createRshParent(): Model
@@ -203,4 +251,25 @@ class RshChildModel extends Model
     protected $table = 'rsh_children';
 
     protected $guarded = [];
+}
+
+class RshSoftChildModel extends Model
+{
+    use \Illuminate\Database\Eloquent\SoftDeletes;
+
+    protected $table = 'rsh_soft_children';
+
+    protected $guarded = [];
+}
+
+class RshSoftParentModel extends Model
+{
+    protected $table = 'rsh_parents';
+
+    protected $guarded = [];
+
+    public function softChildren(): HasMany
+    {
+        return $this->hasMany(RshSoftChildModel::class, 'rsh_soft_parent_id');
+    }
 }

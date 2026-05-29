@@ -159,7 +159,7 @@
                                         </div>
                                         <input
                                                 type="search"
-                                                wire:model.live.debounce.300ms="tableSearch"
+                                                wire:model.live.debounce.300ms="tableState.search"
                                                 placeholder="{{ __('wire-table::messages.search') }}..."
                                                 class="block w-full rounded-lg border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 pl-9 pr-3 py-2 text-sm placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 dark:text-white dark:placeholder-gray-500"
                                         >
@@ -762,7 +762,7 @@
                                             <label class="flex items-center pt-0.5 flex-shrink-0">
                                                 <input
                                                         type="checkbox"
-                                                        wire:model.live="selectedRecords"
+                                                        wire:model.live="tableState.selection.records"
                                                         value="{{ $recordKey }}"
                                                         class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:focus:ring-offset-gray-800 touch-manipulation"
                                                 >
@@ -914,7 +914,7 @@
                                 <div class="flex items-center gap-2">
                                     <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('wire-table::messages.show') }}</span>
                                     <select
-                                            wire:model.live="tablePerPage"
+                                            wire:model.live="tableState.pagination.perPage"
                                             class="rounded-lg border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 focus:border-primary-500 focus:ring-primary-500 py-1.5"
                                     >
                                         @foreach($table->getPerPageOptions() as $option)

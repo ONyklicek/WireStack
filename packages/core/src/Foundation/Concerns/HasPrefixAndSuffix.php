@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Foundation\Concerns;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
  * Prefix/suffix text and icons for input fields.
@@ -33,16 +34,16 @@ trait HasPrefixAndSuffix
         return $this;
     }
 
-    public function prefixIcon(string|Closure|null $icon): static
+    public function prefixIcon(string|Icon|Closure|null $icon): static
     {
-        $this->prefixIcon = $icon;
+        $this->prefixIcon = $icon instanceof Icon ? $icon->value() : $icon;
 
         return $this;
     }
 
-    public function suffixIcon(string|Closure|null $icon): static
+    public function suffixIcon(string|Icon|Closure|null $icon): static
     {
-        $this->suffixIcon = $icon;
+        $this->suffixIcon = $icon instanceof Icon ? $icon->value() : $icon;
 
         return $this;
     }
@@ -59,12 +60,16 @@ trait HasPrefixAndSuffix
 
     public function getPrefixIcon(): ?string
     {
-        return $this->evaluate($this->prefixIcon);
+        $value = $this->evaluate($this->prefixIcon);
+
+        return $value instanceof Icon ? $value->value() : $value;
     }
 
     public function getSuffixIcon(): ?string
     {
-        return $this->evaluate($this->suffixIcon);
+        $value = $this->evaluate($this->suffixIcon);
+
+        return $value instanceof Icon ? $value->value() : $value;
     }
 
     public function hasAffix(): bool

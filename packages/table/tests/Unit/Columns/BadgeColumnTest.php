@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireTable\Columns\BadgeColumn;
 
 it('can be created', function () {
@@ -19,6 +21,16 @@ it('can set color map', function () {
     expect($column->getColorForState('active'))->toBe('success')
         ->and($column->getColorForState('inactive'))->toBe('danger')
         ->and($column->getColorForState('unknown'))->toBe('gray');
+});
+
+it('accepts Color enum in colors map', function () {
+    $column = BadgeColumn::make('status')->colors([
+        'active' => Color::Success,
+        'inactive' => Color::Danger,
+    ]);
+
+    expect($column->getColorForState('active'))->toBe('success')
+        ->and($column->getColorForState('inactive'))->toBe('danger');
 });
 
 it('can use color callback', function () {
@@ -41,6 +53,16 @@ it('can set icon map', function () {
     expect($column->getIconForState('active'))->toBe('check')
         ->and($column->getIconForState('inactive'))->toBe('x')
         ->and($column->getIconForState('unknown'))->toBeNull();
+});
+
+it('accepts Icon enum in icons map', function () {
+    $column = BadgeColumn::make('status')->icons([
+        'active' => Icon::check,
+        'inactive' => Icon::xMark,
+    ]);
+
+    expect($column->getIconForState('active'))->toBe('check')
+        ->and($column->getIconForState('inactive'))->toBe('x-mark');
 });
 
 it('can use icon callback', function () {
@@ -83,17 +105,16 @@ it('falls back to gray for unknown colors', function () {
         ->toContain('bg-gray-100');
 });
 
-// ─── Icon SVG ───────────────────────────────────────────────────────────────
+it('color callback can return Color enum', function () {
+    $column = BadgeColumn::make('status')->colorUsing(fn ($state) => $state === 'active' ? Color::Success : Color::Gray);
 
-it('returns svg path for known icons', function () {
-    $column = BadgeColumn::make('status');
-
-    expect($column->getIconSvg('check'))->toContain('path')
-        ->and($column->getIconSvg('x'))->toContain('path')
-        ->and($column->getIconSvg('clock'))->toContain('path')
-        ->and($column->getIconSvg('exclamation'))->toContain('path');
+    expect($column->getColorForState('active'))->toBe('success')
+        ->and($column->getColorForState('other'))->toBe('gray');
 });
 
-it('returns empty string for unknown icons', function () {
-    expect(BadgeColumn::make('status')->getIconSvg('nonexistent'))->toBe('');
+it('icon callback can return Icon enum', function () {
+    $column = BadgeColumn::make('status')->iconUsing(fn ($state) => $state === 'active' ? Icon::check : null);
+
+    expect($column->getIconForState('active'))->toBe('check')
+        ->and($column->getIconForState('other'))->toBeNull();
 });

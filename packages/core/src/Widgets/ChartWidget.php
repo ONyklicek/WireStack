@@ -60,7 +60,7 @@ class ChartWidget extends Widget
     public function getDatasets(): array
     {
         if ($this->datasetsCallback) {
-            return call_user_func($this->datasetsCallback, $this->activeFilter);
+            return ($this->datasetsCallback)($this->activeFilter);
         }
 
         return $this->datasets;
@@ -86,7 +86,7 @@ class ChartWidget extends Widget
     public function getLabels(): array
     {
         if ($this->labelsCallback) {
-            return call_user_func($this->labelsCallback, $this->activeFilter);
+            return ($this->labelsCallback)($this->activeFilter);
         }
 
         return $this->labels;

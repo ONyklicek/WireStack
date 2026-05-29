@@ -96,7 +96,7 @@ trait HasAuthorization
 
         // Custom authorize callback (highest priority)
         if ($this->authorizeCallback) {
-            return (bool) call_user_func($this->authorizeCallback, $user);
+            return (bool) ($this->authorizeCallback)($user);
         }
 
         // Gate ability check

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Foundation\Icons;
 
+use NyonCode\WireCore\Foundation\Icons\Icon as IconEnum;
+
 /**
  * Central icon management.
  *
@@ -60,14 +62,18 @@ final class IconManager
      */
     public function getPath(string $name): string
     {
-        // Custom icons take highest priority
-        if (isset($this->customIcons[$name])) {
+        $resolved = IconEnum::resolve($name);
+
+        if (isset($this->customIcons[$resolved])) {
+            return $this->customIcons[$resolved];
+        }
+
+        if ($resolved !== $name && isset($this->customIcons[$name])) {
             return $this->customIcons[$name];
         }
 
-        // Search through registered icon sets
         foreach ($this->iconSets as $iconSet) {
-            $path = $iconSet->getPath($name);
+            $path = $iconSet->getPath($resolved);
             if ($path !== null) {
                 return $path;
             }
@@ -98,12 +104,14 @@ final class IconManager
      */
     public function has(string $name): bool
     {
-        if (isset($this->customIcons[$name])) {
+        $resolved = IconEnum::resolve($name);
+
+        if (isset($this->customIcons[$resolved]) || ($resolved !== $name && isset($this->customIcons[$name]))) {
             return true;
         }
 
         foreach ($this->iconSets as $iconSet) {
-            if ($iconSet->has($name)) {
+            if ($iconSet->has($resolved)) {
                 return true;
             }
         }

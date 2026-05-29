@@ -241,7 +241,7 @@ it('applies basic filter', function () {
     $query = $service->buildQuery(
         baseQuery: TqsUser::query(),
         table: $table,
-        filterValues: ['company_id' => 1],
+        filterValues: ['company_id' => ['value' => 1]],
     );
 
     $results = $query->get();
@@ -263,7 +263,7 @@ it('handles custom filter query callbacks', function () {
     $query = $service->buildQuery(
         baseQuery: TqsUser::query(),
         table: $table,
-        filterValues: ['age_min' => 30],
+        filterValues: ['age_min' => ['value' => 30]],
     );
 
     $results = $query->get();
@@ -340,7 +340,7 @@ it('handles search + filter + sort together', function () {
         baseQuery: TqsUser::query(),
         table: $table,
         search: 'example.com',
-        filterValues: ['company_id' => 1],
+        filterValues: ['company_id' => ['value' => 1]],
         sortColumn: 'name',
         sortDirection: 'asc',
     );

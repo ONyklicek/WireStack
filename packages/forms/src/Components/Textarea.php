@@ -19,6 +19,8 @@ class Textarea extends Field
 
     protected bool $autosize = false;
 
+    protected ?bool $spellcheck = null;
+
     public function rows(int $rows): static
     {
         $this->rows = $rows;
@@ -54,6 +56,13 @@ class Textarea extends Field
         return $this;
     }
 
+    public function spellcheck(?bool $condition = true): static
+    {
+        $this->spellcheck = $condition;
+
+        return $this;
+    }
+
     public function getRows(): int
     {
         return $this->rows;
@@ -77,6 +86,11 @@ class Textarea extends Field
     public function isAutosize(): bool
     {
         return $this->autosize;
+    }
+
+    public function getSpellcheck(): ?bool
+    {
+        return $this->spellcheck;
     }
 
     protected function viewName(): string

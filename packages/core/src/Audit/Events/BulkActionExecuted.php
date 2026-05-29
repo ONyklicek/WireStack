@@ -43,7 +43,7 @@ final readonly class BulkActionExecuted implements AuditableEvent
         return null;
     }
 
-    public function getNewValues(): ?array
+    public function getNewValues(): array
     {
         return [
             'action' => $this->actionName,

@@ -19,6 +19,7 @@ use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Concerns\HasSqlDebug;
@@ -26,6 +27,7 @@ use NyonCode\WireTable\Filters\Filter;
 use RuntimeException;
 
 /** @phpstan-consistent-constructor */
+#[\AllowDynamicProperties]
 class Table implements Htmlable
 {
     use Concerns\HasSubRows;
@@ -156,7 +158,7 @@ class Table implements Htmlable
 
     public static function make(): static
     {
-        return new static; // @phpstan-ignore new.static
+        return new static;
     }
 
     public function model(string $model): static
@@ -226,7 +228,7 @@ class Table implements Htmlable
 
         // Apply query modification callback if set
         if ($this->modifyQueryCallback) {
-            $query = call_user_func($this->modifyQueryCallback, $query) ?? $query;
+            $query = ($this->modifyQueryCallback)($query) ?? $query;
         }
 
         return $query;
@@ -318,7 +320,7 @@ class Table implements Htmlable
                 'searchable' => $column->isSearchable(),
                 'toggleable' => $column->isToggleable(),
                 'visible' => $column->canView(),
-                'editable' => method_exists($column, 'isEditable') ? $column->isEditable() : false,
+                'editable' => $column->isEditable(),
                 'type' => class_basename($column),
             ];
         }
@@ -745,7 +747,7 @@ class Table implements Htmlable
     {
         if ($this->authorizeCreate !== null) {
             return $this->authorizeCreate instanceof Closure
-                ? (bool) call_user_func($this->authorizeCreate)
+                ? (bool) ($this->authorizeCreate)()
                 : $this->authorizeCreate;
         }
 
@@ -763,7 +765,7 @@ class Table implements Htmlable
     {
         if ($this->authorizeUpdate !== null) {
             return $this->authorizeUpdate instanceof Closure
-                ? (bool) call_user_func($this->authorizeUpdate, $record)
+                ? (bool) ($this->authorizeUpdate)($record)
                 : $this->authorizeUpdate;
         }
 
@@ -781,7 +783,7 @@ class Table implements Htmlable
     {
         if ($this->authorizeDelete !== null) {
             return $this->authorizeDelete instanceof Closure
-                ? (bool) call_user_func($this->authorizeDelete, $record)
+                ? (bool) ($this->authorizeDelete)($record)
                 : $this->authorizeDelete;
         }
 
@@ -799,7 +801,7 @@ class Table implements Htmlable
     {
         if ($this->authorizeView !== null) {
             return $this->authorizeView instanceof Closure
-                ? (bool) call_user_func($this->authorizeView, $record)
+                ? (bool) ($this->authorizeView)($record)
                 : $this->authorizeView;
         }
 
@@ -828,11 +830,11 @@ class Table implements Htmlable
         return $this->defaultSortDirection;
     }
 
-    public function emptyState(?string $heading = null, ?string $description = null, ?string $icon = null): static
+    public function emptyState(?string $heading = null, ?string $description = null, string|Icon|null $icon = null): static
     {
         $this->emptyStateHeading = $heading;
         $this->emptyStateDescription = $description;
-        $this->emptyStateIcon = $icon;
+        $this->emptyStateIcon = $icon instanceof Icon ? $icon->value() : $icon;
 
         return $this;
     }
@@ -890,7 +892,7 @@ class Table implements Htmlable
     public function getRecordUrl(Model $record): ?string
     {
         if ($this->recordUrlCallback) {
-            return call_user_func($this->recordUrlCallback, $record);
+            return ($this->recordUrlCallback)($record);
         }
 
         if ($this->recordUrl) {
