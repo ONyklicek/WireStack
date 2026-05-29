@@ -72,7 +72,7 @@ jobs:
           personal_token: ${{ secrets.SPLIT_TOKEN }}
           external_repository: NyonCode/wire-stack.github.io
           publish_dir: ./docs-site/dist
-          publish_branch: gh-pages
+          publish_branch: main
           force_orphan: true
           user_name: "Ondřej Nyklíček"
           user_email: "ondrejnyklicek@icloud.com"
