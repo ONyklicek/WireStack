@@ -26,8 +26,9 @@ TextInput::make('age')->integer()
 | `password()` | `password` | Masked input |
 | `tel()` | `tel` | Phone number |
 | `url()` | `url` | URL input |
-| `numeric()` | `text` with inputmode | Numeric with decimal |
-| `integer()` | `text` with inputmode | Integer only |
+| `numeric()` | `number` with inputmode | Numeric with decimal |
+| `integer()` | `number` with inputmode | Integer only, step=1 |
+| `search()` | `search` | Search input |
 | `type(string)` | Custom | Set HTML input type directly |
 
 ## Constraints
@@ -76,3 +77,27 @@ TextInput::make('search')
     ->live()
     ->debounce(300)
 ```
+
+## Validation
+
+```php
+TextInput::make('username')
+    ->required()
+    ->rules(['alpha_dash', 'min:3', 'max:30'])
+    ->validationMessages(['required' => 'Username is required'])
+```
+
+## Common Options
+
+```php
+TextInput::make('bio')
+    ->label('Short bio')
+    ->helperText('Displayed on your profile')
+    ->hint('Max 255 chars')
+    ->placeholder('Tell us about yourself')
+    ->disabled(fn () => $this->locked)
+    ->readOnly(fn () => ! auth()->user()->canEdit())
+    ->autofocus()
+```
+
+See [Common Field API](index.md#common-field-api) for the full list of shared methods.

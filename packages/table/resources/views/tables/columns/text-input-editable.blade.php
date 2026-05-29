@@ -26,6 +26,7 @@
 @endphp
 
 <div wire:key="{{ $wireKey }}"
+     wire:ignore.self
      x-data="{
         value: {{ $valueJson }},
         original: {{ $valueJson }},
@@ -42,6 +43,19 @@
                     if (this.dirty) this.doValidate();
                 }, {{ $debounce }}))
             }
+
+            const observer = new MutationObserver((mutations) => {
+                for (const m of mutations) {
+                    if (m.attributeName === 'data-server-value') {
+                        const newVal = this.$el.dataset.serverValue;
+                        const newVer = this.$el.dataset.recordVersion;
+                        if (newVal !== this.serverValue) {
+                            this.syncFromServer(newVal, newVer);
+                        }
+                    }
+                }
+            });
+            observer.observe(this.$el, { attributes: true, attributeFilter: ['data-server-value', 'data-record-version'] });
         },
         syncFromServer(newVal, newVersion) {
             if (this.saving) return;
@@ -91,7 +105,6 @@
             } catch (e) {}
         }
      }"
-     x-effect="let sv = $el.dataset.serverValue, rv = $el.dataset.recordVersion; if (sv !== undefined && sv !== serverValue) syncFromServer(sv, rv)"
      data-server-value="{{ $value }}"
      data-record-version="{{ $recordVersion }}"
      data-msg-error="{{ $msgError }}"

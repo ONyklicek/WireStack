@@ -33,8 +33,8 @@ it('has correct defaults', function () {
     $halt = ActionHalt::make();
 
     expect($halt->getModalHeading())->toBeNull()
-        ->and($halt->getModalSubmitLabel())->toBe('confirm_submit')
-        ->and($halt->getModalCancelLabel())->toBe('confirm_cancel')
+        ->and($halt->getModalSubmitLabel())->toBe('Confirm')
+        ->and($halt->getModalCancelLabel())->toBe('Cancel')
         ->and($halt->getModalWidth())->toBe('md')
         ->and($halt->isDanger())->toBeFalse()
         ->and($halt->isInformative())->toBeFalse();
@@ -48,14 +48,14 @@ it('informative mode clears form and submit', function () {
     expect($halt->isInformative())->toBeTrue()
         ->and($halt->getModalSubmitLabel())->toBeNull()
         ->and($halt->getFormInstance())->toBeNull()
-        ->and($halt->getModalCancelLabel())->toBe('confirm_close');
+        ->and($halt->getModalCancelLabel())->toBe('Close');
 });
 
 it('has confirmDelete preset', function () {
     $halt = ActionHalt::confirmDelete('Test Record');
 
-    expect($halt->getModalHeading())->toBe('delete_heading')
-        ->and($halt->getModalDescription())->toBe('delete_description_named')
+    expect($halt->getModalHeading())->toBe('Delete record')
+        ->and($halt->getModalDescription())->toBe('Are you sure you want to delete "Test Record"? This action is irreversible.')
         ->and($halt->isDanger())->toBeTrue();
 });
 

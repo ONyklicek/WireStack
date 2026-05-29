@@ -19,6 +19,17 @@ return [
     'delete_bulk_heading' => 'Smazat vybrané záznamy',
     'delete_bulk_description' => 'Opravdu chcete smazat vybrané záznamy? Tato akce je nevratná.',
 
+    // Force delete presets
+    'force_delete_bulk_label' => 'Trvale smazat vybrané',
+    'force_delete_bulk_heading' => 'Trvale smazat vybrané záznamy',
+    'force_delete_bulk_description' => 'Opravdu chcete trvale smazat vybrané záznamy? Tuto akci nelze vrátit zpět.',
+
+    // Restore presets
+    'restore_bulk_label' => 'Obnovit vybrané',
+    'restore_bulk_heading' => 'Obnovit vybrané záznamy',
+    'restore_bulk_description' => 'Opravdu chcete obnovit vybrané záznamy?',
+    'restore_submit' => 'Obnovit',
+
     // Action labels
     'edit_label' => 'Upravit',
     'view_label' => 'Zobrazit',

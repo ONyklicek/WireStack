@@ -7,6 +7,7 @@ namespace NyonCode\WireTable\Filters;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireForms\Components\TextInput;
 
 class NumberRangeFilter extends Filter
 {
@@ -93,7 +94,7 @@ class NumberRangeFilter extends Filter
         }
 
         if ($this->queryCallback) {
-            return call_user_func($this->queryCallback, $query, $value);
+            return ($this->queryCallback)($query, $value);
         }
 
         $column = $this->getColumn();
@@ -112,15 +113,32 @@ class NumberRangeFilter extends Filter
         return $query->where($column, $value);
     }
 
+    public function getFormFields(): array
+    {
+        return [
+            TextInput::make('min')
+                ->numeric()
+                ->placeholder($this->getMinLabel()),
+            TextInput::make('max')
+                ->numeric()
+                ->placeholder($this->getMaxLabel()),
+        ];
+    }
+
     public function render(mixed $value = null): string
     {
         if (! $this->canView()) {
             return '';
         }
 
-        return view($this->resolveFilterView('tables.filters.number-range'), [
+        return view($this->resolveFilterView('tables.filters.form-field'), [
             'filter' => $this,
             'value' => $value,
         ])->render();
+    }
+
+    public function wrapValue(mixed $value): mixed
+    {
+        return $value;
     }
 }

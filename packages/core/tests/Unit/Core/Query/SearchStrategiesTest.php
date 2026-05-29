@@ -9,9 +9,6 @@ use NyonCode\WireCore\Core\Query\SearchClause;
 use NyonCode\WireCore\Core\Query\Strategies\MySqlSearchStrategy;
 use NyonCode\WireCore\Core\Query\Strategies\PostgresSearchStrategy;
 use NyonCode\WireCore\Core\Query\Strategies\SqliteSearchStrategy;
-use NyonCode\WireCore\Tests\TestCase;
-
-uses(TestCase::class);
 
 beforeEach(function () {
     Schema::create('strategy_test_users', function (Blueprint $table) {

@@ -35,6 +35,7 @@ class SlideOverComponent extends Component
         public bool $stickyFooter = false,
         public bool $stickyHeader = false,
         public ?string $id = null,
+        public ?string $closeAction = null,
     ) {}
 
     public function widthClass(): string

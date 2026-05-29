@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Notifications;
 
+use NyonCode\WireCore\Foundation\Icons\Icon;
+
 /**
  * Immutable value object representing a notification.
  *
@@ -73,9 +75,11 @@ final class Notification
             $this->extra);
     }
 
-    public function icon(?string $icon): self
+    public function icon(string|Icon|null $icon): self
     {
-        return new self($this->type, $this->message, $this->title, $this->duration, $icon, $this->position,
+        $resolved = $icon instanceof Icon ? $icon->value() : $icon;
+
+        return new self($this->type, $this->message, $this->title, $this->duration, $resolved, $this->position,
             $this->extra);
     }
 

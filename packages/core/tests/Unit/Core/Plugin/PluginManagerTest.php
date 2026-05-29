@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use NyonCode\WireCore\Core\Plugin\Contracts\HasConfiguration;
+use NyonCode\WireCore\Core\Plugin\Contracts\HasDependencies;
 use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Query\Contracts\QueryPipe;
@@ -114,6 +116,15 @@ it('registers custom filter types', function () {
     expect($manager->getFilterTypes())->toBe(['ai' => 'App\\Filters\\AiFilter']);
 });
 
+// --- Action Type Extension ---
+
+it('registers custom action types', function () {
+    $manager = new PluginManager;
+    $manager->addActionType('workflow', 'App\\Actions\\WorkflowAction');
+
+    expect($manager->getActionTypes())->toBe(['workflow' => 'App\\Actions\\WorkflowAction']);
+});
+
 // --- Hook System ---
 
 it('runs hooks in order', function () {
@@ -135,6 +146,33 @@ it('runs hooks in order', function () {
     $manager->runHook('table.querying');
 
     expect($order)->toBe(['first', 'second']);
+});
+
+it('runs hooks by ascending priority', function () {
+    $manager = new PluginManager;
+    $order = [];
+
+    $manager->hook('table.querying', function (array $payload) use (&$order) {
+        $order[] = 'audit';
+
+        return $payload;
+    }, priority: 100);
+
+    $manager->hook('table.querying', function (array $payload) use (&$order) {
+        $order[] = 'scope';
+
+        return $payload;
+    }, priority: -100);
+
+    $manager->hook('table.querying', function (array $payload) use (&$order) {
+        $order[] = 'default';
+
+        return $payload;
+    });
+
+    $manager->runHook('table.querying');
+
+    expect($order)->toBe(['scope', 'default', 'audit']);
 });
 
 it('passes and modifies payload through hooks', function () {
@@ -181,6 +219,90 @@ it('handles hooks with no registered callbacks', function () {
     expect($result)->toBe(['data' => true]);
 });
 
+it('runs typed hooks with object payloads', function () {
+    $manager = new PluginManager;
+    $payload = (object) ['steps' => []];
+
+    $manager->hook('typed.example', function (object $payload): object {
+        $payload->steps[] = 'audit';
+
+        return $payload;
+    }, priority: 100);
+
+    $manager->hook('typed.example', function (object $payload): object {
+        $payload->steps[] = 'scope';
+
+        return $payload;
+    }, priority: -100);
+
+    $result = $manager->runTypedHook('typed.example', $payload);
+
+    expect($result)->toBe($payload)
+        ->and($result->steps)->toBe(['scope', 'audit']);
+});
+
+it('allows typed hooks to replace the payload object', function () {
+    $manager = new PluginManager;
+    $payload = (object) ['value' => 'original'];
+    $replacement = (object) ['value' => 'replacement'];
+
+    $manager->hook('typed.example', fn (object $payload): object => $replacement);
+
+    expect($manager->runTypedHook('typed.example', $payload))->toBe($replacement);
+});
+
+it('keeps typed payload unchanged when callback returns a non-object', function () {
+    $manager = new PluginManager;
+    $payload = (object) ['value' => 'original'];
+
+    $manager->hook('typed.example', fn (object $payload): string => 'ignored');
+
+    expect($manager->runTypedHook('typed.example', $payload))->toBe($payload);
+});
+
+// --- Dependencies ---
+
+it('prevents registering a plugin when a dependency is missing', function () {
+    $manager = new PluginManager;
+
+    $manager->register(createDependentPlugin('needs-core', ['core']));
+})->throws(RuntimeException::class, "Plugin 'needs-core' requires 'core' which is not registered.");
+
+it('registers a plugin when dependencies are already registered', function () {
+    $manager = new PluginManager;
+
+    $manager->register(createTestPlugin('core'));
+    $manager->register(createDependentPlugin('needs-core', ['core']));
+
+    expect($manager->has('needs-core'))->toBeTrue();
+});
+
+// --- Configuration ---
+
+it('merges plugin default config with user config', function () {
+    config()->set('wire-core.plugins.config.export', [
+        'format' => 'xlsx',
+    ]);
+
+    $manager = new PluginManager;
+    $manager->register(createConfigurablePlugin('export', [
+        'format' => 'csv',
+        'chunk_size' => 500,
+    ]));
+
+    expect($manager->getPluginConfig('export'))->toBe([
+        'format' => 'xlsx',
+        'chunk_size' => 500,
+    ]);
+});
+
+it('returns empty config for plugins without configuration', function () {
+    $manager = new PluginManager;
+    $manager->register(createTestPlugin('plain'));
+
+    expect($manager->getPluginConfig('plain'))->toBe([]);
+});
+
 // --- Helpers ---
 
 function createTestPlugin(
@@ -213,6 +335,86 @@ function createTestPlugin(
             if ($this->bootFn) {
                 ($this->bootFn)($manager);
             }
+        }
+    };
+}
+
+/**
+ * @param  array<int, string>  $dependencies
+ */
+function createDependentPlugin(string $id, array $dependencies): Plugin
+{
+    return new class($id, $dependencies) implements HasDependencies, Plugin
+    {
+        /**
+         * @param  array<int, string>  $dependencies
+         */
+        public function __construct(
+            private readonly string $id,
+            private readonly array $dependencies,
+        ) {}
+
+        public function getId(): string
+        {
+            return $this->id;
+        }
+
+        /**
+         * @return array<int, string>
+         */
+        public function dependencies(): array
+        {
+            return $this->dependencies;
+        }
+
+        public function register(PluginManager $manager): void
+        {
+            //
+        }
+
+        public function boot(PluginManager $manager): void
+        {
+            //
+        }
+    };
+}
+
+/**
+ * @param  array<string, mixed>  $defaults
+ */
+function createConfigurablePlugin(string $id, array $defaults): Plugin
+{
+    return new class($id, $defaults) implements HasConfiguration, Plugin
+    {
+        /**
+         * @param  array<string, mixed>  $defaults
+         */
+        public function __construct(
+            private readonly string $id,
+            private readonly array $defaults,
+        ) {}
+
+        public function getId(): string
+        {
+            return $this->id;
+        }
+
+        /**
+         * @return array<string, mixed>
+         */
+        public function defaultConfig(): array
+        {
+            return $this->defaults;
+        }
+
+        public function register(PluginManager $manager): void
+        {
+            //
+        }
+
+        public function boot(PluginManager $manager): void
+        {
+            //
         }
     };
 }

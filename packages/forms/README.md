@@ -1,6 +1,6 @@
 # Wire Forms
 
-Standalone form system for Laravel Livewire. 20+ field types, validation, layout components. Can be used **independently** or together with [Wire Table](https://github.com/NyonCode/wire-table).
+Standalone form system for Laravel Livewire. Includes input fields, layout components, relationship fields, repeaters, validation, and save lifecycle hooks. Can be used **independently** or together with [Wire Table](https://github.com/NyonCode/wire-table).
 
 ## Requirements
 
@@ -252,6 +252,9 @@ See [Wire Table documentation](https://github.com/NyonCode/wire-table) for detai
 | `FileUpload` | File upload with preview |
 | `RichEditor` | Rich text editor |
 | `Hidden` | Hidden input |
+| `BelongsToSelect` | Select field backed by a `belongsTo` relation |
+| `MorphToSelect` | Select fields for polymorphic relations |
+| `Repeater` | Repeatable nested form rows |
 
 ### Layout Components
 | Component | Description |
@@ -309,6 +312,9 @@ $form
     ->afterSave(Closure $fn)
     ->successMessage(string|Closure|null $message)
     ->disableSuccessNotification()
+    ->authorize()
+    ->authorizeUsing(Closure $fn)
+    ->canSave(): bool
     ->disabled(bool $disabled = true)
     ->isCreating(): bool
     ->isEditing(): bool
@@ -322,6 +328,17 @@ $form
 ```bash
 php artisan vendor:publish --tag=wire-forms-config
 ```
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Forms Overview](../../docs/forms/overview.md) | Form setup, standalone usage, and save flow |
+| [Field Reference](../../docs/forms/fields/index.md) | Built-in field components |
+| [Validation](../../docs/forms/validation.md) | Rules, messages, and validation behavior |
+| [Save Lifecycle](../../docs/forms/save-lifecycle.md) | Mutation, persistence, hooks, and notifications |
+| [Authorization](../../docs/authorization.md) | Policy and callback authorization |
+| [Configuration](../../docs/configuration.md) | Date formats, uploads, and rich editor config |
 
 ## License
 

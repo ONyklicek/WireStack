@@ -1,0 +1,1923 @@
+<!DOCTYPE html>
+<html lang="en" data-search-index="../../search-index.json">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Columns | Wire Docs</title>
+    <meta name="description" content="Wire Table provides 13 column types. All share the same base column API for labels, visibility, authorization, sorting, formatting, and inline editing.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../../assets/site.css">
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem('wire-docs-theme');
+                var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+    <script defer src="../../assets/site.js"></script>
+</head>
+<body class="docs-body">
+    <div class="site-shell">
+        <aside class="site-sidebar" data-sidebar>
+            <div class="sidebar-header">
+                <a class="brand-link" href="../../">
+                    <span class="brand-mark">W</span>
+                    <span class="brand-name">WireStack<span class="brand-badge">Docs</span></span>
+                </a>
+                <button class="icon-button sidebar-close" type="button" data-nav-close aria-label="Close navigation" style="display:none">×</button>
+            </div>
+
+            <nav class="sidebar-nav">
+                                    <section class="nav-section">
+                        <h2>Start Here</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../documentation/">
+                                        Wire Documentation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../getting-started/">
+                                        Getting Started                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../project-map/">
+                                        Project Map                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../configuration/">
+                                        Configuration                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../authorization/">
+                                        Authorization                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Forms</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../forms/overview/">
+                                        Wire Forms                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/validation/">
+                                        Form Validation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/save-lifecycle/">
+                                        Save Lifecycle                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Fields</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/">
+                                        Form Fields                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/alert/">
+                                        Alert                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/belongs-to-select/">
+                                        BelongsToSelect                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/checkbox/">
+                                        Checkbox                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/checkbox-list/">
+                                        CheckboxList                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/code-editor/">
+                                        CodeEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/color-picker/">
+                                        ColorPicker                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/date-time-picker/">
+                                        DateTimePicker                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/fieldset/">
+                                        Fieldset                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/file-upload/">
+                                        FileUpload                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/grid/">
+                                        Grid                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/hidden/">
+                                        Hidden                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/html/">
+                                        Html                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/key-value/">
+                                        KeyValue                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/markdown-editor/">
+                                        MarkdownEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/morph-to-select/">
+                                        MorphToSelect                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/otp-input/">
+                                        OtpInput                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/placeholder/">
+                                        Placeholder                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/radio/">
+                                        Radio                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/rating/">
+                                        Rating                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/repeater/">
+                                        Repeater                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/rich-editor/">
+                                        RichEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/section/">
+                                        Section                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/select/">
+                                        Select                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/slider/">
+                                        Slider                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/tags/">
+                                        Tags                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/textarea/">
+                                        Textarea                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/text-input/">
+                                        TextInput                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/tiptap-editor/">
+                                        TiptapEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/toggle/">
+                                        Toggle                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../forms/fields/view-field/">
+                                        ViewField                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Table</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../overview/">
+                                        Wire Table                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="is-active" href="./">
+                                        Columns                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../filters/">
+                                        Filters                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../actions/">
+                                        Table Actions                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../exports/">
+                                        Table Exports                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../sub-rows/">
+                                        Sub-Rows                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../notifications/">
+                                        Table Notifications                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../advanced/">
+                                        Advanced Features                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Sortable</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../sortable/overview/">
+                                        Introduction                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/installation/">
+                                        Installation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/row-sorting/">
+                                        Row Reordering                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/column-sorting/">
+                                        Column Reordering                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/customization/">
+                                        Customization                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/advanced/">
+                                        Advanced Usage                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/api-reference/">
+                                        API Reference                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Core</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../core/actions/">
+                                        Actions                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/foundation/">
+                                        Foundation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/notifications/">
+                                        Notifications                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/modals/">
+                                        Modals                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/widgets/">
+                                        Widgets                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/plugins/">
+                                        Core Plugins                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/audit/">
+                                        Audit Log                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                            </nav>
+        </aside>
+
+        <div class="site-overlay" data-nav-close></div>
+
+        <main class="site-main">
+            <header class="topbar">
+                <button class="nav-toggle" type="button" data-nav-toggle aria-label="Open navigation">
+                    <span></span><span></span><span></span>
+                </button>
+
+                <div class="search-shell" data-search-root>
+                    <input
+                        type="search"
+                        class="search-input"
+                        placeholder="Search documentation…"
+                        autocomplete="off"
+                        spellcheck="false"
+                        data-search-input
+                    >
+                    <span class="search-kbd"><kbd>⌘</kbd><kbd>K</kbd></span>
+                    <div class="search-results" data-search-results hidden></div>
+                </div>
+
+                <div class="topbar-actions">
+                    <button class="icon-button theme-toggle" type="button" data-theme-toggle aria-label="Toggle theme">
+                        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                    </button>
+                    <a class="icon-button" href="https://github.com/ONyklicek/WireStack" target="_blank" rel="noreferrer" aria-label="GitHub repository">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2c-3.2.7-3.88-1.54-3.88-1.54-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.56-.29-5.26-1.28-5.26-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.18 1.18a11.02 11.02 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.58.23 2.75.12 3.04.74.81 1.18 1.83 1.18 3.09 0 4.42-2.7 5.39-5.28 5.68.42.36.79 1.06.79 2.14v3.17c0 .31.21.68.8.56A11.52 11.52 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5Z"/></svg>
+                    </a>
+                </div>
+            </header>
+
+            <div class="page-body">
+                <div class="content-shell">
+                    <article class="docs-article">
+                        <div class="page-hero">
+                            <nav class="breadcrumb" aria-label="Breadcrumb">
+                                <a href="../../">Docs</a>
+                                <span class="sep">/</span>
+                                <span class="current">Table</span>
+                            </nav>
+                            <p class="eyebrow">Table</p>
+                            <h1>Columns</h1>
+                                                            <p class="lead">Wire Table provides 13 column types. All share the same base column API for labels, visibility, authorization, sorting, formatting, and inline editing.</p>
+                            
+                            
+                                                                                </div>
+
+                        
+<p>Wire Table provides 13 column types. All share the same base column API for labels, visibility, authorization, sorting, formatting, and inline editing.</p>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#shared-column-api">Shared Column API</a></li>
+<li><a href="#relation-paths--dot-notation">Relation Paths &amp; Dot Notation</a></li>
+<li><a href="#textcolumn">TextColumn</a></li>
+<li><a href="#badgecolumn">BadgeColumn</a></li>
+<li><a href="#booleancolumn">BooleanColumn</a></li>
+<li><a href="#iconcolumn">IconColumn</a></li>
+<li><a href="#imagecolumn">ImageColumn</a></li>
+<li><a href="#buttoncolumn">ButtonColumn</a></li>
+<li><a href="#togglecolumn">ToggleColumn</a></li>
+<li><a href="#selectcolumn">SelectColumn</a></li>
+<li><a href="#textinputcolumn">TextInputColumn</a></li>
+<li><a href="#stackedcolumn">StackedColumn</a></li>
+<li><a href="#splitcolumn">SplitColumn</a></li>
+<li><a href="#pollcolumn">PollColumn</a></li>
+<li><a href="#column-level-filtering">Column-Level Filtering</a></li>
+<li><a href="#inline-editing">Inline Editing</a></li>
+<li><a href="#patterns--recipes">Patterns &amp; Recipes</a></li>
+</ol>
+<hr>
+<h2 id="shared-column-api">Shared Column API</h2>
+<p>Every column inherits these capabilities from the base <code>Column</code> class.</p>
+<h3 id="factory-identity">Factory &amp; Identity</h3>
+<pre><code class="language-php">Column::make(string $name)           // static factory — $name is dot-notation path
+-&gt;label(string|Closure $label)        // display label in &lt;th&gt; (auto-generated from name)
+-&gt;getName(): string                   // get column name
+-&gt;getLabel(): string                  // get resolved label
+</code></pre>
+<h3 id="sorting">Sorting</h3>
+<pre><code class="language-php">-&gt;sortable(bool|Closure $sortable = true)
+-&gt;isSortable(): bool
+
+// Custom sort logic
+-&gt;sortUsing(Closure $fn)
+</code></pre>
+<pre><code class="language-php">TextColumn::make('full_name')
+    -&gt;sortable()
+    -&gt;sortUsing(function (Builder $query, string $direction) {
+        $query-&gt;orderBy('last_name', $direction)
+              -&gt;orderBy('first_name', $direction);
+    })
+</code></pre>
+<h3 id="searching">Searching</h3>
+<pre><code class="language-php">-&gt;searchable(bool|array $searchable = true)
+-&gt;isSearchable(): bool
+
+// Explicit DB columns to search (when column name is virtual)
+-&gt;searchColumns(array $columns)
+
+// Custom search logic
+-&gt;searchUsing(Closure $fn)
+
+// Get resolved search columns
+-&gt;getSearchColumns(): array
+</code></pre>
+<pre><code class="language-php">// Search across multiple DB columns
+TextColumn::make('user')
+    -&gt;searchable()
+    -&gt;searchColumns(['first_name', 'last_name', 'email'])
+
+// Custom search logic
+TextColumn::make('full_name')
+    -&gt;searchable()
+    -&gt;searchUsing(function (Builder $query, string $search) {
+        $query-&gt;where(DB::raw("CONCAT(first_name, ' ', last_name)"), 'like', "%{$search}%");
+    })
+</code></pre>
+<h3 id="visibility-toggleability">Visibility &amp; Toggleability</h3>
+<pre><code class="language-php">-&gt;hidden(bool|Closure $hidden = true)        // hide column
+-&gt;visible(bool|Closure $visible = true)      // show column (inverse of hidden)
+-&gt;isHidden(): bool
+
+// User-toggleable (column picker)
+-&gt;toggleable(bool $toggleable = true)
+
+// Permission-based
+-&gt;permission(string $permission)             // visible only if user has permission
+-&gt;visible(Closure $fn)                       // custom visibility callback
+</code></pre>
+<h3 id="responsive-breakpoints">Responsive Breakpoints</h3>
+<pre><code class="language-php">-&gt;visibleFrom(string $breakpoint)      // hidden below this breakpoint
+-&gt;hiddenFrom(string $breakpoint)       // hidden from this breakpoint up
+-&gt;onlyOnMobile()                       // visible only on mobile (&lt;md)
+-&gt;onlyOnDesktop()                      // visible only on desktop (≥lg)
+-&gt;onlyOnTabletAndUp()                  // visible from md up
+-&gt;onlyOnLargeScreens()                 // visible from xl up
+</code></pre>
+<pre><code class="language-php">TextColumn::make('phone')
+    -&gt;visibleFrom('md')          // hidden on mobile, visible from md
+
+TextColumn::make('notes')
+    -&gt;onlyOnLargeScreens()       // only visible on xl+
+</code></pre>
+<h3 id="responsive-display-variants">Responsive Display Variants</h3>
+<pre><code class="language-php">// Custom render for mobile vs desktop
+-&gt;mobileDisplayUsing(Closure $fn)
+-&gt;desktopDisplayUsing(Closure $fn)
+-&gt;hasResponsiveDisplay(): bool
+</code></pre>
+<pre><code class="language-php">TextColumn::make('user')
+    -&gt;mobileDisplayUsing(fn ($record) =&gt; $record-&gt;name)
+    -&gt;desktopDisplayUsing(fn ($record) =&gt; "{$record-&gt;name} &lt;{$record-&gt;email}&gt;")
+</code></pre>
+<h3 id="value-formatting">Value Formatting</h3>
+<pre><code class="language-php">-&gt;formatStateUsing(Closure $fn)        // transform value for display
+-&gt;displayUsing(Closure $fn)            // alias for formatStateUsing
+-&gt;default(mixed $value)                // value when state is null
+-&gt;placeholder(string $text)            // text shown when value is null/empty
+-&gt;limit(int $chars)                    // truncate to N characters
+-&gt;words(int $words)                    // truncate to N words
+-&gt;prefix(string $prefix)              // prepend text
+-&gt;suffix(string $suffix)              // append text
+-&gt;html(bool $html = true)             // render value as raw HTML
+-&gt;wrap(bool $wrap = true)             // allow text wrapping (default: nowrap)
+</code></pre>
+<pre><code class="language-php">TextColumn::make('price')
+    -&gt;prefix('$')
+    -&gt;suffix(' USD')
+    -&gt;placeholder('N/A')
+
+TextColumn::make('bio')
+    -&gt;limit(100)
+    -&gt;tooltip(fn ($record) =&gt; $record-&gt;bio)   // show full on hover
+
+TextColumn::make('content')
+    -&gt;html()
+    -&gt;wrap()
+    -&gt;limit(200)
+</code></pre>
+<h3 id="text-styling">Text Styling</h3>
+<pre><code class="language-php">-&gt;size(string $size)                   // 'xs', 'sm', 'md', 'lg', 'xl'
+-&gt;weight(string $weight)              // 'thin', 'light', 'normal', 'medium', 'semibold', 'bold', 'extrabold'
+-&gt;textColor(string $color)            // Tailwind color name or 'gray', 'primary', etc.
+-&gt;fontFamily(string $family)          // 'sans', 'serif', 'mono' (TextColumn only)
+</code></pre>
+<pre><code class="language-php">TextColumn::make('name')
+    -&gt;weight('bold')
+    -&gt;size('lg')
+
+TextColumn::make('subtitle')
+    -&gt;size('sm')
+    -&gt;textColor('gray')
+    -&gt;weight('light')
+</code></pre>
+<h3 id="width-alignment">Width &amp; Alignment</h3>
+<pre><code class="language-php">-&gt;width(string $width)                 // CSS width: '200px', '20%', 'auto'
+-&gt;alignment(string $alignment)         // 'left', 'center', 'right'
+-&gt;alignLeft()                          // shortcut
+-&gt;alignCenter()                        // shortcut
+-&gt;alignRight()                         // shortcut
+</code></pre>
+<h3 id="icons">Icons</h3>
+<pre><code class="language-php">-&gt;icon(string|Closure $icon)
+-&gt;iconPosition(string $position)       // 'before' (default), 'after'
+-&gt;color(string|Closure $color)         // icon/text color
+</code></pre>
+<pre><code class="language-php">TextColumn::make('email')
+    -&gt;icon('mail')
+    -&gt;iconPosition('before')
+    -&gt;color('primary')
+</code></pre>
+<h3 id="url-clickable-cell">URL (Clickable Cell)</h3>
+<pre><code class="language-php">-&gt;url(string|Closure $url)             // make cell a link
+-&gt;openUrlInNewTab(bool $newTab = true)
+-&gt;actionUrl(string|Closure $url)       // alias
+</code></pre>
+<pre><code class="language-php">TextColumn::make('name')
+    -&gt;url(fn ($record) =&gt; route('users.show', $record))
+    -&gt;openUrlInNewTab()
+    -&gt;color('primary')
+</code></pre>
+<h3 id="copyable">Copyable</h3>
+<pre><code class="language-php">-&gt;copyable(bool $copyable = true)      // click-to-copy icon
+-&gt;copyMessage(string $msg)             // feedback text after copy
+</code></pre>
+<h3 id="tooltip-description">Tooltip &amp; Description</h3>
+<pre><code class="language-php">-&gt;tooltip(string|Closure $tooltip)     // hover tooltip
+-&gt;description(string|Closure $desc)    // secondary text below value
+</code></pre>
+<pre><code class="language-php">TextColumn::make('title')
+    -&gt;description(fn ($record) =&gt; Str::limit($record-&gt;body, 50))
+    -&gt;tooltip(fn ($record) =&gt; "Created: {$record-&gt;created_at-&gt;format('d.m.Y')}")
+</code></pre>
+<h3 id="summary-aggregate-footer">Summary (Aggregate Footer)</h3>
+<pre><code class="language-php">-&gt;summarize(string $aggregate, ?string $label = null)
+</code></pre>
+<p>Available aggregates: <code>'sum'</code>, <code>'avg'</code>, <code>'count'</code>, <code>'min'</code>, <code>'max'</code>, <code>'range'</code></p>
+<p>See <a href="../advanced/#summary-footer">Advanced — Summary</a> for details.</p>
+<h3 id="extra-html-attributes">Extra HTML Attributes</h3>
+<pre><code class="language-php">-&gt;extraAttributes(array $attrs)        // on &lt;td&gt;
+-&gt;extraHeaderAttributes(array $attrs)  // on &lt;th&gt;
+</code></pre>
+<pre><code class="language-php">TextColumn::make('notes')
+    -&gt;extraAttributes(['data-testid' =&gt; 'notes-cell'])
+    -&gt;extraHeaderAttributes(['class' =&gt; 'bg-gray-100'])
+</code></pre>
+<h3 id="pivot-columns">Pivot Columns</h3>
+<pre><code class="language-php">-&gt;pivot(bool $isPivot = true)          // marks as pivot table column
+-&gt;isPivot(): bool
+</code></pre>
+<p>For many-to-many relationships with pivot data:</p>
+<pre><code class="language-php">TextColumn::make('roles.pivot.assigned_at')
+    -&gt;pivot()
+    -&gt;dateTime('d.m.Y')
+</code></pre>
+<h3 id="state-access">State Access</h3>
+<pre><code class="language-php">-&gt;state(mixed $value)                  // override state value
+-&gt;getState(Model $record): mixed       // resolve state from record
+</code></pre>
+<hr>
+<h2 id="relation-paths-dot-notation">Relation Paths &amp; Dot Notation</h2>
+<p>Column names support deep dot-notation for relations, aggregates, pivots, and morphs. The Core Relation AST parser automatically determines JOINs, eager loads, and subqueries.</p>
+<h3 id="simple-relation">Simple Relation</h3>
+<pre><code class="language-php">TextColumn::make('author.name')       // belongsTo or hasOne
+TextColumn::make('category.title')
+</code></pre>
+<h3 id="nested-relations">Nested Relations</h3>
+<pre><code class="language-php">TextColumn::make('author.country.name')        // 3 levels deep
+TextColumn::make('order.customer.company.name') // 4 levels deep
+</code></pre>
+<h3 id="aggregates">Aggregates</h3>
+<pre><code class="language-php">TextColumn::make('orders.count')               // withCount
+TextColumn::make('items.sum.amount')           // withSum
+TextColumn::make('ratings.avg.score')          // withAvg
+TextColumn::make('bids.min.amount')            // withMin
+TextColumn::make('bids.max.amount')            // withMax
+</code></pre>
+<h3 id="pivot-data">Pivot Data</h3>
+<pre><code class="language-php">TextColumn::make('tags.pivot.sort_order')
+TextColumn::make('roles.pivot.assigned_at')-&gt;dateTime()
+</code></pre>
+<h3 id="morph-relations">Morph Relations</h3>
+<pre><code class="language-php">TextColumn::make('commentable.title')          // polymorphic
+</code></pre>
+<h3 id="how-it-works">How It Works</h3>
+<ol>
+<li><code>RelationPath::parse('author.country.name')</code> produces <code>[RelationSegment('author'), RelationSegment('country'), ColumnSegment('name')]</code></li>
+<li><code>QueryPlanner</code> builds a <code>RelationGraph</code> determining optimal access strategy</li>
+<li>Simple belongsTo relations → LEFT JOIN (enables sort/filter)</li>
+<li>HasMany/morphMany → eager load (display only)</li>
+<li>Aggregates → <code>withCount()</code> / <code>withSum()</code> subqueries</li>
+<li>Pivot → intermediate table JOIN</li>
+</ol>
+<hr>
+<h2 id="textcolumn">TextColumn</h2>
+<p>General-purpose text column with formatting presets.</p>
+<pre><code class="language-php">use NyonCode\WireTable\Columns\TextColumn;
+</code></pre>
+<h3 id="basic-usage">Basic Usage</h3>
+<pre><code class="language-php">TextColumn::make('name')
+    -&gt;sortable()
+    -&gt;searchable()
+
+TextColumn::make('email')
+    -&gt;searchable()
+    -&gt;copyable()
+    -&gt;copyMessage('Copied!')
+    -&gt;icon('mail')
+</code></pre>
+<h3 id="date-time-formatting">Date/Time Formatting</h3>
+<pre><code class="language-php">// PHP date format
+TextColumn::make('created_at')
+    -&gt;dateTime('d.m.Y H:i')
+    -&gt;sortable()
+
+// Date only
+TextColumn::make('birth_date')
+    -&gt;date('j. F Y')
+
+// Relative time
+TextColumn::make('last_login')
+    -&gt;since()                    // "2 hours ago", "3 days ago"
+    -&gt;sortable()
+    -&gt;tooltip(fn ($r) =&gt; $r-&gt;last_login?-&gt;format('d.m.Y H:i:s'))
+</code></pre>
+<h3 id="money-formatting">Money Formatting</h3>
+<pre><code class="language-php">TextColumn::make('price')
+    -&gt;money('CZK')              // "1 234,50 CZK"
+    -&gt;sortable()
+    -&gt;alignRight()
+
+TextColumn::make('salary')
+    -&gt;money('USD')              // "$1,234.50"
+    -&gt;summarize('sum', 'Total')
+</code></pre>
+<h3 id="numeric-formatting">Numeric Formatting</h3>
+<pre><code class="language-php">TextColumn::make('quantity')
+    -&gt;numeric(
+        decimalPlaces: 0,
+        thousandsSeparator: ' '
+    )
+    -&gt;alignRight()
+    -&gt;sortable()
+
+TextColumn::make('percentage')
+    -&gt;numeric(decimalPlaces: 1)
+    -&gt;suffix('%')
+</code></pre>
+<h3 id="font-family">Font Family</h3>
+<pre><code class="language-php">TextColumn::make('code')
+    -&gt;fontFamily('mono')         // monospace font
+
+TextColumn::make('quote')
+    -&gt;fontFamily('serif')
+</code></pre>
+<h3 id="complete-textcolumn-api">Complete TextColumn API</h3>
+<pre><code class="language-php">-&gt;date(?string $format = null)       // date formatting
+-&gt;dateTime(?string $format = null)   // datetime formatting
+-&gt;since()                            // relative time (diffForHumans)
+-&gt;money(string $currency)            // currency formatting
+-&gt;numeric(int $decimalPlaces = 0, string $decimalSeparator = ',', string $thousandsSeparator = ' ')
+-&gt;fontFamily(string $family)         // 'sans', 'serif', 'mono'
+-&gt;isMoney(): bool
+-&gt;getCurrency(): ?string
+-&gt;isNumeric(): bool
+</code></pre>
+<hr>
+<h2 id="badgecolumn">BadgeColumn</h2>
+<p>Colored badge/tag display with state-based color and icon mapping.</p>
+<pre><code class="language-php">use NyonCode\WireTable\Columns\BadgeColumn;
+</code></pre>
+<h3 id="basic-usage-2">Basic Usage</h3>
+<pre><code class="language-php">BadgeColumn::make('status')
+    -&gt;colors([
+        'success' =&gt; 'active',      // green badge for 'active'
+        'danger' =&gt; 'banned',       // red badge for 'banned'
+        'warning' =&gt; 'pending',     // yellow badge for 'pending'
+        'gray' =&gt; 'draft',          // gray badge for 'draft'
+        'primary' =&gt; 'featured',    // blue badge for 'featured'
+        'info' =&gt; 'processing',     // cyan badge for 'processing'
+    ])
+</code></pre>
+<h3 id="with-icons">With Icons</h3>
+<pre><code class="language-php">BadgeColumn::make('priority')
+    -&gt;colors([
+        'danger' =&gt; 'critical',
+        'warning' =&gt; 'high',
+        'info' =&gt; 'medium',
+        'gray' =&gt; 'low',
+    ])
+    -&gt;icons([
+        'exclamation' =&gt; 'critical',
+        'arrow-up' =&gt; 'high',
+        'minus' =&gt; 'medium',
+        'arrow-down' =&gt; 'low',
+    ])
+</code></pre>
+<h3 id="dynamic-colors">Dynamic Colors</h3>
+<pre><code class="language-php">// Closure-based color resolution
+BadgeColumn::make('score')
+    -&gt;colorUsing(fn (int $state) =&gt; match(true) {
+        $state &gt;= 90 =&gt; 'success',
+        $state &gt;= 70 =&gt; 'info',
+        $state &gt;= 50 =&gt; 'warning',
+        default =&gt; 'danger',
+    })
+    -&gt;iconUsing(fn (int $state) =&gt; $state &gt;= 90 ? 'star' : null)
+</code></pre>
+<h3 id="custom-label-badge">Custom Label + Badge</h3>
+<pre><code class="language-php">BadgeColumn::make('role')
+    -&gt;formatStateUsing(fn (string $state) =&gt; match($state) {
+        'super_admin' =&gt; 'Super Admin',
+        'admin' =&gt; 'Administrator',
+        'editor' =&gt; 'Editor',
+        default =&gt; ucfirst($state),
+    })
+    -&gt;colors([
+        'danger' =&gt; 'super_admin',
+        'primary' =&gt; 'admin',
+        'success' =&gt; 'editor',
+    ])
+</code></pre>
+<h3 id="size">Size</h3>
+<pre><code class="language-php">BadgeColumn::make('tag')
+    -&gt;size('xs')     // xs, sm, md, lg
+</code></pre>
+<h3 id="badgecolumn-api">BadgeColumn API</h3>
+<pre><code class="language-php">-&gt;colors(array $map)                 // ['color_name' =&gt; 'state_value', ...]
+-&gt;colorUsing(Closure $fn)            // fn($state) =&gt; 'color_name'
+-&gt;icons(array $map)                  // ['icon_name' =&gt; 'state_value', ...]
+-&gt;iconUsing(Closure $fn)             // fn($state) =&gt; 'icon_name'
+-&gt;size(string $size)                 // 'xs', 'sm', 'md', 'lg'
+-&gt;getSize(): string
+-&gt;getColorForState($state): string
+-&gt;getIconForState($state): ?string
+</code></pre>
+<hr>
+<h2 id="booleancolumn">BooleanColumn</h2>
+<p>Displays true/false values as colored icons with optional text labels.</p>
+<pre><code class="language-php">use NyonCode\WireTable\Columns\BooleanColumn;
+</code></pre>
+<h3 id="basic-usage-3">Basic Usage</h3>
+<pre><code class="language-php">BooleanColumn::make('is_active')
+BooleanColumn::make('email_verified_at')   // null = false, non-null = true
+</code></pre>
+<h3 id="custom-icons-colors">Custom Icons &amp; Colors</h3>
+<pre><code class="language-php">BooleanColumn::make('is_verified')
+    -&gt;trueIcon('check-circle')
+    -&gt;falseIcon('x-circle')
+    -&gt;trueColor('success')
+    -&gt;falseColor('danger')
+</code></pre>
+<h3 id="with-labels">With Labels</h3>
+<pre><code class="language-php">BooleanColumn::make('is_published')
+    -&gt;trueLabel('Published')
+    -&gt;falseLabel('Draft')
+</code></pre>
+<h3 id="booleancolumn-api">BooleanColumn API</h3>
+<pre><code class="language-php">-&gt;trueIcon(string $icon)             // default: 'check-circle'
+-&gt;falseIcon(string $icon)            // default: 'x-circle'
+-&gt;trueColor(string $color)           // default: 'success'
+-&gt;falseColor(string $color)          // default: 'danger'
+-&gt;trueLabel(?string $label)          // text beside icon (true state)
+-&gt;falseLabel(?string $label)         // text beside icon (false state)
+-&gt;labels(string $trueLabel, string $falseLabel)  // set both
+</code></pre>
+<hr>
+<h2 id="iconcolumn">IconColumn</h2>
+<p>Displays state-mapped icons with colors and sizes.</p>
+<pre><code class="language-php">use NyonCode\WireTable\Columns\IconColumn;
+</code></pre>
+<h3 id="state-based-icons">State-Based Icons</h3>
+<pre><code class="language-php">IconColumn::make('status')
+    -&gt;icons([
+        'check-circle' =&gt; 'active',
+        'clock' =&gt; 'pending',
+        'x-circle' =&gt; 'inactive',
+        'exclamation' =&gt; 'error',
+    ])
+    -&gt;colors([
+        'success' =&gt; 'active',
+        'warning' =&gt; 'pending',
+        'danger' =&gt; ['inactive', 'error'],  // multiple states → one color
+    ])
+</code></pre>
+<h3 id="dynamic-resolution">Dynamic Resolution</h3>
+<pre><code class="language-php">IconColumn::make('health')
+    -&gt;iconUsing(fn ($state) =&gt; match(true) {
+        $state &gt; 80 =&gt; 'check-circle',
+        $state &gt; 40 =&gt; 'minus',
+        default =&gt; 'exclamation',
+    })
+    -&gt;colorUsing(fn ($state) =&gt; match(true) {
+        $state &gt; 80 =&gt; 'success',
+        $state &gt; 40 =&gt; 'warning',
+        default =&gt; 'danger',
+    })
+</code></pre>
+<h3 id="boolean-mode">Boolean Mode</h3>
+<pre><code class="language-php">IconColumn::make('has_subscription')
+    -&gt;boolean()
+    -&gt;trueIcon('star')
+    -&gt;trueColor('warning')
+    -&gt;falseIcon('minus')
+    -&gt;falseColor('gray')
+</code></pre>
+<h3 id="icon-size">Icon Size</h3>
+<pre><code class="language-php">IconColumn::make('rating')
+    -&gt;iconSize('lg')    // xs, sm, md, lg, xl
+</code></pre>
+<h3 id="iconcolumn-api">IconColumn API</h3>
+<pre><code class="language-php">-&gt;icons(array $map)                  // ['icon_name' =&gt; 'state_value', ...]
+-&gt;iconUsing(Closure $fn)             // fn($state) =&gt; 'icon_name'
+-&gt;colors(array $map)                 // ['color_name' =&gt; 'state_value'|['values'], ...]
+-&gt;colorUsing(Closure $fn)            // fn($state) =&gt; 'color_name'
+-&gt;iconSize(string $size)             // 'xs', 'sm', 'md', 'lg', 'xl'
+-&gt;boolean(bool $boolean = true)      // enable boolean mode
+-&gt;trueIcon(string $icon)
+-&gt;falseIcon(string $icon)
+-&gt;trueColor(string $color)
+-&gt;falseColor(string $color)
+-&gt;booleanColors(string $true, string $false)
+</code></pre>
+<hr>
+<h2 id="imagecolumn">ImageColumn</h2>
+<p>Displays images/avatars in table cells.</p>
+<pre><code class="language-php">use NyonCode\WireTable\Columns\ImageColumn;
+</code></pre>
+<h3 id="basic-usage-4">Basic Usage</h3>
+<pre><code class="language-php">ImageColumn::make('avatar_url')
+    -&gt;circular()
+    -&gt;size(40)
+
+ImageColumn::make('photo')
+    -&gt;size(60)
+    -&gt;defaultImageUrl('/images/placeholder.png')
+</code></pre>
+<h3 id="imagecolumn-api">ImageColumn API</h3>
+<pre><code class="language-php">-&gt;size(int $pixels)                  // width &amp; height in px
+-&gt;circular(bool $circular = true)    // rounded-full
+-&gt;square(bool $square = true)        // rounded-none
+-&gt;defaultImageUrl(string $url)       // fallback image
+</code></pre>
+<hr>
+<h2 id="buttoncolumn">ButtonColumn</h2>
+<p>Fully-featured interactive button with actions, confirmation, loading states, and multiple variants.</p>
+<pre><code class="language-php">use NyonCode\WireTable\Columns\ButtonColumn;
+</code></pre>
+<h3 id="link-button">Link Button</h3>
+<pre><code class="language-php">ButtonColumn::make('view')
+    -&gt;buttonLabel('View')
+    -&gt;buttonIcon('eye')
+    -&gt;buttonColor('primary')
+    -&gt;url(fn ($record) =&gt; route('users.show', $record))
+    -&gt;openUrlInNewTab()
+</code></pre>
+<h3 id="action-button-livewire">Action Button (Livewire)</h3>
+<pre><code class="language-php">ButtonColumn::make('approve')
+    -&gt;buttonLabel('Approve')
+    -&gt;buttonIcon('check')
+    -&gt;buttonColor('success')
+    -&gt;action(fn ($record) =&gt; $record-&gt;approve())
+</code></pre>
+<h3 id="livewire-method-call">Livewire Method Call</h3>
+<pre><code class="language-php">ButtonColumn::make('download')
+    -&gt;buttonLabel('Download')
+    -&gt;buttonIcon('download')
+    -&gt;livewireAction('downloadPdf')  // calls $this-&gt;downloadPdf($recordKey)
+</code></pre>
+<h3 id="with-confirmation">With Confirmation</h3>
+<pre><code class="language-php">ButtonColumn::make('delete')
+    -&gt;buttonLabel('Delete')
+    -&gt;buttonIcon('trash')
+    -&gt;buttonColor('danger')
+    -&gt;requiresConfirmation()
+    -&gt;confirmationTitle('Delete this record?')
+    -&gt;confirmationDescription('This action cannot be undone.')
+    -&gt;confirmButtonText('Yes, delete')
+    -&gt;cancelButtonText('Cancel')
+    -&gt;action(fn ($record) =&gt; $record-&gt;delete())
+</code></pre>
+<h3 id="button-variants">Button Variants</h3>
+<pre><code class="language-php">// Solid (default)
+ButtonColumn::make('save')-&gt;buttonColor('primary')
+
+// Outlined
+ButtonColumn::make('cancel')-&gt;buttonColor('gray')-&gt;outlined()
+
+// Link style
+ButtonColumn::make('details')-&gt;link()
+
+// Danger shortcut
+ButtonColumn::make('remove')-&gt;danger()
+
+// Success shortcut
+ButtonColumn::make('confirm')-&gt;success()
+</code></pre>
+<h3 id="icon-only">Icon Only</h3>
+<pre><code class="language-php">ButtonColumn::make('edit')
+    -&gt;buttonIcon('pencil')
+    -&gt;iconOnly()                     // no label, just icon
+    -&gt;tooltip('Edit record')
+</code></pre>
+<h3 id="sizes">Sizes</h3>
+<pre><code class="language-php">ButtonColumn::make('action')
+    -&gt;buttonSize('xs')   // xs, sm, md, lg
+</code></pre>
+<h3 id="conditional-state">Conditional State</h3>
+<pre><code class="language-php">ButtonColumn::make('publish')
+    -&gt;buttonLabel(fn ($r) =&gt; $r-&gt;is_published ? 'Unpublish' : 'Publish')
+    -&gt;buttonColor(fn ($r) =&gt; $r-&gt;is_published ? 'gray' : 'success')
+    -&gt;buttonIcon(fn ($r) =&gt; $r-&gt;is_published ? 'x' : 'check')
+    -&gt;visibleWhen(fn ($r) =&gt; $r-&gt;status !== 'draft')
+    -&gt;disabled(fn ($r) =&gt; $r-&gt;is_locked)
+    -&gt;disabledTooltip('Record is locked')
+</code></pre>
+<h3 id="loading-state">Loading State</h3>
+<pre><code class="language-php">ButtonColumn::make('process')
+    -&gt;buttonLabel('Process')
+    -&gt;loading()                      // show spinner during execution
+    -&gt;loadingText('Processing...')
+</code></pre>
+<h3 id="buttoncolumn-api">ButtonColumn API</h3>
+<pre><code class="language-php">-&gt;buttonLabel(string|Closure $label)
+-&gt;buttonIcon(string|Closure $icon)
+-&gt;buttonColor(string|Closure $color)       // 'primary', 'danger', 'success', 'warning', 'info', 'gray'
+-&gt;buttonSize(string $size)                 // 'xs', 'sm', 'md', 'lg'
+-&gt;buttonVariant(string $variant)           // 'solid', 'outlined', 'link'
+-&gt;iconOnly(bool $iconOnly = true)
+-&gt;iconPosition(string $position)           // 'before', 'after'
+-&gt;outlined()                               // shortcut for variant('outlined')
+-&gt;link()                                   // shortcut for variant('link')
+-&gt;danger()                                 // shortcut for color('danger')
+-&gt;success()                                // shortcut for color('success')
+-&gt;action(Closure $fn)                      // inline action callback
+-&gt;livewireAction(string $method)           // call Livewire method
+-&gt;url(string|Closure $url)                 // URL (instead of action)
+-&gt;openUrlInNewTab(bool $newTab = true)
+-&gt;requiresConfirmation(bool $requires = true)
+-&gt;confirmationTitle(string $title)
+-&gt;confirmationDescription(string $desc)
+-&gt;confirmButtonText(string $text)
+-&gt;cancelButtonText(string $text)
+-&gt;disabled(bool|Closure $disabled = true)
+-&gt;disabledTooltip(string $tooltip)
+-&gt;visibleWhen(Closure $fn)
+-&gt;enabledWhen(Closure $fn)
+-&gt;loading(bool $loading = true)
+-&gt;loadingText(string $text)
+-&gt;extraButtonAttributes(array $attrs)
+</code></pre>
+<hr>
+<h2 id="togglecolumn">ToggleColumn</h2>
+<p>Inline toggle switch — saves immediately on click. Dispatches <code>CellUpdating</code> / <code>CellUpdated</code> events.</p>
+<pre><code class="language-php">use NyonCode\WireTable\Columns\ToggleColumn;
+</code></pre>
+<h3 id="basic-usage-5">Basic Usage</h3>
+<pre><code class="language-php">ToggleColumn::make('is_active')
+ToggleColumn::make('is_featured')
+</code></pre>
+<h3 id="custom-colors">Custom Colors</h3>
+<pre><code class="language-php">ToggleColumn::make('is_published')
+    -&gt;onColor('success')       // green when on
+    -&gt;offColor('danger')       // red when off
+</code></pre>
+<h3 id="custom-icons">Custom Icons</h3>
+<pre><code class="language-php">ToggleColumn::make('notifications_enabled')
+    -&gt;onIcon('bell')
+    -&gt;offIcon('bell-slash')
+</code></pre>
+<h3 id="disabled-state">Disabled State</h3>
+<pre><code class="language-php">ToggleColumn::make('is_admin')
+    -&gt;disabled(fn ($record) =&gt; $record-&gt;id === auth()-&gt;id())  // can't toggle yourself
+
+ToggleColumn::make('is_locked')
+    -&gt;disabled()               // always disabled (display only)
+</code></pre>
+<h3 id="togglecolumn-api">ToggleColumn API</h3>
+<pre><code class="language-php">-&gt;onColor(string $color)             // default: 'primary'
+-&gt;offColor(string $color)            // default: 'gray'
+-&gt;onIcon(?string $icon)              // icon when on
+-&gt;offIcon(?string $icon)             // icon when off
+-&gt;disabled(bool|Closure $disabled = true)
+-&gt;isDisabled(?Model $record = null): bool
+</code></pre>
+<hr>
+<h2 id="selectcolumn">SelectColumn</h2>
+<p>Inline select dropdown — saves immediately on change. Validates against defined rules.</p>
+<pre><code class="language-php">use NyonCode\WireTable\Columns\SelectColumn;
+</code></pre>
+<h3 id="basic-usage-6">Basic Usage</h3>
+<pre><code class="language-php">SelectColumn::make('status')
+    -&gt;options([
+        'draft' =&gt; 'Draft',
+        'review' =&gt; 'In Review',
+        'published' =&gt; 'Published',
+        'archived' =&gt; 'Archived',
+    ])
+</code></pre>
+<h3 id="with-validation">With Validation</h3>
+<pre><code class="language-php">SelectColumn::make('priority')
+    -&gt;options([
+        'low' =&gt; 'Low',
+        'medium' =&gt; 'Medium',
+        'high' =&gt; 'High',
+        'critical' =&gt; 'Critical',
+    ])
+    -&gt;rules(['required', 'in:low,medium,high,critical'])
+</code></pre>
+<h3 id="native-vs-styled">Native vs Styled</h3>
+<pre><code class="language-php">// Native HTML &lt;select&gt; (default)
+SelectColumn::make('type')-&gt;options([...])-&gt;native()
+
+// Custom styled dropdown
+SelectColumn::make('type')-&gt;options([...])-&gt;native(false)
+</code></pre>
+<h3 id="conditional-disabled">Conditional Disabled</h3>
+<pre><code class="language-php">SelectColumn::make('role')
+    -&gt;options(['admin' =&gt; 'Admin', 'editor' =&gt; 'Editor', 'viewer' =&gt; 'Viewer'])
+    -&gt;disabled(fn ($record) =&gt; $record-&gt;is_super_admin)  // can't change super admin
+</code></pre>
+<h3 id="selectcolumn-api">SelectColumn API</h3>
+<pre><code class="language-php">-&gt;options(array $options)            // ['value' =&gt; 'Label', ...]
+-&gt;native(bool $native = true)       // use native &lt;select&gt; element
+-&gt;isNative(): bool
+-&gt;disabled(bool|Closure $disabled = true)
+-&gt;isDisabled(?Model $record = null): bool
+-&gt;rules(array $rules)               // validation rules
+</code></pre>
+<hr>
+<h2 id="textinputcolumn">TextInputColumn</h2>
+<p>Inline text input — validates and saves on blur (or enter). Supports <code>type</code> attribute.</p>
+<pre><code class="language-php">use NyonCode\WireTable\Columns\TextInputColumn;
+</code></pre>
+<h3 id="basic-usage-7">Basic Usage</h3>
+<pre><code class="language-php">TextInputColumn::make('name')
+    -&gt;rules(['required', 'string', 'max:255'])
+    -&gt;saveOnBlur()
+</code></pre>
+<h3 id="number-input">Number Input</h3>
+<pre><code class="language-php">TextInputColumn::make('quantity')
+    -&gt;type('number')
+    -&gt;rules(['required', 'integer', 'min:0', 'max:9999'])
+</code></pre>
+<h3 id="email-input">Email Input</h3>
+<pre><code class="language-php">TextInputColumn::make('email')
+    -&gt;type('email')
+    -&gt;rules(['required', 'email', 'max:255'])
+</code></pre>
+<h3 id="textinputcolumn-api">TextInputColumn API</h3>
+<pre><code class="language-php">-&gt;type(string $type)                 // 'text', 'number', 'email', 'tel', 'url'
+-&gt;rules(array|string $rules)         // Laravel validation rules
+-&gt;saveOnBlur(bool $saveOnBlur = true)
+-&gt;editableUsing(Closure $fn)         // custom save callback
+</code></pre>
+<hr>
+<h2 id="stackedcolumn">StackedColumn</h2>
+<p>Vertically stacks content — avatar + primary text + secondary text. Perfect for "user" cells.</p>
+<pre><code class="language-php">use NyonCode\WireTable\Columns\StackedColumn;
+</code></pre>
+<h3 id="avatar-name-email-pattern">Avatar + Name + Email Pattern</h3>
+<pre><code class="language-php">StackedColumn::make('user')
+    -&gt;avatar('avatar_url')
+    -&gt;primary('name')
+    -&gt;secondary('email')
+    -&gt;circular()
+    -&gt;avatarSize('md')
+</code></pre>
+<h3 id="without-avatar">Without Avatar</h3>
+<pre><code class="language-php">StackedColumn::make('details')
+    -&gt;primary('title')
+    -&gt;secondary('subtitle')
+</code></pre>
+<h3 id="avatar-from-name-generated">Avatar from Name (Generated)</h3>
+<pre><code class="language-php">StackedColumn::make('user')
+    -&gt;avatarUrl(fn ($record) =&gt; null)  // no URL → generates color from name
+    -&gt;primary('name')
+    -&gt;secondary('role')
+    -&gt;circular()
+</code></pre>
+<h3 id="custom-stack">Custom Stack</h3>
+<pre><code class="language-php">StackedColumn::make('info')
+    -&gt;stack([
+        ['column' =&gt; 'name', 'weight' =&gt; 'bold'],
+        ['column' =&gt; 'department.name', 'size' =&gt; 'sm', 'color' =&gt; 'gray'],
+        ['column' =&gt; 'email', 'size' =&gt; 'xs', 'color' =&gt; 'gray', 'icon' =&gt; 'mail'],
+    ])
+</code></pre>
+<h3 id="search-through-stacked">Search Through Stacked</h3>
+<pre><code class="language-php">StackedColumn::make('user')
+    -&gt;primary('name')
+    -&gt;secondary('email')
+    -&gt;searchable()
+    -&gt;searchColumns(['name', 'email'])  // search both fields
+</code></pre>
+<h3 id="stackedcolumn-api">StackedColumn API</h3>
+<pre><code class="language-php">-&gt;primary(string $column)            // primary (bold) text column
+-&gt;secondary(string $column)          // secondary (muted) text column
+-&gt;avatar(string $column)             // avatar image URL column
+-&gt;avatarUrl(string|Closure $url)     // explicit avatar URL
+-&gt;circular(bool $circular = true)    // round avatar
+-&gt;square(bool $square = true)        // square avatar
+-&gt;avatarSize(string $size)           // 'xs', 'sm', 'md', 'lg', 'xl'
+-&gt;avatarBackground(string $color)    // fallback background color
+-&gt;stack(array $items)                // custom stack items
+-&gt;searchColumns(array $columns)      // columns to include in search
+</code></pre>
+<hr>
+<h2 id="splitcolumn">SplitColumn</h2>
+<p>Horizontally splits space between multiple child columns.</p>
+<pre><code class="language-php">use NyonCode\WireTable\Columns\SplitColumn;
+</code></pre>
+<h3 id="basic-split">Basic Split</h3>
+<pre><code class="language-php">SplitColumn::make('name_status')
+    -&gt;columns([
+        TextColumn::make('name')-&gt;weight('bold'),
+        BadgeColumn::make('status')-&gt;colors([...]),
+    ])
+</code></pre>
+<h3 id="vertical-layout">Vertical Layout</h3>
+<pre><code class="language-php">SplitColumn::make('address')
+    -&gt;columns([
+        TextColumn::make('street'),
+        TextColumn::make('city'),
+        TextColumn::make('country'),
+    ])
+    -&gt;vertical()
+</code></pre>
+<h3 id="with-gap-alignment">With Gap &amp; Alignment</h3>
+<pre><code class="language-php">SplitColumn::make('user_info')
+    -&gt;columns([
+        ImageColumn::make('avatar')-&gt;circular()-&gt;size(32),
+        TextColumn::make('name'),
+    ])
+    -&gt;gap('sm')          // 'xs', 'sm', 'md', 'lg'
+    -&gt;alignCenter()      // vertical center alignment
+</code></pre>
+<h3 id="splitcolumn-api">SplitColumn API</h3>
+<pre><code class="language-php">-&gt;columns(array $columns)            // Column[] child columns
+-&gt;vertical(bool $vertical = true)    // vertical layout
+-&gt;horizontal(bool $horizontal = true) // horizontal layout (default)
+-&gt;gap(string $gap)                   // 'xs', 'sm', 'md', 'lg'
+-&gt;alignCenter(bool $center = true)   // vertical center
+-&gt;alignStart(bool $start = true)     // vertical top
+-&gt;getColumns(): array
+-&gt;isSearchable(): bool               // true if any child is searchable
+-&gt;getSearchColumns(): array          // merged from children
+-&gt;isSortable(): bool                 // true if first child is sortable
+-&gt;getSortColumn(): ?string           // from first sortable child
+</code></pre>
+<hr>
+<h2 id="pollcolumn">PollColumn</h2>
+<p>Advanced auto-refreshing column with state machines, progress tracking, and condition-based polling. Ideal for background jobs, live status, progress bars.</p>
+<pre><code class="language-php">use NyonCode\WireTable\Columns\PollColumn;
+</code></pre>
+<h3 id="basic-polling">Basic Polling</h3>
+<pre><code class="language-php">PollColumn::make('status')
+    -&gt;interval('5s')
+    -&gt;stateDisplays([
+        'pending' =&gt; 'Waiting...',
+        'processing' =&gt; 'In Progress',
+        'completed' =&gt; 'Done',
+        'failed' =&gt; 'Failed',
+    ])
+    -&gt;stateColors([
+        'pending' =&gt; 'gray',
+        'processing' =&gt; 'info',
+        'completed' =&gt; 'success',
+        'failed' =&gt; 'danger',
+    ])
+    -&gt;stateIcons([
+        'pending' =&gt; 'clock',
+        'processing' =&gt; 'refresh',
+        'completed' =&gt; 'check',
+        'failed' =&gt; 'x',
+    ])
+</code></pre>
+<h3 id="job-status-preset">Job Status Preset</h3>
+<pre><code class="language-php">PollColumn::make('job_status')
+    -&gt;forJobStatus()           // preconfigured for Laravel Job states
+    -&gt;interval('3s')
+    -&gt;stopWhen(fn ($state) =&gt; in_array($state, ['completed', 'failed']))
+</code></pre>
+<h3 id="progress-bar-preset">Progress Bar Preset</h3>
+<pre><code class="language-php">PollColumn::make('progress')
+    -&gt;forProgress()            // progress bar UI (0-100)
+    -&gt;interval('2s')
+    -&gt;stopWhen(fn ($state) =&gt; $state &gt;= 100)
+</code></pre>
+<h3 id="conditional-polling">Conditional Polling</h3>
+<pre><code class="language-php">PollColumn::make('sync_status')
+    -&gt;interval('5s')
+    -&gt;pollWhile(fn ($state) =&gt; $state === 'syncing')   // poll only while syncing
+    -&gt;pollForever(false)                                // stop when condition fails
+    -&gt;maxPolls(60)                                      // safety limit
+</code></pre>
+<h3 id="custom-state-resolution">Custom State Resolution</h3>
+<pre><code class="language-php">PollColumn::make('deployment')
+    -&gt;resolveStateUsing(fn ($record) =&gt; $record-&gt;fresh()-&gt;deployment_status)
+    -&gt;interval('10s')
+</code></pre>
+<h3 id="badge-mode">Badge Mode</h3>
+<pre><code class="language-php">PollColumn::make('status')
+    -&gt;badge()
+    -&gt;colors([
+        'success' =&gt; 'online',
+        'danger' =&gt; 'offline',
+        'warning' =&gt; 'degraded',
+    ])
+    -&gt;interval('30s')
+</code></pre>
+<h3 id="loading-indicator">Loading Indicator</h3>
+<pre><code class="language-php">PollColumn::make('data')
+    -&gt;loadingIndicator('spinner')    // show during fetch
+    -&gt;keepContentWhileLoading()       // don't flash blank
+    -&gt;animateTransitions()            // smooth state changes
+</code></pre>
+<h3 id="callbacks">Callbacks</h3>
+<pre><code class="language-php">PollColumn::make('batch_progress')
+    -&gt;interval('3s')
+    -&gt;onComplete(fn ($record) =&gt; Notification::success("Batch {$record-&gt;id} done"))
+    -&gt;stopWhen(fn ($state) =&gt; $state === 'done')
+</code></pre>
+<h3 id="pollcolumn-api">PollColumn API</h3>
+<pre><code class="language-php">// Polling control
+-&gt;interval(string $interval)             // '1s', '2s', '3s', '5s', '10s', '30s', '60s'
+-&gt;intervalSeconds(int $seconds)          // numeric seconds
+-&gt;pollForever(bool $forever = true)      // don't stop
+-&gt;maxPolls(int $max)                     // safety limit
+-&gt;stopWhen(Closure $fn)                  // fn($state) =&gt; bool
+-&gt;pollWhile(Closure $fn)                 // fn($state) =&gt; bool
+-&gt;pollWhilePending()                     // shortcut: poll while 'pending'
+
+// State display
+-&gt;stateDisplays(array $map)              // ['state' =&gt; 'display text', ...]
+-&gt;displayForState(string $state, string $display)
+-&gt;defaultState(string $state)
+-&gt;stateClasses(array $map)               // ['state' =&gt; 'css classes', ...]
+-&gt;stateIcons(array $map)                 // ['state' =&gt; 'icon name', ...]
+-&gt;stateColors(array $map)                // ['state' =&gt; 'color name', ...]
+-&gt;resolveStateUsing(Closure $fn)         // custom state resolver
+
+// Presets
+-&gt;forJobStatus()                         // job lifecycle preset
+-&gt;forProgress()                          // progress bar preset
+
+// UI options
+-&gt;badge(bool $badge = true)              // render as badge
+-&gt;colors(array $map)                     // badge color map
+-&gt;colorUsing(Closure $fn)                // dynamic color
+-&gt;size(string $size)                     // badge size
+-&gt;loadingIndicator(?string $type)        // 'spinner', 'dots', 'pulse'
+-&gt;withoutLoadingIndicator()
+-&gt;keepContentWhileLoading(bool $keep = true)
+-&gt;animateTransitions(bool $animate = true)
+
+// Row-level
+-&gt;rowLevelPolling(bool $rowLevel = true) // poll per row (not whole table)
+
+// Callbacks
+-&gt;onComplete(Closure $fn)
+-&gt;refreshMethod(string $method)          // Livewire method on refresh
+</code></pre>
+<hr>
+<h2 id="column-level-filtering">Column-Level Filtering</h2>
+<p>Beyond the dedicated Filter classes, any column can have an inline filter in its header.</p>
+<pre><code class="language-php">// Select filter in column header
+TextColumn::make('status')
+    -&gt;filterable()
+    -&gt;filterAsSelect(['active' =&gt; 'Active', 'inactive' =&gt; 'Inactive'])
+
+// Boolean filter
+BooleanColumn::make('is_active')
+    -&gt;filterable()
+    -&gt;filterAsBoolean()
+
+// Date range filter
+TextColumn::make('created_at')
+    -&gt;filterable()
+    -&gt;filterAsDateRange()
+
+// Number range filter
+TextColumn::make('price')
+    -&gt;filterable()
+    -&gt;filterAsNumberRange()
+    -&gt;filterMinValue(0)
+    -&gt;filterMaxValue(10000)
+
+// Custom filter logic
+TextColumn::make('name')
+    -&gt;filterable()
+    -&gt;filterUsing(fn (Builder $query, mixed $value) =&gt; $query-&gt;where('name', 'like', "%{$value}%"))
+    -&gt;filterDebounce(500)
+
+// Filter with operator
+TextColumn::make('age')
+    -&gt;filterable()
+    -&gt;filterOperator('&gt;=')
+</code></pre>
+<h3 id="column-level-filter-api">Column-Level Filter API</h3>
+<pre><code class="language-php">-&gt;filterable(bool|Closure $filterable = true)
+-&gt;isFilterable(): bool
+-&gt;filterAsSelect(array $options)
+-&gt;filterAsDate()
+-&gt;filterAsDateRange()
+-&gt;filterAsNumberRange()
+-&gt;filterAsBoolean()
+-&gt;filterOperator(string $operator)     // '=', '!=', '&gt;', '&lt;', '&gt;=', '&lt;=', 'like'
+-&gt;filterDebounce(int $ms)
+-&gt;filterMinDate(string $date)
+-&gt;filterMaxDate(string $date)
+-&gt;filterMinValue(float $value)
+-&gt;filterMaxValue(float $value)
+-&gt;filterUsing(Closure $fn)
+-&gt;filterOptions(array $options)
+-&gt;applyFilter(Builder $query, mixed $value): Builder
+</code></pre>
+<hr>
+<h2 id="inline-editing">Inline Editing</h2>
+<p>Columns can also use the generic <code>editable()</code> API (in addition to dedicated TextInputColumn/SelectColumn/ToggleColumn):</p>
+<pre><code class="language-php">TextColumn::make('name')
+    -&gt;editable()                              // enables inline editing
+    -&gt;editableType('text')                    // 'text', 'select', 'toggle'
+    -&gt;editableRules(['required', 'max:255'])
+    -&gt;editableUsing(function ($record, $column, $value) {
+        $record-&gt;update([$column =&gt; $value]);
+    })
+
+TextColumn::make('category')
+    -&gt;editable()
+    -&gt;editableType('select')
+    -&gt;editableOptions(['a' =&gt; 'Category A', 'b' =&gt; 'Category B'])
+    -&gt;editableRules(['required', 'in:a,b'])
+</code></pre>
+<hr>
+<h2 id="patterns-recipes">Patterns &amp; Recipes</h2>
+<h3 id="user-table-with-avatar">User Table with Avatar</h3>
+<pre><code class="language-php">$table-&gt;columns([
+    StackedColumn::make('user')
+        -&gt;avatar('avatar_url')
+        -&gt;primary('name')
+        -&gt;secondary('email')
+        -&gt;circular()
+        -&gt;searchable()
+        -&gt;searchColumns(['name', 'email']),
+
+    BadgeColumn::make('role')
+        -&gt;colors(['primary' =&gt; 'admin', 'success' =&gt; 'editor', 'gray' =&gt; 'viewer']),
+
+    TextColumn::make('department.name')
+        -&gt;sortable()
+        -&gt;searchable(),
+
+    TextColumn::make('posts.count')
+        -&gt;label('Posts')
+        -&gt;sortable()
+        -&gt;alignCenter(),
+
+    TextColumn::make('last_login')
+        -&gt;since()
+        -&gt;sortable()
+        -&gt;size('sm')
+        -&gt;textColor('gray'),
+
+    BooleanColumn::make('is_active'),
+]);
+</code></pre>
+<h3 id="financial-table">Financial Table</h3>
+<pre><code class="language-php">$table-&gt;columns([
+    TextColumn::make('number')
+        -&gt;searchable()
+        -&gt;fontFamily('mono'),
+
+    TextColumn::make('client.name')
+        -&gt;searchable()
+        -&gt;sortable(),
+
+    TextColumn::make('issued_at')
+        -&gt;date('d.m.Y')
+        -&gt;sortable(),
+
+    TextColumn::make('due_at')
+        -&gt;date('d.m.Y')
+        -&gt;color(fn ($record) =&gt; $record-&gt;is_overdue ? 'danger' : null),
+
+    TextColumn::make('total')
+        -&gt;money('CZK')
+        -&gt;sortable()
+        -&gt;alignRight()
+        -&gt;weight('bold')
+        -&gt;summarize('sum', 'Total'),
+
+    BadgeColumn::make('status')
+        -&gt;colors([
+            'gray' =&gt; 'draft',
+            'warning' =&gt; 'sent',
+            'success' =&gt; 'paid',
+            'danger' =&gt; 'overdue',
+        ]),
+
+    PollColumn::make('payment_status')
+        -&gt;interval('30s')
+        -&gt;badge()
+        -&gt;colors(['success' =&gt; 'received', 'warning' =&gt; 'pending', 'gray' =&gt; 'none'])
+        -&gt;pollWhile(fn ($state) =&gt; $state === 'pending'),
+]);
+</code></pre>
+<h3 id="task-board-table">Task Board Table</h3>
+<pre><code class="language-php">$table-&gt;columns([
+    SelectColumn::make('status')
+        -&gt;options([
+            'todo' =&gt; '📋 To Do',
+            'in_progress' =&gt; '🔄 In Progress',
+            'review' =&gt; '👀 Review',
+            'done' =&gt; '✅ Done',
+        ]),
+
+    TextColumn::make('title')
+        -&gt;searchable()
+        -&gt;weight('semibold')
+        -&gt;description(fn ($r) =&gt; Str::limit($r-&gt;body, 60))
+        -&gt;url(fn ($r) =&gt; route('tasks.show', $r)),
+
+    StackedColumn::make('assignee')
+        -&gt;avatar('assignee.avatar_url')
+        -&gt;primary('assignee.name')
+        -&gt;circular()
+        -&gt;avatarSize('sm'),
+
+    BadgeColumn::make('priority')
+        -&gt;colors(['danger' =&gt; 'high', 'warning' =&gt; 'medium', 'gray' =&gt; 'low'])
+        -&gt;icons(['arrow-up' =&gt; 'high', 'minus' =&gt; 'medium', 'arrow-down' =&gt; 'low']),
+
+    TextColumn::make('due_at')
+        -&gt;date('d.m.')
+        -&gt;color(fn ($r) =&gt; $r-&gt;is_overdue ? 'danger' : 'gray')
+        -&gt;size('sm'),
+]);
+</code></pre>
+
+                                                    <nav class="page-nav" aria-label="Pagination">
+                                                                    <a class="page-nav-link is-prev" href="../overview/">
+                                        <span>← Previous</span>
+                                        <strong>Wire Table</strong>
+                                    </a>
+                                
+                                                                    <a class="page-nav-link is-next" href="../filters/">
+                                        <span>Next →</span>
+                                        <strong>Filters</strong>
+                                    </a>
+                                                            </nav>
+                                            </article>
+
+                                            <aside class="page-toc">
+                            <p class="toc-title">On this page</p>
+                            <ul>
+                                                                    <li class="level-2">
+                                        <a href="#table-of-contents">
+                                            Table of Contents                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#shared-column-api">
+                                            Shared Column API                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#factory-identity">
+                                            Factory &amp; Identity                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#sorting">
+                                            Sorting                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#searching">
+                                            Searching                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#visibility-toggleability">
+                                            Visibility &amp; Toggleability                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#responsive-breakpoints">
+                                            Responsive Breakpoints                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#responsive-display-variants">
+                                            Responsive Display Variants                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#value-formatting">
+                                            Value Formatting                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#text-styling">
+                                            Text Styling                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#width-alignment">
+                                            Width &amp; Alignment                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#icons">
+                                            Icons                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#url-clickable-cell">
+                                            URL (Clickable Cell)                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#copyable">
+                                            Copyable                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#tooltip-description">
+                                            Tooltip &amp; Description                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#summary-aggregate-footer">
+                                            Summary (Aggregate Footer)                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#extra-html-attributes">
+                                            Extra HTML Attributes                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#pivot-columns">
+                                            Pivot Columns                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#state-access">
+                                            State Access                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#relation-paths-dot-notation">
+                                            Relation Paths &amp; Dot Notation                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#simple-relation">
+                                            Simple Relation                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#nested-relations">
+                                            Nested Relations                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#aggregates">
+                                            Aggregates                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#pivot-data">
+                                            Pivot Data                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#morph-relations">
+                                            Morph Relations                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#how-it-works">
+                                            How It Works                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#textcolumn">
+                                            TextColumn                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#basic-usage">
+                                            Basic Usage                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#date-time-formatting">
+                                            Date/Time Formatting                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#money-formatting">
+                                            Money Formatting                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#numeric-formatting">
+                                            Numeric Formatting                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#font-family">
+                                            Font Family                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#complete-textcolumn-api">
+                                            Complete TextColumn API                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#badgecolumn">
+                                            BadgeColumn                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#basic-usage-2">
+                                            Basic Usage                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#with-icons">
+                                            With Icons                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#dynamic-colors">
+                                            Dynamic Colors                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#custom-label-badge">
+                                            Custom Label + Badge                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#size">
+                                            Size                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#badgecolumn-api">
+                                            BadgeColumn API                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#booleancolumn">
+                                            BooleanColumn                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#basic-usage-3">
+                                            Basic Usage                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#custom-icons-colors">
+                                            Custom Icons &amp; Colors                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#with-labels">
+                                            With Labels                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#booleancolumn-api">
+                                            BooleanColumn API                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#iconcolumn">
+                                            IconColumn                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#state-based-icons">
+                                            State-Based Icons                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#dynamic-resolution">
+                                            Dynamic Resolution                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#boolean-mode">
+                                            Boolean Mode                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#icon-size">
+                                            Icon Size                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#iconcolumn-api">
+                                            IconColumn API                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#imagecolumn">
+                                            ImageColumn                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#basic-usage-4">
+                                            Basic Usage                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#imagecolumn-api">
+                                            ImageColumn API                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#buttoncolumn">
+                                            ButtonColumn                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#link-button">
+                                            Link Button                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#action-button-livewire">
+                                            Action Button (Livewire)                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#livewire-method-call">
+                                            Livewire Method Call                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#with-confirmation">
+                                            With Confirmation                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#button-variants">
+                                            Button Variants                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#icon-only">
+                                            Icon Only                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#sizes">
+                                            Sizes                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#conditional-state">
+                                            Conditional State                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#loading-state">
+                                            Loading State                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#buttoncolumn-api">
+                                            ButtonColumn API                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#togglecolumn">
+                                            ToggleColumn                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#basic-usage-5">
+                                            Basic Usage                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#custom-colors">
+                                            Custom Colors                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#custom-icons">
+                                            Custom Icons                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#disabled-state">
+                                            Disabled State                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#togglecolumn-api">
+                                            ToggleColumn API                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#selectcolumn">
+                                            SelectColumn                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#basic-usage-6">
+                                            Basic Usage                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#with-validation">
+                                            With Validation                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#native-vs-styled">
+                                            Native vs Styled                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#conditional-disabled">
+                                            Conditional Disabled                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#selectcolumn-api">
+                                            SelectColumn API                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#textinputcolumn">
+                                            TextInputColumn                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#basic-usage-7">
+                                            Basic Usage                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#number-input">
+                                            Number Input                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#email-input">
+                                            Email Input                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#textinputcolumn-api">
+                                            TextInputColumn API                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#stackedcolumn">
+                                            StackedColumn                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#avatar-name-email-pattern">
+                                            Avatar + Name + Email Pattern                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#without-avatar">
+                                            Without Avatar                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#avatar-from-name-generated">
+                                            Avatar from Name (Generated)                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#custom-stack">
+                                            Custom Stack                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#search-through-stacked">
+                                            Search Through Stacked                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#stackedcolumn-api">
+                                            StackedColumn API                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#splitcolumn">
+                                            SplitColumn                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#basic-split">
+                                            Basic Split                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#vertical-layout">
+                                            Vertical Layout                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#with-gap-alignment">
+                                            With Gap &amp; Alignment                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#splitcolumn-api">
+                                            SplitColumn API                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#pollcolumn">
+                                            PollColumn                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#basic-polling">
+                                            Basic Polling                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#job-status-preset">
+                                            Job Status Preset                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#progress-bar-preset">
+                                            Progress Bar Preset                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#conditional-polling">
+                                            Conditional Polling                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#custom-state-resolution">
+                                            Custom State Resolution                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#badge-mode">
+                                            Badge Mode                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#loading-indicator">
+                                            Loading Indicator                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#callbacks">
+                                            Callbacks                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#pollcolumn-api">
+                                            PollColumn API                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#column-level-filtering">
+                                            Column-Level Filtering                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#column-level-filter-api">
+                                            Column-Level Filter API                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#inline-editing">
+                                            Inline Editing                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#patterns-recipes">
+                                            Patterns &amp; Recipes                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#user-table-with-avatar">
+                                            User Table with Avatar                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#financial-table">
+                                            Financial Table                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#task-board-table">
+                                            Task Board Table                                        </a>
+                                    </li>
+                                                            </ul>
+                        </aside>
+                                    </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

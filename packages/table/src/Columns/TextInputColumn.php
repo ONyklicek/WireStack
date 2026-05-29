@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Validator;
+use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireTable\Concerns\HasView;
 
 class TextInputColumn extends Column
@@ -97,7 +98,7 @@ class TextInputColumn extends Column
     public function __construct(string $name)
     {
         parent::__construct($name);
-        $this->editable = true;
+        $this->capabilities = $this->capabilities->add(Capability::Editable);
         $this->editableType = 'text';
     }
 
@@ -325,7 +326,7 @@ class TextInputColumn extends Column
     public function getRules(Model $record): array
     {
         if ($this->rules instanceof Closure) {
-            return call_user_func($this->rules, $record);
+            return ($this->rules)($record);
         }
 
         return $this->rules ?? [];
@@ -444,7 +445,7 @@ class TextInputColumn extends Column
         return $this;
     }
 
-    public function formatForSave(mixed $value, Model|null $record): mixed
+    public function formatForSave(mixed $value, ?Model $record): mixed
     {
         if ($this->trim && is_string($value)) {
             $value = trim($value);
@@ -473,7 +474,7 @@ class TextInputColumn extends Column
         }
 
         if ($this->beforeSaveFormatter) {
-            $value = call_user_func($this->beforeSaveFormatter, $value, $record);
+            $value = ($this->beforeSaveFormatter)($value, $record);
         }
 
         return $value;
@@ -577,7 +578,7 @@ class TextInputColumn extends Column
         }
 
         if ($this->afterLoadFormatter) {
-            $value = call_user_func($this->afterLoadFormatter, $value, $record);
+            $value = ($this->afterLoadFormatter)($value, $record);
         }
 
         return $value;
@@ -619,7 +620,7 @@ class TextInputColumn extends Column
     public function isDisabled(Model $record): bool
     {
         if ($this->disabledCallback) {
-            return call_user_func($this->disabledCallback, $record);
+            return ($this->disabledCallback)($record);
         }
 
         return $this->disabled;
@@ -628,7 +629,7 @@ class TextInputColumn extends Column
     public function isReadonly(Model $record): bool
     {
         if ($this->readonlyCallback) {
-            return call_user_func($this->readonlyCallback, $record);
+            return ($this->readonlyCallback)($record);
         }
 
         return $this->readonly;
@@ -650,7 +651,7 @@ class TextInputColumn extends Column
     public function formatForDisplay(mixed $value, Model $record): string
     {
         if ($this->displayFormatter) {
-            return (string) call_user_func($this->displayFormatter, $value, $record);
+            return (string) ($this->displayFormatter)($value, $record);
         }
 
         // Format number for readonly display

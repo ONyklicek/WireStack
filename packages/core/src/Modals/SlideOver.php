@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Modals;
 
+use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Modals\Concerns\HasFooterActions;
 use NyonCode\WireCore\Modals\Concerns\HasModalProperties;
 use NyonCode\WireCore\Modals\Contracts\ModalContract;
@@ -53,17 +55,17 @@ class SlideOver implements ModalContract
         return new static;
     }
 
-    public function icon(?string $icon, ?string $color = null): static
+    public function icon(string|Icon|null $icon, string|Color|null $color = null): static
     {
-        $this->icon = $icon;
-        $this->iconColor = $color;
+        $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
+        $this->iconColor = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
 
-    public function color(?string $color): static
+    public function color(string|Color|null $color): static
     {
-        $this->color = $color;
+        $this->color = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
@@ -95,7 +97,7 @@ class SlideOver implements ModalContract
 
     public function getIconColor(): string
     {
-        return $this->iconColor ?? 'gray';
+        return $this->iconColor ?? Color::Gray->value;
     }
 
     public function getColor(): ?string

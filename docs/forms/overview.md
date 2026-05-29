@@ -1,3 +1,7 @@
+---
+order: 10
+---
+
 # Wire Forms
 
 Standalone form system for Laravel Livewire. Works independently or with Wire Table.
@@ -12,7 +16,7 @@ Add to Tailwind content paths:
 ```js
 export default {
     content: [
-        ///... Curent code
+        // ...current app paths
         './vendor/nyoncode/wire-core/resources/views/**/*.blade.php',
         './vendor/nyoncode/wire-forms/resources/views/**/*.blade.php',
     ]
@@ -21,24 +25,9 @@ export default {
 
 ---
 
-## Architecture
+## How Forms Work
 
-Forms use Config + Runtime separation internally:
-
-```
-Form (public API, Htmlable)
-├── ConfigBuilder      → accumulates fluent calls
-├── FormConfig         → immutable snapshot
-├── FormRuntime        → validate, save, getState
-├── StateManager       → wire:model binding, fill, dirty tracking
-│   └── delegates to Core StateContainer
-├── SaveHandler        → validate → mutate → persist → notify
-├── FormValidationResolver → collect rules from fields
-│   └── delegates to Core ValidationPipeline
-└── FormRenderer       → Blade output
-```
-
-Users interact **only** with `Form`. Internal classes are never exposed.
+Define a `Form` schema on your Livewire component, bind it to a state path, and render it with `{{ $this->form }}`.
 
 ---
 
@@ -69,7 +58,7 @@ class CreateUser extends Component
 
     public function save(): void
     {
-        $this->form()->save();
+        $this->form->save();
     }
 }
 ```
@@ -85,7 +74,7 @@ class CreateUser extends Component
 
 ## Multi-Form
 
-Methods ending with `Form` are auto-detected ([ADR 0009](../decisions/0009-single-multi-form-coexistence.md)):
+Methods ending with `Form` are auto-detected:
 
 ```php
 class UserSettings extends Component
@@ -119,12 +108,12 @@ class UserSettings extends Component
 
     public function saveProfile(): void
     {
-        $this->profileForm()->save();
+        $this->profileForm->save();
     }
 
     public function savePassword(): void
     {
-        $data = $this->passwordForm()->validate();
+        $data = $this->passwordForm->validate();
         $this->user->update(['password' => Hash::make($data['password'])]);
     }
 }
@@ -144,12 +133,12 @@ class UserSettings extends Component
 
 ### Explicit Form Registration
 
-Alternative to auto-detection:
+Alternative to auto-detection — return method names exactly as defined:
 
 ```php
 protected function getForms(): array
 {
-    return ['profile', 'settings'];
+    return ['profileForm', 'passwordForm'];
 }
 ```
 
@@ -179,7 +168,7 @@ $form->getModel();     // Model instance or null
 
 ## Standalone Usage (without Livewire)
 
-Works for server-side validation and data processing ([ADR 0012](../decisions/0012-form-make-standalone-usage.md)):
+Works for server-side validation and data processing:
 
 ```php
 $form = Form::make()
@@ -223,16 +212,16 @@ $form->model(User::class)->save();
 ### Save Lifecycle Hooks
 
 ```php
-->mutateDataBeforeSave(Closure $fn)  // transform data before persist
-->beforeSave(Closure $fn)            // void hook before persist
-->afterSave(Closure $fn)             // void hook after persist
+->mutateDataBeforeSave(Closure $fn)  // fn(array $data): array — transform data before persist
+->beforeSave(Closure $fn)            // fn(array $data): void — runs before persist
+->afterSave(Closure $fn)             // fn(Model|mixed $record): void — runs after persist
 ```
 
 ### Notifications
 
 ```php
-->successMessage(string $msg)        // custom success notification text
-->disableSuccessNotification()       // no notification after save
+->successMessage(string|Closure|null $msg)  // custom success notification text; Closure receives $record
+->disableSuccessNotification()              // no notification after save
 ```
 
 ### Validation
@@ -240,6 +229,23 @@ $form->model(User::class)->save();
 ```php
 ->validationMessages(array $msgs)    // custom validation messages
 ```
+
+### State
+
+```php
+->disabled(bool $disabled = true)    // make all fields read-only
+```
+
+### Authorization
+
+```php
+->authorize(bool $usePolicy = true)              // enable model policy auto-resolution (create/update)
+->authorizeUsing(?Closure $callback)             // fn(User $user): bool — custom auth check
+->canSave(): bool                                // whether the current user may save
+->isReadOnly(): bool                             // true when authorization denies save
+```
+
+When `->authorize()` is enabled the form becomes read-only (and hides the save button) if the current user lacks the `create` or `update` policy permission on the model.
 
 ### Introspection
 
@@ -305,7 +311,7 @@ class MyComponent extends Component
 - [CheckboxList](fields/checkbox-list.md) — multi-checkbox group
 - [Radio](fields/radio.md) — radio button group
 - [Toggle](fields/toggle.md) — on/off switch
-- [DateTimePicker](fields/date-time-picker.md) — unified date/time/datetime ([ADR 0008](../decisions/0008-datetimepicker-unification.md))
+- [DateTimePicker](fields/date-time-picker.md) — unified date/time/datetime
 - [ColorPicker](fields/color-picker.md) — color selector
 - [FileUpload](fields/file-upload.md) — file/image upload
 - [RichEditor](fields/rich-editor.md) — WYSIWYG editor

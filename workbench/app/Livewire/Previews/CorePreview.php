@@ -1,0 +1,87 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Workbench\App\Livewire\Previews;
+
+use Livewire\Component;
+use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Actions\DeleteAction;
+use NyonCode\WireCore\Actions\ViewAction;
+use NyonCode\WireCore\Widgets\Stat;
+use NyonCode\WireCore\Widgets\StatsOverviewWidget;
+use Workbench\App\Models\User;
+
+class CorePreview extends Component
+{
+    public string $variant = 'overview';
+
+    public bool $showPreviewModal = false;
+
+    public function mount(string $variant = 'overview'): void
+    {
+        $this->variant = $variant;
+        $this->showPreviewModal = $variant === 'modal';
+    }
+
+    public function closePreviewModal(): void
+    {
+        $this->showPreviewModal = false;
+    }
+
+    public function render()
+    {
+        $record = User::query()->firstOrFail();
+
+        $stats = StatsOverviewWidget::make()
+            ->columns(3)
+            ->stats([
+                Stat::make('Open actions', '18')
+                    ->description('+4 this week')
+                    ->descriptionIcon('arrow-trending-up')
+                    ->color('success')
+                    ->icon('bolt'),
+                Stat::make('Queued exports', '6')
+                    ->description('2 waiting for review')
+                    ->descriptionIcon('clock')
+                    ->color('warning')
+                    ->icon('arrow-down-tray'),
+                Stat::make('Plugin hooks', '34')
+                    ->description('All listeners healthy')
+                    ->descriptionIcon('check')
+                    ->color('primary')
+                    ->icon('puzzle-piece'),
+            ]);
+
+        $actions = [
+            Action::make('create')
+                ->label('New action')
+                ->icon('plus')
+                ->color('primary'),
+            ViewAction::make()
+                ->label('Inspect')
+                ->outlined(),
+            DeleteAction::make()
+                ->label('Archive')
+                ->color('danger'),
+        ];
+
+        $footerActions = [
+            Action::make('save')
+                ->label('Save changes')
+                ->icon('check')
+                ->color('primary'),
+            Action::make('cancel')
+                ->label('Cancel')
+                ->outlined()
+                ->color('gray'),
+        ];
+
+        return view('livewire.previews.core-preview', [
+            'record' => $record,
+            'stats' => $stats,
+            'actions' => $actions,
+            'footerActions' => $footerActions,
+        ]);
+    }
+}

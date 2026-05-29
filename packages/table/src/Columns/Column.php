@@ -5,27 +5,27 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Columns;
 
 use Closure;
-use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Pivot;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Core\Components\DataComponent;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Concerns\HasAuthorization;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireTable\Concerns\HasSummary;
-use Throwable;
 
 /** @phpstan-consistent-constructor */
 class Column extends DataComponent implements Htmlable
 {
+    use HasAuthorization;
     use HasSummary;
 
-    /** @var bool Whether the column can be sorted */
-    protected bool $sortable = false;
-
-    /** @var bool Whether the column is included in search */
-    protected bool $searchable = false;
+    // Note: $sortable and $searchable booleans removed in v2.
+    // Use capabilities as single source of truth via isSortable()/isSearchable().
 
     /** @var array<int, string> Explicit DB columns to search (Filament-style: searchable(['first_name', 'last_name'])) */
     protected array $searchColumns = [];
@@ -111,7 +111,7 @@ class Column extends DataComponent implements Htmlable
     /** @var string|null Text/icon color (e.g., 'primary', 'danger', '#FF0000') */
     protected ?string $color = null;
 
-    /** @var string|null Icon class or name */
+    /** @var string|null Icon name */
     protected ?string $icon = null;
 
     /** @var string|null Icon position relative to text ('before' or 'after') */
@@ -123,15 +123,24 @@ class Column extends DataComponent implements Htmlable
     /** @var Closure|null Callback to determine if the column should be visible */
     protected ?Closure $visibleCallback = null;
 
-    /** @var string|null Required permission to view this column */
-    protected ?string $permission = null;
+    /** @var string|null Gate ability for inline editing */
+    protected ?string $inlineEditAbility = null;
 
     /** @var bool Whether this column is for a pivot table */
     protected bool $isPivot = false;
 
+    // ── Aggregate support ─────────────────────────────────────────
+    /** @var string|null Aggregate function: 'count', 'sum', 'avg', 'min', 'max' */
+    protected ?string $aggregateFunction = null;
+
+    /** @var string|null Relation name for aggregate (e.g., 'orders') */
+    protected ?string $aggregateRelation = null;
+
+    /** @var string|null Column to aggregate on (e.g., 'total' for sum) */
+    protected ?string $aggregateColumn = null;
+
     // Inline editing properties
-    /** @var bool Whether the column is editable */
-    protected bool $editable = false;
+    // Note: $editable boolean removed in v2. Use capabilities.
 
     /** @var string|null Type of input for inline editing (e.g., 'text', 'select', 'date') */
     protected ?string $editableType = 'text';
@@ -146,8 +155,7 @@ class Column extends DataComponent implements Htmlable
     protected ?Closure $editableCallback = null;
 
     // Column filtering properties
-    /** @var bool Whether the column can be filtered */
-    protected bool $filterable = false;
+    // Note: $filterable boolean removed in v2. Use capabilities.
 
     /**
      * Type of filter input.
@@ -251,6 +259,110 @@ class Column extends DataComponent implements Htmlable
         return $this->isPivot;
     }
 
+    // ── Aggregate methods ─────────────────────────────────────────
+
+    /**
+     * Count related records.
+     *
+     * Usage: Column::make('orders_count')->counts('orders')
+     */
+    public function counts(string $relationship): static
+    {
+        $this->aggregateFunction = 'count';
+        $this->aggregateRelation = $relationship;
+
+        return $this;
+    }
+
+    /**
+     * Sum a column on related records.
+     *
+     * Usage: Column::make('orders_total')->sums('orders', 'total')
+     */
+    public function sums(string $relationship, string $column): static
+    {
+        $this->aggregateFunction = 'sum';
+        $this->aggregateRelation = $relationship;
+        $this->aggregateColumn = $column;
+
+        return $this;
+    }
+
+    /**
+     * Average a column on related records.
+     *
+     * Usage: Column::make('avg_rating')->averages('reviews', 'rating')
+     */
+    public function averages(string $relationship, string $column): static
+    {
+        $this->aggregateFunction = 'avg';
+        $this->aggregateRelation = $relationship;
+        $this->aggregateColumn = $column;
+
+        return $this;
+    }
+
+    /**
+     * Min of a column on related records.
+     */
+    public function mins(string $relationship, string $column): static
+    {
+        $this->aggregateFunction = 'min';
+        $this->aggregateRelation = $relationship;
+        $this->aggregateColumn = $column;
+
+        return $this;
+    }
+
+    /**
+     * Max of a column on related records.
+     */
+    public function maxes(string $relationship, string $column): static
+    {
+        $this->aggregateFunction = 'max';
+        $this->aggregateRelation = $relationship;
+        $this->aggregateColumn = $column;
+
+        return $this;
+    }
+
+    public function isAggregate(): bool
+    {
+        return $this->aggregateFunction !== null;
+    }
+
+    public function getAggregateFunction(): ?string
+    {
+        return $this->aggregateFunction;
+    }
+
+    public function getAggregateRelation(): ?string
+    {
+        return $this->aggregateRelation;
+    }
+
+    public function getAggregateColumn(): ?string
+    {
+        return $this->aggregateColumn;
+    }
+
+    /**
+     * Get the attribute name that Eloquent uses for withCount/withSum.
+     * E.g., withCount('orders') → 'orders_count', withSum('orders', 'total') → 'orders_sum_total'
+     */
+    public function getAggregateAttribute(): ?string
+    {
+        if ($this->aggregateFunction === null || $this->aggregateRelation === null) {
+            return null;
+        }
+
+        if ($this->aggregateFunction === 'count') {
+            return "{$this->aggregateRelation}_count";
+        }
+
+        return "{$this->aggregateRelation}_{$this->aggregateFunction}_{$this->aggregateColumn}";
+    }
+
     /**
      * Set the label of the column.
      */
@@ -273,7 +385,7 @@ class Column extends DataComponent implements Htmlable
 
     public function isSortable(): bool
     {
-        return $this->sortable;
+        return $this->hasCapability(Capability::Sortable);
     }
 
     /**
@@ -289,20 +401,17 @@ class Column extends DataComponent implements Htmlable
     public function searchable(bool|array $searchable = true, ?Closure $query = null): static
     {
         if (is_array($searchable)) {
-            $this->searchable = true;
             $this->searchColumns = $searchable;
+            $this->capabilities = $this->capabilities->add(Capability::Searchable);
         } else {
-            $this->searchable = $searchable;
+            $this->capabilities = $searchable
+                ? $this->capabilities->add(Capability::Searchable)
+                : $this->capabilities->remove(Capability::Searchable);
         }
 
         if ($query !== null) {
             $this->searchCallback = $query;
         }
-
-        // Bridge to capability system
-        $this->capabilities = $this->searchable
-            ? $this->capabilities->add(Capability::Searchable)
-            : $this->capabilities->remove(Capability::Searchable);
 
         return $this;
     }
@@ -312,7 +421,7 @@ class Column extends DataComponent implements Htmlable
      */
     public function isSearchable(): bool
     {
-        return $this->searchable;
+        return $this->hasCapability(Capability::Searchable);
     }
 
     /**
@@ -332,7 +441,7 @@ class Column extends DataComponent implements Htmlable
      */
     public function searchUsing(Closure $callback): static
     {
-        $this->searchable = true;
+        $this->capabilities = $this->capabilities->add(Capability::Searchable);
         $this->searchCallback = $callback;
 
         return $this;
@@ -355,16 +464,13 @@ class Column extends DataComponent implements Htmlable
      */
     public function sortable(bool $sortable = true, ?Closure $query = null): static
     {
-        $this->sortable = $sortable;
+        $this->capabilities = $sortable
+            ? $this->capabilities->add(Capability::Sortable)
+            : $this->capabilities->remove(Capability::Sortable);
 
         if ($query !== null) {
             $this->sortCallback = $query;
         }
-
-        // Bridge to capability system
-        $this->capabilities = $this->sortable
-            ? $this->capabilities->add(Capability::Sortable)
-            : $this->capabilities->remove(Capability::Sortable);
 
         return $this;
     }
@@ -376,7 +482,7 @@ class Column extends DataComponent implements Htmlable
      */
     public function sortUsing(Closure $callback): static
     {
-        $this->sortable = true;
+        $this->capabilities = $this->capabilities->add(Capability::Sortable);
         $this->sortCallback = $callback;
 
         return $this;
@@ -618,7 +724,7 @@ class Column extends DataComponent implements Htmlable
         $state = $this->getState($record);
 
         if ($this->displayUsing) {
-            $content = (string) call_user_func($this->displayUsing, $state, $record);
+            $content = (string) ($this->displayUsing)($state, $record);
         } else {
             $content = $this->formatValue($state, $record);
         }
@@ -709,7 +815,7 @@ class Column extends DataComponent implements Htmlable
         // Add description if set
         if ($this->description) {
             $descriptionText = is_callable($this->description)
-                ? call_user_func($this->description, $record)
+                ? ($this->description)($record)
                 : $this->description;
 
             if ($descriptionText) {
@@ -731,26 +837,7 @@ class Column extends DataComponent implements Htmlable
 
     public function canView(): bool
     {
-        if (! $this->permission) {
-            return true;
-        }
-
-        /** @var Authenticatable|null $user */
-        $user = auth()->guard()->user();
-        if (! $user) {
-            return false;
-        }
-
-        if (method_exists($user, 'hasRole') && $user->hasRole('Super Admin')) {
-            return true;
-        }
-
-        // Spatie Permission support
-        if (method_exists($user, 'hasPermissionTo')) {
-            return $user->hasPermissionTo($this->permission);
-        }
-
-        return true;
+        return $this->isAuthorized();
     }
 
     /**
@@ -769,11 +856,23 @@ class Column extends DataComponent implements Htmlable
             return ($this->stateCallback)($record);
         }
 
+        // Aggregate columns: read from withCount/withSum attribute
+        if ($this->isAggregate()) {
+            $attr = $this->getAggregateAttribute();
+            $value = $attr !== null ? $record->getAttribute($attr) : null;
+
+            if ($this->formatStateUsing) {
+                $value = ($this->formatStateUsing)($value, $record);
+            }
+
+            return $value ?? $this->default;
+        }
+
         // fallback: resolveValue + formatStateUsing
         $value = $this->resolveValue($record);
 
         if ($this->formatStateUsing) {
-            $value = call_user_func($this->formatStateUsing, $value, $record);
+            $value = ($this->formatStateUsing)($value, $record);
         }
 
         if ($value === null || $value === '') {
@@ -959,7 +1058,7 @@ class Column extends DataComponent implements Htmlable
     public function getUrl(Model $record): ?string
     {
         if ($this->urlCallback) {
-            return call_user_func($this->urlCallback, $record);
+            return ($this->urlCallback)($record);
         }
 
         return null;
@@ -972,7 +1071,7 @@ class Column extends DataComponent implements Htmlable
     {
         if ($this->mobileDisplayUsing) {
             $state = $this->getState($record);
-            $content = call_user_func($this->mobileDisplayUsing, $state, $record, $this);
+            $content = ($this->mobileDisplayUsing)($state, $record, $this);
 
             return $this->html ? (string) $content : e((string) $content);
         }
@@ -987,7 +1086,7 @@ class Column extends DataComponent implements Htmlable
     {
         if ($this->desktopDisplayUsing) {
             $state = $this->getState($record);
-            $content = call_user_func($this->desktopDisplayUsing, $state, $record, $this);
+            $content = ($this->desktopDisplayUsing)($state, $record, $this);
 
             return $this->html ? (string) $content : e((string) $content);
         }
@@ -1227,9 +1326,9 @@ class Column extends DataComponent implements Htmlable
         return $this->openUrlInNewTab;
     }
 
-    public function color(?string $color): static
+    public function color(string|Color|null $color): static
     {
-        $this->color = $color;
+        $this->color = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
@@ -1239,9 +1338,9 @@ class Column extends DataComponent implements Htmlable
         return $this->color;
     }
 
-    public function icon(?string $icon, ?string $position = 'before'): static
+    public function icon(string|Icon|null $icon, ?string $position = 'before'): static
     {
-        $this->icon = $icon;
+        $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
         $this->iconPosition = $position;
 
         return $this;
@@ -1281,22 +1380,37 @@ class Column extends DataComponent implements Htmlable
     public function isVisible(): bool
     {
         if ($this->visibleCallback) {
-            return call_user_func($this->visibleCallback);
+            return ($this->visibleCallback)();
         }
 
         return ! $this->hidden;
     }
 
-    public function permission(?string $permission): static
+    /**
+     * Set a Gate ability required for inline editing of this column.
+     */
+    public function authorizeInline(?string $ability): static
     {
-        $this->permission = $permission;
+        $this->inlineEditAbility = $ability;
 
         return $this;
     }
 
-    public function getPermission(): ?string
+    public function getInlineEditAbility(): ?string
     {
-        return $this->permission;
+        return $this->inlineEditAbility;
+    }
+
+    /**
+     * Check if the current user can inline-edit this column.
+     */
+    public function canInlineEdit(): bool
+    {
+        if (! $this->inlineEditAbility) {
+            return true;
+        }
+
+        return Gate::allows($this->inlineEditAbility);
     }
 
     /**
@@ -1304,21 +1418,19 @@ class Column extends DataComponent implements Htmlable
      */
     public function editable(bool $editable = true, string $type = 'text', array $options = []): static
     {
-        $this->editable = $editable;
-        $this->editableType = $type;
-        $this->editableOptions = $options;
-
-        // Bridge to capability system
-        $this->capabilities = $this->editable
+        $this->capabilities = $editable
             ? $this->capabilities->add(Capability::Editable)
             : $this->capabilities->remove(Capability::Editable);
+
+        $this->editableType = $type;
+        $this->editableOptions = $options;
 
         return $this;
     }
 
     public function isEditable(): bool
     {
-        return $this->editable;
+        return $this->hasCapability(Capability::Editable);
     }
 
     public function getEditableType(): string
@@ -1349,7 +1461,7 @@ class Column extends DataComponent implements Htmlable
     public function getEditableRules(?Model $record): array
     {
         if ($this->editableRules) {
-            return call_user_func($this->editableRules, $record);
+            return ($this->editableRules)($record);
         }
 
         return [];
@@ -1393,9 +1505,9 @@ class Column extends DataComponent implements Htmlable
 
     // Column filtering methods
 
-    public function textColor(string $color): static
+    public function textColor(string|Color $color): static
     {
-        $this->textColor = $color;
+        $this->textColor = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
@@ -1426,14 +1538,12 @@ class Column extends DataComponent implements Htmlable
      */
     public function filterable(bool $filterable = true, string $type = 'text', array $options = []): static
     {
-        $this->filterable = $filterable;
-        $this->filterType = $type;
-        $this->filterOptions = $options;
-
-        // Bridge to capability system
-        $this->capabilities = $this->filterable
+        $this->capabilities = $filterable
             ? $this->capabilities->add(Capability::Filterable)
             : $this->capabilities->remove(Capability::Filterable);
+
+        $this->filterType = $type;
+        $this->filterOptions = $options;
 
         return $this;
     }
@@ -1445,7 +1555,7 @@ class Column extends DataComponent implements Htmlable
      */
     public function filterAsSelect(array $options, ?string $placeholder = null): static
     {
-        $this->filterable = true;
+        $this->capabilities = $this->capabilities->add(Capability::Filterable);
         $this->filterType = 'select';
         $this->filterOptions = $options;
         if ($placeholder) {
@@ -1460,7 +1570,7 @@ class Column extends DataComponent implements Htmlable
      */
     public function filterAsDate(?string $minDate = null, ?string $maxDate = null): static
     {
-        $this->filterable = true;
+        $this->capabilities = $this->capabilities->add(Capability::Filterable);
         $this->filterType = 'date';
         $this->filterMinDate = $minDate;
         $this->filterMaxDate = $maxDate;
@@ -1473,7 +1583,7 @@ class Column extends DataComponent implements Htmlable
      */
     public function filterAsDateRange(?string $minDate = null, ?string $maxDate = null): static
     {
-        $this->filterable = true;
+        $this->capabilities = $this->capabilities->add(Capability::Filterable);
         $this->filterType = 'date_range';
         $this->filterMinDate = $minDate;
         $this->filterMaxDate = $maxDate;
@@ -1486,7 +1596,7 @@ class Column extends DataComponent implements Htmlable
      */
     public function filterAsNumberRange(?float $min = null, ?float $max = null, ?float $step = null): static
     {
-        $this->filterable = true;
+        $this->capabilities = $this->capabilities->add(Capability::Filterable);
         $this->filterType = 'number_range';
         $this->filterMinValue = $min;
         $this->filterMaxValue = $max;
@@ -1500,7 +1610,7 @@ class Column extends DataComponent implements Htmlable
      */
     public function filterAsBoolean(?string $trueLabel = null, ?string $falseLabel = null): static
     {
-        $this->filterable = true;
+        $this->capabilities = $this->capabilities->add(Capability::Filterable);
         $this->filterType = 'boolean';
         $this->filterTrueLabel = $trueLabel;
         $this->filterFalseLabel = $falseLabel;
@@ -1576,7 +1686,7 @@ class Column extends DataComponent implements Htmlable
 
     public function isFilterable(): bool
     {
-        return $this->filterable;
+        return $this->hasCapability(Capability::Filterable);
     }
 
     public function getFilterType(): string
@@ -1624,7 +1734,7 @@ class Column extends DataComponent implements Htmlable
 
         // 1. Custom filter callback takes priority
         if ($this->filterQueryCallback) {
-            return call_user_func($this->filterQueryCallback, $query, $value);
+            return ($this->filterQueryCallback)($query, $value);
         }
 
         $column = $this->name;
@@ -1748,12 +1858,9 @@ class Column extends DataComponent implements Htmlable
         return $this->getColumnName();
     }
 
-    /**
-     * @throws Throwable
-     */
     public function renderFilter(mixed $value = null): string
     {
-        if (! $this->filterable) {
+        if (! $this->isFilterable()) {
             return '';
         }
 

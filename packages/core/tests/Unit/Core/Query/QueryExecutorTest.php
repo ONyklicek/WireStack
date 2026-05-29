@@ -14,9 +14,6 @@ use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireCore\Core\Query\SearchClause;
 use NyonCode\WireCore\Core\Query\SortClause;
 use NyonCode\WireCore\Core\Query\Strategies\SqliteSearchStrategy;
-use NyonCode\WireCore\Tests\TestCase;
-
-uses(TestCase::class);
 
 beforeEach(function () {
     Schema::create('exec_test_users', function (Blueprint $table) {

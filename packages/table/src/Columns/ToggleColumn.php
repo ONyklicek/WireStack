@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Columns;
 
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Capabilities\Capability;
+use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 
 class ToggleColumn extends Column
 {
@@ -23,34 +26,34 @@ class ToggleColumn extends Column
     public function __construct(string $name)
     {
         parent::__construct($name);
-        $this->editable = true;
+        $this->capabilities = $this->capabilities->add(Capability::Editable);
         $this->editableType = 'toggle';
     }
 
-    public function onColor(?string $color): static
+    public function onColor(string|Color|null $color): static
     {
-        $this->onColor = $color;
+        $this->onColor = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
 
-    public function offColor(?string $color): static
+    public function offColor(string|Color|null $color): static
     {
-        $this->offColor = $color;
+        $this->offColor = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
 
-    public function onIcon(?string $icon): static
+    public function onIcon(string|Icon|null $icon): static
     {
-        $this->onIcon = $icon;
+        $this->onIcon = $icon instanceof Icon ? $icon->value() : $icon;
 
         return $this;
     }
 
-    public function offIcon(?string $icon): static
+    public function offIcon(string|Icon|null $icon): static
     {
-        $this->offIcon = $icon;
+        $this->offIcon = $icon instanceof Icon ? $icon->value() : $icon;
 
         return $this;
     }
@@ -69,7 +72,7 @@ class ToggleColumn extends Column
     public function isDisabled(Model $record): bool
     {
         if ($this->disabledCallback) {
-            return call_user_func($this->disabledCallback, $record);
+            return ($this->disabledCallback)($record);
         }
 
         return $this->disabled;

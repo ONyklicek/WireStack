@@ -1,6 +1,10 @@
+---
+order: 40
+---
+
 # Modals
 
-Modal system for confirmation dialogs, slide-overs, and multi-step wizards. Lives inside `wire-core` as a separate module, prepared for future extraction ([ADR 0006](../decisions/0006-modular-core-extraction-strategy.md)).
+Modal system for confirmation dialogs, slide-overs, and multi-step wizards.
 
 ## Modal Types
 
@@ -177,7 +181,3 @@ Action::make('process')
 <x-wire-modals::modal />
 <x-wire-modals::confirmation />
 ```
-
-## Module Dependencies
-
-Modals depends only on Foundation. It does not depend on Actions or Notifications ([ADR 0007](../decisions/0007-internal-module-dependencies.md)).

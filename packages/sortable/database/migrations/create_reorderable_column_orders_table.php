@@ -14,10 +14,11 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('model_type');
+            $table->string('table_identifier');
             $table->json('column_order');
             $table->timestamps();
 
-            $table->unique(['user_id', 'model_type']);
+            $table->unique(['user_id', 'model_type', 'table_identifier']);
         });
     }
 

@@ -5,12 +5,14 @@
 @endphp
 
 <div
+    wire:key="field-{{ $statePath }}"
     @class([
-        'wire-field',
+        'wire-field relative',
         'sm:col-span-1' => $columnSpan === 1,
-        'sm:col-span-2' => $columnSpan === 2 || $columnSpan === 'full',
+        'sm:col-span-2 md:col-span-2' => $columnSpan === 2 || $columnSpan === 'full',
     ])
 >
+
     @if($field->getLabel() && !($hideLabel ?? false))
         <label for="{{ $field->getId() }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             {{ $field->getLabel() }}

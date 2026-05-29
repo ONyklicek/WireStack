@@ -15,39 +15,50 @@
         "nyoncode/wire-forms": "@dev",
         "nyoncode/wire-table": "@dev",
         "nyoncode/wire-sortable": "@dev",
-	    "illuminate/support": "^10.0|^11.0|^12.0|^13.0"
+        "illuminate/support": "^10.0|^11.0|^12.0|^13.0"
     },
     "require-dev": {
         "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
         "laravel/pint": "^1.29",
         "pestphp/pest": "^2.0|^3.0|^4.0",
-        "phpstan/phpstan": "^1.12",
+        "phpstan/phpstan": "^2.0",
         "symplify/monorepo-builder": "^11.2"
     },
     "repositories": [
         {
             "type": "path",
             "url": "packages/core",
-            "options": { "symlink": true }
+            "options": {
+                "symlink": true
+            }
         },
         {
             "type": "path",
             "url": "packages/forms",
-            "options": { "symlink": true }
+            "options": {
+                "symlink": true
+            }
         },
         {
             "type": "path",
             "url": "packages/table",
-            "options": { "symlink": true }
+            "options": {
+                "symlink": true
+            }
         },
         {
             "type": "path",
             "url": "packages/sortable",
-            "options": { "symlink": true }
+            "options": {
+                "symlink": true
+            }
         }
     ],
     "autoload-dev": {
         "psr-4": {
+            "Workbench\\App\\": "workbench/app/",
+            "Workbench\\Database\\Factories\\": "workbench/database/factories/",
+            "Workbench\\Database\\Seeders\\": "workbench/database/seeders/",
             "NyonCode\\Wire\\Tests\\": "tests/",
             "NyonCode\\WireCore\\Tests\\": "packages/core/tests/",
             "NyonCode\\WireForms\\Tests\\": "packages/forms/tests/",
@@ -58,7 +69,7 @@
     "minimum-stability": "dev",
     "prefer-stable": true,
     "scripts": {
-	    "test": "vendor/bin/pest",
+        "test": "vendor/bin/pest",
         "test:core": "vendor/bin/pest --configuration packages/core/phpunit.xml",
         "test:forms": "vendor/bin/pest --configuration packages/forms/phpunit.xml",
         "test:table": "vendor/bin/pest --configuration packages/table/phpunit.xml",

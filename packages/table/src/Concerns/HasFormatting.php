@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Concerns;
 
 use Carbon\Carbon;
+use NyonCode\WireTable\Columns\Column;
 
 /**
  * Trait HasFormatting
  *
  * Shared value formatting logic for columns (money, numbers, dates).
+ *
+ * @phpstan-require-extends Column
  */
 trait HasFormatting
 {

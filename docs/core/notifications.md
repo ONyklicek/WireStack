@@ -1,6 +1,10 @@
+---
+order: 30
+---
+
 # Notifications
 
-Pluggable notification system with multiple drivers. Lives inside `wire-core` as a separate module, prepared for future extraction ([ADR 0006](../decisions/0006-modular-core-extraction-strategy.md)).
+Pluggable notification system with multiple drivers.
 
 ## Drivers
 
@@ -12,52 +16,61 @@ Pluggable notification system with multiple drivers. Lives inside `wire-core` as
 | Log | `LogDriver` | Logs notifications for debugging | None |
 | Null | `NullDriver` | No-op (disables notifications) | None |
 
-See [ADR 0004](../decisions/0004-notification-driver-defaults.md) for default driver selection.
+The session driver is the default.
 
 ## Notification Builder
 
+`Notification` is an immutable value object. Create via static factory, then send through `NotificationManager`.
+
 ```php
 use NyonCode\WireCore\Notifications\Notification;
+use NyonCode\WireCore\Notifications\NotificationManager;
 
-// Fluent builder
-Notification::make()
-    ->title('Record Saved')
-    ->body('The user was successfully updated.')
-    ->success()
-    ->send();
+// Shorthand factories — create and send immediately
+NotificationManager::success('User saved');
+NotificationManager::error('Failed to delete');
 
-// Shorthand factories
-Notification::success('User saved');
-Notification::error('Failed to delete');
-Notification::warning('Disk space low');
-Notification::info('3 new messages');
+// Build a notification, then send
+$notification = Notification::success('The user was successfully updated.')
+    ->title('Record Saved');
+
+NotificationManager::send($notification);
 
 // Full customization
-Notification::make()
-    ->title('Custom')
-    ->body('Detailed message...')
+$notification = Notification::make('success', 'Changes saved.')
+    ->title('Done')
     ->icon('check')
     ->duration(5000)            // ms, 0 = persistent
     ->position('top-right')     // top-right, top-left, bottom-right, bottom-left
-    ->extra(['link' => '/details'])
-    ->send();
+    ->extra(['link' => '/details']);
+
+NotificationManager::send($notification);
 ```
 
 ### Notification API
 
 ```php
-->title(?string $title)
-->body(?string $body)
-->success()                      // color: success
-->danger()                       // color: danger
-->warning()                      // color: warning
-->info()                         // color: info
-->icon(?string $icon)
-->duration(?int $ms)             // auto-dismiss time, 0 = persistent
-->position(?string $position)    // toast position
-->extra(array $data)             // arbitrary extra data
-->send()                         // dispatch via active driver
-->toArray(): array               // serialize to array
+// Static factories (return a new Notification instance)
+Notification::make(string $type, string $message): static
+Notification::success(string $message): static
+Notification::error(string $message): static
+Notification::warning(string $message): static
+Notification::info(string $message): static
+
+// Fluent immutable modifiers (each returns a new instance)
+->title(?string $title): static
+->duration(?int $ms): static      // auto-dismiss time, 0 = persistent
+->icon(?string $icon): static
+->position(?string $position): static
+->extra(array $data): static      // arbitrary extra data (merged)
+->toArray(): array                // serialize to array
+
+// Sending (via NotificationManager)
+NotificationManager::send(Notification $n, ?NotificationDriver $driver = null, mixed $livewire = null): void
+NotificationManager::success(string $message, ...): void
+NotificationManager::error(string $message, ...): void
+NotificationManager::warning(string $message, ...): void
+NotificationManager::info(string $message, ...): void
 ```
 
 ## Usage in Actions
@@ -113,8 +126,6 @@ Form::make()
     ->disableSuccessNotification()
     ->save();
 ```
-
-See [ADR 0010](../decisions/0010-form-save-notifications-integration.md).
 
 ## Configuration
 
@@ -176,7 +187,3 @@ Place the toast container in your layout:
 ```blade
 <x-wire-notifications::toast-container />
 ```
-
-## Module Dependencies
-
-Notifications depends only on Foundation. It does not depend on Actions, Modals, or Forms ([ADR 0007](../decisions/0007-internal-module-dependencies.md)).

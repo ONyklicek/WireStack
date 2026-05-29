@@ -3,14 +3,12 @@
 declare(strict_types=1);
 
 use Illuminate\Validation\ValidationException;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Forms\Config\FormConfig;
 use NyonCode\WireForms\Forms\Runtime\FormRuntime;
 use NyonCode\WireForms\Forms\Runtime\SaveHandler;
 use NyonCode\WireForms\Forms\Runtime\StateManager;
-use NyonCode\WireForms\Tests\TestCase;
-
-uses(TestCase::class);
 
 function createRuntimeWithState(FormConfig $config, array $state = []): FormRuntime
 {
@@ -72,6 +70,77 @@ test('mutateDataBeforeSave returning null cancels save', function () {
     $result = $handler->save();
 
     expect($result)->toBeNull();
+});
+
+// ─── Plugin hooks ─────────────────────────────────────────────
+
+test('form.saving hook can modify data before beforeSave and persistence', function () {
+    $manager = app(PluginManager::class);
+    $manager->hook('form.saving', function (array $payload) {
+        $payload['data']['name'] = 'Jane';
+        $payload['data']['plugin'] = true;
+
+        return $payload;
+    });
+
+    $beforeSaveData = null;
+
+    $config = new FormConfig(
+        schema: [
+            TextInput::make('name'),
+        ],
+        mutateDataBeforeSave: fn (array $data) => [...$data, 'mutated' => true],
+        beforeSave: function (array $data) use (&$beforeSaveData) {
+            $beforeSaveData = $data;
+        },
+        using: fn (array $data) => $data,
+    );
+
+    $runtime = createRuntimeWithState($config, ['name' => 'John']);
+
+    $handler = new SaveHandler($config, $runtime);
+    $result = $handler->save();
+
+    expect($beforeSaveData)->toBe([
+        'name' => 'Jane',
+        'mutated' => true,
+        'plugin' => true,
+    ])->and($result)->toBe($beforeSaveData);
+});
+
+test('form.saved hook receives the persisted record after afterSave', function () {
+    $manager = app(PluginManager::class);
+    $order = [];
+    $observedRecord = null;
+
+    $manager->hook('form.saved', function (array $payload) use (&$order, &$observedRecord) {
+        $order[] = 'plugin.saved';
+        $observedRecord = $payload['record'];
+
+        return $payload;
+    });
+
+    $config = new FormConfig(
+        schema: [
+            TextInput::make('name'),
+        ],
+        afterSave: function () use (&$order) {
+            $order[] = 'afterSave';
+        },
+        using: function (array $data) use (&$order) {
+            $order[] = 'persist';
+
+            return ['persisted' => true, ...$data];
+        },
+    );
+
+    $runtime = createRuntimeWithState($config, ['name' => 'John']);
+
+    $handler = new SaveHandler($config, $runtime);
+    $result = $handler->save();
+
+    expect($order)->toBe(['persist', 'afterSave', 'plugin.saved'])
+        ->and($observedRecord)->toBe($result);
 });
 
 // ─── beforeSave hook ──────────────────────────────────────────
@@ -261,6 +330,33 @@ test('save with closure successMessage resolves it', function () {
     $result = $handler->save();
 
     expect($result)->toBe(['name' => 'John']);
+});
+
+// ─── statePath unwrapping ─────────────────────────────────────
+
+test('save unwraps statePath prefix from validated data before persisting', function () {
+    $persisted = null;
+
+    $config = new FormConfig(
+        schema: [
+            TextInput::make('name'),
+        ],
+        statePath: 'data',
+        using: function (array $data) use (&$persisted) {
+            $persisted = $data;
+
+            return $data;
+        },
+        successMessage: null,
+    );
+
+    $runtime = createRuntimeWithState($config, ['name' => 'John']);
+
+    $handler = new SaveHandler($config, $runtime);
+    $handler->save();
+
+    // persist() must receive flat attributes, not ['data' => ['name' => 'John']]
+    expect($persisted)->toBe(['name' => 'John']);
 });
 
 // ─── Complete lifecycle ───────────────────────────────────────

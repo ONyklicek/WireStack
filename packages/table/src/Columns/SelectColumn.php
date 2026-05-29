@@ -6,6 +6,7 @@ namespace NyonCode\WireTable\Columns;
 
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireTable\Concerns\HasView;
 
@@ -22,10 +23,16 @@ class SelectColumn extends Column
 
     protected ?Closure $disabledCallback = null;
 
+    /** @var string|null Relationship name for auto-loading options */
+    protected ?string $relationship = null;
+
+    /** @var string|null Display attribute on the related model */
+    protected ?string $titleAttribute = null;
+
     public function __construct(string $name)
     {
         parent::__construct($name);
-        $this->editable = true;
+        $this->capabilities = $this->capabilities->add(Capability::Editable);
         $this->editableType = 'select';
         $this->placeholder = Trans::get('wire-table::messages.select_placeholder');
     }
@@ -94,10 +101,60 @@ class SelectColumn extends Column
         ]);
     }
 
+    /**
+     * Configure relationship for auto-loading options from related model.
+     *
+     * Usage: SelectColumn::make('category_id')->relationship('category', 'name')
+     */
+    public function relationship(string $name, string $titleAttribute): static
+    {
+        $this->relationship = $name;
+        $this->titleAttribute = $titleAttribute;
+
+        return $this;
+    }
+
+    public function getRelationshipName(): ?string
+    {
+        return $this->relationship;
+    }
+
+    public function getTitleAttribute(): ?string
+    {
+        return $this->titleAttribute;
+    }
+
+    /**
+     * Load options from the relationship's related model.
+     * Call this with a model instance to auto-populate options.
+     */
+    public function loadRelationshipOptions(Model $record): static
+    {
+        if ($this->relationship === null || $this->titleAttribute === null) {
+            return $this;
+        }
+
+        if (! method_exists($record, $this->relationship)) {
+            return $this;
+        }
+
+        try {
+            $relation = $record->{$this->relationship}();
+            $relatedModel = $relation->getRelated();
+            $options = $relatedModel::query()
+                ->pluck($this->titleAttribute, $relatedModel->getKeyName())
+                ->all();
+
+            return $this->options($options);
+        } catch (\Throwable) {
+            return $this;
+        }
+    }
+
     public function isDisabled(Model $record): bool
     {
         if ($this->disabledCallback) {
-            return call_user_func($this->disabledCallback, $record);
+            return ($this->disabledCallback)($record);
         }
 
         return $this->disabled;

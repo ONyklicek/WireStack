@@ -39,6 +39,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
             ->hasShortName('wire-core')
             ->hasConfig()
             ->hasViews()
+            ->hasMigrations()
             ->hasTranslations('resources/lang')
             ->hasAbout();
     }
@@ -139,6 +140,9 @@ class WireCoreServiceProvider extends PackageServiceProvider
         Blade::component('wire-modals::modal', ModalComponent::class);
         Blade::component('wire-modals::confirmation', ConfirmationComponent::class);
         Blade::component('wire-modals::slide-over', SlideOverComponent::class);
+
+        // Universal alias: <x-wire::modal />
+        Blade::component('wire::modal', ModalComponent::class);
     }
 
     // ─── Plugins ────────────────────────────────────────────────
@@ -149,10 +153,14 @@ class WireCoreServiceProvider extends PackageServiceProvider
 
         // Register plugins from config
         $this->app->afterResolving(PluginManager::class, function (PluginManager $manager) {
-            /** @var array<int, class-string<Plugin>> $plugins */
+            /** @var list<mixed> $plugins */
             $plugins = $this->app['config']->get('wire-core.plugins', []);
 
             foreach ($plugins as $pluginClass) {
+                if (! is_string($pluginClass) || ! is_subclass_of($pluginClass, Plugin::class)) {
+                    continue;
+                }
+
                 $manager->register($this->app->make($pluginClass));
             }
         });

@@ -97,7 +97,7 @@ final class QueryExecutor
      * @param  Builder<Model>  $builder
      * @return array<int, QueryPipe>
      */
-    private function getDefaultPipes(Builder $builder, ?string $searchTerm): array
+    public function getDefaultPipes(Builder $builder, ?string $searchTerm): array
     {
         $strategy = $this->searchStrategy ?? $this->resolveSearchStrategy($builder);
 

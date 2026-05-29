@@ -64,17 +64,17 @@ it('has no submit label when informative', function () {
 });
 
 it('uses close label when informative', function () {
-    expect(ConfirmationDialog::make()->informative()->getCancelLabel())->toBe('confirm_close');
+    expect(ConfirmationDialog::make()->informative()->getCancelLabel())->toBe('Close');
 });
 
 // ─── Labels ────────────────────────────────────────────────────────────
 
 it('has default submit label from translation', function () {
-    expect(ConfirmationDialog::make()->getSubmitLabel())->toBe('confirm_submit');
+    expect(ConfirmationDialog::make()->getSubmitLabel())->toBe('Confirm');
 });
 
 it('has default cancel label from translation', function () {
-    expect(ConfirmationDialog::make()->getCancelLabel())->toBe('confirm_cancel');
+    expect(ConfirmationDialog::make()->getCancelLabel())->toBe('Cancel');
 });
 
 it('can set custom labels', function () {
@@ -91,18 +91,18 @@ it('can set custom labels', function () {
 it('creates delete preset', function () {
     $dialog = ConfirmationDialog::delete('User');
 
-    expect($dialog->getHeading())->toBe('delete_heading')
-        ->and($dialog->getDescription())->toBe('delete_description_named')
+    expect($dialog->getHeading())->toBe('Delete record')
+        ->and($dialog->getDescription())->toBe('Are you sure you want to delete "User"? This action is irreversible.')
         ->and($dialog->getIcon())->toBe('trash')
         ->and($dialog->getIconColor())->toBe('danger')
-        ->and($dialog->getSubmitLabel())->toBe('delete_submit')
+        ->and($dialog->getSubmitLabel())->toBe('Delete')
         ->and($dialog->isDanger())->toBeTrue();
 });
 
 it('creates delete preset without record name', function () {
     $dialog = ConfirmationDialog::delete();
 
-    expect($dialog->getDescription())->toBe('delete_description');
+    expect($dialog->getDescription())->toBe('Are you sure you want to delete this record? This action is irreversible.');
 });
 
 it('creates danger preset', function () {
@@ -172,5 +172,5 @@ it('serializes informative dialog correctly', function () {
 
     expect($array['submitLabel'])->toBeNull()
         ->and($array['isInformative'])->toBeTrue()
-        ->and($array['cancelLabel'])->toBe('confirm_close');
+        ->and($array['cancelLabel'])->toBe('Close');
 });

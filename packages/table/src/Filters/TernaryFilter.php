@@ -7,6 +7,7 @@ namespace NyonCode\WireTable\Filters;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireForms\Components\Select;
 
 class TernaryFilter extends Filter
 {
@@ -62,7 +63,7 @@ class TernaryFilter extends Filter
         }
 
         if ($this->queryCallback) {
-            return call_user_func($this->queryCallback, $query, $value);
+            return ($this->queryCallback)($query, $value);
         }
 
         $column = $this->getColumn();
@@ -82,6 +83,18 @@ class TernaryFilter extends Filter
         }
 
         return $query;
+    }
+
+    public function getFormFields(): array
+    {
+        return [
+            Select::make('value')
+                ->options([
+                    '1' => $this->getTrueLabel(),
+                    '0' => $this->getFalseLabel(),
+                ])
+                ->placeholder($this->getAllLabel()),
+        ];
     }
 
     public function render(mixed $value = null): string

@@ -5,7 +5,8 @@
     $label = $filter->getLabel();
     $placeholder = $filter->getPlaceholder();
     $options = $filter->getOptions();
-    $currentValue = $value ?? $filter->getDefault();
+    $rawValue = is_array($value) && array_key_exists('value', $value) ? $value['value'] : $value;
+    $currentValue = $rawValue ?? $filter->getDefault();
     $isMultiple = $filter->isMultiple();
 @endphp
 
@@ -15,7 +16,7 @@
     </label>
     <select
         id="filter-{{ $name }}"
-        wire:model.live="tableFilters.{{ $name }}"
+        wire:model.live="tableState.filters.{{ $name }}.value"
         @if($isMultiple) multiple @endif
         class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
     >

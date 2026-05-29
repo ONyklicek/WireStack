@@ -44,8 +44,8 @@ it('has correct defaults', function () {
     expect($halt->getModalHeading())->toBeNull()
         ->and($halt->getModalDescription())->toBeNull()
         ->and($halt->getModalIcon())->toBeNull()
-        ->and($halt->getModalSubmitLabel())->toBe('confirm_submit')
-        ->and($halt->getModalCancelLabel())->toBe('confirm_cancel')
+        ->and($halt->getModalSubmitLabel())->toBe('Confirm')
+        ->and($halt->getModalCancelLabel())->toBe('Cancel')
         ->and($halt->getModalWidth())->toBe('md')
         ->and($halt->isDanger())->toBeFalse()
         ->and($halt->isInformative())->toBeFalse()
@@ -61,7 +61,7 @@ it('can be set to informative (no submit button)', function () {
 
     expect($halt->isInformative())->toBeTrue()
         ->and($halt->getModalSubmitLabel())->toBeNull()
-        ->and($halt->getModalCancelLabel())->toBe('confirm_close');
+        ->and($halt->getModalCancelLabel())->toBe('Close');
 });
 
 it('noSubmit is alias for informative', function () {
@@ -148,8 +148,8 @@ it('can set redirect after confirm', function () {
 it('has confirmDelete preset', function () {
     $halt = ActionHalt::confirmDelete('Test Record');
 
-    expect($halt->getModalHeading())->toBe('delete_heading')
-        ->and($halt->getModalDescription())->toBe('delete_description_named')
+    expect($halt->getModalHeading())->toBe('Delete record')
+        ->and($halt->getModalDescription())->toBe('Are you sure you want to delete "Test Record"? This action is irreversible.')
         ->and($halt->isDanger())->toBeTrue()
         ->and($halt->getModalIcon())->toBe('trash');
 });
@@ -157,7 +157,7 @@ it('has confirmDelete preset', function () {
 it('has confirmDelete preset without name', function () {
     $halt = ActionHalt::confirmDelete();
 
-    expect($halt->getModalDescription())->toBe('delete_description');
+    expect($halt->getModalDescription())->toBe('Are you sure you want to delete this record? This action is irreversible.');
 });
 
 it('has confirmDanger preset', function () {

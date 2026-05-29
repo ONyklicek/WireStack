@@ -16,9 +16,40 @@ Checkbox::make('agree_terms')
     ->inline()
 ```
 
+## Conditional Visibility
+
+```php
+Checkbox::make('receive_newsletter')
+    ->label('Subscribe to newsletter')
+    ->visible(fn () => $this->email !== null)
+```
+
+## Disabled State
+
+```php
+Checkbox::make('is_verified')
+    ->label('Email verified')
+    ->disabled()
+    ->default(fn () => $this->record?->email_verified_at !== null)
+```
+
+## Live Updates
+
+```php
+Checkbox::make('show_advanced')
+    ->live()    // re-renders the form when toggled
+```
+
 ## Methods
 
-| Method | Description |
-|--------|-------------|
-| `description(string)` | Help text below the checkbox |
-| `inline()` | Inline layout (label next to checkbox) |
+| Method | Type | Description |
+|--------|------|-------------|
+| `description(string\|Closure\|null)` | string | Help text rendered below the checkbox |
+| `inline(bool)` | bool | Display label inline next to the checkbox |
+| `default(mixed\|Closure)` | mixed | Pre-filled value (`true` or `false`) |
+| `disabled(bool\|Closure)` | bool | Disable the checkbox |
+| `readOnly(bool\|Closure)` | bool | Make the checkbox read-only |
+| `required()` | — | Mark as required |
+| `live()` | — | Trigger Livewire update on change |
+
+See [Common Field API](index.md#common-field-api) for label, hint, tooltip, and other shared methods.

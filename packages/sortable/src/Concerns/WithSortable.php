@@ -10,6 +10,7 @@ use Illuminate\Contracts\Pagination\Paginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use NyonCode\WireSortable\Models\ReorderableColumnOrder;
+use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Table;
 
 /**
@@ -100,12 +101,13 @@ trait WithSortable
 
         $userId = $this->getReorderableUserId();
         $modelType = $this->getReorderableModelType();
+        $tableIdentifier = $this->getReorderableTableIdentifier();
 
         if ($userId === null || $modelType === null) {
             return;
         }
 
-        $saved = ReorderableColumnOrder::getOrder($userId, $modelType);
+        $saved = ReorderableColumnOrder::getOrder($userId, $modelType, $tableIdentifier);
 
         if (is_array($saved) && ! empty($saved)) {
             $this->reorderableColumnOrder = $saved;
@@ -122,8 +124,6 @@ trait WithSortable
      * Called by WithTable via method_exists. Returns all records
      * ordered by the sort column when in reorder mode (bypassing
      * search, filters, sorting, and pagination).
-     *
-     * @return LengthAwarePaginator|Paginator|CursorPaginator|Collection|null
      */
     protected function interceptTableRecords(): LengthAwarePaginator|Paginator|CursorPaginator|Collection|null
     {
@@ -231,6 +231,7 @@ trait WithSortable
 
         $userId = $this->getReorderableUserId();
         $modelType = $this->getReorderableModelType();
+        $tableIdentifier = $this->getReorderableTableIdentifier();
 
         if ($userId === null || $modelType === null) {
             return;
@@ -249,7 +250,7 @@ trait WithSortable
 
         $this->reorderableColumnOrder = $filtered;
 
-        ReorderableColumnOrder::saveOrder($userId, $modelType, $filtered);
+        ReorderableColumnOrder::saveOrder($userId, $modelType, $tableIdentifier, $filtered);
     }
 
     /**
@@ -261,16 +262,17 @@ trait WithSortable
 
         $userId = $this->getReorderableUserId();
         $modelType = $this->getReorderableModelType();
+        $tableIdentifier = $this->getReorderableTableIdentifier();
 
         if ($userId !== null && $modelType !== null) {
-            ReorderableColumnOrder::deleteOrder($userId, $modelType);
+            ReorderableColumnOrder::deleteOrder($userId, $modelType, $tableIdentifier);
         }
     }
 
     /**
      * Get columns in user-defined order.
      *
-     * @return array<int, \NyonCode\WireTable\Columns\Column>
+     * @return array<int, Column>
      */
     public function getReorderableColumns(): array
     {
@@ -324,6 +326,17 @@ trait WithSortable
     }
 
     /**
+     * Get the table identifier for column order persistence.
+     * Uses the Livewire component class name to distinguish
+     * multiple tables over the same model.
+     * Override this to customize.
+     */
+    protected function getReorderableTableIdentifier(): string
+    {
+        return static::class;
+    }
+
+    /**
      * Get the model type key for column order persistence.
      * Uses the table's Eloquent model class.
      */
@@ -342,10 +355,6 @@ trait WithSortable
 
     private function resolveModelClass(Table $table): ?string
     {
-        try {
-            return get_class($table->getQuery()->getModel());
-        } catch (\RuntimeException) {
-            return null;
-        }
+        return $this->getReorderableModelType();
     }
 }

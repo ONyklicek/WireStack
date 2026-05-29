@@ -21,7 +21,7 @@
                     type="text"
                     x-model="search"
                     placeholder="{{ $field->getSearchPrompt() }}"
-                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
+                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150 dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
                 />
             </div>
         @endif
@@ -57,7 +57,7 @@
                             {{ $wireAttr }}="{{ $field->getWireModelAttribute() }}"
                             value="{{ $value }}"
                             @if($field->isDisabled()) disabled @endif
-                            class="rounded border-gray-300 text-primary-600 shadow-sm focus:ring-primary-500 dark:bg-gray-800 dark:border-gray-600"
+                            class="rounded border-gray-300 text-primary-600 shadow-sm focus:ring-primary-500 transition-colors duration-150 dark:bg-gray-800 dark:border-gray-600"
                         />
                         <label for="{{ $field->getId() }}-{{ $value }}" class="text-sm text-gray-700 dark:text-gray-300">
                             {{ $label }}

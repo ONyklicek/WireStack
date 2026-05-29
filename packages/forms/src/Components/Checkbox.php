@@ -39,6 +39,11 @@ class Checkbox extends Field
         return $this->inline;
     }
 
+    public function getStateType(): string
+    {
+        return 'bool';
+    }
+
     protected function viewName(): string
     {
         return 'wire-forms::components.checkbox';

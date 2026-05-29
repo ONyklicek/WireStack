@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Livewire\Component;
 use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Forms\Form;
 
@@ -175,6 +177,43 @@ it('supports dynamic form fields via closure', function () {
     $record = (object) ['name' => 'Jan'];
     $form = $action->getFormInstance(context: $record);
     expect($form)->toBeInstanceOf(Form::class);
+});
+
+it('uses tableState for modal form state when bound to a table livewire component', function () {
+    $component = new class extends Component
+    {
+        public StateContainer $tableState;
+
+        public function render()
+        {
+            return <<<'BLADE'
+<div></div>
+BLADE;
+        }
+    };
+
+    $component->tableState = new StateContainer([
+        'modal' => [
+            'action' => [
+                'formData' => [],
+            ],
+        ],
+    ]);
+
+    $action = Action::make('edit')
+        ->requiresConfirmation()
+        ->form([
+            TextInput::make('reason'),
+        ]);
+
+    $form = $action->getFormInstance($component);
+
+    expect($form)->toBeInstanceOf(Form::class);
+
+    $fields = $form->getFlatComponents();
+
+    expect($fields)->toHaveCount(1)
+        ->and($fields[0]->getStatePath())->toBe('tableState.modal.action.formData.reason');
 });
 
 // ─── Form Validation ──────────────────────────────────────────────────────

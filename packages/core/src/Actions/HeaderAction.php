@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Actions;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Colors\Color;
 
 /**
  * Class HeaderAction - Enhanced with lifecycle hooks, loading state, keyboard shortcuts.
@@ -43,9 +44,9 @@ class HeaderAction extends BaseAction
         return $this;
     }
 
-    public function badgeColor(?string $color): static
+    public function badgeColor(string|Color|null $color): static
     {
-        $this->badgeColor = $color;
+        $this->badgeColor = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
@@ -68,13 +69,13 @@ class HeaderAction extends BaseAction
         }
 
         return $this->badge instanceof Closure
-            ? call_user_func($this->badge)
+            ? ($this->badge)()
             : $this->badge;
     }
 
     public function getBadgeColor(): string
     {
-        return $this->badgeColor ?? 'danger';
+        return $this->badgeColor ?? Color::Danger->value;
     }
 
     public function hasBadge(): bool

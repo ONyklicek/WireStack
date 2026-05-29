@@ -1,3 +1,7 @@
+---
+order: 20
+---
+
 # Foundation
 
 Foundation is the permanent core of `wire-core`. It provides shared traits, base classes, icons, colors, and Blade components used by all other modules and packages.
@@ -96,7 +100,7 @@ $action = Action::make('delete');
 ```php
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 
-$svg = IconManager::get('check');
+$svg = app(IconManager::class)->render('check');
 ```
 
 ### Available Icons

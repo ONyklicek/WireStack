@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Concerns;
 
+use NyonCode\WireTable\Columns\Column;
+
 /**
  * Trait HasResponsive
  *
  * Shared responsive display logic for columns.
+ *
+ * @phpstan-require-extends Column
  */
 trait HasResponsive
 {

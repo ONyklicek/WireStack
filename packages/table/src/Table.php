@@ -9,12 +9,17 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Model as EloquentModel;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
+use InvalidArgumentException;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Concerns\HasSqlDebug;
@@ -22,6 +27,7 @@ use NyonCode\WireTable\Filters\Filter;
 use RuntimeException;
 
 /** @phpstan-consistent-constructor */
+#[\AllowDynamicProperties]
 class Table implements Htmlable
 {
     use Concerns\HasSubRows;
@@ -62,6 +68,17 @@ class Table implements Htmlable
     protected bool $paginated = true;
 
     protected bool $selectable = false;
+
+    // Policy-based authorization
+    protected bool $usePolicy = false;
+
+    protected bool|Closure|null $authorizeCreate = null;
+
+    protected bool|Closure|null $authorizeUpdate = null;
+
+    protected bool|Closure|null $authorizeDelete = null;
+
+    protected bool|Closure|null $authorizeView = null;
 
     protected ?string $defaultSort = null;
 
@@ -141,7 +158,7 @@ class Table implements Htmlable
 
     public static function make(): static
     {
-        return new static; // @phpstan-ignore new.static
+        return new static;
     }
 
     public function model(string $model): static
@@ -211,7 +228,7 @@ class Table implements Htmlable
 
         // Apply query modification callback if set
         if ($this->modifyQueryCallback) {
-            $query = call_user_func($this->modifyQueryCallback, $query) ?? $query;
+            $query = ($this->modifyQueryCallback)($query) ?? $query;
         }
 
         return $query;
@@ -303,7 +320,7 @@ class Table implements Htmlable
                 'searchable' => $column->isSearchable(),
                 'toggleable' => $column->isToggleable(),
                 'visible' => $column->canView(),
-                'editable' => method_exists($column, 'isEditable') ? $column->isEditable() : false,
+                'editable' => $column->isEditable(),
                 'type' => class_basename($column),
             ];
         }
@@ -665,6 +682,136 @@ class Table implements Htmlable
         return $this->selectable || ! empty($this->bulkActions);
     }
 
+    /**
+     * Enable model policy auto-resolution.
+     *
+     * When enabled, create/update/delete/view permissions are resolved
+     * automatically from the model's Laravel Policy.
+     */
+    public function authorize(bool $usePolicy = true): static
+    {
+        $this->usePolicy = $usePolicy;
+
+        return $this;
+    }
+
+    public function usesPolicy(): bool
+    {
+        return $this->usePolicy;
+    }
+
+    /**
+     * Override create authorization (hides "New" button when denied).
+     */
+    public function authorizeCreate(bool|Closure $authorize = true): static
+    {
+        $this->authorizeCreate = $authorize;
+
+        return $this;
+    }
+
+    /**
+     * Override update authorization (per-row, hides edit action when denied).
+     */
+    public function authorizeUpdate(bool|Closure $authorize = true): static
+    {
+        $this->authorizeUpdate = $authorize;
+
+        return $this;
+    }
+
+    /**
+     * Override delete authorization (per-row, hides delete action when denied).
+     */
+    public function authorizeDelete(bool|Closure $authorize = true): static
+    {
+        $this->authorizeDelete = $authorize;
+
+        return $this;
+    }
+
+    /**
+     * Override view authorization (per-row, hides view action when denied).
+     */
+    public function authorizeView(bool|Closure $authorize = true): static
+    {
+        $this->authorizeView = $authorize;
+
+        return $this;
+    }
+
+    /**
+     * Check if the current user can create a new record.
+     */
+    public function canCreate(): bool
+    {
+        if ($this->authorizeCreate !== null) {
+            return $this->authorizeCreate instanceof Closure
+                ? (bool) ($this->authorizeCreate)()
+                : $this->authorizeCreate;
+        }
+
+        if ($this->usePolicy && $this->model) {
+            return Gate::allows('create', $this->model);
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if the current user can update the given record.
+     */
+    public function canUpdate(EloquentModel $record): bool
+    {
+        if ($this->authorizeUpdate !== null) {
+            return $this->authorizeUpdate instanceof Closure
+                ? (bool) ($this->authorizeUpdate)($record)
+                : $this->authorizeUpdate;
+        }
+
+        if ($this->usePolicy) {
+            return Gate::allows('update', $record);
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if the current user can delete the given record.
+     */
+    public function canDelete(EloquentModel $record): bool
+    {
+        if ($this->authorizeDelete !== null) {
+            return $this->authorizeDelete instanceof Closure
+                ? (bool) ($this->authorizeDelete)($record)
+                : $this->authorizeDelete;
+        }
+
+        if ($this->usePolicy) {
+            return Gate::allows('delete', $record);
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if the current user can view the given record.
+     */
+    public function canView(EloquentModel $record): bool
+    {
+        if ($this->authorizeView !== null) {
+            return $this->authorizeView instanceof Closure
+                ? (bool) ($this->authorizeView)($record)
+                : $this->authorizeView;
+        }
+
+        if ($this->usePolicy) {
+            return Gate::allows('view', $record);
+        }
+
+        return true;
+    }
+
     public function defaultSort(?string $column, string $direction = 'asc'): static
     {
         $this->defaultSort = $column;
@@ -683,11 +830,11 @@ class Table implements Htmlable
         return $this->defaultSortDirection;
     }
 
-    public function emptyState(?string $heading = null, ?string $description = null, ?string $icon = null): static
+    public function emptyState(?string $heading = null, ?string $description = null, string|Icon|null $icon = null): static
     {
         $this->emptyStateHeading = $heading;
         $this->emptyStateDescription = $description;
-        $this->emptyStateIcon = $icon;
+        $this->emptyStateIcon = $icon instanceof Icon ? $icon->value() : $icon;
 
         return $this;
     }
@@ -745,7 +892,7 @@ class Table implements Htmlable
     public function getRecordUrl(Model $record): ?string
     {
         if ($this->recordUrlCallback) {
-            return call_user_func($this->recordUrlCallback, $record);
+            return ($this->recordUrlCallback)($record);
         }
 
         if ($this->recordUrl) {
@@ -995,6 +1142,10 @@ class Table implements Htmlable
      */
     public function poll(string $interval = '5s'): static
     {
+        if (! preg_match('/^\d+(ms|s|m|h)$/', $interval)) {
+            throw new InvalidArgumentException('Interval must be like "5s", "500ms", "10m" or "1h".');
+        }
+
         $this->polling = true;
         $this->pollingInterval = $interval;
 
@@ -1276,6 +1427,58 @@ class Table implements Htmlable
     public function getSortableColumns(): array
     {
         return array_values(array_filter($this->columns, fn (Column $column) => $column->isSortable()));
+    }
+
+    // ==========================================
+    // Plugin Type Resolution
+    // ==========================================
+
+    /**
+     * Resolve a custom column class registered by a plugin.
+     *
+     * @return class-string|null
+     */
+    public static function resolveColumnType(string $type): ?string
+    {
+        if (! app()->bound(PluginManager::class)) {
+            return null;
+        }
+
+        $types = app(PluginManager::class)->getColumnTypes();
+
+        return $types[$type] ?? null;
+    }
+
+    /**
+     * Resolve a custom filter class registered by a plugin.
+     *
+     * @return class-string|null
+     */
+    public static function resolveFilterType(string $type): ?string
+    {
+        if (! app()->bound(PluginManager::class)) {
+            return null;
+        }
+
+        $types = app(PluginManager::class)->getFilterTypes();
+
+        return $types[$type] ?? null;
+    }
+
+    /**
+     * Resolve a custom action class registered by a plugin.
+     *
+     * @return class-string|null
+     */
+    public static function resolveActionType(string $type): ?string
+    {
+        if (! app()->bound(PluginManager::class)) {
+            return null;
+        }
+
+        $types = app(PluginManager::class)->getActionTypes();
+
+        return $types[$type] ?? null;
     }
 
     public function __toString(): string

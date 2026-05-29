@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en" data-search-index="../../search-index.json">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Save Lifecycle | Wire Docs</title>
+    <meta name="description" content="The Form::save() method executes a strict 9-step pipeline. Each step is clearly defined with hooks for customization.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../../assets/site.css">
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem('wire-docs-theme');
+                var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+    <script defer src="../../assets/site.js"></script>
+</head>
+<body class="docs-body">
+    <div class="site-shell">
+        <aside class="site-sidebar" data-sidebar>
+            <div class="sidebar-header">
+                <a class="brand-link" href="../../">
+                    <span class="brand-mark">W</span>
+                    <span class="brand-name">WireStack<span class="brand-badge">Docs</span></span>
+                </a>
+                <button class="icon-button sidebar-close" type="button" data-nav-close aria-label="Close navigation" style="display:none">×</button>
+            </div>
+
+            <nav class="sidebar-nav">
+                                    <section class="nav-section">
+                        <h2>Start Here</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../documentation/">
+                                        Wire Documentation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../getting-started/">
+                                        Getting Started                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../project-map/">
+                                        Project Map                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../configuration/">
+                                        Configuration                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../authorization/">
+                                        Authorization                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Forms</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../overview/">
+                                        Wire Forms                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../validation/">
+                                        Form Validation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="is-active" href="./">
+                                        Save Lifecycle                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Fields</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../fields/">
+                                        Form Fields                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/alert/">
+                                        Alert                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/belongs-to-select/">
+                                        BelongsToSelect                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/checkbox/">
+                                        Checkbox                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/checkbox-list/">
+                                        CheckboxList                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/code-editor/">
+                                        CodeEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/color-picker/">
+                                        ColorPicker                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/date-time-picker/">
+                                        DateTimePicker                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/fieldset/">
+                                        Fieldset                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/file-upload/">
+                                        FileUpload                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/grid/">
+                                        Grid                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/hidden/">
+                                        Hidden                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/html/">
+                                        Html                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/key-value/">
+                                        KeyValue                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/markdown-editor/">
+                                        MarkdownEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/morph-to-select/">
+                                        MorphToSelect                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/otp-input/">
+                                        OtpInput                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/placeholder/">
+                                        Placeholder                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/radio/">
+                                        Radio                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/rating/">
+                                        Rating                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/repeater/">
+                                        Repeater                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/rich-editor/">
+                                        RichEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/section/">
+                                        Section                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/select/">
+                                        Select                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/slider/">
+                                        Slider                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/tags/">
+                                        Tags                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/textarea/">
+                                        Textarea                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/text-input/">
+                                        TextInput                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/tiptap-editor/">
+                                        TiptapEditor                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/toggle/">
+                                        Toggle                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../fields/view-field/">
+                                        ViewField                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Table</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../table/overview/">
+                                        Wire Table                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../table/columns/">
+                                        Columns                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../table/filters/">
+                                        Filters                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../table/actions/">
+                                        Table Actions                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../table/exports/">
+                                        Table Exports                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../table/sub-rows/">
+                                        Sub-Rows                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../table/notifications/">
+                                        Table Notifications                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../table/advanced/">
+                                        Advanced Features                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Sortable</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../sortable/overview/">
+                                        Introduction                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/installation/">
+                                        Installation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/row-sorting/">
+                                        Row Reordering                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/column-sorting/">
+                                        Column Reordering                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/customization/">
+                                        Customization                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/advanced/">
+                                        Advanced Usage                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../sortable/api-reference/">
+                                        API Reference                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                                    <section class="nav-section">
+                        <h2>Core</h2>
+                        <ul>
+                                                            <li>
+                                    <a class="" href="../../core/actions/">
+                                        Actions                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/foundation/">
+                                        Foundation                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/notifications/">
+                                        Notifications                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/modals/">
+                                        Modals                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/widgets/">
+                                        Widgets                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/plugins/">
+                                        Core Plugins                                    </a>
+                                </li>
+                                                            <li>
+                                    <a class="" href="../../core/audit/">
+                                        Audit Log                                    </a>
+                                </li>
+                                                    </ul>
+                    </section>
+                            </nav>
+        </aside>
+
+        <div class="site-overlay" data-nav-close></div>
+
+        <main class="site-main">
+            <header class="topbar">
+                <button class="nav-toggle" type="button" data-nav-toggle aria-label="Open navigation">
+                    <span></span><span></span><span></span>
+                </button>
+
+                <div class="search-shell" data-search-root>
+                    <input
+                        type="search"
+                        class="search-input"
+                        placeholder="Search documentation…"
+                        autocomplete="off"
+                        spellcheck="false"
+                        data-search-input
+                    >
+                    <span class="search-kbd"><kbd>⌘</kbd><kbd>K</kbd></span>
+                    <div class="search-results" data-search-results hidden></div>
+                </div>
+
+                <div class="topbar-actions">
+                    <button class="icon-button theme-toggle" type="button" data-theme-toggle aria-label="Toggle theme">
+                        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                    </button>
+                    <a class="icon-button" href="https://github.com/ONyklicek/WireStack" target="_blank" rel="noreferrer" aria-label="GitHub repository">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2c-3.2.7-3.88-1.54-3.88-1.54-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.56-.29-5.26-1.28-5.26-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.18 1.18a11.02 11.02 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.58.23 2.75.12 3.04.74.81 1.18 1.83 1.18 3.09 0 4.42-2.7 5.39-5.28 5.68.42.36.79 1.06.79 2.14v3.17c0 .31.21.68.8.56A11.52 11.52 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5Z"/></svg>
+                    </a>
+                </div>
+            </header>
+
+            <div class="page-body">
+                <div class="content-shell">
+                    <article class="docs-article">
+                        <div class="page-hero">
+                            <nav class="breadcrumb" aria-label="Breadcrumb">
+                                <a href="../../">Docs</a>
+                                <span class="sep">/</span>
+                                <span class="current">Forms</span>
+                            </nav>
+                            <p class="eyebrow">Forms</p>
+                            <h1>Save Lifecycle</h1>
+                                                            <p class="lead">The Form::save() method executes a strict 9-step pipeline. Each step is clearly defined with hooks for customization.</p>
+                            
+                            
+                                                                                </div>
+
+                        
+<p>The <code>Form::save()</code> method executes a strict 9-step pipeline. Each step is clearly defined with hooks for customization.</p>
+<p>This page describes what happens when a form is saved.</p>
+<hr>
+<h2 id="pipeline-overview">Pipeline Overview</h2>
+<pre><code>Form::save()
+│
+├── 1. VALIDATE
+│   ├── Collect rules from all fields
+│   ├── Merge form-level rules
+│   ├── Run through ValidationPipeline
+│   └── Throw ValidationException on failure ← STOP
+│
+├── 2. MUTATE
+│   └── mutateDataBeforeSave(Closure $fn)
+│       Transform validated data before persistence
+│
+├── 3. PLUGIN HOOK: form.saving
+│   └── Plugins may inspect or modify $data
+│
+├── 4. BEFORE SAVE
+│   └── beforeSave(Closure $fn)
+│       Void hook — side effects, external calls
+│
+├── 5. PERSIST
+│   ├── Default: Model::create($data) or $model-&gt;update($data)
+│   └── Custom: using(Closure $fn)
+│
+├── 6. SAVE RELATIONSHIPS
+│   └── RelationshipSaveHandler cascades Repeater data to model relations
+│
+├── 7. AFTER SAVE
+│   └── afterSave(Closure $fn)
+│       Void hook — side effects, cache clear, events
+│
+├── 8. PLUGIN HOOK: form.saved
+│   └── Plugins observe the persisted $record
+│
+└── 9. NOTIFY
+    ├── Send success notification via Notifications module
+    └── Skip if disableSuccessNotification()
+</code></pre>
+<hr>
+<h2 id="step-1-validate">Step 1: Validate</h2>
+<p>Collects rules from all field components and validates the current state.</p>
+<pre><code class="language-php">// Automatic in save()
+// Can also be called standalone:
+$data = $form-&gt;validate();
+</code></pre>
+<p>If validation fails, <code>Illuminate\Validation\ValidationException</code> is thrown. Steps 2-9 are skipped entirely.</p>
+<p>See <a href="../validation/">Validation</a> for details on field rules, custom messages, and the ValidationPipeline.</p>
+<hr>
+<h2 id="step-2-mutate-data">Step 2: Mutate Data</h2>
+<p>Transform the validated data before it reaches the model:</p>
+<pre><code class="language-php">$form-&gt;mutateDataBeforeSave(function (array $data): array {
+    // Slugify the title
+    $data['slug'] = Str::slug($data['title']);
+
+    // Remove temporary fields
+    unset($data['agree_to_terms']);
+
+    // Encrypt sensitive data
+    $data['ssn'] = encrypt($data['ssn']);
+
+    return $data; // MUST return the array
+});
+</code></pre>
+<p>The Closure receives the validated data array and <strong>must</strong> return the modified array.</p>
+<h3 id="multiple-mutations">Multiple Mutations</h3>
+<pre><code class="language-php">$form
+    -&gt;mutateDataBeforeSave(fn (array $data) =&gt; array_merge($data, [
+        'updated_by' =&gt; auth()-&gt;id(),
+    ]));
+</code></pre>
+<hr>
+<h2 id="step-3-plugin-hook-form-saving">Step 3: Plugin Hook — form.saving</h2>
+<p>Fires automatically when plugins are registered via <code>PluginManager</code>. Plugins may inspect or modify <code>$data</code> before persistence. User code does not interact with this step directly.</p>
+<hr>
+<h2 id="step-4-before-save">Step 4: Before Save</h2>
+<p>A void hook that runs after mutation but before persistence:</p>
+<pre><code class="language-php">$form-&gt;beforeSave(function (array $data): void {
+    // Validate external service availability
+    if (! ExternalApi::isAvailable()) {
+        throw new \RuntimeException('External service is down');
+    }
+
+    // Dispatch a pre-save event
+    event(new UserSaving($data));
+});
+</code></pre>
+<p>The Closure receives the mutated data but does <strong>not</strong> return it.</p>
+<p>If this hook throws an exception, persistence (step 5) is skipped.</p>
+<hr>
+<h2 id="step-5-persist">Step 5: Persist</h2>
+<h3 id="default-behavior">Default Behavior</h3>
+<p>The persistence logic depends on the model mode:</p>
+<pre><code class="language-php">// Create mode — model is a class string
+$form-&gt;model(User::class);
+// → User::create($data)
+
+// Edit mode — model is an instance
+$form-&gt;model($user);
+// → $user-&gt;update($data)
+</code></pre>
+<h3 id="custom-persistence">Custom Persistence</h3>
+<p>Override the default with <code>using()</code>:</p>
+<pre><code class="language-php">$form-&gt;using(function (array $data): mixed {
+    // Create
+    $user = User::create($data);
+    $user-&gt;assignRole($data['role']);
+    return $user;
+});
+</code></pre>
+<p>The <code>using()</code> callback replaces the entire default create/update logic. It receives <code>$data</code> (the mutated data array). The return value becomes the result of <code>save()</code>.</p>
+<h3 id="no-model">No Model</h3>
+<p>If <code>model(null)</code> is set and no <code>using()</code> callback is provided, <code>save()</code> throws an <code>InvalidArgumentException</code>.</p>
+<hr>
+<h2 id="step-6-save-relationships">Step 6: Save Relationships</h2>
+<p>After the model is persisted, <code>RelationshipSaveHandler</code> cascades any Repeater field data to the model's relations. This step only runs when the persist result is an Eloquent <code>Model</code> instance.</p>
+<p>User code does not interact with this step directly; it is handled automatically for Repeater fields with <code>-&gt;relationship()</code> configured.</p>
+<hr>
+<h2 id="step-7-after-save">Step 7: After Save</h2>
+<p>A void hook that runs after successful persistence:</p>
+<pre><code class="language-php">$form-&gt;afterSave(function (mixed $record): void {
+    // $record is the created/updated Model (or using() return value)
+    Cache::forget("user:{$record-&gt;id}");
+
+    // Dispatch event
+    event(new UserSaved($record));
+
+    // Send notification
+    $record-&gt;notify(new WelcomeNotification());
+});
+</code></pre>
+<p>Receives <code>$record</code> — the return value of the persist step (typically the Model instance).</p>
+<hr>
+<h2 id="step-8-plugin-hook-form-saved">Step 8: Plugin Hook — form.saved</h2>
+<p>Fires after <code>afterSave</code> to let plugins observe the persisted record. User code does not interact with this step directly.</p>
+<hr>
+<h2 id="step-9-notify">Step 9: Notify</h2>
+<p>Sends a success notification via the Notifications module:</p>
+<pre><code class="language-php">// Custom message
+$form-&gt;successMessage('User saved successfully!');
+
+// Disable entirely
+$form-&gt;disableSuccessNotification();
+</code></pre>
+<p>The notification is sent through <code>NotificationManager</code> using the active driver (session, Livewire, Flasher, etc.).</p>
+<p>This step only fires if:</p>
+<ol>
+<li>The Notifications module is available (<code>app()-&gt;bound()</code> check)</li>
+<li><code>disableSuccessNotification()</code> was NOT called</li>
+<li>The save completed without exceptions</li>
+</ol>
+<hr>
+<h2 id="complete-example">Complete Example</h2>
+<pre><code class="language-php">class EditUser extends Component
+{
+    use WithForms;
+
+    public User $user;
+    public array $data = [];
+
+    public function mount(User $user): void
+    {
+        $this-&gt;user = $user;
+        $this-&gt;form-&gt;fill($user-&gt;toArray());
+    }
+
+    public function form(Form $form): Form
+    {
+        return $form
+            -&gt;statePath('data')
+            -&gt;model($this-&gt;user)
+            -&gt;schema([
+                TextInput::make('name')-&gt;required()-&gt;maxLength(255),
+                TextInput::make('email')-&gt;email()-&gt;required(),
+                Select::make('role')
+                    -&gt;options(['admin' =&gt; 'Admin', 'editor' =&gt; 'Editor'])
+                    -&gt;required(),
+                Toggle::make('active'),
+            ])
+            -&gt;mutateDataBeforeSave(function (array $data): array {
+                $data['updated_by'] = auth()-&gt;id();
+                return $data;
+            })
+            -&gt;beforeSave(function (array $data): void {
+                Log::info('Updating user', ['id' =&gt; $this-&gt;user-&gt;id]);
+            })
+            -&gt;afterSave(function (mixed $record): void {
+                Cache::forget("user:{$record-&gt;id}");
+                event(new UserUpdated($record));
+            })
+            -&gt;successMessage('User updated.');
+    }
+
+    public function save(): void
+    {
+        $this-&gt;form-&gt;save();
+        $this-&gt;redirect(route('users.index'));
+    }
+}
+</code></pre>
+<hr>
+<h2 id="error-handling">Error Handling</h2>
+<table>
+<thead>
+<tr>
+<th>Exception</th>
+<th>When</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ValidationException</code></td>
+<td>Step 1 fails</td>
+<td>Steps 2-9 skipped, errors shown in UI</td>
+</tr>
+<tr>
+<td>Any <code>Throwable</code></td>
+<td>Steps 2-8 throw</td>
+<td>Pipeline aborts, no notification sent</td>
+</tr>
+<tr>
+<td><code>InvalidArgumentException</code></td>
+<td>No model + no <code>using()</code></td>
+<td>Step 5 fails</td>
+</tr>
+</tbody>
+</table>
+<p>The save pipeline does <strong>not</strong> wrap in a database transaction by default. If you need atomicity, wrap in <code>DB::transaction()</code>:</p>
+<pre><code class="language-php">public function save(): void
+{
+    DB::transaction(fn () =&gt; $this-&gt;form-&gt;save());
+}
+</code></pre>
+
+                                                    <nav class="page-nav" aria-label="Pagination">
+                                                                    <a class="page-nav-link is-prev" href="../validation/">
+                                        <span>← Previous</span>
+                                        <strong>Form Validation</strong>
+                                    </a>
+                                
+                                                                    <a class="page-nav-link is-next" href="../fields/">
+                                        <span>Next →</span>
+                                        <strong>Form Fields</strong>
+                                    </a>
+                                                            </nav>
+                                            </article>
+
+                                            <aside class="page-toc">
+                            <p class="toc-title">On this page</p>
+                            <ul>
+                                                                    <li class="level-2">
+                                        <a href="#pipeline-overview">
+                                            Pipeline Overview                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#step-1-validate">
+                                            Step 1: Validate                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#step-2-mutate-data">
+                                            Step 2: Mutate Data                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#multiple-mutations">
+                                            Multiple Mutations                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#step-3-plugin-hook-form-saving">
+                                            Step 3: Plugin Hook — form.saving                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#step-4-before-save">
+                                            Step 4: Before Save                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#step-5-persist">
+                                            Step 5: Persist                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#default-behavior">
+                                            Default Behavior                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#custom-persistence">
+                                            Custom Persistence                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#no-model">
+                                            No Model                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#step-6-save-relationships">
+                                            Step 6: Save Relationships                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#step-7-after-save">
+                                            Step 7: After Save                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#step-8-plugin-hook-form-saved">
+                                            Step 8: Plugin Hook — form.saved                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#step-9-notify">
+                                            Step 9: Notify                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#complete-example">
+                                            Complete Example                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#error-handling">
+                                            Error Handling                                        </a>
+                                    </li>
+                                                            </ul>
+                        </aside>
+                                    </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

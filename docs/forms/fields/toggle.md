@@ -17,9 +17,9 @@ Toggle::make('is_active')
 ## Customization
 
 ```php
-Toggle::make('is_active')
-    ->onLabel('Active')
-    ->offLabel('Inactive')
+Toggle::make('notifications_enabled')
+    ->onLabel('On')
+    ->offLabel('Off')
     ->onColor('success')
     ->offColor('danger')
     ->onIcon('check')
@@ -27,14 +27,34 @@ Toggle::make('is_active')
     ->inline()
 ```
 
+## Live Updates
+
+```php
+Toggle::make('dark_mode')
+    ->live()    // immediately re-renders the form on change
+```
+
+## Conditional Disable
+
+```php
+Toggle::make('published')
+    ->disabled(fn () => ! auth()->user()->can('publish'))
+```
+
 ## Methods
 
-| Method | Description |
-|--------|-------------|
-| `onLabel(string)` | Label when on |
-| `offLabel(string)` | Label when off |
-| `onColor(string)` | Color when on (success, primary, etc.) |
-| `offColor(string)` | Color when off |
-| `onIcon(string)` | Icon when on |
-| `offIcon(string)` | Icon when off |
-| `inline()` | Inline layout |
+| Method | Type | Description |
+|--------|------|-------------|
+| `onLabel(string\|Closure\|null)` | string | Label shown when toggled on |
+| `offLabel(string\|Closure\|null)` | string | Label shown when toggled off |
+| `onColor(string\|Color)` | string | Color when on (`primary`, `success`, `warning`, `danger`, `gray`) |
+| `offColor(string\|Color)` | string | Color when off |
+| `onIcon(string\|Icon\|null)` | string | Icon when on |
+| `offIcon(string\|Icon\|null)` | string | Icon when off |
+| `inline(bool)` | bool | Display label inline with the toggle (default `true`) |
+| `default(bool\|Closure)` | bool | Pre-filled value |
+| `disabled(bool\|Closure)` | bool | Disable the toggle |
+| `required()` | — | Mark as required |
+| `live()` | — | Trigger Livewire update on change |
+
+See [Common Field API](index.md#common-field-api) for label, hint, tooltip, and other shared methods.

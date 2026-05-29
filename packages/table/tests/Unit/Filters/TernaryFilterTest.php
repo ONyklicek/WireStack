@@ -13,9 +13,9 @@ it('can be created', function () {
 it('has default labels from translation', function () {
     $filter = TernaryFilter::make('active');
 
-    expect($filter->getTrueLabel())->toBe('filter_yes')
-        ->and($filter->getFalseLabel())->toBe('filter_no')
-        ->and($filter->getAllLabel())->toBe('filter_all');
+    expect($filter->getTrueLabel())->toBe('Yes')
+        ->and($filter->getFalseLabel())->toBe('No')
+        ->and($filter->getAllLabel())->toBe('All');
 });
 
 it('can set custom labels', function () {

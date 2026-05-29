@@ -69,6 +69,10 @@ FileUpload::make('file')
 | `minFiles(int)` | Min number of files |
 | `image()` | Image-only mode |
 | `avatar()` | Avatar mode (circular, single) |
-| `imageResizeTargetWidth(int)` | Resize width |
-| `imageResizeTargetHeight(int)` | Resize height |
-| `imageCropAspectRatio(string)` | Crop aspect ratio |
+| `imageResizeTargetWidth(int)` | Resize width in pixels |
+| `imageResizeTargetHeight(int)` | Resize height in pixels |
+| `imageCropAspectRatio(string)` | Crop aspect ratio (e.g. `16:9`) |
+| `disabled(bool\|Closure)` | Disable the uploader |
+| `required()` | Mark as required |
+
+See [Common Field API](index.md#common-field-api) for label, hint, tooltip, and other shared methods.

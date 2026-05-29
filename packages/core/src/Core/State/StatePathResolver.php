@@ -31,7 +31,15 @@ final class StatePathResolver
      */
     public static function set(array &$state, string $path, mixed $value): void
     {
-        Arr::set($state, $path, $value);
+        $keys = explode('.', $path);
+        $ref = &$state;
+        foreach ($keys as $key) {
+            if (! is_array($ref[$key] ?? null)) {
+                $ref[$key] = [];
+            }
+            $ref = &$ref[$key];
+        }
+        $ref = $value;
     }
 
     /**
@@ -51,7 +59,16 @@ final class StatePathResolver
      */
     public static function forget(array &$state, string $path): void
     {
-        Arr::forget($state, $path);
+        $keys = explode('.', $path);
+        $ref = &$state;
+        $last = array_pop($keys);
+        foreach ($keys as $key) {
+            if (! isset($ref[$key]) || ! is_array($ref[$key])) {
+                return;
+            }
+            $ref = &$ref[$key];
+        }
+        unset($ref[$last]);
     }
 
     /**

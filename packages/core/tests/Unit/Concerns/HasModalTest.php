@@ -35,7 +35,7 @@ it('does not require confirmation when form is set', function () {
 // ─── Modal Heading ──────────────────────────────────────────────────────────
 
 it('has default heading from translation', function () {
-    expect(Action::make('test')->getModalHeading())->toBe('confirm_heading');
+    expect(Action::make('test')->getModalHeading())->toBe('Confirm action');
 });
 
 it('can set custom heading', function () {
@@ -59,7 +59,7 @@ it('supports dynamic heading via closure', function () {
 it('has default description when confirmation is required', function () {
     $action = Action::make('test')->requiresConfirmation();
 
-    expect($action->getModalDescription())->toBe('confirm_description');
+    expect($action->getModalDescription())->toBe('Are you sure you want to perform this action?');
 });
 
 it('can set custom description', function () {
@@ -88,11 +88,11 @@ it('has default warning icon color', function () {
 // ─── Modal Actions Labels ───────────────────────────────────────────────────
 
 it('has default submit label from translation', function () {
-    expect(Action::make('test')->getModalSubmitActionLabel())->toBe('confirm_submit');
+    expect(Action::make('test')->getModalSubmitActionLabel())->toBe('Confirm');
 });
 
 it('has default cancel label from translation', function () {
-    expect(Action::make('test')->getModalCancelActionLabel())->toBe('confirm_cancel');
+    expect(Action::make('test')->getModalCancelActionLabel())->toBe('Cancel');
 });
 
 it('can set custom submit label', function () {

@@ -19,6 +19,17 @@ return [
     'delete_bulk_heading' => 'Delete selected records',
     'delete_bulk_description' => 'Are you sure you want to delete the selected records? This action is irreversible.',
 
+    // Force delete presets
+    'force_delete_bulk_label' => 'Force delete selected',
+    'force_delete_bulk_heading' => 'Force delete selected records',
+    'force_delete_bulk_description' => 'Are you sure you want to permanently delete the selected records? This action cannot be undone.',
+
+    // Restore presets
+    'restore_bulk_label' => 'Restore selected',
+    'restore_bulk_heading' => 'Restore selected records',
+    'restore_bulk_description' => 'Are you sure you want to restore the selected records?',
+    'restore_submit' => 'Restore',
+
     // Action labels
     'edit_label' => 'Edit',
     'view_label' => 'View',

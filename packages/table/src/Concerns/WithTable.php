@@ -15,6 +15,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Livewire\Component;
 use Livewire\WithPagination;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
@@ -33,86 +34,47 @@ use NyonCode\WireCore\Core\Events\TableFiltering;
 use NyonCode\WireCore\Core\Events\TableRefreshed;
 use NyonCode\WireCore\Core\Events\TableSearched;
 use NyonCode\WireCore\Core\Events\TableSearching;
+use NyonCode\WireCore\Core\Plugin\Hooks\ActionExecutedPayload;
+use NyonCode\WireCore\Core\Plugin\Hooks\ActionExecutingPayload;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Export\ExportAction;
+use NyonCode\WireTable\Export\ExportFormat;
+use NyonCode\WireTable\Export\TableExport;
 use NyonCode\WireTable\Table;
 use ReflectionFunction;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/** @phpstan-require-extends Component */
 trait WithTable
 {
     use HasSqlDebug;
     use WithPagination;
 
-    public ?string $tableSearch = null;
-
-    public string $tableSortColumn = '';
-
-    public string $tableSortDirection = 'asc';
-
-    public int $tablePerPage = 10;
-
-    public array $tableFilters = [];
-
-    public array $columnFilters = [];
-
-    public array $selectedRecords = [];
-
-    public array $hiddenColumns = []; // Array of hidden column names
-
-    /** @var array Record keys that are currently expanded (showing sub-rows) */
-    public array $expandedRows = [];
-
-    /** @var bool If true, show all sub-rows inline (flatten mode) */
-    public bool $flattenMode = false;
-
-    /** @var array Filters for sub-rows (keyed by column name) */
-    public array $subRowFilters = [];
-
-    // Modal state
-    public bool $showActionModal = false;
-
-    public ?string $actionModalName = null;
-
-    public ?string $actionModalRecordKey = null;
-
-    public bool $actionModalIsBulk = false;
-
-    public array $actionModalFormData = [];
+    /**
+     * Unified state container replacing 26 individual public properties.
+     *
+     * All table state (sort, filters, selection, modal, halt, polling, etc.)
+     * is stored in this single container and synchronized via TableStateSynthesizer.
+     *
+     * Access state via: $this->tableState->get('sort.column')
+     * Legacy property access ($this->tableSortColumn) is supported via __get/__set.
+     *
+     * @see TableStateSchema for path definitions and defaults
+     */
+    public StateContainer $tableState;
 
     /** @var Form|null Resolved Form instance for the current action modal */
     protected ?Form $actionModalFormInstance = null;
 
-    public bool $actionModalIsHeaderAction = false;
-
-    // Dynamic halt modal state
+    /** @var Form|null Resolved Form instance for the halt modal */
     protected ?Form $haltModalFormInstance = null;
-
-    public bool $showHaltModal = false;
-
-    public ?string $haltActionName = null;
-
-    public ?string $haltRecordKey = null;
-
-    public array $haltModalConfig = [];
-
-    public array $haltModalFormData = [];
-
-    public bool $haltActionConfirmed = false;
-
-    // Halt context - tracks where halt originated and how to resume
-    public ?string $haltActionType = null;  // 'row', 'bulk', 'header'
-
-    public array $haltContext = [];  // skipBeforeOnConfirm, source, index, redirectAfterConfirm
-
-    // Lazy loading state
-    public bool $tableReady = false;
-
-    // Polling state
-    public bool $tablePollingActive = true;
 
     protected string $wireTableClass = Table::class;
 
@@ -124,42 +86,151 @@ trait WithTable
     /** @var LengthAwarePaginator|Paginator|CursorPaginator|Collection|null Cached records for current request lifecycle */
     protected LengthAwarePaginator|Paginator|CursorPaginator|Collection|null $cachedRecords = null;
 
+    /** @var Builder<Model>|null Cached query builder so summaries don't re-plan the query */
+    protected ?Builder $cachedQuery = null;
+
     /** @var TableQueryService|null Shared query service instance */
     protected ?TableQueryService $queryService = null;
 
     /**
-     * Initialize table state
+     * Initialize table state via StateContainer.
      */
     public function mountWithTable(): void
     {
+        $this->tableState = new StateContainer(TableStateSchema::defaults());
+
         $table = $this->getTable();
 
         // If lazy loading is enabled, don't load data yet
-        if ($table->isLazy()) {
-            $this->tableReady = false;
-        } else {
-            $this->tableReady = true;
-        }
+        $this->tableState->set('ready', ! $table->isLazy());
 
         if ($table->getDefaultSort()) {
-            $this->tableSortColumn = $table->getDefaultSort();
-            $this->tableSortDirection = $table->getDefaultSortDirection();
+            $this->tableState->set('sort.column', $table->getDefaultSort());
+            $this->tableState->set('sort.direction', $table->getDefaultSortDirection());
         }
 
-        $this->tablePerPage = $table->getPerPage();
+        $this->tableState->set('pagination.perPage', $table->getPerPage());
 
-        // Initialize filters with defaults
+        // Initialize filters with defaults (wrapped to match form-field state shape)
+        $filters = [];
         foreach ($table->getFilters() as $filter) {
             $default = $filter->getDefault();
             if ($default !== null) {
-                $this->tableFilters[$filter->getName()] = $default;
+                $filters[$filter->getName()] = $filter->wrapValue($default);
             }
+        }
+        if ($filters !== []) {
+            $this->tableState->set('filters', $filters);
         }
 
         // Initialize hidden columns (columns that start hidden)
+        $hidden = [];
         foreach ($table->getColumns() as $column) {
             if ($column->isToggleable() && ! $column->isVisible()) {
-                $this->hiddenColumns[] = $column->getName();
+                $hidden[] = $column->getName();
+            }
+        }
+        if ($hidden !== []) {
+            $this->tableState->set('columns.hidden', $hidden);
+        }
+    }
+
+    // ==========================================
+    // Backward Compatibility (Deprecated Properties)
+    // ==========================================
+
+    /**
+     * Magic getter for backward compatibility with legacy property names.
+     *
+     * @deprecated Access state via $this->tableState->get() instead.
+     */
+    public function __get($name): mixed
+    {
+        $map = TableStateSchema::legacyPropertyMap();
+
+        if (isset($map[$name]) && isset($this->tableState)) {
+            Deprecation::property(static::class, $name, "tableState->get('{$map[$name]}')");
+
+            return $this->tableState->get($map[$name]);
+        }
+
+        // Let parent __get handle it (Livewire trait magic)
+        if (is_subclass_of(static::class, Component::class)) {
+            return parent::__get($name);
+        }
+
+        return null;
+    }
+
+    /**
+     * Magic setter for backward compatibility with legacy property names.
+     *
+     * @deprecated Access state via $this->tableState->set() instead.
+     */
+    public function __set($name, $value): void
+    {
+        $map = TableStateSchema::legacyPropertyMap();
+
+        if (isset($map[$name])) {
+            if (! isset($this->tableState)) {
+                // tableState not yet initialised — mountWithTable() hasn't run.
+                // This write will be overwritten when mount runs (filter/sort/pagination
+                // defaults are applied there). Move legacy writes into mountWithTable().
+                $this->tableState = new StateContainer(TableStateSchema::defaults());
+            }
+
+            Deprecation::property(static::class, $name, "tableState->set('{$map[$name]}', \$value)");
+            $this->tableState->set($map[$name], $value);
+
+            return;
+        }
+
+        // Let parent __set handle it (Livewire trait magic)
+        if (is_subclass_of(static::class, Component::class) && method_exists(get_parent_class(static::class), '__set')) {
+            parent::__set($name, $value);
+        }
+    }
+
+    /**
+     * Magic isset for backward compatibility with legacy property names.
+     */
+    public function __isset($name): bool
+    {
+        $map = TableStateSchema::legacyPropertyMap();
+
+        if (isset($map[$name])) {
+            return $this->tableState->has($map[$name]);
+        }
+
+        if (is_subclass_of(static::class, Component::class)) {
+            return parent::__isset($name);
+        }
+
+        return false;
+    }
+
+    /**
+     * Livewire lifecycle hook for StateContainer property updates.
+     *
+     * Called by Livewire when any nested path on $tableState changes.
+     * Handles page resets for search/filter/sort/perPage changes.
+     */
+    public function updatedTableState(mixed $value, string $path): void
+    {
+        $resetPaths = [
+            'pagination.perPage',
+            'search',
+            'filters',
+            'columnFilters',
+            'sort.column',
+            'sort.direction',
+        ];
+
+        foreach ($resetPaths as $resetPath) {
+            if ($path === $resetPath || str_starts_with($path, $resetPath.'.')) {
+                $this->resetPage();
+
+                return;
             }
         }
     }
@@ -212,6 +283,15 @@ trait WithTable
             return;
         }
 
+        // Don't re-render while any modal with a form is open. A poll re-render
+        // hits the server before debounced wire:model.live values are synced,
+        // causing morph to overwrite whatever the user has typed. Keeping
+        // wire:poll in the DOM means polling resumes automatically on the next
+        // tick once the modal closes — no extra work needed.
+        if ($this->tableState->get('modal.action.show') || $this->tableState->get('modal.halt.show')) {
+            return;
+        }
+
         // Simply re-render - Livewire will fetch new data
         // The table instance is recreated on each request
         $this->tableInstance = null;
@@ -222,7 +302,7 @@ trait WithTable
      */
     public function shouldPoll(): bool
     {
-        if (! $this->tablePollingActive) {
+        if (! $this->tableState->get('polling.active')) {
             return false;
         }
 
@@ -246,7 +326,7 @@ trait WithTable
      */
     public function pauseTablePolling(): void
     {
-        $this->tablePollingActive = false;
+        $this->tableState->set('polling.active', false);
     }
 
     /**
@@ -254,7 +334,7 @@ trait WithTable
      */
     public function resumeTablePolling(): void
     {
-        $this->tablePollingActive = true;
+        $this->tableState->set('polling.active', true);
     }
 
     /**
@@ -262,7 +342,7 @@ trait WithTable
      */
     public function toggleTablePolling(): void
     {
-        $this->tablePollingActive = ! $this->tablePollingActive;
+        $this->tableState->set('polling.active', ! $this->tableState->get('polling.active'));
     }
 
     /**
@@ -276,7 +356,7 @@ trait WithTable
             return ['enabled' => false];
         }
 
-        return array_merge($table->getPollingConfig(), ['active' => $this->tablePollingActive && $this->shouldPoll()]);
+        return array_merge($table->getPollingConfig(), ['active' => $this->tableState->get('polling.active') && $this->shouldPoll()]);
     }
 
     /**
@@ -305,7 +385,7 @@ trait WithTable
      */
     public function loadTable(): void
     {
-        $this->tableReady = true;
+        $this->tableState->set('ready', true);
     }
 
     /**
@@ -359,7 +439,7 @@ trait WithTable
         $table = $this->getTable();
 
         // If lazy loading is enabled and not ready, return empty collection
-        if ($table->isLazy() && ! $this->tableReady) {
+        if ($table->isLazy() && ! $this->tableState->get('ready')) {
             return collect();
         }
 
@@ -377,7 +457,6 @@ trait WithTable
         return $this->cachedRecords;
     }
 
-
     /**
      * Execute query with the appropriate pagination mode.
      *
@@ -385,10 +464,12 @@ trait WithTable
      */
     protected function paginateQuery(Table $table, Builder $query): LengthAwarePaginator|Paginator|CursorPaginator
     {
+        $perPage = (int) $this->tableState->get('pagination.perPage', 10);
+
         return match ($table->getPaginationMode()) {
-            'simple' => $query->simplePaginate($this->tablePerPage),
-            'cursor' => $query->cursorPaginate($this->tablePerPage),
-            default => $query->paginate($this->tablePerPage),
+            'simple' => $query->simplePaginate($perPage),
+            'cursor' => $query->cursorPaginate($perPage),
+            default => $query->paginate($perPage),
         };
     }
 
@@ -421,9 +502,9 @@ trait WithTable
         return 'wire_table:'.md5(
             $query->toSql().
             serialize($query->getBindings()).
-            $this->tablePerPage.
-            $this->tableSortColumn.
-            $this->tableSortDirection
+            $this->tableState->get('pagination.perPage').
+            $this->tableState->get('sort.column').
+            $this->tableState->get('sort.direction')
         );
     }
 
@@ -434,27 +515,41 @@ trait WithTable
      * and QueryExecutor infrastructure. This replaces ~500 lines of
      * inline query building, accessor reflection, and metadata analysis.
      *
+     * The resulting Builder is cached within the request lifecycle so that
+     * computeTableSummaries() can reuse it without triggering a second full
+     * planning pass (metadata registry + QueryPlanner + QueryExecutor).
+     *
      * @return Builder<Model>
      */
     protected function buildTableQuery(): Builder
     {
+        if ($this->cachedQuery !== null) {
+            return clone $this->cachedQuery;
+        }
+
         $table = $this->getTable();
         $baseQuery = $table->getQuery();
         $tableId = static::class;
 
+        $search = $this->tableState->get('search');
+        $filters = $this->tableState->get('filters', []);
+        $sortColumn = $this->tableState->get('sort.column', '');
+        $sortDirection = $this->tableState->get('sort.direction', 'asc');
+        $columnFilters = $this->tableState->get('columnFilters', []);
+
         // Dispatch search event
-        if ($this->tableSearch) {
+        if ($search) {
             $searchableColumns = [];
             foreach ($table->getColumns() as $col) {
                 if ($col->isSearchable()) {
                     $searchableColumns[] = $col->getName();
                 }
             }
-            event(new TableSearching($tableId, $this->tableSearch, $searchableColumns));
+            event(new TableSearching($tableId, $search, $searchableColumns));
         }
 
         // Dispatch filter event
-        $activeFilters = array_filter($this->tableFilters, fn ($v) => $v !== null && $v !== '' && $v !== []);
+        $activeFilters = array_filter($filters, fn ($v) => $v !== null && $v !== '' && $v !== []);
         if (! empty($activeFilters)) {
             event(new TableFiltering($tableId, $activeFilters));
         }
@@ -462,23 +557,25 @@ trait WithTable
         $query = $this->getQueryService()->buildQuery(
             baseQuery: $baseQuery,
             table: $table,
-            search: $this->tableSearch,
-            filterValues: $this->tableFilters,
-            sortColumn: ! empty($this->tableSortColumn) ? $this->tableSortColumn : null,
-            sortDirection: $this->tableSortDirection,
-            columnFilterValues: $this->columnFilters,
+            search: $search,
+            filterValues: $filters,
+            sortColumn: ! empty($sortColumn) ? $sortColumn : null,
+            sortDirection: $sortDirection,
+            columnFilterValues: $columnFilters,
         );
 
         // Post-search event
-        if ($this->tableSearch) {
+        if ($search) {
             // Count is deferred — we dispatch with -1 as a signal that count is not yet known
-            event(new TableSearched($tableId, $this->tableSearch, -1));
+            event(new TableSearched($tableId, $search, -1));
         }
 
         // Post-filter event
         if (! empty($activeFilters)) {
             event(new TableFiltered($tableId, $activeFilters, -1));
         }
+
+        $this->cachedQuery = $query;
 
         return $query;
     }
@@ -488,7 +585,7 @@ trait WithTable
      */
     public function isTableReady(): bool
     {
-        return $this->tableReady;
+        return (bool) $this->tableState->get('ready', false);
     }
 
     // ==========================================
@@ -500,45 +597,13 @@ trait WithTable
      */
     public function sortTable(string $column): void
     {
-        if ($this->tableSortColumn === $column) {
-            $this->tableSortDirection = $this->tableSortDirection === 'asc' ? 'desc' : 'asc';
+        if ($this->tableState->get('sort.column') === $column) {
+            $this->tableState->set('sort.direction', $this->tableState->get('sort.direction') === 'asc' ? 'desc' : 'asc');
         } else {
-            $this->tableSortColumn = $column;
-            $this->tableSortDirection = 'asc';
+            $this->tableState->set('sort.column', $column);
+            $this->tableState->set('sort.direction', 'asc');
         }
 
-        $this->resetPage();
-    }
-
-    /**
-     * Update per page setting
-     */
-    public function updatedTablePerPage(): void
-    {
-        $this->resetPage();
-    }
-
-    /**
-     * Update search query
-     */
-    public function updatedTableSearch(): void
-    {
-        $this->resetPage();
-    }
-
-    /**
-     * Update filters
-     */
-    public function updatedTableFilters(): void
-    {
-        $this->resetPage();
-    }
-
-    /**
-     * Update column filters
-     */
-    public function updatedColumnFilters(): void
-    {
         $this->resetPage();
     }
 
@@ -547,9 +612,9 @@ trait WithTable
      */
     public function resetTableFilters(): void
     {
-        $this->tableFilters = [];
-        $this->columnFilters = [];
-        $this->tableSearch = null;
+        $this->tableState->set('filters', []);
+        $this->tableState->set('columnFilters', []);
+        $this->tableState->set('search', null);
         $this->resetPage();
     }
 
@@ -558,7 +623,7 @@ trait WithTable
      */
     public function resetColumnFilters(): void
     {
-        $this->columnFilters = [];
+        $this->tableState->set('columnFilters', []);
         $this->resetPage();
     }
 
@@ -586,12 +651,15 @@ trait WithTable
     public function toggleRowExpansion(mixed $recordKey): void
     {
         $key = (string) $recordKey;
+        $expanded = $this->tableState->get('rows.expanded', []);
 
-        if (in_array($key, $this->expandedRows, true)) {
-            $this->expandedRows = array_values(array_diff($this->expandedRows, [$key]));
+        if (in_array($key, $expanded, true)) {
+            $expanded = array_values(array_diff($expanded, [$key]));
         } else {
-            $this->expandedRows[] = $key;
+            $expanded[] = $key;
         }
+
+        $this->tableState->set('rows.expanded', $expanded);
     }
 
     /**
@@ -606,12 +674,12 @@ trait WithTable
 
         if ($table->isSubRowsDefaultExpanded()) {
             // Default expanded: clear the "collapsed" list
-            $this->expandedRows = [];
+            $this->tableState->set('rows.expanded', []);
         } else {
             $records = $this->getTableRecords();
-            $this->expandedRows = $records->pluck($table->getPrimaryKey())
+            $this->tableState->set('rows.expanded', $records->pluck($table->getPrimaryKey())
                 ->map(fn ($k) => (string) $k)
-                ->all();
+                ->all());
         }
     }
 
@@ -625,11 +693,11 @@ trait WithTable
         if ($table->hasSubRows() && $table->isSubRowsDefaultExpanded()) {
             // Default expanded: add all to "collapsed" list
             $records = $this->getTableRecords();
-            $this->expandedRows = $records->pluck($table->getPrimaryKey())
+            $this->tableState->set('rows.expanded', $records->pluck($table->getPrimaryKey())
                 ->map(fn ($k) => (string) $k)
-                ->all();
+                ->all());
         } else {
-            $this->expandedRows = [];
+            $this->tableState->set('rows.expanded', []);
         }
     }
 
@@ -638,7 +706,8 @@ trait WithTable
      */
     public function isRowExpanded(mixed $recordKey): bool
     {
-        $isInList = in_array((string) $recordKey, $this->expandedRows, true);
+        $expanded = $this->tableState->get('rows.expanded', []);
+        $isInList = in_array((string) $recordKey, $expanded, true);
 
         // When default expanded, the expandedRows list tracks *collapsed* rows
         if ($this->getTable()->isSubRowsDefaultExpanded()) {
@@ -653,7 +722,7 @@ trait WithTable
      */
     public function toggleFlattenMode(): void
     {
-        $this->flattenMode = ! $this->flattenMode;
+        $this->tableState->set('rows.flattenMode', ! $this->tableState->get('rows.flattenMode'));
     }
 
     /**
@@ -676,10 +745,11 @@ trait WithTable
         $query = $table->getSubRowsQuery($record);
 
         // Apply sub-row filters
-        if ($table->isSubRowsFilterable() && ! empty($this->subRowFilters)) {
+        $subRowFilters = $this->tableState->get('rows.subRowFilters', []);
+        if ($table->isSubRowsFilterable() && ! empty($subRowFilters)) {
             foreach ($table->getSubRowColumns() as $column) {
                 $colName = $column->getName();
-                $filterValue = $this->subRowFilters[$colName] ?? null;
+                $filterValue = $subRowFilters[$colName] ?? null;
 
                 if ($filterValue !== null && $filterValue !== '' && $column->isFilterable()) {
                     $query = $column->applyFilter($query, $filterValue);
@@ -695,7 +765,7 @@ trait WithTable
      */
     public function resetSubRowFilters(): void
     {
-        $this->subRowFilters = [];
+        $this->tableState->set('rows.subRowFilters', []);
     }
 
     /**
@@ -776,15 +846,12 @@ trait WithTable
      */
     public function toggleColumn(string $column): void
     {
-        $isHidden = in_array($column, $this->hiddenColumns, true);
+        $hidden = $this->tableState->get('columns.hidden', []);
+        $isHidden = in_array($column, $hidden, true);
 
         if ($isHidden) {
             // Show the column - remove from hidden
-            $index = array_search($column, $this->hiddenColumns, true);
-            if ($index !== false) {
-                unset($this->hiddenColumns[$index]);
-                $this->hiddenColumns = array_values($this->hiddenColumns);
-            }
+            $hidden = array_values(array_diff($hidden, [$column]));
         } else {
             // Hide the column - but check if it's the last visible
             $visibleCount = 0;
@@ -792,7 +859,7 @@ trait WithTable
 
             foreach ($table->getColumns() as $col) {
                 if ($col->isToggleable() && $col->canView()) {
-                    if (! in_array($col->getName(), $this->hiddenColumns, true)) {
+                    if (! in_array($col->getName(), $hidden, true)) {
                         $visibleCount++;
                     }
                 }
@@ -803,8 +870,10 @@ trait WithTable
                 return;
             }
 
-            $this->hiddenColumns[] = $column;
+            $hidden[] = $column;
         }
+
+        $this->tableState->set('columns.hidden', $hidden);
     }
 
     /**
@@ -812,7 +881,9 @@ trait WithTable
      */
     public function isColumnVisible(string $column): bool
     {
-        return ! in_array($column, $this->hiddenColumns, true);
+        $hidden = $this->tableState->get('columns.hidden', []);
+
+        return ! in_array($column, $hidden, true);
     }
 
     // ─── Record Selection ────────────────────────────────
@@ -822,14 +893,17 @@ trait WithTable
      */
     public function toggleRecordSelection(string $key): void
     {
-        $index = array_search($key, $this->selectedRecords, true);
+        $selected = $this->tableState->get('selection.records', []);
+        $index = array_search($key, $selected, true);
 
         if ($index !== false) {
-            unset($this->selectedRecords[$index]);
-            $this->selectedRecords = array_values($this->selectedRecords);
+            unset($selected[$index]);
+            $selected = array_values($selected);
         } else {
-            $this->selectedRecords[] = $key;
+            $selected[] = $key;
         }
+
+        $this->tableState->set('selection.records', $selected);
     }
 
     /**
@@ -840,11 +914,12 @@ trait WithTable
         $records = $this->getTableRecords();
         $primaryKey = $this->getTable()->getPrimaryKey();
 
-        $this->selectedRecords = [];
-
+        $selected = [];
         foreach ($records as $record) {
-            $this->selectedRecords[] = (string) $record->{$primaryKey};
+            $selected[] = (string) $record->{$primaryKey};
         }
+
+        $this->tableState->set('selection.records', $selected);
     }
 
     /**
@@ -852,7 +927,9 @@ trait WithTable
      */
     public function isRecordSelected(string $key): bool
     {
-        return in_array($key, $this->selectedRecords, true);
+        $selected = $this->tableState->get('selection.records', []);
+
+        return in_array($key, $selected, true);
     }
 
     /**
@@ -860,7 +937,7 @@ trait WithTable
      */
     public function getSelectedRecordsCount(): int
     {
-        return count($this->selectedRecords);
+        return count($this->tableState->get('selection.records', []));
     }
 
     /**
@@ -868,7 +945,7 @@ trait WithTable
      */
     public function areSomeVisibleSelected(): bool
     {
-        if (empty($this->selectedRecords)) {
+        if (empty($this->tableState->get('selection.records', []))) {
             return false;
         }
 
@@ -886,11 +963,12 @@ trait WithTable
             return false;
         }
 
+        $selected = $this->tableState->get('selection.records', []);
         $primaryKey = $this->getTable()->getPrimaryKey();
 
         foreach ($records as $record) {
             $key = (string) $record->{$primaryKey};
-            if (! in_array($key, $this->selectedRecords, true)) {
+            if (! in_array($key, $selected, true)) {
                 return false;
             }
         }
@@ -903,7 +981,7 @@ trait WithTable
      */
     public function getSelectedRecordKeys(): array
     {
-        return $this->selectedRecords;
+        return $this->tableState->get('selection.records', []);
     }
 
     /**
@@ -911,7 +989,7 @@ trait WithTable
      */
     public function deselectAllRecords(): void
     {
-        $this->selectedRecords = [];
+        $this->tableState->set('selection.records', []);
     }
 
     /**
@@ -955,14 +1033,14 @@ trait WithTable
             return;
         }
 
-        $this->actionModalName = $actionName;
-        $this->actionModalRecordKey = $recordKey;
-        $this->actionModalIsBulk = false;
-        $this->actionModalIsHeaderAction = false;
+        $this->tableState->set('modal.action.name', $actionName);
+        $this->tableState->set('modal.action.recordKey', $recordKey);
+        $this->tableState->set('modal.action.isBulk', false);
+        $this->tableState->set('modal.action.isHeaderAction', false);
         $this->actionModalConfigCache = $action->getModalConfig($record);
-        $this->actionModalFormData = $action->getFormDefaults($record);
+        $this->tableState->set('modal.action.formData', $action->getFormDefaults($record));
         $this->actionModalFormInstance = $action->getFormInstance($this, $record);
-        $this->showActionModal = true;
+        $this->tableState->set('modal.action.show', true);
     }
 
     /**
@@ -1062,7 +1140,32 @@ trait WithTable
             $recordIds = $payload['records']->pluck($pk)->all();
         }
 
-        // Dispatch ActionExecuting event
+        // Plugin hook: action.executing (hooks modify before event reports)
+        if (app()->bound(PluginManager::class)) {
+            $manager = app(PluginManager::class);
+
+            $manager->runHook('action.executing', [
+                'action' => $action,
+                'actionName' => $action->getName(),
+                'actionType' => $actionType,
+                'recordIds' => $recordIds,
+                'data' => $data,
+                'component' => $this,
+            ]);
+
+            $preContext = $this->payloadToContext($payload, $action->getName());
+            $manager->runTypedHook(
+                'action.executing',
+                new ActionExecutingPayload(
+                    actionName: $action->getName(),
+                    context: $preContext,
+                    actionType: $actionType,
+                    component: $this,
+                ),
+            );
+        }
+
+        // Dispatch ActionExecuting event (after hooks — reports final state)
         event(new ActionExecuting($tableId, $action->getName(), $recordIds));
 
         // Build ActionContext
@@ -1174,6 +1277,31 @@ trait WithTable
 
         $this->handleActionSuccess($action, $payload['record'] ?? $payload['records'] ?? null);
 
+        // Plugin hook: action.executed
+        if (app()->bound(PluginManager::class)) {
+            $manager = app(PluginManager::class);
+
+            $manager->runHook('action.executed', [
+                'action' => $action,
+                'actionName' => $action->getName(),
+                'actionType' => $actionType,
+                'recordIds' => $recordIds,
+                'result' => $pipelineResult,
+                'component' => $this,
+            ]);
+
+            $manager->runTypedHook(
+                'action.executed',
+                new ActionExecutedPayload(
+                    actionName: $action->getName(),
+                    context: $context,
+                    result: $pipelineResult,
+                    actionType: $actionType,
+                    component: $this,
+                ),
+            );
+        }
+
         // Dispatch ActionExecuted event
         event(new ActionExecuted($tableId, $action->getName(), $recordIds, $pipelineResult->isSuccess()));
     }
@@ -1219,24 +1347,31 @@ trait WithTable
         array $formData = [],
         string $actionType = 'row',
     ): void {
-        $this->haltRecordKey = $recordKey;
-        $this->haltActionName = $actionName;
-        $this->haltModalConfig = $halt->toArray()['modal'];
-        $this->haltModalFormData = $halt->getModalFormData() ?? $formData;
-        $this->haltActionType = $actionType;
-        $this->haltContext = $halt->toArray()['context'] ?? [];
+        $this->tableState->set('modal.halt.recordKey', $recordKey);
+        $this->tableState->set('modal.halt.actionName', $actionName);
+        $this->tableState->set('modal.halt.config', $halt->toArray()['modal']);
+        $this->tableState->set('modal.halt.formData', $halt->getModalFormData() ?? $formData);
+        $this->tableState->set('modal.halt.actionType', $actionType);
+        $this->tableState->set('modal.halt.context', $halt->toArray()['context'] ?? []);
 
         // Resolve Form instance for halt modal
         $formInstance = $halt->getFormInstance();
         if ($formInstance) {
-            $formInstance->statePath('haltModalFormData');
+            $formInstance->statePath('tableState.modal.halt.formData');
             $formInstance->livewire($this);
             $this->haltModalFormInstance = $formInstance;
-            // Store in session so it survives Livewire re-renders
-            session()->put('wire.halt_form_instance', serialize($formInstance));
+            // Persist across Livewire re-renders; Form schema may contain non-serializable
+            // closures (options callbacks, validation rules), so we swallow the exception.
+            // If serialization fails the form won't survive polling re-renders, but
+            // the halt modal stays open and the user can still submit on first render.
+            try {
+                session()->put('wire.halt_form_instance', serialize($formInstance));
+            } catch (\Throwable) {
+                // Non-serializable form — session fallback unavailable
+            }
         }
 
-        $this->showHaltModal = true;
+        $this->tableState->set('modal.halt.show', true);
     }
 
     /**
@@ -1263,6 +1398,7 @@ trait WithTable
     {
         $this->tableInstance = null;
         $this->cachedRecords = null;
+        $this->cachedQuery = null;
         $this->queryService = null;
 
         event(new TableRefreshed(static::class));
@@ -1295,14 +1431,14 @@ trait WithTable
         // Get selected records for dynamic form fields/defaults
         $selectedRecords = $this->getSelectedRecords();
 
-        $this->actionModalName = $actionName;
-        $this->actionModalRecordKey = null;
-        $this->actionModalIsBulk = true;
-        $this->actionModalIsHeaderAction = false;
+        $this->tableState->set('modal.action.name', $actionName);
+        $this->tableState->set('modal.action.recordKey', null);
+        $this->tableState->set('modal.action.isBulk', true);
+        $this->tableState->set('modal.action.isHeaderAction', false);
         $this->actionModalConfigCache = $action->getModalConfig($selectedRecords);
-        $this->actionModalFormData = $action->getFormDefaults($selectedRecords);
+        $this->tableState->set('modal.action.formData', $action->getFormDefaults($selectedRecords));
         $this->actionModalFormInstance = $action->getFormInstance($this, $selectedRecords);
-        $this->showActionModal = true;
+        $this->tableState->set('modal.action.show', true);
     }
 
     /**
@@ -1356,19 +1492,22 @@ trait WithTable
      */
     public function submitActionModal(): void
     {
-        $isHeaderAction = $this->actionModalIsHeaderAction;
-        $isBulkAction = $this->actionModalIsBulk;
+        $isHeaderAction = (bool) $this->tableState->get('modal.action.isHeaderAction');
+        $isBulkAction = (bool) $this->tableState->get('modal.action.isBulk');
+        $actionName = $this->tableState->get('modal.action.name');
+        $recordKey = $this->tableState->get('modal.action.recordKey');
+        $formData = $this->tableState->get('modal.action.formData', []);
 
-        if (! $this->actionModalName) {
+        if (! $actionName) {
             $this->closeActionModal();
 
             return;
         }
 
         $action = match (true) {
-            $isHeaderAction => $this->findHeaderAction($this->actionModalName),
-            $isBulkAction => $this->findBulkAction($this->actionModalName),
-            default => $this->findAction($this->actionModalName),
+            $isHeaderAction => $this->findHeaderAction($actionName),
+            $isBulkAction => $this->findBulkAction($actionName),
+            default => $this->findAction($actionName),
         };
 
         if (! $action) {
@@ -1379,7 +1518,7 @@ trait WithTable
 
         // Re-resolve Form instance (not serialized between Livewire requests)
         if ($this->actionModalFormInstance === null) {
-            $context = $isBulkAction ? ($this->getSelectedRecords()) : ($this->actionModalRecordKey ? $this->getRecord($this->actionModalRecordKey) : null);
+            $context = $isBulkAction ? ($this->getSelectedRecords()) : ($recordKey ? $this->getRecord($recordKey) : null);
             $this->actionModalFormInstance = $action->getFormInstance($this, $context);
         }
 
@@ -1390,14 +1529,14 @@ trait WithTable
 
         // Execute action
         if ($isHeaderAction) {
-            $this->executeHeaderActionWithData($this->actionModalName, $this->actionModalFormData);
+            $this->executeHeaderActionWithData($actionName, $formData);
         } elseif ($isBulkAction) {
-            $this->executeBulkActionWithData($this->actionModalName, $this->actionModalFormData);
+            $this->executeBulkActionWithData($actionName, $formData);
         } else {
             $this->executeTableActionWithData(
-                $this->actionModalRecordKey,
-                $this->actionModalName,
-                $this->actionModalFormData,
+                $recordKey,
+                $actionName,
+                $formData,
             );
         }
 
@@ -1409,12 +1548,12 @@ trait WithTable
      */
     public function closeActionModal(): void
     {
-        $this->showActionModal = false;
-        $this->actionModalName = null;
-        $this->actionModalRecordKey = null;
-        $this->actionModalIsBulk = false;
-        $this->actionModalIsHeaderAction = false;
-        $this->actionModalFormData = [];
+        $this->tableState->set('modal.action.show', false);
+        $this->tableState->set('modal.action.name', null);
+        $this->tableState->set('modal.action.recordKey', null);
+        $this->tableState->set('modal.action.isBulk', false);
+        $this->tableState->set('modal.action.isHeaderAction', false);
+        $this->tableState->set('modal.action.formData', []);
         $this->actionModalFormInstance = null;
         $this->actionModalConfigCache = [];
 
@@ -1532,7 +1671,7 @@ trait WithTable
     public function getActionModalData(): array
     {
         // If cache is empty but modal should be shown, regenerate it
-        if (empty($this->actionModalConfigCache) && $this->showActionModal && $this->actionModalName) {
+        if (empty($this->actionModalConfigCache) && $this->tableState->get('modal.action.show') && $this->tableState->get('modal.action.name')) {
             $this->regenerateModalConfig();
         }
 
@@ -1545,7 +1684,7 @@ trait WithTable
      */
     public function getActionModalFormInstance(): ?Form
     {
-        if ($this->actionModalFormInstance === null && $this->showActionModal && $this->actionModalName) {
+        if ($this->actionModalFormInstance === null && $this->tableState->get('modal.action.show') && $this->tableState->get('modal.action.name')) {
             $this->resolveActionModalFormInstance();
         }
 
@@ -1557,21 +1696,23 @@ trait WithTable
      */
     protected function resolveActionModalFormInstance(): void
     {
-        if (! $this->actionModalName) {
+        $actionName = $this->tableState->get('modal.action.name');
+        if (! $actionName) {
             return;
         }
 
         $action = null;
         $context = null;
+        $recordKey = $this->tableState->get('modal.action.recordKey');
 
-        if ($this->actionModalIsHeaderAction) {
-            $action = $this->findHeaderAction($this->actionModalName);
-        } elseif ($this->actionModalIsBulk) {
-            $action = $this->findBulkAction($this->actionModalName);
+        if ($this->tableState->get('modal.action.isHeaderAction')) {
+            $action = $this->findHeaderAction($actionName);
+        } elseif ($this->tableState->get('modal.action.isBulk')) {
+            $action = $this->findBulkAction($actionName);
             $context = $this->getSelectedRecords();
         } else {
-            $action = $this->findAction($this->actionModalName);
-            $context = $this->actionModalRecordKey ? $this->getRecord($this->actionModalRecordKey) : null;
+            $action = $this->findAction($actionName);
+            $context = $recordKey ? $this->getRecord($recordKey) : null;
         }
 
         if ($action) {
@@ -1584,25 +1725,28 @@ trait WithTable
      */
     protected function regenerateModalConfig(): void
     {
-        if (! $this->actionModalName) {
+        $actionName = $this->tableState->get('modal.action.name');
+        if (! $actionName) {
             return;
         }
 
-        if ($this->actionModalIsHeaderAction) {
-            $action = $this->findHeaderAction($this->actionModalName);
+        $recordKey = $this->tableState->get('modal.action.recordKey');
+
+        if ($this->tableState->get('modal.action.isHeaderAction')) {
+            $action = $this->findHeaderAction($actionName);
             if ($action) {
                 $this->actionModalConfigCache = $action->getModalConfig();
             }
-        } elseif ($this->actionModalIsBulk) {
-            $action = $this->findBulkAction($this->actionModalName);
+        } elseif ($this->tableState->get('modal.action.isBulk')) {
+            $action = $this->findBulkAction($actionName);
             if ($action) {
                 $selectedRecords = $this->getSelectedRecords();
                 $this->actionModalConfigCache = $action->getModalConfig($selectedRecords);
             }
         } else {
-            $action = $this->findAction($this->actionModalName);
+            $action = $this->findAction($actionName);
             if ($action) {
-                $record = $this->actionModalRecordKey ? $this->getRecord($this->actionModalRecordKey) : null;
+                $record = $recordKey ? $this->getRecord($recordKey) : null;
                 $this->actionModalConfigCache = $action->getModalConfig($record);
             }
         }
@@ -1641,7 +1785,7 @@ trait WithTable
      */
     public function getHaltModalData(): array
     {
-        return $this->haltModalConfig;
+        return $this->tableState->get('modal.halt.config', []);
     }
 
     /**
@@ -1654,9 +1798,18 @@ trait WithTable
             return $this->haltModalFormInstance;
         }
 
-        if ($this->showHaltModal && session()->has('wire.halt_form_instance')) {
-            $this->haltModalFormInstance = unserialize(session()->get('wire.halt_form_instance'));
-            $this->haltModalFormInstance->livewire($this);
+        if ($this->tableState->get('modal.halt.show') && session()->has('wire.halt_form_instance')) {
+            try {
+                $restored = unserialize(session()->get('wire.halt_form_instance'));
+                if ($restored instanceof Form) {
+                    $restored->livewire($this);
+                    $this->haltModalFormInstance = $restored;
+                }
+            } catch (\Throwable) {
+                // Corrupt or non-restorable session data — close the modal cleanly
+                $this->tableState->set('modal.halt.show', false);
+                session()->forget('wire.halt_form_instance');
+            }
         }
 
         return $this->haltModalFormInstance;
@@ -1667,20 +1820,23 @@ trait WithTable
      */
     public function submitHaltModal(array $formData = []): void
     {
-        if (! $this->haltActionName) {
+        $haltActionName = $this->tableState->get('modal.halt.actionName');
+        if (! $haltActionName) {
             $this->closeHaltModal();
 
             return;
         }
 
+        $haltConfig = $this->tableState->get('modal.halt.config', []);
+
         // Validate form if present
-        $validation = $this->haltModalConfig['formValidation'] ?? null;
+        $validation = $haltConfig['formValidation'] ?? null;
         if ($validation && ! empty($formData)) {
             $result = app(ValidationPipeline::class)->validate(
                 $formData,
                 $validation,
-                $this->haltModalConfig['formValidationMessages'] ?? [],
-                $this->haltModalConfig['formValidationAttributes'] ?? [],
+                $haltConfig['formValidationMessages'] ?? [],
+                $haltConfig['formValidationAttributes'] ?? [],
             );
 
             if ($result->failed()) {
@@ -1689,13 +1845,14 @@ trait WithTable
         }
 
         // Merge form data
-        $data = array_merge($this->haltModalFormData, $formData);
+        $data = array_merge($this->tableState->get('modal.halt.formData', []), $formData);
 
         // Capture context before closing
-        $actionName = $this->haltActionName;
-        $recordKey = $this->haltRecordKey;
-        $actionType = $this->haltActionType ?? 'row';
-        $redirectAfterConfirm = $this->haltContext['redirectAfterConfirm'] ?? null;
+        $actionName = $haltActionName;
+        $recordKey = $this->tableState->get('modal.halt.recordKey');
+        $actionType = $this->tableState->get('modal.halt.actionType') ?? 'row';
+        $haltContext = $this->tableState->get('modal.halt.context', []);
+        $redirectAfterConfirm = $haltContext['redirectAfterConfirm'] ?? null;
 
         $this->closeHaltModal();
 
@@ -1719,15 +1876,15 @@ trait WithTable
      */
     public function closeHaltModal(): void
     {
-        $this->showHaltModal = false;
-        $this->haltActionName = null;
-        $this->haltRecordKey = null;
-        $this->haltModalConfig = [];
-        $this->haltModalFormData = [];
+        $this->tableState->set('modal.halt.show', false);
+        $this->tableState->set('modal.halt.actionName', null);
+        $this->tableState->set('modal.halt.recordKey', null);
+        $this->tableState->set('modal.halt.config', []);
+        $this->tableState->set('modal.halt.formData', []);
         $this->haltModalFormInstance = null;
         session()->forget('wire.halt_form_instance');
-        $this->haltActionType = null;
-        $this->haltContext = [];
+        $this->tableState->set('modal.halt.actionType', null);
+        $this->tableState->set('modal.halt.context', []);
 
         // Invalidate table cache so next render fetches fresh data
         $this->invalidateTable();
@@ -1755,14 +1912,14 @@ trait WithTable
             return;
         }
 
-        $this->actionModalName = $actionName;
-        $this->actionModalRecordKey = null;
-        $this->actionModalIsBulk = false;
-        $this->actionModalIsHeaderAction = true;
+        $this->tableState->set('modal.action.name', $actionName);
+        $this->tableState->set('modal.action.recordKey', null);
+        $this->tableState->set('modal.action.isBulk', false);
+        $this->tableState->set('modal.action.isHeaderAction', true);
         $this->actionModalConfigCache = $action->getModalConfig();
-        $this->actionModalFormData = $action->getFormDefaults();
+        $this->tableState->set('modal.action.formData', $action->getFormDefaults());
         $this->actionModalFormInstance = $action->getFormInstance($this);
-        $this->showActionModal = true;
+        $this->tableState->set('modal.action.show', true);
     }
 
     /**
@@ -1790,6 +1947,15 @@ trait WithTable
      */
     public function updateTableCell(mixed $recordKey, string $columnName, mixed $value, ?string $recordVersion = null): array
     {
+        // Prevent Livewire from re-rendering the table in this response.
+        // Re-rendering causes DOM morphing that destroys Alpine component state
+        // (success indicator, saving flag, etc.). The Alpine MutationObserver
+        // on each cell handles syncing new values, and polling refreshes the
+        // table on the next cycle.
+        if (method_exists($this, 'skipRender')) {
+            $this->skipRender();
+        }
+
         $table = $this->getTable();
         $column = $this->findColumn($columnName);
 
@@ -1919,12 +2085,14 @@ trait WithTable
                 // Pivot update
                 if ($column->isPivot()) {
                     $attribute = $column->getRelationshipAttribute();
-                    if ($record->pivot) {
+                    if ($record->pivot && $attribute !== null) {
                         $record->pivot->{$attribute} = $value;
                         $record->pivot->save();
                     }
+                    $record->refresh();
+                    $newVersion = $record->updated_at ? (string) $record->updated_at->getTimestamp() : null;
 
-                    return ['success' => true, 'record' => $record, 'value' => $value, 'oldValue' => $oldValue];
+                    return ['success' => true, 'version' => $newVersion, 'record' => $record, 'value' => $value, 'oldValue' => $oldValue];
                 }
 
                 // Relation update
@@ -1932,12 +2100,14 @@ trait WithTable
                     $relation = $column->getRelation();
                     $attribute = $column->getRelationshipAttribute();
                     $related = data_get($record, $relation);
-                    if ($related instanceof Model) {
+                    if ($related instanceof Model && $attribute !== null) {
                         $related->{$attribute} = $value;
                         $related->save();
                     }
+                    $record->refresh();
+                    $newVersion = $record->updated_at ? (string) $record->updated_at->getTimestamp() : null;
 
-                    return ['success' => true, 'record' => $record, 'value' => $value, 'oldValue' => $oldValue];
+                    return ['success' => true, 'version' => $newVersion, 'record' => $record, 'value' => $value, 'oldValue' => $oldValue];
                 }
 
                 // Direct update
@@ -1962,8 +2132,6 @@ trait WithTable
                 // Dispatch CellUpdated event
                 event(new CellUpdated(static::class, $columnName, $recordKey, $oldValue, $savedValue));
 
-                $this->invalidateTable();
-
                 // Clean internal keys before returning to client
                 unset($result['record'], $result['value'], $result['oldValue']);
             }
@@ -1985,6 +2153,10 @@ trait WithTable
      */
     public function validateTableCell(mixed $recordKey, string $columnName, mixed $value): array
     {
+        if (method_exists($this, 'skipRender')) {
+            $this->skipRender();
+        }
+
         $table = $this->getTable();
         $column = $this->findColumn($columnName);
 
@@ -2080,11 +2252,11 @@ trait WithTable
             'complete_sql' => $this->getTableSql(),
             'raw_sql' => $this->buildTableQuery()->toSql(),
             'bindings' => $this->buildTableQuery()->getBindings(),
-            'search' => $this->tableSearch ?? null,
-            'filters' => $this->tableFilters ?? [],
-            'column_filters' => $this->columnFilters ?? [],
-            'sort_column' => $this->tableSortColumn,
-            'sort_direction' => $this->tableSortDirection,
+            'search' => $this->tableState->get('search'),
+            'filters' => $this->tableState->get('filters', []),
+            'column_filters' => $this->tableState->get('columnFilters', []),
+            'sort_column' => $this->tableState->get('sort.column'),
+            'sort_direction' => $this->tableState->get('sort.direction'),
         ]);
     }
 
@@ -2097,11 +2269,11 @@ trait WithTable
             'complete_sql' => $this->getTableSql(),
             'raw_sql' => $this->buildTableQuery()->toSql(),
             'bindings' => $this->buildTableQuery()->getBindings(),
-            'search' => $this->tableSearch ?? null,
-            'filters' => $this->tableFilters ?? [],
-            'column_filters' => $this->columnFilters ?? [],
-            'sort_column' => $this->tableSortColumn,
-            'sort_direction' => $this->tableSortDirection,
+            'search' => $this->tableState->get('search'),
+            'filters' => $this->tableState->get('filters', []),
+            'column_filters' => $this->tableState->get('columnFilters', []),
+            'sort_column' => $this->tableState->get('sort.column'),
+            'sort_direction' => $this->tableState->get('sort.direction'),
         ]);
     }
 
@@ -2119,7 +2291,7 @@ trait WithTable
     public function dumpTableColumns(): void
     {
         $allColumnNames = $this->getTable()->getColumnNames();
-        $hiddenNames = $this->hiddenColumns ?? [];
+        $hiddenNames = $this->tableState->get('columns.hidden', []);
 
         dump([
             'defined_columns' => $this->getTableColumnsInfo(),
@@ -2151,7 +2323,7 @@ trait WithTable
     public function ddTableColumns(): never
     {
         $allColumnNames = $this->getTable()->getColumnNames();
-        $hiddenNames = $this->hiddenColumns ?? [];
+        $hiddenNames = $this->tableState->get('columns.hidden', []);
 
         dd([
             'defined_columns' => $this->getTableColumnsInfo(),
@@ -2180,5 +2352,63 @@ trait WithTable
     {
         // Invalidate cached records so next render fetches fresh data
         $this->cachedRecords = null;
+    }
+
+    // ==========================================
+    // Export
+    // ==========================================
+
+    /**
+     * Export the current table data.
+     *
+     * Uses the current filtered/sorted query and visible columns.
+     */
+    public function exportTable(string $format = 'csv'): StreamedResponse
+    {
+        $exportFormat = ExportFormat::from($format);
+        $table = $this->getTable();
+
+        // Find ExportAction config if defined
+        $exportConfig = null;
+        foreach ($table->getHeaderActions() as $action) {
+            if ($action instanceof ExportAction) {
+                $exportConfig = $action->getExportConfig();
+                break;
+            }
+        }
+
+        $export = ($exportConfig ?? TableExport::make())->format($exportFormat);
+
+        // Use current filtered query
+        $query = $this->getFilteredTableQuery();
+
+        // Use visible columns
+        $columns = array_values(array_filter(
+            $export->getColumns() ?? $table->getColumns(),
+            fn (Column $col) => $col->canView() && ! in_array($col->getName(), $this->tableState->get('columns.hidden', []), true),
+        ));
+
+        return $export->download($query, $columns);
+    }
+
+    /**
+     * Get the filtered (but not paginated) query for the current table state.
+     *
+     * @return Builder<Model>
+     */
+    protected function getFilteredTableQuery(): Builder
+    {
+        $table = $this->getTable();
+        $service = new TableQueryService;
+
+        return $service->buildQuery(
+            baseQuery: $table->getQuery(),
+            table: $table,
+            search: $this->tableState->get('search', ''),
+            filterValues: $this->tableState->get('filters', []),
+            sortColumn: $this->tableState->get('sort.column') ?: $table->getDefaultSort(),
+            sortDirection: $this->tableState->get('sort.direction') ?: $table->getDefaultSortDirection(),
+            columnFilterValues: $this->tableState->get('columnFilters', []),
+        );
     }
 }

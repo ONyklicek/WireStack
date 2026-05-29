@@ -9,6 +9,8 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Actions\Concerns\HasColor;
 use NyonCode\WireCore\Actions\Concerns\HasIcons;
+use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
  * Class ActionGroup - Enhanced with dividers, nested groups, badges, and auto-dividers.
@@ -42,7 +44,7 @@ class ActionGroup implements Htmlable
 
     public ?string $icon = 'dots-vertical';
 
-    protected ?string $color = 'gray';
+    protected ?string $color = Color::Gray->value;
 
     protected ?string $size = 'sm';
 
@@ -84,16 +86,16 @@ class ActionGroup implements Htmlable
         return $this;
     }
 
-    public function icon(?string $icon): static
+    public function icon(string|Icon|null $icon): static
     {
-        $this->icon = $icon;
+        $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
 
         return $this;
     }
 
-    public function color(?string $color): static
+    public function color(string|Color|null $color): static
     {
-        $this->color = $color;
+        $this->color = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
@@ -151,9 +153,9 @@ class ActionGroup implements Htmlable
     /**
      * Set badge color.
      */
-    public function badgeColor(?string $color): static
+    public function badgeColor(string|Color|null $color): static
     {
-        $this->badgeColor = $color;
+        $this->badgeColor = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
@@ -172,7 +174,7 @@ class ActionGroup implements Htmlable
 
     public function getColor(): string
     {
-        return $this->color ?? 'gray';
+        return $this->color ?? Color::Gray->value;
     }
 
     public function getSize(): string
@@ -215,13 +217,13 @@ class ActionGroup implements Htmlable
         }
 
         return $this->badge instanceof Closure
-            ? call_user_func($this->badge)
+            ? ($this->badge)()
             : $this->badge;
     }
 
     public function getBadgeColor(): string
     {
-        return $this->badgeColor ?? 'danger';
+        return $this->badgeColor ?? Color::Danger->value;
     }
 
     public function hasBadge(): bool

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Concerns;
 
+use Livewire\Component;
+
 /**
  * Trait WithRowPolling
  *
@@ -11,6 +13,8 @@ namespace NyonCode\WireTable\Concerns;
  * The actual refreshRow() implementation is now in WithTable trait.
  * Components that use WithTable already have refreshRow().
  * This trait can be used by components that need only row polling without the full table.
+ *
+ * @phpstan-require-extends Component
  *
  * @author Ondřej Nyklíček
  */

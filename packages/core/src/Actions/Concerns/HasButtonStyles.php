@@ -4,23 +4,28 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Actions\Concerns;
 
+use NyonCode\WireCore\Actions\BaseAction;
+use NyonCode\WireCore\Foundation\Colors\Color;
+
 /**
  * Trait HasButtonStyles
  *
  * Shared button CSS class generation for all Action types.
  * Uses HasColor for color classes.
+ *
+ * @phpstan-require-extends BaseAction
  */
 trait HasButtonStyles
 {
-    protected ?string $color = 'primary';
+    protected ?string $color = Color::Primary->value;
 
     protected ?string $size = 'sm';
 
     protected bool $outlined = false;
 
-    public function color(?string $color): static
+    public function color(string|Color|null $color): static
     {
-        $this->color = $color;
+        $this->color = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
@@ -41,7 +46,7 @@ trait HasButtonStyles
 
     public function getColor(): string
     {
-        return $this->color ?? 'primary';
+        return $this->color ?? Color::Primary->value;
     }
 
     public function getSize(): string

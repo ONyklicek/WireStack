@@ -16,4 +16,14 @@ Hidden::make('type')
     ->default('post')
 ```
 
-No additional methods beyond the base Field API.
+## Common Options
+
+`Hidden` supports the full Field API for validation and conditional logic even though it renders no UI:
+
+```php
+Hidden::make('status')
+    ->default('draft')
+    ->rules(['in:draft,published,archived'])
+```
+
+See [Common Field API](index.md#common-field-api) for all shared methods.

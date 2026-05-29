@@ -9,9 +9,6 @@ use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Core\Query\JoinClause;
 use NyonCode\WireCore\Core\Query\Pipes\ApplyRelations;
 use NyonCode\WireCore\Core\Query\QueryPlan;
-use NyonCode\WireCore\Tests\TestCase;
-
-uses(TestCase::class);
 
 beforeEach(function () {
     Schema::create('test_users', function (Blueprint $table) {

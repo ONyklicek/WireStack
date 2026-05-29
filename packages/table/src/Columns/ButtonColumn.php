@@ -16,6 +16,8 @@ namespace NyonCode\WireTable\Columns;
 
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 
 class ButtonColumn extends Column
 {
@@ -91,8 +93,8 @@ class ButtonColumn extends Column
     public function __construct(string $name)
     {
         parent::__construct($name);
-        $this->sortable = false;
-        $this->searchable = false;
+        $this->sortable(false);
+        $this->searchable(false);
     }
 
     /**
@@ -108,9 +110,9 @@ class ButtonColumn extends Column
     /**
      * Set the button icon.
      */
-    public function buttonIcon(string|Closure $icon, ?string $position = 'before'): static
+    public function buttonIcon(string|Icon|Closure $icon, ?string $position = 'before'): static
     {
-        $this->buttonIcon = $icon;
+        $this->buttonIcon = $icon instanceof Icon ? $icon->value() : $icon;
         $this->buttonIconPosition = $position;
 
         return $this;
@@ -243,15 +245,15 @@ class ButtonColumn extends Column
      */
     public function danger(): static
     {
-        return $this->buttonColor('danger');
+        return $this->buttonColor(Color::Danger);
     }
 
     /**
      * Set the button color.
      */
-    public function buttonColor(string|Closure $color): static
+    public function buttonColor(string|Color|Closure $color): static
     {
-        $this->buttonColor = $color;
+        $this->buttonColor = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
@@ -261,7 +263,7 @@ class ButtonColumn extends Column
      */
     public function success(): static
     {
-        return $this->buttonColor('success');
+        return $this->buttonColor(Color::Success);
     }
 
     /**

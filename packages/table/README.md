@@ -12,6 +12,7 @@ Enterprise-grade Livewire table component for Laravel. Inline editing, actions, 
 - **Search** - Global search across multiple columns, relationship search, custom search callbacks
 - **Sorting** - Column sorting with custom sort callbacks, default sort
 - **Pagination** - Configurable per-page options, lazy loading
+- **Exports** - CSV, Excel, and PDF export for the current table query
 - **Polling** - Table-level and row-level polling with configurable intervals
 - **Notifications** - Pluggable notification drivers (session, Livewire events, Flasher)
 - **Responsive** - Stacked mobile layout, responsive column visibility
@@ -120,7 +121,6 @@ For the full installation guide including Vite setup and troubleshooting, see [I
 namespace App\Livewire;
 
 use Livewire\Component;
-use NyonCode\WireTable\Contracts\HasTable;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Table;
 use NyonCode\WireTable\Columns\TextColumn;
@@ -131,7 +131,7 @@ use NyonCode\WireCore\Actions\DeleteAction;
 use NyonCode\WireTable\Filters\SelectFilter;
 use App\Models\User;
 
-class UserTable extends Component implements HasTable
+class UserTable extends Component
 {
     use WithTable;
 
@@ -202,10 +202,12 @@ class UserTable extends Component implements HasTable
 | [Columns](docs/columns.md) | All 13 column types and their options |
 | [Actions](docs/actions.md) | Row, bulk, header actions and action groups |
 | [Filters](docs/filters.md) | Select, date, number range, ternary filters |
+| [Exports](docs/exports.md) | CSV, Excel, and PDF exports |
 | [Forms](docs/forms.md) | Modal form fields for action dialogs |
 | [Sub-Rows](docs/sub-rows.md) | Expandable child records, flatten mode, filtering |
 | [Notifications](docs/notifications.md) | Notification drivers and customization |
 | [Advanced](docs/advanced.md) | Polling, lazy loading, debugging, keyboard shortcuts |
+| [Authorization](../../docs/authorization.md) | Gates, policies, permissions, and callbacks |
 
 ## License
 

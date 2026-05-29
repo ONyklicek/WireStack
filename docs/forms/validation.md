@@ -1,3 +1,7 @@
+---
+order: 20
+---
+
 # Form Validation
 
 Wire Forms provides validation at three levels: field-level rules, form-level rules, and programmatic validation via the Core ValidationPipeline.
@@ -40,9 +44,8 @@ Some fields provide fluent helpers that map to Laravel rules:
 | `->integer()` | `integer` |
 | `->maxLength(255)` | `max:255` |
 | `->minLength(3)` | `min:3` |
-| `->confirmed()` | `confirmed` |
 | `->url()` | `url` |
-| `->tel()` | custom telephone pattern |
+| `->tel()` | sets `tel` HTML input type (no validation rule) |
 
 ### Custom Validation Messages
 
@@ -84,7 +87,7 @@ Validates state against all collected rules and returns validated data:
 // In a Livewire component
 public function save(): void
 {
-    $data = $this->form()->validate();
+    $data = $this->form->validate();
     // $data contains only validated fields
     // Throws Illuminate\Validation\ValidationException on failure
 }
@@ -95,7 +98,7 @@ public function save(): void
 Inspect the collected rules without validating:
 
 ```php
-$rules = $this->form()->getValidationRules();
+$rules = $this->form->getValidationRules();
 // ['name' => ['required', 'string', 'max:255'], 'email' => ['required', 'email'], ...]
 ```
 
@@ -109,13 +112,16 @@ When calling `$form->save()`, validation happens automatically as the first step
 save()
 ├── 1. Validate ← all field + form rules
 ├── 2. mutateDataBeforeSave()
-├── 3. beforeSave()
-├── 4. Persist (create/update)
-├── 5. afterSave()
-└── 6. Success notification
+├── 3. Plugin hook: form.saving
+├── 4. beforeSave()
+├── 5. Persist (create/update)
+├── 6. Save relationships
+├── 7. afterSave()
+├── 8. Plugin hook: form.saved
+└── 9. Success notification
 ```
 
-If validation fails, `save()` throws `ValidationException` and steps 2-6 are skipped.
+If validation fails, `save()` throws `ValidationException` and steps 2-9 are skipped.
 
 ---
 
@@ -136,64 +142,6 @@ try {
     // ['name' => ['The name field is required.'], 'email' => ['The email field must be a valid email address.']]
 }
 ```
-
----
-
-## FormValidationResolver
-
-Internally, `FormValidationResolver` collects rules from all field components and delegates to the Core `ValidationPipeline`:
-
-```
-FormValidationResolver
-├── Iterate form schema (flat)
-├── Collect rules from each Field (->getRules())
-├── Merge form-level rules
-├── Merge custom messages
-└── Delegate to Core ValidationPipeline
-    └── Returns ValidationResult
-```
-
-### Core ValidationPipeline
-
-The shared `ValidationPipeline` from wire-core is used by both forms and inline table editing:
-
-```php
-use NyonCode\WireCore\Core\Validation\ValidationPipeline;
-use NyonCode\WireCore\Core\Validation\ValidationResult;
-
-$pipeline = new ValidationPipeline();
-
-$result = $pipeline->validate(
-    data: ['name' => '', 'email' => 'bad'],
-    rules: ['name' => 'required', 'email' => 'email'],
-    messages: ['name.required' => 'Name is mandatory'],
-    attributes: ['name' => 'Full Name'],
-);
-
-$result->passed();          // false
-$result->failed();          // true
-$result->errors();          // ['name' => ['Name is mandatory'], 'email' => [...]]
-$result->hasError('name');  // true
-$result->getError('name');  // ['Name is mandatory']
-$result->validatedData();   // [] (empty on failure)
-```
-
-### Validatable Contract
-
-Components can implement `Validatable` to participate in pipeline validation:
-
-```php
-use NyonCode\WireCore\Core\Validation\Contracts\Validatable;
-
-interface Validatable
-{
-    public function getValidationRules(): array;
-    public function getValidationMessages(): array;
-    public function getValidationAttributes(): array;
-}
-```
-
----
 
 ## Conditional Rules
 

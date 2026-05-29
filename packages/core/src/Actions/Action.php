@@ -109,7 +109,7 @@ class Action extends BaseAction
 
     public function getUrl(Model $record): ?string
     {
-        return $this->urlCallback ? call_user_func($this->urlCallback, $record) : null;
+        return $this->urlCallback ? ($this->urlCallback)($record) : null;
     }
 
     // ─── Rendering ──────────────────────────────────────────────

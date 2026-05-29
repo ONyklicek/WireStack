@@ -1,0 +1,79 @@
+name: Deploy Docs Site
+
+# Builds docs-site/dist and publishes it to the external GitHub Pages repo
+# NyonCode/wire-stack.github.io — same token-based pattern as split.yml.
+#
+# One-time setup:
+#   1. Reuse the existing SPLIT_TOKEN secret (a PAT with write access to the
+#      NyonCode org), or add a dedicated token under the same name. It must be
+#      able to push to NyonCode/wire-stack.github.io.
+#   2. (Optional) add TORCHLIGHT_TOKEN secret; otherwise the token committed
+#      in torchlight.config.cjs is used.
+#   3. In NyonCode/wire-stack.github.io → Settings → Pages → "Deploy from a
+#      branch" → branch: gh-pages, folder: / (root).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'docs-site/**'
+      - 'torchlight.config.cjs'
+      - '.github/workflows/deploy-docs.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-docs
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build & publish docs
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, curl, libxml, mbstring, zip, fileinfo
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install npm dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build static docs site
+        run: php docs-site/build.php
+
+      - name: Highlight code blocks (Torchlight)
+        env:
+          TORCHLIGHT_TOKEN: ${{ secrets.TORCHLIGHT_TOKEN }}
+        run: npm run docs:highlight
+
+      - name: Disable Jekyll processing
+        run: touch docs-site/dist/.nojekyll
+
+      - name: Publish to wire-stack.github.io
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.SPLIT_TOKEN }}
+          external_repository: NyonCode/wire-stack.github.io
+          publish_dir: ./docs-site/dist
+          publish_branch: gh-pages
+          force_orphan: true
+          user_name: "Ondřej Nyklíček"
+          user_email: "ondrejnyklicek@icloud.com"
+          commit_message: 'Deploy docs from ${{ github.sha }}'

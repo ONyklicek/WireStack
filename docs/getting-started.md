@@ -1,4 +1,10 @@
+---
+order: 20
+---
+
 # Getting Started
+
+This guide covers the production setup for Wire in a Laravel application.
 
 ## Requirements
 
@@ -30,13 +36,23 @@ composer require nyoncode/wire-forms
 composer require nyoncode/wire-core
 ```
 
-### Sortable plugin (drag & drop row reordering)
+### Sortable package (drag and drop row reordering)
 
 ```bash
 composer require nyoncode/wire-sortable
 ```
 
 Service providers register automatically via Laravel auto-discovery.
+
+## Production Checklist
+
+Before you render the first component, make sure all of these are true:
+
+- Livewire 3 is installed
+- Tailwind scans the Wire vendor views
+- your app defines a `primary` color
+- the main layout includes `@vite`, `@livewireStyles`, and `@livewireScripts`
+- the layout renders `<x-wire-notifications::toast-container />` if you want built-in toasts
 
 ## Tailwind CSS Configuration
 
@@ -94,10 +110,36 @@ module.exports = {
 
 > Without a `primary` color defined, buttons and other interactive elements will be invisible (white text on a transparent background).
 
+## Layout Template
+
+Your main layout must include Vite assets and Livewire. Add the notifications container if you use action feedback or toasts.
+
+```blade
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @livewireStyles
+</head>
+<body>
+    {{ $slot }}
+
+    <x-wire-notifications::toast-container />
+
+    @livewireScripts
+</body>
+</html>
+```
+
+Do not install Alpine separately. Livewire 3 already ships it.
+
 ## Config Publishing (optional)
 
 ```bash
 php artisan vendor:publish --tag=wire-core-config
+php artisan vendor:publish --tag=wire-forms-config
 php artisan vendor:publish --tag=wire-table-config
 php artisan vendor:publish --tag=wire-sortable-config
 ```
@@ -183,6 +225,8 @@ class UserTable extends Component
 </div>
 ```
 
+Next: [Columns](table/columns.md), [Filters](table/filters.md), [Actions](table/actions.md)
+
 ---
 
 ## Quick Start: Form
@@ -236,6 +280,27 @@ class EditUser extends Component
 </form>
 ```
 
+Next: [Field Reference](forms/fields/index.md), [Validation](forms/validation.md), [Save Lifecycle](forms/save-lifecycle.md)
+
+## Troubleshooting
+
+### Styles are missing
+
+- verify the Wire vendor paths are present in Tailwind content or `@source`
+- rebuild assets with `npm run build`
+- clear compiled views with `php artisan view:clear`
+
+### Components render without JavaScript behavior
+
+- confirm the layout includes `@livewireScripts`
+- remove any standalone Alpine bootstrap from `resources/js/app.js`
+
+### Notifications do not appear
+
+- confirm the layout renders `<x-wire-notifications::toast-container />`
+- verify your configured notification driver is valid
+- check whether the action actually sends a success or failure notification
+
 ---
 
 ## Development (monorepo)
@@ -262,9 +327,12 @@ composer analyse       # PHPStan level 6
 
 ## Next Steps
 
-- [Architecture](architecture.md) — understand the package structure
 - [Table columns](table/columns.md) — all 13 column types
 - [Form fields](forms/overview.md) — all field types and Form API
 - [Actions](core/actions.md) — row, bulk, header actions
-- [Plugin development](core/plugins.md) — extend the ecosystem
+- [Core plugins](core/plugins.md) — reusable app and package extensions
+- [Configuration](configuration.md) — config files and environment variables
+- [Authorization](authorization.md) — Gates, policies, permissions
+- [Table exports](table/exports.md) — CSV, Excel, PDF downloads
+- [Audit log](core/audit.md) — model change history
 - [Sortable rows](sortable/overview.md) — drag & drop row reordering

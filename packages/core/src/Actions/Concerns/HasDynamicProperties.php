@@ -6,6 +6,8 @@ namespace NyonCode\WireCore\Actions\Concerns;
 
 use Closure;
 use Illuminate\Support\Str;
+use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
  * Trait HasDynamicProperties
@@ -62,22 +64,22 @@ trait HasDynamicProperties
     public function getLabel(mixed $context = null): string
     {
         if ($this->labelCallback && $context) {
-            return call_user_func($this->labelCallback, $context);
+            return ($this->labelCallback)($context);
         }
 
         return $this->label ?? Str::headline($this->name);
     }
 
     /**
-     * Set color as string or Closure.
-     * Closure signature: fn(Model $record): string
+     * Set color as string, Color enum, or Closure.
+     * Closure signature: fn(Model $record): string|Color
      */
-    public function color(string|Closure|null $color): static
+    public function color(string|Color|Closure|null $color): static
     {
         if ($color instanceof Closure) {
             $this->colorCallback = $color;
         } else {
-            $this->color = $color;
+            $this->color = $color instanceof Color ? $color->value : $color;
             $this->colorCallback = null;
         }
 
@@ -90,10 +92,12 @@ trait HasDynamicProperties
     public function getColor(mixed $context = null): string
     {
         if ($this->colorCallback && $context) {
-            return call_user_func($this->colorCallback, $context);
+            $value = ($this->colorCallback)($context);
+
+            return $value instanceof Color ? $value->value : (string) $value;
         }
 
-        return $this->color ?? 'primary';
+        return $this->color ?? Color::Primary->value;
     }
 
     /**
@@ -118,22 +122,22 @@ trait HasDynamicProperties
     public function getTooltip(mixed $context = null): ?string
     {
         if ($this->tooltipCallback && $context) {
-            return call_user_func($this->tooltipCallback, $context);
+            return ($this->tooltipCallback)($context);
         }
 
         return $this->tooltip;
     }
 
     /**
-     * Set icon as string or Closure.
-     * Closure signature: fn(Model $record): ?string
+     * Set icon as string, Icon enum, or Closure.
+     * Closure signature: fn(Model $record): string|Icon|null
      */
-    public function icon(string|Closure|null $icon, ?string $position = 'before'): static
+    public function icon(string|Icon|Closure|null $icon, ?string $position = 'before'): static
     {
         if ($icon instanceof Closure) {
             $this->iconCallback = $icon;
         } else {
-            $this->icon = $icon;
+            $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
             $this->iconCallback = null;
         }
         $this->iconPosition = $position;
@@ -147,7 +151,13 @@ trait HasDynamicProperties
     public function getIcon(mixed $context = null): ?string
     {
         if ($this->iconCallback && $context) {
-            return call_user_func($this->iconCallback, $context);
+            $value = ($this->iconCallback)($context);
+
+            if ($value instanceof Icon) {
+                return $value->value();
+            }
+
+            return $value !== null ? (string) $value : null;
         }
 
         return $this->icon;
@@ -175,7 +185,7 @@ trait HasDynamicProperties
     public function getSize(mixed $context = null): string
     {
         if ($this->sizeCallback && $context) {
-            return call_user_func($this->sizeCallback, $context);
+            return ($this->sizeCallback)($context);
         }
 
         return $this->size ?? 'sm';
@@ -207,9 +217,9 @@ trait HasDynamicProperties
     public function getExtraAttributes(mixed $context = null): array
     {
         if ($this->extraAttributesCallback && $context) {
-            return call_user_func($this->extraAttributesCallback, $context);
+            return ($this->extraAttributesCallback)($context);
         }
 
-        return $this->extraAttributes ?? [];
+        return $this->extraAttributes;
     }
 }

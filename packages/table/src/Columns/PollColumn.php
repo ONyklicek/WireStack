@@ -6,6 +6,8 @@ namespace NyonCode\WireTable\Columns;
 
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 
 class PollColumn extends Column
 {
@@ -123,11 +125,14 @@ class PollColumn extends Column
     }
 
     /**
-     * @param  array<string, string>  $colors
+     * @param  array<string, string|Color>  $colors
      */
     public function colors(array $colors): static
     {
-        $this->colors = $colors;
+        $this->colors = array_map(
+            static fn (string|Color $color): string => $color instanceof Color ? $color->value : $color,
+            $colors,
+        );
 
         return $this;
     }
@@ -313,25 +318,31 @@ class PollColumn extends Column
     }
 
     /**
-     * Set icons for different states.
-     *
-     * @param  array<string, string>|Closure  $icons
+     * @param  array<string, string|Icon>|Closure  $icons
      */
     public function stateIcons(array|Closure $icons): static
     {
-        $this->stateIcons = $icons;
+        $this->stateIcons = is_array($icons)
+            ? array_map(
+                static fn (string|Icon $icon): string => $icon instanceof Icon ? $icon->value() : $icon,
+                $icons,
+            )
+            : $icons;
 
         return $this;
     }
 
     /**
-     * Set colors for different states.
-     *
-     * @param  array<string, string>|Closure  $colors
+     * @param  array<string, string|Color>|Closure  $colors
      */
     public function stateColors(array|Closure $colors): static
     {
-        $this->stateColors = $colors;
+        $this->stateColors = is_array($colors)
+            ? array_map(
+                static fn (string|Color $color): string => $color instanceof Color ? $color->value : $color,
+                $colors,
+            )
+            : $colors;
 
         return $this;
     }
@@ -637,7 +648,7 @@ class PollColumn extends Column
     public function getColorForState(mixed $state): string
     {
         if ($this->colorCallback) {
-            return call_user_func($this->colorCallback, $state) ?? 'gray';
+            return ($this->colorCallback)($state) ?? 'gray';
         }
 
         return $this->colors[$state] ?? 'gray';

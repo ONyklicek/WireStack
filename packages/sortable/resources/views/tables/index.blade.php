@@ -13,6 +13,20 @@
 @endphp
 
 @if($hasSortableFeatures)
+    @php
+        // Apply user-defined column order before the inner view renders so that
+        // $table->getColumns() (called by wire-table::tables.index in multiple
+        // places) returns columns in the persisted order instead of the original
+        // PHP-defined order. Without this, Livewire's morph undoes the visual
+        // reordering on every re-render.
+        if ($isColumnReorderable && method_exists($component, 'getReorderableColumns')) {
+            $reorderedColumns = $component->getReorderableColumns();
+            if (!empty($reorderedColumns)) {
+                $table->columns($reorderedColumns);
+            }
+        }
+    @endphp
+
     <div
             x-data="wireSortable({
                 rowReorderable: {{ $isReorderable ? 'true' : 'false' }},

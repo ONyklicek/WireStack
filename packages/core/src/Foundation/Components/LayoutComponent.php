@@ -72,9 +72,9 @@ abstract class LayoutComponent implements Htmlable
     }
 
     /**
-     * Propagate state path to all child components.
+     * Propagate state path (and optionally live mode) to all child components.
      */
-    public function prepareChildren(string $parentPath = ''): void
+    public function prepareChildren(string $parentPath = '', bool $live = false): void
     {
         $basePath = $this->statePath
             ? ($parentPath ? "{$parentPath}.{$this->statePath}" : $this->statePath)
@@ -82,9 +82,14 @@ abstract class LayoutComponent implements Htmlable
 
         foreach ($this->schema as $component) {
             if ($component instanceof self) {
-                $component->prepareChildren($basePath);
-            } elseif ($component instanceof Component && $basePath) {
-                $component->statePath($basePath);
+                $component->prepareChildren($basePath, $live);
+            } elseif ($component instanceof Component) {
+                if ($basePath) {
+                    $component->statePath($basePath);
+                }
+                if ($live && method_exists($component, 'live')) {
+                    $component->live();
+                }
             }
         }
     }

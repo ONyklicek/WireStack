@@ -2,18 +2,22 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Core\Query\Contracts\QueryPipe;
+use NyonCode\WireCore\Core\Query\QueryPlan;
+use NyonCode\WireSortable\SortablePlugin;
+use NyonCode\WireSortable\SortableTable;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Concerns\TableQueryService;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Table;
-use NyonCode\WireTable\Tests\TestCase;
-
-uses(TestCase::class);
 
 // ─── Test Models ─────────────────────────────────────────────────────────────
 
@@ -27,11 +31,23 @@ class TqsUser extends Model
     {
         return $this->belongsTo(TqsCompany::class, 'company_id');
     }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(TqsOrder::class, 'user_id');
+    }
 }
 
 class TqsCompany extends Model
 {
     protected $table = 'tqs_companies';
+
+    protected $guarded = [];
+}
+
+class TqsOrder extends Model
+{
+    protected $table = 'tqs_orders';
 
     protected $guarded = [];
 }
@@ -50,19 +66,32 @@ beforeEach(function () {
         $table->string('name');
         $table->string('email');
         $table->integer('age')->default(0);
+        $table->integer('position')->default(0);
         $table->foreignId('company_id')->nullable();
+        $table->timestamps();
+    });
+
+    Schema::create('tqs_orders', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('user_id');
+        $table->integer('total');
         $table->timestamps();
     });
 
     TqsCompany::create(['id' => 1, 'name' => 'Acme Corp']);
     TqsCompany::create(['id' => 2, 'name' => 'Evil Corp']);
 
-    TqsUser::create(['id' => 1, 'name' => 'Alice', 'email' => 'alice@example.com', 'age' => 30, 'company_id' => 1]);
-    TqsUser::create(['id' => 2, 'name' => 'Bob', 'email' => 'bob@example.com', 'age' => 25, 'company_id' => 2]);
-    TqsUser::create(['id' => 3, 'name' => 'Charlie', 'email' => 'charlie@example.com', 'age' => 35, 'company_id' => 1]);
+    TqsUser::create(['id' => 1, 'name' => 'Alice', 'email' => 'alice@example.com', 'age' => 30, 'position' => 2, 'company_id' => 1]);
+    TqsUser::create(['id' => 2, 'name' => 'Bob', 'email' => 'bob@example.com', 'age' => 25, 'position' => 3, 'company_id' => 2]);
+    TqsUser::create(['id' => 3, 'name' => 'Charlie', 'email' => 'charlie@example.com', 'age' => 35, 'position' => 1, 'company_id' => 1]);
+
+    TqsOrder::create(['id' => 1, 'user_id' => 1, 'total' => 10]);
+    TqsOrder::create(['id' => 2, 'user_id' => 1, 'total' => 20]);
+    TqsOrder::create(['id' => 3, 'user_id' => 2, 'total' => 50]);
 });
 
 afterEach(function () {
+    Schema::dropIfExists('tqs_orders');
     Schema::dropIfExists('tqs_users');
     Schema::dropIfExists('tqs_companies');
 });
@@ -212,7 +241,7 @@ it('applies basic filter', function () {
     $query = $service->buildQuery(
         baseQuery: TqsUser::query(),
         table: $table,
-        filterValues: ['company_id' => 1],
+        filterValues: ['company_id' => ['value' => 1]],
     );
 
     $results = $query->get();
@@ -234,7 +263,7 @@ it('handles custom filter query callbacks', function () {
     $query = $service->buildQuery(
         baseQuery: TqsUser::query(),
         table: $table,
-        filterValues: ['age_min' => 30],
+        filterValues: ['age_min' => ['value' => 30]],
     );
 
     $results = $query->get();
@@ -265,6 +294,34 @@ it('handles relation columns with eager loading', function () {
     expect($hasJoinsOrEagerLoads)->toBeTrue();
 });
 
+// ─── Aggregate Columns ──────────────────────────────────────────────────────
+
+it('applies aggregate columns to the built query', function () {
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->columns([
+            Column::make('orders_count')->counts('orders'),
+            Column::make('orders_sum_total')->sums('orders', 'total'),
+            Column::make('orders_avg_total')->averages('orders', 'total'),
+            Column::make('orders_min_total')->mins('orders', 'total'),
+            Column::make('orders_max_total')->maxes('orders', 'total'),
+        ]);
+
+    $service = new TableQueryService;
+    $query = $service->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+    );
+
+    $alice = $query->where('name', 'Alice')->firstOrFail();
+
+    expect((int) $alice->orders_count)->toBe(2)
+        ->and((float) $alice->orders_sum_total)->toBe(30.0)
+        ->and((float) $alice->orders_avg_total)->toBe(15.0)
+        ->and((float) $alice->orders_min_total)->toBe(10.0)
+        ->and((float) $alice->orders_max_total)->toBe(20.0);
+});
+
 // ─── Combined Operations ─────────────────────────────────────────────────────
 
 it('handles search + filter + sort together', function () {
@@ -283,7 +340,7 @@ it('handles search + filter + sort together', function () {
         baseQuery: TqsUser::query(),
         table: $table,
         search: 'example.com',
-        filterValues: ['company_id' => 1],
+        filterValues: ['company_id' => ['value' => 1]],
         sortColumn: 'name',
         sortDirection: 'asc',
     );
@@ -330,4 +387,152 @@ it('ignores sort for non-sortable columns', function () {
     // Should still work, just no ordering
     $results = $query->get();
     expect($results)->toHaveCount(3);
+});
+
+// ─── Plugin Runtime Wiring ──────────────────────────────────────────────────
+
+it('lets table.configuring hooks modify columns before planning', function () {
+    $manager = app(PluginManager::class);
+    $manager->hook('table.configuring', function (array $payload) {
+        $payload['columns'] = [
+            Column::make('name')->searchable(),
+        ];
+
+        return $payload;
+    });
+
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->columns([]);
+
+    $service = new TableQueryService;
+    $query = $service->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+        search: 'Alice',
+    );
+
+    $results = $query->get();
+
+    expect($results)->toHaveCount(1)
+        ->and($results->first()->name)->toBe('Alice')
+        ->and($service->getLastPlan()?->hasSearch())->toBeTrue();
+});
+
+it('lets table.querying hooks force sort before the query is planned', function () {
+    $manager = app(PluginManager::class);
+    $manager->hook('table.querying', function (array $payload) {
+        $payload['force_sort_column'] = 'position';
+        $payload['force_sort_direction'] = 'asc';
+
+        return $payload;
+    });
+
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->columns([
+            Column::make('name')->sortable(),
+            Column::make('position')->sortable(),
+        ]);
+
+    $service = new TableQueryService;
+    $query = $service->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+        sortColumn: 'name',
+        sortDirection: 'asc',
+    );
+
+    $results = $query->get();
+
+    expect($results->pluck('name')->all())->toBe(['Charlie', 'Alice', 'Bob']);
+});
+
+it('runs plugin query pipes after the default query executor pipes', function () {
+    $manager = app(PluginManager::class);
+    $manager->addQueryPipe('adult-filter', new class implements QueryPipe
+    {
+        public function handle(Builder $builder, QueryPlan $plan, Closure $next): Builder
+        {
+            $builder = $next($builder, $plan);
+
+            return $builder->where('age', '>=', 30);
+        }
+    });
+
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->columns([
+            Column::make('name')->sortable(),
+        ]);
+
+    $service = new TableQueryService;
+    $query = $service->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+        sortColumn: 'name',
+        sortDirection: 'asc',
+    );
+
+    expect($query->pluck('name')->all())->toBe(['Alice', 'Charlie']);
+});
+
+it('dispatches table.queried hooks with the built query and plan', function () {
+    $manager = app(PluginManager::class);
+    $observed = [];
+
+    $manager->hook('table.queried', function (array $payload) use (&$observed) {
+        $observed['query'] = $payload['query'];
+        $observed['plan'] = $payload['plan'];
+
+        return $payload;
+    });
+
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->columns([
+            Column::make('name')->sortable(),
+        ]);
+
+    $service = new TableQueryService;
+    $query = $service->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+        sortColumn: 'name',
+    );
+
+    expect($observed['query'])->toBe($query)
+        ->and($observed['plan'])->toBe($service->getLastPlan());
+});
+
+it('uses SortablePlugin force sort overrides while a table is reordering', function () {
+    $manager = app(PluginManager::class);
+    $manager->register(new SortablePlugin);
+
+    $component = new class
+    {
+        public function isTableReordering(): bool
+        {
+            return true;
+        }
+    };
+
+    $table = SortableTable::make()
+        ->model(TqsUser::class)
+        ->reorderable('position')
+        ->livewireComponent($component)
+        ->columns([
+            Column::make('name')->sortable(),
+            Column::make('position')->sortable(),
+        ]);
+
+    $service = new TableQueryService;
+    $query = $service->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+        sortColumn: 'name',
+        sortDirection: 'asc',
+    );
+
+    expect($query->pluck('name')->all())->toBe(['Charlie', 'Alice', 'Bob']);
 });

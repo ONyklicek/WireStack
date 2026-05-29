@@ -6,7 +6,10 @@ namespace NyonCode\WireCore\Actions\Concerns;
 
 use Closure;
 use Livewire\Component;
+use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireForms\Forms\Form;
 
 /**
@@ -16,6 +19,10 @@ use NyonCode\WireForms\Forms\Form;
  */
 trait HasModal
 {
+    protected const TABLE_ACTION_FORM_STATE_PATH = 'tableState.modal.action.formData';
+
+    protected const LEGACY_ACTION_FORM_STATE_PATH = 'actionModalFormData';
+
     protected bool $hasModal = false;
 
     protected ?string $modalHeading = null;
@@ -103,10 +110,10 @@ trait HasModal
         return $this;
     }
 
-    public function modalIcon(?string $icon, ?string $color = null): static
+    public function modalIcon(string|Icon|null $icon, string|Color|null $color = null): static
     {
-        $this->modalIcon = $icon;
-        $this->modalIconColor = $color;
+        $this->modalIcon = $icon instanceof Icon ? $icon->value() : $icon;
+        $this->modalIconColor = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
@@ -258,8 +265,8 @@ trait HasModal
     // Getters
     public function getModalHeading(mixed $context = null): string
     {
-        if ($this->modalHeadingCallback && $context) {
-            return call_user_func($this->modalHeadingCallback, $context);
+        if ($this->modalHeadingCallback !== null && $context !== null) {
+            return ($this->modalHeadingCallback)($context);
         }
 
         return $this->modalHeading ?? Trans::get('wire-core::actions.confirm_heading');
@@ -267,8 +274,8 @@ trait HasModal
 
     public function getModalDescription(mixed $context = null): ?string
     {
-        if ($this->modalDescriptionCallback && $context) {
-            return call_user_func($this->modalDescriptionCallback, $context);
+        if ($this->modalDescriptionCallback !== null && $context !== null) {
+            return ($this->modalDescriptionCallback)($context);
         }
 
         return $this->modalDescription ?? ($this->doesRequireConfirmation() ? Trans::get('wire-core::actions.confirm_description') : null);
@@ -286,7 +293,7 @@ trait HasModal
 
     public function getModalIconColor(): string
     {
-        return $this->modalIconColor ?? 'warning';
+        return $this->modalIconColor ?? Color::Warning->value;
     }
 
     public function getModalSubmitActionLabel(): string
@@ -350,7 +357,7 @@ trait HasModal
         $form = null;
 
         if ($this->formInstance instanceof Closure) {
-            $resolved = call_user_func($this->formInstance, $context);
+            $resolved = ($this->formInstance)($context);
             if ($resolved instanceof Form) {
                 $form = $resolved;
             } elseif (is_array($resolved)) {
@@ -364,17 +371,19 @@ trait HasModal
             return null;
         }
 
-        $form->statePath('actionModalFormData');
+        $statePath = $this->resolveModalFormStatePath($livewire);
+        $form->statePath($statePath);
+        $form->live();
 
         if ($livewire) {
             $form->livewire($livewire);
         }
 
         // Fill form with defaults from fillFormUsing callback only if Livewire state is empty
-        if ($this->fillFormUsing && $context && $livewire) {
-            $currentState = data_get($livewire, 'actionModalFormData', []);
+        if ($this->fillFormUsing !== null && $context !== null && $livewire !== null) {
+            $currentState = $this->getCurrentModalFormState($livewire, $statePath);
             if (empty($currentState)) {
-                $defaults = call_user_func($this->fillFormUsing, $context);
+                $defaults = ($this->fillFormUsing)($context);
                 if (is_array($defaults) && ! empty($defaults)) {
                     $form->fill($defaults);
                 }
@@ -382,6 +391,35 @@ trait HasModal
         }
 
         return $form;
+    }
+
+    protected function resolveModalFormStatePath(?Component $livewire = null): string
+    {
+        if ($livewire !== null
+            && isset($livewire->tableState)
+            && $livewire->tableState instanceof StateContainer) {
+            return self::TABLE_ACTION_FORM_STATE_PATH;
+        }
+
+        return self::LEGACY_ACTION_FORM_STATE_PATH;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function getCurrentModalFormState(Component $livewire, string $statePath): array
+    {
+        if ($statePath === self::TABLE_ACTION_FORM_STATE_PATH
+            && isset($livewire->tableState)
+            && $livewire->tableState instanceof StateContainer) {
+            $state = $livewire->tableState->get('modal.action.formData', []);
+
+            return is_array($state) ? $state : [];
+        }
+
+        $state = data_get($livewire, $statePath, []);
+
+        return is_array($state) ? $state : [];
     }
 
     /**
@@ -405,8 +443,8 @@ trait HasModal
      */
     public function getRawFormValidation(mixed $context = null): array
     {
-        if ($this->modalFormValidationCallback && $context) {
-            return call_user_func($this->modalFormValidationCallback, $context);
+        if ($this->modalFormValidationCallback !== null && $context !== null) {
+            return ($this->modalFormValidationCallback)($context);
         }
 
         return $this->modalFormValidation ?? [];
@@ -431,8 +469,8 @@ trait HasModal
      */
     public function getValidationMessages(mixed $context = null): array
     {
-        $messages = ($this->modalFormValidationMessagesCallback && $context)
-            ? call_user_func($this->modalFormValidationMessagesCallback, $context)
+        $messages = ($this->modalFormValidationMessagesCallback !== null && $context !== null)
+            ? ($this->modalFormValidationMessagesCallback)($context)
             : ($this->modalFormValidationMessages ?? []);
 
         return $this->prefixValidationRules($messages);
@@ -443,8 +481,8 @@ trait HasModal
      */
     public function getRawValidationMessages(mixed $context = null): array
     {
-        if ($this->modalFormValidationMessagesCallback && $context) {
-            return call_user_func($this->modalFormValidationMessagesCallback, $context);
+        if ($this->modalFormValidationMessagesCallback !== null && $context !== null) {
+            return ($this->modalFormValidationMessagesCallback)($context);
         }
 
         return $this->modalFormValidationMessages ?? [];
@@ -455,8 +493,8 @@ trait HasModal
      */
     public function getValidationAttributes(mixed $context = null): array
     {
-        $attributes = ($this->modalFormValidationAttributesCallback && $context)
-            ? call_user_func($this->modalFormValidationAttributesCallback, $context)
+        $attributes = ($this->modalFormValidationAttributesCallback !== null && $context !== null)
+            ? ($this->modalFormValidationAttributesCallback)($context)
             : ($this->modalFormValidationAttributes ?? []);
 
         return $this->prefixValidationRules($attributes);
@@ -467,8 +505,8 @@ trait HasModal
      */
     public function getRawValidationAttributes(mixed $context = null): array
     {
-        if ($this->modalFormValidationAttributesCallback && $context) {
-            return call_user_func($this->modalFormValidationAttributesCallback, $context);
+        if ($this->modalFormValidationAttributesCallback !== null && $context !== null) {
+            return ($this->modalFormValidationAttributesCallback)($context);
         }
 
         return $this->modalFormValidationAttributes ?? [];
@@ -479,8 +517,8 @@ trait HasModal
      */
     public function getFormDefaults(mixed $context = null): array
     {
-        if ($this->fillFormUsing && $context) {
-            return call_user_func($this->fillFormUsing, $context);
+        if ($this->fillFormUsing !== null && $context !== null) {
+            return ($this->fillFormUsing)($context);
         }
 
         return [];

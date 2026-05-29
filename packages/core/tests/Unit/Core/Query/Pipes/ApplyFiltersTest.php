@@ -9,9 +9,6 @@ use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Core\Query\FilterClause;
 use NyonCode\WireCore\Core\Query\Pipes\ApplyFilters;
 use NyonCode\WireCore\Core\Query\QueryPlan;
-use NyonCode\WireCore\Tests\TestCase;
-
-uses(TestCase::class);
 
 beforeEach(function () {
     Schema::create('filter_test_users', function (Blueprint $table) {

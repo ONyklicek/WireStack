@@ -279,6 +279,11 @@ class DateTimePicker extends Field
         };
     }
 
+    public function getStateType(): string
+    {
+        return 'datetime';
+    }
+
     protected function viewName(): string
     {
         return 'wire-forms::components.date-time-picker';

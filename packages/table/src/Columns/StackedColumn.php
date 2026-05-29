@@ -144,14 +144,10 @@ class StackedColumn extends Column
     public function searchable(bool|array $searchable = true, ?Closure $query = null): static
     {
         if (is_array($searchable)) {
-            $this->searchable = true;
             $this->searchColumns = $searchable;
+            parent::searchable(true, $query);
         } else {
-            $this->searchable = $searchable;
-        }
-
-        if ($query !== null) {
-            $this->searchCallback = $query;
+            parent::searchable($searchable, $query);
         }
 
         return $this;
@@ -214,7 +210,7 @@ class StackedColumn extends Column
 
         // Apply formatters if set
         if ($primaryValue !== null && $this->formatStateUsing) {
-            $primaryValue = call_user_func($this->formatStateUsing, $primaryValue, $record);
+            $primaryValue = ($this->formatStateUsing)($primaryValue, $record);
         }
 
         $avatarHtml = '';
@@ -299,7 +295,7 @@ class StackedColumn extends Column
         // Custom URL generator
         if ($this->avatarUrl) {
             if (is_callable($this->avatarUrl)) {
-                return call_user_func($this->avatarUrl, $record);
+                return ($this->avatarUrl)($record);
             }
 
             return $this->avatarUrl;

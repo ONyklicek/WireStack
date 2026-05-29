@@ -41,8 +41,8 @@ it('can set min and max date', function () {
 it('has default labels from translation', function () {
     $filter = DateFilter::make('created_at');
 
-    expect($filter->getFromLabel())->toBe('from')
-        ->and($filter->getToLabel())->toBe('to');
+    expect($filter->getFromLabel())->toBe('From')
+        ->and($filter->getToLabel())->toBe('To');
 });
 
 it('can set custom labels', function () {

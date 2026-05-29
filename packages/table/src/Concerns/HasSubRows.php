@@ -248,7 +248,7 @@ trait HasSubRows
         $query = $record->{$relation}();
 
         if ($this->subRowQueryCallback) {
-            $query = call_user_func($this->subRowQueryCallback, $query);
+            $query = ($this->subRowQueryCallback)($query);
         }
 
         if ($this->subRowsLimit) {

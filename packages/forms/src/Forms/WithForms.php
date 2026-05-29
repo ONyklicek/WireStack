@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Forms;
 
 use InvalidArgumentException;
+use Livewire\Component;
 use ReflectionMethod;
 use ReflectionNamedType;
 
 /**
+ * @phpstan-require-extends Component
+ *
  * Livewire trait for form integration.
  *
  * Supports single form ($this->form) and multi-form ($this->profileForm).
@@ -155,6 +158,47 @@ trait WithForms
         }
 
         return $returnType->getName() === Form::class;
+    }
+
+    // ─── Repeater actions ─────────────────────────────────────────
+
+    public function addRepeaterItem(string $statePath): void
+    {
+        $items = data_get($this, $statePath, []);
+        if (! is_array($items)) {
+            $items = [];
+        }
+
+        $items[] = [];
+        data_set($this, $statePath, $items);
+    }
+
+    public function removeRepeaterItem(string $statePath, int $index): void
+    {
+        $items = data_get($this, $statePath, []);
+        if (! is_array($items)) {
+            return;
+        }
+
+        unset($items[$index]);
+        data_set($this, $statePath, array_values($items));
+    }
+
+    public function reorderRepeaterItems(string $statePath, array $order): void
+    {
+        $items = data_get($this, $statePath, []);
+        if (! is_array($items)) {
+            return;
+        }
+
+        $reordered = [];
+        foreach ($order as $oldIndex) {
+            if (isset($items[$oldIndex])) {
+                $reordered[] = $items[$oldIndex];
+            }
+        }
+
+        data_set($this, $statePath, $reordered);
     }
 
     private function validateFormCoexistence(): void

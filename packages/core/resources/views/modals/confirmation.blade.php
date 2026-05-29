@@ -3,7 +3,7 @@
     x-data="{ show: @entangle($attributes->wire('model')) }"
     x-show="show"
     x-cloak
-    @if($closeOnEscape) x-on:keydown.escape.window="show = false" @endif
+    @if($closeOnEscape) x-on:keydown.escape.window="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}" @endif
     class="fixed inset-0 z-50 overflow-y-auto"
     @if($id) id="{{ $id }}" @endif
     aria-labelledby="confirmation-modal-title"
@@ -21,7 +21,7 @@
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
             class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/80 backdrop-blur-sm transition-opacity"
-            @if($closeOnClickAway) @click="show = false" @endif
+            @if($closeOnClickAway) @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}" @endif
         ></div>
 
         <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
@@ -88,7 +88,7 @@
                 {{-- Cancel / Close button --}}
                 <button
                     type="button"
-                    @click="show = false"
+                    @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}"
                     class="mt-3 inline-flex w-full justify-center rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 sm:mt-0 sm:w-auto"
                 >
                     {{ $cancelLabel }}

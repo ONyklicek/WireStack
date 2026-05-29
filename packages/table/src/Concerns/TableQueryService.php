@@ -7,15 +7,25 @@ namespace NyonCode\WireTable\Concerns;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use NyonCode\WireCore\Core\Capabilities\CapabilityResolver;
+use NyonCode\WireCore\Core\Metadata\AccessorMetadata;
+use NyonCode\WireCore\Core\Metadata\ColumnMetadata;
 use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
+use NyonCode\WireCore\Core\Plugin\Hooks\TableConfiguringPayload;
+use NyonCode\WireCore\Core\Plugin\Hooks\TableQueriedPayload;
+use NyonCode\WireCore\Core\Plugin\Hooks\TableQueryingPayload;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Core\Query\Contracts\QueryPipe;
 use NyonCode\WireCore\Core\Query\FilterDefinition;
 use NyonCode\WireCore\Core\Query\JoinRegistry;
 use NyonCode\WireCore\Core\Query\QueryExecutor;
 use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireCore\Core\Query\QueryPlanner;
 use NyonCode\WireCore\Core\Query\SortDefinition;
+use NyonCode\WireCore\Core\Relations\RelationPath;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Filters\Filter;
+use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Table;
 
 /**
@@ -32,6 +42,11 @@ final class TableQueryService
     private ?QueryPlan $lastPlan = null;
 
     private ?MetadataRegistry $registry = null;
+
+    private ?string $currentModelClass = null;
+
+    /** @var array<class-string<Model>, true> */
+    private array $lazilyRegistered = [];
 
     /**
      * Build the query for a table using the Core query infrastructure.
@@ -62,12 +77,37 @@ final class TableQueryService
         array $columnFilterValues = [],
     ): Builder {
         $modelClass = get_class($baseQuery->getModel());
+        $this->currentModelClass = $modelClass;
+        $this->lazilyRegistered = [];
         $this->registry = $this->buildMetadataRegistry($baseQuery, $modelClass, $table);
+        $pluginManager = $this->resolvePluginManager();
 
         $columns = $table->getColumns();
         $filters = $table->getFilters();
 
+        // ── 0. Plugin hook: table.configuring ──
+        if ($pluginManager !== null) {
+            $payload = $pluginManager->runHook('table.configuring', [
+                'table' => $table,
+                'columns' => $columns,
+                'filters' => $filters,
+            ]);
+            $columns = $payload['columns'] ?? $columns;
+            $filters = $payload['filters'] ?? $filters;
+
+            // Typed hook (parallel API — both array and typed hooks run)
+            $typedPayload = $pluginManager->runTypedHook(
+                'table.configuring',
+                new TableConfiguringPayload($table, $columns, $filters),
+            );
+            $columns = $typedPayload->columns;
+            $filters = $typedPayload->filters;
+        }
+
         // ── 1. Collect custom callbacks that bypass the planner ──
+        // WARNING: custom callbacks receive the raw query builder. Using orWhere()
+        // inside a callback can escape the table's base authorization scope.
+        // Always use $query->where(fn($q) => $q->...) to scope conditions safely.
         $customSearchCallbacks = [];
         $customSortCallback = null;
         $customFilterCallbacks = [];
@@ -88,15 +128,27 @@ final class TableQueryService
 
         // Collect filter custom query callbacks
         foreach ($filters as $filter) {
-            $value = $filterValues[$filter->getName()] ?? null;
-            if ($value === null || $value === '' || $value === []) {
+            $raw = $filterValues[$filter->getName()] ?? null;
+            if ($raw === null || $raw === '' || $raw === []) {
                 continue;
             }
             if (! $filter->canView()) {
                 continue;
             }
+
+            $value = $filter->extractValue($raw);
+            if ($value === null || $value === '' || $value === []) {
+                continue;
+            }
+
             if ($filter->getQueryCallback() !== null) {
                 $customFilterCallbacks[] = ['callback' => $filter->getQueryCallback(), 'value' => $value];
+            } elseif (is_array($value) && ! $filter->isMultiple()) {
+                // Multi-field filter (e.g. NumberRange, DateFilter range) — route through apply()
+                $customFilterCallbacks[] = [
+                    'callback' => fn (Builder $q, mixed $v) => $filter->apply($q, $v),
+                    'value' => $value,
+                ];
             }
         }
 
@@ -105,6 +157,28 @@ final class TableQueryService
         $plannerFilters = $this->buildPlannerFilters($filters, $filterValues, $columnFilterValues, $columns);
         $plannerSorts = $this->buildPlannerSorts($sortColumn, $sortDirection, $columns, $customSortCallback !== null);
         $searchTerm = ! empty($search) && ! empty($customSearchCallbacks) ? null : $search;
+
+        // ── 2.5 Plugin hook: table.querying (pre-plan, can force sort override) ──
+        if ($pluginManager !== null) {
+            $queryingPayload = $pluginManager->runHook('table.querying', [
+                'table' => $table,
+                'columns' => $columns,
+                'filters' => $filters,
+                'sort_column' => $sortColumn,
+                'sort_direction' => $sortDirection,
+                'search' => $search,
+            ]);
+
+            // Plugins can force sort override (e.g. SortablePlugin in reorder mode)
+            if (isset($queryingPayload['force_sort_column'])) {
+                $forceDirection = $queryingPayload['force_sort_direction'] ?? 'asc';
+                $plannerSorts = [SortDefinition::make(
+                    column: $queryingPayload['force_sort_column'],
+                    direction: in_array($forceDirection, ['asc', 'desc'], true) ? $forceDirection : 'asc',
+                )];
+                $customSortCallback = null;
+            }
+        }
 
         // ── 3. Plan ──
         $joinRegistry = new JoinRegistry;
@@ -117,9 +191,38 @@ final class TableQueryService
             search: ! empty($search) ? $searchTerm : null,
         );
 
-        // ── 4. Execute plan ──
+        // ── 3.5 Typed plugin hook: table.querying (post-plan, pre-execute) ──
+        // Plugins that only need to observe the finished plan (e.g. for logging or
+        // read-only inspection) may use this typed hook.
+        //
+        // NOTE: Do NOT use forceSortColumn here. Sort overrides must go through the
+        // array-based table.querying hook (step 2.5 above) so they are applied
+        // BEFORE the first plan() call. Setting forceSortColumn in the typed hook
+        // would require re-running the full planner a second time.
+        if ($pluginManager !== null) {
+            $pluginManager->runTypedHook(
+                'table.querying',
+                new TableQueryingPayload($table, $this->lastPlan, $baseQuery),
+            );
+        }
+
+        // ── 4. Execute plan (with plugin pipes appended) ──
         $executor = new QueryExecutor;
+
+        if ($pluginManager !== null) {
+            $pluginPipes = $pluginManager->getQueryPipes();
+            if ($pluginPipes !== []) {
+                $executor = $executor->withPipes([
+                    ...$this->getDefaultExecutorPipes($executor, $baseQuery, $searchTerm),
+                    ...array_values($pluginPipes),
+                ]);
+            }
+        }
+
         $query = $executor->execute($baseQuery, $this->lastPlan, $searchTerm);
+
+        // ── 4.5 Apply aggregate subqueries (withCount, withSum, etc.) ──
+        $query = $this->applyAggregates($query, $columns);
 
         // ── 5. Apply custom callbacks (these bypass the planner) ──
 
@@ -158,6 +261,20 @@ final class TableQueryService
             }
         }
 
+        // ── 6. Plugin hook: table.queried (post-execution observation) ──
+        if ($pluginManager !== null) {
+            $pluginManager->runHook('table.queried', [
+                'table' => $table,
+                'query' => $query,
+                'plan' => $this->lastPlan,
+            ]);
+
+            $pluginManager->runTypedHook(
+                'table.queried',
+                new TableQueriedPayload($table, $query, $this->lastPlan),
+            );
+        }
+
         return $query;
     }
 
@@ -176,6 +293,29 @@ final class TableQueryService
     public function getLastRegistry(): ?MetadataRegistry
     {
         return $this->registry;
+    }
+
+    /**
+     * Resolve the PluginManager if it is registered in the container.
+     */
+    private function resolvePluginManager(): ?PluginManager
+    {
+        if (! app()->bound(PluginManager::class)) {
+            return null;
+        }
+
+        return app(PluginManager::class);
+    }
+
+    /**
+     * Get default executor pipes to merge with plugin pipes.
+     *
+     * @param  Builder<Model>  $builder
+     * @return array<int, QueryPipe>
+     */
+    private function getDefaultExecutorPipes(QueryExecutor $executor, Builder $builder, ?string $searchTerm): array
+    {
+        return $executor->getDefaultPipes($builder, $searchTerm);
     }
 
     /**
@@ -218,7 +358,7 @@ final class TableQueryService
         }
 
         foreach ($table->getFilters() as $filter) {
-            if (method_exists($filter, 'getRelation') && $filter->getRelation()) {
+            if ($filter->getRelation()) {
                 $relation = $filter->getRelation();
                 if (! in_array($relation, $relations, true)) {
                     $relations[] = $relation;
@@ -261,15 +401,91 @@ final class TableQueryService
 
     /**
      * Convert Column objects to DataComponent[] for the planner.
-     * Only includes columns that participate in query planning (searchable/sortable).
+     *
+     * Auto-resolves capabilities from MetadataRegistry so columns backed by
+     * a real DB column inherit Searchable/Sortable/Filterable without the user
+     * needing to call ->searchable()->sortable() explicitly.
+     *
+     * Supports dot-notation relation chains (e.g., "company.name") by walking
+     * the registry to the terminal model and reading its column/accessor metadata.
      *
      * @param  array<int, Column>  $columns
      * @return array<int, Column>
      */
     private function buildPlannerColumns(array $columns): array
     {
-        // The planner needs all columns to plan eager loads and joins
+        if ($this->registry === null || $this->currentModelClass === null) {
+            return $columns;
+        }
+
+        $resolver = new CapabilityResolver;
+
+        foreach ($columns as $column) {
+            [$columnMeta, $accessorMeta] = $this->resolveColumnMeta($column->getName());
+
+            if ($columnMeta !== null) {
+                $resolved = $resolver->resolve($columnMeta, null, $column->getCapabilities()->all());
+                $column->capabilities($resolved);
+            } elseif ($accessorMeta !== null) {
+                $resolved = $resolver->resolve(null, $accessorMeta, $column->getCapabilities()->all());
+                $column->capabilities($resolved);
+            }
+        }
+
         return $columns;
+    }
+
+    /**
+     * Resolve ColumnMetadata or AccessorMetadata for a given column name.
+     *
+     * Handles dot-notation by walking the relation chain through the registry,
+     * lazily registering related models that were not part of the initial scan.
+     *
+     * Aggregate columns (e.g. "orders->count()") have no DB column to inspect,
+     * so auto-detection returns [null, null] and buildPlannerColumns leaves their
+     * capabilities unchanged. Explicit declarations (->sortable(), ->searchable())
+     * set via the fluent API are preserved and honoured by the planner.
+     *
+     * @return array{0: ?ColumnMetadata, 1: ?AccessorMetadata}
+     */
+    private function resolveColumnMeta(string $name): array
+    {
+        $parsed = RelationPath::parse($name);
+
+        if ($parsed->isSimple()) {
+            return [
+                $this->registry->getColumn($this->currentModelClass, $name),
+                $this->registry->getAccessor($this->currentModelClass, $name),
+            ];
+        }
+
+        if ($parsed->isAggregate()) {
+            return [null, null];
+        }
+
+        $currentModel = $this->currentModelClass;
+
+        foreach ($parsed->getRelationSegments() as $segment) {
+            $relation = $this->registry->getRelation($currentModel, $segment->name);
+
+            if ($relation === null || $relation->relatedModel === null) {
+                return [null, null];
+            }
+
+            $currentModel = $relation->relatedModel;
+
+            if (! $this->registry->hasModel($currentModel) && ! isset($this->lazilyRegistered[$currentModel])) {
+                $this->registry->registerModel($currentModel);
+                $this->lazilyRegistered[$currentModel] = true;
+            }
+        }
+
+        $terminalColumn = $parsed->getColumnName();
+
+        return [
+            $this->registry->getColumn($currentModel, $terminalColumn),
+            $this->registry->getAccessor($currentModel, $terminalColumn),
+        ];
     }
 
     /**
@@ -287,12 +503,14 @@ final class TableQueryService
         array $columnFilterValues,
         array $columns,
     ): array {
+        $this->enrichSelectFiltersWithEnumOptions($filters);
+
         $definitions = [];
 
         // Global filters (without custom query callbacks — those are handled post-plan)
         foreach ($filters as $filter) {
-            $value = $filterValues[$filter->getName()] ?? null;
-            if ($value === null || $value === '' || $value === []) {
+            $raw = $filterValues[$filter->getName()] ?? null;
+            if ($raw === null || $raw === '' || $raw === []) {
                 continue;
             }
             if (! $filter->canView()) {
@@ -300,6 +518,16 @@ final class TableQueryService
             }
             // Skip filters with custom query callbacks — they bypass the planner
             if ($filter->getQueryCallback() !== null) {
+                continue;
+            }
+
+            $value = $filter->extractValue($raw);
+            if ($value === null || $value === '' || $value === []) {
+                continue;
+            }
+
+            // Multi-field filters route through apply() — skip in planner
+            if (is_array($value) && ! $filter->isMultiple()) {
                 continue;
             }
 
@@ -338,6 +566,50 @@ final class TableQueryService
     }
 
     /**
+     * Auto-populate SelectFilter options from Eloquent enum casts when the
+     * filter has no explicit options set. Users can override at any time by
+     * calling ->options([...]) on the filter.
+     *
+     * @param  array<int, Filter>  $filters
+     */
+    private function enrichSelectFiltersWithEnumOptions(array $filters): void
+    {
+        if ($this->registry === null || $this->currentModelClass === null) {
+            return;
+        }
+
+        if (! $this->registry->hasModel($this->currentModelClass)) {
+            return;
+        }
+
+        $modelMeta = $this->registry->getModelMetadata($this->currentModelClass);
+
+        foreach ($filters as $filter) {
+            if (! ($filter instanceof SelectFilter) || $filter->getOptions() !== []) {
+                continue;
+            }
+
+            $cast = $modelMeta->getCast($filter->getColumn());
+
+            if ($cast === null || ! enum_exists($cast)) {
+                continue;
+            }
+
+            $options = [];
+
+            /** @var class-string<\UnitEnum> $enumClass */
+            $enumClass = $cast;
+
+            foreach ($enumClass::cases() as $case) {
+                $key = $case instanceof \BackedEnum ? (string) $case->value : $case->name;
+                $options[$key] = $case->name;
+            }
+
+            $filter->options($options);
+        }
+    }
+
+    /**
      * Convert sort state → SortDefinition[] for the planner.
      *
      * @param  array<int, Column>  $columns
@@ -362,6 +634,37 @@ final class TableQueryService
             column: $columnObj->getName(),
             direction: $sortDirection,
         )];
+    }
+
+    /**
+     * Apply withCount / withSum / withAvg / withMin / withMax for aggregate columns.
+     *
+     * @param  Builder<Model>  $query
+     * @param  array<int, Column>  $columns
+     * @return Builder<Model>
+     */
+    private function applyAggregates(Builder $query, array $columns): Builder
+    {
+        foreach ($columns as $column) {
+            if (! $column->isAggregate()) {
+                continue;
+            }
+
+            $relation = $column->getAggregateRelation();
+            $function = $column->getAggregateFunction();
+            $aggregateCol = $column->getAggregateColumn();
+
+            match ($function) {
+                'count' => $query->withCount($relation),
+                'sum' => $query->withSum($relation, $aggregateCol),
+                'avg' => $query->withAvg($relation, $aggregateCol),
+                'min' => $query->withMin($relation, $aggregateCol),
+                'max' => $query->withMax($relation, $aggregateCol),
+                default => null,
+            };
+        }
+
+        return $query;
     }
 
     /**

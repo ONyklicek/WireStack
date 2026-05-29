@@ -136,7 +136,7 @@ class SplitColumn extends Column
             }
         }
 
-        return $this->searchable;
+        return parent::isSearchable();
     }
 
     /**
@@ -164,7 +164,7 @@ class SplitColumn extends Column
             }
         }
 
-        return $this->sortable;
+        return parent::isSortable();
     }
 
     /**

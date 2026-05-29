@@ -9,9 +9,6 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Core\Query\Pipes\ApplySoftDeletes;
 use NyonCode\WireCore\Core\Query\QueryPlan;
-use NyonCode\WireCore\Tests\TestCase;
-
-uses(TestCase::class);
 
 beforeEach(function () {
     Schema::create('sd_test_users', function (Blueprint $table) {
