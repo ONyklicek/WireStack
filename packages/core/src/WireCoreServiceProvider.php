@@ -17,6 +17,7 @@ use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
+use NyonCode\WireCore\Foundation\Icons\IconSet;
 use NyonCode\WireCore\Modals\View\ConfirmationComponent;
 use NyonCode\WireCore\Modals\View\ModalComponent;
 use NyonCode\WireCore\Modals\View\SlideOverComponent;
@@ -69,8 +70,35 @@ class WireCoreServiceProvider extends PackageServiceProvider
 
     protected function registerFoundation(): void
     {
-        $this->app->singleton(IconManager::class, function () {
-            return new IconManager;
+        $this->app->singleton(IconManager::class, function ($app) {
+            $manager = new IconManager;
+
+            // Register additional icon sets declared in config. The bundled
+            // DefaultIconSet is always present as the base/fallback set, so the
+            // 'default' entry is skipped here. Later sets take priority.
+            /** @var array<string, mixed> $sets */
+            $sets = config('wire-core.icons.sets', []);
+
+            foreach ($sets as $name => $class) {
+                if ($name === 'default' || ! is_string($class) || ! is_a($class, IconSet::class, true)) {
+                    continue;
+                }
+
+                $manager->registerIconSet($app->make($class));
+            }
+
+            // Load SVG files from any configured directories. This is the
+            // easiest way to add custom icons — no class required.
+            /** @var array<int, mixed> $paths */
+            $paths = config('wire-core.icons.paths', []);
+
+            foreach ($paths as $path) {
+                if (is_string($path) && is_dir($path)) {
+                    $manager->registerIconsFromDirectory($path);
+                }
+            }
+
+            return $manager;
         });
     }
 

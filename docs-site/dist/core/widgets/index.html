@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Widgets | Wire Docs</title>
-    <meta name="description" content="The Widget module provides dashboard components — stats cards, charts, embedded tables, and custom views. Widgets live in wire-core and can be composed into grid layouts on any Livewire component.">
+    <meta name="description" content="The Widget module provides dashboard components — stats cards, charts, embedded tables, and custom views. Widgets live in wire-core and can be composed into responsive grid layouts on any Livewire component.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
@@ -229,6 +229,10 @@
                                         Table Exports                                    </a>
                                 </li>
                                                             <li>
+                                    <a class="" href="../../table/summaries/">
+                                        Summaries                                    </a>
+                                </li>
+                                                            <li>
                                     <a class="" href="../../table/sub-rows/">
                                         Sub-Rows                                    </a>
                                 </li>
@@ -346,7 +350,7 @@
             <div class="page-body">
                 <div class="content-shell">
                     <article class="docs-article">
-                        <div class="page-hero">
+                        <div class="page-hero has-preview">
                             <nav class="breadcrumb" aria-label="Breadcrumb">
                                 <a href="../../">Docs</a>
                                 <span class="sep">/</span>
@@ -354,13 +358,63 @@
                             </nav>
                             <p class="eyebrow">Core</p>
                             <h1>Widgets</h1>
-                                                            <p class="lead">The Widget module provides dashboard components — stats cards, charts, embedded tables, and custom views. Widgets live in wire-core and can be composed into grid layouts on any Livewire component.</p>
+                                                            <p class="lead">The Widget module provides dashboard components — stats cards, charts, embedded tables, and custom views. Widgets live in wire-core and can be composed into responsive grid layouts on any Livewire component.</p>
                             
+                                                            <figure class="hero-preview">
+                                    <img src="../../assets/previews/widgets-overview.png" alt="Widgets preview" loading="lazy">
+                                </figure>
                             
-                                                                                </div>
+                                                                                        <div class="preview-gallery">
+                                                                            <article class="preview-card">
+                                            <figure class="preview-card-image">
+                                                <img src="../../assets/previews/widgets-chart.png" alt="Chart Widget" loading="lazy">
+                                            </figure>
+                                            <div class="preview-card-copy">
+                                                <strong>Chart Widget</strong>
+                                                <p>A single chart widget with heading, description, and a live quarter filter.</p>
+                                            </div>
+                                        </article>
+                                                                    </div>
+                                                    </div>
 
                         
-<p>The Widget module provides dashboard components — stats cards, charts, embedded tables, and custom views. Widgets live in <code>wire-core</code> and can be composed into grid layouts on any Livewire component.</p>
+<p>The Widget module provides dashboard components — stats cards, charts, embedded tables, and custom views. Widgets live in <code>wire-core</code> and can be composed into responsive grid layouts on any Livewire component.</p>
+<p>Every widget shares the same fluent builder, so heading, visibility, authorization, column span, and polling work identically across all four types.</p>
+<h3 id="widget-types-at-a-glance">Widget types at a glance</h3>
+<table>
+<thead>
+<tr>
+<th>Widget</th>
+<th>Class</th>
+<th>Best for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Stats overview</strong></td>
+<td><code>StatsOverviewWidget</code></td>
+<td>KPIs, counters, and summary metrics with optional sparklines</td>
+</tr>
+<tr>
+<td><strong>Chart</strong></td>
+<td><code>ChartWidget</code></td>
+<td>Line, bar, pie, and doughnut charts powered by Chart.js</td>
+</tr>
+<tr>
+<td><strong>Table</strong></td>
+<td><code>TableWidget</code></td>
+<td>A compact wire-table embedded inside a dashboard card</td>
+</tr>
+<tr>
+<td><strong>Custom</strong></td>
+<td><code>CustomWidget</code></td>
+<td>Any Blade view rendered as a widget</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Mix widget types freely inside a single <code>WithWidgets</code> dashboard — each widget controls its own column span, visibility, and refresh interval. See <a href="#dashboard-layout-withwidgets">Dashboard Layout</a>.</p>
+</blockquote>
 <hr>
 <h2 id="table-of-contents">Table of Contents</h2>
 <ol>
@@ -472,6 +526,9 @@ use NyonCode\WireCore\Widgets\Stat;
 <p>Chart widget with Chart.js integration. Supports line, bar, pie, and doughnut charts.</p>
 <pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Widgets\ChartWidget</span><span style="color: #E1E4E8;">;</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireCore\Widgets\ChartWidget;
 </textarea></code></pre>
+<blockquote>
+<p><strong>Requires Chart.js.</strong> The widget renders a <code>&lt;canvas&gt;</code> and initializes it through Alpine. Include <a href="https://www.chartjs.org/" target="_blank" rel="noreferrer">Chart.js</a> on the page — via CDN or your bundle — or the canvas stays empty and a console warning is logged. Dataset styling (<code>borderColor</code>, <code>fill</code>, <code>tension</code>, …) is passed straight through to Chart.js.</p>
+</blockquote>
 <h3 id="basic-usage-2">Basic Usage</h3>
 <pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">ChartWidget</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">()</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">heading</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Revenue Over Time&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">type</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;line&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">labels</span><span style="color: #E1E4E8;">([</span><span style="color: #9ECBFF;">&#39;Jan&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;Feb&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;Mar&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;Apr&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;May&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;Jun&#39;</span><span style="color: #E1E4E8;">])</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">datasets</span><span style="color: #E1E4E8;">([</span></div><div class='line'><span style="color: #E1E4E8;">        [</span></div><div class='line'><span style="color: #E1E4E8;">            </span><span style="color: #9ECBFF;">&#39;label&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;Revenue&#39;</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">            </span><span style="color: #9ECBFF;">&#39;data&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> [</span><span style="color: #79B8FF;">1200</span><span style="color: #E1E4E8;">, </span><span style="color: #79B8FF;">1900</span><span style="color: #E1E4E8;">, </span><span style="color: #79B8FF;">3000</span><span style="color: #E1E4E8;">, </span><span style="color: #79B8FF;">5000</span><span style="color: #E1E4E8;">, </span><span style="color: #79B8FF;">2300</span><span style="color: #E1E4E8;">, </span><span style="color: #79B8FF;">3200</span><span style="color: #E1E4E8;">],</span></div><div class='line'><span style="color: #E1E4E8;">            </span><span style="color: #9ECBFF;">&#39;borderColor&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;#3B82F6&#39;</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">        ],</span></div><div class='line'><span style="color: #E1E4E8;">    ])</span></div><textarea data-torchlight-original="true" style="display: none !important;">ChartWidget::make()
     -&gt;heading('Revenue Over Time')
@@ -591,7 +648,9 @@ ChartWidget::make()
 -&gt;isPollingOnlyVisible(): bool
 -&gt;getPollingDirective(): ?string           // returns wire:poll directive string
 </textarea></code></pre>
-<p>The <code>pollingOnlyVisible</code> option (default: <code>true</code>) uses <code>wire:poll.visible</code> to avoid unnecessary requests when the widget is scrolled out of view.</p>
+<blockquote>
+<p><strong>Polling is visibility-aware by default.</strong> <code>pollingOnlyVisible</code> defaults to <code>true</code>, so widgets use <code>wire:poll.visible</code> and pause requests while scrolled out of view. Call <code>-&gt;pollingOnlyVisible(false)</code> to keep refreshing off-screen.</p>
+</blockquote>
 <hr>
 <h2 id="dashboard-layout-withwidgets">Dashboard Layout (WithWidgets)</h2>
 <p>Use the <code>WithWidgets</code> trait on a Livewire component to compose a widget dashboard.</p>
@@ -707,6 +766,10 @@ wire-core::widgets.widget-grid
                                             <aside class="page-toc">
                             <p class="toc-title">On this page</p>
                             <ul>
+                                                                    <li class="level-3">
+                                        <a href="#widget-types-at-a-glance">
+                                            Widget types at a glance                                        </a>
+                                    </li>
                                                                     <li class="level-2">
                                         <a href="#table-of-contents">
                                             Table of Contents                                        </a>
@@ -969,6 +1032,10 @@ wire-core::widgets.widget-grid
                                             <aside class="page-toc">
                             <p class="toc-title">On this page</p>
                             <ul>
+                                                                    <li class="level-3">
+                                        <a href="#widget-types-at-a-glance">
+                                            Widget types at a glance                                        </a>
+                                    </li>
                                                                     <li class="level-2">
                                         <a href="#table-of-contents">
                                             Table of Contents                                        </a>

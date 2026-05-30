@@ -14,6 +14,7 @@ use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Table;
+use Workbench\App\Models\Invoice;
 use Workbench\App\Models\User;
 
 class TablePreview extends Component
@@ -22,43 +23,144 @@ class TablePreview extends Component
 
     public string $variant = 'overview';
 
+    /** Variants backed by the Invoice → InvoiceItem relationship. */
+    private const INVOICE_VARIANTS = [
+        'subrows', 'summary',
+        'subrows-flatten', 'subrows-limit', 'subrows-filter',
+    ];
+
+    /** Variants that expand only the first invoice (a single drill-down). */
+    private const EXPAND_FIRST_VARIANTS = ['subrows', 'subrows-limit', 'subrows-filter'];
+
     public function mount(string $variant = 'overview'): void
     {
         $this->variant = $variant;
     }
 
     /**
-     * Seed selection state after WithTable has booted its state container,
-     * so the selection variant renders with rows checked and the bulk
-     * toolbar visible. (Doing this in mount() is wiped by mountWithTable.)
+     * Seed expand/selection state after WithTable boots its state container,
+     * so each variant renders in the state the screenshot needs.
      */
     public function booted(): void
     {
-        if ($this->variant !== 'selection') {
+        if ($this->variant === 'selection') {
+            $this->tableState->set('selection.records', User::query()
+                ->orderBy('id')
+                ->limit(3)
+                ->pluck('id')
+                ->map(fn (int $id): string => (string) $id)
+                ->all());
+
             return;
         }
 
-        $this->tableState->set('selection.records', User::query()
-            ->orderBy('id')
-            ->limit(3)
-            ->pluck('id')
-            ->map(fn (int $id): string => (string) $id)
-            ->all());
+        if (in_array($this->variant, self::EXPAND_FIRST_VARIANTS, true)) {
+            $this->tableState->set('rows.expanded', Invoice::query()
+                ->orderBy('id')
+                ->limit(1)
+                ->pluck('id')
+                ->map(fn (int $id): string => (string) $id)
+                ->all());
+        }
     }
 
     public function table(Table $table): Table
     {
+        if (in_array($this->variant, self::INVOICE_VARIANTS, true)) {
+            return $this->variant === 'summary'
+                ? $this->summaryTable($table)
+                : $this->subRowsTable($table);
+        }
+
+        return $this->usersTable($table);
+    }
+
+    /**
+     * Sub-rows showcase. Variant tweaks: flatten, limit (show-more), and
+     * filterable child rows.
+     */
+    private function subRowsTable(Table $table): Table
+    {
+        $filterable = $this->variant === 'subrows-filter';
+
+        $table
+            ->model(Invoice::class)
+            ->columns([
+                TextColumn::make('number')->label('Invoice')->sortable(),
+                TextColumn::make('customer')->label('Customer'),
+                BadgeColumn::make('status')->label('Status')->colors($this->statusColors()),
+                $this->invoiceTotalColumn(),
+            ])
+            ->defaultSort('number', 'asc')
+            ->paginated(false)
+            ->subRows('items')
+            ->subRowColumns($this->invoiceItemColumns($filterable))
+            ->subRowsSortable(default: 'line_total', direction: 'desc')
+            ->subRowActions([
+                Action::make('edit')->label('Edit')->icon('pencil')->color('primary'),
+                DeleteAction::make(),
+            ]);
+
+        if ($this->variant === 'subrows-flatten') {
+            $table->flattenSubRows();
+        }
+
+        if ($this->variant === 'subrows-limit') {
+            $table->subRowsLimit(2);
+        }
+
+        if ($filterable) {
+            $table->subRowsFilterable();
+        }
+
+        return $table;
+    }
+
+    /**
+     * Summary showcase: rollup totals per invoice, a multi-aggregate footer
+     * (sum + average), and the page/all scope toggle.
+     */
+    private function summaryTable(Table $table): Table
+    {
+        return $table
+            ->model(Invoice::class)
+            ->columns([
+                TextColumn::make('number')->label('Invoice')->sortable(),
+                TextColumn::make('customer')->label('Customer'),
+                BadgeColumn::make('status')->label('Status')->colors($this->statusColors()),
+                TextColumn::make('items_count')
+                    ->label('Items')
+                    ->counts('items')
+                    ->numeric(0)
+                    ->alignment('right')
+                    ->summarizeSum('Total items'),
+                $this->invoiceTotalColumn()
+                    ->summarizeAvg('Average'),
+            ])
+            ->filters([
+                SelectFilter::make('status')
+                    ->label('Status')
+                    ->options([
+                        'paid' => 'Paid',
+                        'pending' => 'Pending',
+                        'overdue' => 'Overdue',
+                    ]),
+            ])
+            ->defaultSort('number', 'asc')
+            ->searchable()
+            ->paginated(false);
+    }
+
+    /**
+     * Original users table (overview + selection variants).
+     */
+    private function usersTable(Table $table): Table
+    {
         return $table
             ->model(User::class)
             ->columns([
-                TextColumn::make('name')
-                    ->label('Name')
-                    ->searchable()
-                    ->sortable(),
-                TextColumn::make('email')
-                    ->label('Email')
-                    ->searchable()
-                    ->sortable(),
+                TextColumn::make('name')->label('Name')->searchable()->sortable(),
+                TextColumn::make('email')->label('Email')->searchable()->sortable(),
                 BadgeColumn::make('role')
                     ->label('Role')
                     ->colors([
@@ -67,13 +169,8 @@ class TablePreview extends Component
                         'editor' => 'warning',
                         'viewer' => 'gray',
                     ]),
-                BooleanColumn::make('is_active')
-                    ->label('Active')
-                    ->sortable(),
-                TextColumn::make('created_at')
-                    ->label('Created')
-                    ->date('M j')
-                    ->sortable(),
+                BooleanColumn::make('is_active')->label('Active')->sortable(),
+                TextColumn::make('created_at')->label('Created')->date('M j')->sortable(),
             ])
             ->filters([
                 SelectFilter::make('role')
@@ -86,22 +183,69 @@ class TablePreview extends Component
                     ]),
             ])
             ->actions([
-                Action::make('edit')
-                    ->label('Edit')
-                    ->icon('pencil')
-                    ->color('primary'),
+                Action::make('edit')->label('Edit')->icon('pencil')->color('primary'),
                 DeleteAction::make(),
             ])
             ->headerActions([
-                HeaderAction::make('invite')
-                    ->label('Invite user')
-                    ->icon('plus')
-                    ->color('primary'),
+                HeaderAction::make('invite')->label('Invite user')->icon('plus')->color('primary'),
             ])
             ->defaultSort('created_at', 'desc')
             ->searchable()
             ->selectable()
             ->paginated(false);
+    }
+
+    /**
+     * Rollup "Total" column = SUM(items.line_total) per invoice, with a
+     * grand-total footer.
+     */
+    private function invoiceTotalColumn(): TextColumn
+    {
+        return TextColumn::make('items_total')
+            ->label('Total')
+            ->sums('items', 'line_total')
+            ->numeric(0)
+            ->suffix(' Kč')
+            ->alignment('right')
+            ->summaryDecimals(0)
+            ->summarizeSum('Grand total');
+    }
+
+    /**
+     * @return array<int, TextColumn>
+     */
+    private function invoiceItemColumns(bool $filterable): array
+    {
+        $product = TextColumn::make('product')->label('Product');
+
+        if ($filterable) {
+            $product->filterable();
+        }
+
+        return [
+            $product,
+            TextColumn::make('quantity')->label('Qty')->numeric(0)->alignment('right'),
+            TextColumn::make('unit_price')->label('Unit')->numeric(0)->suffix(' Kč')->alignment('right'),
+            TextColumn::make('line_total')
+                ->label('Line total')
+                ->numeric(0)
+                ->suffix(' Kč')
+                ->alignment('right')
+                ->summaryDecimals(0)
+                ->summarizeSum('Subtotal', scope: 'subRows'),
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function statusColors(): array
+    {
+        return [
+            'paid' => 'success',
+            'pending' => 'warning',
+            'overdue' => 'danger',
+        ];
     }
 
     public function render()

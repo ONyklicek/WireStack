@@ -48,6 +48,16 @@ return [
     'summary_max' => 'Max',
     'summary_range' => 'Range',
     'summary_total' => 'Total',
+    'summary_distinct' => 'Distinct',
+    'summary_median' => 'Median',
+    'summary_variance' => 'Variance',
+    'summary_stddev' => 'Std dev',
+    'summary_first' => 'First',
+    'summary_last' => 'Last',
+    'summary_scope_label' => 'Showing:',
+    'summary_scope_query' => 'All',
+    'summary_scope_page' => 'This page',
+    'summary_scope_selection' => 'Selection',
 
     // Column
     'copied' => 'Copied!',
@@ -86,6 +96,8 @@ return [
     'reset' => 'Reset',
     'no_sub_rows' => 'No sub-rows found',
     'details' => 'Details',
+    'actions' => 'Actions',
+    'show_more_count' => 'Show :count more',
 
     // Inline editable
     'save_failed' => 'Save failed',

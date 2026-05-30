@@ -121,7 +121,7 @@ Lowest-level reusable code; everything else depends on it. **Keep it dependency-
   `HasLivewire`, `CanBeLive`, `CanBeReadOnly`, `BelongsToComponent`.
   These are the trait building blocks reused by both wire-forms fields and wire-table columns.
 - **`Contracts/`** — `HasIcon`, `HasLabel`, `HasVisibility` interfaces.
-- **`Icons/`** — `IconManager` (singleton registry), `Icon`, `IconSet` (interface), `DefaultIconSet`.
+- **`Icons/`** — `IconManager` (singleton registry), `Icon`, `IconSet` (interface), `DefaultIconSet`. `DefaultIconSet` ships the complete Heroicons 2.2.0 solid set (324 icons, 20x20) plus Wire-friendly aliases; paths come from the generated `resources/icons/heroicons-solid.php`, loaded lazily. The `Icon` enum maps friendly names/aliases to canonical Heroicons names.
 - **`Colors/`** — `Color` enum.
 - **`View/`** — Blade view-class components: `Badge`, `Button`, `Dropdown`, `Icon` (the `wire` namespace).
 - **`Components/`** — base classes `Component`, `LayoutComponent`, `ViewComponent`.
@@ -133,14 +133,24 @@ Lowest-level reusable code; everything else depends on it. **Keep it dependency-
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 
 $icons = app(IconManager::class);
-$icons->registerIconSet($customSet);          // add a full IconSet
-$icons->registerIcons(['star' => '<svg…>']);   // add ad-hoc icons
+$icons->registerIconSet($customSet);            // add a full IconSet
+$icons->registerIcons(['star' => '<svg…>']);    // add ad-hoc icons (full <svg> normalized)
+$icons->registerIconsFromDirectory($dir, 'brand'); // load *.svg from a folder ("brand-<file>")
 $icons->has('star');                            // bool
 $icons->getPath('star');                        // resolve registered svg/path
 $icons->render('star', size: 'w-5 h-5', class: 'text-primary'); // inline svg string
 ```
 
-The default set is selected by `icons.default_set`; add sets under `icons.sets`.
+Config wiring (`WireCoreServiceProvider::registerFoundation`): `IconManager` is a
+singleton seeded with `DefaultIconSet`, then it registers every set under
+`icons.sets` (except `default`, the base) and auto-loads SVG files from each
+directory in `icons.paths`. `registerIcons()` accepts a full `<svg>` or a bare
+path fragment (outer `<svg>` stripped via `normalizeSvg`). Icons are wrapped in a
+fixed `0 0 20 20` viewBox by `render()`.
+
+To refresh the bundled Heroicons, regenerate `resources/icons/heroicons-solid.php`
+from the official `heroicons` npm package (`20/solid` SVGs, keyed by file name) —
+do not edit icon paths by hand.
 
 #### Color enum
 

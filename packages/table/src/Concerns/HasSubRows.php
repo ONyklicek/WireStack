@@ -7,6 +7,7 @@ namespace NyonCode\WireTable\Concerns;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use NyonCode\WireTable\Columns\Column;
 
 /**
@@ -65,6 +66,22 @@ trait HasSubRows
 
     /** Custom sub-row Blade view */
     protected ?string $subRowView = null;
+
+    /** Whether sub-row columns can be sorted by clicking their headers */
+    protected bool $subRowsSortable = false;
+
+    /** Default sort column for sub-rows (applied until the user clicks a header) */
+    protected ?string $subRowsDefaultSort = null;
+
+    /** Default sort direction for sub-rows */
+    protected string $subRowsDefaultSortDirection = 'asc';
+
+    /**
+     * Per-child-row actions, rendered in a trailing actions cell.
+     *
+     * @var array<int, object>
+     */
+    protected array $subRowActions = [];
 
     // ─── Fluent API ─────────────────────────────────────
 
@@ -177,11 +194,42 @@ trait HasSubRows
         return $this;
     }
 
+    /**
+     * Enable click-to-sort on sub-row column headers, with an optional default
+     * sort applied before the user interacts.
+     *
+     * Example:
+     *   ->subRowsSortable(default: 'created_at', direction: 'desc')
+     */
+    public function subRowsSortable(bool $sortable = true, ?string $default = null, string $direction = 'asc'): static
+    {
+        $this->subRowsSortable = $sortable;
+        $this->subRowsDefaultSort = $default;
+        $this->subRowsDefaultSortDirection = strtolower($direction) === 'desc' ? 'desc' : 'asc';
+
+        return $this;
+    }
+
+    /**
+     * Set per-child-row actions. Each action renders against the sub-row record,
+     * the same way main-table actions render against a parent record.
+     *
+     * @param  array<int, object>  $actions
+     */
+    public function subRowActions(array $actions): static
+    {
+        $this->subRowActions = $actions;
+
+        return $this;
+    }
+
     // ─── Getters ────────────────────────────────────────
 
     public function hasSubRows(): bool
     {
-        return $this->subRowRelation !== null || ! empty($this->subRowColumns);
+        return $this->subRowRelation !== null
+            || ! empty($this->subRowColumns)
+            || $this->subRowView !== null;
     }
 
     public function getSubRowRelation(): ?string
@@ -237,12 +285,43 @@ trait HasSubRows
         return $this->subRowView;
     }
 
+    public function isSubRowsSortable(): bool
+    {
+        return $this->subRowsSortable;
+    }
+
+    public function getSubRowsDefaultSort(): ?string
+    {
+        return $this->subRowsDefaultSort;
+    }
+
+    public function getSubRowsDefaultSortDirection(): string
+    {
+        return $this->subRowsDefaultSortDirection;
+    }
+
+    /**
+     * @return array<int, object>
+     */
+    public function getSubRowActions(): array
+    {
+        return $this->subRowActions;
+    }
+
+    public function hasSubRowActions(): bool
+    {
+        return ! empty($this->subRowActions);
+    }
+
     /**
      * Build the sub-rows query for a parent record.
      *
+     * @param  array{column: string, direction: string}|null  $sort  Active sort override
+     * @param  bool  $applyLimit  When false, the configured subRowsLimit is skipped
+     *                            (used by "show all" / show-more).
      * @return Builder<Model>
      */
-    public function getSubRowsQuery(mixed $record): Builder
+    public function getSubRowsQuery(mixed $record, ?array $sort = null, bool $applyLimit = true): Builder
     {
         $relation = $this->subRowRelation;
         $query = $record->{$relation}();
@@ -251,10 +330,43 @@ trait HasSubRows
             $query = ($this->subRowQueryCallback)($query);
         }
 
-        if ($this->subRowsLimit) {
+        // Apply sorting: an explicit user sort wins over the configured default.
+        $sortColumn = $sort['column'] ?? $this->subRowsDefaultSort;
+        $sortDirection = $sort['direction'] ?? $this->subRowsDefaultSortDirection;
+
+        if ($sortColumn !== null && $this->isSubRowColumnSortable($sortColumn)) {
+            $query->orderBy($sortColumn, $sortDirection === 'desc' ? 'desc' : 'asc');
+        }
+
+        if ($applyLimit && $this->subRowsLimit) {
             $query->limit($this->subRowsLimit);
         }
 
+        // A relationship object proxies to its underlying Builder, but is not one;
+        // hand back the Builder (constraints already applied) for a stable contract.
+        if ($query instanceof Relation) {
+            return $query->getQuery();
+        }
+
         return $query;
+    }
+
+    /**
+     * Whether a given sub-row column name may be sorted.
+     * Guards against ordering by arbitrary user-supplied strings.
+     */
+    public function isSubRowColumnSortable(string $columnName): bool
+    {
+        if (! $this->subRowsSortable && $columnName !== $this->subRowsDefaultSort) {
+            return false;
+        }
+
+        foreach ($this->subRowColumns as $column) {
+            if ($column->getName() === $columnName) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

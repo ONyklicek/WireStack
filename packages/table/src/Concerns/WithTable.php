@@ -111,6 +111,11 @@ trait WithTable
 
         $this->tableState->set('pagination.perPage', $table->getPerPage());
 
+        // Seed flatten mode from the table config (flattenSubRows()).
+        if ($table->hasSubRows() && $table->isFlattenSubRows()) {
+            $this->tableState->set('rows.flattenMode', true);
+        }
+
         // Initialize filters with defaults (wrapped to match form-field state shape)
         $filters = [];
         foreach ($table->getFilters() as $filter) {
@@ -454,6 +459,9 @@ trait WithTable
             $this->cachedRecords = $query->get();
         }
 
+        // Eager-load sub-rows for the page in one query (avoids per-parent N+1).
+        $this->eagerLoadSubRows($this->cachedRecords);
+
         return $this->cachedRecords;
     }
 
@@ -742,7 +750,25 @@ trait WithTable
             return collect([$record]);
         }
 
-        $query = $table->getSubRowsQuery($record);
+        // Resolve active sort and "show all" flag for this specific parent.
+        $relation = $table->getSubRowRelation();
+        $sort = $this->getSubRowSort();
+        $parentKey = $record->getKey();
+        $showAll = (bool) ($this->tableState->get('rows.subRowsShowAll', [])[$parentKey] ?? false);
+
+        // Fast path: sub-rows were eager-loaded for the whole page in one query
+        // (see eagerLoadSubRows). Read from memory instead of querying per parent.
+        if ($record->relationLoaded($relation)) {
+            $items = $record->getRelation($relation);
+
+            if (! $showAll && $table->getSubRowsLimit()) {
+                $items = $items->take($table->getSubRowsLimit());
+            }
+
+            return $items->values();
+        }
+
+        $query = $table->getSubRowsQuery($record, $sort, applyLimit: ! $showAll);
 
         // Apply sub-row filters
         $subRowFilters = $this->tableState->get('rows.subRowFilters', []);
@@ -761,6 +787,66 @@ trait WithTable
     }
 
     /**
+     * Eager-load sub-rows for the records that will actually render them
+     * (expanded rows, or every row in flatten mode), in a single query —
+     * replacing the per-parent N+1 queries.
+     *
+     * Skipped when sub-row filters are active, since per-parent filtering with
+     * custom filter callbacks can't be expressed safely inside one eager-load
+     * closure; those fall back to the per-parent query path in getSubRows().
+     *
+     * @param  LengthAwarePaginator<int, Model>|Paginator<int, Model>|CursorPaginator<int, Model>|Collection<int, Model>  $records
+     */
+    protected function eagerLoadSubRows(LengthAwarePaginator|Paginator|CursorPaginator|Collection $records): void
+    {
+        $table = $this->getTable();
+
+        if (! $table->hasSubRows() || $table->getSubRowRelation() === null) {
+            return;
+        }
+
+        // Don't eager-load when sub-row filters are active (correctness over speed).
+        $subRowFilters = $this->tableState->get('rows.subRowFilters', []);
+        if ($table->isSubRowsFilterable() && ! empty($subRowFilters)) {
+            return;
+        }
+
+        $collection = $records instanceof Collection ? $records : $records->getCollection();
+        if ($collection->isEmpty()) {
+            return;
+        }
+
+        // Only load sub-rows that will be displayed.
+        $flatten = (bool) $this->tableState->get('rows.flattenMode');
+        $target = $flatten
+            ? $collection
+            : $collection->filter(fn ($record) => $this->isRowExpanded($record->getKey()));
+
+        if ($target->isEmpty()) {
+            return;
+        }
+
+        $relation = $table->getSubRowRelation();
+        $sort = $this->getSubRowSort();
+        $callback = $table->getSubRowQueryCallback();
+
+        // Note: no per-parent limit here — the full set is needed for accurate
+        // "show more" counts; the limit is applied in-memory per parent.
+        $target->load([$relation => function ($query) use ($table, $sort, $callback) {
+            if ($callback) {
+                $query = $callback($query) ?? $query;
+            }
+
+            $sortColumn = $sort['column'] ?? $table->getSubRowsDefaultSort();
+            $sortDirection = $sort['direction'] ?? $table->getSubRowsDefaultSortDirection();
+
+            if ($sortColumn !== null && $table->isSubRowColumnSortable($sortColumn)) {
+                $query->orderBy($sortColumn, $sortDirection === 'desc' ? 'desc' : 'asc');
+            }
+        }]);
+    }
+
+    /**
      * Reset sub-row filters.
      */
     public function resetSubRowFilters(): void
@@ -776,25 +862,123 @@ trait WithTable
         // Sub-row filters don't need pagination reset
     }
 
+    /**
+     * Current sub-row sort state, or null when none is active.
+     *
+     * @return array{column: string, direction: string}|null
+     */
+    public function getSubRowSort(): ?array
+    {
+        $sort = $this->tableState->get('rows.subRowSort');
+
+        if (! is_array($sort) || empty($sort['column'])) {
+            return null;
+        }
+
+        return [
+            'column' => (string) $sort['column'],
+            'direction' => ($sort['direction'] ?? 'asc') === 'desc' ? 'desc' : 'asc',
+        ];
+    }
+
+    /**
+     * Toggle sub-row sorting by a column. Clicking the active column flips the
+     * direction; clicking a new column sorts it ascending.
+     */
+    public function sortSubRows(string $column): void
+    {
+        $table = $this->getTable();
+
+        if (! $table->isSubRowColumnSortable($column)) {
+            return;
+        }
+
+        $current = $this->getSubRowSort();
+
+        if ($current !== null && $current['column'] === $column) {
+            $direction = $current['direction'] === 'asc' ? 'desc' : 'asc';
+        } else {
+            $direction = 'asc';
+        }
+
+        $this->tableState->set('rows.subRowSort', ['column' => $column, 'direction' => $direction]);
+    }
+
+    /**
+     * Reveal all sub-rows for a parent, bypassing the configured subRowsLimit.
+     */
+    public function showAllSubRows(string|int $parentKey): void
+    {
+        $showAll = $this->tableState->get('rows.subRowsShowAll', []);
+        $showAll[$parentKey] = true;
+        $this->tableState->set('rows.subRowsShowAll', $showAll);
+    }
+
+    /**
+     * Whether a parent currently has its sub-rows fully expanded (show-all).
+     */
+    public function isSubRowsShowAll(string|int $parentKey): bool
+    {
+        return (bool) ($this->tableState->get('rows.subRowsShowAll', [])[$parentKey] ?? false);
+    }
+
+    /**
+     * Total (unlimited) count of a parent's sub-rows, honouring sub-row filters.
+     * Used to decide whether a "show more" affordance is needed.
+     */
+    public function getSubRowsTotalCount(mixed $record): int
+    {
+        $table = $this->getTable();
+
+        if (! $table->hasSubRows() || $table->getSubRowRelation() === null) {
+            return 0;
+        }
+
+        // Use the eager-loaded relation when present — no extra count query.
+        $relation = $table->getSubRowRelation();
+        if ($record->relationLoaded($relation)) {
+            return $record->getRelation($relation)->count();
+        }
+
+        $query = $table->getSubRowsQuery($record, $this->getSubRowSort(), applyLimit: false);
+
+        // Honour the same sub-row filters used when listing.
+        $subRowFilters = $this->tableState->get('rows.subRowFilters', []);
+        if ($table->isSubRowsFilterable() && ! empty($subRowFilters)) {
+            foreach ($table->getSubRowColumns() as $column) {
+                $colName = $column->getName();
+                $filterValue = $subRowFilters[$colName] ?? null;
+
+                if ($filterValue !== null && $filterValue !== '' && $column->isFilterable()) {
+                    $query = $column->applyFilter($query, $filterValue);
+                }
+            }
+        }
+
+        return $query->count();
+    }
+
     // ─── Summaries ───────────────────────────────────────
 
     /**
      * Compute all column summaries.
      * Returns an array keyed by column name.
      *
-     * @param  string  $scope  'page' for current page, 'query' for all filtered records, 'subRows' for sub-rows
+     * @param  string  $scope  'page' (current page), 'query' (all filtered),
+     *                         'selection' (selected rows), or 'subRows'
      * @param  mixed  $parentRecord  Parent record (only for 'subRows' scope)
+     * @param  Collection<int, mixed>|null  $subRecords  Pre-fetched sub-rows (avoids a
+     *                                                   second query when the caller already has them)
      * @return array [columnName => [['label' => ..., 'value' => ...], ...], ...]
      */
-    public function computeTableSummaries(string $scope = 'query', mixed $parentRecord = null): array
+    public function computeTableSummaries(string $scope = 'query', mixed $parentRecord = null, ?Collection $subRecords = null): array
     {
         $table = $this->getTable();
-        $pageRecords = $this->getTableRecords();
-        $query = ($scope === 'query') ? $this->buildTableQuery() : null;
 
         // For sub-rows scope, use sub-row records
         if ($scope === 'subRows' && $parentRecord !== null && $table->hasSubRows()) {
-            $subRecords = $this->getSubRows($parentRecord);
+            // Reuse already-fetched sub-rows when provided; only query otherwise.
+            $subRecords ??= $this->getSubRows($parentRecord);
             $columnsToSummarize = $table->getSubRowColumns();
 
             $summaries = [];
@@ -807,14 +991,21 @@ trait WithTable
             return $summaries;
         }
 
-        // For main table
+        // For main table — resolve the in-memory record set per scope.
+        $inMemoryRecords = match ($scope) {
+            'page' => $this->getTableRecords(),
+            'selection' => $this->getSelectedRecords(),
+            default => collect(),
+        };
+        $query = ($scope === 'query') ? $this->buildTableQuery() : null;
+
         $columns = $table->getColumns();
         $summaries = [];
 
         foreach ($columns as $column) {
             if ($column->hasSummary()) {
                 $summaries[$column->getName()] = $column->computeSummaries(
-                    $scope === 'page' ? $pageRecords : collect(),
+                    $inMemoryRecords,
                     $query,
                 );
             }
@@ -837,6 +1028,50 @@ trait WithTable
         }
 
         return false;
+    }
+
+    /**
+     * Active footer summary scope: 'page', 'query', or 'selection'.
+     *
+     * Falls back to 'query' when 'selection' is active but nothing is selected,
+     * so the footer never shows an empty selection total.
+     */
+    public function getSummaryScope(): string
+    {
+        $scope = $this->tableState->get('summary.scope', 'query');
+
+        if ($scope === 'selection' && $this->getSelectedRecordsCount() === 0) {
+            return 'query';
+        }
+
+        return in_array($scope, ['page', 'query', 'selection'], true) ? $scope : 'query';
+    }
+
+    /**
+     * Set the footer summary scope (ignores unknown values).
+     */
+    public function setSummaryScope(string $scope): void
+    {
+        if (in_array($scope, ['page', 'query', 'selection'], true)) {
+            $this->tableState->set('summary.scope', $scope);
+        }
+    }
+
+    /**
+     * Scope options to offer in the footer toggle. 'selection' only appears
+     * when rows are actually selected.
+     *
+     * @return array<int, string>
+     */
+    public function getSummaryScopeOptions(): array
+    {
+        $options = ['query', 'page'];
+
+        if ($this->getSelectedRecordsCount() > 0) {
+            $options[] = 'selection';
+        }
+
+        return $options;
     }
 
     // ─── Column Visibility ───────────────────────────────

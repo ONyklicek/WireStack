@@ -11,9 +11,24 @@ return [
     ],
 
     'icons' => [
+        // Name of the base/fallback set. DefaultIconSet (the full Heroicons
+        // collection) is always registered as the base set.
         'default_set' => 'default',
+
+        // Icon sets registered with the IconManager. Each value must be a class
+        // implementing NyonCode\WireCore\Foundation\Icons\IconSet. Sets added
+        // here take priority over the bundled defaults, so you can override
+        // individual icons or ship an entirely different style.
         'sets' => [
             'default' => DefaultIconSet::class,
+            // 'custom' => App\Wire\Icons\MyIconSet::class,
+        ],
+
+        // Directories of SVG files to auto-register as icons. The icon name is
+        // the file name without extension (logo.svg => "logo"). This is the
+        // simplest way to add custom icons — just drop SVGs in a folder.
+        'paths' => [
+            // resource_path('icons'),
         ],
     ],
 

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Gate;
@@ -158,7 +159,7 @@ it('save throws AuthorizationException when authorizeUsing denies', function () 
         ->using(fn (array $data) => $data);
 
     expect(fn () => $form->save())
-        ->toThrow(\Illuminate\Auth\Access\AuthorizationException::class);
+        ->toThrow(AuthorizationException::class);
 });
 
 it('save throws AuthorizationException when policy denies', function () {
@@ -172,7 +173,7 @@ it('save throws AuthorizationException when policy denies', function () {
         ->using(fn (array $data) => $data);
 
     expect(fn () => $form->save())
-        ->toThrow(\Illuminate\Auth\Access\AuthorizationException::class);
+        ->toThrow(AuthorizationException::class);
 });
 
 it('save proceeds when canSave returns true', function () {

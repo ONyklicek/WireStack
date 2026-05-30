@@ -9,6 +9,7 @@ use Workbench\App\Livewire\Previews\FieldPreview;
 use Workbench\App\Livewire\Previews\FormPreview;
 use Workbench\App\Livewire\Previews\SortablePreview;
 use Workbench\App\Livewire\Previews\TablePreview;
+use Workbench\App\Livewire\Previews\WidgetPreview;
 
 Route::get('/', function (): RedirectResponse {
     return redirect('/previews');
@@ -49,6 +50,46 @@ Route::get('/previews', function () {
             'variant' => 'selection',
         ],
         [
+            'slug' => 'table-subrows',
+            'title' => 'Wire Table',
+            'label' => 'Table sub-rows',
+            'copy' => 'Expandable invoice line items with sortable headers, row actions, and a subtotal.',
+            'component' => TablePreview::class,
+            'variant' => 'subrows',
+        ],
+        [
+            'slug' => 'table-summary',
+            'title' => 'Wire Table',
+            'label' => 'Table summary',
+            'copy' => 'Rollup totals per row, a multi-aggregate footer, and the page/all scope toggle.',
+            'component' => TablePreview::class,
+            'variant' => 'summary',
+        ],
+        [
+            'slug' => 'table-subrows-flatten',
+            'title' => 'Wire Table',
+            'label' => 'Sub-rows flatten',
+            'copy' => 'Flatten mode rendering every child record as a regular table row.',
+            'component' => TablePreview::class,
+            'variant' => 'subrows-flatten',
+        ],
+        [
+            'slug' => 'table-subrows-limit',
+            'title' => 'Wire Table',
+            'label' => 'Sub-rows show more',
+            'copy' => 'Limited child rows with the per-parent "show more" affordance.',
+            'component' => TablePreview::class,
+            'variant' => 'subrows-limit',
+        ],
+        [
+            'slug' => 'table-subrows-filter',
+            'title' => 'Wire Table',
+            'label' => 'Sub-row filters',
+            'copy' => 'Per-child interactive filter bar above the sub-row table.',
+            'component' => TablePreview::class,
+            'variant' => 'subrows-filter',
+        ],
+        [
             'slug' => 'sortable-overview',
             'title' => 'Wire Sortable',
             'label' => 'Sortable overview',
@@ -80,6 +121,22 @@ Route::get('/previews', function () {
             'component' => CorePreview::class,
             'variant' => 'modal',
         ],
+        [
+            'slug' => 'widgets-overview',
+            'title' => 'Wire Core',
+            'label' => 'Widgets dashboard',
+            'copy' => 'Stats overview cards with sparklines and a Chart.js chart widget composed in a grid.',
+            'component' => WidgetPreview::class,
+            'variant' => 'overview',
+        ],
+        [
+            'slug' => 'widgets-chart',
+            'title' => 'Wire Core',
+            'label' => 'Chart widget',
+            'copy' => 'A single interactive chart widget with heading, description, and a quarter filter.',
+            'component' => WidgetPreview::class,
+            'variant' => 'chart',
+        ],
     ];
 
     return view('previews.index', ['screens' => $screens]);
@@ -90,10 +147,17 @@ foreach ([
     'forms-repeater' => ['title' => 'Wire Forms Repeater', 'subtitle' => 'Focused nested repeater preview.', 'component' => FormPreview::class, 'variant' => 'repeater'],
     'table-overview' => ['title' => 'Wire Table', 'subtitle' => 'Live table preview with search, filters, and actions.', 'component' => TablePreview::class, 'variant' => 'overview'],
     'table-selection' => ['title' => 'Wire Table Selection', 'subtitle' => 'Selected-record state with bulk toolbar and active filters.', 'component' => TablePreview::class, 'variant' => 'selection'],
+    'table-subrows' => ['title' => 'Wire Table Sub-rows', 'subtitle' => 'Expandable invoice line items with sortable headers, row actions, and a subtotal.', 'component' => TablePreview::class, 'variant' => 'subrows'],
+    'table-summary' => ['title' => 'Wire Table Summary', 'subtitle' => 'Rollup totals, a multi-aggregate footer, and the page/all scope toggle.', 'component' => TablePreview::class, 'variant' => 'summary'],
+    'table-subrows-flatten' => ['title' => 'Wire Table Flatten', 'subtitle' => 'Flatten mode rendering every child as a regular row.', 'component' => TablePreview::class, 'variant' => 'subrows-flatten'],
+    'table-subrows-limit' => ['title' => 'Wire Table Show More', 'subtitle' => 'Limited child rows with the "show more" affordance.', 'component' => TablePreview::class, 'variant' => 'subrows-limit'],
+    'table-subrows-filter' => ['title' => 'Wire Table Sub-row Filters', 'subtitle' => 'Per-child interactive filter bar above the sub-row table.', 'component' => TablePreview::class, 'variant' => 'subrows-filter'],
     'sortable-overview' => ['title' => 'Wire Sortable', 'subtitle' => 'Full reorderable task table preview.', 'component' => SortablePreview::class, 'variant' => 'overview'],
     'sortable-detail' => ['title' => 'Wire Sortable Detail', 'subtitle' => 'Closer reorder-surface preview.', 'component' => SortablePreview::class, 'variant' => 'detail'],
     'core-overview' => ['title' => 'Wire Core', 'subtitle' => 'Stats, actions, and shared primitives.', 'component' => CorePreview::class, 'variant' => 'overview'],
     'core-modal' => ['title' => 'Wire Core Modal', 'subtitle' => 'Real modal surface from the core runtime.', 'component' => CorePreview::class, 'variant' => 'modal'],
+    'widgets-overview' => ['title' => 'Wire Core Widgets', 'subtitle' => 'Stats overview and a chart widget composed into a dashboard grid.', 'component' => WidgetPreview::class, 'variant' => 'overview'],
+    'widgets-chart' => ['title' => 'Wire Core Chart Widget', 'subtitle' => 'A single interactive Chart.js widget with heading and filter.', 'component' => WidgetPreview::class, 'variant' => 'chart'],
 ] as $slug => $screen) {
     Route::get('/previews/'.$slug, fn () => view('previews.capture', $screen));
 }
@@ -129,3 +193,4 @@ Route::redirect('/previews/forms', '/previews/forms-overview');
 Route::redirect('/previews/table', '/previews/table-overview');
 Route::redirect('/previews/sortable', '/previews/sortable-overview');
 Route::redirect('/previews/core', '/previews/core-overview');
+Route::redirect('/previews/widgets', '/previews/widgets-overview');
