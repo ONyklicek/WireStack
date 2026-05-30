@@ -361,17 +361,17 @@
 
                         
 <p>Multi-column grid layout for organizing fields.</p>
-<pre><code class="language-php">use NyonCode\WireForms\Components\Layout\Grid;
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireForms\Components\Layout\Grid</span><span style="color: #E1E4E8;">;</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireForms\Components\Layout\Grid;
+</textarea></code></pre>
 <h2 id="usage">Usage</h2>
-<pre><code class="language-php">Grid::make()
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Grid</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">()</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">columns</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">2</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">schema</span><span style="color: #E1E4E8;">([</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #79B8FF;">TextInput</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;first_name&#39;</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">columnSpan</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">1</span><span style="color: #E1E4E8;">),</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #79B8FF;">TextInput</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;last_name&#39;</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">columnSpan</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">1</span><span style="color: #E1E4E8;">),</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #79B8FF;">Textarea</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;bio&#39;</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">columnSpanFull</span><span style="color: #E1E4E8;">(),</span></div><div class='line'><span style="color: #E1E4E8;">    ])</span></div><textarea data-torchlight-original="true" style="display: none !important;">Grid::make()
     -&gt;columns(2)
     -&gt;schema([
         TextInput::make('first_name')-&gt;columnSpan(1),
         TextInput::make('last_name')-&gt;columnSpan(1),
         Textarea::make('bio')-&gt;columnSpanFull(),
     ])
-</code></pre>
+</textarea></code></pre>
 <h2 id="methods">Methods</h2>
 <table>
 <thead>

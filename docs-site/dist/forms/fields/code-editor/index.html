@@ -361,34 +361,34 @@
 
                         
 <p>Code editor with monospace styling, line numbers, and Tab-key indentation. No external dependencies — stores plain text.</p>
-<pre><code class="language-php">use NyonCode\WireForms\Components\CodeEditor;
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireForms\Components\CodeEditor</span><span style="color: #E1E4E8;">;</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireForms\Components\CodeEditor;
+</textarea></code></pre>
 <h2 id="basic-usage">Basic Usage</h2>
-<pre><code class="language-php">CodeEditor::make('script')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">CodeEditor</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;script&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">language</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;php&#39;</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">CodeEditor::make('script')
     -&gt;language('php')
-</code></pre>
+</textarea></code></pre>
 <h2 id="configuration">Configuration</h2>
-<pre><code class="language-php">CodeEditor::make('config')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">CodeEditor</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;config&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">language</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;json&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">minHeight</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">300</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">withLineNumbers</span><span style="color: #E1E4E8;">()</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">maxLength</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">10000</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">CodeEditor::make('config')
     -&gt;language('json')
     -&gt;minHeight(300)
     -&gt;withLineNumbers()
     -&gt;maxLength(10000)
-</code></pre>
+</textarea></code></pre>
 <h2 id="without-line-numbers">Without Line Numbers</h2>
-<pre><code class="language-php">CodeEditor::make('query')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">CodeEditor</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;query&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">language</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;sql&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">withLineNumbers</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">false</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">CodeEditor::make('query')
     -&gt;language('sql')
     -&gt;withLineNumbers(false)
-</code></pre>
+</textarea></code></pre>
 <h2 id="supported-language-labels">Supported Language Labels</h2>
 <p>The <code>language()</code> call is <strong>display only</strong> (shown in the header bar). Any string is accepted:</p>
-<pre><code class="language-php">-&gt;language('php')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">language</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;php&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">language</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;javascript&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">language</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;json&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">language</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;sql&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">language</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;yaml&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">language</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;bash&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">language</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;plaintext&#39;</span><span style="color: #E1E4E8;">)   </span><span style="color: #6A737D;">// default</span></div><textarea data-torchlight-original="true" style="display: none !important;">-&gt;language('php')
 -&gt;language('javascript')
 -&gt;language('json')
 -&gt;language('sql')
 -&gt;language('yaml')
 -&gt;language('bash')
 -&gt;language('plaintext')   // default
-</code></pre>
+</textarea></code></pre>
 <p>Full syntax highlighting requires integrating an external library (e.g. CodeMirror or Monaco) into the application's JS build.</p>
 <h2 id="methods">Methods</h2>
 <table>

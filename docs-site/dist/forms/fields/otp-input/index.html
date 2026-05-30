@@ -364,35 +364,35 @@
 
                         
 <p>OTP / PIN input — N separate character boxes with automatic focus advance, paste support, and arrow-key navigation.</p>
-<pre><code class="language-php">use NyonCode\WireForms\Components\OtpInput;
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireForms\Components\OtpInput</span><span style="color: #E1E4E8;">;</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireForms\Components\OtpInput;
+</textarea></code></pre>
 <h2 id="basic-usage">Basic Usage</h2>
-<pre><code class="language-php">OtpInput::make('code')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">OtpInput</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;code&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">length</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">6</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">OtpInput::make('code')
     -&gt;length(6)
-</code></pre>
+</textarea></code></pre>
 <p>Stored value is a plain string: <code>'123456'</code>.</p>
 <h2 id="digits-only">Digits Only</h2>
-<pre><code class="language-php">OtpInput::make('pin')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">OtpInput</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;pin&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">length</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">4</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">numericOnly</span><span style="color: #E1E4E8;">()    </span><span style="color: #6A737D;">// inputmode=&quot;numeric&quot;, accepts 0-9 only</span></div><textarea data-torchlight-original="true" style="display: none !important;">OtpInput::make('pin')
     -&gt;length(4)
     -&gt;numericOnly()    // inputmode="numeric", accepts 0-9 only
-</code></pre>
+</textarea></code></pre>
 <h2 id="masked-password-style">Masked (Password Style)</h2>
-<pre><code class="language-php">OtpInput::make('pin')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">OtpInput</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;pin&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">length</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">4</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">masked</span><span style="color: #E1E4E8;">()</span></div><textarea data-torchlight-original="true" style="display: none !important;">OtpInput::make('pin')
     -&gt;length(4)
     -&gt;masked()
-</code></pre>
+</textarea></code></pre>
 <h2 id="visual-separator">Visual Separator</h2>
-<pre><code class="language-php">OtpInput::make('code')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">OtpInput</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;code&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">length</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">6</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">separator</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">3</span><span style="color: #E1E4E8;">)    </span><span style="color: #6A737D;">// renders as: [x][x][x] — [x][x][x]</span></div><textarea data-torchlight-original="true" style="display: none !important;">OtpInput::make('code')
     -&gt;length(6)
     -&gt;separator(3)    // renders as: [x][x][x] — [x][x][x]
-</code></pre>
+</textarea></code></pre>
 <h2 id="verification-code-pattern">Verification Code Pattern</h2>
-<pre><code class="language-php">OtpInput::make('verification_code')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">OtpInput</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;verification_code&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">length</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">6</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">numericOnly</span><span style="color: #E1E4E8;">()</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">required</span><span style="color: #E1E4E8;">()</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">live</span><span style="color: #E1E4E8;">()</span></div><textarea data-torchlight-original="true" style="display: none !important;">OtpInput::make('verification_code')
     -&gt;length(6)
     -&gt;numericOnly()
     -&gt;required()
     -&gt;live()
-</code></pre>
+</textarea></code></pre>
 <h2 id="methods">Methods</h2>
 <table>
 <thead>

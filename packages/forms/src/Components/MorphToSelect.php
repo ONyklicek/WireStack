@@ -4,11 +4,6 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Components;
 
-use Illuminate\Database\Eloquent\Model;
-use NyonCode\WireCore\Foundation\Components\Component;
-use NyonCode\WireForms\Concerns\HasFormValidation;
-use NyonCode\WireForms\Contracts\HasValidation;
-
 /**
  * MorphTo relationship select — renders two selects: type selector + ID selector.
  *
@@ -21,10 +16,8 @@ use NyonCode\WireForms\Contracts\HasValidation;
  *               ->titleAttribute('name'),
  *       ])
  */
-class MorphToSelect extends Component implements HasValidation
+class MorphToSelect extends Field
 {
-    use HasFormValidation;
-
     /** @var array<int, MorphToSelect\Type> */
     protected array $types = [];
 

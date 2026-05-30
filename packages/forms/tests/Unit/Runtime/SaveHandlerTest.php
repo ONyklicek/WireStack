@@ -2,8 +2,13 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Forms\Config\FormConfig;
 use NyonCode\WireForms\Forms\Runtime\FormRuntime;
@@ -359,6 +364,58 @@ test('save unwraps statePath prefix from validated data before persisting', func
     expect($persisted)->toBe(['name' => 'John']);
 });
 
+// ─── Relationship repeaters ───────────────────────────────────
+
+test('persist strips relationship repeater keys from parent payload and cascades children', function () {
+    Schema::dropIfExists('sh_children');
+    Schema::dropIfExists('sh_parents');
+    Schema::create('sh_parents', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->timestamps();
+    });
+    Schema::create('sh_children', function (Blueprint $table) {
+        $table->id();
+        $table->unsignedBigInteger('sh_parent_id');
+        $table->string('label');
+        $table->timestamps();
+    });
+
+    $config = new FormConfig(
+        schema: [
+            TextInput::make('name'),
+            Repeater::make('children')->relationship('children'),
+        ],
+        model: ShParentModel::class,
+        // Inject the repeater payload post-validation so persist() receives the
+        // `children` array exactly as the Livewire flow would.
+        mutateDataBeforeSave: fn (array $data) => [...$data, 'children' => [
+            ['label' => 'Child A'],
+            ['label' => 'Child B'],
+        ]],
+        successMessage: null,
+    );
+
+    $runtime = createRuntimeWithState($config, [
+        'name' => 'Parent',
+    ]);
+
+    $handler = new SaveHandler($config, $runtime);
+
+    // Without the strip, dehydrate() would set `children` as a parent column and
+    // the parent save() would throw a "no such column: children" SQL error.
+    $record = $handler->save();
+
+    expect($record)->toBeInstanceOf(ShParentModel::class)
+        ->and($record->name)->toBe('Parent')
+        // `children` must not be persisted as a parent attribute
+        ->and($record->getAttributes())->not->toHaveKey('children')
+        ->and($record->children()->pluck('label')->all())->toBe(['Child A', 'Child B']);
+
+    Schema::dropIfExists('sh_children');
+    Schema::dropIfExists('sh_parents');
+});
+
 // ─── Complete lifecycle ───────────────────────────────────────
 
 test('full save lifecycle with all hooks', function () {
@@ -397,3 +454,24 @@ test('full save lifecycle with all hooks', function () {
         ->and($result['mutated'])->toBeTrue()
         ->and($result['persisted'])->toBeTrue();
 });
+
+// ─── Models ───────────────────────────────────────────────────
+
+class ShParentModel extends Model
+{
+    protected $table = 'sh_parents';
+
+    protected $guarded = [];
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(ShChildModel::class, 'sh_parent_id');
+    }
+}
+
+class ShChildModel extends Model
+{
+    protected $table = 'sh_children';
+
+    protected $guarded = [];
+}

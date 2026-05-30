@@ -364,35 +364,35 @@
 
                         
 <p>Free-form tag input. The user types text and commits it as a chip by pressing Enter or comma. Supports predefined suggestions, limits, and relationship mode.</p>
-<pre><code class="language-php">use NyonCode\WireForms\Components\Tags;
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireForms\Components\Tags</span><span style="color: #E1E4E8;">;</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireForms\Components\Tags;
+</textarea></code></pre>
 <h2 id="basic-usage">Basic Usage</h2>
-<pre><code class="language-php">Tags::make('labels')
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Tags</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;labels&#39;</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">Tags::make('labels')
+</textarea></code></pre>
 <p>State is an array of strings: <code>['php', 'laravel', 'vue']</code>.</p>
 <h2 id="with-suggestions">With Suggestions</h2>
-<pre><code class="language-php">Tags::make('skills')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Tags</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;skills&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">suggestions</span><span style="color: #E1E4E8;">([</span><span style="color: #9ECBFF;">&#39;PHP&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;Laravel&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;Vue&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;React&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;TypeScript&#39;</span><span style="color: #E1E4E8;">])</span></div><textarea data-torchlight-original="true" style="display: none !important;">Tags::make('skills')
     -&gt;suggestions(['PHP', 'Laravel', 'Vue', 'React', 'TypeScript'])
-</code></pre>
+</textarea></code></pre>
 <p>When <code>allowNew(false)</code> only suggestions can be picked:</p>
-<pre><code class="language-php">Tags::make('category')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Tags</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;category&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">suggestions</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">fn</span><span style="color: #E1E4E8;"> () =&gt; </span><span style="color: #79B8FF;">Category</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">pluck</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;name&#39;</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">toArray</span><span style="color: #E1E4E8;">())</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">allowNew</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">false</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">Tags::make('category')
     -&gt;suggestions(fn () =&gt; Category::pluck('name')-&gt;toArray())
     -&gt;allowNew(false)
-</code></pre>
+</textarea></code></pre>
 <h2 id="limits">Limits</h2>
-<pre><code class="language-php">Tags::make('tags')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Tags</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;tags&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">minItems</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">1</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">maxItems</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">5</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">Tags::make('tags')
     -&gt;minItems(1)
     -&gt;maxItems(5)
-</code></pre>
+</textarea></code></pre>
 <h2 id="split-keys">Split Keys</h2>
 <p>By default Enter and comma commit a tag. Override if needed:</p>
-<pre><code class="language-php">Tags::make('tags')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Tags</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;tags&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">splitKeys</span><span style="color: #E1E4E8;">([</span><span style="color: #9ECBFF;">&#39;Enter&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39; &#39;</span><span style="color: #E1E4E8;">])   </span><span style="color: #6A737D;">// space-separated tags</span></div><textarea data-torchlight-original="true" style="display: none !important;">Tags::make('tags')
     -&gt;splitKeys(['Enter', ' '])   // space-separated tags
-</code></pre>
+</textarea></code></pre>
 <h2 id="relationship">Relationship</h2>
-<pre><code class="language-php">Tags::make('tags')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Tags</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;tags&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">relationship</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;tags&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;name&#39;</span><span style="color: #E1E4E8;">)   </span><span style="color: #6A737D;">// many-to-many</span></div><textarea data-torchlight-original="true" style="display: none !important;">Tags::make('tags')
     -&gt;relationship('tags', 'name')   // many-to-many
-</code></pre>
+</textarea></code></pre>
 <h2 id="methods">Methods</h2>
 <table>
 <thead>

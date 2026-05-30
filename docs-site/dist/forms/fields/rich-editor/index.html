@@ -361,17 +361,17 @@
 
                         
 <p>Rich text editor with configurable toolbar.</p>
-<pre><code class="language-php">use NyonCode\WireForms\Components\RichEditor;
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireForms\Components\RichEditor</span><span style="color: #E1E4E8;">;</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireForms\Components\RichEditor;
+</textarea></code></pre>
 <h2 id="usage">Usage</h2>
-<pre><code class="language-php">RichEditor::make('content')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">RichEditor</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;content&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">toolbarButtons</span><span style="color: #E1E4E8;">([</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #9ECBFF;">&#39;bold&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;italic&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;underline&#39;</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #9ECBFF;">&#39;h2&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;h3&#39;</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #9ECBFF;">&#39;bulletList&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;orderedList&#39;</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #9ECBFF;">&#39;link&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;blockquote&#39;</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">    ])</span></div><textarea data-torchlight-original="true" style="display: none !important;">RichEditor::make('content')
     -&gt;toolbarButtons([
         'bold', 'italic', 'underline',
         'h2', 'h3',
         'bulletList', 'orderedList',
         'link', 'blockquote',
     ])
-</code></pre>
+</textarea></code></pre>
 <h2 id="default-toolbar">Default Toolbar</h2>
 <p>When no <code>toolbarButtons()</code> call is made (and no config override), the default toolbar is:</p>
 <table>
@@ -438,21 +438,21 @@
 </table>
 <p>The default can be overridden globally via <code>config('wire-forms.rich_editor.toolbar')</code>.</p>
 <h2 id="disable-specific-buttons">Disable Specific Buttons</h2>
-<pre><code class="language-php">RichEditor::make('content')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">RichEditor</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;content&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">disableToolbarButtons</span><span style="color: #E1E4E8;">([</span><span style="color: #9ECBFF;">&#39;codeBlock&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;attachFiles&#39;</span><span style="color: #E1E4E8;">])</span></div><textarea data-torchlight-original="true" style="display: none !important;">RichEditor::make('content')
     -&gt;disableToolbarButtons(['codeBlock', 'attachFiles'])
-</code></pre>
+</textarea></code></pre>
 <h2 id="disable-all-buttons">Disable All Buttons</h2>
-<pre><code class="language-php">RichEditor::make('content')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">RichEditor</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;content&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">disableAllToolbarButtons</span><span style="color: #E1E4E8;">()   </span><span style="color: #6A737D;">// plain rich text, no toolbar</span></div><textarea data-torchlight-original="true" style="display: none !important;">RichEditor::make('content')
     -&gt;disableAllToolbarButtons()   // plain rich text, no toolbar
-</code></pre>
+</textarea></code></pre>
 <h2 id="file-attachments">File Attachments</h2>
-<pre><code class="language-php">RichEditor::make('content')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">RichEditor</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;content&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">fileAttachmentsDirectory</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;content-images&#39;</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">RichEditor::make('content')
     -&gt;fileAttachmentsDirectory('content-images')
-</code></pre>
+</textarea></code></pre>
 <h2 id="character-limit">Character Limit</h2>
-<pre><code class="language-php">RichEditor::make('summary')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">RichEditor</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;summary&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">maxLength</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">500</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">RichEditor::make('summary')
     -&gt;maxLength(500)
-</code></pre>
+</textarea></code></pre>
 <h2 id="methods">Methods</h2>
 <table>
 <thead>

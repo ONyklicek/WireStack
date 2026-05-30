@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\ViewErrorBag;
 use NyonCode\WireForms\Components\MorphToSelect;
 use NyonCode\WireForms\Components\MorphToSelect\Type;
 
@@ -84,6 +85,27 @@ test('get id options for unknown type returns empty', function () {
         ]);
 
     expect($field->getIdOptionsForType('App\\Models\\Unknown'))->toBe([]);
+});
+
+test('renders both type and id selects', function () {
+    // Share $errors as Laravel's middleware normally does
+    view()->share('errors', new ViewErrorBag);
+
+    // No titleAttribute → getOptions() returns [] without instantiating models
+    $field = MorphToSelect::make('commentable')
+        ->types([
+            Type::make('App\\Models\\Post')->label('Posts'),
+            Type::make('App\\Models\\Video')->label('Videos'),
+        ]);
+    $field->statePath('data');
+
+    $html = $field->toHtml();
+
+    expect($html)
+        ->toContain('commentable_type')
+        ->and($html)->toContain('commentable_id')
+        ->and($html)->toContain('Posts')
+        ->and($html)->toContain('Videos');
 });
 
 // ─── Type tests ────────────────────────────────────────────────────

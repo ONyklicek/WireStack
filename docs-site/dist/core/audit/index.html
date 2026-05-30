@@ -364,33 +364,33 @@
 <h2 id="install">Install</h2>
 <p>The audit log is part of <code>wire-core</code>. If you installed <code>wire-table</code> or <code>wire-forms</code>, core is already installed.</p>
 <p>Publish the config and migration:</p>
-<pre><code class="language-bash">php artisan vendor:publish --tag=wire-core-config
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-bash"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #B392F0;">php</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">artisan</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">vendor:publish</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">--tag=wire-core-config</span></div><div class='line'><span style="color: #B392F0;">php</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">artisan</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">vendor:publish</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">--tag=wire-core-migrations</span></div><div class='line'><span style="color: #B392F0;">php</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">artisan</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">migrate</span></div><textarea data-torchlight-original="true" style="display: none !important;">php artisan vendor:publish --tag=wire-core-config
 php artisan vendor:publish --tag=wire-core-migrations
 php artisan migrate
-</code></pre>
+</textarea></code></pre>
 <p>Register the audit subscriber in one of your application service providers:</p>
-<pre><code class="language-php">use Illuminate\Support\Facades\Event;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">Illuminate\Support\Facades\Event</span><span style="color: #E1E4E8;">;</span></div><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Audit\AuditEventSubscriber</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #F97583;">public</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">boot</span><span style="color: #E1E4E8;">()</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">void</span></div><div class='line'><span style="color: #E1E4E8;">{</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #79B8FF;">Event</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">subscribe</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">AuditEventSubscriber</span><span style="color: #F97583;">::class</span><span style="color: #E1E4E8;">);</span></div><div class='line'><span style="color: #E1E4E8;">}</span></div><textarea data-torchlight-original="true" style="display: none !important;">use Illuminate\Support\Facades\Event;
 use NyonCode\WireCore\Audit\AuditEventSubscriber;
 
 public function boot(): void
 {
     Event::subscribe(AuditEventSubscriber::class);
 }
-</code></pre>
+</textarea></code></pre>
 <h2 id="enable-auditing-on-a-model">Enable Auditing On A Model</h2>
 <p>Add <code>HasAuditable</code> to any Eloquent model you want to track.</p>
-<pre><code class="language-php">use Illuminate\Database\Eloquent\Model;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">Illuminate\Database\Eloquent\Model</span><span style="color: #E1E4E8;">;</span></div><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Audit\Concerns\HasAuditable</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #F97583;">class</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">Order</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">extends</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">Model</span></div><div class='line'><span style="color: #E1E4E8;">{</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">HasAuditable</span><span style="color: #E1E4E8;">;</span></div><div class='line'><span style="color: #E1E4E8;">}</span></div><textarea data-torchlight-original="true" style="display: none !important;">use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Audit\Concerns\HasAuditable;
 
 class Order extends Model
 {
     use HasAuditable;
 }
-</code></pre>
+</textarea></code></pre>
 <p>The trait records Eloquent <code>created</code>, <code>updated</code>, and <code>deleted</code> events.</p>
 <h2 id="exclude-or-include-columns">Exclude Or Include Columns</h2>
 <p>Use <code>getAuditExclude()</code> to hide noisy or sensitive columns for a single model.</p>
-<pre><code class="language-php">class Order extends Model
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">class</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">Order</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">extends</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">Model</span></div><div class='line'><span style="color: #E1E4E8;">{</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">HasAuditable</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">protected</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">getAuditExclude</span><span style="color: #E1E4E8;">()</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">array</span></div><div class='line'><span style="color: #E1E4E8;">    {</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #F97583;">return</span><span style="color: #E1E4E8;"> [</span><span style="color: #9ECBFF;">&#39;cached_total&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;internal_token&#39;</span><span style="color: #E1E4E8;">];</span></div><div class='line'><span style="color: #E1E4E8;">    }</span></div><div class='line'><span style="color: #E1E4E8;">}</span></div><textarea data-torchlight-original="true" style="display: none !important;">class Order extends Model
 {
     use HasAuditable;
 
@@ -399,46 +399,46 @@ class Order extends Model
         return ['cached_total', 'internal_token'];
     }
 }
-</code></pre>
+</textarea></code></pre>
 <p>Use <code>getAuditInclude()</code> when you want a whitelist.</p>
-<pre><code class="language-php">protected function getAuditInclude(): array
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">protected</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">getAuditInclude</span><span style="color: #E1E4E8;">()</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">array</span></div><div class='line'><span style="color: #E1E4E8;">{</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">return</span><span style="color: #E1E4E8;"> [</span><span style="color: #9ECBFF;">&#39;status&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;total&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;assigned_user_id&#39;</span><span style="color: #E1E4E8;">];</span></div><div class='line'><span style="color: #E1E4E8;">}</span></div><textarea data-torchlight-original="true" style="display: none !important;">protected function getAuditInclude(): array
 {
     return ['status', 'total', 'assigned_user_id'];
 }
-</code></pre>
+</textarea></code></pre>
 <p>Global exclusions live in <code>config/wire-core.php</code>:</p>
-<pre><code class="language-php">'audit' =&gt; [
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #9ECBFF;">&#39;audit&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> [</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #9ECBFF;">&#39;exclude_columns&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> [</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #9ECBFF;">&#39;password&#39;</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #9ECBFF;">&#39;remember_token&#39;</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">    ],</span></div><div class='line'><span style="color: #E1E4E8;">],</span></div><textarea data-torchlight-original="true" style="display: none !important;">'audit' =&gt; [
     'exclude_columns' =&gt; [
         'password',
         'remember_token',
     ],
 ],
-</code></pre>
+</textarea></code></pre>
 <h2 id="view-audit-entries">View Audit Entries</h2>
 <p>Each auditable model gets an <code>audits()</code> relation.</p>
-<pre><code class="language-php">$entries = $order-&gt;audits()-&gt;latest()-&gt;get();
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #E1E4E8;">$entries </span><span style="color: #F97583;">=</span><span style="color: #E1E4E8;"> $order</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">audits</span><span style="color: #E1E4E8;">()</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">latest</span><span style="color: #E1E4E8;">()</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">get</span><span style="color: #E1E4E8;">();</span></div><textarea data-torchlight-original="true" style="display: none !important;">$entries = $order-&gt;audits()-&gt;latest()-&gt;get();
+</textarea></code></pre>
 <p>Audit entries expose helpers for common queries:</p>
-<pre><code class="language-php">use NyonCode\WireCore\Audit\AuditEntry;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Audit\AuditEntry</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #79B8FF;">AuditEntry</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">forRecord</span><span style="color: #E1E4E8;">($order)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">get</span><span style="color: #E1E4E8;">();</span></div><div class='line'><span style="color: #79B8FF;">AuditEntry</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">forEvent</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;updated&#39;</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">get</span><span style="color: #E1E4E8;">();</span></div><div class='line'><span style="color: #79B8FF;">AuditEntry</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">byUser</span><span style="color: #E1E4E8;">($user</span><span style="color: #F97583;">-&gt;</span><span style="color: #E1E4E8;">id)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">get</span><span style="color: #E1E4E8;">();</span></div><div class='line'><span style="color: #79B8FF;">AuditEntry</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">olderThan</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">90</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">delete</span><span style="color: #E1E4E8;">();</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireCore\Audit\AuditEntry;
 
 AuditEntry::forRecord($order)-&gt;get();
 AuditEntry::forEvent('updated')-&gt;get();
 AuditEntry::byUser($user-&gt;id)-&gt;get();
 AuditEntry::olderThan(90)-&gt;delete();
-</code></pre>
+</textarea></code></pre>
 <p>To show a row-level audit trail in a Wire Table, add the built-in action:</p>
-<pre><code class="language-php">use NyonCode\WireCore\Audit\Actions\AuditTrailAction;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Audit\Actions\AuditTrailAction</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #F97583;">return</span><span style="color: #E1E4E8;"> $table</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">model</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">Order</span><span style="color: #F97583;">::class</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">actions</span><span style="color: #E1E4E8;">([</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #79B8FF;">AuditTrailAction</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(),</span></div><div class='line'><span style="color: #E1E4E8;">    ]);</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireCore\Audit\Actions\AuditTrailAction;
 
 return $table
     -&gt;model(Order::class)
     -&gt;actions([
         AuditTrailAction::make(),
     ]);
-</code></pre>
+</textarea></code></pre>
 <p>The action opens a slide-over with the record history.</p>
 <h2 id="manual-audit-events">Manual Audit Events</h2>
 <p>You can dispatch audit events manually for operations that do not go through an audited model event.</p>
-<pre><code class="language-php">use NyonCode\WireCore\Audit\Events\BulkActionExecuted;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Audit\Events\BulkActionExecuted</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #B392F0;">event</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">new</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">BulkActionExecuted</span><span style="color: #E1E4E8;">(</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #B392F0;">actionName</span><span style="color: #E1E4E8;">: </span><span style="color: #9ECBFF;">&#39;archive&#39;</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #B392F0;">modelType</span><span style="color: #E1E4E8;">: </span><span style="color: #79B8FF;">Order</span><span style="color: #F97583;">::class</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #B392F0;">recordIds</span><span style="color: #E1E4E8;">: $orders</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">modelKeys</span><span style="color: #E1E4E8;">(),</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #B392F0;">success</span><span style="color: #E1E4E8;">: </span><span style="color: #79B8FF;">true</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #B392F0;">metadata</span><span style="color: #E1E4E8;">: [</span><span style="color: #9ECBFF;">&#39;source&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;orders-table&#39;</span><span style="color: #E1E4E8;">],</span></div><div class='line'><span style="color: #E1E4E8;">));</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireCore\Audit\Events\BulkActionExecuted;
 
 event(new BulkActionExecuted(
     actionName: 'archive',
@@ -447,9 +447,9 @@ event(new BulkActionExecuted(
     success: true,
     metadata: ['source' =&gt; 'orders-table'],
 ));
-</code></pre>
+</textarea></code></pre>
 <p>For a single cell update:</p>
-<pre><code class="language-php">use NyonCode\WireCore\Audit\Events\InlineCellUpdated;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Audit\Events\InlineCellUpdated</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #B392F0;">event</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">new</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">InlineCellUpdated</span><span style="color: #E1E4E8;">(</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #B392F0;">modelType</span><span style="color: #E1E4E8;">: </span><span style="color: #79B8FF;">Order</span><span style="color: #F97583;">::class</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #B392F0;">recordId</span><span style="color: #E1E4E8;">: $order</span><span style="color: #F97583;">-&gt;</span><span style="color: #E1E4E8;">id,</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #B392F0;">column</span><span style="color: #E1E4E8;">: </span><span style="color: #9ECBFF;">&#39;status&#39;</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #B392F0;">oldValue</span><span style="color: #E1E4E8;">: </span><span style="color: #9ECBFF;">&#39;draft&#39;</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #B392F0;">newValue</span><span style="color: #E1E4E8;">: </span><span style="color: #9ECBFF;">&#39;approved&#39;</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">));</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireCore\Audit\Events\InlineCellUpdated;
 
 event(new InlineCellUpdated(
     modelType: Order::class,
@@ -458,26 +458,26 @@ event(new InlineCellUpdated(
     oldValue: 'draft',
     newValue: 'approved',
 ));
-</code></pre>
+</textarea></code></pre>
 <h2 id="disable-temporarily">Disable Temporarily</h2>
 <p>Disable audit logging during imports, seeders, or maintenance jobs:</p>
-<pre><code class="language-php">use NyonCode\WireCore\Audit\AuditLogger;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Audit\AuditLogger</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #79B8FF;">AuditLogger</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">withoutAuditing</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> () {</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #79B8FF;">Order</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">query</span><span style="color: #E1E4E8;">()</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">update</span><span style="color: #E1E4E8;">([</span><span style="color: #9ECBFF;">&#39;synced_at&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">now</span><span style="color: #E1E4E8;">()]);</span></div><div class='line'><span style="color: #E1E4E8;">});</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireCore\Audit\AuditLogger;
 
 AuditLogger::withoutAuditing(function () {
     Order::query()-&gt;update(['synced_at' =&gt; now()]);
 });
-</code></pre>
+</textarea></code></pre>
 <h2 id="retention">Retention</h2>
 <p>Set a retention period in days:</p>
-<pre><code class="language-php">'audit' =&gt; [
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #9ECBFF;">&#39;audit&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> [</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #9ECBFF;">&#39;retention_days&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">180</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">],</span></div><textarea data-torchlight-original="true" style="display: none !important;">'audit' =&gt; [
     'retention_days' =&gt; 180,
 ],
-</code></pre>
+</textarea></code></pre>
 <p>Then prune old entries from a scheduled command or job:</p>
-<pre><code class="language-php">use NyonCode\WireCore\Audit\AuditLogger;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Audit\AuditLogger</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #B392F0;">app</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">AuditLogger</span><span style="color: #F97583;">::class</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">prune</span><span style="color: #E1E4E8;">();</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireCore\Audit\AuditLogger;
 
 app(AuditLogger::class)-&gt;prune();
-</code></pre>
+</textarea></code></pre>
 <h2 id="configuration">Configuration</h2>
 <table>
 <thead>

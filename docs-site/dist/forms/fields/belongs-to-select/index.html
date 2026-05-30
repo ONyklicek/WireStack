@@ -362,21 +362,21 @@
                         
 <p><code>BelongsToSelect</code> is a relationship-aware select field for <code>belongsTo</code> associations.</p>
 <h2 id="basic-usage">Basic Usage</h2>
-<pre><code class="language-php">use NyonCode\WireForms\Components\BelongsToSelect;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireForms\Components\BelongsToSelect</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #79B8FF;">BelongsToSelect</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;company_id&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">relationship</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;company&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;name&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">label</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Company&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">searchable</span><span style="color: #E1E4E8;">()</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireForms\Components\BelongsToSelect;
 
 BelongsToSelect::make('company_id')
     -&gt;relationship('company', 'name')
     -&gt;label('Company')
     -&gt;searchable()
-</code></pre>
+</textarea></code></pre>
 <p>This resolves options from the related model instead of requiring a manual <code>options()</code> array.</p>
 <h2 id="common-options">Common Options</h2>
-<pre><code class="language-php">BelongsToSelect::make('company_id')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">BelongsToSelect</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;company_id&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">relationship</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;company&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;name&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">searchable</span><span style="color: #E1E4E8;">()</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">preload</span><span style="color: #E1E4E8;">()</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">required</span><span style="color: #E1E4E8;">()</span></div><textarea data-torchlight-original="true" style="display: none !important;">BelongsToSelect::make('company_id')
     -&gt;relationship('company', 'name')
     -&gt;searchable()
     -&gt;preload()
     -&gt;required()
-</code></pre>
+</textarea></code></pre>
 <table>
 <thead>
 <tr>
@@ -412,19 +412,19 @@ BelongsToSelect::make('company_id')
 </tbody>
 </table>
 <h2 id="scoped-options">Scoped Options</h2>
-<pre><code class="language-php">BelongsToSelect::make('company_id')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">BelongsToSelect</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;company_id&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">relationship</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;company&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;name&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">modifyOptionsQueryUsing</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">fn</span><span style="color: #E1E4E8;"> ($query) =&gt; $query</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">where</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;active&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #79B8FF;">true</span><span style="color: #E1E4E8;">))</span></div><textarea data-torchlight-original="true" style="display: none !important;">BelongsToSelect::make('company_id')
     -&gt;relationship('company', 'name')
     -&gt;modifyOptionsQueryUsing(fn ($query) =&gt; $query-&gt;where('active', true))
-</code></pre>
+</textarea></code></pre>
 <h2 id="inline-create">Inline Create</h2>
-<pre><code class="language-php">use NyonCode\WireForms\Components\TextInput;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireForms\Components\TextInput</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #79B8FF;">BelongsToSelect</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;company_id&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">relationship</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;company&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;name&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">createOptionForm</span><span style="color: #E1E4E8;">([</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #79B8FF;">TextInput</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;name&#39;</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">required</span><span style="color: #E1E4E8;">(),</span></div><div class='line'><span style="color: #E1E4E8;">    ])</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireForms\Components\TextInput;
 
 BelongsToSelect::make('company_id')
     -&gt;relationship('company', 'name')
     -&gt;createOptionForm([
         TextInput::make('name')-&gt;required(),
     ])
-</code></pre>
+</textarea></code></pre>
 <h2 id="related-docs">Related Docs</h2>
 <ul>
 <li><a href="../select/">Select</a></li>

@@ -362,7 +362,7 @@
                         
 <p><code>MorphToSelect</code> renders a type selector plus a record selector for polymorphic relationships.</p>
 <h2 id="basic-usage">Basic Usage</h2>
-<pre><code class="language-php">use App\Models\Post;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">App\Models\Post</span><span style="color: #E1E4E8;">;</span></div><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">App\Models\Video</span><span style="color: #E1E4E8;">;</span></div><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireForms\Components\MorphToSelect</span><span style="color: #E1E4E8;">;</span></div><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireForms\Components\MorphToSelect\Type</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #79B8FF;">MorphToSelect</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;commentable&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">types</span><span style="color: #E1E4E8;">([</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #79B8FF;">Type</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">Post</span><span style="color: #F97583;">::class</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">titleAttribute</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;title&#39;</span><span style="color: #E1E4E8;">),</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #79B8FF;">Type</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">Video</span><span style="color: #F97583;">::class</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">titleAttribute</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;name&#39;</span><span style="color: #E1E4E8;">),</span></div><div class='line'><span style="color: #E1E4E8;">    ])</span></div><textarea data-torchlight-original="true" style="display: none !important;">use App\Models\Post;
 use App\Models\Video;
 use NyonCode\WireForms\Components\MorphToSelect;
 use NyonCode\WireForms\Components\MorphToSelect\Type;
@@ -372,7 +372,7 @@ MorphToSelect::make('commentable')
         Type::make(Post::class)-&gt;titleAttribute('title'),
         Type::make(Video::class)-&gt;titleAttribute('name'),
     ])
-</code></pre>
+</textarea></code></pre>
 <p>This is useful when a form field may point to more than one model type.</p>
 <h2 id="how-state-is-stored">How State Is Stored</h2>
 <p>By default the component writes two values:</p>
@@ -381,10 +381,10 @@ MorphToSelect::make('commentable')
 <li><code>commentable_id</code></li>
 </ul>
 <p>You can customize the suffixes if your schema uses different column names.</p>
-<pre><code class="language-php">MorphToSelect::make('subject')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">MorphToSelect</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;subject&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">typeColumnSuffix</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;_model&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">idColumnSuffix</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;_key&#39;</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">MorphToSelect::make('subject')
     -&gt;typeColumnSuffix('_model')
     -&gt;idColumnSuffix('_key')
-</code></pre>
+</textarea></code></pre>
 <h2 id="when-to-use-it">When to Use It</h2>
 <p>Use <code>MorphToSelect</code> when:</p>
 <ul>
