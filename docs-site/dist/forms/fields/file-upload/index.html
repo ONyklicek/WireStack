@@ -229,6 +229,10 @@
                                         Table Exports                                    </a>
                                 </li>
                                                             <li>
+                                    <a class="" href="../../../table/summaries/">
+                                        Summaries                                    </a>
+                                </li>
+                                                            <li>
                                     <a class="" href="../../../table/sub-rows/">
                                         Sub-Rows                                    </a>
                                 </li>
@@ -364,40 +368,40 @@
 
                         
 <p>File upload with preview, validation, and image processing.</p>
-<pre><code class="language-php">use NyonCode\WireForms\Components\FileUpload;
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireForms\Components\FileUpload</span><span style="color: #E1E4E8;">;</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireForms\Components\FileUpload;
+</textarea></code></pre>
 <h2 id="basic-usage">Basic Usage</h2>
-<pre><code class="language-php">FileUpload::make('attachment')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">FileUpload</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;attachment&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">disk</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;public&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">directory</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;attachments&#39;</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">FileUpload::make('attachment')
     -&gt;disk('public')
     -&gt;directory('attachments')
-</code></pre>
+</textarea></code></pre>
 <h2 id="validation">Validation</h2>
-<pre><code class="language-php">FileUpload::make('document')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">FileUpload</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;document&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">acceptedFileTypes</span><span style="color: #E1E4E8;">([</span><span style="color: #9ECBFF;">&#39;application/pdf&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;image/*&#39;</span><span style="color: #E1E4E8;">])</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">maxSize</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">10240</span><span style="color: #E1E4E8;">)       </span><span style="color: #6A737D;">// KB</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">minSize</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">100</span><span style="color: #E1E4E8;">)         </span><span style="color: #6A737D;">// KB</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">multiple</span><span style="color: #E1E4E8;">()</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">maxFiles</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">5</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">minFiles</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">1</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">FileUpload::make('document')
     -&gt;acceptedFileTypes(['application/pdf', 'image/*'])
     -&gt;maxSize(10240)       // KB
     -&gt;minSize(100)         // KB
     -&gt;multiple()
     -&gt;maxFiles(5)
     -&gt;minFiles(1)
-</code></pre>
+</textarea></code></pre>
 <h2 id="image-mode">Image Mode</h2>
-<pre><code class="language-php">FileUpload::make('photo')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">FileUpload</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;photo&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">image</span><span style="color: #E1E4E8;">()</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">imageResizeTargetWidth</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">1920</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">imageResizeTargetHeight</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">1080</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">imageCropAspectRatio</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;16:9&#39;</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">FileUpload::make('photo')
     -&gt;image()
     -&gt;imageResizeTargetWidth(1920)
     -&gt;imageResizeTargetHeight(1080)
     -&gt;imageCropAspectRatio('16:9')
-</code></pre>
+</textarea></code></pre>
 <h2 id="avatar">Avatar</h2>
-<pre><code class="language-php">FileUpload::make('avatar')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">FileUpload</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;avatar&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">avatar</span><span style="color: #E1E4E8;">()             </span><span style="color: #6A737D;">// circular preview, single file</span></div><textarea data-torchlight-original="true" style="display: none !important;">FileUpload::make('avatar')
     -&gt;avatar()             // circular preview, single file
-</code></pre>
+</textarea></code></pre>
 <h2 id="storage">Storage</h2>
-<pre><code class="language-php">FileUpload::make('file')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">FileUpload</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;file&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">disk</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;s3&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">directory</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;uploads/2024&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">visibility</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;public&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">preserveFilenames</span><span style="color: #E1E4E8;">()</span></div><textarea data-torchlight-original="true" style="display: none !important;">FileUpload::make('file')
     -&gt;disk('s3')
     -&gt;directory('uploads/2024')
     -&gt;visibility('public')
     -&gt;preserveFilenames()
-</code></pre>
+</textarea></code></pre>
 <h2 id="methods">Methods</h2>
 <table>
 <thead>

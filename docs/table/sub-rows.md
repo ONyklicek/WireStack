@@ -4,7 +4,23 @@ order: 60
 
 # Sub-Rows
 
-Sub-rows render related child records below each parent row. Use them when users need detail without leaving the table.
+Sub-rows render related child records in an expandable panel below each parent
+row. Use them when users need to drill into detail — an invoice's line items, an
+order's shipments, a project's tasks — without leaving the table.
+
+```text
+┌───┬────────────┬──────────────┬───────────┬──────────────┐
+│ ▾ │ INV-1001   │ Northwind    │   paid    │   9 350 Kč   │  ← parent row
+│   └──────────────────────────────────────────────────────┐
+│       Product        Qty   Unit        Line total  Actions│  ← child table
+│       27" monitor      1   5 600 Kč      5 600 Kč  [✎][🗑] │
+│       Keyboard         2   1 200 Kč      2 400 Kč  [✎][🗑] │
+│       Wireless mouse   3     450 Kč      1 350 Kč  [✎][🗑] │
+│       Subtotal:                          9 350 Kč          │  ← per-parent total
+│   └──────────────────────────────────────────────────────┘
+│ ▸ │ INV-1002   │ Globex       │  pending  │  18 100 Kč   │
+└───┴────────────┴──────────────┴───────────┴──────────────┘
+```
 
 ## Basic Setup
 
@@ -15,93 +31,258 @@ use NyonCode\WireTable\Table;
 public function table(Table $table): Table
 {
     return $table
-        ->model(Order::class)
+        ->model(Invoice::class)
         ->columns([
-            TextColumn::make('order_number')->sortable(),
-            TextColumn::make('customer.name')->label('Customer'),
+            TextColumn::make('number')->label('Invoice')->sortable(),
+            TextColumn::make('customer')->label('Customer'),
             TextColumn::make('total')->money(),
         ])
-        ->subRows('items')
-        ->subRowColumns([
-            TextColumn::make('product_name'),
-            TextColumn::make('quantity')->numeric(),
-            TextColumn::make('unit_price')->money(),
+        ->subRows('items')                      // Eloquent relationship method
+        ->subRowColumns([                       // columns for the child table
+            TextColumn::make('product')->label('Product'),
+            TextColumn::make('quantity')->numeric()->label('Qty'),
+            TextColumn::make('unit_price')->money()->label('Unit'),
         ]);
 }
 ```
 
-`subRows('items')` expects an Eloquent relationship method on the parent model.
+`subRows('items')` expects a relationship method (`items()`) on the parent model.
+The child columns are independent of the parent columns — they can be entirely
+different fields.
 
 ## When to Use Them
 
 Use sub-rows when:
 
-- a parent record owns a small set of child records
-- users need quick drill-down without route changes
-- the child data shares the same decision context as the parent row
+- a parent record owns a **small** set of child records,
+- users need quick drill-down without route changes,
+- the child data shares the same decision context as the parent row.
 
-Avoid them when the child data is large enough that it deserves its own table, filters, or pagination.
+Avoid them when the child set is large enough to deserve its own table with its
+own filters and pagination — sub-rows are a detail affordance, not a second grid.
 
 ## Expand and Collapse
 
 ```php
-->subRowsExpandable()
-->subRowsDefaultExpanded()
-->subRowsToggleLabel('Show items')
+->subRowsExpandable()                  // user can toggle (default true)
+->subRowsDefaultExpanded()             // start expanded
+->subRowsExpandable(false)             // always open, no toggle
+->subRowsToggleLabel('Show items')     // label for the toggle column
 ```
 
-The table tracks expanded rows in Livewire state, so the user can open only the records they care about.
+Expanded rows are tracked in Livewire state, so a user opens only the records they
+care about and the state survives re-renders. The toolbar also exposes
+**Expand all** / **Collapse all** controls.
 
-## Filter and Limit Child Rows
+## Sortable Child Rows
+
+Let users sort the child table by clicking its column headers, with an optional
+default sort applied before any interaction:
+
+```php
+->subRowsSortable(default: 'line_total', direction: 'desc')
+```
+
+```text
+Product ↕   Qty ↕   Unit ↕   Line total ▼     ← ▼ active sort, ↕ sortable
+─────────────────────────────────────────
+27" monitor   1   5 600 Kč     5 600 Kč
+Keyboard      2   1 200 Kč     2 400 Kč
+Wireless ...  3     450 Kč     1 350 Kč
+```
+
+Only columns present in `subRowColumns()` may be sorted — arbitrary column names
+are rejected, so the sort is safe to drive from the request. Clicking the active
+column flips the direction; clicking another sorts it ascending. The active sort
+is shared across all expanded parents.
+
+## Limit and "Show More"
 
 ```php
 ->subRowsLimit(5)
+```
+
+When a limit is set and more children exist, a **"Show N more"** button renders at
+the bottom of the child table. Clicking it reveals the full set for that parent
+(tracked per-parent in state), while the count stays accurate:
+
+```text
+Product        Qty   Line total
+───────────────────────────────
+Keyboard         2     2 400 Kč
+Wireless mouse   3     1 350 Kč
+       Show 1 more                 ← appears because limit (2) < total (3)
+```
+
+## Filter the Child Query
+
+Shape the underlying relationship query with `subRowQuery()`:
+
+```php
+use Illuminate\Database\Eloquent\Builder;
+
 ->subRowQuery(fn (Builder $query) => $query
     ->where('active', true)
     ->orderBy('sort_order')
 )
 ```
 
-Use `subRowsLimit()` when the child relationship can be noisy. Use `subRowQuery()` when the UI should only show a filtered slice of the relationship.
+Enable per-child interactive filters with `subRowsFilterable()`. A filter bar
+renders above the child table for any sortable/filterable sub-row column:
+
+```php
+->subRowsFilterable()
+```
+
+```text
+Filter:  [ Product…    ]  [ price from – to ]   ✕ Reset
+───────────────────────────────────────────────────────
+Product        Qty   Line total
+Keyboard         2     2 400 Kč     ← only rows matching the filter
+```
+
+## Row Actions
+
+Render per-child actions in a trailing actions cell. Each action renders against
+the **child** record, exactly like main-table actions render against a parent:
+
+```php
+use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Actions\DeleteAction;
+
+->subRowActions([
+    Action::make('edit')->label('Edit')->icon('pencil')->color('primary'),
+    DeleteAction::make(),
+])
+```
+
+```text
+Product        Qty   Line total       Actions
+─────────────────────────────────────────────
+27" monitor      1     5 600 Kč     [✎ Edit][🗑 Delete]
+Keyboard         2     2 400 Kč     [✎ Edit][🗑 Delete]
+```
+
+## Per-Parent Subtotals
+
+Give a sub-row column a `subRows`-scoped summary and the child table grows a
+footer with that aggregate for the parent's children:
+
+```php
+->subRowColumns([
+    TextColumn::make('product')->label('Product'),
+    TextColumn::make('quantity')->numeric()->summarizeSum(scope: 'subRows'),
+    TextColumn::make('line_total')
+        ->numeric(0)
+        ->suffix(' Kč')
+        ->summaryDecimals(0)
+        ->summarizeSum('Subtotal', scope: 'subRows'),
+])
+```
+
+```text
+Product        Qty   Line total
+───────────────────────────────
+27" monitor      1     5 600 Kč
+Keyboard         2     2 400 Kč
+Wireless mouse   3     1 350 Kč
+Subtotal:        6     9 350 Kč     ← per-parent footer
+```
+
+All aggregate types and number formatting from the [Summaries](summaries.md) page
+apply here. To total **across** all parents in the main footer, give a parent
+rollup column its own summary — see
+[Grand totals across all children](summaries.md#grand-totals-across-all-children).
 
 ## Flatten Mode
 
-Flatten mode removes the hierarchy and shows all child rows inline.
+Flatten mode opens **every** parent's sub-rows at once, instead of letting the
+user expand them one at a time — handy for review and scanning where you want all
+detail visible together:
 
 ```php
 ->flattenSubRows()
 ```
 
-This is useful for review workflows where grouping is less important than scanning all detail rows together.
+```text
+┌───┬────────────┬──────────────┐
+│ ▾ │ INV-1001   │   9 350 Kč   │   every invoice is expanded,
+│   └── Monitor … Keyboard … ───┘   not just the one the user clicked
+│ ▾ │ INV-1002   │  18 100 Kč   │
+│   └── Desk … Chair … ─────────┘
+│ ▾ │ INV-1003   │   8 450 Kč   │
+│   └── License … Support … ────┘
+└───┴────────────┴──────────────┘
+```
 
-## Summaries
+The runtime **Expand all** / **Collapse all** toolbar buttons toggle the same
+state, so users can switch between flattened and per-row drill-down on demand.
 
-Sub-row columns can render per-parent summaries.
+## Detail-Row Mode (No Relation)
+
+Skip `subRows()` entirely and provide only a child view: the expanded panel then
+renders the **parent record itself** — ideal for a detail card. Sub-rows activate
+as soon as `subRowView()` (or `subRowColumns()`) is set, even without a relation:
 
 ```php
-->subRowColumns([
-    TextColumn::make('product_name'),
-    TextColumn::make('quantity')
-        ->numeric()
-        ->summarizeSum(scope: 'subRows'),
-    TextColumn::make('line_total')
-        ->money()
-        ->summarizeSum(scope: 'subRows'),
-])
+->subRowView('components.users.detail')   // no subRows() call → detail-row mode
+```
+
+```text
+┌───┬────────────┬──────────┐
+│ ▾ │ Alice      │  Active  │
+│   └──────────────────────────────────┐
+│       Email:    alice@example.com     │  ← your custom Blade
+│       Phone:    +420 777 123 456      │
+│   └──────────────────────────────────┘
+└───┴────────────┴──────────┘
 ```
 
 ## Custom View
 
-Replace the default sub-row renderer when you need a custom layout.
+Replace the default child renderer entirely when the data is not naturally
+tabular:
 
 ```php
 ->subRowView('components.orders.sub-rows')
 ```
 
-Use a custom view when the child records are not naturally tabular or when you need domain-specific formatting.
+The view receives `$table`, `$component`, `$record` (parent), `$subRows`
+(children collection), and layout variables.
+
+## Performance: Eager Loading
+
+Sub-rows are loaded for the whole page in a **single query** rather than one query
+per expanded parent:
+
+- **Flatten mode** — every parent's children load at once.
+- **Normal mode** — only the currently expanded parents are loaded.
+
+This removes the N+1 that would otherwise grow with the number of open rows.
+Reading a parent's children (and its subtotal count) then costs no extra queries.
+Eager loading is automatically skipped while interactive sub-row filters are
+active, since per-parent filtering falls back to a safe per-parent query.
+
+## Option Reference
+
+| Method                                          | Purpose                                  |
+| ----------------------------------------------- | ---------------------------------------- |
+| `subRows(string $relation)`                     | Enable sub-rows from a relationship (omit it + set `subRowView`/`subRowColumns` for detail-row mode) |
+| `subRowColumns(array $columns)`                 | Columns for the child table              |
+| `subRowQuery(Closure $cb)`                      | Shape the child relationship query       |
+| `subRowsSortable(bool, ?string $default, string $direction)` | Click-to-sort headers + default sort |
+| `subRowActions(array $actions)`                 | Per-child row actions                    |
+| `subRowsLimit(?int)`                            | Cap children, enabling "Show N more"     |
+| `subRowsFilterable(bool)`                       | Per-child interactive filter bar         |
+| `subRowsExpandable(bool)`                       | Allow expand/collapse toggle             |
+| `subRowsDefaultExpanded(bool)`                  | Start expanded                           |
+| `subRowsToggleLabel(?string)`                   | Label for the toggle column              |
+| `flattenSubRows(bool)`                          | Render children as flat rows             |
+| `subRowView(string)`                            | Custom child renderer                    |
 
 ## Related Docs
 
+- [Summaries](summaries.md) — aggregate types, scopes, formatting, rollups
 - [Table Overview](overview.md)
 - [Columns](columns.md)
-- [Advanced Features](advanced.md)
+- [Actions](actions.md)

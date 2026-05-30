@@ -229,6 +229,10 @@
                                         Table Exports                                    </a>
                                 </li>
                                                             <li>
+                                    <a class="" href="../summaries/">
+                                        Summaries                                    </a>
+                                </li>
+                                                            <li>
                                     <a class="" href="../sub-rows/">
                                         Sub-Rows                                    </a>
                                 </li>
@@ -363,7 +367,7 @@
 <p>Wire uses notifications to confirm completed actions, report failures, and surface background work to the user.</p>
 <h2 id="default-usage">Default Usage</h2>
 <p>The simplest path is to let actions send success or failure messages.</p>
-<pre><code class="language-php">use NyonCode\WireCore\Actions\Action;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Actions\Action</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #79B8FF;">Action</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;save&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">successNotification</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;User saved.&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">failureNotification</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;User could not be saved.&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">action</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> (</span><span style="color: #79B8FF;">User</span><span style="color: #E1E4E8;"> $record, </span><span style="color: #79B8FF;">Action</span><span style="color: #E1E4E8;"> $action) {</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #F97583;">try</span><span style="color: #E1E4E8;"> {</span></div><div class='line'><span style="color: #E1E4E8;">            $record</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">save</span><span style="color: #E1E4E8;">();</span></div><div class='line'><span style="color: #E1E4E8;">            $action</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">sendSuccessNotification</span><span style="color: #E1E4E8;">();</span></div><div class='line'><span style="color: #E1E4E8;">        } </span><span style="color: #F97583;">catch</span><span style="color: #E1E4E8;"> (</span><span style="color: #79B8FF;">\Throwable</span><span style="color: #E1E4E8;"> $e) {</span></div><div class='line'><span style="color: #E1E4E8;">            $action</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">sendFailureNotification</span><span style="color: #E1E4E8;">();</span></div><div class='line'><span style="color: #E1E4E8;">        }</span></div><div class='line'><span style="color: #E1E4E8;">    })</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireCore\Actions\Action;
 
 Action::make('save')
     -&gt;successNotification('User saved.')
@@ -376,10 +380,10 @@ Action::make('save')
             $action-&gt;sendFailureNotification();
         }
     })
-</code></pre>
+</textarea></code></pre>
 <h2 id="manual-notifications">Manual Notifications</h2>
 <p>Use manual notifications when the result depends on runtime conditions.</p>
-<pre><code class="language-php">use NyonCode\WireCore\Notifications\Notification;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Notifications\Notification</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #79B8FF;">Action</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;process&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">action</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> (</span><span style="color: #79B8FF;">User</span><span style="color: #E1E4E8;"> $record, </span><span style="color: #79B8FF;">Action</span><span style="color: #E1E4E8;"> $action) {</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #F97583;">if</span><span style="color: #E1E4E8;"> ($record</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">hasWarnings</span><span style="color: #E1E4E8;">()) {</span></div><div class='line'><span style="color: #E1E4E8;">            $action</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">sendNotification</span><span style="color: #E1E4E8;">(</span></div><div class='line'><span style="color: #E1E4E8;">                </span><span style="color: #79B8FF;">Notification</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">warning</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Processed with warnings.&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">            );</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #E1E4E8;">            </span><span style="color: #F97583;">return</span><span style="color: #E1E4E8;">;</span></div><div class='line'><span style="color: #E1E4E8;">        }</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #E1E4E8;">        $action</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">sendNotification</span><span style="color: #E1E4E8;">(</span></div><div class='line'><span style="color: #E1E4E8;">            </span><span style="color: #79B8FF;">Notification</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">success</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Processing finished.&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">        );</span></div><div class='line'><span style="color: #E1E4E8;">    })</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireCore\Notifications\Notification;
 
 Action::make('process')
     -&gt;action(function (User $record, Action $action) {
@@ -395,7 +399,7 @@ Action::make('process')
             Notification::success('Processing finished.')
         );
     })
-</code></pre>
+</textarea></code></pre>
 <h2 id="notification-types">Notification Types</h2>
 <table>
 <thead>
@@ -425,8 +429,8 @@ Action::make('process')
 </table>
 <h2 id="toast-container">Toast Container</h2>
 <p>If you want built-in toast rendering, include the container in your layout:</p>
-<pre><code class="language-blade">&lt;x-wire-notifications::toast-container /&gt;
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-blade"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #E1E4E8;">&lt;</span><span style="color: #FDAEB7;">x-wire-notifications::toast-container</span><span style="color: #E1E4E8;"> /&gt;</span></div><textarea data-torchlight-original="true" style="display: none !important;">&lt;x-wire-notifications::toast-container /&gt;
+</textarea></code></pre>
 <p>Without it, notifications can still be dispatched through a custom driver, but the default visual container will not render.</p>
 <h2 id="drivers">Drivers</h2>
 <p>Notification delivery is driver-based.</p>
@@ -457,23 +461,23 @@ Action::make('process')
 </tbody>
 </table>
 <h3 id="per-table-override">Per-table override</h3>
-<pre><code class="language-php">use NyonCode\WireCore\Notifications\Drivers\LivewireEventDriver;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Notifications\Drivers\LivewireEventDriver</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">notificationDriver</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">new</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">LivewireEventDriver</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;wire-toast&#39;</span><span style="color: #E1E4E8;">))</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireCore\Notifications\Drivers\LivewireEventDriver;
 
 -&gt;notificationDriver(new LivewireEventDriver('wire-toast'))
-</code></pre>
+</textarea></code></pre>
 <h3 id="global-config">Global config</h3>
-<pre><code class="language-php">// config/wire-table.php
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #6A737D;">// config/wire-table.php</span></div><div class='line'><span style="color: #9ECBFF;">&#39;notification_driver&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">null</span><span style="color: #E1E4E8;">,</span></div><textarea data-torchlight-original="true" style="display: none !important;">// config/wire-table.php
 'notification_driver' =&gt; null,
-</code></pre>
+</textarea></code></pre>
 <p>Set a driver class there if you want one default for the whole app.</p>
 <h2 id="custom-notification-object">Custom Notification Object</h2>
 <p>When you need more control, build the notification explicitly.</p>
-<pre><code class="language-php">Notification::success('User saved.')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Notification</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">success</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;User saved.&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">title</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Done&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">duration</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">4000</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">icon</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;check&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">position</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;top-right&#39;</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">Notification::success('User saved.')
     -&gt;title('Done')
     -&gt;duration(4000)
     -&gt;icon('check')
     -&gt;position('top-right')
-</code></pre>
+</textarea></code></pre>
 <p><code>TableNotification</code> still exists as a backwards-compatible alias, but new code should use <code>Notification</code>.</p>
 <h2 id="related-docs">Related Docs</h2>
 <ul>

@@ -40,6 +40,11 @@ final class TableStateSchema
                 'expanded' => [],
                 'flattenMode' => false,
                 'subRowFilters' => [],
+                'subRowSort' => null,
+                'subRowsShowAll' => [],
+            ],
+            'summary' => [
+                'scope' => 'query',
             ],
             'modal' => [
                 'action' => [

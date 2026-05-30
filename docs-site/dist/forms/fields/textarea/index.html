@@ -229,6 +229,10 @@
                                         Table Exports                                    </a>
                                 </li>
                                                             <li>
+                                    <a class="" href="../../../table/summaries/">
+                                        Summaries                                    </a>
+                                </li>
+                                                            <li>
                                     <a class="" href="../../../table/sub-rows/">
                                         Sub-Rows                                    </a>
                                 </li>
@@ -364,32 +368,32 @@
 
                         
 <p>Multi-line text input.</p>
-<pre><code class="language-php">use NyonCode\WireForms\Components\Textarea;
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireForms\Components\Textarea</span><span style="color: #E1E4E8;">;</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireForms\Components\Textarea;
+</textarea></code></pre>
 <h2 id="usage">Usage</h2>
-<pre><code class="language-php">Textarea::make('description')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Textarea</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;description&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">rows</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">5</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">cols</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">40</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">minLength</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">10</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">maxLength</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">1000</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">autosize</span><span style="color: #E1E4E8;">()</span></div><textarea data-torchlight-original="true" style="display: none !important;">Textarea::make('description')
     -&gt;rows(5)
     -&gt;cols(40)
     -&gt;minLength(10)
     -&gt;maxLength(1000)
     -&gt;autosize()
-</code></pre>
+</textarea></code></pre>
 <h2 id="autosize">Autosize</h2>
-<pre><code class="language-php">Textarea::make('notes')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Textarea</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;notes&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">autosize</span><span style="color: #E1E4E8;">()    </span><span style="color: #6A737D;">// grows automatically as user types</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">rows</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">3</span><span style="color: #E1E4E8;">)       </span><span style="color: #6A737D;">// minimum visible rows before content triggers resize</span></div><textarea data-torchlight-original="true" style="display: none !important;">Textarea::make('notes')
     -&gt;autosize()    // grows automatically as user types
     -&gt;rows(3)       // minimum visible rows before content triggers resize
-</code></pre>
+</textarea></code></pre>
 <h2 id="spellcheck">Spellcheck</h2>
-<pre><code class="language-php">Textarea::make('content')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Textarea</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;content&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">spellcheck</span><span style="color: #E1E4E8;">()           </span><span style="color: #6A737D;">// force enable browser spellcheck</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">spellcheck</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">false</span><span style="color: #E1E4E8;">)      </span><span style="color: #6A737D;">// force disable browser spellcheck</span></div><div class='line'><span style="color: #6A737D;">// null (default) — inherits from browser/OS setting</span></div><textarea data-torchlight-original="true" style="display: none !important;">Textarea::make('content')
     -&gt;spellcheck()           // force enable browser spellcheck
     -&gt;spellcheck(false)      // force disable browser spellcheck
 // null (default) — inherits from browser/OS setting
-</code></pre>
+</textarea></code></pre>
 <h2 id="live-updates">Live Updates</h2>
-<pre><code class="language-php">Textarea::make('bio')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Textarea</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;bio&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">live</span><span style="color: #E1E4E8;">()</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">debounce</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">500</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">Textarea::make('bio')
     -&gt;live()
     -&gt;debounce(500)
-</code></pre>
+</textarea></code></pre>
 <h2 id="methods">Methods</h2>
 <table>
 <thead>

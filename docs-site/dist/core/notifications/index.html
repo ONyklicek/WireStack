@@ -229,6 +229,10 @@
                                         Table Exports                                    </a>
                                 </li>
                                                             <li>
+                                    <a class="" href="../../table/summaries/">
+                                        Summaries                                    </a>
+                                </li>
+                                                            <li>
                                     <a class="" href="../../table/sub-rows/">
                                         Sub-Rows                                    </a>
                                 </li>
@@ -367,7 +371,7 @@
 <tr>
 <th>Driver</th>
 <th>Class</th>
-<th>Description</th>
+<th>Delivery</th>
 <th>Requirements</th>
 </tr>
 </thead>
@@ -375,14 +379,14 @@
 <tr>
 <td>Session</td>
 <td><code>SessionDriver</code></td>
-<td>Laravel <code>session()-&gt;flash()</code></td>
+<td><code>session()-&gt;flash()</code> <strong>+</strong> a Livewire event (<code>type</code> + <code>message</code> only)</td>
 <td>None (default)</td>
 </tr>
 <tr>
 <td>Livewire</td>
 <td><code>LivewireEventDriver</code></td>
-<td>Livewire <code>$dispatch()</code> browser events</td>
-<td>Frontend listener</td>
+<td>Livewire <code>$dispatch()</code> browser event with the <strong>full</strong> payload</td>
+<td>Frontend listener (toast container)</td>
 </tr>
 <tr>
 <td>Flasher</td>
@@ -391,23 +395,47 @@
 <td><code>php-flasher/flasher-laravel</code></td>
 </tr>
 <tr>
-<td>Log</td>
-<td><code>LogDriver</code></td>
-<td>Logs notifications for debugging</td>
-<td>None</td>
-</tr>
-<tr>
 <td>Null</td>
 <td><code>NullDriver</code></td>
-<td>No-op (disables notifications)</td>
+<td>No-op — discards everything</td>
 <td>None</td>
 </tr>
 </tbody>
 </table>
 <p>The session driver is the default.</p>
+<h3 id="which-driver-for-what">Which driver for what?</h3>
+<table>
+<thead>
+<tr>
+<th>Use this driver when…</th>
+<th>Driver</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>You want zero-setup feedback that <strong>survives redirects / full page loads</strong> (flash), with a basic live toast as a bonus — good default for server-rendered and redirect-after-action flows.</td>
+<td><code>SessionDriver</code></td>
+</tr>
+<tr>
+<td>Your UI is the <strong>toast container</strong> and you want <strong>rich, instant toasts</strong> (title, duration, icon) without a reload. Recommended pairing with <code>&lt;x-wire-notifications::toast-container /&gt;</code>.</td>
+<td><code>LivewireEventDriver</code></td>
+</tr>
+<tr>
+<td>Your app already uses <strong>php-flasher</strong> (Toastr / Notyf / SweetAlert adapters) and you want notifications to flow into that existing UI.</td>
+<td><code>FlasherDriver</code></td>
+</tr>
+<tr>
+<td>You want to <strong>disable notifications</strong> — tests, queued/background jobs, or any context with no user to notify.</td>
+<td><code>NullDriver</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Which drivers feed the toast container?</strong> <code>&lt;x-wire-notifications::toast-container /&gt;</code> is an Alpine listener on a Livewire browser event, so only event-dispatching drivers reach it: <strong><code>LivewireEventDriver</code></strong> (full <code>title</code>/<code>duration</code>/<code>icon</code>) and <strong><code>SessionDriver</code></strong> (only <code>type</code>+<code>message</code>; <code>title</code>/<code>duration</code> fall back to the container defaults). <code>FlasherDriver</code> renders its <strong>own</strong> UI and bypasses the container; <code>NullDriver</code> shows nothing.</p>
+</blockquote>
 <h2 id="notification-builder">Notification Builder</h2>
 <p><code>Notification</code> is an immutable value object. Create via static factory, then send through <code>NotificationManager</code>.</p>
-<pre><code class="language-php">use NyonCode\WireCore\Notifications\Notification;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Notifications\Notification</span><span style="color: #E1E4E8;">;</span></div><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Notifications\NotificationManager</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #6A737D;">// Shorthand factories — create and send immediately</span></div><div class='line'><span style="color: #79B8FF;">NotificationManager</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">success</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;User saved&#39;</span><span style="color: #E1E4E8;">);</span></div><div class='line'><span style="color: #79B8FF;">NotificationManager</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">error</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Failed to delete&#39;</span><span style="color: #E1E4E8;">);</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #6A737D;">// Build a notification, then send</span></div><div class='line'><span style="color: #E1E4E8;">$notification </span><span style="color: #F97583;">=</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">Notification</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">success</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;The user was successfully updated.&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">title</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Record Saved&#39;</span><span style="color: #E1E4E8;">);</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #79B8FF;">NotificationManager</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">send</span><span style="color: #E1E4E8;">($notification);</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #6A737D;">// Full customization</span></div><div class='line'><span style="color: #E1E4E8;">$notification </span><span style="color: #F97583;">=</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">Notification</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;success&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;Changes saved.&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">title</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Done&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">icon</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;check&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">duration</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">5000</span><span style="color: #E1E4E8;">)            </span><span style="color: #6A737D;">// ms, 0 = persistent</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">position</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;top-right&#39;</span><span style="color: #E1E4E8;">)     </span><span style="color: #6A737D;">// top-right, top-left, bottom-right, bottom-left</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">extra</span><span style="color: #E1E4E8;">([</span><span style="color: #9ECBFF;">&#39;link&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;/details&#39;</span><span style="color: #E1E4E8;">]);</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #79B8FF;">NotificationManager</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">send</span><span style="color: #E1E4E8;">($notification);</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationManager;
 
 // Shorthand factories — create and send immediately
@@ -429,9 +457,9 @@ $notification = Notification::make('success', 'Changes saved.')
     -&gt;extra(['link' =&gt; '/details']);
 
 NotificationManager::send($notification);
-</code></pre>
+</textarea></code></pre>
 <h3 id="notification-api">Notification API</h3>
-<pre><code class="language-php">// Static factories (return a new Notification instance)
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #6A737D;">// Static factories (return a new Notification instance)</span></div><div class='line'><span style="color: #79B8FF;">Notification</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">string</span><span style="color: #E1E4E8;"> $type, </span><span style="color: #F97583;">string</span><span style="color: #E1E4E8;"> $message): </span><span style="color: #F97583;">static</span></div><div class='line'><span style="color: #79B8FF;">Notification</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">success</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">string</span><span style="color: #E1E4E8;"> $message): </span><span style="color: #F97583;">static</span></div><div class='line'><span style="color: #79B8FF;">Notification</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">error</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">string</span><span style="color: #E1E4E8;"> $message): </span><span style="color: #F97583;">static</span></div><div class='line'><span style="color: #79B8FF;">Notification</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">warning</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">string</span><span style="color: #E1E4E8;"> $message): </span><span style="color: #F97583;">static</span></div><div class='line'><span style="color: #79B8FF;">Notification</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">info</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">string</span><span style="color: #E1E4E8;"> $message): </span><span style="color: #F97583;">static</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #6A737D;">// Fluent immutable modifiers (each returns a new instance)</span></div><div class='line'><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">title</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">?string</span><span style="color: #E1E4E8;"> $title)</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">static</span></div><div class='line'><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">duration</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">?int</span><span style="color: #E1E4E8;"> $ms)</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">static</span><span style="color: #E1E4E8;">      </span><span style="color: #6A737D;">// auto-dismiss time, 0 = persistent</span></div><div class='line'><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">icon</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">?string</span><span style="color: #E1E4E8;"> $icon)</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">static</span></div><div class='line'><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">position</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">?string</span><span style="color: #E1E4E8;"> $position)</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">static</span></div><div class='line'><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">extra</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">array</span><span style="color: #E1E4E8;"> $data): </span><span style="color: #F97583;">static</span><span style="color: #E1E4E8;">      </span><span style="color: #6A737D;">// arbitrary extra data (merged)</span></div><div class='line'><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">toArray</span><span style="color: #E1E4E8;">(): </span><span style="color: #F97583;">array</span><span style="color: #E1E4E8;">                </span><span style="color: #6A737D;">// serialize to array</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #6A737D;">// Sending (via NotificationManager)</span></div><div class='line'><span style="color: #79B8FF;">NotificationManager</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">send</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">Notification</span><span style="color: #E1E4E8;"> $n, </span><span style="color: #F97583;">?</span><span style="color: #79B8FF;">NotificationDriver</span><span style="color: #E1E4E8;"> $driver </span><span style="color: #F97583;">=</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">null</span><span style="color: #E1E4E8;">, </span><span style="color: #F97583;">mixed</span><span style="color: #E1E4E8;"> $livewire </span><span style="color: #F97583;">=</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">null</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">void</span></div><div class='line'><span style="color: #79B8FF;">NotificationManager</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">success</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">string</span><span style="color: #E1E4E8;"> $message, </span><span style="color: #F97583;">...</span><span style="color: #E1E4E8;">): </span><span style="color: #79B8FF;">void</span></div><div class='line'><span style="color: #79B8FF;">NotificationManager</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">error</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">string</span><span style="color: #E1E4E8;"> $message, </span><span style="color: #F97583;">...</span><span style="color: #E1E4E8;">): </span><span style="color: #79B8FF;">void</span></div><div class='line'><span style="color: #79B8FF;">NotificationManager</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">warning</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">string</span><span style="color: #E1E4E8;"> $message, </span><span style="color: #F97583;">...</span><span style="color: #E1E4E8;">): </span><span style="color: #79B8FF;">void</span></div><div class='line'><span style="color: #79B8FF;">NotificationManager</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">info</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">string</span><span style="color: #E1E4E8;"> $message, </span><span style="color: #F97583;">...</span><span style="color: #E1E4E8;">): </span><span style="color: #79B8FF;">void</span></div><textarea data-torchlight-original="true" style="display: none !important;">// Static factories (return a new Notification instance)
 Notification::make(string $type, string $message): static
 Notification::success(string $message): static
 Notification::error(string $message): static
@@ -452,9 +480,9 @@ NotificationManager::success(string $message, ...): void
 NotificationManager::error(string $message, ...): void
 NotificationManager::warning(string $message, ...): void
 NotificationManager::info(string $message, ...): void
-</code></pre>
+</textarea></code></pre>
 <h2 id="usage-in-actions">Usage in Actions</h2>
-<pre><code class="language-php">Action::make('save')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Action</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;save&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">action</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> ($record, </span><span style="color: #79B8FF;">Action</span><span style="color: #E1E4E8;"> $action) {</span></div><div class='line'><span style="color: #E1E4E8;">        $record</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">save</span><span style="color: #E1E4E8;">();</span></div><div class='line'><span style="color: #E1E4E8;">        $action</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">sendSuccessNotification</span><span style="color: #E1E4E8;">();</span></div><div class='line'><span style="color: #E1E4E8;">    })</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">successNotification</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Saved!&#39;</span><span style="color: #E1E4E8;">);</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #6A737D;">// Custom notification from action</span></div><div class='line'><span style="color: #E1E4E8;">$action</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">sendNotification</span><span style="color: #E1E4E8;">(</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #79B8FF;">Notification</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">success</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Done&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">title</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Processed&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">duration</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">3000</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">icon</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;check&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">);</span></div><textarea data-torchlight-original="true" style="display: none !important;">Action::make('save')
     -&gt;action(function ($record, Action $action) {
         $record-&gt;save();
         $action-&gt;sendSuccessNotification();
@@ -468,9 +496,10 @@ $action-&gt;sendNotification(
         -&gt;duration(3000)
         -&gt;icon('check')
 );
-</code></pre>
+</textarea></code></pre>
 <h2 id="usage-in-components">Usage in Components</h2>
-<pre><code class="language-php">use NyonCode\WireCore\Notifications\Concerns\InteractsWithNotifications;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Notifications\Concerns\InteractsWithNotifications</span><span style="color: #E1E4E8;">;</span></div><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Notifications\Notification</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #F97583;">class</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">MyComponent</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">extends</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">Component</span></div><div class='line'><span style="color: #E1E4E8;">{</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">InteractsWithNotifications</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">public</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">save</span><span style="color: #E1E4E8;">()</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">void</span></div><div class='line'><span style="color: #E1E4E8;">    {</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #6A737D;">// ... save logic</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #6A737D;">// Type shortcuts (take a message string)</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #79B8FF;">$this</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">notifySuccess</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Record saved&#39;</span><span style="color: #E1E4E8;">);</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #79B8FF;">$this</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">notifyError</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Save failed&#39;</span><span style="color: #E1E4E8;">);</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #79B8FF;">$this</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">notifyWarning</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Careful&#39;</span><span style="color: #E1E4E8;">);</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #79B8FF;">$this</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">notifyInfo</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Heads up&#39;</span><span style="color: #E1E4E8;">);</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #6A737D;">// Or send a fully-built Notification</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #79B8FF;">$this</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">notify</span><span style="color: #E1E4E8;">(</span></div><div class='line'><span style="color: #E1E4E8;">            </span><span style="color: #79B8FF;">Notification</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">success</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Record saved&#39;</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">title</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Done&#39;</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">duration</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">5000</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">        );</span></div><div class='line'><span style="color: #E1E4E8;">    }</span></div><div class='line'><span style="color: #E1E4E8;">}</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireCore\Notifications\Concerns\InteractsWithNotifications;
+use NyonCode\WireCore\Notifications\Notification;
 
 class MyComponent extends Component
 {
@@ -479,13 +508,23 @@ class MyComponent extends Component
     public function save(): void
     {
         // ... save logic
-        $this-&gt;notify('success', 'Record saved');
+
+        // Type shortcuts (take a message string)
+        $this-&gt;notifySuccess('Record saved');
+        $this-&gt;notifyError('Save failed');
+        $this-&gt;notifyWarning('Careful');
+        $this-&gt;notifyInfo('Heads up');
+
+        // Or send a fully-built Notification
+        $this-&gt;notify(
+            Notification::success('Record saved')-&gt;title('Done')-&gt;duration(5000)
+        );
     }
 }
-</code></pre>
+</textarea></code></pre>
 <h2 id="usage-in-forms">Usage in Forms</h2>
 <p>Forms automatically send a success notification after <code>save()</code> unless disabled:</p>
-<pre><code class="language-php">Form::make()
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Form</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">()</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">schema</span><span style="color: #E1E4E8;">([</span><span style="color: #F97583;">...</span><span style="color: #E1E4E8;">])</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">model</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">User</span><span style="color: #F97583;">::class</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">successMessage</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;User saved!&#39;</span><span style="color: #E1E4E8;">)          </span><span style="color: #6A737D;">// custom message</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">save</span><span style="color: #E1E4E8;">();</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #6A737D;">// Disable</span></div><div class='line'><span style="color: #79B8FF;">Form</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">()</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">schema</span><span style="color: #E1E4E8;">([</span><span style="color: #F97583;">...</span><span style="color: #E1E4E8;">])</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">disableSuccessNotification</span><span style="color: #E1E4E8;">()</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">save</span><span style="color: #E1E4E8;">();</span></div><textarea data-torchlight-original="true" style="display: none !important;">Form::make()
     -&gt;schema([...])
     -&gt;model(User::class)
     -&gt;successMessage('User saved!')          // custom message
@@ -496,51 +535,59 @@ Form::make()
     -&gt;schema([...])
     -&gt;disableSuccessNotification()
     -&gt;save();
-</code></pre>
+</textarea></code></pre>
 <h2 id="configuration">Configuration</h2>
-<pre><code class="language-php">// config/wire-core.php
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #6A737D;">// config/wire-core.php</span></div><div class='line'><span style="color: #F97583;">return</span><span style="color: #E1E4E8;"> [</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #9ECBFF;">&#39;notifications&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> [</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #9ECBFF;">&#39;default&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">env</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;WIRE_NOTIFICATIONS_DRIVER&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;session&#39;</span><span style="color: #E1E4E8;">), </span><span style="color: #6A737D;">// session, livewire, flasher, null</span></div><div class='line'><span style="color: #E1E4E8;">    ],</span></div><div class='line'><span style="color: #E1E4E8;">];</span></div><textarea data-torchlight-original="true" style="display: none !important;">// config/wire-core.php
 return [
     'notifications' =&gt; [
-        'driver' =&gt; 'session', // session, livewire, flasher, log, null
+        'default' =&gt; env('WIRE_NOTIFICATIONS_DRIVER', 'session'), // session, livewire, flasher, null
     ],
 ];
-</code></pre>
+</textarea></code></pre>
+<p>This config value drives the <strong>container-bound</strong> <code>NotificationDriver</code> (resolved by the service provider for constructor/<code>app()</code> injection).</p>
 <h3 id="driver-resolution-order">Driver Resolution Order</h3>
+<p>When you call <code>NotificationManager::send()</code> (or its shortcuts), the driver is resolved in this order:</p>
 <ol>
-<li>Per-table/per-component driver override</li>
-<li>Global default (<code>NotificationManager::setDefaultDriver()</code>)</li>
-<li>Config value (<code>wire-core.notifications.driver</code>)</li>
-<li>Fallback: <code>SessionDriver</code></li>
+<li><strong>Explicit</strong> driver passed to the call / component (<code>setNotificationDriver()</code>, the <code>$driver</code> argument)</li>
+<li><strong>Global default</strong> set via <code>NotificationManager::setDefaultDriver()</code></li>
+<li><strong>Fallback:</strong> built-in <code>SessionDriver</code></li>
 </ol>
+<blockquote>
+<p><strong>Note:</strong> the static <code>NotificationManager</code> does <strong>not</strong> read <code>wire-core.notifications.default</code> on its own — that config only feeds the container binding. To make the configured driver the global default for the static API, bridge it once in a service provider:</p>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Notifications\Contracts\NotificationDriver</span><span style="color: #E1E4E8;">;</span></div><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Notifications\NotificationManager</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #79B8FF;">NotificationManager</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">setDefaultDriver</span><span style="color: #E1E4E8;">(</span><span style="color: #B392F0;">app</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">NotificationDriver</span><span style="color: #F97583;">::class</span><span style="color: #E1E4E8;">));</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
+use NyonCode\WireCore\Notifications\NotificationManager;
+
+NotificationManager::setDefaultDriver(app(NotificationDriver::class));
+</textarea></code></pre>
+</blockquote>
 <h2 id="custom-drivers">Custom Drivers</h2>
-<p>Implement the <code>NotificationDriver</code> contract:</p>
-<pre><code class="language-php">use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
+<p>Implement the <code>NotificationDriver</code> contract — its single <code>send()</code> method receives the notification and (optionally) the Livewire component in scope:</p>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Notifications\Contracts\NotificationDriver</span><span style="color: #E1E4E8;">;</span></div><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Notifications\Notification</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #F97583;">class</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">SlackDriver</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">implements</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">NotificationDriver</span></div><div class='line'><span style="color: #E1E4E8;">{</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">public</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">send</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">Notification</span><span style="color: #E1E4E8;"> $notification, </span><span style="color: #F97583;">mixed</span><span style="color: #E1E4E8;"> $livewireComponent </span><span style="color: #F97583;">=</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">null</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">void</span></div><div class='line'><span style="color: #E1E4E8;">    {</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #79B8FF;">Http</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">post</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;https://hooks.slack.com/...&#39;</span><span style="color: #E1E4E8;">, [</span></div><div class='line'><span style="color: #E1E4E8;">            </span><span style="color: #9ECBFF;">&#39;text&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> $notification</span><span style="color: #F97583;">-&gt;</span><span style="color: #E1E4E8;">title </span><span style="color: #F97583;">.</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;: &#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">.</span><span style="color: #E1E4E8;"> $notification</span><span style="color: #F97583;">-&gt;</span><span style="color: #E1E4E8;">message,</span></div><div class='line'><span style="color: #E1E4E8;">        ]);</span></div><div class='line'><span style="color: #E1E4E8;">    }</span></div><div class='line'><span style="color: #E1E4E8;">}</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireCore\Notifications\Notification;
 
 class SlackDriver implements NotificationDriver
 {
-    public function send(Notification $notification): void
+    public function send(Notification $notification, mixed $livewireComponent = null): void
     {
         Http::post('https://hooks.slack.com/...', [
-            'text' =&gt; $notification-&gt;title . ': ' . $notification-&gt;body,
+            'text' =&gt; $notification-&gt;title . ': ' . $notification-&gt;message,
         ]);
     }
 }
-</code></pre>
-<p>Register in a service provider:</p>
-<pre><code class="language-php">use NyonCode\WireCore\Notifications\NotificationManager;
+</textarea></code></pre>
+<p>Register it as the global default in a service provider (<code>boot()</code>):</p>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Notifications\NotificationManager</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #79B8FF;">NotificationManager</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">setDefaultDriver</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">new</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">SlackDriver</span><span style="color: #E1E4E8;">());</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireCore\Notifications\NotificationManager;
 
-NotificationManager::registerDriver('slack', SlackDriver::class);
-</code></pre>
-<p>Then set in config:</p>
-<pre><code class="language-php">'notifications' =&gt; [
-    'driver' =&gt; 'slack',
-],
-</code></pre>
+NotificationManager::setDefaultDriver(new SlackDriver());
+</textarea></code></pre>
+<p>Or use it for a single component/call without changing the global default:</p>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">$this</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">setNotificationDriver</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">new</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">SlackDriver</span><span style="color: #E1E4E8;">());      </span><span style="color: #6A737D;">// per-component (trait)</span></div><div class='line'><span style="color: #79B8FF;">NotificationManager</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">send</span><span style="color: #E1E4E8;">($notification, </span><span style="color: #F97583;">new</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">SlackDriver</span><span style="color: #E1E4E8;">()); </span><span style="color: #6A737D;">// per-call</span></div><textarea data-torchlight-original="true" style="display: none !important;">$this-&gt;setNotificationDriver(new SlackDriver());      // per-component (trait)
+NotificationManager::send($notification, new SlackDriver()); // per-call
+</textarea></code></pre>
 <h2 id="blade-component">Blade Component</h2>
 <p>Place the toast container in your layout:</p>
-<pre><code class="language-blade">&lt;x-wire-notifications::toast-container /&gt;
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-blade"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #E1E4E8;">&lt;</span><span style="color: #FDAEB7;">x-wire-notifications::toast-container</span><span style="color: #E1E4E8;"> /&gt;</span></div><textarea data-torchlight-original="true" style="display: none !important;">&lt;x-wire-notifications::toast-container /&gt;
+</textarea></code></pre>
 
                                                     <nav class="page-nav" aria-label="Pagination">
                                                                     <a class="page-nav-link is-prev" href="../foundation/">
@@ -561,6 +608,10 @@ NotificationManager::registerDriver('slack', SlackDriver::class);
                                                                     <li class="level-2">
                                         <a href="#drivers">
                                             Drivers                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#which-driver-for-what">
+                                            Which driver for what?                                        </a>
                                     </li>
                                                                     <li class="level-2">
                                         <a href="#notification-builder">

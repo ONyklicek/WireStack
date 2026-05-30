@@ -28,12 +28,25 @@ const captures = [
   { slug: 'forms-repeater', path: 'forms-repeater' },
   { slug: 'table-overview', path: 'table-overview' },
   { slug: 'table-selection', path: 'table-selection' },
+  { slug: 'table-subrows', path: 'table-subrows' },
+  { slug: 'table-summary', path: 'table-summary' },
+  { slug: 'table-subrows-flatten', path: 'table-subrows-flatten' },
+  { slug: 'table-subrows-limit', path: 'table-subrows-limit' },
+  { slug: 'table-subrows-filter', path: 'table-subrows-filter' },
   { slug: 'sortable-overview', path: 'sortable-overview' },
   { slug: 'sortable-detail', path: 'sortable-detail' },
   { slug: 'core-overview', path: 'core-overview' },
   { slug: 'core-modal', path: 'core-modal', selector: '[role="dialog"] .transform', pad: 88 },
+  { slug: 'widgets-overview', path: 'widgets-overview' },
+  { slug: 'widgets-chart', path: 'widgets-chart' },
   ...fieldSlugs.map((slug) => ({ slug: `field-${slug}`, path: `field-${slug}` })),
 ];
+
+// Optionally capture only a subset, e.g. ONLY=table-subrows,table-summary
+const onlySlugs = (process.env.ONLY ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+const activeCaptures = onlySlugs.length > 0
+  ? captures.filter((capture) => onlySlugs.includes(capture.slug))
+  : captures;
 
 await mkdir(outputDir, { recursive: true });
 
@@ -64,7 +77,7 @@ try {
     width: 1600, height: 1600, deviceScaleFactor: 2, mobile: false,
   });
 
-  for (const capture of captures) {
+  for (const capture of activeCaptures) {
     const url = `${previewBase}/${capture.path}`;
     const selector = capture.selector ?? '[data-preview-root]';
 

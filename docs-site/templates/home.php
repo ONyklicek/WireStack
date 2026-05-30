@@ -98,7 +98,9 @@
                                 <?= htmlspecialchars($link['label'], ENT_QUOTES) ?>
                                 <?php if ($i === 0) { ?> →<?php } ?>
                             </a>
-                            <?php if ($i >= 1) break; ?>
+                            <?php if ($i >= 1) {
+                                break;
+                            } ?>
                         <?php } ?>
                         <a class="btn btn-ghost" href="<?= htmlspecialchars($githubUrl, ENT_QUOTES) ?>" target="_blank" rel="noreferrer">GitHub</a>
                     </div>

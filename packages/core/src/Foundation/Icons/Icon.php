@@ -395,6 +395,8 @@ enum Icon
             self::refresh => 'arrow-path',
             self::shield => 'shield-check',
             self::lock => 'lock-closed',
+            self::square3Stack3D => 'square-3-stack-3d',
+            self::squares2X2 => 'squares-2x2',
             self::more => 'ellipsis-vertical',
             self::dotsVertical => 'ellipsis-vertical',
             self::dotsHorizontal => 'ellipsis-horizontal',

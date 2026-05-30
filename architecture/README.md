@@ -33,6 +33,7 @@ This directory is split for low-token navigation. Start with the smallest releva
 
 - `core/unified-engine.md`
 - `core/plugins.md`
+- `core/notifications.md`
 - `unified-engine-spec.md`
 - `unified-engine-plan.md`
 - `unified-engine-assessment.md`

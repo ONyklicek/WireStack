@@ -229,6 +229,10 @@
                                         Table Exports                                    </a>
                                 </li>
                                                             <li>
+                                    <a class="" href="../../table/summaries/">
+                                        Summaries                                    </a>
+                                </li>
+                                                            <li>
                                     <a class="" href="../../table/sub-rows/">
                                         Sub-Rows                                    </a>
                                 </li>
@@ -362,7 +366,7 @@
                         
 <p>Drag &amp; drop column header reordering with per-user, per-table database persistence.</p>
 <h2 id="basic-usage">Basic usage</h2>
-<pre><code class="language-php">use Livewire\Component;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">Livewire\Component</span><span style="color: #E1E4E8;">;</span></div><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireTable\Table</span><span style="color: #E1E4E8;">;</span></div><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireTable\Columns\TextColumn</span><span style="color: #E1E4E8;">;</span></div><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireTable\Concerns\WithTable</span><span style="color: #E1E4E8;">;</span></div><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireSortable\Concerns\WithSortable</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #F97583;">class</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">TaskTable</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">extends</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">Component</span></div><div class='line'><span style="color: #E1E4E8;">{</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">WithTable</span><span style="color: #E1E4E8;">, </span><span style="color: #79B8FF;">WithSortable</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">public</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">table</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">Table</span><span style="color: #E1E4E8;"> $table)</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">Table</span></div><div class='line'><span style="color: #E1E4E8;">    {</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #F97583;">return</span><span style="color: #E1E4E8;"> $table</span></div><div class='line'><span style="color: #E1E4E8;">            </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">model</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">Task</span><span style="color: #F97583;">::class</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">            </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">columnReorderable</span><span style="color: #E1E4E8;">()</span></div><div class='line'><span style="color: #E1E4E8;">            </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">columns</span><span style="color: #E1E4E8;">([</span></div><div class='line'><span style="color: #E1E4E8;">                </span><span style="color: #79B8FF;">TextColumn</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;name&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;Name&#39;</span><span style="color: #E1E4E8;">),</span></div><div class='line'><span style="color: #E1E4E8;">                </span><span style="color: #79B8FF;">TextColumn</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;status&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;Status&#39;</span><span style="color: #E1E4E8;">),</span></div><div class='line'><span style="color: #E1E4E8;">                </span><span style="color: #79B8FF;">TextColumn</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;priority&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;Priority&#39;</span><span style="color: #E1E4E8;">),</span></div><div class='line'><span style="color: #E1E4E8;">            ]);</span></div><div class='line'><span style="color: #E1E4E8;">    }</span></div><div class='line'><span style="color: #E1E4E8;">}</span></div><textarea data-torchlight-original="true" style="display: none !important;">use Livewire\Component;
 use NyonCode\WireTable\Table;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Concerns\WithTable;
@@ -384,7 +388,7 @@ class TaskTable extends Component
             ]);
     }
 }
-</code></pre>
+</textarea></code></pre>
 <p>Users can drag column headers to rearrange them. The body cells reorder automatically to match.</p>
 <h2 id="database-persistence">Database persistence</h2>
 <p>Column order is stored in the <code>reorderable_column_orders</code> table with a unique constraint on <code>(user_id, model_type, table_identifier)</code>. This means:</p>
@@ -395,7 +399,7 @@ class TaskTable extends Component
 <li>When a user is deleted, their column orders are cascade-deleted</li>
 </ul>
 <h3 id="storage-structure">Storage structure</h3>
-<pre><code>reorderable_column_orders
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #e1e4e8;">reorderable_column_orders</span></div><div class='line'><span style="color: #e1e4e8;">├── user_id: 1</span></div><div class='line'><span style="color: #e1e4e8;">│   ├── model_type: &quot;App\Models\Task&quot;, table_identifier: &quot;App\Livewire\TaskListTable&quot;</span></div><div class='line'><span style="color: #e1e4e8;">│   │   → [&quot;status&quot;, &quot;name&quot;, &quot;priority&quot;]</span></div><div class='line'><span style="color: #e1e4e8;">│   ├── model_type: &quot;App\Models\Task&quot;, table_identifier: &quot;App\Livewire\TaskBoardTable&quot;</span></div><div class='line'><span style="color: #e1e4e8;">│   │   → [&quot;priority&quot;, &quot;name&quot;, &quot;status&quot;]</span></div><div class='line'><span style="color: #e1e4e8;">│   └── model_type: &quot;App\Models\User&quot;, table_identifier: &quot;App\Livewire\UserTable&quot;</span></div><div class='line'><span style="color: #e1e4e8;">│       → [&quot;email&quot;, &quot;name&quot;, &quot;role&quot;]</span></div><div class='line'><span style="color: #e1e4e8;">├── user_id: 2</span></div><div class='line'><span style="color: #e1e4e8;">│   └── model_type: &quot;App\Models\Task&quot;, table_identifier: &quot;App\Livewire\TaskListTable&quot;</span></div><div class='line'><span style="color: #e1e4e8;">│       → [&quot;priority&quot;, &quot;status&quot;, &quot;name&quot;]</span></div><textarea data-torchlight-original="true" style="display: none !important;">reorderable_column_orders
 ├── user_id: 1
 │   ├── model_type: "App\Models\Task", table_identifier: "App\Livewire\TaskListTable"
 │   │   → ["status", "name", "priority"]
@@ -406,7 +410,7 @@ class TaskTable extends Component
 ├── user_id: 2
 │   └── model_type: "App\Models\Task", table_identifier: "App\Livewire\TaskListTable"
 │       → ["priority", "status", "name"]
-</code></pre>
+</textarea></code></pre>
 <h3 id="how-it-loads">How it loads</h3>
 <p>On component mount (<code>mountWithSortable</code>), the trait:</p>
 <ol>
@@ -433,47 +437,47 @@ class TaskTable extends Component
 <p>When loading saved order, columns that no longer exist in the definition are silently skipped. Newly added columns (not present in the saved order) are appended at the end.</p>
 <h2 id="getting-ordered-columns">Getting ordered columns</h2>
 <p>Use <code>getReorderableColumns()</code> to get columns in the user's preferred order:</p>
-<pre><code class="language-php">$columns = $this-&gt;getReorderableColumns();
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #E1E4E8;">$columns </span><span style="color: #F97583;">=</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">$this</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">getReorderableColumns</span><span style="color: #E1E4E8;">();</span></div><textarea data-torchlight-original="true" style="display: none !important;">$columns = $this-&gt;getReorderableColumns();
+</textarea></code></pre>
 <p>This returns all defined columns sorted by the saved order. Columns not present in the saved order are appended at the end.</p>
 <h2 id="resetting-column-order">Resetting column order</h2>
 <p>Call <code>resetColumnOrder()</code> to restore the default order:</p>
-<pre><code class="language-blade">&lt;button wire:click="resetColumnOrder"&gt;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-blade"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #E1E4E8;">&lt;</span><span style="color: #85E89D;">button</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">wire:click</span><span style="color: #E1E4E8;">=</span><span style="color: #9ECBFF;">&quot;resetColumnOrder&quot;</span><span style="color: #E1E4E8;">&gt;</span></div><div class='line'><span style="color: #E1E4E8;">    Reset Column Order</span></div><div class='line'><span style="color: #E1E4E8;">&lt;/</span><span style="color: #85E89D;">button</span><span style="color: #E1E4E8;">&gt;</span></div><textarea data-torchlight-original="true" style="display: none !important;">&lt;button wire:click="resetColumnOrder"&gt;
     Reset Column Order
 &lt;/button&gt;
-</code></pre>
+</textarea></code></pre>
 <p>This clears both the component property and the database entry.</p>
 <h2 id="combining-with-row-reordering">Combining with row reordering</h2>
 <p>Row and column reordering work independently and can be used together:</p>
-<pre><code class="language-php">return $table
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">return</span><span style="color: #E1E4E8;"> $table</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">model</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">Task</span><span style="color: #F97583;">::class</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">reorderable</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;position&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">columnReorderable</span><span style="color: #E1E4E8;">()</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">columns</span><span style="color: #E1E4E8;">([</span><span style="color: #F97583;">...</span><span style="color: #E1E4E8;">]);</span></div><textarea data-torchlight-original="true" style="display: none !important;">return $table
     -&gt;model(Task::class)
     -&gt;reorderable('position')
     -&gt;columnReorderable()
     -&gt;columns([...]);
-</code></pre>
+</textarea></code></pre>
 <h2 id="multiple-tables-over-the-same-model">Multiple tables over the same model</h2>
 <p>By default, the table identifier is the Livewire component class (<code>static::class</code>). This means two components like <code>TaskListTable</code> and <code>TaskBoardTable</code> that both query <code>App\Models\Task</code> will have independent column orders without any extra configuration.</p>
 <p>If you need a custom identifier (e.g., a single component that renders different table configurations), override <code>getReorderableTableIdentifier()</code>:</p>
-<pre><code class="language-php">protected function getReorderableTableIdentifier(): string
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">protected</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">getReorderableTableIdentifier</span><span style="color: #E1E4E8;">()</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">string</span></div><div class='line'><span style="color: #E1E4E8;">{</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">return</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">static::class</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">.</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;:&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">.</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">$this</span><span style="color: #F97583;">-&gt;</span><span style="color: #E1E4E8;">tableVariant;</span></div><div class='line'><span style="color: #E1E4E8;">}</span></div><textarea data-torchlight-original="true" style="display: none !important;">protected function getReorderableTableIdentifier(): string
 {
     return static::class . ':' . $this-&gt;tableVariant;
 }
-</code></pre>
+</textarea></code></pre>
 <h2 id="custom-user-resolution">Custom user resolution</h2>
 <p>By default, the trait uses <code>auth()-&gt;id()</code> to identify the user. Override <code>getReorderableUserId()</code> for custom logic:</p>
-<pre><code class="language-php">// Multi-guard authentication
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #6A737D;">// Multi-guard authentication</span></div><div class='line'><span style="color: #F97583;">protected</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">getReorderableUserId</span><span style="color: #E1E4E8;">()</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">?int</span></div><div class='line'><span style="color: #E1E4E8;">{</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">return</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">auth</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;admin&#39;</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">id</span><span style="color: #E1E4E8;">();</span></div><div class='line'><span style="color: #E1E4E8;">}</span></div><textarea data-torchlight-original="true" style="display: none !important;">// Multi-guard authentication
 protected function getReorderableUserId(): ?int
 {
     return auth('admin')-&gt;id();
 }
-</code></pre>
+</textarea></code></pre>
 <h2 id="custom-model-type">Custom model type</h2>
 <p>By default, the model type is resolved from <code>$table-&gt;getQuery()-&gt;getModel()</code>. Override <code>getReorderableModelType()</code> if you need a custom key:</p>
-<pre><code class="language-php">protected function getReorderableModelType(): ?string
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">protected</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">getReorderableModelType</span><span style="color: #E1E4E8;">()</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">?string</span></div><div class='line'><span style="color: #E1E4E8;">{</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">return</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;custom-key&#39;</span><span style="color: #E1E4E8;">;</span></div><div class='line'><span style="color: #E1E4E8;">}</span></div><textarea data-torchlight-original="true" style="display: none !important;">protected function getReorderableModelType(): ?string
 {
     return 'custom-key';
 }
-</code></pre>
+</textarea></code></pre>
 <h2 id="guests-unauthenticated-users">Guests (unauthenticated users)</h2>
 <p>When <code>getReorderableUserId()</code> returns <code>null</code>, column reordering is silently disabled:</p>
 <ul>

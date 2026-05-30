@@ -229,6 +229,10 @@
                                         Table Exports                                    </a>
                                 </li>
                                                             <li>
+                                    <a class="" href="../../../table/summaries/">
+                                        Summaries                                    </a>
+                                </li>
+                                                            <li>
                                     <a class="" href="../../../table/sub-rows/">
                                         Sub-Rows                                    </a>
                                 </li>
@@ -364,49 +368,49 @@
 
                         
 <p>Visual range slider for numeric values with configurable min, max, and step.</p>
-<pre><code class="language-php">use NyonCode\WireForms\Components\Slider;
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireForms\Components\Slider</span><span style="color: #E1E4E8;">;</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireForms\Components\Slider;
+</textarea></code></pre>
 <h2 id="basic-usage">Basic Usage</h2>
-<pre><code class="language-php">Slider::make('volume')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Slider</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;volume&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">min</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">0</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">max</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">100</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">default</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">50</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">Slider::make('volume')
     -&gt;min(0)
     -&gt;max(100)
     -&gt;default(50)
-</code></pre>
+</textarea></code></pre>
 <h2 id="with-units">With Units</h2>
 <p>Use <code>prefix()</code> / <code>suffix()</code> to add a unit label to both the range endpoints and the current-value badge:</p>
-<pre><code class="language-php">Slider::make('discount')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Slider</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;discount&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">min</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">0</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">max</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">100</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">suffix</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;%&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">default</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">10</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">Slider::make('discount')
     -&gt;min(0)
     -&gt;max(100)
     -&gt;suffix('%')
     -&gt;default(10)
-</code></pre>
-<pre><code class="language-php">Slider::make('price')
+</textarea></code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Slider</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;price&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">min</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">0</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">max</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">10000</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">step</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">100</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">prefix</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;CZK &#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">showValue</span><span style="color: #E1E4E8;">()</span></div><textarea data-torchlight-original="true" style="display: none !important;">Slider::make('price')
     -&gt;min(0)
     -&gt;max(10000)
     -&gt;step(100)
     -&gt;prefix('CZK ')
     -&gt;showValue()
-</code></pre>
+</textarea></code></pre>
 <h2 id="decimal-step">Decimal Step</h2>
-<pre><code class="language-php">Slider::make('opacity')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Slider</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;opacity&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">min</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">0.0</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">max</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">1.0</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">step</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">0.05</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">default</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">1.0</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">Slider::make('opacity')
     -&gt;min(0.0)
     -&gt;max(1.0)
     -&gt;step(0.05)
     -&gt;default(1.0)
-</code></pre>
+</textarea></code></pre>
 <h2 id="hide-value-badge">Hide Value Badge</h2>
-<pre><code class="language-php">Slider::make('threshold')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Slider</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;threshold&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">showValue</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">false</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">Slider::make('threshold')
     -&gt;showValue(false)
-</code></pre>
+</textarea></code></pre>
 <h2 id="custom-color">Custom Color</h2>
 <p>The track is filled up to the current value and the thumb is colored to match.
 The fill color defaults to the theme primary; override it with any CSS color:</p>
-<pre><code class="language-php">Slider::make('volume')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Slider</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;volume&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">color</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;#f59e0b&#39;</span><span style="color: #E1E4E8;">)          </span><span style="color: #6A737D;">// hex</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #79B8FF;">Slider</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;health&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">color</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;rgb(16 185 129)&#39;</span><span style="color: #E1E4E8;">)  </span><span style="color: #6A737D;">// rgb</span></div><textarea data-torchlight-original="true" style="display: none !important;">Slider::make('volume')
     -&gt;color('#f59e0b')          // hex
 
 Slider::make('health')
     -&gt;color('rgb(16 185 129)')  // rgb
-</code></pre>
+</textarea></code></pre>
 <h2 id="methods">Methods</h2>
 <table>
 <thead>

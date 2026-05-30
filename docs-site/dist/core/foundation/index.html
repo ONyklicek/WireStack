@@ -229,6 +229,10 @@
                                         Table Exports                                    </a>
                                 </li>
                                                             <li>
+                                    <a class="" href="../../table/summaries/">
+                                        Summaries                                    </a>
+                                </li>
+                                                            <li>
                                     <a class="" href="../../table/sub-rows/">
                                         Sub-Rows                                    </a>
                                 </li>
@@ -542,7 +546,7 @@
 </table>
 <h3 id="closure-evaluation">Closure Evaluation</h3>
 <p>All configuration methods accept both scalar values and Closures:</p>
-<pre><code class="language-php">// Scalar
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #6A737D;">// Scalar</span></div><div class='line'><span style="color: #79B8FF;">TextColumn</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;name&#39;</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">label</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Full Name&#39;</span><span style="color: #E1E4E8;">);</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #6A737D;">// Closure — evaluated per record at render time</span></div><div class='line'><span style="color: #79B8FF;">TextColumn</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;name&#39;</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">label</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">fn</span><span style="color: #E1E4E8;"> (</span><span style="color: #79B8FF;">User</span><span style="color: #E1E4E8;"> $record) =&gt; </span><span style="color: #9ECBFF;">&quot;Name: {</span><span style="color: #E1E4E8;">$record</span><span style="color: #F97583;">-&gt;</span><span style="color: #E1E4E8;">name</span><span style="color: #9ECBFF;">}&quot;</span><span style="color: #E1E4E8;">);</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #6A737D;">// Closure with dependency injection</span></div><div class='line'><span style="color: #79B8FF;">Action</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;edit&#39;</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">hidden</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">fn</span><span style="color: #E1E4E8;"> (</span><span style="color: #79B8FF;">User</span><span style="color: #E1E4E8;"> $record, </span><span style="color: #79B8FF;">Table</span><span style="color: #E1E4E8;"> $table) =&gt; </span><span style="color: #F97583;">!</span><span style="color: #E1E4E8;"> $table</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">isEditable</span><span style="color: #E1E4E8;">());</span></div><textarea data-torchlight-original="true" style="display: none !important;">// Scalar
 TextColumn::make('name')-&gt;label('Full Name');
 
 // Closure — evaluated per record at render time
@@ -550,7 +554,7 @@ TextColumn::make('name')-&gt;label(fn (User $record) =&gt; "Name: {$record-&gt;n
 
 // Closure with dependency injection
 Action::make('edit')-&gt;hidden(fn (User $record, Table $table) =&gt; ! $table-&gt;isEditable());
-</code></pre>
+</textarea></code></pre>
 <h2 id="base-classes">Base Classes</h2>
 <table>
 <thead>
@@ -578,24 +582,177 @@ Action::make('edit')-&gt;hidden(fn (User $record, Table $table) =&gt; ! $table-&
 </tr>
 </tbody>
 </table>
-<pre><code class="language-php">// All components use the static factory pattern
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #6A737D;">// All components use the static factory pattern</span></div><div class='line'><span style="color: #E1E4E8;">$field </span><span style="color: #F97583;">=</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">TextInput</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;email&#39;</span><span style="color: #E1E4E8;">);</span></div><div class='line'><span style="color: #E1E4E8;">$column </span><span style="color: #F97583;">=</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">TextColumn</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;name&#39;</span><span style="color: #E1E4E8;">);</span></div><div class='line'><span style="color: #E1E4E8;">$action </span><span style="color: #F97583;">=</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">Action</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;delete&#39;</span><span style="color: #E1E4E8;">);</span></div><textarea data-torchlight-original="true" style="display: none !important;">// All components use the static factory pattern
 $field = TextInput::make('email');
 $column = TextColumn::make('name');
 $action = Action::make('delete');
-</code></pre>
+</textarea></code></pre>
 <h2 id="icons">Icons</h2>
-<p>50+ inline SVG icons with no external dependencies.</p>
+<p>The complete <a href="https://heroicons.com" target="_blank" rel="noreferrer">Heroicons</a> <strong>solid</strong> collection (324 icons,
+<code>20x20</code> viewBox) is bundled inline — no external dependencies, no extra package.</p>
 <h3 id="blade-usage">Blade Usage</h3>
-<pre><code class="language-blade">&lt;x-wire::icon name="check" class="w-5 h-5" /&gt;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-blade"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #E1E4E8;">&lt;</span><span style="color: #FDAEB7;">x-wire::icon</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">name</span><span style="color: #E1E4E8;">=</span><span style="color: #9ECBFF;">&quot;check&quot;</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">class</span><span style="color: #E1E4E8;">=</span><span style="color: #9ECBFF;">&quot;w-5 h-5&quot;</span><span style="color: #E1E4E8;"> /&gt;</span></div><div class='line'><span style="color: #E1E4E8;">&lt;</span><span style="color: #FDAEB7;">x-wire::icon</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">name</span><span style="color: #E1E4E8;">=</span><span style="color: #9ECBFF;">&quot;trash&quot;</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">class</span><span style="color: #E1E4E8;">=</span><span style="color: #9ECBFF;">&quot;w-4 h-4 text-red-500&quot;</span><span style="color: #E1E4E8;"> /&gt;</span></div><textarea data-torchlight-original="true" style="display: none !important;">&lt;x-wire::icon name="check" class="w-5 h-5" /&gt;
 &lt;x-wire::icon name="trash" class="w-4 h-4 text-red-500" /&gt;
-</code></pre>
+</textarea></code></pre>
 <h3 id="php-usage">PHP Usage</h3>
-<pre><code class="language-php">use NyonCode\WireCore\Foundation\Icons\IconManager;
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Foundation\Icons\IconManager</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #E1E4E8;">$svg </span><span style="color: #F97583;">=</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">app</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">IconManager</span><span style="color: #F97583;">::class</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">render</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;check&#39;</span><span style="color: #E1E4E8;">);</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireCore\Foundation\Icons\IconManager;
 
 $svg = app(IconManager::class)-&gt;render('check');
-</code></pre>
+</textarea></code></pre>
 <h3 id="available-icons">Available Icons</h3>
-<p><code>check</code>, <code>x</code>, <code>pencil</code>, <code>trash</code>, <code>eye</code>, <code>plus</code>, <code>minus</code>, <code>search</code>, <code>filter</code>, <code>sort-asc</code>, <code>sort-desc</code>, <code>chevron-up</code>, <code>chevron-down</code>, <code>chevron-left</code>, <code>chevron-right</code>, <code>arrow-up</code>, <code>arrow-down</code>, <code>info</code>, <code>warning</code>, <code>exclamation</code>, <code>question</code>, <code>user</code>, <code>users</code>, <code>mail</code>, <code>phone</code>, <code>calendar</code>, <code>clock</code>, <code>document</code>, <code>folder</code>, <code>upload</code>, <code>download</code>, <code>link</code>, <code>external-link</code>, <code>copy</code>, <code>refresh</code>, <code>settings</code>, <code>menu</code>, <code>dots-horizontal</code>, <code>dots-vertical</code>, and more.</p>
+<p>Every icon uses its <strong>canonical Heroicons name</strong> — the file name from
+<a href="https://heroicons.com" target="_blank" rel="noreferrer">heroicons.com</a> (solid variant). Browse the full set
+there; a few examples:</p>
+<p><code>academic-cap</code>, <code>arrow-down-tray</code>, <code>bars-3</code>, <code>chevron-up</code>, <code>cog-6-tooth</code>,
+<code>document-text</code>, <code>envelope</code>, <code>funnel</code>, <code>magnifying-glass</code>, <code>pencil</code>, <code>qr-code</code>,
+<code>trash</code>, <code>user</code>, <code>wrench-screwdriver</code>, <code>x-mark</code>.</p>
+<p>For IDE autocompletion you can reference icons through the <code>Icon</code> enum instead of
+raw strings:</p>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Foundation\Icons\Icon</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #79B8FF;">Action</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;edit&#39;</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">icon</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">Icon</span><span style="color: #F97583;">::</span><span style="color: #79B8FF;">pencilSquare</span><span style="color: #E1E4E8;">);</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireCore\Foundation\Icons\Icon;
+
+Action::make('edit')-&gt;icon(Icon::pencilSquare);
+</textarea></code></pre>
+<h3 id="wire-friendly-aliases">Wire-friendly Aliases</h3>
+<p>A small set of short aliases map onto canonical icons for convenience:</p>
+<table>
+<thead>
+<tr>
+<th>Alias</th>
+<th>Resolves to</th>
+<th>Alias</th>
+<th>Resolves to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pen</code>, <code>edit</code></td>
+<td><code>pencil</code></td>
+<td><code>delete</code></td>
+<td><code>trash</code></td>
+</tr>
+<tr>
+<td><code>view</code></td>
+<td><code>eye</code></td>
+<td><code>add</code></td>
+<td><code>plus</code></td>
+</tr>
+<tr>
+<td><code>download</code>, <code>export</code></td>
+<td><code>arrow-down-tray</code></td>
+<td><code>upload</code>, <code>import</code></td>
+<td><code>arrow-up-tray</code></td>
+</tr>
+<tr>
+<td><code>duplicate</code>, <code>copy</code></td>
+<td><code>document-duplicate</code></td>
+<td><code>x</code>, <code>close</code></td>
+<td><code>x-mark</code></td>
+</tr>
+<tr>
+<td><code>settings</code></td>
+<td><code>cog</code></td>
+<td><code>mail</code>, <code>email</code></td>
+<td><code>envelope</code></td>
+</tr>
+<tr>
+<td><code>exclamation</code>, <code>warning</code></td>
+<td><code>exclamation-triangle</code></td>
+<td><code>information</code>, <code>info</code></td>
+<td><code>information-circle</code></td>
+</tr>
+<tr>
+<td><code>question</code></td>
+<td><code>question-mark-circle</code></td>
+<td><code>archive</code></td>
+<td><code>archive-box</code></td>
+</tr>
+<tr>
+<td><code>refresh</code></td>
+<td><code>arrow-path</code></td>
+<td><code>shield</code></td>
+<td><code>shield-check</code></td>
+</tr>
+<tr>
+<td><code>lock</code></td>
+<td><code>lock-closed</code></td>
+<td><code>filter</code></td>
+<td><code>funnel</code></td>
+</tr>
+<tr>
+<td><code>more</code>, <code>dots-vertical</code></td>
+<td><code>ellipsis-vertical</code></td>
+<td><code>dots-horizontal</code></td>
+<td><code>ellipsis-horizontal</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="adding-custom-icons">Adding Custom Icons</h2>
+<p>You don't have to settle for the bundled set. Pick whichever approach fits — they
+all add to (or override) the defaults, and a custom icon is used anywhere an icon
+name is accepted (<code>-&gt;icon('logo')</code>, <code>&lt;x-wire::icon name="logo" /&gt;</code>, …).</p>
+<p>Icons are wrapped in a <code>0 0 20 20</code> viewBox, so design custom SVGs on a 20×20 grid
+for consistent sizing.</p>
+<h3 id="1-from-a-folder-of-svg-files-easiest">1. From a folder of SVG files (easiest)</h3>
+<p>Drop <code>.svg</code> files in a directory and register the path — the file name becomes the
+icon name (<code>logo.svg</code> → <code>logo</code>). No class, no boilerplate.</p>
+<p>Via config (<code>config/wire-core.php</code>), great for app-wide icons:</p>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #9ECBFF;">&#39;icons&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> [</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #9ECBFF;">&#39;paths&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> [</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #B392F0;">resource_path</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;icons&#39;</span><span style="color: #E1E4E8;">),        </span><span style="color: #6A737D;">// resources/icons/logo.svg =&gt; &quot;logo&quot;</span></div><div class='line'><span style="color: #E1E4E8;">    ],</span></div><div class='line'><span style="color: #E1E4E8;">],</span></div><textarea data-torchlight-original="true" style="display: none !important;">'icons' =&gt; [
+    'paths' =&gt; [
+        resource_path('icons'),        // resources/icons/logo.svg =&gt; "logo"
+    ],
+],
+</textarea></code></pre>
+<p>Or at runtime, with an optional prefix to namespace the set:</p>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Foundation\Icons\IconManager</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #B392F0;">app</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">IconManager</span><span style="color: #F97583;">::class</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">registerIconsFromDirectory</span><span style="color: #E1E4E8;">(</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #B392F0;">resource_path</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;icons/brand&#39;</span><span style="color: #E1E4E8;">),</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #B392F0;">prefix</span><span style="color: #E1E4E8;">: </span><span style="color: #9ECBFF;">&#39;brand&#39;</span><span style="color: #E1E4E8;">,                   </span><span style="color: #6A737D;">// brand/logo.svg =&gt; &quot;brand-logo&quot;</span></div><div class='line'><span style="color: #E1E4E8;">);</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireCore\Foundation\Icons\IconManager;
+
+app(IconManager::class)-&gt;registerIconsFromDirectory(
+    resource_path('icons/brand'),
+    prefix: 'brand',                   // brand/logo.svg =&gt; "brand-logo"
+);
+</textarea></code></pre>
+<h3 id="2-inline-by-name">2. Inline, by name</h3>
+<p>Register individual icons — paste a full <code>&lt;svg&gt;…&lt;/svg&gt;</code> (the wrapper is stripped
+automatically) or just the inner <code>&lt;path&gt;</code>:</p>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #B392F0;">app</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">IconManager</span><span style="color: #F97583;">::class</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">registerIcons</span><span style="color: #E1E4E8;">([</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #9ECBFF;">&#39;logo&#39;</span><span style="color: #E1E4E8;">  </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;&lt;svg viewBox=&quot;0 0 20 20&quot;&gt;&lt;path d=&quot;M10 2 …&quot;/&gt;&lt;/svg&gt;&#39;</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #9ECBFF;">&#39;spark&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;&lt;path d=&quot;M10 1 12 8 …&quot;/&gt;&#39;</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">]);</span></div><textarea data-torchlight-original="true" style="display: none !important;">app(IconManager::class)-&gt;registerIcons([
+    'logo'  =&gt; '&lt;svg viewBox="0 0 20 20"&gt;&lt;path d="M10 2 …"/&gt;&lt;/svg&gt;',
+    'spark' =&gt; '&lt;path d="M10 1 12 8 …"/&gt;',
+]);
+</textarea></code></pre>
+<p>Reuse the same name as a bundled icon to <strong>override</strong> it.</p>
+<p>Put either call in a service provider's <code>boot()</code> method so the icons are
+available everywhere:</p>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">public</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">boot</span><span style="color: #E1E4E8;">()</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">void</span></div><div class='line'><span style="color: #E1E4E8;">{</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #B392F0;">app</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">IconManager</span><span style="color: #F97583;">::class</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">registerIconsFromDirectory</span><span style="color: #E1E4E8;">(</span><span style="color: #B392F0;">resource_path</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;icons&#39;</span><span style="color: #E1E4E8;">));</span></div><div class='line'><span style="color: #E1E4E8;">}</span></div><textarea data-torchlight-original="true" style="display: none !important;">public function boot(): void
+{
+    app(IconManager::class)-&gt;registerIconsFromDirectory(resource_path('icons'));
+}
+</textarea></code></pre>
+<h3 id="3-a-reusable-icon-set-advanced">3. A reusable icon set (advanced)</h3>
+<p>For a complete, swappable theme (e.g. a different icon style), implement
+<code>IconSet</code> and register the class in config under <code>icons.sets</code>. Sets registered
+here take priority over the bundled defaults:</p>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireCore\Foundation\Icons\IconSet</span><span style="color: #E1E4E8;">;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #F97583;">final</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">class</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">MyIconSet</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">implements</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">IconSet</span></div><div class='line'><span style="color: #E1E4E8;">{</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">public</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">getPath</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">string</span><span style="color: #E1E4E8;"> $name)</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">?string</span><span style="color: #E1E4E8;"> { </span><span style="color: #6A737D;">/* return inner SVG or null */</span><span style="color: #E1E4E8;"> }</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">public</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">has</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">string</span><span style="color: #E1E4E8;"> $name)</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">bool</span><span style="color: #E1E4E8;"> { </span><span style="color: #6A737D;">/* … */</span><span style="color: #E1E4E8;"> }</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">public</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">names</span><span style="color: #E1E4E8;">()</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">array</span><span style="color: #E1E4E8;"> { </span><span style="color: #6A737D;">/* … */</span><span style="color: #E1E4E8;"> }</span></div><div class='line'><span style="color: #E1E4E8;">}</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireCore\Foundation\Icons\IconSet;
+
+final class MyIconSet implements IconSet
+{
+    public function getPath(string $name): ?string { /* return inner SVG or null */ }
+    public function has(string $name): bool { /* … */ }
+    public function names(): array { /* … */ }
+}
+</textarea></code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #6A737D;">// config/wire-core.php</span></div><div class='line'><span style="color: #9ECBFF;">&#39;icons&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> [</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #9ECBFF;">&#39;sets&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> [</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #9ECBFF;">&#39;default&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">DefaultIconSet</span><span style="color: #F97583;">::class</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #9ECBFF;">&#39;custom&#39;</span><span style="color: #E1E4E8;">  </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">App\Wire\Icons\MyIconSet</span><span style="color: #F97583;">::class</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">    ],</span></div><div class='line'><span style="color: #E1E4E8;">],</span></div><textarea data-torchlight-original="true" style="display: none !important;">// config/wire-core.php
+'icons' =&gt; [
+    'sets' =&gt; [
+        'default' =&gt; DefaultIconSet::class,
+        'custom'  =&gt; App\Wire\Icons\MyIconSet::class,
+    ],
+],
+</textarea></code></pre>
+<p>You can also register a set at runtime: <code>app(IconManager::class)-&gt;registerIconSet(new MyIconSet)</code>.</p>
+<h3 id="regenerating-the-bundled-heroicons">Regenerating the bundled Heroicons</h3>
+<p>The bundled paths live in the generated PHP data file
+<code>packages/core/resources/icons/heroicons-solid.php</code>, produced from the official
+<code>heroicons</code> npm package (<code>20/solid</code> SVGs, keyed by file name). Regenerate that
+file rather than editing icon paths by hand.</p>
 <h2 id="colors">Colors</h2>
 <p>Tailwind CSS color abstraction — 7 semantic color names:</p>
 <table>
@@ -636,13 +793,13 @@ $svg = app(IconManager::class)-&gt;render('check');
 </tr>
 </tbody>
 </table>
-<pre><code class="language-php">Action::make('delete')-&gt;color('danger');
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Action</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;delete&#39;</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">color</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;danger&#39;</span><span style="color: #E1E4E8;">);</span></div><div class='line'><span style="color: #79B8FF;">BadgeColumn</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;status&#39;</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">colors</span><span style="color: #E1E4E8;">([</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #9ECBFF;">&#39;active&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;success&#39;</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #9ECBFF;">&#39;pending&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;warning&#39;</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #9ECBFF;">&#39;inactive&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;danger&#39;</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">]);</span></div><textarea data-torchlight-original="true" style="display: none !important;">Action::make('delete')-&gt;color('danger');
 BadgeColumn::make('status')-&gt;colors([
     'active' =&gt; 'success',
     'pending' =&gt; 'warning',
     'inactive' =&gt; 'danger',
 ]);
-</code></pre>
+</textarea></code></pre>
 <p>Each color resolves to Tailwind utility classes for bg, text, border, ring, and hover variants.</p>
 <h2 id="support-utilities">Support Utilities</h2>
 <table>
@@ -665,7 +822,7 @@ BadgeColumn::make('status')-&gt;colors([
 </table>
 <h2 id="blade-components">Blade Components</h2>
 <p>Foundation provides base components under the <code>wire::</code> namespace:</p>
-<pre><code class="language-blade">{{-- Icon --}}
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-blade"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #6A737D;">{{-- Icon --}}</span></div><div class='line'><span style="color: #E1E4E8;">&lt;</span><span style="color: #FDAEB7;">x-wire::icon</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">name</span><span style="color: #E1E4E8;">=</span><span style="color: #9ECBFF;">&quot;check&quot;</span><span style="color: #E1E4E8;"> /&gt;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #6A737D;">{{-- Badge --}}</span></div><div class='line'><span style="color: #E1E4E8;">&lt;</span><span style="color: #FDAEB7;">x-wire::badge</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">color</span><span style="color: #E1E4E8;">=</span><span style="color: #9ECBFF;">&quot;success&quot;</span><span style="color: #E1E4E8;">&gt;Active&lt;/</span><span style="color: #FDAEB7;">x-wire::badge</span><span style="color: #E1E4E8;">&gt;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #6A737D;">{{-- Button --}}</span></div><div class='line'><span style="color: #E1E4E8;">&lt;</span><span style="color: #FDAEB7;">x-wire::button</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">color</span><span style="color: #E1E4E8;">=</span><span style="color: #9ECBFF;">&quot;primary&quot;</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">size</span><span style="color: #E1E4E8;">=</span><span style="color: #9ECBFF;">&quot;sm&quot;</span><span style="color: #E1E4E8;">&gt;Save&lt;/</span><span style="color: #FDAEB7;">x-wire::button</span><span style="color: #E1E4E8;">&gt;</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #6A737D;">{{-- Dropdown --}}</span></div><div class='line'><span style="color: #E1E4E8;">&lt;</span><span style="color: #FDAEB7;">x-wire::dropdown</span><span style="color: #E1E4E8;">&gt;</span></div><div class='line'><span style="color: #E1E4E8;">    &lt;</span><span style="color: #FDAEB7;">x-slot:trigger</span><span style="color: #E1E4E8;">&gt;Options&lt;/</span><span style="color: #FDAEB7;">x-slot:trigger</span><span style="color: #E1E4E8;">&gt;</span></div><div class='line'><span style="color: #E1E4E8;">    &lt;</span><span style="color: #FDAEB7;">x-wire::dropdown.item</span><span style="color: #E1E4E8;">&gt;Edit&lt;/</span><span style="color: #FDAEB7;">x-wire::dropdown.item</span><span style="color: #E1E4E8;">&gt;</span></div><div class='line'><span style="color: #E1E4E8;">    &lt;</span><span style="color: #FDAEB7;">x-wire::dropdown.item</span><span style="color: #E1E4E8;">&gt;Delete&lt;/</span><span style="color: #FDAEB7;">x-wire::dropdown.item</span><span style="color: #E1E4E8;">&gt;</span></div><div class='line'><span style="color: #E1E4E8;">&lt;/</span><span style="color: #FDAEB7;">x-wire::dropdown</span><span style="color: #E1E4E8;">&gt;</span></div><textarea data-torchlight-original="true" style="display: none !important;">{{-- Icon --}}
 &lt;x-wire::icon name="check" /&gt;
 
 {{-- Badge --}}
@@ -680,7 +837,7 @@ BadgeColumn::make('status')-&gt;colors([
     &lt;x-wire::dropdown.item&gt;Edit&lt;/x-wire::dropdown.item&gt;
     &lt;x-wire::dropdown.item&gt;Delete&lt;/x-wire::dropdown.item&gt;
 &lt;/x-wire::dropdown&gt;
-</code></pre>
+</textarea></code></pre>
 
                                                     <nav class="page-nav" aria-label="Pagination">
                                                                     <a class="page-nav-link is-prev" href="../actions/">
@@ -741,6 +898,30 @@ BadgeColumn::make('status')-&gt;colors([
                                                                     <li class="level-3">
                                         <a href="#available-icons">
                                             Available Icons                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#wire-friendly-aliases">
+                                            Wire-friendly Aliases                                        </a>
+                                    </li>
+                                                                    <li class="level-2">
+                                        <a href="#adding-custom-icons">
+                                            Adding Custom Icons                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#1-from-a-folder-of-svg-files-easiest">
+                                            1. From a folder of SVG files (easiest)                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#2-inline-by-name">
+                                            2. Inline, by name                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#3-a-reusable-icon-set-advanced">
+                                            3. A reusable icon set (advanced)                                        </a>
+                                    </li>
+                                                                    <li class="level-3">
+                                        <a href="#regenerating-the-bundled-heroicons">
+                                            Regenerating the bundled Heroicons                                        </a>
                                     </li>
                                                                     <li class="level-2">
                                         <a href="#colors">

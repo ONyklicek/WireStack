@@ -229,6 +229,10 @@
                                         Table Exports                                    </a>
                                 </li>
                                                             <li>
+                                    <a class="" href="../../../table/summaries/">
+                                        Summaries                                    </a>
+                                </li>
+                                                            <li>
                                     <a class="" href="../../../table/sub-rows/">
                                         Sub-Rows                                    </a>
                                 </li>
@@ -364,42 +368,42 @@
 
                         
 <p>Inline key-value pair editor for dictionary / map-like data (environment variables, metadata, config options).</p>
-<pre><code class="language-php">use NyonCode\WireForms\Components\KeyValue;
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireForms\Components\KeyValue</span><span style="color: #E1E4E8;">;</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireForms\Components\KeyValue;
+</textarea></code></pre>
 <h2 id="basic-usage">Basic Usage</h2>
-<pre><code class="language-php">KeyValue::make('metadata')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">KeyValue</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;metadata&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">keyLabel</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Key&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">valueLabel</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Value&#39;</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">KeyValue::make('metadata')
     -&gt;keyLabel('Key')
     -&gt;valueLabel('Value')
-</code></pre>
+</textarea></code></pre>
 <h2 id="state-format">State Format</h2>
 <p>State is stored as <code>array&lt;int, array{key: string, value: string}&gt;</code>:</p>
-<pre><code class="language-php">[
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #E1E4E8;">[</span></div><div class='line'><span style="color: #E1E4E8;">    [</span><span style="color: #9ECBFF;">&#39;key&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;color&#39;</span><span style="color: #E1E4E8;">,  </span><span style="color: #9ECBFF;">&#39;value&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;blue&#39;</span><span style="color: #E1E4E8;">],</span></div><div class='line'><span style="color: #E1E4E8;">    [</span><span style="color: #9ECBFF;">&#39;key&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;size&#39;</span><span style="color: #E1E4E8;">,   </span><span style="color: #9ECBFF;">&#39;value&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;large&#39;</span><span style="color: #E1E4E8;">],</span></div><div class='line'><span style="color: #E1E4E8;">]</span></div><textarea data-torchlight-original="true" style="display: none !important;">[
     ['key' =&gt; 'color',  'value' =&gt; 'blue'],
     ['key' =&gt; 'size',   'value' =&gt; 'large'],
 ]
-</code></pre>
+</textarea></code></pre>
 <p>To convert to an associative array for persistence, use <code>mutateFormDataBeforeSave</code>:</p>
-<pre><code class="language-php">-&gt;mutateFormDataBeforeSave(function (array $data): array {
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">mutateFormDataBeforeSave</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> (</span><span style="color: #F97583;">array</span><span style="color: #E1E4E8;"> $data)</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">array</span><span style="color: #E1E4E8;"> {</span></div><div class='line'><span style="color: #E1E4E8;">    $data[</span><span style="color: #9ECBFF;">&#39;metadata&#39;</span><span style="color: #E1E4E8;">] </span><span style="color: #F97583;">=</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">collect</span><span style="color: #E1E4E8;">($data[</span><span style="color: #9ECBFF;">&#39;metadata&#39;</span><span style="color: #E1E4E8;">])</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">pluck</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;value&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #9ECBFF;">&#39;key&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">all</span><span style="color: #E1E4E8;">();</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">return</span><span style="color: #E1E4E8;"> $data;</span></div><div class='line'><span style="color: #E1E4E8;">})</span></div><textarea data-torchlight-original="true" style="display: none !important;">-&gt;mutateFormDataBeforeSave(function (array $data): array {
     $data['metadata'] = collect($data['metadata'])
         -&gt;pluck('value', 'key')
         -&gt;all();
     return $data;
 })
-</code></pre>
+</textarea></code></pre>
 <h2 id="fixed-keys">Fixed Keys</h2>
 <p>Prevent the user from editing key names (value-only mode):</p>
-<pre><code class="language-php">KeyValue::make('config')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">KeyValue</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;config&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">keyEditable</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">false</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">default</span><span style="color: #E1E4E8;">([</span></div><div class='line'><span style="color: #E1E4E8;">        [</span><span style="color: #9ECBFF;">&#39;key&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;timeout&#39;</span><span style="color: #E1E4E8;">,  </span><span style="color: #9ECBFF;">&#39;value&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;30&#39;</span><span style="color: #E1E4E8;">],</span></div><div class='line'><span style="color: #E1E4E8;">        [</span><span style="color: #9ECBFF;">&#39;key&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;retries&#39;</span><span style="color: #E1E4E8;">,  </span><span style="color: #9ECBFF;">&#39;value&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;3&#39;</span><span style="color: #E1E4E8;">],</span></div><div class='line'><span style="color: #E1E4E8;">    ])</span></div><textarea data-torchlight-original="true" style="display: none !important;">KeyValue::make('config')
     -&gt;keyEditable(false)
     -&gt;default([
         ['key' =&gt; 'timeout',  'value' =&gt; '30'],
         ['key' =&gt; 'retries',  'value' =&gt; '3'],
     ])
-</code></pre>
+</textarea></code></pre>
 <h2 id="placeholders">Placeholders</h2>
-<pre><code class="language-php">KeyValue::make('headers')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">KeyValue</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;headers&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">keyPlaceholder</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Header name&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">valuePlaceholder</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;Header value&#39;</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">KeyValue::make('headers')
     -&gt;keyPlaceholder('Header name')
     -&gt;valuePlaceholder('Header value')
-</code></pre>
+</textarea></code></pre>
 <h2 id="methods">Methods</h2>
 <table>
 <thead>

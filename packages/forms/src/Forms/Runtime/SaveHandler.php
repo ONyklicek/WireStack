@@ -13,6 +13,8 @@ use NyonCode\WireCore\Core\Hydration\ValueTransformer;
 use NyonCode\WireCore\Core\Plugin\Hooks\FormSavedPayload;
 use NyonCode\WireCore\Core\Plugin\Hooks\FormSavingPayload;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Foundation\Components\LayoutComponent;
+use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Forms\Config\FormConfig;
 
 /**
@@ -120,6 +122,14 @@ final class SaveHandler
             throw new InvalidArgumentException('Form has no model configured. Call ->model() or ->using() before save().');
         }
 
+        // Relationship-backed repeaters (e.g. Repeater::make('children')->relationship('children'))
+        // hold has-many rows, not parent columns. They are persisted separately by
+        // RelationshipSaveHandler after the parent save, so strip them here to avoid
+        // dehydrating a non-existent column onto the parent.
+        foreach ($this->relationshipRepeaterNames() as $name) {
+            unset($data[$name]);
+        }
+
         $dehydrator = new Dehydrator(new ValueTransformer, new CastResolver);
 
         // Update mode
@@ -136,6 +146,36 @@ final class SaveHandler
         $instance->save();
 
         return $instance;
+    }
+
+    /**
+     * Collect the field names of all relationship-backed repeaters in the schema,
+     * traversing nested layout components.
+     *
+     * @return array<int, string>
+     */
+    private function relationshipRepeaterNames(): array
+    {
+        return $this->collectRelationshipRepeaterNames($this->config->schema);
+    }
+
+    /**
+     * @param  array<int, mixed>  $schema
+     * @return array<int, string>
+     */
+    private function collectRelationshipRepeaterNames(array $schema): array
+    {
+        $names = [];
+
+        foreach ($schema as $component) {
+            if ($component instanceof Repeater && $component->getRelationship() !== null) {
+                $names[] = $component->getName();
+            } elseif ($component instanceof LayoutComponent) {
+                $names = array_merge($names, $this->collectRelationshipRepeaterNames($component->getSchema()));
+            }
+        }
+
+        return $names;
     }
 
     private function notifySuccess(mixed $record): void

@@ -264,6 +264,7 @@ final class PluginManager
         foreach ($hooks as $hook) {
             if ($this->callbackExpectsObject($hook['callback'])) {
                 $this->warnSkippedCallback($name, $hook['callback'], 'runHook', 'runTypedHook');
+
                 continue;
             }
 
@@ -299,6 +300,7 @@ final class PluginManager
         foreach ($hooks as $hook) {
             if ($this->callbackExpectsArray($hook['callback'])) {
                 $this->warnSkippedCallback($name, $hook['callback'], 'runTypedHook', 'runHook');
+
                 continue;
             }
 

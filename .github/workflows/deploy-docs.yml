@@ -48,7 +48,7 @@ jobs:
         run: composer install --prefer-dist --no-interaction --no-progress
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
 
@@ -73,6 +73,7 @@ jobs:
           external_repository: NyonCode/wire-stack.github.io
           publish_dir: ./docs-site/dist
           publish_branch: gh-pages
+          cname: wirestack.nyoncode.cz
           force_orphan: true
           user_name: "Ondřej Nyklíček"
           user_email: "ondrejnyklicek@icloud.com"

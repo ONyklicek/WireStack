@@ -229,6 +229,10 @@
                                         Table Exports                                    </a>
                                 </li>
                                                             <li>
+                                    <a class="" href="../../table/summaries/">
+                                        Summaries                                    </a>
+                                </li>
+                                                            <li>
                                     <a class="" href="../../table/sub-rows/">
                                         Sub-Rows                                    </a>
                                 </li>
@@ -389,7 +393,7 @@
 </tr>
 </tbody>
 </table>
-<pre><code class="language-php">// Default column
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #6A737D;">// Default column</span></div><div class='line'><span style="color: #E1E4E8;">$table</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">reorderable</span><span style="color: #E1E4E8;">();</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #6A737D;">// Custom column</span></div><div class='line'><span style="color: #E1E4E8;">$table</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">reorderable</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;position&#39;</span><span style="color: #E1E4E8;">);</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #6A737D;">// Conditional</span></div><div class='line'><span style="color: #E1E4E8;">$table</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">reorderable</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;position&#39;</span><span style="color: #E1E4E8;">, $user</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">can</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;reorder&#39;</span><span style="color: #E1E4E8;">));</span></div><textarea data-torchlight-original="true" style="display: none !important;">// Default column
 $table-&gt;reorderable();
 
 // Custom column
@@ -397,7 +401,7 @@ $table-&gt;reorderable('position');
 
 // Conditional
 $table-&gt;reorderable('position', $user-&gt;can('reorder'));
-</code></pre>
+</textarea></code></pre>
 <h3 id="isreorderable-bool"><code>isReorderable(): bool</code></h3>
 <p>Returns whether row reordering is enabled.</p>
 <h3 id="getordercolumn-string"><code>getOrderColumn(): string</code></h3>
@@ -414,8 +418,8 @@ $table-&gt;reorderable('position', $user-&gt;can('reorder'));
 <h2 id="withsortable">WithSortable</h2>
 <p><code>NyonCode\WireSortable\Concerns\WithSortable</code></p>
 <p>Livewire trait. Use alongside <code>WithTable</code>:</p>
-<pre><code class="language-php">use WithTable, WithSortable;
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">WithTable</span><span style="color: #E1E4E8;">, </span><span style="color: #79B8FF;">WithSortable</span><span style="color: #E1E4E8;">;</span></div><textarea data-torchlight-original="true" style="display: none !important;">use WithTable, WithSortable;
+</textarea></code></pre>
 <h3 id="properties">Properties</h3>
 <table>
 <thead>
@@ -477,35 +481,35 @@ $table-&gt;reorderable('position', $user-&gt;can('reorder'));
 <h3 id="protected-hooks">Protected hooks</h3>
 <h4><code>beforeReorder(array $items): void</code></h4>
 <p>Called before the database update. Override for authorization or pre-processing.</p>
-<pre><code class="language-php">protected function beforeReorder(array $items): void
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">protected</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">beforeReorder</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">array</span><span style="color: #E1E4E8;"> $items)</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">void</span></div><div class='line'><span style="color: #E1E4E8;">{</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #79B8FF;">$this</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">authorize</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;reorder&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #79B8FF;">Task</span><span style="color: #F97583;">::class</span><span style="color: #E1E4E8;">);</span></div><div class='line'><span style="color: #E1E4E8;">}</span></div><textarea data-torchlight-original="true" style="display: none !important;">protected function beforeReorder(array $items): void
 {
     $this-&gt;authorize('reorder', Task::class);
 }
-</code></pre>
+</textarea></code></pre>
 <h4><code>afterReorder(array $items): void</code></h4>
 <p>Called after the database update. Override for cache invalidation or events.</p>
-<pre><code class="language-php">protected function afterReorder(array $items): void
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">protected</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">afterReorder</span><span style="color: #E1E4E8;">(</span><span style="color: #F97583;">array</span><span style="color: #E1E4E8;"> $items)</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">void</span></div><div class='line'><span style="color: #E1E4E8;">{</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #79B8FF;">Cache</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">forget</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;tasks.ordered&#39;</span><span style="color: #E1E4E8;">);</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #79B8FF;">$this</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">dispatch</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;tasks-reordered&#39;</span><span style="color: #E1E4E8;">);</span></div><div class='line'><span style="color: #E1E4E8;">}</span></div><textarea data-torchlight-original="true" style="display: none !important;">protected function afterReorder(array $items): void
 {
     Cache::forget('tasks.ordered');
     $this-&gt;dispatch('tasks-reordered');
 }
-</code></pre>
+</textarea></code></pre>
 <h4><code>getReorderableUserId(): ?int</code></h4>
 <p>Returns the user ID for column order persistence. Defaults to <code>auth()-&gt;id()</code>.</p>
 <p>Override for custom auth guards:</p>
-<pre><code class="language-php">protected function getReorderableUserId(): ?int
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">protected</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">getReorderableUserId</span><span style="color: #E1E4E8;">()</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">?int</span></div><div class='line'><span style="color: #E1E4E8;">{</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">return</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">auth</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;admin&#39;</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">id</span><span style="color: #E1E4E8;">();</span></div><div class='line'><span style="color: #E1E4E8;">}</span></div><textarea data-torchlight-original="true" style="display: none !important;">protected function getReorderableUserId(): ?int
 {
     return auth('admin')-&gt;id();
 }
-</code></pre>
+</textarea></code></pre>
 <h4><code>getReorderableModelType(): ?string</code></h4>
 <p>Returns the model type key for column order persistence. Defaults to the Eloquent model class name (e.g., <code>App\Models\Task</code>).</p>
 <p>Override to use a custom key:</p>
-<pre><code class="language-php">protected function getReorderableModelType(): ?string
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">protected</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> </span><span style="color: #B392F0;">getReorderableModelType</span><span style="color: #E1E4E8;">()</span><span style="color: #F97583;">:</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">?string</span></div><div class='line'><span style="color: #E1E4E8;">{</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">return</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">static::class</span><span style="color: #E1E4E8;">; </span><span style="color: #6A737D;">// component class instead of model</span></div><div class='line'><span style="color: #E1E4E8;">}</span></div><textarea data-torchlight-original="true" style="display: none !important;">protected function getReorderableModelType(): ?string
 {
     return static::class; // component class instead of model
 }
-</code></pre>
+</textarea></code></pre>
 <hr>
 <h2 id="reorderablecolumnorder">ReorderableColumnOrder</h2>
 <p><code>NyonCode\WireSortable\Models\ReorderableColumnOrder</code></p>

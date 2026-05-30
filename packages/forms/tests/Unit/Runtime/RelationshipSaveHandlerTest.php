@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use NyonCode\WireForms\Components\Repeater;
@@ -203,7 +204,7 @@ test('delete fires model deleting and deleted events', function () {
 
 test('soft-deleted children are soft-deleted not hard-deleted', function () {
     Schema::dropIfExists('rsh_soft_children');
-    Schema::create('rsh_soft_children', function (\Illuminate\Database\Schema\Blueprint $table) {
+    Schema::create('rsh_soft_children', function (Blueprint $table) {
         $table->id();
         $table->unsignedBigInteger('rsh_soft_parent_id');
         $table->string('label');
@@ -255,7 +256,7 @@ class RshChildModel extends Model
 
 class RshSoftChildModel extends Model
 {
-    use \Illuminate\Database\Eloquent\SoftDeletes;
+    use SoftDeletes;
 
     protected $table = 'rsh_soft_children';
 

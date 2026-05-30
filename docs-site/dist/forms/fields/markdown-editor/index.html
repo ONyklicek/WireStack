@@ -229,6 +229,10 @@
                                         Table Exports                                    </a>
                                 </li>
                                                             <li>
+                                    <a class="" href="../../../table/summaries/">
+                                        Summaries                                    </a>
+                                </li>
+                                                            <li>
                                     <a class="" href="../../../table/sub-rows/">
                                         Sub-Rows                                    </a>
                                 </li>
@@ -361,28 +365,28 @@
 
                         
 <p>Markdown editor with toolbar shortcuts and optional live preview. Stores plain Markdown text.</p>
-<pre><code class="language-php">use NyonCode\WireForms\Components\MarkdownEditor;
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireForms\Components\MarkdownEditor</span><span style="color: #E1E4E8;">;</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireForms\Components\MarkdownEditor;
+</textarea></code></pre>
 <h2 id="basic-usage">Basic Usage</h2>
-<pre><code class="language-php">MarkdownEditor::make('description')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">MarkdownEditor</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;description&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">minHeight</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">300</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">MarkdownEditor::make('description')
     -&gt;minHeight(300)
-</code></pre>
+</textarea></code></pre>
 <h2 id="with-preview-tab">With Preview Tab</h2>
-<pre><code class="language-php">MarkdownEditor::make('content')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">MarkdownEditor</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;content&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">withPreview</span><span style="color: #E1E4E8;">()    </span><span style="color: #6A737D;">// default — adds a Write / Preview tab switcher</span></div><textarea data-torchlight-original="true" style="display: none !important;">MarkdownEditor::make('content')
     -&gt;withPreview()    // default — adds a Write / Preview tab switcher
-</code></pre>
+</textarea></code></pre>
 <h2 id="side-by-side-preview">Side-by-Side Preview</h2>
-<pre><code class="language-php">MarkdownEditor::make('article')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">MarkdownEditor</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;article&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">livePreview</span><span style="color: #E1E4E8;">()    </span><span style="color: #6A737D;">// editor and preview rendered side by side</span></div><textarea data-torchlight-original="true" style="display: none !important;">MarkdownEditor::make('article')
     -&gt;livePreview()    // editor and preview rendered side by side
-</code></pre>
+</textarea></code></pre>
 <h2 id="without-preview">Without Preview</h2>
-<pre><code class="language-php">MarkdownEditor::make('notes')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">MarkdownEditor</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;notes&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">withPreview</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">false</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">MarkdownEditor::make('notes')
     -&gt;withPreview(false)
-</code></pre>
+</textarea></code></pre>
 <h2 id="character-limit">Character Limit</h2>
-<pre><code class="language-php">MarkdownEditor::make('bio')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">MarkdownEditor</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;bio&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">maxLength</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">500</span><span style="color: #E1E4E8;">)   </span><span style="color: #6A737D;">// shows a counter and enforces the limit</span></div><textarea data-torchlight-original="true" style="display: none !important;">MarkdownEditor::make('bio')
     -&gt;maxLength(500)   // shows a counter and enforces the limit
-</code></pre>
+</textarea></code></pre>
 <h2 id="toolbar-shortcuts">Toolbar Shortcuts</h2>
 <p>The toolbar provides keyboard-accessible buttons for:</p>
 <table>

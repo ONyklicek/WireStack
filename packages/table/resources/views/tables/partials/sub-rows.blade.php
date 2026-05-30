@@ -1,11 +1,44 @@
 {{-- Sub-rows for a parent record --}}
 {{-- Variables: $table, $component, $record, $recordKey, $subRows, $colSpan, $cellPadding, $isBordered --}}
 @php
+    $customSubRowView = $table->getSubRowView();
+@endphp
+
+{{-- Custom child renderer: hand full control to a user-supplied view --}}
+@if($customSubRowView)
+    <tr wire:key="sub-rows-{{ $recordKey }}">
+        <td colspan="{{ $colSpan }}" class="p-0">
+            <div class="bg-gray-50/80 dark:bg-gray-800/50 border-t border-b border-gray-100 dark:border-gray-700/50">
+                @include($customSubRowView, [
+                    'table' => $table,
+                    'component' => $component,
+                    'record' => $record,
+                    'recordKey' => $recordKey,
+                    'subRows' => $subRows,
+                ])
+            </div>
+        </td>
+    </tr>
+@else
+@php
     $subColumns = $table->getSubRowColumns();
-    $hasSubRowActions = false; // Future: sub-row actions
+    $subRowActions = $table->getSubRowActions();
+    $hasSubRowActions = $table->hasSubRowActions();
     $isFilterable = $table->isSubRowsFilterable();
-    $subRowSummaries = $component->computeTableSummaries('subRows', $record);
+    $isSortable = $table->isSubRowsSortable();
+    $activeSort = $component->getSubRowSort();
+    $subRowSummaries = $component->computeTableSummaries('subRows', $record, $subRows);
     $hasSubSummaries = !empty($subRowSummaries);
+
+    // "Show more" affordance: only when a limit is configured and more exist.
+    $subRowsLimit = $table->getSubRowsLimit();
+    $showAll = $component->isSubRowsShowAll($recordKey);
+    $totalSubRows = ($subRowsLimit && !$showAll) ? $component->getSubRowsTotalCount($record) : $subRows->count();
+    $remaining = max(0, $totalSubRows - $subRows->count());
+
+    // Visible column count for colspans (+1 indent spacer, +1 optional actions cell).
+    $visibleSubColCount = collect($subColumns)->filter(fn ($c) => $c->canView())->count();
+    $totalColCount = $visibleSubColCount + 1 + ($hasSubRowActions ? 1 : 0);
 @endphp
 
 <tr wire:key="sub-rows-{{ $recordKey }}">
@@ -38,9 +71,29 @@
                         <th class="w-8"></th>
                         @foreach($subColumns as $subCol)
                             @if($subCol->canView())
-                                <th class="px-3 py-2 font-medium">{{ $subCol->getLabel() }}</th>
+                                @php $colSortable = $isSortable && $table->isSubRowColumnSortable($subCol->getName()); @endphp
+                                <th class="px-3 py-2 font-medium">
+                                    @if($colSortable)
+                                        @php $isActive = $activeSort && $activeSort['column'] === $subCol->getName(); @endphp
+                                        <button type="button"
+                                                wire:click="sortSubRows('{{ $subCol->getName() }}')"
+                                                class="inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200 {{ $isActive ? 'text-gray-700 dark:text-gray-200' : '' }}">
+                                            <span>{{ $subCol->getLabel() }}</span>
+                                            @if($isActive)
+                                                <span class="text-[10px]">{{ $activeSort['direction'] === 'asc' ? '▲' : '▼' }}</span>
+                                            @else
+                                                <span class="text-[10px] opacity-30">↕</span>
+                                            @endif
+                                        </button>
+                                    @else
+                                        {{ $subCol->getLabel() }}
+                                    @endif
+                                </th>
                             @endif
                         @endforeach
+                        @if($hasSubRowActions)
+                            <th class="px-3 py-2 font-medium text-right">{{ __('wire-table::messages.actions') }}</th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
@@ -54,14 +107,36 @@
                                     </td>
                                 @endif
                             @endforeach
+                            @if($hasSubRowActions)
+                                <td class="px-3 py-2 whitespace-nowrap text-right">
+                                    <div class="flex items-center justify-end gap-1">
+                                        @foreach($subRowActions as $action)
+                                            {!! $action->render($subRow) !!}
+                                        @endforeach
+                                    </div>
+                                </td>
+                            @endif
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ count($subColumns) + 1 }}" class="px-3 py-4 text-center text-xs text-gray-400 dark:text-gray-500 italic">
+                            <td colspan="{{ $totalColCount }}" class="px-3 py-4 text-center text-xs text-gray-400 dark:text-gray-500 italic">
                                 {{ __('wire-table::messages.no_sub_rows') }}
                             </td>
                         </tr>
                     @endforelse
+
+                    {{-- Show more --}}
+                    @if($remaining > 0)
+                        <tr wire:key="sub-rows-more-{{ $recordKey }}">
+                            <td colspan="{{ $totalColCount }}" class="px-3 py-2 text-center">
+                                <button type="button"
+                                        wire:click="showAllSubRows('{{ $recordKey }}')"
+                                        class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline">
+                                    {{ __('wire-table::messages.show_more_count', ['count' => $remaining]) }}
+                                </button>
+                            </td>
+                        </tr>
+                    @endif
                 </tbody>
 
                 {{-- Sub-row summaries --}}
@@ -91,6 +166,9 @@
                                         </td>
                                     @endif
                                 @endforeach
+                                @if($hasSubRowActions)
+                                    <td class="px-3 py-1.5"></td>
+                                @endif
                             </tr>
                         @endfor
                     </tfoot>
@@ -99,3 +177,4 @@
         </div>
     </td>
 </tr>
+@endif

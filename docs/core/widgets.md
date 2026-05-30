@@ -4,7 +4,20 @@ order: 50
 
 # Widgets
 
-The Widget module provides dashboard components — stats cards, charts, embedded tables, and custom views. Widgets live in `wire-core` and can be composed into grid layouts on any Livewire component.
+The Widget module provides dashboard components — stats cards, charts, embedded tables, and custom views. Widgets live in `wire-core` and can be composed into responsive grid layouts on any Livewire component.
+
+Every widget shares the same fluent builder, so heading, visibility, authorization, column span, and polling work identically across all four types.
+
+### Widget types at a glance
+
+| Widget | Class | Best for |
+| --- | --- | --- |
+| **Stats overview** | `StatsOverviewWidget` | KPIs, counters, and summary metrics with optional sparklines |
+| **Chart** | `ChartWidget` | Line, bar, pie, and doughnut charts powered by Chart.js |
+| **Table** | `TableWidget` | A compact wire-table embedded inside a dashboard card |
+| **Custom** | `CustomWidget` | Any Blade view rendered as a widget |
+
+> Mix widget types freely inside a single `WithWidgets` dashboard — each widget controls its own column span, visibility, and refresh interval. See [Dashboard Layout](#dashboard-layout-withwidgets).
 
 ---
 
@@ -162,6 +175,8 @@ Chart widget with Chart.js integration. Supports line, bar, pie, and doughnut ch
 ```php
 use NyonCode\WireCore\Widgets\ChartWidget;
 ```
+
+> **Requires Chart.js.** The widget renders a `<canvas>` and initializes it through Alpine. Include [Chart.js](https://www.chartjs.org/) on the page — via CDN or your bundle — or the canvas stays empty and a console warning is logged. Dataset styling (`borderColor`, `fill`, `tension`, …) is passed straight through to Chart.js.
 
 ### Basic Usage
 
@@ -334,7 +349,7 @@ ChartWidget::make()
 ->getPollingDirective(): ?string           // returns wire:poll directive string
 ```
 
-The `pollingOnlyVisible` option (default: `true`) uses `wire:poll.visible` to avoid unnecessary requests when the widget is scrolled out of view.
+> **Polling is visibility-aware by default.** `pollingOnlyVisible` defaults to `true`, so widgets use `wire:poll.visible` and pause requests while scrolled out of view. Call `->pollingOnlyVisible(false)` to keep refreshing off-screen.
 
 ---
 

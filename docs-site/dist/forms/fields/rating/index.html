@@ -229,6 +229,10 @@
                                         Table Exports                                    </a>
                                 </li>
                                                             <li>
+                                    <a class="" href="../../../table/summaries/">
+                                        Summaries                                    </a>
+                                </li>
+                                                            <li>
                                     <a class="" href="../../../table/sub-rows/">
                                         Sub-Rows                                    </a>
                                 </li>
@@ -364,29 +368,29 @@
 
                         
 <p>Star rating field with configurable max stars, half-star precision, and colour.</p>
-<pre><code class="language-php">use NyonCode\WireForms\Components\Rating;
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">use</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">NyonCode\WireForms\Components\Rating</span><span style="color: #E1E4E8;">;</span></div><textarea data-torchlight-original="true" style="display: none !important;">use NyonCode\WireForms\Components\Rating;
+</textarea></code></pre>
 <h2 id="basic-usage">Basic Usage</h2>
-<pre><code class="language-php">Rating::make('score')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Rating</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;score&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">max</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">5</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">default</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">0</span><span style="color: #E1E4E8;">)</span></div><textarea data-torchlight-original="true" style="display: none !important;">Rating::make('score')
     -&gt;max(5)
     -&gt;default(0)
-</code></pre>
+</textarea></code></pre>
 <h2 id="half-stars">Half Stars</h2>
-<pre><code class="language-php">Rating::make('rating')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Rating</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;rating&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">allowHalf</span><span style="color: #E1E4E8;">()    </span><span style="color: #6A737D;">// allows 0.5 increments: 1, 1.5, 2, 2.5 …</span></div><textarea data-torchlight-original="true" style="display: none !important;">Rating::make('rating')
     -&gt;allowHalf()    // allows 0.5 increments: 1, 1.5, 2, 2.5 …
-</code></pre>
+</textarea></code></pre>
 <h2 id="custom-max">Custom Max</h2>
-<pre><code class="language-php">Rating::make('priority')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Rating</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;priority&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">max</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">3</span><span style="color: #E1E4E8;">)         </span><span style="color: #6A737D;">// 3-star scale</span></div><textarea data-torchlight-original="true" style="display: none !important;">Rating::make('priority')
     -&gt;max(3)         // 3-star scale
-</code></pre>
+</textarea></code></pre>
 <h2 id="colours">Colours</h2>
-<pre><code class="language-php">Rating::make('satisfaction')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Rating</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;satisfaction&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">color</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;primary&#39;</span><span style="color: #E1E4E8;">)   </span><span style="color: #6A737D;">// primary, success, danger, warning (default)</span></div><textarea data-torchlight-original="true" style="display: none !important;">Rating::make('satisfaction')
     -&gt;color('primary')   // primary, success, danger, warning (default)
-</code></pre>
+</textarea></code></pre>
 <h2 id="non-clearable">Non-Clearable</h2>
-<pre><code class="language-php">Rating::make('score')
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Rating</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">make</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;score&#39;</span><span style="color: #E1E4E8;">)</span></div><div class='line'><span style="color: #E1E4E8;">    </span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">clearable</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">false</span><span style="color: #E1E4E8;">)   </span><span style="color: #6A737D;">// clicking the active star no longer resets it</span></div><textarea data-torchlight-original="true" style="display: none !important;">Rating::make('score')
     -&gt;clearable(false)   // clicking the active star no longer resets it
-</code></pre>
+</textarea></code></pre>
 <h2 id="methods">Methods</h2>
 <table>
 <thead>

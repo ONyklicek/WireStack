@@ -7,6 +7,7 @@ namespace Workbench\Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Workbench\App\Models\Invoice;
 use Workbench\App\Models\Task;
 use Workbench\App\Models\User;
 
@@ -66,6 +67,54 @@ class DatabaseSeeder extends Seeder
 
         foreach ($tasks as $task) {
             Task::query()->create($task);
+        }
+
+        $invoices = [
+            [
+                'number' => 'INV-1001',
+                'customer' => 'Northwind Traders',
+                'status' => 'paid',
+                'issued_at' => now()->subDays(12),
+                'items' => [
+                    ['product' => 'Mechanical keyboard', 'quantity' => 2, 'unit_price' => 1200],
+                    ['product' => 'Wireless mouse', 'quantity' => 3, 'unit_price' => 450],
+                    ['product' => '27" monitor', 'quantity' => 1, 'unit_price' => 5600],
+                ],
+            ],
+            [
+                'number' => 'INV-1002',
+                'customer' => 'Globex Corporation',
+                'status' => 'pending',
+                'issued_at' => now()->subDays(5),
+                'items' => [
+                    ['product' => 'Standing desk', 'quantity' => 1, 'unit_price' => 8900],
+                    ['product' => 'Ergonomic chair', 'quantity' => 4, 'unit_price' => 2300],
+                ],
+            ],
+            [
+                'number' => 'INV-1003',
+                'customer' => 'Acme Industries',
+                'status' => 'overdue',
+                'issued_at' => now()->subDays(33),
+                'items' => [
+                    ['product' => 'Software license', 'quantity' => 5, 'unit_price' => 990],
+                    ['product' => 'Priority support', 'quantity' => 1, 'unit_price' => 3500],
+                ],
+            ],
+        ];
+
+        foreach ($invoices as $invoice) {
+            $items = $invoice['items'];
+            unset($invoice['items']);
+
+            $model = Invoice::query()->create($invoice);
+
+            foreach ($items as $item) {
+                $model->items()->create([
+                    ...$item,
+                    'line_total' => $item['quantity'] * $item['unit_price'],
+                ]);
+            }
         }
     }
 }

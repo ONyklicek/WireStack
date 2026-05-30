@@ -39,10 +39,17 @@ $previewMeta = [
     'forms-repeater' => ['title' => 'Repeater', 'caption' => 'Nested rows with add, remove, and reorder controls.'],
     'table-overview' => ['title' => 'Table Surface', 'caption' => 'Search, filters, actions, and full row rendering.'],
     'table-selection' => ['title' => 'Selection State', 'caption' => 'Bulk-selected rows with the active selection toolbar.'],
+    'table-subrows' => ['title' => 'Sub-rows', 'caption' => 'Expanded invoice line items with sortable headers, row actions, and a per-invoice subtotal.'],
+    'table-summary' => ['title' => 'Summary Footer', 'caption' => 'Per-row rollup totals, a sum + average footer, and the page/all scope toggle.'],
+    'table-subrows-flatten' => ['title' => 'Flatten Mode', 'caption' => 'Every child record rendered inline as a regular table row.'],
+    'table-subrows-limit' => ['title' => 'Show More', 'caption' => 'Limited child rows with the per-parent “show more” affordance.'],
+    'table-subrows-filter' => ['title' => 'Sub-row Filters', 'caption' => 'A per-child interactive filter bar above the sub-row table.'],
     'sortable-overview' => ['title' => 'Sortable Table', 'caption' => 'Full reorderable table rendered through the sortable runtime.'],
     'sortable-detail' => ['title' => 'Reorder Detail', 'caption' => 'Closer view of row ordering and drag handles.'],
     'core-overview' => ['title' => 'Core Actions', 'caption' => 'Stats, actions, and shared runtime components.'],
     'core-modal' => ['title' => 'Modal Surface', 'caption' => 'Real modal rendering from the shared core component set.'],
+    'widgets-overview' => ['title' => 'Widget Dashboard', 'caption' => 'A stats overview with sparklines and a Chart.js chart widget composed in a grid.'],
+    'widgets-chart' => ['title' => 'Chart Widget', 'caption' => 'A single chart widget with heading, description, and a live quarter filter.'],
 ];
 
 // Previews are attached only to pages where the screenshot is genuinely on
@@ -52,10 +59,13 @@ $pagePreviews = [
     'docs/forms/fields/repeater.md' => ['forms-repeater'],
     'docs/table/overview.md' => ['table-overview', 'table-selection'],
     'docs/table/actions.md' => ['table-selection'],
+    'docs/table/summaries.md' => ['table-summary', 'table-subrows'],
+    'docs/table/sub-rows.md' => ['table-subrows', 'table-subrows-limit', 'table-subrows-filter', 'table-subrows-flatten'],
     'docs/sortable/overview.md' => ['sortable-overview', 'sortable-detail'],
     'docs/sortable/row-sorting.md' => ['sortable-detail'],
     'docs/core/actions.md' => ['core-overview'],
     'docs/core/modals.md' => ['core-modal'],
+    'docs/core/widgets.md' => ['widgets-overview', 'widgets-chart'],
 ];
 
 $renderedPages = [];

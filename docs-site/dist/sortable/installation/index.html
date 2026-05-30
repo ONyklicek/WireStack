@@ -229,6 +229,10 @@
                                         Table Exports                                    </a>
                                 </li>
                                                             <li>
+                                    <a class="" href="../../table/summaries/">
+                                        Summaries                                    </a>
+                                </li>
+                                                            <li>
                                     <a class="" href="../../table/sub-rows/">
                                         Sub-Rows                                    </a>
                                 </li>
@@ -396,21 +400,21 @@
 </tbody>
 </table>
 <h2 id="install-via-composer">Install via Composer</h2>
-<pre><code class="language-bash">composer require nyoncode/wire-sortable
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-bash"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #B392F0;">composer</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">require</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">nyoncode/wire-sortable</span></div><textarea data-torchlight-original="true" style="display: none !important;">composer require nyoncode/wire-sortable
+</textarea></code></pre>
 <p>The package auto-registers its service provider via Laravel package discovery.</p>
 <h2 id="install-command">Install command</h2>
 <p>Run the install command to publish config and migration in one step:</p>
-<pre><code class="language-bash">php artisan wire-sortable:install
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-bash"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #B392F0;">php</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">artisan</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">wire-sortable:install</span></div><textarea data-torchlight-original="true" style="display: none !important;">php artisan wire-sortable:install
+</textarea></code></pre>
 <p>This will:</p>
 <ol>
 <li>Publish the config file to <code>config/wire-sortable.php</code></li>
 <li>Publish the migration for the <code>reorderable_column_orders</code> table</li>
 </ol>
 <h2 id="run-migrations">Run migrations</h2>
-<pre><code class="language-bash">php artisan migrate
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-bash"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #B392F0;">php</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">artisan</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">migrate</span></div><textarea data-torchlight-original="true" style="display: none !important;">php artisan migrate
+</textarea></code></pre>
 <p>This creates the <code>reorderable_column_orders</code> table used for storing per-user column order preferences. The table has the following structure:</p>
 <table>
 <thead>
@@ -463,25 +467,25 @@
 <p>The package uses <a href="https://sortablejs.github.io/Sortable/" target="_blank" rel="noreferrer">SortableJS</a> for drag &amp; drop. By default, it loads from a CDN. You have two options:</p>
 <h3 id="option-a-cdn-default">Option A: CDN (default)</h3>
 <p>No action required. SortableJS is loaded automatically from jsDelivr:</p>
-<pre><code>https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #e1e4e8;">https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js</span></div><textarea data-torchlight-original="true" style="display: none !important;">https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js
+</textarea></code></pre>
 <h3 id="option-b-bundle-it-yourself">Option B: Bundle it yourself</h3>
 <p>Install SortableJS via your preferred package manager:</p>
-<pre><code class="language-bash">npm install sortablejs
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-bash"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #B392F0;">npm</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">install</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">sortablejs</span></div><div class='line'><span style="color: #6A737D;"># or: yarn add sortablejs</span></div><div class='line'><span style="color: #6A737D;"># or: pnpm add sortablejs</span></div><div class='line'><span style="color: #6A737D;"># or: bun add sortablejs</span></div><textarea data-torchlight-original="true" style="display: none !important;">npm install sortablejs
 # or: yarn add sortablejs
 # or: pnpm add sortablejs
 # or: bun add sortablejs
-</code></pre>
+</textarea></code></pre>
 <p>Add it to your <code>app.js</code>:</p>
-<pre><code class="language-js">import Sortable from 'sortablejs';
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-js"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">import</span><span style="color: #E1E4E8;"> Sortable </span><span style="color: #F97583;">from</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">&#39;sortablejs&#39;</span><span style="color: #E1E4E8;">;</span></div><div class='line'><span style="color: #E1E4E8;">window.Sortable </span><span style="color: #F97583;">=</span><span style="color: #E1E4E8;"> Sortable;</span></div><textarea data-torchlight-original="true" style="display: none !important;">import Sortable from 'sortablejs';
 window.Sortable = Sortable;
-</code></pre>
+</textarea></code></pre>
 <p>Then disable the CDN in <code>config/wire-sortable.php</code>:</p>
-<pre><code class="language-php">'sortablejs_cdn' =&gt; null,
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #9ECBFF;">&#39;sortablejs_cdn&#39;</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=&gt;</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">null</span><span style="color: #E1E4E8;">,</span></div><textarea data-torchlight-original="true" style="display: none !important;">'sortablejs_cdn' =&gt; null,
+</textarea></code></pre>
 <h2 id="manual-publishing">Manual publishing</h2>
 <p>If you prefer to publish assets individually:</p>
-<pre><code class="language-bash"># Config only
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-bash"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #6A737D;"># Config only</span></div><div class='line'><span style="color: #B392F0;">php</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">artisan</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">vendor:publish</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">--tag=wire-sortable-config</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #6A737D;"># Migrations only</span></div><div class='line'><span style="color: #B392F0;">php</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">artisan</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">vendor:publish</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">--tag=wire-sortable-migrations</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #6A737D;"># Views (for customization)</span></div><div class='line'><span style="color: #B392F0;">php</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">artisan</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">vendor:publish</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">--tag=wire-sortable-views</span></div><div class='line'>&nbsp;</div><div class='line'><span style="color: #6A737D;"># Translations</span></div><div class='line'><span style="color: #B392F0;">php</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">artisan</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">vendor:publish</span><span style="color: #E1E4E8;"> </span><span style="color: #79B8FF;">--tag=wire-sortable-translations</span></div><textarea data-torchlight-original="true" style="display: none !important;"># Config only
 php artisan vendor:publish --tag=wire-sortable-config
 
 # Migrations only
@@ -492,28 +496,28 @@ php artisan vendor:publish --tag=wire-sortable-views
 
 # Translations
 php artisan vendor:publish --tag=wire-sortable-translations
-</code></pre>
+</textarea></code></pre>
 <h2 id="tailwind-css">Tailwind CSS</h2>
 <p>Add the package views to your <code>content</code> paths so Tailwind can scan the classes:</p>
 <p><strong>Tailwind v3</strong> (<code>tailwind.config.js</code>):</p>
-<pre><code class="language-js">module.exports = {
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-js"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">module</span><span style="color: #E1E4E8;">.</span><span style="color: #79B8FF;">exports</span><span style="color: #E1E4E8;"> </span><span style="color: #F97583;">=</span><span style="color: #E1E4E8;"> {</span></div><div class='line'><span style="color: #E1E4E8;">    content: [</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #6A737D;">// ...</span></div><div class='line'><span style="color: #E1E4E8;">        </span><span style="color: #9ECBFF;">&#39;./vendor/nyoncode/wire-sortable/resources/views/**/*.blade.php&#39;</span><span style="color: #E1E4E8;">,</span></div><div class='line'><span style="color: #E1E4E8;">    ],</span></div><div class='line'><span style="color: #E1E4E8;">};</span></div><textarea data-torchlight-original="true" style="display: none !important;">module.exports = {
     content: [
         // ...
         './vendor/nyoncode/wire-sortable/resources/views/**/*.blade.php',
     ],
 };
-</code></pre>
+</textarea></code></pre>
 <p><strong>Tailwind v4</strong> (<code>resources/css/app.css</code>):</p>
-<pre><code class="language-css">@source '../../vendor/nyoncode/wire-sortable/resources/views';
-</code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-css"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #F97583;">@source</span><span style="color: #E1E4E8;"> &#39;../../vendor/nyoncode/wire-sortable/resources/views&#39;;</span></div><textarea data-torchlight-original="true" style="display: none !important;">@source '../../vendor/nyoncode/wire-sortable/resources/views';
+</textarea></code></pre>
 <h2 id="database-migration-for-row-reordering">Database migration for row reordering</h2>
 <p>If you plan to use row reordering, add a sort column to your model's table:</p>
-<pre><code class="language-bash">php artisan make:migration add_sort_order_to_tasks_table
-</code></pre>
-<pre><code class="language-php">Schema::table('tasks', function (Blueprint $table) {
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-bash"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #B392F0;">php</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">artisan</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">make:migration</span><span style="color: #E1E4E8;"> </span><span style="color: #9ECBFF;">add_sort_order_to_tasks_table</span></div><textarea data-torchlight-original="true" style="display: none !important;">php artisan make:migration add_sort_order_to_tasks_table
+</textarea></code></pre>
+<pre class="torchlight" style="background-color: #24292e; --theme-selection-background: #39414a;" data-torchlight-processed="3449c9e5e332f1dbb81505cd739fbf3f"><code class="language-php"><!-- Syntax highlighted by torchlight.dev --><div class='line'><span style="color: #79B8FF;">Schema</span><span style="color: #F97583;">::</span><span style="color: #B392F0;">table</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;tasks&#39;</span><span style="color: #E1E4E8;">, </span><span style="color: #F97583;">function</span><span style="color: #E1E4E8;"> (</span><span style="color: #79B8FF;">Blueprint</span><span style="color: #E1E4E8;"> $table) {</span></div><div class='line'><span style="color: #E1E4E8;">    $table</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">unsignedInteger</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;sort_order&#39;</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">default</span><span style="color: #E1E4E8;">(</span><span style="color: #79B8FF;">0</span><span style="color: #E1E4E8;">)</span><span style="color: #F97583;">-&gt;</span><span style="color: #B392F0;">after</span><span style="color: #E1E4E8;">(</span><span style="color: #9ECBFF;">&#39;id&#39;</span><span style="color: #E1E4E8;">);</span></div><div class='line'><span style="color: #E1E4E8;">});</span></div><textarea data-torchlight-original="true" style="display: none !important;">Schema::table('tasks', function (Blueprint $table) {
     $table-&gt;unsignedInteger('sort_order')-&gt;default(0)-&gt;after('id');
 });
-</code></pre>
+</textarea></code></pre>
 <p>The column name must match the value passed to <code>reorderable()</code> (defaults to <code>sort_order</code>).</p>
 <blockquote>
 <p><strong>Tip:</strong> You can use any column name. Just pass it to <code>reorderable('position')</code> and make sure the migration matches.</p>

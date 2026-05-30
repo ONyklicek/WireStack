@@ -715,6 +715,25 @@
                                     </tr>
                                 @endforelse
                                 </tbody>
+
+                                {{-- Summary footer --}}
+                                @if($component->tableHasSummaries())
+                                    @php $summaryScope = $component->getSummaryScope(); @endphp
+                                    @include('wire-table::tables.partials.summary-footer', [
+                                        'table' => $table,
+                                        'component' => $component,
+                                        'summaries' => $component->computeTableSummaries($summaryScope),
+                                        'summaryScope' => $summaryScope,
+                                        'summaryScopeOptions' => $component->getSummaryScopeOptions(),
+                                        'isSelectable' => $isSelectable,
+                                        'hasActions' => $hasActions,
+                                        'actionsPosition' => $actionsPosition,
+                                        'cellPadding' => $cellPadding,
+                                        'isBordered' => $isBordered,
+                                        'visibleColumns' => $visibleColumns,
+                                        'colSpan' => $colSpan,
+                                    ])
+                                @endif
                             </table>
                         @else
                             {{-- No columns visible state --}}
