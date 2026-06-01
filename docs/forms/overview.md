@@ -101,7 +101,7 @@ class UserSettings extends Component
             ->statePath('passwordData')
             ->schema([
                 TextInput::make('current_password')->password()->required(),
-                TextInput::make('password')->password()->required()->confirmed(),
+                TextInput::make('password')->password()->required()->rules(['confirmed']),
                 TextInput::make('password_confirmation')->password()->required(),
             ]);
     }
@@ -330,6 +330,10 @@ class MyComponent extends Component
 - [Html](fields/html.md) — raw HTML
 - [ViewField](fields/view-field.md) — custom Blade view
 
+### Build Your Own
+
+- [Extending Forms](custom-fields.md) — custom fields, display components, presets, and packaging
+
 ### Shared Field API
 
 Every field inherits:
@@ -345,7 +349,6 @@ Every field inherits:
 ->disabled(bool|Closure $disabled = true)
 ->size('sm'|'md'|'lg'|'xl')
 ->columnSpan(int|string $span)          // grid column span
-->columnStart(int $start)               // grid column start
 ->default(mixed $value)                 // default value
 ->extraAttributes(array $attrs)         // HTML attributes
 ->live()                                // wire:model.live

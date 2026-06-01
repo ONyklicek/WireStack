@@ -10,6 +10,31 @@
         },
         remove(id) {
             this.toasts = this.toasts.filter(t => t.id !== id);
+        },
+        init() {
+            const eventName = @js($eventName);
+            const dispatch = (payload) => window.dispatchEvent(
+                new CustomEvent(eventName, { detail: payload })
+            );
+            const normalize = (type, message, options) => {
+                const data = (message !== null && typeof message === 'object')
+                    ? { ...message }
+                    : { message, ...(options || {}) };
+                if (type && !data.type) data.type = type;
+                if (!data.type) data.type = 'info';
+                return data;
+            };
+            if (!window.wireToast) {
+                const toast = (message, options) => dispatch(normalize(null, message, options));
+                ['success', 'error', 'warning', 'info'].forEach((type) => {
+                    toast[type] = (message, options) => dispatch(normalize(type, message, options));
+                });
+                window.wireToast = toast;
+            }
+            if (window.Alpine && !window.Alpine.__wireToastMagic) {
+                window.Alpine.__wireToastMagic = true;
+                window.Alpine.magic('toast', () => window.wireToast);
+            }
         }
     }"
     x-on:{{ $eventName }}.window="add($event.detail)"

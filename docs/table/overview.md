@@ -26,7 +26,7 @@ module.exports = {
 
 Publish config (optional):
 ```bash
-php artisan vendor:publish --tag=wire-table-config
+php artisan vendor:publish --tag=wire-table::config
 ```
 
 ---
@@ -371,11 +371,8 @@ Dynamic row classes:
 ### Responsive Layout
 
 ```php
-// Stack columns vertically on mobile
-->stackedOnMobile(bool $stacked = true)
-
-// Breakpoint below which to stack (default: 'md')
-->stackedBreakpoint(string $breakpoint)    // 'sm', 'md', 'lg', 'xl'
+// Stack columns vertically on mobile; 2nd arg is the breakpoint (default 'md')
+->stackedOnMobile(bool $stacked = true, string $breakpoint = 'md')   // 'sm','md','lg','xl'
 ```
 
 ### Empty State
@@ -595,8 +592,7 @@ $table->actions([
             ->action(fn ($r) => $r->replicate()->save()),
         Action::make('pdf')
             ->icon('document')
-            ->url(fn ($r) => route('invoices.pdf', $r))
-            ->openUrlInNewTab(),
+            ->url(fn ($r) => route('invoices.pdf', $r), openInNewTab: true),
         Action::divider(),
         Action::make('delete')
             ->icon('trash')

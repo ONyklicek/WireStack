@@ -4,3 +4,4 @@
 composer.lock
 # Torchlight highlight cache
 docs-site/.torchlight-cache/
+/docs-site/dist/

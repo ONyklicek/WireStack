@@ -148,7 +148,7 @@ Keep `register()` lightweight. Do not resolve request-scoped services or assume 
 Publish the core config:
 
 ```bash
-php artisan vendor:publish --tag=wire-core-config
+php artisan vendor:publish --tag=wire-core::config
 ```
 
 Add plugin classes to `config/wire-core.php`:

@@ -157,3 +157,24 @@ it('InteractsWithNotifications supports per-component driver', function () {
     expect($componentDriver->sent)->toHaveCount(1)
         ->and($componentDriver->sent[0]->message)->toBe('Test');
 });
+
+// ─── Toast container JS helper ─────────────────────────────────────────
+
+it('renders the wireToast JS helper into the toast container', function () {
+    $html = Illuminate\Support\Facades\Blade::render('<x-wire-notifications::toast-container />');
+
+    expect($html)
+        ->toContain('window.wireToast')
+        ->toContain("Alpine.magic('toast'")
+        ->toContain('table-notification'); // default event name dispatched by helper
+});
+
+it('wires the JS helper to a custom event name', function () {
+    $html = Illuminate\Support\Facades\Blade::render(
+        '<x-wire-notifications::toast-container event-name="my-toast" />'
+    );
+
+    expect($html)
+        ->toContain("eventName = 'my-toast'")
+        ->toContain('x-on:my-toast.window');
+});

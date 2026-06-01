@@ -9,10 +9,10 @@ Wire works out of the box after installation. Publish config files only when you
 ## Publish Config Files
 
 ```bash
-php artisan vendor:publish --tag=wire-core-config
-php artisan vendor:publish --tag=wire-forms-config
-php artisan vendor:publish --tag=wire-table-config
-php artisan vendor:publish --tag=wire-sortable-config
+php artisan vendor:publish --tag=wire-core::config
+php artisan vendor:publish --tag=wire-forms::config
+php artisan vendor:publish --tag=wire-table::config
+php artisan vendor:publish --tag=wire-sortable::config
 ```
 
 You only need the tags for packages you installed.

@@ -99,16 +99,16 @@ If you prefer to publish assets individually:
 
 ```bash
 # Config only
-php artisan vendor:publish --tag=wire-sortable-config
+php artisan vendor:publish --tag=wire-sortable::config
 
 # Migrations only
-php artisan vendor:publish --tag=wire-sortable-migrations
+php artisan vendor:publish --tag=wire-sortable::migrations
 
 # Views (for customization)
-php artisan vendor:publish --tag=wire-sortable-views
+php artisan vendor:publish --tag=wire-sortable::views
 
 # Translations
-php artisan vendor:publish --tag=wire-sortable-translations
+php artisan vendor:publish --tag=wire-sortable::translations
 ```
 
 ## Tailwind CSS

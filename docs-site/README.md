@@ -14,6 +14,84 @@ Static documentation web for the Wire monorepo.
 php docs-site/build.php
 ```
 
+## Versioned Documentation (v1.x / v2.x)
+
+The sidebar shows a **version switcher**. Each version is a self-contained build
+written to its own folder under `dist/`:
+
+| Version           | `path` | Output folder       | URL        |
+|-------------------|--------|---------------------|------------|
+| latest (current)  | `''`   | `dist/`             | `/`        |
+| an older/newer one| `v2`   | `dist/v2/`          | `/v2/`     |
+
+### 1. Configure the versions
+
+Edit `$siteVersions` near the top of `build.php`:
+
+```php
+$siteVersions = [
+    ['label' => 'v1.x', 'badge' => 'Latest', 'path' => '',   'available' => true],
+    ['label' => 'v2.x', 'badge' => 'Soon',   'path' => 'v2', 'available' => false],
+];
+```
+
+- `label`     — text shown in the switcher.
+- `badge`     — small tag next to the label (`Latest`, `Soon`, `LTS`, …).
+- `path`      — output sub-directory under `dist/` **and** the URL segment.
+  Use `''` for the version served from the site root (the latest one).
+- `available` — `true` once the version is actually built. `false` renders it as
+  a disabled "coming soon" entry (cannot be clicked).
+
+The switcher links are computed from path depth, so they are correct no matter
+which version you are viewing and regardless of build order.
+
+### 2. Where each version's content comes from
+
+`build.php` always renders the Markdown under `docs/` of the **current checkout**.
+So "a version" = "the docs as they exist on that branch/tag". Pick which version
+the build represents with `DOCS_BUILD_VERSION=<label>`; it controls the output
+folder (`path`) and which entry is marked as current.
+
+### 3. Build commands
+
+Build the latest version (served from the site root):
+
+```bash
+php docs-site/build.php
+# or explicitly:
+DOCS_BUILD_VERSION=v1.x php docs-site/build.php
+```
+
+Build another version into its sub-folder — typically from that version's branch
+or tag so `docs/` contains the right content:
+
+```bash
+git worktree add ../wire-v2 v2.x        # or: git checkout v2.x
+DOCS_BUILD_VERSION=v2.x php docs-site/build.php
+```
+
+Rebuilding one version **does not** wipe the others: the root build preserves the
+sibling version folders, and a sub-folder build only recreates its own folder.
+A full publish just builds every version you want online:
+
+```bash
+php docs-site/build.php                         # latest  -> dist/
+DOCS_BUILD_VERSION=v2.x php docs-site/build.php  # v2.x    -> dist/v2/
+```
+
+### 4. Promoting a new latest (when v2 ships)
+
+Move the previous latest into its own folder and make the new one the root:
+
+```php
+$siteVersions = [
+    ['label' => 'v2.x', 'badge' => 'Latest', 'path' => '',   'available' => true],
+    ['label' => 'v1.x', 'badge' => 'LTS',    'path' => 'v1', 'available' => true],
+];
+```
+
+Then build v2 from the new code (root) and v1 from the old branch into `dist/v1`.
+
 ## Markdown Metadata
 
 The builder now reads optional front matter from the top of each Markdown file:

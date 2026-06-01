@@ -187,43 +187,60 @@ $table
 
 ### Summary Scopes
 
-By default, summaries are computed over the **current page** of results (in-memory). For a **full query** aggregate (additional DB query):
+The `scope` argument (3rd parameter of `summarize()`) selects which rows are
+aggregated. It defaults to `'query'` (all filtered rows, via a DB aggregate).
+Pass `'page'` to aggregate only the current page in memory. A column can carry
+more than one summary:
 
 ```php
 TextColumn::make('amount')
     ->money('CZK')
-    ->summarize('sum', 'Page Total')           // current page (default)
-    ->summaryQuery('sum', 'Grand Total')       // full query aggregate
+    ->summarize('sum', 'Page Total', scope: 'page')    // current page only
+    ->summarize('sum', 'Grand Total', scope: 'query')  // all filtered rows (default)
 ```
+
+Scopes: `'query'` (all filtered), `'page'` (current page), `'selection'`
+(selected rows), `'subRows'`.
 
 ### Custom Summary Formatting
 
+Pass a `format` closure to `summarize()`, or use `summaryDecimals()` for numeric
+formatting:
+
 ```php
 TextColumn::make('revenue')
+    ->summarize('sum', format: fn (float $value) => number_format($value, 0, ',', ' ') . ' CZK')
+
+TextColumn::make('total')
     ->summarize('sum')
-    ->summaryFormatUsing(fn (float $value) => number_format($value, 0, ',', ' ') . ' CZK')
+    ->summaryDecimals(2)                 // → "1 234,50"
 ```
 
 ### How It Works
 
-1. **Page-level**: After query results are fetched, `HasSummary` iterates the Collection and computes aggregates in PHP
-2. **Query-level**: A separate `$query->sum('amount')` (or avg/count/min/max) query is executed against the filtered (but unpaginated) dataset
+1. **Page scope**: after results are fetched, `HasSummary` iterates the
+   Collection and computes the aggregate in PHP.
+2. **Query scope**: a separate `$query->sum('amount')` (or avg/count/min/max) is
+   executed against the filtered (but unpaginated) dataset.
 
 ### Summary API
 
-```php
-// Column-level
-->summarize(string $aggregate, ?string $label = null)
-->summaryQuery(string $aggregate, ?string $label = null)
-->summaryFormatUsing(Closure $fn)
+These methods live on the **column** (`HasSummary`):
 
-// Table-level shortcuts
-->summarizeSum(string $column, ?string $label = null)
-->summarizeAvg(string $column, ?string $label = null)
-->summarizeCount(string $column, ?string $label = null)
-->summarizeMin(string $column, ?string $label = null)
-->summarizeMax(string $column, ?string $label = null)
-->summarizeRange(string $column, ?string $label = null)
+```php
+->summarize(
+    string|Closure $type,           // 'sum','avg','count','min','max','range','distinct','median'
+    ?string $label = null,
+    string $scope = 'query',         // 'query' | 'page' | 'selection' | 'subRows'
+    ?Closure $format = null,         // fn(mixed $value): string
+    ?Closure $when = null,           // fn(Builder $query): Builder
+)
+->summaryDecimals(int $decimals, string $decimalSeparator = ',', string $thousandsSeparator = ' ')
+
+// Shortcuts — each takes (?string $label = null, string $scope = 'query'):
+->summarizeSum()      ->summarizeAvg()     ->summarizeCount()
+->summarizeMin()      ->summarizeMax()     ->summarizeRange()
+->summarizeDistinct() ->summarizeMedian()
 ```
 
 ---
@@ -503,8 +520,7 @@ class UserTable extends Component
 Below a breakpoint, columns stack vertically as label-value pairs:
 
 ```php
-$table->stackedOnMobile()
-      ->stackedBreakpoint('md')    // stack below 'md' (default)
+$table->stackedOnMobile(true, 'md')   // 2nd arg = breakpoint to stack below (default 'md')
 ```
 
 In stacked mode:
@@ -603,7 +619,7 @@ $table->view('my-custom-table-view')
 Wire Table resolves views with namespace support. You can publish and override the default views:
 
 ```bash
-php artisan vendor:publish --tag=wire-table-views
+php artisan vendor:publish --tag=wire-table::views
 ```
 
 Published to `resources/views/vendor/wire-table/`.
@@ -664,8 +680,8 @@ class OrderTable extends Component
                     ->sortable()
                     ->alignRight()
                     ->weight('bold')
-                    ->summarize('sum', 'Page Total')
-                    ->summaryQuery('sum', 'Grand Total'),
+                    ->summarize('sum', 'Page Total', scope: 'page')
+                    ->summarize('sum', 'Grand Total', scope: 'query'),
 
                 BadgeColumn::make('status')
                     ->colors([
@@ -711,17 +727,18 @@ class OrderTable extends Component
                     ->default(['pending', 'processing']),
 
                 DateFilter::make('created_at')
-                    ->from()->until()
+                    ->range()
                     ->fromLabel('From')
-                    ->untilLabel('Until'),
+                    ->toLabel('Until'),
 
                 NumberRangeFilter::make('total')
                     ->min(0)->max(1000000)->step(100),
 
                 TernaryFilter::make('has_invoice')
                     ->label('Invoice Generated')
-                    ->trueQuery(fn ($q) => $q->whereNotNull('invoice_id'))
-                    ->falseQuery(fn ($q) => $q->whereNull('invoice_id')),
+                    ->query(fn (Builder $q, $value) => $value === '1'
+                        ? $q->whereNotNull('invoice_id')
+                        : $q->whereNull('invoice_id')),
             ])
             ->actions([
                 Action::make('view')
@@ -767,7 +784,6 @@ class OrderTable extends Component
             ])
             ->defaultSort('created_at', 'desc')
             ->searchable()
-            ->searchDebounce(400)
             ->paginated()
             ->perPage(25)
             ->perPageOptions([10, 25, 50, 100])
@@ -775,9 +791,11 @@ class OrderTable extends Component
             ->striped()
             ->hoverable()
             ->stackedOnMobile()
-            ->emptyStateHeading('No orders found')
-            ->emptyStateDescription('Create your first order to get started.')
-            ->emptyStateIcon('shopping-cart');
+            ->emptyState(
+                heading: 'No orders found',
+                description: 'Create your first order to get started.',
+                icon: 'shopping-cart',
+            );
     }
 }
 ```

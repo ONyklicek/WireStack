@@ -96,8 +96,7 @@ SelectFilter::make('activity_level')
 
 ```php
 DateFilter::make('deleted_at')
-    ->from()
-    ->until()
+    ->range()
     ->permission('view-deleted-records')
 
 SelectFilter::make('internal_status')
@@ -241,46 +240,37 @@ use NyonCode\WireTable\Filters\DateFilter;
 
 ### Single Date
 
-```php
-DateFilter::make('created_at')
-// Applies: WHERE created_at = '2024-01-15'
-```
-
-### Date Range (From/Until)
+The default mode renders one date input and matches that exact day.
 
 ```php
 DateFilter::make('created_at')
-    ->from()
-    ->until()
-// Renders two date inputs: "From" and "Until"
-// Applies: WHERE created_at >= '2024-01-01' AND created_at <= '2024-01-31'
+// Applies: WHERE DATE(created_at) = '2024-01-15'
 ```
 
-### Only "From" or Only "Until"
+### Date Range
+
+Call `range()` to render two date inputs ("from" and "to"). The user can fill
+either side, so open-ended ranges work without extra configuration.
 
 ```php
-// Only "from" — open-ended upper bound
-DateFilter::make('published_after')
-    ->column('published_at')
-    ->from()
-// Applies: WHERE published_at >= value
-
-// Only "until" — open-ended lower bound
-DateFilter::make('expires_before')
-    ->column('expires_at')
-    ->until()
-// Applies: WHERE expires_at <= value
+DateFilter::make('created_at')
+    ->range()
+// Renders two date inputs.
+// Both set:  WHERE DATE(created_at) >= from AND <= to
+// Only from: WHERE DATE(created_at) >= from
+// Only to:   WHERE DATE(created_at) <= to
 ```
 
 ### Custom Labels
 
+In range mode the labels are used as the input placeholders.
+
 ```php
 DateFilter::make('period')
     ->column('created_at')
-    ->from()
-    ->until()
+    ->range()
     ->fromLabel('Created after')
-    ->untilLabel('Created before')
+    ->toLabel('Created before')
 ```
 
 ### Date Constraints
@@ -294,21 +284,20 @@ DateFilter::make('birth_date')
 ### DateFilter API
 
 ```php
-->from(bool $from = true)           // enable "from" date input
-->until(bool $until = true)         // enable "until" date input
-->fromLabel(string $label)          // label for "from" input (default: 'From')
-->untilLabel(string $label)         // label for "until" input (default: 'Until')
+->range(bool $range = true)         // two inputs (from/to) instead of one
+->fromLabel(string $label)          // "from" placeholder (default: 'From')
+->toLabel(string $label)            // "to" placeholder (default: 'To')
 ->minDate(string $date)             // min selectable date
 ->maxDate(string $date)             // max selectable date
 ```
 
 ### Range Behavior
 
-| from | until | Condition |
-|------|-------|-----------|
-| set | null | `WHERE column >= from` |
-| null | set | `WHERE column <= until` |
-| set | set | `WHERE column >= from AND column <= until` |
+| from | to | Condition |
+|------|----|-----------|
+| set | null | `WHERE DATE(column) >= from` |
+| null | set | `WHERE DATE(column) <= to` |
+| set | set | `WHERE DATE(column) >= from AND <= to` |
 | null | null | No filter applied |
 
 ---
@@ -408,18 +397,23 @@ TernaryFilter::make('verified')
 
 ### Custom Query Logic
 
+Use a single `query()` callback; it receives the builder and the selected value
+(`'1'` for the "true" option, `'0'` for the "false" option).
+
 ```php
 TernaryFilter::make('has_orders')
     ->label('Has Orders')
-    ->trueQuery(fn (Builder $query) => $query->has('orders'))
-    ->falseQuery(fn (Builder $query) => $query->doesntHave('orders'))
+    ->query(fn (Builder $query, $value) => $value === '1'
+        ? $query->has('orders')
+        : $query->doesntHave('orders'))
 ```
 
 ```php
 TernaryFilter::make('overdue')
     ->label('Overdue')
-    ->trueQuery(fn (Builder $query) => $query->where('due_at', '<', now()))
-    ->falseQuery(fn (Builder $query) => $query->where('due_at', '>=', now()))
+    ->query(fn (Builder $query, $value) => $value === '1'
+        ? $query->where('due_at', '<', now())
+        : $query->where('due_at', '>=', now()))
 ```
 
 ### TernaryFilter API
@@ -427,18 +421,18 @@ TernaryFilter::make('overdue')
 ```php
 ->trueLabel(string $label)          // default: 'Yes'
 ->falseLabel(string $label)         // default: 'No'
-->nullable(bool $nullable = true)   // treat as IS NULL / IS NOT NULL
-->trueQuery(Closure $fn)            // custom query for "Yes"
-->falseQuery(Closure $fn)           // custom query for "No"
+->allLabel(string $label)           // placeholder for the "no filter" option
+->nullable(bool $nullable = true)   // "false" also matches IS NULL
+->query(Closure $fn)                // custom query: fn(Builder $q, $value)
 ```
 
 ### State Values
 
-| UI State | Internal Value | Default Behavior |
-|----------|---------------|-----------------|
+| UI State | Submitted Value | Default Behavior |
+|----------|-----------------|-----------------|
 | All | `null` | No filter |
-| Yes | `true` | `WHERE column = 1` or `IS NOT NULL` (if nullable) |
-| No | `false` | `WHERE column = 0` or `IS NULL` (if nullable) |
+| Yes | `'1'` | `WHERE column = 1` |
+| No | `'0'` | `WHERE column = 0` (or `= 0 OR IS NULL` if nullable) |
 
 ---
 
@@ -465,8 +459,9 @@ SelectFilter::make('tags')
 // HasMany (existence) — use TernaryFilter
 TernaryFilter::make('has_comments')
     ->label('Has Comments')
-    ->trueQuery(fn ($q) => $q->has('comments'))
-    ->falseQuery(fn ($q) => $q->doesntHave('comments'))
+    ->query(fn (Builder $q, $value) => $value === '1'
+        ? $q->has('comments')
+        : $q->doesntHave('comments'))
 ```
 
 ---
@@ -482,9 +477,7 @@ TextColumn::make('status')
 
 TextColumn::make('price')
     ->filterable()
-    ->filterAsNumberRange()
-    ->filterMinValue(0)
-    ->filterMaxValue(10000)
+    ->filterAsNumberRange(0, 10000)
 
 TextColumn::make('created_at')
     ->filterable()
@@ -674,8 +667,9 @@ $table->filters([
         ->label('Availability')
         ->trueLabel('In Stock')
         ->falseLabel('Out of Stock')
-        ->trueQuery(fn ($q) => $q->where('stock_quantity', '>', 0))
-        ->falseQuery(fn ($q) => $q->where('stock_quantity', '<=', 0)),
+        ->query(fn (Builder $q, $value) => $value === '1'
+            ? $q->where('stock_quantity', '>', 0)
+            : $q->where('stock_quantity', '<=', 0)),
 
     SelectFilter::make('rating')
         ->options([
@@ -687,8 +681,9 @@ $table->filters([
 
     TernaryFilter::make('has_discount')
         ->label('Discounted')
-        ->trueQuery(fn ($q) => $q->whereNotNull('discount_percent'))
-        ->falseQuery(fn ($q) => $q->whereNull('discount_percent')),
+        ->query(fn (Builder $q, $value) => $value === '1'
+            ? $q->whereNotNull('discount_percent')
+            : $q->whereNull('discount_percent')),
 ]);
 ```
 
@@ -705,10 +700,9 @@ $table->filters([
         ->nullable(),
 
     DateFilter::make('created_at')
-        ->from()
-        ->until()
+        ->range()
         ->fromLabel('Registered after')
-        ->untilLabel('Registered before'),
+        ->toLabel('Registered before'),
 
     TernaryFilter::make('two_factor_enabled')
         ->label('2FA Enabled'),
@@ -747,8 +741,7 @@ $table->filters([
         ->default(['pending', 'processing']),   // pre-select active orders
 
     DateFilter::make('ordered_at')
-        ->from()
-        ->until(),
+        ->range(),
 
     NumberRangeFilter::make('total')
         ->min(0)
@@ -766,10 +759,9 @@ $table->filters([
 
     TernaryFilter::make('has_notes')
         ->label('Has Notes')
-        ->trueQuery(fn ($q) => $q->whereNotNull('notes')->where('notes', '!=', ''))
-        ->falseQuery(fn ($q) => $q->where(fn ($q2) =>
-            $q2->whereNull('notes')->orWhere('notes', '')
-        )),
+        ->query(fn (Builder $q, $value) => $value === '1'
+            ? $q->whereNotNull('notes')->where('notes', '!=', '')
+            : $q->where(fn ($q2) => $q2->whereNull('notes')->orWhere('notes', ''))),
 ]);
 ```
 
