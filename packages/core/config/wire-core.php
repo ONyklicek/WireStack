@@ -16,20 +16,42 @@ return [
         'default_set' => 'default',
 
         // Icon sets registered with the IconManager. Each value must be a class
-        // implementing NyonCode\WireCore\Foundation\Icons\IconSet. Sets added
-        // here take priority over the bundled defaults, so you can override
-        // individual icons or ship an entirely different style.
+        // implementing NyonCode\WireCore\Foundation\Icons\IconSet.
+        //
+        // The bundled 'default' set (Heroicons) is the base set and its icons are
+        // used with bare names (e.g. "pencil", "user"). EVERY other set's key is a
+        // REQUIRED prefix: its icons are addressed as "prefix:name" (e.g.
+        // "lucide:home"), so the two never collide and resolution is deterministic.
+        // Registering a non-default set without a string prefix throws.
+        //
+        // Sets that also implement ProvidesIconMetadata may ship stroke-based or
+        // non-20x20 icons (Lucide, Feather, Heroicons outline, …) and they render
+        // correctly alongside the default solid set.
+        // Besides the unprefixed solid 'default' set, the framework also bundles
+        // the Heroicons outline variant (24x24, stroke), always available under
+        // the "outline:" prefix (e.g. "outline:x-mark"). Use outline for larger UI
+        // chrome (close buttons, toolbars, pagination, empty states) and the solid
+        // set for small accents. List a set below only to add a third-party set or
+        // to override the "outline" prefix with a different set.
         'sets' => [
             'default' => DefaultIconSet::class,
-            // 'custom' => App\Wire\Icons\MyIconSet::class,
+            // 'lucide' => App\Wire\Icons\LucideIconSet::class,   // → "lucide:home"
+            // 'custom' => App\Wire\Icons\MyIconSet::class,       // → "custom:logo"
         ],
 
         // Directories of SVG files to auto-register as icons. The icon name is
-        // the file name without extension (logo.svg => "logo"). This is the
-        // simplest way to add custom icons — just drop SVGs in a folder.
+        // the file name without extension (logo.svg => "logo"). Use a string key
+        // as a name prefix to namespace a folder and avoid file-name collisions
+        // (e.g. 'brand' => resource_path('icons/brand') => "brand-logo"). Each
+        // file keeps its own viewBox and fill/stroke styling.
         'paths' => [
             // resource_path('icons'),
+            // 'brand' => resource_path('icons/brand'),
         ],
+
+        // When true, an unknown icon name logs a warning (and still renders the
+        // fallback placeholder). Handy in development to catch typos.
+        'warn_missing' => env('WIRE_ICONS_WARN_MISSING', false),
     ],
 
     'colors' => [

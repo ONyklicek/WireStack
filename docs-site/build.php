@@ -21,8 +21,64 @@ foreach ($pages as $page) {
     $pageMap[$page['source']] = $page;
 }
 
-recreateDirectory($distRoot);
-copyDirectory($siteRoot.'/assets', $distRoot.'/assets');
+// Documentation versions shown in the switcher.
+//
+// - `path`:      output sub-directory under dist/ ('' = the dist root). This is
+//                also the URL segment the switcher links to.
+// - `available`: whether the version has been (or will be) built. Unavailable
+//                versions render as a disabled "coming soon" entry.
+//
+// Build a specific version with DOCS_BUILD_VERSION=<label>; with no env var the
+// first available version is built (and served from the dist root).
+$siteVersions = [
+    ['label' => 'v1.x', 'badge' => 'Latest', 'path' => '', 'available' => true],
+    ['label' => 'v2.x', 'badge' => 'Soon', 'path' => 'v2', 'available' => false],
+];
+
+// Resolve which version this run builds.
+$activeVersionLabel = (string) (getenv('DOCS_BUILD_VERSION') ?: '');
+$activeVersion = null;
+
+foreach ($siteVersions as $version) {
+    if ($activeVersionLabel !== '' && $version['label'] === $activeVersionLabel) {
+        $activeVersion = $version;
+        break;
+    }
+}
+
+if ($activeVersion === null) {
+    foreach ($siteVersions as $version) {
+        if (! empty($version['available'])) {
+            $activeVersion = $version;
+            break;
+        }
+    }
+}
+
+$activeVersion ??= $siteVersions[0];
+$activeVersionLabel = $activeVersion['label'];
+$outputSubdir = trim((string) ($activeVersion['path'] ?? ''), '/');
+$versionRoot = $outputSubdir === '' ? $distRoot : $distRoot.'/'.$outputSubdir;
+
+// When rebuilding the root version, keep sibling version sub-directories intact
+// so they don't get wiped; a sub-directory build only recreates its own folder.
+$preserveSubdirs = [];
+foreach ($siteVersions as $version) {
+    $path = trim((string) ($version['path'] ?? ''), '/');
+    if ($path !== '' && $path !== $outputSubdir) {
+        $preserveSubdirs[] = $path;
+    }
+}
+
+ensureDirectory($distRoot);
+
+if ($outputSubdir === '') {
+    recreateDirectoryPreserving($distRoot, $preserveSubdirs);
+} else {
+    recreateDirectory($versionRoot);
+}
+
+copyDirectory($siteRoot.'/assets', $versionRoot.'/assets');
 
 $environment = new Environment([
     'renderer' => [
@@ -80,18 +136,18 @@ foreach ($pages as $page) {
         repoRoot: $root,
     );
 
-    $currentFile = $distRoot.'/'.$page['output'];
+    $currentFile = $versionRoot.'/'.$page['output'];
     $renderedPages[] = array_merge($page, $content);
 
     $previewItems = [];
 
     // Field doc pages get their own single, on-topic preview captured from the
     // runtime (assets/previews/field-<slug>.png) instead of a generic bundle.
-    $fieldPreviewImage = fieldPreviewImage($page['sourceRelative'], $distRoot);
+    $fieldPreviewImage = fieldPreviewImage($page['sourceRelative'], $versionRoot);
 
     if ($fieldPreviewImage !== null) {
         $previewItems[] = [
-            'image' => relativeAssetPath($currentFile, $distRoot.'/'.$fieldPreviewImage),
+            'image' => relativeAssetPath($currentFile, $versionRoot.'/'.$fieldPreviewImage),
             'title' => $content['title'],
             'caption' => trim($content['excerpt']) !== ''
                 ? $content['excerpt']
@@ -101,12 +157,12 @@ foreach ($pages as $page) {
         foreach ($pagePreviews[$page['sourceRelative']] ?? [] as $slug) {
             $image = 'assets/previews/'.$slug.'.png';
 
-            if (! is_file($distRoot.'/'.$image) || ! isset($previewMeta[$slug])) {
+            if (! is_file($versionRoot.'/'.$image) || ! isset($previewMeta[$slug])) {
                 continue;
             }
 
             $previewItems[] = [
-                'image' => relativeAssetPath($currentFile, $distRoot.'/'.$image),
+                'image' => relativeAssetPath($currentFile, $versionRoot.'/'.$image),
                 'title' => $previewMeta[$slug]['title'],
                 'caption' => $previewMeta[$slug]['caption'],
             ];
@@ -118,11 +174,12 @@ foreach ($pages as $page) {
     $html = renderTemplate($siteRoot.'/templates/page.php', [
         'siteTitle' => 'Wire Docs',
         'page' => array_merge($page, $content, ['previewUrl' => $previewUrl, 'previewItems' => $previewItems]),
-        'navSections' => buildNavSections($pages, $page['source'], $distRoot),
-        'searchIndexUrl' => relativeAssetPath($currentFile, $distRoot.'/search-index.json'),
-        'cssUrl' => relativeAssetPath($currentFile, $distRoot.'/assets/site.css'),
-        'jsUrl' => relativeAssetPath($currentFile, $distRoot.'/assets/site.js'),
-        'homeUrl' => relativePageUrl($currentFile, $distRoot.'/index.html'),
+        'navSections' => buildNavSections($pages, $page['source'], $versionRoot),
+        'versionMenu' => buildVersionMenu($siteVersions, $page['output'], $outputSubdir, $activeVersionLabel),
+        'searchIndexUrl' => relativeAssetPath($currentFile, $versionRoot.'/search-index.json'),
+        'cssUrl' => relativeAssetPath($currentFile, $versionRoot.'/assets/site.css'),
+        'jsUrl' => relativeAssetPath($currentFile, $versionRoot.'/assets/site.js'),
+        'homeUrl' => relativePageUrl($currentFile, $versionRoot.'/index.html'),
     ]);
 
     ensureDirectory(dirname($currentFile));
@@ -131,7 +188,7 @@ foreach ($pages as $page) {
     $searchIndex[] = [
         'title' => $content['title'],
         'section' => $page['section'],
-        'url' => relativePageUrl($distRoot.'/index.html', $currentFile),
+        'url' => relativePageUrl($versionRoot.'/index.html', $currentFile),
         'excerpt' => $content['excerpt'],
         'text' => $content['plainText'],
     ];
@@ -139,32 +196,33 @@ foreach ($pages as $page) {
 
 $homeHtml = renderTemplate($siteRoot.'/templates/home.php', [
     'siteTitle' => 'Wire Docs',
-    'navSections' => buildNavSections($pages, null, $distRoot),
+    'navSections' => buildNavSections($pages, null, $versionRoot),
+    'versionMenu' => buildVersionMenu($siteVersions, 'index.html', $outputSubdir, $activeVersionLabel),
     'searchIndexUrl' => 'search-index.json',
     'cssUrl' => 'assets/site.css',
     'jsUrl' => 'assets/site.js',
     'cards' => [
         [
             'title' => 'Wire Forms',
-            'href' => relativePageUrl($distRoot.'/index.html', $distRoot.'/forms/overview/index.html'),
+            'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/forms/overview/index.html'),
             'copy' => 'Standalone forms, layouts, validation, and nested repeaters.',
             'image' => 'assets/previews/forms-overview.png',
         ],
         [
             'title' => 'Wire Table',
-            'href' => relativePageUrl($distRoot.'/index.html', $distRoot.'/table/overview/index.html'),
+            'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/table/overview/index.html'),
             'copy' => 'Searchable tables, actions, filters, exports, notifications, and responsive states.',
             'image' => 'assets/previews/table-overview.png',
         ],
         [
             'title' => 'Wire Sortable',
-            'href' => relativePageUrl($distRoot.'/index.html', $distRoot.'/sortable/overview/index.html'),
+            'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/sortable/overview/index.html'),
             'copy' => 'Row and column reordering built on top of the table runtime.',
             'image' => 'assets/previews/sortable-overview.png',
         ],
         [
             'title' => 'Wire Core',
-            'href' => relativePageUrl($distRoot.'/index.html', $distRoot.'/core/actions/index.html'),
+            'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/core/actions/index.html'),
             'copy' => 'Actions, widgets, modals, notifications, plugins, and shared foundations.',
             'image' => 'assets/previews/core-overview.png',
         ],
@@ -172,49 +230,49 @@ $homeHtml = renderTemplate($siteRoot.'/templates/home.php', [
     'galleryCards' => [
         [
             'title' => 'Forms Layout',
-            'href' => relativePageUrl($distRoot.'/index.html', $distRoot.'/forms/overview/index.html'),
+            'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/forms/overview/index.html'),
             'copy' => 'Primary form rendering with sections and inputs.',
             'image' => 'assets/previews/forms-overview.png',
         ],
         [
             'title' => 'Forms Repeater',
-            'href' => relativePageUrl($distRoot.'/index.html', $distRoot.'/forms/fields/repeater/index.html'),
+            'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/forms/fields/repeater/index.html'),
             'copy' => 'Focused nested repeater with item actions.',
             'image' => 'assets/previews/forms-repeater.png',
         ],
         [
             'title' => 'Table Surface',
-            'href' => relativePageUrl($distRoot.'/index.html', $distRoot.'/table/overview/index.html'),
+            'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/table/overview/index.html'),
             'copy' => 'Table toolbar, search, filters, and rows.',
             'image' => 'assets/previews/table-overview.png',
         ],
         [
             'title' => 'Table Selection',
-            'href' => relativePageUrl($distRoot.'/index.html', $distRoot.'/table/actions/index.html'),
+            'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/table/actions/index.html'),
             'copy' => 'Bulk-selected rows with active selection state.',
             'image' => 'assets/previews/table-selection.png',
         ],
         [
             'title' => 'Sortable Overview',
-            'href' => relativePageUrl($distRoot.'/index.html', $distRoot.'/sortable/overview/index.html'),
+            'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/sortable/overview/index.html'),
             'copy' => 'Full reorderable table runtime.',
             'image' => 'assets/previews/sortable-overview.png',
         ],
         [
             'title' => 'Sortable Detail',
-            'href' => relativePageUrl($distRoot.'/index.html', $distRoot.'/sortable/row-sorting/index.html'),
+            'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/sortable/row-sorting/index.html'),
             'copy' => 'Closer look at drag and order affordances.',
             'image' => 'assets/previews/sortable-detail.png',
         ],
         [
             'title' => 'Core Overview',
-            'href' => relativePageUrl($distRoot.'/index.html', $distRoot.'/core/actions/index.html'),
+            'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/core/actions/index.html'),
             'copy' => 'Stats and shared action primitives.',
             'image' => 'assets/previews/core-overview.png',
         ],
         [
             'title' => 'Core Modal',
-            'href' => relativePageUrl($distRoot.'/index.html', $distRoot.'/core/modals/index.html'),
+            'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/core/modals/index.html'),
             'copy' => 'Modal surface from the core runtime.',
             'image' => 'assets/previews/core-modal.png',
         ],
@@ -225,20 +283,20 @@ $homeHtml = renderTemplate($siteRoot.'/templates/home.php', [
         ['label' => 'Core sections', 'value' => '4'],
     ],
     'quickLinks' => [
-        ['label' => 'Getting Started', 'href' => relativePageUrl($distRoot.'/index.html', $distRoot.'/getting-started/index.html')],
-        ['label' => 'Documentation Index', 'href' => relativePageUrl($distRoot.'/index.html', $distRoot.'/documentation/index.html')],
-        ['label' => 'Forms', 'href' => relativePageUrl($distRoot.'/index.html', $distRoot.'/forms/overview/index.html')],
-        ['label' => 'Table', 'href' => relativePageUrl($distRoot.'/index.html', $distRoot.'/table/overview/index.html')],
+        ['label' => 'Getting Started', 'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/getting-started/index.html')],
+        ['label' => 'Documentation Index', 'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/documentation/index.html')],
+        ['label' => 'Forms', 'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/forms/overview/index.html')],
+        ['label' => 'Table', 'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/table/overview/index.html')],
     ],
 ]);
 
-file_put_contents($distRoot.'/index.html', $homeHtml);
+file_put_contents($versionRoot.'/index.html', $homeHtml);
 file_put_contents(
-    $distRoot.'/search-index.json',
+    $versionRoot.'/search-index.json',
     json_encode($searchIndex, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
 );
 
-echo "Built docs site in {$distRoot}\n";
+echo "Built docs site ({$activeVersionLabel}) in {$versionRoot}\n";
 
 /**
  * @return array<int, array<string, string>>
@@ -554,6 +612,52 @@ function buildNavSections(array $pages, ?string $activeSource, string $distRoot)
     return $ordered;
 }
 
+/**
+ * Resolve the version switcher entries for a page in the version currently being
+ * built. Cross-version home links are computed purely from path depth (no
+ * filesystem lookups) so they are correct even before the other version's files
+ * exist on disk. Each version links to its own home page (dist root for the ''
+ * path, dist/<path>/ otherwise); unavailable versions render as disabled.
+ *
+ * @param  array<int, array<string, mixed>>  $versions
+ * @param  string  $pageOutput  Output path of the current page relative to its version root, e.g. 'table/overview/index.html'.
+ * @param  string  $activeSubdir  Sub-directory of the version being built ('' = dist root).
+ * @param  string  $activeLabel  Label of the version being built.
+ * @return array{current:string, items:array<int, array{label:string, badge:string, current:bool, href:?string, disabled:bool}>}
+ */
+function buildVersionMenu(array $versions, string $pageOutput, string $activeSubdir, string $activeLabel): array
+{
+    // Steps up from the current page to the dist root.
+    $depthToVersionRoot = substr_count(trim($pageOutput, '/'), '/');
+    $depthToDistRoot = $depthToVersionRoot + ($activeSubdir === '' ? 0 : 1);
+    $up = str_repeat('../', $depthToDistRoot);
+
+    $items = [];
+
+    foreach ($versions as $version) {
+        $label = (string) ($version['label'] ?? '');
+        $path = trim((string) ($version['path'] ?? ''), '/');
+        $available = (bool) ($version['available'] ?? false);
+        $isCurrent = $label === $activeLabel;
+
+        $href = null;
+        if ($available || $isCurrent) {
+            $target = $up.($path === '' ? '' : $path.'/');
+            $href = $target === '' ? './' : $target;
+        }
+
+        $items[] = [
+            'label' => $label,
+            'badge' => (string) ($version['badge'] ?? ''),
+            'current' => $isCurrent,
+            'href' => $href,
+            'disabled' => $href === null,
+        ];
+    }
+
+    return ['current' => $activeLabel, 'items' => $items];
+}
+
 function outputPathForSource(string $sourceRelative): string
 {
     if ($sourceRelative === 'README.md') {
@@ -730,6 +834,37 @@ function renderTemplate(string $template, array $variables): string
     include $template;
 
     return (string) ob_get_clean();
+}
+
+/**
+ * Recreate a directory but keep the named top-level entries (used to preserve
+ * sibling version sub-directories when rebuilding the root version).
+ *
+ * @param  array<int, string>  $preserve
+ */
+function recreateDirectoryPreserving(string $directory, array $preserve): void
+{
+    ensureDirectory($directory);
+
+    $entries = scandir($directory);
+
+    if ($entries === false) {
+        return;
+    }
+
+    foreach ($entries as $entry) {
+        if ($entry === '.' || $entry === '..' || in_array($entry, $preserve, true)) {
+            continue;
+        }
+
+        $path = $directory.'/'.$entry;
+
+        if (is_dir($path) && ! is_link($path)) {
+            deleteDirectory($path);
+        } elseif (file_exists($path) || is_link($path)) {
+            unlink($path);
+        }
+    }
 }
 
 function recreateDirectory(string $directory): void

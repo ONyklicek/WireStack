@@ -49,9 +49,6 @@ Action::make('edit')
     // Size
     ->modalWidth('2xl')              // sm, md, lg, xl, 2xl, 3xl, 4xl, 5xl
 
-    // Alignment
-    ->modalAlignment('center')       // center, start
-
     // Close behavior
     ->closeModalOnClickAway()
     ->closeModalOnEscape()
@@ -94,7 +91,7 @@ Action::make('edit')
         ModalFooterAction::make('save')
             ->label('Save')
             ->color('primary')
-            ->submit(),
+            ->submitsForm(),
 
         ModalFooterAction::make('save-and-close')
             ->label('Save & Close')
@@ -104,7 +101,7 @@ Action::make('edit')
             ->label('Cancel')
             ->color('gray')
             ->outlined()
-            ->close(),                       // closes the modal
+            ->closesModal(),                 // closes the modal
     ]);
 ```
 
@@ -115,25 +112,22 @@ use NyonCode\WireCore\Actions\ModalStep;
 
 Action::make('create')
     ->steps([
-        ModalStep::make('info')
-            ->label('Basic Info')
+        ModalStep::make('Basic Info')
             ->description('Enter user details')
             ->icon('user')
-            ->fields([
+            ->schema([
                 TextInput::make('name')->required(),
                 TextInput::make('email')->email()->required(),
             ]),
 
-        ModalStep::make('settings')
-            ->label('Settings')
-            ->fields([
+        ModalStep::make('Settings')
+            ->schema([
                 Select::make('role')->options([...]),
                 Toggle::make('active'),
             ]),
 
-        ModalStep::make('review')
-            ->label('Review')
-            ->fields([
+        ModalStep::make('Review')
+            ->schema([
                 Placeholder::make('summary')
                     ->content(fn ($data) => "Creating {$data['name']}"),
             ]),

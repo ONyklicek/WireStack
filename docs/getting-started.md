@@ -138,19 +138,19 @@ Do not install Alpine separately. Livewire 3 already ships it.
 ## Config Publishing (optional)
 
 ```bash
-php artisan vendor:publish --tag=wire-core-config
-php artisan vendor:publish --tag=wire-forms-config
-php artisan vendor:publish --tag=wire-table-config
-php artisan vendor:publish --tag=wire-sortable-config
+php artisan vendor:publish --tag=wire-core::config
+php artisan vendor:publish --tag=wire-forms::config
+php artisan vendor:publish --tag=wire-table::config
+php artisan vendor:publish --tag=wire-sortable::config
 ```
 
 ## View Publishing (optional)
 
 ```bash
-php artisan vendor:publish --tag=wire-core-views
-php artisan vendor:publish --tag=wire-forms-views
-php artisan vendor:publish --tag=wire-table-views
-php artisan vendor:publish --tag=wire-sortable-views
+php artisan vendor:publish --tag=wire-core::views
+php artisan vendor:publish --tag=wire-forms::views
+php artisan vendor:publish --tag=wire-table::views
+php artisan vendor:publish --tag=wire-sortable::views
 ```
 
 ---

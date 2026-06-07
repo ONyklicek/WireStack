@@ -20,6 +20,16 @@ class WireSortableServiceProvider extends PackageServiceProvider
         $packager
             ->name('WireSortable')
             ->hasShortName('wire-sortable')
+            ->registeredPackage(function($packager){
+                $this->app->resolving(PluginManager::class, function (PluginManager $manager) {
+                    if (! $manager->has('sortable')) {
+                        $manager->register(new SortablePlugin);
+                    }
+                });
+            })
+            ->bootedPackage(function($packager){
+                $this->registerTableMacros();
+            })
             ->hasConfig()
             ->hasViews()
             ->hasTranslations()
@@ -30,24 +40,6 @@ class WireSortableServiceProvider extends PackageServiceProvider
                     ->publishConfig()
                     ->publishMigrations();
             });
-    }
-
-    public function boot(): void
-    {
-        parent::boot();
-
-        $this->registerTableMacros();
-    }
-
-    public function register(): void
-    {
-        parent::register();
-
-        $this->app->resolving(PluginManager::class, function (PluginManager $manager) {
-            if (! $manager->has('sortable')) {
-                $manager->register(new SortablePlugin);
-            }
-        });
     }
 
     protected function registerTableMacros(): void

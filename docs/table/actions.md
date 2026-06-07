@@ -49,8 +49,7 @@ Action::make('activate')
 ```php
 Action::make('view')
     ->icon('eye')
-    ->url(fn (User $record) => route('users.show', $record))
-    ->openUrlInNewTab()
+    ->url(fn (User $record) => route('users.show', $record), openInNewTab: true)
 ```
 
 ### Icon-only actions

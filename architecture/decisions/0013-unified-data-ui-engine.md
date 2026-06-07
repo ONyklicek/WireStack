@@ -63,6 +63,4 @@ Each phase ends with a working state and green CI.
 
 ## References
 
-- [unified-engine-spec.md](../unified-engine-spec.md) — Full specification
-- [unified-engine-assessment.md](../unified-engine-assessment.md) — Current state assessment
-- [unified-engine-plan.md](../unified-engine-plan.md) — Detailed implementation plan
+- [core/unified-engine.md](../core/unified-engine.md) — Current-state reference for the implemented engine (supersedes the original spec/plan/assessment planning docs)

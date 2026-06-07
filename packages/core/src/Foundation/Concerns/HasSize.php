@@ -39,4 +39,22 @@ trait HasSize
     {
         return $this->evaluate($this->size) ?? 'md';
     }
+
+    /**
+     * Canonical soft "pill"/badge sizing (padding + font size).
+     *
+     * Single source for badge-like surfaces (BadgeColumn, PollColumn, …) so the
+     * xs/sm/md/lg scale stays identical everywhere. Literal class strings are
+     * kept verbatim for Tailwind's JIT scanner.
+     */
+    public static function getBadgeSizeClasses(string $size): string
+    {
+        return match ($size) {
+            'xs' => 'px-1.5 py-0.5 text-[10px]',
+            'sm' => 'px-2 py-0.5 text-xs',
+            'lg' => 'px-3 py-1 text-sm',
+            'md' => 'px-2.5 py-1 text-xs',
+            default => 'px-2.5 py-1 text-xs',
+        };
+    }
 }

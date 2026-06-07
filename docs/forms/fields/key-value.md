@@ -25,10 +25,10 @@ State is stored as `array<int, array{key: string, value: string}>`:
 ]
 ```
 
-To convert to an associative array for persistence, use `mutateFormDataBeforeSave`:
+To convert to an associative array for persistence, use `mutateDataBeforeSave`:
 
 ```php
-->mutateFormDataBeforeSave(function (array $data): array {
+->mutateDataBeforeSave(function (array $data): array {
     $data['metadata'] = collect($data['metadata'])
         ->pluck('value', 'key')
         ->all();

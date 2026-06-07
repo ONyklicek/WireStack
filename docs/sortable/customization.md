@@ -124,7 +124,7 @@ The button is hidden when the table uses `alwaysReorderable()` or when row reord
 The button labels are translatable. Publish the translations:
 
 ```bash
-php artisan vendor:publish --tag=wire-sortable-translations
+php artisan vendor:publish --tag=wire-sortable::translations
 ```
 
 Edit `lang/vendor/wire-sortable/{locale}/messages.php`:
@@ -143,7 +143,7 @@ Included locales: `en`, `cs`.
 To fully customize the HTML and JavaScript:
 
 ```bash
-php artisan vendor:publish --tag=wire-sortable-views
+php artisan vendor:publish --tag=wire-sortable::views
 ```
 
 Published files:

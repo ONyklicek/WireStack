@@ -67,9 +67,7 @@
                 @if($field->isDeletable())
                     <button type="button" @click="removePair(index)"
                         class="flex items-center justify-center w-9 h-full text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors">
-                        <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                        </svg>
+                        <x-wire::icon name="x-mark" class="w-4 h-4" />
                     </button>
                 @else
                     <span class="w-9"></span>
@@ -89,9 +87,7 @@
         <div class="border-t border-gray-200 dark:border-gray-700 px-3 py-2 bg-gray-50 dark:bg-gray-700/30">
             <button type="button" @click="addPair()"
                 class="inline-flex items-center gap-1.5 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors">
-                <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
-                </svg>
+                <x-wire::icon name="plus" class="w-4 h-4" />
                 {{ __('Add entry') }}
             </button>
         </div>

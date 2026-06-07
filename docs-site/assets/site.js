@@ -27,6 +27,131 @@
   });
 
   /* ----------------------------------------------------------
+     Version switcher dropdown
+     ---------------------------------------------------------- */
+  const versionSwitcher = document.querySelector('[data-version-switcher]');
+  if (versionSwitcher) {
+    const trigger = versionSwitcher.querySelector('[data-version-trigger]');
+    const menu = versionSwitcher.querySelector('[data-version-menu]');
+
+    const closeVersions = () => {
+      versionSwitcher.classList.remove('is-open');
+      trigger?.setAttribute('aria-expanded', 'false');
+      if (menu) menu.hidden = true;
+    };
+
+    trigger?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const isOpen = versionSwitcher.classList.toggle('is-open');
+      trigger.setAttribute('aria-expanded', String(isOpen));
+      if (menu) menu.hidden = !isOpen;
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!versionSwitcher.contains(event.target)) closeVersions();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeVersions();
+    });
+  }
+
+  /* ----------------------------------------------------------
+     Collapsible sidebar sections (active section stays open)
+     ---------------------------------------------------------- */
+  (() => {
+    let collapsed = new Set();
+    try {
+      collapsed = new Set(JSON.parse(localStorage.getItem('wire-docs-nav-collapsed') || '[]'));
+    } catch {}
+
+    document.querySelectorAll('.sidebar-nav .nav-section').forEach((section) => {
+      const heading = section.querySelector('h2');
+      const list = section.querySelector('ul');
+      if (!heading || !list) return;
+
+      const key = heading.textContent.trim();
+      const hasActive = !!section.querySelector('a.is-active');
+
+      const chevron = document.createElement('span');
+      chevron.className = 'nav-section-chevron';
+      chevron.setAttribute('aria-hidden', 'true');
+      heading.appendChild(chevron);
+      heading.setAttribute('role', 'button');
+      heading.setAttribute('tabindex', '0');
+
+      if (collapsed.has(key) && !hasActive) section.classList.add('is-collapsed');
+
+      const toggle = () => {
+        const isCollapsed = section.classList.toggle('is-collapsed');
+        if (isCollapsed) collapsed.add(key); else collapsed.delete(key);
+        try {
+          localStorage.setItem('wire-docs-nav-collapsed', JSON.stringify([...collapsed]));
+        } catch {}
+      };
+
+      heading.addEventListener('click', toggle);
+      heading.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          toggle();
+        }
+      });
+    });
+
+    // Bring the active nav item into view inside the sidebar on load.
+    const active = document.querySelector('.sidebar-nav a.is-active');
+    active?.scrollIntoView({ block: 'center' });
+  })();
+
+  /* ----------------------------------------------------------
+     Reading progress bar
+     ---------------------------------------------------------- */
+  const progressBar = document.querySelector('[data-reading-progress]');
+  if (progressBar) {
+    let ticking = false;
+    const updateProgress = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = max > 0 ? Math.min(100, (window.scrollY / max) * 100) : 0;
+      progressBar.style.width = pct + '%';
+      ticking = false;
+    };
+    window.addEventListener('scroll', () => {
+      if (!ticking) {
+        window.requestAnimationFrame(updateProgress);
+        ticking = true;
+      }
+    }, { passive: true });
+    updateProgress();
+  }
+
+  /* ----------------------------------------------------------
+     Back to top
+     ---------------------------------------------------------- */
+  const backToTop = document.querySelector('[data-back-to-top]');
+  if (backToTop) {
+    const toggleBackToTop = () => {
+      backToTop.classList.toggle('is-visible', window.scrollY > 600);
+    };
+    window.addEventListener('scroll', toggleBackToTop, { passive: true });
+    backToTop.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    toggleBackToTop();
+  }
+
+  /* ----------------------------------------------------------
+     Wrap wide tables so they scroll horizontally on small screens
+     ---------------------------------------------------------- */
+  document.querySelectorAll('.docs-article table').forEach((table) => {
+    if (table.closest('.table-scroll')) return;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'table-scroll';
+    table.parentNode.insertBefore(wrapper, table);
+    wrapper.appendChild(table);
+  });
+
+  /* ----------------------------------------------------------
      Copy-to-clipboard for code blocks
      ---------------------------------------------------------- */
   const copyIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
@@ -119,16 +244,34 @@
   const searchIndexUrl = root.getAttribute('data-search-index');
   const baseUrl = searchIndexUrl ? new URL(searchIndexUrl, window.location.href) : null;
 
-  // ⌘K / Ctrl+K focuses search
+  const openSearch = () => {
+    body.classList.add('search-open');
+    // Defer focus so the mobile sheet is visible before focusing.
+    requestAnimationFrame(() => {
+      searchInput?.focus();
+      searchInput?.select();
+    });
+  };
+
+  const closeSearch = () => {
+    body.classList.remove('search-open');
+    if (searchResults) searchResults.hidden = true;
+    searchInput?.blur();
+  };
+
+  document.querySelector('[data-search-open]')?.addEventListener('click', openSearch);
+  document.querySelectorAll('[data-search-close]').forEach((el) => {
+    el.addEventListener('click', closeSearch);
+  });
+
+  // ⌘K / Ctrl+K opens & focuses search
   document.addEventListener('keydown', (event) => {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
       event.preventDefault();
-      searchInput?.focus();
-      searchInput?.select();
+      openSearch();
     }
-    if (event.key === 'Escape' && document.activeElement === searchInput) {
-      searchInput.blur();
-      if (searchResults) searchResults.hidden = true;
+    if (event.key === 'Escape' && (document.activeElement === searchInput || body.classList.contains('search-open'))) {
+      closeSearch();
     }
   });
 

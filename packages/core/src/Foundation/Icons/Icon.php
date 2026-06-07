@@ -366,6 +366,7 @@ enum Icon
     case dotsVertical;
     case dotsHorizontal;
     case filter;
+    case externalLink;
 
     public function value(): string
     {
@@ -401,6 +402,7 @@ enum Icon
             self::dotsVertical => 'ellipsis-vertical',
             self::dotsHorizontal => 'ellipsis-horizontal',
             self::filter => 'funnel',
+            self::externalLink => 'arrow-top-right-on-square',
             default => self::toKebabCase($this->name),
         };
     }

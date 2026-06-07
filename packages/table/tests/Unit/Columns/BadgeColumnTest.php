@@ -96,7 +96,7 @@ it('generates correct color classes for known colors', function () {
     expect($column->getColorClasses('success'))->toContain('bg-emerald-100')
         ->and($column->getColorClasses('danger'))->toContain('bg-red-100')
         ->and($column->getColorClasses('warning'))->toContain('bg-amber-100')
-        ->and($column->getColorClasses('info'))->toContain('bg-sky-100')
+        ->and($column->getColorClasses('info'))->toContain('bg-cyan-100')
         ->and($column->getColorClasses('gray'))->toContain('bg-gray-100');
 });
 

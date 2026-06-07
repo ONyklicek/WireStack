@@ -80,9 +80,15 @@
                                                 class="inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200 {{ $isActive ? 'text-gray-700 dark:text-gray-200' : '' }}">
                                             <span>{{ $subCol->getLabel() }}</span>
                                             @if($isActive)
-                                                <span class="text-[10px]">{{ $activeSort['direction'] === 'asc' ? '▲' : '▼' }}</span>
+                                                @if($activeSort['direction'] === 'asc')
+                                                    <x-wire::icon name="outline:chevron-up" size="w-4 h-4" class="text-gray-500 dark:text-gray-400"
+                                                @else
+                                                    <x-wire::icon name="outline:chevron-down" size="w-4 h-4" class="text-gray-500 dark:text-gray-400"
+                                                @endif
                                             @else
-                                                <span class="text-[10px] opacity-30">↕</span>
+                                                <span class="text-[10px] opacity-30">
+                                                    <x-wire::icon name="outline:chevron-up-down" size="w-4 h-4" class="text-gray-500 dark:text-gray-400 opacity-0 hover:opacity-100" />
+                                                </span>
                                             @endif
                                         </button>
                                     @else

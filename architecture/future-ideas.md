@@ -2,26 +2,23 @@
 
 Features and improvements considered for future releases. Not currently planned — added here when discovered during implementation.
 
-## v0.2.0 Candidates
+> Many items from the original v0.2.0 list have shipped: Repeater, Tags, KeyValue,
+> MarkdownEditor, Slider field types, table export (CSV/Excel/PDF), column toggling,
+> and column reordering (via `wire-sortable`). Only the items below remain open.
 
-### New Field Types
-- **Repeater** — dynamic array of field groups (add/remove/reorder)
-- **TagsInput** — tag input with autocomplete
-- **RangeSlider** — numeric range slider
+## Field Types
+
 - **Tabs** — tabbed layout component for forms
-- **KeyValue** — key-value pair editor
-- **MarkdownEditor** — Markdown editor with preview
 
-### Form Enhancements
+## Form Enhancements
+
 - **Cross-form validation** — `validateAllForms()` helper for multi-form components
 - **Form wizard** — multi-step form with step validation (standalone, not action-modal)
 - **Dependent fields** — reactive field visibility/options based on other field values
 - **Form state persistence** — save/restore form draft to localStorage or database
 
-### Table Enhancements
-- **Column toggling** — user can show/hide columns
-- **Column reordering** — drag to reorder columns
-- **Export** — CSV/Excel export action
+## Table Enhancements
+
 - **Saved filters** — persist filter presets
 
 ## Future Package Extraction
@@ -36,4 +33,4 @@ See [ADR 0006](decisions/0006-modular-core-extraction-strategy.md) for extractio
 
 ## Tailwind 4
 
-Full Tailwind 4 support planned for v0.2.0. See [ADR 0005](decisions/0005-tailwind-4-support.md).
+Tailwind 4 testing/support tracked separately. See [ADR 0005](decisions/0005-tailwind-4-support.md).

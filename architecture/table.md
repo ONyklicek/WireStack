@@ -74,9 +74,30 @@ Concrete columns own focused behavior such as:
 - toggles/selects/text inputs
 - stacked/split composition
 
-Many UI changes also require matching Blade partials under:
+Architecture rule:
 
-- `packages/table/resources/views/tables/columns/`
+- every renderable column UI should have its own Blade partial
+- column classes should own state/configuration and delegate markup rendering to Blade
+- inline HTML returned directly from `renderCell()` is legacy debt, not the pattern to copy
+- if a concrete column renders custom UI, add or update the matching Blade partial under `packages/table/resources/views/tables/columns/`
+
+Mechanism: the base `Column` uses `Concerns\HasView`, so every `renderCell()`
+returns `$this->renderView('tables.columns.<name>', [...])` — it resolves an
+explicit `->view()` override first, then `wire-table::tables.columns.<name>`,
+then an app-level view. The column resolves all state/config in PHP and passes
+plain primitives; the partial holds the HTML. No column returns inline HTML.
+
+Current partials under `packages/table/resources/views/tables/columns/`:
+
+- `text.blade.php` — base text cell (styling span, icon, URL link, copyable,
+  tooltip, description); reuses `partials/copyable.blade.php`
+- `responsive.blade.php` — mobile/desktop wrapper
+- `badge` · `boolean` · `icon` · `image` · `button` · `toggle` · `poll` ·
+  `split` · `stacked` · `select` · `text-input-editable` · `text-input-readonly`
+- shared `partials/` — `spinner` (optional `$class`), `progress`, `copyable`
+
+Many UI changes also require touching these partials under
+`packages/table/resources/views/tables/columns/`.
 
 ### `Filters/`
 

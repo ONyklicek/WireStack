@@ -3,9 +3,7 @@
         {{-- Previous Page Link --}}
         @if ($paginator->onFirstPage())
             <span class="relative inline-flex items-center px-2 py-1.5 text-sm font-medium text-gray-300 dark:text-gray-600 cursor-not-allowed rounded-lg">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                </svg>
+                <x-wire::icon name="outline:chevron-left" size="w-5 h-5" />
             </span>
         @else
             <button
@@ -13,9 +11,7 @@
                     wire:loading.attr="disabled"
                     class="relative inline-flex items-center px-2 py-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                </svg>
+                <x-wire::icon name="outline:chevron-left" size="w-5 h-5" />
             </button>
         @endif
 
@@ -61,15 +57,11 @@
                     wire:loading.attr="disabled"
                     class="relative inline-flex items-center px-2 py-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
+                <x-wire::icon name="outline:chevron-right" size="w-5 h-5" />
             </button>
         @else
             <span class="relative inline-flex items-center px-2 py-1.5 text-sm font-medium text-gray-300 dark:text-gray-600 cursor-not-allowed rounded-lg">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
+                <x-wire::icon name="outline:chevron-right" size="w-5 h-5" />
             </span>
         @endif
     </nav>

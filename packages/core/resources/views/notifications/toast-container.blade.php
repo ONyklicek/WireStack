@@ -10,6 +10,31 @@
         },
         remove(id) {
             this.toasts = this.toasts.filter(t => t.id !== id);
+        },
+        init() {
+            const eventName = @js($eventName);
+            const dispatch = (payload) => window.dispatchEvent(
+                new CustomEvent(eventName, { detail: payload })
+            );
+            const normalize = (type, message, options) => {
+                const data = (message !== null && typeof message === 'object')
+                    ? { ...message }
+                    : { message, ...(options || {}) };
+                if (type && !data.type) data.type = type;
+                if (!data.type) data.type = 'info';
+                return data;
+            };
+            if (!window.wireToast) {
+                const toast = (message, options) => dispatch(normalize(null, message, options));
+                ['success', 'error', 'warning', 'info'].forEach((type) => {
+                    toast[type] = (message, options) => dispatch(normalize(type, message, options));
+                });
+                window.wireToast = toast;
+            }
+            if (window.Alpine && !window.Alpine.__wireToastMagic) {
+                window.Alpine.__wireToastMagic = true;
+                window.Alpine.magic('toast', () => window.wireToast);
+            }
         }
     }"
     x-on:{{ $eventName }}.window="add($event.detail)"
@@ -32,24 +57,16 @@
                     {{-- Icon --}}
                     <div class="flex-shrink-0">
                         <template x-if="toast.type === 'success'">
-                            <svg class="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
+                            <x-wire::icon name="outline:check-circle" size="h-5 w-5" class="text-emerald-500" />
                         </template>
                         <template x-if="toast.type === 'error'">
-                            <svg class="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                            </svg>
+                            <x-wire::icon name="outline:exclamation-circle" size="h-5 w-5" class="text-red-500" />
                         </template>
                         <template x-if="toast.type === 'warning'">
-                            <svg class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                            </svg>
+                            <x-wire::icon name="outline:exclamation-triangle" size="h-5 w-5" class="text-amber-500" />
                         </template>
                         <template x-if="toast.type === 'info'">
-                            <svg class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
-                            </svg>
+                            <x-wire::icon name="outline:information-circle" size="h-5 w-5" class="text-blue-500" />
                         </template>
                     </div>
 
@@ -64,9 +81,8 @@
                         @click="remove(toast.id)"
                         class="flex-shrink-0 rounded-lg p-1 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
                     >
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        <x-wire::icon name="outline:x-mark" size="h-4 w-4" />
+                        <span class="sr-only">{{ __('Close') }}</span>
                     </button>
                 </div>
             </div>

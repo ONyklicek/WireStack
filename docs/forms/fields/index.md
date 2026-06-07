@@ -49,6 +49,12 @@ Reference for the built-in Wire Forms field and layout components.
 | [Html](html.md) | Render trusted HTML content |
 | [ViewField](view-field.md) | Render a custom Blade partial as a field |
 
+## Build Your Own
+
+Need a field that is not listed here? See [Extending Forms](../custom-fields.md)
+for building custom fields and display components, reusable presets, and
+packaging fields into a plugin.
+
 ## Common Field API
 
 Every field inherits the following methods from the shared `Field` base class. Individual field docs focus on field-specific options; refer back here for anything not listed there.

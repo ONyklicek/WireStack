@@ -138,7 +138,6 @@ Action::make('details')
 ```php
 Action::make('edit')
     ->modalWidth('2xl')              // sm, md, lg, xl, 2xl, 3xl, 4xl, 5xl
-    ->modalAlignment('center')       // center, start
     ->closeModalOnClickAway()
     ->closeModalOnEscape()
     ->slideOverOnMobile()            // slide-over on mobile, modal on desktop
@@ -172,25 +171,22 @@ use NyonCode\WireCore\Actions\ModalStep;
 
 Action::make('create')
     ->steps([
-        ModalStep::make('basics')
-            ->label('Basic Info')
+        ModalStep::make('Basic Info')
             ->description('Enter user details')
             ->icon('user')
-            ->fields([
+            ->schema([
                 TextInput::make('name')->required(),
                 TextInput::make('email')->email()->required(),
             ]),
 
-        ModalStep::make('settings')
-            ->label('Settings')
-            ->fields([
+        ModalStep::make('Settings')
+            ->schema([
                 Select::make('role')->options([...]),
                 Toggle::make('active'),
             ]),
 
-        ModalStep::make('review')
-            ->label('Review')
-            ->fields([
+        ModalStep::make('Review')
+            ->schema([
                 Placeholder::make('summary'),
             ]),
     ])
@@ -208,7 +204,7 @@ Action::make('edit')
         ModalFooterAction::make('save')
             ->label('Save')
             ->color('primary')
-            ->submit(),
+            ->submitsForm(),
         ModalFooterAction::make('save-and-close')
             ->label('Save & Close')
             ->action(fn () => $this->saveAndClose()),
@@ -260,13 +256,11 @@ Action::make('edit')
 
 ```php
 Action::make('view')
-    ->url(fn ($record) => route('users.show', $record))
-    ->openUrlInNewTab();
+    ->url(fn ($record) => route('users.show', $record), openInNewTab: true);
 
 // String URL
 Action::make('docs')
-    ->url('/docs')
-    ->openUrlInNewTab();
+    ->url('/docs', openInNewTab: true);
 ```
 
 ## Keyboard Shortcuts
@@ -303,8 +297,7 @@ Shared across Action, BulkAction, HeaderAction:
 
 ```php
 ->label(string|Closure $label)
-->icon(string|Closure $icon)
-->iconPosition('before'|'after')
+->icon(string|Closure $icon, ?string $position = null)   // position: 'before' | 'after'
 ->color(string|Closure $color)          // primary, danger, success, warning, info, gray
 ->size(string $size)                    // xs, sm, md, lg
 ->outlined(bool $outlined = true)

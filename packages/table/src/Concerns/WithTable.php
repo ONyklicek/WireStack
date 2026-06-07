@@ -758,7 +758,12 @@ trait WithTable
 
         // Fast path: sub-rows were eager-loaded for the whole page in one query
         // (see eagerLoadSubRows). Read from memory instead of querying per parent.
-        if ($record->relationLoaded($relation)) {
+        //
+        // Only safe when no sub-row filters are active. The relation may also be
+        // eager-loaded by the caller's base query (e.g. Invoice::with('items')),
+        // in which case the loaded set is unfiltered — fall through to the query
+        // path so active rows.subRowFilters are honoured.
+        if ($record->relationLoaded($relation) && ! $this->hasActiveSubRowFilters()) {
             $items = $record->getRelation($relation);
 
             if (! $showAll && $table->getSubRowsLimit()) {
@@ -806,8 +811,7 @@ trait WithTable
         }
 
         // Don't eager-load when sub-row filters are active (correctness over speed).
-        $subRowFilters = $this->tableState->get('rows.subRowFilters', []);
-        if ($table->isSubRowsFilterable() && ! empty($subRowFilters)) {
+        if ($this->hasActiveSubRowFilters()) {
             return;
         }
 
@@ -852,6 +856,28 @@ trait WithTable
     public function resetSubRowFilters(): void
     {
         $this->tableState->set('rows.subRowFilters', []);
+    }
+
+    /**
+     * Whether the table has sub-row filtering enabled and at least one active
+     * sub-row filter value. Used to disable eager-load / in-memory fast paths
+     * that would otherwise bypass per-parent filtering.
+     */
+    protected function hasActiveSubRowFilters(): bool
+    {
+        if (! $this->getTable()->isSubRowsFilterable()) {
+            return false;
+        }
+
+        $subRowFilters = $this->tableState->get('rows.subRowFilters', []);
+
+        foreach ($subRowFilters as $value) {
+            if ($value !== null && $value !== '') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -935,8 +961,11 @@ trait WithTable
         }
 
         // Use the eager-loaded relation when present — no extra count query.
+        // Skipped when sub-row filters are active: a caller-eager-loaded relation
+        // (e.g. Invoice::with('items')) is unfiltered, so counting it would ignore
+        // rows.subRowFilters and over-count the "show more" affordance.
         $relation = $table->getSubRowRelation();
-        if ($record->relationLoaded($relation)) {
+        if ($record->relationLoaded($relation) && ! $this->hasActiveSubRowFilters()) {
             return $record->getRelation($relation)->count();
         }
 
@@ -1240,7 +1269,32 @@ trait WithTable
 
         $table = $this->getTable();
 
-        return $table->getQuery()->whereIn($table->getPrimaryKey(), $selectedKeys)->get();
+        $query = $table->getQuery()->whereIn($table->getPrimaryKey(), $selectedKeys);
+
+        // Apply the same withCount/withSum aggregate subqueries that buildTableQuery()
+        // adds, so aggregate columns (e.g. ->sums('items', 'line_total')) expose their
+        // computed attribute on the selected models. Without this, selection-scope
+        // summaries pluck a missing attribute and render as 0. Filters/sort are
+        // intentionally not applied — selection is an explicit set of keys.
+        foreach ($table->getColumns() as $column) {
+            if (! $column->isAggregate()) {
+                continue;
+            }
+
+            $relation = $column->getAggregateRelation();
+            $aggregateCol = $column->getAggregateColumn();
+
+            match ($column->getAggregateFunction()) {
+                'count' => $query->withCount($relation),
+                'sum' => $query->withSum($relation, $aggregateCol),
+                'avg' => $query->withAvg($relation, $aggregateCol),
+                'min' => $query->withMin($relation, $aggregateCol),
+                'max' => $query->withMax($relation, $aggregateCol),
+                default => null,
+            };
+        }
+
+        return $query->get();
     }
 
     // ==========================================

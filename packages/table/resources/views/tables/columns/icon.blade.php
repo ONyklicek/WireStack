@@ -1,12 +1,9 @@
+{{-- IconColumn cell --}}
 @php
-    /** @var string $iconSvg */
-    /** @var string $size */
-    /** @var string $colorClass */
-    /** @var string|null $tooltip */
+    /** @var string $colorClass canonical text color from HasColor::getTextColorClasses */
+    /** @var string $iconHtml resolved icon svg */
 @endphp
 
-<div class="flex items-center" @if($tooltip) title="{{ $tooltip }}" @endif>
-    <svg class="{{ $size }} {{ $colorClass }}" fill="currentColor" viewBox="0 0 20 20">
-        {!! $iconSvg !!}
-    </svg>
-</div>
+<span class="inline-flex items-center {{ $colorClass }}">
+    {!! $iconHtml !!}
+</span>

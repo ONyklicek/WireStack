@@ -25,28 +25,20 @@ class WireFormsServiceProvider extends PackageServiceProvider
         $packager
             ->name('WireForms')
             ->hasShortName('wire-forms')
+            ->registeredPackage(function($packager){
+                $this->app->bind(Form::class, fn () => new Form);
+            })
+            ->bootedPackage(function ($packager){
+                Blade::componentNamespace('NyonCode\\WireForms\\Components', 'wire-forms');
+                ActionMacros::register();
+
+                $this->registerAssetRoutes();
+            })
             ->hasConfig()
             ->hasViews()
             ->hasAssets('dist')
             ->hasTranslations('resources/lang')
             ->hasAbout();
-    }
-
-    public function register(): void
-    {
-        parent::register();
-
-        $this->app->bind(Form::class, fn () => new Form);
-    }
-
-    public function boot(): void
-    {
-        parent::boot();
-
-        Blade::componentNamespace('NyonCode\\WireForms\\Components', 'wire-forms');
-        ActionMacros::register();
-
-        $this->registerAssetRoutes();
     }
 
     /**

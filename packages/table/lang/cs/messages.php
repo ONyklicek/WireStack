@@ -30,6 +30,7 @@ return [
     'empty_no_records_match' => 'Žádné záznamy neodpovídají vašemu hledání. Zkuste upravit filtry.',
 
     // Filters
+    'filters' => 'Filtry',
     'filter_all' => 'Vše',
     'filter_yes' => 'Ano',
     'filter_no' => 'Ne',

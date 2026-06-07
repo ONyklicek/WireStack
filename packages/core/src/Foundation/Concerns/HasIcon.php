@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Foundation\Concerns;
 
 use Closure;
-use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Icons\Icon;
+use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 
 /**
  * Provides an icon property for components.
  *
- * @phpstan-require-extends Component
+ * The using class must provide an `evaluate()` method (e.g. via the
+ * {@see EvaluatesClosures} trait) so
+ * closure-based icons can be resolved. Both Foundation\Components\Component
+ * and the table DataComponent satisfy this, so fields and columns can share
+ * the same icon API.
  */
 trait HasIcon
 {

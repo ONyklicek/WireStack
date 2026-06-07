@@ -14,6 +14,11 @@ User-facing documentation for the Wire ecosystem.
 | [Project Map](project-map.md) | Package overview, install paths, source layout, and test commands |
 | [Configuration](configuration.md) | Published config files, environment variables, and package defaults |
 | [Authorization](authorization.md) | Gates, policies, permissions, table rules, and form rules |
+| [Theming & Customization](theming.md) | Colors, icons, overriding views, and localization |
+| [Testing](testing.md) | Standalone, Livewire, and unit tests for forms and tables |
+| [Cookbook](cookbook.md) | Task-oriented recipes built from the public API |
+| [Troubleshooting](troubleshooting.md) | Fixes for common configuration issues |
+| [Upgrade Guide](upgrade.md) | Versioning, requirements, and upgrade steps |
 
 ## wire-table
 
@@ -36,6 +41,7 @@ User-facing documentation for the Wire ecosystem.
 | [Validation](forms/validation.md) | Rules, messages, and custom validation behavior |
 | [Save Lifecycle](forms/save-lifecycle.md) | Validation, mutation, persistence, and notifications |
 | [Field Reference](forms/fields/index.md) | Input, layout, display, relationship, and repeater components |
+| [Extending Forms](forms/custom-fields.md) | Custom fields, display components, presets, and packaging |
 
 ## wire-sortable
 

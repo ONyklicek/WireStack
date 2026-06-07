@@ -219,3 +219,51 @@ Place the toast container in your layout:
 ```blade
 <x-wire-notifications::toast-container />
 ```
+
+You can customize the position, the fallback auto-dismiss duration, and the browser event it listens for:
+
+```blade
+<x-wire-notifications::toast-container
+    position="bottom-right"
+    :duration="5000"
+    event-name="table-notification" />
+```
+
+| Prop | Default | Purpose |
+|------|---------|---------|
+| `position` | `top-right` | `top-left` / `top-center` / `top-right` / `bottom-left` / `bottom-center` / `bottom-right` |
+| `duration` | `4000` | fallback auto-dismiss (ms) for notifications without their own `duration` |
+| `eventName` | `table-notification` | the `window` event it listens for (`x-on:{eventName}.window`) |
+
+## Triggering Toasts from JavaScript
+
+The toast container installs a global `window.wireToast` helper (and an Alpine `$toast` magic) when it mounts, so you can pop a toast straight from the frontend — no server round-trip. The helper simply dispatches the container's `eventName` window event with the standard payload (`type`, `message`, `title`, `duration`).
+
+```js
+// shorthand — type + message
+wireToast.success('Saved');
+wireToast.error('Something went wrong');
+wireToast.warning('Careful');
+wireToast.info('Heads up');
+
+// with options (title, duration, …)
+wireToast.success('Saved', { title: 'Done', duration: 6000 });
+
+// full payload object (type defaults to 'info' if omitted)
+wireToast({ type: 'success', message: 'Saved', title: 'Done' });
+wireToast('Plain info toast');
+```
+
+Inside Alpine, use the `$toast` magic:
+
+```blade
+<button @click="$toast.success('Copied!')">Copy</button>
+```
+
+The helper targets the container's configured `eventName`, so a custom `event-name="my-toast"` is wired up automatically. `window.wireToast` is installed once (the first container wins); if you render multiple containers with different event names, dispatch the `CustomEvent` yourself for the secondary ones:
+
+```js
+window.dispatchEvent(new CustomEvent('my-toast', {
+    detail: { type: 'success', message: 'Saved' },
+}));
+```

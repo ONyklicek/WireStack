@@ -205,30 +205,25 @@ TextColumn::make('subtitle')
 ### Icons
 
 ```php
-->icon(string|Closure $icon)
-->iconPosition(string $position)       // 'before' (default), 'after'
+->icon(string|Icon|null $icon, ?string $position = 'before')   // position: 'before' | 'after'
 ->color(string|Closure $color)         // icon/text color
 ```
 
 ```php
 TextColumn::make('email')
-    ->icon('mail')
-    ->iconPosition('before')
+    ->icon('mail', 'before')
     ->color('primary')
 ```
 
 ### URL (Clickable Cell)
 
 ```php
-->url(string|Closure $url)             // make cell a link
-->openUrlInNewTab(bool $newTab = true)
-->actionUrl(string|Closure $url)       // alias
+->actionUrl(Closure $url, bool $openInNewTab = false)   // make the cell a link
 ```
 
 ```php
 TextColumn::make('name')
-    ->url(fn ($record) => route('users.show', $record))
-    ->openUrlInNewTab()
+    ->actionUrl(fn ($record) => route('users.show', $record), openInNewTab: true)
     ->color('primary')
 ```
 
@@ -295,6 +290,31 @@ TextColumn::make('roles.pivot.assigned_at')
 ->state(mixed $value)                  // override state value
 ->getState(Model $record): mixed       // resolve state from record
 ```
+
+### Custom Rendering (Blade Partials)
+
+Every column owns its **state/configuration** and delegates **markup** to a Blade
+partial under `packages/table/resources/views/tables/columns/`. The base text
+cell renders through `text.blade.php`; each custom-UI column has its own partial
+(`badge`, `boolean`, `icon`, `image`, `button`, `toggle`, `poll`, `split`,
+`stacked`, `select`, `text-input-*`). Columns never return inline HTML from
+`renderCell()` — they call `renderView('tables.columns.<name>', [...])`.
+
+Two ways to customize the markup:
+
+```php
+// 1. Per-column override — point any column at your own Blade view.
+TextColumn::make('name')->view('columns.my-name-cell');
+
+// 2. Project-wide override — publish the package views and edit the partial.
+//    php artisan vendor:publish --tag=wire-table-views
+//    then edit resources/views/vendor/wire-table/tables/columns/badge.blade.php
+```
+
+View resolution order: an explicit `->view()` wins, then the package view
+(`wire-table::tables.columns.<name>`), then an app-level view of the same name.
+Your partial receives exactly the data the built-in one does — the already
+resolved state/config primitives for that column — so you only rewrite the HTML.
 
 ---
 
@@ -676,21 +696,27 @@ use NyonCode\WireTable\Columns\ImageColumn;
 ```php
 ImageColumn::make('avatar_url')
     ->circular()
-    ->size(40)
+    ->size('md')
 
 ImageColumn::make('photo')
-    ->size(60)
+    ->size('lg')
     ->defaultImageUrl('/images/placeholder.png')
 ```
 
 ### ImageColumn API
 
 ```php
-->size(int $pixels)                  // width & height in px
-->circular(bool $circular = true)    // rounded-full
-->square(bool $square = true)        // rounded-none
-->defaultImageUrl(string $url)       // fallback image
+->size(string|Closure $size)          // scale: xs | sm | md | lg | xl | 2xl (default md)
+->circular(bool $circular = true)     // rounded-full (otherwise rounded-md)
+->defaultImageUrl(?string $url)       // fallback image when the value is empty
+->disk(?string $disk)                 // resolve relative paths via a Storage disk
+->ring(int $ring, ?int $color = null) // avatar ring width
 ```
+
+> `size()` takes a named scale, not pixels — the scale maps to Tailwind
+> width/height utilities (`md` → `w-10 h-10`). Its signature matches the
+> canonical `HasSize::size(string|Closure)` so the column stays usable; passing
+> an unknown value falls back to the `md` scale.
 
 ---
 
@@ -709,8 +735,7 @@ ButtonColumn::make('view')
     ->buttonLabel('View')
     ->buttonIcon('eye')
     ->buttonColor('primary')
-    ->url(fn ($record) => route('users.show', $record))
-    ->openUrlInNewTab()
+    ->actionUrl(fn ($record) => route('users.show', $record), openInNewTab: true)
 ```
 
 ### Action Button (Livewire)
@@ -739,11 +764,12 @@ ButtonColumn::make('delete')
     ->buttonLabel('Delete')
     ->buttonIcon('trash')
     ->buttonColor('danger')
-    ->requiresConfirmation()
-    ->confirmationTitle('Delete this record?')
-    ->confirmationDescription('This action cannot be undone.')
-    ->confirmButtonText('Yes, delete')
-    ->cancelButtonText('Cancel')
+    ->requiresConfirmation(
+        title: 'Delete this record?',
+        description: 'This action cannot be undone.',
+        confirmText: 'Yes, delete',
+        cancelText: 'Cancel',
+    )
     ->action(fn ($record) => $record->delete())
 ```
 
@@ -790,8 +816,7 @@ ButtonColumn::make('publish')
     ->buttonColor(fn ($r) => $r->is_published ? 'gray' : 'success')
     ->buttonIcon(fn ($r) => $r->is_published ? 'x' : 'check')
     ->visibleWhen(fn ($r) => $r->status !== 'draft')
-    ->disabled(fn ($r) => $r->is_locked)
-    ->disabledTooltip('Record is locked')
+    ->disabled(fn ($r) => $r->is_locked, 'Record is locked')
 ```
 
 ### Loading State
@@ -799,40 +824,37 @@ ButtonColumn::make('publish')
 ```php
 ButtonColumn::make('process')
     ->buttonLabel('Process')
-    ->loading()                      // show spinner during execution
-    ->loadingText('Processing...')
+    ->loading(true, 'Processing...')  // show spinner + text during execution
 ```
 
 ### ButtonColumn API
 
 ```php
 ->buttonLabel(string|Closure $label)
-->buttonIcon(string|Closure $icon)
-->buttonColor(string|Closure $color)       // 'primary', 'danger', 'success', 'warning', 'info', 'gray'
-->buttonSize(string $size)                 // 'xs', 'sm', 'md', 'lg'
-->buttonVariant(string $variant)           // 'solid', 'outlined', 'link'
+->buttonIcon(string|Closure $icon, ?string $position = 'before')  // 'before' | 'after'
+->buttonColor(string|Closure $color)       // 'primary', 'danger', 'success', 'gray', …
+->buttonSize(string|Closure $size)         // 'xs', 'sm', 'md', 'lg'
+->buttonVariant(string|Closure $variant)   // 'solid', 'outlined', 'link'
 ->iconOnly(bool $iconOnly = true)
-->iconPosition(string $position)           // 'before', 'after'
 ->outlined()                               // shortcut for variant('outlined')
 ->link()                                   // shortcut for variant('link')
 ->danger()                                 // shortcut for color('danger')
 ->success()                                // shortcut for color('success')
 ->action(Closure $fn)                      // inline action callback
 ->livewireAction(string $method)           // call Livewire method
-->url(string|Closure $url)                 // URL (instead of action)
-->openUrlInNewTab(bool $newTab = true)
-->requiresConfirmation(bool $requires = true)
-->confirmationTitle(string $title)
-->confirmationDescription(string $desc)
-->confirmButtonText(string $text)
-->cancelButtonText(string $text)
-->disabled(bool|Closure $disabled = true)
-->disabledTooltip(string $tooltip)
+->actionUrl(Closure $url, bool $openInNewTab = false)  // render a link instead
+->requiresConfirmation(
+    bool|Closure $requires = true,
+    string|Closure|null $title = null,
+    string|Closure|null $description = null,
+    string|Closure|null $confirmText = null,
+    string|Closure|null $cancelText = null,
+)
+->disabled(bool|Closure $disabled = true, string|Closure|null $tooltip = null)
 ->visibleWhen(Closure $fn)
 ->enabledWhen(Closure $fn)
-->loading(bool $loading = true)
-->loadingText(string $text)
-->extraButtonAttributes(array $attrs)
+->loading(bool|Closure $show = true, string|Closure|null $text = null)
+->extraButtonAttributes(array|Closure $attrs)
 ```
 
 ---
@@ -1108,7 +1130,7 @@ SplitColumn::make('address')
 ```php
 SplitColumn::make('user_info')
     ->columns([
-        ImageColumn::make('avatar')->circular()->size(32),
+        ImageColumn::make('avatar')->circular()->size('sm'),
         TextColumn::make('name'),
     ])
     ->gap('sm')          // 'xs', 'sm', 'md', 'lg'
@@ -1301,9 +1323,7 @@ TextColumn::make('created_at')
 // Number range filter
 TextColumn::make('price')
     ->filterable()
-    ->filterAsNumberRange()
-    ->filterMinValue(0)
-    ->filterMaxValue(10000)
+    ->filterAsNumberRange(0, 10000)        // min, max, optional step
 
 // Custom filter logic
 TextColumn::make('name')
@@ -1320,22 +1340,17 @@ TextColumn::make('age')
 ### Column-Level Filter API
 
 ```php
-->filterable(bool|Closure $filterable = true)
+->filterable(bool $filterable = true, string $type = 'text', array $options = [])
 ->isFilterable(): bool
-->filterAsSelect(array $options)
-->filterAsDate()
-->filterAsDateRange()
-->filterAsNumberRange()
-->filterAsBoolean()
+->filterAsSelect(array $options, ?string $placeholder = null)
+->filterAsDate(?string $minDate = null, ?string $maxDate = null)
+->filterAsDateRange(?string $minDate = null, ?string $maxDate = null)
+->filterAsNumberRange(?float $min = null, ?float $max = null, ?float $step = null)
+->filterAsBoolean(?string $trueLabel = null, ?string $falseLabel = null)
 ->filterOperator(string $operator)     // '=', '!=', '>', '<', '>=', '<=', 'like'
 ->filterDebounce(int $ms)
-->filterMinDate(string $date)
-->filterMaxDate(string $date)
-->filterMinValue(float $value)
-->filterMaxValue(float $value)
-->filterUsing(Closure $fn)
-->filterOptions(array $options)
-->applyFilter(Builder $query, mixed $value): Builder
+->filterPlaceholder(?string $placeholder)
+->filterUsing(Closure $fn)             // fn(Builder $query, mixed $value)
 ```
 
 ---
@@ -1346,18 +1361,16 @@ Columns can also use the generic `editable()` API (in addition to dedicated Text
 
 ```php
 TextColumn::make('name')
-    ->editable()                              // enables inline editing
-    ->editableType('text')                    // 'text', 'select', 'toggle'
-    ->editableRules(['required', 'max:255'])
+    ->editable()                              // type defaults to 'text'
+    ->editableRules(fn ($record) => ['required', 'max:255'])
     ->editableUsing(function ($record, $column, $value) {
         $record->update([$column => $value]);
     })
 
 TextColumn::make('category')
-    ->editable()
-    ->editableType('select')
-    ->editableOptions(['a' => 'Category A', 'b' => 'Category B'])
-    ->editableRules(['required', 'in:a,b'])
+    // editable(enabled, type, options) — 'text' | 'select' | 'toggle'
+    ->editable(true, 'select', ['a' => 'Category A', 'b' => 'Category B'])
+    ->editableRules(fn ($record) => ['required', 'in:a,b'])
 ```
 
 ---

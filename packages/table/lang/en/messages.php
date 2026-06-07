@@ -30,6 +30,7 @@ return [
     'empty_no_records_match' => 'No records match your search. Try adjusting the filters.',
 
     // Filters
+    'filters' => 'Filters',
     'filter_all' => 'All',
     'filter_yes' => 'Yes',
     'filter_no' => 'No',

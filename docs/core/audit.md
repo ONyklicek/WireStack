@@ -13,8 +13,8 @@ The audit log is part of `wire-core`. If you installed `wire-table` or `wire-for
 Publish the config and migration:
 
 ```bash
-php artisan vendor:publish --tag=wire-core-config
-php artisan vendor:publish --tag=wire-core-migrations
+php artisan vendor:publish --tag=wire-core::config
+php artisan vendor:publish --tag=wire-core::migrations
 php artisan migrate
 ```
 
