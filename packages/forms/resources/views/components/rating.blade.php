@@ -2,11 +2,13 @@
     use NyonCode\WireForms\Components\Rating;
     assert($field instanceof Rating);
     $wireModifier = $field->getWireModelModifier();
+    // Bright star scale (-500/-400); hues kept in sync with the canonical
+    // Foundation palette (success = emerald, not green).
     $colorClasses = match($field->getColor()) {
         'primary' => 'text-primary-500',
-        'success'  => 'text-green-500',
+        'success'  => 'text-emerald-500',
         'danger'   => 'text-red-500',
-        default    => 'text-yellow-400',
+        default    => 'text-amber-400',
     };
 @endphp
 

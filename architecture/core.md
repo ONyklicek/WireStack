@@ -92,7 +92,9 @@ If the task changes shared rendering, container wiring, or registration behavior
 |-----|---------|---------|
 | `notifications.default` | `env('WIRE_NOTIFICATIONS_DRIVER', 'session')` | driver: `session` / `livewire` / `flasher` / `null` |
 | `icons.default_set` | `'default'` | active icon set name |
-| `icons.sets` | `['default' => DefaultIconSet::class]` | registered icon sets |
+| `icons.sets` | `['default' => DefaultIconSet::class]` | base set unprefixed; other sets keyed by required prefix (`prefix:name`) |
+| `icons.paths` | `[]` | SVG folders to auto-register; string key = name prefix |
+| `icons.warn_missing` | `false` | log a warning when an unknown icon is rendered |
 | `colors.palette` | `[]` | custom color extensions |
 | `plugins` | `[]` | plugin class list booted at startup |
 | `modals.default_width` | `'md'` | default modal width |
@@ -121,7 +123,7 @@ Lowest-level reusable code; everything else depends on it. **Keep it dependency-
   `HasLivewire`, `CanBeLive`, `CanBeReadOnly`, `BelongsToComponent`.
   These are the trait building blocks reused by both wire-forms fields and wire-table columns.
 - **`Contracts/`** — `HasIcon`, `HasLabel`, `HasVisibility` interfaces.
-- **`Icons/`** — `IconManager` (singleton registry), `Icon`, `IconSet` (interface), `DefaultIconSet`. `DefaultIconSet` ships the complete Heroicons 2.2.0 solid set (324 icons, 20x20) plus Wire-friendly aliases; paths come from the generated `resources/icons/heroicons-solid.php`, loaded lazily. The `Icon` enum maps friendly names/aliases to canonical Heroicons names.
+- **`Icons/`** — `IconManager` (singleton registry), `Icon`, `IconSet` (interface), `ProvidesIconMetadata` (optional capability), `ResolvedIcon` (value object), `DefaultIconSet`. `DefaultIconSet` ships the complete Heroicons 2.2.0 solid set (324 icons, 20x20) plus Wire-friendly aliases; paths come from the generated `resources/icons/heroicons-solid.php`, loaded lazily. The `Icon` enum maps friendly names/aliases to canonical Heroicons names. Multiple sets can be registered and used at once: the bundled Heroicons set is the **unprefixed base** (`pencil`, `user`), and every additional set is registered under a **required prefix** and addressed as `prefix:name` (`lucide:home`) — registering a non-default set without a prefix throws, so resolution is deterministic and sets never collide. Sets implementing `ProvidesIconMetadata` carry their own viewBox + fill/stroke attributes (via `ResolvedIcon`), so stroke-based or non-20x20 sets (Lucide, Feather, Heroicons outline) render correctly next to the default solid set. Custom icons (`registerIcons`/`registerIconsFromDirectory`) are flat bare names that take priority over the default set. `IconManager::render()` accepts a `label` for accessibility (`role="img"`), else emits `aria-hidden`. Sets implementing only `IconSet` still work — their `getPath()` is wrapped in the default 20x20 fill format. `setDefaultIconSet()` swaps the unprefixed base.
 - **`Colors/`** — `Color` enum.
 - **`View/`** — Blade view-class components: `Badge`, `Button`, `Dropdown`, `Icon` (the `wire` namespace).
 - **`Components/`** — base classes `Component`, `LayoutComponent`, `ViewComponent`.

@@ -7,6 +7,7 @@ namespace NyonCode\WireCore\Modals\View;
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireCore\Foundation\Concerns\HasColor;
 
 /**
  * Blade component: <x-wire-modals::confirmation>
@@ -27,6 +28,8 @@ use NyonCode\WireCore\Core\Support\Trans;
  */
 class ConfirmationComponent extends Component
 {
+    use HasColor;
+
     public function __construct(
         public ?string $heading = null,
         public ?string $description = null,
@@ -64,24 +67,12 @@ class ConfirmationComponent extends Component
 
     public function iconBgClass(): string
     {
-        return match ($this->iconColor) {
-            'danger' => 'bg-red-100 dark:bg-red-900/30',
-            'success' => 'bg-emerald-100 dark:bg-emerald-900/30',
-            'info' => 'bg-blue-100 dark:bg-blue-900/30',
-            'warning' => 'bg-amber-100 dark:bg-amber-900/30',
-            default => 'bg-gray-100 dark:bg-gray-700',
-        };
+        return self::getModalIconBgClass($this->iconColor);
     }
 
     public function iconColorClass(): string
     {
-        return match ($this->iconColor) {
-            'danger' => 'text-red-600 dark:text-red-400',
-            'success' => 'text-emerald-600 dark:text-emerald-400',
-            'info' => 'text-blue-600 dark:text-blue-400',
-            'warning' => 'text-amber-600 dark:text-amber-400',
-            default => 'text-gray-600 dark:text-gray-400',
-        };
+        return self::getModalIconTextClass($this->iconColor);
     }
 
     public function submitButtonClasses(): string

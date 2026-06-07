@@ -69,3 +69,18 @@ it('can be disabled via closure', function () {
     expect($column->isDisabled($locked))->toBeTrue()
         ->and($column->isDisabled($unlocked))->toBeFalse();
 });
+
+it('renders toggle on-color via the canonical Foundation palette', function () {
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 7, 'active' => true]);
+
+    // Delegates to HasColor::getSolidBgClass — primary, success → emerald,
+    // warning → amber (not the old blue/green/yellow drift).
+    expect(ToggleColumn::make('active')->onColor('primary')->renderCell($record))->toContain('bg-primary-600')
+        ->and(ToggleColumn::make('active')->onColor('success')->renderCell($record))->toContain('bg-emerald-600')
+        ->and(ToggleColumn::make('active')->onColor('warning')->renderCell($record))->toContain('bg-amber-500')
+        ->and(ToggleColumn::make('active')->onColor('gray')->renderCell($record))->toContain('bg-gray-600');
+});

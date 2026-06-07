@@ -1,4 +1,8 @@
-@php /** @var \NyonCode\WireForms\Components\DateTimePicker $field */
+@php
+    use NyonCode\WireForms\Components\DateTimePicker;
+
+     assert($field instanceof DateTimePicker);
+
     $wireModifier = $field->getWireModelModifier();
     $wireAttr = 'wire:model' . ($wireModifier ? ".{$wireModifier}" : '');
     $mode = $field->getMode();
@@ -17,27 +21,41 @@
 
 @if($field->isNative())
     <input
-        type="{{ $field->getNativeInputType() }}"
-        id="{{ $fieldId }}"
-        {{ $wireAttr }}="{{ $field->getWireModelAttribute() }}"
-        @if($field->getPlaceholder()) placeholder="{{ $field->getPlaceholder() }}" @endif
-        @if($field->getMinDate()) min="{{ $field->getMinDate() }}" @endif
-        @if($field->getMaxDate()) max="{{ $field->getMaxDate() }}" @endif
-        @if($field->isDisabled()) disabled @endif
-        @if($field->isReadOnly()) readonly @endif
-        @if($field->hasAutofocus()) autofocus @endif
-        @if($field->isRequired()) required @endif
-        @class([
-            'block w-full rounded-md border-gray-300 shadow-sm',
-            'focus:border-primary-500 focus:ring-primary-500',
-            'hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150',
-            'dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm',
-            'border-red-500 focus:border-red-500 focus:ring-red-500' => $errors->has($field->getStatePath()),
-        ])
+            type="{{ $field->getNativeInputType() }}"
+            id="{{ $fieldId }}"
+    {{ $wireAttr }}="{{ $field->getWireModelAttribute() }}"
+    @if($field->getPlaceholder())
+        placeholder="{{ $field->getPlaceholder() }}"
+    @endif
+    @if($field->getMinDate())
+        min="{{ $field->getMinDate() }}"
+    @endif
+    @if($field->getMaxDate())
+        max="{{ $field->getMaxDate() }}"
+    @endif
+    @if($field->isDisabled())
+        disabled
+    @endif
+    @if($field->isReadOnly())
+        readonly
+    @endif
+    @if($field->hasAutofocus())
+        autofocus
+    @endif
+    @if($field->isRequired())
+        required
+    @endif
+    @class([
+        'block w-full rounded-md border-gray-300 shadow-sm',
+        'focus:border-primary-500 focus:ring-primary-500',
+        'hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150',
+        'dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm',
+        'border-red-500 focus:border-red-500 focus:ring-red-500' => $errors->has($field->getStatePath()),
+    ])
     />
 @else
     <div
-        x-data="{
+            x-data="{
             open: false,
             value: $wire.entangle('{{ $field->getWireModelAttribute() }}'),
             hasDate: @js($hasDate),
@@ -221,36 +239,39 @@
                 this.value = null;
             }
         }"
-        @click.outside="open = false"
-        class="relative"
+            @click.outside="open = false"
+            class="relative"
     >
         {{-- Input trigger --}}
         <div class="relative">
             <input
-                type="text"
-                id="{{ $fieldId }}"
-                :value="displayValue"
-                @click="open = !open"
-                @keydown.escape="open = false"
-                readonly
-                @if($field->getPlaceholder()) placeholder="{{ $field->getPlaceholder() }}" @endif
-                @if($field->isDisabled()) disabled @endif
-                @if($field->hasAutofocus()) autofocus @endif
-                @if($field->isRequired()) required @endif
-                @class([
-                    'block w-full rounded-md border-gray-300 shadow-sm cursor-pointer',
-                    'focus:border-primary-500 focus:ring-primary-500',
-                    'hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150',
-                    'dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm',
-                    'border-red-500 focus:border-red-500 focus:ring-red-500' => $errors->has($field->getStatePath()),
-                ])
+                    type="text"
+                    id="{{ $fieldId }}"
+                    :value="displayValue"
+                    @click="open = !open"
+                    @keydown.escape="open = false"
+                    readonly
+                    @if($field->getPlaceholder()) placeholder="{{ $field->getPlaceholder() }}" @endif
+                    @if($field->isDisabled()) disabled @endif
+                    @if($field->hasAutofocus()) autofocus @endif
+                    @if($field->isRequired()) required @endif
+                    @class([
+                        'block w-full rounded-md border-gray-300 shadow-sm cursor-pointer',
+                        'focus:border-primary-500 focus:ring-primary-500',
+                        'hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150',
+                        'dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm',
+                        'border-red-500 focus:border-red-500 focus:ring-red-500' => $errors->has($field->getStatePath()),
+                    ])
             />
             <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <svg class="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <svg class="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                     stroke-width="1.5" stroke="currentColor">
                     @if($hasDate)
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/>
                     @else
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     @endif
                 </svg>
             </div>
@@ -258,36 +279,35 @@
 
         {{-- Dropdown panel --}}
         <div
-            x-show="open"
-            x-transition:enter="transition ease-out duration-150"
-            x-transition:enter-start="opacity-0 -translate-y-1"
-            x-transition:enter-end="opacity-100 translate-y-0"
-            x-transition:leave="transition ease-in duration-100"
-            x-transition:leave-start="opacity-100 translate-y-0"
-            x-transition:leave-end="opacity-0 -translate-y-1"
-            class="absolute z-50 mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg p-4"
-            @keydown.escape="open = false"
+                x-show="open"
+                x-transition:enter="transition ease-out duration-150"
+                x-transition:enter-start="opacity-0 -translate-y-1"
+                x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-100"
+                x-transition:leave-start="opacity-100 translate-y-0"
+                x-transition:leave-end="opacity-0 -translate-y-1"
+                class="absolute z-50 mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg p-4"
+                @keydown.escape="open = false"
         >
             @if($hasDate)
                 {{-- Month/year navigation --}}
                 <div class="flex items-center justify-between mb-3">
-                    <button type="button" @click="prevMonth()" class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors duration-150">
-                        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clip-rule="evenodd" />
-                        </svg>
+                    <button type="button" @click="prevMonth()"
+                            class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors duration-150">
+                        <x-wire::icon name="chevron-left" class="h-4 w-4"/>
                     </button>
                     <span class="text-sm font-semibold text-gray-900 dark:text-white" x-text="monthYearLabel"></span>
-                    <button type="button" @click="nextMonth()" class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors duration-150">
-                        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
-                        </svg>
+                    <button type="button" @click="nextMonth()"
+                            class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors duration-150">
+                        <x-wire::icon name="chevron-right" class="h-4 w-4"/>
                     </button>
                 </div>
 
                 {{-- Day names --}}
                 <div class="grid grid-cols-7 gap-0 mb-1">
                     <template x-for="name in dayNames" :key="name">
-                        <div class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-1" x-text="name"></div>
+                        <div class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-1"
+                             x-text="name"></div>
                     </template>
                 </div>
 
@@ -295,10 +315,10 @@
                 <div class="grid grid-cols-7 gap-0">
                     <template x-for="(cell, idx) in days" :key="idx">
                         <button
-                            type="button"
-                            @click="cell.current && selectDate(cell.date)"
-                            :disabled="!cell.current || isDisabled(cell.date)"
-                            :class="{
+                                type="button"
+                                @click="cell.current && selectDate(cell.date)"
+                                :disabled="!cell.current || isDisabled(cell.date)"
+                                :class="{
                                 'text-gray-900 dark:text-white': cell.current && !isDisabled(cell.date),
                                 'text-gray-300 dark:text-gray-600': !cell.current,
                                 'opacity-40 cursor-not-allowed': cell.current && isDisabled(cell.date),
@@ -306,8 +326,8 @@
                                 'ring-1 ring-primary-500': isToday(cell.date) && !isSelected(cell.date),
                                 'hover:bg-gray-100 dark:hover:bg-gray-700': cell.current && !isDisabled(cell.date) && !isSelected(cell.date),
                             }"
-                            class="w-8 h-8 text-sm rounded-full flex items-center justify-center transition-colors duration-150"
-                            x-text="cell.day"
+                                class="w-8 h-8 text-sm rounded-full flex items-center justify-center transition-colors duration-150"
+                                x-text="cell.day"
                         ></button>
                     </template>
                 </div>
@@ -318,12 +338,15 @@
                 <div @class(['flex items-center justify-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-600 mt-3' => $hasDate, 'flex items-center justify-center gap-2' => !$hasDate])>
                     {{-- Hours --}}
                     <div class="flex flex-col items-center">
-                        <button type="button" @click="adjustHours(1)" class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
-                            <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M14.77 12.79a.75.75 0 01-1.06-.02L10 8.832 6.29 12.77a.75.75 0 11-1.08-1.04l4.25-4.5a.75.75 0 011.08 0l4.25 4.5a.75.75 0 01-.02 1.06z" clip-rule="evenodd" /></svg>
+                        <button type="button" @click="adjustHours(1)"
+                                class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
+                            <x-wire::icon name="chevron-up" class="h-4 w-4"/>
                         </button>
-                        <span class="w-8 text-center text-sm font-medium text-gray-900 dark:text-white tabular-nums" x-text="String(hours).padStart(2, '0')"></span>
-                        <button type="button" @click="adjustHours(-1)" class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
-                            <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" /></svg>
+                        <span class="w-8 text-center text-sm font-medium text-gray-900 dark:text-white tabular-nums"
+                              x-text="String(hours).padStart(2, '0')"></span>
+                        <button type="button" @click="adjustHours(-1)"
+                                class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
+                            <x-wire::icon name="chevron-down" class="h-4 w-4"/>
                         </button>
                     </div>
 
@@ -331,12 +354,15 @@
 
                     {{-- Minutes --}}
                     <div class="flex flex-col items-center">
-                        <button type="button" @click="adjustMinutes(1)" class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
-                            <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M14.77 12.79a.75.75 0 01-1.06-.02L10 8.832 6.29 12.77a.75.75 0 11-1.08-1.04l4.25-4.5a.75.75 0 011.08 0l4.25 4.5a.75.75 0 01-.02 1.06z" clip-rule="evenodd" /></svg>
+                        <button type="button" @click="adjustMinutes(1)"
+                                class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
+                            <x-wire::icon name="chevron-up" class="h-4 w-4"/>
                         </button>
-                        <span class="w-8 text-center text-sm font-medium text-gray-900 dark:text-white tabular-nums" x-text="String(minutes).padStart(2, '0')"></span>
-                        <button type="button" @click="adjustMinutes(-1)" class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
-                            <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" /></svg>
+                        <span class="w-8 text-center text-sm font-medium text-gray-900 dark:text-white tabular-nums"
+                              x-text="String(minutes).padStart(2, '0')"></span>
+                        <button type="button" @click="adjustMinutes(-1)"
+                                class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
+                            <x-wire::icon name="chevron-down" class="h-4 w-4"/>
                         </button>
                     </div>
 
@@ -345,12 +371,15 @@
 
                         {{-- Seconds --}}
                         <div class="flex flex-col items-center">
-                            <button type="button" @click="adjustSeconds(1)" class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
-                                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M14.77 12.79a.75.75 0 01-1.06-.02L10 8.832 6.29 12.77a.75.75 0 11-1.08-1.04l4.25-4.5a.75.75 0 011.08 0l4.25 4.5a.75.75 0 01-.02 1.06z" clip-rule="evenodd" /></svg>
+                            <button type="button" @click="adjustSeconds(1)"
+                                    class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
+                                <x-wire::icon name="chevron-up" class="h-4 w-4"/>
                             </button>
-                            <span class="w-8 text-center text-sm font-medium text-gray-900 dark:text-white tabular-nums" x-text="String(seconds).padStart(2, '0')"></span>
-                            <button type="button" @click="adjustSeconds(-1)" class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
-                                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" /></svg>
+                            <span class="w-8 text-center text-sm font-medium text-gray-900 dark:text-white tabular-nums"
+                                  x-text="String(seconds).padStart(2, '0')"></span>
+                            <button type="button" @click="adjustSeconds(-1)"
+                                    class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
+                                <x-wire::icon name="chevron-down" class="h-4 w-4"/>
                             </button>
                         </div>
                     @endif
@@ -359,11 +388,13 @@
 
             {{-- Footer --}}
             <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-                <button type="button" @click="clear(); open = false" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
+                <button type="button" @click="clear(); open = false"
+                        class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
                     {{ __('Clear') }}
                 </button>
                 @if($hasDate && $hasTime)
-                    <button type="button" @click="open = false" class="text-xs font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors duration-150">
+                    <button type="button" @click="open = false"
+                            class="text-xs font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors duration-150">
                         {{ __('Done') }}
                     </button>
                 @endif

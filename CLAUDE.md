@@ -25,6 +25,46 @@ wire-sortable -> wire-table -> wire-forms -> wire-core
 
 Monorepo packages are loaded from root `composer.json` as local path repositories with symlinks.
 
+## Architectural Invariants
+
+Prefer one canonical owner for every reusable behavior.
+
+- If a capability is shared across packages or component types, extend the existing canonical abstraction instead of creating a local variant.
+- Canonical shared abstractions should usually live in the lowest dependency layer that can own them, most often `packages/core/src/Foundation/`.
+- Prefer extending existing `Foundation/Concerns/*`, `Foundation/Contracts/*`, enums, value objects, or shared support classes before adding package-local helpers.
+- Downstream packages (`forms`, `table`, `sortable`) should consume or delegate to shared foundations. Avoid duplicating `match` maps, resolver methods, or parallel mini-APIs for the same concept.
+- When behavior already exists as a concern such as `HasColor`, `HasIcon`, `HasSize`, `HasVisibility`, or similar shared trait vocabulary, treat that concern as the first extension point unless package docs explicitly say otherwise.
+- Treat shared Foundation concerns as binding architectural extension points, not optional helpers. If a concern can be modeled universally, it should have one canonical owner in shared Foundation-level code.
+- Apply this rule broadly, not just to `HasColor`: colors, icons, size, visibility, labels, state, defaults, shared options, reusable resolvers, value objects, enums, and owner-facing render helpers should all centralize once when they are truly cross-cutting.
+- Reference example: `packages/core/src/Foundation/Concerns/HasColor.php` is the canonical shared color resolver. Follow the same pattern for any other concern that can be owned universally instead of treating `HasColor` as a one-off exception.
+- Domain ownership examples: `HasColor` owns color semantics, `HasIcon` / `HasIcons` own icon semantics, and equivalent shared concerns should own their domain the same way. Downstream code should delegate rather than re-encode the same rules locally.
+- When changing canonical color resolvers or Tailwind-facing utility vocabularies, preserve compatibility with the lowest supported consumer Tailwind version defined by `architecture/decisions/0005-tailwind-4-support.md`. Do not add Tailwind-version-specific color names or utility assumptions to shared resolvers unless the support policy is explicitly changed first.
+- If a new cross-cutting capability does not fit an existing abstraction, add a new canonical abstraction first, then wire downstream callers to it.
+- During refactors, prefer consolidation over compatibility layers unless backwards compatibility is explicitly required.
+
+### Nova/Filament-Like Design Bias
+
+Prefer APIs that feel closer to Laravel Nova / Filament:
+
+- Public component APIs should be fluent, declarative, owner-centric, and easy to compose from actions, fields, columns, filters, and view components.
+- Reusable UI behavior should not live as ad-hoc Blade conditionals or package-local `match` maps when it can be expressed as a shared owner or resolver.
+- Shared semantics should be centralized once, while surface-specific rendering stays modular. For design-system work, prefer:
+  - semantic registries / canonical vocabularies,
+  - reusable per-surface resolvers or value objects,
+  - owner-facing render helpers for Blade/views.
+- Do not collapse distinct UI surfaces into one universal helper. A `button`, `link`, `badge`, `toggle`, `dropdown item`, `banner`, or similar surface may share semantics while still needing separate reusable rendering rules.
+- Anything added for one package should be evaluated for reuse by other packages. Favor abstractions that can be consumed from `core`, `forms`, `table`, `sortable`, and future packages without copy-paste.
+- New abstractions must stay modular and portable: minimal package assumptions, stable contracts, testable in isolation, and usable from other contexts besides the original caller.
+- Copy Nova/Filament ergonomics, not their internals verbatim. The target is the same quality of composition and reuse, adapted to this repository's package graph.
+
+Before changing shared behavior, ask:
+
+1. What is the canonical owner of this concern?
+2. Is there already a shared trait, contract, enum, or support class for it?
+3. Should downstream code delegate to the shared owner instead of implementing its own logic?
+4. Is this behavior really one surface, or should it be modeled as multiple reusable surface-specific resolvers?
+5. Will this abstraction still make sense if another package needs the same behavior later?
+
 ## Start Here By Task
 
 - Core actions, modals, notifications, icons, widgets:
@@ -37,6 +77,8 @@ Monorepo packages are loaded from root `composer.json` as local path repositorie
   `architecture/sortable.md`
 - Anything spanning package boundaries:
   `architecture/integrations.md`
+- Shared design-system ownership, canonical UI semantics, color/size/icon surface work:
+  `architecture/plans/canonical-ownership-consolidation.md`
 - Full analysis, inconsistency review, bug-hunting, or audit:
   `architecture/audit.md`
 - Docs, previews, workbench, screenshot refresh:

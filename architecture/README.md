@@ -34,11 +34,8 @@ This directory is split for low-token navigation. Start with the smallest releva
 - `core/unified-engine.md`
 - `core/plugins.md`
 - `core/notifications.md`
-- `unified-engine-spec.md`
-- `unified-engine-plan.md`
-- `unified-engine-assessment.md`
-- `notes.md`
 - `future-ideas.md`
+- `plans/v1-gaps.md`
 
 ## ADRs
 
@@ -48,5 +45,6 @@ Key ADR clusters:
 - `0006`, `0007`, `0013`, `0015`, `0016`: core runtime and module wiring
 - `0008`, `0009`: form component and runtime design
 - `0014`: plugin architecture
+- `0017`: ERP/CRM target application architecture
 
 Read ADRs only when the code no longer makes intent obvious.

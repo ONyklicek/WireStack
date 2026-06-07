@@ -18,6 +18,7 @@ use Closure;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Icons\Icon;
+use NyonCode\WireCore\Foundation\Icons\IconManager;
 
 class ButtonColumn extends Column
 {
@@ -318,87 +319,26 @@ class ButtonColumn extends Column
             return '';
         }
 
-        $buttonLabel = $this->evaluateForRecord($this->buttonLabel, $record) ?? $this->getLabel();
         $isDisabled = $this->isDisabledForRecord($record);
-        $showLoading = $this->evaluateForRecord($this->showLoading, $record);
-        $loadingText = $this->evaluateForRecord($this->loadingText, $record);
         $url = $this->evaluateForRecord($this->urlCallback, $record);
-        $openInNewTab = $this->evaluateForRecord($this->openUrlInNewTab, $record);
 
-        $classes = $this->getButtonClasses($record);
-        $iconHtml = $this->renderButtonIcon($record);
-
-        $extraAttributes = $this->evaluateForRecord($this->extraButtonAttributes, $record);
-        $attributesString = '';
-        foreach ($extraAttributes as $key => $value) {
-            $attributesString .= ' '.e($key).'="'.e($value).'"';
-        }
-
-        // Disabled tooltip
-        $disabledTooltip = $isDisabled ? $this->evaluateForRecord($this->disabledTooltip, $record) : null;
-        if ($disabledTooltip) {
-            $attributesString .= ' title="'.e($disabledTooltip).'"';
-        }
-
-        // Content
-        $content = '';
-        if ($iconHtml && $this->buttonIconPosition === 'before') {
-            $content .= $iconHtml;
-        }
-        if (! $this->iconOnly) {
-            $content .= '<span>'.e($buttonLabel).'</span>';
-        }
-        if ($iconHtml && $this->buttonIconPosition === 'after') {
-            $content .= $iconHtml;
-        }
-
-        // Loading state
-        $loadingHtml = '';
-        if ($showLoading && ! $url) {
-            $loadingContent = $loadingText ? e($loadingText) : ($this->iconOnly ? '' : e($buttonLabel));
-            $loadingHtml =
-                '
-                <span wire:loading wire:target="'.
-                ($this->livewireAction ?? 'executeColumnAction').
-                '" class="inline-flex items-center gap-1.5">
-                    <svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    '.
-                ($loadingContent ? '<span>'.$loadingContent.'</span>' : '').
-                '
-                </span>
-            ';
-        }
-
-        // If URL, render as link
-        if ($url) {
-            $target = $openInNewTab ? ' target="_blank" rel="noopener noreferrer"' : '';
-
-            return '<a href="'.
-                e($url).
-                '"'.
-                $target.
-                ' class="'.
-                $classes.
-                '"'.
-                $attributesString.
-                '>'.
-                $content.
-                '</a>';
-        }
-
-        // Render as button
-        $wireClick = $this->getWireClick($record);
-        $disabled = $isDisabled ? ' disabled' : '';
-
-        return <<<HTML
-        <button type="button" class="$classes" $wireClick$disabled$attributesString>
-            <span wire:loading.remove wire:target="$this->livewireAction">$content</span>
-            {$loadingHtml}
-        </button>
-        HTML;
+        return $this->renderView('tables.columns.button', [
+            'url' => $url,
+            'openInNewTab' => (bool) $this->evaluateForRecord($this->openUrlInNewTab, $record),
+            'classes' => $this->getButtonClasses($record),
+            'iconHtml' => $this->renderButtonIcon($record),
+            'iconPosition' => $this->buttonIconPosition,
+            'iconOnly' => $this->iconOnly,
+            'buttonLabel' => $this->evaluateForRecord($this->buttonLabel, $record) ?? $this->getLabel(),
+            'extraAttributes' => $this->evaluateForRecord($this->extraButtonAttributes, $record),
+            'disabledTooltip' => $isDisabled ? $this->evaluateForRecord($this->disabledTooltip, $record) : null,
+            'isDisabled' => $isDisabled,
+            'showLoading' => (bool) $this->evaluateForRecord($this->showLoading, $record) && ! $url,
+            'loadingText' => $this->evaluateForRecord($this->loadingText, $record),
+            'wireClick' => $this->getWireClick($record),
+            'loadingTarget' => $this->livewireAction ?? 'executeColumnAction',
+            'removeTarget' => (string) $this->livewireAction,
+        ]);
     }
 
     /**
@@ -442,7 +382,7 @@ class ButtonColumn extends Column
      */
     protected function getButtonClasses(Model $record): string
     {
-        $color = $this->evaluateForRecord($this->buttonColor, $record);
+        $color = (string) $this->evaluateForRecord($this->buttonColor, $record);
         $size = $this->evaluateForRecord($this->buttonSize, $record);
         $variant = $this->evaluateForRecord($this->buttonVariant, $record);
         $isDisabled = $this->isDisabledForRecord($record);
@@ -459,35 +399,14 @@ class ButtonColumn extends Column
             default => $this->iconOnly ? 'p-1.5' : 'px-2.5 py-1.5 text-sm gap-1.5',
         };
 
-        // Color classes based on variant
+        // Color classes are owned by Foundation HasColor (the canonical palette).
+        // Only the variant→surface mapping lives here; each surface resolver is
+        // shared with actions/badges so hues never drift (success → emerald,
+        // info → cyan, blue → primary).
         $colorClasses = match ($variant) {
-            'outlined' => match ($color) {
-                'primary' => 'border border-primary-500 text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-950 focus:ring-primary-500',
-                'danger' => 'border border-red-500 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950 focus:ring-red-500',
-                'success' => 'border border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950 focus:ring-emerald-500',
-                'warning' => 'border border-amber-500 text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950 focus:ring-amber-500',
-                'info' => 'border border-sky-500 text-sky-600 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-950 focus:ring-sky-500',
-                'secondary' => 'border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800 focus:ring-gray-500',
-                default => 'border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800 focus:ring-gray-500',
-            },
-            'link' => match ($color) {
-                'primary' => 'text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 hover:underline',
-                'danger' => 'text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 hover:underline',
-                'success' => 'text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 hover:underline',
-                'warning' => 'text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 hover:underline',
-                'info' => 'text-sky-600 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300 hover:underline',
-                'secondary' => 'text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 hover:underline',
-                default => 'text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 hover:underline',
-            },
-            default => match ($color) {
-                'primary' => 'bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 focus:ring-primary-500',
-                'danger' => 'bg-red-600 text-white hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 focus:ring-red-500',
-                'success' => 'bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 focus:ring-emerald-500',
-                'warning' => 'bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-400 dark:hover:bg-amber-500 focus:ring-amber-500',
-                'info' => 'bg-sky-600 text-white hover:bg-sky-700 dark:bg-sky-500 dark:hover:bg-sky-600 focus:ring-sky-500',
-                'secondary' => 'bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 focus:ring-gray-500',
-                default => 'bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 focus:ring-gray-500',
-            },
+            'outlined' => $this->getOutlinedColorClasses($color),
+            'link' => self::getLinkColorClasses($color),
+            default => $this->getSolidColorClasses($color),
         };
 
         $disabledClasses = $isDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : '';
@@ -514,9 +433,7 @@ class ButtonColumn extends Column
             default => 'w-4 h-4',
         };
 
-        $path = $this->getIconPath($icon);
-
-        return '<svg class="'.$iconSize.' shrink-0" fill="currentColor" viewBox="0 0 20 20">'.$path.'</svg>';
+        return app(IconManager::class)->render($icon, $iconSize.' shrink-0');
     }
 
     /**

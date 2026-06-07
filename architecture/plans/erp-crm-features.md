@@ -6,6 +6,12 @@ type: plan
 
 ## ERP/CRM Features — Implementation Plan
 
+Tento dokument je feature inventory / implementation checklist.
+Nevyjadřuje cílovou architekturu produktu.
+
+Pro cílový model “Filament-like DX, Nova-like ownership, ERP-safe execution”
+viz [ADR 0017](../decisions/0017-erp-crm-application-architecture.md).
+
 Stavíme na hotovém Unified Engine (Phase 0–5). Každá feature je samostatná fáze, může se dělat nezávisle (kromě závislostí uvedených níže).
 
 ### Stav implementace (aktualizováno 2026-05-24)

@@ -192,35 +192,13 @@ class SplitColumn extends Column
             }
         }
 
-        // Build layout
-        $alignClass = $this->alignCenter ? 'items-center' : 'items-start';
-        $gapClass = "gap-$this->gap";
-
-        if ($this->layout === 'horizontal' && $imageHtml) {
-            // Image + stacked text layout
-            $textHtml = implode('', $textColumns);
-
-            return <<<HTML
-            <div class="flex $alignClass $gapClass">
-                {$imageHtml}
-                <div class="min-w-0 flex-1">
-                    {$textHtml}
-                </div>
-            </div>
-            HTML;
-        }
-
-        if ($this->layout === 'horizontal') {
-            // All horizontal
-            $html = implode('', array_map(fn ($h) => "<div>$h</div>", array_merge([$imageHtml], $textColumns)));
-
-            return "<div class=\"flex $alignClass $gapClass\">$html</div>";
-        }
-
-        // Vertical layout
-        $allHtml = $imageHtml ? array_merge([$imageHtml], $textColumns) : $textColumns;
-        $html = implode('', $allHtml);
-
-        return "<div class=\"flex flex-col $gapClass\">$html</div>";
+        // State/layout decisions stay here; markup lives in the partial.
+        return $this->renderView('tables.columns.split', [
+            'layout' => $this->layout,
+            'alignClass' => $this->alignCenter ? 'items-center' : 'items-start',
+            'gapClass' => "gap-$this->gap",
+            'imageHtml' => $imageHtml,
+            'textColumns' => $textColumns,
+        ]);
     }
 }

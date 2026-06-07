@@ -137,6 +137,32 @@ abstract class BaseAction implements Htmlable
     }
 
     /**
+     * Canonical color classes for a rendered action button (solid or outlined).
+     *
+     * Delegates to the shared Foundation color resolver so action views never
+     * re-encode the palette. Used by the header/bulk action Blade partials.
+     */
+    public function getButtonColorClasses(): string
+    {
+        $color = $this->getColor();
+
+        return $this->isOutlined()
+            ? $this->getOutlinedColorClasses($color)
+            : $this->getSolidColorClasses($color);
+    }
+
+    /**
+     * Canonical ghost/menu-item color classes (dropdown items).
+     *
+     * Delegates to the shared Foundation resolver. Used by the row-action
+     * dropdown-item Blade partial.
+     */
+    public function getMenuItemColorClasses(?string $color = null): string
+    {
+        return $this->getGhostColorClasses($color);
+    }
+
+    /**
      * Resolve button size classes.
      */
     protected function resolveButtonSizeClasses(bool $isIconButton, string $size): string

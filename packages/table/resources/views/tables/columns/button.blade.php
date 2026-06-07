@@ -1,56 +1,62 @@
 {{-- ButtonColumn cell --}}
-{{-- Variables: $column, $record --}}
 @php
-    $buttonLabel = $column->evaluateLabel($record);
-    $isDisabled = $column->isDisabledForRecord($record);
-    $showLoading = $column->evaluateShowLoading($record);
-    $loadingText = $column->evaluateLoadingText($record);
-    $url = $column->evaluateUrl($record);
-    $openInNewTab = $column->evaluateOpenInNewTab($record);
-
-    $classes = $column->getButtonClasses($record);
-    $iconHtml = $column->renderButtonIcon($record);
-    $extraAttributes = $column->evaluateExtraAttributes($record);
-    $iconOnly = $column->isIconOnly();
-    $iconPosition = $column->getButtonIconPosition();
-    $wireClick = $column->getWireClick($record);
-    $livewireAction = $column->getLivewireAction();
-    $disabledTooltip = $isDisabled ? $column->evaluateDisabledTooltip($record) : null;
+    /** @var string|null $url */
+    /** @var bool $openInNewTab */
+    /** @var string $classes */
+    /** @var string $iconHtml resolved icon svg (may be empty) */
+    /** @var string $iconPosition before|after */
+    /** @var bool $iconOnly */
+    /** @var string $buttonLabel */
+    /** @var array<string, mixed> $extraAttributes */
+    /** @var string|null $disabledTooltip */
+    /** @var bool $isDisabled */
+    /** @var bool $showLoading */
+    /** @var string|null $loadingText */
+    /** @var string $wireClick full wire:click attribute (button only) */
+    /** @var string $loadingTarget */
+    /** @var string $removeTarget */
 @endphp
 
 @if($url)
-    <a href="{{ $url }}"
-       @if($openInNewTab) target="_blank" rel="noopener noreferrer" @endif
-       class="{{ $classes }}"
-       @if($disabledTooltip) title="{{ $disabledTooltip }}" @endif
-       @foreach($extraAttributes as $key => $value) {{ $key }}="{{ $value }}" @endforeach
+    <a
+        href="{{ $url }}"
+        @if($openInNewTab) target="_blank" rel="noopener noreferrer" @endif
+        class="{{ $classes }}"
+        @foreach($extraAttributes as $key => $value) {{ $key }}="{{ $value }}" @endforeach
+        @if($disabledTooltip) title="{{ $disabledTooltip }}" @endif
     >
-        @if($iconHtml && $iconPosition === 'before') {!! $iconHtml !!} @endif
-        @unless($iconOnly) <span>{{ $buttonLabel }}</span> @endunless
-        @if($iconHtml && $iconPosition === 'after') {!! $iconHtml !!} @endif
+        @if($iconHtml && $iconPosition === 'before')
+            {!! $iconHtml !!}
+        @endif
+
+        @unless($iconOnly)
+            <span>{{ $buttonLabel }}</span>
+        @endunless
+
+        @if($iconHtml && $iconPosition === 'after')
+            {!! $iconHtml !!}
+        @endif
     </a>
 @else
-    <button type="button"
-            class="{{ $classes }}"
-            {!! $wireClick !!}
-            @if($isDisabled) disabled @endif
-            @if($disabledTooltip) title="{{ $disabledTooltip }}" @endif
-            @foreach($extraAttributes as $key => $value) {{ $key }}="{{ $value }}" @endforeach
+    <button
+        type="button"
+        class="{{ $classes }}"
+        {!! $wireClick !!}
+        @if($isDisabled) disabled @endif
+        @foreach($extraAttributes as $key => $value) {{ $key }}="{{ $value }}" @endforeach
+        @if($disabledTooltip) title="{{ $disabledTooltip }}" @endif
     >
-        <span @if($showLoading) wire:loading.remove wire:target="{{ $livewireAction }}" @endif>
-            @if($iconHtml && $iconPosition === 'before') {!! $iconHtml !!} @endif
-            @unless($iconOnly) <span>{{ $buttonLabel }}</span> @endunless
-            @if($iconHtml && $iconPosition === 'after') {!! $iconHtml !!} @endif
+        <span wire:loading.remove wire:target="{{ $removeTarget }}">
+            @if($iconHtml && $iconPosition === 'before'){!! $iconHtml !!}@endif
+            @unless($iconOnly)<span>{{ $buttonLabel }}</span>@endunless
+            @if($iconHtml && $iconPosition === 'after'){!! $iconHtml !!}@endif
         </span>
 
         @if($showLoading)
-            <span wire:loading wire:target="{{ $livewireAction }}" class="inline-flex items-center gap-1.5">
+            @php $loadingContent = $loadingText ?: ($iconOnly ? '' : $buttonLabel); @endphp
+            <span wire:loading wire:target="{{ $loadingTarget }}" class="inline-flex items-center gap-1.5">
                 @include('wire-table::tables.columns.partials.spinner')
-                @if($loadingText)
-                    <span>{{ $loadingText }}</span>
-                @elseif(!$iconOnly)
-                    <span>{{ $buttonLabel }}</span>
-                @endif
+                @if($loadingContent)<span>{{ $loadingContent }}</span>@endif
             </span>
         @endif
     </button>

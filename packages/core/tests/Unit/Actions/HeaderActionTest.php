@@ -72,3 +72,11 @@ it('caps badge display at 99+', function () {
 it('returns empty badge html when no badge', function () {
     expect(HeaderAction::make('test')->getBadgeHtml())->toBe('');
 });
+
+it('renders badge html using the canonical badge palette', function () {
+    $action = HeaderAction::make('inbox')
+        ->badge(3)
+        ->badgeColor('success');
+
+    expect($action->getBadgeHtml())->toContain(HeaderAction::getBadgeColorClasses('success'));
+});

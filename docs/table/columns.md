@@ -291,6 +291,31 @@ TextColumn::make('roles.pivot.assigned_at')
 ->getState(Model $record): mixed       // resolve state from record
 ```
 
+### Custom Rendering (Blade Partials)
+
+Every column owns its **state/configuration** and delegates **markup** to a Blade
+partial under `packages/table/resources/views/tables/columns/`. The base text
+cell renders through `text.blade.php`; each custom-UI column has its own partial
+(`badge`, `boolean`, `icon`, `image`, `button`, `toggle`, `poll`, `split`,
+`stacked`, `select`, `text-input-*`). Columns never return inline HTML from
+`renderCell()` — they call `renderView('tables.columns.<name>', [...])`.
+
+Two ways to customize the markup:
+
+```php
+// 1. Per-column override — point any column at your own Blade view.
+TextColumn::make('name')->view('columns.my-name-cell');
+
+// 2. Project-wide override — publish the package views and edit the partial.
+//    php artisan vendor:publish --tag=wire-table-views
+//    then edit resources/views/vendor/wire-table/tables/columns/badge.blade.php
+```
+
+View resolution order: an explicit `->view()` wins, then the package view
+(`wire-table::tables.columns.<name>`), then an app-level view of the same name.
+Your partial receives exactly the data the built-in one does — the already
+resolved state/config primitives for that column — so you only rewrite the HTML.
+
 ---
 
 ## Relation Paths & Dot Notation
@@ -671,21 +696,27 @@ use NyonCode\WireTable\Columns\ImageColumn;
 ```php
 ImageColumn::make('avatar_url')
     ->circular()
-    ->size(40)
+    ->size('md')
 
 ImageColumn::make('photo')
-    ->size(60)
+    ->size('lg')
     ->defaultImageUrl('/images/placeholder.png')
 ```
 
 ### ImageColumn API
 
 ```php
-->size(int $pixels)                  // width & height in px
-->circular(bool $circular = true)    // rounded-full
-->square(bool $square = true)        // rounded-none
-->defaultImageUrl(string $url)       // fallback image
+->size(string|Closure $size)          // scale: xs | sm | md | lg | xl | 2xl (default md)
+->circular(bool $circular = true)     // rounded-full (otherwise rounded-md)
+->defaultImageUrl(?string $url)       // fallback image when the value is empty
+->disk(?string $disk)                 // resolve relative paths via a Storage disk
+->ring(int $ring, ?int $color = null) // avatar ring width
 ```
+
+> `size()` takes a named scale, not pixels — the scale maps to Tailwind
+> width/height utilities (`md` → `w-10 h-10`). Its signature matches the
+> canonical `HasSize::size(string|Closure)` so the column stays usable; passing
+> an unknown value falls back to the `md` scale.
 
 ---
 
@@ -1099,7 +1130,7 @@ SplitColumn::make('address')
 ```php
 SplitColumn::make('user_info')
     ->columns([
-        ImageColumn::make('avatar')->circular()->size(32),
+        ImageColumn::make('avatar')->circular()->size('sm'),
         TextColumn::make('name'),
     ])
     ->gap('sm')          // 'xs', 'sm', 'md', 'lg'

@@ -620,9 +620,9 @@ function buildNavSections(array $pages, ?string $activeSource, string $distRoot)
  * path, dist/<path>/ otherwise); unavailable versions render as disabled.
  *
  * @param  array<int, array<string, mixed>>  $versions
- * @param  string  $pageOutput     Output path of the current page relative to its version root, e.g. 'table/overview/index.html'.
- * @param  string  $activeSubdir   Sub-directory of the version being built ('' = dist root).
- * @param  string  $activeLabel    Label of the version being built.
+ * @param  string  $pageOutput  Output path of the current page relative to its version root, e.g. 'table/overview/index.html'.
+ * @param  string  $activeSubdir  Sub-directory of the version being built ('' = dist root).
+ * @param  string  $activeLabel  Label of the version being built.
  * @return array{current:string, items:array<int, array{label:string, badge:string, current:bool, href:?string, disabled:bool}>}
  */
 function buildVersionMenu(array $versions, string $pageOutput, string $activeSubdir, string $activeLabel): array

@@ -55,6 +55,60 @@ it('does not open url in new tab by default', function () {
     expect($action->shouldOpenUrlInNewTab())->toBeFalse();
 });
 
+// ─── Render Data ─────────────────────────────────────────────────────────────
+
+it('builds solid button render data from canonical size and color resolvers', function () {
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 1]);
+
+    $data = Action::make('approve')
+        ->color('success')
+        ->size('md')
+        ->getRenderData($record);
+
+    expect($data['classes'])->toContain('px-3 py-2 text-sm gap-2')
+        ->and($data['classes'])->toContain('bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-600');
+});
+
+it('builds outlined button render data from canonical resolvers', function () {
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 1]);
+
+    $data = Action::make('edit')
+        ->outlined()
+        ->color('primary')
+        ->size('sm')
+        ->getRenderData($record);
+
+    expect($data['classes'])->toContain('px-2.5 py-1.5 text-sm gap-1.5')
+        ->and($data['classes'])->toContain('border border-primary-600 text-primary-600 hover:bg-primary-50 focus:ring-primary-500 dark:border-primary-400 dark:text-primary-400 dark:hover:bg-primary-900/20');
+});
+
+it('builds icon button render data from canonical icon button resolver', function () {
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 1]);
+
+    $data = Action::make('delete')
+        ->icon('trash')
+        ->iconButton()
+        ->color('danger')
+        ->size('lg')
+        ->getRenderData($record);
+
+    expect($data['classes'])->toContain('p-2.5')
+        ->and($data['classes'])->toContain('text-red-600 hover:bg-red-50 focus:ring-red-500 dark:text-red-400 dark:hover:bg-red-900/20')
+        ->and($data['iconHtml'])->toContain('w-5 h-5');
+});
+
 // ─── Icon Button ────────────────────────────────────────────────────────────
 
 it('is not an icon button by default', function () {

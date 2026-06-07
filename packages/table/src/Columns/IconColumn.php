@@ -140,15 +140,10 @@ class IconColumn extends Column
             return $this->getPlaceholder();
         }
 
-        $colorClass = $this->resolveColorClass($color ?? 'gray');
-        $sizeClass = $this->getSizeClass();
-        $svg = app(IconManager::class)->render($icon, $sizeClass);
-
-        return <<<HTML
-        <span class="inline-flex items-center $colorClass">
-            $svg
-        </span>
-        HTML;
+        return $this->renderView('tables.columns.icon', [
+            'colorClass' => $this->resolveColorClass($color ?? 'gray'),
+            'iconHtml' => app(IconManager::class)->render($icon, $this->getSizeClass()),
+        ]);
     }
 
     public function getIconForState(mixed $state): ?string
@@ -195,16 +190,6 @@ class IconColumn extends Column
 
     protected function resolveColorClass(string $color): string
     {
-        return match ($color) {
-            'success', 'green', 'emerald' => 'text-emerald-500',
-            'danger', 'red' => 'text-red-500',
-            'warning', 'yellow', 'amber' => 'text-amber-500',
-            'info', 'blue', 'sky', 'cyan' => 'text-sky-500',
-            'primary' => 'text-primary-600',
-            'secondary', 'gray' => 'text-gray-500',
-            'purple' => 'text-purple-500',
-            'pink' => 'text-pink-500',
-            default => 'text-gray-500',
-        };
+        return self::getTextColorClasses($color);
     }
 }

@@ -81,6 +81,22 @@ it('can set badge color', function () {
     expect($group->getBadgeColor())->toBe('success');
 });
 
+it('uses canonical icon button colors in trigger classes', function () {
+    $group = ActionGroup::make([])->color('success');
+
+    expect($group->getTriggerClasses())
+        ->toContain('text-emerald-600 hover:bg-emerald-50 focus:ring-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-900/20')
+        ->and($group->getTriggerClasses())->toContain('p-1.5');
+});
+
+it('uses the shared button size scale when the trigger has a label', function () {
+    $group = ActionGroup::make([])
+        ->label('More')
+        ->size('md');
+
+    expect($group->getTriggerClasses())->toContain('px-3 py-2 text-sm gap-2');
+});
+
 // ─── Dropdown Position Classes ──────────────────────────────────────────────
 
 it('generates correct dropdown position classes', function () {

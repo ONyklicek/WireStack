@@ -18,14 +18,8 @@
     if ($disabled) {
         $classes = "{$baseClasses} text-gray-400 dark:text-gray-500 cursor-not-allowed";
     } else {
-        $colorClasses = match ($color) {
-            'danger', 'red' => 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20',
-            'warning', 'yellow' => 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20',
-            'success', 'green' => 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20',
-            'primary', 'blue' => 'text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20',
-            default => 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700',
-        };
-        $classes = "{$baseClasses} {$colorClasses}";
+        // Color resolution is owned by Foundation HasColor (ghost/menu-item surface).
+        $classes = "{$baseClasses} {$action->getMenuItemColorClasses($color)}";
     }
 @endphp
 

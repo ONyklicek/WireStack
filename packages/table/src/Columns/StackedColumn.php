@@ -201,9 +201,6 @@ class StackedColumn extends Column
      */
     public function renderCell(Model $record): string
     {
-        $avatarUrl = $this->getAvatarUrl($record);
-        $avatarClasses = $this->getAvatarClasses();
-
         // Build content based on configuration
         $primaryValue = $this->primaryColumn ? $this->resolveColumnValue($record, $this->primaryColumn) : null;
         $secondaryValue = $this->secondaryColumn ? $this->resolveColumnValue($record, $this->secondaryColumn) : null;
@@ -213,16 +210,12 @@ class StackedColumn extends Column
             $primaryValue = ($this->formatStateUsing)($primaryValue, $record);
         }
 
-        $avatarHtml = '';
-        if ($avatarUrl) {
-            $avatarHtml = <<<HTML
-            <img src="$avatarUrl" class="$avatarClasses object-cover" alt="">
-            HTML;
-        }
+        $customStack = ! empty($this->stack);
 
-        // Custom stack
-        if (! empty($this->stack)) {
-            $stackHtml = '';
+        /** @var array<int, array{class: string, value: string}> $items */
+        $items = [];
+
+        if ($customStack) {
             foreach ($this->stack as $item) {
                 $column = $item['column'] ?? null;
                 $class = $item['class'] ?? 'text-sm text-gray-500 dark:text-gray-400';
@@ -237,54 +230,25 @@ class StackedColumn extends Column
                 }
 
                 if ($value !== null && $value !== '') {
-                    $value = e($prefix.$value.$suffix);
-                    $stackHtml .= "<p class=\"$class\">$value</p>";
+                    $items[] = ['class' => $class, 'value' => $prefix.$value.$suffix];
                 }
             }
-
-            if ($avatarHtml) {
-                return <<<HTML
-                <div class="flex items-center gap-3">
-                    {$avatarHtml}
-                    <div>
-                        {$stackHtml}
-                    </div>
-                </div>
-                HTML;
+        } else {
+            if ($primaryValue !== null && $primaryValue !== '') {
+                $items[] = ['class' => 'font-medium text-gray-900 dark:text-white', 'value' => $primaryValue];
             }
 
-            return "<div>$stackHtml</div>";
+            if ($secondaryValue !== null && $secondaryValue !== '') {
+                $items[] = ['class' => 'text-sm text-gray-500 dark:text-gray-400', 'value' => $secondaryValue];
+            }
         }
 
-        // Default primary/secondary layout
-        $textHtml = '';
-
-        if ($primaryValue !== null && $primaryValue !== '') {
-            $primaryValue = e($primaryValue);
-            $textHtml .= "<p class=\"font-medium text-gray-900 dark:text-white\">$primaryValue</p>";
-        }
-
-        if ($secondaryValue !== null && $secondaryValue !== '') {
-            $secondaryValue = e($secondaryValue);
-            $textHtml .= "<p class=\"text-sm text-gray-500 dark:text-gray-400\">$secondaryValue</p>";
-        }
-
-        if ($avatarHtml && $textHtml) {
-            return <<<HTML
-            <div class="flex items-center gap-3">
-                {$avatarHtml}
-                <div>
-                    {$textHtml}
-                </div>
-            </div>
-            HTML;
-        }
-
-        if ($avatarHtml) {
-            return $avatarHtml;
-        }
-
-        return $textHtml ?: '<span class="text-gray-400">—</span>';
+        return $this->renderView('tables.columns.stacked', [
+            'avatarUrl' => $this->getAvatarUrl($record),
+            'avatarClasses' => $this->getAvatarClasses(),
+            'items' => $items,
+            'customStack' => $customStack,
+        ]);
     }
 
     /**

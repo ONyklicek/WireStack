@@ -350,45 +350,256 @@ use a hook for a cross-cutting rule.
 
 ## Packaging Fields Into a Plugin
 
-To ship custom fields (and their presets) as a reusable unit — in your app or a
-companion package — group them behind a [core plugin](../core/plugins.md). The
-plugin's `boot()` is the right place to register macros and the field views.
+The sections above build a field inside an app, where a class plus a Blade view
+is enough — the field resolves its own view, so no registration step is needed.
+This section covers the next step: shipping custom fields as a **reusable,
+installable unit** — a companion package others can `composer require`, or a
+shared module inside a larger app.
 
-```php
-<?php
+### What "registering a field" really means
 
-namespace App\Wire\Plugins;
+There is **no field type registry**. Unlike table columns, filters, and actions
+— which have `addColumnType()` / `addFilterType()` / `addActionType()` metadata
+registries — form fields are never looked up by name. A field is just a class,
+and `render()` calls its `viewName()` directly through Laravel's `view()`
+helper. So making a packaged field usable comes down to exactly two things:
 
-use Illuminate\Support\Facades\View;
-use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
-use NyonCode\WireCore\Core\Plugin\PluginManager;
+1. **The field's class is autoloadable** — handled by your package's Composer
+   `autoload` block, like any PHP class.
+2. **The field's view resolves** — its `viewName()` must point at a view Laravel
+   can find. In a package that means registering a **view namespace**.
 
-final class MoneyFieldsPlugin implements Plugin
+The [core plugin](../core/plugins.md) is the layer on top: it is where you
+install the cross-cutting extras — **presets (macros), save hooks, and default
+configuration** — so consumers get them by registering one class. The plugin is
+optional for a plain field, and required only once you ship macros or hooks.
+
+> Do **not** register a field with `addColumnType()` (or the other type
+> registries). Those are metadata registries for *table* columns/filters/actions
+> and are never consulted to render a form field. Registering a field there does
+> nothing useful and is misleading.
+
+### 1. Package layout
+
+A minimal field package looks like this:
+
+```text
+acme/wire-money-fields/
+├── composer.json
+├── src/
+│   ├── AcmeMoneyServiceProvider.php
+│   ├── AcmeMoneyPlugin.php
+│   └── Components/
+│       └── MoneyInput.php
+└── resources/
+    └── views/
+        └── components/
+            └── money-input.blade.php
+```
+
+`composer.json` autoloads the namespace and registers the service provider so
+the package boots automatically:
+
+```json
 {
-    public function getId(): string
-    {
-        return 'money-fields';
-    }
-
-    public function register(PluginManager $manager): void
-    {
-        // Optional: expose the field class by alias for plugin-aware tooling.
-        $manager->addColumnType('money', \App\Forms\Components\MoneyInput::class);
-    }
-
-    public function boot(PluginManager $manager): void
-    {
-        // Make the package's views resolvable under a namespace, so the
-        // field's viewName() can return 'money-fields::components.money-input'.
-        View::addNamespace('money-fields', __DIR__ . '/../../resources/views');
+    "name": "acme/wire-money-fields",
+    "require": {
+        "nyoncode/wire-forms": "^0.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Acme\\WireMoney\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Acme\\WireMoney\\AcmeMoneyServiceProvider"
+            ]
+        }
     }
 }
 ```
 
-Register the plugin in `config/wire-core.php` (app) or from your package service
-provider (see [Register Plugins From A Package](../core/plugins.md#register-plugins-from-a-package)).
-When shipping from a package, point your fields' `viewName()` at the namespaced
-views (`money-fields::components.money-input`).
+### 2. The field, pointed at a namespaced view
+
+The field class is identical to the app version, except `viewName()` returns a
+**namespaced** view (`namespace::path`) so it resolves no matter where the
+package is installed:
+
+```php
+<?php
+
+namespace Acme\WireMoney\Components;
+
+use NyonCode\WireForms\Components\Field;
+
+class MoneyInput extends Field
+{
+    protected string $currency = 'USD';
+
+    public function currency(string $currency): static
+    {
+        $this->currency = $currency;
+
+        return $this;
+    }
+
+    public function getCurrency(): string
+    {
+        return $this->currency;
+    }
+
+    public function getStateType(): string
+    {
+        return 'int';
+    }
+
+    protected function viewName(): string
+    {
+        // "acme-money" is the namespace registered by the service provider.
+        return 'acme-money::components.money-input';
+    }
+}
+```
+
+### 3. Register the view namespace in the service provider
+
+The service provider's one required job is to make `acme-money::` resolvable.
+You can register it manually with `loadViewsFrom()`, and `publishes()` the views
+so consumers can override your markup:
+
+```php
+<?php
+
+namespace Acme\WireMoney;
+
+use Illuminate\Support\ServiceProvider;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+
+final class AcmeMoneyServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        // Register the plugin (macros, hooks, config) once the manager resolves.
+        $this->app->resolving(PluginManager::class, function (PluginManager $manager) {
+            if (! $manager->has('acme-money')) {
+                $manager->register($this->app->make(AcmeMoneyPlugin::class));
+            }
+        });
+    }
+
+    public function boot(): void
+    {
+        // Makes acme-money::components.money-input resolvable.
+        $this->loadViewsFrom(__DIR__ . '/../resources/views', 'acme-money');
+
+        // Let consumers override the markup with vendor:publish.
+        $this->publishes([
+            __DIR__ . '/../resources/views' => resource_path('views/vendor/acme-money'),
+        ], 'acme-money::views');
+    }
+}
+```
+
+> If your package is built on `spatie/laravel-package-toolkit` (the same toolkit
+> Wire packages use), calling `->hasViews()` in your package configuration
+> registers the namespace and the publish tag for you, derived from the package
+> short name — exactly how `wire-forms::partials.field-wrapper-start` is exposed.
+
+Once the namespace is registered, the field is fully usable — `MoneyInput::make('price')`
+works in any schema with no further setup.
+
+### 4. The plugin: presets, hooks, and config
+
+Add a plugin when you want to ship more than the field class — for example a
+reusable **preset macro**, a **save hook**, or **default configuration**. Form
+fields are not `Macroable`, so field presets ship as a static factory or a
+subclass (see [Reusable Presets](#reusable-presets)); the plugin is where you
+register `Table`/`Action` macros, hooks, and config.
+
+```php
+<?php
+
+namespace Acme\WireMoney;
+
+use NyonCode\WireCore\Core\Plugin\Contracts\HasConfiguration;
+use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+
+final class AcmeMoneyPlugin implements HasConfiguration, Plugin
+{
+    public function getId(): string
+    {
+        return 'acme-money';
+    }
+
+    public function defaultConfig(): array
+    {
+        return ['default_currency' => 'USD'];
+    }
+
+    public function register(PluginManager $manager): void
+    {
+        // A cross-cutting save hook: round any money field to whole cents.
+        $manager->hook('form.saving', function (array $payload): array {
+            foreach ($payload['data'] as $key => $value) {
+                if (str_ends_with($key, '_cents') && is_numeric($value)) {
+                    $payload['data'][$key] = (int) round($value);
+                }
+            }
+
+            return $payload;
+        });
+    }
+
+    public function boot(PluginManager $manager): void
+    {
+        // Config-driven defaults are available here if you need them:
+        // $manager->getPluginConfig($this->getId())['default_currency']
+    }
+}
+```
+
+The plugin is wired up automatically by the service provider's `resolving()`
+callback in step 3, so consumers get the field, its views, and its hooks just by
+installing the package. See
+[Core Plugins → Register Plugins From A Package](../core/plugins.md#register-plugins-from-a-package)
+for the registration pattern and the `has()` guard.
+
+### 5. Consumers install it
+
+From the consuming app, installation is just Composer plus optional view
+overrides:
+
+```bash
+composer require acme/wire-money-fields
+
+# Optional: override the field markup
+php artisan vendor:publish --tag=acme-money::views
+```
+
+```php
+use Acme\WireMoney\Components\MoneyInput;
+
+$form->schema([
+    MoneyInput::make('price_cents')->currency('EUR'),
+]);
+```
+
+> **Plugin config tags use `::`** — `acme-money::views`, `acme-money::config` —
+> not a dash. A dashed tag like `acme-money-views` resolves to nothing.
+
+### Checklist
+
+| Step | Required for | Mechanism |
+|------|-------------|-----------|
+| Autoload field class | Always | Composer `psr-4` |
+| Register view namespace | Always (in a package) | `loadViewsFrom()` / `->hasViews()` |
+| `viewName()` returns `namespace::path` | Always (in a package) | Field class |
+| Publish views | Optional (override support) | `publishes(..., 'tag::views')` |
+| Register the plugin | Only for macros/hooks/config | `resolving(PluginManager::class)` |
+| Default config | Only for configurable plugins | `HasConfiguration` |
 
 ---
 

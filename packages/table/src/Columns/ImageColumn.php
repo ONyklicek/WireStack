@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Columns;
 
+use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Storage;
@@ -28,9 +29,16 @@ class ImageColumn extends Column
 
     protected ?int $ringColor = null;
 
-    public function size(string $size): static
+    /**
+     * Set the image size scale (xs|sm|md|lg|xl|2xl).
+     *
+     * Signature stays compatible with the canonical {@see HasSize::size()}
+     * (`string|Closure`) so loading/instantiating ImageColumn does not fatal on
+     * the LSP contravariance check; a Closure is resolved to its string scale.
+     */
+    public function size(string|Closure $size): static
     {
-        $this->imageSize = $size;
+        $this->imageSize = $size instanceof Closure ? (string) $this->evaluate($size) : $size;
 
         return $this;
     }
@@ -121,13 +129,12 @@ class ImageColumn extends Column
             return $this->getPlaceholder() ?? '';
         }
 
-        $sizeClasses = $this->getSizeClasses();
-        $shapeClasses = $this->circular ? 'rounded-full' : 'rounded-md';
-        $ringClasses = $this->ring > 0 ? "ring-$this->ring ring-white dark:ring-gray-800" : '';
-
-        return <<<HTML
-        <img src="$url" alt="" class="$sizeClasses $shapeClasses $ringClasses object-cover">
-        HTML;
+        return $this->renderView('tables.columns.image', [
+            'url' => $url,
+            'sizeClasses' => $this->getSizeClasses(),
+            'shapeClasses' => $this->circular ? 'rounded-full' : 'rounded-md',
+            'ringClasses' => $this->ring > 0 ? "ring-$this->ring ring-white dark:ring-gray-800" : '',
+        ]);
     }
 
     private function resolveImageUrl(mixed $state): ?string

@@ -40,7 +40,13 @@ return [
         'default_set' => 'default',
         'sets' => [
             'default' => \NyonCode\WireCore\Foundation\Icons\DefaultIconSet::class,
+            // 'lucide' => App\Wire\Icons\LucideIconSet::class,   // => "lucide:home"
         ],
+        'paths' => [
+            // resource_path('icons'),                 // logo.svg => "logo"
+            // 'brand' => resource_path('icons/brand'), // mark.svg => "brand-mark"
+        ],
+        'warn_missing' => env('WIRE_ICONS_WARN_MISSING', false),
     ],
 
     'colors' => [
@@ -76,6 +82,33 @@ WIRE_NOTIFICATIONS_DRIVER=livewire
 ```
 
 See [Core Notifications](core/notifications.md) for usage examples.
+
+### Icons
+
+| Key | Purpose |
+|-----|---------|
+| `default_set` | Which `sets` key is the **unprefixed** base set (default `'default'` = Heroicons). |
+| `sets` | Registered icon sets. The default-set key is unprefixed; **every other key is a required prefix**, so its icons are addressed as `prefix:name` (e.g. `lucide:home`). Registering a non-default set without a string prefix throws. |
+| `paths` | Folders of `.svg` files auto-registered as bare-named icons. A string key adds a dash-joined name prefix (`'brand' => …` → `brand-mark`). |
+| `warn_missing` | Log a warning (and render the fallback) when an unknown icon name is used — handy for catching typos in development. |
+
+```php
+'icons' => [
+    'default_set' => 'default',
+    'sets' => [
+        'default' => DefaultIconSet::class,   // "pencil"      (Heroicons, 20×20 fill)
+        'lucide'  => LucideIconSet::class,    // "lucide:home" (24×24 stroke)
+    ],
+    'paths' => [
+        'brand' => resource_path('icons/brand'),
+    ],
+    'warn_missing' => env('WIRE_ICONS_WARN_MISSING', false),
+],
+```
+
+Sets are used together with deterministic, collision-free resolution. See
+[Core → Foundation → Icons](core/foundation.md#icons) for the full API, the
+`prefix:name` model, custom sets, and accessibility.
 
 ### Plugins
 

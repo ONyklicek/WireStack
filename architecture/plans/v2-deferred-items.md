@@ -1,5 +1,11 @@
 # V2 Plan — Odložené položky z v1
 
+> **Status (2026-06-07):** Část položek už shipovala — ověřuj vždy proti aktuálnímu kódu, ne jen proti tomuto plánu.
+> - #1 StateContainer: `TableStateSynthesizer` existuje a WithTable už nedrží raw `public` state properties (synthesizer-backed).
+> - #2.3 / #2.4 / #2.5 (enum auto-options, relation chain, accessor inference): hotové, pokryté testy.
+> - #5 Filter views → form field komponenty: hotové.
+> Zbývající/nedokončené: plná DataComponent dědičnost (#2), Hydration v SaveHandler (#3), StateHydrator v StateManager (#4), modal shell jako `<x-wire::modal>` (#6), plugin systém vylepšení (#7).
+
 ## Kontext
 
 V1 propojila existující Core moduly s runtime (ActionPipeline, ValidationPipeline, Events, Form v action modalech, i18n). Šest oblastí bylo záměrně odloženo, protože vyžadují breaking changes v Livewire serializaci, novou dědičnost hierarchii, nebo změnu state/save lifecycle. Tento dokument je detailní plán jejich implementace ve v2.

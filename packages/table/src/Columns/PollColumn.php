@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Icons\Icon;
+use NyonCode\WireCore\Foundation\Icons\IconManager;
 
 class PollColumn extends Column
 {
@@ -73,7 +74,7 @@ class PollColumn extends Column
     /** @var array<string, string> */
     protected array $colors = [];
 
-    protected string $size = 'md';
+    // $size is provided by Foundation\Concerns\HasSize (via Column).
 
     protected ?Closure $colorCallback = null;
 
@@ -144,12 +145,7 @@ class PollColumn extends Column
         return $this;
     }
 
-    public function size(string $size): static
-    {
-        $this->size = $size;
-
-        return $this;
-    }
+    // size()/getSize() come from Foundation\Concerns\HasSize (via Column).
 
     /**
      * Stop when status reaches a final state.
@@ -389,14 +385,9 @@ class PollColumn extends Column
                 $progress = $record->{$progressColumn} ?? 0;
                 $percentage = min(100, ($progress / $completeValue) * 100);
 
-                return <<<HTML
-                <div class="flex items-center gap-2">
-                    <div class="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div class="bg-primary-600 h-2 rounded-full transition-all duration-300" style="width: $percentage%"></div>
-                    </div>
-                    <span class="text-sm text-gray-600 dark:text-gray-400">$percentage%</span>
-                </div>
-                HTML;
+                return $this->renderView('tables.columns.partials.progress', [
+                    'percentage' => $percentage,
+                ]);
             })
             ->html();
     }
@@ -409,11 +400,6 @@ class PollColumn extends Column
         $this->stateDisplays[$state] = $display;
 
         return $this;
-    }
-
-    protected function getSize(): string
-    {
-        return $this->size;
     }
 
     /**
@@ -463,91 +449,42 @@ class PollColumn extends Column
         $shouldPoll = $this->shouldPoll($record);
         $state = $this->getCurrentState($record);
         $stateClasses = $this->getStateClasses($record, $state);
-        $stateIconHtml = $this->renderStateIcon($record, $state);
         $color = $this->getColorForState($state);
         $colorClass = $color ? $this->getColorClass($color) : '';
 
-        $colorClasses = $this->getColorClasses($color);
-        $sizeClasses = $this->getSizeClasses();
-
-        $content = $this->renderStateContent($record, $state);
-        $loadingIndicator = $this->renderLoadingIndicator($record);
-
-        // Build the cell content
-        $position = $this->evaluateForRecord($this->loadingPosition, $record);
-
-        $innerContent = '';
-        if ($stateIconHtml) {
-            $innerContent .= $stateIconHtml.' ';
-        }
-        $innerContent .= $content;
-
         // Wrap with state classes
         if ($this->isBadge()) {
-            $transitionClasses = trim("inline-flex items-center $sizeClasses $colorClasses rounded-full font-medium");
+            $transitionClasses = trim('inline-flex items-center '.$this->getSizeClasses().' '.$this->getColorClasses($color).' rounded-full font-medium');
         } else {
             $transitionClasses = $this->animateTransitions ? 'transition-all duration-300' : '';
         }
 
         $allClasses = implode(' ', array_filter([$stateClasses, $colorClass, $transitionClasses]));
 
-        if ($allClasses) {
-            $innerContent = '<span class="'.$allClasses.'">'.$innerContent.'</span>';
-        }
-
-        // If polling, wrap with wire:poll
+        // Determine poll directive / wire:key (only relevant while polling)
+        $pollDirective = '';
+        $wireKey = '';
         if ($shouldPoll) {
             $interval = $this->getInterval($record);
             $recordKey = $record->getKey();
-
-            // Add loading indicator
-            if ($this->showLoadingIndicator) {
-                $loadingWrapper = '<span class="inline-flex items-center gap-0">'; // gap-1.5
-                if ($position === 'before') {
-                    $innerContent =
-                        $loadingWrapper.
-                        '<span wire:loading>'.
-                        $loadingIndicator.
-                        '</span>'.
-                        $innerContent.
-                        '</span>';
-                } else {
-                    $innerContent =
-                        $loadingWrapper.
-                        $innerContent.
-                        '<span wire:loading class="ml-1">'.
-                        $loadingIndicator.
-                        '</span></span>';
-                }
-            }
-
-            // Determine poll directive
-            if ($this->rowLevelPolling) {
-                // Row-level polling - refresh only this row's data
-                $pollDirective = "wire:poll.{$interval}ms=\"refreshRow('$recordKey')\"";
-            } else {
-                // Component-level polling
-                $pollDirective = "wire:poll.{$interval}ms";
-            }
-
-            if ($this->isBadge()) {
-                return <<<HTML
-                    <span $pollDirective wire:key="poll-$this->name-$recordKey" class="inline-flex items-center rounded-full font-medium">
-                        {$innerContent}
-                    </span>
-
-                HTML;
-            }
-
-            return <<<HTML
-
-            <div $pollDirective wire:key="poll-$this->name-$recordKey">
-                {$innerContent}
-            </div>
-            HTML;
+            $pollDirective = $this->rowLevelPolling
+                ? "wire:poll.{$interval}ms=\"refreshRow('$recordKey')\""
+                : "wire:poll.{$interval}ms";
+            $wireKey = "poll-{$this->name}-{$recordKey}";
         }
 
-        return $innerContent;
+        return $this->renderView('tables.columns.poll', [
+            'stateIconHtml' => $this->renderStateIcon($record, $state),
+            'content' => $this->renderStateContent($record, $state),
+            'allClasses' => $allClasses,
+            'shouldPoll' => $shouldPoll,
+            'isBadge' => $this->isBadge(),
+            'showLoadingIndicator' => $shouldPoll && $this->showLoadingIndicator,
+            'loadingIndicator' => $this->renderLoadingIndicator($record),
+            'position' => $this->evaluateForRecord($this->loadingPosition, $record),
+            'pollDirective' => $pollDirective,
+            'wireKey' => $wireKey,
+        ]);
     }
 
     /**
@@ -615,13 +552,7 @@ class PollColumn extends Column
         $color = $this->getStateColor($record, $state);
         $colorClass = $color ? $this->getColorClass($color) : 'text-gray-400';
 
-        $path = $this->getIconPath($icon);
-
-        return '<svg class="w-4 h-4 inline-block '.
-            $colorClass.
-            '" fill="currentColor" viewBox="0 0 20 20">'.
-            $path.
-            '</svg>';
+        return app(IconManager::class)->render($icon, 'w-4 h-4 inline-block', $colorClass);
     }
 
     /**
@@ -656,34 +587,12 @@ class PollColumn extends Column
 
     public function getColorClasses(string $color): string
     {
-        return match ($color) {
-            'primary' => 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400',
-            'success',
-            'green',
-            'emerald' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-            'warning', 'yellow', 'amber' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-            'danger', 'red' => 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-            'info', 'blue', 'sky' => 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400',
-            'secondary', 'gray' => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-            'purple', 'violet' => 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
-            'pink' => 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
-            'indigo' => 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
-            'orange' => 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-            'teal' => 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
-            'cyan' => 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
-            default => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-        };
+        return self::getBadgeColorClasses($color);
     }
 
     public function getSizeClasses(): string
     {
-        return match ($this->size) {
-            'xs' => 'px-1.5 py-0.5 text-[10px]',
-            'sm' => 'px-2 py-0.5 text-xs',
-            'md' => 'px-2.5 py-1 text-xs',
-            'lg' => 'px-3 py-1 text-sm',
-            default => 'px-2.5 py-1 text-xs',
-        };
+        return self::getBadgeSizeClasses($this->getSize());
     }
 
     /**
@@ -700,12 +609,9 @@ class PollColumn extends Column
             return (string) $customIndicator;
         }
 
-        return <<<'HTML'
-        <svg class="animate-spin w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        HTML;
+        return trim($this->renderView('tables.columns.partials.spinner', [
+            'class' => 'w-4 h-4 text-gray-400',
+        ]));
     }
 
     private function isBadge(): bool

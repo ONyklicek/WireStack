@@ -73,28 +73,45 @@ class WireCoreServiceProvider extends PackageServiceProvider
         $this->app->singleton(IconManager::class, function ($app) {
             $manager = new IconManager;
 
-            // Register additional icon sets declared in config. The bundled
-            // DefaultIconSet is always present as the base/fallback set, so the
-            // 'default' entry is skipped here. Later sets take priority.
-            /** @var array<string, mixed> $sets */
+            // Register icon sets declared in config. The set whose key matches
+            // `icons.default_set` becomes the unprefixed base (Heroicons by
+            // default); every other set's key is its required prefix, so its icons
+            // are addressed as `prefix:name` (e.g. `lucide:home`).
+            $defaultKey = config('wire-core.icons.default_set', 'default');
+            /** @var array<int|string, mixed> $sets */
             $sets = config('wire-core.icons.sets', []);
 
-            foreach ($sets as $name => $class) {
-                if ($name === 'default' || ! is_string($class) || ! is_a($class, IconSet::class, true)) {
+            foreach ($sets as $prefix => $class) {
+                if (! is_string($class) || ! is_a($class, IconSet::class, true)) {
                     continue;
                 }
 
-                $manager->registerIconSet($app->make($class));
+                if ($prefix === $defaultKey) {
+                    $manager->setDefaultIconSet($app->make($class));
+
+                    continue;
+                }
+
+                if (! is_string($prefix) || $prefix === '') {
+                    throw new \InvalidArgumentException(
+                        "Icon set [{$class}] must be configured under a string prefix key in "
+                        .'wire-core.icons.sets (e.g. \'lucide\' => LucideIconSet::class).'
+                    );
+                }
+
+                $manager->registerIconSet($app->make($class), $prefix);
             }
 
             // Load SVG files from any configured directories. This is the
-            // easiest way to add custom icons — no class required.
-            /** @var array<int, mixed> $paths */
+            // easiest way to add custom icons — no class required. A string key
+            // is used as a name prefix (e.g. 'brand' => '/path' → 'brand-logo'),
+            // which also avoids collisions when two folders share a file name.
+            /** @var array<int|string, mixed> $paths */
             $paths = config('wire-core.icons.paths', []);
 
-            foreach ($paths as $path) {
+            foreach ($paths as $prefix => $path) {
                 if (is_string($path) && is_dir($path)) {
-                    $manager->registerIconsFromDirectory($path);
+                    $manager->registerIconsFromDirectory($path, is_string($prefix) ? $prefix : '');
                 }
             }
 

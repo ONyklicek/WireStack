@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Blade;
 use NyonCode\WireCore\Notifications\Concerns\InteractsWithNotifications;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireCore\Notifications\Drivers\NullDriver;
@@ -161,7 +162,7 @@ it('InteractsWithNotifications supports per-component driver', function () {
 // ─── Toast container JS helper ─────────────────────────────────────────
 
 it('renders the wireToast JS helper into the toast container', function () {
-    $html = Illuminate\Support\Facades\Blade::render('<x-wire-notifications::toast-container />');
+    $html = Blade::render('<x-wire-notifications::toast-container />');
 
     expect($html)
         ->toContain('window.wireToast')
@@ -170,7 +171,7 @@ it('renders the wireToast JS helper into the toast container', function () {
 });
 
 it('wires the JS helper to a custom event name', function () {
-    $html = Illuminate\Support\Facades\Blade::render(
+    $html = Blade::render(
         '<x-wire-notifications::toast-container event-name="my-toast" />'
     );
 

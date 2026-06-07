@@ -49,7 +49,8 @@ scale such as `colors.zinc` or `colors.slate` the same way.
 ## Icons
 
 Icons resolve through the core `IconManager`, configured in
-`config/wire-core.php`. There are two ways to customize them:
+`config/wire-core.php`. The bundled Heroicons set is the **unprefixed default**;
+additional sets are namespaced under a prefix and used together.
 
 **Drop in SVGs** — point a directory at the icon paths and every SVG becomes an
 icon named after its filename:
@@ -63,21 +64,35 @@ icon named after its filename:
 ],
 ```
 
-**Register an icon set** — to swap the entire style or override individual icons,
-register a set class and make it the default:
+**Add an icon set** — register a set class under a prefix; its icons are then used
+as `prefix:name` and render correctly even if they are stroke-based / non-20×20
+(Lucide, Feather, Heroicons outline):
 
 ```php
 'icons' => [
-    'default' => 'custom',
     'sets' => [
+        'default' => NyonCode\WireCore\Foundation\Icons\DefaultIconSet::class, // "pencil"
+        'lucide'  => App\Wire\Icons\LucideIconSet::class,                      // "lucide:home"
+    ],
+],
+```
+
+**Swap the default style** — point `default_set` at another set's key to make it
+the unprefixed base:
+
+```php
+'icons' => [
+    'default_set' => 'lucide',  // bare names resolve against Lucide; "default:pencil" still works
+    'sets' => [
+        'lucide'  => App\Wire\Icons\LucideIconSet::class,
         'default' => NyonCode\WireCore\Foundation\Icons\DefaultIconSet::class,
-        'custom'  => App\Wire\Icons\MyIconSet::class,
     ],
 ],
 ```
 
 The bundled `DefaultIconSet` is the full Heroicons solid set. See
-[Core → Foundation](core/foundation.md) for the icon API used inside components.
+[Core → Foundation → Icons](core/foundation.md#icons) for the full API, the
+`prefix:name` model, custom sets, and accessibility.
 
 ---
 

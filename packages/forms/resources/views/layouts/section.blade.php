@@ -1,12 +1,15 @@
-@php /** @var \NyonCode\WireForms\Components\Layout\Section $layout */
+@php
+    use NyonCode\WireForms\Components\Layout\Section;
+    assert($layout instanceof Section);
+
     $columns = $layout->getColumns();
     $isCollapsible = $layout->isCollapsible();
     $isCollapsed = $layout->isCollapsed();
 @endphp
 
 <div
-    @if($isCollapsible) x-data="{ open: {{ $isCollapsed ? 'false' : 'true' }} }" @endif
-    class="rounded-lg border border-gray-200 dark:border-gray-700 {{ $layout->isCompact() ? 'p-3' : 'p-4 sm:p-6' }}"
+        @if($isCollapsible) x-data="{ open: {{ $isCollapsed ? 'false' : 'true' }} }" @endif
+class="rounded-lg border border-gray-200 dark:border-gray-700 {{ $layout->isCompact() ? 'p-3' : 'p-4 sm:p-6' }}"
 >
     @if($layout->getLabel() || $layout->getDescription())
         <div @class([
@@ -18,7 +21,7 @@
                 @if($layout->getLabel())
                     <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                         @if($layout->getIcon())
-                            <x-wire::icon :name="$layout->getIcon()" class="w-5 h-5 text-gray-400" />
+                            <x-wire::icon :name="$layout->getIcon()" class="w-5 h-5 text-gray-400"/>
                         @endif
                         {{ $layout->getLabel() }}
                     </h3>
@@ -32,23 +35,22 @@
 
             @if($isCollapsible)
                 <button type="button" class="ml-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                    <svg x-bind:class="{ 'rotate-180': open }" class="w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <x-wire::icon name="outline:chevron-down" class="w-5 h-5 transition-transform"
+                                  x-bind:class="{ 'rotate-180': open }"/>
                 </button>
             @endif
         </div>
     @endif
 
     <div
-        @if($isCollapsible) x-show="open" x-collapse @endif
-        @class([
-            'grid gap-4',
-            'sm:grid-cols-1' => $columns === 1,
-            'sm:grid-cols-2' => $columns === 2,
-            'sm:grid-cols-2 md:grid-cols-3' => $columns === 3,
-            'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' => $columns === 4,
-        ])
+            @if($isCollapsible) x-show="open" x-collapse @endif
+            @class([
+                'grid gap-4',
+                'sm:grid-cols-1' => $columns === 1,
+                'sm:grid-cols-2' => $columns === 2,
+                'sm:grid-cols-2 md:grid-cols-3' => $columns === 3,
+                'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' => $columns === 4,
+            ])
     >
         @foreach($layout->getSchema() as $component)
             @if($component->isVisible())

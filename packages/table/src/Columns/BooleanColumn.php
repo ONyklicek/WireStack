@@ -70,27 +70,15 @@ class BooleanColumn extends Column
         $color = $state ? $this->trueColor : $this->falseColor;
         $label = $state ? $this->trueLabel : $this->falseLabel;
 
-        $colorClass = $this->resolveColorClass($color);
-        $svg = app(IconManager::class)->render($icon, 'w-5 h-5');
-        $labelHtml = $label ? "<span class=\"ml-1.5\">$label</span>" : '';
-
-        return <<<HTML
-        <span class="inline-flex items-center $colorClass">
-            $svg
-            $labelHtml
-        </span>
-        HTML;
+        return $this->renderView('tables.columns.boolean', [
+            'colorClass' => $this->resolveColorClass($color),
+            'iconHtml' => app(IconManager::class)->render($icon, 'w-5 h-5'),
+            'label' => $label,
+        ]);
     }
 
     protected function resolveColorClass(string $color): string
     {
-        return match ($color) {
-            'success', 'green' => 'text-green-500',
-            'danger', 'red' => 'text-red-500',
-            'warning', 'yellow' => 'text-yellow-500',
-            'info', 'blue' => 'text-blue-500',
-            'gray' => 'text-gray-500',
-            default => 'text-gray-500',
-        };
+        return self::getTextColorClasses($color);
     }
 }

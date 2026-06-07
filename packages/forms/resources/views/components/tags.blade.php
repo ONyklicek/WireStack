@@ -127,11 +127,11 @@
                             class="flex w-full items-center justify-between px-4 py-3 text-sm transition-colors duration-75"
                         >
                             <span x-text="suggestion"></span>
-                            <svg
+                            <x-wire::icon
+                                name="check"
                                 class="h-4 w-4 shrink-0 text-primary-500 transition-opacity"
-                                :class="tags.includes(suggestion) ? 'opacity-100' : 'opacity-0'"
-                                viewBox="0 0 24 24" fill="currentColor"
-                            ><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                ::class="tags.includes(suggestion) ? 'opacity-100' : 'opacity-0'"
+                            />
                         </button>
                     </li>
                 </template>
@@ -168,9 +168,7 @@
                         class="-mr-0.5 flex h-6 w-6 items-center justify-center rounded-full text-gray-500 transition-colors duration-100 hover:bg-gray-300 hover:text-gray-800 active:bg-gray-400 dark:text-gray-400 dark:hover:bg-gray-600 dark:hover:text-gray-100"
                         :aria-label="'Remove ' + tag"
                     >
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                            <path d="M18 6L6 18M6 6l12 12"/>
-                        </svg>
+                        <x-wire::icon name="outline:x-mark" class="h-4 w-4" />
                     </button>
                 @endunless
             </span>
