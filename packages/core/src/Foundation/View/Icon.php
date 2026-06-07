@@ -20,6 +20,7 @@ use NyonCode\WireCore\Foundation\Icons\IconManager;
 class Icon extends Component
 {
     public function __construct(
+        protected readonly IconManager $manager,
         public string $name,
         public string $size = 'w-4 h-4',
         public string $class = '',
@@ -28,9 +29,7 @@ class Icon extends Component
 
     public function render(): View
     {
-        /** @var IconManager $manager */
-        $manager = app(IconManager::class);
-        $icon = $manager->resolved($this->name);
+        $icon = $this->manager->resolved($this->name);
 
         return view('wire-core::foundation.icon', [
             'body' => $icon->body,
