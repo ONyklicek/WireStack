@@ -141,4 +141,29 @@ class NumberRangeFilter extends Filter
     {
         return $value;
     }
+
+    public function getQueryStringFields(): array
+    {
+        return ['min' => '_min', 'max' => '_max'];
+    }
+
+    /**
+     * Render the active bounds as "10 – 100", "≥ 10", or "≤ 100".
+     */
+    protected function getIndicatorValueLabel(mixed $value): ?string
+    {
+        if (! is_array($value)) {
+            return parent::getIndicatorValueLabel($value);
+        }
+
+        $min = isset($value['min']) && $value['min'] !== '' ? (string) $value['min'] : null;
+        $max = isset($value['max']) && $value['max'] !== '' ? (string) $value['max'] : null;
+
+        return match (true) {
+            $min !== null && $max !== null => "{$min} – {$max}",
+            $min !== null => "≥ {$min}",
+            $max !== null => "≤ {$max}",
+            default => null,
+        };
+    }
 }

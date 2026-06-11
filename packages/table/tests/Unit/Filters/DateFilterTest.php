@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use NyonCode\WireForms\Components\DateTimePicker;
 use NyonCode\WireTable\Filters\DateFilter;
 
 it('can be created', function () {
@@ -52,4 +53,30 @@ it('can set custom labels', function () {
 
     expect($filter->getFromLabel())->toBe('From')
         ->and($filter->getToLabel())->toBe('To');
+});
+
+// ─── Month Mode ─────────────────────────────────────────────────────────────
+
+it('is not month mode by default and does not bypass the planner', function () {
+    $filter = DateFilter::make('created_at');
+
+    expect($filter->isMonth())->toBeFalse()
+        ->and($filter->bypassesPlanner())->toBeFalse();
+});
+
+it('can be set to month mode, which bypasses the planner', function () {
+    $filter = DateFilter::make('created_at')->month();
+
+    expect($filter->isMonth())->toBeTrue()
+        ->and($filter->bypassesPlanner())->toBeTrue();
+});
+
+it('renders a month picker form field in month mode', function () {
+    $fields = DateFilter::make('created_at')->month()->getFormFields();
+
+    expect($fields)->toHaveCount(1)
+        ->and($fields[0])->toBeInstanceOf(DateTimePicker::class)
+        ->and($fields[0]->getMode())->toBe('month')
+        ->and($fields[0]->getNativeInputType())->toBe('month')
+        ->and($fields[0]->isNative())->toBeTrue();
 });

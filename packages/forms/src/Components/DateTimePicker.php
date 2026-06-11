@@ -59,6 +59,15 @@ class DateTimePicker extends Field
         return $this->mode('date');
     }
 
+    /**
+     * Month + year picking ("YYYY-MM"). Always renders as a native
+     * <input type="month"> — the custom calendar has no month-only grid.
+     */
+    public function asMonth(): static
+    {
+        return $this->mode('month');
+    }
+
     public function asTime(): static
     {
         return $this->mode('time');
@@ -185,6 +194,7 @@ class DateTimePicker extends Field
         try {
             return match ($this->mode) {
                 'date' => config('wire-forms.date_format', 'Y-m-d'),
+                'month' => 'Y-m',
                 'time' => $this->withSeconds
                     ? config('wire-forms.time_format', 'H:i').':s'
                     : config('wire-forms.time_format', 'H:i'),
@@ -193,6 +203,7 @@ class DateTimePicker extends Field
         } catch (\Throwable) {
             return match ($this->mode) {
                 'date' => 'Y-m-d',
+                'month' => 'Y-m',
                 'time' => $this->withSeconds ? 'H:i:s' : 'H:i',
                 default => 'Y-m-d H:i',
             };
@@ -216,7 +227,7 @@ class DateTimePicker extends Field
 
     public function isNative(): bool
     {
-        return $this->native;
+        return $this->native || $this->mode === 'month';
     }
 
     public function getFirstDayOfWeek(): int
@@ -274,6 +285,7 @@ class DateTimePicker extends Field
     {
         return match ($this->mode) {
             'date' => 'date',
+            'month' => 'month',
             'time' => 'time',
             default => 'datetime-local',
         };

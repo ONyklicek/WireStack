@@ -141,6 +141,39 @@ Product        Qty   Line total
 Keyboard         2     2 400 Kč     ← only rows matching the filter
 ```
 
+## Filter by Sub-Row Values from Table Filters
+
+Mark any main-table filter with `subRows()` and it targets the child records
+instead of parent columns — e.g. a Month/Year filter over the children's date:
+
+```php
+use NyonCode\WireTable\Filters\DateFilter;
+
+->filters([
+    DateFilter::make('billed_at')->month()->subRows(),
+])
+```
+
+One filter constrains everything consistently:
+
+- parents shrink to those having at least one matching child,
+- expanded panels show only the matching children,
+- per-parent subtotals, "show more" counts, rollup columns (`->sums()`,
+  `->counts()`, …) and their footer grand totals all aggregate only the
+  matching children.
+
+```text
+Měsíc: [ 2026-06 ▾ ]
+┌───┬────────────┬──────────────┐
+│ ▾ │ INV-1001   │   5 000 Kč   │   ← rollup counts June items only
+│   └── June item A … June item B ──┘
+│ ▾ │ INV-1003   │   5 000 Kč   │   ← INV-1002 (May only) is gone
+└───┴────────────┴──────────────┘
+│ Celkem:        │  10 000 Kč   │   ← footer sums filtered sub-rows
+```
+
+See [Filters — Filtering by Sub-Row Values](filters.md#filtering-by-sub-row-values).
+
 ## Row Actions
 
 Render per-child actions in a trailing actions cell. Each action renders against

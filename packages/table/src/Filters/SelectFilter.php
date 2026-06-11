@@ -79,4 +79,28 @@ class SelectFilter extends Filter
             'value' => $value,
         ])->render();
     }
+
+    /**
+     * Show option labels instead of raw option values in the indicator chip.
+     */
+    protected function getIndicatorValueLabel(mixed $value): ?string
+    {
+        if ($value === null || $value === '' || $value === []) {
+            return null;
+        }
+
+        $options = $this->getOptions();
+        $values = is_array($value) ? $value : [$value];
+        $labels = [];
+
+        foreach ($values as $single) {
+            if ($single === null || $single === '') {
+                continue;
+            }
+
+            $labels[] = (string) ($options[$single] ?? $single);
+        }
+
+        return $labels === [] ? null : implode(', ', $labels);
+    }
 }

@@ -203,7 +203,7 @@
                                                             wire:click="resetTableFilters"
                                                             class="w-full text-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                                                     >
-                                                        Resetovat filtry
+                                                        {{ __('wire-table::messages.filter_reset') }}
                                                     </button>
                                                 </div>
                                             </div>
@@ -320,6 +320,11 @@
                             </div>
                         </div>
                     </div>
+
+                    {{-- Active Filter Indicators --}}
+                    @if($hasFilters)
+                        @include('wire-table::tables.partials.filter-indicators', ['component' => $component])
+                    @endif
 
                     {{-- Selection Bar --}}
                     @if($isSelectable && count($component->selectedRecords) > 0)

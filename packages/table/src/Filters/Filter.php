@@ -36,8 +36,14 @@ class Filter implements Htmlable
 
     public bool $multiple = false;
 
+    /** @var string|Closure|null Custom indicator chip label (string or fn ($value, Filter)) */
+    protected string|Closure|null $indicator = null;
+
     /** @var string|null Relationship name for related model attributes */
     protected ?string $relation = null;
+
+    /** Whether this filter targets the table's sub-row relation instead of parent columns */
+    protected bool $appliesToSubRows = false;
 
     public function __construct(string $name)
     {
@@ -132,6 +138,117 @@ class Filter implements Htmlable
     public function isMultiple(): bool
     {
         return $this->multiple;
+    }
+
+    /**
+     * Customize the indicator chip label shown while this filter is active.
+     *
+     * Accepts a fixed string or a closure receiving the unwrapped filter
+     * value and the filter instance. Returning null/'' from the closure
+     * hides the chip.
+     */
+    public function indicator(string|Closure|null $indicator): static
+    {
+        $this->indicator = $indicator;
+
+        return $this;
+    }
+
+    /**
+     * Indicator chip label for the given raw filter state, or null when
+     * the filter is inactive (no chip).
+     */
+    public function getIndicator(mixed $raw): ?string
+    {
+        $value = $this->extractValue($raw);
+        $valueLabel = $this->getIndicatorValueLabel($value);
+
+        if ($valueLabel === null) {
+            return null;
+        }
+
+        if ($this->indicator instanceof Closure) {
+            $label = ($this->indicator)($value, $this);
+
+            return ($label === null || $label === '') ? null : (string) $label;
+        }
+
+        if (is_string($this->indicator)) {
+            return $this->indicator;
+        }
+
+        return $this->getLabel().': '.$valueLabel;
+    }
+
+    /**
+     * Human-readable form of the active filter value, or null when the
+     * value means "inactive". Concrete filters override this to map raw
+     * values to option labels, ranges, formatted dates, etc.
+     */
+    protected function getIndicatorValueLabel(mixed $value): ?string
+    {
+        if ($value === null || $value === '' || $value === []) {
+            return null;
+        }
+
+        if (is_array($value)) {
+            $values = array_filter($value, fn ($v) => $v !== null && $v !== '');
+
+            return $values === [] ? null : implode(', ', array_map('strval', $values));
+        }
+
+        return (string) $value;
+    }
+
+    /**
+     * Map of state sub-paths to URL parameter suffixes for query-string
+     * persistence (Table::queryString()). The base {value: x} shape maps
+     * to a single unsuffixed parameter; multi-field filters override this
+     * (e.g. NumberRangeFilter → ['min' => '_min', 'max' => '_max']).
+     *
+     * @return array<string, string>
+     */
+    public function getQueryStringFields(): array
+    {
+        return ['value' => ''];
+    }
+
+    /**
+     * Scope this filter to the table's sub-row relation (Table::subRows()).
+     *
+     * The filter then constrains child records instead of parent columns:
+     * parents are reduced to those having at least one matching child
+     * (whereHas), displayed sub-rows are limited to matching children, and
+     * rollup aggregates (->sums(), ->counts(), …) only count matching children
+     * — so footer grand totals reflect the filtered sub-rows.
+     *
+     * A ->query() callback on a sub-row scoped filter receives the CHILD
+     * query builder, not the parent one.
+     *
+     * Ignored (treated as a regular parent filter) when the table has no
+     * sub-row relation configured.
+     */
+    public function subRows(bool $subRows = true): static
+    {
+        $this->appliesToSubRows = $subRows;
+
+        return $this;
+    }
+
+    public function appliesToSubRows(): bool
+    {
+        return $this->appliesToSubRows;
+    }
+
+    /**
+     * Whether this filter must always be applied via apply() instead of the
+     * QueryPlanner. Concrete filters whose constraint cannot be expressed as a
+     * simple column/operator/value definition (e.g. DateFilter month mode)
+     * override this.
+     */
+    public function bypassesPlanner(): bool
+    {
+        return false;
     }
 
     /**

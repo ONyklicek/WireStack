@@ -63,6 +63,10 @@ class Table implements Htmlable
 
     protected bool $searchable = true;
 
+    protected bool $queryString = false;
+
+    protected string $queryStringPrefix = '';
+
     protected bool $sortable = true;
 
     protected bool $paginated = true;
@@ -649,6 +653,39 @@ class Table implements Htmlable
         $this->searchable = $searchable;
 
         return $this;
+    }
+
+    /**
+     * Persist search, sort, per-page, and filter state in the URL query string.
+     *
+     * Pass a string to prefix every parameter name — required when multiple
+     * tables with query-string persistence render on the same page:
+     *
+     *     $table->queryString();          // ?search=…&sort=…&filter_status=…
+     *     $table->queryString('orders_'); // ?orders_search=…&orders_sort=…
+     *
+     * The current page is already tracked by Livewire's WithPagination.
+     */
+    public function queryString(bool|string $enabled = true): static
+    {
+        if (is_string($enabled)) {
+            $this->queryString = true;
+            $this->queryStringPrefix = $enabled;
+        } else {
+            $this->queryString = $enabled;
+        }
+
+        return $this;
+    }
+
+    public function hasQueryString(): bool
+    {
+        return $this->queryString;
+    }
+
+    public function getQueryStringPrefix(): string
+    {
+        return $this->queryStringPrefix;
     }
 
     public function sortable(bool $sortable = true): static

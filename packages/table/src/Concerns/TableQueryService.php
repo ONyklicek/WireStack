@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Concerns;
 
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -111,6 +112,8 @@ final class TableQueryService
         $customSearchCallbacks = [];
         $customSortCallback = null;
         $customFilterCallbacks = [];
+        $subRowScopedFilters = [];
+        $subRowRelation = $table->getSubRowRelation();
 
         foreach ($columns as $column) {
             if ($column->isSearchable() && $column->getSearchCallback() !== null) {
@@ -141,10 +144,15 @@ final class TableQueryService
                 continue;
             }
 
-            if ($filter->getQueryCallback() !== null) {
+            if ($filter->appliesToSubRows() && $subRowRelation !== null) {
+                // Sub-row scoped filter — constrains children, applied below as
+                // one combined whereHas + as a constraint on rollup aggregates.
+                $subRowScopedFilters[] = ['filter' => $filter, 'value' => $value];
+            } elseif ($filter->getQueryCallback() !== null) {
                 $customFilterCallbacks[] = ['callback' => $filter->getQueryCallback(), 'value' => $value];
-            } elseif (is_array($value) && ! $filter->isMultiple()) {
-                // Multi-field filter (e.g. NumberRange, DateFilter range) — route through apply()
+            } elseif ($filter->bypassesPlanner() || (is_array($value) && ! $filter->isMultiple())) {
+                // Multi-field filter (e.g. NumberRange, DateFilter range) or a
+                // filter whose constraint the planner can't express — route through apply()
                 $customFilterCallbacks[] = [
                     'callback' => fn (Builder $q, mixed $v) => $filter->apply($q, $v),
                     'value' => $value,
@@ -152,9 +160,26 @@ final class TableQueryService
             }
         }
 
+        // Sub-row scoped filters: a parent survives only when at least one child
+        // matches ALL active sub-row filters combined — one whereHas, not one per
+        // filter, so the surviving parents actually have displayable children.
+        $subRowConstraint = null;
+        if ($subRowScopedFilters !== []) {
+            $subRowConstraint = static function (Builder $q) use ($subRowScopedFilters): void {
+                foreach ($subRowScopedFilters as $item) {
+                    $item['filter']->apply($q, $item['value']);
+                }
+            };
+
+            $customFilterCallbacks[] = [
+                'callback' => fn (Builder $q) => $q->whereHas($subRowRelation, $subRowConstraint),
+                'value' => null,
+            ];
+        }
+
         // ── 2. Build QueryPlanner inputs (only for columns/filters WITHOUT custom callbacks) ──
         $plannerColumns = $this->buildPlannerColumns($columns);
-        $plannerFilters = $this->buildPlannerFilters($filters, $filterValues, $columnFilterValues, $columns);
+        $plannerFilters = $this->buildPlannerFilters($filters, $filterValues, $columnFilterValues, $columns, $subRowRelation !== null);
         $plannerSorts = $this->buildPlannerSorts($sortColumn, $sortDirection, $columns, $customSortCallback !== null);
         $searchTerm = ! empty($search) && ! empty($customSearchCallbacks) ? null : $search;
 
@@ -222,7 +247,9 @@ final class TableQueryService
         $query = $executor->execute($baseQuery, $this->lastPlan, $searchTerm);
 
         // ── 4.5 Apply aggregate subqueries (withCount, withSum, etc.) ──
-        $query = $this->applyAggregates($query, $columns);
+        // Rollups over the sub-row relation honour active sub-row scoped filters,
+        // so rollup cells and footer grand totals reflect the filtered children.
+        $query = $this->applyAggregates($query, $columns, $subRowRelation, $subRowConstraint);
 
         // ── 5. Apply custom callbacks (these bypass the planner) ──
 
@@ -502,6 +529,7 @@ final class TableQueryService
         array $filterValues,
         array $columnFilterValues,
         array $columns,
+        bool $subRowsEnabled = false,
     ): array {
         $this->enrichSelectFiltersWithEnumOptions($filters);
 
@@ -518,6 +546,10 @@ final class TableQueryService
             }
             // Skip filters with custom query callbacks — they bypass the planner
             if ($filter->getQueryCallback() !== null) {
+                continue;
+            }
+            // Sub-row scoped and planner-incompatible filters route through apply()
+            if ($filter->bypassesPlanner() || ($filter->appliesToSubRows() && $subRowsEnabled)) {
                 continue;
             }
 
@@ -639,12 +671,21 @@ final class TableQueryService
     /**
      * Apply withCount / withSum / withAvg / withMin / withMax for aggregate columns.
      *
+     * When the aggregated relation is the table's sub-row relation and sub-row
+     * scoped filters are active, the aggregate subquery is constrained the same
+     * way the displayed children are (the constrained array syntax keeps the
+     * default alias, e.g. items_sum_total).
+     *
      * @param  Builder<Model>  $query
      * @param  array<int, Column>  $columns
      * @return Builder<Model>
      */
-    private function applyAggregates(Builder $query, array $columns): Builder
-    {
+    private function applyAggregates(
+        Builder $query,
+        array $columns,
+        ?string $subRowRelation = null,
+        ?Closure $subRowConstraint = null,
+    ): Builder {
         foreach ($columns as $column) {
             if (! $column->isAggregate()) {
                 continue;
@@ -654,12 +695,16 @@ final class TableQueryService
             $function = $column->getAggregateFunction();
             $aggregateCol = $column->getAggregateColumn();
 
+            $target = ($subRowConstraint !== null && $relation === $subRowRelation)
+                ? [$relation => $subRowConstraint]
+                : $relation;
+
             match ($function) {
-                'count' => $query->withCount($relation),
-                'sum' => $query->withSum($relation, $aggregateCol),
-                'avg' => $query->withAvg($relation, $aggregateCol),
-                'min' => $query->withMin($relation, $aggregateCol),
-                'max' => $query->withMax($relation, $aggregateCol),
+                'count' => $query->withCount($target),
+                'sum' => $query->withSum($target, $aggregateCol),
+                'avg' => $query->withAvg($target, $aggregateCol),
+                'min' => $query->withMin($target, $aggregateCol),
+                'max' => $query->withMax($target, $aggregateCol),
                 default => null,
             };
         }

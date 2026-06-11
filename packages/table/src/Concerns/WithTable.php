@@ -11,6 +11,7 @@ use Illuminate\Contracts\Pagination\Paginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation as EloquentRelation;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -47,6 +48,7 @@ use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Export\ExportAction;
 use NyonCode\WireTable\Export\ExportFormat;
 use NyonCode\WireTable\Export\TableExport;
+use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Table;
 use ReflectionFunction;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -56,6 +58,7 @@ trait WithTable
 {
     use HasSqlDebug;
     use WithPagination;
+    use WithTableQueryString;
 
     /**
      * Unified state container replacing 26 individual public properties.
@@ -138,6 +141,10 @@ trait WithTable
         if ($hidden !== []) {
             $this->tableState->set('columns.hidden', $hidden);
         }
+
+        // Query-string persistence: seed state from the URL (URL wins over
+        // the defaults applied above) and register URL-tracking attributes.
+        $this->initializeTableQueryString($table);
     }
 
     // ==========================================
@@ -636,6 +643,44 @@ trait WithTable
     }
 
     /**
+     * Clear a single filter (used by the indicator chips' remove buttons).
+     */
+    public function removeTableFilter(string $name): void
+    {
+        $filters = $this->tableState->get('filters', []);
+        unset($filters[$name]);
+        $this->tableState->set('filters', $filters);
+        $this->resetPage();
+    }
+
+    /**
+     * Indicator labels for active filters, keyed by filter name.
+     *
+     * Drives the indicator chips rendered under the table toolbar.
+     *
+     * @return array<string, string>
+     */
+    public function getActiveFilterIndicators(): array
+    {
+        $filters = $this->tableState->get('filters', []);
+        $indicators = [];
+
+        foreach ($this->getTable()->getFilters() as $filter) {
+            if (! $filter->canView()) {
+                continue;
+            }
+
+            $indicator = $filter->getIndicator($filters[$filter->getName()] ?? null);
+
+            if ($indicator !== null) {
+                $indicators[$filter->getName()] = $indicator;
+            }
+        }
+
+        return $indicators;
+    }
+
+    /**
      * Find a column by name
      */
     protected function findColumn(string $name): ?Column
@@ -775,6 +820,10 @@ trait WithTable
 
         $query = $table->getSubRowsQuery($record, $sort, applyLimit: ! $showAll);
 
+        // Main-table filters scoped to sub-rows (Filter::subRows()) constrain
+        // the displayed children the same way they constrained the parents.
+        $query = $this->applySubRowScopedFilters($query);
+
         // Apply sub-row filters
         $subRowFilters = $this->tableState->get('rows.subRowFilters', []);
         if ($table->isSubRowsFilterable() && ! empty($subRowFilters)) {
@@ -841,6 +890,11 @@ trait WithTable
                 $query = $callback($query) ?? $query;
             }
 
+            // Sub-row scoped main filters are global (same constraint for every
+            // parent), so unlike interactive per-parent filters they are safe
+            // to express inside the single eager-load closure.
+            $this->applySubRowScopedFilters($query);
+
             $sortColumn = $sort['column'] ?? $table->getSubRowsDefaultSort();
             $sortDirection = $sort['direction'] ?? $table->getSubRowsDefaultSortDirection();
 
@@ -856,6 +910,67 @@ trait WithTable
     public function resetSubRowFilters(): void
     {
         $this->tableState->set('rows.subRowFilters', []);
+    }
+
+    /**
+     * Main-table filters scoped to the sub-row relation (Filter::subRows())
+     * paired with their active values. Empty when sub-rows are not relation-backed.
+     *
+     * @return array<int, array{0: Filter, 1: mixed}>
+     */
+    protected function getActiveSubRowScopedFilters(): array
+    {
+        $table = $this->getTable();
+
+        if ($table->getSubRowRelation() === null) {
+            return [];
+        }
+
+        $filterValues = $this->tableState->get('filters', []);
+        $active = [];
+
+        foreach ($table->getFilters() as $filter) {
+            if (! $filter->appliesToSubRows() || ! $filter->canView()) {
+                continue;
+            }
+
+            $raw = $filterValues[$filter->getName()] ?? null;
+            if ($raw === null || $raw === '' || $raw === []) {
+                continue;
+            }
+
+            $value = $filter->extractValue($raw);
+            if ($value === null || $value === '' || $value === []) {
+                continue;
+            }
+
+            $active[] = [$filter, $value];
+        }
+
+        return $active;
+    }
+
+    /**
+     * Constrain a child query by the active sub-row scoped main filters —
+     * the same constraint TableQueryService used to whereHas the parents.
+     *
+     * Accepts either an Eloquent Builder or a Relation (eager-load closures
+     * receive the latter); filters always run against the Eloquent Builder.
+     *
+     * @template TQuery of Builder<Model>|EloquentRelation<Model, Model, mixed>
+     *
+     * @param  TQuery  $query
+     * @return TQuery
+     */
+    protected function applySubRowScopedFilters(Builder|EloquentRelation $query): Builder|EloquentRelation
+    {
+        $builder = $query instanceof EloquentRelation ? $query->getQuery() : $query;
+
+        foreach ($this->getActiveSubRowScopedFilters() as [$filter, $value]) {
+            $filter->apply($builder, $value);
+        }
+
+        return $query;
     }
 
     /**
@@ -971,7 +1086,9 @@ trait WithTable
 
         $query = $table->getSubRowsQuery($record, $this->getSubRowSort(), applyLimit: false);
 
-        // Honour the same sub-row filters used when listing.
+        // Honour the same constraints used when listing.
+        $query = $this->applySubRowScopedFilters($query);
+
         $subRowFilters = $this->tableState->get('rows.subRowFilters', []);
         if ($table->isSubRowsFilterable() && ! empty($subRowFilters)) {
             foreach ($table->getSubRowColumns() as $column) {

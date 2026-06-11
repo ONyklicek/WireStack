@@ -12,13 +12,15 @@ Wire Table provides 4 built-in filter types plus the ability to build custom fil
 
 1. [Filter Flow](#filter-flow)
 2. [Shared Filter API](#shared-filter-api)
-3. [SelectFilter](#selectfilter)
-4. [DateFilter](#datefilter)
-5. [NumberRangeFilter](#numberrangefilter)
-6. [TernaryFilter](#ternaryfilter)
-7. [Column-Level Filters](#column-level-filters)
-8. [Custom Filter Class](#custom-filter-class)
-9. [Patterns & Recipes](#patterns--recipes)
+3. [Filter Indicators](#filter-indicators)
+4. [SelectFilter](#selectfilter)
+5. [DateFilter](#datefilter)
+6. [NumberRangeFilter](#numberrangefilter)
+7. [TernaryFilter](#ternaryfilter)
+8. [Filtering by Sub-Row Values](#filtering-by-sub-row-values)
+9. [Column-Level Filters](#column-level-filters)
+10. [Custom Filter Class](#custom-filter-class)
+11. [Patterns & Recipes](#patterns--recipes)
 
 ---
 
@@ -129,6 +131,50 @@ When enabled, the filter accepts an array of values and applies `whereIn()`.
 
 ```php
 ->view(string $view)                 // custom Blade view for the filter UI
+```
+
+---
+
+## Filter Indicators
+
+Active filters render as removable chips under the table toolbar — each chip
+shows a human-readable label and a × button that clears just that filter.
+With more than one active filter, a "Reset filters" link appears next to
+the chips.
+
+Default labels are generated per filter type:
+
+| Filter | Example chip |
+|---|---|
+| `SelectFilter` | `Status: Active` (option label, not raw value) |
+| `SelectFilter` + `multiple()` | `Status: Active, Trial` |
+| `TernaryFilter` | `Verified: Yes` (true/false labels) |
+| `NumberRangeFilter` | `Price: 10 – 100`, `Price: ≥ 10`, `Price: ≤ 100` |
+| `DateFilter` | `Created: 2026-06-11` |
+| `DateFilter` + `range()` | `Created: 2026-06-01 – 2026-06-30` |
+| `DateFilter` + `month()` | `Billed: May 2026` (translated month name) |
+| base `Filter` | `Label: value` |
+
+### Customizing the Chip
+
+```php
+SelectFilter::make('status')
+    ->options([...])
+    ->indicator('Only active customers')              // fixed label
+
+DateFilter::make('created_at')
+    ->indicator(fn ($value) => 'Since '.$value)       // closure: fn ($value, Filter $filter)
+```
+
+Returning `null` or an empty string from the closure hides the chip while
+the filter stays applied. Hidden/unauthorized filters never produce chips.
+
+### Component API
+
+```php
+$component->getActiveFilterIndicators();   // ['status' => 'Status: Active', ...]
+$component->removeTableFilter('status');   // clear one filter (chip × button)
+$component->resetTableFilters();           // clear all filters + search
 ```
 
 ---
@@ -273,6 +319,21 @@ DateFilter::make('period')
     ->toLabel('Created before')
 ```
 
+### Month + Year
+
+Call `month()` to filter by a whole month instead of an exact day. It renders a
+native month picker (`<input type="month">`) and matches every record in the
+selected month:
+
+```php
+DateFilter::make('billed_at')
+    ->month()
+// Value "2026-06" applies: WHERE YEAR(billed_at) = 2026 AND MONTH(billed_at) = 6
+```
+
+Combine with [`subRows()`](#filtering-by-sub-row-values) to filter parents by
+the month of their child records.
+
 ### Date Constraints
 
 ```php
@@ -285,6 +346,7 @@ DateFilter::make('birth_date')
 
 ```php
 ->range(bool $range = true)         // two inputs (from/to) instead of one
+->month(bool $month = true)         // month picker, matches whole month
 ->fromLabel(string $label)          // "from" placeholder (default: 'From')
 ->toLabel(string $label)            // "to" placeholder (default: 'To')
 ->minDate(string $date)             // min selectable date
@@ -463,6 +525,43 @@ TernaryFilter::make('has_comments')
         ? $q->has('comments')
         : $q->doesntHave('comments'))
 ```
+
+---
+
+## Filtering by Sub-Row Values
+
+When the table has [sub-rows](sub-rows.md), mark a filter with `subRows()` to
+target the **child** records instead of parent columns. One call constrains all
+three places at once:
+
+- **parents** — reduced to those having at least one matching child (`whereHas`),
+- **displayed sub-rows** — only matching children render in the expanded panel,
+- **rollup aggregates** — `->sums()` / `->counts()` cells and their footer grand
+  totals count only the matching children.
+
+```php
+$table
+    ->subRows('items')
+    ->filters([
+        // "Month/Year" — show only invoices with items billed that month,
+        // and only those items inside each expanded invoice
+        DateFilter::make('billed_at')->month()->subRows(),
+
+        // Any filter type works — this matches a child column by equality
+        SelectFilter::make('status')
+            ->options(['open' => 'Open', 'closed' => 'Closed'])
+            ->subRows(),
+    ])
+```
+
+The filter's column names refer to the **child** model. A `->query()` callback
+on a sub-row scoped filter receives the child query builder. When the table has
+no sub-row relation configured, `subRows()` is ignored and the filter behaves
+like a regular parent filter.
+
+With multiple sub-row scoped filters active, a parent survives only when at
+least one child matches **all** of them combined, so every surviving parent has
+children to display.
 
 ---
 
