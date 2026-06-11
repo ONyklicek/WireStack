@@ -20,14 +20,14 @@ class WireSortableServiceProvider extends PackageServiceProvider
         $packager
             ->name('WireSortable')
             ->hasShortName('wire-sortable')
-            ->registeredPackage(function($packager){
+            ->registeredPackage(function ($packager) {
                 $this->app->resolving(PluginManager::class, function (PluginManager $manager) {
                     if (! $manager->has('sortable')) {
                         $manager->register(new SortablePlugin);
                     }
                 });
             })
-            ->bootedPackage(function($packager){
+            ->bootedPackage(function ($packager) {
                 $this->registerTableMacros();
             })
             ->hasConfig()

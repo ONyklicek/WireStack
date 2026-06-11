@@ -38,13 +38,13 @@ class WireCoreServiceProvider extends PackageServiceProvider
         $packager
             ->name('WireCore')
             ->hasShortName('wire-core')
-            ->registeredPackage(function($packager){
+            ->registeredPackage(function ($packager) {
                 $this->registerFoundation();
                 $this->registerCore();
                 $this->registerNotifications();
                 $this->registerPlugins();
             })
-            ->bootedPackage(function($packager){
+            ->bootedPackage(function ($packager) {
                 $this->bootFoundation();
                 $this->bootActions();
                 $this->bootNotifications();
@@ -202,7 +202,6 @@ class WireCoreServiceProvider extends PackageServiceProvider
             }
         });
     }
-
 
     protected function bootPlugins(): void
     {
