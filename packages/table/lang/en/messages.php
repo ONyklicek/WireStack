@@ -40,6 +40,7 @@ return [
     'filter_placeholder' => 'Filter...',
     'filter_reset' => 'Reset filters',
     'filter_reset_column' => 'Reset column filters',
+    'filter_remove' => 'Remove filter',
 
     // Summary
     'summary_sum' => 'Sum',

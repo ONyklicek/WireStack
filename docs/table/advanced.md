@@ -587,24 +587,61 @@ Useful when different parts of your app use different notification UIs.
 
 ## URL State Persistence
 
-Persist table state (search, sort, filters, page) in the URL for bookmarkable/shareable links:
+Persist table state (search, sort, per-page, filters) in the URL for bookmarkable and shareable links:
 
 ```php
-class UserTable extends Component
+public function table(Table $table): Table
 {
-    use WithTable;
-
-    protected $queryString = [
-        'tableSearch' => ['except' => '', 'as' => 'q'],
-        'tableSortColumn' => ['except' => '', 'as' => 'sort'],
-        'tableSortDirection' => ['except' => 'asc', 'as' => 'dir'],
-        'tablePerPage' => ['except' => 10, 'as' => 'per_page'],
-        'tableFilters' => ['except' => [], 'as' => 'filters'],
-    ];
+    return $table
+        ->model(User::class)
+        ->queryString()
+        ->columns([...])
+        ->filters([...]);
 }
 ```
 
-Now URLs look like: `/users?q=john&sort=name&dir=asc&per_page=25&filters[role]=admin`
+URLs then look like:
+
+```text
+/users?search=john&sort=name&direction=desc&per_page=25&filter_role=admin
+```
+
+Tracked parameters:
+
+| Parameter | State | Notes |
+|---|---|---|
+| `search` | global search | only when the table is searchable |
+| `sort`, `direction` | sort state | only sortable column names are accepted |
+| `per_page` | page size | only values from `perPageOptions()` are accepted |
+| `filter_{name}` | filter value | one parameter per filter |
+| `page` | current page | handled by Livewire's `WithPagination` |
+
+Multi-field filters expand into suffixed parameters: `NumberRangeFilter`
+becomes `filter_price_min` / `filter_price_max`, a range `DateFilter`
+becomes `filter_created_at_from` / `filter_created_at_to`. Filters using
+`multiple()` accept array syntax (`filter_status[]=active&filter_status[]=trial`).
+
+Incoming URL values are validated against the table configuration —
+unknown sort columns, per-page values outside `perPageOptions()`, and
+parameters for unknown or hidden filters are ignored.
+
+### Multiple Tables Per Page
+
+Parameter names are global per URL. When two query-string-persisted tables
+render on the same page, give each one a prefix:
+
+```php
+$table->queryString('orders_');   // ?orders_search=…&orders_filter_status=…
+```
+
+### Notes
+
+- URL seeding wins over `defaultSort()` / filter `default()` values.
+- Filters whose names contain dots (relationship filters such as
+  `author.name`) are not URL-tracked.
+- The URL updates via `history.replaceState`, so typing in the search box
+  does not flood the browser history; parameters disappear again when the
+  state returns to its default.
 
 ---
 

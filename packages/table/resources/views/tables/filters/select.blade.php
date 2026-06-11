@@ -8,6 +8,7 @@
     $rawValue = is_array($value) && array_key_exists('value', $value) ? $value['value'] : $value;
     $currentValue = $rawValue ?? $filter->getDefault();
     $isMultiple = $filter->isMultiple();
+    $selectedValues = $isMultiple ? array_map('strval', (array) ($currentValue ?? [])) : [];
 @endphp
 
 <div class="flex flex-col gap-1">
@@ -22,7 +23,7 @@
     >
         <option value="">{{ $placeholder }}</option>
         @foreach($options as $optionValue => $optionLabel)
-            <option value="{{ $optionValue }}" @if((string) $currentValue === (string) $optionValue) selected @endif>
+            <option value="{{ $optionValue }}" @if($isMultiple ? in_array((string) $optionValue, $selectedValues, true) : (string) $currentValue === (string) $optionValue) selected @endif>
                 {{ $optionLabel }}
             </option>
         @endforeach

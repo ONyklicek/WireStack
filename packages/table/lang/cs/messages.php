@@ -40,6 +40,7 @@ return [
     'filter_placeholder' => 'Filtr...',
     'filter_reset' => 'Resetovat filtry',
     'filter_reset_column' => 'Resetovat filtry sloupců',
+    'filter_remove' => 'Odebrat filtr',
 
     // Summary
     'summary_sum' => 'Součet',

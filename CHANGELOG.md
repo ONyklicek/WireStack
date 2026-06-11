@@ -2,6 +2,18 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [1.1.0]
+
+### Added
+- **Sub-row scoped table filters** – `Filter::subRows()` targets the child records of `Table::subRows()`: parents reduce to those with a matching child (`whereHas`), expanded panels show only matching children, and rollup aggregates (`->sums()`, `->counts()`, …) plus their footer grand totals count only the matching children.
+- **`DateFilter::month()`** – Month/Year filtering (`whereYear` + `whereMonth`) rendered as a native month picker; combines with `subRows()` for filtering by the month of child records.
+- **`DateTimePicker::asMonth()`** (wire-forms) – month mode rendering a native `<input type="month">`.
+- **URL query-string persistence** – `Table::queryString()` keeps search, sort, per-page, and filter state in the URL (shareable/bookmarkable table views). Incoming values are validated against the table config; an optional prefix (`queryString('orders_')`) avoids collisions between multiple tables on one page.
+- **Filter indicator chips** – active filters render as removable chips under the toolbar with per-type labels (option labels, range bounds, translated month names); customizable via `Filter::indicator(string|Closure)`, removable via the new `removeTableFilter()` action.
+
+### Fixed
+- Multiple-select filter (`SelectFilter::multiple()`) no longer crashes the select view when an array value is active, and renders the selected options correctly.
+
 ## [1.0.0] – 2026-06-11
 
 ### Added

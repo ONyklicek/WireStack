@@ -109,6 +109,22 @@ class TernaryFilter extends Filter
         ])->render();
     }
 
+    /**
+     * Show the true/false option label in the indicator chip.
+     */
+    protected function getIndicatorValueLabel(mixed $value): ?string
+    {
+        if ($value === 'true' || $value === '1' || $value === true) {
+            return $this->getTrueLabel();
+        }
+
+        if ($value === 'false' || $value === '0' || $value === false) {
+            return $this->getFalseLabel();
+        }
+
+        return null;
+    }
+
     public function getAllLabel(): string
     {
         return $this->allLabel ?? Trans::get('wire-table::messages.filter_all');

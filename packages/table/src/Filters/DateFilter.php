@@ -6,12 +6,15 @@ namespace NyonCode\WireTable\Filters;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireForms\Components\DateTimePicker;
 
 class DateFilter extends Filter
 {
     protected bool $range = false;
+
+    protected bool $monthMode = false;
 
     protected ?string $minDate = null;
 
@@ -31,6 +34,32 @@ class DateFilter extends Filter
     public function isRange(): bool
     {
         return $this->range;
+    }
+
+    /**
+     * Filter by month + year instead of a full date. The value is a single
+     * "YYYY-MM" string (native month input) applied as whereYear + whereMonth.
+     *
+     * Example: DateFilter::make('billed_at')->month()->subRows()
+     */
+    public function month(bool $month = true): static
+    {
+        $this->monthMode = $month;
+
+        return $this;
+    }
+
+    public function isMonth(): bool
+    {
+        return $this->monthMode;
+    }
+
+    /**
+     * whereYear/whereMonth cannot be expressed as a planner column definition.
+     */
+    public function bypassesPlanner(): bool
+    {
+        return $this->monthMode;
     }
 
     public function minDate(?string $date): static
@@ -97,6 +126,10 @@ class DateFilter extends Filter
 
         $column = $this->getColumn();
 
+        if ($this->monthMode) {
+            return $this->applyMonth($query, $column, $value);
+        }
+
         if ($this->range && is_array($value)) {
             if (! empty($value['from'])) {
                 $query->whereDate($column, '>=', $value['from']);
@@ -112,8 +145,36 @@ class DateFilter extends Filter
         return $query->whereDate($column, $value);
     }
 
+    /**
+     * Apply a "YYYY-MM" month value as whereYear + whereMonth.
+     * Malformed values are ignored rather than producing a broken constraint.
+     *
+     * @param  Builder<Model>  $query
+     * @return Builder<Model>
+     */
+    protected function applyMonth(Builder $query, string $column, mixed $value): Builder
+    {
+        if (! is_string($value) || ! preg_match('/^(\d{4})-(\d{1,2})$/', $value, $matches)) {
+            return $query;
+        }
+
+        $query->whereYear($column, (int) $matches[1]);
+        $query->whereMonth($column, (int) $matches[2]);
+
+        return $query;
+    }
+
     public function getFormFields(): array
     {
+        if ($this->monthMode) {
+            return [
+                DateTimePicker::make('value')
+                    ->asMonth()
+                    ->minDate($this->minDate)
+                    ->maxDate($this->maxDate),
+            ];
+        }
+
         if ($this->range) {
             return [
                 DateTimePicker::make('from')
@@ -156,5 +217,43 @@ class DateFilter extends Filter
         }
 
         return parent::wrapValue($value);
+    }
+
+    public function getQueryStringFields(): array
+    {
+        if ($this->range) {
+            return ['from' => '_from', 'to' => '_to'];
+        }
+
+        return parent::getQueryStringFields();
+    }
+
+    /**
+     * Render the active value as "May 2026" (month mode), "from – to"
+     * (range mode), or the single date.
+     */
+    protected function getIndicatorValueLabel(mixed $value): ?string
+    {
+        if ($this->range && is_array($value)) {
+            $from = ! empty($value['from']) ? (string) $value['from'] : null;
+            $to = ! empty($value['to']) ? (string) $value['to'] : null;
+
+            return match (true) {
+                $from !== null && $to !== null => "{$from} – {$to}",
+                $from !== null => "{$this->getFromLabel()} {$from}",
+                $to !== null => "{$this->getToLabel()} {$to}",
+                default => null,
+            };
+        }
+
+        if ($this->monthMode && is_string($value) && preg_match('/^\d{4}-\d{1,2}$/', $value)) {
+            try {
+                return Carbon::createFromFormat('Y-m', $value)->translatedFormat('F Y');
+            } catch (\Throwable) {
+                return $value;
+            }
+        }
+
+        return parent::getIndicatorValueLabel($value);
     }
 }
