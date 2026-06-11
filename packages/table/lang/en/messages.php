@@ -60,6 +60,7 @@ return [
     'summary_scope_query' => 'All',
     'summary_scope_page' => 'This page',
     'summary_scope_selection' => 'Selection',
+    'summary_subtotal' => 'Subtotal',
 
     // Column
     'copied' => 'Copied!',
