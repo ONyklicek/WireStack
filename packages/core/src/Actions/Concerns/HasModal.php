@@ -373,7 +373,12 @@ trait HasModal
 
         $statePath = $this->resolveModalFormStatePath($livewire);
         $form->statePath($statePath);
-        $form->live();
+
+        // Fields stay deferred (plain wire:model) by default: Livewire sends
+        // dirty model values along with the submit call, so live sync adds
+        // nothing — it only triggers a full re-render per keystroke pause,
+        // whose morph races further typing and erases it. Reactive fields
+        // opt in individually via ->live().
 
         if ($livewire) {
             $form->livewire($livewire);

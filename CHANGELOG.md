@@ -13,6 +13,7 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ### Fixed
 - Multiple-select filter (`SelectFilter::multiple()`) no longer crashes the select view when an array value is active, and renders the selected options correctly.
+- **Action modal forms no longer lose typed text.** Action forms forced `wire:model.live` on every field, so each keystroke pause triggered a full component re-render whose DOM morph raced further typing and erased it. Fields now default to deferred `wire:model` (values are sent with the submit call), eliminating both the text loss and the per-keystroke server roundtrip + table re-render. Fields that drive reactive behavior opt in per field via `->live()`.
 
 ## [1.0.0] – 2026-06-11
 

@@ -184,7 +184,7 @@ it('uses tableState for modal form state when bound to a table livewire componen
     {
         public StateContainer $tableState;
 
-        public function render()
+        public function render(): string
         {
             return <<<'BLADE'
 <div></div>
@@ -214,6 +214,25 @@ BLADE;
 
     expect($fields)->toHaveCount(1)
         ->and($fields[0]->getStatePath())->toBe('tableState.modal.action.formData.reason');
+});
+
+it('keeps modal form fields deferred unless a field opts into live', function () {
+    // Forcing live on the whole form re-renders the component per keystroke
+    // pause; the morph races further typing and erases it. Submit works
+    // deferred because Livewire sends dirty wire:model values with the call.
+    $action = Action::make('edit')
+        ->requiresConfirmation()
+        ->form([
+            TextInput::make('reason'),
+            TextInput::make('category')->live(),
+        ]);
+
+    [$reason, $category] = $action->getFormInstance()->getFlatComponents();
+    assert($reason instanceof TextInput && $category instanceof TextInput);
+
+    expect($reason->isLive())->toBeFalse()
+        ->and($reason->getWireModelModifier())->toBe('')
+        ->and($category->isLive())->toBeTrue();
 });
 
 // ─── Form Validation ──────────────────────────────────────────────────────
