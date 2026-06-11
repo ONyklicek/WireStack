@@ -18,6 +18,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class PdfExporter implements Exporter
 {
+    use Concerns\ResolvesExportValue;
+
     public function __construct(
         protected string $orientation = 'portrait',
         protected string $paperSize = 'A4',
@@ -33,15 +35,16 @@ class PdfExporter implements Exporter
     /**
      * @param  Builder<Model>  $query
      * @param  array<int, Column>  $columns
+     * @param  array<int, array<int, string>>  $summaryRows
      */
-    public function export(Builder $query, array $columns, string $fileName): StreamedResponse
+    public function export(Builder $query, array $columns, string $fileName, array $summaryRows = []): StreamedResponse
     {
         if (! static::isAvailable()) {
             // Fallback to CSV
             $csvFileName = str_replace('.pdf', '.csv', $fileName);
 
             return (new CsvExporter(withHeadings: $this->withHeadings))
-                ->export($query, $columns, $csvFileName);
+                ->export($query, $columns, $csvFileName, $summaryRows);
         }
 
         // Collect all records (PDF can't stream chunks)
@@ -67,6 +70,7 @@ class PdfExporter implements Exporter
             'headings' => $headings,
             'rows' => $rows,
             'columns' => $columns,
+            'summaryRows' => $summaryRows,
         ]);
 
         $pdf->setPaper($this->paperSize, $this->orientation);
@@ -82,13 +86,7 @@ class PdfExporter implements Exporter
 
     protected function resolveColumnValue(Column $column, Model $record): string
     {
-        $name = $column->getName();
-
-        if (str_contains($name, '.')) {
-            $value = data_get($record, $name);
-        } else {
-            $value = $record->getAttribute($name);
-        }
+        $value = $this->resolveRawExportValue($column, $record);
 
         if ($value === null) {
             return '';

@@ -16,6 +16,8 @@ interface Exporter
      *
      * @param  Builder<Model>  $query
      * @param  array<int, Column>  $columns
+     * @param  array<int, array<int, string>>  $summaryRows  Pre-formatted summary
+     *                                                       rows (one cell per column) appended after the data rows.
      */
-    public function export(Builder $query, array $columns, string $fileName): StreamedResponse;
+    public function export(Builder $query, array $columns, string $fileName, array $summaryRows = []): StreamedResponse;
 }

@@ -11,6 +11,8 @@ use Illuminate\Contracts\Pagination\Paginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
+use Illuminate\Database\Eloquent\Relations\MorphOneOrMany;
 use Illuminate\Database\Eloquent\Relations\Relation as EloquentRelation;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -590,7 +592,39 @@ trait WithTable
             event(new TableFiltered($tableId, $activeFilters, -1));
         }
 
+        $query = $this->applyGroupOrdering($query);
+
         $this->cachedQuery = $query;
+
+        return $query;
+    }
+
+    /**
+     * Keep groups contiguous: prepend an order on the group column so every
+     * other sort applies within a group. Skipped when the user explicitly
+     * sorts by the group column — that sort already keeps groups together.
+     *
+     * @param  Builder<Model>  $query
+     * @return Builder<Model>
+     */
+    protected function applyGroupOrdering(Builder $query): Builder
+    {
+        $table = $this->getTable();
+        $groupColumn = $table->getGroupColumn();
+
+        if ($groupColumn === null) {
+            return $query;
+        }
+
+        if ($this->tableState->get('sort.column', '') === $groupColumn) {
+            return $query;
+        }
+
+        $base = $query->getQuery();
+        $base->orders = array_merge(
+            [['column' => $query->qualifyColumn($groupColumn), 'direction' => 'asc']],
+            $base->orders ?? [],
+        );
 
         return $query;
     }
@@ -825,17 +859,7 @@ trait WithTable
         $query = $this->applySubRowScopedFilters($query);
 
         // Apply sub-row filters
-        $subRowFilters = $this->tableState->get('rows.subRowFilters', []);
-        if ($table->isSubRowsFilterable() && ! empty($subRowFilters)) {
-            foreach ($table->getSubRowColumns() as $column) {
-                $colName = $column->getName();
-                $filterValue = $subRowFilters[$colName] ?? null;
-
-                if ($filterValue !== null && $filterValue !== '' && $column->isFilterable()) {
-                    $query = $column->applyFilter($query, $filterValue);
-                }
-            }
-        }
+        $query = $this->applyInteractiveSubRowFilters($query);
 
         return $query->get();
     }
@@ -974,6 +998,33 @@ trait WithTable
     }
 
     /**
+     * Constrain a child query by the active interactive sub-row filter bar
+     * values (subRowsFilterable()) — the per-column filters typed by the user.
+     *
+     * @param  Builder<Model>  $query
+     * @return Builder<Model>
+     */
+    protected function applyInteractiveSubRowFilters(Builder $query): Builder
+    {
+        $table = $this->getTable();
+        $subRowFilters = $this->tableState->get('rows.subRowFilters', []);
+
+        if (! $table->isSubRowsFilterable() || empty($subRowFilters)) {
+            return $query;
+        }
+
+        foreach ($table->getSubRowColumns() as $column) {
+            $filterValue = $subRowFilters[$column->getName()] ?? null;
+
+            if ($filterValue !== null && $filterValue !== '' && $column->isFilterable()) {
+                $query = $column->applyFilter($query, $filterValue);
+            }
+        }
+
+        return $query;
+    }
+
+    /**
      * Whether the table has sub-row filtering enabled and at least one active
      * sub-row filter value. Used to disable eager-load / in-memory fast paths
      * that would otherwise bypass per-parent filtering.
@@ -1088,18 +1139,7 @@ trait WithTable
 
         // Honour the same constraints used when listing.
         $query = $this->applySubRowScopedFilters($query);
-
-        $subRowFilters = $this->tableState->get('rows.subRowFilters', []);
-        if ($table->isSubRowsFilterable() && ! empty($subRowFilters)) {
-            foreach ($table->getSubRowColumns() as $column) {
-                $colName = $column->getName();
-                $filterValue = $subRowFilters[$colName] ?? null;
-
-                if ($filterValue !== null && $filterValue !== '' && $column->isFilterable()) {
-                    $query = $column->applyFilter($query, $filterValue);
-                }
-            }
-        }
+        $query = $this->applyInteractiveSubRowFilters($query);
 
         return $query->count();
     }
@@ -1173,7 +1213,182 @@ trait WithTable
             }
         }
 
+        return $this->tableHasSubRowGrandTotals();
+    }
+
+    /**
+     * Whether group subtotal rows should render: grouping is active, enabled,
+     * and at least one column has a summary to subtotal.
+     */
+    public function tableHasGroupSummaries(): bool
+    {
+        $table = $this->getTable();
+
+        if (! $table->hasGrouping() || ! $table->hasGroupSummaries()) {
+            return false;
+        }
+
+        foreach ($table->getColumns() as $column) {
+            if ($column->hasSummary()) {
+                return true;
+            }
+        }
+
         return false;
+    }
+
+    /**
+     * Per-group subtotals, computed in memory over the group's records on the
+     * current page (groups crossing a page boundary subtotal per page).
+     *
+     * @return array<string, array<int, array<string, mixed>>> [columnName => [['label' => …, 'value' => …], …]]
+     */
+    public function computeGroupSummaries(mixed $groupValue): array
+    {
+        $table = $this->getTable();
+
+        if (! $table->hasGrouping()) {
+            return [];
+        }
+
+        $records = $this->getTableRecords();
+
+        $groupRecords = ($records instanceof Collection ? $records : collect($records->items()))
+            ->filter(fn ($record) => $table->getGroupValue($record) === $groupValue)
+            ->values();
+
+        $summaries = [];
+
+        foreach ($table->getColumns() as $column) {
+            if (! $column->hasSummary()) {
+                continue;
+            }
+
+            // In-memory over the group's rows; selection/subRows scopes don't
+            // describe a group, so only query/page declarations subtotal.
+            $summaries[$column->getName()] = $column->computeSummaries(
+                $groupRecords,
+                null,
+                ['query', 'page'],
+            );
+        }
+
+        return $summaries;
+    }
+
+    /**
+     * Whether any sub-row column declares a 'query'-scoped summary — a grand
+     * total of children across all parents, rendered in the main footer.
+     */
+    public function tableHasSubRowGrandTotals(): bool
+    {
+        $table = $this->getTable();
+
+        if ($table->getSubRowRelation() === null) {
+            return false;
+        }
+
+        foreach ($table->getSubRowColumns() as $column) {
+            if ($column->hasSummaryInScope('query')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Grand totals of sub-row columns across parents, for the main footer.
+     *
+     * A sub-row column opts in with summarize(..., scope: 'query') (the default
+     * scope). The aggregate runs in SQL over the child table constrained to the
+     * current parent set — 'query' = all filtered parents, 'page' = parents on
+     * the current page, 'selection' = selected parents — and honours sub-row
+     * scoped main filters, the subRowQuery() callback, and the interactive
+     * sub-row filter bar, so the total always matches the displayed children.
+     *
+     * @return array<string, array<int, array<string, mixed>>> [columnName => [['label' => …, 'value' => …], …]]
+     */
+    public function computeSubRowGrandTotals(string $scope = 'query'): array
+    {
+        if (! $this->tableHasSubRowGrandTotals()) {
+            return [];
+        }
+
+        $childQuery = $this->buildSubRowGrandTotalQuery($scope);
+
+        if ($childQuery === null) {
+            return [];
+        }
+
+        $totals = [];
+
+        foreach ($this->getTable()->getSubRowColumns() as $column) {
+            if (! $column->hasSummaryInScope('query')) {
+                continue;
+            }
+
+            $totals[$column->getName()] = $column->computeSummaries(
+                collect(),
+                clone $childQuery,
+                ['query'],
+            );
+        }
+
+        return $totals;
+    }
+
+    /**
+     * Build the child query for sub-row grand totals: all children whose parent
+     * is in the current parent set, under the same constraints the displayed
+     * sub-rows use. Only direct parent→child relations (HasMany/HasOne and
+     * their morph variants) are supported; other relation types yield null.
+     *
+     * @return Builder<Model>|null
+     */
+    protected function buildSubRowGrandTotalQuery(string $scope = 'query'): ?Builder
+    {
+        $table = $this->getTable();
+        $relationName = $table->getSubRowRelation();
+
+        if ($relationName === null) {
+            return null;
+        }
+
+        $relation = $table->getQuery()->getModel()->{$relationName}();
+
+        if (! $relation instanceof HasOneOrMany) {
+            return null;
+        }
+
+        $childQuery = $relation->getRelated()->newQuery();
+
+        if ($relation instanceof MorphOneOrMany) {
+            $childQuery->where($relation->getQualifiedMorphType(), $relation->getMorphClass());
+        }
+
+        $foreignKey = $relation->getQualifiedForeignKeyName();
+        $localKey = $relation->getLocalKeyName();
+
+        if ($scope === 'page') {
+            // Paginators forward collection calls, so pluck() works on both.
+            $childQuery->whereIn($foreignKey, $this->getTableRecords()->pluck($localKey));
+        } elseif ($scope === 'selection') {
+            $childQuery->whereIn($foreignKey, $this->getSelectedRecords()->pluck($localKey));
+        } else {
+            // buildTableQuery() may hand back its cached instance — clone before
+            // stripping orders/selects for the parent-id subquery.
+            $parents = (clone $this->buildTableQuery())->reorder();
+            $childQuery->whereIn($foreignKey, $parents->select($parents->qualifyColumn($localKey)));
+        }
+
+        if ($callback = $table->getSubRowQueryCallback()) {
+            $childQuery = $callback($childQuery) ?? $childQuery;
+        }
+
+        $childQuery = $this->applySubRowScopedFilters($childQuery);
+
+        return $this->applyInteractiveSubRowFilters($childQuery);
     }
 
     /**
@@ -2807,7 +3022,7 @@ trait WithTable
         $table = $this->getTable();
         $service = new TableQueryService;
 
-        return $service->buildQuery(
+        return $this->applyGroupOrdering($service->buildQuery(
             baseQuery: $table->getQuery(),
             table: $table,
             search: $this->tableState->get('search', ''),
@@ -2815,6 +3030,6 @@ trait WithTable
             sortColumn: $this->tableState->get('sort.column') ?: $table->getDefaultSort(),
             sortDirection: $this->tableState->get('sort.direction') ?: $table->getDefaultSortDirection(),
             columnFilterValues: $this->tableState->get('columnFilters', []),
-        );
+        ));
     }
 }

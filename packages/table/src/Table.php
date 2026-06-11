@@ -30,6 +30,7 @@ use RuntimeException;
 #[\AllowDynamicProperties]
 class Table implements Htmlable
 {
+    use Concerns\HasGrouping;
     use Concerns\HasSubRows;
     use HasSqlDebug;
     use Macroable;

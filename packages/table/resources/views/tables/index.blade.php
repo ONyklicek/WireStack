@@ -28,6 +28,8 @@
     $hasColumnFilters = count($filterableColumns) > 0;
     $hasSubRows = $table->hasSubRows();
     $isSubRowsExpandable = $hasSubRows && $table->isSubRowsExpandable();
+    $hasGrouping = $table->hasGrouping();
+    $hasGroupSummaries = $hasGrouping && $component->tableHasGroupSummaries();
     $subRowColumns = $hasSubRows ? $table->getSubRowColumns() : [];
     $visibleSubRowColumns = $hasSubRows ? array_filter($subRowColumns, fn($c) => $c->canView()) : [];
     $colSpan = ($isSelectable ? 1 : 0) + count($visibleColumns) + ($hasActions ? 1 : 0) + ($hasSubRows ? 1 : 0);
@@ -515,7 +517,22 @@
                                         $recordUrl = $table->getRecordUrl($record);
                                         $isSelected = $component->isRecordSelected($recordKey);
                                         $rowIndex = $loop->index;
+
+                                        $groupValue = $hasGrouping ? $table->getGroupValue($record) : null;
+                                        $prevRecord = $hasGrouping && $rowIndex > 0 ? $records[$rowIndex - 1] : null;
+                                        $nextRecord = $hasGrouping ? ($records[$rowIndex + 1] ?? null) : null;
+                                        $isGroupStart = $hasGrouping && ($prevRecord === null || $table->getGroupValue($prevRecord) !== $groupValue);
+                                        $isGroupEnd = $hasGrouping && ($nextRecord === null || $table->getGroupValue($nextRecord) !== $groupValue);
                                     @endphp
+
+                                    {{-- Group header --}}
+                                    @if($isGroupStart)
+                                        @include('wire-table::tables.partials.group-header', [
+                                            'label' => $table->resolveGroupLabel($record),
+                                            'colSpan' => $colSpan,
+                                            'cellPadding' => $cellPadding,
+                                        ])
+                                    @endif
                                     <tr
                                             class="{{ $table->isHoverable() ? 'hover:bg-gray-50 dark:hover:bg-gray-700/30' : '' }} {{ $isSelected ? 'bg-primary-50 dark:bg-primary-900/20' : '' }} {{ $isStriped && $rowIndex % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/30' : '' }} {{ $table->getRowClass() }}"
                                             wire:key="row-{{ $recordKey }}"
@@ -607,6 +624,22 @@
                                             'isBordered' => $isBordered,
                                         ])
                                     @endif
+
+                                    {{-- Group subtotal --}}
+                                    @if($isGroupEnd && $hasGroupSummaries)
+                                        @include('wire-table::tables.partials.group-subtotal', [
+                                            'table' => $table,
+                                            'component' => $component,
+                                            'groupSummaries' => $component->computeGroupSummaries($groupValue),
+                                            'visibleColumns' => $visibleColumns,
+                                            'colSpan' => $colSpan,
+                                            'cellPadding' => $cellPadding,
+                                            'isBordered' => $isBordered,
+                                            'isSelectable' => $isSelectable,
+                                            'hasActions' => $hasActions,
+                                            'actionsPosition' => $actionsPosition,
+                                        ])
+                                    @endif
                                 @empty
                                     <tr>
                                         <td colspan="{{ $colSpan }}" class="px-6 py-16 text-center">
@@ -659,6 +692,7 @@
                                         'table' => $table,
                                         'component' => $component,
                                         'summaries' => $component->computeTableSummaries($summaryScope),
+                                        'subRowGrandTotals' => $component->computeSubRowGrandTotals($summaryScope),
                                         'summaryScope' => $summaryScope,
                                         'summaryScopeOptions' => $component->getSummaryScopeOptions(),
                                         'isSelectable' => $isSelectable,

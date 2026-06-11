@@ -22,6 +22,8 @@ class TableExport
 
     protected bool $withHeadings = true;
 
+    protected bool $withSummaries = true;
+
     protected ExportFormat $format = ExportFormat::Csv;
 
     protected string $csvDelimiter = ',';
@@ -99,6 +101,22 @@ class TableExport
     public function hasHeadings(): bool
     {
         return $this->withHeadings;
+    }
+
+    /**
+     * Include footer summary rows ('query'-scoped column summaries) in the
+     * export. Enabled by default; opt out with withSummaries(false).
+     */
+    public function withSummaries(bool $withSummaries = true): static
+    {
+        $this->withSummaries = $withSummaries;
+
+        return $this;
+    }
+
+    public function hasSummaries(): bool
+    {
+        return $this->withSummaries;
     }
 
     public function format(ExportFormat $format): static
@@ -211,7 +229,58 @@ class TableExport
 
         $fullFileName = $this->fileName.'.'.$this->format->extension();
 
-        return $exporter->export($query, $columns, $fullFileName);
+        $summaryRows = $this->withSummaries ? $this->buildSummaryRows($query, $columns) : [];
+
+        return $exporter->export($query, $columns, $fullFileName, $summaryRows);
+    }
+
+    /**
+     * Build pre-formatted summary rows from the columns' 'query'-scoped
+     * summaries — the same totals the footer shows for the full filtered set.
+     * Cells render as "Label: value" in the column they belong to; a column
+     * with several summaries produces several rows.
+     *
+     * @param  Builder<Model>  $query
+     * @param  array<int, Column>  $columns
+     * @return array<int, array<int, string>>
+     */
+    protected function buildSummaryRows(Builder $query, array $columns): array
+    {
+        $perColumn = [];
+        $maxRows = 0;
+
+        foreach ($columns as $index => $column) {
+            $entries = $column->hasSummaryInScope('query')
+                ? $column->computeSummaries(collect(), clone $query, ['query'])
+                : [];
+
+            $perColumn[$index] = $entries;
+            $maxRows = max($maxRows, count($entries));
+        }
+
+        $rows = [];
+
+        for ($i = 0; $i < $maxRows; $i++) {
+            $row = [];
+
+            foreach (array_keys($columns) as $index) {
+                $entry = $perColumn[$index][$i] ?? null;
+
+                if ($entry === null) {
+                    $row[] = '';
+
+                    continue;
+                }
+
+                $label = (string) ($entry['label'] ?? '');
+
+                $row[] = trim(($label !== '' ? $label.': ' : '').$entry['value']);
+            }
+
+            $rows[] = $row;
+        }
+
+        return $rows;
     }
 
     protected function resolveExporter(): Contracts\Exporter
