@@ -65,6 +65,11 @@ class ConfirmationComponent extends Component
         };
     }
 
+    protected function getColor(): string
+    {
+        return $this->color ?? 'primary';
+    }
+
     public function iconBgClass(): string
     {
         return self::getModalIconBgClass($this->iconColor);

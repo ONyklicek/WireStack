@@ -70,6 +70,15 @@ class ModalComponent extends Component
         return self::getModalIconTextClass($this->iconColor);
     }
 
+    /**
+     * Modal chrome has no accent color of its own; HasColor is consumed
+     * only for its static icon-chip helpers.
+     */
+    protected function getColor(): ?string
+    {
+        return null;
+    }
+
     public function render(): View
     {
         return view('wire-core::modals.modal');
