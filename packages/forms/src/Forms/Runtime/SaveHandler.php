@@ -63,7 +63,7 @@ final class SaveHandler
                 'form.saving',
                 new FormSavingPayload($this->config, $data),
             );
-            $data = is_array($typedPayload->data) ? $typedPayload->data : $data;
+            $data = $typedPayload->data;
         }
 
         // 4. beforeSave hook (void)

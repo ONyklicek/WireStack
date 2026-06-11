@@ -21,7 +21,7 @@ class WireTableServiceProvider extends PackageServiceProvider
         $packager
             ->name('WireTable')
             ->hasShortName('wire-table')
-            ->bootedPackage(function($packager){
+            ->bootedPackage(function ($packager) {
                 app(HandleComponents::class)
                     ->registerPropertySynthesizer(TableStateSynthesizer::class);
             })

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Components;
 
+use Closure;
+
 /**
  * Color picker field supporting hex, hsl, rgb, rgba formats.
  */
