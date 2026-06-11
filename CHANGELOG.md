@@ -2,6 +2,18 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+##[1.2.0]
+
+### Added
+- **Sub-row grand totals in the main footer** – a `query`-scoped summary on a sub-row column (`->summarizeSum('Celkem')`) renders the total of all children across all parents in the main table footer, computed in SQL over the child table. No parent rollup column needed; honours `Filter::subRows()`, `subRowQuery()`, the interactive sub-row filter bar, and the footer scope toggle (all / page / selection parents).
+- **Row grouping with subtotals** – `Table::groupBy('customer')` keeps groups contiguous (group order is prepended to the active sort), renders a header row per group (`groupLabel(string|Closure)`), and adds per-group subtotal rows for every column with a summary (`groupSummaries(false)` to disable); the grand-total footer stays.
+- **Summaries in exports** – CSV, Excel, and PDF exports append the `query`-scoped column summaries (the footer grand totals) after the data rows as `Label: value` cells; opt out with `TableExport::withSummaries(false)`. Custom PDF views receive a new `summaryRows` variable.
+- **`SummaryType` enum** – summary aggregate types are a backed enum (`NyonCode\WireTable\Columns\SummaryType`): `->summarize(SummaryType::Median)` with full IDE completion. The enum owns the per-type semantics (default labels, count formatting, SQL portability, empty-set results). Strings stay accepted and are normalized to the enum; unknown type strings now throw an `InvalidArgumentException` instead of silently rendering an empty footer value.
+
+### Changed
+- **Rollup grand totals compute in SQL.** Summarizing a rollup column (`->sums()` + `->summarizeSum()`) previously loaded every filtered parent row into memory and summed floats in PHP; the rollup alias is now aggregated in SQL over a derived table — no row loading, database decimal precision.
+
+
 ## [1.1.0]
 
 ### Added
@@ -14,6 +26,7 @@ All notable changes to the Wire ecosystem will be documented in this file.
 ### Fixed
 - Multiple-select filter (`SelectFilter::multiple()`) no longer crashes the select view when an array value is active, and renders the selected options correctly.
 - **Action modal forms no longer lose typed text.** Action forms forced `wire:model.live` on every field, so each keystroke pause triggered a full component re-render whose DOM morph raced further typing and erased it. Fields now default to deferred `wire:model` (values are sent with the submit call), eliminating both the text loss and the per-keystroke server roundtrip + table re-render. Fields that drive reactive behavior opt in per field via `->live()`.
+- **Rollup columns export their values.** Exporters resolved cell values only by column name, so a rollup column named differently from its aggregate attribute (e.g. `items_total` vs `items_sum_line_total`) exported empty cells; exporters now read the computed aggregate attribute.
 
 ## [1.0.0] – 2026-06-11
 
