@@ -2,6 +2,33 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [1.0.0] – 2026-06-11
+
+### Added
+- **`wire-sortable` package** – drag & drop row sorting as a table plugin (`SortablePlugin`, `SortableTable`).
+- **Plugin system** in `wire-core` (`PluginManager`) with string and typed hooks (e.g. `form.saving`) and plugin toolbar widgets.
+- **Widget system** with toolbar widgets and workbench previews.
+- **Audit subsystem** (`HasAuditable`) and **authorization trait** (`HasAuthorization`).
+- **Table exports** with optional exporter drivers.
+- **Bundled Heroicons** solid and outline sets (`outline:` prefix) in `DefaultIconSet`; `IconManager` is now resolved via DI.
+- **Table summaries & subrows** – new summary types, numeric formatting with prefix/suffix, footer scope toggle, sortable subrows with actions and eager loading (N+1 fix).
+- **Row polling** (`poll()`) and stable table identifiers for multi-table pages.
+- **Macroable support** and `ActionMacros` cross-package integration.
+- **Relation aggregate columns** (rollup attributes such as `items_sum_total`).
+- **docs-site** with per-field live previews and six new guides: custom fields, testing, theming, cookbook, troubleshooting, upgrade.
+
+### Changed
+- **Design-system consolidation** – canonical color/size vocabulary now lives in `Foundation/Concerns` (`HasColor`, `HasSize`, `HasIcon`); table columns and forms delegate to it, inline SVGs replaced by `<x-wire::icon>`.
+- Nine custom-UI table columns migrated from inline `renderCell()` to Blade partials via `HasView::renderView()`.
+- Forms UI refreshed.
+
+### Fixed
+- Livewire `morph.updating` bug.
+- `poll()` no longer accepts invalid polling interval values.
+- `ImageColumn::size()` LSP violation that caused a fatal error.
+- `ColorPicker::swatches()` `TypeError` when passing a `Closure` (missing import).
+- Latent fatal in `HasColor` consumers – modal view components now define `getColor()`.
+
 ## [0.1.0] – 2026-04-18
 
 ### Added
