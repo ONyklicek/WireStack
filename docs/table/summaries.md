@@ -44,29 +44,36 @@ public function table(Table $table): Table
 
 ## Aggregate Types
 
-The first argument to `summarize()` is the aggregate type. Built-in types:
+The first argument to `summarize()` is the aggregate type — a `SummaryType`
+enum case or its string value. Built-in types:
 
-| Type            | Result                                   | Example output |
-| --------------- | ---------------------------------------- | -------------- |
-| `sum`           | Total of all values                      | `35 900`       |
-| `avg`           | Mean (rounded to 2 decimals)             | `11 966.67`    |
-| `count`         | Number of non-null values                | `30`           |
-| `distinctCount` | Number of distinct values                | `7`            |
-| `min`           | Smallest value                           | `10`           |
-| `max`           | Largest value                            | `90`           |
-| `range`         | `"min – max"` string                     | `10 – 90`      |
-| `median`        | Middle value (avg of two when even)      | `40.0`         |
-| `variance`      | Sample variance (n − 1)                  | `4.57`         |
-| `stddev`        | Sample standard deviation                | `2.14`         |
-| `first`         | First value in the set                   | `Alice`        |
-| `last`          | Last value in the set                    | `Zoe`          |
-| `Closure`       | Custom — `fn ($values, $query) => …`     | anything       |
+| Enum case                      | String          | Result                               | Example output |
+| ------------------------------ | --------------- | ------------------------------------ | -------------- |
+| `SummaryType::Sum`             | `sum`           | Total of all values                  | `35 900`       |
+| `SummaryType::Avg`             | `avg`           | Mean (rounded to 2 decimals)         | `11 966.67`    |
+| `SummaryType::Count`           | `count`         | Number of non-null values            | `30`           |
+| `SummaryType::DistinctCount`   | `distinctCount` | Number of distinct values            | `7`            |
+| `SummaryType::Min`             | `min`           | Smallest value                       | `10`           |
+| `SummaryType::Max`             | `max`           | Largest value                        | `90`           |
+| `SummaryType::Range`           | `range`         | `"min – max"` string                 | `10 – 90`      |
+| `SummaryType::Median`          | `median`        | Middle value (avg of two when even)  | `40.0`         |
+| `SummaryType::Variance`        | `variance`      | Sample variance (n − 1)              | `4.57`         |
+| `SummaryType::Stddev`          | `stddev`        | Sample standard deviation            | `2.14`         |
+| `SummaryType::First`           | `first`         | First value in the set               | `Alice`        |
+| `SummaryType::Last`            | `last`          | Last value in the set                | `Zoe`          |
+| —                              | `Closure`       | Custom — `fn ($values, $query) => …` | anything       |
 
 ```php
+use NyonCode\WireTable\Columns\SummaryType;
+
 TextColumn::make('score')
-    ->summarize('median')
-    ->summarize('stddev');
+    ->summarize(SummaryType::Median)
+    ->summarize('stddev');           // strings are normalized to the enum
 ```
+
+Strings are validated on the spot — an unknown type throws an
+`InvalidArgumentException` listing the valid values, instead of silently
+rendering an empty footer cell.
 
 ### Shortcut Methods
 
@@ -107,6 +114,11 @@ TextColumn::make('price')->summarize('sum', scope: 'page');
 
 `query` is the default. It runs a real database aggregate, so it stays fast even
 across millions of rows — it never loads them into memory.
+
+On a **sub-row column**, the scopes split the same way: `subRows` renders a
+per-parent subtotal inside the expanded panel, while `query` (the default)
+renders a **grand total of all children across all parents** in the main
+footer — see [Grand totals from sub-row columns](#grand-totals-from-sub-row-columns).
 
 ### The Scope Toggle
 
@@ -223,6 +235,50 @@ TextColumn::make('items_total')
 └────────────┴──────────────┘
 ```
 
+The grand total is aggregated **in SQL** over the filtered query (the rollup
+alias is wrapped as a derived table) — parent rows are never loaded into
+memory, and decimal columns sum at database precision.
+
+## Grand Totals From Sub-Row Columns
+
+When the table uses [sub-rows](sub-rows.md), the amount often lives **only on
+the child rows** — there is no parent column to roll up. Give the sub-row
+column a `query`-scoped summary (the default scope) and the grand total of all
+children renders in the main footer, no rollup column needed:
+
+```php
+->subRows('items')
+->subRowColumns([
+    TextColumn::make('product'),
+    TextColumn::make('line_total')
+        ->suffix(' Kč')
+        ->summaryDecimals(0)
+        ->summarizeSum('Subtotal', scope: 'subRows')  // per-parent panel footer
+        ->summarizeSum('Celkem'),                     // main footer grand total
+])
+```
+
+```text
+┌───┬────────────┬─────────────┐
+│ ▸ │ INV-1001   │  …          │
+│ ▸ │ INV-1002   │  …          │
+├───┴────────────┴─────────────┤
+│           Celkem: 35 900 Kč  │ ← all items of all filtered invoices
+└──────────────────────────────┘
+```
+
+The total is computed in SQL over the child table, constrained to the current
+parent set, and honours everything the displayed children honour:
+[`Filter::subRows()`](filters.md#filtering-by-sub-row-values) scoped filters,
+`subRowQuery()`, and the interactive sub-row filter bar. The footer scope
+toggle applies too — `All` totals children of all filtered parents, `This
+page` only children of parents on the current page, `Selection` only children
+of checked parents.
+
+Because sub-row columns don't align with the parent grid, these totals render
+as full-width footer rows. Only direct parent→child relations (`HasMany`,
+`HasOne`, and their morph variants) are supported.
+
 ## Custom Closure Summaries
 
 For anything the built-ins don't cover, pass a closure. It receives a collection
@@ -256,6 +312,11 @@ TextColumn::make('total')
 - **`query` scope** uses a real SQL aggregate (`SUM`, `AVG`, `COUNT`, `MIN`,
   `MAX`, `DISTINCT COUNT`). It clones the filtered query so the table query is
   untouched, and never loads rows into memory.
+- **Rollup columns at `query` scope** wrap the filtered query as a derived
+  table and aggregate the rollup alias in SQL — same guarantee, no row
+  loading, database-precision sums.
+- **Sub-row grand totals** run one SQL aggregate per summarized sub-row column
+  over the child table, constrained to the current parent set.
 - **Statistical types** that aren't portable across drivers (`median`,
   `variance`, `stddev`, `first`, `last`) pull the single column and compute in
   PHP.
@@ -298,5 +359,7 @@ public function table(Table $table): Table
 ## Related Docs
 
 - [Sub-Rows](sub-rows.md) — per-parent subtotals and child summaries
+- [Row Grouping](grouping.md) — per-group subtotal rows
+- [Exports](exports.md) — summaries are appended to CSV/Excel/PDF exports
 - [Columns](columns.md)
 - [Table Overview](overview.md)

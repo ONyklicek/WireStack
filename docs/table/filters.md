@@ -536,8 +536,14 @@ three places at once:
 
 - **parents** — reduced to those having at least one matching child (`whereHas`),
 - **displayed sub-rows** — only matching children render in the expanded panel,
-- **rollup aggregates** — `->sums()` / `->counts()` cells and their footer grand
-  totals count only the matching children.
+- **rollup aggregates** — `->sums()` / `->counts()` cells (over the same
+  relation as `subRows()`) and their footer grand totals count only the
+  matching children,
+- **sub-row grand totals** — `query`-scoped summaries on sub-row columns total
+  only the matching children in the main footer.
+
+See [Sub-Rows — Building the Diagram](sub-rows.md#building-the-diagram) for a
+complete worked example of filters + rollups + totals.
 
 ```php
 $table

@@ -29,6 +29,8 @@ User-facing documentation for the Wire ecosystem.
 | [Filters](table/filters.md) | Built-in filters and custom query behavior |
 | [Actions](table/actions.md) | Row, bulk, and header actions with modal forms |
 | [Exports](table/exports.md) | CSV, Excel, and PDF exports for the current table query |
+| [Summaries](table/summaries.md) | Footer aggregates, scopes, rollups, and grand totals |
+| [Row Grouping](table/grouping.md) | Grouped rows with headers and per-group subtotals |
 | [Sub-Rows](table/sub-rows.md) | Related child records rendered inside a table row |
 | [Notifications](table/notifications.md) | Toasts, action feedback, and delivery drivers |
 | [Advanced Features](table/advanced.md) | Polling, summaries, performance, and debugging |
