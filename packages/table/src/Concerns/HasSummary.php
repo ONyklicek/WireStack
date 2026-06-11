@@ -248,7 +248,7 @@ trait HasSummary
         // (e.g. items_sum_total), not a real DB column. Summarizing one yields a
         // grand total of all sub-rows across the parent set — so route it through
         // the in-memory path using that attribute, even for 'query' scope.
-        $isAggregate = method_exists($this, 'isAggregate') && $this->isAggregate();
+        $isAggregate = $this->isAggregate();
         $columnName = $isAggregate ? ($this->getAggregateAttribute() ?? $this->getName()) : $this->getName();
 
         // For 'query' scope on a real column, use DB aggregation when possible.
@@ -465,11 +465,11 @@ trait HasSummary
      */
     protected function decorateNumeric(string $formatted): string
     {
-        if (isset($this->prefix) && $this->prefix !== null) {
+        if ($this->prefix !== null) {
             $formatted = $this->prefix.$formatted;
         }
 
-        if (isset($this->suffix) && $this->suffix !== null) {
+        if ($this->suffix !== null) {
             $formatted = $formatted.$this->suffix;
         }
 
