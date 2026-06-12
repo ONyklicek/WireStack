@@ -47,6 +47,7 @@ use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Columns\SummaryBatch;
 use NyonCode\WireTable\Export\ExportAction;
 use NyonCode\WireTable\Export\ExportFormat;
 use NyonCode\WireTable\Export\TableExport;
@@ -96,6 +97,17 @@ trait WithTable
 
     /** @var TableQueryService|null Shared query service instance */
     protected ?TableQueryService $queryService = null;
+
+    /** @var Collection|null Memoized selected records — cleared when the selection mutates */
+    protected ?Collection $cachedSelectedRecords = null;
+
+    /**
+     * Memoized page records partitioned by group value, in page order.
+     * Each entry: ['value' => mixed, 'records' => Collection].
+     *
+     * @var array<int, array{value: mixed, records: Collection<int, Model>}>|null
+     */
+    protected ?array $cachedGroupPartitions = null;
 
     /**
      * Initialize table state via StateContainer.
@@ -306,9 +318,79 @@ trait WithTable
             return;
         }
 
+        // Opt-in change detection: skip the full render (query + summaries +
+        // DOM morph) when a cheap checksum of the filtered data is unchanged.
+        if ($this->shouldSkipPollRender()) {
+            if (method_exists($this, 'skipRender')) {
+                $this->skipRender();
+            }
+
+            return;
+        }
+
         // Simply re-render - Livewire will fetch new data
         // The table instance is recreated on each request
         $this->tableInstance = null;
+    }
+
+    /**
+     * Compare the poll checksum with the previous one; true = data unchanged.
+     *
+     * The new checksum is stored in state either way, so the next poll
+     * compares against the latest observed data.
+     */
+    protected function shouldSkipPollRender(): bool
+    {
+        $detector = $this->getTable()->getPollChangeDetection();
+
+        if ($detector === false) {
+            return false;
+        }
+
+        $checksum = $this->computePollChecksum($detector);
+
+        // No checksum available (e.g. model without timestamps) — always render.
+        if ($checksum === null) {
+            return false;
+        }
+
+        $previous = $this->tableState->get('polling.checksum');
+        $this->tableState->set('polling.checksum', $checksum);
+
+        return $previous !== null && $previous === $checksum;
+    }
+
+    /**
+     * Checksum of the current filtered data set.
+     *
+     * Default (true): COUNT(*) + MAX(updated_at) in one query. This misses
+     * changes that don't touch the parent row (e.g. child-table rollups) —
+     * pass a closure to pollChangeDetection() for those cases.
+     */
+    protected function computePollChecksum(bool|callable $detector): ?string
+    {
+        $query = (clone $this->buildTableQuery())->reorder();
+
+        if ($detector !== true) {
+            return (string) $detector($query);
+        }
+
+        $model = $query->getModel();
+
+        if (! $model->usesTimestamps() || $model->getUpdatedAtColumn() === null) {
+            return null;
+        }
+
+        $updatedAt = $query->getQuery()->getGrammar()->wrap(
+            $query->qualifyColumn($model->getUpdatedAtColumn()),
+        );
+
+        $base = $query->toBase();
+        $base->select([]);
+        $base->selectRaw("COUNT(*) as wt_count, MAX({$updatedAt}) as wt_max");
+        $row = $base->first();
+
+        return ($row->wt_count ?? 0).'|'.($row->wt_max ?? '');
     }
 
     /**
@@ -500,6 +582,14 @@ trait WithTable
         $ttl = $table->getQueryCacheTtl();
         $key = $table->getQueryCacheKey() ?? $this->generateQueryCacheKey($query);
 
+        // Pagination is applied inside the cache callback, so the page number is
+        // not part of the SQL/bindings — without this suffix every page would
+        // share one cache entry and serve page 1's results. Applies to custom
+        // queryCacheKey() too, which would otherwise also collide across pages.
+        if ($table->isPaginated()) {
+            $key .= ':page:'.$this->getQueryCachePage();
+        }
+
         return Cache::remember($key, $ttl, function () use ($table, $query) {
             if ($table->isPaginated()) {
                 return $this->paginateQuery($table, $query);
@@ -507,6 +597,21 @@ trait WithTable
 
             return $query->get();
         });
+    }
+
+    /**
+     * Current page for the query cache key suffix.
+     *
+     * Cursor pagination encodes its position in the cursor parameter rather
+     * than a page number, so the raw request value is used there.
+     */
+    protected function getQueryCachePage(): string
+    {
+        if ($this->getTable()->getPaginationMode() === 'cursor') {
+            return (string) request()->query('cursor', '');
+        }
+
+        return (string) $this->getPage();
     }
 
     /**
@@ -1188,11 +1293,17 @@ trait WithTable
         $columns = $table->getColumns();
         $summaries = [];
 
+        // Batch all SQL-native query-scope aggregates into at most two queries
+        // instead of one query per summary per column on every render.
+        $batched = $query !== null ? SummaryBatch::compute($columns, $query) : [];
+
         foreach ($columns as $column) {
             if ($column->hasSummary()) {
                 $summaries[$column->getName()] = $column->computeSummaries(
                     $inMemoryRecords,
                     $query,
+                    null,
+                    $batched[$column->getName()] ?? [],
                 );
             }
         }
@@ -1251,11 +1362,7 @@ trait WithTable
             return [];
         }
 
-        $records = $this->getTableRecords();
-
-        $groupRecords = ($records instanceof Collection ? $records : collect($records->items()))
-            ->filter(fn ($record) => $table->getGroupValue($record) === $groupValue)
-            ->values();
+        $groupRecords = $this->getGroupRecords($groupValue);
 
         $summaries = [];
 
@@ -1274,6 +1381,54 @@ trait WithTable
         }
 
         return $summaries;
+    }
+
+    /**
+     * Records of one group on the current page. The page is partitioned once
+     * per request — group subtotals are rendered per group, and re-filtering
+     * the whole page for each of them is O(groups × page size).
+     *
+     * @return Collection<int, Model>
+     */
+    protected function getGroupRecords(mixed $groupValue): Collection
+    {
+        if ($this->cachedGroupPartitions === null) {
+            $table = $this->getTable();
+            $records = $this->getTableRecords();
+            $records = $records instanceof Collection ? $records : collect($records->items());
+
+            $partitions = [];
+
+            foreach ($records as $record) {
+                $value = $table->getGroupValue($record);
+                $matched = false;
+
+                // Group values may be objects (enums, dates) — match strictly
+                // instead of using them as array keys. No references needed:
+                // 'records' is a Collection object, push() mutates in place.
+                foreach ($partitions as $partition) {
+                    if ($partition['value'] === $value) {
+                        $partition['records']->push($record);
+                        $matched = true;
+                        break;
+                    }
+                }
+
+                if (! $matched) {
+                    $partitions[] = ['value' => $value, 'records' => collect([$record])];
+                }
+            }
+
+            $this->cachedGroupPartitions = $partitions;
+        }
+
+        foreach ($this->cachedGroupPartitions as $partition) {
+            if ($partition['value'] === $groupValue) {
+                return $partition['records'];
+            }
+        }
+
+        return collect();
     }
 
     /**
@@ -1322,8 +1477,13 @@ trait WithTable
         }
 
         $totals = [];
+        $subRowColumns = $this->getTable()->getSubRowColumns();
 
-        foreach ($this->getTable()->getSubRowColumns() as $column) {
+        // The child query is identical for every sub-row column — batch the
+        // SQL-native aggregates into one query instead of one per summary.
+        $batched = SummaryBatch::compute($subRowColumns, $childQuery, ['query']);
+
+        foreach ($subRowColumns as $column) {
             if (! $column->hasSummaryInScope('query')) {
                 continue;
             }
@@ -1332,6 +1492,7 @@ trait WithTable
                 collect(),
                 clone $childQuery,
                 ['query'],
+                $batched[$column->getName()] ?? [],
             );
         }
 
@@ -1500,6 +1661,7 @@ trait WithTable
         }
 
         $this->tableState->set('selection.records', $selected);
+        $this->cachedSelectedRecords = null;
     }
 
     /**
@@ -1516,6 +1678,7 @@ trait WithTable
         }
 
         $this->tableState->set('selection.records', $selected);
+        $this->cachedSelectedRecords = null;
     }
 
     /**
@@ -1586,13 +1749,22 @@ trait WithTable
     public function deselectAllRecords(): void
     {
         $this->tableState->set('selection.records', []);
+        $this->cachedSelectedRecords = null;
     }
 
     /**
-     * Get Collection of selected records (fetched from database)
+     * Get Collection of selected records (fetched from database).
+     *
+     * Memoized per request — selection-scope summaries, grand totals, and bulk
+     * modals may all ask for the set within one render. The memo is cleared
+     * whenever the selection mutates or the table cache is invalidated.
      */
     public function getSelectedRecords(): Collection
     {
+        if ($this->cachedSelectedRecords !== null) {
+            return $this->cachedSelectedRecords;
+        }
+
         $selectedKeys = $this->getSelectedRecordKeys();
 
         if (empty($selectedKeys)) {
@@ -1626,7 +1798,7 @@ trait WithTable
             };
         }
 
-        return $query->get();
+        return $this->cachedSelectedRecords = $query->get();
     }
 
     // ==========================================
@@ -2021,6 +2193,8 @@ trait WithTable
         $this->cachedRecords = null;
         $this->cachedQuery = null;
         $this->queryService = null;
+        $this->cachedSelectedRecords = null;
+        $this->cachedGroupPartitions = null;
 
         event(new TableRefreshed(static::class));
     }
@@ -2971,8 +3145,11 @@ trait WithTable
      */
     public function refreshRow(mixed $recordKey): void
     {
-        // Invalidate cached records so next render fetches fresh data
+        // Invalidate cached records so next render fetches fresh data.
+        // cachedQuery is intentionally kept — the query plan doesn't change,
+        // only the row data; re-running the planner would be wasted work.
         $this->cachedRecords = null;
+        $this->cachedGroupPartitions = null;
     }
 
     // ==========================================

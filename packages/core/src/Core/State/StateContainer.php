@@ -32,11 +32,10 @@ final class StateContainer implements \ArrayAccess
      */
     public function get(string $path, mixed $default = null): mixed
     {
-        if (! StatePathResolver::has($this->state, $path)) {
-            return $default;
-        }
-
-        return StatePathResolver::resolve($this->state, $path);
+        // Single traversal — Arr::get returns the default only for missing
+        // paths, so a stored null still wins over the default (same semantics
+        // as the previous has() + resolve() double walk).
+        return StatePathResolver::resolve($this->state, $path, $default);
     }
 
     /**

@@ -17,11 +17,14 @@ final class StatePathResolver
     /**
      * Get a value at the given dot-notation path.
      *
+     * The default is returned only when the path does not exist — an
+     * explicitly stored null is returned as null (Arr::get semantics).
+     *
      * @param  array<string, mixed>  $state
      */
-    public static function resolve(array $state, string $path): mixed
+    public static function resolve(array $state, string $path, mixed $default = null): mixed
     {
-        return Arr::get($state, $path);
+        return Arr::get($state, $path, $default);
     }
 
     /**

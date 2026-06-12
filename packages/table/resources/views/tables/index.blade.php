@@ -16,10 +16,28 @@
     $pollingConfig = $component->getTablePollingConfig();
     $pollingAttribute = $component->getTablePollingAttribute();
 
+    // Table state — read once via the state container; the legacy magic
+    // properties ($component->tableFilters, …) build the deprecation map on
+    // every access and must not be used in per-row/per-column loops.
+    $tableSearch = $component->tableState->get('search');
+    $tableFilters = $component->tableState->get('filters', []) ?? [];
+    $columnFilterValues = $component->tableState->get('columnFilters', []) ?? [];
+    $selectedRecords = $component->tableState->get('selection.records', []) ?? [];
+    $sortColumn = $component->tableState->get('sort.column');
+    $sortDirection = $component->tableState->get('sort.direction', 'asc');
+    $flattenMode = (bool) $component->tableState->get('rows.flattenMode');
+    $activeTableFilters = array_filter($tableFilters);
+    $activeColumnFilters = array_filter($columnFilterValues);
+
+    $actions = $table->getActions();
+    $bulkActions = $table->getBulkActions();
+    $headerActions = $table->getHeaderActions();
+    $filters = $table->getFilters();
+
     $hasActions = $table->hasActions();
-    $hasBulkActions = !empty($table->getBulkActions());
-    $hasHeaderActions = !empty($table->getHeaderActions());
-    $hasFilters = !empty($table->getFilters());
+    $hasBulkActions = !empty($bulkActions);
+    $hasHeaderActions = !empty($headerActions);
+    $hasFilters = !empty($filters);
     $isSelectable = $table->isSelectable();
     $isPaginated = $table->isPaginated();
     $visibleColumns = array_filter($table->getColumns(), fn($c) => $c->canView() && $component->isColumnVisible($c->getName()));
@@ -75,7 +93,7 @@
     }
 
     // Check if search/filter is active but no results
-    $hasActiveFilters = !empty($component->tableSearch) || !empty(array_filter($component->tableFilters ?? [])) || !empty(array_filter($component->columnFilters ?? []));
+    $hasActiveFilters = !empty($tableSearch) || $activeTableFilters !== [] || $activeColumnFilters !== [];
     $recordCount = $records instanceof LengthAwarePaginator ? $records->total() : $records->count();
     $isEmptyDueToFilter = $hasActiveFilters && $recordCount === 0;
 @endphp
@@ -175,10 +193,10 @@
                                         >
                                             <x-wire::icon name="outline:funnel" size="h-4 w-4" />
                                             <span>{{ __('wire-table::messages.filters') }}</span>
-                                            @if(!empty(array_filter($component->tableFilters ?? [])))
+                                            @if($activeTableFilters !== [])
                                                 <span
                                                         class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-primary-600 rounded-full">
-                                        {{ count(array_filter($component->tableFilters)) }}
+                                        {{ count($activeTableFilters) }}
                                     </span>
                                             @endif
                                         </button>
@@ -193,9 +211,9 @@
                                                 x-cloak
                                         >
                                             <div class="p-4 space-y-4">
-                                                @foreach($table->getFilters() as $filter)
+                                                @foreach($filters as $filter)
                                                     @if($filter->canView())
-                                                        {!! $filter->render($component->tableFilters[$filter->getName()] ?? null) !!}
+                                                        {!! $filter->render($tableFilters[$filter->getName()] ?? null) !!}
                                                     @endif
                                                 @endforeach
 
@@ -233,7 +251,7 @@
 
                                 {{-- Header Actions --}}
                                 @if($hasHeaderActions)
-                                    @foreach($table->getHeaderActions() as $headerAction)
+                                    @foreach($headerActions as $headerAction)
                                         @if($headerAction->canExecute())
                                             {!! $headerAction->render() !!}
                                         @endif
@@ -329,7 +347,7 @@
                     @endif
 
                     {{-- Selection Bar --}}
-                    @if($isSelectable && count($component->selectedRecords) > 0)
+                    @if($isSelectable && count($selectedRecords) > 0)
                         <div
                                 class="px-4 lg:px-6 py-3 bg-primary-50 dark:bg-primary-900/20 border-b border-primary-100 dark:border-primary-800/30">
                             <div class="flex items-center justify-between">
@@ -337,17 +355,17 @@
                                     <div
                                             class="flex items-center justify-center w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-800/50">
                                 <span
-                                        class="text-sm font-semibold text-primary-700 dark:text-primary-300">{{ count($component->selectedRecords) }}</span>
+                                        class="text-sm font-semibold text-primary-700 dark:text-primary-300">{{ count($selectedRecords) }}</span>
                                     </div>
                                     <span class="text-sm font-medium text-primary-700 dark:text-primary-300">
-                            {{ trans_choice('{1} record selected|[2,*] records selected', count($component->selectedRecords)) }}
+                            {{ trans_choice('{1} record selected|[2,*] records selected', count($selectedRecords)) }}
                         </span>
                                 </div>
 
                                 <div class="flex items-center gap-2">
                                     {{-- Bulk Actions in selection bar --}}
                                     @if($hasBulkActions)
-                                        @foreach($table->getBulkActions() as $bulkAction)
+                                        @foreach($bulkActions as $bulkAction)
                                             @if($bulkAction->canExecute())
                                                 {!! $bulkAction->render() !!}
                                             @endif
@@ -419,37 +437,35 @@
                                     @endif
 
                                     {{-- Column Headers --}}
-                                    @foreach($table->getColumns() as $column)
-                                        @if($column->canView() && $component->isColumnVisible($column->getName()))
-                                            <th
-                                                    scope="col"
-                                                    class="{{ $headerPadding }} text-{{ $column->getAlignment() }} font-semibold {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $column->getResponsiveClasses() }}"
-                                                    @if($column->getWidth()) style="width: {{ $column->getWidth() }}" @endif
-                                            >
-                                                @if($column->isSortable() && $table->isSortable())
-                                                    <button
-                                                            type="button"
-                                                            wire:click="sortTable('{{ $column->getName() }}')"
-                                                            class="group inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200"
-                                                    >
-                                                        <span>{{ $column->getLabel() }}</span>
-                                                        <span class="flex-none">
-                                                    @if($component->tableSortColumn === $column->getName())
-                                                                @if($component->tableSortDirection === 'asc')
-                                                                    <x-wire::icon name="outline:chevron-up" size="h-4 w-4" class="text-gray-500 dark:text-gray-400" />
-                                                                @else
-                                                                    <x-wire::icon name="outline:chevron-down" size="h-4 w-4" class="text-gray-500 dark:text-gray-400" />
-                                                                @endif
+                                    @foreach($visibleColumns as $column)
+                                        <th
+                                                scope="col"
+                                                class="{{ $headerPadding }} text-{{ $column->getAlignment() }} font-semibold {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $column->getResponsiveClasses() }}"
+                                                @if($column->getWidth()) style="width: {{ $column->getWidth() }}" @endif
+                                        >
+                                            @if($column->isSortable() && $table->isSortable())
+                                                <button
+                                                        type="button"
+                                                        wire:click="sortTable('{{ $column->getName() }}')"
+                                                        class="group inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200"
+                                                >
+                                                    <span>{{ $column->getLabel() }}</span>
+                                                    <span class="flex-none">
+                                                @if($sortColumn === $column->getName())
+                                                            @if($sortDirection === 'asc')
+                                                                <x-wire::icon name="outline:chevron-up" size="h-4 w-4" class="text-gray-500 dark:text-gray-400" />
                                                             @else
-                                                                <x-wire::icon name="outline:chevron-up-down" size="h-4 w-4" class="text-gray-500 dark:text-gray-400 opacity-0 group-hover:opacity-100" />
+                                                                <x-wire::icon name="outline:chevron-down" size="h-4 w-4" class="text-gray-500 dark:text-gray-400" />
                                                             @endif
-                                                </span>
-                                                    </button>
-                                                @else
-                                                    {{ $column->getLabel() }}
-                                                @endif
-                                            </th>
-                                        @endif
+                                                        @else
+                                                            <x-wire::icon name="outline:chevron-up-down" size="h-4 w-4" class="text-gray-500 dark:text-gray-400 opacity-0 group-hover:opacity-100" />
+                                                        @endif
+                                            </span>
+                                                </button>
+                                            @else
+                                                {{ $column->getLabel() }}
+                                            @endif
+                                        </th>
                                     @endforeach
 
                                     {{-- Actions Header (End Position - Default) --}}
@@ -481,20 +497,18 @@
                                             <th class="{{ $headerPadding }}"></th>
                                         @endif
 
-                                        @foreach($table->getColumns() as $column)
-                                            @if($column->canView() && $component->isColumnVisible($column->getName()))
-                                                <th class="{{ $headerPadding }}">
-                                                    @if($column->isFilterable())
-                                                        {!! $column->renderFilter($component->columnFilters[$column->getName()] ?? null) !!}
-                                                    @endif
-                                                </th>
-                                            @endif
+                                        @foreach($visibleColumns as $column)
+                                            <th class="{{ $headerPadding }}">
+                                                @if($column->isFilterable())
+                                                    {!! $column->renderFilter($columnFilterValues[$column->getName()] ?? null) !!}
+                                                @endif
+                                            </th>
                                         @endforeach
 
                                         {{-- Actions Filter Cell (End Position) --}}
                                         @if($hasActions && $actionsPosition === 'end')
                                             <th class="{{ $headerPadding }} text-right">
-                                                @if(!empty(array_filter($component->columnFilters ?? [])))
+                                                @if($activeColumnFilters !== [])
                                                     <button
                                                             type="button"
                                                             wire:click="resetColumnFilters"
@@ -572,7 +586,7 @@
                                             <td class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }}">
                                                 <div
                                                         class="flex items-center gap-1 {{ $actionsAlignment === 'center' ? 'justify-center' : ($actionsAlignment === 'right' ? 'justify-end' : 'justify-start') }}">
-                                                    @foreach($table->getActions() as $action)
+                                                    @foreach($actions as $action)
                                                         {!! $action->render($record) !!}
                                                     @endforeach
                                                 </div>
@@ -580,19 +594,17 @@
                                         @endif
 
                                         {{-- Column Cells --}}
-                                        @foreach($table->getColumns() as $column)
-                                            @if($column->canView() && $component->isColumnVisible($column->getName()))
-                                                <td class="{{ $cellPadding }} {{ $column->shouldWrap() ? '' : 'whitespace-nowrap' }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} text-{{ $column->getAlignment() }} dark:text-white {{ $column->getResponsiveClasses() }}">
-                                                    @if($recordUrl && !$column->isEditable())
-                                                        <a href="{{ $recordUrl }}"
-                                                           class="hover:text-primary-600 dark:hover:text-primary-400">
-                                                            {!! $column->hasResponsiveDisplay() ? $column->renderResponsiveCell($record) : $column->renderCell($record) !!}
-                                                        </a>
-                                                    @else
+                                        @foreach($visibleColumns as $column)
+                                            <td class="{{ $cellPadding }} {{ $column->shouldWrap() ? '' : 'whitespace-nowrap' }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} text-{{ $column->getAlignment() }} dark:text-white {{ $column->getResponsiveClasses() }}">
+                                                @if($recordUrl && !$column->isEditable())
+                                                    <a href="{{ $recordUrl }}"
+                                                       class="hover:text-primary-600 dark:hover:text-primary-400">
                                                         {!! $column->hasResponsiveDisplay() ? $column->renderResponsiveCell($record) : $column->renderCell($record) !!}
-                                                    @endif
-                                                </td>
-                                            @endif
+                                                    </a>
+                                                @else
+                                                    {!! $column->hasResponsiveDisplay() ? $column->renderResponsiveCell($record) : $column->renderCell($record) !!}
+                                                @endif
+                                            </td>
                                         @endforeach
 
                                         {{-- Actions Cell (End Position - Default) --}}
@@ -600,7 +612,7 @@
                                             <td class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }}">
                                                 <div
                                                         class="flex items-center gap-1 {{ $actionsAlignment === 'center' ? 'justify-center' : ($actionsAlignment === 'right' ? 'justify-end' : 'justify-start') }}">
-                                                    @foreach($table->getActions() as $action)
+                                                    @foreach($actions as $action)
                                                         {!! $action->render($record) !!}
                                                     @endforeach
                                                 </div>
@@ -609,7 +621,7 @@
                                     </tr>
 
                                     {{-- Sub-rows --}}
-                                    @if($hasSubRows && ($component->isRowExpanded($recordKey) || $component->flattenMode))
+                                    @if($hasSubRows && ($component->isRowExpanded($recordKey) || $flattenMode))
                                         @php
                                             $subRows = $component->getSubRows($record);
                                         @endphp
@@ -619,6 +631,7 @@
                                             'record' => $record,
                                             'recordKey' => $recordKey,
                                             'subRows' => $subRows,
+                                            'visibleSubRowColumns' => $visibleSubRowColumns,
                                             'colSpan' => $colSpan,
                                             'cellPadding' => $cellPadding,
                                             'isBordered' => $isBordered,
@@ -736,7 +749,7 @@
                             @forelse($records as $record)
                                 @php
                                     $recordKey = $record->{$table->getPrimaryKey()};
-                                    $isSelected = in_array((string) $recordKey, $component->selectedRecords);
+                                    $isSelected = in_array((string) $recordKey, $selectedRecords);
                                     $recordUrl = $table->getRecordUrl($record);
                                 @endphp
                                 <div
@@ -781,7 +794,7 @@
 
                                         @if($hasActions)
                                             <div class="flex items-center gap-1 flex-shrink-0 -mr-1">
-                                                @foreach($table->getActions() as $action)
+                                                @foreach($actions as $action)
                                                     {!! $action->render($record) !!}
                                                 @endforeach
                                             </div>
@@ -814,7 +827,7 @@
                                     @endif
 
                                     {{-- Sub-rows (Mobile) --}}
-                                    @if($hasSubRows && ($component->isRowExpanded($recordKey) || $component->flattenMode))
+                                    @if($hasSubRows && ($component->isRowExpanded($recordKey) || $flattenMode))
                                         @php $subRows = $component->getSubRows($record); @endphp
                                         @if($subRows->isNotEmpty())
                                             <div class="border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/80 dark:bg-gray-800/50">

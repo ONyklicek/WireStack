@@ -22,11 +22,14 @@
 @else
 @php
     $subColumns = $table->getSubRowColumns();
+    // canView() may hit the Gate — resolve visibility once per parent, not per cell.
+    $visibleSubRowColumns ??= array_filter($subColumns, fn ($c) => $c->canView());
     $subRowActions = $table->getSubRowActions();
     $hasSubRowActions = $table->hasSubRowActions();
     $isFilterable = $table->isSubRowsFilterable();
     $isSortable = $table->isSubRowsSortable();
     $activeSort = $component->getSubRowSort();
+    $subRowFilterValues = $component->tableState->get('rows.subRowFilters', []) ?? [];
     $subRowSummaries = $component->computeTableSummaries('subRows', $record, $subRows);
     $hasSubSummaries = !empty($subRowSummaries);
 
@@ -37,8 +40,7 @@
     $remaining = max(0, $totalSubRows - $subRows->count());
 
     // Visible column count for colspans (+1 indent spacer, +1 optional actions cell).
-    $visibleSubColCount = collect($subColumns)->filter(fn ($c) => $c->canView())->count();
-    $totalColCount = $visibleSubColCount + 1 + ($hasSubRowActions ? 1 : 0);
+    $totalColCount = count($visibleSubRowColumns) + 1 + ($hasSubRowActions ? 1 : 0);
 @endphp
 
 <tr wire:key="sub-rows-{{ $recordKey }}">
@@ -51,11 +53,11 @@
                     @foreach($subColumns as $subCol)
                         @if($subCol->isFilterable())
                             <div class="w-40">
-                                {!! $subCol->renderFilter($component->subRowFilters[$subCol->getName()] ?? null) !!}
+                                {!! $subCol->renderFilter($subRowFilterValues[$subCol->getName()] ?? null) !!}
                             </div>
                         @endif
                     @endforeach
-                    @if(!empty($component->subRowFilters))
+                    @if(!empty($subRowFilterValues))
                         <button type="button" wire:click="resetSubRowFilters" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                             ✕ {{ __('wire-table::messages.reset') }}
                         </button>
@@ -69,10 +71,9 @@
                     <tr class="text-left text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         {{-- Indent spacer --}}
                         <th class="w-8"></th>
-                        @foreach($subColumns as $subCol)
-                            @if($subCol->canView())
-                                @php $colSortable = $isSortable && $table->isSubRowColumnSortable($subCol->getName()); @endphp
-                                <th class="px-3 py-2 font-medium">
+                        @foreach($visibleSubRowColumns as $subCol)
+                            @php $colSortable = $isSortable && $table->isSubRowColumnSortable($subCol->getName()); @endphp
+                            <th class="px-3 py-2 font-medium">
                                     @if($colSortable)
                                         @php $isActive = $activeSort && $activeSort['column'] === $subCol->getName(); @endphp
                                         <button type="button"
@@ -95,7 +96,6 @@
                                         {{ $subCol->getLabel() }}
                                     @endif
                                 </th>
-                            @endif
                         @endforeach
                         @if($hasSubRowActions)
                             <th class="px-3 py-2 font-medium text-right">{{ __('wire-table::messages.actions') }}</th>
@@ -106,12 +106,10 @@
                     @forelse($subRows as $subRow)
                         <tr class="hover:bg-gray-100/50 dark:hover:bg-gray-700/20" wire:key="sub-row-{{ $recordKey }}-{{ $subRow->getKey() }}">
                             <td class="w-8"></td>
-                            @foreach($subColumns as $subCol)
-                                @if($subCol->canView())
-                                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300 {{ $subCol->shouldWrap() ? '' : 'whitespace-nowrap' }}">
-                                        {!! $subCol->renderCell($subRow) !!}
-                                    </td>
-                                @endif
+                            @foreach($visibleSubRowColumns as $subCol)
+                                <td class="px-3 py-2 text-gray-700 dark:text-gray-300 {{ $subCol->shouldWrap() ? '' : 'whitespace-nowrap' }}">
+                                    {!! $subCol->renderCell($subRow) !!}
+                                </td>
                             @endforeach
                             @if($hasSubRowActions)
                                 <td class="px-3 py-2 whitespace-nowrap text-right">
@@ -158,19 +156,17 @@
                         @for($i = 0; $i < $maxRows; $i++)
                             <tr class="text-xs font-medium text-gray-600 dark:text-gray-400">
                                 <td class="w-8"></td>
-                                @foreach($subColumns as $subCol)
-                                    @if($subCol->canView())
-                                        @php
-                                            $colSummaries = $subRowSummaries[$subCol->getName()] ?? [];
-                                            $entry = $colSummaries[$i] ?? null;
-                                        @endphp
-                                        <td class="px-3 py-1.5">
-                                            @if($entry)
-                                                <span class="text-gray-400">{{ $entry['label'] }}:</span>
-                                                <span class="text-gray-700 dark:text-gray-200 font-semibold">{{ $entry['value'] }}</span>
-                                            @endif
-                                        </td>
-                                    @endif
+                                @foreach($visibleSubRowColumns as $subCol)
+                                    @php
+                                        $colSummaries = $subRowSummaries[$subCol->getName()] ?? [];
+                                        $entry = $colSummaries[$i] ?? null;
+                                    @endphp
+                                    <td class="px-3 py-1.5">
+                                        @if($entry)
+                                            <span class="text-gray-400">{{ $entry['label'] }}:</span>
+                                            <span class="text-gray-700 dark:text-gray-200 font-semibold">{{ $entry['value'] }}</span>
+                                        @endif
+                                    </td>
                                 @endforeach
                                 @if($hasSubRowActions)
                                     <td class="px-3 py-1.5"></td>

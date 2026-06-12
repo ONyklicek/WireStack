@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireTable\Columns\SummaryBatch;
 use NyonCode\WireTable\Columns\SummaryType;
 
 /**
@@ -218,13 +219,17 @@ trait HasSummary
      * @param  Builder<Model>|null  $query  Full query (for 'query' scope)
      * @param  array<int, string>|null  $scopes  When given, only summaries declared
      *                                           with one of these scopes are computed.
+     * @param  array<int, mixed>  $precomputed  Values already computed in a batched
+     *                                          aggregate query, keyed by summary index
+     *                                          (see SummaryBatch). Skips the per-summary
+     *                                          query; formatting still applies here.
      * @return array<int, array<string, mixed>>
      */
-    public function computeSummaries(Collection $pageRecords, ?Builder $query = null, ?array $scopes = null): array
+    public function computeSummaries(Collection $pageRecords, ?Builder $query = null, ?array $scopes = null, array $precomputed = []): array
     {
         $results = [];
 
-        foreach ($this->summaries as $summary) {
+        foreach ($this->summaries as $index => $summary) {
             if ($scopes !== null && ! in_array($summary['scope'], $scopes, true)) {
                 continue;
             }
@@ -234,7 +239,9 @@ trait HasSummary
             $format = $summary['format'];
             $when = $summary['when'] ?? null;
 
-            $value = $this->computeSingleSummary($type, $scope, $pageRecords, $query, $when);
+            $value = array_key_exists($index, $precomputed)
+                ? $precomputed[$index]
+                : $this->computeSingleSummary($type, $scope, $pageRecords, $query, $when);
 
             if ($format) {
                 // Explicit formatter wins — full control to the caller.
@@ -418,6 +425,34 @@ trait HasSummary
         }
 
         return $this->formatRange($min, $max);
+    }
+
+    /**
+     * Normalize a raw batched SQL aggregate so the result matches what the
+     * per-summary query path returns for the same summary:
+     *
+     *  - Sum: Builder::sum() coalesces an empty set to 0 (`?: 0`)
+     *  - Avg on rollup columns: computeAggregateQuerySummary() rounds to 2
+     *  - Count/DistinctCount: Builder::count() casts to int
+     *  - Range: formatted "min – max" string ('–' for an empty rollup set)
+     *
+     * @internal Used by {@see SummaryBatch}.
+     */
+    public function normalizeBatchedSummaryValue(SummaryType $type, mixed $raw): mixed
+    {
+        $isAggregate = $this->isAggregate();
+
+        return match ($type) {
+            SummaryType::Sum => $raw ?: 0,
+            SummaryType::Avg => $isAggregate
+                ? ($raw !== null ? round((float) $raw, 2) : null)
+                : $raw,
+            SummaryType::Count, SummaryType::DistinctCount => (int) $raw,
+            SummaryType::Range => ($isAggregate && $raw['min'] === null && $raw['max'] === null)
+                ? '–'
+                : $this->formatRange($raw['min'], $raw['max']),
+            default => $raw,
+        };
     }
 
     /**

@@ -290,6 +290,29 @@ $table->poll('10s')->pollMethod('refreshData')
 
 Instead of full re-render, calls a specific Livewire method.
 
+### Change Detection (Skip Unchanged Renders)
+
+```php
+$table->poll('5s')->pollChangeDetection()
+```
+
+Each poll normally re-runs the full query, summaries, and DOM morph even when
+nothing changed. With change detection enabled, a cheap checksum
+(`COUNT(*)` + `MAX(updated_at)` of the filtered query, one SQL query) is
+compared between polls — an unchanged checksum skips the render entirely.
+
+Models without timestamps fall back to always rendering. When parent
+timestamps don't capture relevant changes (e.g. rollup sums over child rows),
+provide a custom checksum:
+
+```php
+$table->poll('5s')
+      ->pollChangeDetection(fn ($query) => (string) $query->max('synced_at'))
+```
+
+The closure receives the filtered query (without ordering) and must return a
+string that changes whenever a re-render is needed.
+
 ### Row/Column Polling
 
 Use `PollColumn` for per-cell live updates without refreshing the entire table:
@@ -312,6 +335,7 @@ See [Columns — PollColumn](columns.md#pollcolumn) for the complete PollColumn 
 ->pollOnlyVisible(bool $onlyVisible = true)
 ->pollWhen(Closure $condition)           // fn() => bool
 ->pollMethod(string $method)             // Livewire method name
+->pollChangeDetection(bool|Closure $detector = true) // skip render when data unchanged
 ```
 
 ---
@@ -394,7 +418,7 @@ $table->cacheQuery(ttl: 60)                    // 60 seconds, auto-generated key
 $table->cacheQuery(ttl: 300, key: 'users')     // 5 minutes, custom key
 ```
 
-Cache key includes a hash of the current state (search, filters, sort, page), so different states cache independently.
+Cache key includes a hash of the current state (search, filters, sort, page), so different states cache independently. The current page is always part of the key — including with a custom `key:` — since pagination is applied inside the cached callback.
 
 Uses `Cache::remember()` — works with any Laravel cache driver.
 

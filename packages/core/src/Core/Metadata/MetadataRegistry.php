@@ -145,6 +145,17 @@ final class MetadataRegistry
         return $this->accessors[$modelClass] ?? [];
     }
 
+    /**
+     * Whether any column or accessor metadata has been registered at all.
+     *
+     * Capability auto-resolution walks every table column against this
+     * metadata; when none exists the walk can be skipped entirely.
+     */
+    public function hasAttributeMetadata(): bool
+    {
+        return $this->columns !== [] || $this->accessors !== [];
+    }
+
     public function flush(): void
     {
         $this->models = [];
