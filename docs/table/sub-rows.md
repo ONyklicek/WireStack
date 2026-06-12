@@ -104,7 +104,11 @@ is shared across all expanded parents.
 
 When a limit is set and more children exist, a **"Show N more"** button renders at
 the bottom of the child table. Clicking it reveals the full set for that parent
-(tracked per-parent in state), while the count stays accurate:
+(tracked per-parent in state), while the count stays accurate.
+
+The eager load fetches only `limit` rows per parent (native per-parent
+eager-load limit) plus one count query for the exact totals — full child sets
+are never loaded into memory unless a parent is expanded via "Show more":
 
 ```text
 Product        Qty   Line total

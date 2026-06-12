@@ -320,7 +320,13 @@ Search uses a database-aware strategy:
 ->selectable(bool $selectable = true)
 ```
 
-When enabled, checkboxes appear. Selected record keys are stored in `$selectedRecords`. Bulk actions operate on the selection.
+When enabled, checkboxes appear. Selected record keys are stored in `tableState.selection.records` (legacy alias `$selectedRecords`). Bulk actions operate on the selection.
+
+Selection is managed client-side (Alpine) — checking rows, select-all, and the
+selection bar react instantly without a server roundtrip. The state syncs with
+the next request, so bulk actions always see the current selection; tables with
+a summary footer commit selection changes automatically (debounced) so
+selection-scope totals stay live.
 
 ### Appearance
 
