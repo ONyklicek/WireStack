@@ -22,7 +22,6 @@
     $tableSearch = $component->tableState->get('search');
     $tableFilters = $component->tableState->get('filters', []) ?? [];
     $columnFilterValues = $component->tableState->get('columnFilters', []) ?? [];
-    $selectedRecords = $component->tableState->get('selection.records', []) ?? [];
     $sortColumn = $component->tableState->get('sort.column');
     $sortDirection = $component->tableState->get('sort.direction', 'asc');
     $flattenMode = (bool) $component->tableState->get('rows.flattenMode');
@@ -39,6 +38,19 @@
     $hasHeaderActions = !empty($headerActions);
     $hasFilters = !empty($filters);
     $isSelectable = $table->isSelectable();
+    $hasSummaries = $component->tableHasSummaries();
+
+    // Selection is managed client-side (Alpine) and entangled deferred — a
+    // checkbox click costs no server roundtrip. When the footer renders
+    // summaries, changes are committed (debounced) so selection-scope totals
+    // and the scope toggle stay correct.
+    $pageRecordKeys = [];
+    if ($isSelectable) {
+        foreach ($records as $pageRecord) {
+            $pageRecordKeys[] = (string) $pageRecord->{$table->getPrimaryKey()};
+        }
+    }
+    $selectionSyncLive = $isSelectable && $hasSummaries;
     $isPaginated = $table->isPaginated();
     $visibleColumns = array_filter($table->getColumns(), fn($c) => $c->canView() && $component->isColumnVisible($c->getName()));
     $hasVisibleColumns = count($visibleColumns) > 0;
@@ -158,7 +170,40 @@
         <div {!! $pollingAttribute !!}>
             @endif
 
-            <div class="w-full" wire:key="table-wrapper">
+            <div
+                    class="w-full"
+                    wire:key="table-wrapper"
+                    @if($isSelectable)
+                        data-page-keys="{{ json_encode($pageRecordKeys) }}"
+                        x-data="{
+                            selected: $wire.entangle('tableState.selection.records'),
+                            commitTimer: null,
+                            get pageKeys() { return JSON.parse(this.$root.dataset.pageKeys || '[]'); },
+                            get allSelected() { return this.pageKeys.length > 0 && this.pageKeys.every(k => this.selected.includes(k)); },
+                            get someSelected() { return this.selected.length > 0 && !this.allSelected; },
+                            isSelected(key) { return this.selected.includes(key); },
+                            toggle(key) {
+                                this.selected = this.isSelected(key)
+                                    ? this.selected.filter(k => k !== key)
+                                    : [...this.selected, key];
+                                this.queueCommit();
+                            },
+                            toggleAll() {
+                                this.selected = (this.allSelected || this.someSelected) ? [] : [...this.pageKeys];
+                                this.queueCommit();
+                            },
+                            deselectAll() {
+                                this.selected = [];
+                                this.queueCommit();
+                            },
+                            queueCommit() {
+                                if (! {{ $selectionSyncLive ? 'true' : 'false' }}) return;
+                                clearTimeout(this.commitTimer);
+                                this.commitTimer = setTimeout(() => this.$wire.$commit(), 350);
+                            },
+                        }"
+                    @endif
+            >
                 <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
 
                     {{-- Header --}}
@@ -346,19 +391,24 @@
                         @include('wire-table::tables.partials.filter-indicators', ['component' => $component])
                     @endif
 
-                    {{-- Selection Bar --}}
-                    @if($isSelectable && count($selectedRecords) > 0)
+                    {{-- Selection Bar (Alpine-driven — appears instantly, no roundtrip) --}}
+                    @if($isSelectable)
                         <div
+                                x-show="selected.length > 0"
+                                x-cloak
                                 class="px-4 lg:px-6 py-3 bg-primary-50 dark:bg-primary-900/20 border-b border-primary-100 dark:border-primary-800/30">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">
                                     <div
                                             class="flex items-center justify-center w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-800/50">
                                 <span
-                                        class="text-sm font-semibold text-primary-700 dark:text-primary-300">{{ count($selectedRecords) }}</span>
+                                        class="text-sm font-semibold text-primary-700 dark:text-primary-300" x-text="selected.length"></span>
                                     </div>
                                     <span class="text-sm font-medium text-primary-700 dark:text-primary-300">
-                            {{ trans_choice('{1} record selected|[2,*] records selected', count($selectedRecords)) }}
+                            {{-- Plural forms resolved client-side: representative counts cover {1} / [2,4] / [5,*] --}}
+                            <span x-show="selected.length === 1">{{ trans_choice('{1} record selected|[2,*] records selected', 1) }}</span>
+                            <span x-show="selected.length >= 2 && selected.length <= 4">{{ trans_choice('{1} record selected|[2,*] records selected', 2) }}</span>
+                            <span x-show="selected.length >= 5">{{ trans_choice('{1} record selected|[2,*] records selected', 5) }}</span>
                         </span>
                                 </div>
 
@@ -375,7 +425,7 @@
                                     {{-- Deselect button --}}
                                     <button
                                             type="button"
-                                            wire:click="deselectAllRecords"
+                                            x-on:click="deselectAll()"
                                             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary-700 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200 hover:bg-primary-100 dark:hover:bg-primary-800/50 rounded-lg transition-colors"
                                     >
                                         <x-wire::icon name="outline:x-mark" size="w-4 h-4" />
@@ -398,21 +448,18 @@
                                     @if($isSelectable)
                                         <th scope="col" class="w-12 {{ $headerPadding }}">
                                             <div class="flex items-center justify-center">
-                                                @php
-                                                    $allSelected = $component->areAllVisibleSelected();
-                                                    $someSelected = $component->areSomeVisibleSelected();
-                                                @endphp
                                                 <button
                                                         type="button"
-                                                        wire:click="{{ $allSelected || $someSelected ? 'deselectAllRecords' : 'selectAllRecords' }}"
-                                                        class="relative h-4 w-4 rounded border focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors
-                                                {{ $allSelected ? 'bg-primary-600 border-primary-600' : ($someSelected ? 'bg-primary-600 border-primary-600' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600') }}"
+                                                        x-on:click="toggleAll()"
+                                                        class="relative h-4 w-4 rounded border focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors"
+                                                        :class="(allSelected || someSelected) ? 'bg-primary-600 border-primary-600' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600'"
                                                 >
-                                                    @if($allSelected)
+                                                    <span x-show="allSelected" x-cloak>
                                                         <x-wire::icon name="check" size="h-4 w-4" class="absolute inset-0 text-white" />
-                                                    @elseif($someSelected)
+                                                    </span>
+                                                    <span x-show="someSelected" x-cloak>
                                                         <x-wire::icon name="minus" size="h-4 w-4" class="absolute inset-0 text-white" />
-                                                    @endif
+                                                    </span>
                                                 </button>
                                             </div>
                                         </th>
@@ -529,7 +576,6 @@
                                     @php
                                         $recordKey = $record->{$table->getPrimaryKey()};
                                         $recordUrl = $table->getRecordUrl($record);
-                                        $isSelected = $component->isRecordSelected($recordKey);
                                         $rowIndex = $loop->index;
 
                                         $groupValue = $hasGrouping ? $table->getGroupValue($record) : null;
@@ -548,7 +594,8 @@
                                         ])
                                     @endif
                                     <tr
-                                            class="{{ $table->isHoverable() ? 'hover:bg-gray-50 dark:hover:bg-gray-700/30' : '' }} {{ $isSelected ? 'bg-primary-50 dark:bg-primary-900/20' : '' }} {{ $isStriped && $rowIndex % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/30' : '' }} {{ $table->getRowClass() }}"
+                                            class="{{ $table->isHoverable() ? 'hover:bg-gray-50 dark:hover:bg-gray-700/30' : '' }} {{ $isStriped && $rowIndex % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/30' : '' }} {{ $table->getRowClass() }}"
+                                            @if($isSelectable) :class="isSelected(@js((string) $recordKey)) ? 'bg-primary-50 dark:bg-primary-900/20' : ''" @endif
                                             wire:key="row-{{ $recordKey }}"
                                     >
                                         {{-- Selection Checkbox --}}
@@ -557,13 +604,13 @@
                                                 <div class="flex items-center justify-center">
                                                     <button
                                                             type="button"
-                                                            wire:click="toggleRecordSelection('{{ $recordKey }}')"
-                                                            class="relative h-4 w-4 rounded border focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors
-                                                    {{ $isSelected ? 'bg-primary-600 border-primary-600' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:border-gray-400' }}"
+                                                            x-on:click="toggle(@js((string) $recordKey))"
+                                                            class="relative h-4 w-4 rounded border focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors"
+                                                            :class="isSelected(@js((string) $recordKey)) ? 'bg-primary-600 border-primary-600' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:border-gray-400'"
                                                     >
-                                                        @if($isSelected)
+                                                        <span x-show="isSelected(@js((string) $recordKey))" x-cloak>
                                                             <x-wire::icon name="check" size="h-4 w-4" class="absolute inset-0 text-white" />
-                                                        @endif
+                                                        </span>
                                                     </button>
                                                 </div>
                                             </td>
@@ -699,7 +746,7 @@
                                 </tbody>
 
                                 {{-- Summary footer --}}
-                                @if($component->tableHasSummaries())
+                                @if($hasSummaries)
                                     @php $summaryScope = $component->getSummaryScope(); @endphp
                                     @include('wire-table::tables.partials.summary-footer', [
                                         'table' => $table,
@@ -749,19 +796,20 @@
                             @forelse($records as $record)
                                 @php
                                     $recordKey = $record->{$table->getPrimaryKey()};
-                                    $isSelected = in_array((string) $recordKey, $selectedRecords);
                                     $recordUrl = $table->getRecordUrl($record);
                                 @endphp
                                 <div
-                                        class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 {{ $isSelected ? 'ring-2 ring-primary-500 ring-inset bg-primary-50/50 dark:bg-primary-900/30' : '' }}">
+                                        class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
+                                        @if($isSelectable) :class="isSelected(@js((string) $recordKey)) ? 'ring-2 ring-primary-500 ring-inset bg-primary-50/50 dark:bg-primary-900/30' : ''" @endif
+                                >
                                     {{-- Card Header: First column as title + Actions --}}
                                     <div class="flex items-start gap-3 p-4 {{ count($restColumns) > 0 ? 'pb-4' : '' }}">
                                         @if($isSelectable)
                                             <label class="flex items-center pt-0.5 flex-shrink-0">
                                                 <input
                                                         type="checkbox"
-                                                        wire:model.live="tableState.selection.records"
-                                                        value="{{ $recordKey }}"
+                                                        x-on:change="toggle(@js((string) $recordKey))"
+                                                        :checked="isSelected(@js((string) $recordKey))"
                                                         class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:focus:ring-offset-gray-800 touch-manipulation"
                                                 >
                                                 <span class="sr-only">Vybrat</span>

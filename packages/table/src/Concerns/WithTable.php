@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\Relation as EloquentRelation;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -950,11 +951,19 @@ trait WithTable
         if ($record->relationLoaded($relation) && ! $this->hasActiveSubRowFilters()) {
             $items = $record->getRelation($relation);
 
-            if (! $showAll && $table->getSubRowsLimit()) {
-                $items = $items->take($table->getSubRowsLimit());
-            }
+            // A limited eager load (subRowsLimit) ships a loadCount alongside.
+            // If show-all was enabled after loading, memory holds only `limit`
+            // rows — fall through to the query for this parent's full set.
+            $loadedCount = $record->getAttribute(Str::snake($relation).'_count');
+            $isPartialLoad = $loadedCount !== null && $items->count() < (int) $loadedCount;
 
-            return $items->values();
+            if (! ($showAll && $isPartialLoad)) {
+                if (! $showAll && $table->getSubRowsLimit()) {
+                    $items = $items->take($table->getSubRowsLimit());
+                }
+
+                return $items->values();
+            }
         }
 
         $query = $table->getSubRowsQuery($record, $sort, applyLimit: ! $showAll);
@@ -1011,10 +1020,9 @@ trait WithTable
         $relation = $table->getSubRowRelation();
         $sort = $this->getSubRowSort();
         $callback = $table->getSubRowQueryCallback();
+        $limit = $table->getSubRowsLimit();
 
-        // Note: no per-parent limit here — the full set is needed for accurate
-        // "show more" counts; the limit is applied in-memory per parent.
-        $target->load([$relation => function ($query) use ($table, $sort, $callback) {
+        $constrain = function ($query) use ($table, $sort, $callback) {
             if ($callback) {
                 $query = $callback($query) ?? $query;
             }
@@ -1030,7 +1038,45 @@ trait WithTable
             if ($sortColumn !== null && $table->isSubRowColumnSortable($sortColumn)) {
                 $query->orderBy($sortColumn, $sortDirection === 'desc' ? 'desc' : 'asc');
             }
-        }]);
+        };
+
+        // No display limit — load the full sets in one query.
+        if ($limit === null) {
+            $target->load([$relation => $constrain]);
+
+            return;
+        }
+
+        // With a limit, loading full child sets just to count them wastes
+        // memory on large relations. Parents flagged "show all" still need the
+        // full set; the rest load only `limit` rows per parent (native
+        // eager-load limit — window function) plus an exact count for the
+        // "show more" affordance (read via getSubRowsTotalCount()).
+        $showAll = $this->tableState->get('rows.subRowsShowAll', []);
+
+        [$fullTargets, $limitedTargets] = $target->partition(
+            fn ($record) => (bool) ($showAll[$record->getKey()] ?? false),
+        );
+
+        if ($fullTargets->isNotEmpty()) {
+            $fullTargets->load([$relation => $constrain]);
+        }
+
+        if ($limitedTargets->isNotEmpty()) {
+            $limitedTargets->load([$relation => function ($query) use ($constrain, $limit) {
+                $constrain($query);
+                $query->limit($limit);
+            }]);
+
+            // Counts ignore ordering — apply only the row constraints.
+            $limitedTargets->loadCount([$relation => function ($query) use ($callback) {
+                if ($callback) {
+                    $query = $callback($query) ?? $query;
+                }
+
+                $this->applySubRowScopedFilters($query);
+            }]);
+        }
     }
 
     /**
@@ -1237,6 +1283,15 @@ trait WithTable
         // rows.subRowFilters and over-count the "show more" affordance.
         $relation = $table->getSubRowRelation();
         if ($record->relationLoaded($relation) && ! $this->hasActiveSubRowFilters()) {
+            // Limited eager loads (subRowsLimit) ship an exact loadCount
+            // alongside — prefer it; the loaded relation itself holds only
+            // `limit` rows, so counting it would always cap at the limit.
+            $loadedCount = $record->getAttribute(Str::snake($relation).'_count');
+
+            if ($loadedCount !== null) {
+                return (int) $loadedCount;
+            }
+
             return $record->getRelation($relation)->count();
         }
 
