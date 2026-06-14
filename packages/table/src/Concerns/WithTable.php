@@ -1040,8 +1040,11 @@ trait WithTable
             }
         };
 
-        // No display limit — load the full sets in one query.
-        if ($limit === null) {
+        // No display limit, or the framework can't limit an eager load per
+        // parent (Laravel < 11): load the full sets in one query. getSubRows()
+        // applies the display limit in memory and counts the loaded relation,
+        // so behaviour stays correct — only the memory win is lost.
+        if (! $limit || ! $this->supportsPerParentEagerLimit()) {
             $target->load([$relation => $constrain]);
 
             return;
@@ -1077,6 +1080,19 @@ trait WithTable
                 $this->applySubRowScopedFilters($query);
             }]);
         }
+    }
+
+    /**
+     * Whether the framework can limit an eager load per parent.
+     *
+     * Per-parent eager-load limits (a window function under the hood) arrived
+     * in Laravel 11 via Query\Builder::groupLimit(). On Laravel 10 calling
+     * ->limit() inside an eager-load closure applies a single global LIMIT
+     * across all parents, so the limited fast path must be skipped there.
+     */
+    protected function supportsPerParentEagerLimit(): bool
+    {
+        return method_exists(\Illuminate\Database\Query\Builder::class, 'groupLimit');
     }
 
     /**

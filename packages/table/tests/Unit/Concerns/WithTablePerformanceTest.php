@@ -151,6 +151,18 @@ class WtperfSubRowLimitComponent extends Component
     }
 }
 
+/**
+ * Forces the Laravel 10 path where the framework can't limit an eager load
+ * per parent — exercises the in-memory fallback regardless of installed version.
+ */
+class WtperfSubRowLimitLegacyComponent extends WtperfSubRowLimitComponent
+{
+    protected function supportsPerParentEagerLimit(): bool
+    {
+        return false;
+    }
+}
+
 class WtperfCachedComponent extends Component
 {
     use WithTable;
@@ -399,6 +411,28 @@ it('eager-loads only the limited sub-rows plus an exact count', function () {
         ->and((int) $a->items_count)->toBe(2);           // exact total shipped alongside
 
     // The show-more total reads the loaded count — no extra query.
+    $queries = wtperfQueryCount(fn () => $component->getSubRowsTotalCount($a));
+
+    expect($queries)->toBe(0)
+        ->and($component->getSubRowsTotalCount($a))->toBe(2)
+        ->and($component->getSubRows($a))->toHaveCount(1);
+});
+
+it('falls back to in-memory limiting when the framework lacks per-parent limits (Laravel 10)', function () {
+    $component = new WtperfSubRowLimitLegacyComponent;
+    $component->mountWithTable();
+    $component->tableState->set('rows.flattenMode', true);
+
+    $records = $component->getTableRecords();
+    $a = $records->firstWhere('number', 'A'); // has 2 items, limit is 1
+
+    // Without native per-parent limits the full set is eager-loaded once...
+    expect($a->relationLoaded('items'))->toBeTrue()
+        ->and($a->getRelation('items'))->toHaveCount(2) // full set in memory
+        ->and($a->items_count)->toBeNull();             // no loadCount shipped
+
+    // ...and the display limit + total stay correct (count from the loaded set,
+    // no extra query).
     $queries = wtperfQueryCount(fn () => $component->getSubRowsTotalCount($a));
 
     expect($queries)->toBe(0)
