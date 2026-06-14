@@ -60,6 +60,7 @@ return [
     'summary_scope_query' => 'Vše',
     'summary_scope_page' => 'Tato stránka',
     'summary_scope_selection' => 'Výběr',
+    'summary_subtotal' => 'Mezisoučet',
 
     // Column
     'copied' => 'Zkopírováno!',

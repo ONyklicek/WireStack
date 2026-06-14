@@ -104,7 +104,11 @@ is shared across all expanded parents.
 
 When a limit is set and more children exist, a **"Show N more"** button renders at
 the bottom of the child table. Clicking it reveals the full set for that parent
-(tracked per-parent in state), while the count stays accurate:
+(tracked per-parent in state), while the count stays accurate.
+
+The eager load fetches only `limit` rows per parent (native per-parent
+eager-load limit) plus one count query for the exact totals — full child sets
+are never loaded into memory unless a parent is expanded via "Show more":
 
 ```text
 Product        Qty   Line total
@@ -144,7 +148,8 @@ Keyboard         2     2 400 Kč     ← only rows matching the filter
 ## Filter by Sub-Row Values from Table Filters
 
 Mark any main-table filter with `subRows()` and it targets the child records
-instead of parent columns — e.g. a Month/Year filter over the children's date:
+instead of parent columns — e.g. a Month/Year filter over the children's date.
+The filter's column name (`billed_at` here) refers to the **child** model:
 
 ```php
 use NyonCode\WireTable\Filters\DateFilter;
@@ -171,6 +176,62 @@ Měsíc: [ 2026-06 ▾ ]
 └───┴────────────┴──────────────┘
 │ Celkem:        │  10 000 Kč   │   ← footer sums filtered sub-rows
 ```
+
+### Building the Diagram
+
+No extra wiring is needed — the aggregates just have to be declared, and the
+filter narrows them automatically. There are two ways to get the totals,
+depending on whether the per-invoice amount should be a visible parent column:
+
+**Amount only in the sub-rows.** Give the sub-row column a per-parent subtotal
+(`scope: 'subRows'`) and a default-scope summary for the grand total — the
+latter renders in the main footer, computed in SQL over exactly the children
+the filter allows (see
+[Grand totals from sub-row columns](summaries.md#grand-totals-from-sub-row-columns)):
+
+```php
+$table
+    ->subRows('items')
+    ->subRowColumns([
+        TextColumn::make('product'),
+        TextColumn::make('line_total')
+            ->suffix(' Kč')
+            ->summaryDecimals(0)
+            ->summarizeSum('Subtotal', scope: 'subRows')  // panel footer per invoice
+            ->summarizeSum('Celkem'),                     // main footer, filtered children
+    ])
+    ->filters([
+        DateFilter::make('billed_at')->month()->subRows(),
+    ]);
+```
+
+**Amount as a parent column.** Use a [rollup column](summaries.md#rollup-columns)
+over the **same relation** as `subRows()` — the relation match is what lets the
+filter constrain it. The cell then shows each invoice's total of *matching*
+items (the `5 000 Kč` column in the diagram), and its summary is the footer
+grand total. A stored parent attribute like `$invoice->total` would **not**
+react to the filter — that's exactly what the rollup replaces:
+
+```php
+$table
+    ->columns([
+        TextColumn::make('number')->label('Invoice'),
+        TextColumn::make('items_total')
+            ->label('Total')
+            ->sums('items', 'line_total')   // same relation as ->subRows('items')
+            ->suffix(' Kč')
+            ->summaryDecimals(0)
+            ->summarizeSum('Celkem'),
+    ])
+    ->subRows('items')
+    ->filters([
+        DateFilter::make('billed_at')->month()->subRows(),
+    ]);
+```
+
+The rollup constraint is keyed by relation name: a rollup over a *different*
+relation (say `->counts('payments')`) is untouched by an `items`-scoped filter
+and keeps aggregating all of its children.
 
 See [Filters — Filtering by Sub-Row Values](filters.md#filtering-by-sub-row-values).
 
@@ -223,9 +284,11 @@ Subtotal:        6     9 350 Kč     ← per-parent footer
 ```
 
 All aggregate types and number formatting from the [Summaries](summaries.md) page
-apply here. To total **across** all parents in the main footer, give a parent
-rollup column its own summary — see
-[Grand totals across all children](summaries.md#grand-totals-across-all-children).
+apply here. To total **across** all parents in the main footer, add a second,
+default-scoped summary to the same sub-row column —
+`->summarizeSum('Celkem')` — or give a parent rollup column its own summary.
+See [Grand totals from sub-row columns](summaries.md#grand-totals-from-sub-row-columns)
+and [Grand totals across all children](summaries.md#grand-totals-across-all-children).
 
 ## Flatten Mode
 

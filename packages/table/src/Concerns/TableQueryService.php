@@ -445,6 +445,14 @@ final class TableQueryService
             return $columns;
         }
 
+        // Registering a model only captures ModelMetadata — column/accessor
+        // metadata comes from explicit registerColumn()/registerAccessor()
+        // calls. Without any, resolveColumnMeta() can never match and the
+        // per-column resolution walk below is pure overhead on every request.
+        if (! $this->registry->hasAttributeMetadata()) {
+            return $columns;
+        }
+
         $resolver = new CapabilityResolver;
 
         foreach ($columns as $column) {

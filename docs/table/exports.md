@@ -106,6 +106,35 @@ return TableExport::make()
     ->download();
 ```
 
+## Exported Summaries
+
+Columns with [`query`-scoped summaries](summaries.md) append their totals after
+the data rows — the same grand totals the footer shows for the full filtered
+set, in every format (CSV, Excel, PDF). Cells render as `Label: value` in the
+column they belong to; a column with several summaries produces several rows:
+
+```text
+Number,Total
+ORD-1,100
+ORD-2,250
+,"Grand total: 350 Kč"
+,"Average: 175 Kč"
+```
+
+`page`/`selection`-scoped summaries describe transient UI state and are never
+exported. To export bare data without totals:
+
+```php
+TableExport::make()
+    ->withSummaries(false);
+```
+
+Rollup columns (`->sums()`, `->counts()`, …) export their per-row values and
+grand totals too. When exporting a **custom query** with rollup columns, the
+query must include the matching `withSum`/`withCount` — the same requirement
+the table itself has. Sub-row grand totals and
+[group subtotals](grouping.md) are footer-only and not included in exports.
+
 ## CSV Options
 
 ```php
@@ -163,7 +192,7 @@ If DomPDF is not installed, Wire falls back to CSV output.
 
 ## PDF View Data
 
-When using a custom PDF view, design it as a regular Blade export template. The exporter passes `headings`, `rows`, and `columns` to the view.
+When using a custom PDF view, design it as a regular Blade export template. The exporter passes `headings`, `rows`, `columns`, and `summaryRows` (pre-formatted total rows, empty when summaries are disabled) to the view.
 
 ```blade
 {{-- resources/views/exports/users.blade.php --}}
@@ -187,6 +216,18 @@ When using a custom PDF view, design it as a regular Blade export template. The 
             </tr>
         @endforeach
     </tbody>
+
+    @if (! empty($summaryRows))
+        <tfoot>
+            @foreach ($summaryRows as $summaryRow)
+                <tr>
+                    @foreach ($summaryRow as $value)
+                        <td>{{ $value }}</td>
+                    @endforeach
+                </tr>
+            @endforeach
+        </tfoot>
+    @endif
 </table>
 ```
 
@@ -197,4 +238,5 @@ When using a custom PDF view, design it as a regular Blade export template. The 
 | [Table Overview](overview.md) | Table setup and state |
 | [Columns](columns.md) | Column labels, visibility, and formatting |
 | [Filters](filters.md) | Filtered queries used by export |
+| [Summaries](summaries.md) | The totals appended to exports |
 | [Authorization](../authorization.md) | Restricting export actions by user |

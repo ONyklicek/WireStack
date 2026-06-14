@@ -12,6 +12,9 @@ namespace NyonCode\WireTable\Concerns;
  */
 final class TableStateSchema
 {
+    /** @var array<string, string>|null Memoized legacy map — __get/__set run per property access. */
+    private static ?array $legacyPropertyMap = null;
+
     /**
      * Get the default state values for a table component.
      *
@@ -69,6 +72,7 @@ final class TableStateSchema
             'ready' => false,
             'polling' => [
                 'active' => true,
+                'checksum' => null,
             ],
         ];
     }
@@ -82,7 +86,7 @@ final class TableStateSchema
      */
     public static function legacyPropertyMap(): array
     {
-        return [
+        return self::$legacyPropertyMap ??= [
             'tableSortColumn' => 'sort.column',
             'tableSortDirection' => 'sort.direction',
             'tablePerPage' => 'pagination.perPage',

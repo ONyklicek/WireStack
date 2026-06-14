@@ -1,6 +1,7 @@
 {{-- Table summary footer --}}
 {{-- Variables: $table, $component, $summaries, $summaryScope, $summaryScopeOptions,
-     $isSelectable, $hasActions, $actionsPosition, $cellPadding, $isBordered, $visibleColumns, $colSpan --}}
+     $isSelectable, $hasActions, $actionsPosition, $cellPadding, $isBordered, $visibleColumns, $colSpan,
+     $subRowGrandTotals (optional) --}}
 @php
     // Determine how many summary rows we need
     $maxRows = 0;
@@ -11,9 +12,10 @@
     $summaryScope = $summaryScope ?? 'query';
     $summaryScopeOptions = $summaryScopeOptions ?? ['query', 'page'];
     $showScopeToggle = count($summaryScopeOptions) > 1;
+    $subRowGrandTotals = $subRowGrandTotals ?? [];
 @endphp
 
-@if($maxRows > 0)
+@if($maxRows > 0 || $subRowGrandTotals !== [])
     <tfoot class="bg-gray-50 dark:bg-gray-800/50 border-t-2 border-gray-300 dark:border-gray-600">
         {{-- Scope toggle row: this page / all / selection --}}
         @if($showScopeToggle)
@@ -84,5 +86,20 @@
                 @endif
             </tr>
         @endfor
+
+        {{-- Sub-row grand totals: children across all parents. Sub-row columns
+             don't align with the parent grid, so these render full-width. --}}
+        @foreach($subRowGrandTotals as $colName => $entries)
+            @foreach($entries as $entry)
+                <tr>
+                    <td colspan="{{ $colSpan }}" class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} text-right">
+                        <div class="text-xs">
+                            <span class="text-gray-500 dark:text-gray-400">{{ $entry['label'] }}:</span>
+                            <span class="text-gray-900 dark:text-white font-semibold">{{ $entry['value'] }}</span>
+                        </div>
+                    </td>
+                </tr>
+            @endforeach
+        @endforeach
     </tfoot>
 @endif

@@ -70,6 +70,8 @@
     "prefer-stable": true,
     "scripts": {
         "test": "vendor/bin/pest",
+        "coverage": "vendor/bin/pest --coverage",
+        "test:coverage": "@coverage",
         "test:core": "vendor/bin/pest --configuration packages/core/phpunit.xml",
         "test:forms": "vendor/bin/pest --configuration packages/forms/phpunit.xml",
         "test:table": "vendor/bin/pest --configuration packages/table/phpunit.xml",

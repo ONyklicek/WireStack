@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Collection;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Columns\SummaryType;
 
 /**
  * Helper: build a page-scope summary of $type on column $name over $rows,
@@ -143,6 +144,30 @@ it('lets an explicit format closure override default formatting', function () {
         ->summarize('sum', scope: 'page', format: fn ($v) => "total={$v}");
 
     expect($column->computeSummaries(collect([['v' => 3], ['v' => 4]]))[0]['value'])->toBe('total=7');
+});
+
+// ─── SummaryType enum ────────────────────────────────────────────────────────
+
+it('accepts SummaryType enum cases directly', function () {
+    $column = Column::make('v')->summarize(SummaryType::Sum, scope: 'page');
+
+    expect($column->computeSummaries(collect([['v' => 3], ['v' => 4]]))[0]['value'])->toBe(7);
+});
+
+it('normalizes string types to the enum', function () {
+    $column = Column::make('v')->summarize('median', scope: 'page');
+
+    expect($column->getSummaries()[0]['type'])->toBe(SummaryType::Median);
+});
+
+it('rejects unknown summary type strings', function () {
+    Column::make('v')->summarize('bogus');
+})->throws(InvalidArgumentException::class, 'Unknown summary type [bogus]');
+
+it('derives the default label from the enum', function () {
+    $column = Column::make('v')->summarize(SummaryType::Max, scope: 'page');
+
+    expect($column->computeSummaries(collect([['v' => 1]]))[0]['label'])->toBe(SummaryType::Max->label());
 });
 
 // ─── Custom closure type ─────────────────────────────────────────────────────

@@ -2,6 +2,33 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+##[1.2.0]
+
+### Added
+- **Poll change detection** – `Table::pollChangeDetection()` skips the full poll re-render (query + summaries + DOM morph) when a cheap checksum of the filtered data (`COUNT(*)` + `MAX(updated_at)` in one query) is unchanged since the last poll. Pass a closure (`->pollChangeDetection(fn ($query) => …)`) when parent timestamps don't capture relevant changes (e.g. child-table rollups). Opt-in; default behavior is unchanged.
+- **Sub-row grand totals in the main footer** – a `query`-scoped summary on a sub-row column (`->summarizeSum('Celkem')`) renders the total of all children across all parents in the main table footer, computed in SQL over the child table. No parent rollup column needed; honours `Filter::subRows()`, `subRowQuery()`, the interactive sub-row filter bar, and the footer scope toggle (all / page / selection parents).
+- **Row grouping with subtotals** – `Table::groupBy('customer')` keeps groups contiguous (group order is prepended to the active sort), renders a header row per group (`groupLabel(string|Closure)`), and adds per-group subtotal rows for every column with a summary (`groupSummaries(false)` to disable); the grand-total footer stays.
+- **Summaries in exports** – CSV, Excel, and PDF exports append the `query`-scoped column summaries (the footer grand totals) after the data rows as `Label: value` cells; opt out with `TableExport::withSummaries(false)`. Custom PDF views receive a new `summaryRows` variable.
+- **`SummaryType` enum** – summary aggregate types are a backed enum (`NyonCode\WireTable\Columns\SummaryType`): `->summarize(SummaryType::Median)` with full IDE completion. The enum owns the per-type semantics (default labels, count formatting, SQL portability, empty-set results). Strings stay accepted and are normalized to the enum; unknown type strings now throw an `InvalidArgumentException` instead of silently rendering an empty footer value.
+
+### Changed
+- **Rollup grand totals compute in SQL.** Summarizing a rollup column (`->sums()` + `->summarizeSum()`) previously loaded every filtered parent row into memory and summed floats in PHP; the rollup alias is now aggregated in SQL over a derived table — no row loading, database decimal precision.
+
+### Performance
+- **Row selection is client-side — a checkbox click no longer costs a server roundtrip.** Selection state lives in Alpine, entangled (deferred) with `tableState.selection.records`: checkboxes, the select-all header state, row highlight, and the selection bar (count, plural label, deselect) all react instantly without re-rendering the table. The server state syncs with the next request (bulk actions always see the current selection); tables with a summary footer auto-commit selection changes debounced (~350 ms) so selection-scope totals and the scope toggle stay correct. Server methods (`toggleRecordSelection()`, `selectAllRecords()`, …) remain for backwards compatibility.
+- **`subRowsLimit()` no longer loads full child sets into memory.** The eager load now fetches only `limit` rows per parent (native per-parent eager-load limit, window function) plus one `loadCount` query for exact "show more" totals; parents flagged show-all still load their full set. Previously every expanded/flattened parent loaded *all* children just so the limit could be applied in memory. On Laravel 10 (no per-parent eager-load limit) the loader transparently falls back to the previous full-load + in-memory limit, so behaviour is identical there.
+- **Footer summaries batch into a single SQL query.** Every `query`-scoped summary previously ran its own aggregate query on each Livewire render (a footer with 5 summaries = 5+ queries per interaction). All SQL-native summaries now compute in one aggregate query (plus one for rollup columns over the derived table); sub-row grand totals batch the same way over the child query. Closure summaries, statistical types (median, stddev, …), and `when()`-restricted summaries keep the per-summary fallback with identical results.
+- **Package views no longer go through the deprecated magic properties.** `index.blade.php` and the sub-row partials read `$component->tableState` directly (precomputed once per render) instead of `$component->tableFilters` & co., which rebuilt the legacy property map on every access — per row, per column. The map itself is now memoized, so user code on the legacy properties is cheaper too.
+- **Row loops reuse the precomputed visible-column set.** Header, filter row, body cells, and sub-row tables no longer re-evaluate `canView()` (which may hit the Gate) and `isColumnVisible()` per cell — visibility resolves once per render (once per parent for sub-rows).
+- **Selected records are memoized per request** (selection-scope summaries, grand totals, and bulk modals previously each ran the same query) and **group subtotals partition the page once** instead of re-filtering all page records per group.
+- **`StateContainer::get()` traverses the path once** instead of the previous `has()` + `resolve()` double walk — it runs hundreds of times per table render.
+- Capability auto-resolution in `TableQueryService` is skipped when the metadata registry holds no column/accessor metadata — removes a no-op per-column walk from every query build.
+
+### Fixed
+- **Query cache no longer serves page 1 for every page.** Pagination is applied inside the cache callback, so the page number was missing from the cache key (`cacheQuery()`) — all pages shared one entry for the TTL. The current page (or cursor) is now part of the key, including with a custom `cacheQuery(key: …)`.
+- **`subRowsLimit()` on Laravel 10 showed too few children.** The per-parent eager-load limit (a window function) only exists on Laravel 11+; on Laravel 10 it applied a single global `LIMIT` across all parents, so the first parent received fewer than `limit` rows. The loader now detects the framework capability and falls back to full-load + in-memory limiting on Laravel 10.
+
+
 ## [1.1.0]
 
 ### Added
@@ -14,6 +41,7 @@ All notable changes to the Wire ecosystem will be documented in this file.
 ### Fixed
 - Multiple-select filter (`SelectFilter::multiple()`) no longer crashes the select view when an array value is active, and renders the selected options correctly.
 - **Action modal forms no longer lose typed text.** Action forms forced `wire:model.live` on every field, so each keystroke pause triggered a full component re-render whose DOM morph raced further typing and erased it. Fields now default to deferred `wire:model` (values are sent with the submit call), eliminating both the text loss and the per-keystroke server roundtrip + table re-render. Fields that drive reactive behavior opt in per field via `->live()`.
+- **Rollup columns export their values.** Exporters resolved cell values only by column name, so a rollup column named differently from its aggregate attribute (e.g. `items_total` vs `items_sum_line_total`) exported empty cells; exporters now read the computed aggregate attribute.
 
 ## [1.0.0] – 2026-06-11
 

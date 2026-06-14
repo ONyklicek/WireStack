@@ -189,4 +189,6 @@ Useful authored docs:
 - `docs/table/columns.md`
 - `docs/table/filters.md`
 - `docs/table/exports.md`
+- `docs/table/summaries.md`
+- `docs/table/grouping.md`
 - `docs/table/sub-rows.md`

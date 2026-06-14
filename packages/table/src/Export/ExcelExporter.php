@@ -20,6 +20,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class ExcelExporter implements Exporter
 {
+    use Concerns\ResolvesExportValue;
+
     public function __construct(
         protected bool $withHeadings = true,
     ) {}
@@ -32,18 +34,19 @@ class ExcelExporter implements Exporter
     /**
      * @param  Builder<Model>  $query
      * @param  array<int, Column>  $columns
+     * @param  array<int, array<int, string>>  $summaryRows
      */
-    public function export(Builder $query, array $columns, string $fileName): StreamedResponse
+    public function export(Builder $query, array $columns, string $fileName, array $summaryRows = []): StreamedResponse
     {
         if (! static::isAvailable()) {
             // Fallback to CSV
             $csvFileName = str_replace('.xlsx', '.csv', $fileName);
 
             return (new CsvExporter(withHeadings: $this->withHeadings))
-                ->export($query, $columns, $csvFileName);
+                ->export($query, $columns, $csvFileName, $summaryRows);
         }
 
-        return new StreamedResponse(function () use ($query, $columns) {
+        return new StreamedResponse(function () use ($query, $columns, $summaryRows) {
             /** @var Writer $writer */
             $writer = new Writer;
             $writer->openToFile('php://output');
@@ -70,6 +73,13 @@ class ExcelExporter implements Exporter
                 }
             });
 
+            foreach ($summaryRows as $summaryRow) {
+                $writer->addRow(new Row(array_map(
+                    fn (string $cell) => Cell::fromValue($cell),
+                    $summaryRow,
+                )));
+            }
+
             $writer->close();
         }, 200, [
             'Content-Type' => ExportFormat::Excel->mimeType(),
@@ -80,13 +90,7 @@ class ExcelExporter implements Exporter
 
     protected function resolveColumnValue(Column $column, Model $record): string|int|float|bool
     {
-        $name = $column->getName();
-
-        if (str_contains($name, '.')) {
-            $value = data_get($record, $name);
-        } else {
-            $value = $record->getAttribute($name);
-        }
+        $value = $this->resolveRawExportValue($column, $record);
 
         if ($value === null) {
             return '';

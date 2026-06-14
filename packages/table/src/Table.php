@@ -30,6 +30,7 @@ use RuntimeException;
 #[\AllowDynamicProperties]
 class Table implements Htmlable
 {
+    use Concerns\HasGrouping;
     use Concerns\HasSubRows;
     use HasSqlDebug;
     use Macroable;
@@ -148,6 +149,13 @@ class Table implements Htmlable
     protected string $pollingMethod = 'refresh'; // 'refresh' | 'reload'
 
     protected bool $pollingVisible = true; // Only poll when tab is visible
+
+    /**
+     * Poll change detection: false = always re-render (default), true = skip
+     * the render when COUNT(*) + MAX(updated_at) of the filtered query are
+     * unchanged, Closure = custom checksum fn (Builder $query): string.
+     */
+    protected bool|Closure $pollingChangeDetection = false;
 
     // Pagination mode: 'standard' | 'simple' | 'cursor'
     protected string $paginationMode = 'standard';
@@ -1231,6 +1239,34 @@ class Table implements Htmlable
         $this->pollingVisible = $onlyVisible;
 
         return $this;
+    }
+
+    /**
+     * Skip the poll re-render when the underlying data has not changed.
+     *
+     * With `true`, a cheap checksum (COUNT(*) + MAX(updated_at) of the
+     * filtered query) is compared between polls; an unchanged checksum
+     * skips the full query + render cycle. Models without timestamps fall
+     * back to always rendering.
+     *
+     * Pass a closure for a custom checksum when parent timestamps don't
+     * capture relevant changes (e.g. rollup sums over child rows):
+     *
+     *   ->pollChangeDetection(fn ($query) => (string) $query->max('synced_at'))
+     */
+    public function pollChangeDetection(bool|Closure $detector = true): static
+    {
+        $this->pollingChangeDetection = $detector;
+
+        return $this;
+    }
+
+    /**
+     * Get the poll change detection setting (false = disabled).
+     */
+    public function getPollChangeDetection(): bool|Closure
+    {
+        return $this->pollingChangeDetection;
     }
 
     /**

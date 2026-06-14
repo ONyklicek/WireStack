@@ -25,7 +25,7 @@
         <button type="button" wire:click="toggleFlattenMode"
                 class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
             <span class="inline-flex items-center gap-1">
-                @if($component->flattenMode)
+                @if($component->tableState->get('rows.flattenMode'))
                     <x-wire::icon name="outline:bars-3" size="w-3.5 h-3.5" />
                     {{ __('wire-table::messages.group_view') }}
                 @else

@@ -29,6 +29,11 @@
         tr:nth-child(even) {
             background-color: #f9fafb;
         }
+        tfoot td {
+            background-color: #f3f4f6;
+            border-top: 2px solid #d1d5db;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -51,6 +56,17 @@
                 </tr>
             @endforeach
         </tbody>
+        @if(!empty($summaryRows ?? []))
+            <tfoot>
+                @foreach($summaryRows as $summaryRow)
+                    <tr>
+                        @foreach($summaryRow as $cell)
+                            <td>{{ $cell }}</td>
+                        @endforeach
+                    </tr>
+                @endforeach
+            </tfoot>
+        @endif
     </table>
 </body>
 </html>

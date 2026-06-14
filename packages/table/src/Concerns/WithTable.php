@@ -11,10 +11,13 @@ use Illuminate\Contracts\Pagination\Paginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
+use Illuminate\Database\Eloquent\Relations\MorphOneOrMany;
 use Illuminate\Database\Eloquent\Relations\Relation as EloquentRelation;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -45,6 +48,7 @@ use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Columns\SummaryBatch;
 use NyonCode\WireTable\Export\ExportAction;
 use NyonCode\WireTable\Export\ExportFormat;
 use NyonCode\WireTable\Export\TableExport;
@@ -94,6 +98,17 @@ trait WithTable
 
     /** @var TableQueryService|null Shared query service instance */
     protected ?TableQueryService $queryService = null;
+
+    /** @var Collection|null Memoized selected records — cleared when the selection mutates */
+    protected ?Collection $cachedSelectedRecords = null;
+
+    /**
+     * Memoized page records partitioned by group value, in page order.
+     * Each entry: ['value' => mixed, 'records' => Collection].
+     *
+     * @var array<int, array{value: mixed, records: Collection<int, Model>}>|null
+     */
+    protected ?array $cachedGroupPartitions = null;
 
     /**
      * Initialize table state via StateContainer.
@@ -304,9 +319,79 @@ trait WithTable
             return;
         }
 
+        // Opt-in change detection: skip the full render (query + summaries +
+        // DOM morph) when a cheap checksum of the filtered data is unchanged.
+        if ($this->shouldSkipPollRender()) {
+            if (method_exists($this, 'skipRender')) {
+                $this->skipRender();
+            }
+
+            return;
+        }
+
         // Simply re-render - Livewire will fetch new data
         // The table instance is recreated on each request
         $this->tableInstance = null;
+    }
+
+    /**
+     * Compare the poll checksum with the previous one; true = data unchanged.
+     *
+     * The new checksum is stored in state either way, so the next poll
+     * compares against the latest observed data.
+     */
+    protected function shouldSkipPollRender(): bool
+    {
+        $detector = $this->getTable()->getPollChangeDetection();
+
+        if ($detector === false) {
+            return false;
+        }
+
+        $checksum = $this->computePollChecksum($detector);
+
+        // No checksum available (e.g. model without timestamps) — always render.
+        if ($checksum === null) {
+            return false;
+        }
+
+        $previous = $this->tableState->get('polling.checksum');
+        $this->tableState->set('polling.checksum', $checksum);
+
+        return $previous !== null && $previous === $checksum;
+    }
+
+    /**
+     * Checksum of the current filtered data set.
+     *
+     * Default (true): COUNT(*) + MAX(updated_at) in one query. This misses
+     * changes that don't touch the parent row (e.g. child-table rollups) —
+     * pass a closure to pollChangeDetection() for those cases.
+     */
+    protected function computePollChecksum(bool|callable $detector): ?string
+    {
+        $query = (clone $this->buildTableQuery())->reorder();
+
+        if ($detector !== true) {
+            return (string) $detector($query);
+        }
+
+        $model = $query->getModel();
+
+        if (! $model->usesTimestamps() || $model->getUpdatedAtColumn() === null) {
+            return null;
+        }
+
+        $updatedAt = $query->getQuery()->getGrammar()->wrap(
+            $query->qualifyColumn($model->getUpdatedAtColumn()),
+        );
+
+        $base = $query->toBase();
+        $base->select([]);
+        $base->selectRaw("COUNT(*) as wt_count, MAX({$updatedAt}) as wt_max");
+        $row = $base->first();
+
+        return ($row->wt_count ?? 0).'|'.($row->wt_max ?? '');
     }
 
     /**
@@ -498,6 +583,14 @@ trait WithTable
         $ttl = $table->getQueryCacheTtl();
         $key = $table->getQueryCacheKey() ?? $this->generateQueryCacheKey($query);
 
+        // Pagination is applied inside the cache callback, so the page number is
+        // not part of the SQL/bindings — without this suffix every page would
+        // share one cache entry and serve page 1's results. Applies to custom
+        // queryCacheKey() too, which would otherwise also collide across pages.
+        if ($table->isPaginated()) {
+            $key .= ':page:'.$this->getQueryCachePage();
+        }
+
         return Cache::remember($key, $ttl, function () use ($table, $query) {
             if ($table->isPaginated()) {
                 return $this->paginateQuery($table, $query);
@@ -505,6 +598,21 @@ trait WithTable
 
             return $query->get();
         });
+    }
+
+    /**
+     * Current page for the query cache key suffix.
+     *
+     * Cursor pagination encodes its position in the cursor parameter rather
+     * than a page number, so the raw request value is used there.
+     */
+    protected function getQueryCachePage(): string
+    {
+        if ($this->getTable()->getPaginationMode() === 'cursor') {
+            return (string) request()->query('cursor', '');
+        }
+
+        return (string) $this->getPage();
     }
 
     /**
@@ -590,7 +698,39 @@ trait WithTable
             event(new TableFiltered($tableId, $activeFilters, -1));
         }
 
+        $query = $this->applyGroupOrdering($query);
+
         $this->cachedQuery = $query;
+
+        return $query;
+    }
+
+    /**
+     * Keep groups contiguous: prepend an order on the group column so every
+     * other sort applies within a group. Skipped when the user explicitly
+     * sorts by the group column — that sort already keeps groups together.
+     *
+     * @param  Builder<Model>  $query
+     * @return Builder<Model>
+     */
+    protected function applyGroupOrdering(Builder $query): Builder
+    {
+        $table = $this->getTable();
+        $groupColumn = $table->getGroupColumn();
+
+        if ($groupColumn === null) {
+            return $query;
+        }
+
+        if ($this->tableState->get('sort.column', '') === $groupColumn) {
+            return $query;
+        }
+
+        $base = $query->getQuery();
+        $base->orders = array_merge(
+            [['column' => $query->qualifyColumn($groupColumn), 'direction' => 'asc']],
+            $base->orders ?? [],
+        );
 
         return $query;
     }
@@ -811,11 +951,19 @@ trait WithTable
         if ($record->relationLoaded($relation) && ! $this->hasActiveSubRowFilters()) {
             $items = $record->getRelation($relation);
 
-            if (! $showAll && $table->getSubRowsLimit()) {
-                $items = $items->take($table->getSubRowsLimit());
-            }
+            // A limited eager load (subRowsLimit) ships a loadCount alongside.
+            // If show-all was enabled after loading, memory holds only `limit`
+            // rows — fall through to the query for this parent's full set.
+            $loadedCount = $record->getAttribute(Str::snake($relation).'_count');
+            $isPartialLoad = $loadedCount !== null && $items->count() < (int) $loadedCount;
 
-            return $items->values();
+            if (! ($showAll && $isPartialLoad)) {
+                if (! $showAll && $table->getSubRowsLimit()) {
+                    $items = $items->take($table->getSubRowsLimit());
+                }
+
+                return $items->values();
+            }
         }
 
         $query = $table->getSubRowsQuery($record, $sort, applyLimit: ! $showAll);
@@ -825,17 +973,7 @@ trait WithTable
         $query = $this->applySubRowScopedFilters($query);
 
         // Apply sub-row filters
-        $subRowFilters = $this->tableState->get('rows.subRowFilters', []);
-        if ($table->isSubRowsFilterable() && ! empty($subRowFilters)) {
-            foreach ($table->getSubRowColumns() as $column) {
-                $colName = $column->getName();
-                $filterValue = $subRowFilters[$colName] ?? null;
-
-                if ($filterValue !== null && $filterValue !== '' && $column->isFilterable()) {
-                    $query = $column->applyFilter($query, $filterValue);
-                }
-            }
-        }
+        $query = $this->applyInteractiveSubRowFilters($query);
 
         return $query->get();
     }
@@ -882,10 +1020,9 @@ trait WithTable
         $relation = $table->getSubRowRelation();
         $sort = $this->getSubRowSort();
         $callback = $table->getSubRowQueryCallback();
+        $limit = $table->getSubRowsLimit();
 
-        // Note: no per-parent limit here — the full set is needed for accurate
-        // "show more" counts; the limit is applied in-memory per parent.
-        $target->load([$relation => function ($query) use ($table, $sort, $callback) {
+        $constrain = function ($query) use ($table, $sort, $callback) {
             if ($callback) {
                 $query = $callback($query) ?? $query;
             }
@@ -901,7 +1038,61 @@ trait WithTable
             if ($sortColumn !== null && $table->isSubRowColumnSortable($sortColumn)) {
                 $query->orderBy($sortColumn, $sortDirection === 'desc' ? 'desc' : 'asc');
             }
-        }]);
+        };
+
+        // No display limit, or the framework can't limit an eager load per
+        // parent (Laravel < 11): load the full sets in one query. getSubRows()
+        // applies the display limit in memory and counts the loaded relation,
+        // so behaviour stays correct — only the memory win is lost.
+        if (! $limit || ! $this->supportsPerParentEagerLimit()) {
+            $target->load([$relation => $constrain]);
+
+            return;
+        }
+
+        // With a limit, loading full child sets just to count them wastes
+        // memory on large relations. Parents flagged "show all" still need the
+        // full set; the rest load only `limit` rows per parent (native
+        // eager-load limit — window function) plus an exact count for the
+        // "show more" affordance (read via getSubRowsTotalCount()).
+        $showAll = $this->tableState->get('rows.subRowsShowAll', []);
+
+        [$fullTargets, $limitedTargets] = $target->partition(
+            fn ($record) => (bool) ($showAll[$record->getKey()] ?? false),
+        );
+
+        if ($fullTargets->isNotEmpty()) {
+            $fullTargets->load([$relation => $constrain]);
+        }
+
+        if ($limitedTargets->isNotEmpty()) {
+            $limitedTargets->load([$relation => function ($query) use ($constrain, $limit) {
+                $constrain($query);
+                $query->limit($limit);
+            }]);
+
+            // Counts ignore ordering — apply only the row constraints.
+            $limitedTargets->loadCount([$relation => function ($query) use ($callback) {
+                if ($callback) {
+                    $query = $callback($query) ?? $query;
+                }
+
+                $this->applySubRowScopedFilters($query);
+            }]);
+        }
+    }
+
+    /**
+     * Whether the framework can limit an eager load per parent.
+     *
+     * Per-parent eager-load limits (a window function under the hood) arrived
+     * in Laravel 11 via Query\Builder::groupLimit(). On Laravel 10 calling
+     * ->limit() inside an eager-load closure applies a single global LIMIT
+     * across all parents, so the limited fast path must be skipped there.
+     */
+    protected function supportsPerParentEagerLimit(): bool
+    {
+        return method_exists(\Illuminate\Database\Query\Builder::class, 'groupLimit');
     }
 
     /**
@@ -968,6 +1159,33 @@ trait WithTable
 
         foreach ($this->getActiveSubRowScopedFilters() as [$filter, $value]) {
             $filter->apply($builder, $value);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Constrain a child query by the active interactive sub-row filter bar
+     * values (subRowsFilterable()) — the per-column filters typed by the user.
+     *
+     * @param  Builder<Model>  $query
+     * @return Builder<Model>
+     */
+    protected function applyInteractiveSubRowFilters(Builder $query): Builder
+    {
+        $table = $this->getTable();
+        $subRowFilters = $this->tableState->get('rows.subRowFilters', []);
+
+        if (! $table->isSubRowsFilterable() || empty($subRowFilters)) {
+            return $query;
+        }
+
+        foreach ($table->getSubRowColumns() as $column) {
+            $filterValue = $subRowFilters[$column->getName()] ?? null;
+
+            if ($filterValue !== null && $filterValue !== '' && $column->isFilterable()) {
+                $query = $column->applyFilter($query, $filterValue);
+            }
         }
 
         return $query;
@@ -1081,6 +1299,15 @@ trait WithTable
         // rows.subRowFilters and over-count the "show more" affordance.
         $relation = $table->getSubRowRelation();
         if ($record->relationLoaded($relation) && ! $this->hasActiveSubRowFilters()) {
+            // Limited eager loads (subRowsLimit) ship an exact loadCount
+            // alongside — prefer it; the loaded relation itself holds only
+            // `limit` rows, so counting it would always cap at the limit.
+            $loadedCount = $record->getAttribute(Str::snake($relation).'_count');
+
+            if ($loadedCount !== null) {
+                return (int) $loadedCount;
+            }
+
             return $record->getRelation($relation)->count();
         }
 
@@ -1088,18 +1315,7 @@ trait WithTable
 
         // Honour the same constraints used when listing.
         $query = $this->applySubRowScopedFilters($query);
-
-        $subRowFilters = $this->tableState->get('rows.subRowFilters', []);
-        if ($table->isSubRowsFilterable() && ! empty($subRowFilters)) {
-            foreach ($table->getSubRowColumns() as $column) {
-                $colName = $column->getName();
-                $filterValue = $subRowFilters[$colName] ?? null;
-
-                if ($filterValue !== null && $filterValue !== '' && $column->isFilterable()) {
-                    $query = $column->applyFilter($query, $filterValue);
-                }
-            }
-        }
+        $query = $this->applyInteractiveSubRowFilters($query);
 
         return $query->count();
     }
@@ -1148,11 +1364,17 @@ trait WithTable
         $columns = $table->getColumns();
         $summaries = [];
 
+        // Batch all SQL-native query-scope aggregates into at most two queries
+        // instead of one query per summary per column on every render.
+        $batched = $query !== null ? SummaryBatch::compute($columns, $query) : [];
+
         foreach ($columns as $column) {
             if ($column->hasSummary()) {
                 $summaries[$column->getName()] = $column->computeSummaries(
                     $inMemoryRecords,
                     $query,
+                    null,
+                    $batched[$column->getName()] ?? [],
                 );
             }
         }
@@ -1173,7 +1395,232 @@ trait WithTable
             }
         }
 
+        return $this->tableHasSubRowGrandTotals();
+    }
+
+    /**
+     * Whether group subtotal rows should render: grouping is active, enabled,
+     * and at least one column has a summary to subtotal.
+     */
+    public function tableHasGroupSummaries(): bool
+    {
+        $table = $this->getTable();
+
+        if (! $table->hasGrouping() || ! $table->hasGroupSummaries()) {
+            return false;
+        }
+
+        foreach ($table->getColumns() as $column) {
+            if ($column->hasSummary()) {
+                return true;
+            }
+        }
+
         return false;
+    }
+
+    /**
+     * Per-group subtotals, computed in memory over the group's records on the
+     * current page (groups crossing a page boundary subtotal per page).
+     *
+     * @return array<string, array<int, array<string, mixed>>> [columnName => [['label' => …, 'value' => …], …]]
+     */
+    public function computeGroupSummaries(mixed $groupValue): array
+    {
+        $table = $this->getTable();
+
+        if (! $table->hasGrouping()) {
+            return [];
+        }
+
+        $groupRecords = $this->getGroupRecords($groupValue);
+
+        $summaries = [];
+
+        foreach ($table->getColumns() as $column) {
+            if (! $column->hasSummary()) {
+                continue;
+            }
+
+            // In-memory over the group's rows; selection/subRows scopes don't
+            // describe a group, so only query/page declarations subtotal.
+            $summaries[$column->getName()] = $column->computeSummaries(
+                $groupRecords,
+                null,
+                ['query', 'page'],
+            );
+        }
+
+        return $summaries;
+    }
+
+    /**
+     * Records of one group on the current page. The page is partitioned once
+     * per request — group subtotals are rendered per group, and re-filtering
+     * the whole page for each of them is O(groups × page size).
+     *
+     * @return Collection<int, Model>
+     */
+    protected function getGroupRecords(mixed $groupValue): Collection
+    {
+        if ($this->cachedGroupPartitions === null) {
+            $table = $this->getTable();
+            $records = $this->getTableRecords();
+            $records = $records instanceof Collection ? $records : collect($records->items());
+
+            $partitions = [];
+
+            foreach ($records as $record) {
+                $value = $table->getGroupValue($record);
+                $matched = false;
+
+                // Group values may be objects (enums, dates) — match strictly
+                // instead of using them as array keys. No references needed:
+                // 'records' is a Collection object, push() mutates in place.
+                foreach ($partitions as $partition) {
+                    if ($partition['value'] === $value) {
+                        $partition['records']->push($record);
+                        $matched = true;
+                        break;
+                    }
+                }
+
+                if (! $matched) {
+                    $partitions[] = ['value' => $value, 'records' => collect([$record])];
+                }
+            }
+
+            $this->cachedGroupPartitions = $partitions;
+        }
+
+        foreach ($this->cachedGroupPartitions as $partition) {
+            if ($partition['value'] === $groupValue) {
+                return $partition['records'];
+            }
+        }
+
+        return collect();
+    }
+
+    /**
+     * Whether any sub-row column declares a 'query'-scoped summary — a grand
+     * total of children across all parents, rendered in the main footer.
+     */
+    public function tableHasSubRowGrandTotals(): bool
+    {
+        $table = $this->getTable();
+
+        if ($table->getSubRowRelation() === null) {
+            return false;
+        }
+
+        foreach ($table->getSubRowColumns() as $column) {
+            if ($column->hasSummaryInScope('query')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Grand totals of sub-row columns across parents, for the main footer.
+     *
+     * A sub-row column opts in with summarize(..., scope: 'query') (the default
+     * scope). The aggregate runs in SQL over the child table constrained to the
+     * current parent set — 'query' = all filtered parents, 'page' = parents on
+     * the current page, 'selection' = selected parents — and honours sub-row
+     * scoped main filters, the subRowQuery() callback, and the interactive
+     * sub-row filter bar, so the total always matches the displayed children.
+     *
+     * @return array<string, array<int, array<string, mixed>>> [columnName => [['label' => …, 'value' => …], …]]
+     */
+    public function computeSubRowGrandTotals(string $scope = 'query'): array
+    {
+        if (! $this->tableHasSubRowGrandTotals()) {
+            return [];
+        }
+
+        $childQuery = $this->buildSubRowGrandTotalQuery($scope);
+
+        if ($childQuery === null) {
+            return [];
+        }
+
+        $totals = [];
+        $subRowColumns = $this->getTable()->getSubRowColumns();
+
+        // The child query is identical for every sub-row column — batch the
+        // SQL-native aggregates into one query instead of one per summary.
+        $batched = SummaryBatch::compute($subRowColumns, $childQuery, ['query']);
+
+        foreach ($subRowColumns as $column) {
+            if (! $column->hasSummaryInScope('query')) {
+                continue;
+            }
+
+            $totals[$column->getName()] = $column->computeSummaries(
+                collect(),
+                clone $childQuery,
+                ['query'],
+                $batched[$column->getName()] ?? [],
+            );
+        }
+
+        return $totals;
+    }
+
+    /**
+     * Build the child query for sub-row grand totals: all children whose parent
+     * is in the current parent set, under the same constraints the displayed
+     * sub-rows use. Only direct parent→child relations (HasMany/HasOne and
+     * their morph variants) are supported; other relation types yield null.
+     *
+     * @return Builder<Model>|null
+     */
+    protected function buildSubRowGrandTotalQuery(string $scope = 'query'): ?Builder
+    {
+        $table = $this->getTable();
+        $relationName = $table->getSubRowRelation();
+
+        if ($relationName === null) {
+            return null;
+        }
+
+        $relation = $table->getQuery()->getModel()->{$relationName}();
+
+        if (! $relation instanceof HasOneOrMany) {
+            return null;
+        }
+
+        $childQuery = $relation->getRelated()->newQuery();
+
+        if ($relation instanceof MorphOneOrMany) {
+            $childQuery->where($relation->getQualifiedMorphType(), $relation->getMorphClass());
+        }
+
+        $foreignKey = $relation->getQualifiedForeignKeyName();
+        $localKey = $relation->getLocalKeyName();
+
+        if ($scope === 'page') {
+            // Paginators forward collection calls, so pluck() works on both.
+            $childQuery->whereIn($foreignKey, $this->getTableRecords()->pluck($localKey));
+        } elseif ($scope === 'selection') {
+            $childQuery->whereIn($foreignKey, $this->getSelectedRecords()->pluck($localKey));
+        } else {
+            // buildTableQuery() may hand back its cached instance — clone before
+            // stripping orders/selects for the parent-id subquery.
+            $parents = (clone $this->buildTableQuery())->reorder();
+            $childQuery->whereIn($foreignKey, $parents->select($parents->qualifyColumn($localKey)));
+        }
+
+        if ($callback = $table->getSubRowQueryCallback()) {
+            $childQuery = $callback($childQuery) ?? $childQuery;
+        }
+
+        $childQuery = $this->applySubRowScopedFilters($childQuery);
+
+        return $this->applyInteractiveSubRowFilters($childQuery);
     }
 
     /**
@@ -1285,6 +1732,7 @@ trait WithTable
         }
 
         $this->tableState->set('selection.records', $selected);
+        $this->cachedSelectedRecords = null;
     }
 
     /**
@@ -1301,6 +1749,7 @@ trait WithTable
         }
 
         $this->tableState->set('selection.records', $selected);
+        $this->cachedSelectedRecords = null;
     }
 
     /**
@@ -1371,13 +1820,22 @@ trait WithTable
     public function deselectAllRecords(): void
     {
         $this->tableState->set('selection.records', []);
+        $this->cachedSelectedRecords = null;
     }
 
     /**
-     * Get Collection of selected records (fetched from database)
+     * Get Collection of selected records (fetched from database).
+     *
+     * Memoized per request — selection-scope summaries, grand totals, and bulk
+     * modals may all ask for the set within one render. The memo is cleared
+     * whenever the selection mutates or the table cache is invalidated.
      */
     public function getSelectedRecords(): Collection
     {
+        if ($this->cachedSelectedRecords !== null) {
+            return $this->cachedSelectedRecords;
+        }
+
         $selectedKeys = $this->getSelectedRecordKeys();
 
         if (empty($selectedKeys)) {
@@ -1411,7 +1869,7 @@ trait WithTable
             };
         }
 
-        return $query->get();
+        return $this->cachedSelectedRecords = $query->get();
     }
 
     // ==========================================
@@ -1806,6 +2264,8 @@ trait WithTable
         $this->cachedRecords = null;
         $this->cachedQuery = null;
         $this->queryService = null;
+        $this->cachedSelectedRecords = null;
+        $this->cachedGroupPartitions = null;
 
         event(new TableRefreshed(static::class));
     }
@@ -2756,8 +3216,11 @@ trait WithTable
      */
     public function refreshRow(mixed $recordKey): void
     {
-        // Invalidate cached records so next render fetches fresh data
+        // Invalidate cached records so next render fetches fresh data.
+        // cachedQuery is intentionally kept — the query plan doesn't change,
+        // only the row data; re-running the planner would be wasted work.
         $this->cachedRecords = null;
+        $this->cachedGroupPartitions = null;
     }
 
     // ==========================================
@@ -2807,7 +3270,7 @@ trait WithTable
         $table = $this->getTable();
         $service = new TableQueryService;
 
-        return $service->buildQuery(
+        return $this->applyGroupOrdering($service->buildQuery(
             baseQuery: $table->getQuery(),
             table: $table,
             search: $this->tableState->get('search', ''),
@@ -2815,6 +3278,6 @@ trait WithTable
             sortColumn: $this->tableState->get('sort.column') ?: $table->getDefaultSort(),
             sortDirection: $this->tableState->get('sort.direction') ?: $table->getDefaultSortDirection(),
             columnFilterValues: $this->tableState->get('columnFilters', []),
-        );
+        ));
     }
 }

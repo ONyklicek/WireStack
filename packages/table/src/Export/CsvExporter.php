@@ -12,6 +12,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CsvExporter implements Exporter
 {
+    use Concerns\ResolvesExportValue;
+
     public function __construct(
         protected string $delimiter = ',',
         protected string $enclosure = '"',
@@ -21,10 +23,11 @@ class CsvExporter implements Exporter
     /**
      * @param  Builder<Model>  $query
      * @param  array<int, Column>  $columns
+     * @param  array<int, array<int, string>>  $summaryRows
      */
-    public function export(Builder $query, array $columns, string $fileName): StreamedResponse
+    public function export(Builder $query, array $columns, string $fileName, array $summaryRows = []): StreamedResponse
     {
-        return new StreamedResponse(function () use ($query, $columns) {
+        return new StreamedResponse(function () use ($query, $columns, $summaryRows) {
             $handle = fopen('php://output', 'w');
 
             if ($handle === false) {
@@ -53,6 +56,10 @@ class CsvExporter implements Exporter
                 }
             });
 
+            foreach ($summaryRows as $summaryRow) {
+                fputcsv($handle, $summaryRow, $this->delimiter, $this->enclosure);
+            }
+
             fclose($handle);
         }, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
@@ -63,14 +70,7 @@ class CsvExporter implements Exporter
 
     protected function resolveColumnValue(Column $column, Model $record): string
     {
-        $name = $column->getName();
-
-        // Handle relationship columns (e.g., "user.name")
-        if (str_contains($name, '.')) {
-            $value = data_get($record, $name);
-        } else {
-            $value = $record->getAttribute($name);
-        }
+        $value = $this->resolveRawExportValue($column, $record);
 
         if ($value === null) {
             return '';

@@ -8,7 +8,10 @@ use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use InvalidArgumentException;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireTable\Columns\SummaryBatch;
+use NyonCode\WireTable\Columns\SummaryType;
 
 /**
  * Trait HasSummary
@@ -19,19 +22,13 @@ use NyonCode\WireCore\Core\Support\Trans;
  * Usage on Column:
  *
  *   Column::make('price')
- *       ->summarize('sum')                        // simple built-in
- *       ->summarize('avg', label: 'Průměr')       // with custom label
- *       ->summarize('count')                       // count non-null
- *       ->summarize('distinctCount')               // count distinct values
- *       ->summarize('min')                         // minimum
- *       ->summarize('max')                         // maximum
- *       ->summarize('range')                       // "min – max"
- *       ->summarize('median')                      // median value
- *       ->summarize('variance')                    // sample variance
- *       ->summarize('stddev')                      // sample standard deviation
- *       ->summarize('first')                       // first value
- *       ->summarize('last')                        // last value
- *       ->summarize(fn($values, $query) => ...)   // custom closure
+ *       ->summarize(SummaryType::Sum)              // enum case
+ *       ->summarize('sum')                         // or its string value
+ *       ->summarize('avg', label: 'Průměr')        // with custom label
+ *       ->summarize(SummaryType::Median)           // see SummaryType for all types
+ *       ->summarize(fn($values, $query) => ...)    // custom closure
+ *
+ * String types are normalized to SummaryType — unknown strings throw.
  *
  * Numeric summary results are formatted using the column's prefix/suffix and,
  * when set, ->summaryDecimals() — so SUM(price) shows "1 234,50 Kč", not 1234.5.
@@ -46,7 +43,7 @@ trait HasSummary
 {
     /**
      * Summary definitions.
-     * Each entry: ['type' => string|Closure, 'label' => ?string, 'scope' => string,
+     * Each entry: ['type' => SummaryType|Closure, 'label' => ?string, 'scope' => string,
      *              'format' => ?Closure, 'when' => ?Closure]
      *
      * @var array<int, array<string, mixed>>
@@ -68,7 +65,8 @@ trait HasSummary
     /**
      * Add a summary aggregation to this column.
      *
-     * @param  string|Closure  $type  Built-in type or custom callback(Collection $values, ?Builder $query): mixed
+     * @param  string|Closure|SummaryType  $type  Built-in type (enum case or its string value)
+     *                                            or custom callback(Collection $values, ?Builder $query): mixed
      * @param  string|null  $label  Display label (auto-generated if null)
      * @param  string  $scope  'page' (current page), 'query' (all filtered), 'selection', or 'subRows'
      * @param  Closure|null  $format  Optional formatter: fn(mixed $result): string
@@ -77,12 +75,19 @@ trait HasSummary
      *                              Restricts which records are aggregated (e.g. only paid invoices).
      */
     public function summarize(
-        string|Closure $type,
+        string|Closure|SummaryType $type,
         ?string $label = null,
         string $scope = 'query',
         ?Closure $format = null,
         ?Closure $when = null,
     ): static {
+        if (is_string($type)) {
+            $type = SummaryType::tryFrom($type) ?? throw new InvalidArgumentException(
+                "Unknown summary type [{$type}]. Valid types: ".
+                implode(', ', array_column(SummaryType::cases(), 'value')).'.',
+            );
+        }
+
         $this->summaries[] = [
             'type' => $type,
             'label' => $label,
@@ -113,7 +118,7 @@ trait HasSummary
      */
     public function summarizeSum(?string $label = null, string $scope = 'query'): static
     {
-        return $this->summarize('sum', $label ?? Trans::get('wire-table::messages.summary_sum'), $scope);
+        return $this->summarize(SummaryType::Sum, $label, $scope);
     }
 
     /**
@@ -121,7 +126,7 @@ trait HasSummary
      */
     public function summarizeAvg(?string $label = null, string $scope = 'query'): static
     {
-        return $this->summarize('avg', $label ?? Trans::get('wire-table::messages.summary_avg'), $scope);
+        return $this->summarize(SummaryType::Avg, $label, $scope);
     }
 
     /**
@@ -129,7 +134,7 @@ trait HasSummary
      */
     public function summarizeCount(?string $label = null, string $scope = 'query'): static
     {
-        return $this->summarize('count', $label ?? Trans::get('wire-table::messages.summary_count'), $scope);
+        return $this->summarize(SummaryType::Count, $label, $scope);
     }
 
     /**
@@ -137,7 +142,7 @@ trait HasSummary
      */
     public function summarizeMin(?string $label = null, string $scope = 'query'): static
     {
-        return $this->summarize('min', $label ?? Trans::get('wire-table::messages.summary_min'), $scope);
+        return $this->summarize(SummaryType::Min, $label, $scope);
     }
 
     /**
@@ -145,7 +150,7 @@ trait HasSummary
      */
     public function summarizeMax(?string $label = null, string $scope = 'query'): static
     {
-        return $this->summarize('max', $label ?? Trans::get('wire-table::messages.summary_max'), $scope);
+        return $this->summarize(SummaryType::Max, $label, $scope);
     }
 
     /**
@@ -153,7 +158,7 @@ trait HasSummary
      */
     public function summarizeRange(?string $label = null, string $scope = 'query'): static
     {
-        return $this->summarize('range', $label ?? Trans::get('wire-table::messages.summary_range'), $scope);
+        return $this->summarize(SummaryType::Range, $label, $scope);
     }
 
     /**
@@ -161,7 +166,7 @@ trait HasSummary
      */
     public function summarizeDistinct(?string $label = null, string $scope = 'query'): static
     {
-        return $this->summarize('distinctCount', $label ?? Trans::get('wire-table::messages.summary_distinct'), $scope);
+        return $this->summarize(SummaryType::DistinctCount, $label, $scope);
     }
 
     /**
@@ -169,7 +174,7 @@ trait HasSummary
      */
     public function summarizeMedian(?string $label = null, string $scope = 'query'): static
     {
-        return $this->summarize('median', $label ?? Trans::get('wire-table::messages.summary_median'), $scope);
+        return $this->summarize(SummaryType::Median, $label, $scope);
     }
 
     /**
@@ -177,12 +182,26 @@ trait HasSummary
      */
     public function summarizeStddev(?string $label = null, string $scope = 'query'): static
     {
-        return $this->summarize('stddev', $label ?? Trans::get('wire-table::messages.summary_stddev'), $scope);
+        return $this->summarize(SummaryType::Stddev, $label, $scope);
     }
 
     public function hasSummary(): bool
     {
         return ! empty($this->summaries);
+    }
+
+    /**
+     * Whether the column has at least one summary declared with the given scope.
+     */
+    public function hasSummaryInScope(string $scope): bool
+    {
+        foreach ($this->summaries as $summary) {
+            if ($summary['scope'] === $scope) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -198,20 +217,31 @@ trait HasSummary
      *
      * @param  Collection<int, mixed>  $pageRecords  Records on current page
      * @param  Builder<Model>|null  $query  Full query (for 'query' scope)
+     * @param  array<int, string>|null  $scopes  When given, only summaries declared
+     *                                           with one of these scopes are computed.
+     * @param  array<int, mixed>  $precomputed  Values already computed in a batched
+     *                                          aggregate query, keyed by summary index
+     *                                          (see SummaryBatch). Skips the per-summary
+     *                                          query; formatting still applies here.
      * @return array<int, array<string, mixed>>
      */
-    public function computeSummaries(Collection $pageRecords, ?Builder $query = null): array
+    public function computeSummaries(Collection $pageRecords, ?Builder $query = null, ?array $scopes = null, array $precomputed = []): array
     {
         $results = [];
 
-        foreach ($this->summaries as $summary) {
+        foreach ($this->summaries as $index => $summary) {
+            if ($scopes !== null && ! in_array($summary['scope'], $scopes, true)) {
+                continue;
+            }
             $type = $summary['type'];
             $label = $summary['label'];
             $scope = $summary['scope'];
             $format = $summary['format'];
             $when = $summary['when'] ?? null;
 
-            $value = $this->computeSingleSummary($type, $scope, $pageRecords, $query, $when);
+            $value = array_key_exists($index, $precomputed)
+                ? $precomputed[$index]
+                : $this->computeSingleSummary($type, $scope, $pageRecords, $query, $when);
 
             if ($format) {
                 // Explicit formatter wins — full control to the caller.
@@ -238,7 +268,7 @@ trait HasSummary
      * @param  Closure|null  $when  Optional restriction (see summarize()).
      */
     protected function computeSingleSummary(
-        string|Closure $type,
+        SummaryType|Closure $type,
         string $scope,
         Collection $pageRecords,
         ?Builder $query,
@@ -246,8 +276,9 @@ trait HasSummary
     ): mixed {
         // Aggregate (rollup) columns expose their value as a computed attribute
         // (e.g. items_sum_total), not a real DB column. Summarizing one yields a
-        // grand total of all sub-rows across the parent set — so route it through
-        // the in-memory path using that attribute, even for 'query' scope.
+        // grand total of all sub-rows across the parent set; at 'query' scope it
+        // is aggregated in SQL over a derived table, in-memory scopes read the
+        // attribute from the already-loaded models.
         $isAggregate = $this->isAggregate();
         $columnName = $isAggregate ? ($this->getAggregateAttribute() ?? $this->getName()) : $this->getName();
 
@@ -269,8 +300,9 @@ trait HasSummary
             return $this->computeQuerySummary($type, $columnName, $q);
         }
 
-        // Aggregate column at 'query' scope: load the filtered parent rows (the
-        // query already has withSum/withCount applied) and aggregate the attribute.
+        // Aggregate column at 'query' scope: the per-row rollup value is a
+        // withSum/withCount subselect alias, so aggregate it in SQL over the
+        // filtered query as a derived table — never load the rows into memory.
         if ($scope === 'query' && $query !== null && $isAggregate) {
             $q = clone $query;
 
@@ -278,7 +310,16 @@ trait HasSummary
                 $q = $when($q) ?? $q;
             }
 
-            $pageRecords = $q->get();
+            if ($type instanceof Closure) {
+                $values = $this->wrapAggregateQuery($q)
+                    ->pluck($columnName)
+                    ->filter(fn ($v) => $v !== null)
+                    ->values();
+
+                return call_user_func($type, $values, $q);
+            }
+
+            return $this->computeAggregateQuerySummary($type, $columnName, $q);
         }
 
         // In-memory scopes ('page', 'selection', 'subRows') and aggregate columns:
@@ -302,26 +343,115 @@ trait HasSummary
      * Compute summary using DB aggregation (efficient for large datasets).
      *
      * Simple aggregates run natively in SQL. Statistical types that aren't
-     * portable across drivers (median/variance/stddev/first/last) fall back to
-     * plucking the column and computing in PHP.
+     * portable across drivers (SummaryType::isSqlNative() === false) fall back
+     * to plucking the column and computing in PHP.
      *
      * @param  Builder<Model>  $query
      */
-    protected function computeQuerySummary(string $type, string $column, Builder $query): mixed
+    protected function computeQuerySummary(SummaryType $type, string $column, Builder $query): mixed
     {
-        return match ($type) {
-            'sum' => $query->sum($column),
-            'avg' => $query->avg($column),
-            'count' => (clone $query)->whereNotNull($column)->count(),
-            'distinctCount' => (clone $query)->whereNotNull($column)->distinct()->count($column),
-            'min' => $query->min($column),
-            'max' => $query->max($column),
-            'range' => $this->formatRange($query->min($column), $query->max($column)),
-            'median', 'variance', 'stddev', 'first', 'last' => $this->computeCollectionSummary(
+        if (! $type->isSqlNative()) {
+            return $this->computeCollectionSummary(
                 $type,
                 $query->pluck($column)->filter(fn ($v) => $v !== null)->values(),
-            ),
+            );
+        }
+
+        return match ($type) {
+            SummaryType::Sum => $query->sum($column),
+            SummaryType::Avg => $query->avg($column),
+            SummaryType::Count => (clone $query)->whereNotNull($column)->count(),
+            SummaryType::DistinctCount => (clone $query)->whereNotNull($column)->distinct()->count($column),
+            SummaryType::Min => $query->min($column),
+            SummaryType::Max => $query->max($column),
+            SummaryType::Range => $this->formatRange($query->min($column), $query->max($column)),
             default => null,
+        };
+    }
+
+    /**
+     * Wrap the filtered query as a derived table so the rollup alias
+     * (e.g. items_sum_total) becomes addressable by outer SQL aggregates.
+     *
+     * @param  Builder<Model>  $query
+     */
+    protected function wrapAggregateQuery(Builder $query): \Illuminate\Database\Query\Builder
+    {
+        return $query->toBase()
+            ->newQuery()
+            ->fromSub($query->toBase(), 'wire_table_summary');
+    }
+
+    /**
+     * Compute a summary over a rollup (withSum/withCount/…) alias in SQL.
+     *
+     * Mirrors computeQuerySummary(), but aggregates the derived-table column
+     * instead of a real table column. Statistical types fall back to plucking
+     * the alias and computing in PHP, exactly like real columns do.
+     *
+     * @param  Builder<Model>  $query
+     */
+    protected function computeAggregateQuerySummary(SummaryType $type, string $column, Builder $query): mixed
+    {
+        $wrapped = $this->wrapAggregateQuery($query);
+
+        if (! $type->isSqlNative()) {
+            return $this->computeCollectionSummary(
+                $type,
+                (clone $wrapped)->pluck($column)->filter(fn ($v) => $v !== null)->values(),
+            );
+        }
+
+        return match ($type) {
+            SummaryType::Sum => (clone $wrapped)->sum($column),
+            SummaryType::Avg => ($avg = (clone $wrapped)->avg($column)) !== null ? round((float) $avg, 2) : null,
+            SummaryType::Count => (clone $wrapped)->whereNotNull($column)->count(),
+            SummaryType::DistinctCount => (clone $wrapped)->whereNotNull($column)->distinct()->count($column),
+            SummaryType::Min => (clone $wrapped)->min($column),
+            SummaryType::Max => (clone $wrapped)->max($column),
+            SummaryType::Range => $this->computeAggregateRange($wrapped, $column),
+            default => null,
+        };
+    }
+
+    protected function computeAggregateRange(\Illuminate\Database\Query\Builder $wrapped, string $column): string
+    {
+        $min = (clone $wrapped)->min($column);
+        $max = (clone $wrapped)->max($column);
+
+        // Match the in-memory empty-set placeholder.
+        if ($min === null && $max === null) {
+            return '–';
+        }
+
+        return $this->formatRange($min, $max);
+    }
+
+    /**
+     * Normalize a raw batched SQL aggregate so the result matches what the
+     * per-summary query path returns for the same summary:
+     *
+     *  - Sum: Builder::sum() coalesces an empty set to 0 (`?: 0`)
+     *  - Avg on rollup columns: computeAggregateQuerySummary() rounds to 2
+     *  - Count/DistinctCount: Builder::count() casts to int
+     *  - Range: formatted "min – max" string ('–' for an empty rollup set)
+     *
+     * @internal Used by {@see SummaryBatch}.
+     */
+    public function normalizeBatchedSummaryValue(SummaryType $type, mixed $raw): mixed
+    {
+        $isAggregate = $this->isAggregate();
+
+        return match ($type) {
+            SummaryType::Sum => $raw ?: 0,
+            SummaryType::Avg => $isAggregate
+                ? ($raw !== null ? round((float) $raw, 2) : null)
+                : $raw,
+            SummaryType::Count, SummaryType::DistinctCount => (int) $raw,
+            SummaryType::Range => ($isAggregate && $raw['min'] === null && $raw['max'] === null)
+                ? '–'
+                : $this->formatRange($raw['min'], $raw['max']),
+            default => $raw,
         };
     }
 
@@ -330,31 +460,25 @@ trait HasSummary
      *
      * @param  Collection<int, mixed>  $values
      */
-    protected function computeCollectionSummary(string $type, Collection $values): mixed
+    protected function computeCollectionSummary(SummaryType $type, Collection $values): mixed
     {
         if ($values->isEmpty()) {
-            return match ($type) {
-                'sum' => 0,
-                'count', 'distinctCount' => 0,
-                'range' => '–',
-                default => null,
-            };
+            return $type->emptyValue();
         }
 
         return match ($type) {
-            'sum' => $values->sum(),
-            'avg' => round((float) $values->avg(), 2),
-            'count' => $values->count(),
-            'distinctCount' => $values->unique()->count(),
-            'min' => $values->min(),
-            'max' => $values->max(),
-            'range' => $this->formatRange($values->min(), $values->max()),
-            'median' => $this->computeMedian($values),
-            'variance' => round($this->computeVariance($values), 2),
-            'stddev' => round(sqrt($this->computeVariance($values)), 2),
-            'first' => $values->first(),
-            'last' => $values->last(),
-            default => null,
+            SummaryType::Sum => $values->sum(),
+            SummaryType::Avg => round((float) $values->avg(), 2),
+            SummaryType::Count => $values->count(),
+            SummaryType::DistinctCount => $values->unique()->count(),
+            SummaryType::Min => $values->min(),
+            SummaryType::Max => $values->max(),
+            SummaryType::Range => $this->formatRange($values->min(), $values->max()),
+            SummaryType::Median => $this->computeMedian($values),
+            SummaryType::Variance => round($this->computeVariance($values), 2),
+            SummaryType::Stddev => round(sqrt($this->computeVariance($values)), 2),
+            SummaryType::First => $values->first(),
+            SummaryType::Last => $values->last(),
         };
     }
 
@@ -408,20 +532,20 @@ trait HasSummary
      * summary result. Non-numeric and already-formatted string results
      * (range, first/last text) only receive prefix/suffix when numeric.
      */
-    protected function formatSummaryValue(string|Closure $type, mixed $value): mixed
+    protected function formatSummaryValue(SummaryType|Closure $type, mixed $value): mixed
     {
         if ($value === null) {
             return null;
         }
 
         // 'range' already produces a formatted "min – max" string.
-        if ($type === 'range') {
+        if ($type === SummaryType::Range) {
             return $value;
         }
 
         // Counts are integers — no decimals, but still allow prefix/suffix? No:
         // counts are not money, so leave them bare.
-        if ($type === 'count' || $type === 'distinctCount') {
+        if ($type instanceof SummaryType && $type->isCount()) {
             return $value;
         }
 
@@ -479,26 +603,12 @@ trait HasSummary
     /**
      * Default label for built-in summary types.
      */
-    protected function getDefaultSummaryLabel(string|Closure $type): string
+    protected function getDefaultSummaryLabel(SummaryType|Closure $type): string
     {
         if ($type instanceof Closure) {
             return Trans::get('wire-table::messages.summary_total');
         }
 
-        return match ($type) {
-            'sum' => Trans::get('wire-table::messages.summary_sum'),
-            'avg' => Trans::get('wire-table::messages.summary_avg'),
-            'count' => Trans::get('wire-table::messages.summary_count'),
-            'distinctCount' => Trans::get('wire-table::messages.summary_distinct'),
-            'min' => Trans::get('wire-table::messages.summary_min'),
-            'max' => Trans::get('wire-table::messages.summary_max'),
-            'range' => Trans::get('wire-table::messages.summary_range'),
-            'median' => Trans::get('wire-table::messages.summary_median'),
-            'variance' => Trans::get('wire-table::messages.summary_variance'),
-            'stddev' => Trans::get('wire-table::messages.summary_stddev'),
-            'first' => Trans::get('wire-table::messages.summary_first'),
-            'last' => Trans::get('wire-table::messages.summary_last'),
-            default => ucfirst($type),
-        };
+        return $type->label();
     }
 }
