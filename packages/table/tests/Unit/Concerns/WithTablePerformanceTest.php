@@ -416,7 +416,10 @@ it('eager-loads only the limited sub-rows plus an exact count', function () {
     expect($queries)->toBe(0)
         ->and($component->getSubRowsTotalCount($a))->toBe(2)
         ->and($component->getSubRows($a))->toHaveCount(1);
-});
+})->skip(
+    ! method_exists(\Illuminate\Database\Query\Builder::class, 'groupLimit'),
+    'Native per-parent eager-load limits require Laravel 11+ (Query\Builder::groupLimit).',
+);
 
 it('falls back to in-memory limiting when the framework lacks per-parent limits (Laravel 10)', function () {
     $component = new WtperfSubRowLimitLegacyComponent;
