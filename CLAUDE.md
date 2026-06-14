@@ -7,15 +7,16 @@ Token-efficient routing file for Claude/Codex in this repository.
 Use the smallest useful context first.
 
 1. Read this file.
-2. Read one package doc only if the task is local:
+2. Read `AI_BLUEPRINT.md` for the repo contract and package ownership rules.
+3. Read one package doc only if the task is local:
    - `architecture/core.md`
    - `architecture/forms.md`
    - `architecture/table.md`
    - `architecture/sortable.md`
-3. Read `architecture/integrations.md` only for cross-package behavior.
-4. Read `architecture/audit.md` only for full analysis, inconsistency hunting, or code review.
-5. Read `architecture/decisions/` only when the current behavior is unclear or a design tradeoff matters.
-6. Read generated output only if the task explicitly targets generated assets.
+4. Read `architecture/integrations.md` only for cross-package behavior.
+5. Read `architecture/audit.md` only for full analysis, inconsistency hunting, or code review.
+6. Read `architecture/decisions/` only when the current behavior is unclear or a design tradeoff matters.
+7. Read generated output only if the task explicitly targets generated assets.
 
 ## Repo Graph
 
@@ -83,6 +84,12 @@ Before changing shared behavior, ask:
   `architecture/audit.md`
 - Docs, previews, workbench, screenshot refresh:
   `architecture/integrations.md`
+- Implementation recipe for adding/changing fields, columns, filters, actions, plugins:
+  `AI_RECIPES.md`
+- Existing component/concern/view/test catalog:
+  `AI_COMPONENT_CATALOG.md`
+- Strict workflow for code changes, reviews, refactors, and test selection:
+  `AI_CHANGE_PROTOCOL.md`
 
 ## Cross-Package Seams
 
@@ -156,6 +163,10 @@ npm run docs:refresh
 
 ## Deep Docs
 
+- `AI_BLUEPRINT.md`
+- `AI_CHANGE_PROTOCOL.md`
+- `AI_RECIPES.md`
+- `AI_COMPONENT_CATALOG.md`
 - `architecture/README.md`
 - `architecture/core.md`
 - `architecture/forms.md`
