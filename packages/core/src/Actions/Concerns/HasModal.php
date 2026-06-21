@@ -10,6 +10,7 @@ use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Icons\Icon;
+use NyonCode\WireCore\Infolists\Infolist;
 use NyonCode\WireForms\Forms\Form;
 
 /**
@@ -49,6 +50,9 @@ trait HasModal
 
     /** @var Form|Closure|null Form instance or closure returning Form */
     protected Form|Closure|null $formInstance = null;
+
+    /** @var Infolist|Closure|null Infolist instance or closure returning Infolist */
+    protected Infolist|Closure|null $infolistInstance = null;
 
     /** @var array<string, mixed>|null */
     protected ?array $modalFormValidation = null;
@@ -209,6 +213,32 @@ trait HasModal
     }
 
     /**
+     * Define a read-only infolist for this action's modal.
+     *
+     * Accepts:
+     * - Infolist instance: ->infolist(Infolist::make()->schema([...]))
+     * - Array of entry/layout components: ->infolist([TextEntry::make('name')])
+     * - Closure returning Infolist: ->infolist(fn ($record) => Infolist::make()->schema([...]))
+     * - Closure returning array of components: ->infolist(fn ($record) => [TextEntry::make('name')])
+     *
+     * The action's record is bound to the infolist automatically, so the modal
+     * shows the record without a submit action.
+     *
+     * @param  array<int, mixed>|Infolist|Closure  $components
+     */
+    public function infolist(array|Infolist|Closure $components): static
+    {
+        if ($components instanceof Infolist || $components instanceof Closure) {
+            $this->infolistInstance = $components;
+        } else {
+            $this->infolistInstance = Infolist::make()->schema($components);
+        }
+        $this->hasModal = true;
+
+        return $this;
+    }
+
+    /**
      * @param  array<string, mixed>|Closure  $rules
      */
     public function formValidation(array|Closure $rules): static
@@ -283,7 +313,7 @@ trait HasModal
 
     public function doesRequireConfirmation(): bool
     {
-        return $this->hasModal && $this->formInstance === null;
+        return $this->hasModal && $this->formInstance === null && $this->infolistInstance === null;
     }
 
     public function getModalIcon(): ?string
@@ -344,6 +374,45 @@ trait HasModal
     public function hasFormModal(): bool
     {
         return $this->hasModal && $this->formInstance !== null;
+    }
+
+    public function hasInfolistModal(): bool
+    {
+        return $this->hasModal && $this->infolistInstance !== null;
+    }
+
+    /**
+     * Check if this action has an Infolist instance configured.
+     */
+    public function hasInfolistInstance(): bool
+    {
+        return $this->infolistInstance !== null;
+    }
+
+    /**
+     * Resolve the Infolist instance for this action's modal, bound to the
+     * action's record/context. Closures are resolved here.
+     */
+    public function getInfolistInstance(mixed $context = null): ?Infolist
+    {
+        $infolist = null;
+
+        if ($this->infolistInstance instanceof Closure) {
+            $resolved = ($this->infolistInstance)($context);
+            if ($resolved instanceof Infolist) {
+                $infolist = $resolved;
+            } elseif (is_array($resolved)) {
+                $infolist = Infolist::make()->schema($resolved);
+            }
+        } elseif ($this->infolistInstance instanceof Infolist) {
+            $infolist = $this->infolistInstance;
+        }
+
+        if ($infolist === null) {
+            return null;
+        }
+
+        return $infolist->record($context);
     }
 
     /**
@@ -550,6 +619,7 @@ trait HasModal
             'mobileWidth' => $this->getMobileModalWidth(),
             'hasForm' => $this->hasFormModal(),
             'hasFormInstance' => $this->hasFormInstance(),
+            'hasInfolist' => $this->hasInfolistModal(),
             'isConfirmation' => $this->doesRequireConfirmation(),
             'actionColor' => $this->getColor(),
             // Enhanced modal features
