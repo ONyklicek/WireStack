@@ -6,6 +6,8 @@ order: 10
 
 Standalone form system for Laravel Livewire. Works independently or with Wire Table.
 
+> Need to **display** a record read-only instead of editing it? See [Infolists](../core/infolists.md) — the same schema and layout, with display entries instead of input fields.
+
 ## Installation
 
 ```bash

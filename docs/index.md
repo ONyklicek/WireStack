@@ -62,5 +62,6 @@ User-facing documentation for the Wire ecosystem.
 | [Core Notifications](core/notifications.md) | Notification value objects and drivers |
 | [Core Modals](core/modals.md) | Confirmation, slide-over, and wizard components |
 | [Core Widgets](core/widgets.md) | Dashboard widgets and widget layout |
+| [Core Infolists](core/infolists.md) | Read-only, schema-driven display of a record |
 | [Core Plugins](core/plugins.md) | App and package extension points |
 | [Audit Log](core/audit.md) | Record model changes and table-related events |

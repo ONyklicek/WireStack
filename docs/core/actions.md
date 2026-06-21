@@ -164,6 +164,23 @@ Action::make('edit')
     ->action(fn ($record, array $data) => $record->update($data));
 ```
 
+## Infolist Modal
+
+Use `->infolist()` to open a **read-only** modal that displays the record — the counterpart of `->form()`. The action's record is bound automatically, the modal is not a confirmation, and it shows only a close button (no submit). See [Infolists](infolists.md) for the full entry reference.
+
+```php
+use NyonCode\WireCore\Actions\ViewAction;
+use NyonCode\WireCore\Infolists\Components\TextEntry;
+
+ViewAction::make()
+    ->slideOver()
+    ->infolist([
+        TextEntry::make('name')->weight('bold'),
+        TextEntry::make('email')->copyable(),
+        TextEntry::make('created_at')->dateTime()->since(),
+    ]);
+```
+
 ## Multi-Step Wizard
 
 ```php
