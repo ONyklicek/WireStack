@@ -84,7 +84,7 @@
                 class="p-4 space-y-4"
             >
                 @foreach($field->getItemSchema($index) as $component)
-                    {!! $component->toHtml() !!}
+                    {{ $component }}
                 @endforeach
             </div>
         </div>

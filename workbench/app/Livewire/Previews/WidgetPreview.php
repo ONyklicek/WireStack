@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Workbench\App\Livewire\Previews;
 
 use Livewire\Component;
+use NyonCode\WireCore\Widgets\BarChartWidget;
+use NyonCode\WireCore\Widgets\ChartItem;
 use NyonCode\WireCore\Widgets\ChartWidget;
 use NyonCode\WireCore\Widgets\Stat;
 use NyonCode\WireCore\Widgets\StatsOverviewWidget;
@@ -25,7 +27,64 @@ class WidgetPreview extends Component
             'stats' => $this->statsWidget(),
             'lineChart' => $this->lineChartWidget(),
             'barChart' => $this->barChartWidget(),
+            'financeBars' => $this->financeBarsWidget(),
+            'systemBars' => $this->systemBarsWidget(),
+            'systemBarsHorizontal' => $this->systemBarsHorizontalWidget(),
         ]);
+    }
+
+    private function financeBarsWidget(): BarChartWidget
+    {
+        return BarChartWidget::make()
+            ->heading('Přehled tržeb')
+            ->description('Měsíční tržby za poslední půlrok')
+            ->type('vertical')
+            ->variant('finance')
+            ->height(220)
+            ->items([
+                ChartItem::make('01 / 2024')->value(125000)->formattedValue('125 000 Kč')->color('blue')->percentage(78),
+                ChartItem::make('02 / 2024')->value(98500)->formattedValue('98 500 Kč')->color('green')->percentage(61),
+                ChartItem::make('03 / 2024')->value(142300)->formattedValue('142 300 Kč')->color('purple')->percentage(89),
+                ChartItem::make('04 / 2024')->value(76400)->formattedValue('76 400 Kč')->color('orange')->percentage(48),
+                ChartItem::make('05 / 2024')->value(118900)->formattedValue('118 900 Kč')->color('blue')->percentage(74),
+                ChartItem::make('06 / 2024')->value(160500)->formattedValue('160 500 Kč')->color('green')->percentage(100),
+            ]);
+    }
+
+    /**
+     * @return array<int, ChartItem>
+     */
+    private function systemMetrics(): array
+    {
+        return [
+            ChartItem::make('CPU')->value(72)->formattedValue('72 %')->icon('cpu-chip')->color('blue')->percentage(72),
+            ChartItem::make('RAM')->value(54)->formattedValue('54 %')->icon('circle-stack')->color('green')->percentage(54),
+            ChartItem::make('Disk')->value(81)->formattedValue('81 %')->icon('server')->color('orange')->percentage(81),
+            ChartItem::make('GPU')->value(36)->formattedValue('36 %')->icon('bolt')->color('purple')->percentage(36),
+        ];
+    }
+
+    private function systemBarsWidget(): BarChartWidget
+    {
+        return BarChartWidget::make()
+            ->heading('Přehled systému')
+            ->type('vertical')
+            ->variant('system')
+            ->showGrid()
+            ->showMenu()
+            ->maxValue(100)
+            ->height(220)
+            ->items($this->systemMetrics());
+    }
+
+    private function systemBarsHorizontalWidget(): BarChartWidget
+    {
+        return BarChartWidget::make()
+            ->heading('Vytížení zdrojů')
+            ->type('horizontal')
+            ->variant('system')
+            ->maxValue(100)
+            ->items($this->systemMetrics());
     }
 
     private function statsWidget(): StatsOverviewWidget

@@ -39,6 +39,9 @@ const captures = [
   { slug: 'core-modal', path: 'core-modal', selector: '[role="dialog"] .transform', pad: 88 },
   { slug: 'widgets-overview', path: 'widgets-overview' },
   { slug: 'widgets-chart', path: 'widgets-chart' },
+  { slug: 'widgets-bar-chart', path: 'widgets-bar-chart' },
+  { slug: 'infolists-overview', path: 'infolists-overview' },
+  { slug: 'infolists-entries', path: 'infolists-entries' },
   ...fieldSlugs.map((slug) => ({ slug: `field-${slug}`, path: `field-${slug}` })),
 ];
 

@@ -3,6 +3,8 @@
     @php
         $modalData = $component->getActionModalData();
         $actionFormInstance = $component->getActionModalFormInstance();
+        $actionInfolistInstance = $component->getActionModalInfolistInstance();
+        $hasInfolist = $modalData['hasInfolist'] ?? false;
         $isSlideOver = $modalData['slideOver'] ?? false;
         $isSlideOverOnMobile = $modalData['slideOverOnMobile'] ?? false;
         $isFullScreenMobile = $modalData['fullScreenOnMobile'] ?? false;
@@ -21,7 +23,9 @@
                 close-action="closeActionModal"
             >
                 @if($actionFormInstance)
-                    {!! $actionFormInstance->toHtml() !!}
+                    {{ $actionFormInstance }}
+                @elseif($actionInfolistInstance)
+                    {{ $actionInfolistInstance }}
                 @endif
 
                 <x-slot:footer>
@@ -33,6 +37,7 @@
                         >
                             {{ $modalData['cancelLabel'] }}
                         </button>
+                        @unless($hasInfolist)
                         <button
                             type="button"
                             wire:click="submitActionModal"
@@ -53,6 +58,7 @@
                             <span wire:loading.remove wire:target="submitActionModal">{{ $modalData['submitLabel'] }}</span>
                             <span wire:loading wire:target="submitActionModal">{{ __('Saving...') }}</span>
                         </button>
+                        @endunless
                     </div>
                 </x-slot:footer>
             </x-wire-modals::slide-over>
@@ -93,7 +99,9 @@
                 close-action="closeActionModal"
             >
                 @if($actionFormInstance)
-                    {!! $actionFormInstance->toHtml() !!}
+                    {{ $actionFormInstance }}
+                @elseif($actionInfolistInstance)
+                    {{ $actionInfolistInstance }}
                 @endif
 
                 <x-slot:footer>
@@ -105,6 +113,7 @@
                         >
                             {{ $modalData['cancelLabel'] }}
                         </button>
+                        @unless($hasInfolist)
                         <button
                             type="button"
                             wire:click="submitActionModal"
@@ -125,6 +134,7 @@
                             <span wire:loading.remove wire:target="submitActionModal">{{ $modalData['submitLabel'] }}</span>
                             <span wire:loading wire:target="submitActionModal">{{ __('Saving...') }}</span>
                         </button>
+                        @endunless
                     </div>
                 </x-slot:footer>
             </x-wire-modals::modal>

@@ -14,6 +14,7 @@ Every widget shares the same fluent builder, so heading, visibility, authorizati
 | --- | --- | --- |
 | **Stats overview** | `StatsOverviewWidget` | KPIs, counters, and summary metrics with optional sparklines |
 | **Chart** | `ChartWidget` | Line, bar, pie, and doughnut charts powered by Chart.js |
+| **Bar chart** | `BarChartWidget` | Pure-CSS vertical/horizontal bars (finance, system) — no JavaScript |
 | **Table** | `TableWidget` | A compact wire-table embedded inside a dashboard card |
 | **Custom** | `CustomWidget` | Any Blade view rendered as a widget |
 
@@ -27,12 +28,14 @@ Every widget shares the same fluent builder, so heading, visibility, authorizati
 2. [StatsOverviewWidget](#statsoverviewwidget)
 3. [Stat](#stat)
 4. [ChartWidget](#chartwidget)
-5. [TableWidget](#tablewidget)
-6. [CustomWidget](#customwidget)
-7. [Polling](#polling)
-8. [Dashboard Layout (WithWidgets)](#dashboard-layout-withwidgets)
-9. [Authorization](#authorization)
-10. [Widget API Reference](#widget-api-reference)
+5. [BarChartWidget](#barchartwidget)
+6. [ChartItem](#chartitem)
+7. [TableWidget](#tablewidget)
+8. [CustomWidget](#customwidget)
+9. [Polling](#polling)
+10. [Dashboard Layout (WithWidgets)](#dashboard-layout-withwidgets)
+11. [Authorization](#authorization)
+12. [Widget API Reference](#widget-api-reference)
 
 ---
 
@@ -254,6 +257,157 @@ ChartWidget::make()
 ->hasFilter(): bool
 ->getActiveFilter(): ?string
 ->activeFilter(?string $filter)            // set active filter programmatically
+```
+
+---
+
+## BarChartWidget
+
+A **dependency-free** bar chart rendered entirely with Tailwind utility classes — no Chart.js, no `<canvas>`, no JavaScript. Use it for compact, print-friendly dashboards. It is a distinct widget from [`ChartWidget`](#chartwidget); both can live on the same dashboard.
+
+```php
+use NyonCode\WireCore\Widgets\BarChartWidget;
+use NyonCode\WireCore\Widgets\ChartItem;
+```
+
+The widget has three visual modes, picked from `type()` + `variant()`:
+
+| `type()` | `variant()` | Look |
+| --- | --- | --- |
+| `vertical` | `finance` | Vertical bars: formatted value above, light max-height track, `MM / YYYY` caption below |
+| `vertical` | `system` / `default` | Vertical bars on a 0–100% track with an icon + label + percentage header and optional grid lines |
+| `horizontal` | `system` / `default` | Horizontal progress bars: label on the left, value on the right |
+
+### Finance bars
+
+```php
+BarChartWidget::make()
+    ->heading('Přehled tržeb')
+    ->type('vertical')
+    ->variant('finance')
+    ->items([
+        ChartItem::make('01 / 2024')->value(125000)->formattedValue('125 000 Kč')->color('blue')->percentage(70),
+        ChartItem::make('02 / 2024')->value(98500)->formattedValue('98 500 Kč')->color('green')->percentage(55),
+    ])
+```
+
+### System metrics (vertical, with grid lines)
+
+```php
+BarChartWidget::make()
+    ->heading('Přehled systému')
+    ->type('vertical')
+    ->variant('system')
+    ->showGrid()           // 0% / 25% / 50% / 75% / 100% guide lines
+    ->showMenu()           // a "⋯" options affordance in the card header
+    ->maxValue(100)        // percentage mode (0–100 track)
+    ->items([
+        ChartItem::make('CPU')->value(72)->formattedValue('72 %')->icon('cpu-chip')->color('blue')->percentage(72),
+        ChartItem::make('RAM')->value(54)->formattedValue('54 %')->icon('circle-stack')->color('green')->percentage(54),
+        ChartItem::make('Disk')->value(81)->formattedValue('81 %')->icon('server')->color('orange')->percentage(81),
+        ChartItem::make('GPU')->value(36)->formattedValue('36 %')->icon('bolt')->color('purple')->percentage(36),
+    ])
+```
+
+### System metrics (horizontal)
+
+Same items, switch `type('horizontal')`:
+
+```php
+BarChartWidget::make()
+    ->type('horizontal')
+    ->variant('system')
+    ->maxValue(100)
+    ->items([ /* ChartItem… */ ])
+```
+
+### How fill height is resolved
+
+Each bar's fill percentage (`percentageFor(ChartItem)`) is resolved in this order:
+
+1. An explicit per-item `->percentage(0–100)` wins.
+2. Otherwise the value is scaled against the widget `->maxValue()`.
+3. Otherwise (percentage mode with no ceiling) the value is auto-scaled against the largest item.
+
+The result is always clamped to `0–100`. The fill size is the **only** dynamic style, passed as a CSS variable and consumed by Tailwind arbitrary values:
+
+```html
+<div class="… h-[var(--value)]" style="--value: 72%"></div>
+```
+
+### Safe colors
+
+`color()` values map through a fixed allow-list (`HasColor::getGradientFillClasses()` / `getFillTextClasses()`) — owner-supplied strings can **never** inject arbitrary classes. Supported chart hues:
+
+| key | fill gradient | accent text |
+| --- | --- | --- |
+| `blue` | `from-blue-500 to-blue-600` | `text-blue-600` |
+| `green` | `from-green-500 to-green-600` | `text-green-600` |
+| `orange` | `from-orange-500 to-orange-600` | `text-orange-600` |
+| `purple` | `from-purple-500 to-purple-600` | `text-purple-600` |
+| `gray` | `from-slate-400 to-slate-500` | `text-slate-600` |
+
+(The brand `primary` alias and the wider palette vocabulary — `red`, `amber`, `cyan`, `pink`, … — are accepted too.)
+
+### Validation
+
+```php
+->type('diagonal');         // throws InvalidArgumentException (allowed: vertical, horizontal)
+->variant('pie');           // throws InvalidArgumentException (allowed: finance, system, default)
+ChartItem::make('CPU')->percentage(120);  // throws InvalidArgumentException (0–100)
+```
+
+### BarChartWidget API
+
+```php
+->type(string $type)                 // 'vertical' | 'horizontal'   (validated)
+->getType(): string
+->variant(string $variant)           // 'finance' | 'system' | 'default'   (validated)
+->getVariant(): string
+->items(array $items)                // array<ChartItem> (validated)
+->getItems(): array
+->showGrid(bool $show = true)        // grid lines (system vertical)
+->shouldShowGrid(): bool
+->showMenu(bool $show = true)        // card-header options affordance
+->shouldShowMenu(): bool
+->maxValue(int|float|null $max)      // absolute ceiling; null = percentage mode
+->getMaxValue(): ?float
+->height(int $px)                    // vertical plot height (default 240)
+->getHeight(): int
+->rounded(string $scale)             // card radius: 'lg' | 'xl' | '2xl' (default) | '3xl' | …
+->getRounded(): string
+->percentageFor(ChartItem $item): float   // resolved 0–100 fill
+->fillClassesFor(ChartItem $item): string // safe gradient classes
+->textClassesFor(ChartItem $item): string // safe accent text classes
+```
+
+---
+
+## ChartItem
+
+A single bar in a [`BarChartWidget`](#barchartwidget).
+
+```php
+use NyonCode\WireCore\Widgets\ChartItem;
+```
+
+### ChartItem API
+
+```php
+ChartItem::make(string $label)
+->value(int|float $value)                 // raw numeric value
+->getValue(): float
+->formattedValue(?string $formatted)      // display string, e.g. '125 000 Kč' / '72 %'
+->getFormattedValue(): string             // falls back to the raw value
+->color(string|Color|null $color)         // safe color key (default 'primary')
+->getColor(): string
+->percentage(int|float $percentage)       // explicit 0–100 fill (validated)
+->getPercentage(): ?float
+->hasPercentage(): bool
+->icon(string|Icon|null $icon)            // icon name (system/horizontal variants)
+->getIcon(): ?string
+->getLabel(): string
+->extraAttributes(array $attrs)
 ```
 
 ---
@@ -500,6 +654,10 @@ Inherited from traits:
 {{-- Individual widget views --}}
 wire-core::widgets.stats-overview
 wire-core::widgets.chart
+wire-core::widgets.bar-chart
+wire-core::widgets.bar-chart.vertical-finance
+wire-core::widgets.bar-chart.vertical-system
+wire-core::widgets.bar-chart.horizontal-system
 wire-core::widgets.table
 wire-core::widgets.custom
 wire-core::widgets.widget-grid

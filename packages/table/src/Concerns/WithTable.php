@@ -44,6 +44,7 @@ use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
+use NyonCode\WireCore\Infolists\Infolist;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireForms\Forms\Form;
@@ -79,6 +80,9 @@ trait WithTable
 
     /** @var Form|null Resolved Form instance for the current action modal */
     protected ?Form $actionModalFormInstance = null;
+
+    /** @var Infolist|null Resolved Infolist instance for the current action modal */
+    protected ?Infolist $actionModalInfolistInstance = null;
 
     /** @var Form|null Resolved Form instance for the halt modal */
     protected ?Form $haltModalFormInstance = null;
@@ -2421,6 +2425,7 @@ trait WithTable
         $this->tableState->set('modal.action.isHeaderAction', false);
         $this->tableState->set('modal.action.formData', []);
         $this->actionModalFormInstance = null;
+        $this->actionModalInfolistInstance = null;
         $this->actionModalConfigCache = [];
 
         // Invalidate table cache so next render fetches fresh data
@@ -2583,6 +2588,48 @@ trait WithTable
 
         if ($action) {
             $this->actionModalFormInstance = $action->getFormInstance($this, $context);
+        }
+    }
+
+    /**
+     * Get the resolved Infolist instance for the current action modal, if any.
+     * Re-resolves on demand since it is not serialized between Livewire requests.
+     */
+    public function getActionModalInfolistInstance(): ?Infolist
+    {
+        if ($this->actionModalInfolistInstance === null && $this->tableState->get('modal.action.show') && $this->tableState->get('modal.action.name')) {
+            $this->resolveActionModalInfolistInstance();
+        }
+
+        return $this->actionModalInfolistInstance;
+    }
+
+    /**
+     * Resolve the Infolist instance from the current action, bound to its record.
+     */
+    protected function resolveActionModalInfolistInstance(): void
+    {
+        $actionName = $this->tableState->get('modal.action.name');
+        if (! $actionName) {
+            return;
+        }
+
+        $action = null;
+        $context = null;
+        $recordKey = $this->tableState->get('modal.action.recordKey');
+
+        if ($this->tableState->get('modal.action.isHeaderAction')) {
+            $action = $this->findHeaderAction($actionName);
+        } elseif ($this->tableState->get('modal.action.isBulk')) {
+            $action = $this->findBulkAction($actionName);
+            $context = $this->getSelectedRecords();
+        } else {
+            $action = $this->findAction($actionName);
+            $context = $recordKey ? $this->getRecord($recordKey) : null;
+        }
+
+        if ($action) {
+            $this->actionModalInfolistInstance = $action->getInfolistInstance($context);
         }
     }
 

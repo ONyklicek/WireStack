@@ -4,7 +4,7 @@
             @if($widget->isVisible())
                 <div class="{{ $widget->getColumnSpan() === 'full' ? 'col-span-full' : ($widget->getColumnSpan() ? 'col-span-' . $widget->getColumnSpan() : '') }}"
                      @if($widget->isPolling()) {!! $widget->getPollingDirective() !!} @endif>
-                    {!! $widget->toHtml() !!}
+                    {{ $widget }}
                 </div>
             @endif
         @endforeach

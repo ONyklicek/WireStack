@@ -20,7 +20,7 @@
         @if($haltModal['hasForm'] ?? false)
             @php $haltFormInstance = $component->getHaltModalFormInstance(); @endphp
             @if($haltFormInstance)
-                {!! $haltFormInstance->toHtml() !!}
+                {{ $haltFormInstance }}
             @endif
         @endif
     </x-wire-modals::confirmation>

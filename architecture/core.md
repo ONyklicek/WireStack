@@ -287,7 +287,9 @@ Dashboard-style pieces. `Widget` is the base (`heading()`, `description()`, `laz
 |--------|---------|---------|
 | `StatsOverviewWidget` | grid of stat cards | `stats([Stat, …])`, `columns(int)` |
 | `Stat` | single metric card | `Stat::make($label, $value)`, `description()`, `descriptionIcon()`, `color()`, `icon()`, `chart([…])` (sparkline) |
-| `ChartWidget` | full chart | `type()`, `datasets()` / `labels()` (`array\|Closure`), `filter($options, $default)`, `activeFilter()` |
+| `ChartWidget` | full chart (JS / Chart.js) | `type()` (line\|bar\|pie\|doughnut), `datasets()` / `labels()` (`array\|Closure`), `filter($options, $default)`, `activeFilter()` |
+| `BarChartWidget` | pure-CSS bar chart (no JS) | `type()` (vertical\|horizontal), `variant()` (finance\|system\|default), `items([ChartItem, …])`, `showGrid()`, `showMenu()`, `maxValue()`, `height()`, `rounded()` |
+| `ChartItem` | one bar in `BarChartWidget` | `ChartItem::make($label)`, `value()`, `formattedValue()`, `color()`, `percentage(0–100)`, `icon()` |
 | `TableWidget` | embed a wire-table | wraps a table component |
 | `CustomWidget` | arbitrary view | render any Blade view as a widget |
 
@@ -299,6 +301,122 @@ StatsOverviewWidget::make()
     ->stats([
         Stat::make('Users', '1,024')->description('+12%')->descriptionIcon('arrow-up')->color(Color::Success)->chart([1,3,2,5,4]),
         Stat::make('Revenue', '$8.4k')->color(Color::Primary),
+    ]);
+```
+
+#### `BarChartWidget` (CSS bar chart)
+
+A dependency-free bar chart rendered with Tailwind utilities only — distinct from
+the JS `ChartWidget`. Three visual modes are selected from `type` + `variant`:
+
+| `type` | `variant` | Partial | Look |
+|--------|-----------|---------|------|
+| `vertical` | `finance` | `vertical-finance` | value above, light max-height track, `MM / YYYY` caption below |
+| `vertical` | `system` / `default` | `vertical-system` | icon + label + % above a 0–100% track, optional grid lines |
+| `horizontal` | `system` / `default` | `horizontal-system` | label left, value right, progress track |
+
+`type()` and `variant()` validate against `BarChartWidget::TYPES` / `::VARIANTS`
+(invalid values throw `InvalidArgumentException`). Each bar's fill percentage is
+resolved by `percentageFor(ChartItem)`: an explicit `percentage()` wins, else the
+value is scaled against `maxValue()`, else auto-scaled against the largest item.
+Colors are mapped through the canonical `HasColor::getGradientFillClasses()`
+allow-list (literal chart hues: `blue` → `blue-500/600`, `green` →
+`green-500/600`, `gray` → `slate-400/500`), with the matching accent text from
+`HasColor::getFillTextClasses()` — owner-supplied color names can never inject
+arbitrary classes. The
+dynamic fill size is the only inline style, passed as a CSS variable
+(`style="--value: 72%"`) consumed by Tailwind arbitrary values
+(`h-[var(--value)]` / `w-[var(--value)]`).
+
+```php
+// Finance — vertical revenue bars
+BarChartWidget::make()
+    ->heading('Přehled tržeb')
+    ->type('vertical')->variant('finance')
+    ->items([
+        ChartItem::make('01 / 2024')->value(125000)->formattedValue('125 000 Kč')->color('blue')->percentage(70),
+        ChartItem::make('02 / 2024')->value(98500)->formattedValue('98 500 Kč')->color('green')->percentage(55),
+    ]);
+
+// System — vertical metrics with grid lines
+BarChartWidget::make()
+    ->heading('Přehled systému')
+    ->type('vertical')->variant('system')->showGrid()->maxValue(100)
+    ->items([
+        ChartItem::make('CPU')->value(72)->formattedValue('72 %')->icon('cpu-chip')->color('blue'),
+        ChartItem::make('RAM')->value(54)->formattedValue('54 %')->icon('circle-stack')->color('green'),
+        ChartItem::make('Disk')->value(81)->formattedValue('81 %')->icon('server')->color('orange'),
+        ChartItem::make('GPU')->value(36)->formattedValue('36 %')->icon('bolt')->color('purple'),
+    ]);
+
+// System — horizontal progress bars (same items, type 'horizontal')
+BarChartWidget::make()->type('horizontal')->variant('system')->maxValue(100)->items([/* … */]);
+```
+
+Safe color keys: `blue`, `green`, `orange`, `purple`, `gray` (plus the shared
+palette vocabulary). Views: `wire-core::widgets.bar-chart` dispatches to the three
+partials under `widgets/bar-chart/`.
+
+---
+
+### `Infolists/`
+
+Read-only, declarative display of a single record — the display counterpart of a
+wire-forms `Form`. Lives in core (next to `Widgets/`) because it is a display
+assembly that depends only on shared Foundation pieces, not on forms or table.
+
+`Infolist` is the public API (`make()`, `record()`/`state()`, `schema()`,
+`columns()`, `Htmlable`). It reuses the **canonical schema layout** in
+`Foundation/Schema/` (`Section`, `Grid`, `Fieldset`) — the same classes wire-forms
+layouts now subclass for backward compatibility (forms keeps its own Blade chrome;
+the shared config — heading, columns, collapsible, aside — lives once in core).
+
+| Entry | Purpose | Key API |
+|-------|---------|---------|
+| `Entry` | base (extends `ViewComponent`) | `record()`, `state(Closure)`, `formatStateUsing()`, `color()`, `getState()` (resolves from record by name via `data_get`, dot-paths supported) |
+| `TextEntry` | text/number/money/date | `money()/numeric()/date()/dateTime()/since()` (via shared `FormatsState`), `badge()`, `copyable()`, `limit()`, `weight()`, `prose()`, `listWithLineBreaks()`, `bulleted()` |
+| `IconEntry` | state → icon | `boolean()`, `icons([state => name])`, `colors([...])`, `trueIcon/falseIcon/trueColor/falseColor()` |
+| `ImageEntry` | image/avatar | `disk()`, `imageSize()`, `circular()`, `stacked()`, `defaultImageUrl()` |
+| `ColorEntry` | color swatch | `copyable()` |
+| `KeyValueEntry` | array → key/value table | `keyLabel()`, `valueLabel()` |
+| `RepeatableEntry` | nested schema per item | `schema([...])`, `columns()`, `contained()` |
+
+Numeric/money/date formatting is owned by the canonical
+`Foundation/Concerns/FormatsState` concern and **shared with table columns**
+(`TextColumn` uses the same trait), so a value formats identically wherever it is
+displayed. Host trait: `Infolists/Concerns/WithInfolists`. Views:
+`wire-core::infolists.infolist` + `infolists/entries/*`; layout views under
+`wire-core::schema.*`.
+
+**Action integration.** `HasModal` exposes `infolist(array|Infolist|Closure)`
+alongside `form()`. An action with an infolist opens a read-only modal bound to
+the record — `doesRequireConfirmation()` is false and the modal renders only a
+close button (no submit). Mirrors `form()`: `getInfolistInstance($context)`
+resolves the closure/array and binds the record, `getModalConfig()` reports
+`hasInfolist`. The table runtime resolves it lazily via
+`WithTable::getActionModalInfolistInstance()` (stateless, so no eager caching like
+forms), and the action-modal partial renders it in slide-over and centered
+variants.
+
+```php
+ViewAction::make()->slideOver()->infolist([
+    TextEntry::make('name')->weight('bold'),
+    TextEntry::make('email')->copyable(),
+]);
+```
+
+```php
+Infolist::make()
+    ->record($user)
+    ->schema([
+        Section::make('Profil')->icon('user')->columns(2)->schema([
+            TextEntry::make('name')->weight('bold'),
+            TextEntry::make('email')->icon('envelope')->copyable(),
+            TextEntry::make('created_at')->dateTime()->since(),
+            TextEntry::make('status')->badge()
+                ->color(fn ($state) => $state === 'active' ? Color::Success : Color::Gray),
+            IconEntry::make('is_verified')->boolean(),
+        ]),
     ]);
 ```
 

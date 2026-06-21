@@ -4,27 +4,19 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Components\Layout;
 
-use NyonCode\WireCore\Foundation\Components\LayoutComponent;
+use NyonCode\WireCore\Foundation\Schema\Grid as BaseGrid;
 
 /**
- * Grid layout component for arranging fields in columns.
+ * Form grid layout.
+ *
+ * Thin subclass of the canonical {@see BaseGrid} schema layout; it only swaps
+ * the Blade view so form grids keep their form-specific markup. Shared column
+ * configuration lives in the core schema layout and is reused by infolists.
+ *
+ * @deprecated v2.0 Use {@see BaseGrid} directly.
  */
-class Grid extends LayoutComponent
+class Grid extends BaseGrid
 {
-    protected int $columns = 2;
-
-    public function columns(int $columns): static
-    {
-        $this->columns = $columns;
-
-        return $this;
-    }
-
-    public function getColumns(): int
-    {
-        return $this->columns;
-    }
-
     protected function viewName(): string
     {
         return 'wire-forms::layouts.grid';

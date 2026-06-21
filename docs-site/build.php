@@ -106,6 +106,9 @@ $previewMeta = [
     'core-modal' => ['title' => 'Modal Surface', 'caption' => 'Real modal rendering from the shared core component set.'],
     'widgets-overview' => ['title' => 'Widget Dashboard', 'caption' => 'A stats overview with sparklines and a Chart.js chart widget composed in a grid.'],
     'widgets-chart' => ['title' => 'Chart Widget', 'caption' => 'A single chart widget with heading, description, and a live quarter filter.'],
+    'widgets-bar-chart' => ['title' => 'Bar Chart Widget', 'caption' => 'Pure-CSS bars: vertical finance, vertical system metrics with grid lines, and horizontal progress.'],
+    'infolists-overview' => ['title' => 'Infolist Overview', 'caption' => 'Read-only record display with sections, a column grid, and formatted text/icon/badge entries.'],
+    'infolists-entries' => ['title' => 'Infolist Entries', 'caption' => 'Every built-in entry — text, badge, list, boolean icon, color, key-value, and repeatable — bound to one record.'],
 ];
 
 // Previews are attached only to pages where the screenshot is genuinely on
@@ -121,7 +124,8 @@ $pagePreviews = [
     'docs/sortable/row-sorting.md' => ['sortable-detail'],
     'docs/core/actions.md' => ['core-overview'],
     'docs/core/modals.md' => ['core-modal'],
-    'docs/core/widgets.md' => ['widgets-overview', 'widgets-chart'],
+    'docs/core/widgets.md' => ['widgets-overview', 'widgets-chart', 'widgets-bar-chart'],
+    'docs/core/infolists.md' => ['infolists-overview', 'infolists-entries'],
 ];
 
 $renderedPages = [];

@@ -36,6 +36,11 @@ class ActionModalPartialRenderComponent extends Component
         return null;
     }
 
+    public function getActionModalInfolistInstance(): null
+    {
+        return null;
+    }
+
     public function closeActionModal(): void {}
 
     public function submitActionModal(): void {}
