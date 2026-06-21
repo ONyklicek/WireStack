@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
@@ -417,7 +418,7 @@ it('eager-loads only the limited sub-rows plus an exact count', function () {
         ->and($component->getSubRowsTotalCount($a))->toBe(2)
         ->and($component->getSubRows($a))->toHaveCount(1);
 })->skip(
-    ! method_exists(\Illuminate\Database\Query\Builder::class, 'groupLimit'),
+    ! method_exists(Builder::class, 'groupLimit'),
     'Native per-parent eager-load limits require Laravel 11+ (Query\Builder::groupLimit).',
 );
 
