@@ -207,6 +207,72 @@ trait HasColor
     }
 
     /**
+     * Get gradient fill classes (`from-* to-*`) for a progress/bar fill.
+     *
+     * Canonical source for the filled portion of bar/progress surfaces such as
+     * the bar chart widget. Returns only the gradient stop classes — the consumer
+     * pairs them with a `bg-gradient-to-{t,r}` direction utility. Chart hues are
+     * intentionally literal (`blue` → `blue-500/600`, `green` → `green-500/600`,
+     * `gray` → `slate-400/500`) to match the documented chart palette; the brand
+     * `primary` alias and other raw hues are accepted too. Class strings are kept
+     * literal so Tailwind's JIT scanner can see them, which is also what makes the
+     * mapping a safe allow-list (no arbitrary class injection from owner-supplied
+     * color names). Foreground companion: {@see getFillTextClasses()}.
+     */
+    public static function getGradientFillClasses(string $color): string
+    {
+        return match ($color) {
+            'primary' => 'from-primary-500 to-primary-600',
+            'blue' => 'from-blue-500 to-blue-600',
+            'green' => 'from-green-500 to-green-600',
+            'success', 'emerald' => 'from-emerald-500 to-emerald-600',
+            'danger', 'red' => 'from-red-500 to-red-600',
+            'warning', 'yellow', 'amber' => 'from-amber-500 to-amber-600',
+            'info', 'cyan' => 'from-cyan-500 to-cyan-600',
+            'sky' => 'from-sky-500 to-sky-600',
+            'purple' => 'from-purple-500 to-purple-600',
+            'violet' => 'from-violet-500 to-violet-600',
+            'indigo' => 'from-indigo-500 to-indigo-600',
+            'orange' => 'from-orange-500 to-orange-600',
+            'teal' => 'from-teal-500 to-teal-600',
+            'pink' => 'from-pink-500 to-pink-600',
+            'gray', 'secondary' => 'from-slate-400 to-slate-500',
+            default => 'from-primary-500 to-primary-600',
+        };
+    }
+
+    /**
+     * Get literal-hue accent text classes that match {@see getGradientFillClasses()}.
+     *
+     * Foreground companion for chart labels/values/icons. Unlike the semantic
+     * {@see getTextColorClasses()} (which remaps `blue` → `primary`,
+     * `green` → `emerald`), this resolver keeps the documented chart palette
+     * literal (`blue` → `text-blue-600`, `green` → `text-green-600`,
+     * `gray` → `text-slate-600`) so the accent hue always matches its bar fill.
+     */
+    public static function getFillTextClasses(string $color): string
+    {
+        return match ($color) {
+            'primary' => 'text-primary-600 dark:text-primary-400',
+            'blue' => 'text-blue-600 dark:text-blue-400',
+            'green' => 'text-green-600 dark:text-green-400',
+            'success', 'emerald' => 'text-emerald-600 dark:text-emerald-400',
+            'danger', 'red' => 'text-red-600 dark:text-red-400',
+            'warning', 'yellow', 'amber' => 'text-amber-600 dark:text-amber-400',
+            'info', 'cyan' => 'text-cyan-600 dark:text-cyan-400',
+            'sky' => 'text-sky-600 dark:text-sky-400',
+            'purple' => 'text-purple-600 dark:text-purple-400',
+            'violet' => 'text-violet-600 dark:text-violet-400',
+            'indigo' => 'text-indigo-600 dark:text-indigo-400',
+            'orange' => 'text-orange-600 dark:text-orange-400',
+            'teal' => 'text-teal-600 dark:text-teal-400',
+            'pink' => 'text-pink-600 dark:text-pink-400',
+            'gray', 'secondary' => 'text-slate-600 dark:text-slate-400',
+            default => 'text-primary-600 dark:text-primary-400',
+        };
+    }
+
+    /**
      * Get color for modal icon background.
      *
      * Canonical source for the rounded icon "chip" behind modal / confirmation
