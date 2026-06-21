@@ -195,7 +195,9 @@ Main areas:
 Widgets:
 
 - `Widget`
-- `ChartWidget`
+- `ChartWidget` (JS / Chart.js)
+- `BarChartWidget` (pure-CSS bar chart)
+- `ChartItem` (bar entry for `BarChartWidget`)
 - `CustomWidget`
 - `Stat`
 - `StatsOverviewWidget`
@@ -206,6 +208,10 @@ Widgets:
 Widget views:
 
 - `packages/core/resources/views/widgets/chart.blade.php`
+- `packages/core/resources/views/widgets/bar-chart.blade.php`
+- `packages/core/resources/views/widgets/bar-chart/vertical-finance.blade.php`
+- `packages/core/resources/views/widgets/bar-chart/vertical-system.blade.php`
+- `packages/core/resources/views/widgets/bar-chart/horizontal-system.blade.php`
 - `packages/core/resources/views/widgets/custom.blade.php`
 - `packages/core/resources/views/widgets/stats-overview.blade.php`
 - `packages/core/resources/views/widgets/table.blade.php`
