@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 use Workbench\App\Livewire\Previews\CorePreview;
 use Workbench\App\Livewire\Previews\FieldPreview;
 use Workbench\App\Livewire\Previews\FormPreview;
+use Workbench\App\Livewire\Previews\InfolistPreview;
 use Workbench\App\Livewire\Previews\SortablePreview;
 use Workbench\App\Livewire\Previews\TablePreview;
 use Workbench\App\Livewire\Previews\WidgetPreview;
@@ -137,6 +138,30 @@ Route::get('/previews', function () {
             'component' => WidgetPreview::class,
             'variant' => 'chart',
         ],
+        [
+            'slug' => 'widgets-bar-chart',
+            'title' => 'Wire Core',
+            'label' => 'Bar chart widget',
+            'copy' => 'Pure-CSS bar chart: vertical finance bars, vertical system metrics with grid lines, and horizontal progress.',
+            'component' => WidgetPreview::class,
+            'variant' => 'bar-chart',
+        ],
+        [
+            'slug' => 'infolists-overview',
+            'title' => 'Wire Core',
+            'label' => 'Infolist overview',
+            'copy' => 'Read-only record display with sections, a column grid, and formatted text/icon/badge entries.',
+            'component' => InfolistPreview::class,
+            'variant' => 'overview',
+        ],
+        [
+            'slug' => 'infolists-entries',
+            'title' => 'Wire Core',
+            'label' => 'Infolist entries',
+            'copy' => 'Gallery of every built-in entry: text, badge, list, boolean icon, color, key-value, and repeatable.',
+            'component' => InfolistPreview::class,
+            'variant' => 'entries',
+        ],
     ];
 
     return view('previews.index', ['screens' => $screens]);
@@ -158,6 +183,9 @@ foreach ([
     'core-modal' => ['title' => 'Wire Core Modal', 'subtitle' => 'Real modal surface from the core runtime.', 'component' => CorePreview::class, 'variant' => 'modal'],
     'widgets-overview' => ['title' => 'Wire Core Widgets', 'subtitle' => 'Stats overview and a chart widget composed into a dashboard grid.', 'component' => WidgetPreview::class, 'variant' => 'overview'],
     'widgets-chart' => ['title' => 'Wire Core Chart Widget', 'subtitle' => 'A single interactive Chart.js widget with heading and filter.', 'component' => WidgetPreview::class, 'variant' => 'chart'],
+    'widgets-bar-chart' => ['title' => 'Wire Core Bar Chart Widget', 'subtitle' => 'Pure-CSS bar chart with finance, system, and horizontal progress modes.', 'component' => WidgetPreview::class, 'variant' => 'bar-chart'],
+    'infolists-overview' => ['title' => 'Wire Core Infolist', 'subtitle' => 'Read-only record display with sections, a column grid, and formatted entries.', 'component' => InfolistPreview::class, 'variant' => 'overview'],
+    'infolists-entries' => ['title' => 'Wire Core Infolist Entries', 'subtitle' => 'Gallery of every built-in infolist entry type bound to one record.', 'component' => InfolistPreview::class, 'variant' => 'entries'],
 ] as $slug => $screen) {
     Route::get('/previews/'.$slug, fn () => view('previews.capture', $screen));
 }
@@ -194,3 +222,4 @@ Route::redirect('/previews/table', '/previews/table-overview');
 Route::redirect('/previews/sortable', '/previews/sortable-overview');
 Route::redirect('/previews/core', '/previews/core-overview');
 Route::redirect('/previews/widgets', '/previews/widgets-overview');
+Route::redirect('/previews/infolists', '/previews/infolists-overview');
