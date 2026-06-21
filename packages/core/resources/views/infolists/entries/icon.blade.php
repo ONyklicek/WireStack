@@ -1,5 +1,8 @@
 @php
-    /** @var \NyonCode\WireCore\Infolists\Components\IconEntry $field */
+    use NyonCode\WireCore\Infolists\Components\IconEntry;
+
+    assert($field instanceof IconEntry);
+
     $span = $field->getColumnSpan();
     $spanClass = match (true) {
         $span === 'full' => 'col-span-full',
@@ -22,7 +25,7 @@
 
     <div class="text-sm">
         @if($icon)
-            <x-wire::icon :name="$icon" :class="$iconClass" :label="$tooltip" />
+            <x-wire::icon :name="$icon" :class="$iconClass" :label="$tooltip"/>
         @else
             <span class="text-gray-400">{{ $field->getPlaceholder() ?? '-' }}</span>
         @endif

@@ -1,5 +1,8 @@
 @php
-    /** @var \NyonCode\WireCore\Infolists\Components\RepeatableEntry $field */
+    use NyonCode\WireCore\Infolists\Components\RepeatableEntry;
+
+    assert($field instanceof RepeatableEntry);
+
     $span = $field->getColumnSpan();
     $spanClass = match (true) {
         $span === 'full' => 'col-span-full',

@@ -1,5 +1,8 @@
 @php
-    /** @var \NyonCode\WireCore\Infolists\Components\TextEntry $field */
+    use NyonCode\WireCore\Infolists\Components\TextEntry;
+
+    assert($field instanceof TextEntry);
+
     $span = $field->getColumnSpan();
     $spanClass = match (true) {
         $span === 'full' => 'col-span-full',
@@ -20,7 +23,7 @@
     @endif
 
     <div @class(['text-sm', $field->getWeightClass()])
-        @if($field->getTooltip()) title="{{ $field->getTooltip() }}" @endif
+         @if($field->getTooltip()) title="{{ $field->getTooltip() }}" @endif
     >
         @if($field->isList())
             <ul @class(['space-y-0.5', 'list-disc list-inside' => $field->isBulleted()])>
@@ -40,13 +43,13 @@
             </span>
         @else
             <span
-                @class([
-                    'inline-flex items-center gap-1',
-                    $field->isProse() ? 'prose dark:prose-invert max-w-none' : $textColor,
-                    'cursor-pointer hover:opacity-70' => $field->isCopyable(),
-                ])
-                @if($field->isCopyable())
-                    x-data="{ copied: false }"
+                    @class([
+                        'inline-flex items-center gap-1',
+                        $field->isProse() ? 'prose dark:prose-invert max-w-none' : $textColor,
+                        'cursor-pointer hover:opacity-70' => $field->isCopyable(),
+                    ])
+                    @if($field->isCopyable())
+                        x-data="{ copied: false }"
                     @click="navigator.clipboard.writeText(@js($field->getFormattedState())); copied = true; setTimeout(() => copied = false, 1500)"
                     role="button"
                     title="{{ __('Copy') }}"

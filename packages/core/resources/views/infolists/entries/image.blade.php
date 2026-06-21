@@ -1,5 +1,8 @@
 @php
-    /** @var \NyonCode\WireCore\Infolists\Components\ImageEntry $field */
+    use NyonCode\WireCore\Infolists\Components\ImageEntry;
+
+    assert($field instanceof ImageEntry);
+
     $span = $field->getColumnSpan();
     $spanClass = match (true) {
         $span === 'full' => 'col-span-full',
@@ -25,14 +28,14 @@
             <div @class(['flex items-center', $field->isStacked() ? '-space-x-2' : 'flex-wrap gap-2'])>
                 @foreach($urls as $url)
                     <img
-                        src="{{ $url }}"
-                        alt="{{ $field->getLabel() }}"
-                        @class([
-                            'object-cover',
-                            $shape,
-                            'ring-2 ring-white dark:ring-gray-800' => $field->isStacked(),
-                        ])
-                        style="width: {{ $size }}px; height: {{ $size }}px;"
+                            src="{{ $url }}"
+                            alt="{{ $field->getLabel() }}"
+                            @class([
+                                'object-cover',
+                                $shape,
+                                'ring-2 ring-white dark:ring-gray-800' => $field->isStacked(),
+                            ])
+                            style="width: {{ $size }}px; height: {{ $size }}px;"
                     />
                 @endforeach
             </div>

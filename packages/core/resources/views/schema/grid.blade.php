@@ -1,5 +1,8 @@
 @php
-    /** @var \NyonCode\WireCore\Foundation\Schema\Grid $layout */
+    use NyonCode\WireCore\Foundation\Schema\Grid;
+
+    assert($layout instanceof Grid);
+
     $columns = $layout->getColumns();
 @endphp
 

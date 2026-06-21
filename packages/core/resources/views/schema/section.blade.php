@@ -1,5 +1,8 @@
 @php
-    /** @var \NyonCode\WireCore\Foundation\Schema\Section $layout */
+    use NyonCode\WireCore\Foundation\Schema\Section;
+
+    assert($layout instanceof Section);
+
     $columns = $layout->getColumns();
     $isCollapsible = $layout->isCollapsible();
     $isCollapsed = $layout->isCollapsed();
@@ -7,7 +10,7 @@
 
 <div
         @if($isCollapsible) x-data="{ open: {{ $isCollapsed ? 'false' : 'true' }} }" @endif
-        class="rounded-lg border border-gray-200 dark:border-gray-700 {{ $layout->isCompact() ? 'p-3' : 'p-4 sm:p-6' }}"
+class="rounded-lg border border-gray-200 dark:border-gray-700 {{ $layout->isCompact() ? 'p-3' : 'p-4 sm:p-6' }}"
 >
     @if($layout->getLabel() || $layout->getDescription())
         <div @class([

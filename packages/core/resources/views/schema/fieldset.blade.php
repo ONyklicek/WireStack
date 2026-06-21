@@ -1,5 +1,8 @@
 @php
-    /** @var \NyonCode\WireCore\Foundation\Schema\Fieldset $layout */
+    use NyonCode\WireCore\Foundation\Schema\Fieldset;
+
+    assert($layout instanceof Fieldset);
+
     $columns = $layout->getColumns();
 @endphp
 
