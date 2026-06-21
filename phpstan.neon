@@ -12,6 +12,7 @@ parameters:
         - { identifier: trait.unused, path: packages/core/src/Actions/Concerns/HasButtonStyles.php }
         - { identifier: trait.unused, path: packages/core/src/Audit/Concerns/HasAuditable.php }
         - { identifier: trait.unused, path: packages/core/src/Foundation/Concerns/HasLivewire.php }
+        - { identifier: trait.unused, path: packages/core/src/Infolists/Concerns/WithInfolists.php }
         - { identifier: trait.unused, path: packages/core/src/Notifications/Concerns/InteractsWithNotifications.php }
         - { identifier: trait.unused, path: packages/core/src/Widgets/Concerns/WithWidgets.php }
         - { identifier: trait.unused, path: packages/forms/src/Forms/WithForms.php }
