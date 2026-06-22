@@ -4,7 +4,7 @@ order: 20
 
 # Columns
 
-Wire Table provides 13 column types. All share the same base column API for labels, visibility, authorization, sorting, formatting, and inline editing.
+Wire Table provides 12 column types. All share the same base column API for labels, visibility, authorization, sorting, formatting, and inline editing.
 
 ---
 
@@ -12,21 +12,22 @@ Wire Table provides 13 column types. All share the same base column API for labe
 
 1. [Shared Column API](#shared-column-api)
 2. [Relation Paths & Dot Notation](#relation-paths--dot-notation)
-3. [TextColumn](#textcolumn)
-4. [BadgeColumn](#badgecolumn)
-5. [BooleanColumn](#booleancolumn)
-6. [IconColumn](#iconcolumn)
-7. [ImageColumn](#imagecolumn)
-8. [ButtonColumn](#buttoncolumn)
-9. [ToggleColumn](#togglecolumn)
-10. [SelectColumn](#selectcolumn)
-11. [TextInputColumn](#textinputcolumn)
-12. [StackedColumn](#stackedcolumn)
-13. [SplitColumn](#splitcolumn)
-14. [PollColumn](#pollcolumn)
-15. [Column-Level Filtering](#column-level-filtering)
-16. [Inline Editing](#inline-editing)
-17. [Patterns & Recipes](#patterns--recipes)
+3. [Enum & JSON Casts](#enum--json-casts)
+4. [TextColumn](#textcolumn)
+5. [BadgeColumn](#badgecolumn)
+6. [BooleanColumn](#booleancolumn)
+7. [IconColumn](#iconcolumn)
+8. [ImageColumn](#imagecolumn)
+9. [ButtonColumn](#buttoncolumn)
+10. [ToggleColumn](#togglecolumn)
+11. [SelectColumn](#selectcolumn)
+12. [TextInputColumn](#textinputcolumn)
+13. [StackedColumn](#stackedcolumn)
+14. [SplitColumn](#splitcolumn)
+15. [PollColumn](#pollcolumn)
+16. [Column-Level Filtering](#column-level-filtering)
+17. [Inline Editing](#inline-editing)
+18. [Patterns & Recipes](#patterns--recipes)
 
 ---
 
@@ -46,7 +47,7 @@ Column::make(string $name)           // static factory — $name is dot-notation
 ### Sorting
 
 ```php
-->sortable(bool|Closure $sortable = true)
+->sortable(bool $sortable = true, ?Closure $query = null)
 ->isSortable(): bool
 
 // Custom sort logic
@@ -68,8 +69,8 @@ TextColumn::make('full_name')
 ->searchable(bool|array $searchable = true)
 ->isSearchable(): bool
 
-// Explicit DB columns to search (when column name is virtual)
-->searchColumns(array $columns)
+// Pass an array to search specific DB columns (when the column name is virtual)
+->searchable(['first_name', 'last_name', 'email'])
 
 // Custom search logic
 ->searchUsing(Closure $fn)
@@ -78,11 +79,12 @@ TextColumn::make('full_name')
 ->getSearchColumns(): array
 ```
 
+> `searchColumns(array $columns)` as a separate setter exists only on `StackedColumn`. On other columns, pass the array straight to `searchable()`.
+
 ```php
 // Search across multiple DB columns
 TextColumn::make('user')
-    ->searchable()
-    ->searchColumns(['first_name', 'last_name', 'email'])
+    ->searchable(['first_name', 'last_name', 'email'])
 
 // Custom search logic
 TextColumn::make('full_name')
@@ -96,15 +98,14 @@ TextColumn::make('full_name')
 
 ```php
 ->hidden(bool|Closure $hidden = true)        // hide column
-->visible(bool|Closure $visible = true)      // show column (inverse of hidden)
 ->isHidden(): bool
 
 // User-toggleable (column picker)
 ->toggleable(bool $toggleable = true)
 
 // Permission-based
-->permission(string $permission)             // visible only if user has permission
-->visible(Closure $fn)                       // custom visibility callback
+->permission(?string $permission)            // visible only if user has permission
+->visible(Closure $callback)                 // custom visibility callback (Closure only)
 ```
 
 ### Responsive Breakpoints
@@ -149,7 +150,6 @@ TextColumn::make('user')
 ->default(mixed $value)                // value when state is null
 ->placeholder(string $text)            // text shown when value is null/empty
 ->limit(int $chars)                    // truncate to N characters
-->words(int $words)                    // truncate to N words
 ->prefix(string $prefix)              // prepend text
 ->suffix(string $suffix)              // append text
 ->html(bool $html = true)             // render value as raw HTML
@@ -174,8 +174,10 @@ TextColumn::make('content')
 
 ### Text Styling
 
+Use `->textSize()` for the cell's **font size**. `->size()` (from the shared `HasSize` concern) sets the column's *structural* size and does **not** change the text font.
+
 ```php
-->size(string $size)                   // 'xs', 'sm', 'md', 'lg', 'xl'
+->textSize(string $size)               // 'xs', 'sm', 'md', 'lg', 'xl' — text font size
 ->weight(string $weight)              // 'thin', 'light', 'normal', 'medium', 'semibold', 'bold', 'extrabold'
 ->textColor(string $color)            // Tailwind color name or 'gray', 'primary', etc.
 ->fontFamily(string $family)          // 'sans', 'serif', 'mono' (TextColumn only)
@@ -184,10 +186,10 @@ TextColumn::make('content')
 ```php
 TextColumn::make('name')
     ->weight('bold')
-    ->size('lg')
+    ->textSize('lg')
 
 TextColumn::make('subtitle')
-    ->size('sm')
+    ->textSize('sm')
     ->textColor('gray')
     ->weight('light')
 ```
@@ -206,7 +208,7 @@ TextColumn::make('subtitle')
 
 ```php
 ->icon(string|Icon|null $icon, ?string $position = 'before')   // position: 'before' | 'after'
-->color(string|Closure $color)         // icon/text color
+->color(string|Color $color)           // static icon/text color (for per-row color use BadgeColumn/IconColumn colorUsing())
 ```
 
 ```php
@@ -307,7 +309,7 @@ Two ways to customize the markup:
 TextColumn::make('name')->view('columns.my-name-cell');
 
 // 2. Project-wide override — publish the package views and edit the partial.
-//    php artisan vendor:publish --tag=wire-table-views
+//    php artisan vendor:publish --tag=wire-table::views
 //    then edit resources/views/vendor/wire-table/tables/columns/badge.blade.php
 ```
 
@@ -370,6 +372,130 @@ TextColumn::make('commentable.title')          // polymorphic
 
 ---
 
+## Enum & JSON Casts
+
+When a model casts an attribute to a PHP enum or to `array`/`json`, the column reads the
+**raw cast value** (an enum instance, an array) — not a string. Every column handles this for
+you: the value is normalized through the canonical `EnumResolver` before it is rendered, so you
+never hit an `Object of class … could not be converted to string` fatal or a stray `Array`.
+
+### Backed & unit enums
+
+```php
+// app/Models/Order.php
+protected $casts = [
+    'status' => OrderStatus::class,   // backed enum: 'pending', 'paid', …
+];
+```
+
+```php
+// A plain column just works — backed enums render their value, unit enums their case name.
+TextColumn::make('status')
+```
+
+To show friendly text, let the enum carry its own label by implementing the opt-in contract:
+
+```php
+use NyonCode\WireCore\Foundation\Contracts\Enum\HasLabel;
+
+enum OrderStatus: string implements HasLabel
+{
+    case Pending = 'pending';
+    case Paid = 'paid';
+    case Refunded = 'refunded';
+
+    public function getLabel(): ?string
+    {
+        return match ($this) {
+            self::Pending => 'Awaiting payment',
+            self::Paid => 'Paid',
+            self::Refunded => 'Refunded',
+        };
+    }
+}
+```
+
+```php
+TextColumn::make('status')   // now renders "Awaiting payment", "Paid", …
+```
+
+> `formatStateUsing()` still receives the **raw enum instance**, so you can keep full control:
+> `->formatStateUsing(fn (OrderStatus $s) => $s->getLabel())`.
+
+### Self-coloring / self-icon enums (badges & icons)
+
+`BadgeColumn` and `IconColumn` auto-resolve color and icon straight from the enum when it
+implements `HasColor` / `HasIcon` — no `colors()` / `icons()` map needed:
+
+```php
+use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Contracts\Enum\HasColor;
+use NyonCode\WireCore\Foundation\Contracts\Enum\HasIcon;
+use NyonCode\WireCore\Foundation\Contracts\Enum\HasLabel;
+use NyonCode\WireCore\Foundation\Icons\Icon;
+
+enum OrderStatus: string implements HasColor, HasIcon, HasLabel
+{
+    case Pending = 'pending';
+    case Paid = 'paid';
+    case Refunded = 'refunded';
+
+    public function getLabel(): ?string  { return ucfirst($this->value); }
+
+    public function getColor(): string|Color|null
+    {
+        return match ($this) {
+            self::Pending => Color::Warning,
+            self::Paid => Color::Success,
+            self::Refunded => Color::Gray,
+        };
+    }
+
+    public function getIcon(): string|Icon|null
+    {
+        return match ($this) {
+            self::Pending => Icon::clock,
+            self::Paid => Icon::checkCircle,
+            self::Refunded => Icon::arrowUturnLeft,
+        };
+    }
+}
+```
+
+```php
+BadgeColumn::make('status')   // colored + iconed badge, label text — all from the enum
+IconColumn::make('status')    // icon + color from the enum
+```
+
+An explicit `->colors([...])` / `->icons([...])` map still wins when present; the enum contracts
+are the fallback. Map keys are matched against the enum's **scalar** value (`->value` / case name):
+
+```php
+BadgeColumn::make('status')->colors([
+    'paid' => 'success',     // keyed by the backing value
+    'pending' => 'warning',
+])
+```
+
+### array / json casts
+
+```php
+protected $casts = ['meta' => 'array'];
+```
+
+```php
+TextColumn::make('meta')   // renders compact JSON: {"k":"v"} — never the literal "Array"
+```
+
+### Where it applies
+
+The same normalization runs everywhere a cast value is shown or written: text/badge/icon/select
+columns, **exports** (CSV/Excel/PDF export the display label / compact JSON), **`groupBy()`**
+headers and **summaries**, **filter indicator chips**, and **infolist entries**. See
+[Foundation → Enums](../core/foundation.md#enums) for the underlying `EnumResolver` and contracts.
+
+---
+
 ## TextColumn
 
 General-purpose text column with formatting presets.
@@ -429,14 +555,14 @@ TextColumn::make('salary')
 ```php
 TextColumn::make('quantity')
     ->numeric(
-        decimalPlaces: 0,
+        decimals: 0,
         thousandsSeparator: ' '
     )
     ->alignRight()
     ->sortable()
 
 TextColumn::make('percentage')
-    ->numeric(decimalPlaces: 1)
+    ->numeric(decimals: 1)
     ->suffix('%')
 ```
 
@@ -457,7 +583,7 @@ TextColumn::make('quote')
 ->dateTime(?string $format = null)   // datetime formatting
 ->since()                            // relative time (diffForHumans)
 ->money(string $currency)            // currency formatting
-->numeric(int $decimalPlaces = 0, string $decimalSeparator = ',', string $thousandsSeparator = ' ')
+->numeric(int $decimals = 0, ?string $decimalSeparator = ',', ?string $thousandsSeparator = ' ')
 ->fontFamily(string $family)         // 'sans', 'serif', 'mono'
 ->isMoney(): bool
 ->getCurrency(): ?string
@@ -588,20 +714,17 @@ BooleanColumn::make('is_verified')
 
 ```php
 BooleanColumn::make('is_published')
-    ->trueLabel('Published')
-    ->falseLabel('Draft')
+    ->labels('Published', 'Draft')
 ```
 
 ### BooleanColumn API
 
 ```php
-->trueIcon(string $icon)             // default: 'check-circle'
-->falseIcon(string $icon)            // default: 'x-circle'
-->trueColor(string $color)           // default: 'success'
-->falseColor(string $color)          // default: 'danger'
-->trueLabel(?string $label)          // text beside icon (true state)
-->falseLabel(?string $label)         // text beside icon (false state)
-->labels(string $trueLabel, string $falseLabel)  // set both
+->trueIcon(string|Icon $icon)        // default: 'check-circle'
+->falseIcon(string|Icon $icon)       // default: 'x-circle'
+->trueColor(string|Color $color)     // default: 'success'
+->falseColor(string|Color $color)    // default: 'danger'
+->labels(?string $trueLabel, ?string $falseLabel)  // text beside the icon
 ```
 
 ---
@@ -673,12 +796,12 @@ IconColumn::make('rating')
 ->colors(array $map)                 // ['color_name' => 'state_value'|['values'], ...]
 ->colorUsing(Closure $fn)            // fn($state) => 'color_name'
 ->iconSize(string $size)             // 'xs', 'sm', 'md', 'lg', 'xl'
-->boolean(bool $boolean = true)      // enable boolean mode
-->trueIcon(string $icon)
-->falseIcon(string $icon)
-->trueColor(string $color)
-->falseColor(string $color)
-->booleanColors(string $true, string $false)
+->boolean(string|Icon $trueIcon = 'check-circle', string|Icon $falseIcon = 'x-circle')  // enable boolean mode
+->trueIcon(string|Icon|null $icon)
+->falseIcon(string|Icon $icon)
+->trueColor(string|Color $color)
+->falseColor(string|Color $color)
+->booleanColors(string|Color $true = 'success', string|Color $false = 'danger')
 ```
 
 ---
@@ -908,14 +1031,14 @@ ToggleColumn::make('is_locked')
 ->onIcon(?string $icon)              // icon when on
 ->offIcon(?string $icon)             // icon when off
 ->disabled(bool|Closure $disabled = true)
-->isDisabled(?Model $record = null): bool
+->isDisabled(Model $record): bool
 ```
 
 ---
 
 ## SelectColumn
 
-Inline select dropdown — saves immediately on change. Validates against defined rules.
+Inline select dropdown — saves immediately on change.
 
 ```php
 use NyonCode\WireTable\Columns\SelectColumn;
@@ -933,17 +1056,11 @@ SelectColumn::make('status')
     ])
 ```
 
-### With Validation
+### Relationship Options
 
 ```php
-SelectColumn::make('priority')
-    ->options([
-        'low' => 'Low',
-        'medium' => 'Medium',
-        'high' => 'High',
-        'critical' => 'Critical',
-    ])
-    ->rules(['required', 'in:low,medium,high,critical'])
+SelectColumn::make('category_id')
+    ->relationship('category', 'name')   // load options from a related model
 ```
 
 ### Native vs Styled
@@ -971,8 +1088,8 @@ SelectColumn::make('role')
 ->native(bool $native = true)       // use native <select> element
 ->isNative(): bool
 ->disabled(bool|Closure $disabled = true)
-->isDisabled(?Model $record = null): bool
-->rules(array $rules)               // validation rules
+->isDisabled(Model $record): bool
+->relationship(string $name, string $titleAttribute)  // options from a relation
 ```
 
 ---
@@ -1086,7 +1203,7 @@ StackedColumn::make('user')
 ->avatar(string $column)             // avatar image URL column
 ->avatarUrl(string|Closure $url)     // explicit avatar URL
 ->circular(bool $circular = true)    // round avatar
-->square(bool $square = true)        // square avatar
+->square()                           // square avatar
 ->avatarSize(string $size)           // 'xs', 'sm', 'md', 'lg', 'xl'
 ->avatarBackground(string $color)    // fallback background color
 ->stack(array $items)                // custom stack items
@@ -1141,11 +1258,11 @@ SplitColumn::make('user_info')
 
 ```php
 ->columns(array $columns)            // Column[] child columns
-->vertical(bool $vertical = true)    // vertical layout
-->horizontal(bool $horizontal = true) // horizontal layout (default)
+->vertical()                         // vertical layout
+->horizontal()                       // horizontal layout (default)
 ->gap(string $gap)                   // 'xs', 'sm', 'md', 'lg'
-->alignCenter(bool $center = true)   // vertical center
-->alignStart(bool $start = true)     // vertical top
+->alignCenter(bool $align = true)    // vertical center
+->alignStart()                       // vertical top
 ->getColumns(): array
 ->isSearchable(): bool               // true if any child is searchable
 ->getSearchColumns(): array          // merged from children
@@ -1167,7 +1284,7 @@ use NyonCode\WireTable\Columns\PollColumn;
 
 ```php
 PollColumn::make('status')
-    ->interval('5s')
+    ->intervalSeconds(5)
     ->stateDisplays([
         'pending' => 'Waiting...',
         'processing' => 'In Progress',
@@ -1193,7 +1310,7 @@ PollColumn::make('status')
 ```php
 PollColumn::make('job_status')
     ->forJobStatus()           // preconfigured for Laravel Job states
-    ->interval('3s')
+    ->intervalSeconds(3)
     ->stopWhen(fn ($state) => in_array($state, ['completed', 'failed']))
 ```
 
@@ -1202,7 +1319,7 @@ PollColumn::make('job_status')
 ```php
 PollColumn::make('progress')
     ->forProgress()            // progress bar UI (0-100)
-    ->interval('2s')
+    ->intervalSeconds(2)
     ->stopWhen(fn ($state) => $state >= 100)
 ```
 
@@ -1210,7 +1327,7 @@ PollColumn::make('progress')
 
 ```php
 PollColumn::make('sync_status')
-    ->interval('5s')
+    ->intervalSeconds(5)
     ->pollWhile(fn ($state) => $state === 'syncing')   // poll only while syncing
     ->pollForever(false)                                // stop when condition fails
     ->maxPolls(60)                                      // safety limit
@@ -1221,7 +1338,7 @@ PollColumn::make('sync_status')
 ```php
 PollColumn::make('deployment')
     ->resolveStateUsing(fn ($record) => $record->fresh()->deployment_status)
-    ->interval('10s')
+    ->intervalSeconds(10)
 ```
 
 ### Badge Mode
@@ -1234,7 +1351,7 @@ PollColumn::make('status')
         'danger' => 'offline',
         'warning' => 'degraded',
     ])
-    ->interval('30s')
+    ->intervalSeconds(30)
 ```
 
 ### Loading Indicator
@@ -1250,7 +1367,7 @@ PollColumn::make('data')
 
 ```php
 PollColumn::make('batch_progress')
-    ->interval('3s')
+    ->intervalSeconds(3)
     ->onComplete(fn ($record) => Notification::success("Batch {$record->id} done"))
     ->stopWhen(fn ($state) => $state === 'done')
 ```
@@ -1259,8 +1376,8 @@ PollColumn::make('batch_progress')
 
 ```php
 // Polling control
-->interval(string $interval)             // '1s', '2s', '3s', '5s', '10s', '30s', '60s'
-->intervalSeconds(int $seconds)          // numeric seconds
+->interval(int|Closure $milliseconds)    // raw milliseconds (e.g. 5000)
+->intervalSeconds(int|Closure $seconds)  // seconds (use this for '5s'-style intervals)
 ->pollForever(bool $forever = true)      // don't stop
 ->maxPolls(int $max)                     // safety limit
 ->stopWhen(Closure $fn)                  // fn($state) => bool
@@ -1269,8 +1386,8 @@ PollColumn::make('batch_progress')
 
 // State display
 ->stateDisplays(array $map)              // ['state' => 'display text', ...]
-->displayForState(string $state, string $display)
-->defaultState(string $state)
+->displayForState(string $state, Closure $display)
+->defaultState(string|Closure $state)
 ->stateClasses(array $map)               // ['state' => 'css classes', ...]
 ->stateIcons(array $map)                 // ['state' => 'icon name', ...]
 ->stateColors(array $map)                // ['state' => 'color name', ...]
@@ -1404,7 +1521,7 @@ $table->columns([
     TextColumn::make('last_login')
         ->since()
         ->sortable()
-        ->size('sm')
+        ->textSize('sm')
         ->textColor('gray'),
 
     BooleanColumn::make('is_active'),
@@ -1428,8 +1545,7 @@ $table->columns([
         ->sortable(),
 
     TextColumn::make('due_at')
-        ->date('d.m.Y')
-        ->color(fn ($record) => $record->is_overdue ? 'danger' : null),
+        ->date('d.m.Y'),
 
     TextColumn::make('total')
         ->money('CZK')
@@ -1447,7 +1563,7 @@ $table->columns([
         ]),
 
     PollColumn::make('payment_status')
-        ->interval('30s')
+        ->intervalSeconds(30)
         ->badge()
         ->colors(['success' => 'received', 'warning' => 'pending', 'gray' => 'none'])
         ->pollWhile(fn ($state) => $state === 'pending'),
@@ -1470,7 +1586,7 @@ $table->columns([
         ->searchable()
         ->weight('semibold')
         ->description(fn ($r) => Str::limit($r->body, 60))
-        ->url(fn ($r) => route('tasks.show', $r)),
+        ->actionUrl(fn ($r) => route('tasks.show', $r)),
 
     StackedColumn::make('assignee')
         ->avatar('assignee.avatar_url')
@@ -1484,7 +1600,7 @@ $table->columns([
 
     TextColumn::make('due_at')
         ->date('d.m.')
-        ->color(fn ($r) => $r->is_overdue ? 'danger' : 'gray')
-        ->size('sm'),
+        ->textColor('gray')
+        ->textSize('sm'),
 ]);
 ```

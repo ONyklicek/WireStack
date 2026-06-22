@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Icons\Icon;
+use NyonCode\WireCore\Foundation\Support\EnumResolver;
 
 /**
  * Trait HasDynamicProperties
@@ -94,7 +95,10 @@ trait HasDynamicProperties
         if ($this->colorCallback && $context) {
             $value = ($this->colorCallback)($context);
 
-            return $value instanceof Color ? $value->value : (string) $value;
+            // A callback may return a Color, a palette-carrying enum, or a plain string.
+            $value = EnumResolver::color($value) ?? $value;
+
+            return $value instanceof Color ? $value->value : (string) EnumResolver::scalar($value);
         }
 
         return $this->color ?? Color::Primary->value;
@@ -153,11 +157,14 @@ trait HasDynamicProperties
         if ($this->iconCallback && $context) {
             $value = ($this->iconCallback)($context);
 
+            // A callback may return an Icon, an icon-carrying enum, or a plain string.
+            $value = EnumResolver::icon($value) ?? $value;
+
             if ($value instanceof Icon) {
                 return $value->value();
             }
 
-            return $value !== null ? (string) $value : null;
+            return $value !== null ? (string) EnumResolver::scalar($value) : null;
         }
 
         return $this->icon;

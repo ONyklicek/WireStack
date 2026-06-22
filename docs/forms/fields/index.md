@@ -161,7 +161,7 @@ use NyonCode\WireForms\Components\Layout\Section;
 ->schema([
     Section::make('User')
         ->schema([
-            Grid::make(2)->schema([
+            Grid::make()->columns(2)->schema([
                 TextInput::make('name')->required(),
                 TextInput::make('email')->email()->required(),
             ]),

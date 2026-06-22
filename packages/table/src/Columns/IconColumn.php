@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
+use NyonCode\WireCore\Foundation\Support\EnumResolver;
 
 class IconColumn extends Column
 {
@@ -158,7 +159,20 @@ class IconColumn extends Column
             return $result instanceof Icon ? $result->value() : $result;
         }
 
-        return $this->icons[(string) $state] ?? null;
+        $key = EnumResolver::scalar($state);
+
+        if (isset($this->icons[$key])) {
+            return $this->icons[$key];
+        }
+
+        // Enum carrying its own icon via the opt-in HasIcon contract.
+        $enumIcon = EnumResolver::icon($state);
+
+        if ($enumIcon !== null) {
+            return $enumIcon instanceof Icon ? $enumIcon->value() : $enumIcon;
+        }
+
+        return null;
     }
 
     public function getColorForState(mixed $state): ?string
@@ -173,7 +187,20 @@ class IconColumn extends Column
             return $result instanceof Color ? $result->value : $result;
         }
 
-        return $this->colors[(string) $state] ?? 'gray';
+        $key = EnumResolver::scalar($state);
+
+        if (isset($this->colors[$key])) {
+            return $this->colors[$key];
+        }
+
+        // Enum carrying its own color via the opt-in HasColor contract.
+        $enumColor = EnumResolver::color($state);
+
+        if ($enumColor !== null) {
+            return $enumColor instanceof Color ? $enumColor->value : $enumColor;
+        }
+
+        return 'gray';
     }
 
     public function getSizeClass(): string

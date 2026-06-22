@@ -392,12 +392,67 @@ names compatible with the lowest supported Tailwind version (see
 [ADR 0005](../../architecture/decisions/0005-tailwind-4-support.md)); use only
 standard hue names, never version-specific ones.
 
+## Enums
+
+PHP enums cannot be stringified with `(string) $enum`, yet Eloquent enum casts hand the raw
+instance to every display and state surface. `EnumResolver` is the single canonical owner that
+normalizes such values; downstream packages (table, forms, infolists, exports) delegate to it
+instead of re-encoding `(string) $enum` or local `match` maps.
+
+```php
+use NyonCode\WireCore\Foundation\Support\EnumResolver;
+
+EnumResolver::scalar($value);   // backed enum → ->value, unit enum → case name, else passthrough
+EnumResolver::label($value);    // HasLabel → getLabel(), else scalar() — human display text
+EnumResolver::display($value);  // label() + array/JSON → compact JSON; (string)-safe everywhere
+EnumResolver::color($value);    // HasColor → getColor(), else null
+EnumResolver::icon($value);     // HasIcon  → getIcon(),  else null
+EnumResolver::isEnum($value);   // bool
+```
+
+Use `scalar()` for map keys, comparisons and copy values; `display()` (or `label()`) wherever a
+value is shown. Non-enum values always pass through untouched, so the helpers are safe to call on
+anything.
+
+### Opt-in enum contracts
+
+An enum used as a cast may implement any of these to drive richer rendering. They live under
+`Foundation\Contracts\Enum\` and are **distinct** from the builder-facing `Foundation\Contracts\HasLabel`
+/ `HasIcon` (which carry fluent setters for components).
+
+| Contract | Method | Effect |
+|----------|--------|--------|
+| `Enum\HasLabel` | `getLabel(): ?string` | Display surfaces render the label instead of the backing value / case name |
+| `Enum\HasColor` | `getColor(): string\|Color\|null` | `BadgeColumn` / `IconColumn` / `IconEntry` auto-resolve the color |
+| `Enum\HasIcon` | `getIcon(): string\|Icon\|null` | The same surfaces auto-resolve the icon |
+
+```php
+use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Contracts\Enum\HasColor;
+use NyonCode\WireCore\Foundation\Contracts\Enum\HasLabel;
+
+enum OrderStatus: string implements HasColor, HasLabel
+{
+    case Pending = 'pending';
+    case Paid = 'paid';
+
+    public function getLabel(): ?string        { return ucfirst($this->value); }
+    public function getColor(): string|Color|null
+    {
+        return $this === self::Paid ? Color::Success : Color::Warning;
+    }
+}
+```
+
+See [Table → Enum & JSON Casts](../table/columns.md#enum-json-casts) for column-level usage.
+
 ## Support Utilities
 
 | Class | Description |
 |-------|-------------|
 | `EvaluatesClosures` | Trait — evaluates Closure-or-value with parameter injection |
 | `ArrayDotHelper` | Dot-notation access: `get('user.name', $array)`, `set()`, `has()`, `forget()` |
+| `EnumResolver` | Static — canonical enum/array normalizer (`scalar`, `label`, `display`, `color`, `icon`) |
 
 ## Blade Components
 

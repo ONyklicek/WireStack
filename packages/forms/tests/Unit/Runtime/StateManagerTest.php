@@ -6,6 +6,18 @@ use Livewire\Component;
 use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireForms\Forms\Runtime\StateManager;
 
+enum SmStatus: string
+{
+    case Active = 'active';
+    case Inactive = 'inactive';
+}
+
+enum SmPriority
+{
+    case Low;
+    case High;
+}
+
 test('initial state is empty array', function () {
     $manager = new StateManager;
 
@@ -17,6 +29,23 @@ test('fill sets state', function () {
     $manager->fill(['name' => 'John', 'email' => 'john@test.com']);
 
     expect($manager->getState())->toBe(['name' => 'John', 'email' => 'john@test.com']);
+});
+
+test('fill reduces enum-cast values to their scalar form', function () {
+    $manager = new StateManager;
+    $manager->fill([
+        'status' => SmStatus::Active,
+        'priority' => SmPriority::High,
+        'nested' => ['phase' => SmStatus::Inactive],
+        'plain' => 'x',
+    ]);
+
+    expect($manager->getState())->toBe([
+        'status' => 'active',
+        'priority' => 'High',
+        'nested' => ['phase' => 'inactive'],
+        'plain' => 'x',
+    ]);
 });
 
 test('fill overwrites previous state', function () {

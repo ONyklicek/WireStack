@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Infolists\Components;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Icons\Icon;
+use NyonCode\WireCore\Foundation\Support\EnumResolver;
 
 /**
  * Icon entry — renders an icon derived from the state.
@@ -99,14 +102,24 @@ class IconEntry extends Entry
             return $state ? $this->trueIcon : $this->falseIcon;
         }
 
+        // Enum-cast state cannot index a map directly; resolve a scalar key first.
+        $key = EnumResolver::scalar($state);
+
         if ($this->iconMap !== null) {
             $map = $this->iconMap instanceof Closure
                 ? $this->evaluateForState($this->iconMap)
                 : $this->iconMap;
 
-            if (is_array($map) && is_scalar($state)) {
-                return $map[$state] ?? null;
+            if (is_array($map) && is_scalar($key) && array_key_exists($key, $map)) {
+                return $map[$key];
             }
+        }
+
+        // Enum carrying its own icon via the opt-in HasIcon contract.
+        $enumIcon = EnumResolver::icon($state);
+
+        if ($enumIcon !== null) {
+            return $enumIcon instanceof Icon ? $enumIcon->value() : $enumIcon;
         }
 
         return $this->getIcon();
@@ -120,14 +133,24 @@ class IconEntry extends Entry
             return $state ? $this->trueColor : $this->falseColor;
         }
 
+        // Enum-cast state cannot index a map directly; resolve a scalar key first.
+        $key = EnumResolver::scalar($state);
+
         if ($this->colorMap !== null) {
             $map = $this->colorMap instanceof Closure
                 ? $this->evaluateForState($this->colorMap)
                 : $this->colorMap;
 
-            if (is_array($map) && is_scalar($state)) {
-                return $map[$state] ?? $this->getColor();
+            if (is_array($map) && is_scalar($key) && array_key_exists($key, $map)) {
+                return $map[$key];
             }
+        }
+
+        // Enum carrying its own color via the opt-in HasColor contract.
+        $enumColor = EnumResolver::color($state);
+
+        if ($enumColor !== null) {
+            return $enumColor instanceof Color ? $enumColor->value : $enumColor;
         }
 
         return $this->getColor();

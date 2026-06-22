@@ -47,13 +47,13 @@ Filter application flows through the Core `ApplyFilters` pipe in the QueryExecut
 
 ## Shared Filter API
 
-Every filter inherits from the base `Filter` class (289 lines).
+Every filter inherits from the base `Filter` class.
 
 ### Factory & Identity
 
 ```php
 Filter::make(string $name)           // static factory
-->label(string|Closure $label)        // display label (auto-generated from name)
+->label(?string $label)               // display label (auto-generated from name)
 ->getName(): string
 ->getLabel(): string
 ```
@@ -73,17 +73,16 @@ When `column()` is not called, the filter uses its `$name` as the database colum
 ->query(Closure $fn)                 // custom query callback
 ```
 
-The callback signature: `function (Builder $query, mixed $value): void`
+The callback signature is `function (Builder $query, mixed $value): Builder` — it **must return the query builder** (the runtime reassigns `$query` to the callback's return value).
 
 ```php
 SelectFilter::make('activity_level')
     ->options([...])
-    ->query(function (Builder $query, string $value) {
-        match ($value) {
-            'active' => $query->where('last_active_at', '>=', now()->subDays(7)),
-            'inactive' => $query->where('last_active_at', '<', now()->subDays(30)),
-            'new' => $query->where('created_at', '>=', now()->subDays(7)),
-        };
+    ->query(fn (Builder $query, string $value) => match ($value) {
+        'active' => $query->where('last_active_at', '>=', now()->subDays(7)),
+        'inactive' => $query->where('last_active_at', '<', now()->subDays(30)),
+        'new' => $query->where('created_at', '>=', now()->subDays(7)),
+        default => $query,
     })
 ```
 
@@ -129,8 +128,13 @@ When enabled, the filter accepts an array of values and applies `whereIn()`.
 
 ### View Customization
 
-```php
-->view(string $view)                 // custom Blade view for the filter UI
+There is no fluent `->view()` setter. Customize a filter's UI in one of two ways:
+
+- **Per filter type** — override `render()` in a custom `Filter` subclass and point it at your own Blade view (see [Custom Filter Class](#custom-filter-class)).
+- **Project-wide** — publish the package views and edit the partials under `resources/views/vendor/wire-table/tables/filters/` (`select`, `date`, `number-range`, `ternary`, `form-field`).
+
+```bash
+php artisan vendor:publish --tag=wire-table::views
 ```
 
 ---
@@ -634,10 +638,15 @@ class MyFilter extends Filter
         return $query->where(...);
     }
 
-    // Custom Blade view (optional)
-    public function getView(): string
+    // Custom Blade view (optional) — override render() and point at your view.
+    // The view receives 'filter' (this instance) and 'value' (current state).
+    public function render(mixed $value = null): string
     {
-        return 'filters.my-filter';
+        if (! $this->canView()) {
+            return '';
+        }
+
+        return view('filters.my-filter', ['filter' => $this, 'value' => $value])->render();
     }
 }
 ```
@@ -647,10 +656,11 @@ class MyFilter extends Filter
 ```php
 namespace App\Wire\Filters;
 
-use NyonCode\WireTable\Filters\Filter;
+use NyonCode\WireTable\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 
-class JsonContainsFilter extends Filter
+// Extends SelectFilter so it inherits ->options()/->searchable()/->native().
+class JsonContainsFilter extends SelectFilter
 {
     protected string $jsonPath = '';
 
@@ -738,9 +748,13 @@ class GeoRadiusFilter extends Filter
         return $this->defaultRadius;
     }
 
-    public function getView(): string
+    public function render(mixed $value = null): string
     {
-        return 'filters.geo-radius';
+        if (! $this->canView()) {
+            return '';
+        }
+
+        return view('filters.geo-radius', ['filter' => $this, 'value' => $value])->render();
     }
 }
 ```

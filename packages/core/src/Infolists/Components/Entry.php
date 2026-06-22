@@ -11,6 +11,7 @@ use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Concerns\HasIcon;
 use NyonCode\WireCore\Foundation\Concerns\HasPlaceholder;
 use NyonCode\WireCore\Foundation\Concerns\HasTooltip;
+use NyonCode\WireCore\Foundation\Support\EnumResolver;
 
 /**
  * Base class for infolist entries — read-only display of a single value
@@ -122,6 +123,9 @@ abstract class Entry extends ViewComponent
         if ($this->formatStateUsing instanceof Closure) {
             $state = ($this->formatStateUsing)($state, $this->record);
         }
+
+        // Enum- and array/JSON-cast attributes arrive as raw instances; render a display-safe value.
+        $state = EnumResolver::display($state);
 
         if ($state === null || $state === '') {
             return $this->getPlaceholder() ?? '-';

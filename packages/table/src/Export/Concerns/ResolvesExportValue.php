@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Export\Concerns;
 
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireTable\Columns\Column;
 
 /**
@@ -26,14 +27,16 @@ trait ResolvesExportValue
         if ($column->isAggregate()) {
             $attribute = $column->getAggregateAttribute() ?? $name;
 
-            return $record->getAttribute($attribute) ?? $record->getAttribute($name);
+            $value = $record->getAttribute($attribute) ?? $record->getAttribute($name);
+        } elseif (str_contains($name, '.')) {
+            // Relationship columns (e.g. "user.name")
+            $value = data_get($record, $name);
+        } else {
+            $value = $record->getAttribute($name);
         }
 
-        // Relationship columns (e.g. "user.name")
-        if (str_contains($name, '.')) {
-            return data_get($record, $name);
-        }
-
-        return $record->getAttribute($name);
+        // Enum- and array/JSON-cast attributes export as their display value (label / compact
+        // JSON), matching the on-screen table; scalar values pass through untouched.
+        return EnumResolver::display($value);
     }
 }

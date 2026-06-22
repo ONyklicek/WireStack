@@ -32,7 +32,7 @@ Wire is a Laravel Livewire package ecosystem split into four Composer packages. 
 | Forms | [Forms Overview](forms/overview.md) | [Field Reference](forms/fields/index.md), [Validation](forms/validation.md), [Save Lifecycle](forms/save-lifecycle.md) |
 | Tables | [Table Overview](table/overview.md) | [Columns](table/columns.md), [Filters](table/filters.md), [Actions](table/actions.md), [Exports](table/exports.md) |
 | Sortable | [Sortable Overview](sortable/overview.md) | [Installation](sortable/installation.md), [Row Reordering](sortable/row-sorting.md), [Column Reordering](sortable/column-sorting.md) |
-| Core UI | [Core Actions](core/actions.md) | [Modals](core/modals.md), [Notifications](core/notifications.md), [Widgets](core/widgets.md), [Plugins](core/plugins.md), [Audit Log](core/audit.md) |
+| Core UI | [Core Actions](core/actions.md) | [Modals](core/modals.md), [Notifications](core/notifications.md), [Widgets](core/widgets.md), [Infolists](core/infolists.md), [Plugins](core/plugins.md), [Audit Log](core/audit.md) |
 
 ## Source Layout
 
@@ -42,6 +42,7 @@ Wire is a Laravel Livewire package ecosystem split into four Composer packages. 
 | `packages/core/src/Modals` | Modal, confirmation, slide-over, wizard classes |
 | `packages/core/src/Notifications` | Notification value object, manager, drivers |
 | `packages/core/src/Widgets` | Stats, chart, table, custom widgets |
+| `packages/core/src/Infolists` | Infolist, entries, read-only record display |
 | `packages/core/src/Audit` | Audit entries, events, logger, model trait, audit trail action |
 | `packages/core/src/Core/Plugin` | Plugin contract, manager, hooks, type registries |
 | `packages/forms/src/Components` | Form fields, layout components, relationship fields, repeater |

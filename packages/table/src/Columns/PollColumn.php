@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
+use NyonCode\WireCore\Foundation\Support\EnumResolver;
 
 class PollColumn extends Column
 {
@@ -516,8 +517,8 @@ class PollColumn extends Column
             return ($this->stateResolver)($record, $this);
         }
 
-        // Default: use the column value as state
-        $value = $this->getState($record);
+        // Default: use the column value as state (enum casts collapse to a scalar).
+        $value = EnumResolver::scalar($this->getState($record));
 
         if (is_string($value) || is_numeric($value)) {
             return (string) $value;

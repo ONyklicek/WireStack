@@ -28,11 +28,68 @@ Infolist::make()
     ]);
 ```
 
-An `Infolist` is `Htmlable`, so you render it directly in Blade — no helper needed:
+> **New to this?** An infolist is just a list of things to show about one record. You build it in PHP, hand it a record, and echo it in Blade. The rest of this page builds up from the simplest possible example.
+
+## Installation
+
+Infolists ship with `wire-core` — nothing extra to install. Make sure the package views are in your Tailwind content paths so the styles are generated:
+
+```js
+export default {
+    content: [
+        // ...your app paths
+        './vendor/nyoncode/wire-core/resources/views/**/*.blade.php',
+    ],
+}
+```
+
+## Quick start
+
+An infolist lives on a Livewire component. The simplest way is a [computed property](https://livewire.laravel.com/docs/computed-properties) that returns the `Infolist`, which you then echo in the component's view.
+
+```php
+use Livewire\Attributes\Computed;
+use Livewire\Component;
+use NyonCode\WireCore\Infolists\Infolist;
+use NyonCode\WireCore\Infolists\Components\TextEntry;
+use NyonCode\WireCore\Foundation\Schema\Section;
+
+class ShowUser extends Component
+{
+    public User $user;          // the record you want to display
+
+    #[Computed]
+    public function infolist(): Infolist
+    {
+        return Infolist::make()
+            ->record($this->user)               // 1. give it the record
+            ->schema([                           // 2. list what to show
+                Section::make('Profile')
+                    ->columns(2)
+                    ->schema([
+                        TextEntry::make('name'),         // reads $user->name
+                        TextEntry::make('email')->copyable(),
+                    ]),
+            ]);
+    }
+
+    public function render()
+    {
+        return view('livewire.show-user');
+    }
+}
+```
 
 ```blade
-{{ $this->profileInfolist }}
+{{-- resources/views/livewire/show-user.blade.php --}}
+<div>
+    {{ $this->infolist }}        {{-- 3. render it --}}
+</div>
 ```
+
+That's the whole loop: **record in → schema → echo out.** `{{ $this->infolist }}` works because an `Infolist` is `Htmlable` and `$this->infolist` resolves the computed property — no special helper or trait required.
+
+> You can name the method anything (`$this->orderInfolist`, `$this->summary`, …) and have several on one component — see [Composing the schema](#composing-the-schema).
 
 ## Entry types at a glance
 
@@ -45,19 +102,25 @@ An `Infolist` is `Htmlable`, so you render it directly in Blade — no helper ne
 | **Key-value** | `KeyValueEntry` | An array / JSON attribute as a key/value table |
 | **Repeatable** | `RepeatableEntry` | A nested entry schema repeated per item of a relation/array |
 
+> **Enum casts.** Entries read enum-cast attributes safely: `TextEntry` renders the enum label
+> (via the `Enum\HasLabel` contract, else the backing value / case name), and `IconEntry`
+> auto-resolves its icon and color from an enum implementing `Enum\HasColor` / `Enum\HasIcon`.
+> See [Foundation → Enums](foundation.md#enums).
+
 ## Table of Contents
 
 1. [The Infolist object](#the-infolist-object)
-2. [State resolution](#state-resolution)
-3. [Layout](#layout)
-4. [TextEntry](#textentry)
-5. [IconEntry](#iconentry)
-6. [ImageEntry](#imageentry)
-7. [ColorEntry](#colorentry)
-8. [KeyValueEntry](#keyvalueentry)
-9. [RepeatableEntry](#repeatableentry)
-10. [Inside an action modal](#inside-an-action-modal)
-11. [Infolist API](#infolist-api)
+2. [Composing the schema](#composing-the-schema)
+3. [State resolution](#state-resolution)
+4. [Layout](#layout)
+5. [TextEntry](#textentry)
+6. [IconEntry](#iconentry)
+7. [ImageEntry](#imageentry)
+8. [ColorEntry](#colorentry)
+9. [KeyValueEntry](#keyvalueentry)
+10. [RepeatableEntry](#repeatableentry)
+11. [Inside an action modal](#inside-an-action-modal)
+12. [Infolist API](#infolist-api)
 
 ## The Infolist object
 
@@ -80,6 +143,86 @@ Infolist::make()->state(['name' => 'Ada', 'email' => 'ada@example.com'])->schema
 ```
 
 The record is propagated to every entry automatically when the infolist renders, recursing through layout components.
+
+##  Composing the schema
+
+> **Can I add more than a couple of fields?** Yes — `schema()` is just a list. Put as many entries as you like, group them with as many sections as you like, and mix any entry types together. There is no limit and no special wiring; you are only arranging objects in an array.
+
+**Add as many entries as you need.** Each `make('column')` line shows one value:
+
+```php
+Section::make('Profile')->columns(2)->schema([
+    TextEntry::make('name'),
+    TextEntry::make('email'),
+    TextEntry::make('phone'),
+    TextEntry::make('created_at')->date(),
+    IconEntry::make('is_verified')->boolean(),
+    // ...add more, in any order
+]);
+```
+
+**Use several sections** to break a record into logical groups — each is a separate card:
+
+```php
+Infolist::make()->record($order)->schema([
+    Section::make('Customer')->columns(2)->schema([
+        TextEntry::make('customer.name'),
+        TextEntry::make('customer.email'),
+    ]),
+    Section::make('Payment')->columns(2)->schema([
+        TextEntry::make('total')->money(),
+        TextEntry::make('status')->badge(),
+    ]),
+    Section::make('Notes')->schema([
+        TextEntry::make('notes')->prose(),
+    ]),
+]);
+```
+
+**Nest layouts** — a `Grid` or `Fieldset` can live inside a `Section`, and a `RepeatableEntry` carries its own sub-schema:
+
+```php
+Section::make('Order')->schema([
+    Grid::make()->columns(3)->schema([
+        TextEntry::make('number'),
+        TextEntry::make('placed_at')->date(),
+        TextEntry::make('total')->money(),
+    ]),
+    RepeatableEntry::make('items')->columns(3)->schema([
+        TextEntry::make('label'),
+        TextEntry::make('qty')->numeric(),
+        TextEntry::make('price')->money(),
+    ]),
+]);
+```
+
+**You don't even need a section** — entries can sit directly in the infolist, arranged by the top-level `columns()`:
+
+```php
+Infolist::make()->record($user)->columns(2)->schema([
+    TextEntry::make('name'),
+    TextEntry::make('email'),
+]);
+```
+
+**Several infolists on one page** — just define more than one computed property and echo each where you want it:
+
+```php
+#[Computed]
+public function profile(): Infolist { /* ... */ }
+
+#[Computed]
+public function billing(): Infolist { /* ... */ }
+```
+
+```blade
+<div class="space-y-6">
+    {{ $this->profile }}
+    {{ $this->billing }}
+</div>
+```
+
+> **Rule of thumb:** if you can describe what to show as "this value, then that value, grouped under these headings", you can express it here — one entry per value, one section per group.
 
 ## State resolution
 
