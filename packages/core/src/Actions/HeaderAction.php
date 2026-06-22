@@ -91,12 +91,10 @@ class HeaderAction extends BaseAction
             return '';
         }
 
-        $count = $this->getBadgeCount();
-        $colorClasses = self::getBadgeColorClasses($this->getBadgeColor());
-
-        return '<span class="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 text-[10px] font-bold rounded-full '.$colorClasses.'">'
-            .($count > 99 ? '99+' : $count)
-            .'</span>';
+        return view('wire-core::actions.partials.badge', [
+            'count' => $this->getBadgeCount(),
+            'color' => $this->getBadgeColor(),
+        ])->render();
     }
 
     public function render(): string

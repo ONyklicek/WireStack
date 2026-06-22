@@ -376,6 +376,9 @@ class ActionGroup implements Htmlable
 
     /**
      * Get badge HTML for the trigger button.
+     *
+     * Colour resolves through the canonical soft badge palette so the group
+     * trigger badge matches the header-action badge and every other pill.
      */
     public function getBadgeHtml(): string
     {
@@ -383,18 +386,69 @@ class ActionGroup implements Htmlable
             return '';
         }
 
-        $count = $this->getBadgeCount();
-        $colorClasses = match ($this->getBadgeColor()) {
-            'primary', 'blue' => 'bg-primary-500 text-white',
-            'danger', 'red' => 'bg-red-500 text-white',
-            'success', 'green' => 'bg-emerald-500 text-white',
-            'warning', 'yellow' => 'bg-amber-500 text-white',
-            default => 'bg-red-500 text-white',
-        };
+        return view('wire-core::actions.partials.badge', [
+            'count' => $this->getBadgeCount(),
+            'color' => $this->getBadgeColor(),
+        ])->render();
+    }
 
-        return '<span class="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold rounded-full '.$colorClasses.'">'
-            .($count > 99 ? '99+' : $count)
-            .'</span>';
+    /**
+     * Count only executable actions, ignoring dividers and nested empties.
+     *
+     * A group with one real action plus dividers should still collapse to a
+     * single inline button rather than a dropdown.
+     *
+     * @param  array<int, Action|ActionGroup>  $items
+     */
+    public function countExecutableActions(array $items): int
+    {
+        $count = 0;
+
+        foreach ($items as $item) {
+            if ($item instanceof Action && $item->isDivider()) {
+                continue;
+            }
+
+            $count++;
+        }
+
+        return $count;
+    }
+
+    /**
+     * Render the single visible action inline (used when the group collapses).
+     */
+    public function getSingleActionHtml(Model $record): string
+    {
+        foreach ($this->getVisibleActions($record) as $item) {
+            if ($item instanceof Action && $item->isDivider()) {
+                continue;
+            }
+
+            return $item->render($record);
+        }
+
+        return '';
+    }
+
+    /**
+     * Render every dropdown menu item (actions + dividers) as one HTML string.
+     *
+     * This is the canonical owner of dropdown body markup. Auto-dividers
+     * (divided()) and manual Action::divider() entries are resolved here so the
+     * group views only emit {!! $group->getDropdownItemsHtml($record) !!}.
+     */
+    public function getDropdownItemsHtml(Model $record): string
+    {
+        $html = '';
+
+        foreach ($this->getVisibleActionsWithDividers($record) as $item) {
+            $html .= $item instanceof self
+                ? $item->render($record)
+                : $item->renderForDropdown($record);
+        }
+
+        return $html;
     }
 
     public function render(Model $record): string

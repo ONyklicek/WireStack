@@ -117,7 +117,7 @@ class Action extends BaseAction
     public function render(Model $record): string
     {
         if ($this->isDivider) {
-            return '<div class="border-t border-gray-100 dark:border-gray-700 my-1" role="separator"></div>';
+            return $this->renderDivider();
         }
 
         if (! $this->canExecute($record)) {
@@ -128,6 +128,36 @@ class Action extends BaseAction
             'action' => $this,
             'record' => $record,
         ])->render();
+    }
+
+    /**
+     * Render this action as a dropdown menu item (used inside an ActionGroup).
+     *
+     * Dividers resolve to the shared separator partial; everything else renders
+     * through the canonical dropdown-item partial so menu rows stay consistent.
+     */
+    public function renderForDropdown(Model $record): string
+    {
+        if ($this->isDivider) {
+            return $this->renderDivider();
+        }
+
+        if (! $this->canExecute($record)) {
+            return '';
+        }
+
+        return view('wire-table::tables.actions.dropdown-item', [
+            'action' => $this,
+            'record' => $record,
+        ])->render();
+    }
+
+    /**
+     * Render the shared visual separator partial.
+     */
+    public function renderDivider(): string
+    {
+        return view('wire-core::actions.partials.divider')->render();
     }
 
     /**

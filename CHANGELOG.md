@@ -2,6 +2,16 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [1.4.1]
+
+### Fixed
+- **`ActionGroup` dividers now render in every dropdown.** The generic `<x-wire-actions::group>` view rendered a bare `{{ $items }}` slot that `GroupComponent` never populated, so the dropdown came out empty — no items and no `Action::divider()` / `divided()` separators. Dropdown body rendering is now owned by `ActionGroup::getDropdownItemsHtml($record)` (sibling of `getBadgeHtml()`): it resolves auto- and manual dividers and renders each item through the canonical dropdown-item partial. Both the core group view and the table row-action group view consume the single method, and the group correctly collapses to one inline button when only a single executable action is visible.
+
+### Changed
+- **Action group rendering unified into one canonical view.** The duplicated core (`actions/group.blade.php`) and table (`tables/actions/action-group.blade.php`) dropdown markup is consolidated: the table view now `@include`s the core view, and item/divider/single-action rendering live on `ActionGroup` as htmlable getters (`getDropdownItemsHtml`, `getSingleActionHtml`, `countExecutableActions`) plus `Action::renderForDropdown()` / `Action::renderDivider()`. The dead, never-included `wire-core::actions.dropdown-item` partial was removed. Dropdown design polished to match the rest of the UI (`rounded-lg`, `ring-black/5`, `x-cloak`).
+
+- **Table search no longer fails on MySQL / MariaDB.** A 1.4.0 hardening attempt wrapped every `LIKE`/`ILIKE` predicate with an explicit `ESCAPE '\'` clause to escape user-typed `%`/`_` wildcards. On MySQL/MariaDB the backslash is itself a string-literal escape, so `'\'` is an unterminated string and the query died with `SQLSTATE[42000] … syntax error … near '\')'` — any table search was unusable. The escaping (and the `EscapesLikeTerm` concern) is reverted; the search strategies are back to the proven `LIKE ?` / `ILIKE ?` form with the term bound as a parameter. (The wildcard-escaping behaviour will be reintroduced per-dialect, since `ESCAPE '\'` is not portable: MySQL/PostgreSQL already default to a backslash escape, only SQLite needs the explicit clause.)
+
 ## [1.4.0]
 
 ### Added
@@ -18,7 +28,6 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ### Security
 - **Sort direction and `NULLS` position are normalized before reaching raw SQL.** `SortClause` now collapses `direction` to an `asc`/`desc` allow-list and `nullsPosition` to `FIRST`/`LAST`/null in its constructor — the single owner of a sort clause. Previously these flowed unnormalized into `orderByRaw` for SQL-expression and `NULLS` sorts; the URL query-string path already validated direction, but this hardens the sink itself (and stops a tampered direction from throwing on plain `orderBy`).
-- **Search terms escape LIKE wildcards.** The `%`, `_` and `\` metacharacters in a user's search term are now escaped (shared `EscapesLikeTerm` concern) and every strategy pairs `LIKE`/`ILIKE` with an explicit `ESCAPE '\'` (consistent across MySQL, PostgreSQL and SQLite). Terms stay parameter-bound as before, so this closes a LIKE-wildcard-injection avenue (e.g. a `%%%%` term forcing a full scan), not a SQL-injection one.
 
 ##[1.3.0]
 
