@@ -7,7 +7,6 @@ namespace NyonCode\WireCore\Core\Query\Strategies;
 use Illuminate\Database\Eloquent\Builder;
 use NyonCode\WireCore\Core\Query\Contracts\SearchStrategy;
 use NyonCode\WireCore\Core\Query\SearchClause;
-use NyonCode\WireCore\Core\Query\Strategies\Concerns\EscapesLikeTerm;
 
 /**
  * MySQL search strategy using LIKE with wildcards.
@@ -16,21 +15,16 @@ use NyonCode\WireCore\Core\Query\Strategies\Concerns\EscapesLikeTerm;
  */
 final class MySqlSearchStrategy implements SearchStrategy
 {
-    use EscapesLikeTerm;
-
     /** {@inheritDoc} */
     public function apply(Builder $builder, SearchClause $clause, string $term): void
     {
-        $likeTerm = $this->likeContains($term);
-        $escape = " ESCAPE '".self::LIKE_ESCAPE."'";
+        $qualifiedColumn = $clause->getQualifiedColumn();
+        $likeTerm = '%'.$term.'%';
 
         if ($clause->sqlExpression !== null) {
-            $builder->orWhereRaw("{$clause->sqlExpression} LIKE ?{$escape}", [$likeTerm]);
-
-            return;
+            $builder->orWhereRaw("{$clause->sqlExpression} LIKE ?", [$likeTerm]);
+        } else {
+            $builder->orWhere($qualifiedColumn, 'LIKE', $likeTerm);
         }
-
-        $column = $builder->getQuery()->getGrammar()->wrap($clause->getQualifiedColumn());
-        $builder->orWhereRaw("{$column} LIKE ?{$escape}", [$likeTerm]);
     }
 }
