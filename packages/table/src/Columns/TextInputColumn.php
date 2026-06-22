@@ -9,6 +9,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Validator;
 use NyonCode\WireCore\Core\Capabilities\Capability;
+use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireTable\Concerns\HasView;
 
 class TextInputColumn extends Column
@@ -659,7 +660,7 @@ class TextInputColumn extends Column
             return number_format((float) $value, $this->decimals, $this->decimalSeparator, $this->thousandsSeparator);
         }
 
-        return (string) ($value ?? '');
+        return (string) (EnumResolver::display($value) ?? '');
     }
 
     protected function renderEditableCell(mixed $state, Model $record): string

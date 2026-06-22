@@ -10,6 +10,7 @@ use DateTimeInterface;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use JsonSerializable;
+use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use Stringable;
 use UnitEnum;
 
@@ -68,12 +69,10 @@ final class StateSerializer
             return $value->format('Y-m-d\TH:i:s.up');
         }
 
-        if ($value instanceof BackedEnum) {
-            return $value->value;
-        }
-
         if ($value instanceof UnitEnum) {
-            return $value->name;
+            // Backed and unit enums collapse to their canonical scalar form via the
+            // single owner so serialization stays in lockstep with display surfaces.
+            return EnumResolver::scalar($value);
         }
 
         if ($value instanceof Jsonable) {

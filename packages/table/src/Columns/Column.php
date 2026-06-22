@@ -19,6 +19,7 @@ use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Concerns\HasIcon;
 use NyonCode\WireCore\Foundation\Concerns\HasSize;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
+use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireTable\Concerns\HasSummary;
 use NyonCode\WireTable\Concerns\HasView;
 
@@ -745,7 +746,7 @@ class Column extends DataComponent implements Htmlable
             'url' => $this->getUrl($record),
             'openInNewTab' => $this->openUrlInNewTab,
             'copyable' => $this->copyable,
-            'copyValue' => $state,
+            'copyValue' => EnumResolver::scalar($state),
             'copyMessage' => $this->copyMessage ?? Trans::get('wire-table::messages.copied'),
             'tooltip' => $this->tooltip,
             'description' => $description,
@@ -823,6 +824,10 @@ class Column extends DataComponent implements Htmlable
 
     public function formatValue(mixed $value, Model $record): string
     {
+        // Enum- and array/JSON-cast attributes arrive as raw instances; normalise to a
+        // display-safe value before stringifying so a plain Column over them never fatals.
+        $value = EnumResolver::display($value);
+
         if ($value === null || $value === '') {
             return $this->getPlaceholder() ?? '';
         }

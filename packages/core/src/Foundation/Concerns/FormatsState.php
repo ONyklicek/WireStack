@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Foundation\Concerns;
 
 use Carbon\Carbon;
+use NyonCode\WireCore\Foundation\Support\EnumResolver;
 
 /**
  * Canonical numeric / money / date state formatting.
@@ -109,6 +110,11 @@ trait FormatsState
      */
     protected function applyNumericAndDateFormatting(mixed $value): mixed
     {
+        // Enum and array/JSON casts arrive here as raw instances that cannot be stringified.
+        // Collapse to a display-safe value first so every consumer of this concern
+        // (table columns, infolist entries) formats a scalar rather than fataling.
+        $value = EnumResolver::display($value);
+
         // Date / datetime
         if (($this->date || $this->dateTime) && $value) {
             $value = $this->since

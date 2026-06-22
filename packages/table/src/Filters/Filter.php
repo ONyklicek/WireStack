@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Concerns\HasAuthorization;
+use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireForms\Components\TextInput;
 
 /** @phpstan-consistent-constructor */
@@ -194,10 +195,13 @@ class Filter implements Htmlable
         if (is_array($value)) {
             $values = array_filter($value, fn ($v) => $v !== null && $v !== '');
 
-            return $values === [] ? null : implode(', ', array_map('strval', $values));
+            return $values === [] ? null : implode(', ', array_map(
+                static fn ($v): string => (string) EnumResolver::label($v),
+                $values,
+            ));
         }
 
-        return (string) $value;
+        return (string) EnumResolver::label($value);
     }
 
     /**

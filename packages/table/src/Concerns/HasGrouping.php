@@ -6,6 +6,7 @@ namespace NyonCode\WireTable\Concerns;
 
 use Closure;
 use InvalidArgumentException;
+use NyonCode\WireCore\Foundation\Support\EnumResolver;
 
 /**
  * Trait HasGrouping
@@ -113,6 +114,8 @@ trait HasGrouping
             return (string) call_user_func($this->groupLabel, $value, $record);
         }
 
+        // Group values may be enum-cast attributes; render their display label.
+        $value = EnumResolver::label($value);
         $label = $value === null || $value === '' ? '—' : (string) $value;
 
         if (is_string($this->groupLabel)) {

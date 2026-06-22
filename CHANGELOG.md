@@ -2,6 +2,24 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [1.4.0]
+
+### Added
+- **PHP enum casts work everywhere a value is displayed.** When an Eloquent model casts an attribute to a PHP enum (`$casts = ['status' => Status::class]`), the raw enum instance now flows safely through every surface instead of fataling on `(string) $enum`. A single canonical owner, `Foundation\Support\EnumResolver`, normalizes any value — `scalar()` (backed → value, unit → case name), `label()` (human text), `color()` and `icon()` — and every downstream surface delegates to it rather than re-encoding `(string) $enum` or local `match` maps: table columns (`TextColumn`, `BadgeColumn`, `IconColumn`, `SelectColumn`, `TextInputColumn`, `PollColumn`), grouping/summary/filter indicators, all three exporters (CSV/Excel/PDF, via `ResolvesExportValue`), infolist entries (`TextEntry`, `IconEntry`, …), and form state (`StateManager::fill()` reduces enum-cast values to their scalar form so the wire-bound state stays safe and matches `<option>` values). `StateSerializer` now delegates its enum branch to the same owner. Non-enum values pass through untouched.
+- **Opt-in enum contracts `Foundation\Contracts\Enum\{HasLabel, HasColor, HasIcon}`.** An enum used as a cast may implement these to carry its own display label, palette color, and icon (Nova/Filament-style). `BadgeColumn`, `IconColumn`, and `IconEntry` auto-resolve color and icon straight from the enum case when no explicit `colors()`/`icons()` map matches; display surfaces render `getLabel()` when present, falling back to the backing value / case name. Distinct from the builder-facing `Foundation\Contracts\HasLabel`/`HasIcon` (which carry fluent setters for components). Exports and group-by labels use the display label, matching what is shown on screen.
+- **`EnumResolver::display()` – canonical display normalizer.** One entry point that turns any owner-provided value into a `(string)`-safe form: enum → label, array / JSON-cast attribute → compact JSON, scalars untouched. Used by the base column formatter, the shared `FormatsState` concern, infolist entries, and the exporters.
+
+### Changed
+- **`StateSerializer` enum serialization delegates to `EnumResolver`.** The wire-transfer serializer no longer carries its own `BackedEnum`/`UnitEnum` branch; it reuses the canonical owner so serialized and displayed enum values stay in lockstep. Behavior is unchanged.
+
+### Fixed
+- **Array / JSON-cast attributes no longer render as the literal `Array`.** A column, infolist entry, or export over an `array`/`json`-cast attribute previously hit `(string) $array`, raising an "Array to string conversion" warning and printing `Array`; it now renders compact JSON via `EnumResolver::display()`.
+- **`NULLS FIRST/LAST` sorts no longer double-prefix the keyword.** A `SortClause` built with `'NULLS LAST'` combined with the `ApplySorting` pipe (which already prepends `NULLS`) would have emitted the invalid `NULLS NULLS LAST`. `SortClause` now stores the bare `FIRST`/`LAST` keyword (accepting either form on input).
+
+### Security
+- **Sort direction and `NULLS` position are normalized before reaching raw SQL.** `SortClause` now collapses `direction` to an `asc`/`desc` allow-list and `nullsPosition` to `FIRST`/`LAST`/null in its constructor — the single owner of a sort clause. Previously these flowed unnormalized into `orderByRaw` for SQL-expression and `NULLS` sorts; the URL query-string path already validated direction, but this hardens the sink itself (and stops a tampered direction from throwing on plain `orderBy`).
+- **Search terms escape LIKE wildcards.** The `%`, `_` and `\` metacharacters in a user's search term are now escaped (shared `EscapesLikeTerm` concern) and every strategy pairs `LIKE`/`ILIKE` with an explicit `ESCAPE '\'` (consistent across MySQL, PostgreSQL and SQLite). Terms stay parameter-bound as before, so this closes a LIKE-wildcard-injection avenue (e.g. a `%%%%` term forcing a full scan), not a SQL-injection one.
+
 ##[1.3.0]
 
 ### Added

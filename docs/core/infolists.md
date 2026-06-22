@@ -102,6 +102,11 @@ That's the whole loop: **record in → schema → echo out.** `{{ $this->infolis
 | **Key-value** | `KeyValueEntry` | An array / JSON attribute as a key/value table |
 | **Repeatable** | `RepeatableEntry` | A nested entry schema repeated per item of a relation/array |
 
+> **Enum casts.** Entries read enum-cast attributes safely: `TextEntry` renders the enum label
+> (via the `Enum\HasLabel` contract, else the backing value / case name), and `IconEntry`
+> auto-resolves its icon and color from an enum implementing `Enum\HasColor` / `Enum\HasIcon`.
+> See [Foundation → Enums](foundation.md#enums).
+
 ## Table of Contents
 
 1. [The Infolist object](#the-infolist-object)

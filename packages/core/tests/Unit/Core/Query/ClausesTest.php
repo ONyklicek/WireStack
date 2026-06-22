@@ -88,10 +88,19 @@ it('returns qualified sort column', function () {
     expect($clause->getQualifiedColumn())->toBe('users_company.name');
 });
 
-it('supports nulls position', function () {
-    $clause = new SortClause('name', 'asc', nullsPosition: 'NULLS LAST');
+it('normalises nulls position to a bare keyword', function () {
+    // Both the bare keyword and the full "NULLS LAST" form are accepted; the bare
+    // keyword is stored (ApplySorting supplies the "NULLS" prefix).
+    expect((new SortClause('name', 'asc', nullsPosition: 'NULLS LAST'))->nullsPosition)->toBe('LAST')
+        ->and((new SortClause('name', 'asc', nullsPosition: 'first'))->nullsPosition)->toBe('FIRST')
+        ->and((new SortClause('name', 'asc', nullsPosition: 'garbage'))->nullsPosition)->toBeNull()
+        ->and((new SortClause('name', 'asc'))->nullsPosition)->toBeNull();
+});
 
-    expect($clause->nullsPosition)->toBe('NULLS LAST');
+it('normalises sort direction to a safe keyword', function () {
+    expect((new SortClause('name', 'DESC'))->direction)->toBe('desc')
+        ->and((new SortClause('name', 'asc'))->direction)->toBe('asc')
+        ->and((new SortClause('name', 'asc; DROP TABLE users'))->direction)->toBe('asc');
 });
 
 // ── AggregateClause ──────────────────────────────────────────

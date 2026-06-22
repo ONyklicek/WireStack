@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireTable\Concerns\HasView;
 
 class SelectColumn extends Column
@@ -89,7 +90,11 @@ class SelectColumn extends Column
 
         // If not editable, just show the display value
         if (! $this->isEditable()) {
-            $displayValue = $this->options[$state] ?? ($state ?? ($this->getPlaceholder() ?? Trans::get('wire-table::messages.select_placeholder')));
+            // Enum-cast state cannot index the options array directly, so resolve a
+            // scalar key first and fall back to the enum's label.
+            $key = EnumResolver::scalar($state);
+            $displayValue = $this->options[$key]
+                ?? (EnumResolver::label($state) ?? ($this->getPlaceholder() ?? Trans::get('wire-table::messages.select_placeholder')));
 
             return e((string) $displayValue);
         }
@@ -97,7 +102,8 @@ class SelectColumn extends Column
         return $this->renderView('tables.columns.select', [
             'column' => $this,
             'record' => $record,
-            'state' => $state,
+            // Pass a scalar so the <option> selected comparison never stringifies an enum.
+            'state' => EnumResolver::scalar($state),
         ]);
     }
 

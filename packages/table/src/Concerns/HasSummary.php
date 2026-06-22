@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireTable\Columns\SummaryBatch;
 use NyonCode\WireTable\Columns\SummaryType;
 
@@ -569,7 +570,8 @@ trait HasSummary
     protected function formatNumeric(mixed $value): string
     {
         if (! is_numeric($value)) {
-            return (string) $value;
+            // First/Last summaries may surface enum-cast values; render their label.
+            return (string) EnumResolver::label($value);
         }
 
         if ($this->summaryDecimals === null) {
