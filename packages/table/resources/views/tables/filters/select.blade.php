@@ -8,7 +8,13 @@
     $rawValue = is_array($value) && array_key_exists('value', $value) ? $value['value'] : $value;
     $currentValue = $rawValue ?? $filter->getDefault();
     $isMultiple = $filter->isMultiple();
-    $selectedValues = $isMultiple ? array_map('strval', (array) ($currentValue ?? [])) : [];
+    // Normalize the current value(s) to a list of comparable strings. Works for
+    // both single and multiple selects and guards against array values reaching
+    // a scalar/echo context (array default, multi/single mismatch, stale state).
+    $selectedValues = array_map('strval', array_filter(
+        is_array($currentValue) ? $currentValue : [$currentValue],
+        static fn ($v) => $v !== null && $v !== '',
+    ));
 @endphp
 
 <div class="flex flex-col gap-1">
@@ -23,7 +29,7 @@
     >
         <option value="">{{ $placeholder }}</option>
         @foreach($options as $optionValue => $optionLabel)
-            <option value="{{ $optionValue }}" @if($isMultiple ? in_array((string) $optionValue, $selectedValues, true) : (string) $currentValue === (string) $optionValue) selected @endif>
+            <option value="{{ $optionValue }}" @if(in_array((string) $optionValue, $selectedValues, true)) selected @endif>
                 {{ $optionLabel }}
             </option>
         @endforeach

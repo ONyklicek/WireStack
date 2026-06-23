@@ -5,6 +5,7 @@
     $label = $filter->getLabel();
     $placeholder = $filter->getPlaceholder();
     $currentValue = $value ?? $filter->getDefault();
+    $currentValue = is_scalar($currentValue) ? $currentValue : '';
 @endphp
 
 <div class="flex flex-col gap-1">

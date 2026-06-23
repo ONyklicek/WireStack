@@ -4,6 +4,7 @@
     $name = $column->getName();
     $placeholder = $column->getFilterPlaceholder() ?? __('wire-table::messages.filter_all');
     $options = $column->getFilterOptions();
+    $currentValue = is_scalar($value) ? (string) $value : '';
 @endphp
 
 <select
@@ -12,7 +13,7 @@
 >
     <option value="">{{ $placeholder }}</option>
     @foreach($options as $optionValue => $optionLabel)
-        <option value="{{ $optionValue }}" @if((string) $value === (string) $optionValue) selected @endif>
+        <option value="{{ $optionValue }}" @if($currentValue === (string) $optionValue) selected @endif>
             {{ $optionLabel }}
         </option>
     @endforeach

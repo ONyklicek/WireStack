@@ -45,7 +45,10 @@
             </div>
         </div>
     @else
-        @php $currentValue = $value ?? ($filter->getDefault() ?? ''); @endphp
+        @php
+            $currentValue = $value ?? ($filter->getDefault() ?? '');
+            $currentValue = is_scalar($currentValue) ? $currentValue : '';
+        @endphp
         <input
             type="date"
             id="filter-{{ $name }}"
