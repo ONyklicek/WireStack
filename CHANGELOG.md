@@ -2,6 +2,11 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [1.4.2]
+
+### Fixed
+- **Table filters no longer fatal with `htmlspecialchars(): … array given`.** Single-value filter views echoed/cast their state value directly into a string context, so an array value reaching a single-value filter — via an array `default()`, a multiple/single-select mismatch, or stale URL/session state — raised a `TypeError` and took down the whole table render. The filter views are now defensive: `filters/select.blade.php` normalizes the current value into a list of comparable strings used uniformly for single and multiple selects (dropping the `(string) $currentValue` cast that blew up on arrays), `filters/form-field.blade.php`, `filters/text.blade.php`, and `filters/date.blade.php` guard their input value with `is_scalar()` before echoing, and the column-level `columns/partials/filter-select.blade.php` guards the value before its option comparison.
+
 ## [1.4.1]
 
 ### Fixed
