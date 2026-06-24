@@ -2,6 +2,12 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [1.5.1]
+
+### Changed
+- **Reusable view markup is owned in PHP, not duplicated in Blade.** A multi-threaded audit of the "Htmlable render" convention (reusable UI markup lives behind PHP htmlable getters / canonical resolvers; Blade only consumes) consolidated the remaining drift. The loading-spinner SVG, previously hand-inlined in four places (table column partial, `header-action`, `action-modal` ×2, forms `file-upload`), now has a single canonical owner `wire-core::partials.spinner` (`$class`, optional `$wireTarget`) that every site delegates to. The sortable drag handle is no longer a JS template string — its markup moved to `wire-sortable::partials.drag-handle`, rendered by the new `Table::getDragHandleHtml()` macro and injected into the Alpine component as config. The infolist column-span `match` (duplicated across six entry views) is now `HasColumnSpan::getColumnSpanClass($default)`; `StackedColumn` builds its stacked lines via `getLinesHtml(): Htmlable` (escaped) instead of a Blade closure; `BarChartWidget` exposes `getCardRadiusClass()` / `getPartialName()`; and the table's responsive stacked-layout classes resolve through `Table::getStackedTableHiddenClass()` / `getStackedCardsVisibleClass()`. `HeaderAction::getBadgeHtml()` now returns `Htmlable`, matching `ActionGroup`.
+- **Forms colour palettes and modal/stat surfaces delegate to canonical resolvers.** The `Alert` and `Rating` Blade `match` maps and the unsafe `text-{$color}-…` string interpolation in `stats-overview` are gone. `Alert::getColorClasses()` delegates to a new `HasColor::getAlertColorClasses()` (soft banner surface — `bg-*-50` / `border-*-200` / `text-*-800`); `Rating::getColorClasses()` keeps its brighter `-500/-400` star scale as an owner-local `rating-active` surface (values unchanged). The action-modal submit button (two formerly inline `match` blocks, slide-over + centered) now resolves through `HasColor::getModalSubmitButtonClasses()`, surfaced via `HasModal::getModalConfig()['submitButtonClasses']`, so both footers stay in sync. `Stat` gains `getValueColorClass()` / `getDescriptionColorClass()` / `getChartColorClass()` and `TextEntry` gains `getTextColorClass()` / `getBadgeColorClass()`, all routed through the canonical (JIT-safe, allow-list) `HasColor` palette.
+
 ## [1.5.0]
 
 ### Added
