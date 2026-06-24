@@ -2,7 +2,19 @@
 
 declare(strict_types=1);
 
+use NyonCode\WireCore\Foundation\Contracts\Enum\HasLabel;
 use NyonCode\WireForms\Components\TextInput;
+
+enum TextInputColor: string implements HasLabel
+{
+    case Red = 'red';
+    case Green = 'green';
+
+    public function getLabel(): ?string
+    {
+        return ucfirst($this->value);
+    }
+}
 
 test('make creates instance with name', function () {
     $field = TextInput::make('username');
@@ -68,6 +80,12 @@ test('mask sets mask attribute', function () {
     $field = TextInput::make('phone')->mask('+420 999 999 999');
 
     expect($field->getMask())->toBe('+420 999 999 999');
+});
+
+test('datalist accepts an enum class and uses its case labels', function () {
+    $field = TextInput::make('color')->datalist(TextInputColor::class);
+
+    expect($field->getDatalistOptions())->toBe(['Red', 'Green']);
 });
 
 test('datalist sets options', function () {

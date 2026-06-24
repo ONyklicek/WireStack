@@ -3,7 +3,25 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use NyonCode\WireCore\Foundation\Contracts\Enum\HasLabel;
 use NyonCode\WireTable\Columns\Column;
+
+enum ColTestStatus: string implements HasLabel
+{
+    case Draft = 'draft';
+    case Published = 'published';
+
+    public function getLabel(): ?string
+    {
+        return match ($this) {
+            self::Draft => 'Draft',
+            self::Published => 'Published',
+        };
+    }
+}
 
 // ─── Factory & Name ─────────────────────────────────────────────────────────
 
@@ -238,6 +256,32 @@ it('can be set to filterable', function () {
     expect(Column::make('status')->filterable()->isFilterable())->toBeTrue();
 });
 
+it('expands an enum class into filter options', function () {
+    expect(Column::make('status')->filterAsSelect(ColTestStatus::class)->getFilterOptions())
+        ->toBe(['draft' => 'Draft', 'published' => 'Published']);
+
+    expect(Column::make('status')->filterable(type: 'select', options: ColTestStatus::class)->getFilterOptions())
+        ->toBe(['draft' => 'Draft', 'published' => 'Published']);
+});
+
+it('ignores a non-scalar text filter value instead of throwing (regression)', function () {
+    Schema::create('col_filter_items', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+    });
+    DB::table('col_filter_items')->insert([['name' => 'a'], ['name' => 'b']]);
+
+    $query = DB::table('col_filter_items');
+
+    // A crafted/stale array value used to cause "Array to string conversion"
+    // when building the LIKE clause; it must now be ignored, returning all rows.
+    $result = Column::make('name')->applyFilterCondition($query, 'name', ['x', 'y']);
+
+    expect($result->count())->toBe(2);
+
+    Schema::dropIfExists('col_filter_items');
+});
+
 // ─── Inline Editing ─────────────────────────────────────────────────────────
 
 it('is not editable by default', function () {
@@ -246,6 +290,11 @@ it('is not editable by default', function () {
 
 it('can be set to editable', function () {
     expect(Column::make('name')->editable()->isEditable())->toBeTrue();
+});
+
+it('expands an enum class into editable select options', function () {
+    expect(Column::make('status')->editable(type: 'select', options: ColTestStatus::class)->getEditableOptions())
+        ->toBe(['draft' => 'Draft', 'published' => 'Published']);
 });
 
 // ─── Toggleable ─────────────────────────────────────────────────────────────

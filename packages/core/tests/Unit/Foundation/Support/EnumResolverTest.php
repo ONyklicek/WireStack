@@ -76,8 +76,8 @@ it('uses getLabel() for enums implementing HasLabel', function () {
     expect(EnumResolver::label(ErRichStatus::Open))->toBe('Otevřeno');
 });
 
-it('falls back to scalar for enums without HasLabel', function () {
-    expect(EnumResolver::label(ErBackedStatus::Inactive))->toBe('inactive')
+it('headlines the case name for enums without HasLabel', function () {
+    expect(EnumResolver::label(ErBackedStatus::Inactive))->toBe('Inactive')
         ->and(EnumResolver::label(ErUnitStatus::Low))->toBe('Low')
         ->and(EnumResolver::label('plain'))->toBe('plain');
 });
@@ -89,9 +89,9 @@ it('collapses array/JSON values to a compact JSON string', function () {
         ->and(EnumResolver::display(['x', 'y']))->toBe('["x","y"]');
 });
 
-it('display falls back to label/scalar for non-array values', function () {
+it('display falls back to label for non-array values', function () {
     expect(EnumResolver::display(ErRichStatus::Open))->toBe('Otevřeno')
-        ->and(EnumResolver::display(ErBackedStatus::Active))->toBe('active')
+        ->and(EnumResolver::display(ErBackedStatus::Active))->toBe('Active')
         ->and(EnumResolver::display('plain'))->toBe('plain')
         ->and(EnumResolver::display(null))->toBeNull();
 });
@@ -117,4 +117,44 @@ it('detects enum instances', function () {
         ->and(EnumResolver::isEnum(ErUnitStatus::Low))->toBeTrue()
         ->and(EnumResolver::isEnum('active'))->toBeFalse()
         ->and(EnumResolver::isEnum(null))->toBeFalse();
+});
+
+// ─── isEnumClass() / options() / normalizeOptions() ──────────────────────────
+
+it('detects enum class-strings', function () {
+    expect(EnumResolver::isEnumClass(ErBackedStatus::class))->toBeTrue()
+        ->and(EnumResolver::isEnumClass(ErRichStatus::class))->toBeTrue()
+        ->and(EnumResolver::isEnumClass('not-an-enum'))->toBeFalse()
+        ->and(EnumResolver::isEnumClass(['a' => 'b']))->toBeFalse()
+        ->and(EnumResolver::isEnumClass(null))->toBeFalse();
+});
+
+it('builds an option map keyed by backing value with HasLabel labels', function () {
+    expect(EnumResolver::options(ErRichStatus::class))->toBe([
+        'open' => 'Otevřeno',
+        'closed' => 'Zavřeno',
+    ]);
+});
+
+it('builds an option map for backed enums without HasLabel, headlining the case name', function () {
+    expect(EnumResolver::options(ErBackedStatus::class))->toBe([
+        'active' => 'Active',
+        'inactive' => 'Inactive',
+    ]);
+});
+
+it('keys unit enum options by case name', function () {
+    expect(EnumResolver::options(ErUnitStatus::class))->toBe([
+        'Low' => 'Low',
+        'High' => 'High',
+    ]);
+});
+
+it('normalizeOptions expands an enum class but passes arrays through untouched', function () {
+    expect(EnumResolver::normalizeOptions(ErRichStatus::class))->toBe([
+        'open' => 'Otevřeno',
+        'closed' => 'Zavřeno',
+    ])
+        ->and(EnumResolver::normalizeOptions(['a' => 'A']))->toBe(['a' => 'A'])
+        ->and(EnumResolver::normalizeOptions([]))->toBe([]);
 });

@@ -33,3 +33,14 @@ it('inherits base action features', function () {
         ->and($action->getIcon())->toBe('archive')
         ->and($action->isOutlined())->toBeTrue();
 });
+
+it('resolves outlined warning/success/info via the canonical color owner (regression)', function () {
+    // The old bulk-button match map only handled primary/danger for outlined,
+    // rendering every other hue gray. Delegating to getButtonClasses() fixes it.
+    foreach (['success' => 'emerald', 'warning' => 'amber', 'info' => 'cyan'] as $color => $hue) {
+        $classes = BulkAction::make('act')->color($color)->outlined()->getButtonClasses();
+
+        expect($classes)->toContain($hue)
+            ->and($classes)->toContain('border');
+    }
+});

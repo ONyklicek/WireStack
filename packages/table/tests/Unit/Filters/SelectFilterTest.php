@@ -20,6 +20,24 @@ it('can set options', function () {
     ]);
 });
 
+it('resolves a closure passed to options (regression: closure threw a TypeError)', function () {
+    $filter = SelectFilter::make('status')->options(fn () => [
+        'active' => 'Aktivní',
+        'inactive' => 'Neaktivní',
+    ]);
+
+    expect($filter->getOptions())->toBe([
+        'active' => 'Aktivní',
+        'inactive' => 'Neaktivní',
+    ]);
+});
+
+it('renders without error when options are provided as a closure', function () {
+    $filter = SelectFilter::make('status')->options(fn () => ['paid' => 'Paid']);
+
+    expect($filter->render('paid'))->toBeString();
+});
+
 it('is native by default', function () {
     expect(SelectFilter::make('status')->isNative())->toBeTrue();
 });

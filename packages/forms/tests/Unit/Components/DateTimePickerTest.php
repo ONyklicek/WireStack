@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Carbon\Carbon;
+use NyonCode\WireCore\Core\State\StateHydrator;
 use NyonCode\WireForms\Components\DateTimePicker;
 
 test('default mode is datetime', function () {
@@ -41,6 +43,21 @@ test('custom format overrides default', function () {
     $field = DateTimePicker::make('date')->format('d/m/Y');
 
     expect($field->getFormat())->toBe('d/m/Y');
+});
+
+test('state type is a mode-appropriate date string, not a Carbon (regression)', function () {
+    expect(DateTimePicker::make('d')->asDate()->getStateType())->toBe('date:Y-m-d')
+        ->and(DateTimePicker::make('d')->asTime()->getStateType())->toBe('date:H:i')
+        ->and(DateTimePicker::make('d')->asDateTime()->getStateType())->toBe('date:Y-m-d\TH:i');
+});
+
+test('hydrator returns a formatted string for date: types (regression)', function () {
+    $hydrator = new StateHydrator;
+
+    // Carbon, raw string, and timestamp all reduce to a serializable string.
+    expect($hydrator->hydrateValue(Carbon::parse('2026-06-23 14:30:00'), 'date:Y-m-d'))->toBe('2026-06-23')
+        ->and($hydrator->hydrateValue('2026-06-23 14:30:00', 'date:Y-m-d\TH:i'))->toBe('2026-06-23T14:30')
+        ->and($hydrator->hydrateValue(null, 'date:Y-m-d'))->toBeNull();
 });
 
 test('minDate and maxDate', function () {

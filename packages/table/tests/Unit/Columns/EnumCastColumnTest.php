@@ -72,8 +72,9 @@ function eccRecord(array $attributes): EccTicket
 it('renders a plain column over a backed enum cast without fataling', function () {
     $record = eccRecord(['status' => 'active']);
 
+    // No HasLabel → the case name is headlined for display ('Active'), consistent with options.
     expect(Column::make('status')->getState($record))->toBe(EccBackedStatus::Active)
-        ->and(Column::make('status')->renderCell($record))->toContain('active');
+        ->and(Column::make('status')->renderCell($record))->toContain('Active');
 });
 
 it('renders a unit enum cast using the case name', function () {

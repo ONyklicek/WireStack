@@ -56,6 +56,31 @@ it('supports dynamic hidden via closure', function () {
         ->and($action->isHidden($unlocked))->toBeFalse();
 });
 
+it('supports dynamic visible via closure (regression: closure was discarded)', function () {
+    $action = Action::make('test')
+        ->visible(fn ($record) => $record->can_edit);
+
+    $editable = (object) ['can_edit' => true];
+    $locked = (object) ['can_edit' => false];
+
+    // visible(closure) must invert the closure, not coerce it to a truthy bool.
+    expect($action->isHidden($editable))->toBeFalse()
+        ->and($action->isHidden($locked))->toBeTrue();
+});
+
+it('hides the action when a visible closure returns false without context', function () {
+    $action = Action::make('test')->visible(fn () => false);
+
+    expect($action->isHidden())->toBeTrue()
+        ->and($action->canExecute())->toBeFalse();
+});
+
+it('shows the action when a visible closure returns true without context', function () {
+    $action = Action::make('test')->visible(fn () => true);
+
+    expect($action->isHidden())->toBeFalse();
+});
+
 // ─── Disabled ──────────────────────────────────────────────────────────────
 
 it('is not disabled by default', function () {

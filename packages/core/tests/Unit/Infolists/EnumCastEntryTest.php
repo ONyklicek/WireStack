@@ -37,10 +37,10 @@ enum EceRich: string implements HasColor, HasIcon, HasLabel
     }
 }
 
-it('formats a backed enum entry as its scalar value', function () {
+it('formats a backed enum entry without HasLabel as a headline of its case name', function () {
     $entry = TextEntry::make('status')->record(['status' => EceBacked::Active]);
 
-    expect($entry->getFormattedState())->toBe('active');
+    expect($entry->getFormattedState())->toBe('Active');
 });
 
 it('formats a HasLabel enum entry as its label', function () {

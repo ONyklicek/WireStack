@@ -6,6 +6,7 @@ use Illuminate\Translation\ArrayLoader;
 use Illuminate\Translation\Translator;
 use Illuminate\Validation\Factory;
 use NyonCode\WireCore\Core\Validation\ValidationResult;
+use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Validation\FormValidationResolver;
 
@@ -70,6 +71,34 @@ test('skips components without validation interface', function () {
     expect($resolver->getRules())->toBe([])
         ->and($resolver->getMessages())->toBe([])
         ->and($resolver->getAttributes())->toBe([]);
+});
+
+// ─── Repeater wildcard validation (regression) ─────────────────────────────
+
+test('emits container and per-item wildcard rules for repeaters', function () {
+    $repeater = Repeater::make('contacts')
+        ->minItems(1)
+        ->required()
+        ->schema([
+            TextInput::make('name')->required(),
+            TextInput::make('email')->rules(['email']),
+        ]);
+
+    // Resolve the repeater's prefixed state path the way the runtime does.
+    $repeater->prepareChildren('data');
+
+    $resolver = new FormValidationResolver([], 'data', [], [$repeater]);
+    $rules = $resolver->getRules();
+
+    expect($rules)->toHaveKey('data.contacts')
+        ->and($rules['data.contacts'])->toContain('required')
+        ->and($rules['data.contacts'])->toContain('array')
+        ->and($rules['data.contacts'])->toContain('min:1')
+        ->and($rules)->toHaveKey('data.contacts.*.name')
+        ->and($rules['data.contacts.*.name'])->toContain('required')
+        ->and($rules)->toHaveKey('data.contacts.*.email')
+        ->and($rules['data.contacts.*.email'])->toContain('email')
+        ->and($rules)->not->toHaveKey('data.name');
 });
 
 // ─── Core ValidationPipeline Integration (Phase 4) ─────────────────────────
