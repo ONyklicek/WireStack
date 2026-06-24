@@ -23,7 +23,9 @@ class SortableTable extends Table
 {
     protected bool $reorderable = false;
 
-    protected string $orderColumn = 'sort_order';
+    protected bool $alwaysReorderable = false;
+
+    protected ?string $orderColumn = null;
 
     protected bool $paginatedWhileReordering = false;
 
@@ -51,9 +53,41 @@ class SortableTable extends Table
         return $this->reorderable;
     }
 
+    /**
+     * Always keep row reordering active (no toggle button); implies reorderable.
+     *
+     * @param  string|null  $orderColumn  DB column storing the sort position
+     */
+    public function alwaysReorderable(?string $orderColumn = null): static
+    {
+        $this->reorderable = true;
+        $this->alwaysReorderable = true;
+
+        if ($orderColumn !== null) {
+            $this->orderColumn = $orderColumn;
+        }
+
+        return $this;
+    }
+
+    public function isAlwaysReorderable(): bool
+    {
+        return $this->alwaysReorderable;
+    }
+
     public function getOrderColumn(): string
     {
-        return $this->orderColumn;
+        if ($this->orderColumn !== null) {
+            return $this->orderColumn;
+        }
+
+        // Read the package config when a container is available; fall back to the
+        // documented default so the table works without a booted app (unit tests).
+        if (app()->bound('config')) {
+            return config('wire-sortable.order_column', 'sort_order');
+        }
+
+        return 'sort_order';
     }
 
     /**

@@ -27,7 +27,16 @@ trait HasSqlDebug
      */
     protected static function interpolateSql(string $sql, array $bindings): string
     {
+        // Track where the next placeholder search should start so a '?' that
+        // appears inside an already-substituted value is never re-matched.
+        $offset = 0;
+
         foreach ($bindings as $binding) {
+            $pos = strpos($sql, '?', $offset);
+            if ($pos === false) {
+                break;
+            }
+
             $value = match (true) {
                 is_null($binding) => 'NULL',
                 is_bool($binding) => $binding ? '1' : '0',
@@ -35,11 +44,8 @@ trait HasSqlDebug
                 default => "'".addslashes((string) $binding)."'",
             };
 
-            // Replace first '?' only - safe even if $value contains '?'
-            $pos = strpos($sql, '?');
-            if ($pos !== false) {
-                $sql = substr_replace($sql, $value, $pos, 1);
-            }
+            $sql = substr_replace($sql, $value, $pos, 1);
+            $offset = $pos + strlen($value);
         }
 
         return $sql;

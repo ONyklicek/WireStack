@@ -131,7 +131,8 @@ final class TableQueryService
 
         // Collect filter custom query callbacks
         foreach ($filters as $filter) {
-            $raw = $filterValues[$filter->getName()] ?? null;
+            // data_get so dotted (relation) filter names resolve their nested state.
+            $raw = data_get($filterValues, $filter->getName());
             if ($raw === null || $raw === '' || $raw === []) {
                 continue;
             }
@@ -545,7 +546,8 @@ final class TableQueryService
 
         // Global filters (without custom query callbacks — those are handled post-plan)
         foreach ($filters as $filter) {
-            $raw = $filterValues[$filter->getName()] ?? null;
+            // data_get so dotted (relation) filter names resolve their nested state.
+            $raw = data_get($filterValues, $filter->getName());
             if ($raw === null || $raw === '' || $raw === []) {
                 continue;
             }

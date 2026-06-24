@@ -71,6 +71,7 @@
     "scripts": {
         "test": "vendor/bin/pest",
         "coverage": "vendor/bin/pest --coverage",
+        "coverage:enforce": "vendor/bin/pest --coverage --min=100",
         "test:coverage": "@coverage",
         "test:core": "vendor/bin/pest --configuration packages/core/phpunit.xml",
         "test:forms": "vendor/bin/pest --configuration packages/forms/phpunit.xml",

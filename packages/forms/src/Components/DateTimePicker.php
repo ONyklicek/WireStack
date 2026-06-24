@@ -293,7 +293,16 @@ class DateTimePicker extends Field
 
     public function getStateType(): string
     {
-        return 'datetime';
+        // Store a mode-appropriate date STRING (not a Carbon) so the value stays
+        // serializable in Livewire state and parseable by the picker/native input.
+        return 'date:'.match ($this->mode) {
+            'date' => 'Y-m-d',
+            'month' => 'Y-m',
+            'time' => $this->hasSeconds() ? 'H:i:s' : 'H:i',
+            // 'T' separator so the native datetime-local input accepts the value
+            // (the custom picker's parser handles it too).
+            default => $this->hasSeconds() ? 'Y-m-d\TH:i:s' : 'Y-m-d\TH:i',
+        };
     }
 
     protected function viewName(): string

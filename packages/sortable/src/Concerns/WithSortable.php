@@ -320,7 +320,7 @@ trait WithSortable
      * Get the user ID for column order persistence.
      * Override this to customize (e.g. for multi-guard auth).
      */
-    protected function getReorderableUserId(): ?int
+    protected function getReorderableUserId(): int|string|null
     {
         return auth()->id();
     }

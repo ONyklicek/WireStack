@@ -74,7 +74,13 @@ class WireSortableServiceProvider extends PackageServiceProvider
         });
 
         Table::macro('getOrderColumn', function (): string {
-            return $this->sortableOrderColumn ?? 'sort_order';
+            if (isset($this->sortableOrderColumn)) {
+                return $this->sortableOrderColumn;
+            }
+
+            return app()->bound('config')
+                ? config('wire-sortable.order_column', 'sort_order')
+                : 'sort_order';
         });
 
         Table::macro('paginatedWhileReordering', function (bool $enabled = true): static {
