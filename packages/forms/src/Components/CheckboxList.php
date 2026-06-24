@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Closure;
+use NyonCode\WireForms\Concerns\HasOptions;
 
 /**
  * Multiple checkbox list with search, bulk toggle, grouped options, and column layout.
  */
 class CheckboxList extends Field
 {
-    /** @var array<string, string>|Closure */
-    protected array|Closure $options = [];
+    use HasOptions;
 
     protected int $columns = 1;
 
@@ -30,16 +30,6 @@ class CheckboxList extends Field
 
     /** @var array<string, array<string, string>>|Closure */
     protected array|Closure $groups = [];
-
-    /**
-     * @param  array<string, string>|Closure  $options
-     */
-    public function options(array|Closure $options): static
-    {
-        $this->options = $options;
-
-        return $this;
-    }
 
     public function columns(int $columns): static
     {
@@ -101,14 +91,6 @@ class CheckboxList extends Field
         return $this;
     }
 
-    /**
-     * @return array<string, string>
-     */
-    public function getOptions(): array
-    {
-        return $this->evaluate($this->options);
-    }
-
     public function getColumns(): int
     {
         return $this->columns;
@@ -150,6 +132,12 @@ class CheckboxList extends Field
     public function getGroups(): array
     {
         return $this->evaluate($this->groups);
+    }
+
+    public function getStateType(): string
+    {
+        // A checkbox list always holds an array of selected option keys.
+        return 'array';
     }
 
     protected function viewName(): string
