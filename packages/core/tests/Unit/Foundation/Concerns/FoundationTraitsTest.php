@@ -250,6 +250,24 @@ it('accepts full column span', function () {
     expect($field->getColumnSpan())->toBe('full');
 });
 
+it('resolves the responsive column span class', function () {
+    $field = makeFoundationField('name');
+    expect($field->getColumnSpanClass())->toBe('');
+
+    expect($field->columnSpan(2)->getColumnSpanClass())->toBe('sm:col-span-2')
+        ->and($field->columnSpan(3)->getColumnSpanClass())->toBe('sm:col-span-3')
+        ->and($field->columnSpan(4)->getColumnSpanClass())->toBe('sm:col-span-4')
+        ->and($field->columnSpanFull()->getColumnSpanClass())->toBe('col-span-full');
+});
+
+it('falls back to the provided default column span class', function () {
+    $field = makeFoundationField('name');
+    expect($field->getColumnSpanClass('col-span-full'))->toBe('col-span-full');
+
+    // An explicit span still wins over the default.
+    expect($field->columnSpan(2)->getColumnSpanClass('col-span-full'))->toBe('sm:col-span-2');
+});
+
 // ─── CanBeReadOnly ──────────────────────────────────────────
 
 it('is not read-only by default', function () {

@@ -113,7 +113,7 @@ it('renders a manual divider between dropdown items', function () {
         Action::make('edit')->label('Edit'),
         Action::divider(),
         Action::make('delete')->label('Delete'),
-    ])->getDropdownItemsHtml(actionGroupRecord());
+    ])->getDropdownItemsHtml(actionGroupRecord())->toHtml();
 
     expect($html)->toContain('Edit')
         ->and($html)->toContain('Delete')
@@ -124,7 +124,7 @@ it('auto-inserts dividers when divided() is set', function () {
     $html = ActionGroup::make([
         Action::make('edit')->label('Edit'),
         Action::make('delete')->label('Delete'),
-    ])->divided()->getDropdownItemsHtml(actionGroupRecord());
+    ])->divided()->getDropdownItemsHtml(actionGroupRecord())->toHtml();
 
     expect($html)->toContain('role="separator"');
 });

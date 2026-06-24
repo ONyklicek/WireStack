@@ -78,3 +78,31 @@ it('returns correct modal icon text classes', function () {
         ->and(TestColorClass::getModalIconTextClass('success'))->toContain('text-emerald-600')
         ->and(TestColorClass::getModalIconTextClass('info'))->toContain('text-blue-600');
 });
+
+it('returns correct alert color classes per semantic hue', function () {
+    expect(TestColorClass::getAlertColorClasses('success'))->toContain('bg-emerald-50')
+        ->and(TestColorClass::getAlertColorClasses('warning'))->toContain('bg-amber-50')
+        ->and(TestColorClass::getAlertColorClasses('danger'))->toContain('bg-red-50')
+        ->and(TestColorClass::getAlertColorClasses('info'))->toContain('bg-blue-50')
+        ->and(TestColorClass::getAlertColorClasses('nonexistent'))->toContain('bg-blue-50');
+});
+
+it('maps alert color aliases to the same hue', function () {
+    expect(TestColorClass::getAlertColorClasses('green'))->toBe(TestColorClass::getAlertColorClasses('success'))
+        ->and(TestColorClass::getAlertColorClasses('red'))->toBe(TestColorClass::getAlertColorClasses('danger'))
+        ->and(TestColorClass::getAlertColorClasses('yellow'))->toBe(TestColorClass::getAlertColorClasses('warning'));
+});
+
+it('returns correct modal submit button classes per semantic hue', function () {
+    expect(TestColorClass::getModalSubmitButtonClasses('primary'))->toContain('bg-primary-600')
+        ->and(TestColorClass::getModalSubmitButtonClasses('danger'))->toContain('bg-red-600')
+        ->and(TestColorClass::getModalSubmitButtonClasses('success'))->toContain('bg-emerald-600')
+        ->and(TestColorClass::getModalSubmitButtonClasses('warning'))->toContain('bg-amber-500')
+        ->and(TestColorClass::getModalSubmitButtonClasses('nonexistent'))->toContain('bg-primary-600');
+});
+
+it('includes active and focus states on modal submit button classes', function () {
+    expect(TestColorClass::getModalSubmitButtonClasses('danger'))
+        ->toContain('active:bg-red-800')
+        ->toContain('focus:ring-red-500');
+});

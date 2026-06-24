@@ -64,13 +64,13 @@ it('can set custom badge color', function () {
 
 it('caps badge display at 99+', function () {
     $action = HeaderAction::make('inbox')->badge(150);
-    $html = $action->getBadgeHtml();
+    $html = $action->getBadgeHtml()->toHtml();
 
     expect($html)->toContain('99+');
 });
 
 it('returns empty badge html when no badge', function () {
-    expect(HeaderAction::make('test')->getBadgeHtml())->toBe('');
+    expect(HeaderAction::make('test')->getBadgeHtml()->toHtml())->toBe('');
 });
 
 it('renders badge html using the canonical badge palette', function () {
@@ -78,5 +78,5 @@ it('renders badge html using the canonical badge palette', function () {
         ->badge(3)
         ->badgeColor('success');
 
-    expect($action->getBadgeHtml())->toContain(HeaderAction::getBadgeColorClasses('success'));
+    expect($action->getBadgeHtml()->toHtml())->toContain(HeaderAction::getBadgeColorClasses('success'));
 });

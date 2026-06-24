@@ -1,18 +1,11 @@
 @php
     use NyonCode\WireForms\Components\Display\Alert;
     assert($field instanceof Alert);
-
-    $colorClasses = match($field->getColor()) {
-        'success' => 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-300',
-        'warning' => 'bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300',
-        'danger' => 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300',
-        default => 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300',
-    };
 @endphp
 
 <div
         @if($field->isDismissible()) x-data="{ show: true }" x-show="show" x-transition @endif
-class="rounded-md border p-4 {{ $colorClasses }}"
+class="rounded-md border p-4 {{ $field->getColorClasses() }}"
 >
     <div class="flex">
         @if($field->getIcon())

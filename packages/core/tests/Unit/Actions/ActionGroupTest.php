@@ -109,3 +109,25 @@ it('generates correct dropdown position classes', function () {
         ->and(ActionGroup::make([])->dropdownPosition('top-end')->getDropdownPositionClasses())
         ->toBe('right-0 bottom-full origin-bottom-right');
 });
+
+it('generates a transform-origin class for the teleported panel', function () {
+    expect(ActionGroup::make([])->dropdownPosition('bottom-start')->getDropdownOriginClass())
+        ->toBe('origin-top-left')
+        ->and(ActionGroup::make([])->dropdownPosition('bottom-end')->getDropdownOriginClass())
+        ->toBe('origin-top-right')
+        ->and(ActionGroup::make([])->dropdownPosition('top-start')->getDropdownOriginClass())
+        ->toBe('origin-bottom-left')
+        ->and(ActionGroup::make([])->dropdownPosition('top-end')->getDropdownOriginClass())
+        ->toBe('origin-bottom-right')
+        ->and(ActionGroup::make([])->dropdownPosition('unknown')->getDropdownOriginClass())
+        ->toBe('origin-top-right');
+});
+
+it('exposes a Floating UI config mapping placement 1:1 with a safe fallback', function () {
+    expect(ActionGroup::make([])->dropdownPosition('bottom-start')->getDropdownConfig())
+        ->toBe(['placement' => 'bottom-start', 'offset' => 6])
+        ->and(ActionGroup::make([])->dropdownPosition('top-end')->getDropdownConfig())
+        ->toBe(['placement' => 'top-end', 'offset' => 6])
+        ->and(ActionGroup::make([])->dropdownPosition('unknown')->getDropdownConfig())
+        ->toBe(['placement' => 'bottom-end', 'offset' => 6]);
+});

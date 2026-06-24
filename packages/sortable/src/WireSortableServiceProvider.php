@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireSortable;
 
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\HtmlString;
 use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
@@ -101,6 +103,13 @@ class WireSortableServiceProvider extends PackageServiceProvider
 
         Table::macro('isColumnReorderable', function (): bool {
             return $this->sortableColumnReorderable ?? false;
+        });
+
+        // Canonical owner of the drag-handle markup. The handle SVG lives in a
+        // Blade partial instead of a hand-built JS string; the rendered HTML is
+        // injected into the sortable Alpine component as config.
+        Table::macro('getDragHandleHtml', function (): Htmlable {
+            return new HtmlString(view('wire-sortable::partials.drag-handle')->render());
         });
     }
 }

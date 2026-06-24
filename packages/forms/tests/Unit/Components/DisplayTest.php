@@ -45,6 +45,13 @@ test('alert color variants', function () {
         ->and(Alert::make('a')->info()->getColor())->toBe('info');
 });
 
+test('alert color classes resolve through the canonical palette', function () {
+    expect(Alert::make('a')->success()->getColorClasses())->toContain('bg-emerald-50')
+        ->and(Alert::make('a')->warning()->getColorClasses())->toContain('bg-amber-50')
+        ->and(Alert::make('a')->danger()->getColorClasses())->toContain('bg-red-50')
+        ->and(Alert::make('a')->info()->getColorClasses())->toContain('bg-blue-50');
+});
+
 test('alert title and icon', function () {
     $alert = Alert::make('msg')
         ->title('Warning!')

@@ -10,8 +10,8 @@ use NyonCode\WireForms\Components\Select;
 
 class SelectFilter extends Filter
 {
-    /** @var array<string, string>|Closure */
-    protected array|Closure $options = [];
+    /** @var array<string, string>|string|Closure */
+    protected array|string|Closure $options = [];
 
     protected bool $native = true;
 

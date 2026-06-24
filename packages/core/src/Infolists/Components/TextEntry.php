@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Infolists\Components;
 
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Foundation\Concerns\FormatsState;
+use NyonCode\WireCore\Foundation\Concerns\HasColor;
 
 /**
  * Text entry — the default entry. Supports number/money/date formatting (shared
@@ -114,6 +115,33 @@ class TextEntry extends Entry
     public function isList(): bool
     {
         return $this->listWithLineBreaks || $this->bulleted;
+    }
+
+    /**
+     * Foreground text color class for the rendered value (and list items).
+     *
+     * Delegates to the canonical {@see HasColor::getTextColorClasses()} palette so
+     * the entry never re-encodes the hue map in Blade; an unset color falls back
+     * to the default body text color.
+     */
+    public function getTextColorClass(): string
+    {
+        $color = $this->getColor();
+
+        return $color !== null
+            ? HasColor::getTextColorClasses($color)
+            : 'text-gray-900 dark:text-white';
+    }
+
+    /**
+     * Soft badge pill color class used when the entry renders as a badge.
+     *
+     * Delegates to the canonical {@see HasColor::getBadgeColorClasses()} palette,
+     * defaulting to a neutral gray pill when no color is set.
+     */
+    public function getBadgeColorClass(): string
+    {
+        return HasColor::getBadgeColorClasses($this->getColor() ?? 'gray');
     }
 
     public function getWeightClass(): string

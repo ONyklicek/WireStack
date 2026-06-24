@@ -188,6 +188,39 @@ class BarChartWidget extends Widget
     }
 
     /**
+     * Card corner-radius class for the chart container.
+     *
+     * Safe allow-list mapping of the owner-supplied {@see rounded()} value so no
+     * arbitrary class reaches Tailwind; the view only consumes the result.
+     */
+    public function getCardRadiusClass(): string
+    {
+        return match ($this->rounded) {
+            'none' => 'rounded-none',
+            'sm' => 'rounded-sm',
+            'md' => 'rounded-md',
+            'lg' => 'rounded-lg',
+            'xl' => 'rounded-xl',
+            '3xl', 'full' => 'rounded-3xl',
+            default => 'rounded-2xl',
+        };
+    }
+
+    /**
+     * Name of the rendering partial selected from the (already validated)
+     * type + variant. Owns the partial-selection logic in PHP so the view just
+     * includes `wire-core::widgets.bar-chart.{partial}`.
+     */
+    public function getPartialName(): string
+    {
+        return match (true) {
+            $this->variant === 'finance' => 'vertical-finance',
+            $this->type === 'horizontal' => 'horizontal-system',
+            default => 'vertical-system',
+        };
+    }
+
+    /**
      * Resolve the 0–100 fill percentage for an item.
      *
      * Precedence: explicit per-item percentage → absolute {@see $maxValue}

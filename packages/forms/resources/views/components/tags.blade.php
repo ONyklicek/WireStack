@@ -5,6 +5,9 @@
 @endphp
 
 @include('wire-forms::partials.field-wrapper-start')
+@unless($field->isDisabled())
+    @include('wire-core::partials.floating-assets')
+@endunless
 
 <div
     x-data="{
@@ -17,9 +20,22 @@
         maxItems: @js($field->getMaxItems()),
         focused: false,
         activeIndex: -1,
+        _float: null,
 
         init() {
             if (!Array.isArray(this.tags)) this.tags = [];
+
+            // Teleport + Floating UI: pin the suggestions list to the input row.
+            this.$watch('showDropdown', (show) => {
+                if (show) {
+                    this.$nextTick(() => {
+                        this._float = this.$float(this.$refs.trigger, this.$refs.panel, { placement: 'bottom-start', offset: 8, matchWidth: true });
+                    });
+                } else if (this._float) {
+                    this._float();
+                    this._float = null;
+                }
+            });
         },
 
         get filteredSuggestions() {
@@ -83,7 +99,7 @@
 >
     {{-- ─── Input row ───────────────────────────────────────────────── --}}
     @unless($field->isDisabled())
-        <div class="relative">
+        <div class="relative" x-ref="trigger">
             <input
                 type="text"
                 x-model="input"
@@ -104,8 +120,10 @@
                 @if($field->isReadOnly()) readonly @endif
             />
 
-            {{-- Suggestions dropdown --}}
+            {{-- Suggestions dropdown (teleported + Floating UI) --}}
+            <template x-teleport="body">
             <ul
+                x-ref="panel"
                 x-show="showDropdown"
                 x-transition:enter="transition ease-out duration-100"
                 x-transition:enter-start="opacity-0 translate-y-1"
@@ -113,7 +131,7 @@
                 x-transition:leave="transition ease-in duration-75"
                 x-transition:leave-start="opacity-100"
                 x-transition:leave-end="opacity-0"
-                class="absolute left-0 right-0 z-50 mt-2 max-h-56 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl ring-1 ring-black ring-opacity-5 dark:border-gray-700 dark:bg-gray-800"
+                class="absolute top-0 left-0 z-50 max-h-56 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl ring-1 ring-black ring-opacity-5 dark:border-gray-700 dark:bg-gray-800"
             >
                 <template x-for="(suggestion, i) in filteredSuggestions" :key="suggestion">
                     <li>
@@ -136,6 +154,7 @@
                     </li>
                 </template>
             </ul>
+            </template>
         </div>
     @endunless
 

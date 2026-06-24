@@ -45,16 +45,10 @@
                             wire:target="submitActionModal"
                             @class([
                                 'rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm inline-flex items-center gap-2',
-                                'bg-primary-600 hover:bg-primary-700' => ($modalData['actionColor'] ?? 'primary') === 'primary',
-                                'bg-red-600 hover:bg-red-700' => ($modalData['actionColor'] ?? 'primary') === 'danger',
-                                'bg-emerald-600 hover:bg-emerald-700' => ($modalData['actionColor'] ?? 'primary') === 'success',
-                                'bg-amber-500 hover:bg-amber-600' => ($modalData['actionColor'] ?? 'primary') === 'warning',
+                                $modalData['submitButtonClasses'] ?? \NyonCode\WireCore\Foundation\Concerns\HasColor::getModalSubmitButtonClasses($modalData['actionColor'] ?? 'primary'),
                             ])
                         >
-                            <svg wire:loading wire:target="submitActionModal" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
+                            @include('wire-core::partials.spinner', ['wireTarget' => 'submitActionModal', 'class' => 'h-4 w-4'])
                             <span wire:loading.remove wire:target="submitActionModal">{{ $modalData['submitLabel'] }}</span>
                             <span wire:loading wire:target="submitActionModal">{{ __('Saving...') }}</span>
                         </button>
@@ -121,16 +115,10 @@
                             wire:target="submitActionModal"
                             @class([
                                 'inline-flex w-full justify-center items-center gap-2 rounded-xl px-4 py-3 sm:py-2.5 text-sm font-semibold text-white shadow-sm sm:w-auto touch-manipulation',
-                                'bg-primary-600 hover:bg-primary-700 active:bg-primary-800 focus:ring-primary-500' => ($modalData['actionColor'] ?? 'primary') === 'primary',
-                                'bg-red-600 hover:bg-red-700 active:bg-red-800 focus:ring-red-500' => ($modalData['actionColor'] ?? 'primary') === 'danger',
-                                'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 focus:ring-emerald-500' => ($modalData['actionColor'] ?? 'primary') === 'success',
-                                'bg-amber-500 hover:bg-amber-600 active:bg-amber-700 focus:ring-amber-500' => ($modalData['actionColor'] ?? 'primary') === 'warning',
+                                $modalData['submitButtonClasses'] ?? \NyonCode\WireCore\Foundation\Concerns\HasColor::getModalSubmitButtonClasses($modalData['actionColor'] ?? 'primary'),
                             ])
                         >
-                            <svg wire:loading wire:target="submitActionModal" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
+                            @include('wire-core::partials.spinner', ['wireTarget' => 'submitActionModal', 'class' => 'h-4 w-4'])
                             <span wire:loading.remove wire:target="submitActionModal">{{ $modalData['submitLabel'] }}</span>
                             <span wire:loading wire:target="submitActionModal">{{ __('Saving...') }}</span>
                         </button>

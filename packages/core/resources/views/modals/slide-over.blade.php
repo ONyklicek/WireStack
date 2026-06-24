@@ -1,4 +1,8 @@
 {{-- Slide-Over Panel Component --}}
+{{-- Teleported to <body> so a transformed/overflow ancestor can never break the
+     fixed overlay's viewport positioning. (Floating UI N/A — slide-overs are
+     edge-pinned to the viewport, not anchored to a trigger.) --}}
+<template x-teleport="body">
 <div
     x-data="{ show: @entangle($attributes->wire('model')) }"
     x-show="show"
@@ -99,3 +103,4 @@
         </div>
     </div>
 </div>
+</template>

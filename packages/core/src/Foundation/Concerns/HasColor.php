@@ -298,6 +298,47 @@ trait HasColor
     }
 
     /**
+     * Get solid color classes for a modal submit button.
+     *
+     * Canonical source for the primary confirm/submit button at the bottom of an
+     * action modal (both the slide-over and centered-dialog layouts), so the two
+     * footers stay in sync instead of each re-encoding the hue map. Pairs with a
+     * `text-white` base. Semantic names map to fixed hues; an unset/unknown color
+     * falls back to the brand primary. Class strings are kept literal so
+     * Tailwind's JIT scanner can see them (safe allow-list).
+     */
+    public static function getModalSubmitButtonClasses(string $color): string
+    {
+        return match ($color) {
+            'danger', 'red' => 'bg-red-600 hover:bg-red-700 active:bg-red-800 focus:ring-red-500',
+            'success', 'green', 'emerald' => 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 focus:ring-emerald-500',
+            'warning', 'yellow', 'amber' => 'bg-amber-500 hover:bg-amber-600 active:bg-amber-700 focus:ring-amber-500',
+            default => 'bg-primary-600 hover:bg-primary-700 active:bg-primary-800 focus:ring-primary-500',
+        };
+    }
+
+    /**
+     * Get soft alert/banner color classes (tinted background + border + text).
+     *
+     * Canonical source for the "alert" / inline banner surface — a soft tinted
+     * block with a matching border and readable foreground. Distinct from the
+     * badge pill and the solid button surfaces, so it owns its own resolver.
+     * Semantic names map to fixed hues (success → emerald, warning → amber,
+     * danger → red); `info`/`primary`/`blue` and an unset color resolve to the
+     * neutral informational blue. Class strings are kept literal so Tailwind's
+     * JIT scanner can see them, which also keeps the mapping a safe allow-list.
+     */
+    public static function getAlertColorClasses(string $color): string
+    {
+        return match ($color) {
+            'success', 'green', 'emerald' => 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-300',
+            'warning', 'yellow', 'amber' => 'bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300',
+            'danger', 'red' => 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300',
+            default => 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300',
+        };
+    }
+
+    /**
      * Get color for modal icon background.
      *
      * Canonical source for the rounded icon "chip" behind modal / confirmation

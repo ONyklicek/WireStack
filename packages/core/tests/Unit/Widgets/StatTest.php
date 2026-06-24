@@ -56,6 +56,26 @@ it('has null defaults for optional properties', function () {
         ->and($stat->getIcon())->toBeNull();
 });
 
+// ─── Color classes ───────────────────────────────────────────────────────────
+
+it('resolves value/description color classes through the canonical palette', function () {
+    $coloured = Stat::make('Revenue', '$1')->color('success');
+    $plain = Stat::make('Revenue', '$1');
+
+    expect($coloured->getValueColorClass())->toBe('text-emerald-600 dark:text-emerald-400')
+        ->and($coloured->getDescriptionColorClass())->toBe('text-emerald-600 dark:text-emerald-400')
+        ->and($plain->getValueColorClass())->toBe('text-gray-900 dark:text-white')
+        ->and($plain->getDescriptionColorClass())->toBe('text-gray-500 dark:text-gray-400');
+});
+
+it('resolves a safe chart color class and defaults to primary', function () {
+    $coloured = Stat::make('Revenue', '$1')->color('danger');
+    $plain = Stat::make('Revenue', '$1');
+
+    expect($coloured->getChartColorClass())->toContain('text-red-600')
+        ->and($plain->getChartColorClass())->toContain('text-primary-600');
+});
+
 // ─── Chart ───────────────────────────────────────────────────────────────────
 
 it('detects empty chart', function () {

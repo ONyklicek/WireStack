@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Actions;
 
 use Closure;
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\HtmlString;
 use NyonCode\WireCore\Foundation\Colors\Color;
 
 /**
@@ -85,16 +87,16 @@ class HeaderAction extends BaseAction
         return $count !== null && $count > 0;
     }
 
-    public function getBadgeHtml(): string
+    public function getBadgeHtml(): Htmlable
     {
         if (! $this->hasBadge()) {
-            return '';
+            return new HtmlString('');
         }
 
-        return view('wire-core::actions.partials.badge', [
+        return new HtmlString(view('wire-core::actions.partials.badge', [
             'count' => $this->getBadgeCount(),
             'color' => $this->getBadgeColor(),
-        ])->render();
+        ])->render());
     }
 
     public function render(): string

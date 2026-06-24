@@ -38,6 +38,13 @@ test('rating fluent configuration', function () {
         ->and($field->getStateType())->toBe('float');
 });
 
+test('rating star color classes use the bright scale', function () {
+    expect(Rating::make('s')->color('primary')->getColorClasses())->toBe('text-primary-500')
+        ->and(Rating::make('s')->color('success')->getColorClasses())->toBe('text-emerald-500')
+        ->and(Rating::make('s')->color('danger')->getColorClasses())->toBe('text-red-500')
+        ->and(Rating::make('s')->getColorClasses())->toBe('text-amber-400');
+});
+
 // ─── Slider ────────────────────────────────────────────────────
 
 test('slider defaults', function () {

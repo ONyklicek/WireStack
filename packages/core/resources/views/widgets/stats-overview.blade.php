@@ -8,11 +8,11 @@
                         <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
                             {{ $stat->getLabel() }}
                         </p>
-                        <p class="mt-1 text-2xl font-semibold {{ $stat->getColor() ? 'text-' . $stat->getColor() . '-600 dark:text-' . $stat->getColor() . '-400' : 'text-gray-900 dark:text-white' }}">
+                        <p class="mt-1 text-2xl font-semibold {{ $stat->getValueColorClass() }}">
                             {{ $stat->getValue() }}
                         </p>
                         @if($stat->getDescription())
-                            <p class="mt-1 flex items-center gap-1 text-sm {{ $stat->getColor() ? 'text-' . $stat->getColor() . '-600 dark:text-' . $stat->getColor() . '-400' : 'text-gray-500 dark:text-gray-400' }}">
+                            <p class="mt-1 flex items-center gap-1 text-sm {{ $stat->getDescriptionColorClass() }}">
                                 @if($stat->getDescriptionIcon())
                                     <x-wire::icon :name="$stat->getDescriptionIcon()" class="h-4 w-4" />
                                 @endif
@@ -42,13 +42,12 @@
                                     $y = 30 - (($val - $min) / $range * 28);
                                     $points[] = "$x,$y";
                                 }
-                                $color = $stat->getColor() ?? 'primary';
                             @endphp
                             <polyline
                                 fill="none"
                                 stroke="currentColor"
                                 stroke-width="1.5"
-                                class="text-{{ $color }}-500"
+                                class="{{ $stat->getChartColorClass() }}"
                                 points="{{ implode(' ', $points) }}"
                             />
                         </svg>

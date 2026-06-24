@@ -1,26 +1,4 @@
-@php
-    // Safe allow-list for the card corner radius (no arbitrary class injection
-    // from the owner-supplied rounded() value).
-    $cardRadius = match ($rounded) {
-        'none' => 'rounded-none',
-        'sm' => 'rounded-sm',
-        'md' => 'rounded-md',
-        'lg' => 'rounded-lg',
-        'xl' => 'rounded-xl',
-        '3xl' => 'rounded-3xl',
-        'full' => 'rounded-3xl',
-        default => 'rounded-2xl',
-    };
-
-    // Pick the rendering partial from the (already validated) type + variant.
-    $partial = match (true) {
-        $variant === 'finance' => 'vertical-finance',
-        $type === 'horizontal' => 'horizontal-system',
-        default => 'vertical-system',
-    };
-@endphp
-
-<div class="wire-bar-chart-widget {{ $cardRadius }} border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+<div class="wire-bar-chart-widget {{ $widget->getCardRadiusClass() }} border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
     @if($widget->getHeading() || $widget->getDescription() || $showMenu)
         <div class="mb-6 flex items-start justify-between gap-4">
             <div>
@@ -33,23 +11,27 @@
             </div>
 
             @if($showMenu)
-                <div class="relative" x-data="{ open: false }">
+                @include('wire-core::partials.floating-assets')
+
+                <div class="relative" x-data="wireDropdown({ placement: 'bottom-end' })" @keydown.escape.window="close()">
                     <button type="button"
-                            x-on:click="open = ! open"
-                            x-on:click.outside="open = false"
+                            x-ref="trigger"
+                            x-on:click="toggle()"
                             class="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700"
                             aria-label="{{ __('Options') }}">
                         <x-wire::icon name="ellipsis-horizontal" class="h-5 w-5" />
                     </button>
-                    <div x-show="open" x-cloak x-transition
-                         class="absolute right-0 z-10 mt-2 w-40 rounded-xl border border-gray-100 bg-white py-1 text-sm text-slate-600 shadow-lg dark:border-gray-700 dark:bg-gray-800 dark:text-slate-300">
-                        {{-- Menu affordance; host dashboards can wire actions here. --}}
-                        <button type="button" class="block w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-slate-700">{{ __('Refresh') }}</button>
-                    </div>
+                    <template x-teleport="body">
+                        <div x-ref="panel" x-show="open" x-cloak x-transition @click.outside="close()"
+                             class="absolute top-0 left-0 z-50 w-40 origin-top-right rounded-xl border border-gray-100 bg-white py-1 text-sm text-slate-600 shadow-lg dark:border-gray-700 dark:bg-gray-800 dark:text-slate-300">
+                            {{-- Menu affordance; host dashboards can wire actions here. --}}
+                            <button type="button" class="block w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-slate-700">{{ __('Refresh') }}</button>
+                        </div>
+                    </template>
                 </div>
             @endif
         </div>
     @endif
 
-    @include("wire-core::widgets.bar-chart.{$partial}", ['items' => $items])
+    @include('wire-core::widgets.bar-chart.'.$widget->getPartialName(), ['items' => $items])
 </div>

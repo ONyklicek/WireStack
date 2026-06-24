@@ -3,14 +3,7 @@
 
     assert($field instanceof ImageEntry);
 
-    $span = $field->getColumnSpan();
-    $spanClass = match (true) {
-        $span === 'full' => 'col-span-full',
-        $span === 2 => 'sm:col-span-2',
-        $span === 3 => 'sm:col-span-3',
-        $span === 4 => 'sm:col-span-4',
-        default => '',
-    };
+    $spanClass = $field->getColumnSpanClass();
     $urls = $field->getImageUrls();
     $size = $field->getImageSize();
     $shape = $field->isCircular() ? 'rounded-full' : 'rounded-md';

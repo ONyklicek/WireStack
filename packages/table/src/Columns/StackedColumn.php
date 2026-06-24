@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Columns;
 
 use Closure;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\HtmlString;
 
 class StackedColumn extends Column
 {
@@ -247,8 +249,29 @@ class StackedColumn extends Column
             'avatarUrl' => $this->getAvatarUrl($record),
             'avatarClasses' => $this->getAvatarClasses(),
             'items' => $items,
+            'linesHtml' => $this->getLinesHtml($items),
             'customStack' => $customStack,
         ]);
+    }
+
+    /**
+     * Render the stacked text lines as one HTML fragment.
+     *
+     * Canonical owner of the stacked-line markup so the cell view only emits the
+     * result instead of building HTML in a Blade closure. Class and value are
+     * escaped.
+     *
+     * @param  array<int, array{class: string, value: string}>  $items
+     */
+    public function getLinesHtml(array $items): Htmlable
+    {
+        $html = '';
+
+        foreach ($items as $item) {
+            $html .= '<p class="'.e($item['class']).'">'.e($item['value']).'</p>';
+        }
+
+        return new HtmlString($html);
     }
 
     /**

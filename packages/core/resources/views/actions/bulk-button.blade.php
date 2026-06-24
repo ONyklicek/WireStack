@@ -1,5 +1,6 @@
 @php
     use NyonCode\WireCore\Actions\BulkAction;
+
     assert($action instanceof BulkAction);
 
     // Delegate color/size to the canonical Foundation resolver so every hue
