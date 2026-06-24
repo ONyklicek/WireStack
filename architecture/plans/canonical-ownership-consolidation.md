@@ -2,7 +2,7 @@
 title: Canonical ownership consolidation — remaining items
 date: 2026-06-04
 scope: packages/core, packages/forms, packages/table, packages/sortable
-status: plan (open items; one low-risk item already done)
+status: plan (open items; H1 + H2 done — viz Hotovo)
 related:
   - architecture/plans/icon-color-enum-audit.md
   - memory/design_system_concern_consolidation_2026_06_04.md
@@ -17,9 +17,12 @@ Navazuje na konsolidaci color/size/icon do `Foundation/Concerns/*`
 **Současní kanoničtí vlastníci (referenční):**
 - `packages/core/src/Foundation/Concerns/HasColor.php` — paleta tříd
   (`getBadgeColorClasses`, `getTextColorClasses`, `getModalIconBgClass`,
-  `getModalIconTextClass` public static; `getSolidColorClasses`,
-  `getOutlinedColorClasses`, `getGhostColorClasses`, `getIconButtonColorClasses`
-  protected instance).
+  `getModalIconTextClass`, `getAlertColorClasses` (banner surface),
+  `getModalSubmitButtonClasses` (modal submit surface) public static;
+  `getSolidColorClasses`, `getOutlinedColorClasses`, `getGhostColorClasses`,
+  `getIconButtonColorClasses` protected instance).
+- `packages/core/src/Foundation/Concerns/HasColumnSpan.php` — `getColumnSpanClass`
+  (responsive grid span → Tailwind, kanonický pro infolist entries i layout).
 - `packages/core/src/Foundation/Concerns/HasSize.php` — `getBadgeSizeClasses`.
 - `packages/core/src/Foundation/Colors/Color.php` — `resolve()` (alias resolver).
 - `packages/core/src/Foundation/Concerns/HasIcon.php` + `Icons/IconManager.php`.
@@ -41,6 +44,38 @@ ale **dostat canonical paletu za stabilní owner-facing API** — viz
   `self::getModalIconBgClass/getModalIconTextClass`. Canonical metody rozšířeny
   na věrný superset (přidán `primary`+`gray`, neutrální gray default). Identický
   výstup pro reálné vstupy, veřejné API beze změny. Tested: core 967 green.
+
+- **H2 — Htmlable render audit (2026-06-24).** Vícevláknový audit + sjednocení
+  reusable markupu na PHP htmlable gettery / kanonické resolvery; Blade už jen
+  konzumuje. Hotovo:
+  - **Loading spinner** — jeden kanonický partial `wire-core::partials.spinner`
+    (param `$class`, volitelný `$wireTarget`); 4 inline kopie (table column
+    partial, header-action, action-modal ×2, forms file-upload) na něj
+    delegují.
+  - **M3 alert** — `Alert::getColorClasses()` deleguje na nový
+    `HasColor::getAlertColorClasses()` (banner surface, `bg-*-50/border/text`).
+  - **M3 rating** — `Rating::getColorClasses()` jako owner-local brighter
+    `rating-active` surface (`-500/-400`); explicitně přijato jako vlastní
+    povrch, ne `text` drift.
+  - **Modal submit button** — `HasColor::getModalSubmitButtonClasses()`,
+    propsán přes `HasModal::getModalConfig()['submitButtonClasses']`; oba footery
+    action-modalu (slide-over i centered) sjednoceny (souvisí s M1).
+  - **Column-span** — `HasColumnSpan::getColumnSpanClass($default='')`; 6
+    infolist entry views už neopakují `match`.
+  - **TextEntry** — `getTextColorClass()` + `getBadgeColorClass()` místo
+    statických `HasColor::` volání v Blade.
+  - **Stat (stats-overview)** — `getValueColorClass/getDescriptionColorClass/`
+    `getChartColorClass()`; odstraněna nebezpečná `text-{$color}-600`
+    interpolace.
+  - **BarChartWidget** — `getCardRadiusClass()` + `getPartialName()`.
+  - **StackedColumn** — `getLinesHtml(): Htmlable` (escaped) místo Blade closure.
+  - **Table responsive** — `getStackedTableHiddenClass/getStackedCardsVisibleClass()`.
+  - **Sortable drag handle** — markup do partialu `wire-sortable::partials.`
+    `drag-handle` + `Table::getDragHandleHtml()` macro; injektován do Alpine
+    configu místo JS template stringu.
+  - **HeaderAction::getBadgeHtml()** sjednocen na `Htmlable` (jako ActionGroup).
+  - Tested: core 1155 / forms 395 / table 809 / sortable green; pint passed;
+    phpstan beze změny (8 preexisting errorů mimo dotčené soubory).
 
 ---
 
@@ -145,7 +180,11 @@ implementace může být `Foundation/Support/*`, malé value objekty typu
   Single-consumer today → lze zatím nechat owner-local helper.
 - **Riziko:** střední.
 
-### M3 — Forms Blade palety (alert, rating)
+### M3 — Forms Blade palety (alert, rating) — ✅ HOTOVO (viz H2)
+- **Vyřešeno (2026-06-24):** alert → `HasColor::getAlertColorClasses()` (banner
+  surface), rating → `Rating::getColorClasses()` (owner-local `rating-active`
+  brighter surface, vědomě ponecháno mimo `text` resolver). Hodnoty zachovány
+  1:1, žádný vizuální posun.
 - **Kanonický vlastník:** `Color::resolve()` + surface resolvery (`banner`,
   `rating-active`, případně `text` pokud vizuálně sedí).
 - **Místa porušení:**

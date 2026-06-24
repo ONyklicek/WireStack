@@ -394,10 +394,18 @@ Column views:
 Shared column partials:
 
 - `copyable`
-- `spinner`
+- `spinner` (thin delegate to the canonical `wire-core::partials.spinner`)
 - `progress`
 - `check-icon`
 - filter UI partials under `tables/columns/partials/filter-*`
+
+Canonical shared partials (owned in `core`, consumed cross-package):
+
+- `packages/core/resources/views/partials/spinner.blade.php` — single source of
+  the loading-spinner SVG (`$class`, optional `$wireTarget`).
+- `packages/sortable/resources/views/partials/drag-handle.blade.php` — drag-handle
+  markup, rendered by the `Table::getDragHandleHtml()` macro and injected into the
+  sortable Alpine component.
 
 ## Table Filters
 
