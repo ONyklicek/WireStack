@@ -7,6 +7,7 @@ namespace NyonCode\WireForms\Validation;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Core\Validation\ValidationResult;
 use NyonCode\WireCore\Foundation\Components\Component;
+use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Contracts\HasValidation;
 
 /**
@@ -21,11 +22,13 @@ final class FormValidationResolver
      * @param  array<int, Component>  $components  Flat list of field components
      * @param  ?string  $statePath  Form state path prefix
      * @param  array<string, string>  $formMessages  Form-level validation messages
+     * @param  array<int, Repeater>  $repeaters  Repeaters, validated via wildcard item paths
      */
     public function __construct(
         private readonly array $components,
         private readonly ?string $statePath = null,
         private readonly array $formMessages = [],
+        private readonly array $repeaters = [],
     ) {}
 
     /**
@@ -62,6 +65,21 @@ final class FormValidationResolver
             $key = $this->resolveKey($component);
             $componentRules = $component->getValidationRules();
             $rules[$key] = ! empty($componentRules) ? $componentRules : ['nullable'];
+        }
+
+        // Repeaters: container rules at the repeater path, child rules at the
+        // per-item wildcard path (e.g. "data.contacts.*.label").
+        foreach ($this->repeaters as $repeater) {
+            $basePath = $repeater->getStatePath();
+
+            $containerRules = $repeater->getContainerValidationRules();
+            if ($containerRules !== []) {
+                $rules[$basePath] = $containerRules;
+            }
+
+            foreach ($repeater->getItemValidationRules() as $childName => $childRules) {
+                $rules["{$basePath}.*.{$childName}"] = $childRules;
+            }
         }
 
         return $rules;
