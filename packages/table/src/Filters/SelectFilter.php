@@ -5,21 +5,22 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Filters;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireForms\Components\Select;
 
 class SelectFilter extends Filter
 {
-    /** @var array<string, string> */
-    protected array $options = [];
+    /** @var array<string, string>|Closure */
+    protected array|Closure $options = [];
 
     protected bool $native = true;
 
     protected bool $searchable = false;
 
     /**
-     * @param  array<string, string>|Closure  $options
+     * @param  array<string, string>|string|Closure  $options
      */
-    public function options(array|Closure $options): static
+    public function options(array|string|Closure $options): static
     {
         $this->options = $options;
 
@@ -31,7 +32,7 @@ class SelectFilter extends Filter
      */
     public function getOptions(): array
     {
-        return $this->options;
+        return $this->normalizeOptions($this->options);
     }
 
     public function native(bool $native = true): static
@@ -102,5 +103,10 @@ class SelectFilter extends Filter
         }
 
         return $labels === [] ? null : implode(', ', $labels);
+    }
+
+    protected function normalizeOptions(array|string|Closure $options): array
+    {
+        return EnumResolver::normalizeOptions(value($options));
     }
 }

@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Closure;
+use NyonCode\WireForms\Concerns\HasOptions;
+use NyonCode\WireForms\Contracts\ProvidesImplicitValidationRules;
 
 /**
  * Select / dropdown field with search, multiple selection, native mode, and relationship support.
  */
-class Select extends Field
+class Select extends Field implements ProvidesImplicitValidationRules
 {
-    /** @var array<string|int, string>|Closure */
-    protected array|Closure $options = [];
+    use HasOptions;
 
     protected bool $searchable = false;
 
@@ -38,16 +39,6 @@ class Select extends Field
     protected ?string $relationship = null;
 
     protected ?string $titleAttribute = null;
-
-    /**
-     * @param  array<string|int, string>|Closure  $options
-     */
-    public function options(array|Closure $options): static
-    {
-        $this->options = $options;
-
-        return $this;
-    }
 
     public function searchable(bool $condition = true): static
     {
@@ -152,14 +143,6 @@ class Select extends Field
 
     // ─── Getters ───────────────────────────────────────────────────
 
-    /**
-     * @return array<string|int, string>
-     */
-    public function getOptions(): array
-    {
-        return $this->evaluate($this->options);
-    }
-
     public function isSearchable(): bool
     {
         return $this->searchable;
@@ -221,6 +204,13 @@ class Select extends Field
     public function getTitleAttribute(): ?string
     {
         return $this->titleAttribute;
+    }
+
+    public function getStateType(): string
+    {
+        // Multi-selects bind an array; normalize state so a stray scalar is
+        // wrapped rather than left as a string the <select multiple> can't use.
+        return $this->isMultiple() ? 'array' : 'string';
     }
 
     protected function viewName(): string

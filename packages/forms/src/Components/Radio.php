@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Closure;
+use NyonCode\WireForms\Concerns\HasOptions;
+use NyonCode\WireForms\Contracts\ProvidesImplicitValidationRules;
 
 /**
  * Radio button group field.
  */
-class Radio extends Field
+class Radio extends Field implements ProvidesImplicitValidationRules
 {
-    /** @var array<string, string>|Closure */
-    protected array|Closure $options = [];
+    use HasOptions;
 
     /** @var array<string, string>|Closure */
     protected array|Closure $descriptions = [];
@@ -20,16 +21,6 @@ class Radio extends Field
     protected bool $inline = false;
 
     protected bool $boolean = false;
-
-    /**
-     * @param  array<mixed, string>|Closure  $options
-     */
-    public function options(array|Closure $options): static
-    {
-        $this->options = $options;
-
-        return $this;
-    }
 
     /**
      * @param  array<string, string>|Closure  $descriptions
@@ -60,14 +51,6 @@ class Radio extends Field
         }
 
         return $this;
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public function getOptions(): array
-    {
-        return $this->evaluate($this->options);
     }
 
     /**
