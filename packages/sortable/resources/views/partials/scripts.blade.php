@@ -17,6 +17,7 @@
                 columnReorderable: config.columnReorderable ?? false,
                 orderColumn: config.orderColumn ?? 'sort_order',
                 animation: config.animation ?? 150,
+                dragHandleHtml: config.dragHandleHtml ?? '',
             },
             isReordering: config.isReordering ?? false,
 
@@ -232,18 +233,9 @@
             },
 
             getDragHandleHtml() {
-                return `
-                    <div class="wire-sortable-handle">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                            <circle cx="5.5" cy="3.5" r="1.5"/>
-                            <circle cx="10.5" cy="3.5" r="1.5"/>
-                            <circle cx="5.5" cy="8" r="1.5"/>
-                            <circle cx="10.5" cy="8" r="1.5"/>
-                            <circle cx="5.5" cy="12.5" r="1.5"/>
-                            <circle cx="10.5" cy="12.5" r="1.5"/>
-                        </svg>
-                    </div>
-                `;
+                // Markup owned by the wire-sortable::partials.drag-handle Blade
+                // partial and injected via config; see Table::getDragHandleHtml().
+                return this.config.dragHandleHtml;
             },
 
             // ── Column Reordering ───────────────────────────────

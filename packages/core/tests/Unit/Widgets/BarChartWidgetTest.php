@@ -168,3 +168,20 @@ it('renders the card with heading and value', function () {
         ->and($html)->toContain('--value: 70%')
         ->and($html)->toContain('from-blue-500 to-blue-600');
 });
+
+// ─── Card radius & partial selection ─────────────────────────────────────────
+
+it('maps the rounded value to a safe card radius class', function () {
+    expect(BarChartWidget::make()->getCardRadiusClass())->toBe('rounded-2xl')
+        ->and(BarChartWidget::make()->rounded('none')->getCardRadiusClass())->toBe('rounded-none')
+        ->and(BarChartWidget::make()->rounded('lg')->getCardRadiusClass())->toBe('rounded-lg')
+        ->and(BarChartWidget::make()->rounded('full')->getCardRadiusClass())->toBe('rounded-3xl')
+        ->and(BarChartWidget::make()->rounded('bogus')->getCardRadiusClass())->toBe('rounded-2xl');
+});
+
+it('selects the rendering partial from type and variant', function () {
+    expect(BarChartWidget::make()->getPartialName())->toBe('vertical-system')
+        ->and(BarChartWidget::make()->variant('finance')->getPartialName())->toBe('vertical-finance')
+        ->and(BarChartWidget::make()->type('horizontal')->getPartialName())->toBe('horizontal-system')
+        ->and(BarChartWidget::make()->type('horizontal')->variant('finance')->getPartialName())->toBe('vertical-finance');
+});

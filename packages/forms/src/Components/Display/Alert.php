@@ -7,6 +7,7 @@ namespace NyonCode\WireForms\Components\Display;
 use Closure;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Components\ViewComponent;
+use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
@@ -97,6 +98,17 @@ class Alert extends ViewComponent
     public function getColor(): string
     {
         return $this->color;
+    }
+
+    /**
+     * Soft alert surface color classes (background + border + text).
+     *
+     * Delegates to the canonical {@see HasColor::getAlertColorClasses()} palette
+     * so the view only consumes the result instead of re-encoding the hue map.
+     */
+    public function getColorClasses(): string
+    {
+        return HasColor::getAlertColorClasses($this->color);
     }
 
     public function getIcon(): ?string

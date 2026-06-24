@@ -9,9 +9,11 @@
     "docs:build": "php docs-site/build.php && npm run docs:highlight",
     "docs:highlight": "node node_modules/@torchlight-api/torchlight-cli/dist/bin/torchlight.cjs.js -c torchlight.config.cjs -i docs-site/dist",
     "docs:changed": "bash scripts/docs-changed.sh",
-    "build:forms-assets": "esbuild packages/forms/resources/js/tiptap-editor.js --bundle --minify --format=iife --legal-comments=none --outfile=packages/forms/dist/wire-forms-tiptap.js"
+    "build:forms-assets": "esbuild packages/forms/resources/js/tiptap-editor.js --bundle --minify --format=iife --legal-comments=none --outfile=packages/forms/dist/wire-forms-tiptap.js",
+    "build:core-assets": "esbuild packages/core/resources/js/dropdown.js --bundle --minify --format=iife --legal-comments=none --outfile=packages/core/dist/wire-core-dropdown.js"
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.7.6",
     "@tiptap/core": "^2.0",
     "@tiptap/extension-character-count": "^2.0",
     "@tiptap/extension-highlight": "^2.0",

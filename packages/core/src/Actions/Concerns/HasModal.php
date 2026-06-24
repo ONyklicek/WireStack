@@ -9,6 +9,7 @@ use Livewire\Component;
 use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Infolists\Infolist;
 use NyonCode\WireForms\Forms\Form;
@@ -622,6 +623,7 @@ trait HasModal
             'hasInfolist' => $this->hasInfolistModal(),
             'isConfirmation' => $this->doesRequireConfirmation(),
             'actionColor' => $this->getColor(),
+            'submitButtonClasses' => HasColor::getModalSubmitButtonClasses($this->getColor()),
             // Enhanced modal features
             'footerActions' => $this->getModalFooterActionsConfig(),
             'headerActions' => $this->getModalHeaderActionsConfig(),

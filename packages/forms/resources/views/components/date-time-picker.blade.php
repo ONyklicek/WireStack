@@ -19,6 +19,10 @@
 
 @include('wire-forms::partials.field-wrapper-start')
 
+@unless($field->isNative())
+    @include('wire-core::partials.floating-assets')
+@endunless
+
 @if($field->isNative())
     <input
             type="{{ $field->getNativeInputType() }}"
@@ -77,8 +81,22 @@
 
             dayNames: [],
             days: [],
+            _float: null,
 
             init() {
+                // Teleport + Floating UI: pin the calendar panel to the input while
+                // open so table/modal overflow can never clip it.
+                this.$watch('open', (open) => {
+                    if (open) {
+                        this.$nextTick(() => {
+                            this._float = this.$float(this.$refs.trigger, this.$refs.panel, { placement: 'bottom-start', offset: 4 });
+                        });
+                    } else if (this._float) {
+                        this._float();
+                        this._float = null;
+                    }
+                });
+
                 const today = new Date();
                 if (this.value) {
                     const parsed = this.parseValue(this.value);
@@ -239,11 +257,10 @@
                 this.value = null;
             }
         }"
-            @click.outside="open = false"
             class="relative"
     >
         {{-- Input trigger --}}
-        <div class="relative">
+        <div class="relative" x-ref="trigger">
             <input
                     type="text"
                     id="{{ $fieldId }}"
@@ -277,16 +294,19 @@
             </div>
         </div>
 
-        {{-- Dropdown panel --}}
+        {{-- Dropdown panel (teleported + Floating UI) --}}
+        <template x-teleport="body">
         <div
+                x-ref="panel"
                 x-show="open"
+                @click.outside="open = false"
                 x-transition:enter="transition ease-out duration-150"
                 x-transition:enter-start="opacity-0 -translate-y-1"
                 x-transition:enter-end="opacity-100 translate-y-0"
                 x-transition:leave="transition ease-in duration-100"
                 x-transition:leave-start="opacity-100 translate-y-0"
                 x-transition:leave-end="opacity-0 -translate-y-1"
-                class="absolute z-50 mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg p-4"
+                class="absolute top-0 left-0 z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg p-4"
                 @keydown.escape="open = false"
         >
             @if($hasDate)
@@ -400,6 +420,7 @@
                 @endif
             </div>
         </div>
+        </template>
     </div>
 @endif
 

@@ -7,6 +7,7 @@ namespace NyonCode\WireCore\Actions;
 use Closure;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\HtmlString;
 use NyonCode\WireCore\Actions\Concerns\HasColor;
 use NyonCode\WireCore\Actions\Concerns\HasIcons;
 use NyonCode\WireCore\Foundation\Colors\Color;
@@ -348,19 +349,19 @@ class ActionGroup implements Htmlable
         return "{$base} {$sizeClasses} {$colorClasses}";
     }
 
-    public function getTriggerIconHtml(): string
+    public function getTriggerIconHtml(): Htmlable
     {
         if (! $this->icon) {
-            return '';
+            return new HtmlString('');
         }
         $size = $this->label ? 'w-4 h-4' : 'w-5 h-5';
 
-        return $this->renderIconSvg($this->icon, $size);
+        return new HtmlString($this->renderIconSvg($this->icon, $size));
     }
 
-    public function getChevronSvg(): string
+    public function getChevronSvg(): Htmlable
     {
-        return $this->renderIconSvg('chevron-down', 'w-4 h-4');
+        return new HtmlString($this->renderIconSvg('chevron-down', 'w-4 h-4'));
     }
 
     public function getDropdownPositionClasses(): string
@@ -375,21 +376,56 @@ class ActionGroup implements Htmlable
     }
 
     /**
+     * Tailwind transform-origin for the dropdown panel.
+     *
+     * Positioning itself is delegated to Floating UI (so the teleported panel
+     * escapes the table's overflow context); only the scale transition origin
+     * still needs a static class.
+     */
+    public function getDropdownOriginClass(): string
+    {
+        return match ($this->dropdownPosition) {
+            'bottom-start' => 'origin-top-left',
+            'top-start' => 'origin-bottom-left',
+            'top-end' => 'origin-bottom-right',
+            default => 'origin-top-right',
+        };
+    }
+
+    /**
+     * Config consumed by the `wireDropdown` Alpine component (Floating UI).
+     *
+     * Placement maps 1:1 to the fluent dropdownPosition() vocabulary; the offset
+     * is the gap (px) between trigger and panel.
+     *
+     * @return array{placement: string, offset: int}
+     */
+    public function getDropdownConfig(): array
+    {
+        $placement = match ($this->dropdownPosition) {
+            'bottom-start', 'bottom-end', 'top-start', 'top-end' => $this->dropdownPosition,
+            default => 'bottom-end',
+        };
+
+        return ['placement' => $placement, 'offset' => 6];
+    }
+
+    /**
      * Get badge HTML for the trigger button.
      *
      * Colour resolves through the canonical soft badge palette so the group
      * trigger badge matches the header-action badge and every other pill.
      */
-    public function getBadgeHtml(): string
+    public function getBadgeHtml(): Htmlable
     {
         if (! $this->hasBadge()) {
-            return '';
+            return new HtmlString('');
         }
 
-        return view('wire-core::actions.partials.badge', [
+        return new HtmlString(view('wire-core::actions.partials.badge', [
             'count' => $this->getBadgeCount(),
             'color' => $this->getBadgeColor(),
-        ])->render();
+        ])->render());
     }
 
     /**
@@ -418,27 +454,27 @@ class ActionGroup implements Htmlable
     /**
      * Render the single visible action inline (used when the group collapses).
      */
-    public function getSingleActionHtml(Model $record): string
+    public function getSingleActionHtml(Model $record): Htmlable
     {
         foreach ($this->getVisibleActions($record) as $item) {
             if ($item instanceof Action && $item->isDivider()) {
                 continue;
             }
 
-            return $item->render($record);
+            return new HtmlString($item->render($record));
         }
 
-        return '';
+        return new HtmlString('');
     }
 
     /**
-     * Render every dropdown menu item (actions + dividers) as one HTML string.
+     * Render every dropdown menu item (actions + dividers) as one HTML fragment.
      *
      * This is the canonical owner of dropdown body markup. Auto-dividers
      * (divided()) and manual Action::divider() entries are resolved here so the
-     * group views only emit {!! $group->getDropdownItemsHtml($record) !!}.
+     * group views only emit {{ $group->getDropdownItemsHtml($record) }}.
      */
-    public function getDropdownItemsHtml(Model $record): string
+    public function getDropdownItemsHtml(Model $record): Htmlable
     {
         $html = '';
 
@@ -448,7 +484,7 @@ class ActionGroup implements Htmlable
                 : $item->renderForDropdown($record);
         }
 
-        return $html;
+        return new HtmlString($html);
     }
 
     public function render(Model $record): string

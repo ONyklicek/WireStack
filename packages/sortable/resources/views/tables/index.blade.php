@@ -34,6 +34,7 @@
                 isReordering: @entangle('isReordering'),
                 orderColumn: '{{ $orderColumn }}',
                 animation: {{ config('wire-sortable.animation', 150) }},
+                dragHandleHtml: @js($table->getDragHandleHtml()->toHtml()),
             })"
             class="wire-sortable-wrapper"
     >

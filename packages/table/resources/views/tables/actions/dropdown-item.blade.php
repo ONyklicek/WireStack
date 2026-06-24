@@ -54,7 +54,7 @@
             @else
                 wire:click{{ $wireModifiers }}="executeTableAction('{{ $recordKey }}', '{{ $actionName }}')"
             @endif
-            @click="open = false"
+            @click="close()"
             @if($shortcutAlpine)
                 x-on:keydown.{{ $shortcutAlpine }}.window.prevent="$el.click()"
             @endif

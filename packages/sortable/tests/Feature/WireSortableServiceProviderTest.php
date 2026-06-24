@@ -15,10 +15,18 @@ it('registers reorderable table macros at boot', function () {
     foreach ([
         'reorderable', 'isReorderable', 'alwaysReorderable', 'isAlwaysReorderable',
         'getOrderColumn', 'paginatedWhileReordering', 'isPaginatedWhileReordering',
-        'columnReorderable', 'isColumnReorderable',
+        'columnReorderable', 'isColumnReorderable', 'getDragHandleHtml',
     ] as $macro) {
         expect(Table::hasMacro($macro))->toBeTrue();
     }
+});
+
+it('renders the drag handle markup from the canonical blade partial', function () {
+    $html = Table::make()->getDragHandleHtml()->toHtml();
+
+    expect($html)->toContain('wire-sortable-handle')
+        ->and($html)->toContain('<svg')
+        ->and($html)->toContain('<circle');
 });
 
 it('reorderable macro toggles state and order column', function () {

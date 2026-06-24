@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore;
 
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Route;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Actions\View\BulkButtonComponent;
@@ -27,9 +28,13 @@ use NyonCode\WireCore\Notifications\Drivers\LivewireEventDriver;
 use NyonCode\WireCore\Notifications\Drivers\NullDriver;
 use NyonCode\WireCore\Notifications\Drivers\SessionDriver;
 use NyonCode\WireCore\Notifications\NotificationManager;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class WireCoreServiceProvider extends PackageServiceProvider
 {
+    /** Absolute path to the pre-bundled, self-registering browser assets. */
+    public const ASSETS_PATH = __DIR__.'/../dist';
+
     /**
      * @throws \Exception
      */
@@ -50,6 +55,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
                 $this->bootNotifications();
                 $this->bootModals();
                 $this->bootPlugins();
+                $this->registerAssetRoutes();
             })
             ->hasConfig()
             ->hasViews()
@@ -208,5 +214,27 @@ class WireCoreServiceProvider extends PackageServiceProvider
         if ($this->app->bound(PluginManager::class)) {
             $this->app->make(PluginManager::class)->boot();
         }
+    }
+
+    // ─── Assets ─────────────────────────────────────────────────
+
+    /**
+     * Serve the package's pre-bundled JS directly so consumers get the floating
+     * dropdown behaviour without running npm, a build step, or `vendor:publish`.
+     */
+    protected function registerAssetRoutes(): void
+    {
+        Route::get('/wire-core/assets/{asset}.js', function (string $asset): BinaryFileResponse {
+            $file = self::ASSETS_PATH.'/wire-core-'.basename($asset).'.js';
+
+            abort_unless(is_file($file), 404);
+
+            return response()
+                ->file($file, ['Content-Type' => 'application/javascript; charset=utf-8'])
+                ->setPublic()
+                ->setMaxAge(31536000);
+        })
+            ->where('asset', '[A-Za-z0-9_-]+')
+            ->name('wire-core.asset');
     }
 }

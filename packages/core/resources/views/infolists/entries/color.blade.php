@@ -3,14 +3,7 @@
 
     assert($field instanceof ColorEntry);
 
-    $span = $field->getColumnSpan();
-    $spanClass = match (true) {
-        $span === 'full' => 'col-span-full',
-        $span === 2 => 'sm:col-span-2',
-        $span === 3 => 'sm:col-span-3',
-        $span === 4 => 'sm:col-span-4',
-        default => '',
-    };
+    $spanClass = $field->getColumnSpanClass();
     $value = $field->getFormattedState();
 @endphp
 

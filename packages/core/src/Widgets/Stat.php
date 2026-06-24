@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Widgets;
 
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Concerns\HasExtraAttributes;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
@@ -122,5 +123,42 @@ class Stat
     public function getValue(): string
     {
         return $this->value;
+    }
+
+    /**
+     * Color class for the stat value, routed through the canonical palette.
+     *
+     * Replaces the unsafe `text-{$color}-600` interpolation that lived in the
+     * widget view (which let arbitrary color names through to Tailwind). An unset
+     * color falls back to the default heading text color.
+     */
+    public function getValueColorClass(): string
+    {
+        return $this->color !== null
+            ? HasColor::getTextColorClasses($this->color)
+            : 'text-gray-900 dark:text-white';
+    }
+
+    /**
+     * Color class for the description line, routed through the canonical palette.
+     *
+     * Same safe allow-list as {@see getValueColorClass()}, but an unset color
+     * falls back to the muted secondary text color.
+     */
+    public function getDescriptionColorClass(): string
+    {
+        return $this->color !== null
+            ? HasColor::getTextColorClasses($this->color)
+            : 'text-gray-500 dark:text-gray-400';
+    }
+
+    /**
+     * Accent stroke color class for the sparkline, routed through the canonical
+     * chart palette so the line hue matches the rest of the design system and no
+     * owner-supplied color name reaches Tailwind verbatim.
+     */
+    public function getChartColorClass(): string
+    {
+        return HasColor::getFillTextClasses($this->color ?? 'primary');
     }
 }

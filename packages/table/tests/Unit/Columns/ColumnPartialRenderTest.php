@@ -123,6 +123,19 @@ it('renders StackedColumn through its partial', function () {
         ->and($html)->toContain('alice@example.test');
 });
 
+it('builds escaped stacked line html via getLinesHtml', function () {
+    $html = StackedColumn::make('user')->getLinesHtml([
+        ['class' => 'font-medium', 'value' => 'Alice'],
+        ['class' => 'text-sm', 'value' => '<script>'],
+    ])->toHtml();
+
+    expect($html)->toBe('<p class="font-medium">Alice</p><p class="text-sm">&lt;script&gt;</p>');
+});
+
+it('renders an empty fragment from getLinesHtml when there are no items', function () {
+    expect(StackedColumn::make('user')->getLinesHtml([])->toHtml())->toBe('');
+});
+
 it('renders base text cell with styling classes through the text partial', function () {
     $html = TextColumn::make('name')->textColor('danger')->renderCell(partialRecord(['name' => 'Alice']));
 

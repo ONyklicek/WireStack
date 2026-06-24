@@ -13,6 +13,8 @@
 @include('wire-forms::partials.field-wrapper-start')
 
 @if($isSearchable)
+    @include('wire-core::partials.floating-assets')
+
     <div
         x-data="{
             open: false,
@@ -21,6 +23,21 @@
             selected: $wire.entangle('{{ $field->getWireModelAttribute() }}'),
             loading: false,
             activeIndex: -1,
+            _float: null,
+            init() {
+                // Teleport + Floating UI: anchor the listbox to the trigger and
+                // keep it pinned while open, tearing the auto-updater down on close.
+                this.$watch('open', (open) => {
+                    if (open) {
+                        this.$nextTick(() => {
+                            this._float = this.$float(this.$refs.trigger, this.$refs.panel, { placement: 'bottom-start', offset: 4, matchWidth: true });
+                        });
+                    } else if (this._float) {
+                        this._float();
+                        this._float = null;
+                    }
+                });
+            },
             get filteredOptions() {
                 if (!this.search) return this.options;
                 const s = this.search.toLowerCase();
@@ -62,12 +79,12 @@
                 return '{{ $fieldId }}-option-' + this.filteredKeys[this.activeIndex];
             }
         }"
-        @click.outside="open = false; activeIndex = -1"
         class="relative"
     >
         <button
             type="button"
             id="{{ $fieldId }}"
+            x-ref="trigger"
             @click="open = !open"
             @keydown.arrow-down.prevent="onArrowDown()"
             @keydown.arrow-up.prevent="onArrowUp()"
@@ -92,15 +109,18 @@
             <x-wire::icon name="chevron-down" class="w-4 h-4 text-gray-400 shrink-0 transition-transform duration-150" ::class="{ 'rotate-180': open }" />
         </button>
 
+        <template x-teleport="body">
         <div
+            x-ref="panel"
             x-show="open"
+            @click.outside="open = false; activeIndex = -1"
             x-transition:enter="transition ease-out duration-150"
             x-transition:enter-start="opacity-0 -translate-y-1"
             x-transition:enter-end="opacity-100 translate-y-0"
             x-transition:leave="transition ease-in duration-100"
             x-transition:leave-start="opacity-100 translate-y-0"
             x-transition:leave-end="opacity-0 -translate-y-1"
-            class="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto"
+            class="absolute top-0 left-0 z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto"
         >
             <div class="p-2">
                 <input
@@ -164,6 +184,7 @@
                 </div>
             @endif
         </div>
+        </template>
     </div>
 @else
     <select

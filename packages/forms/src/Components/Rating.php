@@ -66,6 +66,23 @@ class Rating extends Field
         return $this->color;
     }
 
+    /**
+     * Filled-star color class (bright -500/-400 scale).
+     *
+     * Owns the rating's star hue map in PHP so the view only consumes the result.
+     * Hues are kept in sync with the canonical Foundation palette (success =
+     * emerald, not green); the default is the classic amber star.
+     */
+    public function getColorClasses(): string
+    {
+        return match ($this->color) {
+            'primary' => 'text-primary-500',
+            'success' => 'text-emerald-500',
+            'danger' => 'text-red-500',
+            default => 'text-amber-400',
+        };
+    }
+
     public function isClearable(): bool
     {
         return $this->clearable;

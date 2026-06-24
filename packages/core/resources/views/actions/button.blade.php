@@ -1,6 +1,9 @@
 @php
-    /** @var \NyonCode\WireCore\Actions\Action $action */
-    /** @var \Illuminate\Database\Eloquent\Model|null $record */
+    use Illuminate\Database\Eloquent\Model;
+    use NyonCode\WireCore\Actions\Action;
+
+    assert($action instanceof Action);
+    /** @var Model|null $record */
 
     $data = method_exists($action, 'getRenderData') && $record
         ? $action->getRenderData($record)
@@ -30,38 +33,43 @@
 
 @if($data['url'] ?? null)
     <a
-        href="{{ $data['url'] }}"
-        @if($data['target'] ?? null) target="{{ $data['target'] }}" @endif
-        class="{{ $data['classes'] }}"
-        @if($data['tooltip'] ?? null) title="{{ $data['tooltip'] }}" @endif
-        @if($data['shortcutLabel'] ?? null) data-shortcut="{{ $data['shortcutLabel'] }}" @endif
-        @foreach($data['extraAttributes'] ?? [] as $attr => $val)
-            {{ $attr }}="{{ $val }}"
-        @endforeach
+            href="{{ $data['url'] }}"
+            @if($data['target'] ?? null) target="{{ $data['target'] }}" @endif
+            class="{{ $data['classes'] }}"
+            @if($data['tooltip'] ?? null) title="{{ $data['tooltip'] }}" @endif
+            @if($data['shortcutLabel'] ?? null) data-shortcut="{{ $data['shortcutLabel'] }}"@endif
+
+    @foreach($data['extraAttributes'] ?? [] as $attr => $val)
+        {{ $attr }}="{{ $val }}"
+    @endforeach
     >
-        @include('wire-core::actions.partials.button-content', ['data' => $data])
-    </a>
+    @include('wire-core::actions.partials.button-content', ['data' => $data])
+</a>
+
+
 @elseif($wireClickAction)
     <button
-        type="button"
-        wire:click{{ $wireModifiers }}="{{ $wireClickAction }}"
-        class="{{ $data['classes'] }}"
-        @if($data['tooltip'] ?? null) title="{{ $data['tooltip'] }}" @endif
-        @if($data['disabled'] ?? false) disabled @endif
-        @if($data['shortcutAlpine'] ?? null)
-            x-on:keydown.{{ $data['shortcutAlpine'] }}.window.prevent="$el.click()"
-        @endif
-        @if($data['shortcutLabel'] ?? null) data-shortcut="{{ $data['shortcutLabel'] }}" @endif
-        @foreach($data['extraAttributes'] ?? [] as $attr => $val)
-            {{ $attr }}="{{ $val }}"
-        @endforeach
+            type="button"
+            wire:click{{ $wireModifiers }}="{{ $wireClickAction }}"
+            class="{{ $data['classes'] }}"
+            @if($data['tooltip'] ?? null) title="{{ $data['tooltip'] }}" @endif
+            @if($data['disabled'] ?? false) disabled @endif
+            @if($data['shortcutAlpine'] ?? null)
+                x-on:keydown.{{ $data['shortcutAlpine'] }}.window.prevent="$el.click()"
+            @endif
+            @if($data['shortcutLabel'] ?? null) data-shortcut="{{ $data['shortcutLabel'] }}"@endif
+
+            @foreach($data['extraAttributes'] ?? [] as $attr => $val)
+                {{ $attr }}="{{ $val }}"
+            @endforeach
     >
+
         {{-- Loading spinner --}}
         @if($data['showLoading'] ?? false)
             <svg
-                wire:loading
-                wire:target="{{ $wireClickAction }}"
-                class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"
+                    wire:loading
+                    wire:target="{{ $wireClickAction }}"
+                    class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"
             >
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -72,6 +80,7 @@
             @if($data['loadingText'] ?? null)
                 <span wire:loading wire:target="{{ $wireClickAction }}">{{ $data['loadingText'] }}</span>
             @endif
+
         @else
             @include('wire-core::actions.partials.button-content', ['data' => $data])
         @endif

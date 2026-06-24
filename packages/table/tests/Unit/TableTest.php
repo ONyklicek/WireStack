@@ -100,6 +100,25 @@ it('supports fluent chaining for all setters', function () {
         ->and($table->getRowClass())->toBe('custom-row');
 });
 
+it('resolves responsive stacked layout classes from the breakpoint', function () {
+    $lg = Table::make()->stackedOnMobile(true, 'lg');
+
+    expect($lg->getStackedTableHiddenClass())->toBe('hidden lg:block')
+        ->and($lg->getStackedCardsVisibleClass())->toBe('lg:hidden');
+
+    $default = Table::make()->stackedOnMobile(true, 'bogus');
+
+    expect($default->getStackedTableHiddenClass())->toBe('hidden md:block')
+        ->and($default->getStackedCardsVisibleClass())->toBe('md:hidden');
+});
+
+it('hides the cards layout when mobile stacking is disabled', function () {
+    $table = Table::make()->stackedOnMobile(false);
+
+    expect($table->getStackedTableHiddenClass())->toBe('')
+        ->and($table->getStackedCardsVisibleClass())->toBe('hidden');
+});
+
 // ─── Columns ────────────────────────────────────────────────────────────────
 
 it('can set and get columns', function () {

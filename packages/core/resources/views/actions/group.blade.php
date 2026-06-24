@@ -1,6 +1,9 @@
 @php
-    /** @var \NyonCode\WireCore\Actions\ActionGroup $group */
-    /** @var \Illuminate\Database\Eloquent\Model|null $record */
+    use Illuminate\Database\Eloquent\Model;
+    use NyonCode\WireCore\Actions\ActionGroup;
+
+    assert($group instanceof ActionGroup);
+    /** @var Model|null $record */
 
     // Resolve visible actions once (auto-dividers included) and count only the
     // executable ones so a lone action collapses to an inline button.
@@ -9,40 +12,54 @@
 @endphp
 
 @if($actionCount === 1)
-    {!! $group->getSingleActionHtml($record) !!}
+    {{ $group->getSingleActionHtml($record) }}
 @elseif($actionCount > 1)
-    <div class="relative inline-block text-left" x-data="{ open: false }">
+    @include('wire-core::partials.floating-assets')
+
+    <div
+        class="relative inline-block text-left"
+        x-data="wireDropdown(@js($group->getDropdownConfig()))"
+        @keydown.escape.window="close()"
+    >
         <button
             type="button"
-            @click="open = !open"
-            @click.outside="open = false"
+            x-ref="trigger"
+            @click="toggle()"
+            :aria-expanded="open"
+            aria-haspopup="menu"
             class="relative {{ $group->getTriggerClasses() }}"
             @if($group->getTooltip()) title="{{ $group->getTooltip() }}" @endif
         >
-            {!! $group->getTriggerIconHtml() !!}
+            {{ $group->getTriggerIconHtml() }}
             @if($group->getLabel())
                 <span>{{ $group->getLabel() }}</span>
-                {!! $group->getChevronSvg() !!}
+                {{ $group->getChevronSvg() }}
             @endif
-            {!! $group->getBadgeHtml() !!}
+            {{ $group->getBadgeHtml() }}
         </button>
 
-        <div
-            x-show="open"
-            x-cloak
-            x-transition:enter="transition ease-out duration-100"
-            x-transition:enter-start="transform opacity-0 scale-95"
-            x-transition:enter-end="transform opacity-100 scale-100"
-            x-transition:leave="transition ease-in duration-75"
-            x-transition:leave-start="transform opacity-100 scale-100"
-            x-transition:leave-end="transform opacity-0 scale-95"
-            class="absolute {{ $group->getDropdownPositionClasses() }} z-50 mt-2 {{ $group->getDropdownWidth() }} rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black/5 dark:ring-white/10 focus:outline-none"
-            style="display: none;"
-            role="menu"
-        >
-            <div class="py-1">
-                {!! $group->getDropdownItemsHtml($record) !!}
+        {{-- Teleported to <body> + positioned by Floating UI so the menu floats
+             above the table instead of being clipped by its overflow. --}}
+        <template x-teleport="body">
+            <div
+                x-ref="panel"
+                x-show="open"
+                x-cloak
+                @click.outside="close()"
+                x-transition:enter="transition ease-out duration-100"
+                x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100"
+                x-transition:leave="transition ease-in duration-75"
+                x-transition:leave-start="opacity-100 scale-100"
+                x-transition:leave-end="opacity-0 scale-95"
+                class="absolute top-0 left-0 z-50 {{ $group->getDropdownOriginClass() }} {{ $group->getDropdownWidth() }} rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black/5 dark:ring-white/10 focus:outline-none"
+                style="display: none;"
+                role="menu"
+            >
+                <div class="py-1">
+                    {{ $group->getDropdownItemsHtml($record) }}
+                </div>
             </div>
-        </div>
+        </template>
     </div>
 @endif

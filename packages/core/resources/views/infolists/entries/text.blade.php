@@ -11,8 +11,7 @@
         $span === 4 => 'sm:col-span-4',
         default => '',
     };
-    $color = $field->getColor();
-    $textColor = $color ? \NyonCode\WireCore\Foundation\Concerns\HasColor::getTextColorClasses($color) : 'text-gray-900 dark:text-white';
+    $textColor = $field->getTextColorClass();
 @endphp
 
 <div class="{{ $spanClass }}">
@@ -34,7 +33,7 @@
         @elseif($field->isBadge())
             <span @class([
                 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium',
-                \NyonCode\WireCore\Foundation\Concerns\HasColor::getBadgeColorClasses($color ?? 'gray'),
+                $field->getBadgeColorClass(),
             ])>
                 @if($field->getIcon())
                     <x-wire::icon :name="$field->getIcon()" class="w-3.5 h-3.5"/>

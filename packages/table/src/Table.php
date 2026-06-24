@@ -1090,6 +1090,46 @@ class Table implements Htmlable
     }
 
     /**
+     * Responsive class that hides the full table below the stacked breakpoint.
+     *
+     * Owns the breakpoint → Tailwind class mapping in PHP (literal class names so
+     * the JIT scanner sees them); the view only consumes the result. Returns no
+     * hiding class when mobile stacking is disabled.
+     */
+    public function getStackedTableHiddenClass(): string
+    {
+        if (! $this->stackedOnMobile) {
+            return '';
+        }
+
+        return match ($this->stackedBreakpoint) {
+            'sm' => 'hidden sm:block',
+            'lg' => 'hidden lg:block',
+            'xl' => 'hidden xl:block',
+            default => 'hidden md:block',
+        };
+    }
+
+    /**
+     * Responsive class that shows the mobile cards only below the stacked
+     * breakpoint. Companion to {@see getStackedTableHiddenClass()}; defaults to a
+     * fully hidden cards layout when mobile stacking is disabled.
+     */
+    public function getStackedCardsVisibleClass(): string
+    {
+        if (! $this->stackedOnMobile) {
+            return 'hidden';
+        }
+
+        return match ($this->stackedBreakpoint) {
+            'sm' => 'sm:hidden',
+            'lg' => 'lg:hidden',
+            'xl' => 'xl:hidden',
+            default => 'md:hidden',
+        };
+    }
+
+    /**
      * Set custom table class
      */
     public function tableClass(?string $class): static

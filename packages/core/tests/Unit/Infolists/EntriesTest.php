@@ -92,6 +92,22 @@ it('resolves a dynamic color closure with state', function () {
     expect($entry->getColor())->toBe('success');
 });
 
+it('resolves the text color class through the canonical palette', function () {
+    $coloured = TextEntry::make('status')->color(Color::Success)->record(['status' => 'x']);
+    $plain = TextEntry::make('status')->record(['status' => 'x']);
+
+    expect($coloured->getTextColorClass())->toBe('text-emerald-600 dark:text-emerald-400')
+        ->and($plain->getTextColorClass())->toBe('text-gray-900 dark:text-white');
+});
+
+it('resolves the badge color class through the canonical palette', function () {
+    $coloured = TextEntry::make('status')->badge()->color(Color::Danger)->record(['status' => 'x']);
+    $plain = TextEntry::make('status')->badge()->record(['status' => 'x']);
+
+    expect($coloured->getBadgeColorClass())->toContain('bg-red-100')
+        ->and($plain->getBadgeColorClass())->toContain('bg-gray-100');
+});
+
 // ─── IconEntry ───────────────────────────────────────────────────────────────
 
 it('maps boolean state to icon and color', function () {
