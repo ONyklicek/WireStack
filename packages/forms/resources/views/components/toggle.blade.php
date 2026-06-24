@@ -15,13 +15,20 @@
             :aria-checked="enabled ? 'true' : 'false'"
             @click="enabled = !enabled"
             @if($field->isDisabled()) disabled @endif
-            :class="enabled ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-700'"
+            :class="enabled ? @js($field->getOnColorClasses()) : @js($field->getOffColorClasses())"
             class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
             <span
                 :class="enabled ? 'translate-x-5' : 'translate-x-0'"
-                class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
-            ></span>
+                class="pointer-events-none inline-flex h-5 w-5 transform items-center justify-center rounded-full bg-white text-gray-700 shadow ring-0 transition duration-200 ease-in-out"
+            >
+                @if($field->getOnIcon())
+                    <span x-show="enabled" x-cloak><x-wire::icon :name="$field->getOnIcon()" class="h-3 w-3" /></span>
+                @endif
+                @if($field->getOffIcon())
+                    <span x-show="!enabled" x-cloak><x-wire::icon :name="$field->getOffIcon()" class="h-3 w-3" /></span>
+                @endif
+            </span>
         </button>
 
         @if($field->getOnLabel() || $field->getOffLabel())

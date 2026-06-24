@@ -7,7 +7,7 @@
         : [
             'url' => null,
             'target' => null,
-            'classes' => $action->resolveSolidColorClasses() . ' ' . $action->resolveButtonSizeClasses(),
+            'classes' => $action->getButtonClasses(),
             'tooltip' => $action->getTooltip(),
             'shortcutLabel' => $action->getKeyboardShortcutLabel(),
             'shortcutAlpine' => $action->getAlpineKeydownExpression(),
