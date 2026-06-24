@@ -203,8 +203,10 @@ class Repeater extends LayoutComponent implements HasValidation
 
     public function getStatePath(): string
     {
-        if ($this->statePath) {
-            return "{$this->statePath}.{$this->getName()}";
+        $prefix = $this->getResolvedStatePath();
+
+        if ($prefix !== null && $prefix !== '') {
+            return "{$prefix}.{$this->getName()}";
         }
 
         return $this->getName();
@@ -275,6 +277,51 @@ class Repeater extends LayoutComponent implements HasValidation
     public function getValidationAttribute(): ?string
     {
         return $this->getLabel() ?? $this->getName();
+    }
+
+    /**
+     * Validation rules for the repeater container itself (array + min/max + required),
+     * keyed at the repeater's own state path. Used by the form validation resolver.
+     *
+     * @return array<int, mixed>
+     */
+    public function getContainerValidationRules(): array
+    {
+        $rules = $this->getRules();
+
+        if ($this->isRequired()) {
+            if (! in_array('array', $rules, true)) {
+                array_unshift($rules, 'array');
+            }
+            if (! in_array('required', $rules, true)) {
+                array_unshift($rules, 'required');
+            }
+        }
+
+        return $rules;
+    }
+
+    /**
+     * Per-item child validation rules keyed by child field name, e.g.
+     * ['label' => ['required'], 'email' => ['email']]. The resolver expands
+     * these to wildcard paths like "data.contacts.*.label".
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    public function getItemValidationRules(): array
+    {
+        $rules = [];
+
+        foreach ($this->schema as $component) {
+            if ($component instanceof Component && $component instanceof HasValidation) {
+                $childRules = $component->getValidationRules();
+                if ($childRules !== []) {
+                    $rules[$component->getName()] = $childRules;
+                }
+            }
+        }
+
+        return $rules;
     }
 
     // ─── Rendering ─────────────────────────────────────────────────

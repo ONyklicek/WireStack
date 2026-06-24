@@ -207,6 +207,31 @@ trait HasColor
     }
 
     /**
+     * Get a soft (muted) background-fill class only (no text/hover/focus).
+     *
+     * Canonical companion to {@see getSolidBgClass()} for surfaces that need a
+     * low-contrast tinted block — e.g. the "off" track of a toggle switch. Same
+     * hue vocabulary as the rest of the palette (success → emerald, blue →
+     * primary, info → cyan), with a neutral gray default so an unset color does
+     * not read as a warning. Class strings are kept literal so Tailwind's JIT
+     * scanner can see them, which also keeps the mapping a safe allow-list.
+     */
+    public static function getSoftBgClass(string $color): string
+    {
+        return match ($color) {
+            'primary', 'blue' => 'bg-primary-200 dark:bg-primary-900',
+            'success', 'green', 'emerald' => 'bg-emerald-200 dark:bg-emerald-900',
+            'danger', 'red' => 'bg-red-200 dark:bg-red-900',
+            'warning', 'yellow', 'amber' => 'bg-amber-200 dark:bg-amber-900',
+            'info', 'cyan' => 'bg-cyan-200 dark:bg-cyan-900',
+            'purple' => 'bg-purple-200 dark:bg-purple-900',
+            'pink' => 'bg-pink-200 dark:bg-pink-900',
+            'gray', 'secondary' => 'bg-gray-200 dark:bg-gray-700',
+            default => 'bg-gray-200 dark:bg-gray-700',
+        };
+    }
+
+    /**
      * Get gradient fill classes (`from-* to-*`) for a progress/bar fill.
      *
      * Canonical source for the filled portion of bar/progress surfaces such as
