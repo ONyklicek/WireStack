@@ -12,7 +12,17 @@ return new class extends Migration
     {
         Schema::create('reorderable_column_orders', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+
+            // Match the user model's key type so non-integer (UUID/ULID) auth
+            // keys are supported. Indexed (not FK-constrained) to stay portable
+            // across custom user tables and connections.
+            match (config('wire-sortable.user_key_type', 'id')) {
+                'uuid' => $table->uuid('user_id'),
+                'ulid' => $table->ulid('user_id'),
+                default => $table->unsignedBigInteger('user_id'),
+            };
+            $table->index('user_id');
+
             $table->string('model_type');
             $table->string('table_identifier');
             $table->json('column_order');
