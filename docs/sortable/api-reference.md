@@ -31,9 +31,26 @@ $table->reorderable('position');
 $table->reorderable('position', $user->can('reorder'));
 ```
 
+### `alwaysReorderable(?string $orderColumn = null): static`
+
+Keep row reordering active permanently — no toggle button is rendered. Implies `reorderable()`.
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `$orderColumn` | `?string` | config default | Database column for sort position |
+
+```php
+$table->alwaysReorderable();
+$table->alwaysReorderable('position');
+```
+
 ### `isReorderable(): bool`
 
 Returns whether row reordering is enabled.
+
+### `isAlwaysReorderable(): bool`
+
+Returns whether reordering is always active (toggle button hidden).
 
 ### `getOrderColumn(): string`
 
@@ -224,6 +241,7 @@ Delete the column order record for a user + model + table combination.
 | `sortablejs_cdn` | `?string` | CDN URL | SortableJS source URL, `null` to disable |
 | `animation` | `int` | `150` | Drag animation duration in milliseconds |
 | `user_model` | `string` | `'App\\Models\\User'` | User model class for column order relationships |
+| `user_key_type` | `string` | `'id'` | Primary key type of the user model, used by the migration to type the `user_id` column. Use `'uuid'` or `'ulid'` for non-integer auth keys |
 
 ---
 

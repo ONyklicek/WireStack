@@ -46,7 +46,7 @@ class ReorderableColumnOrder extends Model
      *
      * @return array<int, string>|null
      */
-    public static function getOrder(int $userId, string $modelType, string $tableIdentifier): ?array
+    public static function getOrder(int|string $userId, string $modelType, string $tableIdentifier): ?array
     {
         $record = static::query()
             ->where('user_id', $userId)
@@ -62,7 +62,7 @@ class ReorderableColumnOrder extends Model
      *
      * @param  array<int, string>  $columnOrder
      */
-    public static function saveOrder(int $userId, string $modelType, string $tableIdentifier, array $columnOrder): void
+    public static function saveOrder(int|string $userId, string $modelType, string $tableIdentifier, array $columnOrder): void
     {
         static::query()->updateOrCreate(
             ['user_id' => $userId, 'model_type' => $modelType, 'table_identifier' => $tableIdentifier],
@@ -73,7 +73,7 @@ class ReorderableColumnOrder extends Model
     /**
      * Delete column order for a user + model + table combination.
      */
-    public static function deleteOrder(int $userId, string $modelType, string $tableIdentifier): void
+    public static function deleteOrder(int|string $userId, string $modelType, string $tableIdentifier): void
     {
         static::query()
             ->where('user_id', $userId)

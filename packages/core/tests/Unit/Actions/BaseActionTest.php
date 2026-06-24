@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Actions\BulkAction;
+use NyonCode\WireCore\Actions\HeaderAction;
 
 // ─── Factory & Name ─────────────────────────────────────────────────────────
 
@@ -157,4 +159,24 @@ it('supports dynamic extra attributes via closure', function () {
 
     $record = (object) ['id' => 5];
     expect($action->getExtraAttributes($record))->toBe(['data-id' => 5]);
+});
+
+// ─── Button class assembly (header/bulk action Blade fallback) ───────────────
+
+it('builds button classes for a header action without per-record data (regression)', function () {
+    // Regression: the button.blade fallback called protected resolve* helpers
+    // with missing args and fataled for actions lacking getRenderData().
+    $classes = HeaderAction::make('create')->getButtonClasses();
+
+    expect($classes)->toBeString()
+        ->and($classes)->toContain('inline-flex');
+});
+
+it('builds button classes for a bulk action and honours outlined color', function () {
+    $solid = BulkAction::make('delete')->color('success')->getButtonClasses();
+    $outlined = BulkAction::make('delete')->color('success')->outlined()->getButtonClasses();
+
+    expect($solid)->toBeString()->not->toBe('')
+        ->and($outlined)->toBeString()->not->toBe('')
+        ->and($outlined)->not->toBe($solid);
 });

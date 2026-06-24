@@ -46,6 +46,15 @@ final class StateHydrator
             return null;
         }
 
+        // "date:<format>" — parse any date-like input then return a formatted
+        // STRING (not a Carbon). Keeps date state serializable and view-friendly
+        // while the owning component decides the format. e.g. "date:Y-m-d".
+        if (str_starts_with($type, 'date:')) {
+            $date = $this->hydrateDate($value);
+
+            return $date?->format(substr($type, 5));
+        }
+
         return match ($type) {
             'int', 'integer' => (int) $value,
             'float', 'double' => (float) $value,

@@ -255,6 +255,20 @@ SelectFilter::make('department')
 
 Options can be a Closure — evaluated lazily on render.
 
+### From an Enum
+
+Pass a PHP enum class instead of an array — its cases expand to `value => label` options.
+Labels come from `getLabel()` when the enum implements `Foundation\Contracts\Enum\HasLabel`,
+otherwise the case name is headlined.
+
+```php
+SelectFilter::make('status')->options(OrderStatus::class)
+```
+
+> When a column's model attribute is **cast** to an enum, a `SelectFilter` on that column
+> auto-populates its options from the enum even without calling `->options()`. This shorthand
+> is for the cases where you set the filter up explicitly.
+
 ### Custom Query
 
 ```php
@@ -272,7 +286,7 @@ SelectFilter::make('has_avatar')
 ### SelectFilter API
 
 ```php
-->options(array|Closure $options)    // ['value' => 'Label', ...]
+->options(array|string|Closure $options) // ['value' => 'Label', ...] or an enum class
 ->multiple(bool $multiple = true)    // multi-select mode
 ->searchable(bool $searchable = true) // searchable dropdown
 ->native(bool $native = true)        // native <select>

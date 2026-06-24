@@ -28,6 +28,16 @@ CheckboxList::make('roles')
     ->options(fn () => Role::pluck('name', 'id')->toArray())
 ```
 
+## Enum Options
+
+Pass a PHP enum class to expand its cases into `value => label` options. Labels come from
+`getLabel()` when the enum implements `Foundation\Contracts\Enum\HasLabel`, otherwise the
+case name is headlined. See [Select › Enum Options](select.md#enum-options) for details.
+
+```php
+CheckboxList::make('permissions')->options(Permission::class)
+```
+
 ## Multi-Column Layout
 
 ```php
@@ -72,7 +82,7 @@ Calling `groups()` automatically enables the grouped layout. You can also call `
 
 | Method | Type | Description |
 |--------|------|-------------|
-| `options(array\|Closure)` | array | Option list (`value => label`) |
+| `options(array\|string\|Closure)` | array | Option list, or an enum class (`value => label`) |
 | `columns(int)` | int | Number of columns (default `1`) |
 | `searchable(bool)` | bool | Enable filter-by-label search box |
 | `searchPrompt(string\|null)` | string | Placeholder for the search input |

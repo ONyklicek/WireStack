@@ -152,6 +152,21 @@ abstract class BaseAction implements Htmlable
     }
 
     /**
+     * Full CSS class string for a rendered action button (base + size + color).
+     *
+     * Public counterpart to Action::getRenderData()'s class assembly, used by the
+     * header/bulk action Blade fallback where no per-record render data exists.
+     */
+    public function getButtonClasses(): string
+    {
+        $base = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800';
+        $isIconButton = method_exists($this, 'isIconButton') && $this->isIconButton();
+        $size = method_exists($this, 'getSize') ? (string) $this->getSize() : 'sm';
+
+        return "{$base} {$this->resolveButtonSizeClasses($isIconButton, $size)} {$this->getButtonColorClasses()}";
+    }
+
+    /**
      * Canonical ghost/menu-item color classes (dropdown items).
      *
      * Delegates to the shared Foundation resolver. Used by the row-action

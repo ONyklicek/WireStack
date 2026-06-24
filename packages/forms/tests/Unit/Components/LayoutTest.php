@@ -91,3 +91,11 @@ test('section columns', function () {
 
     expect($section->getColumns())->toBe(3);
 });
+
+// ─── Form-specific view names ───────────────────────────────────
+
+test('layout subclasses swap in the form blade views', function () {
+    expect(Grid::make()->render()->name())->toBe('wire-forms::layouts.grid')
+        ->and(Section::make('S')->render()->name())->toBe('wire-forms::layouts.section')
+        ->and(Fieldset::make('F')->render()->name())->toBe('wire-forms::layouts.fieldset');
+});

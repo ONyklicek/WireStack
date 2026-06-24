@@ -92,6 +92,7 @@ class ToggleColumn extends Column
             'columnName' => $this->getName(),
             'disabled' => $this->isDisabled($record),
             'onColorClass' => $this->getOnColorClass(),
+            'offColorClass' => $this->getOffColorClass(),
         ]);
     }
 
@@ -100,5 +101,12 @@ class ToggleColumn extends Column
         // Solid background fill is owned by Foundation HasColor (canonical palette:
         // primary, success → emerald, warning → amber, info → cyan).
         return self::getSolidBgClass($this->onColor ?? 'primary');
+    }
+
+    protected function getOffColorClass(): string
+    {
+        // Soft (muted) background fill for the "off" track is owned by the same
+        // Foundation HasColor palette; gray default matches the neutral track.
+        return self::getSoftBgClass($this->offColor ?? 'gray');
     }
 }

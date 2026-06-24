@@ -389,11 +389,12 @@ protected $casts = [
 ```
 
 ```php
-// A plain column just works — backed enums render their value, unit enums their case name.
+// A plain column just works — without an explicit label the case name is headlined
+// for display (`InReview` → "In Review"), the same text the value yields as a select option.
 TextColumn::make('status')
 ```
 
-To show friendly text, let the enum carry its own label by implementing the opt-in contract:
+To control the exact text, let the enum carry its own label by implementing the opt-in contract:
 
 ```php
 use NyonCode\WireCore\Foundation\Contracts\Enum\HasLabel;
@@ -1063,6 +1064,16 @@ SelectColumn::make('category_id')
     ->relationship('category', 'name')   // load options from a related model
 ```
 
+### Enum Options
+
+Pass a PHP enum class to expand its cases into `value => label` options. Labels come from
+`getLabel()` when the enum implements `Foundation\Contracts\Enum\HasLabel`, otherwise the
+case name is headlined. See [Enum & JSON Casts](#enum--json-casts) for the contracts.
+
+```php
+SelectColumn::make('status')->options(OrderStatus::class)
+```
+
 ### Native vs Styled
 
 ```php
@@ -1084,7 +1095,7 @@ SelectColumn::make('role')
 ### SelectColumn API
 
 ```php
-->options(array $options)            // ['value' => 'Label', ...]
+->options(array|string|Closure $options) // ['value' => 'Label', ...] or an enum class
 ->native(bool $native = true)       // use native <select> element
 ->isNative(): bool
 ->disabled(bool|Closure $disabled = true)
@@ -1457,9 +1468,9 @@ TextColumn::make('age')
 ### Column-Level Filter API
 
 ```php
-->filterable(bool $filterable = true, string $type = 'text', array $options = [])
+->filterable(bool $filterable = true, string $type = 'text', array|string $options = [])
 ->isFilterable(): bool
-->filterAsSelect(array $options, ?string $placeholder = null)
+->filterAsSelect(array|string $options, ?string $placeholder = null)  // array or enum class
 ->filterAsDate(?string $minDate = null, ?string $maxDate = null)
 ->filterAsDateRange(?string $minDate = null, ?string $maxDate = null)
 ->filterAsNumberRange(?float $min = null, ?float $max = null, ?float $step = null)
@@ -1489,6 +1500,10 @@ TextColumn::make('category')
     ->editable(true, 'select', ['a' => 'Category A', 'b' => 'Category B'])
     ->editableRules(fn ($record) => ['required', 'in:a,b'])
 ```
+
+The `options` argument of both `editable(type: 'select', …)` and `filterable()` /
+`filterAsSelect()` accepts a PHP enum class as well — it expands to `value => label` exactly
+like the dedicated `SelectColumn`/`SelectFilter`. See [Enum Options](#enum-options).
 
 ---
 

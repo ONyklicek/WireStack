@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use NyonCode\WireCore\Foundation\Schema\Grid;
 use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Components\TextInput;
 
@@ -120,6 +121,37 @@ test('state path is correct', function () {
     expect($repeater->getStatePath())->toBe('data.contacts');
 });
 
+test('state path is prefixed through prepareChildren when nested in a layout (regression)', function () {
+    // Regression: a Repeater nested in a layout never had its own statePath set,
+    // so getStatePath() dropped the form base prefix (returned 'contacts' instead
+    // of 'data.contacts'), and add/remove/wire bindings hit the wrong location.
+    $repeater = Repeater::make('contacts')->schema([TextInput::make('name')]);
+
+    $layout = Grid::make()->schema([$repeater]);
+    $layout->prepareChildren('data');
+
+    expect($repeater->getStatePath())->toBe('data.contacts')
+        ->and($repeater->getItemStatePath(0))->toBe('data.contacts.0');
+});
+
+test('state path is prefixed for a top-level repeater prepared with a base path (regression)', function () {
+    $repeater = Repeater::make('contacts');
+
+    // Mirrors the FormRuntime::prepare() call for a root-level layout component.
+    $repeater->prepareChildren('data');
+
+    expect($repeater->getStatePath())->toBe('data.contacts');
+});
+
+test('prepareChildren is idempotent and never double-applies the base path (regression)', function () {
+    $repeater = Repeater::make('contacts');
+
+    $repeater->prepareChildren('data');
+    $repeater->prepareChildren('data');
+
+    expect($repeater->getStatePath())->toBe('data.contacts');
+});
+
 test('item state path includes index', function () {
     $repeater = Repeater::make('contacts')->statePath('data');
 
@@ -160,6 +192,29 @@ test('validation rules are empty without constraints', function () {
     $repeater = Repeater::make('items');
 
     expect($repeater->getRules())->toBe([]);
+});
+
+test('container validation rules add required+array when required (regression)', function () {
+    $repeater = Repeater::make('items')->minItems(2)->required();
+
+    $rules = $repeater->getContainerValidationRules();
+
+    expect($rules)->toContain('required')
+        ->and($rules)->toContain('array')
+        ->and($rules)->toContain('min:2');
+});
+
+test('item validation rules are collected per child field (regression)', function () {
+    $repeater = Repeater::make('contacts')->schema([
+        TextInput::make('name')->required(),
+        TextInput::make('email')->rules(['email']),
+        TextInput::make('note'), // no rules → omitted
+    ]);
+
+    expect($repeater->getItemValidationRules())->toBe([
+        'name' => ['required'],
+        'email' => ['email'],
+    ]);
 });
 
 test('mutate relationship data callback can be set', function () {

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Config\Repository;
+use Illuminate\Container\Container;
 use NyonCode\WireSortable\SortableTable;
 use NyonCode\WireTable\Table;
 
@@ -39,6 +41,62 @@ it('returns itself for fluent chaining', function () {
     $table = SortableTable::make();
 
     expect($table->reorderable())->toBe($table);
+});
+
+// ── Always Reorderable ──────────────────────────────────
+
+it('is not always reorderable by default', function () {
+    expect(SortableTable::make()->isAlwaysReorderable())->toBeFalse();
+});
+
+it('alwaysReorderable also enables reorderable (regression: state was split across macros)', function () {
+    $table = SortableTable::make()->alwaysReorderable();
+
+    expect($table->isAlwaysReorderable())->toBeTrue()
+        ->and($table->isReorderable())->toBeTrue()
+        ->and($table->getOrderColumn())->toBe('sort_order');
+});
+
+it('alwaysReorderable accepts a custom order column', function () {
+    $table = SortableTable::make()->alwaysReorderable('position');
+
+    expect($table->isReorderable())->toBeTrue()
+        ->and($table->getOrderColumn())->toBe('position');
+});
+
+it('returns itself for alwaysReorderable fluent chaining', function () {
+    $table = SortableTable::make();
+
+    expect($table->alwaysReorderable())->toBe($table);
+});
+
+it('returns the documented default order column without a booted app', function () {
+    // Pure unit test: no container bound, so the config-driven default applies.
+    expect(SortableTable::make()->getOrderColumn())->toBe('sort_order');
+});
+
+it('falls back to the configured order column when none is set (regression)', function () {
+    $container = new Container;
+    $container->instance('config', new Repository(['wire-sortable' => ['order_column' => 'position']]));
+    Container::setInstance($container);
+
+    try {
+        expect(SortableTable::make()->getOrderColumn())->toBe('position');
+    } finally {
+        Container::setInstance(null);
+    }
+});
+
+it('an explicit order column wins over the config default', function () {
+    $container = new Container;
+    $container->instance('config', new Repository(['wire-sortable' => ['order_column' => 'position']]));
+    Container::setInstance($container);
+
+    try {
+        expect(SortableTable::make()->reorderable('manual_order')->getOrderColumn())->toBe('manual_order');
+    } finally {
+        Container::setInstance(null);
+    }
 });
 
 // ── Paginated While Reordering ──────────────────────────

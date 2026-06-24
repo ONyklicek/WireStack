@@ -25,6 +25,46 @@ Select::make('category_id')
     ->placeholder('Choose category')
 ```
 
+## Enum Options
+
+Pass a PHP enum class directly instead of an array — the cases are expanded to a
+`value => label` map. The key is the backing value (or the case name for unit enums),
+and the label comes from the enum's `getLabel()` when it implements the
+`Foundation\Contracts\Enum\HasLabel` contract, falling back to a headline of the case name.
+
+```php
+use NyonCode\WireCore\Foundation\Contracts\Enum\HasLabel;
+
+enum Status: string implements HasLabel
+{
+    case Draft = 'draft';
+    case Published = 'published';
+
+    public function getLabel(): ?string
+    {
+        return match ($this) {
+            self::Draft => 'Draft',
+            self::Published => 'Published',
+        };
+    }
+}
+
+Select::make('status')->options(Status::class)
+// → ['draft' => 'Draft', 'published' => 'Published']
+```
+
+An enum without `HasLabel` still works — the case name is headlined for the label
+(`LowPriority` → `Low Priority`). A closure returning an enum class is expanded too.
+
+**Automatic validation.** A single-value `Select` (or [`Radio`](radio.md)) whose options come
+from an enum is automatically constrained to those values with an `in:` rule — a submission
+outside the enum is rejected without you restating it. It is skipped for `multiple()` selects
+(array state) and when you declare your own `in:` / `Rule::in()` / `Rule::enum()` rule.
+
+> The same `->options(Enum::class)` shorthand works on [`Radio`](radio.md),
+> [`CheckboxList`](checkbox-list.md), table `SelectColumn`, and the table
+> [`SelectFilter`](../../table/filters.md).
+
 ## Searchable
 
 ```php
@@ -106,7 +146,7 @@ Select::make('color')
 
 | Method | Type | Description |
 |--------|------|-------------|
-| `options(array\|Closure)` | array | Static or dynamic options (`value => label`) |
+| `options(array\|string\|Closure)` | array | Static, dynamic, or enum-class options (`value => label`) |
 | `searchable()` | bool | Enable option search |
 | `multiple()` | bool | Allow multiple selections |
 | `native()` | bool | Use the browser-native `<select>` element |

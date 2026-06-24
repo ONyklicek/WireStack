@@ -41,6 +41,7 @@ class WtfiComponent extends Component
                 SelectFilter::make('status')->label('Status')->options(['active' => 'Active', 'archived' => 'Archived']),
                 NumberRangeFilter::make('price')->label('Price'),
                 SelectFilter::make('secret')->options(['a' => 'A'])->hidden(),
+                SelectFilter::make('category.name')->label('Category')->options(['x' => 'X', 'y' => 'Y']),
             ]);
     }
 
@@ -111,6 +112,35 @@ it('removes a single filter and keeps the others', function () {
     $component->removeTableFilter('status');
 
     expect($component->tableState->get('filters'))->toBe(['price' => ['min' => '10', 'max' => '']]);
+});
+
+// ─── Dotted / relation filter names ──────────────────────────────────────────
+
+it('reads a dotted (relation) filter name from nested UI state for indicators (regression)', function () {
+    $component = new WtfiComponent;
+    $component->mountWithTable();
+
+    // The live wire:model writes filters.category.name.value nested, not flat.
+    $component->tableState->set('filters', [
+        'category' => ['name' => ['value' => 'x']],
+    ]);
+
+    expect($component->getActiveFilterIndicators())->toBe([
+        'category.name' => 'Category: X',
+    ]);
+});
+
+it('removes a dotted (relation) filter from nested state (regression)', function () {
+    $component = new WtfiComponent;
+    $component->mountWithTable();
+    $component->tableState->set('filters', [
+        'status' => ['value' => 'active'],
+        'category' => ['name' => ['value' => 'x']],
+    ]);
+
+    $component->removeTableFilter('category.name');
+
+    expect($component->tableState->get('filters'))->toBe(['status' => ['value' => 'active']]);
 });
 
 // ─── Rendering ───────────────────────────────────────────────────────────────

@@ -24,6 +24,17 @@ Radio::make('plan')
     ->options(fn () => Plan::active()->pluck('name', 'slug')->toArray())
 ```
 
+## Enum Options
+
+Pass a PHP enum class to expand its cases into `value => label` options. Labels come from
+`getLabel()` when the enum implements `Foundation\Contracts\Enum\HasLabel`, otherwise the
+case name is headlined. The field is also auto-constrained to the enum's values with an `in:`
+rule. See [Select › Enum Options](select.md#enum-options) for details.
+
+```php
+Radio::make('status')->options(Status::class)
+```
+
 ## Descriptions
 
 ```php
@@ -73,7 +84,7 @@ Radio::make('delivery_method')
 
 | Method | Type | Description |
 |--------|------|-------------|
-| `options(array\|Closure)` | array | Option list (`value => label`) |
+| `options(array\|string\|Closure)` | array | Option list, or an enum class (`value => label`) |
 | `descriptions(array\|Closure)` | array | Per-option description text (`value => description`) |
 | `inline(bool)` | bool | Display options horizontally |
 | `boolean()` | — | Shorthand for Yes/No radio group |

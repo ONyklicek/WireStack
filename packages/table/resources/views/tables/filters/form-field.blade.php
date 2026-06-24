@@ -19,7 +19,9 @@
                     default => 'text',
                 };
                 $placeholder = method_exists($field, 'getPlaceholder') ? ($field->getPlaceholder() ?? '') : '';
-                $currentValue = is_array($value) ? ($value[$fieldName] ?? '') : '';
+                $fieldValue = is_array($value) ? ($value[$fieldName] ?? '') : '';
+                // Guard the scalar input value against nested arrays in state.
+                $currentValue = is_scalar($fieldValue) ? $fieldValue : '';
             @endphp
             <div class="flex-1">
                 <label for="filter-{{ $name }}-{{ $fieldName }}" class="sr-only">{{ $placeholder !== '' ? $placeholder : $fieldName }}</label>

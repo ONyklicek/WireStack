@@ -26,6 +26,9 @@
         <testsuite name="Sortable Unit">
             <directory>packages/sortable/tests/Unit</directory>
         </testsuite>
+        <testsuite name="Sortable Feature">
+            <directory>packages/sortable/tests/Feature</directory>
+        </testsuite>
         <testsuite name="Forms Standalone">
             <directory>packages/forms/tests/Standalone</directory>
         </testsuite>

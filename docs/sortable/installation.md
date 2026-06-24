@@ -48,7 +48,7 @@ This creates the `reorderable_column_orders` table used for storing per-user col
 | Column | Type | Description |
 |---|---|---|
 | `id` | bigint | Primary key |
-| `user_id` | bigint (FK) | References the users table, cascades on delete |
+| `user_id` | bigint / uuid / ulid | Indexed user key. Type follows `wire-sortable.user_key_type` (`id` by default; set `uuid`/`ulid` for non-integer auth keys) |
 | `model_type` | string | Fully qualified Eloquent model class name |
 | `table_identifier` | string | Livewire component class name (distinguishes multiple tables over the same model) |
 | `column_order` | json | Array of column names in the user's preferred order |

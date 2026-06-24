@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use Illuminate\Database\Eloquent\Relations\MorphOneOrMany;
 use Illuminate\Database\Eloquent\Relations\Relation as EloquentRelation;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -143,7 +144,9 @@ trait WithTable
         foreach ($table->getFilters() as $filter) {
             $default = $filter->getDefault();
             if ($default !== null) {
-                $filters[$filter->getName()] = $filter->wrapValue($default);
+                // Arr::set so dotted (relation) filter names nest the same way the
+                // live wire:model binding writes them — keeps init and UI in sync.
+                Arr::set($filters, $filter->getName(), $filter->wrapValue($default));
             }
         }
         if ($filters !== []) {
@@ -792,7 +795,17 @@ trait WithTable
     public function removeTableFilter(string $name): void
     {
         $filters = $this->tableState->get('filters', []);
-        unset($filters[$name]);
+        Arr::forget($filters, $name);
+
+        // Prune empty parent nests left behind by a dotted (relation) filter name
+        // so cleared filters don't accumulate stale [] containers in the state.
+        if (str_contains($name, '.')) {
+            $parent = substr($name, 0, strrpos($name, '.'));
+            if (Arr::get($filters, $parent) === []) {
+                Arr::forget($filters, $parent);
+            }
+        }
+
         $this->tableState->set('filters', $filters);
         $this->resetPage();
     }
@@ -814,7 +827,7 @@ trait WithTable
                 continue;
             }
 
-            $indicator = $filter->getIndicator($filters[$filter->getName()] ?? null);
+            $indicator = $filter->getIndicator(data_get($filters, $filter->getName()));
 
             if ($indicator !== null) {
                 $indicators[$filter->getName()] = $indicator;
@@ -1129,7 +1142,7 @@ trait WithTable
                 continue;
             }
 
-            $raw = $filterValues[$filter->getName()] ?? null;
+            $raw = data_get($filterValues, $filter->getName());
             if ($raw === null || $raw === '' || $raw === []) {
                 continue;
             }

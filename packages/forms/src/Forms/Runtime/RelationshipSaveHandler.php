@@ -87,6 +87,10 @@ final class RelationshipSaveHandler
 
             $id = $itemData[$primaryKey] ?? null;
 
+            // Never mass-assign the primary key from client state (it is used only
+            // to match existing rows, not to write into create/update payloads).
+            unset($itemData[$primaryKey]);
+
             if ($id && in_array($id, $existingIds)) {
                 // Update existing — use fresh query to avoid accumulating where clauses
                 $record->{$relationName}()->where($primaryKey, $id)->update($itemData);

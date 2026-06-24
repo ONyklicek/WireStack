@@ -25,8 +25,24 @@
     $sortColumn = $component->tableState->get('sort.column');
     $sortDirection = $component->tableState->get('sort.direction', 'asc');
     $flattenMode = (bool) $component->tableState->get('rows.flattenMode');
-    $activeTableFilters = array_filter($tableFilters);
-    $activeColumnFilters = array_filter($columnFilterValues);
+    // Treat a filter as active only when it holds a real value. A range filter
+    // that was typed then cleared leaves ['min' => '', 'max' => ''] — a truthy
+    // array that plain array_filter would wrongly count as active.
+    $filterHasValue = function ($value) use (&$filterHasValue) {
+        if (is_array($value)) {
+            foreach ($value as $inner) {
+                if ($filterHasValue($inner)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        return $value !== null && $value !== '';
+    };
+    $activeTableFilters = array_filter($tableFilters, $filterHasValue);
+    $activeColumnFilters = array_filter($columnFilterValues, $filterHasValue);
 
     $actions = $table->getActions();
     $bulkActions = $table->getBulkActions();
@@ -487,6 +503,7 @@
                                     @foreach($visibleColumns as $column)
                                         <th
                                                 scope="col"
+                                                data-column="{{ $column->getName() }}"
                                                 class="{{ $headerPadding }} text-{{ $column->getAlignment() }} font-semibold {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $column->getResponsiveClasses() }}"
                                                 @if($column->getWidth()) style="width: {{ $column->getWidth() }}" @endif
                                         >

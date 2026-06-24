@@ -84,3 +84,17 @@ it('renders toggle on-color via the canonical Foundation palette', function () {
         ->and(ToggleColumn::make('active')->onColor('warning')->renderCell($record))->toContain('bg-amber-500')
         ->and(ToggleColumn::make('active')->onColor('gray')->renderCell($record))->toContain('bg-gray-600');
 });
+
+it('renders toggle off-color via the canonical Foundation palette', function () {
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 7, 'active' => false]);
+
+    // The "off" track now honors offColor() and delegates to
+    // HasColor::getSoftBgClass instead of the previously hardcoded gray.
+    expect(ToggleColumn::make('active')->offColor('danger')->renderCell($record))->toContain('bg-red-200')
+        ->and(ToggleColumn::make('active')->offColor('success')->renderCell($record))->toContain('bg-emerald-200')
+        ->and(ToggleColumn::make('active')->renderCell($record))->toContain('bg-gray-200');
+});

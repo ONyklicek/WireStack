@@ -5,8 +5,9 @@
     /** @var string $columnName */
     /** @var bool $disabled */
     /** @var string $onColorClass canonical "on" track fill from HasColor::getSolidBgClass */
+    /** @var string $offColorClass canonical "off" track fill from HasColor::getSoftBgClass */
 
-    $bgColor = $state ? $onColorClass : 'bg-gray-200 dark:bg-gray-700';
+    $bgColor = $state ? $onColorClass : $offColorClass;
     $cursorClass = $disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer';
     $translateClass = $state ? 'translate-x-5' : 'translate-x-0';
 @endphp

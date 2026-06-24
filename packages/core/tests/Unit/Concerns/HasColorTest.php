@@ -44,6 +44,27 @@ it('supports color aliases', function () {
         ->and(TestColorClass::getBadgeColorClasses('yellow'))->toBe(TestColorClass::getBadgeColorClasses('warning'));
 });
 
+it('returns correct soft background classes for the toggle off track', function () {
+    expect(TestColorClass::getSoftBgClass('primary'))->toContain('bg-primary-200')
+        ->and(TestColorClass::getSoftBgClass('success'))->toContain('bg-emerald-200')
+        ->and(TestColorClass::getSoftBgClass('danger'))->toContain('bg-red-200')
+        ->and(TestColorClass::getSoftBgClass('warning'))->toContain('bg-amber-200')
+        ->and(TestColorClass::getSoftBgClass('info'))->toContain('bg-cyan-200')
+        ->and(TestColorClass::getSoftBgClass('purple'))->toContain('bg-purple-200')
+        ->and(TestColorClass::getSoftBgClass('pink'))->toContain('bg-pink-200')
+        ->and(TestColorClass::getSoftBgClass('gray'))->toContain('bg-gray-200')
+        ->and(TestColorClass::getSoftBgClass('nonexistent'))->toContain('bg-gray-200');
+});
+
+it('maps soft background color aliases to the same hue', function () {
+    expect(TestColorClass::getSoftBgClass('blue'))->toBe(TestColorClass::getSoftBgClass('primary'))
+        ->and(TestColorClass::getSoftBgClass('green'))->toBe(TestColorClass::getSoftBgClass('success'))
+        ->and(TestColorClass::getSoftBgClass('red'))->toBe(TestColorClass::getSoftBgClass('danger'))
+        ->and(TestColorClass::getSoftBgClass('yellow'))->toBe(TestColorClass::getSoftBgClass('warning'))
+        ->and(TestColorClass::getSoftBgClass('cyan'))->toBe(TestColorClass::getSoftBgClass('info'))
+        ->and(TestColorClass::getSoftBgClass('secondary'))->toBe(TestColorClass::getSoftBgClass('gray'));
+});
+
 it('returns correct modal icon bg classes', function () {
     expect(TestColorClass::getModalIconBgClass('danger'))->toContain('bg-red-100')
         ->and(TestColorClass::getModalIconBgClass('warning'))->toContain('bg-amber-100')

@@ -27,6 +27,10 @@ trait HasVisibility
 
     public function visible(bool|Closure $visible = true): static
     {
+        if ($visible instanceof Closure) {
+            return $this->hidden(static fn (mixed ...$args): bool => ! $visible(...$args));
+        }
+
         return $this->hidden(! $visible);
     }
 

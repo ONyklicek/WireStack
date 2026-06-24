@@ -196,6 +196,7 @@ class Form implements Htmlable
             $this->getFlatComponents(),
             $this->getConfig()->statePath,
             $this->getConfig()->validationMessages,
+            $this->getRuntime()->getRepeaters(),
         );
 
         return $resolver->getRules();

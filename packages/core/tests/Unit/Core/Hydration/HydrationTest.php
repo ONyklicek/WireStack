@@ -42,6 +42,15 @@ it('transforms value to bool cast', function () {
         ->and($transformer->transform('', 'bool'))->toBeFalse();
 });
 
+it('transforms Eloquent cast aliases', function () {
+    $transformer = new ValueTransformer;
+
+    expect($transformer->transform(1, 'boolean'))->toBeTrue()
+        ->and($transformer->transform('42', 'integer'))->toBe(42)
+        ->and($transformer->transform('3.14', 'double'))->toBe(3.14)
+        ->and($transformer->transform('2024-06-15', 'datetime:Y-m-d'))->toBe('2024-06-15');
+});
+
 it('transforms value to array cast from json string', function () {
     $transformer = new ValueTransformer;
 
@@ -233,6 +242,28 @@ it('resolves all casts for a model', function () {
     expect($casts)->toHaveKey('is_active', 'boolean')
         ->toHaveKey('metadata', 'array')
         ->toHaveKey('amount', 'float');
+});
+
+it('resolves protected casts method definitions when getCasts omits them', function () {
+    $model = new class extends Model
+    {
+        public function getCasts()
+        {
+            return [];
+        }
+
+        /**
+         * @return array<string, string>
+         */
+        protected function casts(): array
+        {
+            return ['is_active' => 'boolean'];
+        }
+    };
+
+    $resolver = new CastResolver;
+
+    expect($resolver->resolve(get_class($model), 'is_active'))->toBe('boolean');
 });
 
 it('checks if a model has a cast for an attribute', function () {

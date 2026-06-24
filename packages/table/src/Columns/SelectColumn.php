@@ -39,11 +39,12 @@ class SelectColumn extends Column
     }
 
     /**
-     * @param  array<string, string>|Closure  $options
+     * @param  array<string, string>|class-string|Closure  $options
      */
-    public function options(array|Closure $options): static
+    public function options(array|string|Closure $options): static
     {
-        $this->options = is_callable($options) ? $options() : $options;
+        $resolved = is_callable($options) ? $options() : $options;
+        $this->options = EnumResolver::normalizeOptions($resolved);
         $this->editableOptions = $this->options;
 
         return $this;

@@ -228,6 +228,25 @@ test('soft-deleted children are soft-deleted not hard-deleted', function () {
     Schema::dropIfExists('rsh_soft_children');
 });
 
+test('does not mass-assign a client-supplied primary key on create (regression)', function () {
+    $parent = createRshParent();
+    $handler = new RelationshipSaveHandler;
+    $repeater = Repeater::make('children')->relationship('children');
+
+    // A client-supplied id that does NOT match any existing child must not be
+    // written as the new row's primary key; the row is created with a fresh id.
+    $handler->save($parent, [$repeater], [
+        'children' => [
+            ['id' => 999, 'label' => 'Forged', 'sort_order' => 1],
+        ],
+    ]);
+
+    $child = $parent->children()->first();
+    expect($child)->not->toBeNull()
+        ->and($child->id)->not->toBe(999)
+        ->and($child->label)->toBe('Forged');
+});
+
 // ─── Helpers ──────────────────────────────────────────────────────────
 
 function createRshParent(): Model

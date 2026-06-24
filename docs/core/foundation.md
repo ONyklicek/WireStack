@@ -403,16 +403,28 @@ instead of re-encoding `(string) $enum` or local `match` maps.
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 
 EnumResolver::scalar($value);   // backed enum → ->value, unit enum → case name, else passthrough
-EnumResolver::label($value);    // HasLabel → getLabel(), else scalar() — human display text
+EnumResolver::label($value);    // getLabel() → label() method → headline(case name); non-enum passthrough
 EnumResolver::display($value);  // label() + array/JSON → compact JSON; (string)-safe everywhere
 EnumResolver::color($value);    // HasColor → getColor(), else null
 EnumResolver::icon($value);     // HasIcon  → getIcon(),  else null
-EnumResolver::isEnum($value);   // bool
+EnumResolver::isEnum($value);   // bool — is this an enum instance?
+
+EnumResolver::isEnumClass($value);       // bool — is this an enum class-string?
+EnumResolver::options(Status::class);    // [value => label] map from the enum's cases
+EnumResolver::normalizeOptions($value);  // enum class → options() map; arrays pass through
 ```
 
 Use `scalar()` for map keys, comparisons and copy values; `display()` (or `label()`) wherever a
 value is shown. Non-enum values always pass through untouched, so the helpers are safe to call on
 anything.
+
+`options()` powers the Filament-style enum-as-options shorthand: any option-based surface —
+form `Select` / `Radio` / `CheckboxList` (via the shared `WireForms\Concerns\HasOptions` trait),
+table `SelectColumn` and `SelectFilter`, plus the generic `Column::editable()` / `filterable()` /
+`filterAsSelect()` — accepts `->options(Status::class)` and delegates the expansion here. Each case
+keys by `scalar()` and labels through the same canonical `label()` resolution, so an option reads
+identically to the matching display cell. A single-value form field whose options come from an enum
+also gains an automatic `in:` validation rule (see [Forms → Select](../forms/fields/select.md#enum-options)).
 
 ### Opt-in enum contracts
 
@@ -422,7 +434,7 @@ An enum used as a cast may implement any of these to drive richer rendering. The
 
 | Contract | Method | Effect |
 |----------|--------|--------|
-| `Enum\HasLabel` | `getLabel(): ?string` | Display surfaces render the label instead of the backing value / case name |
+| `Enum\HasLabel` | `getLabel(): ?string` | Display surfaces render this label instead of the default headline of the case name |
 | `Enum\HasColor` | `getColor(): string\|Color\|null` | `BadgeColumn` / `IconColumn` / `IconEntry` auto-resolve the color |
 | `Enum\HasIcon` | `getIcon(): string\|Icon\|null` | The same surfaces auto-resolve the icon |
 
@@ -452,7 +464,7 @@ See [Table → Enum & JSON Casts](../table/columns.md#enum-json-casts) for colum
 |-------|-------------|
 | `EvaluatesClosures` | Trait — evaluates Closure-or-value with parameter injection |
 | `ArrayDotHelper` | Dot-notation access: `get('user.name', $array)`, `set()`, `has()`, `forget()` |
-| `EnumResolver` | Static — canonical enum/array normalizer (`scalar`, `label`, `display`, `color`, `icon`) |
+| `EnumResolver` | Static — canonical enum/array normalizer (`scalar`, `label`, `display`, `color`, `icon`, `options`) |
 
 ## Blade Components
 

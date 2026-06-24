@@ -177,3 +177,12 @@ it('renders a swatch value for a color entry', function () {
 
     expect($entry->getFormattedState())->toBe('#ff0000');
 });
+
+it('color entry is copyable opt-in and uses the color view', function () {
+    $entry = ColorEntry::make('brand');
+
+    expect($entry->isCopyable())->toBeFalse()
+        ->and($entry->copyable()->isCopyable())->toBeTrue()
+        ->and($entry->copyable(false)->isCopyable())->toBeFalse()
+        ->and($entry->render()->name())->toBe('wire-core::infolists.entries.color');
+});

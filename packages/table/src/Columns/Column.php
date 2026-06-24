@@ -829,7 +829,9 @@ class Column extends DataComponent implements Htmlable
         $value = EnumResolver::display($value);
 
         if ($value === null || $value === '') {
-            return $this->getPlaceholder() ?? '';
+            // getPlaceholder() always resolves to a string (defaults to '-'); the
+            // cast keeps the string return type without an unreachable ?? branch.
+            return (string) $this->getPlaceholder();
         }
 
         $formatted = (string) $value;
@@ -1270,16 +1272,16 @@ class Column extends DataComponent implements Htmlable
     }
 
     /**
-     * @param  array<string, string>  $options
+     * @param  array<string, string>|class-string  $options
      */
-    public function editable(bool $editable = true, string $type = 'text', array $options = []): static
+    public function editable(bool $editable = true, string $type = 'text', array|string $options = []): static
     {
         $this->capabilities = $editable
             ? $this->capabilities->add(Capability::Editable)
             : $this->capabilities->remove(Capability::Editable);
 
         $this->editableType = $type;
-        $this->editableOptions = $options;
+        $this->editableOptions = EnumResolver::normalizeOptions($options);
 
         return $this;
     }
@@ -1394,16 +1396,16 @@ class Column extends DataComponent implements Htmlable
     }
 
     /**
-     * @param  array<string, string>  $options
+     * @param  array<string, string>|class-string  $options
      */
-    public function filterable(bool $filterable = true, string $type = 'text', array $options = []): static
+    public function filterable(bool $filterable = true, string $type = 'text', array|string $options = []): static
     {
         $this->capabilities = $filterable
             ? $this->capabilities->add(Capability::Filterable)
             : $this->capabilities->remove(Capability::Filterable);
 
         $this->filterType = $type;
-        $this->filterOptions = $options;
+        $this->filterOptions = EnumResolver::normalizeOptions($options);
 
         return $this;
     }
@@ -1411,13 +1413,13 @@ class Column extends DataComponent implements Htmlable
     /**
      * Configure as a select column filter.
      *
-     * @param  array<string, string>  $options
+     * @param  array<string, string>|class-string  $options
      */
-    public function filterAsSelect(array $options, ?string $placeholder = null): static
+    public function filterAsSelect(array|string $options, ?string $placeholder = null): static
     {
         $this->capabilities = $this->capabilities->add(Capability::Filterable);
         $this->filterType = 'select';
-        $this->filterOptions = $options;
+        $this->filterOptions = EnumResolver::normalizeOptions($options);
         if ($placeholder) {
             $this->filterPlaceholder = $placeholder;
         }
@@ -1640,6 +1642,12 @@ class Column extends DataComponent implements Htmlable
      */
     protected function applyTextFilter(mixed $query, string $column, mixed $value): mixed
     {
+        // Crafted/stale state can deliver an array here; guard against
+        // "Array to string conversion" in the LIKE/comparison branches.
+        if (! is_scalar($value)) {
+            return $query;
+        }
+
         return match ($this->filterOperator) {
             'equals', '=' => $query->where($column, $value),
             'starts_with' => $query->where($column, 'like', "$value%"),

@@ -9,6 +9,7 @@ use NyonCode\WireCore\Core\State\StateHydrator;
 use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 use NyonCode\WireForms\Components\Field;
+use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Forms\Config\FormConfig;
 use NyonCode\WireForms\Validation\FormValidationResolver;
 
@@ -45,6 +46,7 @@ final class FormRuntime
             $this->getFlatComponents(),
             $this->config->statePath,
             $this->config->validationMessages,
+            $this->getRepeaters(),
         );
 
         $state = $this->stateManager->getState();
@@ -178,6 +180,13 @@ final class FormRuntime
         $flat = [];
 
         foreach ($components as $component) {
+            if ($component instanceof Repeater) {
+                // A repeater is a leaf for flattening: its template children live at
+                // per-item wildcard paths and are validated via getRepeaters(), not
+                // as flat fields at the (wrong) template path.
+                continue;
+            }
+
             if ($component instanceof LayoutComponent) {
                 $flat = array_merge($flat, $this->flattenComponents($component->getSchema()));
             } elseif ($component instanceof Component) {
@@ -186,5 +195,37 @@ final class FormRuntime
         }
 
         return $flat;
+    }
+
+    /**
+     * Collect all repeaters in the schema (recursively), after preparation so
+     * each repeater reports its resolved, prefixed state path.
+     *
+     * @return array<int, Repeater>
+     */
+    public function getRepeaters(): array
+    {
+        $this->prepare();
+
+        return $this->collectRepeaters($this->config->schema);
+    }
+
+    /**
+     * @param  array<int, mixed>  $components
+     * @return array<int, Repeater>
+     */
+    private function collectRepeaters(array $components): array
+    {
+        $repeaters = [];
+
+        foreach ($components as $component) {
+            if ($component instanceof Repeater) {
+                $repeaters[] = $component;
+            } elseif ($component instanceof LayoutComponent) {
+                $repeaters = array_merge($repeaters, $this->collectRepeaters($component->getSchema()));
+            }
+        }
+
+        return $repeaters;
     }
 }

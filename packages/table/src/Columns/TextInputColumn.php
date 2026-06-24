@@ -758,15 +758,15 @@ class TextInputColumn extends Column
             $attrs['pattern'] = $this->pattern;
         }
 
-        if ($this->step) {
+        if ($this->step !== null) {
             $attrs['step'] = $this->step;
         }
 
-        if ($this->min) {
+        if ($this->min !== null) {
             $attrs['min'] = $this->min;
         }
 
-        if ($this->max) {
+        if ($this->max !== null) {
             $attrs['max'] = $this->max;
         }
 

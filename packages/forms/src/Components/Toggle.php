@@ -6,6 +6,7 @@ namespace NyonCode\WireForms\Components;
 
 use Closure;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
@@ -104,6 +105,26 @@ class Toggle extends Field
     public function getOffIcon(): ?string
     {
         return $this->offIcon;
+    }
+
+    /**
+     * Background utility class for the "on" track. Delegates to the canonical
+     * solid-fill resolver in Foundation {@see HasColor::getSolidBgClass()} so the
+     * toggle shares one palette with every other solid surface instead of
+     * re-encoding hue rules locally.
+     */
+    public function getOnColorClasses(): string
+    {
+        return HasColor::getSolidBgClass($this->onColor);
+    }
+
+    /**
+     * Background utility class for the "off" track. Delegates to the canonical
+     * soft-fill resolver {@see HasColor::getSoftBgClass()}.
+     */
+    public function getOffColorClasses(): string
+    {
+        return HasColor::getSoftBgClass($this->offColor);
     }
 
     public function isInline(): bool
