@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Foundation\Support;
 
 use BackedEnum;
+use Illuminate\Support\Str;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Contracts\Enum\HasColor;
 use NyonCode\WireCore\Foundation\Contracts\Enum\HasIcon;
@@ -51,16 +52,19 @@ final class EnumResolver
     /**
      * Normalise a value to its human-facing label.
      *
-     * Enums implementing {@see HasLabel} use their `getLabel()`; otherwise this falls back
-     * to {@see scalar()}. Use wherever the value is shown to a user.
+     * Enums resolve through one canonical order: the {@see HasLabel} contract's `getLabel()`,
+     * then a `label()` method, then a headline of the case name (`InReview` → "In Review").
+     * This is the same label an enum yields as an option key/label (see {@see options()}), so a
+     * label-less enum reads identically on a table cell, an export, and a `<select>` option.
+     * Non-enum values pass through untouched. Use wherever the value is shown to a user.
      */
     public static function label(mixed $value): mixed
     {
-        if ($value instanceof HasLabel) {
-            return $value->getLabel() ?? self::scalar($value);
+        if ($value instanceof UnitEnum) {
+            return self::enumLabel($value);
         }
 
-        return self::scalar($value);
+        return $value;
     }
 
     /**
@@ -118,5 +122,85 @@ final class EnumResolver
     public static function isEnum(mixed $value): bool
     {
         return $value instanceof UnitEnum;
+    }
+
+    /**
+     * Whether the given value is the class-string of a PHP enum.
+     *
+     * Use to detect the Filament-style shorthand where an owner passes an enum
+     * class to an options API (`->options(Status::class)`) instead of an array.
+     */
+    public static function isEnumClass(mixed $value): bool
+    {
+        return is_string($value) && enum_exists($value);
+    }
+
+    /**
+     * Build a `[value => label]` option map from a backed/unit enum class.
+     *
+     * Each case collapses to its {@see scalar()} key and its {@see label()} — the same
+     * canonical label resolution used everywhere a value is displayed. This is the canonical
+     * owner of the "enum as option source" expansion; downstream option APIs (form
+     * Select/Radio/CheckboxList, table SelectColumn/SelectFilter) delegate here instead of
+     * re-encoding the map.
+     *
+     * @param  class-string  $enumClass
+     * @return array<string|int, string>
+     */
+    public static function options(string $enumClass): array
+    {
+        $map = [];
+
+        foreach ($enumClass::cases() as $case) {
+            /** @var string|int $key */
+            $key = self::scalar($case);
+            $map[$key] = self::enumLabel($case);
+        }
+
+        return $map;
+    }
+
+    /**
+     * Normalise an owner-provided options value into an array.
+     *
+     * Enum class-strings expand via {@see options()}; arrays (and anything else)
+     * pass through untouched. Closures must already be resolved by the caller.
+     *
+     * @return array<string|int, string>|mixed
+     */
+    public static function normalizeOptions(mixed $value): mixed
+    {
+        if (self::isEnumClass($value)) {
+            return self::options($value);
+        }
+
+        return $value;
+    }
+
+    /**
+     * Resolve the canonical human label for a single enum case.
+     *
+     * Order: the {@see HasLabel} contract's `getLabel()`, then a `label()` method, then a
+     * headline of the case name. Shared by {@see label()} and {@see options()} so display
+     * surfaces and option lists never diverge for the same enum.
+     */
+    private static function enumLabel(UnitEnum $case): string
+    {
+        if ($case instanceof HasLabel) {
+            $label = $case->getLabel();
+
+            if ($label !== null) {
+                return $label;
+            }
+        }
+
+        if (method_exists($case, 'label')) {
+            /** @var string $label */
+            $label = $case->label();
+
+            return $label;
+        }
+
+        return Str::headline($case->name);
     }
 }
