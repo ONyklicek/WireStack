@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Concerns;
 
 use Closure;
+use Illuminate\Validation\Rules\Enum;
+use Illuminate\Validation\Rules\In;
+use NyonCode\WireForms\Contracts\ProvidesImplicitValidationRules;
 
 /**
  * Validation support for form field components.
@@ -60,11 +63,38 @@ trait HasFormValidation
     {
         $rules = $this->rules;
 
+        if ($this instanceof ProvidesImplicitValidationRules && ! $this->hasOptionConstraint($rules)) {
+            foreach ($this->implicitValidationRules() as $rule) {
+                $rules[] = $rule;
+            }
+        }
+
         if ($this->isRequired() && ! in_array('required', $rules)) {
             array_unshift($rules, 'required');
         }
 
         return $rules;
+    }
+
+    /**
+     * Whether the field already carries an owner-defined value-set constraint
+     * (`in:` / `Rule::in()` / `Rule::enum()`), in which case no implicit one is added.
+     *
+     * @param  array<int, mixed>  $rules
+     */
+    private function hasOptionConstraint(array $rules): bool
+    {
+        foreach ($rules as $rule) {
+            if ($rule instanceof In || $rule instanceof Enum) {
+                return true;
+            }
+
+            if (is_string($rule) && (str_starts_with($rule, 'in:') || str_starts_with($rule, 'enum'))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
