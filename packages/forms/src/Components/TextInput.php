@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Support\EnumResolver;
 
 /**
  * Text input field with type variants (email, password, tel, url, numeric, integer).
@@ -161,10 +162,19 @@ class TextInput extends Field
     }
 
     /**
-     * @param  array<int, string>  $options
+     * Suggestion list for the input.
+     *
+     * Accepts a plain list of suggestion strings, or a backed/unit enum class — in which
+     * case the enum's case labels (see {@see EnumResolver::options()}) become the suggestions.
+     *
+     * @param  array<int, string>|class-string  $options
      */
-    public function datalist(array $options): static
+    public function datalist(array|string $options): static
     {
+        if (EnumResolver::isEnumClass($options)) {
+            $options = array_values(EnumResolver::options($options));
+        }
+
         $this->datalistOptions = $options;
 
         return $this;

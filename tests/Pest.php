@@ -5,9 +5,14 @@ declare(strict_types=1);
 use NyonCode\Wire\Tests\TestCase;
 use NyonCode\WireCore\Tests\TestCase as CoreTestCase;
 use NyonCode\WireForms\Tests\TestCase as FormsTestCase;
+use NyonCode\WireSortable\Tests\TestCase as SortableTestCase;
 use NyonCode\WireTable\Tests\TestCase as TableTestCase;
 
 uses(TestCase::class)->in(__DIR__.'/Integration');
+
+uses(SortableTestCase::class)->in(
+    __DIR__.'/../packages/sortable/tests/Feature',
+);
 
 uses(CoreTestCase::class)->in(
     __DIR__.'/../packages/core/tests/Unit',
