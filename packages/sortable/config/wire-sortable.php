@@ -46,4 +46,18 @@ return [
     */
     'user_model' => 'App\\Models\\User',
 
+    /*
+    |--------------------------------------------------------------------------
+    | User Key Type
+    |--------------------------------------------------------------------------
+    |
+    | The primary key type of your user model, used by the migration to type
+    | the reorderable_column_orders.user_id column. Use 'uuid' or 'ulid' for
+    | non-integer auth keys; 'id' (default) assumes an unsigned bigint.
+    |
+    | Supported: 'id', 'uuid', 'ulid'.
+    |
+    */
+    'user_key_type' => 'id',
+
 ];
