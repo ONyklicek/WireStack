@@ -34,7 +34,35 @@ final class CastResolver
         /** @var Model $model */
         $model = new $modelClass;
 
-        return $model->getCasts();
+        return array_merge($model->getCasts(), $this->resolveMethodCasts($model));
+    }
+
+    /**
+     * Resolve Laravel 11+ style cast definitions on Laravel versions where
+     * Eloquent does not merge the casts() method into getCasts().
+     *
+     * @return array<string, string>
+     */
+    private function resolveMethodCasts(Model $model): array
+    {
+        if (! method_exists($model, 'casts')) {
+            return [];
+        }
+
+        $resolver = \Closure::bind(
+            static fn (Model $model): array => $model->casts(),
+            null,
+            $model::class,
+        );
+
+        if ($resolver === null) {
+            return [];
+        }
+
+        return array_map(
+            static fn (mixed $cast): string => (string) $cast,
+            $resolver($model),
+        );
     }
 
     /**
