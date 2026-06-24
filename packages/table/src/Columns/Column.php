@@ -829,7 +829,9 @@ class Column extends DataComponent implements Htmlable
         $value = EnumResolver::display($value);
 
         if ($value === null || $value === '') {
-            return $this->getPlaceholder() ?? '';
+            // getPlaceholder() always resolves to a string (defaults to '-'); the
+            // cast keeps the string return type without an unreachable ?? branch.
+            return (string) $this->getPlaceholder();
         }
 
         $formatted = (string) $value;
