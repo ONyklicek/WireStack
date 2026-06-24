@@ -70,6 +70,13 @@ TextInput::make('city')
     ->datalist(['Prague', 'Brno', 'Ostrava'])
 ```
 
+Pass a PHP enum class to use its case labels as the suggestions (same label resolution as
+[`Select` options](select.md#enum-options)):
+
+```php
+TextInput::make('city')->datalist(City::class)
+```
+
 ## Live Updates
 
 ```php

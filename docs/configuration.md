@@ -226,10 +226,11 @@ return [
     'sortablejs_cdn' => 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js',
     'animation' => 150,
     'user_model' => 'App\\Models\\User',
+    'user_key_type' => 'id', // 'uuid' / 'ulid' for non-integer user keys
 ];
 ```
 
-Set `sortablejs_cdn` to `null` when your application bundles SortableJS itself.
+Set `sortablejs_cdn` to `null` when your application bundles SortableJS itself. Set `user_key_type` to `uuid` or `ulid` (before running the column-order migration) when your user model uses a non-integer primary key.
 
 See [Sortable Installation](sortable/installation.md).
 
