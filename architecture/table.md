@@ -94,7 +94,8 @@ Current partials under `packages/table/resources/views/tables/columns/`:
 - `responsive.blade.php` — mobile/desktop wrapper
 - `badge` · `boolean` · `icon` · `image` · `button` · `toggle` · `poll` ·
   `split` · `stacked` · `select` · `text-input-editable` · `text-input-readonly`
-- shared `partials/` — `spinner` (optional `$class`), `progress`, `copyable`
+- shared `partials/` — `spinner` (optional `$class`; thin delegate to the
+  canonical `wire-core::partials.spinner`), `progress`, `copyable`
 
 Many UI changes also require touching these partials under
 `packages/table/resources/views/tables/columns/`.

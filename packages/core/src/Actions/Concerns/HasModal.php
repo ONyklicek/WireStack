@@ -454,8 +454,9 @@ trait HasModal
             $form->livewire($livewire);
         }
 
-        // Fill form with defaults from fillFormUsing callback only if Livewire state is empty
-        if ($this->fillFormUsing !== null && $context !== null && $livewire !== null) {
+        // Fill form with defaults from fillFormUsing callback only if Livewire state is empty.
+        // Context may be null for header actions, which still need their defaults seeded.
+        if ($this->fillFormUsing !== null && $livewire !== null) {
             $currentState = $this->getCurrentModalFormState($livewire, $statePath);
             if (empty($currentState)) {
                 $defaults = ($this->fillFormUsing)($context);
@@ -592,7 +593,11 @@ trait HasModal
      */
     public function getFormDefaults(mixed $context = null): array
     {
-        if ($this->fillFormUsing !== null && $context !== null) {
+        // Header actions have no record, so $context is null. Their fillFormUsing
+        // closure takes no arguments and still needs to run, otherwise array
+        // fields (e.g. CheckboxList) are never seeded and Livewire collapses the
+        // grouped checkboxes into a single shared boolean (checking one checks all).
+        if ($this->fillFormUsing !== null) {
             return ($this->fillFormUsing)($context);
         }
 
