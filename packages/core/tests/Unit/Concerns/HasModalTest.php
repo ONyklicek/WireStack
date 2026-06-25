@@ -231,6 +231,17 @@ it('can use fillFormUsing to provide defaults', function () {
     expect($action->getFormDefaults($record))->toBe(['title' => 'Hello World']);
 });
 
+it('seeds fillFormUsing defaults without a context (header actions)', function () {
+    // Header actions have no record/context. Their zero-argument fillFormUsing
+    // closure must still run so array fields (e.g. CheckboxList) are initialised
+    // as arrays instead of being left undefined.
+    $action = Action::make('create')
+        ->form([TextInput::make('name')])
+        ->fillFormUsing(fn () => ['name' => '', 'permissions' => []]);
+
+    expect($action->getFormDefaults())->toBe(['name' => '', 'permissions' => []]);
+});
+
 // ─── Multi-step Modal ───────────────────────────────────────────────────────
 
 it('has no steps by default', function () {
