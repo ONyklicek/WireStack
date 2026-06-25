@@ -2,10 +2,13 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
-## [1.5.1]
+## [1.5.2]
 
 ### Fixed
 - **Header-action form modals seed their `fillFormUsing` defaults.** `HasModal::getFormDefaults()` and the fill step in `getFormInstance()` were both gated on `$context !== null` — a guard meant to avoid calling a record-typed row-action closure with `null`. Header actions, however, legitimately have **no record** (`$context` is always `null`) and supply a zero-argument closure, so that guard silently discarded their defaults: `fillFormUsing(fn () => ['permissions' => []])` never ran and the modal's `tableState.modal.action.formData` stayed `[]`. Scalar fields hid the problem (an uninitialised text field still renders an empty input), but an array-typed field bound by `wire:model` was left **undefined**, so Livewire collapsed a `CheckboxList`'s grouped checkboxes into a single shared boolean — ticking one box ticked them all. Both gates now run whenever `fillFormUsing` is set; row/bulk actions still always pass a non-null context (they return early when no record is found), so only header actions are affected.
+
+
+## [1.5.1]
 
 ### Changed
 - **Reusable view markup is owned in PHP, not duplicated in Blade.** A multi-threaded audit of the "Htmlable render" convention (reusable UI markup lives behind PHP htmlable getters / canonical resolvers; Blade only consumes) consolidated the remaining drift. The loading-spinner SVG, previously hand-inlined in four places (table column partial, `header-action`, `action-modal` ×2, forms `file-upload`), now has a single canonical owner `wire-core::partials.spinner` (`$class`, optional `$wireTarget`) that every site delegates to. The sortable drag handle is no longer a JS template string — its markup moved to `wire-sortable::partials.drag-handle`, rendered by the new `Table::getDragHandleHtml()` macro and injected into the Alpine component as config. The infolist column-span `match` (duplicated across six entry views) is now `HasColumnSpan::getColumnSpanClass($default)`; `StackedColumn` builds its stacked lines via `getLinesHtml(): Htmlable` (escaped) instead of a Blade closure; `BarChartWidget` exposes `getCardRadiusClass()` / `getPartialName()`; and the table's responsive stacked-layout classes resolve through `Table::getStackedTableHiddenClass()` / `getStackedCardsVisibleClass()`. `HeaderAction::getBadgeHtml()` now returns `Htmlable`, matching `ActionGroup`.
