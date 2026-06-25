@@ -164,6 +164,18 @@ Action::make('edit')
     ->action(fn ($record, array $data) => $record->update($data));
 ```
 
+A `HeaderAction` form modal has **no record**, so its `fillFormUsing` closure takes no arguments. Use it to seed initial state — and always seed array-typed fields (`CheckboxList`, `Tags`, multiple `Select`) with an empty array so they bind correctly from the first interaction:
+
+```php
+HeaderAction::make('create')
+    ->form([
+        TextInput::make('name')->required(),
+        CheckboxList::make('permissions')->options($permissions)->bulkToggleable(),
+    ])
+    ->fillFormUsing(fn () => ['name' => '', 'permissions' => []])
+    ->action(fn (array $data) => Role::create($data));
+```
+
 ## Infolist Modal
 
 Use `->infolist()` to open a **read-only** modal that displays the record — the counterpart of `->form()`. The action's record is bound automatically, the modal is not a confirmation, and it shows only a close button (no submit). See [Infolists](infolists.md) for the full entry reference.
