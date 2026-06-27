@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Query\Contracts\QueryPipe;
 use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireCore\Core\Query\SortClause;
+use NyonCode\WireCore\Core\Support\SqlSafety;
 
 /**
  * Applies sort clauses from the QueryPlan to the builder.
@@ -43,6 +44,10 @@ final class ApplySorting implements QueryPipe
         }
 
         if ($sort->nullsPosition !== null) {
+            // The column is interpolated into raw SQL for NULLS ordering, so it
+            // must be a valid identifier/qualified column (raw expressions, which
+            // contain spaces or parentheses, are allowed through unchanged).
+            SqlSafety::assertValidQualifiedColumn($column);
             $builder->orderByRaw("{$column} {$sort->direction} NULLS {$sort->nullsPosition}");
 
             return;

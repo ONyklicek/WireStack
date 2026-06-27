@@ -65,7 +65,6 @@ return [
         // App\Wire\Plugins\ExamplePlugin::class,
     ],
 
-
     'modals' => [
         'default_width' => 'md',
         'slide_over_width' => 'md',
