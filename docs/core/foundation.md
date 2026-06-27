@@ -392,6 +392,19 @@ names compatible with the lowest supported Tailwind version (see
 [ADR 0005](../../architecture/decisions/0005-tailwind-4-support.md)); use only
 standard hue names, never version-specific ones.
 
+### Canonical sizing & typography resolvers
+
+Sibling single-source resolvers, used the same way as `HasColor` — extend once,
+every surface picks it up, and class strings stay literal for Tailwind's JIT
+scanner.
+
+| Resolver | Surface |
+|----------|---------|
+| `HasSize::getBadgeSizeClasses($size)` | soft "pill"/badge padding + font size |
+| `HasSize::getButtonSizeClasses($size, $iconOnly)` | button padding scale (action buttons, action-group triggers, `ButtonColumn`); `$iconOnly` returns square padding |
+| `HasFontWeight::getFontWeightClasses($weight)` | `font-*` weight utility (table columns, infolist entries); unknown weight → `font-normal` |
+| `Modals\Concerns\HasModalProperties::getMaxWidthClass($width, $responsive)` | modal `max-w-*` (centered dialogs gate at `sm:`; slide-overs pass `responsive: false`) |
+
 ## Enums
 
 PHP enums cannot be stringified with `(string) $enum`, yet Eloquent enum casts hand the raw

@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
+use NyonCode\WireCore\Modals\Concerns\HasModalProperties;
 
 /**
  * Blade component: <x-wire-modals::confirmation>
@@ -56,13 +57,7 @@ class ConfirmationComponent extends Component
 
     public function widthClass(): string
     {
-        return match ($this->width) {
-            'sm' => 'sm:max-w-sm',
-            'lg' => 'sm:max-w-lg',
-            'xl' => 'sm:max-w-xl',
-            '2xl' => 'sm:max-w-2xl',
-            default => 'sm:max-w-md',
-        };
+        return HasModalProperties::getMaxWidthClass($this->width);
     }
 
     protected function getColor(): string

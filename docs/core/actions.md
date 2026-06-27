@@ -346,6 +346,7 @@ Shared across Action, BulkAction, HeaderAction:
 ->form(array $components)
 ->fillFormUsing(Closure $fn)
 ->steps(array $steps)
+->modal(ModalContract $modal)        // Modal | SlideOver | ConfirmationDialog | Wizard
 ->before(Closure $fn)
 ->after(Closure $fn)
 ->successNotification(string $message)

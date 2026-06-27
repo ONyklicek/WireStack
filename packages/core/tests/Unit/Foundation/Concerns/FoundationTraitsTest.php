@@ -226,6 +226,16 @@ it('resolves canonical button size classes for labelled and icon-only buttons', 
         ->and(Concerns\HasSize::getButtonSizeClasses('sm', iconOnly: true))->toBe('p-1.5');
 });
 
+it('resolves canonical font-weight classes from a safe allow-list', function () {
+    expect(Concerns\HasFontWeight::getFontWeightClasses('thin'))->toBe('font-thin')
+        ->and(Concerns\HasFontWeight::getFontWeightClasses('semibold'))->toBe('font-semibold')
+        ->and(Concerns\HasFontWeight::getFontWeightClasses('bold'))->toBe('font-bold')
+        ->and(Concerns\HasFontWeight::getFontWeightClasses('black'))->toBe('font-black')
+        ->and(Concerns\HasFontWeight::getFontWeightClasses('normal'))->toBe('font-normal')
+        ->and(Concerns\HasFontWeight::getFontWeightClasses(''))->toBe('font-normal')
+        ->and(Concerns\HasFontWeight::getFontWeightClasses('500'))->toBe('font-normal');
+});
+
 // ─── HasPrefixAndSuffix ─────────────────────────────────────
 
 it('accepts prefix and suffix', function () {

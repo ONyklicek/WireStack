@@ -465,7 +465,7 @@ For the full engine rationale, read **[`architecture/core/unified-engine.md`](co
 - `Foundation` stays dependency-light — it is the bottom of the graph.
 - `Actions`, `Modals`, and `Notifications` should not grow hard dependencies on each other; coordinate through the container or explicit runtime abstractions, not ad-hoc imports.
 - New shared trait vocabulary belongs in `Foundation/Concerns/`, not duplicated per package.
-- Anything touching SQL identifiers must go through `Core/Support/SqlSafety` — never interpolate column/operator/direction strings directly.
+- Anything touching SQL identifiers must go through `Core/Support/SqlSafety` — never interpolate column/operator/direction strings directly. It owns the keyword allow-lists (`normalizeDirection`/`normalizeNullsPosition`, `assertValidOperator`, `assertValidQualifiedColumn`) and is wired into the raw-SQL paths: `SortClause` (direction/NULLS), `ApplyFilters` (operator before `whereRaw`), and `ApplySorting` (column before a `NULLS orderByRaw`).
 - Dynamic (`string|Closure`) properties resolve through `EvaluatesClosures::evaluate()`; follow that pattern instead of inventing a second closure mechanism.
 
 ---

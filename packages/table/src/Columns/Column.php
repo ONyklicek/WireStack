@@ -16,6 +16,7 @@ use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasAuthorization;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
+use NyonCode\WireCore\Foundation\Concerns\HasFontWeight;
 use NyonCode\WireCore\Foundation\Concerns\HasIcon;
 use NyonCode\WireCore\Foundation\Concerns\HasSize;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
@@ -29,6 +30,7 @@ class Column extends DataComponent implements Htmlable
 {
     use HasAuthorization;
     use HasColor;
+    use HasFontWeight;
     use HasIcon;
     use HasResponsive;
     use HasSize;
@@ -813,17 +815,7 @@ class Column extends DataComponent implements Htmlable
         }
 
         if ($this->textWeight) {
-            $classes[] = match ($this->textWeight) {
-                'thin' => 'font-thin',
-                'light' => 'font-light',
-                'normal' => 'font-normal',
-                'medium' => 'font-medium',
-                'semibold' => 'font-semibold',
-                'bold' => 'font-bold',
-                'extrabold' => 'font-extrabold',
-                'black' => 'font-black',
-                default => "font-$this->textWeight",
-            };
+            $classes[] = HasFontWeight::getFontWeightClasses($this->textWeight);
         }
 
         if ($this->textColor) {

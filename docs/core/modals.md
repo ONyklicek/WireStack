@@ -47,7 +47,7 @@ Action::make('details')
 ```php
 Action::make('edit')
     // Size
-    ->modalWidth('2xl')              // sm, md, lg, xl, 2xl, 3xl, 4xl, 5xl
+    ->modalWidth('2xl')              // sm, md, lg, xl, 2xl, 3xl, 4xl, 5xl, 6xl, 7xl, full
 
     // Close behavior
     ->closeModalOnClickAway()
@@ -58,25 +58,46 @@ Action::make('edit')
     ->fullScreenOnMobile();          // full screen on mobile
 ```
 
-## Modal Object
+## Modal Config Objects
 
-For advanced use cases, the `Modal` class provides a standalone configuration object:
+Instead of the fluent `->modal*()` setters, an action can be configured from a
+declarative modal object. Pass any `ModalContract` — `Modal`, `SlideOver`,
+`ConfirmationDialog`, or `Wizard` — to `->modal()`:
 
 ```php
+use NyonCode\WireCore\Modals\ConfirmationDialog;
 use NyonCode\WireCore\Modals\Modal;
+use NyonCode\WireCore\Modals\SlideOver;
+use NyonCode\WireCore\Modals\Wizard;
 
-$modal = Modal::make()
-    ->icon('user', 'primary')
-    ->color('primary')
-    ->fullScreenOnMobile()
-    ->mobileWidth('full');
+// Centered dialog
+Action::make('edit')->modal(
+    Modal::make()
+        ->heading('Edit record')
+        ->description('Update the details below')
+        ->width('lg')
+        ->icon('pencil', 'primary')
+);
 
-$modal->getIcon();             // 'user'
-$modal->getIconColor();        // 'primary'
-$modal->getColor();            // 'primary'
-$modal->isFullScreenOnMobile(); // true
-$modal->toArray();             // serialized config
+// Slide-over panel (->mobileOnly() = slide-over on mobile, modal on desktop)
+Action::make('view')->modal(
+    SlideOver::make()->heading('Details')->width('xl')
+);
+
+// Confirmation dialog — with presets (delete / makeDanger / makeWarning / makeInfo)
+Action::make('delete')->modal(
+    ConfirmationDialog::delete('User')
+);
+
+// Multi-step wizard (see below)
+Action::make('create')->modal(
+    Wizard::make()->heading('Create user')->steps([/* ModalStep::make(...) */])
+);
 ```
+
+The config object's values are translated into the action's modal state and
+rendered through the same runtime as the fluent setters — there is a single
+canonical modal owner, so both styles behave identically.
 
 ## Footer Actions
 
@@ -107,6 +128,11 @@ Action::make('edit')
 
 ## Multi-Step Wizard
 
+Give an action multiple steps with `->steps([...])` (or a `Wizard` object via
+`->modal()`). The modal renders a step indicator with **Back / Next / Submit**
+navigation; each step validates before advancing, data is shared across all
+steps, and the final submit re-validates every step.
+
 ```php
 use NyonCode\WireCore\Actions\ModalStep;
 
@@ -118,24 +144,45 @@ Action::make('create')
             ->schema([
                 TextInput::make('name')->required(),
                 TextInput::make('email')->email()->required(),
-            ]),
+            ])
+            ->validation(['name' => 'required|min:2']),    // extra per-step rules
 
         ModalStep::make('Settings')
             ->schema([
                 Select::make('role')->options([...]),
                 Toggle::make('active'),
-            ]),
+            ])
+            ->afterValidation(fn (array $data) => logger('step 2 passed', $data)),
 
         ModalStep::make('Review')
+            ->before(fn (array $data) => ['summary' => "Creating {$data['name']}"]) // pre-fill
             ->schema([
                 Placeholder::make('summary')
-                    ->content(fn ($data) => "Creating {$data['name']}"),
+                    ->content(fn ($data) => $data['summary'] ?? ''),
             ]),
     ])
     ->action(fn ($record, $data) => User::create($data));
 ```
 
-Steps show a progress indicator and allow forward/backward navigation. Each step validates its own fields before advancing.
+Each step writes to the same form-data bag, so values entered earlier persist as
+the user moves back and forth. Validation on **Next** runs the step's field rules
+(via the form runtime), then any `->validation()` rules, then the
+`afterValidation` hook; the next step's `before` hook can return an array to
+pre-fill it. **Submit** re-validates every step cumulatively (the
+`afterValidation` hooks are not re-run, so they never fire twice).
+
+### ModalStep API
+
+```php
+ModalStep::make(string $label)
+    ->description(?string $description)
+    ->icon(string|Icon|null $icon)
+    ->schema(array|Closure $fields)
+    ->validation(array|Closure $rules)         // extra rules, keyed by field name
+    ->validationMessages(?array $messages)
+    ->afterValidation(Closure $callback)       // runs after the step validates
+    ->before(Closure $callback)                // runs before the step shows; return array to pre-fill
+```
 
 ## Halt Modal
 

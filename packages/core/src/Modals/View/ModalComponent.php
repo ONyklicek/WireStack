@@ -7,6 +7,7 @@ namespace NyonCode\WireCore\Modals\View;
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
+use NyonCode\WireCore\Modals\Concerns\HasModalProperties;
 
 /**
  * Blade component: <x-wire-modals::modal>
@@ -45,19 +46,7 @@ class ModalComponent extends Component
 
     public function widthClass(): string
     {
-        return match ($this->width) {
-            'sm' => 'sm:max-w-sm',
-            'lg' => 'sm:max-w-lg',
-            'xl' => 'sm:max-w-xl',
-            '2xl' => 'sm:max-w-2xl',
-            '3xl' => 'sm:max-w-3xl',
-            '4xl' => 'sm:max-w-4xl',
-            '5xl' => 'sm:max-w-5xl',
-            '6xl' => 'sm:max-w-6xl',
-            '7xl' => 'sm:max-w-7xl',
-            'full' => 'sm:max-w-full',
-            default => 'sm:max-w-md',
-        };
+        return HasModalProperties::getMaxWidthClass($this->width);
     }
 
     public function iconBgClass(): string
