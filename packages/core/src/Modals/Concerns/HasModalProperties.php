@@ -111,6 +111,49 @@ trait HasModalProperties
         return $this->width;
     }
 
+    /**
+     * Canonical modal max-width class for a width token.
+     *
+     * Single source for the modal/dialog/slide-over `max-w-*` scale so the three
+     * view surfaces stay in sync instead of each re-encoding it. Centered dialogs
+     * gate the width at the `sm:` breakpoint (full width on mobile); slide-over
+     * panels apply it unconditionally (`$responsive: false`). Class strings are
+     * kept literal for Tailwind's JIT scanner; an unknown token falls back to
+     * `max-w-md`.
+     */
+    public static function getMaxWidthClass(string $width, bool $responsive = true): string
+    {
+        if ($responsive) {
+            return match ($width) {
+                'sm' => 'sm:max-w-sm',
+                'lg' => 'sm:max-w-lg',
+                'xl' => 'sm:max-w-xl',
+                '2xl' => 'sm:max-w-2xl',
+                '3xl' => 'sm:max-w-3xl',
+                '4xl' => 'sm:max-w-4xl',
+                '5xl' => 'sm:max-w-5xl',
+                '6xl' => 'sm:max-w-6xl',
+                '7xl' => 'sm:max-w-7xl',
+                'full' => 'sm:max-w-full',
+                default => 'sm:max-w-md',
+            };
+        }
+
+        return match ($width) {
+            'sm' => 'max-w-sm',
+            'lg' => 'max-w-lg',
+            'xl' => 'max-w-xl',
+            '2xl' => 'max-w-2xl',
+            '3xl' => 'max-w-3xl',
+            '4xl' => 'max-w-4xl',
+            '5xl' => 'max-w-5xl',
+            '6xl' => 'max-w-6xl',
+            '7xl' => 'max-w-7xl',
+            'full' => 'max-w-full',
+            default => 'max-w-md',
+        };
+    }
+
     public function shouldCloseOnClickAway(): bool
     {
         return $this->closeOnClickAway;

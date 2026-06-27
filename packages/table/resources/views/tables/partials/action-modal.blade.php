@@ -8,6 +8,10 @@
         $isSlideOver = $modalData['slideOver'] ?? false;
         $isSlideOverOnMobile = $modalData['slideOverOnMobile'] ?? false;
         $isFullScreenMobile = $modalData['fullScreenOnMobile'] ?? false;
+        $wizardSteps = $modalData['steps'] ?? null;
+        $isWizard = is_array($wizardSteps) && count($wizardSteps) > 0;
+        $wizardCurrentStep = $isWizard ? (int) $component->tableState->get('modal.action.currentStep', 0) : 0;
+        $wizardTotalSteps = $isWizard ? count($wizardSteps) : 0;
     @endphp
 
     @if(!empty($modalData) && isset($modalData['heading']))
@@ -22,6 +26,13 @@
                 :close-on-escape="$modalData['closeOnEscape'] ?? true"
                 close-action="closeActionModal"
             >
+                @if($isWizard)
+                    @include('wire-table::tables.partials.wizard-steps', [
+                        'steps' => $wizardSteps,
+                        'currentStep' => $wizardCurrentStep,
+                    ])
+                @endif
+
                 @if($actionFormInstance)
                     {{ $actionFormInstance }}
                 @elseif($actionInfolistInstance)
@@ -29,6 +40,15 @@
                 @endif
 
                 <x-slot:footer>
+                    @if($isWizard)
+                        @include('wire-table::tables.partials.wizard-footer', [
+                            'currentStep' => $wizardCurrentStep,
+                            'totalSteps' => $wizardTotalSteps,
+                            'modalData' => $modalData,
+                            'secondaryClasses' => 'rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600',
+                            'primaryClasses' => 'rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm inline-flex items-center gap-2 '.($modalData['submitButtonClasses'] ?? \NyonCode\WireCore\Foundation\Concerns\HasColor::getModalSubmitButtonClasses($modalData['actionColor'] ?? 'primary')),
+                        ])
+                    @else
                     <div class="flex justify-end gap-3">
                         <button
                             type="button"
@@ -54,6 +74,7 @@
                         </button>
                         @endunless
                     </div>
+                    @endif
                 </x-slot:footer>
             </x-wire-modals::slide-over>
         @elseif($modalData['isConfirmation'] ?? false)
@@ -92,6 +113,13 @@
                 :sticky-footer="true"
                 close-action="closeActionModal"
             >
+                @if($isWizard)
+                    @include('wire-table::tables.partials.wizard-steps', [
+                        'steps' => $wizardSteps,
+                        'currentStep' => $wizardCurrentStep,
+                    ])
+                @endif
+
                 @if($actionFormInstance)
                     {{ $actionFormInstance }}
                 @elseif($actionInfolistInstance)
@@ -99,6 +127,15 @@
                 @endif
 
                 <x-slot:footer>
+                    @if($isWizard)
+                        @include('wire-table::tables.partials.wizard-footer', [
+                            'currentStep' => $wizardCurrentStep,
+                            'totalSteps' => $wizardTotalSteps,
+                            'modalData' => $modalData,
+                            'secondaryClasses' => 'inline-flex w-full justify-center rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-3 sm:py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 active:bg-gray-100 dark:active:bg-gray-600 sm:w-auto touch-manipulation',
+                            'primaryClasses' => 'inline-flex w-full justify-center items-center gap-2 rounded-xl px-4 py-3 sm:py-2.5 text-sm font-semibold text-white shadow-sm sm:w-auto touch-manipulation '.($modalData['submitButtonClasses'] ?? \NyonCode\WireCore\Foundation\Concerns\HasColor::getModalSubmitButtonClasses($modalData['actionColor'] ?? 'primary')),
+                        ])
+                    @else
                     <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
                         <button
                             type="button"
@@ -124,6 +161,7 @@
                         </button>
                         @endunless
                     </div>
+                    @endif
                 </x-slot:footer>
             </x-wire-modals::modal>
         @endif

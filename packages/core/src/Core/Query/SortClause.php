@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Core\Query;
 
+use NyonCode\WireCore\Core\Support\SqlSafety;
+
 /**
  * Immutable representation of a sort clause in a query plan.
  */
@@ -32,20 +34,11 @@ final readonly class SortClause
         ?string $nullsPosition = null,
     ) {
         // Direction and NULLS position are interpolated into orderByRaw for SQL-expression
-        // and NULLS sorts, so they are normalised here — the single owner of a sort clause —
-        // against a fixed keyword allow-list. Any untrusted value collapses to a safe default.
-        $this->direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
-
-        // Accept both the bare keyword ("LAST") and the full "NULLS LAST" form, storing the
-        // bare keyword — ApplySorting prepends "NULLS", so storing the prefix too would emit
-        // an invalid "NULLS NULLS LAST".
-        $normalisedNulls = preg_replace('/^NULLS\s+/', '', strtoupper(trim((string) $nullsPosition)));
-
-        $this->nullsPosition = match ($normalisedNulls) {
-            'FIRST' => 'FIRST',
-            'LAST' => 'LAST',
-            default => null,
-        };
+        // and NULLS sorts, so they are normalised against SqlSafety's fixed keyword allow-list
+        // — the canonical owner of SQL keyword/identifier safety. Any untrusted value collapses
+        // to a safe default. ApplySorting prepends "NULLS", so the bare keyword is stored.
+        $this->direction = SqlSafety::normalizeDirection($direction);
+        $this->nullsPosition = SqlSafety::normalizeNullsPosition($nullsPosition);
     }
 
     /**

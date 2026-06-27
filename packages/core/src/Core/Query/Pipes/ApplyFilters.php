@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Query\Contracts\QueryPipe;
 use NyonCode\WireCore\Core\Query\FilterClause;
 use NyonCode\WireCore\Core\Query\QueryPlan;
+use NyonCode\WireCore\Core\Support\SqlSafety;
 
 /**
  * Applies filter clauses from the QueryPlan to the builder.
@@ -75,6 +76,9 @@ final class ApplyFilters implements QueryPipe
         }
 
         if ($filter->sqlExpression !== null) {
+            // The operator is interpolated into raw SQL here, so it must pass the
+            // canonical operator allow-list before use (the value stays bound).
+            SqlSafety::assertValidOperator($filter->operator);
             $builder->whereRaw("{$filter->sqlExpression} {$filter->operator} ?", [$filter->value], $boolean);
 
             return;

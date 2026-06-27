@@ -3,25 +3,14 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Builder;
-use Livewire\Component;
-use NyonCode\WireTable\Concerns\HasFormatting;
 use NyonCode\WireTable\Concerns\HasResponsive;
 use NyonCode\WireTable\Concerns\HasSqlDebug;
-use NyonCode\WireTable\Concerns\WithRowPolling;
 use Workbench\App\Models\Task;
 
 /**
- * Coverage for the standalone/legacy table concerns that are not wired into a
- * concrete Column but are still part of the public surface.
+ * Coverage for standalone table concerns exercised outside a concrete Column:
+ * HasResponsive (also mixed into Column) and HasSqlDebug.
  */
-function formattingDouble(): object
-{
-    return new class
-    {
-        use HasFormatting;
-    };
-}
-
 function responsiveDouble(): object
 {
     return new class
@@ -47,40 +36,6 @@ function sqlDebugDouble(): object
         }
     };
 }
-
-// ─── HasFormatting ─────────────────────────────────────────────
-
-test('formatMoney renders known currencies and a fallback', function () {
-    $d = formattingDouble();
-
-    expect($d::formatMoney(1234.5))->toBe('1 234,50 Kč')
-        ->and($d::formatMoney(1000, 'EUR'))->toBe('1 000,00 €')
-        ->and($d::formatMoney(1000, 'USD'))->toBe('$1 000,00')
-        ->and($d::formatMoney(1000, 'GBP'))->toBe('£1 000,00')
-        ->and($d::formatMoney(1000, 'PLN'))->toBe('1 000,00 PLN')
-        ->and($d::formatMoney(null))->toBe('')
-        ->and($d::formatMoney(''))->toBe('');
-});
-
-test('formatNumber formats with custom separators', function () {
-    $d = formattingDouble();
-
-    expect($d::formatNumber(1234.567, 2))->toBe('1 234,57')
-        ->and($d::formatNumber(1234, 0, '.', ','))->toBe('1,234')
-        ->and($d::formatNumber(null))->toBe('');
-});
-
-test('formatDate, formatDateTime and formatSince handle values and invalid input', function () {
-    $d = formattingDouble();
-
-    expect($d::formatDate('2026-01-02'))->toBe('02.01.2026')
-        ->and($d::formatDateTime('2026-01-02 13:45'))->toBe('02.01.2026 13:45')
-        ->and($d::formatDate(null))->toBe('')
-        ->and($d::formatDate('not-a-date'))->toBe('not-a-date')
-        ->and($d::formatSince(null))->toBe('')
-        ->and($d::formatSince('also-not-a-date'))->toBe('also-not-a-date')
-        ->and($d::formatSince('2020-01-01'))->toContain('ago');
-});
 
 // ─── HasResponsive ─────────────────────────────────────────────
 
@@ -152,20 +107,4 @@ test('builderToSql interpolates an eloquent builder', function () {
     $sql = $d::publicBuilderToSql(Task::query()->where('id', 7));
 
     expect($sql)->toContain('"id" = 7');
-});
-
-// ─── WithRowPolling ────────────────────────────────────────────
-
-test('refreshRow is a safe no-op by default', function () {
-    $component = new class extends Component
-    {
-        use WithRowPolling;
-
-        public function render()
-        {
-            return '<div></div>';
-        }
-    };
-
-    expect($component->refreshRow(1))->toBeNull();
 });

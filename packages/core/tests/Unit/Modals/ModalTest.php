@@ -220,3 +220,18 @@ it('supports fluent chaining', function () {
     expect($modal)->toBeInstanceOf(Modal::class)
         ->and($modal->getHeading())->toBe('Test');
 });
+
+// ─── Canonical max-width resolver ──────────────────────────────────────
+
+it('resolves responsive max-width classes for centered dialogs', function () {
+    expect(Modal::getMaxWidthClass('lg'))->toBe('sm:max-w-lg')
+        ->and(Modal::getMaxWidthClass('7xl'))->toBe('sm:max-w-7xl')
+        ->and(Modal::getMaxWidthClass('full'))->toBe('sm:max-w-full')
+        ->and(Modal::getMaxWidthClass('unknown'))->toBe('sm:max-w-md');
+});
+
+it('resolves unprefixed max-width classes for slide-over panels', function () {
+    expect(Modal::getMaxWidthClass('lg', responsive: false))->toBe('max-w-lg')
+        ->and(Modal::getMaxWidthClass('2xl', responsive: false))->toBe('max-w-2xl')
+        ->and(Modal::getMaxWidthClass('unknown', responsive: false))->toBe('max-w-md');
+});

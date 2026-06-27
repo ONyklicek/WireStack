@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Actions\Concerns;
 
 use NyonCode\WireCore\Actions\BaseAction;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Concerns\HasSize;
 
 /**
  * Trait HasButtonStyles
@@ -72,22 +73,6 @@ trait HasButtonStyles
 
     protected function getButtonSizeClasses(bool $isIconButton = false): string
     {
-        if ($isIconButton) {
-            return match ($this->getSize()) {
-                'xs' => 'p-1',
-                'sm' => 'p-1.5',
-                'md' => 'p-2',
-                'lg' => 'p-2.5',
-                default => 'p-1.5',
-            };
-        }
-
-        return match ($this->getSize()) {
-            'xs' => 'px-2 py-1 text-xs gap-1',
-            'sm' => 'px-2.5 py-1.5 text-sm gap-1.5',
-            'md' => 'px-3 py-2 text-sm gap-2',
-            'lg' => 'px-4 py-2.5 text-base gap-2',
-            default => 'px-2.5 py-1.5 text-sm gap-1.5',
-        };
+        return HasSize::getButtonSizeClasses($this->getSize(), $isIconButton);
     }
 }

@@ -16,10 +16,12 @@ use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasAuthorization;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
+use NyonCode\WireCore\Foundation\Concerns\HasFontWeight;
 use NyonCode\WireCore\Foundation\Concerns\HasIcon;
 use NyonCode\WireCore\Foundation\Concerns\HasSize;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireTable\Concerns\HasResponsive;
 use NyonCode\WireTable\Concerns\HasSummary;
 use NyonCode\WireTable\Concerns\HasView;
 
@@ -28,7 +30,9 @@ class Column extends DataComponent implements Htmlable
 {
     use HasAuthorization;
     use HasColor;
+    use HasFontWeight;
     use HasIcon;
+    use HasResponsive;
     use HasSize;
     use HasSummary;
     use HasView;
@@ -48,11 +52,8 @@ class Column extends DataComponent implements Htmlable
     /** @var bool Whether the column is hidden by default */
     protected bool $hidden = false;
 
-    /** @var string|null Show column from this breakpoint (sm, md, lg, xl, 2xl) */
-    protected ?string $visibleFrom = null;
-
-    /** @var string|null Hide column from this breakpoint (sm, md, lg, xl, 2xl) */
-    protected ?string $hiddenFrom = null;
+    // Responsive visibility ($visibleFrom/$hiddenFrom, visibleFrom()/hiddenFrom(),
+    // getResponsiveClasses()) is owned by the HasResponsive trait.
 
     /** @var Closure|null Custom display for mobile view */
     protected ?Closure $mobileDisplayUsing = null;
@@ -526,75 +527,6 @@ class Column extends DataComponent implements Htmlable
     }
 
     /**
-     * Show column only from specified breakpoint and up.
-     * Column will be hidden on smaller screens.
-     *
-     * @param  string  $breakpoint  sm, md, lg, xl, 2xl
-     */
-    public function visibleFrom(string $breakpoint): static
-    {
-        $this->visibleFrom = $breakpoint;
-
-        return $this;
-    }
-
-    /**
-     * Hide column from specified breakpoint and up.
-     * Column will be visible only on smaller screens.
-     *
-     * @param  string  $breakpoint  sm, md, lg, xl, 2xl
-     */
-    public function hiddenFrom(string $breakpoint): static
-    {
-        $this->hiddenFrom = $breakpoint;
-
-        return $this;
-    }
-
-    /**
-     * Get CSS classes for responsive visibility.
-     */
-    public function getResponsiveClasses(): string
-    {
-        $classes = [];
-
-        if ($this->visibleFrom) {
-            // Hidden by default, shown from breakpoint
-            $classes[] = 'hidden';
-            $classes[] = match ($this->visibleFrom) {
-                'sm' => 'sm:table-cell',
-                'md' => 'md:table-cell',
-                'lg' => 'lg:table-cell',
-                'xl' => 'xl:table-cell',
-                '2xl' => '2xl:table-cell',
-                default => 'md:table-cell',
-            };
-        }
-
-        if ($this->hiddenFrom) {
-            // Shown by default, hidden from breakpoint
-            $classes[] = match ($this->hiddenFrom) {
-                'sm' => 'sm:hidden',
-                'md' => 'md:hidden',
-                'lg' => 'lg:hidden',
-                'xl' => 'xl:hidden',
-                '2xl' => '2xl:hidden',
-                default => 'md:hidden',
-            };
-        }
-
-        return implode(' ', $classes);
-    }
-
-    /**
-     * Check if column has responsive visibility settings.
-     */
-    public function hasResponsiveVisibility(): bool
-    {
-        return $this->visibleFrom !== null || $this->hiddenFrom !== null;
-    }
-
-    /**
      * Show column only on tablet and up (hidden below sm).
      */
     public function onlyOnTabletAndUp(): static
@@ -883,17 +815,7 @@ class Column extends DataComponent implements Htmlable
         }
 
         if ($this->textWeight) {
-            $classes[] = match ($this->textWeight) {
-                'thin' => 'font-thin',
-                'light' => 'font-light',
-                'normal' => 'font-normal',
-                'medium' => 'font-medium',
-                'semibold' => 'font-semibold',
-                'bold' => 'font-bold',
-                'extrabold' => 'font-extrabold',
-                'black' => 'font-black',
-                default => "font-$this->textWeight",
-            };
+            $classes[] = HasFontWeight::getFontWeightClasses($this->textWeight);
         }
 
         if ($this->textColor) {

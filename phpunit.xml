@@ -32,6 +32,12 @@
         <testsuite name="Forms Standalone">
             <directory>packages/forms/tests/Standalone</directory>
         </testsuite>
+<!--        <testsuite name="Boost Unit">-->
+<!--            <directory>packages/boost/tests/Unit</directory>-->
+<!--        </testsuite>-->
+<!--        <testsuite name="Boost Feature">-->
+<!--            <directory>packages/boost/tests/Feature</directory>-->
+<!--        </testsuite>-->
         <testsuite name="Integration">
             <directory>tests/Integration</directory>
         </testsuite>
@@ -42,6 +48,7 @@
             <directory>packages/forms/src</directory>
             <directory>packages/table/src</directory>
             <directory>packages/sortable/src</directory>
+<!--            <directory>packages/boost/src</directory>-->
         </include>
     </source>
     <php>

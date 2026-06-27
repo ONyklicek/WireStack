@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use NyonCode\Wire\Tests\TestCase;
+use NyonCode\WireBoost\Tests\TestCase as BoostTestCase;
 use NyonCode\WireCore\Tests\TestCase as CoreTestCase;
 use NyonCode\WireForms\Tests\TestCase as FormsTestCase;
 use NyonCode\WireSortable\Tests\TestCase as SortableTestCase;
@@ -29,3 +30,8 @@ uses(TableTestCase::class)->in(
     __DIR__.'/../packages/table/tests/Unit',
     __DIR__.'/../packages/table/tests/Feature',
 );
+
+//uses(BoostTestCase::class)->in(
+//    __DIR__.'/../packages/boost/tests/Unit',
+//    __DIR__.'/../packages/boost/tests/Feature',
+//);

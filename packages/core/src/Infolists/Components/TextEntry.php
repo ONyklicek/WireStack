@@ -7,6 +7,7 @@ namespace NyonCode\WireCore\Infolists\Components;
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Foundation\Concerns\FormatsState;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
+use NyonCode\WireCore\Foundation\Concerns\HasFontWeight;
 
 /**
  * Text entry — the default entry. Supports number/money/date formatting (shared
@@ -146,13 +147,7 @@ class TextEntry extends Entry
 
     public function getWeightClass(): string
     {
-        return match ($this->weight) {
-            'bold' => 'font-bold',
-            'semibold' => 'font-semibold',
-            'medium' => 'font-medium',
-            'light' => 'font-light',
-            default => 'font-normal',
-        };
+        return HasFontWeight::getFontWeightClasses((string) $this->weight);
     }
 
     public function getFormattedState(): string

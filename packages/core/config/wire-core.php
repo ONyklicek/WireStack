@@ -54,10 +54,13 @@ return [
         'warn_missing' => env('WIRE_ICONS_WARN_MISSING', false),
     ],
 
+    // Colors
     'colors' => [
         'palette' => [],
     ],
 
+    // Plugins
+    // #TODO add auto discover
     'plugins' => [
         // App\Wire\Plugins\ExamplePlugin::class,
     ],

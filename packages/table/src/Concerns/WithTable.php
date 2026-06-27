@@ -18,6 +18,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
@@ -27,6 +28,7 @@ use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Actions\ActionHalt;
 use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireCore\Actions\HeaderAction;
+use NyonCode\WireCore\Actions\ModalStep;
 use NyonCode\WireCore\Core\Actions\ActionContext;
 use NyonCode\WireCore\Core\Actions\ActionPipeline;
 use NyonCode\WireCore\Core\Actions\ActionResult;
@@ -1918,9 +1920,10 @@ trait WithTable
         $this->tableState->set('modal.action.recordKey', $recordKey);
         $this->tableState->set('modal.action.isBulk', false);
         $this->tableState->set('modal.action.isHeaderAction', false);
+        $this->tableState->set('modal.action.currentStep', 0);
         $this->actionModalConfigCache = $action->getModalConfig($record);
         $this->tableState->set('modal.action.formData', $action->getFormDefaults($record));
-        $this->actionModalFormInstance = $action->getFormInstance($this, $record);
+        $this->actionModalFormInstance = $this->buildModalActionFormInstance($action, $record);
         $this->tableState->set('modal.action.show', true);
     }
 
@@ -2139,6 +2142,7 @@ trait WithTable
         $notification = $context->get('notification');
         if ($notification) {
             $this->sendNotification(
+                // #TODO need fix
                 Notification::make()
                     ->title($notification['message'])
                     ->type($notification['type'] ?? 'success'),
@@ -2318,9 +2322,10 @@ trait WithTable
         $this->tableState->set('modal.action.recordKey', null);
         $this->tableState->set('modal.action.isBulk', true);
         $this->tableState->set('modal.action.isHeaderAction', false);
+        $this->tableState->set('modal.action.currentStep', 0);
         $this->actionModalConfigCache = $action->getModalConfig($selectedRecords);
         $this->tableState->set('modal.action.formData', $action->getFormDefaults($selectedRecords));
-        $this->actionModalFormInstance = $action->getFormInstance($this, $selectedRecords);
+        $this->actionModalFormInstance = $this->buildModalActionFormInstance($action, $selectedRecords);
         $this->tableState->set('modal.action.show', true);
     }
 
@@ -2399,15 +2404,25 @@ trait WithTable
             return;
         }
 
-        // Re-resolve Form instance (not serialized between Livewire requests)
-        if ($this->actionModalFormInstance === null) {
-            $context = $isBulkAction ? ($this->getSelectedRecords()) : ($recordKey ? $this->getRecord($recordKey) : null);
-            $this->actionModalFormInstance = $action->getFormInstance($this, $context);
-        }
+        $context = $isBulkAction ? ($this->getSelectedRecords()) : ($recordKey ? $this->getRecord($recordKey) : null);
 
-        // Validate via Form instance
-        if ($this->actionModalFormInstance !== null) {
-            $this->actionModalFormInstance->validate();
+        if ($action->hasMultipleSteps()) {
+            // Validate every step's schema and rules against the shared form data
+            // before executing. afterValidation hooks already ran while stepping
+            // forward, so they are skipped here to avoid firing twice.
+            for ($step = 0; $step < $action->getStepCount(); $step++) {
+                $this->validateModalStep($action, $context, $step, runAfterValidation: false);
+            }
+        } else {
+            // Re-resolve Form instance (not serialized between Livewire requests)
+            if ($this->actionModalFormInstance === null) {
+                $this->actionModalFormInstance = $action->getFormInstance($this, $context);
+            }
+
+            // Validate via Form instance
+            if ($this->actionModalFormInstance !== null) {
+                $this->actionModalFormInstance->validate();
+            }
         }
 
         // Execute action
@@ -2437,6 +2452,7 @@ trait WithTable
         $this->tableState->set('modal.action.isBulk', false);
         $this->tableState->set('modal.action.isHeaderAction', false);
         $this->tableState->set('modal.action.formData', []);
+        $this->tableState->set('modal.action.currentStep', 0);
         $this->actionModalFormInstance = null;
         $this->actionModalInfolistInstance = null;
         $this->actionModalConfigCache = [];
@@ -2600,7 +2616,141 @@ trait WithTable
         }
 
         if ($action) {
-            $this->actionModalFormInstance = $action->getFormInstance($this, $context);
+            $this->actionModalFormInstance = $this->buildModalActionFormInstance($action, $context);
+        }
+    }
+
+    /**
+     * Resolve the Form instance for an action modal, honouring multi-step
+     * wizards. A wizard renders only the current step's schema while all steps
+     * share the same `modal.action.formData` state bag.
+     */
+    protected function buildModalActionFormInstance(Action|BulkAction|HeaderAction $action, mixed $context): ?Form
+    {
+        if ($action->hasMultipleSteps()) {
+            $step = (int) $this->tableState->get('modal.action.currentStep', 0);
+
+            return $action->getStepFormInstance($this, $context, $step);
+        }
+
+        return $action->getFormInstance($this, $context);
+    }
+
+    /**
+     * Resolve the action backing the currently open modal together with its
+     * record/selection context.
+     *
+     * @return array{0: Action|BulkAction|HeaderAction|null, 1: mixed}
+     */
+    protected function resolveCurrentModalAction(): array
+    {
+        $actionName = $this->tableState->get('modal.action.name');
+
+        if (! $actionName) {
+            return [null, null];
+        }
+
+        if ($this->tableState->get('modal.action.isHeaderAction')) {
+            return [$this->findHeaderAction($actionName), null];
+        }
+
+        if ($this->tableState->get('modal.action.isBulk')) {
+            return [$this->findBulkAction($actionName), $this->getSelectedRecords()];
+        }
+
+        $recordKey = $this->tableState->get('modal.action.recordKey');
+
+        return [$this->findAction($actionName), $recordKey ? $this->getRecord($recordKey) : null];
+    }
+
+    /**
+     * Advance the wizard to the next step after validating the current one.
+     */
+    public function nextActionModalStep(): void
+    {
+        [$action, $context] = $this->resolveCurrentModalAction();
+
+        if (! $action || ! $action->hasMultipleSteps()) {
+            return;
+        }
+
+        $current = (int) $this->tableState->get('modal.action.currentStep', 0);
+
+        $this->validateModalStep($action, $context, $current);
+
+        $next = min($current + 1, $action->getStepCount() - 1);
+
+        $this->runModalStepBeforeCallback($action, $context, $next);
+
+        $this->tableState->set('modal.action.currentStep', $next);
+        $this->actionModalFormInstance = null;
+    }
+
+    /**
+     * Step the wizard back one step. No validation runs when moving backwards.
+     */
+    public function prevActionModalStep(): void
+    {
+        $current = (int) $this->tableState->get('modal.action.currentStep', 0);
+
+        $this->tableState->set('modal.action.currentStep', max(0, $current - 1));
+        $this->actionModalFormInstance = null;
+    }
+
+    /**
+     * Validate a single wizard step: the step's field schema via the Form
+     * runtime, then any extra rules declared with ModalStep::validation(), then
+     * the optional afterValidation() hook.
+     */
+    protected function validateModalStep(Action|BulkAction|HeaderAction $action, mixed $context, int $stepIndex, bool $runAfterValidation = true): void
+    {
+        $action->getStepFormInstance($this, $context, $stepIndex)?->validate();
+
+        $step = $action->getModalStep($stepIndex);
+
+        if (! $step instanceof ModalStep) {
+            return;
+        }
+
+        $formData = $this->tableState->get('modal.action.formData', []);
+        $formData = is_array($formData) ? $formData : [];
+
+        $rules = $step->getValidation($context);
+
+        if ($rules !== []) {
+            Validator::make($formData, $rules, $step->getValidationMessages())->validate();
+        }
+
+        if ($runAfterValidation && ($callback = $step->getAfterValidationCallback())) {
+            $callback($formData, $context);
+        }
+    }
+
+    /**
+     * Run a step's before() hook, letting it pre-fill form state before the step
+     * is shown. The returned array (if any) is merged into the form data bag.
+     */
+    protected function runModalStepBeforeCallback(Action|BulkAction|HeaderAction $action, mixed $context, int $stepIndex): void
+    {
+        $step = $action->getModalStep($stepIndex);
+
+        if (! $step instanceof ModalStep) {
+            return;
+        }
+
+        $callback = $step->getBeforeCallback();
+
+        if ($callback === null) {
+            return;
+        }
+
+        $formData = $this->tableState->get('modal.action.formData', []);
+        $formData = is_array($formData) ? $formData : [];
+
+        $result = $callback($formData, $context);
+
+        if (is_array($result)) {
+            $this->tableState->set('modal.action.formData', array_merge($formData, $result));
         }
     }
 
@@ -2842,9 +2992,10 @@ trait WithTable
         $this->tableState->set('modal.action.recordKey', null);
         $this->tableState->set('modal.action.isBulk', false);
         $this->tableState->set('modal.action.isHeaderAction', true);
+        $this->tableState->set('modal.action.currentStep', 0);
         $this->actionModalConfigCache = $action->getModalConfig();
         $this->tableState->set('modal.action.formData', $action->getFormDefaults());
-        $this->actionModalFormInstance = $action->getFormInstance($this);
+        $this->actionModalFormInstance = $this->buildModalActionFormInstance($action, null);
         $this->tableState->set('modal.action.show', true);
     }
 

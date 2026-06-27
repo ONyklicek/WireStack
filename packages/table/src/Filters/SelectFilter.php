@@ -105,6 +105,10 @@ class SelectFilter extends Filter
         return $labels === [] ? null : implode(', ', $labels);
     }
 
+    /**
+     * @param  array<array-key, mixed>|string|Closure  $options
+     * @return array<array-key, mixed>
+     */
     protected function normalizeOptions(array|string|Closure $options): array
     {
         return EnumResolver::normalizeOptions(value($options));

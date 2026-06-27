@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Modals\View;
 
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
+use NyonCode\WireCore\Modals\Concerns\HasModalProperties;
 
 /**
  * Blade component: <x-wire-modals::slide-over>
@@ -40,13 +41,7 @@ class SlideOverComponent extends Component
 
     public function widthClass(): string
     {
-        return match ($this->width) {
-            'sm' => 'max-w-sm',
-            'lg' => 'max-w-lg',
-            'xl' => 'max-w-xl',
-            '2xl' => 'max-w-2xl',
-            default => 'max-w-md',
-        };
+        return HasModalProperties::getMaxWidthClass($this->width, responsive: false);
     }
 
     public function translateEnterStart(): string

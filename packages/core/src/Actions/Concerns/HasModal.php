@@ -6,12 +6,17 @@ namespace NyonCode\WireCore\Actions\Concerns;
 
 use Closure;
 use Livewire\Component;
+use NyonCode\WireCore\Actions\ModalStep;
 use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Infolists\Infolist;
+use NyonCode\WireCore\Modals\Contracts\ModalContract;
+use NyonCode\WireCore\Modals\Modal;
+use NyonCode\WireCore\Modals\SlideOver;
+use NyonCode\WireCore\Modals\Wizard;
 use NyonCode\WireForms\Forms\Form;
 
 /**
@@ -240,6 +245,63 @@ trait HasModal
     }
 
     /**
+     * Configure this action's modal from a declarative modal config object.
+     *
+     * Accepts any {@see ModalContract}: Modal, SlideOver, ConfirmationDialog or
+     * Wizard. The config object's values are translated into this action's modal
+     * state, so the existing modal runtime/blade renders it — there is a single
+     * canonical modal owner (HasModal) rather than two parallel APIs.
+     *
+     *   ->modal(Wizard::make()->heading('Create')->steps([...]))
+     *   ->modal(SlideOver::make()->heading('Details'))
+     *   ->modal(ConfirmationDialog::delete('User'))
+     */
+    public function modal(ModalContract $modal): static
+    {
+        $this->hasModal = true;
+
+        // Shared properties common to every modal config object.
+        $this->modalHeading = $modal->getHeading();
+        $this->modalDescription = $modal->getDescription();
+        $this->modalWidth = $modal->getWidth();
+        $this->modalCloseOnClickAway = $modal->shouldCloseOnClickAway();
+        $this->modalCloseOnEscape = $modal->shouldCloseOnEscape();
+        $this->modalIcon = $modal->getIcon();
+        $this->modalIconColor = $modal->getIconColor();
+        $this->modalSubmitLabel = $modal->getSubmitLabel();
+        $this->modalCancelLabel = $modal->getCancelLabel();
+        $this->modalMaxHeight = $modal->getMaxHeight();
+        $this->stickyFooter = $modal->hasStickyFooter();
+        $this->stickyHeader = $modal->hasStickyHeader();
+
+        // The modal's accent color drives the submit button; mirror it onto the
+        // action's own color (HasColor is always present on the host action, the
+        // same way getModalConfig() reads $this->getColor()).
+        $color = $modal->getColor();
+        if ($color !== null) {
+            $this->color($color);
+        }
+
+        // Type-specific translation.
+        match (true) {
+            $modal instanceof Wizard => $this->modalSteps = $modal->getSteps(),
+            $modal instanceof SlideOver => $modal->isMobileOnly()
+                ? $this->slideOverOnMobile = true
+                : $this->slideOver = true,
+            $modal instanceof Modal => $this->applyPlainModalOptions($modal),
+            default => null,
+        };
+
+        return $this;
+    }
+
+    protected function applyPlainModalOptions(Modal $modal): void
+    {
+        $this->fullScreenOnMobile = $modal->isFullScreenOnMobile();
+        $this->mobileModalWidth = $modal->getMobileWidth();
+    }
+
+    /**
      * @param  array<string, mixed>|Closure  $rules
      */
     public function formValidation(array|Closure $rules): static
@@ -314,7 +376,10 @@ trait HasModal
 
     public function doesRequireConfirmation(): bool
     {
-        return $this->hasModal && $this->formInstance === null && $this->infolistInstance === null;
+        return $this->hasModal
+            && $this->formInstance === null
+            && $this->infolistInstance === null
+            && ! $this->hasMultipleSteps();
     }
 
     public function getModalIcon(): ?string
@@ -374,7 +439,7 @@ trait HasModal
 
     public function hasFormModal(): bool
     {
-        return $this->hasModal && $this->formInstance !== null;
+        return $this->hasModal && ($this->formInstance !== null || $this->hasMultipleSteps());
     }
 
     public function hasInfolistModal(): bool
@@ -503,7 +568,7 @@ trait HasModal
      */
     public function hasFormInstance(): bool
     {
-        return $this->formInstance !== null;
+        return $this->formInstance !== null || $this->hasMultipleSteps();
     }
 
     /**
@@ -737,6 +802,53 @@ trait HasModal
 
             return $step;
         }, $this->modalSteps);
+    }
+
+    public function getStepCount(): int
+    {
+        return count($this->modalSteps);
+    }
+
+    /**
+     * Resolve a single wizard step by its index, clamped to the valid range.
+     */
+    public function getModalStep(int $index): ?ModalStep
+    {
+        $steps = array_values($this->modalSteps);
+
+        if ($steps === []) {
+            return null;
+        }
+
+        $index = max(0, min($index, count($steps) - 1));
+        $step = $steps[$index];
+
+        return $step instanceof ModalStep ? $step : null;
+    }
+
+    /**
+     * Build a Form instance for a single wizard step. The form shares the same
+     * state path as a normal action form, so each step reads and writes the same
+     * `modal.action.formData` bag and data persists as the user moves between
+     * steps. Returns null when this action is not a multi-step wizard.
+     */
+    public function getStepFormInstance(?Component $livewire = null, mixed $context = null, int $stepIndex = 0): ?Form
+    {
+        $step = $this->getModalStep($stepIndex);
+
+        if ($step === null) {
+            return null;
+        }
+
+        $form = Form::make()->schema($step->getSchema($context));
+
+        $form->statePath($this->resolveModalFormStatePath($livewire));
+
+        if ($livewire) {
+            $form->livewire($livewire);
+        }
+
+        return $form;
     }
 
     /**

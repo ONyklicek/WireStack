@@ -82,6 +82,37 @@ final class SqlSafety
     }
 
     /**
+     * Normalise a sort direction to a safe `asc`/`desc` keyword.
+     *
+     * Unlike {@see assertValidDirection()} this never throws — any untrusted or
+     * unexpected value collapses to the safe `asc` default. Use this when a
+     * direction is interpolated into raw SQL (orderByRaw) and a hard failure is
+     * undesirable.
+     */
+    public static function normalizeDirection(string $direction): string
+    {
+        return strtolower($direction) === 'desc' ? 'desc' : 'asc';
+    }
+
+    /**
+     * Normalise a NULLS position to a safe `FIRST`/`LAST` keyword, or null.
+     *
+     * Accepts both the bare keyword ("LAST") and the full "NULLS LAST" form and
+     * always returns the bare keyword (callers prepend "NULLS"). Any value
+     * outside the allow-list collapses to null (the database default ordering).
+     */
+    public static function normalizeNullsPosition(?string $nullsPosition): ?string
+    {
+        $normalised = preg_replace('/^NULLS\s+/', '', strtoupper(trim((string) $nullsPosition)));
+
+        return match ($normalised) {
+            'FIRST' => 'FIRST',
+            'LAST' => 'LAST',
+            default => null,
+        };
+    }
+
+    /**
      * Validate an SQL operator.
      *
      * @throws InvalidArgumentException if operator is not allowed

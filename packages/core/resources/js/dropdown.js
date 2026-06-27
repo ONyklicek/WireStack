@@ -40,11 +40,41 @@ export const floatingAnchor = (reference, floating, config = {}) => {
     // Float above any stacking context now that we live on <body>.
     Object.assign(floating.style, { position: 'absolute', top: '0', left: '0' })
 
-    return autoUpdate(reference, floating, () => {
+    const reposition = () => {
+        // A Livewire morph can detach/replace the trigger; positioning against a
+        // node that is no longer in the document collapses to (0,0) and throws the
+        // panel into the top-left corner. Wait until both ends are reconnected.
+        if (! reference.isConnected || ! floating.isConnected) {
+            return
+        }
+
         computePosition(reference, floating, { placement, middleware }).then(({ x, y }) => {
             Object.assign(floating.style, { left: `${x}px`, top: `${y}px` })
         })
+    }
+
+    const stopAutoUpdate = autoUpdate(reference, floating, reposition)
+
+    // Livewire DOM morphs strip the inline left/top Floating UI writes (they are
+    // absent from the server HTML), so any re-render while the panel is open drops
+    // it into the top-left corner until the next scroll/resize. Re-pin on every
+    // morph that touches the panel, ignoring our own style writes to avoid a loop.
+    const observer = new MutationObserver((mutations) => {
+        const onlyOurStyle = mutations.every(
+            (m) => m.target === floating && m.type === 'attributes' && m.attributeName === 'style',
+        )
+
+        if (! onlyOurStyle) {
+            reposition()
+        }
     })
+
+    observer.observe(floating, { childList: true, subtree: true, attributes: true })
+
+    return () => {
+        stopAutoUpdate()
+        observer.disconnect()
+    }
 }
 
 /**

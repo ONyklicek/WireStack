@@ -443,7 +443,6 @@ Main concerns:
 
 - `Concerns\WithTable`
 - `Concerns\TableQueryService`
-- `Concerns\HasFormatting`
 - `Concerns\HasGrouping`
 - `Concerns\HasResponsive`
 - `Concerns\HasSqlDebug`

@@ -22,6 +22,24 @@ interface ModalContract
 
     public function shouldCloseOnEscape(): bool;
 
+    public function getIcon(): ?string;
+
+    public function getIconColor(): string;
+
+    public function getColor(): ?string;
+
+    public function getSubmitLabel(): ?string;
+
+    public function getCancelLabel(): string;
+
+    public function hasStickyFooter(): bool;
+
+    public function hasStickyHeader(): bool;
+
+    public function getMaxHeight(): ?string;
+
+    public function getId(): ?string;
+
     /**
      * Serialize modal configuration for frontend rendering.
      *

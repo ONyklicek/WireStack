@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Core\Hydration;
 
+use Closure;
 use Illuminate\Database\Eloquent\Model;
+use ReflectionClass;
 
 /**
  * Resolves Laravel cast definitions from Eloquent models.
@@ -45,19 +47,18 @@ final class CastResolver
      */
     private function resolveMethodCasts(Model $model): array
     {
-        if (! method_exists($model, 'casts')) {
+        // Eloquent's casts() method only exists on Laravel 11+. Detect it via
+        // reflection (which also sees the protected method) so this stays a real
+        // runtime guard on Laravel 10, where the method is absent.
+        if (! (new ReflectionClass($model))->hasMethod('casts')) {
             return [];
         }
 
-        $resolver = \Closure::bind(
+        $resolver = Closure::bind(
             static fn (Model $model): array => $model->casts(),
             null,
             $model::class,
         );
-
-        if ($resolver === null) {
-            return [];
-        }
 
         return array_map(
             static fn (mixed $cast): string => (string) $cast,
