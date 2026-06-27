@@ -165,3 +165,23 @@ it('skips when no filters in plan', function () {
 
     expect($sql)->not->toContain('where');
 });
+
+it('rejects an invalid operator on a raw sql-expression filter', function () {
+    $model = new class extends Model
+    {
+        protected $table = 'filter_test_users';
+    };
+
+    // The operator is interpolated into raw SQL, so an operator outside the
+    // canonical allow-list must be rejected rather than spliced into the query.
+    $plan = new QueryPlan(
+        filters: [
+            new FilterClause('total', '; DROP TABLE users; --', 1, sqlExpression: 'LENGTH(name)'),
+        ],
+    );
+
+    $pipe = new ApplyFilters;
+
+    expect(fn () => $pipe->handle($model->newQuery(), $plan, fn (Builder $b, QueryPlan $p) => $b))
+        ->toThrow(InvalidArgumentException::class);
+});

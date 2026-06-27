@@ -93,3 +93,25 @@ it('accepts simple qualified columns', function () {
 
     expect(true)->toBeTrue();
 });
+
+// ── Direction normalisation ──────────────────────────────────
+
+it('normalises sort direction to a safe keyword', function () {
+    expect(SqlSafety::normalizeDirection('desc'))->toBe('desc')
+        ->and(SqlSafety::normalizeDirection('DESC'))->toBe('desc')
+        ->and(SqlSafety::normalizeDirection('asc'))->toBe('asc')
+        ->and(SqlSafety::normalizeDirection('ASC'))->toBe('asc')
+        ->and(SqlSafety::normalizeDirection(''))->toBe('asc')
+        ->and(SqlSafety::normalizeDirection('; DROP TABLE users'))->toBe('asc');
+});
+
+// ── NULLS position normalisation ─────────────────────────────
+
+it('normalises NULLS position to a safe keyword or null', function () {
+    expect(SqlSafety::normalizeNullsPosition('FIRST'))->toBe('FIRST')
+        ->and(SqlSafety::normalizeNullsPosition('last'))->toBe('LAST')
+        ->and(SqlSafety::normalizeNullsPosition('NULLS LAST'))->toBe('LAST')
+        ->and(SqlSafety::normalizeNullsPosition('  nulls first '))->toBe('FIRST')
+        ->and(SqlSafety::normalizeNullsPosition(null))->toBeNull()
+        ->and(SqlSafety::normalizeNullsPosition('garbage'))->toBeNull();
+});
