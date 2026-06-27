@@ -21,6 +21,19 @@ test('the package serves the dropdown bundle without publishing or a build step'
         ->and(file_get_contents($response->baseResponse->getFile()->getPathname()))->toContain('wireDropdown');
 });
 
+test('the shipped bundle keeps the panel pinned across Livewire morphs', function () {
+    $bundle = WireCoreServiceProvider::ASSETS_PATH.'/wire-core-dropdown.js';
+
+    // A Livewire morph can detach the trigger or strip Floating UI's inline
+    // left/top styles, dropping the teleported panel into the top-left corner.
+    // The compiled bundle must skip positioning against a disconnected node and
+    // re-pin via a MutationObserver. This also fails if the dist drifts from the
+    // source because the asset was not recompiled.
+    expect(file_get_contents($bundle))
+        ->toContain('isConnected')
+        ->toContain('MutationObserver');
+});
+
 test('the named asset route resolves', function () {
     expect(route('wire-core.asset', ['asset' => 'dropdown'], false))
         ->toBe('/wire-core/assets/dropdown.js');
