@@ -17,7 +17,6 @@ parameters:
         - { identifier: trait.unused, path: packages/core/src/Widgets/Concerns/WithWidgets.php }
         - { identifier: trait.unused, path: packages/forms/src/Forms/WithForms.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/HasFormatting.php }
-        - { identifier: trait.unused, path: packages/table/src/Concerns/HasResponsive.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithRowPolling.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTable.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTableQueryString.php }
