@@ -7,6 +7,7 @@ namespace NyonCode\WireForms\Concerns;
 use Closure;
 use Illuminate\Validation\Rule;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireForms\Components\Field;
 use NyonCode\WireForms\Contracts\ProvidesImplicitValidationRules;
 
 /**
@@ -17,6 +18,8 @@ use NyonCode\WireForms\Contracts\ProvidesImplicitValidationRules;
  * (`->options(Status::class)`). Enum class-strings expand to a `[value => label]`
  * map through the canonical {@see EnumResolver::options()} owner, using each
  * case's `HasLabel` label when available.
+ *
+ * @phpstan-require-extends Field
  */
 trait HasOptions
 {
@@ -58,7 +61,7 @@ trait HasOptions
             return [];
         }
 
-        if (method_exists($this, 'getStateType') && $this->getStateType() === 'array') {
+        if ($this->getStateType() === 'array') {
             return [];
         }
 

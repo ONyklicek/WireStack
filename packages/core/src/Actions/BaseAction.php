@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Actions;
 
+use AllowDynamicProperties;
 use Closure;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Traits\Macroable;
@@ -29,7 +30,7 @@ use NyonCode\WireCore\Foundation\Concerns\HasSize;
  *
  * @phpstan-consistent-constructor
  */
-#[\AllowDynamicProperties]
+#[AllowDynamicProperties]
 abstract class BaseAction implements Htmlable
 {
     use HasColor;
@@ -162,9 +163,9 @@ abstract class BaseAction implements Htmlable
     {
         $base = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800';
         $isIconButton = method_exists($this, 'isIconButton') && $this->isIconButton();
-        $size = method_exists($this, 'getSize') ? (string) $this->getSize() : 'sm';
+        $size = $this->getSize();
 
-        return "{$base} {$this->resolveButtonSizeClasses($isIconButton, $size)} {$this->getButtonColorClasses()}";
+        return "$base {$this->resolveButtonSizeClasses($isIconButton, $size)} {$this->getButtonColorClasses()}";
     }
 
     /**
