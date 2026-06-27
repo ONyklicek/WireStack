@@ -4,6 +4,7 @@ parameters:
         - packages/core/src
         - packages/forms/src
         - packages/table/src
+        - packages/boost/src
     tmpDir: build/phpstan
     scanFiles:
         - stubs/phpstan/optional-exporters.php
