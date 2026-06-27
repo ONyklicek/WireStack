@@ -16,6 +16,7 @@ use NyonCode\WireCore\Actions\Concerns\HasLoadingState;
 use NyonCode\WireCore\Actions\Concerns\HasModal;
 use NyonCode\WireCore\Actions\Concerns\HasVisibility;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Concerns\HasSize;
 
 /**
  * Abstract BaseAction
@@ -182,19 +183,7 @@ abstract class BaseAction implements Htmlable
      */
     protected function resolveButtonSizeClasses(bool $isIconButton, string $size): string
     {
-        if ($isIconButton) {
-            return match ($size) {
-                'xs' => 'p-1', 'sm' => 'p-1.5', 'md' => 'p-2', 'lg' => 'p-2.5', default => 'p-1.5',
-            };
-        }
-
-        return match ($size) {
-            'xs' => 'px-2 py-1 text-xs gap-1',
-            'sm' => 'px-2.5 py-1.5 text-sm gap-1.5',
-            'md' => 'px-3 py-2 text-sm gap-2',
-            'lg' => 'px-4 py-2.5 text-base gap-2',
-            default => 'px-2.5 py-1.5 text-sm gap-1.5',
-        };
+        return HasSize::getButtonSizeClasses($size, $isIconButton);
     }
 
     public function toHtml(): string

@@ -11,6 +11,7 @@ use Illuminate\Support\HtmlString;
 use NyonCode\WireCore\Actions\Concerns\HasColor;
 use NyonCode\WireCore\Actions\Concerns\HasIcons;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Concerns\HasSize;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
@@ -335,15 +336,7 @@ class ActionGroup implements Htmlable
     public function getTriggerClasses(): string
     {
         $base = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800';
-        $sizeClasses = $this->label
-            ? match ($this->getSize()) {
-                'xs' => 'px-2 py-1 text-xs gap-1', 'sm' => 'px-2.5 py-1.5 text-sm gap-1.5',
-                'md' => 'px-3 py-2 text-sm gap-2', 'lg' => 'px-4 py-2.5 text-base gap-2',
-                default => 'px-2.5 py-1.5 text-sm gap-1.5',
-            }
-        : match ($this->getSize()) {
-            'xs' => 'p-1', 'sm' => 'p-1.5', 'md' => 'p-2', 'lg' => 'p-2.5', default => 'p-1.5',
-        };
+        $sizeClasses = HasSize::getButtonSizeClasses($this->getSize(), iconOnly: ! $this->label);
         $colorClasses = $this->getIconButtonColorClasses();
 
         return "{$base} {$sizeClasses} {$colorClasses}";

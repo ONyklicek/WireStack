@@ -55,10 +55,19 @@ trait HasResponsive
                 'md' => 'md:hidden',
                 'lg' => 'lg:hidden',
                 'xl' => 'xl:hidden',
+                '2xl' => '2xl:hidden',
                 default => 'md:hidden',
             };
         }
 
         return implode(' ', $classes);
+    }
+
+    /**
+     * Check if column has responsive visibility settings.
+     */
+    public function hasResponsiveVisibility(): bool
+    {
+        return $this->visibleFrom !== null || $this->hiddenFrom !== null;
     }
 }

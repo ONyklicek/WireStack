@@ -275,9 +275,10 @@ trait HasModal
         $this->stickyHeader = $modal->hasStickyHeader();
 
         // The modal's accent color drives the submit button; mirror it onto the
-        // action's color when the host action exposes a color setter.
+        // action's own color (HasColor is always present on the host action, the
+        // same way getModalConfig() reads $this->getColor()).
         $color = $modal->getColor();
-        if ($color !== null && method_exists($this, 'color')) {
+        if ($color !== null) {
             $this->color($color);
         }
 

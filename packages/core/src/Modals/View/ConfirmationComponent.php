@@ -84,14 +84,9 @@ class ConfirmationComponent extends Component
     {
         $base = 'inline-flex w-full justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm sm:w-auto';
 
-        $colorClasses = match ($this->color) {
-            'danger' => 'bg-red-600 hover:bg-red-500 focus:ring-red-500',
-            'success' => 'bg-emerald-600 hover:bg-emerald-500 focus:ring-emerald-500',
-            'warning' => 'bg-amber-500 hover:bg-amber-400 focus:ring-amber-500',
-            default => 'bg-primary-600 hover:bg-primary-500 focus:ring-primary-500',
-        };
-
-        return "{$base} {$colorClasses}";
+        // Delegate the hue map to the canonical owner so this footer stays in
+        // sync with the table action modal footers instead of re-encoding it.
+        return "{$base} ".self::getModalSubmitButtonClasses($this->color ?? 'primary');
     }
 
     public function render(): View

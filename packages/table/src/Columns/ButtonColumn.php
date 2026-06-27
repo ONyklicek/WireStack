@@ -17,6 +17,7 @@ namespace NyonCode\WireTable\Columns;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Concerns\HasSize;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 
@@ -390,14 +391,8 @@ class ButtonColumn extends Column
         $baseClasses =
             'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800';
 
-        // Size classes
-        $sizeClasses = match ($size) {
-            'xs' => $this->iconOnly ? 'p-1' : 'px-2 py-1 text-xs gap-1',
-            'sm' => $this->iconOnly ? 'p-1.5' : 'px-2.5 py-1.5 text-sm gap-1.5',
-            'md' => $this->iconOnly ? 'p-2' : 'px-3 py-2 text-sm gap-2',
-            'lg' => $this->iconOnly ? 'p-2.5' : 'px-4 py-2.5 text-base gap-2',
-            default => $this->iconOnly ? 'p-1.5' : 'px-2.5 py-1.5 text-sm gap-1.5',
-        };
+        // Size classes — canonical scale owned by Foundation HasSize.
+        $sizeClasses = HasSize::getButtonSizeClasses($size, $this->iconOnly);
 
         // Color classes are owned by Foundation HasColor (the canonical palette).
         // Only the variant→surface mapping lives here; each surface resolver is
