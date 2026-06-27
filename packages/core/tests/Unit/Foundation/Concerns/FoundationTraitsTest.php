@@ -214,6 +214,18 @@ it('accepts size shortcuts', function () {
     expect($field->getSize())->toBe('lg');
 });
 
+it('resolves canonical button size classes for labelled and icon-only buttons', function () {
+    expect(Concerns\HasSize::getButtonSizeClasses('xs'))->toBe('px-2 py-1 text-xs gap-1')
+        ->and(Concerns\HasSize::getButtonSizeClasses('md'))->toBe('px-3 py-2 text-sm gap-2')
+        ->and(Concerns\HasSize::getButtonSizeClasses('lg'))->toBe('px-4 py-2.5 text-base gap-2')
+        ->and(Concerns\HasSize::getButtonSizeClasses('sm'))->toBe('px-2.5 py-1.5 text-sm gap-1.5')
+        ->and(Concerns\HasSize::getButtonSizeClasses('unknown'))->toBe('px-2.5 py-1.5 text-sm gap-1.5')
+        ->and(Concerns\HasSize::getButtonSizeClasses('xs', iconOnly: true))->toBe('p-1')
+        ->and(Concerns\HasSize::getButtonSizeClasses('md', iconOnly: true))->toBe('p-2')
+        ->and(Concerns\HasSize::getButtonSizeClasses('lg', iconOnly: true))->toBe('p-2.5')
+        ->and(Concerns\HasSize::getButtonSizeClasses('sm', iconOnly: true))->toBe('p-1.5');
+});
+
 // ─── HasPrefixAndSuffix ─────────────────────────────────────
 
 it('accepts prefix and suffix', function () {
