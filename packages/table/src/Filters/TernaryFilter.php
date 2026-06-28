@@ -53,6 +53,17 @@ class TernaryFilter extends Filter
     }
 
     /**
+     * Ternary state ('true'/'false') must be coerced to a real boolean (and,
+     * when nullable, expanded to a "= false OR IS NULL" branch). Neither can be
+     * expressed as a plain column/operator/value planner definition, so always
+     * route through apply().
+     */
+    public function bypassesPlanner(): bool
+    {
+        return true;
+    }
+
+    /**
      * @param  Builder<Model>  $query
      * @return Builder<Model>
      */
