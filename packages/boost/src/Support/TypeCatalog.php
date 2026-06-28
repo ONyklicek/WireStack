@@ -1,0 +1,144 @@
+<?php
+
+declare(strict_types=1);
+
+namespace NyonCode\WireBoost\Support;
+
+use Illuminate\Support\Str;
+use NyonCode\WireCore\Actions\BaseAction;
+use NyonCode\WireCore\Infolists\Components\Entry;
+use NyonCode\WireCore\Modals\Modal;
+use NyonCode\WireCore\Widgets\Widget;
+use NyonCode\WireForms\Components\Field;
+use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Filters\Filter;
+use ReflectionClass;
+
+/**
+ * Discovers the built-in wireStack component vocabulary (column, field, filter,
+ * action, entry, widget and modal types) by reflecting the concrete subclasses
+ * shipped next to each canonical base class. Categories whose package is not
+ * installed simply resolve to an empty list, so the catalog degrades safely.
+ */
+class TypeCatalog
+{
+    /**
+     * Category => canonical base class.
+     *
+     * @var array<string, class-string>
+     */
+    public const CATEGORIES = [
+        'columns' => Column::class,
+        'filters' => Filter::class,
+        'fields' => Field::class,
+        'actions' => BaseAction::class,
+        'infolist-entries' => Entry::class,
+        'widgets' => Widget::class,
+        'modals' => Modal::class,
+    ];
+
+    /**
+     * @return array<int, string>
+     */
+    public function categories(): array
+    {
+        return array_keys(self::CATEGORIES);
+    }
+
+    public function has(string $category): bool
+    {
+        return isset(self::CATEGORIES[$category]);
+    }
+
+    /**
+     * Concrete component types registered under a category.
+     *
+     * @return array<int, array{name: string, class: class-string, summary: string}>
+     */
+    public function types(string $category): array
+    {
+        $base = self::CATEGORIES[$category] ?? null;
+
+        if ($base === null || ! class_exists($base)) {
+            return [];
+        }
+
+        $reflection = new ReflectionClass($base);
+        $directory = dirname((string) $reflection->getFileName());
+        $namespace = $reflection->getNamespaceName();
+
+        $types = [];
+
+        foreach (glob($directory.'/*.php') ?: [] as $file) {
+            /** @var class-string $class */
+            $class = $namespace.'\\'.basename($file, '.php');
+
+            // Every file in a base-class directory maps to a loadable class.
+            // @codeCoverageIgnoreStart
+            if (! class_exists($class)) {
+                continue;
+            }
+            // @codeCoverageIgnoreEnd
+
+            $candidate = new ReflectionClass($class);
+
+            if ($candidate->isAbstract() || ! $candidate->isSubclassOf($base)) {
+                continue;
+            }
+
+            $types[] = [
+                'name' => Str::kebab($candidate->getShortName()),
+                'class' => $class,
+                'summary' => $this->summary($candidate->getDocComment(), $candidate->getShortName()),
+            ];
+        }
+
+        usort($types, static fn (array $a, array $b): int => strcmp($a['name'], $b['name']));
+
+        return $types;
+    }
+
+    /**
+     * Resolve a component type to its fully-qualified class name, accepting an
+     * exact FQCN or a built-in type short name (e.g. "text-column").
+     *
+     * @return class-string|null
+     */
+    public function resolve(string $name): ?string
+    {
+        if (class_exists($name)) {
+            /** @var class-string $name */
+            return $name;
+        }
+
+        $needle = ltrim($name, '\\');
+
+        foreach ($this->categories() as $category) {
+            foreach ($this->types($category) as $type) {
+                if ($type['name'] === $needle || class_basename($type['class']) === $needle) {
+                    return $type['class'];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * First meaningful line of the class doc-block, or a humanised class name.
+     */
+    private function summary(string|false $doc, string $shortName): string
+    {
+        if (is_string($doc)) {
+            foreach (preg_split('/\R/', $doc) ?: [] as $raw) {
+                $line = trim(ltrim(trim($raw), '/* '));
+
+                if ($line !== '' && ! str_starts_with($line, '@')) {
+                    return $line;
+                }
+            }
+        }
+
+        return Str::headline($shortName);
+    }
+}

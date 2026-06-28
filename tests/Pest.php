@@ -31,7 +31,7 @@ uses(TableTestCase::class)->in(
     __DIR__.'/../packages/table/tests/Feature',
 );
 
-//uses(BoostTestCase::class)->in(
-//    __DIR__.'/../packages/boost/tests/Unit',
-//    __DIR__.'/../packages/boost/tests/Feature',
-//);
+uses(BoostTestCase::class)->in(
+    __DIR__.'/../packages/boost/tests/Unit',
+    __DIR__.'/../packages/boost/tests/Feature',
+);
