@@ -65,3 +65,14 @@ User-facing documentation for the Wire ecosystem.
 | [Core Infolists](core/infolists.md) | Read-only, schema-driven display of a record |
 | [Core Plugins](core/plugins.md) | App and package extension points |
 | [Audit Log](core/audit.md) | Record model changes and table-related events |
+
+## wire-boost
+
+AI tooling for the Wire ecosystem — an MCP server, guidelines, and skills for AI coding agents.
+
+| Document | Description |
+|----------|-------------|
+| [Boost Overview](boost/overview.md) | What Wire Boost is and how it helps AI agents |
+| [Installation](boost/installation.md) | Install the package and configure your agents |
+| [MCP Server & Tools](boost/mcp-tools.md) | The MCP server and its twenty introspection tools |
+| [Guidelines & Skills](boost/guidelines-and-skills.md) | The always-loaded and on-demand AI-context layer |

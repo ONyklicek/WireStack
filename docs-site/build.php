@@ -410,6 +410,7 @@ function inferSectionFromSource(string $sourceRelative): string
         str_starts_with($sourceRelative, 'docs/table/') => 'Table',
         str_starts_with($sourceRelative, 'docs/sortable/') => 'Sortable',
         str_starts_with($sourceRelative, 'docs/core/') => 'Core',
+        str_starts_with($sourceRelative, 'docs/boost/') => 'Boost',
         str_starts_with($sourceRelative, 'docs/') => 'Start Here',
         default => 'Start Here',
     };
@@ -426,6 +427,7 @@ function normalizeSection(string $section): string
         'table' => 'Table',
         'sortable' => 'Sortable',
         'core' => 'Core',
+        'boost' => 'Boost',
         default => ucwords(str_replace(['-', '_'], ' ', $section)),
     };
 }
@@ -439,6 +441,7 @@ function sectionSortWeight(string $section): int
         'Table' => 40,
         'Sortable' => 50,
         'Core' => 60,
+        'Boost' => 70,
         default => 999,
     };
 }
