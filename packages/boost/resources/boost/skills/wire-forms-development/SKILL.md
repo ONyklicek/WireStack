@@ -24,7 +24,7 @@ public function form(Form $form): Form
 {
     return $form->statePath('data')->schema([
         Section::make('Profile')->schema([
-            Grid::make(2)->schema([
+            Grid::make()->columns(2)->schema([
                 TextInput::make('first_name')->required(),
                 TextInput::make('last_name')->required(),
             ]),

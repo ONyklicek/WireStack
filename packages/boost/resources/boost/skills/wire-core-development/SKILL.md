@@ -24,7 +24,7 @@ color/icon/size/visibility vocabulary.
 EditAction::make()
     ->icon('pencil')
     ->color('primary')
-    ->modal(fn () => Modal::make()->heading('Edit'));
+    ->modal(Modal::make()->heading('Edit'));
 
 // Infolist
 Infolist::make()->schema([
@@ -35,7 +35,7 @@ Infolist::make()->schema([
 
 // Stats widget
 StatsOverviewWidget::make()->stats([
-    Stat::make('Users', User::count())->icon('users')->color('success'),
+    Stat::make('Users', (string) User::count())->icon('users')->color('success'),
 ]);
 ```
 

@@ -15,7 +15,7 @@ Build a data table inside a Livewire component using the `WithTable` trait and a
                 ->query(User::query())
                 ->columns([
                     TextColumn::make('name')->sortable()->searchable(),
-                    BadgeColumn::make('status')->color(fn ($state) => $state === 'active' ? 'success' : 'gray'),
+                    BadgeColumn::make('status')->colorUsing(fn ($state) => $state === 'active' ? 'success' : 'gray'),
                     BooleanColumn::make('is_admin'),
                 ])
                 ->filters([
@@ -31,6 +31,13 @@ Build a data table inside a Livewire component using the `WithTable` trait and a
 
 `TextColumn`, `BadgeColumn`, `BooleanColumn`, `IconColumn`, `ImageColumn`, `ButtonColumn`, `ToggleColumn`,
 `PollColumn`, `SelectColumn`, `TextInputColumn`, `SplitColumn`, `StackedColumn`.
+
+`BadgeColumn` (and `IconColumn`) color/icon resolution — pick by intent:
+- one fixed color for every row: `->color('success')` (takes `string|Color|null`, never a Closure);
+- a static state → color map: `->colors(['active' => 'success', 'draft' => 'gray'])`;
+- a value computed per row: `->colorUsing(fn ($state) => …)` (the Closure receives the cell state);
+- nothing at all when the state is an enum implementing `HasColor` — the color resolves automatically.
+The same four-way choice applies to icons: `->icon()`, `->icons([...])`, `->iconUsing(fn ($state) => …)`, or an enum with `HasIcon`.
 
 ### Filters
 

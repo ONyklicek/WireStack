@@ -26,8 +26,8 @@ public function table(Table $table): Table
         ->query(Invoice::query())
         ->columns([
             TextColumn::make('number')->sortable()->searchable(),
-            BadgeColumn::make('status')->color(fn ($state) => $state->getColor()),
-            TextColumn::make('total')->summarize(SummaryType::sum()),
+            BadgeColumn::make('status')->colorUsing(fn ($state) => $state->getColor()),
+            TextColumn::make('total')->summarize(SummaryType::Sum),
         ])
         ->filters([
             SelectFilter::make('status')->options(InvoiceStatus::class)->indicator('Status'),
@@ -42,6 +42,6 @@ public function table(Table $table): Table
 ## Rules
 
 - A filter's query callback must return the query Builder.
-- Reuse the shared `HasColor`/`HasIcon` concerns via `->color()` / `->icon()`; do not hardcode classes.
+- Badge/icon color & icon: use `->color('success')` for one fixed color, `->colors([state => color])` for a static map, `->colorUsing(fn ($state) => …)` for a per-row value, or nothing when the state enum implements `HasColor`. `->color()` takes `string|Color|null` — never a Closure (that is `->colorUsing()`). Icons mirror this: `->icon()` / `->icons([...])` / `->iconUsing()` / enum `HasIcon`.
 - Prefer SQL-computed summaries over PHP aggregation for footer totals.
 - For inline editing use `TextInputColumn`, `ToggleColumn` or `SelectColumn`.

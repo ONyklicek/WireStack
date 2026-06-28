@@ -19,18 +19,32 @@ use function Laravel\Prompts\multiselect;
 #[AsCommand(name: 'wire-boost:install', description: 'Configure AI agents with the WireStack Boost MCP server, guidelines and skills.')]
 class InstallCommand extends Command
 {
+
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
     protected $signature = 'wire-boost:install {--agent=* : Agent keys to configure (claude, codex, cursor, gemini, vscode, junie)}';
 
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
     protected $description = 'Configure AI agents with the WireStack Boost MCP server, guidelines and skills.';
 
-    public function handle(AgentRegistry $registry, McpInstaller $mcp): int
+    /**
+     * Execute the console command.
+     */
+    public function handle(AgentRegistry $registry, McpInstaller $mcp): void
     {
         $keys = $this->selectedKeys($registry);
 
         if ($keys === []) {
             $this->components->warn('No agents selected.');
 
-            return self::SUCCESS;
+            return;
         }
 
         $base = base_path();
@@ -64,8 +78,6 @@ class InstallCommand extends Command
                 $this->components->task('Skills', fn (): bool => $skills->install($agent->skillsPath($base)) !== []);
             }
         }
-
-        return self::SUCCESS;
     }
 
     /**

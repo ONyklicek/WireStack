@@ -16,6 +16,10 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
 - Presets: `DeleteAction`, `EditAction`, `ViewAction`, plus bulk presets (`DeleteBulkAction`, …).
 - Actions can open modals via `->modal(...)` and multi-step wizards via `->steps([...])`.
 - Color, icon and visibility come from the shared `HasColor`, `HasIcons`, `HasVisibility` concerns.
+- On actions, `->label()`, `->icon()`, `->color()`, `->tooltip()` and `->size()` each accept `string|Closure|null`,
+  so they can be computed per row — the Closure receives the record: `->color(fn ($record) => $record->isPaid() ? 'success' : 'danger')`.
+  This differs from table columns, where `->color()` is static and per-state colors use `->colorUsing()` / `->colors()`.
+- `->action(fn ($record) => …)` runs the action; the callback receives the current record.
 
 ### Modals
 
