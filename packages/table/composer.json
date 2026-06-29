@@ -11,8 +11,8 @@
     ],
     "require": {
         "php": "^8.2",
-        "nyoncode/wire-core": "^0.1|dev-main|@dev",
-        "nyoncode/wire-forms": "^0.1|dev-main|@dev",
+        "nyoncode/wire-core": "^1.0|@dev",
+        "nyoncode/wire-forms": "^1.0|@dev",
         "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
         "illuminate/database": "^10.0|^11.0|^12.0|^13.0",
         "livewire/livewire": "^3.0",

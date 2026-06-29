@@ -13,6 +13,7 @@ php artisan vendor:publish --tag=wire-core::config
 php artisan vendor:publish --tag=wire-forms::config
 php artisan vendor:publish --tag=wire-table::config
 php artisan vendor:publish --tag=wire-sortable::config
+php artisan vendor:publish --tag=wire-boost::config
 ```
 
 You only need the tags for packages you installed.
@@ -233,6 +234,37 @@ return [
 Set `sortablejs_cdn` to `null` when your application bundles SortableJS itself. Set `user_key_type` to `uuid` or `ulid` (before running the column-order migration) when your user model uses a non-integer primary key.
 
 See [Sortable Installation](sortable/installation.md).
+
+## Boost
+
+The `wire-boost` config controls the AI tooling MCP server. The two code-executing tools are disabled by default.
+
+```php
+return [
+    'server' => [
+        'name' => 'WireStack Boost',
+        'version' => '1.0.0',
+    ],
+    'tools' => [
+        'database_query' => env('WIRE_BOOST_DATABASE_QUERY', false),
+        'tinker' => env('WIRE_BOOST_TINKER', false),
+        'browser_logs' => env('WIRE_BOOST_BROWSER_LOGS', true),
+    ],
+    'scan' => [
+        'paths' => [app_path()], // where list-wire-components searches
+    ],
+    'docs' => [
+        'paths' => [], // extra Markdown directories for search-wire-docs
+    ],
+    'browser_logs' => [
+        'path' => storage_path('wire-boost/browser.log'),
+        'max_entries' => 50,
+    ],
+];
+```
+
+Enable `database-query` and `tinker` only when you trust the agent connecting to the server. See
+[MCP Server & Tools](boost/mcp-tools.md).
 
 ## Audit
 

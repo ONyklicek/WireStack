@@ -14,6 +14,7 @@ Wire is a Laravel Livewire package ecosystem split into four Composer packages. 
 | Forms | `nyoncode/wire-forms` | Standalone form schema, field components, validation, save lifecycle | Core |
 | Table | `nyoncode/wire-table` | Tables, columns, filters, actions, inline editing, exports | Core, Forms |
 | Sortable | `nyoncode/wire-sortable` | Drag and drop row and column reordering for Wire Table | Core, Table |
+| Boost | `nyoncode/wire-boost` | AI tooling: MCP server, guidelines, and skills for coding agents | Core, Laravel MCP |
 
 ## Install Paths
 
@@ -23,6 +24,7 @@ Wire is a Laravel Livewire package ecosystem split into four Composer packages. 
 | Build standalone forms only | `composer require nyoncode/wire-forms` |
 | Add row or column reordering | `composer require nyoncode/wire-sortable` |
 | Use shared widgets/actions only | `composer require nyoncode/wire-core` |
+| Add AI agent tooling (MCP) | `composer require nyoncode/wire-boost --dev` |
 
 ## Documentation Map
 
@@ -33,6 +35,7 @@ Wire is a Laravel Livewire package ecosystem split into four Composer packages. 
 | Tables | [Table Overview](table/overview.md) | [Columns](table/columns.md), [Filters](table/filters.md), [Actions](table/actions.md), [Exports](table/exports.md) |
 | Sortable | [Sortable Overview](sortable/overview.md) | [Installation](sortable/installation.md), [Row Reordering](sortable/row-sorting.md), [Column Reordering](sortable/column-sorting.md) |
 | Core UI | [Core Actions](core/actions.md) | [Modals](core/modals.md), [Notifications](core/notifications.md), [Widgets](core/widgets.md), [Infolists](core/infolists.md), [Plugins](core/plugins.md), [Audit Log](core/audit.md) |
+| Boost (AI) | [Boost Overview](boost/overview.md) | [Installation](boost/installation.md), [MCP Server & Tools](boost/mcp-tools.md), [Guidelines & Skills](boost/guidelines-and-skills.md) |
 
 ## Source Layout
 
