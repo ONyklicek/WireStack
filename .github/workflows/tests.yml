@@ -43,8 +43,19 @@ jobs:
         run: |
           composer require "illuminate/support:${{ matrix.laravel }}" "illuminate/database:${{ matrix.laravel }}" --no-interaction --no-update
 
+      - name: Drop wire-boost on Laravel 10 (laravel/mcp requires Laravel 11+)
+        if: matrix.laravel == '10.*'
+        run: |
+          composer remove nyoncode/wire-boost --no-interaction --no-update
+          composer remove laravel/mcp --dev --no-interaction --no-update
+
       - name: Install dependencies
         run: composer update --prefer-dist --no-interaction --no-progress
 
       - name: Run tests
+        if: matrix.laravel != '10.*'
         run: vendor/bin/pest
+
+      - name: Run tests (excluding boost on Laravel 10)
+        if: matrix.laravel == '10.*'
+        run: vendor/bin/pest --exclude-testsuite="Boost Unit,Boost Feature"

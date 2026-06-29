@@ -31,7 +31,11 @@ uses(TableTestCase::class)->in(
     __DIR__.'/../packages/table/tests/Feature',
 );
 
-uses(BoostTestCase::class)->in(
-    __DIR__.'/../packages/boost/tests/Unit',
-    __DIR__.'/../packages/boost/tests/Feature',
-);
+// wire-boost requires Laravel 11+ (laravel/mcp). When the package is absent
+// (e.g. the Laravel 10 CI matrix), skip its bindings instead of fataling.
+if (class_exists(BoostTestCase::class)) {
+    uses(BoostTestCase::class)->in(
+        __DIR__.'/../packages/boost/tests/Unit',
+        __DIR__.'/../packages/boost/tests/Feature',
+    );
+}
