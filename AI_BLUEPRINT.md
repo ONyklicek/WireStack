@@ -36,10 +36,11 @@ Read the recipe, catalog, and protocol files only when the task requires them.
 `nyoncode/wire` is a Laravel/Livewire monorepo for enterprise-grade UI
 components.
 
-It contains four local Composer packages:
+It contains four runtime packages plus one companion tooling package:
 
 ```text
 wire-sortable -> wire-table -> wire-forms -> wire-core
+wire-boost ----> wire-core   (companion AI tooling; suggests the rest)
 ```
 
 Dependency direction matters:
@@ -50,6 +51,9 @@ Dependency direction matters:
 - `wire-table` consumes `wire-core` and `wire-forms`.
 - `wire-sortable` consumes `wire-table` and extends it with plugin/macro
   behavior.
+- `wire-boost` is companion AI tooling that requires only `wire-core` and
+  *suggests* `wire-forms`/`wire-table`/`wire-sortable`; it introspects whichever
+  packages are installed and never participates in the runtime UI graph.
 
 Root `composer.json` loads all packages as local path repositories with symlinks.
 
@@ -185,6 +189,33 @@ Start files:
 - `packages/sortable/src/SortableTable.php`
 - `packages/sortable/src/Concerns/WithSortable.php`
 - `packages/sortable/src/Models/ReorderableColumnOrder.php`
+
+### wire-boost
+
+Path: `packages/boost`
+
+Companion AI tooling for the whole Wire ecosystem (a `laravel/boost`-style
+package). Owns:
+
+- the MCP server (built on `laravel/mcp`) and its 20 tools — wireStack
+  introspection (`ListWireComponents`, `DescribeComponentApi`, `DescribeForm`,
+  `DescribeTable`, `DescribeInfolist`, `ListIcons`, `SearchDocs`, `WireConfig`, …)
+  and general app tools (`ApplicationInfo`, `DatabaseSchema`, `ListRoutes`,
+  `Tinker`, `ReadLogEntries`, …)
+- bundled AI guidelines (`wire-core`/`wire-forms`/`wire-table`/`wire-sortable`)
+- agent skills per package
+- install/update wiring into the host app
+
+It only reads the other packages' public API surface — never the reverse. Like
+`wire-sortable`, it is excluded from `composer analyse`.
+
+Start files:
+
+- `packages/boost/src/WireBoostServiceProvider.php`
+- `packages/boost/src/Console/InstallCommand.php`
+- `packages/boost/src/Mcp/Tools/`
+- `packages/boost/resources/boost/guidelines/`
+- `packages/boost/resources/boost/skills/`
 
 ## Canonical Ownership Rules
 
