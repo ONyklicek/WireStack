@@ -252,11 +252,14 @@ test('repeater actions add remove and reorder nested items', function () {
         [],
     ]);
 
+    // A partial order reorders the named indices and keeps the rest (index 1,
+    // Gamma) appended in place — reorder must never silently drop rows.
     $component->call('reorderRepeaterItems', 'data.contacts', [2, 0]);
 
     expect($component->get('data')['contacts'])->toBe([
         [],
         ['name' => 'Alpha'],
+        ['name' => 'Gamma'],
     ]);
 });
 
@@ -268,4 +271,53 @@ test('repeater actions ignore non array state', function () {
         ->call('reorderRepeaterItems', 'data.contacts', [0]);
 
     expect($component->get('data')['contacts'])->toBe('not-array');
+});
+
+// ─── afterStateUpdated() reactive hook ─────────────────────────
+
+class AfterStateFormComponent extends Component
+{
+    use WithForms;
+
+    public array $data = ['type' => 'individual', 'vat_id' => 'OLD'];
+
+    /** @var array<int, mixed> */
+    public array $log = [];
+
+    public function form(Form $form): Form
+    {
+        return $form
+            ->statePath('data')
+            ->schema([
+                TextInput::make('type')->afterStateUpdated(function ($state, $old, $set, $component) {
+                    $component->getLivewire()->log[] = [$old, $state];
+                    $set('vat_id', $state === 'business' ? 'AUTO' : null);
+                }),
+                TextInput::make('vat_id'),
+            ]);
+    }
+
+    public function render(): string
+    {
+        return '<div>{{ $this->form }}</div>';
+    }
+}
+
+test('afterStateUpdated fires for a standalone form field and can $set a sibling', function () {
+    Livewire::test(AfterStateFormComponent::class)
+        ->set('data.type', 'business')
+        ->assertSet('data.vat_id', 'AUTO');
+});
+
+test('afterStateUpdated receives the previous value as $old', function () {
+    $component = Livewire::test(AfterStateFormComponent::class)
+        ->set('data.type', 'business');
+
+    expect($component->get('log'))->toBe([['individual', 'business']]);
+});
+
+test('afterStateUpdated does not fire for fields without a callback', function () {
+    Livewire::test(AfterStateFormComponent::class)
+        ->set('data.vat_id', 'typed')
+        ->assertSet('data.vat_id', 'typed');
 });

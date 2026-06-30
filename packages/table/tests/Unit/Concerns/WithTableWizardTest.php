@@ -68,6 +68,47 @@ class WtwComponent extends Component
     }
 }
 
+class WtwCtxComponent extends Component
+{
+    use WithTable;
+
+    /** @var array<string, mixed>|null */
+    public static ?array $stepTwoContext = null;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(WtwUser::class)
+            ->paginated(false)
+            ->columns([
+                TextColumn::make('name'),
+            ])
+            ->headerActions([
+                HeaderAction::make('wizard')
+                    ->steps([
+                        ModalStep::make('Account')
+                            ->schema([TextInput::make('name')])
+                            ->validation(['name' => 'required|min:2']),
+                        ModalStep::make('Confirm')
+                            ->schema(function ($context) {
+                                WtwCtxComponent::$stepTwoContext = $context;
+
+                                return [
+                                    TextInput::make('greeting')
+                                        ->default('Hi '.($context['name'] ?? '?')),
+                                ];
+                            }),
+                    ])
+                    ->action(fn () => null),
+            ]);
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
 beforeEach(function () {
     config()->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
 
@@ -78,6 +119,7 @@ beforeEach(function () {
 
     WtwComponent::$executed = false;
     WtwComponent::$afterRan = false;
+    WtwCtxComponent::$stepTwoContext = null;
 });
 
 afterEach(function () {
@@ -185,6 +227,32 @@ it('executes the action when all steps are valid', function () {
         ->assertHasNoErrors();
 
     expect(WtwComponent::$executed)->toBeTrue();
+});
+
+// ─── Header action wizard step context (regression) ─────────────
+
+it('passes the live form-data bag as context to a header wizard step schema', function () {
+    Livewire::test(WtwCtxComponent::class)
+        ->call('openHeaderActionModal', 'wizard')
+        ->set('tableState.modal.action.formData', ['name' => 'Jane'])
+        ->call('nextActionModalStep')
+        ->assertHasNoErrors();
+
+    expect(WtwCtxComponent::$stepTwoContext)->toBe(['name' => 'Jane']);
+});
+
+it('builds the second step schema from first-step data', function () {
+    $test = Livewire::test(WtwCtxComponent::class)
+        ->call('openHeaderActionModal', 'wizard')
+        ->set('tableState.modal.action.formData', ['name' => 'Jane'])
+        ->call('nextActionModalStep');
+
+    $form = $test->instance()->getActionModalFormInstance();
+    $flat = $form->getFlatComponents();
+
+    expect($flat)->toHaveCount(1)
+        ->and($flat[0]->getName())->toBe('greeting')
+        ->and($flat[0]->getDefault())->toBe('Hi Jane');
 });
 
 // ─── Rendering ───────────────────────────────────────────────────

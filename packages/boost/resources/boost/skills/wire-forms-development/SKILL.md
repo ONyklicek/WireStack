@@ -38,9 +38,40 @@ public function form(Form $form): Form
 }
 ```
 
+## Reactive patterns
+
+Field closures (`visible`, `hidden`, `disabled`, `afterStateUpdated`) receive live state accessors:
+`$get('sibling')` reads another field, `$get()` reads this field's own live value, `$set('field', $v)`
+writes another field (StateContainer-safe in action modals), and `$state` is this field's snapshot value.
+
+Conditional field + reactive auto-fill:
+
+```php
+Select::make('type')->options(['business' => 'Business', 'person' => 'Person'])->live(),
+
+TextInput::make('vat_id')
+    // Only shown — and only validated — when type is "business".
+    ->visible(fn ($get) => $get('type') === 'business')
+    ->required(),
+
+TextInput::make('discount')
+    // afterStateUpdated auto-enables live(); $old is the previous value.
+    ->afterStateUpdated(fn ($state, $set) => $set('discount_label', "{$state}%")),
+```
+
+Prefill an action modal form from the record with `fillFormUsing()` (callback gets the record,
+`null` for header actions):
+
+```php
+EditAction::make()
+    ->form([TextInput::make('name'), Select::make('role')->options(Role::class)])
+    ->fillFormUsing(fn ($record) => ['name' => $record->name, 'role' => $record->role->value]);
+```
+
 ## Rules
 
 - A field's `make($name)` argument is the key under the form `statePath`.
 - Put validation on the field (`->required()`, `->rules([...])`).
 - Use an enum class with `->options(Enum::class)` rather than re-listing values.
-- Reactivity is opt-in via `->live()`; otherwise `wire:model` is deferred.
+- Reactivity is opt-in via `->live()`; `afterStateUpdated()` enables it for you.
+- Read/write sibling state inside closures with `$get`/`$set`; do not reach for `Livewire::current()`.

@@ -28,6 +28,7 @@ use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Actions\ActionHalt;
 use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireCore\Actions\HeaderAction;
+use NyonCode\WireCore\Actions\ModalFooterAction;
 use NyonCode\WireCore\Actions\ModalStep;
 use NyonCode\WireCore\Core\Actions\ActionContext;
 use NyonCode\WireCore\Core\Actions\ActionPipeline;
@@ -50,6 +51,8 @@ use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Infolists\Infolist;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationManager;
+use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
+use NyonCode\WireForms\Concerns\InteractsWithRepeaters;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Columns\SummaryBatch;
@@ -64,7 +67,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /** @phpstan-require-extends Component */
 trait WithTable
 {
+    use DispatchesStateUpdates;
     use HasSqlDebug;
+    use InteractsWithRepeaters;
     use WithPagination;
     use WithTableQueryString;
 
@@ -89,6 +94,14 @@ trait WithTable
 
     /** @var Form|null Resolved Form instance for the halt modal */
     protected ?Form $haltModalFormInstance = null;
+
+    /**
+     * Previous modal form-data values captured in updatingTableState() so the
+     * matching field's afterStateUpdated() callback receives `$old`.
+     *
+     * @var array<string, mixed>
+     */
+    protected array $modalStateBeforeUpdate = [];
 
     protected string $wireTableClass = Table::class;
 
@@ -251,6 +264,17 @@ trait WithTable
      * Called by Livewire when any nested path on $tableState changes.
      * Handles page resets for search/filter/sort/perPage changes.
      */
+    /**
+     * Livewire hook: snapshot a modal form field's previous value before it
+     * changes, so updatedTableState() can pass `$old` to afterStateUpdated().
+     */
+    public function updatingTableState(mixed $value, string $path): void
+    {
+        if ($this->isModalFormDataPath($path)) {
+            $this->modalStateBeforeUpdate[$path] = $this->tableState->get($path);
+        }
+    }
+
     public function updatedTableState(mixed $value, string $path): void
     {
         $resetPaths = [
@@ -269,6 +293,29 @@ trait WithTable
                 return;
             }
         }
+
+        // A field inside an action/halt modal form changed — run its reactive
+        // afterStateUpdated() callback against the live form-data bag.
+        if ($this->isModalFormDataPath($path)) {
+            $old = $this->modalStateBeforeUpdate[$path] ?? null;
+            unset($this->modalStateBeforeUpdate[$path]);
+
+            $forms = array_filter([
+                $this->getActionModalFormInstance(),
+                $this->getHaltModalFormInstance(),
+            ]);
+
+            $this->dispatchAfterStateUpdated($forms, 'tableState.'.$path, $old);
+        }
+    }
+
+    /**
+     * Whether a tableState sub-path points at a field inside an open modal form.
+     */
+    private function isModalFormDataPath(string $path): bool
+    {
+        return str_starts_with($path, 'modal.action.formData.')
+            || str_starts_with($path, 'modal.halt.formData.');
     }
 
     // ==========================================
@@ -2462,6 +2509,63 @@ trait WithTable
     }
 
     /**
+     * Run a custom modal footer action declared via Action::modalFooterActions().
+     *
+     * The callback receives the live form-data bag as `$data` plus a `$set`
+     * writer for it, `$component`, and the modal's `$context`/`$record`/`$records`.
+     * When the footer action opts into `submitsForm()`, the form is validated
+     * first so validation errors surface before the callback runs.
+     */
+    public function callModalFooterAction(string $name): void
+    {
+        [$action, $context] = $this->resolveCurrentModalAction();
+
+        if ($action === null) {
+            return;
+        }
+
+        $footer = null;
+        foreach ($action->getModalFooterActions() as $candidate) {
+            if ($candidate instanceof ModalFooterAction && $candidate->getName() === $name) {
+                $footer = $candidate;
+                break;
+            }
+        }
+
+        if ($footer === null) {
+            return;
+        }
+
+        if ($footer->shouldSubmitForm()) {
+            // Surfaces validation errors (throws ValidationException) before the callback.
+            $this->getActionModalFormInstance()?->validate();
+        }
+
+        $callback = $footer->getActionCallback();
+
+        if ($callback !== null) {
+            $formData = $this->tableState->get('modal.action.formData', []);
+            $isBulk = (bool) $this->tableState->get('modal.action.isBulk');
+            $isHeader = (bool) $this->tableState->get('modal.action.isHeaderAction');
+
+            $this->invokeActionCallback($callback, [
+                'data' => is_array($formData) ? $formData : [],
+                'set' => function (string $path, mixed $value): void {
+                    $this->tableState->set('modal.action.formData.'.$path, $value);
+                },
+                'context' => $context,
+                'record' => (! $isBulk && ! $isHeader) ? $context : null,
+                'records' => $isBulk ? $context : null,
+                'component' => $this,
+            ]);
+        }
+
+        if ($footer->shouldCloseModal()) {
+            $this->closeActionModal();
+        }
+    }
+
+    /**
      * Find header action by name
      */
     protected function findHeaderAction(string $actionName): ?HeaderAction
@@ -2607,6 +2711,10 @@ trait WithTable
 
         if ($this->tableState->get('modal.action.isHeaderAction')) {
             $action = $this->findHeaderAction($actionName);
+            // Header actions carry no record; expose the live form-data bag so a
+            // wizard's later steps can build their schema from earlier values.
+            $formData = $this->tableState->get('modal.action.formData', []);
+            $context = is_array($formData) ? $formData : [];
         } elseif ($this->tableState->get('modal.action.isBulk')) {
             $action = $this->findBulkAction($actionName);
             $context = $this->getSelectedRecords();
@@ -2651,7 +2759,12 @@ trait WithTable
         }
 
         if ($this->tableState->get('modal.action.isHeaderAction')) {
-            return [$this->findHeaderAction($actionName), null];
+            // Header actions have no record/selection context, so expose the live
+            // form-data bag instead. This lets a multi-step wizard's later steps
+            // build their schema (and validation) from values entered earlier.
+            $formData = $this->tableState->get('modal.action.formData', []);
+
+            return [$this->findHeaderAction($actionName), is_array($formData) ? $formData : []];
         }
 
         if ($this->tableState->get('modal.action.isBulk')) {

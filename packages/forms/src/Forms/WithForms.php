@@ -6,6 +6,8 @@ namespace NyonCode\WireForms\Forms;
 
 use InvalidArgumentException;
 use Livewire\Component;
+use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
+use NyonCode\WireForms\Concerns\InteractsWithRepeaters;
 use ReflectionMethod;
 use ReflectionNamedType;
 
@@ -19,16 +21,54 @@ use ReflectionNamedType;
  */
 trait WithForms
 {
+    use DispatchesStateUpdates;
+    use InteractsWithRepeaters;
+
     /** @var array<string, Form> */
     protected array $cachedForms = [];
 
     /** @var array<string>|null */
     private ?array $resolvedFormNames = null;
 
+    /**
+     * Previous values captured in updating() so updated() can pass `$old` to
+     * afterStateUpdated() callbacks.
+     *
+     * @var array<string, mixed>
+     */
+    protected array $formStateBeforeUpdate = [];
+
     public function bootWithForms(): void
     {
         // Livewire 3 lifecycle hook — validate form coexistence
         $this->validateFormCoexistence();
+    }
+
+    /**
+     * Livewire trait hook (fires for every property): snapshot the previous value
+     * before a bound field changes. Signature is ($name, $value) — Livewire calls
+     * trait-scoped update hooks with the full path first.
+     */
+    public function updatingWithForms(string $name, mixed $value): void
+    {
+        $this->formStateBeforeUpdate[$name] = data_get($this, $name);
+    }
+
+    /**
+     * Livewire trait hook: fire the matching field's afterStateUpdated() callback
+     * once its bound value has changed.
+     */
+    public function updatedWithForms(string $name, mixed $value): void
+    {
+        $old = $this->formStateBeforeUpdate[$name] ?? null;
+        unset($this->formStateBeforeUpdate[$name]);
+
+        $forms = array_map(
+            fn (string $formName): Form => $this->resolveForm($formName),
+            $this->getForms(),
+        );
+
+        $this->dispatchAfterStateUpdated($forms, $name, $old);
     }
 
     /**
@@ -158,47 +198,6 @@ trait WithForms
         }
 
         return $returnType->getName() === Form::class;
-    }
-
-    // ─── Repeater actions ─────────────────────────────────────────
-
-    public function addRepeaterItem(string $statePath): void
-    {
-        $items = data_get($this, $statePath, []);
-        if (! is_array($items)) {
-            $items = [];
-        }
-
-        $items[] = [];
-        data_set($this, $statePath, $items);
-    }
-
-    public function removeRepeaterItem(string $statePath, int $index): void
-    {
-        $items = data_get($this, $statePath, []);
-        if (! is_array($items)) {
-            return;
-        }
-
-        unset($items[$index]);
-        data_set($this, $statePath, array_values($items));
-    }
-
-    public function reorderRepeaterItems(string $statePath, array $order): void
-    {
-        $items = data_get($this, $statePath, []);
-        if (! is_array($items)) {
-            return;
-        }
-
-        $reordered = [];
-        foreach ($order as $oldIndex) {
-            if (isset($items[$oldIndex])) {
-                $reordered[] = $items[$oldIndex];
-            }
-        }
-
-        data_set($this, $statePath, $reordered);
     }
 
     private function validateFormCoexistence(): void

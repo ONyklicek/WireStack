@@ -5,3 +5,5 @@ composer.lock
 # Torchlight highlight cache
 docs-site/.torchlight-cache/
 /docs-site/dist/
+
+.DS_Store

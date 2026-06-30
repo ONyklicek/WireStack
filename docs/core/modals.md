@@ -171,6 +171,35 @@ the user moves back and forth. Validation on **Next** runs the step's field rule
 pre-fill it. **Submit** re-validates every step cumulatively (the
 `afterValidation` hooks are not re-run, so they never fire twice).
 
+### Building a step from earlier data
+
+Pass a Closure to `->schema()` to build a step's fields from the values entered in
+previous steps. The Closure receives the accumulated form-data bag, so a later step
+can adapt to an earlier choice. This works for row, bulk **and** header actions —
+a header action carries no record, so its step Closures still receive the live
+form-data bag (not `null`):
+
+```php
+HeaderAction::make('create')
+    ->steps([
+        ModalStep::make('Type')
+            ->schema([
+                Select::make('kind')
+                    ->options(['business' => 'Business', 'person' => 'Person']),
+            ]),
+
+        ModalStep::make('Details')
+            // $data holds everything entered so far (here: 'kind' from step 1).
+            ->schema(fn (array $data) => [
+                TextInput::make('name')->required(),
+                ...($data['kind'] === 'business'
+                    ? [TextInput::make('vat_id')->required()]
+                    : [TextInput::make('birth_date')]),
+            ]),
+    ])
+    ->action(fn (array $data) => Customer::create($data));
+```
+
 ### ModalStep API
 
 ```php

@@ -161,6 +161,48 @@ final class StateContainer implements \ArrayAccess
     }
 
     /**
+     * Canonical owner for writing a dot-notation path into a host that may carry
+     * StateContainer bags (e.g. a Livewire component whose `tableState` is a
+     * StateContainer).
+     *
+     * Walks the path segment by segment. When a StateContainer is encountered at
+     * any depth, the remaining sub-path is delegated to its set() (so dirty
+     * tracking still fires), because data_set() cannot write through an
+     * overloaded ArrayAccess element by reference — it silently drops the write
+     * with an "Indirect modification of overloaded element" notice. Hosts with
+     * only plain array/object segments fall through to data_set() unchanged.
+     */
+    public static function writeInto(object $host, string $path, mixed $value): void
+    {
+        $segments = explode('.', $path);
+        $current = $host;
+
+        foreach ($segments as $index => $segment) {
+            $child = match (true) {
+                is_object($current) => $current->{$segment} ?? null,
+                is_array($current) => $current[$segment] ?? null,
+                default => null,
+            };
+
+            if ($child instanceof self) {
+                $subPath = implode('.', array_slice($segments, $index + 1));
+
+                if ($subPath === '') {
+                    $child->replace(is_array($value) ? $value : []);
+                } else {
+                    $child->set($subPath, $value);
+                }
+
+                return;
+            }
+
+            $current = $child;
+        }
+
+        data_set($host, $path, $value);
+    }
+
+    /**
      * Allow data_get() to traverse top-level state keys as if they were properties.
      */
     public function __get(string $key): mixed

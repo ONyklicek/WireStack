@@ -73,6 +73,48 @@ test('skips components without validation interface', function () {
         ->and($resolver->getAttributes())->toBe([]);
 });
 
+// ─── Hidden fields are excluded from validation (regression) ───────────────
+
+test('skips rules, messages and attributes for hidden fields', function () {
+    $fields = [
+        TextInput::make('name')->required(),
+        TextInput::make('vat_id')->label('VAT ID')->required()
+            ->validationMessages(['required' => 'VAT required'])
+            ->hidden(),
+    ];
+
+    $resolver = new FormValidationResolver($fields, 'data');
+
+    expect($resolver->getRules())->toHaveKey('data.name')
+        ->and($resolver->getRules())->not->toHaveKey('data.vat_id')
+        ->and($resolver->getMessages())->not->toHaveKey('data.vat_id.required')
+        ->and($resolver->getAttributes())->not->toHaveKey('data.vat_id');
+});
+
+test('honours a closure visibility when deciding to validate', function () {
+    $hidden = TextInput::make('vat_id')->required()->visible(fn () => false);
+    $shown = TextInput::make('vat_id')->required()->visible(fn () => true);
+
+    expect((new FormValidationResolver([$hidden], 'data'))->getRules())
+        ->not->toHaveKey('data.vat_id')
+        ->and((new FormValidationResolver([$shown], 'data'))->getRules())
+        ->toHaveKey('data.vat_id');
+});
+
+test('skips a hidden repeater entirely', function () {
+    $repeater = Repeater::make('contacts')
+        ->required()
+        ->hidden()
+        ->schema([TextInput::make('name')->required()]);
+
+    $repeater->prepareChildren('data');
+
+    $resolver = new FormValidationResolver([], 'data', [], [$repeater]);
+
+    expect($resolver->getRules())->not->toHaveKey('data.contacts')
+        ->and($resolver->getRules())->not->toHaveKey('data.contacts.*.name');
+});
+
 // ─── Repeater wildcard validation (regression) ─────────────────────────────
 
 test('emits container and per-item wildcard rules for repeaters', function () {

@@ -338,6 +338,70 @@ it('serializes and deserializes state roundtrip', function () {
     expect($deserialized)->toBe($original);
 });
 
+// ─── StateContainer::writeInto() (canonical host writer) ─────────────────────
+
+it('writeInto delegates through a nested StateContainer bag', function () {
+    $host = new class
+    {
+        public StateContainer $tableState;
+
+        public function __construct()
+        {
+            $this->tableState = new StateContainer([
+                'modal' => ['action' => ['formData' => ['type' => 'business']]],
+            ]);
+        }
+    };
+
+    StateContainer::writeInto($host, 'tableState.modal.action.formData.type', 'individual');
+
+    expect($host->tableState->get('modal.action.formData.type'))->toBe('individual');
+});
+
+it('writeInto replaces the whole bag when the path stops at the container', function () {
+    $host = new class
+    {
+        public StateContainer $tableState;
+
+        public function __construct()
+        {
+            $this->tableState = new StateContainer(['old' => 'value']);
+        }
+    };
+
+    StateContainer::writeInto($host, 'tableState', ['fresh' => 'state']);
+
+    expect($host->tableState->all())->toBe(['fresh' => 'state']);
+});
+
+it('writeInto coerces a non-array container replacement to an empty array', function () {
+    $host = new class
+    {
+        public StateContainer $bag;
+
+        public function __construct()
+        {
+            $this->bag = new StateContainer(['a' => 1]);
+        }
+    };
+
+    StateContainer::writeInto($host, 'bag', 'not-an-array');
+
+    expect($host->bag->all())->toBe([]);
+});
+
+it('writeInto falls back to data_set for plain array hosts', function () {
+    $host = new class
+    {
+        /** @var array<string, mixed> */
+        public array $data = ['name' => 'old'];
+    };
+
+    StateContainer::writeInto($host, 'data.name', 'new');
+
+    expect($host->data['name'])->toBe('new');
+});
+
 // ─── Test Helpers (Enums) ────────────────────────────────────────────────────
 
 enum TestBackedEnum: string

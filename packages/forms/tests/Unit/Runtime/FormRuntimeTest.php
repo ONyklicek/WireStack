@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Validation\ValidationException;
+use Livewire\Component;
 use NyonCode\WireForms\Components\Layout\Grid;
 use NyonCode\WireForms\Components\Layout\Section;
 use NyonCode\WireForms\Components\TextInput;
@@ -202,6 +203,49 @@ test('prepare propagates disabled state to components', function () {
     $runtime->prepare();
 
     expect($input->isDisabled())->toBeTrue();
+});
+
+test('prepare propagates the livewire instance to fields', function () {
+    $input = TextInput::make('name');
+    $nested = TextInput::make('city');
+
+    $config = new FormConfig(
+        schema: [
+            $input,
+            Section::make('addr')->schema([$nested]),
+        ],
+        statePath: 'data',
+    );
+
+    $livewire = new class extends Component
+    {
+        public array $data = [];
+
+        public function render(): string
+        {
+            return '<div></div>';
+        }
+    };
+
+    $stateManager = new StateManager;
+    $stateManager->setLivewire($livewire);
+
+    $runtime = new FormRuntime($config, $stateManager);
+    $runtime->prepare();
+
+    expect($input->getLivewire())->toBe($livewire)
+        ->and($nested->getLivewire())->toBe($livewire);
+});
+
+test('prepare leaves livewire null when none is bound', function () {
+    $input = TextInput::make('name');
+
+    $config = new FormConfig(schema: [$input], statePath: 'data');
+
+    $runtime = new FormRuntime($config, new StateManager);
+    $runtime->prepare();
+
+    expect($input->getLivewire())->toBeNull();
 });
 
 test('prepare is idempotent', function () {
