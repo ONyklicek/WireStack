@@ -852,6 +852,16 @@ trait HasModal
     }
 
     /**
+     * The configured modal footer action objects (not the render config).
+     *
+     * @return array<int, mixed>
+     */
+    public function getModalFooterActions(): array
+    {
+        return $this->modalFooterActions;
+    }
+
+    /**
      * @return array<int, mixed>
      */
     public function getModalFooterActionsConfig(): array

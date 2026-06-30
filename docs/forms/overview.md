@@ -355,6 +355,10 @@ Every field inherits:
 ->extraAttributes(array $attrs)         // HTML attributes
 ->live()                                // wire:model.live
 ->debounce(int $ms = 500)              // wire:model.blur with debounce
+->afterStateUpdated(Closure $callback)  // react to value changes (auto-enables live)
 ->rules(string|array $rules)            // Laravel validation rules
 ->validationMessages(array $messages)   // custom validation messages
 ```
+
+`visible()`, `hidden()`, `disabled()` and `afterStateUpdated()` closures receive live state
+accessors (`$get`, `$set`, `$state`). See [Reactive Fields](reactive-fields.md).

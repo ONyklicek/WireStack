@@ -136,9 +136,11 @@ final class FormRuntime
             return;
         }
 
+        $livewire = $this->stateManager->getLivewire();
+
         foreach ($this->config->schema as $component) {
             if ($component instanceof LayoutComponent) {
-                $component->prepareChildren($this->config->statePath ?? '', $this->config->isLive);
+                $component->prepareChildren($this->config->statePath ?? '', $this->config->isLive, $livewire);
             } elseif ($component instanceof Component) {
                 if ($this->config->statePath) {
                     $component->statePath($this->config->statePath);
@@ -148,6 +150,9 @@ final class FormRuntime
                 }
                 if ($this->config->isLive && method_exists($component, 'live')) {
                     $component->live();
+                }
+                if ($livewire !== null) {
+                    $component->livewire($livewire);
                 }
             }
         }

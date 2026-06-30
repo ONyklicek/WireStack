@@ -50,6 +50,10 @@
                         ])
                     @else
                     <div class="flex justify-end gap-3">
+                        @include('wire-table::tables.partials.modal-footer-actions', [
+                            'footerActions' => $modalData['footerActions'] ?? [],
+                            'position' => 'before',
+                        ])
                         <button
                             type="button"
                             wire:click="closeActionModal"
@@ -73,6 +77,10 @@
                             <span wire:loading wire:target="submitActionModal">{{ __('Saving...') }}</span>
                         </button>
                         @endunless
+                        @include('wire-table::tables.partials.modal-footer-actions', [
+                            'footerActions' => $modalData['footerActions'] ?? [],
+                            'position' => 'after',
+                        ])
                     </div>
                     @endif
                 </x-slot:footer>
@@ -137,6 +145,10 @@
                         ])
                     @else
                     <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+                        @include('wire-table::tables.partials.modal-footer-actions', [
+                            'footerActions' => $modalData['footerActions'] ?? [],
+                            'position' => 'before',
+                        ])
                         <button
                             type="button"
                             wire:click="closeActionModal"
@@ -160,6 +172,10 @@
                             <span wire:loading wire:target="submitActionModal">{{ __('Saving...') }}</span>
                         </button>
                         @endunless
+                        @include('wire-table::tables.partials.modal-footer-actions', [
+                            'footerActions' => $modalData['footerActions'] ?? [],
+                            'position' => 'after',
+                        ])
                     </div>
                     @endif
                 </x-slot:footer>

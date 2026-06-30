@@ -90,8 +90,11 @@ abstract class LayoutComponent implements Htmlable
 
     /**
      * Propagate state path (and optionally live mode) to all child components.
+     *
+     * The owning Livewire instance is forwarded too so child components can
+     * resolve reactive state inside dynamic callbacks (e.g. visible()).
      */
-    public function prepareChildren(string $parentPath = '', bool $live = false): void
+    public function prepareChildren(string $parentPath = '', bool $live = false, mixed $livewire = null): void
     {
         $basePath = $this->statePath
             ? ($parentPath ? "{$parentPath}.{$this->statePath}" : $this->statePath)
@@ -103,13 +106,16 @@ abstract class LayoutComponent implements Htmlable
 
         foreach ($this->schema as $component) {
             if ($component instanceof self) {
-                $component->prepareChildren($basePath, $live);
+                $component->prepareChildren($basePath, $live, $livewire);
             } elseif ($component instanceof Component) {
                 if ($basePath) {
                     $component->statePath($basePath);
                 }
                 if ($live && method_exists($component, 'live')) {
                     $component->live();
+                }
+                if ($livewire !== null) {
+                    $component->livewire($livewire);
                 }
             }
         }

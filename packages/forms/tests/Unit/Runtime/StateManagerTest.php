@@ -48,6 +48,17 @@ test('fill reduces enum-cast values to their scalar form', function () {
     ]);
 });
 
+test('fill leaves non-enum values untouched (only enums are normalised)', function () {
+    $manager = new StateManager;
+    $object = new stdClass;
+
+    $manager->fill(['kept' => $object, 'int' => 5, 'null' => null]);
+
+    expect($manager->getState()['kept'])->toBe($object)
+        ->and($manager->getState()['int'])->toBe(5)
+        ->and($manager->getState()['null'])->toBeNull();
+});
+
 test('fill overwrites previous state', function () {
     $manager = new StateManager;
     $manager->fill(['a' => 1]);

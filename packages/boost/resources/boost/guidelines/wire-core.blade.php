@@ -15,6 +15,14 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
 
 - Presets: `DeleteAction`, `EditAction`, `ViewAction`, plus bulk presets (`DeleteBulkAction`, …).
 - Actions can open modals via `->modal(...)` and multi-step wizards via `->steps([...])`.
+- A wizard step's `->schema(fn (array $data) => [...])` Closure builds its fields from data entered in
+  earlier steps; the bag is live even for header actions (no record), so later steps can branch on it.
+- An action with a form (`->form([...])`) seeds initial values with `->fillFormUsing(fn ($record) => [...])`
+  (`$record` is `null` for header actions). Inside the form, reactive fields use `$get`/`$set` and
+  `->afterStateUpdated()` against the live `modal.action.formData` bag — see the wire-forms guideline.
+- Add extra footer buttons with `->modalFooterActions([ModalFooterAction::make('preview')->action(fn ($data, $set) => …)])`.
+  The callback gets the live form `$data` and a `$set` writer; `->submitsForm()` validates first,
+  `->closesModal()` closes after, `->position('before'|'after')` places it around Cancel/Submit.
 - Color, icon and visibility come from the shared `HasColor`, `HasIcons`, `HasVisibility` concerns.
 - On actions, `->label()`, `->icon()`, `->color()`, `->tooltip()` and `->size()` each accept `string|Closure|null`,
   so they can be computed per row — the Closure receives the record: `->color(fn ($record) => $record->isPaid() ? 'success' : 'danger')`.

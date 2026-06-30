@@ -16,6 +16,8 @@ parameters:
         - { identifier: trait.unused, path: packages/core/src/Infolists/Concerns/WithInfolists.php }
         - { identifier: trait.unused, path: packages/core/src/Notifications/Concerns/InteractsWithNotifications.php }
         - { identifier: trait.unused, path: packages/core/src/Widgets/Concerns/WithWidgets.php }
+        - { identifier: trait.unused, path: packages/forms/src/Concerns/DispatchesStateUpdates.php }
+        - { identifier: trait.unused, path: packages/forms/src/Concerns/InteractsWithRepeaters.php }
         - { identifier: trait.unused, path: packages/forms/src/Forms/WithForms.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTable.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTableQueryString.php }

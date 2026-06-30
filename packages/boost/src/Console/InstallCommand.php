@@ -19,7 +19,6 @@ use function Laravel\Prompts\multiselect;
 #[AsCommand(name: 'wire-boost:install', description: 'Configure AI agents with the WireStack Boost MCP server, guidelines and skills.')]
 class InstallCommand extends Command
 {
-
     /**
      * The name and signature of the console command.
      *

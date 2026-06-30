@@ -7,6 +7,7 @@ namespace NyonCode\WireForms\Forms\Runtime;
 use Livewire\Component;
 use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use UnitEnum;
 
 /**
  * Manages form state and wire:model bindings.
@@ -80,9 +81,11 @@ final class StateManager
     private function normaliseEnums(array $data): array
     {
         foreach ($data as $key => $value) {
-            $data[$key] = is_array($value)
-                ? $this->normaliseEnums($value)
-                : EnumResolver::scalar($value);
+            $data[$key] = match (true) {
+                is_array($value) => $this->normaliseEnums($value),
+                $value instanceof UnitEnum => EnumResolver::scalar($value),
+                default => $value,
+            };
         }
 
         return $data;
@@ -141,39 +144,17 @@ final class StateManager
     /**
      * Write a value to the Livewire component at the given dot-notation path.
      *
-     * Traverses the path segment by segment. When a StateContainer is encountered
-     * at any depth, delegates the remaining sub-path to its set() method — which
-     * uses Arr::set internally — instead of data_set(), which cannot write through
-     * non-array PHP objects.
+     * Delegates to the canonical {@see StateContainer::writeInto()} so the
+     * StateContainer-aware traversal lives in one place (table action modals bind
+     * their bag as a StateContainer, which data_set() cannot write through).
      */
     private function writeLivewireState(string $path, mixed $value): void
     {
-        $segments = explode('.', $path);
-        $current = $this->livewire;
-
-        foreach ($segments as $index => $segment) {
-            $child = match (true) {
-                is_object($current) => $current->{$segment} ?? null,
-                is_array($current) => $current[$segment] ?? null,
-                default => null,
-            };
-
-            if ($child instanceof StateContainer) {
-                $subPath = implode('.', array_slice($segments, $index + 1));
-
-                if ($subPath !== '') {
-                    $child->set($subPath, $value);
-                } else {
-                    $child->replace(is_array($value) ? $value : []);
-                }
-
-                return;
-            }
-
-            $current = $child;
+        if ($this->livewire === null) {
+            return;
         }
 
-        data_set($this->livewire, $path, $value);
+        StateContainer::writeInto($this->livewire, $path, $value);
     }
 
     /**

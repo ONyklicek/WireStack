@@ -62,6 +62,10 @@ final class FormValidationResolver
                 continue;
             }
 
+            if (! $this->isComponentVisible($component)) {
+                continue;
+            }
+
             $key = $this->resolveKey($component);
             $componentRules = $component->getValidationRules();
             $rules[$key] = ! empty($componentRules) ? $componentRules : ['nullable'];
@@ -70,6 +74,10 @@ final class FormValidationResolver
         // Repeaters: container rules at the repeater path, child rules at the
         // per-item wildcard path (e.g. "data.contacts.*.label").
         foreach ($this->repeaters as $repeater) {
+            if (! $this->isComponentVisible($repeater)) {
+                continue;
+            }
+
             $basePath = $repeater->getStatePath();
 
             $containerRules = $repeater->getContainerValidationRules();
@@ -99,6 +107,10 @@ final class FormValidationResolver
                 continue;
             }
 
+            if (! $this->isComponentVisible($component)) {
+                continue;
+            }
+
             $key = $this->resolveKey($component);
             $componentMessages = $component->getValidationMessages();
 
@@ -124,6 +136,10 @@ final class FormValidationResolver
                 continue;
             }
 
+            if (! $this->isComponentVisible($component)) {
+                continue;
+            }
+
             $key = $this->resolveKey($component);
             $label = $component->getLabel();
 
@@ -133,6 +149,17 @@ final class FormValidationResolver
         }
 
         return $attributes;
+    }
+
+    /**
+     * Hidden components are excluded from validation: a required() rule on a
+     * field the user cannot see must never block submit. Visibility is resolved
+     * against live state, so a field toggled hidden by another field's value is
+     * skipped while it stays hidden.
+     */
+    private function isComponentVisible(object $component): bool
+    {
+        return ! method_exists($component, 'isVisible') || $component->isVisible();
     }
 
     private function resolveKey(Component&HasValidation $component): string

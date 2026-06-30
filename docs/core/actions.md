@@ -222,6 +222,11 @@ Action::make('create')
     ->action(fn ($record, $data) => $record->update($data));
 ```
 
+A step's `->schema()` accepts a Closure to build its fields from data entered in
+earlier steps — `->schema(fn (array $data) => [...])`. The Closure receives the live
+form-data bag even for `HeaderAction` (which has no record). See
+[Multi-Step Wizard](modals.md#multi-step-wizard) for a worked example.
+
 ## Footer Actions
 
 ```php
