@@ -28,7 +28,9 @@ return new class extends Migration
             $table->json('column_order');
             $table->timestamps();
 
-            $table->unique(['user_id', 'model_type', 'table_identifier']);
+            // Explicit short name: the auto-generated identifier exceeds MySQL's
+            // 64-character limit for index names.
+            $table->unique(['user_id', 'model_type', 'table_identifier'], 'reorderable_column_orders_owner_unique');
         });
     }
 
