@@ -85,4 +85,40 @@ trait HasSize
             default => 'px-2.5 py-1.5 text-sm gap-1.5',
         };
     }
+
+    /**
+     * Canonical icon-dimension classes for an icon rendered inside/next to a button
+     * surface (Radio segmented/buttons, ButtonColumn triggers).
+     *
+     * The scale tracks {@see getButtonSizeClasses()} so the glyph stays proportional to
+     * the button text across every clickable surface. Literal class strings are kept
+     * verbatim for Tailwind's JIT scanner.
+     */
+    public static function getButtonIconSizeClasses(string $size): string
+    {
+        return match ($size) {
+            'xs' => 'w-3.5 h-3.5',
+            'md' => 'w-5 h-5',
+            'lg' => 'w-5 h-5',
+            default => 'w-4 h-4',
+        };
+    }
+
+    /**
+     * Canonical icon-dimension classes for a standalone display icon (IconColumn).
+     *
+     * Larger than {@see getButtonIconSizeClasses()} because the icon is the content
+     * itself rather than an accent beside a label. Literal class strings are kept
+     * verbatim for Tailwind's JIT scanner.
+     */
+    public static function getIconSizeClasses(string $size): string
+    {
+        return match ($size) {
+            'xs' => 'w-4 h-4',
+            'sm' => 'w-5 h-5',
+            'lg' => 'w-7 h-7',
+            'xl' => 'w-8 h-8',
+            default => 'w-6 h-6',
+        };
+    }
 }

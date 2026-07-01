@@ -114,6 +114,83 @@ test('radio descriptions', function () {
     expect($field->getDescriptions())->toBe(['admin' => 'Full access']);
 });
 
+test('radio defaults to the default variant', function () {
+    $field = Radio::make('role');
+
+    expect($field->getVariant())->toBe('default')
+        ->and($field->isCards())->toBeFalse()
+        ->and($field->isButtons())->toBeFalse()
+        ->and($field->hasIndicator())->toBeTrue();
+});
+
+test('radio cards variant', function () {
+    $field = Radio::make('plan')->cards();
+
+    expect($field->isCards())->toBeTrue()
+        ->and($field->getVariant())->toBe('cards');
+});
+
+test('radio cards can be disabled back to default', function () {
+    $field = Radio::make('plan')->cards()->cards(false);
+
+    expect($field->isCards())->toBeFalse()
+        ->and($field->getVariant())->toBe('default');
+});
+
+test('radio segmented variant', function () {
+    $field = Radio::make('plan')->segmented();
+
+    expect($field->isSegmented())->toBeTrue()
+        ->and($field->isButtons())->toBeFalse()
+        ->and($field->getVariant())->toBe('segmented');
+});
+
+test('radio segmented can be disabled back to default', function () {
+    $field = Radio::make('plan')->segmented()->segmented(false);
+
+    expect($field->isSegmented())->toBeFalse()
+        ->and($field->getVariant())->toBe('default');
+});
+
+test('radio buttons variant', function () {
+    $field = Radio::make('plan')->buttons();
+
+    expect($field->isButtons())->toBeTrue()
+        ->and($field->isSegmented())->toBeFalse()
+        ->and($field->getVariant())->toBe('buttons');
+});
+
+test('radio buttons can be disabled back to default', function () {
+    $field = Radio::make('plan')->buttons()->buttons(false);
+
+    expect($field->isButtons())->toBeFalse()
+        ->and($field->getVariant())->toBe('default');
+});
+
+test('radio icons', function () {
+    $field = Radio::make('plan')->icons(['pro' => 'star', 'free' => 'gift']);
+
+    expect($field->getIcons())->toBe(['pro' => 'star', 'free' => 'gift']);
+});
+
+test('radio icons accept a closure', function () {
+    $field = Radio::make('plan')->icons(fn () => ['pro' => 'star']);
+
+    expect($field->getIcons())->toBe(['pro' => 'star']);
+});
+
+test('radio hide indicator', function () {
+    $field = Radio::make('plan')->cards()->hideIndicator();
+
+    expect($field->hasIndicator())->toBeFalse();
+});
+
+test('radio indicator can be toggled back on', function () {
+    $field = Radio::make('plan')->hideIndicator()->indicator();
+
+    expect($field->hasIndicator())->toBeTrue();
+});
+
 // ─── CheckboxList ──────────────────────────────────────────────
 
 test('checkbox list options and columns', function () {

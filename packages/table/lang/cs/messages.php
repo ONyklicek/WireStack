@@ -68,6 +68,8 @@ return [
     'actions_label' => 'Akce',
     'toggle_columns' => 'Přepnout sloupce',
     'export_label' => 'Export',
+    'import_label' => 'Import',
+    'import_result' => 'Naimportováno :imported řádků, :failed selhalo.',
 
     // Selection
     'select_all' => 'Vybrat vše',

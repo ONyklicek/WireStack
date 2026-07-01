@@ -18,6 +18,13 @@
        $panelFooter      string|null               extra HTML rendered at the bottom
                                                    of the dropdown panel (optional slot,
                                                    e.g. a "create new option" button)
+       $remoteSearch     bool                      fetch options from the server as the
+                                                   user types instead of filtering the
+                                                   preloaded $options client-side. Calls
+                                                   $wire.searchSelectOptions($statePath, term),
+                                                   so the host must expose that method
+                                                   (wire-forms WithForms). Default false.
+       $loadingMessage   string                    shown while a remote search is in flight
 --}}
 @php
     $selectId ??= 'searchable-select';
@@ -26,6 +33,8 @@
     $disabled ??= false;
     $hasError ??= false;
     $panelFooter ??= null;
+    $remoteSearch ??= false;
+    $loadingMessage ??= null;
 @endphp
 
 @include('wire-core::partials.floating-assets')
@@ -35,6 +44,9 @@
         open: false,
         search: '',
         multiple: @js($multiple),
+        remote: @js($remoteSearch),
+        loading: false,
+        initialOptions: @js((object) $options),
         options: @js((object) $options),
         placeholder: @js($placeholder ?? ''),
         selected: $wire.entangle('{{ $statePath }}'),
@@ -54,8 +66,27 @@
                     this._float = null;
                 }
             });
+
+            // Remote search: ask the server for matches as the term changes, always
+            // keeping the initial seed (which carries the current selection's label)
+            // so the trigger stays readable.
+            if (this.remote) {
+                this.$watch('search', (value) => this.fetchRemote(value));
+            }
+        },
+        async fetchRemote(search) {
+            this.loading = true;
+            this.activeIndex = -1;
+            try {
+                const results = await this.$wire.searchSelectOptions('{{ $statePath }}', search ?? '');
+                this.options = { ...this.initialOptions, ...(results ?? {}) };
+            } finally {
+                this.loading = false;
+            }
         },
         get filteredOptions() {
+            // The server already narrowed remote results; never re-filter locally.
+            if (this.remote) return this.options;
             if (!this.search) return this.options;
             const s = this.search.toLowerCase();
             return Object.fromEntries(
@@ -208,7 +239,13 @@
                     </li>
                 </template>
 
-                <li x-show="Object.keys(filteredOptions).length === 0" class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400" role="option" aria-disabled="true">
+                @if($remoteSearch)
+                    <li x-show="loading" class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400" role="option" aria-disabled="true">
+                        {{ $loadingMessage ?? __('Loading...') }}
+                    </li>
+                @endif
+
+                <li x-show="!loading && Object.keys(filteredOptions).length === 0" class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400" role="option" aria-disabled="true">
                     {{ $noResultsMessage }}
                 </li>
             </ul>

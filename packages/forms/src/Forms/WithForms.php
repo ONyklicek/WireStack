@@ -9,6 +9,7 @@ use Livewire\Component;
 use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
 use NyonCode\WireForms\Concerns\InteractsWithFieldActions;
 use NyonCode\WireForms\Concerns\InteractsWithRepeaters;
+use NyonCode\WireForms\Concerns\InteractsWithSelectCreation;
 use ReflectionMethod;
 use ReflectionNamedType;
 
@@ -25,6 +26,7 @@ trait WithForms
     use DispatchesStateUpdates;
     use InteractsWithFieldActions;
     use InteractsWithRepeaters;
+    use InteractsWithSelectCreation;
 
     /** @var array<string, Form> */
     protected array $cachedForms = [];
@@ -71,6 +73,7 @@ trait WithForms
         );
 
         $this->dispatchAfterStateUpdated($forms, $name, $old);
+        $this->dispatchLiveValidation($forms, $name);
     }
 
     /**

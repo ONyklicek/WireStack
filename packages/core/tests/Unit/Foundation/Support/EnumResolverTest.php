@@ -150,6 +150,28 @@ it('keys unit enum options by case name', function () {
     ]);
 });
 
+it('builds an icon map from a HasIcon enum, normalising Icon instances to names', function () {
+    expect(EnumResolver::icons(ErRichStatus::class))->toBe([
+        'open' => Icon::check->value(),
+        'closed' => Icon::xMark->value(),
+    ]);
+});
+
+it('builds an empty icon map for enums that do not implement HasIcon', function () {
+    expect(EnumResolver::icons(ErBackedStatus::class))->toBe([]);
+});
+
+it('builds a color map from a HasColor enum, normalising Color instances to names', function () {
+    expect(EnumResolver::colors(ErRichStatus::class))->toBe([
+        'open' => Color::Success->value,
+        'closed' => Color::Danger->value,
+    ]);
+});
+
+it('builds an empty color map for enums that do not implement HasColor', function () {
+    expect(EnumResolver::colors(ErBackedStatus::class))->toBe([]);
+});
+
 it('normalizeOptions expands an enum class but passes arrays through untouched', function () {
     expect(EnumResolver::normalizeOptions(ErRichStatus::class))->toBe([
         'open' => 'Otevřeno',

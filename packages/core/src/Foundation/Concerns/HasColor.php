@@ -133,6 +133,84 @@ trait HasColor
     }
 
     /**
+     * Get the peer-checked class bundles for a selectable "choice" surface (radio
+     * cards / segmented / buttons and the native radio accent).
+     *
+     * A single canonical owner for the option-choice palette. Returns literal class
+     * strings keyed by the sub-surface that consumes them, so the JIT scanner can see
+     * every hue and downstream views never interpolate a color into a class name:
+     *
+     * - `input`     — native radio accent + focus ring (default variant).
+     * - `solid`     — filled selected button (`buttons` variant).
+     * - `text`      — selected label tint (`segmented` variant).
+     * - `card`      — selected card border/ring + card icon tint (`cards` variant).
+     * - `indicator` — selected card radio-dot border/fill (`cards` variant).
+     *
+     * @return array{input:string, solid:string, text:string, card:string, indicator:string}
+     */
+    public static function getChoiceColorClasses(string $color): array
+    {
+        return match ($color) {
+            'success', 'green', 'emerald' => [
+                'input' => 'text-emerald-600 focus:ring-emerald-500',
+                'solid' => 'peer-checked:border-emerald-600 peer-checked:bg-emerald-600 peer-checked:text-white',
+                'text' => 'peer-checked:text-emerald-600 dark:peer-checked:text-emerald-400',
+                'card' => 'peer-checked:border-emerald-500 peer-checked:ring-emerald-500/40 peer-checked:[&_.wf-card-icon]:text-emerald-600 dark:peer-checked:[&_.wf-card-icon]:text-emerald-400',
+                'indicator' => 'peer-checked:[&_.wf-card-indicator]:border-emerald-600 peer-checked:[&_.wf-card-indicator]:bg-emerald-600',
+            ],
+            'danger', 'red' => [
+                'input' => 'text-red-600 focus:ring-red-500',
+                'solid' => 'peer-checked:border-red-600 peer-checked:bg-red-600 peer-checked:text-white',
+                'text' => 'peer-checked:text-red-600 dark:peer-checked:text-red-400',
+                'card' => 'peer-checked:border-red-500 peer-checked:ring-red-500/40 peer-checked:[&_.wf-card-icon]:text-red-600 dark:peer-checked:[&_.wf-card-icon]:text-red-400',
+                'indicator' => 'peer-checked:[&_.wf-card-indicator]:border-red-600 peer-checked:[&_.wf-card-indicator]:bg-red-600',
+            ],
+            'warning', 'yellow', 'amber' => [
+                'input' => 'text-amber-500 focus:ring-amber-500',
+                'solid' => 'peer-checked:border-amber-500 peer-checked:bg-amber-500 peer-checked:text-white',
+                'text' => 'peer-checked:text-amber-600 dark:peer-checked:text-amber-400',
+                'card' => 'peer-checked:border-amber-500 peer-checked:ring-amber-500/40 peer-checked:[&_.wf-card-icon]:text-amber-600 dark:peer-checked:[&_.wf-card-icon]:text-amber-400',
+                'indicator' => 'peer-checked:[&_.wf-card-indicator]:border-amber-500 peer-checked:[&_.wf-card-indicator]:bg-amber-500',
+            ],
+            'info', 'cyan' => [
+                'input' => 'text-cyan-600 focus:ring-cyan-500',
+                'solid' => 'peer-checked:border-cyan-600 peer-checked:bg-cyan-600 peer-checked:text-white',
+                'text' => 'peer-checked:text-cyan-600 dark:peer-checked:text-cyan-400',
+                'card' => 'peer-checked:border-cyan-500 peer-checked:ring-cyan-500/40 peer-checked:[&_.wf-card-icon]:text-cyan-600 dark:peer-checked:[&_.wf-card-icon]:text-cyan-400',
+                'indicator' => 'peer-checked:[&_.wf-card-indicator]:border-cyan-600 peer-checked:[&_.wf-card-indicator]:bg-cyan-600',
+            ],
+            'purple' => [
+                'input' => 'text-purple-600 focus:ring-purple-500',
+                'solid' => 'peer-checked:border-purple-600 peer-checked:bg-purple-600 peer-checked:text-white',
+                'text' => 'peer-checked:text-purple-600 dark:peer-checked:text-purple-400',
+                'card' => 'peer-checked:border-purple-500 peer-checked:ring-purple-500/40 peer-checked:[&_.wf-card-icon]:text-purple-600 dark:peer-checked:[&_.wf-card-icon]:text-purple-400',
+                'indicator' => 'peer-checked:[&_.wf-card-indicator]:border-purple-600 peer-checked:[&_.wf-card-indicator]:bg-purple-600',
+            ],
+            'pink' => [
+                'input' => 'text-pink-600 focus:ring-pink-500',
+                'solid' => 'peer-checked:border-pink-600 peer-checked:bg-pink-600 peer-checked:text-white',
+                'text' => 'peer-checked:text-pink-600 dark:peer-checked:text-pink-400',
+                'card' => 'peer-checked:border-pink-500 peer-checked:ring-pink-500/40 peer-checked:[&_.wf-card-icon]:text-pink-600 dark:peer-checked:[&_.wf-card-icon]:text-pink-400',
+                'indicator' => 'peer-checked:[&_.wf-card-indicator]:border-pink-600 peer-checked:[&_.wf-card-indicator]:bg-pink-600',
+            ],
+            'gray', 'secondary' => [
+                'input' => 'text-gray-600 focus:ring-gray-500',
+                'solid' => 'peer-checked:border-gray-600 peer-checked:bg-gray-600 peer-checked:text-white',
+                'text' => 'peer-checked:text-gray-600 dark:peer-checked:text-gray-300',
+                'card' => 'peer-checked:border-gray-500 peer-checked:ring-gray-500/40 peer-checked:[&_.wf-card-icon]:text-gray-600 dark:peer-checked:[&_.wf-card-icon]:text-gray-300',
+                'indicator' => 'peer-checked:[&_.wf-card-indicator]:border-gray-600 peer-checked:[&_.wf-card-indicator]:bg-gray-600',
+            ],
+            default => [
+                'input' => 'text-primary-600 focus:ring-primary-500',
+                'solid' => 'peer-checked:border-primary-600 peer-checked:bg-primary-600 peer-checked:text-white',
+                'text' => 'peer-checked:text-primary-600 dark:peer-checked:text-primary-400',
+                'card' => 'peer-checked:border-primary-500 peer-checked:ring-primary-500/40 peer-checked:[&_.wf-card-icon]:text-primary-600 dark:peer-checked:[&_.wf-card-icon]:text-primary-400',
+                'indicator' => 'peer-checked:[&_.wf-card-indicator]:border-primary-600 peer-checked:[&_.wf-card-indicator]:bg-primary-600',
+            ],
+        };
+    }
+
+    /**
      * Get plain text color classes (foreground only, no background).
      *
      * Canonical source for text-tinted cells, icons and inline states. Same

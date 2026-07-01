@@ -8,6 +8,7 @@ use Livewire\Component;
 use NyonCode\WireCore\Foundation\Components\Component as FieldComponent;
 use NyonCode\WireCore\Foundation\Contracts\HasFieldActions;
 use NyonCode\WireCore\Foundation\Contracts\HasStateAccessors;
+use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Forms\Form;
 
 /**
@@ -58,6 +59,27 @@ trait InteractsWithFieldActions
             'component' => $field,
             'livewire' => $this,
         ]);
+    }
+
+    /**
+     * Livewire endpoint backing async searchable selects ({@see Select::getSearchResultsUsing()}).
+     *
+     * The remote combobox calls this with the field's state path and the current
+     * search term; we re-resolve the field from the live form definition and run
+     * its search callback, returning a `[value => label]` map for the client to
+     * render.
+     *
+     * @return array<string|int, string>
+     */
+    public function searchSelectOptions(string $statePath, string $search): array
+    {
+        $field = $this->resolveFieldForAction($statePath);
+
+        if (! $field instanceof Select || ! $field->hasSearchResultsCallback()) {
+            return [];
+        }
+
+        return $field->getSearchResults($search);
     }
 
     /**

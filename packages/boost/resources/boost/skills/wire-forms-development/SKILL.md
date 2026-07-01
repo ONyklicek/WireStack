@@ -59,6 +59,19 @@ TextInput::make('discount')
     ->afterStateUpdated(fn ($state, $set) => $set('discount_label', "{$state}%")),
 ```
 
+Fluent conditioning shortcuts replace the Closure for the common "equals value" case (array = "is one of"):
+
+```php
+TextInput::make('vat_id')
+    ->visibleWhen('type', 'business')       // also hiddenWhen / disabledWhen (shared with columns/filters/actions)
+    ->requiredIf('type', 'business')        // also requiredUnless / requiredWith
+    ->validateLive();                       // validate this field on change (or ->validateOnBlur())
+```
+
+`validateLive()` / `validateOnBlur()` validate just that field during the reactive roundtrip and
+refresh only its error bag; `requiredIf()` is honoured live. Cross-field string rules
+(`required_if:other,value`) validate on submit — prefer `requiredIf()` for the reactive version.
+
 Prefill an action modal form from the record with `fillFormUsing()` (callback gets the record,
 `null` for header actions):
 
@@ -71,7 +84,10 @@ EditAction::make()
 ## Rules
 
 - A field's `make($name)` argument is the key under the form `statePath`.
-- Put validation on the field (`->required()`, `->rules([...])`).
+- Put validation on the field (`->required()`, `->rules([...])`); `->rules()` also accepts a Closure for state-dependent rules.
+- Prefer conditioning shortcuts over hand-written closures: `requiredIf`/`requiredUnless`/`requiredWith`, `visibleWhen`/`hiddenWhen`/`disabledWhen`.
+- Opt into live validation per field with `->validateLive()` / `->validateOnBlur()`.
 - Use an enum class with `->options(Enum::class)` rather than re-listing values.
+- `Radio` renders as a list by default, or `->cards()` / `->segmented()` / `->buttons()`. All take `->icons([...])` / `->colors([...])` per option (auto-derived from a `HasIcon`/`HasColor` enum via `->options(Enum::class)`), a group `->color(...)`, and — for `segmented`/`buttons` — `->sm()`/`->md()`/`->lg()`.
 - Reactivity is opt-in via `->live()`; `afterStateUpdated()` enables it for you.
 - Read/write sibling state inside closures with `$get`/`$set`; do not reach for `Livewire::current()`.

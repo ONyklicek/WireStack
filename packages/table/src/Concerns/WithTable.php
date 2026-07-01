@@ -61,6 +61,9 @@ use NyonCode\WireTable\Export\ExportAction;
 use NyonCode\WireTable\Export\ExportFormat;
 use NyonCode\WireTable\Export\TableExport;
 use NyonCode\WireTable\Filters\Filter;
+use NyonCode\WireTable\Import\ImportAction;
+use NyonCode\WireTable\Import\ImportResult;
+use NyonCode\WireTable\Import\TableImport;
 use NyonCode\WireTable\Table;
 use ReflectionFunction;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -308,6 +311,7 @@ trait WithTable
             ]);
 
             $this->dispatchAfterStateUpdated($forms, 'tableState.'.$path, $old);
+            $this->dispatchLiveValidation($forms, 'tableState.'.$path);
         }
     }
 
@@ -3586,6 +3590,34 @@ trait WithTable
         ));
 
         return $export->download($query, $columns);
+    }
+
+    /**
+     * Import rows from an uploaded file into the table's model.
+     *
+     * Resolves the {@see ImportAction} config declared in the table's header
+     * actions (mirroring exportTable()), runs the import over the given file path
+     * (typically an uploaded temp file's real path), invalidates cached records so
+     * the new rows render, and returns the per-row {@see ImportResult}.
+     */
+    public function importTable(string $filePath): ImportResult
+    {
+        $importConfig = null;
+        foreach ($this->getTable()->getHeaderActions() as $action) {
+            if ($action instanceof ImportAction) {
+                $importConfig = $action->getImportConfig();
+                break;
+            }
+        }
+
+        $result = ($importConfig ?? TableImport::make())->import($filePath);
+
+        // New rows changed the dataset — drop cached records/partitions so the
+        // next render reflects the import.
+        $this->cachedRecords = null;
+        $this->cachedGroupPartitions = null;
+
+        return $result;
     }
 
     /**

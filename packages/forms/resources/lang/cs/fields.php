@@ -10,4 +10,9 @@ return [
     'deselect_all' => 'Zrušit výběr',
     'no_results' => 'Žádné výsledky',
     'loading' => 'Načítání...',
+    'create_option' => 'Vytvořit položku',
+    'edit_option' => 'Upravit položku',
+    'create' => 'Vytvořit',
+    'save' => 'Uložit',
+    'cancel' => 'Zrušit',
 ];

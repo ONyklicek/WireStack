@@ -42,6 +42,12 @@ class FieldPreview extends Component
             'agree' => true,
             'permissions' => ['view', 'edit'],
             'plan' => 'pro',
+            'alignment' => 'center',
+            'range' => 'week',
+            'priority' => 'high',
+            'size_sm' => 'b',
+            'size_md' => 'b',
+            'size_lg' => 'b',
             'notifications' => true,
             'brand_color' => '#f59e0b',
             'volume' => 65,
@@ -57,12 +63,37 @@ class FieldPreview extends Component
     {
         return $form
             ->statePath('data')
-            ->schema([$this->fieldFor($this->field)]);
+            ->schema($this->schemaFor($this->field));
     }
 
     public function render()
     {
         return view('livewire.previews.field-preview');
+    }
+
+    /**
+     * Schema for a preview key. Most previews render a single field; a few compose
+     * several fields to showcase one axis (e.g. the size scale).
+     *
+     * @return array<int, Field>
+     */
+    protected function schemaFor(string $field): array
+    {
+        if ($field === 'radio-sizes') {
+            return [
+                Radio::make('size_sm')->label('Small')->options(['a' => 'Left', 'b' => 'Center', 'c' => 'Right'])
+                    ->icons(['a' => 'bars-3-bottom-left', 'b' => 'bars-3', 'c' => 'bars-3-bottom-right'])
+                    ->buttons()->inline()->sm(),
+                Radio::make('size_md')->label('Medium (default)')->options(['a' => 'Left', 'b' => 'Center', 'c' => 'Right'])
+                    ->icons(['a' => 'bars-3-bottom-left', 'b' => 'bars-3', 'c' => 'bars-3-bottom-right'])
+                    ->buttons()->inline()->md(),
+                Radio::make('size_lg')->label('Large')->options(['a' => 'Left', 'b' => 'Center', 'c' => 'Right'])
+                    ->icons(['a' => 'bars-3-bottom-left', 'b' => 'bars-3', 'c' => 'bars-3-bottom-right'])
+                    ->buttons()->inline()->lg(),
+            ];
+        }
+
+        return [$this->fieldFor($field)];
     }
 
     protected function fieldFor(string $field): Field
@@ -105,7 +136,66 @@ class FieldPreview extends Component
                     'free' => 'Free',
                     'pro' => 'Pro',
                     'team' => 'Team',
-                ]),
+                ])
+                ->descriptions([
+                    'free' => 'For personal projects and quick trials.',
+                    'pro' => 'For growing teams that need more room.',
+                    'team' => 'Advanced controls, SSO, and audit logs.',
+                ])
+                ->icons([
+                    'free' => 'gift',
+                    'pro' => 'star',
+                    'team' => 'user-group',
+                ])
+                ->cards(),
+
+            'radio-color' => Radio::make('priority')
+                ->label('Priority')
+                ->helperText('Any accent color via ->color().')
+                ->options([
+                    'low' => 'Low',
+                    'normal' => 'Normal',
+                    'high' => 'High',
+                ])
+                ->icons([
+                    'low' => 'arrow-down',
+                    'normal' => 'minus',
+                    'high' => 'arrow-up',
+                ])
+                ->cards()
+                ->inline()
+                ->color('danger'),
+
+            'radio-segmented' => Radio::make('range')
+                ->label('Date range')
+                ->helperText('Pick the reporting window.')
+                ->options([
+                    'day' => 'Day',
+                    'week' => 'Week',
+                    'month' => 'Month',
+                ])
+                ->icons([
+                    'day' => 'sun',
+                    'week' => 'calendar-days',
+                    'month' => 'calendar',
+                ])
+                ->segmented(),
+
+            'radio-buttons' => Radio::make('alignment')
+                ->label('Text alignment')
+                ->helperText('Choose how the block is aligned.')
+                ->options([
+                    'left' => 'Left',
+                    'center' => 'Center',
+                    'right' => 'Right',
+                ])
+                ->icons([
+                    'left' => 'bars-3-bottom-left',
+                    'center' => 'bars-3',
+                    'right' => 'bars-3-bottom-right',
+                ])
+                ->buttons()
+                ->inline(),
 
             'toggle' => Toggle::make('notifications')
                 ->label('Email notifications')

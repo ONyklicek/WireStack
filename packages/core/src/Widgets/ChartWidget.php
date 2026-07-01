@@ -25,6 +25,9 @@ class ChartWidget extends Widget
 
     protected ?Closure $labelsCallback = null;
 
+    /** @var array<string, mixed> Chart.js options overriding the type defaults. */
+    protected array $options = [];
+
     /**
      * @param  string  $type  line|bar|pie|doughnut
      */
@@ -128,6 +131,44 @@ class ChartWidget extends Widget
         return $this;
     }
 
+    /**
+     * Override the Chart.js options. Merged over the type's default options, so
+     * callers only specify what they want to change.
+     *
+     * @param  array<string, mixed>  $options
+     */
+    public function options(array $options): static
+    {
+        $this->options = $options;
+
+        return $this;
+    }
+
+    /**
+     * Resolved Chart.js options: the type defaults with the caller's overrides
+     * merged on top.
+     *
+     * @return array<string, mixed>
+     */
+    public function getOptions(): array
+    {
+        return array_replace_recursive($this->getDefaultOptions(), $this->options);
+    }
+
+    /**
+     * Baseline Chart.js options shared by all chart types. Type-specific widgets
+     * (pie, doughnut, …) override this to add their own defaults.
+     *
+     * @return array<string, mixed>
+     */
+    protected function getDefaultOptions(): array
+    {
+        return [
+            'responsive' => true,
+            'maintainAspectRatio' => false,
+        ];
+    }
+
     protected function viewName(): string
     {
         return 'wire-core::widgets.chart';
@@ -144,6 +185,7 @@ class ChartWidget extends Widget
             'labels' => $this->getLabels(),
             'filterOptions' => $this->filterOptions,
             'activeFilter' => $this->activeFilter,
+            'options' => $this->getOptions(),
         ];
     }
 }

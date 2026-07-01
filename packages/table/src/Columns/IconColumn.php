@@ -7,6 +7,7 @@ namespace NyonCode\WireTable\Columns;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Concerns\HasSize;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
@@ -205,14 +206,7 @@ class IconColumn extends Column
 
     public function getSizeClass(): string
     {
-        return match ($this->iconSize) {
-            'xs' => 'w-4 h-4',
-            'sm' => 'w-5 h-5',
-            'md' => 'w-6 h-6',
-            'lg' => 'w-7 h-7',
-            'xl' => 'w-8 h-8',
-            default => 'w-6 h-6',
-        };
+        return HasSize::getIconSizeClasses($this->iconSize);
     }
 
     protected function resolveColorClass(string $color): string
