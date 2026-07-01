@@ -77,3 +77,12 @@ it('builds a default index from the shipped corpus', function () {
     expect($paths)->not->toBeEmpty()
         ->and(collect($paths)->contains(fn (string $p): bool => str_ends_with($p, 'guidelines')))->toBeTrue();
 });
+
+it('surfaces reactive and field-action recipes from the shipped corpus', function () {
+    $index = DocsIndex::default();
+
+    expect($index->search('afterStateUpdated'))->not->toBeEmpty()
+        ->and($index->search('suffixAction'))->not->toBeEmpty()
+        ->and($index->search('modalFooterActions'))->not->toBeEmpty()
+        ->and($index->search('Button field action'))->not->toBeEmpty();
+});

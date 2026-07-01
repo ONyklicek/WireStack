@@ -6,6 +6,14 @@ parameters:
         - packages/table/src
         - packages/boost/src
     tmpDir: build/phpstan
+    excludePaths:
+        # Concrete Livewire hosts that compose WithTable are not statically
+        # analysable as concrete classes: WithTable relies on Livewire runtime
+        # magic (dynamic __get/__set, method_exists guards, cross-trait calls)
+        # and is only PHPStan-clean when checked as a trait via @phpstan-require-extends.
+        # Every other concrete WithTable host (tests, workbench, wire-sortable) is
+        # likewise outside the analysed paths; RelationManager is such a host base.
+        - packages/table/src/RelationManagers/RelationManager.php
     scanFiles:
         - stubs/phpstan/optional-exporters.php
     ignoreErrors:
@@ -17,7 +25,9 @@ parameters:
         - { identifier: trait.unused, path: packages/core/src/Notifications/Concerns/InteractsWithNotifications.php }
         - { identifier: trait.unused, path: packages/core/src/Widgets/Concerns/WithWidgets.php }
         - { identifier: trait.unused, path: packages/forms/src/Concerns/DispatchesStateUpdates.php }
+        - { identifier: trait.unused, path: packages/forms/src/Concerns/InteractsWithFieldActions.php }
         - { identifier: trait.unused, path: packages/forms/src/Concerns/InteractsWithRepeaters.php }
+        - { identifier: trait.unused, path: packages/forms/src/Concerns/InteractsWithSelectCreation.php }
         - { identifier: trait.unused, path: packages/forms/src/Forms/WithForms.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTable.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTableQueryString.php }

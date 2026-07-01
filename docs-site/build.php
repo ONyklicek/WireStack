@@ -128,6 +128,17 @@ $pagePreviews = [
     'docs/core/infolists.md' => ['infolists-overview', 'infolists-entries'],
 ];
 
+// Extra variant previews appended after a field page's primary preview, so one
+// field doc can showcase more than one rendering (e.g. Radio cards + buttons).
+$fieldExtraPreviews = [
+    'docs/forms/fields/radio.md' => [
+        ['slug' => 'field-radio-segmented', 'title' => 'Segmented Variant', 'caption' => 'A compact segmented control — a pill highlight slides over a shared track.'],
+        ['slug' => 'field-radio-buttons', 'title' => 'Buttons Variant', 'caption' => 'Separate buttons; the selected one is filled with the accent color.'],
+        ['slug' => 'field-radio-color', 'title' => 'Any Accent Color', 'caption' => 'Every variant tints the selected option with ->color() — here a row of danger-colored cards.'],
+        ['slug' => 'field-radio-sizes', 'title' => 'Sizes', 'caption' => 'The segmented and buttons variants scale with ->sm() / ->md() / ->lg().'],
+    ],
+];
+
 $renderedPages = [];
 $searchIndex = [];
 
@@ -157,6 +168,21 @@ foreach ($pages as $page) {
                 ? $content['excerpt']
                 : 'Rendered live through the Wire Forms runtime.',
         ];
+
+        // Optional additional variant previews for the same field doc page.
+        foreach ($fieldExtraPreviews[$page['sourceRelative']] ?? [] as $extra) {
+            $image = 'assets/previews/'.$extra['slug'].'.png';
+
+            if (! is_file($versionRoot.'/'.$image)) {
+                continue;
+            }
+
+            $previewItems[] = [
+                'image' => relativeAssetPath($currentFile, $versionRoot.'/'.$image),
+                'title' => $extra['title'],
+                'caption' => $extra['caption'],
+            ];
+        }
     } else {
         foreach ($pagePreviews[$page['sourceRelative']] ?? [] as $slug) {
             $image = 'assets/previews/'.$slug.'.png';

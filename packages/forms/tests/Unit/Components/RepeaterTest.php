@@ -217,6 +217,24 @@ test('item validation rules are collected per child field (regression)', functio
     ]);
 });
 
+test('item validation rules descend into nested layout components', function () {
+    $repeater = Repeater::make('contacts')->schema([
+        Grid::make()->schema([
+            TextInput::make('name')->required(),
+            Grid::make()->schema([
+                TextInput::make('email')->rules(['email']),
+            ]),
+        ]),
+        TextInput::make('phone')->required(),
+    ]);
+
+    expect($repeater->getItemValidationRules())->toBe([
+        'name' => ['required'],
+        'email' => ['email'],
+        'phone' => ['required'],
+    ]);
+});
+
 test('mutate relationship data callback can be set', function () {
     $callback = fn ($data) => array_merge($data, ['sort_order' => 0]);
     $repeater = Repeater::make('items')

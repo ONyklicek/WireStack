@@ -310,10 +310,29 @@ class Repeater extends LayoutComponent implements HasValidation
      */
     public function getItemValidationRules(): array
     {
+        return $this->collectItemValidationRules($this->schema);
+    }
+
+    /**
+     * Recursively collect per-item field rules, descending into nested layout
+     * components (Grid, Section, Fieldset, …) so fields wrapped in a layout are
+     * validated the same as direct children.
+     *
+     * @param  array<int, Component|LayoutComponent>  $components
+     * @return array<string, array<int, mixed>>
+     */
+    private function collectItemValidationRules(array $components): array
+    {
         $rules = [];
 
-        foreach ($this->schema as $component) {
-            if ($component instanceof Component && $component instanceof HasValidation) {
+        foreach ($components as $component) {
+            if ($component instanceof LayoutComponent) {
+                $rules = array_merge($rules, $this->collectItemValidationRules($component->getSchema()));
+
+                continue;
+            }
+
+            if ($component instanceof HasValidation) {
                 $childRules = $component->getValidationRules();
                 if ($childRules !== []) {
                     $rules[$component->getName()] = $childRules;

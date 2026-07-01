@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Foundation\Contracts\Enum\HasLabel;
 use NyonCode\WireForms\Components\TextInput;
 
@@ -15,6 +16,32 @@ enum TextInputColor: string implements HasLabel
         return ucfirst($this->value);
     }
 }
+
+test('suffix and prefix actions are exposed and resolvable by name', function () {
+    $verify = Action::make('verify');
+    $lookup = Action::make('lookup');
+
+    $field = TextInput::make('vat')->suffixAction($verify)->prefixAction($lookup);
+
+    expect($field->getSuffixAction())->toBe($verify)
+        ->and($field->getPrefixAction())->toBe($lookup)
+        ->and($field->hasAffix())->toBeTrue()
+        ->and($field->hasPrefixContent())->toBeTrue()
+        ->and($field->hasSuffixContent())->toBeTrue()
+        ->and($field->getFieldAction('verify'))->toBe($verify)
+        ->and($field->getFieldAction('lookup'))->toBe($lookup)
+        ->and($field->getFieldAction('nope'))->toBeNull();
+});
+
+test('hint action is exposed and resolvable but not part of the affix wrapper', function () {
+    $generate = Action::make('generate');
+
+    $field = TextInput::make('slug')->hintAction($generate);
+
+    expect($field->getHintAction())->toBe($generate)
+        ->and($field->getFieldAction('generate'))->toBe($generate)
+        ->and($field->hasAffix())->toBeFalse();
+});
 
 test('make creates instance with name', function () {
     $field = TextInput::make('username');

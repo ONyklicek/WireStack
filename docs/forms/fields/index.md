@@ -28,6 +28,7 @@ Reference for the built-in Wire Forms field and layout components.
 | Code / script input | [CodeEditor](code-editor.md) |
 | OTP / PIN code | [OtpInput](otp-input.md) |
 | Hidden form metadata | [Hidden](hidden.md) |
+| Run an action from the schema | [Button](button.md) |
 | Select a related record | [BelongsToSelect](belongs-to-select.md) |
 | Select a polymorphic target | [MorphToSelect](morph-to-select.md) |
 | Manage repeated groups or child rows | [Repeater](repeater.md) |
@@ -112,6 +113,12 @@ Available on TextInput, Textarea, and Select.
 | `suffix(string)` | `->suffix('%')` |
 | `prefixIcon(string)` | `->prefixIcon('magnifying-glass')` |
 | `suffixIcon(string)` | `->suffixIcon('check')` |
+| `prefixAction(Action)` | `->prefixAction(Action::make('lookup')->action(fn ($get, $set) => …))` |
+| `suffixAction(Action)` | `->suffixAction(Action::make('verify')->action(fn ($get, $set) => …))` |
+| `hintAction(Action)` | `->hintAction(Action::make('help'))` |
+
+Affix and hint actions run on the server with the field's reactive `$get` / `$set` context — see
+[Field actions and buttons](../reactive-fields.md#field-actions-and-buttons).
 
 ### Other
 

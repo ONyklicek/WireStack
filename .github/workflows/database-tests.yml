@@ -1,0 +1,111 @@
+name: Database Tests
+
+# Runs the behaviour/result-based suites (Feature + Standalone + Integration —
+# which execute real queries through the components) against live MySQL, MariaDB
+# and PostgreSQL servers. The dialect-specific Unit suites that assert exact SQL
+# strings keep running on SQLite in the main "Tests" workflow.
+
+on:
+  push:
+    branches:
+      - "*"
+  pull_request:
+    branches:
+      - "*"
+
+jobs:
+  database-tests:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - db: mysql
+            port: 3306
+            username: root
+          - db: mariadb
+            port: 3307
+            username: root
+          - db: pgsql
+            port: 5432
+            username: postgres
+
+    name: ${{ matrix.db }}
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: wire_test
+          MYSQL_ROOT_PASSWORD: password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -ppassword"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_DATABASE: wire_test
+          MARIADB_ROOT_PASSWORD: password
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -h 127.0.0.1 -ppassword"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: wire_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, mysql, pdo_mysql, pgsql, pdo_pgsql
+          coverage: none
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      # Behaviour/result-based tests that execute real queries (search, filters,
+      # sorting, exports, CRUD) — these are dialect-agnostic and validate the
+      # generated SQL against each server. The SQL-string Unit suites (exact
+      # toSql/toRawSql assertions) and Boost's schema-introspection tests stay on
+      # SQLite in the main "Tests" workflow.
+      - name: Run behaviour tests against ${{ matrix.db }}
+        env:
+          DB_CONNECTION: ${{ matrix.db }}
+          DB_HOST: 127.0.0.1
+          DB_PORT: ${{ matrix.port }}
+          DB_DATABASE: wire_test
+          DB_USERNAME: ${{ matrix.username }}
+          DB_PASSWORD: password
+        run: >-
+          vendor/bin/pest
+          packages/core/tests/Feature
+          packages/forms/tests/Feature
+          packages/forms/tests/Standalone
+          packages/table/tests/Feature
+          packages/sortable/tests/Feature
+          tests/Integration
+          packages/table/tests/Unit/Concerns/TableQueryServiceTest.php

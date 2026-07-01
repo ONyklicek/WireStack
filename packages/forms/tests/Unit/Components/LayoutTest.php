@@ -2,10 +2,34 @@
 
 declare(strict_types=1);
 
+use Livewire\Component as LivewireComponent;
 use NyonCode\WireForms\Components\Layout\Fieldset;
 use NyonCode\WireForms\Components\Layout\Grid;
 use NyonCode\WireForms\Components\Layout\Section;
 use NyonCode\WireForms\Components\TextInput;
+
+/**
+ * Minimal Livewire host exposing a `data` state bag, mirroring how a form binds
+ * its schema under a statePath.
+ */
+function layoutStateHost(string $type = 'business'): LivewireComponent
+{
+    return new class($type) extends LivewireComponent
+    {
+        /** @var array<string, mixed> */
+        public array $data;
+
+        public function __construct(string $type)
+        {
+            $this->data = ['type' => $type, 'name' => 'Acme'];
+        }
+
+        public function render(): string
+        {
+            return '<div></div>';
+        }
+    };
+}
 
 // ─���─ Grid ──────────────────────────────────────────────────────
 
@@ -98,4 +122,66 @@ test('layout subclasses swap in the form blade views', function () {
     expect(Grid::make()->render()->name())->toBe('wire-forms::layouts.grid')
         ->and(Section::make('S')->render()->name())->toBe('wire-forms::layouts.section')
         ->and(Fieldset::make('F')->render()->name())->toBe('wire-forms::layouts.fieldset');
+});
+
+// ─── Reactive state accessors ($get / $set) ─────────────────────
+
+test('layout exposes $get/$set accessors bound to the livewire host', function () {
+    $host = layoutStateHost();
+
+    $section = Section::make('Billing')->schema([TextInput::make('vat_id')]);
+    $section->prepareChildren('data', false, $host);
+
+    $accessors = $section->getStateAccessors();
+
+    expect($accessors['get']('type'))->toBe('business');
+
+    $accessors['set']('type', 'individual');
+
+    expect($host->data['type'])->toBe('individual');
+});
+
+test('layout visible() closure resolves sibling state via $get', function () {
+    $grid = Grid::make()->schema([TextInput::make('vat_id')])
+        ->visible(fn ($get) => $get('type') === 'business');
+    $grid->prepareChildren('data', false, layoutStateHost('business'));
+
+    expect($grid->isVisible())->toBeTrue();
+});
+
+test('layout visible() closure hides when sibling state differs', function () {
+    $grid = Grid::make()->schema([TextInput::make('vat_id')])
+        ->visible(fn ($get) => $get('type') === 'business');
+    $grid->prepareChildren('data', false, layoutStateHost('individual'));
+
+    expect($grid->isVisible())->toBeFalse();
+});
+
+test('nested layout inherits the livewire binding from prepareChildren', function () {
+    $host = layoutStateHost();
+    $inner = Grid::make()->schema([TextInput::make('vat_id')]);
+    $outer = Section::make('Billing')->schema([$inner]);
+
+    $outer->prepareChildren('data', false, $host);
+
+    expect($inner->getStateAccessors()['get']('type'))->toBe('business');
+});
+
+test('a bound layout $get() without a path returns null (layouts have no own value)', function () {
+    $grid = Grid::make()->schema([TextInput::make('vat_id')]);
+    $grid->prepareChildren('data', false, layoutStateHost());
+
+    // livewire is bound, but the layout has no name, so the own-value read
+    // resolves to null rather than the bag root.
+    expect($grid->getStateAccessors()['get']())->toBeNull();
+});
+
+test('layout state accessors degrade gracefully without a bound livewire', function () {
+    $grid = Grid::make()->schema([]);
+
+    $accessors = $grid->getStateAccessors();
+
+    expect($accessors['get']('type', 'fallback'))->toBe('fallback')
+        ->and($accessors['state'])->toBeNull()
+        ->and($accessors['get']())->toBeNull();
 });

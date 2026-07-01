@@ -13,7 +13,13 @@
 
 @if($hasAffix)
     <div class="flex rounded-md shadow-sm">
-        @if($field->getPrefixIcon())
+        @if($field->getPrefixAction())
+            @include('wire-forms::partials.affix-action', [
+                'action' => $field->getPrefixAction(),
+                'statePath' => $field->getStatePath(),
+                'position' => 'left',
+            ])
+        @elseif($field->getPrefixIcon())
             <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm">
                     <x-wire::icon :name="$field->getPrefixIcon()" class="w-4 h-4"/>
                 </span>
@@ -76,13 +82,19 @@
             'hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150',
             'dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm',
             'border-red-500 focus:border-red-500 focus:ring-red-500' => $errors->has($field->getStatePath()),
-            'rounded-l-none' => $hasAffix && ($field->getPrefix() || $field->getPrefixIcon()),
-            'rounded-r-none' => $hasAffix && ($field->getSuffix() || $field->getSuffixIcon()),
+            'rounded-l-none' => $hasAffix && $field->hasPrefixContent(),
+            'rounded-r-none' => $hasAffix && $field->hasSuffixContent(),
         ])
         />
 
         @if($hasAffix)
-            @if($field->getSuffixIcon())
+            @if($field->getSuffixAction())
+                @include('wire-forms::partials.affix-action', [
+                    'action' => $field->getSuffixAction(),
+                    'statePath' => $field->getStatePath(),
+                    'position' => 'right',
+                ])
+            @elseif($field->getSuffixIcon())
                 <span class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm">
                     <x-wire::icon :name="$field->getSuffixIcon()" class="w-4 h-4"/>
                 </span>

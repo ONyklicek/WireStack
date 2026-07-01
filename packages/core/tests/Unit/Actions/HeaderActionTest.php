@@ -11,6 +11,27 @@ it('can be created', function () {
         ->and($action->getName())->toBe('create');
 });
 
+// ─── Context-free dynamic properties (no record) ─────────────────────────────
+
+it('evaluates context-free dynamic label/color/icon without a record', function () {
+    $action = HeaderAction::make('create')
+        ->label(fn () => 'Vytvořit')
+        ->color(fn () => 'success')
+        ->icon(fn () => 'heroicon-o-plus');
+
+    expect($action->getLabel())->toBe('Vytvořit')
+        ->and($action->getColor())->toBe('success')
+        ->and($action->getIcon())->toBe('heroicon-o-plus');
+});
+
+it('falls back to the static label for a record-scoped closure when no record is present', function () {
+    // fn ($record) requires a record it cannot get on a header action, so getLabel()
+    // returns the auto-generated headline instead of invoking (and erroring on) it.
+    $action = HeaderAction::make('create')->label(fn ($record) => $record->name);
+
+    expect($action->getLabel())->toBe('Create');
+});
+
 // ─── URL ────────────────────────────────────────────────────────────────────
 
 it('can set url', function () {

@@ -85,7 +85,7 @@
     // Action configuration
     $actionsPosition = $table->getActionsPosition(); // 'start' or 'end'
     $actionsAlignment = $table->getActionsAlignment(); // 'left', 'center', 'right'
-    $actionsColumnLabel = $table->getActionsColumnLabel() ?? 'Akce';
+    $actionsColumnLabel = $table->getActionsColumnLabel() ?? __('wire-table::messages.actions_label');
     $actionsColumnWidth = $table->getActionsColumnWidth();
 
     // Table styling

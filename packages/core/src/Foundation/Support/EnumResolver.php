@@ -161,6 +161,66 @@ final class EnumResolver
     }
 
     /**
+     * Build a `[value => iconName]` map from an enum class implementing {@see HasIcon}.
+     *
+     * Mirrors {@see options()} but for the opt-in {@see HasIcon} contract: each case
+     * that declares an icon collapses to its {@see scalar()} key and the icon's string
+     * name ({@see Icon} instances are normalised through `value()`). Cases without an icon
+     * are omitted, so the map is empty for enums that do not implement `HasIcon`. This is
+     * the canonical owner of the "enum as icon source" expansion; option-driven surfaces
+     * (form Radio cards/buttons) delegate here instead of re-deriving per-case icons.
+     *
+     * @param  class-string  $enumClass
+     * @return array<string|int, string>
+     */
+    public static function icons(string $enumClass): array
+    {
+        $map = [];
+
+        foreach ($enumClass::cases() as $case) {
+            $icon = self::icon($case);
+
+            if ($icon !== null) {
+                /** @var string|int $key */
+                $key = self::scalar($case);
+                $map[$key] = $icon instanceof Icon ? $icon->value() : $icon;
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * Build a `[value => colorName]` map from an enum class implementing {@see HasColor}.
+     *
+     * Mirrors {@see icons()} for the opt-in {@see HasColor} contract: each case that declares
+     * a color collapses to its {@see scalar()} key and the color's string name ({@see Color}
+     * instances are normalised through `value`). Cases without a color are omitted, so the map
+     * is empty for enums that do not implement `HasColor`. Canonical owner of the "enum as
+     * color source" expansion for option-driven surfaces (form Radio, and any per-option
+     * color map) so per-case colors are never re-derived downstream.
+     *
+     * @param  class-string  $enumClass
+     * @return array<string|int, string>
+     */
+    public static function colors(string $enumClass): array
+    {
+        $map = [];
+
+        foreach ($enumClass::cases() as $case) {
+            $color = self::color($case);
+
+            if ($color !== null) {
+                /** @var string|int $key */
+                $key = self::scalar($case);
+                $map[$key] = $color instanceof Color ? $color->value : $color;
+            }
+        }
+
+        return $map;
+    }
+
+    /**
      * Normalise an owner-provided options value into an array.
      *
      * Enum class-strings expand via {@see options()}; arrays (and anything else)

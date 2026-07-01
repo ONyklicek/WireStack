@@ -88,3 +88,38 @@ it('defaults active filter to first option', function () {
 
     expect($widget->getActiveFilter())->toBe('week');
 });
+
+// ─── Options ─────────────────────────────────────────────────────────────────
+
+it('exposes default Chart.js options', function () {
+    expect(ChartWidget::make()->getOptions())->toBe([
+        'responsive' => true,
+        'maintainAspectRatio' => false,
+    ]);
+});
+
+it('merges custom options over the defaults', function () {
+    $options = ChartWidget::make()
+        ->options([
+            'maintainAspectRatio' => true,
+            'plugins' => ['legend' => ['display' => false]],
+        ])
+        ->getOptions();
+
+    expect($options)->toBe([
+        'responsive' => true,
+        'maintainAspectRatio' => true,
+        'plugins' => ['legend' => ['display' => false]],
+    ]);
+});
+
+it('includes the resolved options in the rendered chart data', function () {
+    $html = ChartWidget::make()
+        ->labels(['A'])
+        ->datasets([['label' => 'X', 'data' => [1]]])
+        ->toHtml();
+
+    expect($html)
+        ->toContain('wireChart(')
+        ->toContain('maintainAspectRatio');
+});

@@ -94,7 +94,9 @@ it('postgres strategy applies ILIKE', function () {
 
     $sql = $builder->toRawSql();
 
-    expect($sql)->toContain('ILIKE')
+    // The column now routes through the query builder (safe, no raw interpolation),
+    // which emits the operator lowercase — semantically identical to raw ILIKE.
+    expect(strtolower($sql))->toContain('ilike')
         ->and($sql)->toContain('%john%');
 });
 

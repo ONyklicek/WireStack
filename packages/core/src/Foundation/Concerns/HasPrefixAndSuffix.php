@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Foundation\Concerns;
 
 use Closure;
+use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
- * Prefix/suffix text and icons for input fields.
+ * Prefix/suffix text and icons for input fields, plus optional interactive
+ * affix actions (Filament-style `suffixAction()` / `prefixAction()` /
+ * `hintAction()`).
  */
 trait HasPrefixAndSuffix
 {
@@ -19,6 +22,12 @@ trait HasPrefixAndSuffix
     protected string|Closure|null $prefixIcon = null;
 
     protected string|Closure|null $suffixIcon = null;
+
+    protected ?Action $prefixAction = null;
+
+    protected ?Action $suffixAction = null;
+
+    protected ?Action $hintAction = null;
 
     public function prefix(string|Closure|null $prefix): static
     {
@@ -48,6 +57,36 @@ trait HasPrefixAndSuffix
         return $this;
     }
 
+    /**
+     * Interactive action rendered before the input (inside the affix wrapper).
+     */
+    public function prefixAction(Action $action): static
+    {
+        $this->prefixAction = $action;
+
+        return $this;
+    }
+
+    /**
+     * Interactive action rendered after the input (inside the affix wrapper).
+     */
+    public function suffixAction(Action $action): static
+    {
+        $this->suffixAction = $action;
+
+        return $this;
+    }
+
+    /**
+     * Interactive action rendered alongside the field hint.
+     */
+    public function hintAction(Action $action): static
+    {
+        $this->hintAction = $action;
+
+        return $this;
+    }
+
     public function getPrefix(): ?string
     {
         return $this->evaluate($this->prefix);
@@ -72,11 +111,57 @@ trait HasPrefixAndSuffix
         return $value instanceof Icon ? $value->value() : $value;
     }
 
-    public function hasAffix(): bool
+    public function getPrefixAction(): ?Action
+    {
+        return $this->prefixAction;
+    }
+
+    public function getSuffixAction(): ?Action
+    {
+        return $this->suffixAction;
+    }
+
+    public function getHintAction(): ?Action
+    {
+        return $this->hintAction;
+    }
+
+    /**
+     * Resolve an affix action by name (prefix, suffix, or hint slot).
+     */
+    public function getFieldAction(string $name): ?Action
+    {
+        foreach ([$this->prefixAction, $this->suffixAction, $this->hintAction] as $action) {
+            if ($action !== null && $action->getName() === $name) {
+                return $action;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Whether anything renders in the leading affix slot.
+     */
+    public function hasPrefixContent(): bool
     {
         return $this->getPrefix() !== null
-            || $this->getSuffix() !== null
             || $this->getPrefixIcon() !== null
-            || $this->getSuffixIcon() !== null;
+            || $this->prefixAction !== null;
+    }
+
+    /**
+     * Whether anything renders in the trailing affix slot.
+     */
+    public function hasSuffixContent(): bool
+    {
+        return $this->getSuffix() !== null
+            || $this->getSuffixIcon() !== null
+            || $this->suffixAction !== null;
+    }
+
+    public function hasAffix(): bool
+    {
+        return $this->hasPrefixContent() || $this->hasSuffixContent();
     }
 }

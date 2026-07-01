@@ -25,8 +25,8 @@ class BelongsToSelect extends Select
     /** @var Closure|null fn(Builder) => Builder — modify the options query */
     protected ?Closure $modifyOptionsQueryUsing = null;
 
-    /** @var array<int, Component>|null Schema for inline create modal */
-    protected ?array $createOptionFormSchema = null;
+    /** @var array<int, Component>|Closure|null Schema for inline create modal */
+    protected array|Closure|null $createOptionFormSchema = null;
 
     /** @var Closure|null fn(array) => Model — custom create handler */
     protected ?Closure $createOptionUsing = null;
@@ -49,9 +49,9 @@ class BelongsToSelect extends Select
     }
 
     /**
-     * @param  array<int, Component>  $schema
+     * @param  array<int, Component>|Closure  $schema
      */
-    public function createOptionForm(array $schema): static
+    public function createOptionForm(array|Closure $schema): static
     {
         $this->createOptionFormSchema = $schema;
 
@@ -80,9 +80,9 @@ class BelongsToSelect extends Select
     }
 
     /**
-     * @return array<int, Component>|null
+     * @return array<int, Component>|Closure|null
      */
-    public function getCreateOptionFormSchema(): ?array
+    public function getCreateOptionFormSchema(): array|Closure|null
     {
         return $this->createOptionFormSchema;
     }

@@ -34,9 +34,17 @@ Display: `Alert`, `Html`, `Placeholder`, `ViewField`. Layout: `Section`, `Grid`,
 
 - Fields are `::make($name)` where `$name` is the state key under the form's `statePath`.
 - Validation lives on the field: `->required()`, `->rules([...])`, `->minLength()` etc.
+- `->rules()` accepts a Closure (or Closure entries in the array), evaluated with `$get`/`$set` for rules that depend on live sibling state.
 - Options accept arrays or an enum class: `->options(Status::class)` (shared `HasOptions`).
 - Reactivity is opt-in with `->live()`; default fields use deferred `wire:model`.
 - `Select`/`Radio`/`CheckboxList` share the same options API.
+- `Radio` has display variants: `->cards()` (selectable cards, `->inline()` for a row,
+  `->hideIndicator()` to drop the dot), `->segmented()` (pill over a track), and `->buttons()`
+  (separate buttons, selected filled; `->inline()` for a row). `->icons([value => name])` and
+  `->colors([value => color])` add per-option icons/colors (every variant) and are auto-derived
+  from a `HasIcon`/`HasColor` enum passed to `->options(Enum::class)`. The `segmented`/`buttons`
+  variants take a size via the shared `HasSize` API (`->sm()`/`->md()`/`->lg()`), and `->color(...)`
+  sets one group accent (shared `HasColor`).
 
 ### Reactive patterns
 
@@ -54,6 +62,18 @@ Conditional field driven by a sibling:
     Select::make('type')->options(['business' => 'Business', 'person' => 'Person'])->live(),
     TextInput::make('vat_id')->visible(fn ($get) => $get('type') === 'business'),
 
+Fluent conditioning shortcuts avoid the Closure for the common "field equals value" case
+(pass an array to match "is one of"):
+
+- `->requiredIf('type', 'business')`, `->requiredUnless('type', 'person')`, `->requiredWith('company')`
+- `->visibleWhen('type', 'business')`, `->hiddenWhen('type', 'person')`, `->disabledWhen('locked', true)`
+
+`visibleWhen`/`hiddenWhen`/`disabledWhen` are shared Foundation helpers (also on columns, filters,
+actions); the `required*` helpers live on the field. Both resolve reactively against live sibling state:
+
+    Select::make('type')->options(['business' => 'Business', 'person' => 'Person'])->live(),
+    TextInput::make('vat_id')->visibleWhen('type', 'business')->requiredIf('type', 'business'),
+
 `afterStateUpdated()` runs a callback after the field's value changes (auto-enables `live()`):
 the callback receives `$state` (new value), `$old`, `$get`, `$set`, `$component`.
 
@@ -63,6 +83,45 @@ the callback receives `$state` (new value), `$old`, `$get`, `$set`, `$component`
 
 Hidden fields are skipped during validation, so a `required()` rule on a field hidden by
 `visible(fn ($get) => …)` never blocks submit.
+
+Live validation is opt-in per field: `->validateLive()` (validates on each change) or
+`->validateOnBlur()` (validates when focus leaves). The host validates just that field during the
+reactive roundtrip and refreshes only its error bag entry — the rest of the form is not flagged.
+Conditional rules (`requiredIf()` etc.) are honoured live. Cross-field Laravel string rules like
+`required_if:other,value` still validate on submit; use `requiredIf()` for the reactive equivalent.
+
+    TextInput::make('email')->email()->required()->validateLive(),
+
+Layout components (`Grid`, `Section`, `Fieldset`, …) receive the same `$get`/`$set` accessors in
+their `visible()`/`hidden()` closures, so you can show or hide a whole section based on sibling state:
+
+    Section::make('Billing')
+        ->schema([TextInput::make('vat_id')])
+        ->visible(fn ($get) => $get('type') === 'business'),
+
+### Field-level actions
+
+Attach an interactive `Action` to an input via `suffixAction()`, `prefixAction()` or `hintAction()`.
+The action's callback runs on the server with the same `$get`/`$set`/`$state` context as
+`afterStateUpdated()` — ideal for lookups (ARES, address verification) or deriving one field from
+another:
+
+    TextInput::make('title')->suffixAction(
+        Action::make('to_upper')
+            ->icon('heroicon-o-arrow-up')
+            ->action(fn ($get, $set) => $set('title', strtoupper((string) $get('title')))),
+    );
+
+For a standalone, design-system-styled button bound to a closure (instead of raw `Html::make()`),
+use the `Button` field. Presentation (`label`, `icon`, `color`, `size`, `outlined`) mirrors actions:
+
+    Button::make('generate_slug')
+        ->label('Generate slug')
+        ->icon('heroicon-o-sparkles')
+        ->action(fn ($get, $set) => $set('slug', Str::slug((string) $get('title')))),
+
+Both work in standalone `WithForms` hosts and table action modals; the host's `callFieldAction()`
+endpoint re-resolves the field and runs the closure.
 
 ### Prefill a form from an action
 

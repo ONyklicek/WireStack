@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use NyonCode\WireBoost\Support\TypeCatalog;
+use NyonCode\WireForms\Components\Display\Html;
+use NyonCode\WireForms\Components\Display\Placeholder;
 use NyonCode\WireTable\Columns\BadgeColumn;
 use NyonCode\WireTable\Columns\TextColumn;
 
@@ -12,7 +14,15 @@ beforeEach(function () {
 
 it('lists the known categories', function () {
     expect($this->catalog->categories())
-        ->toContain('columns', 'filters', 'fields', 'actions', 'infolist-entries', 'widgets', 'modals');
+        ->toContain('columns', 'filters', 'fields', 'displays', 'actions', 'infolist-entries', 'widgets', 'modals');
+});
+
+it('discovers display components and resolves them by short name', function () {
+    $names = array_column($this->catalog->types('displays'), 'name');
+
+    expect($names)->toContain('html', 'placeholder', 'alert', 'view-field')
+        ->and($this->catalog->resolve('html'))->toBe(Html::class)
+        ->and($this->catalog->resolve('placeholder'))->toBe(Placeholder::class);
 });
 
 it('reports whether a category is known', function () {

@@ -48,6 +48,12 @@ trait HasModal
 
     protected ?string $modalCancelLabel = null;
 
+    protected ?string $modalPreviousLabel = null;
+
+    protected ?string $modalNextLabel = null;
+
+    protected ?string $modalSavingLabel = null;
+
     protected ?string $modalWidth = 'md';
 
     protected bool $modalCloseOnClickAway = true;
@@ -138,6 +144,36 @@ trait HasModal
     public function modalCancelActionLabel(?string $label): static
     {
         $this->modalCancelLabel = $label;
+
+        return $this;
+    }
+
+    /**
+     * Label for the wizard "Back" (previous step) button.
+     */
+    public function modalPreviousActionLabel(?string $label): static
+    {
+        $this->modalPreviousLabel = $label;
+
+        return $this;
+    }
+
+    /**
+     * Label for the wizard "Next" (next step) button.
+     */
+    public function modalNextActionLabel(?string $label): static
+    {
+        $this->modalNextLabel = $label;
+
+        return $this;
+    }
+
+    /**
+     * Label shown on the submit button while the action is processing.
+     */
+    public function modalSavingLabel(?string $label): static
+    {
+        $this->modalSavingLabel = $label;
 
         return $this;
     }
@@ -400,6 +436,21 @@ trait HasModal
     public function getModalCancelActionLabel(): string
     {
         return $this->modalCancelLabel ?? Trans::get('wire-core::actions.confirm_cancel');
+    }
+
+    public function getModalPreviousActionLabel(): string
+    {
+        return $this->modalPreviousLabel ?? Trans::get('wire-core::actions.wizard_previous');
+    }
+
+    public function getModalNextActionLabel(): string
+    {
+        return $this->modalNextLabel ?? Trans::get('wire-core::actions.wizard_next');
+    }
+
+    public function getModalSavingLabel(): string
+    {
+        return $this->modalSavingLabel ?? Trans::get('wire-core::actions.submit_saving');
     }
 
     public function getModalWidth(): string
@@ -681,6 +732,9 @@ trait HasModal
             'iconColor' => $this->getModalIconColor(),
             'submitLabel' => $this->getModalSubmitActionLabel(),
             'cancelLabel' => $this->getModalCancelActionLabel(),
+            'previousLabel' => $this->getModalPreviousActionLabel(),
+            'nextLabel' => $this->getModalNextActionLabel(),
+            'savingLabel' => $this->getModalSavingLabel(),
             'width' => $this->getModalWidth(),
             'closeOnClickAway' => $this->shouldCloseModalOnClickAway(),
             'closeOnEscape' => $this->shouldCloseModalOnEscape(),

@@ -9,6 +9,11 @@ return [
     'confirm_cancel' => 'Cancel',
     'confirm_close' => 'Close',
 
+    // Modal / wizard navigation
+    'wizard_previous' => 'Back',
+    'wizard_next' => 'Next',
+    'submit_saving' => 'Saving...',
+
     // Delete presets
     'delete_heading' => 'Delete record',
     'delete_description' => 'Are you sure you want to delete this record? This action is irreversible.',

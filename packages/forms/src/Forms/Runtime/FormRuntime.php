@@ -140,7 +140,7 @@ final class FormRuntime
 
         foreach ($this->config->schema as $component) {
             if ($component instanceof LayoutComponent) {
-                $component->prepareChildren($this->config->statePath ?? '', $this->config->isLive, $livewire);
+                $component->prepareChildren($this->config->statePath ?? '', $this->config->isLive, $livewire, $this->config->isDisabled);
             } elseif ($component instanceof Component) {
                 if ($this->config->statePath) {
                     $component->statePath($this->config->statePath);

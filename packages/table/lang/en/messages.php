@@ -67,6 +67,9 @@ return [
     'copy' => 'Copy',
     'actions_label' => 'Actions',
     'toggle_columns' => 'Toggle columns',
+    'export_label' => 'Export',
+    'import_label' => 'Import',
+    'import_result' => 'Imported :imported row(s), :failed failed.',
 
     // Selection
     'select_all' => 'Select all',

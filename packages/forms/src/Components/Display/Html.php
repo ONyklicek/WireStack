@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components\Display;
 
 use Closure;
-use NyonCode\WireCore\Foundation\Components\ViewComponent;
 
 /**
  * Raw HTML display component with static helper factories.
@@ -16,7 +15,7 @@ use NyonCode\WireCore\Foundation\Components\ViewComponent;
  *
  * @phpstan-consistent-constructor
  */
-class Html extends ViewComponent
+class Html extends Display
 {
     protected string|Closure|null $content = null;
 

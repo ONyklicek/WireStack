@@ -19,8 +19,9 @@ const devtoolsPort = Number(process.env.CHROME_PORT ?? 9333);
 // Component / variant previews captured from the runtime.
 const fieldSlugs = [
   'text-input', 'textarea', 'select', 'checkbox', 'checkbox-list', 'radio',
-  'toggle', 'color-picker', 'slider', 'tags', 'rating', 'otp-input',
-  'key-value', 'date-time-picker', 'file-upload',
+  'radio-color', 'radio-sizes', 'radio-segmented', 'radio-buttons', 'toggle',
+  'color-picker', 'slider', 'tags', 'rating', 'otp-input', 'key-value',
+  'date-time-picker', 'file-upload',
 ];
 
 const captures = [

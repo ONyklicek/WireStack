@@ -1,5 +1,5 @@
 <div class="wire-chart-widget rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800"
-     x-data="wireChart(@js($type), @js($labels), @js($datasets), @js($filterOptions), @js($activeFilter))">
+     x-data="wireChart(@js($type), @js($labels), @js($datasets), @js($filterOptions), @js($activeFilter), @js($options))">
 
     @if($widget->getHeading() || $widget->hasFilter())
         <div class="mb-4 flex items-center justify-between">
@@ -32,12 +32,13 @@
     @push('scripts')
     <script>
         document.addEventListener('alpine:init', () => {
-            Alpine.data('wireChart', (type, labels, datasets, filterOptions, activeFilter) => ({
+            Alpine.data('wireChart', (type, labels, datasets, filterOptions, activeFilter, options) => ({
                 type,
                 labels,
                 datasets,
                 filterOptions,
                 activeFilter,
+                options,
                 chart: null,
 
                 init() {
@@ -48,10 +49,7 @@
                     this.chart = new Chart(this.$refs.canvas, {
                         type: this.type,
                         data: { labels: this.labels, datasets: this.datasets },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                        },
+                        options: this.options,
                     });
                 },
 

@@ -7,6 +7,7 @@ namespace NyonCode\WireCore\Foundation\Components;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Contracts\View\View;
 use NyonCode\WireCore\Foundation\Concerns;
+use NyonCode\WireCore\Foundation\Contracts\HasStateAccessors;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 
 /**
@@ -17,11 +18,13 @@ use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
  *
  * @phpstan-consistent-constructor
  */
-abstract class LayoutComponent implements Htmlable
+abstract class LayoutComponent implements HasStateAccessors, Htmlable
 {
+    use Concerns\BelongsToComponent;
     use Concerns\HasColumnSpan;
     use Concerns\HasLabel;
     use Concerns\HasVisibility;
+    use Concerns\InteractsWithState;
     use EvaluatesClosures;
 
     /** @var array<int, Component|LayoutComponent> */
@@ -89,13 +92,37 @@ abstract class LayoutComponent implements Htmlable
     }
 
     /**
+     * Sibling state for layout closures (`visible(fn ($get) => ...)`) resolves
+     * against the layout's resolved absolute path, so children of a Repeater or
+     * nested layout read the correctly-prefixed bag.
+     */
+    protected function resolveStateBagRoot(): ?string
+    {
+        return $this->getResolvedStatePath();
+    }
+
+    /**
      * Propagate state path (and optionally live mode) to all child components.
      *
      * The owning Livewire instance is forwarded too so child components can
      * resolve reactive state inside dynamic callbacks (e.g. visible()).
      */
-    public function prepareChildren(string $parentPath = '', bool $live = false, mixed $livewire = null): void
+    public function prepareChildren(string $parentPath = '', bool $live = false, mixed $livewire = null, bool $disabled = false): void
     {
+        // Bind the owning Livewire instance to this layout too (not just its
+        // children) so layout-level reactive closures resolve $get/$set against
+        // live state. Covers both the top-level layout (prepared by the form
+        // runtime) and nested layouts (prepared recursively below).
+        if ($livewire !== null) {
+            $this->livewire($livewire);
+        }
+
+        // A disabled form must disable everything inside its layouts too, not just
+        // its direct fields — mark the layout and cascade to descendants.
+        if ($disabled) {
+            $this->disabled();
+        }
+
         $basePath = $this->statePath
             ? ($parentPath ? "{$parentPath}.{$this->statePath}" : $this->statePath)
             : $parentPath;
@@ -106,13 +133,16 @@ abstract class LayoutComponent implements Htmlable
 
         foreach ($this->schema as $component) {
             if ($component instanceof self) {
-                $component->prepareChildren($basePath, $live, $livewire);
+                $component->prepareChildren($basePath, $live, $livewire, $disabled);
             } elseif ($component instanceof Component) {
                 if ($basePath) {
                     $component->statePath($basePath);
                 }
                 if ($live && method_exists($component, 'live')) {
                     $component->live();
+                }
+                if ($disabled) {
+                    $component->disabled();
                 }
                 if ($livewire !== null) {
                     $component->livewire($livewire);

@@ -420,13 +420,7 @@ class ButtonColumn extends Column
         }
 
         $size = $this->evaluateForRecord($this->buttonSize, $record);
-        $iconSize = match ($size) {
-            'xs' => 'w-3.5 h-3.5',
-            'sm' => 'w-4 h-4',
-            'md' => 'w-5 h-5',
-            'lg' => 'w-5 h-5',
-            default => 'w-4 h-4',
-        };
+        $iconSize = HasSize::getButtonIconSizeClasses($size);
 
         return app(IconManager::class)->render($icon, $iconSize.' shrink-0');
     }

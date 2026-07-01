@@ -162,6 +162,24 @@ it('can be disabled', function () {
     expect($field->isDisabled())->toBeTrue();
 });
 
+it('visibleWhen keeps the component visible when no state context is available', function () {
+    $field = makeFoundationField('name');
+    $field->visibleWhen('type', 'business');
+    expect($field->isVisible())->toBeTrue();
+});
+
+it('hiddenWhen keeps the component shown when no state context is available', function () {
+    $field = makeFoundationField('name');
+    $field->hiddenWhen('type', 'business');
+    expect($field->isHidden())->toBeFalse();
+});
+
+it('disabledWhen keeps the component enabled when no state context is available', function () {
+    $field = makeFoundationField('name');
+    $field->disabledWhen('type', 'business');
+    expect($field->isDisabled())->toBeFalse();
+});
+
 // ─── HasHelperText ──────────────────────────────────────────
 
 it('has no helper text by default', function () {
@@ -224,6 +242,32 @@ it('resolves canonical button size classes for labelled and icon-only buttons', 
         ->and(Concerns\HasSize::getButtonSizeClasses('md', iconOnly: true))->toBe('p-2')
         ->and(Concerns\HasSize::getButtonSizeClasses('lg', iconOnly: true))->toBe('p-2.5')
         ->and(Concerns\HasSize::getButtonSizeClasses('sm', iconOnly: true))->toBe('p-1.5');
+});
+
+it('resolves canonical choice-surface color bundles per sub-surface', function () {
+    $primary = Concerns\HasColor::getChoiceColorClasses('primary');
+    expect($primary)->toHaveKeys(['input', 'solid', 'text', 'card', 'indicator'])
+        ->and($primary['solid'])->toContain('peer-checked:bg-primary-600')
+        ->and($primary['input'])->toContain('text-primary-600');
+
+    expect(Concerns\HasColor::getChoiceColorClasses('success')['solid'])->toContain('peer-checked:bg-emerald-600')
+        ->and(Concerns\HasColor::getChoiceColorClasses('danger')['card'])->toContain('peer-checked:border-red-500')
+        ->and(Concerns\HasColor::getChoiceColorClasses('info')['text'])->toContain('peer-checked:text-cyan-600')
+        ->and(Concerns\HasColor::getChoiceColorClasses('unknown')['solid'])->toContain('peer-checked:bg-primary-600');
+});
+
+it('resolves canonical icon size classes for button-accompanying and standalone icons', function () {
+    expect(Concerns\HasSize::getButtonIconSizeClasses('xs'))->toBe('w-3.5 h-3.5')
+        ->and(Concerns\HasSize::getButtonIconSizeClasses('sm'))->toBe('w-4 h-4')
+        ->and(Concerns\HasSize::getButtonIconSizeClasses('md'))->toBe('w-5 h-5')
+        ->and(Concerns\HasSize::getButtonIconSizeClasses('lg'))->toBe('w-5 h-5')
+        ->and(Concerns\HasSize::getButtonIconSizeClasses('unknown'))->toBe('w-4 h-4')
+        ->and(Concerns\HasSize::getIconSizeClasses('xs'))->toBe('w-4 h-4')
+        ->and(Concerns\HasSize::getIconSizeClasses('sm'))->toBe('w-5 h-5')
+        ->and(Concerns\HasSize::getIconSizeClasses('md'))->toBe('w-6 h-6')
+        ->and(Concerns\HasSize::getIconSizeClasses('lg'))->toBe('w-7 h-7')
+        ->and(Concerns\HasSize::getIconSizeClasses('xl'))->toBe('w-8 h-8')
+        ->and(Concerns\HasSize::getIconSizeClasses('unknown'))->toBe('w-6 h-6');
 });
 
 it('resolves canonical font-weight classes from a safe allow-list', function () {

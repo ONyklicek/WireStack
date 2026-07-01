@@ -9,6 +9,7 @@ use NyonCode\WireCore\Actions\BaseAction;
 use NyonCode\WireCore\Infolists\Components\Entry;
 use NyonCode\WireCore\Modals\Modal;
 use NyonCode\WireCore\Widgets\Widget;
+use NyonCode\WireForms\Components\Display\Display;
 use NyonCode\WireForms\Components\Field;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Filters\Filter;
@@ -31,6 +32,7 @@ class TypeCatalog
         'columns' => Column::class,
         'filters' => Filter::class,
         'fields' => Field::class,
+        'displays' => Display::class,
         'actions' => BaseAction::class,
         'infolist-entries' => Entry::class,
         'widgets' => Widget::class,

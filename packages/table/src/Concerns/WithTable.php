@@ -52,6 +52,7 @@ use NyonCode\WireCore\Infolists\Infolist;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
+use NyonCode\WireForms\Concerns\InteractsWithFieldActions;
 use NyonCode\WireForms\Concerns\InteractsWithRepeaters;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireTable\Columns\Column;
@@ -60,6 +61,9 @@ use NyonCode\WireTable\Export\ExportAction;
 use NyonCode\WireTable\Export\ExportFormat;
 use NyonCode\WireTable\Export\TableExport;
 use NyonCode\WireTable\Filters\Filter;
+use NyonCode\WireTable\Import\ImportAction;
+use NyonCode\WireTable\Import\ImportResult;
+use NyonCode\WireTable\Import\TableImport;
 use NyonCode\WireTable\Table;
 use ReflectionFunction;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -69,6 +73,7 @@ trait WithTable
 {
     use DispatchesStateUpdates;
     use HasSqlDebug;
+    use InteractsWithFieldActions;
     use InteractsWithRepeaters;
     use WithPagination;
     use WithTableQueryString;
@@ -306,6 +311,7 @@ trait WithTable
             ]);
 
             $this->dispatchAfterStateUpdated($forms, 'tableState.'.$path, $old);
+            $this->dispatchLiveValidation($forms, 'tableState.'.$path);
         }
     }
 
@@ -712,8 +718,10 @@ trait WithTable
 
         $search = $this->tableState->get('search');
         $filters = $this->tableState->get('filters', []);
-        $sortColumn = $this->tableState->get('sort.column', '');
-        $sortDirection = $this->tableState->get('sort.direction', 'asc');
+        // Fall back to the configured default sort when no explicit sort is set, so
+        // the rendered table and the export (getFilteredTableQuery) order identically.
+        $sortColumn = $this->tableState->get('sort.column', '') ?: ($table->getDefaultSort() ?? '');
+        $sortDirection = $this->tableState->get('sort.direction', '') ?: ($table->getDefaultSortDirection() ?? 'asc');
         $columnFilters = $this->tableState->get('columnFilters', []);
 
         // Dispatch search event
@@ -3582,6 +3590,34 @@ trait WithTable
         ));
 
         return $export->download($query, $columns);
+    }
+
+    /**
+     * Import rows from an uploaded file into the table's model.
+     *
+     * Resolves the {@see ImportAction} config declared in the table's header
+     * actions (mirroring exportTable()), runs the import over the given file path
+     * (typically an uploaded temp file's real path), invalidates cached records so
+     * the new rows render, and returns the per-row {@see ImportResult}.
+     */
+    public function importTable(string $filePath): ImportResult
+    {
+        $importConfig = null;
+        foreach ($this->getTable()->getHeaderActions() as $action) {
+            if ($action instanceof ImportAction) {
+                $importConfig = $action->getImportConfig();
+                break;
+            }
+        }
+
+        $result = ($importConfig ?? TableImport::make())->import($filePath);
+
+        // New rows changed the dataset — drop cached records/partitions so the
+        // next render reflects the import.
+        $this->cachedRecords = null;
+        $this->cachedGroupPartitions = null;
+
+        return $result;
     }
 
     /**

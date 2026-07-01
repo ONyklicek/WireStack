@@ -21,17 +21,30 @@
     <label for="filter-{{ $name }}" class="text-sm font-medium text-gray-700 dark:text-gray-300">
         {{ $label }}
     </label>
-    <select
-        id="filter-{{ $name }}"
-        wire:model.live="tableState.filters.{{ $name }}.value"
-        @if($isMultiple) multiple @endif
-        class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-    >
-        <option value="">{{ $placeholder }}</option>
-        @foreach($options as $optionValue => $optionLabel)
-            <option value="{{ $optionValue }}" @if(in_array((string) $optionValue, $selectedValues, true)) selected @endif>
-                {{ $optionLabel }}
-            </option>
-        @endforeach
-    </select>
+    @if($filter->isSearchable() && ! $filter->isNative())
+        {{-- Searchable combobox: delegate to the canonical shared owner. --}}
+        @include('wire-core::partials.searchable-select', [
+            'selectId' => 'filter-' . $name,
+            'statePath' => 'tableState.filters.' . $name . '.value',
+            'options' => $options,
+            'placeholder' => $placeholder,
+            'multiple' => $isMultiple,
+            'searchPrompt' => __('Search...'),
+            'noResultsMessage' => __('No results found'),
+        ])
+    @else
+        <select
+            id="filter-{{ $name }}"
+            wire:model.live="tableState.filters.{{ $name }}.value"
+            @if($isMultiple) multiple @endif
+            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+        >
+            <option value="">{{ $placeholder }}</option>
+            @foreach($options as $optionValue => $optionLabel)
+                <option value="{{ $optionValue }}" @if(in_array((string) $optionValue, $selectedValues, true)) selected @endif>
+                    {{ $optionLabel }}
+                </option>
+            @endforeach
+        </select>
+    @endif
 </div>
