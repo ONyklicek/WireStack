@@ -53,3 +53,61 @@ it('is not searchable by default', function () {
 it('can be set to searchable', function () {
     expect(SelectFilter::make('status')->searchable()->isSearchable())->toBeTrue();
 });
+
+it('searchable() opts out of native rendering so it works on its own', function () {
+    expect(SelectFilter::make('status')->searchable()->isNative())->toBeFalse();
+});
+
+it('an explicit native() after searchable() forces the native element', function () {
+    $filter = SelectFilter::make('status')->searchable()->native();
+
+    expect($filter->isSearchable())->toBeTrue()
+        ->and($filter->isNative())->toBeTrue();
+});
+
+it('renders a native select when not searchable', function () {
+    $html = SelectFilter::make('status')
+        ->options(['paid' => 'Paid', 'due' => 'Due'])
+        ->render();
+
+    expect($html)
+        ->toContain('<select')
+        ->toContain('wire:model.live="tableState.filters.status.value"')
+        ->not->toContain('x-teleport');
+});
+
+it('renders the searchable combobox when searchable (regression: searchable() was a no-op)', function () {
+    $html = SelectFilter::make('status')
+        ->options(['paid' => 'Paid', 'due' => 'Due'])
+        ->searchable()
+        ->render();
+
+    expect($html)
+        ->toContain('x-teleport')
+        ->toContain("\$wire.entangle('tableState.filters.status.value')")
+        ->toContain('id="filter-status"');
+});
+
+it('passes the multiple flag through to the searchable combobox', function () {
+    $html = SelectFilter::make('status')
+        ->options(['paid' => 'Paid', 'due' => 'Due'])
+        ->searchable()
+        ->multiple()
+        ->render();
+
+    expect($html)
+        ->toContain('multiple: true')
+        ->toContain('aria-multiselectable="true"');
+});
+
+it('renders the native element when searchable is overridden by native()', function () {
+    $html = SelectFilter::make('status')
+        ->options(['paid' => 'Paid', 'due' => 'Due'])
+        ->searchable()
+        ->native()
+        ->render();
+
+    expect($html)
+        ->toContain('<select')
+        ->not->toContain('x-teleport');
+});

@@ -6,14 +6,13 @@ namespace NyonCode\WireForms\Components\Display;
 
 use Closure;
 use NyonCode\WireCore\Foundation\Colors\Color;
-use NyonCode\WireCore\Foundation\Components\ViewComponent;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
  * Alert/notification display component with color, icon, title, and dismissible options.
  */
-class Alert extends ViewComponent
+class Alert extends Display
 {
     protected string|Closure|null $content = null;
 

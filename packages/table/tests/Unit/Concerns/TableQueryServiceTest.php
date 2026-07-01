@@ -180,6 +180,45 @@ it('handles custom search callbacks', function () {
         ->and($results->first()->name)->toBe('Bob');
 });
 
+// ─── Column-level filters honour the column operator ─────────────────────────
+
+it('applies column filters through the column operator (default like = partial match)', function () {
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->columns([Column::make('name')->filterable()]);
+
+    $names = (new TableQueryService)->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+        columnFilterValues: ['name' => 'li'],
+    )->get()->pluck('name')->all();
+
+    expect($names)->toContain('Alice', 'Charlie')
+        ->and($names)->not->toContain('Bob');
+});
+
+it('honours a custom column filterOperator for exact match', function () {
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->columns([Column::make('name')->filterable()->filterOperator('=')]);
+
+    $service = new TableQueryService;
+
+    // Exact match: a partial term matches nothing.
+    expect($service->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+        columnFilterValues: ['name' => 'li'],
+    )->get())->toHaveCount(0);
+
+    // The full value matches exactly one row.
+    expect($service->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+        columnFilterValues: ['name' => 'Alice'],
+    )->get())->toHaveCount(1);
+});
+
 // ─── Sorting ─────────────────────────────────────────────────────────────────
 
 it('applies sorting', function () {

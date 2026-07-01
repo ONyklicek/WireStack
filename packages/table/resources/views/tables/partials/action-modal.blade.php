@@ -74,7 +74,7 @@
                         >
                             @include('wire-core::partials.spinner', ['wireTarget' => 'submitActionModal', 'class' => 'h-4 w-4'])
                             <span wire:loading.remove wire:target="submitActionModal">{{ $modalData['submitLabel'] }}</span>
-                            <span wire:loading wire:target="submitActionModal">{{ __('Saving...') }}</span>
+                            <span wire:loading wire:target="submitActionModal">{{ $modalData['savingLabel'] ?? __('Saving...') }}</span>
                         </button>
                         @endunless
                         @include('wire-table::tables.partials.modal-footer-actions', [
@@ -169,7 +169,7 @@
                         >
                             @include('wire-core::partials.spinner', ['wireTarget' => 'submitActionModal', 'class' => 'h-4 w-4'])
                             <span wire:loading.remove wire:target="submitActionModal">{{ $modalData['submitLabel'] }}</span>
-                            <span wire:loading wire:target="submitActionModal">{{ __('Saving...') }}</span>
+                            <span wire:loading wire:target="submitActionModal">{{ $modalData['savingLabel'] ?? __('Saving...') }}</span>
                         </button>
                         @endunless
                         @include('wire-table::tables.partials.modal-footer-actions', [

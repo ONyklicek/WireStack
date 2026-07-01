@@ -171,6 +171,24 @@ the user moves back and forth. Validation on **Next** runs the step's field rule
 pre-fill it. **Submit** re-validates every step cumulatively (the
 `afterValidation` hooks are not re-run, so they never fire twice).
 
+### Customising the navigation labels
+
+The wizard's **Back**, **Next** and the submit-in-progress **Saving…** labels are
+configurable and fall back to translatable defaults
+(`wire-core::actions.{wizard_previous,wizard_next,submit_saving}`):
+
+```php
+Action::make('create')
+    ->steps([/* ... */])
+    ->modalPreviousActionLabel('Back')
+    ->modalNextActionLabel('Continue')
+    ->modalSubmitActionLabel('Create user')
+    ->modalSavingLabel('Creating…');
+```
+
+[`modalFooterActions()`](../forms/reactive-fields.md#modal-footer-actions) render in
+a wizard footer too, alongside Back / Next / Submit.
+
 ### Building a step from earlier data
 
 Pass a Closure to `->schema()` to build a step's fields from the values entered in

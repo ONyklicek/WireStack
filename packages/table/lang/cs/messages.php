@@ -67,6 +67,7 @@ return [
     'copy' => 'Kopírovat',
     'actions_label' => 'Akce',
     'toggle_columns' => 'Přepnout sloupce',
+    'export_label' => 'Export',
 
     // Selection
     'select_all' => 'Vybrat vše',

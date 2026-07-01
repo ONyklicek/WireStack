@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 use NyonCode\WireForms\Components\Layout\Grid;
 use NyonCode\WireForms\Components\Layout\Section;
+use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Forms\Form;
@@ -99,6 +100,23 @@ test('form disabled propagates to components', function () {
 
     $flat = $form->getFlatComponents();
     expect($flat[0]->isDisabled())->toBeTrue();
+});
+
+test('form disabled propagates into nested layouts and repeaters', function () {
+    $repeater = Repeater::make('items')->schema([TextInput::make('qty')]);
+
+    $form = Form::make()
+        ->schema([
+            Section::make('Info')->schema([TextInput::make('name')]),
+            $repeater,
+        ])
+        ->disabled();
+
+    $name = collect($form->getFlatComponents())->first(fn ($c) => $c->getName() === 'name');
+
+    expect($name?->isDisabled())->toBeTrue()
+        ->and($repeater->isDisabled())->toBeTrue()
+        ->and($repeater->isAddable())->toBeFalse();
 });
 
 test('form validation rules collected from schema', function () {

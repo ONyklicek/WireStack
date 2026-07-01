@@ -180,7 +180,7 @@ final class TableQueryService
 
         // ── 2. Build QueryPlanner inputs (only for columns/filters WITHOUT custom callbacks) ──
         $plannerColumns = $this->buildPlannerColumns($columns);
-        $plannerFilters = $this->buildPlannerFilters($filters, $filterValues, $columnFilterValues, $columns, $subRowRelation !== null);
+        $plannerFilters = $this->buildPlannerFilters($filters, $filterValues, $subRowRelation !== null);
         $plannerSorts = $this->buildPlannerSorts($sortColumn, $sortDirection, $columns, $customSortCallback !== null);
         $searchTerm = ! empty($search) && ! empty($customSearchCallbacks) ? null : $search;
 
@@ -275,7 +275,10 @@ final class TableQueryService
             $query = call_user_func($item['callback'], $query, $item['value']);
         }
 
-        // Column-level filters with custom callbacks
+        // Column-level filters. Both custom-callback and plain columns are applied
+        // through the canonical Column::applyFilter() so the configured filterType
+        // and filterOperator (default "like") are honoured identically to sub-row
+        // filtering — instead of a hard-coded "=" in the planner.
         foreach ($columns as $column) {
             if (! $column->isFilterable()) {
                 continue;
@@ -284,9 +287,8 @@ final class TableQueryService
             if ($value === null || $value === '') {
                 continue;
             }
-            if ($column->getFilterQueryCallback() !== null) {
-                $query = call_user_func($column->getFilterQueryCallback(), $query, $value);
-            }
+
+            $query = $column->applyFilter($query, $value);
         }
 
         // ── 6. Plugin hook: table.queried (post-execution observation) ──
@@ -527,17 +529,16 @@ final class TableQueryService
     /**
      * Convert active filter values + Filter config → FilterDefinition[] for the planner.
      *
+     * Column-level filters are not converted here; they are applied post-planner
+     * via Column::applyFilter() in buildQuery().
+     *
      * @param  array<int, Filter>  $filters
      * @param  array<string, mixed>  $filterValues
-     * @param  array<string, mixed>  $columnFilterValues
-     * @param  array<int, Column>  $columns
      * @return array<int, FilterDefinition>
      */
     private function buildPlannerFilters(
         array $filters,
         array $filterValues,
-        array $columnFilterValues,
-        array $columns,
         bool $subRowsEnabled = false,
     ): array {
         $this->enrichSelectFiltersWithEnumOptions($filters);
@@ -583,26 +584,9 @@ final class TableQueryService
             );
         }
 
-        // Column-level filters (without custom callbacks)
-        foreach ($columns as $column) {
-            if (! $column->isFilterable()) {
-                continue;
-            }
-            $value = $columnFilterValues[$column->getName()] ?? null;
-            if ($value === null || $value === '') {
-                continue;
-            }
-            // Skip columns with custom filter callbacks
-            if ($column->getFilterQueryCallback() !== null) {
-                continue;
-            }
-
-            $definitions[] = FilterDefinition::make(
-                column: $column->getName(),
-                operator: '=',
-                value: $value,
-            );
-        }
+        // Column-level filters are applied post-planner through Column::applyFilter()
+        // (see buildQuery) so their filterType/filterOperator is honoured; they are
+        // intentionally not converted to planner FilterDefinitions here.
 
         return $definitions;
     }

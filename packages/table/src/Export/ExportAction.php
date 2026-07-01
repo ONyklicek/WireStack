@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Export;
 
 use NyonCode\WireCore\Actions\HeaderAction;
+use NyonCode\WireCore\Core\Support\Trans;
 
 class ExportAction extends HeaderAction
 {
@@ -16,7 +17,7 @@ class ExportAction extends HeaderAction
     public static function makeExport(): static
     {
         return static::make('export')
-            ->label('Export')
+            ->label(Trans::get('wire-table::messages.export_label'))
             ->icon('heroicon-o-arrow-down-tray')
             ->color('gray');
     }

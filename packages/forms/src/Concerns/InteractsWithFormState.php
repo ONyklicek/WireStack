@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Concerns;
 
-use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Foundation\Components\Component;
-use NyonCode\WireCore\Foundation\Contracts\HasStateAccessors;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithState;
 
 /**
  * Supplies Filament-style reactive state accessors to evaluated Closures.
  *
- * Implements the Core {@see HasStateAccessors}
- * contract so that dynamic field callbacks — `visible()`, `disabled()`,
+ * Delegates the accessor wiring to the canonical Core
+ * {@see InteractsWithState} owner and layers on the field-specific own-value
+ * semantics so dynamic field callbacks — `visible()`, `disabled()`,
  * `hidden()`, `afterStateUpdated()` — can read sibling state via `$get`, write
  * via `$set`, and read their own value, all resolved against the bound Livewire
  * component's live state bag.
@@ -30,44 +30,23 @@ use NyonCode\WireCore\Foundation\Contracts\HasStateAccessors;
  */
 trait InteractsWithFormState
 {
+    use InteractsWithState;
+
     /**
-     * @return array<string, mixed>
+     * Fields resolve sibling state against their bound state-path prefix.
      */
-    public function getStateAccessors(): array
+    protected function resolveStateBagRoot(): ?string
     {
-        $livewire = $this->getLivewire();
-        $bagRoot = $this->statePath;
-        $ownName = $this->getName();
+        return $this->statePath;
+    }
 
-        $resolvePath = static function (string $path) use ($bagRoot): string {
-            return $bagRoot !== null && $bagRoot !== ''
-                ? "{$bagRoot}.{$path}"
-                : $path;
-        };
-
-        return [
-            'get' => static function (?string $path = null, mixed $default = null) use ($livewire, $resolvePath, $ownName): mixed {
-                if ($livewire === null) {
-                    return $default;
-                }
-
-                // No path → the field's own live value, always current (even after
-                // an earlier $set in the same closure), unlike the $state snapshot.
-                return data_get($livewire, $resolvePath($path ?? $ownName), $default);
-            },
-            'set' => static function (string $path, mixed $value) use ($livewire, $resolvePath): mixed {
-                if ($livewire !== null) {
-                    // Route through the canonical StateContainer-aware writer: inside a
-                    // table action modal the bag is a StateContainer, and a plain
-                    // data_set() would silently drop the write.
-                    StateContainer::writeInto($livewire, $resolvePath($path), $value);
-                }
-
-                return $value;
-            },
-            'state' => $livewire !== null
-                ? data_get($livewire, $this->getStatePath())
-                : null,
-        ];
+    /**
+     * The field's own current value, taken as the `$state` snapshot.
+     */
+    protected function resolveOwnState(mixed $livewire): mixed
+    {
+        return $livewire !== null
+            ? data_get($livewire, $this->getStatePath())
+            : null;
     }
 }

@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components\Display;
 
 use Closure;
-use NyonCode\WireCore\Foundation\Components\ViewComponent;
 
 /**
  * Placeholder display component for showing text/HTML content without editing.
  */
-class Placeholder extends ViewComponent
+class Placeholder extends Display
 {
     protected string|Closure|null $content = null;
 

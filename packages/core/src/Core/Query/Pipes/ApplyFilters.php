@@ -62,15 +62,34 @@ final class ApplyFilters implements QueryPipe
         }
 
         if ($operator === 'BETWEEN') {
-            $values = (array) $filter->value;
-            $builder->whereBetween($column, [$values[0] ?? null, $values[1] ?? null], $boolean);
+            $values = array_values((array) $filter->value);
+            $lower = $values[0] ?? null;
+            $upper = $values[1] ?? null;
+
+            // A genuine BETWEEN needs both bounds. With only one bound, degrade to a
+            // single-sided comparison instead of "BETWEEN x AND NULL", which matches
+            // nothing; with neither bound, skip the clause entirely.
+            if ($lower !== null && $upper !== null) {
+                $builder->whereBetween($column, [$lower, $upper], $boolean);
+            } elseif ($lower !== null) {
+                $builder->where($column, '>=', $lower, $boolean);
+            } elseif ($upper !== null) {
+                $builder->where($column, '<=', $upper, $boolean);
+            }
 
             return;
         }
 
         if ($operator === 'NOT BETWEEN') {
-            $values = (array) $filter->value;
-            $builder->whereNotBetween($column, [$values[0] ?? null, $values[1] ?? null], $boolean);
+            $values = array_values((array) $filter->value);
+            $lower = $values[0] ?? null;
+            $upper = $values[1] ?? null;
+
+            // NOT BETWEEN is only well-defined with both bounds; a single bound is
+            // ambiguous, so skip rather than emit "NOT BETWEEN x AND NULL".
+            if ($lower !== null && $upper !== null) {
+                $builder->whereNotBetween($column, [$lower, $upper], $boolean);
+            }
 
             return;
         }

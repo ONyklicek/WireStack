@@ -2,8 +2,16 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\ViewErrorBag;
 use NyonCode\WireForms\Components\BelongsToSelect;
 use NyonCode\WireForms\Components\TextInput;
+
+function renderBelongsToSelect(BelongsToSelect $field): string
+{
+    view()->share('errors', new ViewErrorBag);
+
+    return view('wire-forms::components.belongs-to-select', ['field' => $field])->render();
+}
 
 test('make creates belongs-to-select with name', function () {
     $field = BelongsToSelect::make('company_id');
@@ -54,6 +62,38 @@ test('inherits searchable from Select', function () {
     $field = BelongsToSelect::make('company_id')->searchable();
 
     expect($field->isSearchable())->toBeTrue();
+});
+
+test('searchable renders the shared combobox (regression: had its own copy)', function () {
+    $field = BelongsToSelect::make('company_id')
+        ->options(['1' => 'Acme', '2' => 'Globex'])
+        ->searchable();
+
+    $html = renderBelongsToSelect($field);
+
+    expect($html)
+        ->toContain('x-teleport')
+        ->toContain("\$wire.entangle('company_id')")
+        ->not->toContain('<select');
+});
+
+test('non-searchable renders a native select', function () {
+    $field = BelongsToSelect::make('company_id')->options(['1' => 'Acme']);
+
+    expect(renderBelongsToSelect($field))
+        ->toContain('<select')
+        ->not->toContain('x-teleport');
+});
+
+test('create-option form renders a "create new" footer inside the combobox panel', function () {
+    $field = BelongsToSelect::make('company_id')
+        ->options(['1' => 'Acme'])
+        ->searchable()
+        ->createOptionForm([TextInput::make('name')]);
+
+    expect(renderBelongsToSelect($field))
+        ->toContain("mountAction('company_id_create_option')")
+        ->toContain('Create new');
 });
 
 test('inherits options from Select when manually set', function () {

@@ -12,6 +12,7 @@ use NyonCode\WireCore\Foundation\Concerns\HasDebounce;
 use NyonCode\WireCore\Foundation\Concerns\HasPlaceholder;
 use NyonCode\WireCore\Foundation\Concerns\HasPrefixAndSuffix;
 use NyonCode\WireCore\Foundation\Concerns\HasTooltip;
+use NyonCode\WireCore\Foundation\Contracts\HasFieldActions;
 use NyonCode\WireCore\Foundation\Contracts\HasStateAccessors;
 use NyonCode\WireCore\Foundation\Contracts\HasStateUpdatedCallback;
 use NyonCode\WireForms\Concerns\CanBeAutofocused;
@@ -25,7 +26,7 @@ use NyonCode\WireForms\Contracts\HasValidation;
  * Extends core Component with validation, live bindings,
  * prefix/suffix, placeholder, read-only, and autofocus.
  */
-abstract class Field extends Component implements HasStateAccessors, HasStateUpdatedCallback, HasValidation
+abstract class Field extends Component implements HasFieldActions, HasStateAccessors, HasStateUpdatedCallback, HasValidation
 {
     use CanBeAutofocused;
     use CanBeLive;

@@ -30,6 +30,27 @@ use NyonCode\WireCore\Foundation\Support\EnumResolver;
  */
 trait HasDynamicProperties
 {
+    /**
+     * Decide whether a dynamic-property Closure should be invoked.
+     *
+     * With a record context the closure always runs. Without one (header/bulk
+     * actions carry no record), only context-free closures such as
+     * `fn () => 'Label'` run; record-scoped closures (`fn ($record) => …`) still
+     * fall back to the static value instead of erroring on a null record.
+     */
+    protected function shouldInvokeDynamicCallback(?Closure $callback, mixed $context): bool
+    {
+        if ($callback === null) {
+            return false;
+        }
+
+        if ($context !== null) {
+            return true;
+        }
+
+        return (new \ReflectionFunction($callback))->getNumberOfRequiredParameters() === 0;
+    }
+
     // Callbacks for dynamic resolution
     protected ?Closure $labelCallback = null;
 
@@ -64,7 +85,7 @@ trait HasDynamicProperties
      */
     public function getLabel(mixed $context = null): string
     {
-        if ($this->labelCallback && $context) {
+        if ($this->shouldInvokeDynamicCallback($this->labelCallback, $context)) {
             return ($this->labelCallback)($context);
         }
 
@@ -92,7 +113,7 @@ trait HasDynamicProperties
      */
     public function getColor(mixed $context = null): string
     {
-        if ($this->colorCallback && $context) {
+        if ($this->shouldInvokeDynamicCallback($this->colorCallback, $context)) {
             $value = ($this->colorCallback)($context);
 
             // A callback may return a Color, a palette-carrying enum, or a plain string.
@@ -125,7 +146,7 @@ trait HasDynamicProperties
      */
     public function getTooltip(mixed $context = null): ?string
     {
-        if ($this->tooltipCallback && $context) {
+        if ($this->shouldInvokeDynamicCallback($this->tooltipCallback, $context)) {
             return ($this->tooltipCallback)($context);
         }
 
@@ -154,7 +175,7 @@ trait HasDynamicProperties
      */
     public function getIcon(mixed $context = null): ?string
     {
-        if ($this->iconCallback && $context) {
+        if ($this->shouldInvokeDynamicCallback($this->iconCallback, $context)) {
             $value = ($this->iconCallback)($context);
 
             // A callback may return an Icon, an icon-carrying enum, or a plain string.
@@ -191,7 +212,7 @@ trait HasDynamicProperties
      */
     public function getSize(mixed $context = null): string
     {
-        if ($this->sizeCallback && $context) {
+        if ($this->shouldInvokeDynamicCallback($this->sizeCallback, $context)) {
             return ($this->sizeCallback)($context);
         }
 
@@ -223,7 +244,7 @@ trait HasDynamicProperties
      */
     public function getExtraAttributes(mixed $context = null): array
     {
-        if ($this->extraAttributesCallback && $context) {
+        if ($this->shouldInvokeDynamicCallback($this->extraAttributesCallback, $context)) {
             return ($this->extraAttributesCallback)($context);
         }
 

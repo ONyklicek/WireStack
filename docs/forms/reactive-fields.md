@@ -41,6 +41,51 @@ TextInput::make('vat_id')
 The trigger field must be `->live()` so its change round-trips to the server and re-evaluates the
 dependent field's visibility.
 
+Layout components receive the same accessors, so a whole `Grid`, `Section` or `Fieldset` can show or
+hide on a sibling's value:
+
+```php
+Section::make('Billing')
+    ->schema([
+        TextInput::make('vat_id'),
+        TextInput::make('company'),
+    ])
+    ->visible(fn ($get) => $get('type') === 'business'),
+```
+
+## Field actions and buttons
+
+Attach an interactive `Action` to an input's affix or hint area with `suffixAction()`,
+`prefixAction()` or `hintAction()`. The action's callback runs on the server with the same
+`$get` / `$set` / `$state` context — ideal for a lookup, a "generate" helper, or an inline verify
+button:
+
+```php
+use NyonCode\WireCore\Actions\Action;
+
+TextInput::make('title')->suffixAction(
+    Action::make('to_upper')
+        ->icon('heroicon-o-arrow-up')
+        ->action(fn ($get, $set) => $set('title', strtoupper((string) $get('title')))),
+);
+```
+
+For a standalone, design-system-styled button bound to a closure — instead of a raw
+`Html::make()->content('<button …>')` that bypasses the palette — use the `Button` field. Its
+presentation (`label` / `icon` / `color` / `size` / `outlined`) mirrors actions:
+
+```php
+use NyonCode\WireForms\Components\Button;
+
+Button::make('generate_slug')
+    ->label('Generate slug')
+    ->icon('heroicon-o-sparkles')
+    ->action(fn ($get, $set) => $set('slug', Str::slug((string) $get('title')))),
+```
+
+Both work in a standalone `WithForms` form and inside a table action modal — the host's
+`callFieldAction()` endpoint re-resolves the field from the live schema and runs the closure.
+
 ## `afterStateUpdated()`
 
 Run a callback after a field's value changes. Registering a callback **automatically enables

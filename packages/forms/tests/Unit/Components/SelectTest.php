@@ -2,9 +2,17 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\ViewErrorBag;
 use Illuminate\Validation\Rules\In;
 use NyonCode\WireCore\Foundation\Contracts\Enum\HasLabel;
 use NyonCode\WireForms\Components\Select;
+
+function renderSelect(Select $field): string
+{
+    view()->share('errors', new ViewErrorBag);
+
+    return view('wire-forms::components.select', ['field' => $field])->render();
+}
 
 enum SelectTestStatus: string implements HasLabel
 {
@@ -117,6 +125,31 @@ test('native flag', function () {
     $field = Select::make('role')->native();
 
     expect($field->isNative())->toBeTrue();
+});
+
+test('renders a native select by default (not searchable)', function () {
+    $html = renderSelect(Select::make('role')->options(['a' => 'A', 'b' => 'B']));
+
+    expect($html)
+        ->toContain('<select')
+        ->not->toContain('x-teleport');
+});
+
+test('searchable renders the shared combobox instead of a native select (regression: searchable() was a no-op)', function () {
+    $html = renderSelect(Select::make('role')->options(['a' => 'A', 'b' => 'B'])->searchable());
+
+    expect($html)
+        ->toContain('x-teleport')
+        ->toContain('$wire.entangle(')
+        ->not->toContain('<select');
+});
+
+test('native() forces a native select even when searchable', function () {
+    $html = renderSelect(Select::make('role')->options(['a' => 'A'])->searchable()->native());
+
+    expect($html)
+        ->toContain('<select')
+        ->not->toContain('x-teleport');
 });
 
 test('max and min items', function () {

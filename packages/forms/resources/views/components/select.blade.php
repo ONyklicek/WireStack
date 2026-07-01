@@ -6,10 +6,25 @@
     $wireModifier = $field->getWireModelModifier();
     $wireAttr = 'wire:model' . ($wireModifier ? ".{$wireModifier}" : '');
     $options = $field->getOptions();
+    $isSearchable = $field->isSearchable() && !$field->isNative();
 @endphp
 
 @include('wire-forms::partials.field-wrapper-start')
 
+@if($isSearchable)
+    {{-- Searchable combobox: delegate to the canonical shared owner. --}}
+    @include('wire-core::partials.searchable-select', [
+        'selectId' => $field->getId(),
+        'statePath' => $field->getWireModelAttribute(),
+        'options' => $options,
+        'placeholder' => $field->getPlaceholder(),
+        'multiple' => $field->isMultiple(),
+        'searchPrompt' => $field->getSearchPrompt(),
+        'noResultsMessage' => $field->getNoSearchResultsMessage(),
+        'disabled' => $field->isDisabled(),
+        'hasError' => $errors->has($field->getStatePath()),
+    ])
+@else
 <select
         id="{{ $field->getId() }}"
         {{ $wireAttr }}="{{ $field->getWireModelAttribute() }}"
@@ -40,5 +55,6 @@
             <option value="{{ $value }}" @if(in_array($value, $disabledValues, true)) disabled @endif>{{ $label }}</option>
         @endforeach
 </select>
+@endif
 
     @include('wire-forms::partials.field-wrapper-end')

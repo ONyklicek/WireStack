@@ -108,6 +108,21 @@ it('applies IN filter', function () {
     expect($sql)->toContain('in');
 });
 
+it('applies NOT IN filter', function () {
+    $model = new class extends Model
+    {
+        protected $table = 'filter_test_users';
+    };
+
+    $plan = new QueryPlan(filters: [new FilterClause('status', 'NOT IN', ['banned'])]);
+
+    $sql = strtolower((new ApplyFilters)
+        ->handle($model->newQuery(), $plan, fn (Builder $b, QueryPlan $p) => $b)
+        ->toRawSql());
+
+    expect($sql)->toContain('not in');
+});
+
 it('applies BETWEEN filter', function () {
     $model = new class extends Model
     {
@@ -127,6 +142,73 @@ it('applies BETWEEN filter', function () {
     $sql = $result->toRawSql();
 
     expect($sql)->toContain('between');
+});
+
+it('degrades a BETWEEN with only a lower bound to a >= comparison', function () {
+    $model = new class extends Model
+    {
+        protected $table = 'filter_test_users';
+    };
+
+    $plan = new QueryPlan(filters: [new FilterClause('age', 'BETWEEN', [18, null])]);
+
+    $sql = (new ApplyFilters)
+        ->handle($model->newQuery(), $plan, fn (Builder $b, QueryPlan $p) => $b)
+        ->toRawSql();
+
+    expect($sql)->toContain('>=')
+        ->and(strtolower($sql))->not->toContain('between');
+});
+
+it('degrades a BETWEEN with only an upper bound to a <= comparison', function () {
+    $model = new class extends Model
+    {
+        protected $table = 'filter_test_users';
+    };
+
+    $plan = new QueryPlan(filters: [new FilterClause('age', 'BETWEEN', [null, 65])]);
+
+    $sql = (new ApplyFilters)
+        ->handle($model->newQuery(), $plan, fn (Builder $b, QueryPlan $p) => $b)
+        ->toRawSql();
+
+    expect($sql)->toContain('<=')
+        ->and(strtolower($sql))->not->toContain('between');
+});
+
+it('skips a BETWEEN with no bounds and a NOT BETWEEN with a single bound', function () {
+    $model = new class extends Model
+    {
+        protected $table = 'filter_test_users';
+    };
+
+    $plan = new QueryPlan(filters: [
+        new FilterClause('age', 'BETWEEN', [null, null]),
+        new FilterClause('age', 'NOT BETWEEN', [18, null]),
+    ]);
+
+    $sql = strtolower((new ApplyFilters)
+        ->handle($model->newQuery(), $plan, fn (Builder $b, QueryPlan $p) => $b)
+        ->toRawSql());
+
+    // Neither incomplete clause should emit any where condition.
+    expect($sql)->not->toContain('between')
+        ->and($sql)->not->toContain('where');
+});
+
+it('applies a NOT BETWEEN with both bounds', function () {
+    $model = new class extends Model
+    {
+        protected $table = 'filter_test_users';
+    };
+
+    $plan = new QueryPlan(filters: [new FilterClause('age', 'NOT BETWEEN', [18, 65])]);
+
+    $sql = strtolower((new ApplyFilters)
+        ->handle($model->newQuery(), $plan, fn (Builder $b, QueryPlan $p) => $b)
+        ->toRawSql());
+
+    expect($sql)->toContain('not between');
 });
 
 it('applies sql expression filter', function () {

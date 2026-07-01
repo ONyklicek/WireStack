@@ -55,6 +55,30 @@ TextInput::make('price')
     ->suffixIcon('calculator')
 ```
 
+## Affix and hint actions
+
+Place an interactive `Action` before/after the input or next to the hint. The callback runs on the
+server with the same reactive `$get` / `$set` context as [`afterStateUpdated()`](../reactive-fields.md#field-actions-and-buttons)
+— use it for lookups (ARES, address verification), generating a value from another field, or an
+inline action:
+
+```php
+use NyonCode\WireCore\Actions\Action;
+
+TextInput::make('company')
+    ->suffixAction(
+        Action::make('lookup')
+            ->icon('heroicon-o-magnifying-glass')
+            ->action(fn ($get, $set) => $set('company', lookupCompany($get('company')))),
+    )
+    ->hintAction(
+        Action::make('help')->icon('heroicon-o-question-mark-circle'),
+    );
+```
+
+`prefixAction()`, `suffixAction()` and `hintAction()` each take an `Action` and share the field's
+state context. For a standalone button, use the [`Button`](button.md) field.
+
 ## Revealable Password
 
 ```php

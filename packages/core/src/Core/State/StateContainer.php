@@ -9,6 +9,12 @@ namespace NyonCode\WireCore\Core\State;
  *
  * Provides a unified interface for managing component state
  * with dot-notation path access and automatic dirty tracking.
+ *
+ * To write a nested path into a host that carries StateContainer bags, always
+ * use {@see StateContainer::writeInto()} (or this container's set()). A plain
+ * data_set() cannot write through an overloaded ArrayAccess element by
+ * reference — it silently drops the write with an "Indirect modification of
+ * overloaded element" notice.
  */
 /** @implements \ArrayAccess<string, mixed> */
 final class StateContainer implements \ArrayAccess

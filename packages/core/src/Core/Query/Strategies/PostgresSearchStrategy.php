@@ -22,7 +22,10 @@ final class PostgresSearchStrategy implements SearchStrategy
         if ($clause->sqlExpression !== null) {
             $builder->orWhereRaw("{$clause->sqlExpression} ILIKE ?", [$likeTerm]);
         } else {
-            $builder->orWhereRaw("{$qualifiedColumn} ILIKE ?", [$likeTerm]);
+            // Route the column through the query builder (Postgres grammar supports
+            // the "ilike" operator) instead of interpolating it into raw SQL, so the
+            // qualified column never reaches a raw string — matching MySqlSearchStrategy.
+            $builder->orWhere($qualifiedColumn, 'ilike', $likeTerm);
         }
     }
 }

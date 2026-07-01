@@ -67,6 +67,7 @@ return [
     'copy' => 'Copy',
     'actions_label' => 'Actions',
     'toggle_columns' => 'Toggle columns',
+    'export_label' => 'Export',
 
     // Selection
     'select_all' => 'Select all',

@@ -52,6 +52,7 @@ use NyonCode\WireCore\Infolists\Infolist;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
+use NyonCode\WireForms\Concerns\InteractsWithFieldActions;
 use NyonCode\WireForms\Concerns\InteractsWithRepeaters;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireTable\Columns\Column;
@@ -69,6 +70,7 @@ trait WithTable
 {
     use DispatchesStateUpdates;
     use HasSqlDebug;
+    use InteractsWithFieldActions;
     use InteractsWithRepeaters;
     use WithPagination;
     use WithTableQueryString;
@@ -712,8 +714,10 @@ trait WithTable
 
         $search = $this->tableState->get('search');
         $filters = $this->tableState->get('filters', []);
-        $sortColumn = $this->tableState->get('sort.column', '');
-        $sortDirection = $this->tableState->get('sort.direction', 'asc');
+        // Fall back to the configured default sort when no explicit sort is set, so
+        // the rendered table and the export (getFilteredTableQuery) order identically.
+        $sortColumn = $this->tableState->get('sort.column', '') ?: ($table->getDefaultSort() ?? '');
+        $sortDirection = $this->tableState->get('sort.direction', '') ?: ($table->getDefaultSortDirection() ?? 'asc');
         $columnFilters = $this->tableState->get('columnFilters', []);
 
         // Dispatch search event

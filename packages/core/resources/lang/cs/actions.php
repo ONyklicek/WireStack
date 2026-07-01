@@ -9,6 +9,11 @@ return [
     'confirm_cancel' => 'Zrušit',
     'confirm_close' => 'Zavřít',
 
+    // Modal / wizard navigation
+    'wizard_previous' => 'Zpět',
+    'wizard_next' => 'Další',
+    'submit_saving' => 'Ukládání…',
+
     // Delete presets
     'delete_heading' => 'Smazat záznam',
     'delete_description' => 'Opravdu chcete smazat tento záznam? Tato akce je nevratná.',

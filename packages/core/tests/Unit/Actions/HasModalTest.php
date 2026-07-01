@@ -77,6 +77,39 @@ it('can set modal cancel label', function () {
     expect($action->getModalCancelActionLabel())->toBe('Zpět');
 });
 
+it('can set wizard previous, next and saving labels', function () {
+    $action = Action::make('test')
+        ->requiresConfirmation()
+        ->modalPreviousActionLabel('Předchozí')
+        ->modalNextActionLabel('Pokračovat')
+        ->modalSavingLabel('Ukládám…');
+
+    expect($action->getModalPreviousActionLabel())->toBe('Předchozí')
+        ->and($action->getModalNextActionLabel())->toBe('Pokračovat')
+        ->and($action->getModalSavingLabel())->toBe('Ukládám…');
+});
+
+it('falls back to translated wizard navigation labels', function () {
+    $action = Action::make('test')->requiresConfirmation();
+
+    expect($action->getModalPreviousActionLabel())->toBe('Back')
+        ->and($action->getModalNextActionLabel())->toBe('Next')
+        ->and($action->getModalSavingLabel())->toBe('Saving...');
+});
+
+it('exposes wizard navigation labels through the modal config', function () {
+    $config = Action::make('test')
+        ->requiresConfirmation()
+        ->modalPreviousActionLabel('Předchozí')
+        ->modalNextActionLabel('Pokračovat')
+        ->modalSavingLabel('Ukládám…')
+        ->getModalConfig();
+
+    expect($config['previousLabel'])->toBe('Předchozí')
+        ->and($config['nextLabel'])->toBe('Pokračovat')
+        ->and($config['savingLabel'])->toBe('Ukládám…');
+});
+
 // ─── Modal Width ───────────────────────────────────────────────────────────
 
 it('has default modal width', function () {

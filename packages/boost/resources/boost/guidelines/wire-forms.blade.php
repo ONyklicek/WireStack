@@ -64,6 +64,37 @@ the callback receives `$state` (new value), `$old`, `$get`, `$set`, `$component`
 Hidden fields are skipped during validation, so a `required()` rule on a field hidden by
 `visible(fn ($get) => …)` never blocks submit.
 
+Layout components (`Grid`, `Section`, `Fieldset`, …) receive the same `$get`/`$set` accessors in
+their `visible()`/`hidden()` closures, so you can show or hide a whole section based on sibling state:
+
+    Section::make('Billing')
+        ->schema([TextInput::make('vat_id')])
+        ->visible(fn ($get) => $get('type') === 'business'),
+
+### Field-level actions
+
+Attach an interactive `Action` to an input via `suffixAction()`, `prefixAction()` or `hintAction()`.
+The action's callback runs on the server with the same `$get`/`$set`/`$state` context as
+`afterStateUpdated()` — ideal for lookups (ARES, address verification) or deriving one field from
+another:
+
+    TextInput::make('title')->suffixAction(
+        Action::make('to_upper')
+            ->icon('heroicon-o-arrow-up')
+            ->action(fn ($get, $set) => $set('title', strtoupper((string) $get('title')))),
+    );
+
+For a standalone, design-system-styled button bound to a closure (instead of raw `Html::make()`),
+use the `Button` field. Presentation (`label`, `icon`, `color`, `size`, `outlined`) mirrors actions:
+
+    Button::make('generate_slug')
+        ->label('Generate slug')
+        ->icon('heroicon-o-sparkles')
+        ->action(fn ($get, $set) => $set('slug', Str::slug((string) $get('title')))),
+
+Both work in standalone `WithForms` hosts and table action modals; the host's `callFieldAction()`
+endpoint re-resolves the field and runs the closure.
+
 ### Prefill a form from an action
 
 Action modal forms read/write the `modal.action.formData` bag. Seed initial values with

@@ -87,6 +87,33 @@ it('propagates state path to children', function () {
     expect($child->getStatePath())->toBe('data.profile.name');
 });
 
+it('cascades disabled state to children and nested layouts', function () {
+    $child = makeConcreteComponent('name');
+
+    $inner = makeConcreteLayout();
+    $inner->schema([$child]);
+
+    $outer = makeConcreteLayout();
+    $outer->schema([$inner]);
+
+    $outer->prepareChildren('data', false, null, true);
+
+    expect($outer->isDisabled())->toBeTrue()
+        ->and($inner->isDisabled())->toBeTrue()
+        ->and($child->isDisabled())->toBeTrue();
+});
+
+it('does not disable children when the form is not disabled', function () {
+    $child = makeConcreteComponent('name');
+    $layout = makeConcreteLayout();
+    $layout->schema([$child]);
+
+    $layout->prepareChildren('data');
+
+    expect($layout->isDisabled())->toBeFalse()
+        ->and($child->isDisabled())->toBeFalse();
+});
+
 it('propagates state path to nested layouts', function () {
     $child = makeConcreteComponent('city');
 

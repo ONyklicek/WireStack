@@ -1475,7 +1475,7 @@ TextColumn::make('age')
 ->filterAsDateRange(?string $minDate = null, ?string $maxDate = null)
 ->filterAsNumberRange(?float $min = null, ?float $max = null, ?float $step = null)
 ->filterAsBoolean(?string $trueLabel = null, ?string $falseLabel = null)
-->filterOperator(string $operator)     // '=', '!=', '>', '<', '>=', '<=', 'like'
+->filterOperator(string $operator)     // '=', '!=', '>', '<', '>=', '<=', 'like' (default, partial match), 'starts_with', 'ends_with'
 ->filterDebounce(int $ms)
 ->filterPlaceholder(?string $placeholder)
 ->filterUsing(Closure $fn)             // fn(Builder $query, mixed $value)

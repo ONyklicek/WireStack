@@ -96,10 +96,14 @@ Select::make('author_id')
 
 ## Native vs Custom
 
+A plain `Select` renders a browser-native `<select>`. The custom searchable
+combobox is used when you call [`searchable()`](#searchable). Use `native()` to
+force the native element even on a searchable field.
+
 ```php
 Select::make('country')
-    ->native()          // browser-native <select>
-    ->native(false)     // custom styled dropdown (default)
+    ->searchable()      // custom searchable combobox
+    ->native()          // force the browser-native <select> instead
 ```
 
 ## Boolean Select

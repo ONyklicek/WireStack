@@ -7,6 +7,7 @@ namespace NyonCode\WireForms\Forms;
 use InvalidArgumentException;
 use Livewire\Component;
 use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
+use NyonCode\WireForms\Concerns\InteractsWithFieldActions;
 use NyonCode\WireForms\Concerns\InteractsWithRepeaters;
 use ReflectionMethod;
 use ReflectionNamedType;
@@ -22,6 +23,7 @@ use ReflectionNamedType;
 trait WithForms
 {
     use DispatchesStateUpdates;
+    use InteractsWithFieldActions;
     use InteractsWithRepeaters;
 
     /** @var array<string, Form> */

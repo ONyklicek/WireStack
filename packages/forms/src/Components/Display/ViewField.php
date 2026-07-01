@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components\Display;
 
 use Closure;
-use NyonCode\WireCore\Foundation\Components\ViewComponent;
 
 /**
  * Display component that renders a custom Blade view.
  */
-class ViewField extends ViewComponent
+class ViewField extends Display
 {
     protected ?string $view = null;
 
