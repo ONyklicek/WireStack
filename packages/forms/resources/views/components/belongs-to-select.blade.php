@@ -5,11 +5,22 @@
 
     $wireModifier = $field->getWireModelModifier();
     $wireAttr = 'wire:model' . ($wireModifier ? ".{$wireModifier}" : '');
-    $options = $field->getOptions();
     // Every non-native select renders through the canonical combobox so searchable
     // and non-searchable selects share one design; native <select> is opt-in only.
     $useCombobox = ! $field->isNative();
+    $isRemoteSearch = $field->isRemoteSearch();
+    $livewire = $field->getLivewire();
     $fieldId = $field->getId();
+
+    if ($useCombobox) {
+        // Seed the combobox with the render-time option list, plus the label(s)
+        // for the current selection so a remotely-searched value still shows
+        // (mirrors the base select view).
+        $currentValue = $livewire ? data_get($livewire, $field->getStatePath()) : null;
+        $comboboxOptions = $field->getSelectedOptionLabels($currentValue) + $field->getPreloadedOptions();
+    } else {
+        $options = $field->getOptions();
+    }
 @endphp
 
 @include('wire-forms::partials.field-wrapper-start')
@@ -21,7 +32,7 @@
     @include('wire-core::partials.searchable-select', [
         'selectId' => $fieldId,
         'statePath' => $field->getWireModelAttribute(),
-        'options' => $options,
+        'options' => $comboboxOptions,
         'placeholder' => $field->getPlaceholder(),
         'multiple' => $field->isMultiple(),
         'searchable' => $field->isSearchable(),
@@ -29,6 +40,8 @@
         'noResultsMessage' => $field->getNoSearchResultsMessage(),
         'disabled' => $field->isDisabled(),
         'hasError' => $errors->has($field->getStatePath()),
+        'remoteSearch' => $isRemoteSearch,
+        'loadingMessage' => $field->getLoadingMessage(),
         'panelFooter' => $field->hasCreateOptionForm()
             ? view('wire-forms::partials.belongs-to-create-option', ['field' => $field])->render()
             : null,

@@ -48,7 +48,16 @@ Read-only counterpart of forms. `Infolist::make()->schema([...])` with entries: 
 
 ### Widgets
 
-`StatsOverviewWidget` / `Stat`, `ChartWidget`, `BarChartWidget`, `TableWidget`, `CustomWidget`.
+`StatsOverviewWidget` / `Stat`, `ChartWidget` (+ `LineChartWidget`/`PieChartWidget`/`DoughnutChartWidget`
+presets and `->options([...])` Chart.js overrides), `BarChartWidget`, `TableWidget`, `CustomWidget`.
+
+### Audit log
+
+Add `HasAuditable` to a model and its created/updated/deleted changes persist as `AuditEntry`
+rows automatically — the package registers the event subscriber itself, gated by
+`wire-core.audit.enabled`. No manual `Event::subscribe()` needed. Retention: configure
+`wire-core.audit.retention_days` and schedule `wire-core:audit-prune` (or run with `--days=N`).
+Suppress logging in seeders/imports with `AuditLogger::withoutAuditing(fn () => …)`.
 
 ### Icons & colors
 

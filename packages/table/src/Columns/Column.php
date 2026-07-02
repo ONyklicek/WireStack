@@ -6,6 +6,7 @@ namespace NyonCode\WireTable\Columns;
 
 use Closure;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Facades\Gate;
@@ -1533,7 +1534,14 @@ class Column extends DataComponent implements Htmlable
             });
         }
 
-        // 3. Standard column
+        // 3. Standard column — qualify against the base table so the clause stays
+        // unambiguous when the base query carries joins (e.g. a belongs-to-many
+        // relation manager). Already-qualified dotted names pass through; select
+        // aliases are unaffected because SQL forbids aliases in WHERE anyway.
+        if (! str_contains($column, '.') && $query instanceof Builder) {
+            $column = $query->qualifyColumn($column);
+        }
+
         return $this->applyFilterCondition($query, $column, $value);
     }
 

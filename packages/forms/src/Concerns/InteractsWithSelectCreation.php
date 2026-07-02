@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Concerns;
 
 use Livewire\Component;
+use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Foundation\Components\Component as FieldComponent;
 use NyonCode\WireForms\Components\Select;
 
@@ -105,17 +106,20 @@ trait InteractsWithSelectCreation
      */
     protected function selectCreatedOption(Select $field, string $statePath, string|int $value): void
     {
+        // Route through the canonical StateContainer-aware writer: inside a table
+        // action modal the bag is a StateContainer, and a plain data_set() would
+        // silently drop the write.
         if ($field->isMultiple()) {
             $current = data_get($this, $statePath, []);
             $current = is_array($current) ? $current : [];
             $current[] = $value;
 
-            data_set($this, $statePath, array_values(array_unique($current)));
+            StateContainer::writeInto($this, $statePath, array_values(array_unique($current)));
 
             return;
         }
 
-        data_set($this, $statePath, $value);
+        StateContainer::writeInto($this, $statePath, $value);
     }
 
     /**

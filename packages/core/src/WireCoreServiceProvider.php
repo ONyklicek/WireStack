@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace NyonCode\WireCore;
 
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Actions\View\BulkButtonComponent;
 use NyonCode\WireCore\Actions\View\ButtonComponent;
 use NyonCode\WireCore\Actions\View\GroupComponent;
+use NyonCode\WireCore\Audit\AuditEventSubscriber;
+use NyonCode\WireCore\Audit\Console\PruneAuditEntriesCommand;
 use NyonCode\WireCore\Core\Actions\ActionPipeline;
 use NyonCode\WireCore\Core\Actions\ActionRegistry;
 use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
@@ -52,12 +55,14 @@ class WireCoreServiceProvider extends PackageServiceProvider
             ->bootedPackage(function ($packager) {
                 $this->bootFoundation();
                 $this->bootActions();
+                $this->bootAudit();
                 $this->bootNotifications();
                 $this->bootModals();
                 $this->bootPlugins();
                 $this->registerAssetRoutes();
             })
             ->hasConfig()
+            ->hasCommand(PruneAuditEntriesCommand::class)
             ->hasViews()
             ->hasMigrations()
             ->hasTranslations('resources/lang')
@@ -149,6 +154,17 @@ class WireCoreServiceProvider extends PackageServiceProvider
     }
 
     // ─── Notifications ──────────────────────────────────────────
+
+    /**
+     * Wire the audit pipeline: HasAuditable models fire AuditableEvents, and this
+     * subscriber persists them through AuditLogger. Registered unconditionally —
+     * the logger itself gates on `wire-core.audit.enabled`, and the subscription
+     * is idempotent for apps that also register it manually.
+     */
+    protected function bootAudit(): void
+    {
+        Event::subscribe(AuditEventSubscriber::class);
+    }
 
     protected function registerNotifications(): void
     {

@@ -123,6 +123,11 @@ Action::make('edit')
             ->color('gray')
             ->outlined()
             ->closesModal(),                 // closes the modal
+
+        ModalFooterAction::make('reset')
+            ->requiresConfirmation()         // asks before running (native wire:confirm)
+            ->confirm('Really reset the form?') // …or with a custom message
+            ->action(fn ($set) => $set('name', '')),
     ]);
 ```
 

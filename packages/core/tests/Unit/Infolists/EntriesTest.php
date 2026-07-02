@@ -164,6 +164,27 @@ it('returns no pairs for non-array state', function () {
 
 // ─── RepeatableEntry ─────────────────────────────────────────────────────────
 
+it('deep-clones nested repeatable schemas per row (regression guard: shallow clone shared child instances)', function () {
+    $entry = RepeatableEntry::make('orders')
+        ->schema([
+            TextEntry::make('number'),
+            RepeatableEntry::make('lines')->schema([TextEntry::make('sku')]),
+        ])
+        ->record(['orders' => [
+            ['number' => 'A-1', 'lines' => [['sku' => 'X'], ['sku' => 'Y']]],
+            ['number' => 'A-2', 'lines' => [['sku' => 'Z']]],
+        ]]);
+
+    $rows = $entry->getRows();
+
+    // Each row's nested RepeatableEntry is a distinct instance with a distinct
+    // inner schema, and resolves its own item's state.
+    expect($rows[0][1])->not->toBe($rows[1][1])
+        ->and($rows[0][1]->getSchema()[0])->not->toBe($rows[1][1]->getSchema()[0])
+        ->and($rows[0][1]->getRows()[1][0]->getState())->toBe('Y')
+        ->and($rows[1][1]->getRows()[0][0]->getState())->toBe('Z');
+});
+
 it('builds one row per item with item-bound entries', function () {
     $entry = RepeatableEntry::make('items')
         ->schema([TextEntry::make('label')])

@@ -11,8 +11,10 @@ use NyonCode\WireCore\Audit\Contracts\AuditableEvent;
  * Laravel event subscriber that listens for all AuditableEvent implementations
  * and delegates to AuditLogger.
  *
- * Register in a service provider:
- *   Event::subscribe(AuditEventSubscriber::class);
+ * Registered automatically by WireCoreServiceProvider; the AuditLogger gates on
+ * `wire-core.audit.enabled`, so no events persist unless auditing is on. The
+ * subscription is idempotent — an application that also registers it manually
+ * (the pre-1.7.1 setup) still ends up with a single listener.
  */
 class AuditEventSubscriber
 {
@@ -35,6 +37,13 @@ class AuditEventSubscriber
      */
     public function subscribe(Dispatcher $events): array
     {
+        // Idempotent: skip when a listener is already attached (e.g. an app that
+        // kept its manual Event::subscribe from before the package self-registered),
+        // so audit entries are never written twice.
+        if ($events->hasListeners(AuditableEvent::class)) {
+            return [];
+        }
+
         return [
             AuditableEvent::class => 'handleAuditableEvent',
         ];

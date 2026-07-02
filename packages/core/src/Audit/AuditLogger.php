@@ -83,11 +83,13 @@ class AuditLogger
     }
 
     /**
-     * Prune audit entries older than the configured retention period.
+     * Prune audit entries older than the retention period — the given number of
+     * days, or the configured `wire-core.audit.retention_days` when omitted.
+     * Returns the number of deleted entries (0 when no period is set).
      */
-    public function prune(): int
+    public function prune(?int $days = null): int
     {
-        $days = $this->getRetentionDays();
+        $days ??= $this->getRetentionDays();
 
         if ($days === null) {
             return 0;

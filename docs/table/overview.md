@@ -638,5 +638,7 @@ class UserTable extends Component
 | [Columns](columns.md) | All 13 column types — TextColumn, BadgeColumn, BooleanColumn, IconColumn, ImageColumn, ButtonColumn, ToggleColumn, SelectColumn, TextInputColumn, StackedColumn, SplitColumn, PollColumn |
 | [Filters](filters.md) | SelectFilter, DateFilter, NumberRangeFilter, TernaryFilter, custom filters, column-level filters |
 | [Exports](exports.md) | CSV, Excel, and PDF exports for the current table query |
+| [Imports](imports.md) | CSV imports — header mapping, casting, per-row validation, updateExisting |
+| [Relation Managers](relation-managers.md) | Relationship-scoped tables as standalone Livewire components |
 | [Advanced](advanced.md) | Sub-rows, summary footer, polling, lazy loading, caching, debug, responsive |
 | [Actions](../core/actions.md) | Full Action system — modals, forms, wizard steps, lifecycle |

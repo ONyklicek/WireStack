@@ -203,6 +203,92 @@ final class FormRuntime
     }
 
     /**
+     * Locate the component bound to the given absolute state path.
+     *
+     * Flat fields (including layout-wrapped ones) are matched directly; paths
+     * inside repeater items — `{repeater}.{index}.{field…}` — resolve through
+     * the repeater's prepared per-item schema, so reactive dispatch (field
+     * actions, live validation, afterStateUpdated, remote search) reaches
+     * fields inside repeater items even though flattening treats a repeater as
+     * a leaf. Nested repeaters resolve recursively. Returns null when no
+     * component owns the path.
+     */
+    public function findComponentByStatePath(string $absolutePath): ?Component
+    {
+        foreach ($this->getFlatComponents() as $component) {
+            if ($component->getStatePath() === $absolutePath) {
+                return $component;
+            }
+        }
+
+        return $this->findInRepeaters($this->getRepeaters(), $absolutePath);
+    }
+
+    /**
+     * @param  array<int, Repeater>  $repeaters
+     */
+    private function findInRepeaters(array $repeaters, string $absolutePath): ?Component
+    {
+        foreach ($repeaters as $repeater) {
+            $base = $repeater->getStatePath().'.';
+
+            if (! str_starts_with($absolutePath, $base)) {
+                continue;
+            }
+
+            // The segment right after the repeater path must be an item index.
+            $index = explode('.', substr($absolutePath, strlen($base)), 2)[0];
+
+            if (! ctype_digit($index)) {
+                continue;
+            }
+
+            $found = $this->searchItemComponents($repeater->getItemSchema((int) $index), $absolutePath);
+
+            if ($found !== null) {
+                return $found;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Search prepared item-schema clones (descending into layouts, recursing
+     * into nested repeaters) for the component bound to the path.
+     *
+     * @param  array<int, mixed>  $components
+     */
+    private function searchItemComponents(array $components, string $absolutePath): ?Component
+    {
+        $nestedRepeaters = [];
+
+        foreach ($components as $component) {
+            if ($component instanceof Repeater) {
+                $nestedRepeaters[] = $component;
+
+                continue;
+            }
+
+            if ($component instanceof LayoutComponent) {
+                $found = $this->searchItemComponents($component->getSchema(), $absolutePath);
+
+                if ($found !== null) {
+                    return $found;
+                }
+
+                continue;
+            }
+
+            if ($component instanceof Component && $component->getStatePath() === $absolutePath) {
+                return $component;
+            }
+        }
+
+        return $this->findInRepeaters($nestedRepeaters, $absolutePath);
+    }
+
+    /**
      * Collect all repeaters in the schema (recursively), after preparation so
      * each repeater reports its resolved, prefixed state path.
      *
