@@ -89,10 +89,12 @@ trait InteractsWithFieldActions
     protected function resolveFieldForAction(string $statePath): ?FieldComponent
     {
         foreach ($this->fieldActionForms() as $form) {
-            foreach ($form->getFlatComponents() as $component) {
-                if ($component->getStatePath() === $statePath) {
-                    return $component;
-                }
+            // Canonical lookup: resolves flat fields and fields inside repeater
+            // items (per-item schema) alike.
+            $component = $form->findComponentByStatePath($statePath);
+
+            if ($component !== null) {
+                return $component;
             }
         }
 

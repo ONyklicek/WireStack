@@ -109,6 +109,75 @@ class BelongsToSelect extends Select
     }
 
     /**
+     * A relationship select can always serve server-side matches (via
+     * {@see searchOptions()}), so the host's remote-search endpoint
+     * (`searchSelectOptions`) accepts it even without an explicit
+     * `getSearchResultsUsing()` callback.
+     */
+    public function hasSearchResultsCallback(): bool
+    {
+        return parent::hasSearchResultsCallback()
+            || ($this->getRelationship() !== null && $this->getTitleAttribute() !== null);
+    }
+
+    /**
+     * Relationship-driven remote search: a searchable, non-preloaded relationship
+     * select asks the server for matches as the user types ({@see searchOptions()});
+     * `preload()` ships the full option list and keeps filtering client-side. An
+     * explicit `getSearchResultsUsing()` callback follows the parent semantics
+     * (where `preload()` only seeds the remote list).
+     */
+    public function isRemoteSearch(): bool
+    {
+        if (parent::hasSearchResultsCallback()) {
+            return parent::isRemoteSearch();
+        }
+
+        return $this->isSearchable()
+            && ! $this->isNative()
+            && ! $this->isPreload()
+            && $this->getRelationship() !== null
+            && $this->getTitleAttribute() !== null;
+    }
+
+    /**
+     * @return array<string|int, string>
+     */
+    public function getSearchResults(string $search): array
+    {
+        if (parent::hasSearchResultsCallback()) {
+            return parent::getSearchResults($search);
+        }
+
+        return $this->searchOptions($search);
+    }
+
+    /**
+     * Resolve the selected value's label. Remote mode ships no option list, so
+     * fall back to a single keyed lookup on the related model instead of
+     * loading the whole related table.
+     */
+    public function getOptionLabel(string|int|null $value): ?string
+    {
+        $label = parent::getOptionLabel($value);
+
+        if ($label !== null || $this->optionLabelCallback !== null || $value === null || $value === '') {
+            return $label;
+        }
+
+        $relatedModel = $this->resolveRelatedModel();
+        $titleAttribute = $this->getTitleAttribute();
+
+        if ($relatedModel === null || $titleAttribute === null) {
+            return null;
+        }
+
+        $title = $relatedModel::query()->find($value)?->{$titleAttribute};
+
+        return $title === null ? null : (string) $title;
+    }
+
+    /**
      * Search options by title attribute (for AJAX searchable mode).
      *
      * @return array<string|int, string>

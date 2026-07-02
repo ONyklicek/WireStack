@@ -60,6 +60,21 @@ class RepeatableEntry extends Entry
     }
 
     /**
+     * Deep-clone the child schema. A shallow clone would share child entry
+     * instances with the original and every other clone — the same pattern that
+     * leaked per-item state paths across Repeater items in forms. Matters as
+     * soon as a child is itself a RepeatableEntry (nested rows), where the
+     * per-row clone in getRows() must not share the inner schema.
+     */
+    public function __clone(): void
+    {
+        $this->schema = array_map(
+            static fn (Entry $entry): Entry => clone $entry,
+            $this->schema,
+        );
+    }
+
+    /**
      * One row per state item, each a fresh clone of the schema bound to the
      * item record.
      *

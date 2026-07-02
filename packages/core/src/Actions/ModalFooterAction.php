@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Actions;
 
 use Closure;
 use Illuminate\Support\Str;
+use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 
@@ -41,6 +42,10 @@ class ModalFooterAction
     protected bool $closesModal = false;
 
     protected bool $submitsForm = false;
+
+    protected bool $requiresConfirmation = false;
+
+    protected ?string $confirmationMessage = null;
 
     public function __construct(string $name)
     {
@@ -109,6 +114,30 @@ class ModalFooterAction
         return $this;
     }
 
+    /**
+     * Ask the user to confirm before the action callback runs. Rendered as a
+     * native `wire:confirm` dialog on the footer button; the message defaults to
+     * the shared confirm-description translation, override it with
+     * {@see confirm()}.
+     */
+    public function requiresConfirmation(bool $condition = true): static
+    {
+        $this->requiresConfirmation = $condition;
+
+        return $this;
+    }
+
+    /**
+     * Require confirmation with a custom message ({@see requiresConfirmation()}
+     * with the given `wire:confirm` text; null keeps the translated default).
+     */
+    public function confirm(?string $message = null): static
+    {
+        $this->confirmationMessage = $message;
+
+        return $this->requiresConfirmation();
+    }
+
     // Getters
     public function getName(): string
     {
@@ -155,6 +184,23 @@ class ModalFooterAction
         return $this->submitsForm;
     }
 
+    public function needsConfirmation(): bool
+    {
+        return $this->requiresConfirmation;
+    }
+
+    /**
+     * The `wire:confirm` message, or null when no confirmation is required.
+     */
+    public function getConfirmationMessage(): ?string
+    {
+        if (! $this->requiresConfirmation) {
+            return null;
+        }
+
+        return $this->confirmationMessage ?? Trans::get('wire-core::actions.confirm_description');
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -169,6 +215,7 @@ class ModalFooterAction
             'position' => $this->position,
             'closesModal' => $this->closesModal,
             'submitsForm' => $this->submitsForm,
+            'confirmMessage' => $this->getConfirmationMessage(),
         ];
     }
 }

@@ -136,8 +136,12 @@ beforeEach(function () {
     });
 
     Schema::create('rm_author_tag', function (Blueprint $table) {
+        // Own id + a column colliding with rm_tags.name: real-world pivots often
+        // carry both, and they must not leak into the related rows (regression).
+        $table->id();
         $table->foreignId('author_id');
         $table->foreignId('tag_id');
+        $table->string('name')->nullable();
     });
 
     $this->author = RmAuthor::create(['name' => 'Alice']);
@@ -169,6 +173,22 @@ test('a different owner scopes to its own related rows', function () {
     $rm = makeRelationManager(RmPostsRelationManager::class, $this->other);
 
     expect($rm->getTable()->getQuery()->pluck('title')->all())->toBe(['Bob One']);
+});
+
+test('a belongs-to-many listing hydrates related columns, not pivot columns (regression: select * over the pivot join)', function () {
+    $tagA = RmTag::create(['name' => 'Tag A']);
+    $tagB = RmTag::create(['name' => 'Tag B']);
+    // Force key + name collisions: pivot rows with different ids and own names.
+    $this->other->tags()->attach($tagA->id, ['name' => 'PIVOT A']);
+    $this->author->tags()->attach($tagA->id, ['name' => 'PIVOT B']);
+    $this->author->tags()->attach($tagB->id, ['name' => 'PIVOT C']);
+
+    $rm = makeRelationManager(RmTagsRelationManager::class, $this->author);
+
+    $rows = $rm->getTable()->getQuery()->get();
+
+    expect($rows->pluck('name')->all())->toBe(['Tag A', 'Tag B'])
+        ->and($rows->map(fn ($row) => $row->getKey())->all())->toBe([$tagA->id, $tagB->id]);
 });
 
 // ─── Accessors ───────────────────────────────────────────────────
@@ -217,7 +237,7 @@ test('createRelatedRecord creates and attaches a belongs-to-many record', functi
     $tag = $rm->createRelatedRecord(['name' => 'Laravel']);
 
     expect($tag)->toBeInstanceOf(RmTag::class)
-        ->and($this->author->tags()->pluck('name')->all())->toBe(['Laravel']);
+        ->and($this->author->tags()->pluck('rm_tags.name')->all())->toBe(['Laravel']);
 });
 
 test('createRelatedRecord throws for an unsupported relationship', function () {
@@ -235,7 +255,7 @@ test('attachRelated and detachRelated manage belongs-to-many links', function ()
     $tag = RmTag::create(['name' => 'PHP']);
 
     $rm->attachRelated($tag->id);
-    expect($this->author->tags()->pluck('name')->all())->toBe(['PHP']);
+    expect($this->author->tags()->pluck('rm_tags.name')->all())->toBe(['PHP']);
 
     $rm->detachRelated($tag->id);
     expect($this->author->tags()->count())->toBe(0);

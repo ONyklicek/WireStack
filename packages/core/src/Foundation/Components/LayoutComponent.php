@@ -152,6 +152,20 @@ abstract class LayoutComponent implements HasStateAccessors, Htmlable
     }
 
     /**
+     * Deep-clone the child schema. A shallow clone would share the child
+     * component instances with the original (and with every other clone), so a
+     * per-clone statePath — e.g. a Repeater item prefix — would leak across all
+     * copies, leaving every row bound to the last-set path.
+     */
+    public function __clone(): void
+    {
+        $this->schema = array_map(
+            static fn (Component|LayoutComponent $component): Component|LayoutComponent => clone $component,
+            $this->schema,
+        );
+    }
+
+    /**
      * Get the view name for rendering this layout.
      */
     abstract protected function viewName(): string;

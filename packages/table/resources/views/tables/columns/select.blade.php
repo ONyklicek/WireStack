@@ -10,7 +10,8 @@
 
 <select
     wire:change="updateTableCell('{{ $recordKey }}', '{{ $columnName }}', $event.target.value)"
-    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+    {{-- Match the searchable combobox trigger so all selects share one design. --}}
+    class="block w-full rounded-md border border-gray-300 bg-white shadow-sm text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-600 dark:text-white"
     @if($disabled) disabled @endif
 >
     @if($placeholder)

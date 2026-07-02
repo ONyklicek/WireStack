@@ -90,6 +90,17 @@ reactive roundtrip and refreshes only its error bag entry — the rest of the fo
 Conditional rules (`requiredIf()` etc.) are honoured live. Cross-field Laravel string rules like
 `required_if:other,value` still validate on submit; use `requiredIf()` for the reactive equivalent.
 
+All of this reactivity works for fields inside `Repeater` items too — `afterStateUpdated()`,
+live validation, field actions and remote search resolve per item, and `$get`/`$set` read/write
+that item's own bag (so `$set('slug', …)` on row 2 touches only row 2).
+
+Selects: `Select` supports server-driven options (`getSearchResultsUsing()` remote search,
+`getOptionLabelUsing()`, `preload()`) and create/edit-option modals (`createOptionForm()` +
+`createOptionUsing()`, `editOptionForm()` + `fillEditOptionUsing()`/`updateOptionUsing()`) —
+both work in standalone forms and inside table action modals. `BelongsToSelect::searchable()`
+without `preload()` searches the related table on the server automatically (title-attribute
+`like`, limit 50); `preload()` ships the full option list and filters client-side.
+
     TextInput::make('email')->email()->required()->validateLive(),
 
 Layout components (`Grid`, `Section`, `Fieldset`, …) receive the same `$get`/`$set` accessors in

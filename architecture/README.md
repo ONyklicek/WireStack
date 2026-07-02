@@ -27,7 +27,9 @@ This directory is split for low-token navigation. Start with the smallest releva
 - `integrations.md`
   Package seams, service-provider boot flow, downstream test matrix, workbench/docs flow
 - `audit.md`
-  Full-project analysis workflow, inconsistency checklist, review output format
+  Full-project analysis workflow, matrix-driven checks, review output format
+- `audit-matrices.md`
+  Living snapshot of the four audit matrices (capability × host, propagation axes, API parity, adversarial inputs); re-derived and date-bumped by every full audit
 
 ## Existing Deep References
 

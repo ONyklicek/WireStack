@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ViewErrorBag;
 use NyonCode\WireForms\Components\BelongsToSelect;
 use NyonCode\WireForms\Components\TextInput;
@@ -64,7 +67,7 @@ test('inherits searchable from Select', function () {
     expect($field->isSearchable())->toBeTrue();
 });
 
-test('searchable renders the shared combobox (regression: had its own copy)', function () {
+test('searchable renders the shared combobox with a search input (regression: had its own copy)', function () {
     $field = BelongsToSelect::make('company_id')
         ->options(['1' => 'Acme', '2' => 'Globex'])
         ->searchable();
@@ -74,15 +77,20 @@ test('searchable renders the shared combobox (regression: had its own copy)', fu
     expect($html)
         ->toContain('x-teleport')
         ->toContain("\$wire.entangle('company_id')")
+        ->toContain('x-ref="searchInput"')
         ->not->toContain('<select');
 });
 
-test('non-searchable renders a native select', function () {
+test('non-searchable renders the shared combobox without a search input', function () {
+    // Unified design: a non-searchable, non-native select is the same combobox as
+    // the searchable one, just without the in-panel search input.
     $field = BelongsToSelect::make('company_id')->options(['1' => 'Acme']);
 
     expect(renderBelongsToSelect($field))
-        ->toContain('<select')
-        ->not->toContain('x-teleport');
+        ->toContain('x-teleport')
+        ->toContain("\$wire.entangle('company_id')")
+        ->not->toContain('<select')
+        ->not->toContain('x-ref="searchInput"');
 });
 
 test('create-option form renders a "create new" footer inside the combobox panel', function () {
@@ -221,4 +229,105 @@ test('preload defaults to false and is toggleable', function () {
 
     $field->preload(false);
     expect($field->isPreload())->toBeFalse();
+});
+
+// ─── Relationship-driven remote search (regression: inherited remote API was dead) ───
+
+class BtsCompany extends Model
+{
+    protected $table = 'bts_companies';
+
+    protected $guarded = [];
+
+    public $timestamps = false;
+}
+
+class BtsAuthor extends Model
+{
+    protected $table = 'bts_authors';
+
+    protected $guarded = [];
+
+    public $timestamps = false;
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(BtsCompany::class);
+    }
+}
+
+function makeRemoteBelongsToSelect(): BelongsToSelect
+{
+    Schema::create('bts_companies', function ($table) {
+        $table->id();
+        $table->string('name');
+    });
+    Schema::create('bts_authors', function ($table) {
+        $table->id();
+        $table->foreignId('company_id')->nullable();
+    });
+
+    return BelongsToSelect::make('company_id')
+        ->relationship('company', 'name')
+        ->searchable()
+        ->record(new BtsAuthor);
+}
+
+test('a searchable relationship select is remote search (regression: searchable without preload rendered an empty, dead combobox)', function () {
+    $field = BelongsToSelect::make('company_id')->relationship('company', 'name')->searchable();
+
+    expect($field->isRemoteSearch())->toBeTrue()
+        ->and($field->hasSearchResultsCallback())->toBeTrue();
+});
+
+test('preload keeps a searchable relationship select client-side', function () {
+    $field = BelongsToSelect::make('company_id')->relationship('company', 'name')->searchable()->preload();
+
+    expect($field->isRemoteSearch())->toBeFalse();
+});
+
+test('a non-searchable relationship select is not remote search', function () {
+    expect(BelongsToSelect::make('company_id')->relationship('company', 'name')->isRemoteSearch())->toBeFalse();
+});
+
+test('getSearchResults falls back to the relationship search', function () {
+    $field = makeRemoteBelongsToSelect();
+    BtsCompany::create(['name' => 'Acme']);
+    BtsCompany::create(['name' => 'Globex']);
+
+    expect($field->getSearchResults('Ac'))->toBe([1 => 'Acme']);
+});
+
+test('an explicit getSearchResultsUsing callback wins over the relationship search', function () {
+    $field = makeRemoteBelongsToSelect()->getSearchResultsUsing(fn (string $search) => ['x' => 'X-'.$search]);
+
+    expect($field->getSearchResults('foo'))->toBe(['x' => 'X-foo']);
+});
+
+test('getOptionLabel resolves a remote selection with a single keyed lookup', function () {
+    $field = makeRemoteBelongsToSelect();
+    $company = BtsCompany::create(['name' => 'Acme']);
+
+    // Remote mode ships no option list…
+    expect($field->getOptions())->toBe([])
+        // …but the selected value still resolves its label.
+        ->and($field->getOptionLabel($company->id))->toBe('Acme')
+        ->and($field->getOptionLabel(999))->toBeNull();
+});
+
+test('remote relationship select renders the remote combobox with the seeded selection label', function () {
+    $field = makeRemoteBelongsToSelect();
+    BtsCompany::create(['name' => 'Acme']);
+
+    $html = renderBelongsToSelect($field);
+
+    expect($html)
+        ->toContain('searchSelectOptions')
+        ->toContain('remote: true');
+});
+
+test('non-remote relationship select renders without remote wiring', function () {
+    $field = BelongsToSelect::make('company_id')->options(['1' => 'Acme']);
+
+    expect(renderBelongsToSelect($field))->toContain('remote: false');
 });

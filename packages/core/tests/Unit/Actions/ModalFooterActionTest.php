@@ -81,3 +81,41 @@ it('serializes to array', function () {
         ->and($array['icon'])->toBe('check')
         ->and($array['color'])->toBe('primary');
 });
+
+it('does not require confirmation by default', function () {
+    $action = ModalFooterAction::make('preview');
+
+    expect($action->needsConfirmation())->toBeFalse()
+        ->and($action->getConfirmationMessage())->toBeNull()
+        ->and($action->toArray()['confirmMessage'])->toBeNull();
+});
+
+it('requiresConfirmation uses the translated default message', function () {
+    $action = ModalFooterAction::make('reset')->requiresConfirmation();
+
+    expect($action->needsConfirmation())->toBeTrue()
+        ->and($action->getConfirmationMessage())->toBe(trans('wire-core::actions.confirm_description'))
+        ->and($action->toArray()['confirmMessage'])->toBe(trans('wire-core::actions.confirm_description'));
+});
+
+it('requiresConfirmation(false) turns confirmation back off', function () {
+    $action = ModalFooterAction::make('reset')->requiresConfirmation()->requiresConfirmation(false);
+
+    expect($action->needsConfirmation())->toBeFalse()
+        ->and($action->getConfirmationMessage())->toBeNull();
+});
+
+it('confirm() requires confirmation with a custom message', function () {
+    $action = ModalFooterAction::make('reset')->confirm('Opravdu resetovat?');
+
+    expect($action->needsConfirmation())->toBeTrue()
+        ->and($action->getConfirmationMessage())->toBe('Opravdu resetovat?')
+        ->and($action->toArray()['confirmMessage'])->toBe('Opravdu resetovat?');
+});
+
+it('confirm(null) requires confirmation with the translated default message', function () {
+    $action = ModalFooterAction::make('reset')->confirm();
+
+    expect($action->needsConfirmation())->toBeTrue()
+        ->and($action->getConfirmationMessage())->toBe(trans('wire-core::actions.confirm_description'));
+});

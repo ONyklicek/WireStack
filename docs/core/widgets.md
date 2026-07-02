@@ -14,6 +14,7 @@ Every widget shares the same fluent builder, so heading, visibility, authorizati
 | --- | --- | --- |
 | **Stats overview** | `StatsOverviewWidget` | KPIs, counters, and summary metrics with optional sparklines |
 | **Chart** | `ChartWidget` | Line, bar, pie, and doughnut charts powered by Chart.js |
+| **Chart presets** | `LineChartWidget` / `PieChartWidget` / `DoughnutChartWidget` | Declarative `ChartWidget` presets (pie/doughnut show the legend by default) |
 | **Bar chart** | `BarChartWidget` | Pure-CSS vertical/horizontal bars (finance, system) — no JavaScript |
 | **Table** | `TableWidget` | A compact wire-table embedded inside a dashboard card |
 | **Custom** | `CustomWidget` | Any Blade view rendered as a widget |
@@ -257,6 +258,37 @@ ChartWidget::make()
 ->hasFilter(): bool
 ->getActiveFilter(): ?string
 ->activeFilter(?string $filter)            // set active filter programmatically
+->options(array $options)                  // Chart.js options merged over the type defaults
+->getOptions(): array
+```
+
+### Convenience Widgets
+
+Declarative presets over `ChartWidget`, so a dashboard states intent instead of `->type(...)`:
+
+```php
+use NyonCode\WireCore\Widgets\DoughnutChartWidget;
+use NyonCode\WireCore\Widgets\LineChartWidget;
+use NyonCode\WireCore\Widgets\PieChartWidget;
+
+LineChartWidget::make()->heading('Revenue')->labels([...])->datasets([...]);
+PieChartWidget::make()->heading('By Category')->labels([...])->datasets([...]);
+DoughnutChartWidget::make()->heading('By Status')->labels([...])->datasets([...]);
+```
+
+`PieChartWidget` and `DoughnutChartWidget` show the Chart.js legend by default (top position) — pie slices rely on it. Everything else matches `ChartWidget`.
+
+### Chart.js Options
+
+Override any Chart.js option with `options()`; the array is merged **over** the type's defaults (`responsive: true`, `maintainAspectRatio: false`, plus the pie/doughnut legend), so you only specify what changes:
+
+```php
+LineChartWidget::make()
+    ->datasets([...])
+    ->options([
+        'scales' => ['y' => ['beginAtZero' => true]],
+        'plugins' => ['legend' => ['display' => false]],
+    ])
 ```
 
 ---

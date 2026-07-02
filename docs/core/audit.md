@@ -18,17 +18,11 @@ php artisan vendor:publish --tag=wire-core::migrations
 php artisan migrate
 ```
 
-Register the audit subscriber in one of your application service providers:
-
-```php
-use Illuminate\Support\Facades\Event;
-use NyonCode\WireCore\Audit\AuditEventSubscriber;
-
-public function boot(): void
-{
-    Event::subscribe(AuditEventSubscriber::class);
-}
-```
+That's the whole setup — the package registers the audit event subscriber
+automatically, and the logger is gated by `wire-core.audit.enabled` (on by
+default). If you registered `AuditEventSubscriber` manually in an application
+service provider (the pre-1.7.1 setup), you can remove that line; the
+subscription is idempotent, so keeping it does not double-log.
 
 ## Enable Auditing On A Model
 
@@ -167,13 +161,23 @@ Set a retention period in days:
 ],
 ```
 
-Then prune old entries from a scheduled command or job:
+Then schedule the bundled prune command:
 
 ```php
-use NyonCode\WireCore\Audit\AuditLogger;
+use Illuminate\Support\Facades\Schedule;
 
-app(AuditLogger::class)->prune();
+Schedule::command('wire-core:audit-prune')->daily();
 ```
+
+Run it manually with an ad-hoc period override:
+
+```bash
+php artisan wire-core:audit-prune --days=90
+```
+
+Without a configured `retention_days` (and no `--days`), the command warns and
+prunes nothing. Programmatic pruning is still available via
+`app(AuditLogger::class)->prune(?int $days = null)`.
 
 ## Configuration
 

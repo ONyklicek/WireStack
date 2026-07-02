@@ -18,6 +18,9 @@
     <button
         type="button"
         wire:click="callModalFooterAction('{{ $footerAction['name'] }}')"
+        @if(! empty($footerAction['confirmMessage']))
+            wire:confirm="{{ $footerAction['confirmMessage'] }}"
+        @endif
         wire:loading.attr="disabled"
         wire:target="callModalFooterAction"
         @class(['inline-flex items-center gap-2', $buttonClasses])

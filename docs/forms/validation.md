@@ -208,7 +208,9 @@ TextInput::make('name')->required()->validateOnBlur();           // when focus l
 `validateLive()` enables `live()` and `validateOnBlur()` enables `blur` binding,
 so the server sees the change and refreshes only that field's error bag entry.
 Conditioning helpers such as `requiredIf()` are honoured live, because they read
-the current sibling state on each roundtrip.
+the current sibling state on each roundtrip. Live validation also works for
+fields inside `Repeater` items — each row's field validates against its own
+item path (e.g. `data.contacts.0.email`).
 
 > Live validation checks one field at a time. Rules that compare raw sibling
 > values via Laravel's string syntax (e.g. `required_if:other,value`) are best

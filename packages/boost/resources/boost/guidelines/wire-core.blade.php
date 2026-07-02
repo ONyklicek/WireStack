@@ -23,6 +23,8 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
 - Add extra footer buttons with `->modalFooterActions([ModalFooterAction::make('preview')->action(fn ($data, $set) => …)])`.
   The callback gets the live form `$data` and a `$set` writer; `->submitsForm()` validates first,
   `->closesModal()` closes after, `->position('before'|'after')` places it around Cancel/Submit.
+  `->requiresConfirmation()` asks before running (native `wire:confirm`, translated default message);
+  `->confirm('Really reset?')` sets a custom message.
 - Color, icon and visibility come from the shared `HasColor`, `HasIcons`, `HasVisibility` concerns.
 - On actions, `->label()`, `->icon()`, `->color()`, `->tooltip()` and `->size()` each accept `string|Closure|null`,
   so they can be computed per row — the Closure receives the record: `->color(fn ($record) => $record->isPaid() ? 'success' : 'danger')`.
@@ -46,7 +48,16 @@ Read-only counterpart of forms. `Infolist::make()->schema([...])` with entries: 
 
 ### Widgets
 
-`StatsOverviewWidget` / `Stat`, `ChartWidget`, `BarChartWidget`, `TableWidget`, `CustomWidget`.
+`StatsOverviewWidget` / `Stat`, `ChartWidget` (+ `LineChartWidget`/`PieChartWidget`/`DoughnutChartWidget`
+presets and `->options([...])` Chart.js overrides), `BarChartWidget`, `TableWidget`, `CustomWidget`.
+
+### Audit log
+
+Add `HasAuditable` to a model and its created/updated/deleted changes persist as `AuditEntry`
+rows automatically — the package registers the event subscriber itself, gated by
+`wire-core.audit.enabled`. No manual `Event::subscribe()` needed. Retention: configure
+`wire-core.audit.retention_days` and schedule `wire-core:audit-prune` (or run with `--days=N`).
+Suppress logging in seeders/imports with `AuditLogger::withoutAuditing(fn () => …)`.
 
 ### Icons & colors
 

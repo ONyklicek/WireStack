@@ -35,16 +35,17 @@ trait DispatchesStateUpdates
                 continue;
             }
 
-            foreach ($form->getFlatComponents() as $field) {
-                if ($field instanceof Component
-                    && $field instanceof HasStateUpdatedCallback
-                    && $field->hasAfterStateUpdated()
-                    && $field->getStatePath() === $absolutePath
-                ) {
-                    $field->runAfterStateUpdated($old);
+            // Canonical lookup: resolves flat fields and fields inside repeater
+            // items (per-item schema) alike.
+            $field = $form->findComponentByStatePath($absolutePath);
 
-                    return true;
-                }
+            if ($field instanceof Component
+                && $field instanceof HasStateUpdatedCallback
+                && $field->hasAfterStateUpdated()
+            ) {
+                $field->runAfterStateUpdated($old);
+
+                return true;
             }
         }
 
@@ -66,16 +67,15 @@ trait DispatchesStateUpdates
                 continue;
             }
 
-            foreach ($form->getFlatComponents() as $field) {
-                if ($field instanceof Field
-                    && $field instanceof HasValidation
-                    && $field->validatesLive()
-                    && $field->getStatePath() === $absolutePath
-                ) {
-                    $this->validateLiveField($field, $absolutePath);
+            $field = $form->findComponentByStatePath($absolutePath);
 
-                    return true;
-                }
+            if ($field instanceof Field
+                && $field instanceof HasValidation
+                && $field->validatesLive()
+            ) {
+                $this->validateLiveField($field, $absolutePath);
+
+                return true;
             }
         }
 

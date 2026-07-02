@@ -34,17 +34,18 @@ class AuditEntry extends Model
     protected $guarded = [];
 
     /**
-     * @return array<string, string>
+     * Declared as a property, not the casts() method: the method form is only
+     * consulted from Laravel 11 up, and this package supports 10.x — with the
+     * method, the JSON columns were silently written as raw PHP arrays there.
+     *
+     * @var array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'old_values' => 'array',
-            'new_values' => 'array',
-            'metadata' => 'array',
-            'created_at' => 'datetime',
-        ];
-    }
+    protected $casts = [
+        'old_values' => 'array',
+        'new_values' => 'array',
+        'metadata' => 'array',
+        'created_at' => 'datetime',
+    ];
 
     /**
      * The auditable (polymorphic) record.
@@ -126,7 +127,8 @@ class AuditEntry extends Model
         $new = $this->new_values ?? [];
         $changes = [];
 
-        foreach (array_unique([...array_keys($old), ...array_keys($new)]) as $key) {
+        // Union of both key sets (array union keeps every key exactly once).
+        foreach (array_keys($old + $new) as $key) {
             $oldVal = $old[$key] ?? null;
             $newVal = $new[$key] ?? null;
 

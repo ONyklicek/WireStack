@@ -331,6 +331,18 @@ class Form implements Htmlable
     }
 
     /**
+     * Locate the component bound to the given absolute state path — flat fields
+     * directly, fields inside repeater items through the per-item schema (see
+     * FormRuntime::findComponentByStatePath()). The canonical lookup used by
+     * every reactive dispatch (afterStateUpdated, live validation, field
+     * actions, remote search).
+     */
+    public function findComponentByStatePath(string $absolutePath): ?\NyonCode\WireCore\Foundation\Components\Component
+    {
+        return $this->getRuntime()->findComponentByStatePath($absolutePath);
+    }
+
+    /**
      * @return array<int, mixed>
      */
     public function getSchema(): array

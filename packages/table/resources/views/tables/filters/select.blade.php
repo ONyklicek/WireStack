@@ -21,14 +21,16 @@
     <label for="filter-{{ $name }}" class="text-sm font-medium text-gray-700 dark:text-gray-300">
         {{ $label }}
     </label>
-    @if($filter->isSearchable() && ! $filter->isNative())
-        {{-- Searchable combobox: delegate to the canonical shared owner. --}}
+    @if(! $filter->isNative())
+        {{-- Combobox: delegate to the canonical shared owner. Non-searchable
+             filters use the same UI without the search input, so both match. --}}
         @include('wire-core::partials.searchable-select', [
             'selectId' => 'filter-' . $name,
             'statePath' => 'tableState.filters.' . $name . '.value',
             'options' => $options,
             'placeholder' => $placeholder,
             'multiple' => $isMultiple,
+            'searchable' => $filter->isSearchable(),
             'searchPrompt' => __('Search...'),
             'noResultsMessage' => __('No results found'),
         ])
@@ -37,7 +39,8 @@
             id="filter-{{ $name }}"
             wire:model.live="tableState.filters.{{ $name }}.value"
             @if($isMultiple) multiple @endif
-            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            {{-- Match the searchable combobox trigger so both filter variants share one design. --}}
+            class="block w-full rounded-md border border-gray-300 bg-white shadow-sm text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-600 dark:text-white"
         >
             <option value="">{{ $placeholder }}</option>
             @foreach($options as $optionValue => $optionLabel)

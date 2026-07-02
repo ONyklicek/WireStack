@@ -132,6 +132,7 @@ class TableImport
         foreach ($this->resolveImporter()->rows($filePath) as $row) {
             if ($mapping === null) {
                 $mapping = $this->resolveMapping(array_keys($row));
+                $this->assertUpdateExistingMapped($mapping);
             }
 
             $data = $this->mapRow($row, $mapping);
@@ -184,6 +185,29 @@ class TableImport
         }
 
         return $mapping;
+    }
+
+    /**
+     * Every updateExisting() match attribute must be fed by a mapped file header.
+     * With an unmapped attribute the updateOrCreate key set loses that entry, and
+     * an empty/partial key set would silently match (and overwrite) unrelated
+     * records — the first row in the table in the empty case. Fail the whole run
+     * up front instead.
+     *
+     * @param  array<string, string|null>  $mapping
+     */
+    protected function assertUpdateExistingMapped(array $mapping): void
+    {
+        $unmapped = array_filter(
+            $this->updateExisting,
+            static fn (string $attribute): bool => ($mapping[$attribute] ?? null) === null,
+        );
+
+        if ($unmapped !== []) {
+            throw new RuntimeException(
+                'The updateExisting() attribute(s) ['.implode(', ', $unmapped).'] are not mapped to any column in the imported file.'
+            );
+        }
     }
 
     /**

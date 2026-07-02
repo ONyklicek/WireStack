@@ -107,6 +107,11 @@ TextInput::make('quantity')
     ->afterStateUpdated(fn ($state, $set) => $set('total', $state * 10));
 ```
 
+All of this reactivity — `afterStateUpdated()`, live validation, field actions and remote
+select search — also works for fields inside `Repeater` items: the dispatch resolves the field
+per item, and `$get`/`$set` read and write that item's own bag (so `$set('slug', …)` on row 2
+touches only row 2).
+
 ## Prefill a form from an action
 
 An action modal form reads and writes the `modal.action.formData` bag. Seed its initial values with
@@ -162,3 +167,5 @@ EditAction::make()
 - `->submitsForm()` validates the modal form first, so validation errors surface before the callback.
 - `->closesModal()` closes the modal once the callback returns.
 - `->position('before'|'after')` places the button before or after the built-in Cancel/Submit.
+- `->requiresConfirmation()` asks the user before the callback runs (a native `wire:confirm`
+  dialog with a translated default message); `->confirm('Really reset?')` sets a custom message.

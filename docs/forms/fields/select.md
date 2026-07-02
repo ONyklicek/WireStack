@@ -76,6 +76,61 @@ Select::make('user_id')
     ->loadingMessage('Loading...')
 ```
 
+## Remote Search
+
+Instead of filtering a preloaded list in the browser, resolve matches on the
+server as the user types:
+
+```php
+Select::make('author_id')
+    ->getSearchResultsUsing(fn (string $search) =>
+        User::where('name', 'like', "%{$search}%")->limit(50)->pluck('name', 'id')->all()
+    )
+    ->getOptionLabelUsing(fn ($value) => User::find($value)?->name)
+```
+
+- `getSearchResultsUsing()` implies `searchable()` and returns a `value => label` map.
+- `getOptionLabelUsing()` (single) / `getOptionLabelsUsing()` (multiple) resolve the
+  label(s) for the current selection, so the trigger stays readable even when the
+  chosen option was never preloaded.
+- `preload()` eagerly seeds the remote list on render (runs the search callback with
+  an empty term) instead of waiting for the first keystroke.
+
+The host must expose the search endpoint — any `WithForms` component or a table
+action modal does. A [`BelongsToSelect`](belongs-to-select.md) gets relationship-driven
+remote search automatically.
+
+## Create & Edit Options
+
+Let the user create a new option — or edit the selected one — from a modal without
+leaving the form:
+
+```php
+Select::make('category_id')
+    ->options(fn () => Category::pluck('name', 'id')->all())
+    ->createOptionForm([
+        TextInput::make('name')->required(),
+    ])
+    ->createOptionUsing(fn (array $data) => Category::create($data)->getKey())
+    ->editOptionForm([
+        TextInput::make('name')->required(),
+    ])
+    ->fillEditOptionUsing(fn ($value) => Category::find($value)->only('name'))
+    ->updateOptionUsing(fn ($value, array $data) => Category::find($value)->update($data))
+```
+
+A "+ Create" (and, for a selected value, "Edit") affordance appears in the combobox
+panel footer and opens an isolated modal. Validation keeps the modal open with
+errors; on success the new value is selected (appended for a multi-select).
+
+- `createOptionUsing()` returns the new option's value — a scalar key, or a model
+  whose key is used.
+- Editing targets the single selected option, so it is unavailable on `multiple()`.
+- `createOptionModalHeading()` / `editOptionModalHeading()` customise the headings.
+- Works in standalone `WithForms` components **and** inside table action modals.
+- So the newly created value renders a label, pair with `getOptionLabelUsing()`
+  or a preloaded option list.
+
 ## Multi-Select
 
 ```php
@@ -96,13 +151,14 @@ Select::make('author_id')
 
 ## Native vs Custom
 
-A plain `Select` renders a browser-native `<select>`. The custom searchable
-combobox is used when you call [`searchable()`](#searchable). Use `native()` to
-force the native element even on a searchable field.
+Every `Select` renders through the custom combobox by default, so searchable and
+non-searchable selects share one design — [`searchable()`](#searchable) simply adds
+the in-panel search input. Use `native()` to opt into the browser-native
+`<select>` element instead.
 
 ```php
 Select::make('country')
-    ->searchable()      // custom searchable combobox
+    ->searchable()      // combobox with a search input
     ->native()          // force the browser-native <select> instead
 ```
 
@@ -163,6 +219,12 @@ Select::make('color')
 | `allowHtml()` | bool | Render option labels as HTML |
 | `boolean()` | — | Shorthand for Yes/No options |
 | `relationship(string, string)` | — | Load options from a relationship |
+| `getSearchResultsUsing(Closure)` | — | Remote search: resolve matches on the server (implies `searchable()`) |
+| `getOptionLabelUsing(Closure)` / `getOptionLabelsUsing(Closure)` | — | Resolve label(s) for the current selection |
+| `preload()` | bool | Eagerly seed the remote option list on render |
+| `createOptionForm(array\|Closure)` / `createOptionUsing(Closure)` | — | Create a new option from a modal |
+| `editOptionForm(array\|Closure)` / `fillEditOptionUsing(Closure)` / `updateOptionUsing(Closure)` | — | Edit the selected option from a modal |
+| `createOptionModalHeading(string)` / `editOptionModalHeading(string)` | string | Modal headings |
 | `placeholder(string\|Closure)` | string | Empty/blank option label |
 | `disabled(bool\|Closure)` | bool | Disable the select |
 | `required()` | — | Mark as required |

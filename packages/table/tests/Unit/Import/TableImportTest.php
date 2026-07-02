@@ -123,6 +123,40 @@ test('updateExisting updates matched rows and creates new ones', function () {
         ->and(ImportTestContact::where('email', 'john@example.com')->value('name'))->toBe('John Updated');
 });
 
+test('updateExisting with an unmapped match attribute fails fast instead of overwriting rows (regression: empty updateOrCreate key matched the first record)', function () {
+    ImportTestContact::create(['name' => 'Existing A', 'email' => 'a@example.com']);
+    ImportTestContact::create(['name' => 'Existing B', 'email' => 'b@example.com']);
+
+    // The file has no "email" header, so the match column stays unmapped.
+    $path = tableImportTempCsv("name\nImported One\nImported Two\n");
+
+    $import = TableImport::make()
+        ->model(ImportTestContact::class)
+        ->columns([
+            ImportColumn::make('name')->requiredMapping(),
+            ImportColumn::make('email'),
+        ])
+        ->updateExisting(['email']);
+
+    expect(fn () => $import->import($path))
+        ->toThrow(RuntimeException::class, 'updateExisting() attribute(s) [email]');
+
+    // Nothing was persisted or overwritten.
+    expect(ImportTestContact::orderBy('id')->pluck('name')->all())->toBe(['Existing A', 'Existing B']);
+});
+
+test('updateExisting with an attribute that has no import column at all fails fast', function () {
+    $path = tableImportTempCsv("name\nJohn\n");
+
+    $import = TableImport::make()
+        ->model(ImportTestContact::class)
+        ->columns([ImportColumn::make('name')])
+        ->updateExisting(['external_id']);
+
+    expect(fn () => $import->import($path))
+        ->toThrow(RuntimeException::class, 'updateExisting() attribute(s) [external_id]');
+});
+
 test('createUsing runs a custom persistence handler', function () {
     $path = tableImportTempCsv("name,email\nJohn,john@example.com\n");
 
