@@ -6,7 +6,8 @@
 @include('wire-forms::partials.field-wrapper-start')
 
     <div
-        x-data="{ enabled: @entangle($field->getWireModelAttribute()) }"
+        {{-- Honor live(): mirror the other entangle-based fields (slider, tags, …). --}}
+        x-data="{ enabled: @entangle($field->getWireModelAttribute()){{ $wireModifier ? '.' . $wireModifier : '' }} }"
         class="flex items-center gap-3"
     >
         <button

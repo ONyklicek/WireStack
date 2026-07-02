@@ -1,5 +1,12 @@
 <div class="wire-widget-grid">
-    <div class="grid gap-6" style="grid-template-columns: repeat({{ $columns ?? 2 }}, minmax(0, 1fr));">
+    @php $columns = $columns ?? 2; @endphp
+    {{-- Responsive: 1 col on mobile, growing toward the configured count. --}}
+    <div @class([
+        'grid gap-6 grid-cols-1',
+        'md:grid-cols-2' => $columns === 2,
+        'md:grid-cols-2 xl:grid-cols-3' => $columns === 3,
+        'md:grid-cols-2 xl:grid-cols-4' => $columns >= 4,
+    ])>
         @foreach($widgets as $widget)
             @if($widget->isVisible())
                 <div class="{{ $widget->getColumnSpan() === 'full' ? 'col-span-full' : ($widget->getColumnSpan() ? 'col-span-' . $widget->getColumnSpan() : '') }}"

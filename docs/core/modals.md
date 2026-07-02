@@ -58,6 +58,12 @@ Action::make('edit')
     ->fullScreenOnMobile();          // full screen on mobile
 ```
 
+Below the `sm` breakpoint, `slideOverOnMobile()` renders the form modal as an
+edge-pinned, full-height panel sliding in from the right, and
+`fullScreenOnMobile()` fills the viewport; both scroll the body *inside* the
+panel so the footer buttons stay visible, and both keep the centered dialog
+unchanged on desktop.
+
 ## Modal Config Objects
 
 Instead of the fluent `->modal*()` setters, an action can be configured from a

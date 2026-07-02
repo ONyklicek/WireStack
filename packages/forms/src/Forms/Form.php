@@ -10,6 +10,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
+use NyonCode\WireCore\Foundation\Schema\Wizard;
 use NyonCode\WireForms\Forms\Config\ConfigBuilder;
 use NyonCode\WireForms\Forms\Config\FormConfig;
 use NyonCode\WireForms\Forms\Runtime\FormRuntime;
@@ -208,6 +209,39 @@ class Form implements Htmlable
     public function validate(): array
     {
         return $this->getRuntime()->validate();
+    }
+
+    // ─── Wizard steps ──────────────────────────────────────────────
+
+    /**
+     * Validate only the fields inside one wizard step (see
+     * {@see Wizard}), so step navigation
+     * can gate on the current step without flagging later ones.
+     *
+     * @return array<string, mixed>
+     */
+    public function validateWizardStep(int $stepIndex, ?string $wizard = null): array
+    {
+        return $this->getRuntime()->validateWizardStep($stepIndex, $wizard);
+    }
+
+    /**
+     * Whether the schema contains a wizard — optionally one with the given name.
+     */
+    public function hasWizard(?string $wizard = null): bool
+    {
+        return $this->getRuntime()->hasWizard($wizard);
+    }
+
+    /**
+     * Absolute state paths owned by one wizard step's fields (wildcards for
+     * repeaters). Used by hosts to clear a step's stale error-bag entries.
+     *
+     * @return array<int, string>
+     */
+    public function getWizardStepFieldPaths(int $stepIndex, ?string $wizard = null): array
+    {
+        return $this->getRuntime()->getWizardStepFieldPaths($stepIndex, $wizard);
     }
 
     // ─── State ─────────────────────────────────────────────────────

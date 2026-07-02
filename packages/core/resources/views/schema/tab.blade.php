@@ -1,4 +1,7 @@
-@php /** @var \NyonCode\WireCore\Foundation\Schema\Tab $layout */
+@php
+    use NyonCode\WireCore\Foundation\Schema\Tab;
+
+    assert($layout instanceof Tab);
     $columns = $layout->getColumns();
 @endphp
 

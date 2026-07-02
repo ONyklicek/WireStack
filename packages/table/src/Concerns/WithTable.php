@@ -55,6 +55,7 @@ use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
 use NyonCode\WireForms\Concerns\InteractsWithFieldActions;
 use NyonCode\WireForms\Concerns\InteractsWithRepeaters;
 use NyonCode\WireForms\Concerns\InteractsWithSelectCreation;
+use NyonCode\WireForms\Concerns\InteractsWithWizards;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Columns\SummaryBatch;
@@ -77,6 +78,7 @@ trait WithTable
     use InteractsWithFieldActions;
     use InteractsWithRepeaters;
     use InteractsWithSelectCreation;
+    use InteractsWithWizards;
     use WithPagination;
     use WithTableQueryString;
 

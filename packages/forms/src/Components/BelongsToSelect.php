@@ -25,9 +25,6 @@ class BelongsToSelect extends Select
     /** @var Closure|null fn(Builder) => Builder — modify the options query */
     protected ?Closure $modifyOptionsQueryUsing = null;
 
-    /** @var array<int, Component>|Closure|null Schema for inline create modal */
-    protected array|Closure|null $createOptionFormSchema = null;
-
     /** @var Closure|null fn(array) => Model — custom create handler */
     protected ?Closure $createOptionUsing = null;
 
@@ -44,16 +41,6 @@ class BelongsToSelect extends Select
     public function modifyOptionsQueryUsing(?Closure $callback): static
     {
         $this->modifyOptionsQueryUsing = $callback;
-
-        return $this;
-    }
-
-    /**
-     * @param  array<int, Component>|Closure  $schema
-     */
-    public function createOptionForm(array|Closure $schema): static
-    {
-        $this->createOptionFormSchema = $schema;
 
         return $this;
     }
@@ -84,12 +71,9 @@ class BelongsToSelect extends Select
      */
     public function getCreateOptionFormSchema(): array|Closure|null
     {
-        return $this->createOptionFormSchema;
-    }
-
-    public function hasCreateOptionForm(): bool
-    {
-        return $this->createOptionFormSchema !== null;
+        // Canonical storage lives on the parent Select ({@see Select::createOptionForm()}),
+        // so the shared InteractsWithSelectCreation modal flow works unchanged.
+        return $this->createOptionSchema;
     }
 
     /**

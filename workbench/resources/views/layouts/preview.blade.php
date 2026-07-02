@@ -9,7 +9,7 @@
 </head>
 <body class="min-h-screen bg-slate-100 text-slate-950 antialiased">
     <div class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),_transparent_42%),linear-gradient(180deg,_#f8fbff_0%,_#eef4fb_100%)]">
-        <div class="mx-auto max-w-7xl px-6 py-10">
+        <div class="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-10">
             @unless($captureOnly ?? false)
                 <div class="mb-8 flex items-center justify-between gap-4">
                     <div>

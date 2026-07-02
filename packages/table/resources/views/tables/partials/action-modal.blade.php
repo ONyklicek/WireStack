@@ -107,9 +107,6 @@
             />
         @else
             {{-- Form Modal --}}
-            @php
-                $slideUpOnMobile = $isSlideOverOnMobile || $isFullScreenMobile;
-            @endphp
             <x-wire-modals::modal
                 wire:model="tableState.modal.action.show"
                 :heading="$modalData['heading']"
@@ -118,6 +115,7 @@
                 :close-on-click-away="$modalData['closeOnClickAway'] ?? true"
                 :close-on-escape="$modalData['closeOnEscape'] ?? true"
                 :full-screen-on-mobile="$isFullScreenMobile"
+                :slide-over-on-mobile="$isSlideOverOnMobile"
                 :sticky-footer="true"
                 close-action="closeActionModal"
             >

@@ -61,7 +61,8 @@
     <div
             x-data="{
             open: false,
-            value: $wire.entangle('{{ $field->getWireModelAttribute() }}'),
+            {{-- Honor live(): mirror the other entangle-based fields. --}}
+            value: $wire.entangle('{{ $field->getWireModelAttribute() }}'){{ $wireModifier ? '.' . $wireModifier : '' }},
             hasDate: @js($hasDate),
             hasTime: @js($hasTime),
             hasSeconds: @js($hasSeconds),

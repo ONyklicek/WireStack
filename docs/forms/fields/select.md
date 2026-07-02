@@ -130,6 +130,23 @@ errors; on success the new value is selected (appended for a multi-select).
 - Works in standalone `WithForms` components **and** inside table action modals.
 - So the newly created value renders a label, pair with `getOptionLabelUsing()`
   or a preloaded option list.
+- The created/edited option is merged into the open combobox immediately (the host
+  dispatches `select-option-created` / `select-option-updated` browser events) — no
+  page refresh needed.
+
+## Reactivity
+
+The combobox binds deferred by default. Add `live()` when other fields react to the
+selection — `afterStateUpdated()`, a sibling's `visibleWhen()`, or `Form::live()` —
+so picking an option syncs to the server on click instead of waiting for the next
+roundtrip:
+
+```php
+Select::make('type')
+    ->options([...])
+    ->live()
+    ->afterStateUpdated(fn ($state, $set) => $set('label', ucfirst((string) $state)))
+```
 
 ## Multi-Select
 

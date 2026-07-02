@@ -8,6 +8,8 @@ use Illuminate\Validation\ValidationException;
 use NyonCode\WireCore\Core\State\StateHydrator;
 use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
+use NyonCode\WireCore\Foundation\Schema\Step;
+use NyonCode\WireCore\Foundation\Schema\Wizard;
 use NyonCode\WireForms\Components\Field;
 use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Forms\Config\FormConfig;
@@ -42,14 +44,109 @@ final class FormRuntime
      */
     public function validate(): array
     {
-        $resolver = new FormValidationResolver(
+        return $this->runValidation(new FormValidationResolver(
             $this->getFlatComponents(),
             $this->config->statePath,
             $this->config->validationMessages,
             $this->getRepeaters(),
-        );
+        ));
+    }
 
-        $state = $this->stateManager->getState();
+    /**
+     * Validate only the fields inside one wizard step, so "Next" can gate on the
+     * current step without flagging untouched later steps. A missing wizard or
+     * out-of-range step index validates nothing (returns an empty array).
+     *
+     * @return array<string, mixed>
+     *
+     * @throws ValidationException
+     */
+    public function validateWizardStep(int $stepIndex, ?string $wizardName = null): array
+    {
+        $step = $this->findWizardStep($stepIndex, $wizardName);
+
+        if ($step === null) {
+            return [];
+        }
+
+        return $this->runValidation(new FormValidationResolver(
+            $this->flattenComponents($step->getSchema()),
+            $this->config->statePath,
+            $this->config->validationMessages,
+            $this->collectRepeaters($step->getSchema()),
+        ));
+    }
+
+    /**
+     * Absolute state paths owned by one wizard step's fields (wildcards for
+     * repeaters), so the host can clear that step's stale error-bag entries
+     * before revalidating.
+     *
+     * @return array<int, string>
+     */
+    public function getWizardStepFieldPaths(int $stepIndex, ?string $wizardName = null): array
+    {
+        return $this->findWizardStep($stepIndex, $wizardName)?->getDescendantFieldStatePaths() ?? [];
+    }
+
+    /**
+     * Whether the schema contains a wizard — optionally one with the given name.
+     */
+    public function hasWizard(?string $wizardName = null): bool
+    {
+        $this->prepare();
+
+        return $this->findWizard($this->config->schema, $wizardName) !== null;
+    }
+
+    private function findWizardStep(int $stepIndex, ?string $wizardName): ?Step
+    {
+        $this->prepare();
+
+        $wizard = $this->findWizard($this->config->schema, $wizardName);
+
+        // getSteps() re-indexes over *visible* steps, matching the client's
+        // rendered step order.
+        return $wizard?->getSteps()[$stepIndex] ?? null;
+    }
+
+    /**
+     * Locate a wizard in the schema, descending through nested layouts. With a
+     * name, only a wizard of that name matches; without, the first one wins.
+     *
+     * @param  array<int, mixed>  $components
+     */
+    private function findWizard(array $components, ?string $wizardName): ?Wizard
+    {
+        foreach ($components as $component) {
+            if ($component instanceof Wizard
+                && ($wizardName === null || $component->getName() === $wizardName)
+            ) {
+                return $component;
+            }
+
+            if ($component instanceof LayoutComponent) {
+                $found = $this->findWizard($component->getSchema(), $wizardName);
+
+                if ($found !== null) {
+                    return $found;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Run a prepared resolver through the host (Livewire) or a standalone
+     * validator — the shared tail of full-form and step-scoped validation.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws ValidationException
+     */
+    private function runValidation(FormValidationResolver $resolver): array
+    {
         $rules = $resolver->getRules();
         $messages = $resolver->getMessages();
         $attributes = $resolver->getAttributes();
@@ -63,6 +160,8 @@ final class FormRuntime
         }
 
         // In standalone mode, nest state under statePath so rules like "data.name" match
+        $state = $this->stateManager->getState();
+
         if ($this->config->statePath) {
             $validationData = [];
             data_set($validationData, $this->config->statePath, $state);

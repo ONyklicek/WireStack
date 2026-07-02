@@ -152,6 +152,35 @@ abstract class LayoutComponent implements HasStateAccessors, Htmlable
     }
 
     /**
+     * Absolute state paths of every field this layout (transitively) contains.
+     *
+     * Used by step-scoped concerns — wizard per-step validation and the
+     * "jump to the first errored step" behavior — to map a layout subtree to
+     * the error-bag keys it owns. Stateful layouts that bind whole subtrees
+     * (e.g. a forms Repeater) override this to report their own path plus a
+     * `{path}.*` wildcard covering per-item children.
+     *
+     * @return array<int, string>
+     */
+    public function getDescendantFieldStatePaths(): array
+    {
+        $paths = [];
+
+        foreach ($this->schema as $component) {
+            if ($component instanceof self) {
+                $paths = array_merge($paths, $component->getDescendantFieldStatePaths());
+            } elseif ($component instanceof Component) {
+                $path = $component->getStatePath();
+                if ($path !== '') {
+                    $paths[] = $path;
+                }
+            }
+        }
+
+        return array_values(array_unique($paths));
+    }
+
+    /**
      * Deep-clone the child schema. A shallow clone would share the child
      * component instances with the original (and with every other clone), so a
      * per-clone statePath — e.g. a Repeater item prefix — would leak across all

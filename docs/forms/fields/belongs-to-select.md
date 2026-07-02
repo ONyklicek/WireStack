@@ -60,6 +60,8 @@ BelongsToSelect::make('company_id')
     ])
 ```
 
+Inline create uses the same modal flow as [Select](select.md#create--edit-options): a "+ Create" button in the combobox panel opens a modal form, and on save the new record is created on the relationship (or via `createOptionUsing()`), selected, and merged into the dropdown without a page refresh. `editOptionForm()` from `Select` works here too.
+
 ## Related Docs
 
 - [Select](select.md)

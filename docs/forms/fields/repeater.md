@@ -60,6 +60,23 @@ Repeater::make('contacts')
 | `disabled(bool\|Closure)` | Disable add/delete/reorder controls |
 | `mutateRelationshipDataBeforeSaveUsing(Closure)` | Transform item data before persistence |
 
+## Per-Item Reactivity
+
+Reactive behavior inside a repeater resolves **per item**: `afterStateUpdated()`, live
+validation, field actions, remote select search and conditional visibility all read the item's
+own state bag, and `$get`/`$set` are scoped to that item.
+
+```php
+Repeater::make('contacts')->schema([
+    Select::make('type')->options(['email' => 'Email', 'other' => 'Other'])->live(),
+    TextInput::make('other_detail')->visibleWhen('type', 'other'),
+])
+```
+
+Here `other_detail` shows only in the rows whose own `type` is `other` — flipping row 2's
+select never affects row 1. See [Reactive Fields](../reactive-fields.md) for the full accessor
+reference.
+
 ## When to Use It
 
 Use `Repeater` when a single form owns a small to medium collection of related child records and the user should manage them inline.

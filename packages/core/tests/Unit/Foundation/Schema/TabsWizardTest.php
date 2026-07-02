@@ -126,7 +126,9 @@ test('wizard renders the schema.wizard view with step indicator and navigation',
 
     expect($html)
         ->toContain('step: 0')
-        ->toContain('total: 2')
+        // The step count flows through the morph-safe sync carrier, never the
+        // x-data literal (a changed x-data attribute would reset the wizard).
+        ->toContain('sync(2, null)')
         ->toContain('Account')
         ->toContain('Profile')
         ->toContain(__('wire-core::actions.wizard_next'))
@@ -137,4 +139,27 @@ test('wizard skippable flag reaches the rendered markup', function () {
     $html = Wizard::make()->skippable()->schema([Step::make('a'), Step::make('b')])->toHtml();
 
     expect($html)->toContain('skippable: true');
+});
+
+test('the tab bar scrolls horizontally instead of wrapping (mobile)', function () {
+    $html = Tabs::make()->schema([
+        Tab::make('profile'),
+        Tab::make('preferences'),
+    ])->toHtml();
+
+    expect($html)
+        ->toContain('overflow-x-auto')
+        ->toContain('whitespace-nowrap')
+        ->not->toContain('flex-wrap');
+});
+
+test('the wizard names the active step on mobile where indicator labels are hidden', function () {
+    $html = Wizard::make()->schema([
+        Step::make('account')->description('Login details'),
+        Step::make('contact'),
+    ])->toHtml();
+
+    expect($html)
+        ->toContain('sm:hidden')
+        ->toContain('Login details');
 });

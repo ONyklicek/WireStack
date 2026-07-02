@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ViewErrorBag;
+use Livewire\Component;
 use NyonCode\WireForms\Components\BelongsToSelect;
 use NyonCode\WireForms\Components\TextInput;
 
@@ -93,15 +94,48 @@ test('non-searchable renders the shared combobox without a search input', functi
         ->not->toContain('x-ref="searchInput"');
 });
 
-test('create-option form renders a "create new" footer inside the combobox panel', function () {
+test('create-option form renders the canonical create footer inside the combobox panel', function () {
+    $livewire = new class extends Component
+    {
+        public ?string $mountedCreateOptionSelect = null;
+
+        public ?string $mountedEditOptionSelect = null;
+
+        public ?string $company_id = null;
+
+        public function render(): string
+        {
+            return '<div></div>';
+        }
+    };
+
+    $field = BelongsToSelect::make('company_id')
+        ->options(['1' => 'Acme'])
+        ->searchable()
+        ->createOptionForm([TextInput::make('name')])
+        ->livewire($livewire);
+
+    // Same InteractsWithSelectCreation flow as the base Select — the old
+    // mountAction('{name}_create_option') pointed to an action nobody registered.
+    expect(renderBelongsToSelect($field))
+        ->toContain("mountCreateOption('company_id')")
+        ->not->toContain('mountAction(');
+});
+
+test('getCreateOptionForm builds the modal form (regression: schema was stored on a property the parent never read)', function () {
+    $field = BelongsToSelect::make('company_id')
+        ->createOptionForm([TextInput::make('name')]);
+
+    expect($field->getCreateOptionForm())->not->toBeNull();
+});
+
+test('create-option footer is omitted without a bound Livewire host', function () {
     $field = BelongsToSelect::make('company_id')
         ->options(['1' => 'Acme'])
         ->searchable()
         ->createOptionForm([TextInput::make('name')]);
 
-    expect(renderBelongsToSelect($field))
-        ->toContain("mountAction('company_id_create_option')")
-        ->toContain('Create new');
+    expect(renderBelongsToSelect($field))->not->toContain('mountCreateOption(');
 });
 
 test('inherits options from Select when manually set', function () {

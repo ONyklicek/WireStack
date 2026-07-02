@@ -14,7 +14,7 @@
     role="dialog"
     aria-modal="true"
 >
-    <div class="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+    <div class="{{ $containerClasses() }}">
         {{-- Backdrop --}}
         <div
             x-show="show"
@@ -31,25 +31,26 @@
         <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
 
         {{-- Modal Panel --}}
+        @php $transitions = $transitionClasses(); @endphp
         <div
             x-show="show"
             x-transition:enter="ease-out duration-300"
-            x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-            x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+            x-transition:enter-start="{{ $transitions['enterStart'] }}"
+            x-transition:enter-end="{{ $transitions['enterEnd'] }}"
             x-transition:leave="ease-in duration-200"
-            x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-            x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+            x-transition:leave-start="{{ $transitions['leaveStart'] }}"
+            x-transition:leave-end="{{ $transitions['leaveEnd'] }}"
             @class([
-                'relative inline-block w-full transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 text-left align-bottom shadow-xl transition-all sm:my-8 sm:align-middle',
+                'relative inline-block w-full transform overflow-hidden bg-white dark:bg-gray-800 text-left align-bottom shadow-xl transition-all sm:align-middle',
                 $widthClass(),
-                'max-h-screen sm:max-h-none' => $fullScreenOnMobile,
+                $panelVariantClasses(),
             ])
             @if($maxHeight) style="max-height: {{ $maxHeight }}" @endif
         >
             {{-- Header --}}
             @if($heading || $icon || isset($header))
                 <div @class([
-                    'px-4 pt-5 sm:px-6 sm:pt-6',
+                    'relative px-4 pt-5 sm:px-6 sm:pt-6',
                     'sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 pb-4' => $stickyHeader,
                 ])>
                     <div class="sm:flex sm:items-start">
@@ -59,7 +60,8 @@
                             </div>
                         @endif
 
-                        <div class="mt-3 text-center sm:mt-0 {{ $icon ? 'sm:ml-4' : '' }} sm:text-left flex-1">
+                        {{-- px keeps a centered mobile heading clear of the pinned close button. --}}
+                        <div class="mt-3 px-8 text-center sm:mt-0 sm:px-0 {{ $icon ? 'sm:ml-4' : '' }} sm:text-left flex-1">
                             @if($heading)
                                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white" id="modal-title">
                                     {{ $heading }}
@@ -75,11 +77,13 @@
                             @endif
                         </div>
 
-                        {{-- Close button --}}
+                        {{-- Close button: pinned to the top-right corner on mobile (the
+                             header only becomes a flex row from sm up), back in the
+                             header row on ≥sm. --}}
                         <button
                             type="button"
                             @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}"
-                            class="ml-auto -mr-1.5 rounded-lg p-1.5 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                            class="absolute right-3 top-3 sm:static sm:right-auto sm:top-auto sm:ml-auto sm:-mr-1.5 rounded-lg p-1.5 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
                         >
                             <span class="sr-only">{{ __('Close') }}</span>
                             <x-wire::icon name="outline:x-mark" size="h-5 w-5" />
@@ -98,6 +102,11 @@
                 'pt-4' => $heading || $icon,
                 'pt-5 sm:pt-6' => !$heading && !$icon,
                 'overflow-y-auto' => $maxHeight,
+                // Mobile variants scroll the body inside the full-height panel;
+                // ≥sm returns to the page-scroll layout (unless maxHeight opts
+                // the body into its own scrollbar anyway).
+                'flex-1 overflow-y-auto overscroll-contain sm:flex-none' => $mobileVariant() !== null,
+                'sm:overflow-visible' => $mobileVariant() !== null && ! $maxHeight,
             ])>
                 {{ $slot }}
             </div>

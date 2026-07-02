@@ -6,8 +6,16 @@ namespace Workbench\App\Livewire\Previews;
 
 use Livewire\Component;
 use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Actions\ActionGroup;
+use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireCore\Actions\DeleteAction;
+use NyonCode\WireCore\Actions\DeleteBulkAction;
 use NyonCode\WireCore\Actions\HeaderAction;
+use NyonCode\WireCore\Actions\ModalStep;
+use NyonCode\WireForms\Components\Select;
+use NyonCode\WireForms\Components\Textarea;
+use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireForms\Components\Toggle;
 use NyonCode\WireTable\Columns\BadgeColumn;
 use NyonCode\WireTable\Columns\BooleanColumn;
 use NyonCode\WireTable\Columns\TextColumn;
@@ -32,6 +40,9 @@ class TablePreview extends Component
     /** Variants that expand only the first invoice (a single drill-down). */
     private const EXPAND_FIRST_VARIANTS = ['subrows', 'subrows-limit', 'subrows-filter'];
 
+    /** Variants that auto-open the header-action form modal for visual QA. */
+    private const MODAL_VARIANTS = ['modal-form', 'modal-slideover-mobile', 'modal-fullscreen-mobile', 'modal-wizard'];
+
     public function mount(string $variant = 'overview'): void
     {
         $this->variant = $variant;
@@ -54,6 +65,12 @@ class TablePreview extends Component
             return;
         }
 
+        if (in_array($this->variant, self::MODAL_VARIANTS, true)) {
+            $this->openHeaderActionModal('invite');
+
+            return;
+        }
+
         if (in_array($this->variant, self::EXPAND_FIRST_VARIANTS, true)) {
             $this->tableState->set('rows.expanded', Invoice::query()
                 ->orderBy('id')
@@ -72,7 +89,13 @@ class TablePreview extends Component
                 : $this->subRowsTable($table);
         }
 
-        return $this->usersTable($table);
+        $table = $this->usersTable($table);
+
+        if ($this->variant === 'paginated') {
+            $table->paginated()->perPage(3);
+        }
+
+        return $table;
     }
 
     /**
@@ -182,17 +205,75 @@ class TablePreview extends Component
                         'viewer' => 'Viewer',
                     ]),
             ])
-            ->actions([
-                Action::make('edit')->label('Edit')->icon('pencil')->color('primary'),
-                DeleteAction::make(),
+            ->actions($this->variant === 'actions-group'
+                ? [
+                    ActionGroup::make([
+                        Action::make('view')->label('View')->icon('outline:eye'),
+                        Action::make('edit')->label('Edit')->icon('pencil')->color('primary'),
+                        Action::make('duplicate')->label('Duplicate')->icon('outline:document-duplicate'),
+                        DeleteAction::make(),
+                    ]),
+                ]
+                : [
+                    Action::make('edit')->label('Edit')->icon('pencil')->color('primary'),
+                    DeleteAction::make(),
+                ])
+            ->bulkActions([
+                BulkAction::make('activate')->label('Activate')->icon('check')->color('success'),
+                BulkAction::make('export')->label('Export selected')->icon('outline:arrow-down-tray')->color('gray'),
+                DeleteBulkAction::make(),
             ])
             ->headerActions([
-                HeaderAction::make('invite')->label('Invite user')->icon('plus')->color('primary'),
+                $this->inviteHeaderAction(),
             ])
             ->defaultSort('created_at', 'desc')
             ->searchable()
             ->selectable()
             ->paginated(false);
+    }
+
+    /**
+     * Invite action: a real modal form. The modal-* preview variants switch its
+     * mobile presentation so the responsive modal surfaces can be screenshotted.
+     */
+    private function inviteHeaderAction(): HeaderAction
+    {
+        $action = HeaderAction::make('invite')
+            ->label('Invite user')
+            ->icon('plus')
+            ->color('primary')
+            ->modalHeading('Invite user')
+            ->modalDescription('Send an invitation with a role and a personal note.')
+            ->form([
+                TextInput::make('name')->label('Name')->required(),
+                TextInput::make('email')->label('Email')->required(),
+                Select::make('role')->label('Role')->options([
+                    'admin' => 'Administrator',
+                    'manager' => 'Manager',
+                    'editor' => 'Editor',
+                    'viewer' => 'Viewer',
+                ]),
+                Textarea::make('note')->label('Personal note')->rows(4),
+                Toggle::make('send_copy')->label('Send me a copy'),
+            ]);
+
+        return match ($this->variant) {
+            'modal-slideover-mobile' => $action->slideOverOnMobile(),
+            'modal-fullscreen-mobile' => $action->fullScreenOnMobile(),
+            'modal-wizard' => $action->steps([
+                ModalStep::make('Account')->schema([
+                    TextInput::make('name')->label('Name')->required(),
+                    TextInput::make('email')->label('Email')->required(),
+                ]),
+                ModalStep::make('Role')->schema([
+                    Select::make('role')->label('Role')->options(['admin' => 'Administrator', 'viewer' => 'Viewer']),
+                ]),
+                ModalStep::make('Note')->schema([
+                    Textarea::make('note')->label('Personal note')->rows(3),
+                ]),
+            ]),
+            default => $action,
+        };
     }
 
     /**

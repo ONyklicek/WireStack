@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Livewire\Component;
 use Livewire\Livewire;
+use NyonCode\WireCore\Modals\View\ModalComponent;
 
 beforeEach(function () {
     config()->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
@@ -40,4 +41,65 @@ it('renders close action handlers for modal components', function () {
         ->assertSeeHtml('$wire.closeModal()')
         ->assertSeeHtml('$wire.closeConfirmation()')
         ->assertSeeHtml('$wire.closePanel()');
+});
+
+// ─── Mobile presentation variants (regression: slideOverOnMobile was a dead flag) ───
+
+class ModalMobileVariantComponent extends Component
+{
+    public bool $show = true;
+
+    public string $mode = 'default';
+
+    public function mount(string $mode = 'default'): void
+    {
+        $this->mode = $mode;
+    }
+
+    public function render(): string
+    {
+        return <<<'BLADE'
+            <div>
+                @if($mode === 'slide-over')
+                    <x-wire-modals::modal wire:model="show" heading="Edit" slide-over-on-mobile>Body</x-wire-modals::modal>
+                @elseif($mode === 'full-screen')
+                    <x-wire-modals::modal wire:model="show" heading="Edit" full-screen-on-mobile>Body</x-wire-modals::modal>
+                @else
+                    <x-wire-modals::modal wire:model="show" heading="Edit">Body</x-wire-modals::modal>
+                @endif
+            </div>
+        BLADE;
+    }
+}
+
+it('renders the mobile slide-over variant (edge-pinned container, slide-in transition, scrolling body)', function () {
+    Livewire::test(ModalMobileVariantComponent::class, ['mode' => 'slide-over'])
+        ->assertSeeHtml('justify-end pl-10')
+        ->assertSeeHtml('translate-x-full sm:translate-x-0')
+        ->assertSeeHtml('rounded-l-2xl')
+        ->assertSeeHtml('flex-1 overflow-y-auto');
+});
+
+it('renders the mobile full-screen variant (edge-to-edge panel with scrolling body)', function () {
+    Livewire::test(ModalMobileVariantComponent::class, ['mode' => 'full-screen'])
+        ->assertSeeHtml('items-stretch justify-center')
+        ->assertSeeHtml('translate-y-full sm:translate-y-0')
+        ->assertSeeHtml('rounded-none')
+        ->assertSeeHtml('flex-1 overflow-y-auto');
+});
+
+it('keeps the default dialog without a mobile variant', function () {
+    Livewire::test(ModalMobileVariantComponent::class)
+        ->assertSeeHtml('items-end justify-center px-4 pt-4 pb-20')
+        ->assertSeeHtml('opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95')
+        ->assertDontSeeHtml('translate-x-full');
+});
+
+it('slide-over wins when both mobile flags are set', function () {
+    $component = new ModalComponent(
+        slideOverOnMobile: true,
+        fullScreenOnMobile: true,
+    );
+
+    expect($component->mobileVariant())->toBe('slide-over');
 });
