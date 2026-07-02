@@ -27,6 +27,23 @@ class AuditPipelineOrder extends Model
 }
 
 beforeEach(function () {
+    // A previously failed run can leave tables behind on MySQL/Postgres, where
+    // DDL is not rolled back with the test — clear before creating.
+    Schema::dropIfExists('audit_pipeline_orders');
+    Schema::dropIfExists('audit_logs');
+
+    // The audit_logs migration constrains user_id to users(id). SQLite ignores
+    // the reference, MySQL/Postgres enforce it — satisfy it like a real app
+    // schema does (and leave an existing users table alone).
+    $this->createdUsersTable = false;
+
+    if (! Schema::hasTable('users')) {
+        Schema::create('users', function (Blueprint $table) {
+            $table->id();
+        });
+        $this->createdUsersTable = true;
+    }
+
     (require dirname(__DIR__, 2).'/database/migrations/create_audit_logs_table.php')->up();
 
     Schema::create('audit_pipeline_orders', function (Blueprint $table) {
@@ -38,6 +55,10 @@ beforeEach(function () {
 afterEach(function () {
     Schema::dropIfExists('audit_pipeline_orders');
     Schema::dropIfExists('audit_logs');
+
+    if ($this->createdUsersTable) {
+        Schema::dropIfExists('users');
+    }
 });
 
 it('persists audit entries without any manual subscriber registration', function () {
