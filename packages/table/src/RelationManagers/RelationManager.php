@@ -110,7 +110,18 @@ abstract class RelationManager extends Component
         $table = $this->resolveBaseTable();
 
         if (! $this->relationshipQueryApplied) {
-            $table->query($this->getRelationship()->getQuery());
+            $relation = $this->getRelationship();
+            $query = $relation->getQuery();
+
+            // A belongs-to-many relation query joins the pivot table but leaves the
+            // select at `*`, so pivot columns would overwrite same-named related
+            // columns during hydration (a pivot `id` even corrupts the row key).
+            // Constrain the select to the related table, like Eloquent's own get().
+            if ($relation instanceof BelongsToMany) {
+                $query->select($relation->getRelated()->qualifyColumn('*'));
+            }
+
+            $table->query($query);
             $this->relationshipQueryApplied = true;
         }
 

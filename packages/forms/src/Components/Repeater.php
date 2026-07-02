@@ -242,7 +242,11 @@ class Repeater extends LayoutComponent implements HasValidation
             if ($clone instanceof Component) {
                 $clone->statePath($itemPath);
             } elseif ($clone instanceof LayoutComponent) {
-                $clone->statePath($itemPath);
+                // Re-prepare the (deep-)cloned layout under the item prefix: this
+                // recomputes its resolved path (the clone carries a stale one from
+                // the form-level prepare) and cascades the prefix into descendant
+                // fields, which a bare statePath() on the layout never reaches.
+                $clone->prepareChildren($itemPath);
             }
             $components[] = $clone;
         }

@@ -317,6 +317,60 @@ test('item schema clones are independent from each other', function () {
         ->and($schema1[0]->getStatePath())->toBe('data.contacts.1.name');
 });
 
+test('item schema propagates the item path into layout-wrapped fields (regression: Grid children kept an unprefixed statePath)', function () {
+    $repeater = Repeater::make('addresses')
+        ->schema([
+            Grid::make()->schema([
+                TextInput::make('street'),
+            ]),
+        ]);
+
+    // Simulate the form-runtime prepare, which also stamps a resolved state path
+    // onto the Grid — getItemSchema() must recompute it per item, not reuse it.
+    $repeater->prepareChildren('data');
+
+    $grid0 = $repeater->getItemSchema(0)[0];
+    $grid1 = $repeater->getItemSchema(1)[0];
+
+    expect($grid0->getSchema()[0]->getStatePath())->toBe('data.addresses.0.street')
+        ->and($grid1->getSchema()[0]->getStatePath())->toBe('data.addresses.1.street')
+        ->and($grid0->getResolvedStatePath())->toBe('data.addresses.0');
+});
+
+test('item schema deep-clones layout children per item (regression: shallow clone shared field instances across rows)', function () {
+    $repeater = Repeater::make('addresses')
+        ->statePath('data')
+        ->schema([
+            Grid::make()->schema([
+                TextInput::make('street'),
+            ]),
+        ]);
+
+    $grid0 = $repeater->getItemSchema(0)[0];
+    $grid1 = $repeater->getItemSchema(1)[0];
+
+    // Distinct instances per item — and the original schema is left untouched.
+    expect($grid0->getSchema()[0])->not->toBe($grid1->getSchema()[0])
+        ->and($grid0->getSchema()[0])->not->toBe($repeater->getSchema()[0]->getSchema()[0])
+        ->and($repeater->getSchema()[0]->getSchema()[0]->getStatePath())->toBe('street');
+});
+
+test('item schema propagates the item path through nested layouts', function () {
+    $repeater = Repeater::make('addresses')
+        ->statePath('data')
+        ->schema([
+            Grid::make()->schema([
+                Grid::make()->schema([
+                    TextInput::make('street'),
+                ]),
+            ]),
+        ]);
+
+    $outer = $repeater->getItemSchema(3)[0];
+
+    expect($outer->getSchema()[0]->getSchema()[0]->getStatePath())->toBe('data.addresses.3.street');
+});
+
 test('validation attribute uses label when available', function () {
     $repeater = Repeater::make('contacts');
 

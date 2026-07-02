@@ -23,6 +23,8 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
 - Add extra footer buttons with `->modalFooterActions([ModalFooterAction::make('preview')->action(fn ($data, $set) => …)])`.
   The callback gets the live form `$data` and a `$set` writer; `->submitsForm()` validates first,
   `->closesModal()` closes after, `->position('before'|'after')` places it around Cancel/Submit.
+  `->requiresConfirmation()` asks before running (native `wire:confirm`, translated default message);
+  `->confirm('Really reset?')` sets a custom message.
 - Color, icon and visibility come from the shared `HasColor`, `HasIcons`, `HasVisibility` concerns.
 - On actions, `->label()`, `->icon()`, `->color()`, `->tooltip()` and `->size()` each accept `string|Closure|null`,
   so they can be computed per row — the Closure receives the record: `->color(fn ($record) => $record->isPaid() ? 'success' : 'danger')`.
