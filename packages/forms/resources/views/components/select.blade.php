@@ -34,10 +34,6 @@
             : null;
     }
 
-    $isCreateModalMounted = $hasCreateOption
-        && data_get($livewire, 'mountedCreateOptionSelect') === $field->getStatePath();
-    $isEditModalMounted = $hasEditOption
-        && data_get($livewire, 'mountedEditOptionSelect') === $field->getStatePath();
 @endphp
 
 @include('wire-forms::partials.field-wrapper-start')
@@ -59,6 +55,10 @@
         'remoteSearch' => $isRemoteSearch,
         'loadingMessage' => $field->getLoadingMessage(),
         'panelFooter' => $panelFooter,
+        // Honor live(): a live select must sync its selection to the server on
+        // click (afterStateUpdated, visibleWhen siblings), not on the next
+        // unrelated roundtrip.
+        'live' => $field->isLive() || $field->isLiveOnBlur(),
     ])
 @else
 <select
@@ -98,70 +98,7 @@
 
     @include('wire-forms::partials.field-wrapper-end')
 
-@if($isCreateModalMounted)
-    {{-- Isolated create-option modal (one open at a time, keyed by state path). --}}
-    <x-wire::modal
-        wire:model="mountedCreateOptionSelect"
-        :heading="$field->getCreateOptionModalHeading()"
-        width="md"
-        closeAction="unmountCreateOption"
-    >
-        <div class="space-y-4" wire:key="create-option-{{ $field->getId() }}">
-            {{ $field->getCreateOptionForm($livewire) }}
-        </div>
-
-        <x-slot:footer>
-            <div class="flex justify-end gap-2">
-                <button
-                    type="button"
-                    wire:click="unmountCreateOption"
-                    class="inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
-                >
-                    {{ __('wire-forms::fields.cancel') }}
-                </button>
-                <button
-                    type="button"
-                    wire:click="createSelectOption"
-                    wire:loading.attr="disabled"
-                    class="inline-flex items-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 transition-colors duration-150"
-                >
-                    {{ __('wire-forms::fields.create') }}
-                </button>
-            </div>
-        </x-slot:footer>
-    </x-wire::modal>
-@endif
-
-@if($isEditModalMounted)
-    {{-- Isolated edit-option modal (one open at a time, keyed by state path). --}}
-    <x-wire::modal
-        wire:model="mountedEditOptionSelect"
-        :heading="$field->getEditOptionModalHeading()"
-        width="md"
-        closeAction="unmountEditOption"
-    >
-        <div class="space-y-4" wire:key="edit-option-{{ $field->getId() }}">
-            {{ $field->getEditOptionForm($livewire) }}
-        </div>
-
-        <x-slot:footer>
-            <div class="flex justify-end gap-2">
-                <button
-                    type="button"
-                    wire:click="unmountEditOption"
-                    class="inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
-                >
-                    {{ __('wire-forms::fields.cancel') }}
-                </button>
-                <button
-                    type="button"
-                    wire:click="updateSelectOption"
-                    wire:loading.attr="disabled"
-                    class="inline-flex items-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 transition-colors duration-150"
-                >
-                    {{ __('wire-forms::fields.save') }}
-                </button>
-            </div>
-        </x-slot:footer>
-    </x-wire::modal>
+@if($livewire !== null)
+    {{-- Isolated create/edit option modals (one open at a time, keyed by state path). --}}
+    @include('wire-forms::partials.select-option-modals')
 @endif

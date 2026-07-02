@@ -21,15 +21,18 @@
 
 @if($field->isSegmented())
     {{-- ─── Segmented (pill over a shared track) ────────────────── --}}
+    {{-- Full-width equal segments on mobile (intrinsic-width pills would wrap
+         into a ragged track); intrinsic inline-flex from sm up. --}}
     <div @class([
-            'inline-flex flex-wrap gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1',
+            'flex w-full flex-wrap gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1',
+            'sm:inline-flex sm:w-auto',
             'dark:border-gray-700 dark:bg-gray-800',
             'opacity-60' => $disabled,
         ]) role="radiogroup">
         @foreach($options as $value => $label)
             @php $cc = HasColor::getChoiceColorClasses($optionColors[$value] ?? $groupColor); @endphp
             <label @class([
-                    'group relative flex items-center justify-center rounded-md font-medium transition-colors duration-150',
+                    'group relative flex flex-1 items-center justify-center rounded-md font-medium transition-colors duration-150 sm:flex-none',
                     $sizeClasses,
                     'cursor-pointer' => !$disabled,
                     'cursor-not-allowed' => $disabled,

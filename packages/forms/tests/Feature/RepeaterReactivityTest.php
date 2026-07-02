@@ -24,8 +24,8 @@ class RepeaterReactivityComponent extends Component
     /** @var array<string, mixed> */
     public array $data = [
         'contacts' => [
-            ['name' => 'Ada', 'slug' => '', 'email' => 'ada@example.com', 'category' => null],
-            ['name' => 'Grace', 'slug' => '', 'email' => 'grace@example.com', 'category' => null],
+            ['name' => 'Ada', 'slug' => '', 'email' => 'ada@example.com', 'category' => null, 'type' => 'other', 'other' => ''],
+            ['name' => 'Grace', 'slug' => '', 'email' => 'grace@example.com', 'category' => null, 'type' => 'email', 'other' => ''],
         ],
     ];
 
@@ -45,6 +45,10 @@ class RepeaterReactivityComponent extends Component
                         ->suffixAction(Action::make('clear')->action(fn ($set) => $set('email', ''))),
                     Select::make('category')
                         ->getSearchResultsUsing(fn (string $search) => ['hit' => 'Found: '.$search]),
+                    Select::make('type')
+                        ->options(['email' => 'Email', 'other' => 'Other'])
+                        ->live(),
+                    TextInput::make('other')->visibleWhen('type', 'other'),
                 ]),
             ]);
     }
@@ -82,4 +86,13 @@ test('remote select search resolves for a field inside a repeater item', functio
     Livewire::test(RepeaterReactivityComponent::class)
         ->call('searchSelectOptions', 'data.contacts.0.category', 'abc')
         ->assertReturned(['hit' => 'Found: abc']);
+});
+
+test('visibleWhen evaluates per item (regression: repeater rendered every item field unconditionally)', function () {
+    Livewire::test(RepeaterReactivityComponent::class)
+        ->assertSeeHtml('data.contacts.0.other')
+        ->assertDontSeeHtml('data.contacts.1.other')
+        // Flipping the controlling field re-evaluates visibility on the roundtrip.
+        ->set('data.contacts.1.type', 'other')
+        ->assertSeeHtml('data.contacts.1.other');
 });

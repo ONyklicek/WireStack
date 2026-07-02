@@ -383,7 +383,8 @@
                                 x-show="selected.length > 0"
                                 x-cloak
                                 class="px-4 lg:px-6 py-3 bg-primary-50 dark:bg-primary-900/20 border-b border-primary-100 dark:border-primary-800/30">
-                            <div class="flex items-center justify-between">
+                            {{-- Stacks on mobile so multiple bulk-action buttons wrap instead of overflowing. --}}
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div class="flex items-center gap-3">
                                     <div
                                             class="flex items-center justify-center w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-800/50">
@@ -398,7 +399,7 @@
                         </span>
                                 </div>
 
-                                <div class="flex items-center gap-2">
+                                <div class="flex flex-wrap items-center gap-2">
                                     {{-- Bulk Actions in selection bar --}}
                                     @if($hasBulkActions)
                                         @foreach($bulkActions as $bulkAction)

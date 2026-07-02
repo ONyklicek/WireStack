@@ -124,6 +124,18 @@ test('createSelectOption persists the option, selects it, and closes the modal',
     expect(OptionStore::label('c2'))->toBe('Sport');
 });
 
+test('createSelectOption dispatches select-option-created so the combobox updates without a refresh', function () {
+    Livewire::test(CreateOptionSelectComponent::class)
+        ->call('mountCreateOption', 'data.category')
+        ->set('createOptionFormData.name', 'Sport')
+        ->call('createSelectOption')
+        ->assertDispatched('select-option-created',
+            statePath: 'data.category',
+            value: 'c2',
+            label: 'Sport',
+        );
+});
+
 test('createSelectOption appends the new value for a multiple select', function () {
     Livewire::test(CreateOptionSelectComponent::class)
         ->set('data.tags', ['c1'])

@@ -31,6 +31,10 @@
                                                    so the host must expose that method
                                                    (wire-forms WithForms). Default false.
        $loadingMessage   string                    shown while a remote search is in flight
+       $live             bool                      entangle with the .live modifier so a
+                                                   selection syncs to the server immediately
+                                                   (fields with live()/afterStateUpdated,
+                                                   table filters). Default false (deferred).
 --}}
 @php
     $selectId ??= 'searchable-select';
@@ -42,6 +46,7 @@
     $remoteSearch ??= false;
     $loadingMessage ??= null;
     $searchable ??= true;
+    $live ??= false;
     // Remote search cannot work without the input; force it on in that mode.
     $showSearch = $searchable || $remoteSearch;
 @endphp
@@ -58,7 +63,7 @@
         initialOptions: @js((object) $options),
         options: @js((object) $options),
         placeholder: @js($placeholder ?? ''),
-        selected: $wire.entangle('{{ $statePath }}'),
+        selected: $wire.entangle('{{ $statePath }}'){!! $live ? '.live' : '' !!},
         activeIndex: -1,
         _float: null,
         init() {
@@ -118,6 +123,14 @@
             }
             return this.options[this.selected] || '';
         },
+        upsertOption(detail) {
+            // Merge a freshly created/edited option into both option maps so the
+            // new choice is selectable — and its label readable on the trigger —
+            // without a page refresh (Alpine never re-reads render-time seeds on morph).
+            if (!detail || detail.statePath !== '{{ $statePath }}' || detail.value === null || detail.value === undefined) return;
+            this.initialOptions = { ...this.initialOptions, [detail.value]: detail.label };
+            this.options = { ...this.options, [detail.value]: detail.label };
+        },
         select(value) {
             if (this.multiple) {
                 let list = Array.isArray(this.selected) ? [...this.selected] : [];
@@ -161,6 +174,8 @@
         }
     }"
     class="relative"
+    @select-option-created.window="upsertOption($event.detail)"
+    @select-option-updated.window="upsertOption($event.detail)"
 >
     <button
         type="button"

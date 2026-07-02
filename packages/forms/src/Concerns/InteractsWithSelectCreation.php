@@ -86,6 +86,16 @@ trait InteractsWithSelectCreation
 
         if ($value !== null) {
             $this->selectCreatedOption($field, $statePath, $value);
+
+            // Let the combobox merge the new option client-side: Alpine seeds its
+            // option map at first render and never re-reads it on morph, so
+            // without this event the created option (and its label) would only
+            // show up after a full page refresh.
+            $this->dispatch('select-option-created',
+                statePath: $statePath,
+                value: $value,
+                label: $field->getOptionLabel($value) ?? (string) $value,
+            );
         }
 
         $this->unmountCreateOption();
@@ -178,6 +188,14 @@ trait InteractsWithSelectCreation
         $form->validate();
 
         $field->updateOption($value, $form->getState());
+
+        // Push the (possibly renamed) label into the combobox's client-side
+        // option map — same rationale as the created-option event.
+        $this->dispatch('select-option-updated',
+            statePath: $statePath,
+            value: $value,
+            label: $field->getOptionLabel($value) ?? (string) $value,
+        );
 
         $this->unmountEditOption();
     }

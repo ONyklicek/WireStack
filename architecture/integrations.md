@@ -167,6 +167,10 @@ Most relevant paths:
 - `workbench/routes/web.php`
 - `workbench/app/Livewire/Docs/`
 - `workbench/app/Livewire/Previews/`
+  (registered with Livewire by `Workbench\App\Providers\WorkbenchServiceProvider` — enabled in
+  `testbench.yaml` — so previews survive update roundtrips; without it, clicking anything in a
+  preview fails with "Unable to find component". Interactive/mobile QA: `vendor/bin/testbench serve`
+  + the `table-modal-*`, `table-actions-group`, `table-paginated`, `forms-tabs`, `forms-wizard` slugs.)
 - `workbench/resources/views/docs/`
 - `workbench/resources/views/previews/`
 

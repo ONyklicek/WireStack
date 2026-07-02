@@ -40,6 +40,8 @@ Reference for the built-in Wire Forms field and layout components.
 | [Grid](grid.md) | Responsive multi-column layout |
 | [Section](section.md) | Group fields under a heading |
 | [Fieldset](fieldset.md) | Group related fields with a border |
+| [Tabs](tabs.md) | Client-side tabbed panels (all panels validate together) |
+| [Wizard](wizard.md) | Client-side multi-step layout with a step indicator |
 
 ## Display Components
 

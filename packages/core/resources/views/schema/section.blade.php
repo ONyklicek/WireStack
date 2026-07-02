@@ -10,7 +10,7 @@
 
 <div
         @if($isCollapsible) x-data="{ open: {{ $isCollapsed ? 'false' : 'true' }} }" @endif
-class="rounded-lg border border-gray-200 dark:border-gray-700 {{ $layout->isCompact() ? 'p-3' : 'p-4 sm:p-6' }}"
+class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 {{ $layout->isCompact() ? 'p-3' : 'p-4 sm:p-6' }}"
 >
     @if($layout->getLabel() || $layout->getDescription())
         <div @class([

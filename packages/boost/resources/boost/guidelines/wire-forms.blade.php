@@ -28,7 +28,14 @@ Build forms inside a Livewire component using the `WithForms` trait and a `form(
 Inputs: `TextInput`, `Textarea`, `Select`, `Checkbox`, `CheckboxList`, `Radio`, `Toggle`, `DateTimePicker`,
 `ColorPicker`, `FileUpload`, `KeyValue`, `MarkdownEditor`, `RichEditor`, `TiptapEditor`, `CodeEditor`,
 `OtpInput`, `Rating`, `Slider`, `Tags`, `Repeater`, `BelongsToSelect`, `MorphToSelect`, `Hidden`.
-Display: `Alert`, `Html`, `Placeholder`, `ViewField`. Layout: `Section`, `Grid`, `Fieldset`.
+Display: `Alert`, `Html`, `Placeholder`, `ViewField`. Layout: `Section`, `Grid`, `Fieldset`,
+`Tabs`/`Tab`, `Wizard`/`Step`. All tab/step panels stay in the DOM, so nested fields flatten and
+validate together on submit; the tab bar scrolls horizontally on mobile and the wizard names the
+active step under its indicator. Inside a Livewire host the wizard additionally validates **per
+step**: "Next" calls the `validateWizardStep()` endpoint and only advances when the current step's
+fields pass, a failed full-form submit jumps to the first step with an error, and steps
+hidden/shown by a `visible()` Closure re-sync the indicator mid-form. Multiple wizards on one host
+are addressed by name (`Wizard::make('signup')`).
 
 ### Conventions
 
@@ -44,7 +51,8 @@ Display: `Alert`, `Html`, `Placeholder`, `ViewField`. Layout: `Section`, `Grid`,
   `->colors([value => color])` add per-option icons/colors (every variant) and are auto-derived
   from a `HasIcon`/`HasColor` enum passed to `->options(Enum::class)`. The `segmented`/`buttons`
   variants take a size via the shared `HasSize` API (`->sm()`/`->md()`/`->lg()`), and `->color(...)`
-  sets one group accent (shared `HasColor`).
+  sets one group accent (shared `HasColor`). On mobile the segmented track stretches its segments
+  to the full width; from `sm` up it keeps intrinsic width.
 
 ### Reactive patterns
 
@@ -91,13 +99,16 @@ Conditional rules (`requiredIf()` etc.) are honoured live. Cross-field Laravel s
 `required_if:other,value` still validate on submit; use `requiredIf()` for the reactive equivalent.
 
 All of this reactivity works for fields inside `Repeater` items too — `afterStateUpdated()`,
-live validation, field actions and remote search resolve per item, and `$get`/`$set` read/write
-that item's own bag (so `$set('slug', …)` on row 2 touches only row 2).
+live validation, field actions, remote search and conditional visibility (`visibleWhen()` /
+`visible(fn ($get) => …)`) resolve per item, and `$get`/`$set` read/write that item's own bag
+(so `$set('slug', …)` on row 2 touches only row 2).
 
 Selects: `Select` supports server-driven options (`getSearchResultsUsing()` remote search,
 `getOptionLabelUsing()`, `preload()`) and create/edit-option modals (`createOptionForm()` +
 `createOptionUsing()`, `editOptionForm()` + `fillEditOptionUsing()`/`updateOptionUsing()`) —
-both work in standalone forms and inside table action modals. `BelongsToSelect::searchable()`
+both work in standalone forms and inside table action modals, and a created/edited option is
+selected and merged into the open combobox immediately (no page refresh). The combobox honours
+`->live()` — add it when siblings react to the selection. `BelongsToSelect::searchable()`
 without `preload()` searches the related table on the server automatically (title-attribute
 `like`, limit 50); `preload()` ships the full option list and filters client-side.
 

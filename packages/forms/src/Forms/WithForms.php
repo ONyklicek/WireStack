@@ -10,6 +10,7 @@ use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
 use NyonCode\WireForms\Concerns\InteractsWithFieldActions;
 use NyonCode\WireForms\Concerns\InteractsWithRepeaters;
 use NyonCode\WireForms\Concerns\InteractsWithSelectCreation;
+use NyonCode\WireForms\Concerns\InteractsWithWizards;
 use ReflectionMethod;
 use ReflectionNamedType;
 
@@ -27,6 +28,7 @@ trait WithForms
     use InteractsWithFieldActions;
     use InteractsWithRepeaters;
     use InteractsWithSelectCreation;
+    use InteractsWithWizards;
 
     /** @var array<string, Form> */
     protected array $cachedForms = [];

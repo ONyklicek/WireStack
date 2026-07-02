@@ -107,10 +107,16 @@ TextInput::make('quantity')
     ->afterStateUpdated(fn ($state, $set) => $set('total', $state * 10));
 ```
 
-All of this reactivity — `afterStateUpdated()`, live validation, field actions and remote
-select search — also works for fields inside `Repeater` items: the dispatch resolves the field
-per item, and `$get`/`$set` read and write that item's own bag (so `$set('slug', …)` on row 2
-touches only row 2).
+All of this reactivity — `afterStateUpdated()`, live validation, field actions, remote
+select search and conditional visibility (`visibleWhen()` / `visible(fn ($get) => …)`) — also
+works for fields inside `Repeater` items: the dispatch resolves the field per item, and
+`$get`/`$set` read and write that item's own bag (so `$set('slug', …)` on row 2 touches only
+row 2). A conditional field inside a repeater shows or hides based on **its own item's** state,
+not its siblings'.
+
+Multi-step forms get the same treatment: inside a Livewire host the standalone
+[Wizard](fields/wizard.md#per-step-validation) validates the current step on the server before
+"Next" advances, and a failed submit jumps to the first step containing an error.
 
 ## Prefill a form from an action
 

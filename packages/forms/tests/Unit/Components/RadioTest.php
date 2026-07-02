@@ -300,3 +300,13 @@ test('disabled radio marks every input disabled', function () {
 
     expect($html)->toContain('disabled');
 });
+
+test('segmented track stretches segments on mobile and returns to intrinsic width from sm up (regression: intrinsic pills wrapped into a ragged track)', function () {
+    $html = renderRadio(Radio::make('range')->segmented()->options(['d' => 'Day', 'w' => 'Week', 'm' => 'Month']));
+
+    expect($html)
+        ->toContain('flex w-full flex-wrap')
+        ->toContain('sm:inline-flex sm:w-auto')
+        ->toContain('flex-1')
+        ->toContain('sm:flex-none');
+});

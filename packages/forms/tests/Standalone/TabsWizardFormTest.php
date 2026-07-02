@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\ViewErrorBag;
 use Illuminate\Validation\ValidationException;
+use NyonCode\WireCore\Foundation\Schema\Section;
 use NyonCode\WireCore\Foundation\Schema\Step;
 use NyonCode\WireCore\Foundation\Schema\Tab;
 use NyonCode\WireCore\Foundation\Schema\Tabs;
@@ -67,6 +68,35 @@ test('fields inside wizard steps flatten and validate together', function () {
         ->state(['username' => 'jane', 'bio' => '']);
 
     expect(fn () => $form->validate())->toThrow(ValidationException::class);
+});
+
+test('a wizard step validates standalone, scoped to its own fields', function () {
+    $form = Form::make()
+        ->schema([
+            Wizard::make()->schema([
+                Step::make('Account')->schema([TextInput::make('username')->required()]),
+                Step::make('Profile')->schema([TextInput::make('bio')->required()]),
+            ]),
+        ])
+        ->state(['username' => 'jane', 'bio' => '']);
+
+    // Step 0 is valid on its own even though step 1 would fail a full validate.
+    expect($form->validateWizardStep(0))->toBeArray()
+        ->and(fn () => $form->validateWizardStep(1))->toThrow(ValidationException::class);
+});
+
+test('a wizard nested inside another layout resolves for step validation', function () {
+    $form = Form::make()
+        ->schema([
+            Section::make('Wrapper')->schema([
+                Wizard::make('inner')->schema([
+                    Step::make('Account')->schema([TextInput::make('username')->required()]),
+                ]),
+            ]),
+        ])
+        ->state(['username' => '']);
+
+    expect(fn () => $form->validateWizardStep(0, 'inner'))->toThrow(ValidationException::class);
 });
 
 test('a form with valid data across wizard steps validates successfully', function () {

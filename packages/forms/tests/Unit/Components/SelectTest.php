@@ -151,6 +151,29 @@ test('searchable renders the shared combobox with a search input (regression: se
         ->not->toContain('<select');
 });
 
+test('live() entangles the combobox with the .live modifier (regression: selection synced only on the next roundtrip)', function () {
+    $html = renderSelect(Select::make('role')->options(['a' => 'A'])->live());
+
+    expect($html)->toContain("\$wire.entangle('role').live");
+});
+
+test('a non-live combobox entangles deferred', function () {
+    $html = renderSelect(Select::make('role')->options(['a' => 'A']));
+
+    expect($html)
+        ->toContain("\$wire.entangle('role')")
+        ->not->toContain('.live');
+});
+
+test('the combobox listens for created/updated option events scoped to its state path', function () {
+    $html = renderSelect(Select::make('role')->options(['a' => 'A']));
+
+    expect($html)
+        ->toContain('select-option-created.window')
+        ->toContain('select-option-updated.window')
+        ->toContain('upsertOption');
+});
+
 test('native() forces a native select even when searchable', function () {
     $html = renderSelect(Select::make('role')->options(['a' => 'A'])->searchable()->native());
 

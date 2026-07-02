@@ -84,7 +84,7 @@ it('renders the searchable combobox when searchable (regression: searchable() wa
 
     expect($html)
         ->toContain('x-teleport')
-        ->toContain("\$wire.entangle('tableState.filters.status.value')")
+        ->toContain("\$wire.entangle('tableState.filters.status.value').live")
         ->toContain('id="filter-status"')
         ->toContain('x-ref="searchInput"');
 });
@@ -99,7 +99,7 @@ it('renders the combobox without a search input when non-native but not searchab
 
     expect($html)
         ->toContain('x-teleport')
-        ->toContain("\$wire.entangle('tableState.filters.status.value')")
+        ->toContain("\$wire.entangle('tableState.filters.status.value').live")
         ->not->toContain('<select')
         ->not->toContain('x-ref="searchInput"');
 });

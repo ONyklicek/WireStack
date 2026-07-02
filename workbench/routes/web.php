@@ -169,6 +169,9 @@ Route::get('/previews', function () {
 
 foreach ([
     'forms-overview' => ['title' => 'Wire Forms', 'subtitle' => 'Schema-driven form layout preview.', 'component' => FormPreview::class, 'variant' => 'overview'],
+    'forms-tabs' => ['title' => 'Wire Forms Tabs', 'subtitle' => 'Tabbed form layout.', 'component' => FormPreview::class, 'variant' => 'tabs'],
+    'forms-wizard' => ['title' => 'Wire Forms Wizard', 'subtitle' => 'Standalone multi-step wizard layout.', 'component' => FormPreview::class, 'variant' => 'wizard'],
+    'forms-wizard-live' => ['title' => 'Wire Forms Wizard (Live)', 'subtitle' => 'Per-step validation, dynamic steps, live select with create-option.', 'component' => FormPreview::class, 'variant' => 'wizard-live'],
     'forms-repeater' => ['title' => 'Wire Forms Repeater', 'subtitle' => 'Focused nested repeater preview.', 'component' => FormPreview::class, 'variant' => 'repeater'],
     'table-overview' => ['title' => 'Wire Table', 'subtitle' => 'Live table preview with search, filters, and actions.', 'component' => TablePreview::class, 'variant' => 'overview'],
     'table-selection' => ['title' => 'Wire Table Selection', 'subtitle' => 'Selected-record state with bulk toolbar and active filters.', 'component' => TablePreview::class, 'variant' => 'selection'],
@@ -177,6 +180,12 @@ foreach ([
     'table-subrows-flatten' => ['title' => 'Wire Table Flatten', 'subtitle' => 'Flatten mode rendering every child as a regular row.', 'component' => TablePreview::class, 'variant' => 'subrows-flatten'],
     'table-subrows-limit' => ['title' => 'Wire Table Show More', 'subtitle' => 'Limited child rows with the "show more" affordance.', 'component' => TablePreview::class, 'variant' => 'subrows-limit'],
     'table-subrows-filter' => ['title' => 'Wire Table Sub-row Filters', 'subtitle' => 'Per-child interactive filter bar above the sub-row table.', 'component' => TablePreview::class, 'variant' => 'subrows-filter'],
+    'table-modal-form' => ['title' => 'Wire Table Action Modal', 'subtitle' => 'Header-action form modal (default responsive dialog).', 'component' => TablePreview::class, 'variant' => 'modal-form'],
+    'table-modal-slideover-mobile' => ['title' => 'Wire Table Modal · slideOverOnMobile', 'subtitle' => 'Form modal that renders as an edge-pinned slide-over on mobile.', 'component' => TablePreview::class, 'variant' => 'modal-slideover-mobile'],
+    'table-modal-fullscreen-mobile' => ['title' => 'Wire Table Modal · fullScreenOnMobile', 'subtitle' => 'Form modal that fills the viewport on mobile.', 'component' => TablePreview::class, 'variant' => 'modal-fullscreen-mobile'],
+    'table-modal-wizard' => ['title' => 'Wire Table Wizard Modal', 'subtitle' => 'Multi-step action modal with step indicator and wizard footer.', 'component' => TablePreview::class, 'variant' => 'modal-wizard'],
+    'table-actions-group' => ['title' => 'Wire Table Action Group', 'subtitle' => 'Row actions collapsed into a dropdown group.', 'component' => TablePreview::class, 'variant' => 'actions-group'],
+    'table-paginated' => ['title' => 'Wire Table Pagination', 'subtitle' => 'Paginated table with per-page selector and page links.', 'component' => TablePreview::class, 'variant' => 'paginated'],
     'sortable-overview' => ['title' => 'Wire Sortable', 'subtitle' => 'Full reorderable task table preview.', 'component' => SortablePreview::class, 'variant' => 'overview'],
     'sortable-detail' => ['title' => 'Wire Sortable Detail', 'subtitle' => 'Closer reorder-surface preview.', 'component' => SortablePreview::class, 'variant' => 'detail'],
     'core-overview' => ['title' => 'Wire Core', 'subtitle' => 'Stats, actions, and shared primitives.', 'component' => CorePreview::class, 'variant' => 'overview'],

@@ -13,7 +13,9 @@
     $color = $action->getColor($record);
     $shortcutLabel = $action->getKeyboardShortcutLabel();
     $shortcutAlpine = $action->getAlpineKeydownExpression();
-    $baseClasses = 'group flex w-full items-center px-4 py-2 text-sm';
+    // text-left: the button variant would otherwise center the label (UA default
+    // for <button>), while <a> items align left — menu rows must match.
+    $baseClasses = 'group flex w-full items-center px-4 py-2 text-sm text-left';
 
     if ($disabled) {
         $classes = "{$baseClasses} text-gray-400 dark:text-gray-500 cursor-not-allowed";

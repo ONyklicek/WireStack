@@ -130,6 +130,18 @@ test('updateSelectOption persists the edit and closes the modal', function () {
     expect(EditOptionStore::label('c1'))->toBe('Headlines');
 });
 
+test('updateSelectOption dispatches select-option-updated with the new label', function () {
+    Livewire::test(EditOptionSelectComponent::class)
+        ->call('mountEditOption', 'data.category')
+        ->set('editOptionFormData.name', 'Headlines')
+        ->call('updateSelectOption')
+        ->assertDispatched('select-option-updated',
+            statePath: 'data.category',
+            value: 'c1',
+            label: 'Headlines',
+        );
+});
+
 test('updateSelectOption is a no-op when no select is mounted', function () {
     Livewire::test(EditOptionSelectComponent::class)
         ->call('updateSelectOption')

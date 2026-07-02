@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Workbench\App\Livewire\Previews;
 
 use Livewire\Component;
+use NyonCode\WireCore\Foundation\Schema\Step;
+use NyonCode\WireCore\Foundation\Schema\Tab;
+use NyonCode\WireCore\Foundation\Schema\Tabs;
+use NyonCode\WireCore\Foundation\Schema\Wizard;
 use NyonCode\WireForms\Components\Layout\Grid;
 use NyonCode\WireForms\Components\Layout\Section;
 use NyonCode\WireForms\Components\Repeater;
@@ -47,13 +51,116 @@ class FormPreview extends Component
             'is_active' => true,
             'bio' => 'Owns product configuration, release notes, and customer rollouts.',
         ];
+
+        if ($variant === 'wizard-live') {
+            $this->data = [
+                'name' => '',
+                'category' => null,
+                'category_note' => '',
+                'email' => '',
+                'wants_extras' => false,
+                'extra_note' => '',
+            ];
+        }
     }
+
+    /** @var array<string, string> In-memory option store for the create-option flow. */
+    public array $categoryOptions = ['news' => 'News', 'sport' => 'Sport'];
 
     public function form(Form $form): Form
     {
-        return $this->variant === 'repeater'
-            ? $this->buildRepeaterForm($form)
-            : $this->buildOverviewForm($form);
+        return match ($this->variant) {
+            'repeater' => $this->buildRepeaterForm($form),
+            'tabs' => $this->buildTabsForm($form),
+            'wizard' => $this->buildWizardForm($form),
+            'wizard-live' => $this->buildWizardLiveForm($form),
+            default => $this->buildOverviewForm($form),
+        };
+    }
+
+    /**
+     * Exercises the reactive wizard stack end-to-end: per-step server
+     * validation on Next, a live() select with a visibleWhen sibling and a
+     * create-option modal, and a live toggle revealing a whole extra step.
+     */
+    protected function buildWizardLiveForm(Form $form): Form
+    {
+        return $form
+            ->statePath('data')
+            ->schema([
+                Wizard::make('signup')->schema([
+                    Step::make('Account')->description('Who is signing up')->schema([
+                        TextInput::make('name')->label('Full name')->rules(['required']),
+                        Select::make('category')
+                            ->label('Category')
+                            ->live()
+                            ->options(fn () => $this->categoryOptions)
+                            ->getOptionLabelUsing(fn ($value) => $this->categoryOptions[$value] ?? null)
+                            ->createOptionForm([TextInput::make('label')->label('Label')->rules(['required'])])
+                            ->createOptionUsing(function (array $data) {
+                                $key = 'c'.(count($this->categoryOptions) + 1);
+                                $this->categoryOptions[$key] = (string) $data['label'];
+
+                                return $key;
+                            }),
+                        TextInput::make('category_note')
+                            ->label('Why sport?')
+                            ->visibleWhen('category', 'sport'),
+                    ]),
+                    Step::make('Contact')->description('How to reach you')->schema([
+                        TextInput::make('email')->label('Email address')->rules(['required', 'email']),
+                        Toggle::make('wants_extras')->label('Add extras step')->live(),
+                    ]),
+                    Step::make('Extras')
+                        ->description('Only when requested')
+                        ->visible(fn ($get) => (bool) $get('wants_extras'))
+                        ->schema([
+                            TextInput::make('extra_note')->label('Extra note')->rules(['required']),
+                        ]),
+                    Step::make('Review')->schema([
+                        Textarea::make('bio')->label('Summary')->rows(3),
+                    ]),
+                ]),
+            ]);
+    }
+
+    protected function buildTabsForm(Form $form): Form
+    {
+        return $form
+            ->statePath('data')
+            ->schema([
+                Tabs::make()->schema([
+                    Tab::make('Profile')->icon('user')->columns(2)->schema([
+                        TextInput::make('name')->label('Full name')->required(),
+                        TextInput::make('email')->label('Email address')->required(),
+                    ]),
+                    Tab::make('Preferences')->schema([
+                        Toggle::make('is_active')->label('Account active'),
+                    ]),
+                    Tab::make('Notes & long tab label')->schema([
+                        Textarea::make('bio')->label('Internal note')->rows(3),
+                    ]),
+                ]),
+            ]);
+    }
+
+    protected function buildWizardForm(Form $form): Form
+    {
+        return $form
+            ->statePath('data')
+            ->schema([
+                Wizard::make()->schema([
+                    Step::make('Account')->description('Login details')->icon('user')->schema([
+                        TextInput::make('name')->label('Full name')->required(),
+                    ]),
+                    Step::make('Contact')->description('How to reach you')->schema([
+                        TextInput::make('email')->label('Email address')->required(),
+                    ]),
+                    Step::make('Review & confirm')->schema([
+                        Textarea::make('bio')->label('Summary')->rows(3),
+                    ]),
+                ]),
+            ]);
     }
 
     public function render()

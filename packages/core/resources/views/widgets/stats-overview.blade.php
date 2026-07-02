@@ -1,5 +1,12 @@
 <div class="wire-stats-overview">
-    <div class="grid gap-4" style="grid-template-columns: repeat({{ $columns }}, minmax(0, 1fr));">
+    {{-- Responsive: 1 col on mobile, growing toward the configured count (an
+         inline repeat() ignored the viewport and crushed the cards on phones). --}}
+    <div @class([
+        'grid gap-4 grid-cols-1',
+        'sm:grid-cols-2' => $columns === 2,
+        'sm:grid-cols-2 lg:grid-cols-3' => $columns === 3,
+        'sm:grid-cols-2 lg:grid-cols-4' => $columns >= 4,
+    ])>
         @foreach($stats as $stat)
             <div class="wire-stat-card rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800"
                  @if($stat->getExtraAttributes()) @foreach($stat->getExtraAttributes() as $attr => $val) {{ $attr }}="{{ $val }}" @endforeach @endif>

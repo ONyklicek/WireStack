@@ -8,7 +8,9 @@
 
 <div x-data="{ activeTab: {{ $layout->getActiveTab() }} }">
     {{-- Tab bar --}}
-    <div role="tablist" class="flex flex-wrap gap-1 border-b border-gray-200 dark:border-gray-700">
+    {{-- Scrollable on narrow screens — wrapping intrinsic-width tabs reads as
+         two ragged rows; a single scrollable row is the standard mobile pattern. --}}
+    <div role="tablist" class="flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-700">
         @foreach($tabs as $index => $tab)
             <button
                 type="button"
@@ -16,7 +18,7 @@
                 :aria-selected="activeTab === {{ $index }}"
                 @click="activeTab = {{ $index }}"
                 @class([
-                    'flex items-center gap-2 px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors duration-150 focus:outline-none',
+                    'flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors duration-150 focus:outline-none',
                 ])
                 :class="activeTab === {{ $index }}
                     ? 'border-primary-500 text-primary-600 dark:text-primary-400'

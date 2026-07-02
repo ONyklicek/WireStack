@@ -11,6 +11,8 @@
     $isRemoteSearch = $field->isRemoteSearch();
     $livewire = $field->getLivewire();
     $fieldId = $field->getId();
+    $hasCreateOption = $field->hasCreateOptionForm() && $livewire !== null;
+    $hasEditOption = $field->hasEditOptionForm() && ! $field->isMultiple() && $livewire !== null;
 
     if ($useCombobox) {
         // Seed the combobox with the render-time option list, plus the label(s)
@@ -18,6 +20,16 @@
         // (mirrors the base select view).
         $currentValue = $livewire ? data_get($livewire, $field->getStatePath()) : null;
         $comboboxOptions = $field->getSelectedOptionLabels($currentValue) + $field->getPreloadedOptions();
+
+        $panelFooter = ($hasCreateOption || $hasEditOption)
+            ? view('wire-forms::partials.select-option-actions', [
+                'statePath' => $field->getStatePath(),
+                'hasCreate' => $hasCreateOption,
+                'hasEdit' => $hasEditOption,
+                'createLabel' => $field->getCreateOptionModalHeading(),
+                'editLabel' => $field->getEditOptionModalHeading(),
+            ])->render()
+            : null;
     } else {
         $options = $field->getOptions();
     }
@@ -42,9 +54,9 @@
         'hasError' => $errors->has($field->getStatePath()),
         'remoteSearch' => $isRemoteSearch,
         'loadingMessage' => $field->getLoadingMessage(),
-        'panelFooter' => $field->hasCreateOptionForm()
-            ? view('wire-forms::partials.belongs-to-create-option', ['field' => $field])->render()
-            : null,
+        'panelFooter' => $panelFooter,
+        // Honor live(): mirror the base select view.
+        'live' => $field->isLive() || $field->isLiveOnBlur(),
     ])
 @else
     <select
@@ -73,3 +85,8 @@
 @endif
 
 @include('wire-forms::partials.field-wrapper-end')
+
+@if($livewire !== null)
+    {{-- Isolated create/edit option modals — same canonical flow as the base select. --}}
+    @include('wire-forms::partials.select-option-modals')
+@endif

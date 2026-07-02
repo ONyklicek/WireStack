@@ -71,6 +71,10 @@ Widgets render via Blade views and support `toHtml()` / `__toString()` for direc
 
 Grid of stat cards — ideal for KPIs, counters, and summary metrics.
 
+The configured column count is the *desktop* layout: the grid always collapses
+to one column on mobile and two from the `sm` breakpoint, growing to the
+configured count (max 4) on large screens.
+
 ```php
 use NyonCode\WireCore\Widgets\StatsOverviewWidget;
 use NyonCode\WireCore\Widgets\Stat;

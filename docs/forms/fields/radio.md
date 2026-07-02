@@ -138,6 +138,10 @@ Radio::make('plan')
 
 ## Segmented Variant
 
+On narrow screens the segments stretch equally across the full track (wrapping
+rows stay full-width); from the `sm` breakpoint up the control keeps its
+intrinsic width.
+
 `->segmented()` renders a compact segmented control — a pill highlight slides over a
 shared track. Icons are supported here too.
 

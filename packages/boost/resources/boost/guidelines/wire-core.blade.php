@@ -34,7 +34,9 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
 ### Modals
 
 `Modal`, `ConfirmationDialog`, `SlideOver` and `Wizard`. Prefer attaching a modal to an action over
-building bespoke modal state.
+building bespoke modal state. Mobile presentation is per action: `->slideOverOnMobile()` renders the
+form modal as an edge-pinned slide-over below the `sm` breakpoint, `->fullScreenOnMobile()` fills the
+viewport; both keep the centered dialog on desktop and scroll the body inside the panel.
 
 ### Notifications
 

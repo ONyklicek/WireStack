@@ -235,23 +235,47 @@ class Repeater extends LayoutComponent implements HasValidation
     public function getItemSchema(int $index): array
     {
         $itemPath = $this->getItemStatePath($index);
+        $livewire = $this->getLivewire();
         $components = [];
 
         foreach ($this->schema as $component) {
             $clone = clone $component;
             if ($clone instanceof Component) {
                 $clone->statePath($itemPath);
+                // Re-bind the owning Livewire instance so per-item reactive
+                // closures (visibleWhen, afterStateUpdated $get/$set) resolve
+                // against live state even when the template child was never
+                // bound (e.g. the repeater is rendered outside a full
+                // form-level prepare, as in action modal hosts).
+                if ($livewire !== null) {
+                    $clone->livewire($livewire);
+                }
             } elseif ($clone instanceof LayoutComponent) {
                 // Re-prepare the (deep-)cloned layout under the item prefix: this
                 // recomputes its resolved path (the clone carries a stale one from
-                // the form-level prepare) and cascades the prefix into descendant
-                // fields, which a bare statePath() on the layout never reaches.
-                $clone->prepareChildren($itemPath);
+                // the form-level prepare) and cascades the prefix — and the
+                // Livewire binding — into descendant fields, which a bare
+                // statePath() on the layout never reaches.
+                $clone->prepareChildren($itemPath, livewire: $livewire);
             }
             $components[] = $clone;
         }
 
         return $components;
+    }
+
+    /**
+     * The repeater binds a whole subtree: report its own path plus a wildcard
+     * covering every per-item child, so error-bag keys like
+     * `data.contacts.0.email` map back to this layout.
+     *
+     * @return array<int, string>
+     */
+    public function getDescendantFieldStatePaths(): array
+    {
+        $path = $this->getStatePath();
+
+        return [$path, "{$path}.*"];
     }
 
     // ─── Validation ────────────────────────────────────────────────
