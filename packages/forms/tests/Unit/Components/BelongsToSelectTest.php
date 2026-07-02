@@ -64,7 +64,7 @@ test('inherits searchable from Select', function () {
     expect($field->isSearchable())->toBeTrue();
 });
 
-test('searchable renders the shared combobox (regression: had its own copy)', function () {
+test('searchable renders the shared combobox with a search input (regression: had its own copy)', function () {
     $field = BelongsToSelect::make('company_id')
         ->options(['1' => 'Acme', '2' => 'Globex'])
         ->searchable();
@@ -74,15 +74,20 @@ test('searchable renders the shared combobox (regression: had its own copy)', fu
     expect($html)
         ->toContain('x-teleport')
         ->toContain("\$wire.entangle('company_id')")
+        ->toContain('x-ref="searchInput"')
         ->not->toContain('<select');
 });
 
-test('non-searchable renders a native select', function () {
+test('non-searchable renders the shared combobox without a search input', function () {
+    // Unified design: a non-searchable, non-native select is the same combobox as
+    // the searchable one, just without the in-panel search input.
     $field = BelongsToSelect::make('company_id')->options(['1' => 'Acme']);
 
     expect(renderBelongsToSelect($field))
-        ->toContain('<select')
-        ->not->toContain('x-teleport');
+        ->toContain('x-teleport')
+        ->toContain("\$wire.entangle('company_id')")
+        ->not->toContain('<select')
+        ->not->toContain('x-ref="searchInput"');
 });
 
 test('create-option form renders a "create new" footer inside the combobox panel', function () {

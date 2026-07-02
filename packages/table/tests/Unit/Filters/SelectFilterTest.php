@@ -85,7 +85,23 @@ it('renders the searchable combobox when searchable (regression: searchable() wa
     expect($html)
         ->toContain('x-teleport')
         ->toContain("\$wire.entangle('tableState.filters.status.value')")
-        ->toContain('id="filter-status"');
+        ->toContain('id="filter-status"')
+        ->toContain('x-ref="searchInput"');
+});
+
+it('renders the combobox without a search input when non-native but not searchable', function () {
+    // Unified design: a non-native filter uses the same combobox as the searchable
+    // one, just without the in-panel search input.
+    $html = SelectFilter::make('status')
+        ->options(['paid' => 'Paid', 'due' => 'Due'])
+        ->native(false)
+        ->render();
+
+    expect($html)
+        ->toContain('x-teleport')
+        ->toContain("\$wire.entangle('tableState.filters.status.value')")
+        ->not->toContain('<select')
+        ->not->toContain('x-ref="searchInput"');
 });
 
 it('passes the multiple flag through to the searchable combobox', function () {

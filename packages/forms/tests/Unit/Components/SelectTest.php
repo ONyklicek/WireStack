@@ -129,20 +129,25 @@ test('native flag', function () {
     expect($field->isNative())->toBeTrue();
 });
 
-test('renders a native select by default (not searchable)', function () {
+test('renders the shared combobox without a search input by default (not searchable)', function () {
     $html = renderSelect(Select::make('role')->options(['a' => 'A', 'b' => 'B']));
 
+    // Unified design: a non-searchable, non-native select is the same combobox as
+    // the searchable one, just without the in-panel search input.
     expect($html)
-        ->toContain('<select')
-        ->not->toContain('x-teleport');
+        ->toContain('x-teleport')
+        ->toContain('$wire.entangle(')
+        ->not->toContain('<select')
+        ->not->toContain('x-ref="searchInput"');
 });
 
-test('searchable renders the shared combobox instead of a native select (regression: searchable() was a no-op)', function () {
+test('searchable renders the shared combobox with a search input (regression: searchable() was a no-op)', function () {
     $html = renderSelect(Select::make('role')->options(['a' => 'A', 'b' => 'B'])->searchable());
 
     expect($html)
         ->toContain('x-teleport')
         ->toContain('$wire.entangle(')
+        ->toContain('x-ref="searchInput"')
         ->not->toContain('<select');
 });
 

@@ -14,6 +14,12 @@
        $searchPrompt     string                    search input placeholder
        $noResultsMessage string                    shown when search matches nothing
        $disabled         bool                      disable the trigger (default false)
+       $searchable       bool                      show the in-panel search input
+                                                   (default true). When false the panel
+                                                   is a plain option list, so searchable
+                                                   and non-searchable selects share one
+                                                   design. Ignored when $remoteSearch is
+                                                   set (remote search needs the input).
        $hasError         bool                      apply error styling (default false)
        $panelFooter      string|null               extra HTML rendered at the bottom
                                                    of the dropdown panel (optional slot,
@@ -35,6 +41,9 @@
     $panelFooter ??= null;
     $remoteSearch ??= false;
     $loadingMessage ??= null;
+    $searchable ??= true;
+    // Remote search cannot work without the input; force it on in that mode.
+    $showSearch = $searchable || $remoteSearch;
 @endphp
 
 @include('wire-core::partials.floating-assets')
@@ -192,6 +201,7 @@
             x-transition:leave-end="opacity-0 -translate-y-1"
             class="absolute top-0 left-0 z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto"
         >
+            @if($showSearch)
             <div class="p-2">
                 <input
                     type="text"
@@ -206,6 +216,7 @@
                     x-ref="searchInput"
                 />
             </div>
+            @endif
 
             <ul class="py-1" role="listbox" :aria-activedescendant="activeDescendant" @if($multiple) aria-multiselectable="true" @endif>
                 @if($placeholder !== null && $placeholder !== '')
