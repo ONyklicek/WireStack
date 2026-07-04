@@ -127,3 +127,9 @@ it('renders the native element when searchable is overridden by native()', funct
         ->toContain('<select')
         ->not->toContain('x-teleport');
 });
+
+it('defaults a searchable filter to a floating dropdown on mobile, plain to a sheet', function () {
+    expect(SelectFilter::make('role')->usesSheetOnMobile())->toBeTrue()
+        ->and(SelectFilter::make('role')->searchable()->usesSheetOnMobile())->toBeFalse()
+        ->and(SelectFilter::make('role')->searchable()->sheetOnMobile()->usesSheetOnMobile())->toBeTrue();
+});

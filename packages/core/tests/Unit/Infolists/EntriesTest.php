@@ -2,11 +2,16 @@
 
 declare(strict_types=1);
 
+use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Contracts\HasFieldActions;
+use NyonCode\WireCore\Infolists\Components\BadgeEntry;
+use NyonCode\WireCore\Infolists\Components\BooleanEntry;
 use NyonCode\WireCore\Infolists\Components\ColorEntry;
 use NyonCode\WireCore\Infolists\Components\IconEntry;
 use NyonCode\WireCore\Infolists\Components\ImageEntry;
 use NyonCode\WireCore\Infolists\Components\KeyValueEntry;
+use NyonCode\WireCore\Infolists\Components\ListEntry;
 use NyonCode\WireCore\Infolists\Components\RepeatableEntry;
 use NyonCode\WireCore\Infolists\Components\TextEntry;
 
@@ -222,4 +227,162 @@ it('color entry is copyable opt-in and uses the color view', function () {
         ->and($entry->copyable()->isCopyable())->toBeTrue()
         ->and($entry->copyable(false)->isCopyable())->toBeFalse()
         ->and($entry->render()->name())->toBe('wire-core::infolists.entries.color');
+});
+
+// ─── Entry actions ───────────────────────────────────────────────────────────
+
+it('has no actions by default', function () {
+    $entry = TextEntry::make('email');
+
+    expect($entry)->toBeInstanceOf(HasFieldActions::class)
+        ->and($entry->hasActions())->toBeFalse()
+        ->and($entry->getActions())->toBe([]);
+});
+
+it('stores a list of inline actions', function () {
+    $action = Action::make('copy');
+    $entry = TextEntry::make('email')->actions([$action]);
+
+    expect($entry->getActions())->toBe([$action])
+        ->and($entry->hasActions())->toBeTrue();
+});
+
+it('appends a single action with action()', function () {
+    $entry = TextEntry::make('email')
+        ->action(Action::make('a'))
+        ->action(Action::make('b'));
+
+    expect($entry->getActions())->toHaveCount(2);
+});
+
+it('filters hidden actions out of getActions()', function () {
+    $visible = Action::make('visible');
+    $hidden = Action::make('hidden')->hidden();
+    $entry = TextEntry::make('email')->actions([$visible, $hidden]);
+
+    expect($entry->getActions())->toBe([$visible])
+        ->and($entry->hasActions())->toBeTrue();
+});
+
+it('resolves an entry action by name including hidden ones', function () {
+    $hidden = Action::make('hidden')->hidden();
+    $entry = TextEntry::make('email')->actions([Action::make('visible'), $hidden]);
+
+    expect($entry->getFieldAction('hidden'))->toBe($hidden)
+        ->and($entry->getFieldAction('missing'))->toBeNull();
+});
+
+// ─── BadgeEntry ──────────────────────────────────────────────────────────────
+
+it('badge entry renders as a badge by default and reuses the text view', function () {
+    $entry = BadgeEntry::make('status')->record(['status' => 'active']);
+
+    expect($entry->isBadge())->toBeTrue()
+        ->and($entry->getFormattedState())->toBe('active')
+        ->and($entry->render()->name())->toBe('wire-core::infolists.entries.text');
+});
+
+it('badge entry keeps the canonical color vocabulary', function () {
+    $entry = BadgeEntry::make('status')->color('success');
+
+    expect($entry->getBadgeColorClass())->toBe(TextEntry::make('x')->color('success')->badge()->getBadgeColorClass());
+});
+
+// ─── BooleanEntry ────────────────────────────────────────────────────────────
+
+it('boolean entry maps truthy/falsy state to check/x icons', function () {
+    expect(BooleanEntry::make('active')->record(['active' => true])->getResolvedIcon())->toBe('check-circle')
+        ->and(BooleanEntry::make('active')->record(['active' => false])->getResolvedIcon())->toBe('x-circle')
+        ->and(BooleanEntry::make('active')->record(['active' => true])->render()->name())->toBe('wire-core::infolists.entries.icon');
+});
+
+it('boolean entry honors custom true/false icons and colors', function () {
+    $entry = BooleanEntry::make('active')
+        ->trueIcon('star')
+        ->falseIcon('minus')
+        ->trueColor('primary')
+        ->falseColor('gray');
+
+    expect($entry->record(['active' => 1])->getResolvedIcon())->toBe('star')
+        ->and($entry->record(['active' => 0])->getResolvedIcon())->toBe('minus')
+        ->and($entry->record(['active' => 1])->getResolvedColor())->toBe('primary');
+});
+
+// ─── ListEntry ───────────────────────────────────────────────────────────────
+
+it('list entry formats an array state into items', function () {
+    $entry = ListEntry::make('tags')->record(['tags' => ['a', 'b', 'c']]);
+
+    expect($entry->getItems())->toBe(['a', 'b', 'c'])
+        ->and($entry->render()->name())->toBe('wire-core::infolists.entries.list');
+});
+
+it('list entry splits a string state on a separator', function () {
+    $entry = ListEntry::make('tags')->separator(',')->record(['tags' => 'a, b ,c']);
+
+    expect($entry->getItems())->toBe(['a', 'b', 'c']);
+});
+
+it('list entry skips empty items', function () {
+    $entry = ListEntry::make('tags')->record(['tags' => ['a', '', null, 'b']]);
+
+    expect($entry->getItems())->toBe(['a', 'b']);
+});
+
+it('list entry caps visible items and reports the remainder', function () {
+    $entry = ListEntry::make('tags')->limitList(2)->record(['tags' => ['a', 'b', 'c', 'd']]);
+
+    expect($entry->getVisibleItems())->toBe(['a', 'b'])
+        ->and($entry->getRemainingCount())->toBe(2)
+        ->and($entry->getLimitList())->toBe(2);
+});
+
+it('list entry has no remainder without a limit', function () {
+    $entry = ListEntry::make('tags')->record(['tags' => ['a', 'b']]);
+
+    expect($entry->getVisibleItems())->toBe(['a', 'b'])
+        ->and($entry->getRemainingCount())->toBe(0);
+});
+
+it('list entry yields no items for an empty state', function () {
+    expect(ListEntry::make('tags')->record(['tags' => null])->getItems())->toBe([])
+        ->and(ListEntry::make('tags')->record(['tags' => ''])->getItems())->toBe([]);
+});
+
+// ─── RepeatableEntry per-row actions ─────────────────────────────────────────
+
+it('repeatable re-indexes row items from zero', function () {
+    $entry = RepeatableEntry::make('lines')->record(['lines' => [5 => ['a' => 1], 9 => ['a' => 2]]]);
+
+    expect($entry->getRowItems())->toBe([['a' => 1], ['a' => 2]]);
+});
+
+it('repeatable yields no row items for a non-iterable state', function () {
+    expect(RepeatableEntry::make('lines')->record(['lines' => null])->getRowItems())->toBe([]);
+});
+
+it('repeatable stores per-row actions via the shared HasActions vocabulary', function () {
+    $action = Action::make('view');
+    $entry = RepeatableEntry::make('lines')->actions([$action]);
+
+    expect($entry->getActions())->toBe([$action])
+        ->and($entry->getFieldAction('view'))->toBe($action);
+});
+
+it('repeatable with() accepts a string or array and merges without duplicates', function () {
+    $entry = RepeatableEntry::make('lines')->with('product')->with(['tax', 'product']);
+
+    expect($entry->getWith())->toBe(['product', 'tax']);
+});
+
+it('repeatable has no eager-loads by default', function () {
+    expect(RepeatableEntry::make('lines')->getWith())->toBe([]);
+});
+
+it('repeatable eager-load is a no-op for plain array rows', function () {
+    $entry = RepeatableEntry::make('lines')
+        ->with('product')
+        ->record(['lines' => [['a' => 1], ['a' => 2]]]);
+
+    expect($entry->getRowItems())->toBe([['a' => 1], ['a' => 2]]);
 });

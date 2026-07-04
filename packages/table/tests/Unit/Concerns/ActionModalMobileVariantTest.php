@@ -46,6 +46,7 @@ class AmvComponent extends Component
         $action = match ($this->mode) {
             'slide-over' => $action->slideOverOnMobile(),
             'full-screen' => $action->fullScreenOnMobile(),
+            'compose' => $action->slideOver()->slideOverOnMobile(),
             default => $action,
         };
 
@@ -76,11 +77,12 @@ afterEach(function () {
     Schema::dropIfExists('amv_users');
 });
 
-it('renders the action modal as a mobile slide-over when slideOverOnMobile() is set', function () {
+it('renders the action modal as a mobile bottom-sheet when slideOverOnMobile() is set', function () {
     Livewire::test(AmvComponent::class, ['mode' => 'slide-over'])
         ->call('openHeaderActionModal', 'invite')
-        ->assertSeeHtml('translate-x-full sm:translate-x-0')
-        ->assertSeeHtml('justify-end pl-10');
+        ->assertSeeHtml('translate-y-full sm:translate-y-0')
+        ->assertSeeHtml('rounded-t-2xl')
+        ->assertDontSeeHtml('translate-x-full');
 });
 
 it('renders the action modal full screen on mobile when fullScreenOnMobile() is set', function () {
@@ -88,6 +90,17 @@ it('renders the action modal full screen on mobile when fullScreenOnMobile() is 
         ->call('openHeaderActionModal', 'invite')
         ->assertSeeHtml('translate-y-full sm:translate-y-0')
         ->assertSeeHtml('items-stretch justify-center');
+});
+
+it('composes slideOver() + slideOverOnMobile() into a desktop slide-over that becomes a bottom-sheet on mobile', function () {
+    Livewire::test(AmvComponent::class, ['mode' => 'compose'])
+        ->call('openHeaderActionModal', 'invite')
+        // Mobile bottom-sheet: full-width tray pinned to the bottom, slides up.
+        ->assertSeeHtml('inset-x-0 bottom-0')
+        ->assertSeeHtml('translate-y-full sm:translate-y-0 sm:translate-x-full')
+        ->assertSeeHtml('rounded-t-2xl sm:h-full sm:max-h-none sm:rounded-none')
+        // Desktop slide-over: edge-pinned right with the breathing gap.
+        ->assertSeeHtml('sm:right-0 sm:pl-10');
 });
 
 it('renders the default dialog without a mobile flag', function () {

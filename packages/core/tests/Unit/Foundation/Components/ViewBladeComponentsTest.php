@@ -8,6 +8,8 @@ use NyonCode\WireCore\Actions\View\GroupComponent;
 use NyonCode\WireCore\Foundation\View\Badge;
 use NyonCode\WireCore\Foundation\View\Button;
 use NyonCode\WireCore\Foundation\View\Dropdown;
+use NyonCode\WireCore\Foundation\View\WidgetGrid;
+use NyonCode\WireCore\Widgets\StatsOverviewWidget;
 
 // ─── Foundation Blade components ───────────────────────────────
 
@@ -33,7 +35,20 @@ it('dropdown keeps its props and renders its view', function () {
 
     expect($dropdown->position)->toBe('top-start')
         ->and($dropdown->width)->toBe('w-64')
+        // Sheet-on-mobile is on by default; consumers can opt out.
+        ->and($dropdown->sheetOnMobile)->toBeTrue()
+        ->and((new Dropdown(sheetOnMobile: false))->sheetOnMobile)->toBeFalse()
         ->and($dropdown->render()->name())->toBe('wire-core::foundation.dropdown');
+});
+
+it('widget grid keeps its widgets + column count and renders its view', function () {
+    $widgets = [StatsOverviewWidget::make()];
+    $grid = new WidgetGrid(widgets: $widgets, columns: 3);
+
+    expect($grid->widgets)->toBe($widgets)
+        ->and($grid->columns)->toBe(3)
+        ->and((new WidgetGrid)->columns)->toBe(2)
+        ->and($grid->render()->name())->toBe('wire-core::widgets.widget-grid');
 });
 
 // ─── Action Blade components (render returns a view name string) ─

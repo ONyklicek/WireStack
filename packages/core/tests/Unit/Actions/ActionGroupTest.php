@@ -124,10 +124,12 @@ it('generates a transform-origin class for the teleported panel', function () {
 });
 
 it('exposes a Floating UI config mapping placement 1:1 with a safe fallback', function () {
+    // The menu opts into the mobile bottom-sheet presentation (Floating UI is
+    // skipped below the breakpoint; the view supplies the max-sm: sheet classes).
     expect(ActionGroup::make([])->dropdownPosition('bottom-start')->getDropdownConfig())
-        ->toBe(['placement' => 'bottom-start', 'offset' => 6])
+        ->toBe(['placement' => 'bottom-start', 'offset' => 6, 'sheetOnMobile' => true, 'sheetBreakpoint' => 639.98])
         ->and(ActionGroup::make([])->dropdownPosition('top-end')->getDropdownConfig())
-        ->toBe(['placement' => 'top-end', 'offset' => 6])
+        ->toBe(['placement' => 'top-end', 'offset' => 6, 'sheetOnMobile' => true, 'sheetBreakpoint' => 639.98])
         ->and(ActionGroup::make([])->dropdownPosition('unknown')->getDropdownConfig())
-        ->toBe(['placement' => 'bottom-end', 'offset' => 6]);
+        ->toBe(['placement' => 'bottom-end', 'offset' => 6, 'sheetOnMobile' => true, 'sheetBreakpoint' => 639.98]);
 });
