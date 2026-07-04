@@ -6,6 +6,7 @@ namespace NyonCode\WireForms\Components;
 
 use Closure;
 use Livewire\Component;
+use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireForms\Concerns\HasOptions;
 use NyonCode\WireForms\Concerns\InteractsWithSelectCreation;
@@ -29,6 +30,9 @@ use NyonCode\WireForms\Forms\Form;
 class Select extends Field implements ProvidesImplicitValidationRules
 {
     use HasOptions;
+    use HasSheetOnMobile {
+        HasSheetOnMobile::defaultSheetOnMobile as protected sheetConfigDefault;
+    }
 
     protected bool $searchable = false;
 
@@ -405,6 +409,21 @@ class Select extends Field implements ProvidesImplicitValidationRules
     public function isRemoteSearch(): bool
     {
         return $this->hasSearchResultsCallback() && $this->isSearchable() && ! $this->isNative();
+    }
+
+    /**
+     * Searchable (or remote) selects default to the classic floating dropdown on
+     * mobile — the search input and scrollable list stay usable right at the
+     * field instead of being pushed into a bottom sheet. Non-searchable selects
+     * keep the global sheet default. An explicit ->sheetOnMobile() still wins.
+     */
+    protected function defaultSheetOnMobile(): bool
+    {
+        if ($this->isSearchable() || $this->isRemoteSearch()) {
+            return false;
+        }
+
+        return $this->sheetConfigDefault();
     }
 
     /**

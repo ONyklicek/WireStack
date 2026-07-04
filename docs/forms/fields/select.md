@@ -63,7 +63,7 @@ outside the enum is rejected without you restating it. It is skipped for `multip
 
 > The same `->options(Enum::class)` shorthand works on [`Radio`](radio.md),
 > [`CheckboxList`](checkbox-list.md), table `SelectColumn`, and the table
-> [`SelectFilter`](../../table/filters.md).
+> [`SelectFilter`](../../table/filters/index.md).
 
 ## Searchable
 

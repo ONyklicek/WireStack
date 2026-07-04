@@ -269,7 +269,7 @@ children renders in the main footer, no rollup column needed:
 
 The total is computed in SQL over the child table, constrained to the current
 parent set, and honours everything the displayed children honour:
-[`Filter::subRows()`](filters.md#filtering-by-sub-row-values) scoped filters,
+[`Filter::subRows()`](filters/relationships.md#filtering-by-sub-row-values) scoped filters,
 `subRowQuery()`, and the interactive sub-row filter bar. The footer scope
 toggle applies too — `All` totals children of all filtered parents, `This
 page` only children of parents on the current page, `Selection` only children
@@ -361,5 +361,5 @@ public function table(Table $table): Table
 - [Sub-Rows](sub-rows.md) — per-parent subtotals and child summaries
 - [Row Grouping](grouping.md) — per-group subtotal rows
 - [Exports](exports.md) — summaries are appended to CSV/Excel/PDF exports
-- [Columns](columns.md)
+- [Columns](columns/index.md)
 - [Table Overview](overview.md)

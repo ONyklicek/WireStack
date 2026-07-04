@@ -15,6 +15,14 @@
     $hasSeconds = $field->hasSeconds();
     $secondsStep = $field->getSecondsStep() ?? 1;
     $fieldId = $field->getId();
+    // Below the configured breakpoint the calendar becomes a bottom sheet instead
+    // of a floating panel — unless disabled via ->sheetOnMobile(false) or config.
+    $sheetOnMobile = $field->usesSheetOnMobile();
+    $sheetBp = $field->getMobileBreakpoint();
+    $sheetBpPx = \NyonCode\WireCore\Foundation\Support\MobileSheet::px($sheetBp);
+    $sheetPanel = \NyonCode\WireCore\Foundation\Support\MobileSheet::panelPadded($sheetBp);
+    $sheetMotion = \NyonCode\WireCore\Foundation\Support\MobileSheet::motion($sheetBp);
+    $sheetBackdrop = \NyonCode\WireCore\Foundation\Support\MobileSheet::backdropHide($sheetBp);
 @endphp
 
 @include('wire-forms::partials.field-wrapper-start')
@@ -90,7 +98,7 @@
                 this.$watch('open', (open) => {
                     if (open) {
                         this.$nextTick(() => {
-                            this._float = this.$float(this.$refs.trigger, this.$refs.panel, { placement: 'bottom-start', offset: 4 });
+                            this._float = this.$float(this.$refs.trigger, this.$refs.panel, { placement: 'bottom-start', offset: 4{{ $sheetOnMobile ? ', sheetOnMobile: true, sheetBreakpoint: '.$sheetBpPx : '' }} });
                         });
                     } else if (this._float) {
                         this._float();
@@ -295,21 +303,46 @@
             </div>
         </div>
 
-        {{-- Dropdown panel (teleported + Floating UI) --}}
+        {{-- Calendar panel: floating from sm up, bottom sheet on a phone (max-sm:
+             classes, $float skips Floating UI) with a dimming backdrop. --}}
         <template x-teleport="body">
-        <div
+        <div>
+            @if($sheetOnMobile)
+                {{-- Backdrop: mobile-only, taps to close. --}}
+                <div
+                        x-show="open"
+                        x-cloak
+                        x-transition:enter="transition ease-out duration-150"
+                        x-transition:enter-start="opacity-0"
+                        x-transition:enter-end="opacity-100"
+                        x-transition:leave="transition ease-in duration-100"
+                        x-transition:leave-start="opacity-100"
+                        x-transition:leave-end="opacity-0"
+                        @click="open = false"
+                        class="fixed inset-0 z-40 bg-gray-500/60 dark:bg-gray-900/70 {{ $sheetBackdrop }}"
+                ></div>
+            @endif
+
+            <div
                 x-ref="panel"
                 x-show="open"
                 @click.outside="open = false"
                 x-transition:enter="transition ease-out duration-150"
-                x-transition:enter-start="opacity-0 -translate-y-1"
+                x-transition:enter-start="opacity-0 -translate-y-1 {{ $sheetOnMobile ? $sheetMotion : '' }}"
                 x-transition:enter-end="opacity-100 translate-y-0"
                 x-transition:leave="transition ease-in duration-100"
                 x-transition:leave-start="opacity-100 translate-y-0"
-                x-transition:leave-end="opacity-0 -translate-y-1"
-                class="absolute top-0 left-0 z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg p-4"
+                x-transition:leave-end="opacity-0 -translate-y-1 {{ $sheetOnMobile ? $sheetMotion : '' }}"
+                @class([
+                    'absolute top-0 left-0 z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg p-4',
+                    $sheetPanel => $sheetOnMobile,
+                ])
+                @if($sheetOnMobile) x-focus-trap="open" tabindex="-1" data-sheet-bp="{{ $sheetBpPx }}" @endif
                 @keydown.escape="open = false"
         >
+            @if($sheetOnMobile)
+                @include('wire-core::partials.sheet-grabber', ['dismiss' => 'open = false', 'breakpoint' => $sheetBp])
+            @endif
             @if($hasDate)
                 {{-- Month/year navigation --}}
                 <div class="flex items-center justify-between mb-3">
@@ -420,6 +453,7 @@
                     </button>
                 @endif
             </div>
+        </div>
         </div>
         </template>
     </div>

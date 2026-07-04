@@ -27,19 +27,19 @@
         @if($closeOnClickAway) @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}" @endif
     ></div>
 
-    <div class="fixed inset-y-0 {{ $positionClasses() }} flex max-w-full {{ $position === 'left' ? 'pr-10' : 'pl-10' }}">
+    <div class="fixed {{ $positionClasses() }} flex max-w-full">
         {{-- Panel --}}
         <div
             x-show="show"
             x-transition:enter="transform transition ease-in-out duration-300"
             x-transition:enter-start="{{ $translateEnterStart() }}"
-            x-transition:enter-end="translate-x-0"
+            x-transition:enter-end="{{ $translateEnterEnd() }}"
             x-transition:leave="transform transition ease-in-out duration-300"
-            x-transition:leave-start="translate-x-0"
+            x-transition:leave-start="{{ $translateLeaveStart() }}"
             x-transition:leave-end="{{ $translateLeaveEnd() }}"
-            class="w-screen {{ $widthClass() }}"
+            class="{{ $widthWrapperClasses() }} {{ $widthClass() }}"
         >
-            <div class="flex h-full flex-col bg-white dark:bg-gray-800 shadow-xl">
+            <div class="flex flex-col bg-white dark:bg-gray-800 shadow-xl {{ $panelClasses() }}">
                 {{-- Header --}}
                 <div @class([
                     'px-4 py-6 sm:px-6',
@@ -62,10 +62,12 @@
 
                         {{-- Close button --}}
                         <div class="ml-3 flex h-7 items-center">
+                            {{-- Negative margin grows the tap area to ~36px without
+                                 shifting the icon's visual position. --}}
                             <button
                                 type="button"
                                 @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}"
-                                class="rounded-md text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                                class="-m-1.5 rounded-md p-1.5 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 touch-manipulation"
                             >
                                 <span class="sr-only">{{ __('Close') }}</span>
                                 <x-wire::icon name="outline:x-mark" size="h-6 w-6" />

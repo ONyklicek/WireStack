@@ -3,6 +3,9 @@
     $wireAttr = 'wire:model' . ($wireModifier ? ".{$wireModifier}" : '');
     $options = $field->getOptions();
     $columns = $field->getColumns();
+    // Per-breakpoint map (['md' => 2, 'lg' => 3]) → literal grid-cols classes;
+    // a plain int keeps the mobile-first reflow arms below.
+    $columnsClass = is_array($columns) ? \NyonCode\WireCore\Foundation\Support\ResponsiveGrid::cols($columns) : '';
 @endphp
 
 @include('wire-forms::partials.field-wrapper-start')
@@ -39,12 +42,15 @@
         @endif
 
         <div class="max-h-60 overflow-y-auto p-3">
+            {{-- Multi-column lists reflow down on narrow screens so option labels
+                 stay readable on a phone (a 3–4 wide grid is unusable at 360px). --}}
             <div @class([
                 'grid gap-2',
+                $columnsClass,
                 'grid-cols-1' => $columns === 1,
-                'grid-cols-2' => $columns === 2,
-                'grid-cols-3' => $columns === 3,
-                'grid-cols-4' => $columns === 4,
+                'grid-cols-1 sm:grid-cols-2' => $columns === 2,
+                'grid-cols-1 sm:grid-cols-3' => $columns === 3,
+                'grid-cols-2 sm:grid-cols-4' => $columns === 4,
             ])>
                 @foreach($options as $value => $label)
                     <div

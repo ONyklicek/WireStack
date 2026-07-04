@@ -4,6 +4,24 @@
 >
     <div data-preview-focus class="h-full rounded-[28px] border border-slate-200 bg-white p-6">
         <div class="space-y-6">
+            @if ($variant === 'dropdown')
+                <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70">
+                    <p class="mb-4 text-sm font-medium text-slate-900">Generic dropdown (sheet on mobile)</p>
+                    <x-wire::dropdown position="bottom-start" width="w-56">
+                        <x-slot:trigger>
+                            <button type="button" class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                Options
+                                <x-wire::icon name="outline:chevron-down" size="h-4 w-4" />
+                            </button>
+                        </x-slot:trigger>
+                        <button type="button" class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Duplicate</button>
+                        <button type="button" class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Archive</button>
+                        <button type="button" class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Move to…</button>
+                        <button type="button" class="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-50">Delete</button>
+                    </x-wire::dropdown>
+                </div>
+            @endif
+
             <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70">
                 {!! $stats !!}
             </div>

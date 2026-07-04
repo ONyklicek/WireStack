@@ -177,6 +177,6 @@ use NyonCode\WireCore\Actions\ActionGroup;
 ## Related Docs
 
 - [Table Overview](overview.md)
-- [Columns](columns.md)
-- [Filters](filters.md)
+- [Columns](columns/index.md)
+- [Filters](filters/index.md)
 - [Notifications](notifications.md)

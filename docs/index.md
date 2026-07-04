@@ -25,8 +25,8 @@ User-facing documentation for the Wire ecosystem.
 | Document | Description |
 |----------|-------------|
 | [Table Overview](table/overview.md) | First table, `WithTable`, and base configuration |
-| [Columns](table/columns.md) | Column types, formatting, search, sort, responsive visibility |
-| [Filters](table/filters.md) | Built-in filters and custom query behavior |
+| [Columns](table/columns/index.md) | Column types, formatting, search, sort, responsive visibility |
+| [Filters](table/filters/index.md) | Built-in filters and custom query behavior |
 | [Actions](table/actions.md) | Row, bulk, and header actions with modal forms |
 | [Exports](table/exports.md) | CSV, Excel, and PDF exports for the current table query |
 | [Imports](table/imports.md) | CSV imports with header mapping, casting, and per-row validation |

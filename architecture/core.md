@@ -209,7 +209,7 @@ Concrete actions expose `static make(string $name = 'delete'|'edit'|'view')`.
 | `HasKeyboardShortcut` | `keyboardShortcut('mod+s')`, `getAlpineKeydownExpression()`, `shortcutUsesMod()` |
 | `HasColor`, `HasIcons` | color resolution + svg rendering helpers |
 
-**Action lifecycle.** An action's `before()`/`after()` hooks, notifications, and redirect feed the engine's **Action Pipeline** (`Core/Actions/`). The pipeline stages (`BeforeCallbacksStage → ActionExecutionStage → AfterCallbacksStage → NotificationStage → RedirectStage`) consume what these concerns configure. Returning `halt()` (an `ActionHalt`) from `before()` stops execution. See the [Action Pipeline section of the engine doc](core/unified-engine.md#action-pipeline) for `ActionContext`/`ActionResult`/`ActionPipeline`.
+**Action lifecycle.** An action's `before()`/`after()` hooks, notifications, and redirect feed the engine's **Action Pipeline** (`Core/Actions/`). The action callback runs at the pipeline terminal, wrapped by stages `BeforeCallbacksStage` (pre + halt), then `AfterCallbacksStage → NotificationStage → RedirectStage` post-processing the result. Returning `halt()` (an `ActionHalt`) from `before()` stops execution before the action; an `after()` hook can halt after it. See the [Action Pipeline section of the engine doc](core/unified-engine.md#action-pipeline) for `ActionContext`/`ActionResult`/`ActionPipeline`.
 
 **Modal-backed actions** (`HasModal`). An action becomes modal-driven when it calls `requiresConfirmation()`, `form()`, or `slideOver()`:
 

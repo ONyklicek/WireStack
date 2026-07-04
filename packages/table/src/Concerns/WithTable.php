@@ -18,23 +18,15 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\WithPagination;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
-use NyonCode\WireCore\Actions\ActionHalt;
 use NyonCode\WireCore\Actions\BulkAction;
+use NyonCode\WireCore\Actions\Concerns\InteractsWithActions;
 use NyonCode\WireCore\Actions\HeaderAction;
-use NyonCode\WireCore\Actions\ModalFooterAction;
-use NyonCode\WireCore\Actions\ModalStep;
-use NyonCode\WireCore\Core\Actions\ActionContext;
-use NyonCode\WireCore\Core\Actions\ActionPipeline;
-use NyonCode\WireCore\Core\Actions\ActionResult;
-use NyonCode\WireCore\Core\Events\ActionExecuted;
-use NyonCode\WireCore\Core\Events\ActionExecuting;
 use NyonCode\WireCore\Core\Events\CellUpdated;
 use NyonCode\WireCore\Core\Events\CellUpdating;
 use NyonCode\WireCore\Core\Events\TableFiltered;
@@ -42,9 +34,6 @@ use NyonCode\WireCore\Core\Events\TableFiltering;
 use NyonCode\WireCore\Core\Events\TableRefreshed;
 use NyonCode\WireCore\Core\Events\TableSearched;
 use NyonCode\WireCore\Core\Events\TableSearching;
-use NyonCode\WireCore\Core\Plugin\Hooks\ActionExecutedPayload;
-use NyonCode\WireCore\Core\Plugin\Hooks\ActionExecutingPayload;
-use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
@@ -52,6 +41,7 @@ use NyonCode\WireCore\Infolists\Infolist;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
+use NyonCode\WireForms\Concerns\InteractsWithActionForms;
 use NyonCode\WireForms\Concerns\InteractsWithFieldActions;
 use NyonCode\WireForms\Concerns\InteractsWithRepeaters;
 use NyonCode\WireForms\Concerns\InteractsWithSelectCreation;
@@ -67,7 +57,6 @@ use NyonCode\WireTable\Import\ImportAction;
 use NyonCode\WireTable\Import\ImportResult;
 use NyonCode\WireTable\Import\TableImport;
 use NyonCode\WireTable\Table;
-use ReflectionFunction;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /** @phpstan-require-extends Component */
@@ -75,6 +64,14 @@ trait WithTable
 {
     use DispatchesStateUpdates;
     use HasSqlDebug;
+
+    // Shared, form-agnostic action engine (wire-core) + the form-hosting bridge
+    // (wire-forms). WithTable keeps thin, record-scoped wrappers on top; the
+    // bridge overrides the engine's form extension points.
+    use InteractsWithActionForms, InteractsWithActions {
+        InteractsWithActionForms::validateMountedActionForm insteadof InteractsWithActions;
+        InteractsWithActionForms::resolveHaltModalForm insteadof InteractsWithActions;
+    }
     use InteractsWithFieldActions;
     use InteractsWithRepeaters;
     use InteractsWithSelectCreation;
@@ -1954,6 +1951,91 @@ trait WithTable
     // Action System
     // ==========================================
 
+    // ==========================================
+    // Action engine seams (back the shared InteractsWithActions engine with
+    // the table's StateContainer bag under `modal.action.*` / `modal.halt.*`).
+    // ==========================================
+
+    protected function setMountedActionState(string $key, mixed $value): void
+    {
+        $this->tableState->set('modal.action.'.$key, $value);
+    }
+
+    protected function getMountedActionState(string $key, mixed $default = null): mixed
+    {
+        return $this->tableState->get('modal.action.'.$key, $default);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function getMountedActionFormData(): array
+    {
+        $data = $this->tableState->get('modal.action.formData', []);
+
+        return is_array($data) ? $data : [];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    protected function setMountedActionFormData(array $data): void
+    {
+        $this->tableState->set('modal.action.formData', $data);
+    }
+
+    protected function setMountedActionFormDataValue(string $path, mixed $value): void
+    {
+        $this->tableState->set('modal.action.formData.'.$path, $value);
+    }
+
+    protected function setHaltModalState(string $key, mixed $value): void
+    {
+        $this->tableState->set('modal.halt.'.$key, $value);
+    }
+
+    protected function haltModalFormStatePath(): string
+    {
+        return 'tableState.modal.halt.formData';
+    }
+
+    /**
+     * The table honours a custom primary key when collecting affected record IDs.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<int, mixed>
+     */
+    protected function resolveActionRecordIds(array $payload): array
+    {
+        $pk = $this->getTable()->getPrimaryKey();
+
+        if (isset($payload['record'])) {
+            return [$payload['record']->{$pk}];
+        }
+
+        if (isset($payload['records'])) {
+            return $payload['records']->pluck($pk)->all();
+        }
+
+        return [];
+    }
+
+    /**
+     * Route action notifications through the table's configured driver.
+     */
+    protected function sendActionNotification(Notification $notification): void
+    {
+        $this->sendNotification($notification);
+    }
+
+    /**
+     * Refresh the cached table instance after a successful action.
+     */
+    protected function afterActionExecuted(): void
+    {
+        $this->invalidateTable();
+    }
+
     /**
      * Open action modal (confirmation or form)
      */
@@ -2031,308 +2113,6 @@ trait WithTable
             'record' => $record,
             'data' => [],
         ], $recordKey, 'row', $confirmed);
-    }
-
-    protected function invokeActionCallback(callable $callback, array $payload): mixed
-    {
-        $reflection = new ReflectionFunction($callback);
-        $arguments = [];
-
-        foreach ($reflection->getParameters() as $parameter) {
-            $name = $parameter->getName();
-
-            if (array_key_exists($name, $payload)) {
-                $arguments[] = $payload[$name];
-            } elseif ($parameter->isDefaultValueAvailable()) {
-                $arguments[] = $parameter->getDefaultValue();
-            }
-        }
-
-        return $reflection->invokeArgs($arguments);
-    }
-
-    /**
-     * Generalized action execution pipeline.
-     *
-     * Delegates to Core ActionPipeline with adapter closures that bridge
-     * ActionContext to the named-parameter reflection-based callbacks.
-     *
-     * @param  mixed  $action  The action to execute
-     * @param  array  $payload  Named arguments for callbacks (record/records/data/etc.)
-     * @param  string  $haltKey  Record key for halt modal ('__bulk__', '__header__', or record key)
-     * @param  string  $actionType  'row', 'bulk', or 'header'
-     * @param  bool  $confirmed  Whether this is a confirmed re-execution
-     */
-    protected function executeActionPipeline(
-        mixed $action,
-        array $payload,
-        string $haltKey,
-        string $actionType,
-        bool $confirmed = false,
-    ): void {
-        $data = $payload['data'] ?? [];
-        $tableId = static::class;
-
-        // Collect record IDs for events
-        $recordIds = [];
-        if (isset($payload['record'])) {
-            $pk = $this->getTable()->getPrimaryKey();
-            $recordIds = [$payload['record']->{$pk}];
-        } elseif (isset($payload['records'])) {
-            $pk = $this->getTable()->getPrimaryKey();
-            $recordIds = $payload['records']->pluck($pk)->all();
-        }
-
-        // Plugin hook: action.executing (hooks modify before event reports)
-        if (app()->bound(PluginManager::class)) {
-            $manager = app(PluginManager::class);
-
-            $manager->runHook('action.executing', [
-                'action' => $action,
-                'actionName' => $action->getName(),
-                'actionType' => $actionType,
-                'recordIds' => $recordIds,
-                'data' => $data,
-                'component' => $this,
-            ]);
-
-            $preContext = $this->payloadToContext($payload, $action->getName());
-            $manager->runTypedHook(
-                'action.executing',
-                new ActionExecutingPayload(
-                    actionName: $action->getName(),
-                    context: $preContext,
-                    actionType: $actionType,
-                    component: $this,
-                ),
-            );
-        }
-
-        // Dispatch ActionExecuting event (after hooks — reports final state)
-        event(new ActionExecuting($tableId, $action->getName(), $recordIds));
-
-        // Build ActionContext
-        $context = $this->payloadToContext($payload, $action->getName());
-        $context->set('confirmed', $confirmed);
-        $context->set('actionType', $actionType);
-        $context->set('haltKey', $haltKey);
-        $context->set('component', $this);
-
-        // Wrap before callbacks as adapter closures
-        if (! $confirmed && $action->hasBeforeCallbacks()) {
-            $wrappedBefore = [];
-            foreach ($action->getBeforeCallbacks() as $i => $beforeCallback) {
-                $wrappedBefore[] = function (ActionContext $ctx) use ($action, $beforeCallback, $i): mixed {
-                    $this->invokeActionCallback($beforeCallback, array_merge(
-                        $this->contextToPayload($ctx),
-                        ['action' => $action, 'confirmed' => false, 'component' => $this],
-                    ));
-
-                    $pendingHalt = $action->consumePendingHalt();
-                    if ($pendingHalt) {
-                        $pendingHalt->source('before', $i);
-                        $ctx->set('pendingHalt', $pendingHalt);
-
-                        return false; // Signals BeforeCallbacksStage to halt
-                    }
-
-                    return true;
-                };
-            }
-            $context->set('beforeCallbacks', $wrappedBefore);
-        }
-
-        // Wrap after callbacks
-        if ($action->hasAfterCallbacks()) {
-            $wrappedAfter = [];
-            foreach ($action->getAfterCallbacks() as $i => $afterCallback) {
-                $wrappedAfter[] = function (ActionContext $ctx, ActionResult $result) use ($action, $afterCallback, $i): void {
-                    $this->invokeActionCallback($afterCallback, array_merge(
-                        $this->contextToPayload($ctx),
-                        ['action' => $action, 'result' => $result, 'confirmed' => $ctx->get('confirmed', false), 'component' => $this],
-                    ));
-
-                    $pendingHalt = $action->consumePendingHalt();
-                    if ($pendingHalt) {
-                        $pendingHalt->source('after', $i);
-                        $ctx->set('pendingHalt', $pendingHalt);
-                    }
-                };
-            }
-            $context->set('afterCallbacks', $wrappedAfter);
-        }
-
-        // Main action closure for the pipeline
-        $mainAction = function (ActionContext $ctx) use ($action): mixed {
-            $callback = $action->getActionCallback();
-            if (! $callback) {
-                return ActionResult::success();
-            }
-
-            $halt = fn () => ActionHalt::make();
-            $result = $this->invokeActionCallback($callback, array_merge(
-                $this->contextToPayload($ctx),
-                ['halt' => $halt, 'confirmed' => $ctx->get('confirmed', false), 'component' => $this],
-            ));
-
-            if ($result instanceof ActionHalt) {
-                $result->source('action');
-                $ctx->set('pendingHalt', $result);
-
-                return ActionResult::halt();
-            }
-
-            return $result instanceof ActionResult ? $result : ActionResult::success();
-        };
-
-        // Execute through Core ActionPipeline
-        $pipeline = app(ActionPipeline::class);
-        $pipelineResult = $pipeline->execute($context, $mainAction);
-
-        // Check for pending halt
-        $pendingHalt = $context->get('pendingHalt');
-        if ($pendingHalt instanceof ActionHalt) {
-            $this->showHaltModal($haltKey, $action->getName(), $pendingHalt, $data, $actionType);
-
-            return;
-        }
-
-        // Handle notification from pipeline
-        $notification = $context->get('notification');
-        if ($notification) {
-            $this->sendNotification(
-                // #TODO need fix
-                Notification::make()
-                    ->title($notification['message'])
-                    ->type($notification['type'] ?? 'success'),
-            );
-        }
-
-        // Handle redirect from pipeline
-        $redirect = $context->get('redirect');
-        if ($redirect) {
-            $this->redirect($redirect);
-        }
-
-        // Post-action
-        if ($actionType === 'bulk' && method_exists($action, 'shouldDeselectRecordsAfterCompletion') && $action->shouldDeselectRecordsAfterCompletion()) {
-            $this->deselectAllRecords();
-        }
-
-        $this->handleActionSuccess($action, $payload['record'] ?? $payload['records'] ?? null);
-
-        // Plugin hook: action.executed
-        if (app()->bound(PluginManager::class)) {
-            $manager = app(PluginManager::class);
-
-            $manager->runHook('action.executed', [
-                'action' => $action,
-                'actionName' => $action->getName(),
-                'actionType' => $actionType,
-                'recordIds' => $recordIds,
-                'result' => $pipelineResult,
-                'component' => $this,
-            ]);
-
-            $manager->runTypedHook(
-                'action.executed',
-                new ActionExecutedPayload(
-                    actionName: $action->getName(),
-                    context: $context,
-                    result: $pipelineResult,
-                    actionType: $actionType,
-                    component: $this,
-                ),
-            );
-        }
-
-        // Dispatch ActionExecuted event
-        event(new ActionExecuted($tableId, $action->getName(), $recordIds, $pipelineResult->isSuccess()));
-    }
-
-    /**
-     * Convert action payload to Core ActionContext.
-     */
-    private function payloadToContext(array $payload, string $actionName): ActionContext
-    {
-        return new ActionContext(
-            record: $payload['record'] ?? null,
-            records: isset($payload['records']) ? $payload['records'] : null,
-            formData: $payload['data'] ?? [],
-            actionName: $actionName,
-        );
-    }
-
-    /**
-     * Convert ActionContext back to named-parameter payload for reflection-based callbacks.
-     */
-    private function contextToPayload(ActionContext $ctx): array
-    {
-        $payload = [];
-
-        if ($ctx->record !== null) {
-            $payload['record'] = $ctx->record;
-        }
-        if ($ctx->records !== null) {
-            $payload['records'] = $ctx->records;
-        }
-        $payload['data'] = $ctx->formData;
-
-        return $payload;
-    }
-
-    /**
-     * Show halt modal with dynamic configuration.
-     */
-    protected function showHaltModal(
-        string $recordKey,
-        string $actionName,
-        ActionHalt $halt,
-        array $formData = [],
-        string $actionType = 'row',
-    ): void {
-        $this->tableState->set('modal.halt.recordKey', $recordKey);
-        $this->tableState->set('modal.halt.actionName', $actionName);
-        $this->tableState->set('modal.halt.config', $halt->toArray()['modal']);
-        $this->tableState->set('modal.halt.formData', $halt->getModalFormData() ?? $formData);
-        $this->tableState->set('modal.halt.actionType', $actionType);
-        $this->tableState->set('modal.halt.context', $halt->toArray()['context'] ?? []);
-
-        // Resolve Form instance for halt modal
-        $formInstance = $halt->getFormInstance();
-        if ($formInstance) {
-            $formInstance->statePath('tableState.modal.halt.formData');
-            $formInstance->livewire($this);
-            $this->haltModalFormInstance = $formInstance;
-            // Persist across Livewire re-renders; Form schema may contain non-serializable
-            // closures (options callbacks, validation rules), so we swallow the exception.
-            // If serialization fails the form won't survive polling re-renders, but
-            // the halt modal stays open and the user can still submit on first render.
-            try {
-                session()->put('wire.halt_form_instance', serialize($formInstance));
-            } catch (\Throwable) {
-                // Non-serializable form — session fallback unavailable
-            }
-        }
-
-        $this->tableState->set('modal.halt.show', true);
-    }
-
-    /**
-     * Handle post-action success: table invalidation and redirects.
-     */
-    protected function handleActionSuccess(mixed $action, mixed $record = null): void
-    {
-        // Invalidate the cached table instance so re-render picks up DB changes
-        $this->invalidateTable();
-
-        // Success redirect
-        if (method_exists($action, 'getSuccessRedirectUrl')) {
-            $redirectUrl = $action->getSuccessRedirectUrl($record);
-            if ($redirectUrl) {
-                $this->redirect($redirectUrl);
-            }
-        }
     }
 
     /**
@@ -2521,60 +2301,12 @@ trait WithTable
     }
 
     /**
-     * Run a custom modal footer action declared via Action::modalFooterActions().
-     *
-     * The callback receives the live form-data bag as `$data` plus a `$set`
-     * writer for it, `$component`, and the modal's `$context`/`$record`/`$records`.
-     * When the footer action opts into `submitsForm()`, the form is validated
-     * first so validation errors surface before the callback runs.
+     * The shared engine closes a mounted action via closeMountedAction(); route
+     * it to the table's full teardown (which also invalidates the table cache).
      */
-    public function callModalFooterAction(string $name): void
+    protected function closeMountedAction(): void
     {
-        [$action, $context] = $this->resolveCurrentModalAction();
-
-        if ($action === null) {
-            return;
-        }
-
-        $footer = null;
-        foreach ($action->getModalFooterActions() as $candidate) {
-            if ($candidate instanceof ModalFooterAction && $candidate->getName() === $name) {
-                $footer = $candidate;
-                break;
-            }
-        }
-
-        if ($footer === null) {
-            return;
-        }
-
-        if ($footer->shouldSubmitForm()) {
-            // Surfaces validation errors (throws ValidationException) before the callback.
-            $this->getActionModalFormInstance()?->validate();
-        }
-
-        $callback = $footer->getActionCallback();
-
-        if ($callback !== null) {
-            $formData = $this->tableState->get('modal.action.formData', []);
-            $isBulk = (bool) $this->tableState->get('modal.action.isBulk');
-            $isHeader = (bool) $this->tableState->get('modal.action.isHeaderAction');
-
-            $this->invokeActionCallback($callback, [
-                'data' => is_array($formData) ? $formData : [],
-                'set' => function (string $path, mixed $value): void {
-                    $this->tableState->set('modal.action.formData.'.$path, $value);
-                },
-                'context' => $context,
-                'record' => (! $isBulk && ! $isHeader) ? $context : null,
-                'records' => $isBulk ? $context : null,
-                'component' => $this,
-            ]);
-        }
-
-        if ($footer->shouldCloseModal()) {
-            $this->closeActionModal();
-        }
+        $this->closeActionModal();
     }
 
     /**
@@ -2682,81 +2414,6 @@ trait WithTable
     }
 
     /**
-     * Get current modal data for view
-     */
-    public function getActionModalData(): array
-    {
-        // If cache is empty but modal should be shown, regenerate it
-        if (empty($this->actionModalConfigCache) && $this->tableState->get('modal.action.show') && $this->tableState->get('modal.action.name')) {
-            $this->regenerateModalConfig();
-        }
-
-        return $this->actionModalConfigCache;
-    }
-
-    /**
-     * Get the resolved Form instance for the current action modal, if any.
-     * Re-resolves on demand since the Form instance is not serialized between Livewire requests.
-     */
-    public function getActionModalFormInstance(): ?Form
-    {
-        if ($this->actionModalFormInstance === null && $this->tableState->get('modal.action.show') && $this->tableState->get('modal.action.name')) {
-            $this->resolveActionModalFormInstance();
-        }
-
-        return $this->actionModalFormInstance;
-    }
-
-    /**
-     * Resolve the Form instance from the current action.
-     */
-    protected function resolveActionModalFormInstance(): void
-    {
-        $actionName = $this->tableState->get('modal.action.name');
-        if (! $actionName) {
-            return;
-        }
-
-        $action = null;
-        $context = null;
-        $recordKey = $this->tableState->get('modal.action.recordKey');
-
-        if ($this->tableState->get('modal.action.isHeaderAction')) {
-            $action = $this->findHeaderAction($actionName);
-            // Header actions carry no record; expose the live form-data bag so a
-            // wizard's later steps can build their schema from earlier values.
-            $formData = $this->tableState->get('modal.action.formData', []);
-            $context = is_array($formData) ? $formData : [];
-        } elseif ($this->tableState->get('modal.action.isBulk')) {
-            $action = $this->findBulkAction($actionName);
-            $context = $this->getSelectedRecords();
-        } else {
-            $action = $this->findAction($actionName);
-            $context = $recordKey ? $this->getRecord($recordKey) : null;
-        }
-
-        if ($action) {
-            $this->actionModalFormInstance = $this->buildModalActionFormInstance($action, $context);
-        }
-    }
-
-    /**
-     * Resolve the Form instance for an action modal, honouring multi-step
-     * wizards. A wizard renders only the current step's schema while all steps
-     * share the same `modal.action.formData` state bag.
-     */
-    protected function buildModalActionFormInstance(Action|BulkAction|HeaderAction $action, mixed $context): ?Form
-    {
-        if ($action->hasMultipleSteps()) {
-            $step = (int) $this->tableState->get('modal.action.currentStep', 0);
-
-            return $action->getStepFormInstance($this, $context, $step);
-        }
-
-        return $action->getFormInstance($this, $context);
-    }
-
-    /**
      * Resolve the action backing the currently open modal together with its
      * record/selection context.
      *
@@ -2786,97 +2443,6 @@ trait WithTable
         $recordKey = $this->tableState->get('modal.action.recordKey');
 
         return [$this->findAction($actionName), $recordKey ? $this->getRecord($recordKey) : null];
-    }
-
-    /**
-     * Advance the wizard to the next step after validating the current one.
-     */
-    public function nextActionModalStep(): void
-    {
-        [$action, $context] = $this->resolveCurrentModalAction();
-
-        if (! $action || ! $action->hasMultipleSteps()) {
-            return;
-        }
-
-        $current = (int) $this->tableState->get('modal.action.currentStep', 0);
-
-        $this->validateModalStep($action, $context, $current);
-
-        $next = min($current + 1, $action->getStepCount() - 1);
-
-        $this->runModalStepBeforeCallback($action, $context, $next);
-
-        $this->tableState->set('modal.action.currentStep', $next);
-        $this->actionModalFormInstance = null;
-    }
-
-    /**
-     * Step the wizard back one step. No validation runs when moving backwards.
-     */
-    public function prevActionModalStep(): void
-    {
-        $current = (int) $this->tableState->get('modal.action.currentStep', 0);
-
-        $this->tableState->set('modal.action.currentStep', max(0, $current - 1));
-        $this->actionModalFormInstance = null;
-    }
-
-    /**
-     * Validate a single wizard step: the step's field schema via the Form
-     * runtime, then any extra rules declared with ModalStep::validation(), then
-     * the optional afterValidation() hook.
-     */
-    protected function validateModalStep(Action|BulkAction|HeaderAction $action, mixed $context, int $stepIndex, bool $runAfterValidation = true): void
-    {
-        $action->getStepFormInstance($this, $context, $stepIndex)?->validate();
-
-        $step = $action->getModalStep($stepIndex);
-
-        if (! $step instanceof ModalStep) {
-            return;
-        }
-
-        $formData = $this->tableState->get('modal.action.formData', []);
-        $formData = is_array($formData) ? $formData : [];
-
-        $rules = $step->getValidation($context);
-
-        if ($rules !== []) {
-            Validator::make($formData, $rules, $step->getValidationMessages())->validate();
-        }
-
-        if ($runAfterValidation && ($callback = $step->getAfterValidationCallback())) {
-            $callback($formData, $context);
-        }
-    }
-
-    /**
-     * Run a step's before() hook, letting it pre-fill form state before the step
-     * is shown. The returned array (if any) is merged into the form data bag.
-     */
-    protected function runModalStepBeforeCallback(Action|BulkAction|HeaderAction $action, mixed $context, int $stepIndex): void
-    {
-        $step = $action->getModalStep($stepIndex);
-
-        if (! $step instanceof ModalStep) {
-            return;
-        }
-
-        $callback = $step->getBeforeCallback();
-
-        if ($callback === null) {
-            return;
-        }
-
-        $formData = $this->tableState->get('modal.action.formData', []);
-        $formData = is_array($formData) ? $formData : [];
-
-        $result = $callback($formData, $context);
-
-        if (is_array($result)) {
-            $this->tableState->set('modal.action.formData', array_merge($formData, $result));
-        }
     }
 
     /**

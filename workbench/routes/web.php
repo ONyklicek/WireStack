@@ -162,10 +162,34 @@ Route::get('/previews', function () {
             'component' => InfolistPreview::class,
             'variant' => 'entries',
         ],
+        [
+            'slug' => 'infolists-order',
+            'title' => 'Wire Core',
+            'label' => 'Infolist order detail',
+            'copy' => 'A real order detail: Split layout, badge/boolean/list entries, and header/entry/per-row actions doing real work.',
+            'component' => InfolistPreview::class,
+            'variant' => 'order',
+        ],
     ];
 
     return view('previews.index', ['screens' => $screens]);
 });
+
+// Curated live index of every mobile/tablet preview (open on a phone via LAN).
+Route::get('/previews/mobile', fn () => view('previews.mobile-index', [
+    'lanUrl' => 'http://192.168.0.218:8085/previews/mobile',
+]));
+
+// Standalone layout Blade tags (<x-wire::grid|split|section|fieldset|callout|empty-state>).
+Route::get('/previews/layout-tags', fn () => view('previews.layout-tags'));
+
+// Interactive standalone Tabs + Wizard (Livewire host → Alpine + core JS bundle).
+Route::get('/previews/layout-live', fn () => view('previews.capture', [
+    'component' => \Workbench\App\Livewire\Previews\LayoutPreview::class,
+    'variant' => 'tabs-wizard',
+    'title' => 'Layout tags · live',
+    'subtitle' => 'Standalone Tabs + Wizard',
+]));
 
 foreach ([
     'forms-overview' => ['title' => 'Wire Forms', 'subtitle' => 'Schema-driven form layout preview.', 'component' => FormPreview::class, 'variant' => 'overview'],
@@ -181,20 +205,26 @@ foreach ([
     'table-subrows-limit' => ['title' => 'Wire Table Show More', 'subtitle' => 'Limited child rows with the "show more" affordance.', 'component' => TablePreview::class, 'variant' => 'subrows-limit'],
     'table-subrows-filter' => ['title' => 'Wire Table Sub-row Filters', 'subtitle' => 'Per-child interactive filter bar above the sub-row table.', 'component' => TablePreview::class, 'variant' => 'subrows-filter'],
     'table-modal-form' => ['title' => 'Wire Table Action Modal', 'subtitle' => 'Header-action form modal (default responsive dialog).', 'component' => TablePreview::class, 'variant' => 'modal-form'],
-    'table-modal-slideover-mobile' => ['title' => 'Wire Table Modal · slideOverOnMobile', 'subtitle' => 'Form modal that renders as an edge-pinned slide-over on mobile.', 'component' => TablePreview::class, 'variant' => 'modal-slideover-mobile'],
+    'table-modal-slideover-mobile' => ['title' => 'Wire Table Modal · slideOverOnMobile', 'subtitle' => 'Form modal that renders as a bottom-sheet on mobile.', 'component' => TablePreview::class, 'variant' => 'modal-slideover-mobile'],
+    'table-modal-slideover-mobile-tablet' => ['title' => 'Wire Table Modal · slideOverOnMobile · tablet', 'subtitle' => 'Same modal as a sheet up to md (tablet breakpoint).', 'component' => TablePreview::class, 'variant' => 'modal-slideover-mobile-tablet'],
+    'table-modal-slideover-compose' => ['title' => 'Wire Table Modal · slideOver + slideOverOnMobile', 'subtitle' => 'Desktop slide-over that becomes a mobile bottom-sheet.', 'component' => TablePreview::class, 'variant' => 'modal-slideover-compose'],
+    'table-modal-slideover-compose-tablet' => ['title' => 'Wire Table Modal · compose · tablet', 'subtitle' => 'Compose slide-over as a sheet up to md.', 'component' => TablePreview::class, 'variant' => 'modal-slideover-compose-tablet'],
     'table-modal-fullscreen-mobile' => ['title' => 'Wire Table Modal · fullScreenOnMobile', 'subtitle' => 'Form modal that fills the viewport on mobile.', 'component' => TablePreview::class, 'variant' => 'modal-fullscreen-mobile'],
     'table-modal-wizard' => ['title' => 'Wire Table Wizard Modal', 'subtitle' => 'Multi-step action modal with step indicator and wizard footer.', 'component' => TablePreview::class, 'variant' => 'modal-wizard'],
     'table-actions-group' => ['title' => 'Wire Table Action Group', 'subtitle' => 'Row actions collapsed into a dropdown group.', 'component' => TablePreview::class, 'variant' => 'actions-group'],
+    'table-actions-group-tablet' => ['title' => 'Wire Table Action Group · tablet', 'subtitle' => 'Action group as a sheet up to md (tablet breakpoint).', 'component' => TablePreview::class, 'variant' => 'actions-group-tablet'],
     'table-paginated' => ['title' => 'Wire Table Pagination', 'subtitle' => 'Paginated table with per-page selector and page links.', 'component' => TablePreview::class, 'variant' => 'paginated'],
     'sortable-overview' => ['title' => 'Wire Sortable', 'subtitle' => 'Full reorderable task table preview.', 'component' => SortablePreview::class, 'variant' => 'overview'],
     'sortable-detail' => ['title' => 'Wire Sortable Detail', 'subtitle' => 'Closer reorder-surface preview.', 'component' => SortablePreview::class, 'variant' => 'detail'],
     'core-overview' => ['title' => 'Wire Core', 'subtitle' => 'Stats, actions, and shared primitives.', 'component' => CorePreview::class, 'variant' => 'overview'],
     'core-modal' => ['title' => 'Wire Core Modal', 'subtitle' => 'Real modal surface from the core runtime.', 'component' => CorePreview::class, 'variant' => 'modal'],
+    'core-dropdown' => ['title' => 'Wire Core Dropdown', 'subtitle' => 'Generic dropdown that becomes a bottom sheet on mobile.', 'component' => CorePreview::class, 'variant' => 'dropdown'],
     'widgets-overview' => ['title' => 'Wire Core Widgets', 'subtitle' => 'Stats overview and a chart widget composed into a dashboard grid.', 'component' => WidgetPreview::class, 'variant' => 'overview'],
     'widgets-chart' => ['title' => 'Wire Core Chart Widget', 'subtitle' => 'A single interactive Chart.js widget with heading and filter.', 'component' => WidgetPreview::class, 'variant' => 'chart'],
     'widgets-bar-chart' => ['title' => 'Wire Core Bar Chart Widget', 'subtitle' => 'Pure-CSS bar chart with finance, system, and horizontal progress modes.', 'component' => WidgetPreview::class, 'variant' => 'bar-chart'],
     'infolists-overview' => ['title' => 'Wire Core Infolist', 'subtitle' => 'Read-only record display with sections, a column grid, and formatted entries.', 'component' => InfolistPreview::class, 'variant' => 'overview'],
     'infolists-entries' => ['title' => 'Wire Core Infolist Entries', 'subtitle' => 'Gallery of every built-in infolist entry type bound to one record.', 'component' => InfolistPreview::class, 'variant' => 'entries'],
+    'infolists-order' => ['title' => 'Wire Core Infolist Order Detail', 'subtitle' => 'A real order detail: Split layout, badge/boolean/list entries, and header/entry/per-row actions.', 'component' => InfolistPreview::class, 'variant' => 'order'],
 ] as $slug => $screen) {
     Route::get('/previews/'.$slug, fn () => view('previews.capture', $screen));
 }
@@ -203,6 +233,9 @@ $fieldPreviews = [
     'text-input' => 'Text Input',
     'textarea' => 'Textarea',
     'select' => 'Select',
+    'select-floating' => 'Select · floating on mobile (opt-out)',
+    'select-bp-lg' => 'Select · per-component breakpoint lg',
+    'checkbox-list-responsive' => 'CheckboxList · per-breakpoint columns',
     'checkbox' => 'Checkbox',
     'checkbox-list' => 'Checkbox List',
     'radio' => 'Radio',

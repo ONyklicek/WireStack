@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 
 /**
  * Unified date/time picker field.
@@ -16,6 +17,8 @@ use Closure;
  */
 class DateTimePicker extends Field
 {
+    use HasSheetOnMobile;
+
     protected string $mode = 'datetime';
 
     protected ?string $format = null;

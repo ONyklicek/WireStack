@@ -593,11 +593,19 @@ class Dashboard extends Component implements HasWidgets
 
 ### Blade Template
 
+Render the dashboard with the `<x-wire::widget-grid>` component.
+`getVisibleWidgets()` is public and returns only the widgets that pass their
+visibility and authorization checks; each widget honors its own `columnSpan()`
+and polling interval inside the grid:
+
 ```blade
 <div>
-    <x-wire::widget-grid :widgets="$this->getVisibleWidgets()" />
+    <x-wire::widget-grid :widgets="$this->getVisibleWidgets()" :columns="2" />
 </div>
 ```
+
+Each widget is also `Htmlable`, so you can skip the component and lay them out
+yourself: `@foreach ($this->getVisibleWidgets() as $widget) {{ $widget }} @endforeach`.
 
 ### WithWidgets API
 
@@ -684,8 +692,8 @@ Inherited from traits:
 ## Blade Components
 
 ```blade
-{{-- Widget grid --}}
-<x-wire::widget-grid :widgets="$widgets" />
+{{-- Widget grid component --}}
+<x-wire::widget-grid :widgets="$widgets" :columns="2" />
 
 {{-- Individual widget views --}}
 wire-core::widgets.stats-overview

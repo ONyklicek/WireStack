@@ -64,17 +64,19 @@ trait HasSize
      * Single source for clickable button surfaces (action buttons, action group
      * triggers, ButtonColumn) so the xs/sm/md/lg scale stays identical across
      * every surface. `$iconOnly` returns square padding without text/gap for
-     * icon-only buttons. Literal class strings are kept verbatim for Tailwind's
-     * JIT scanner (safe allow-list).
+     * icon-only buttons — enlarged one step on mobile so the tap target clears
+     * ~40px on a touch screen, then back to the compact desktop size from `sm`
+     * up. Literal class strings are kept verbatim for Tailwind's JIT scanner
+     * (safe allow-list).
      */
     public static function getButtonSizeClasses(string $size, bool $iconOnly = false): string
     {
         if ($iconOnly) {
             return match ($size) {
-                'xs' => 'p-1',
-                'md' => 'p-2',
-                'lg' => 'p-2.5',
-                default => 'p-1.5',
+                'xs' => 'p-2 sm:p-1',
+                'md' => 'p-2.5 sm:p-2',
+                'lg' => 'p-3 sm:p-2.5',
+                default => 'p-2.5 sm:p-1.5',
             };
         }
 

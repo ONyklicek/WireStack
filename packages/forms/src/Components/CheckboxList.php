@@ -14,7 +14,8 @@ class CheckboxList extends Field
 {
     use HasOptions;
 
-    protected int $columns = 1;
+    /** @var int|array<string|int, int|string> */
+    protected int|array $columns = 1;
 
     protected bool $searchable = false;
 
@@ -31,7 +32,13 @@ class CheckboxList extends Field
     /** @var array<string, array<string, string>>|Closure */
     protected array|Closure $groups = [];
 
-    public function columns(int $columns): static
+    /**
+     * Number of option columns. Pass an int for a mobile-first reflow, or a
+     * Filament-style per-breakpoint map, e.g. ['default' => 1, 'md' => 2, 'lg' => 3].
+     *
+     * @param  int|array<string|int, int|string>  $columns
+     */
+    public function columns(int|array $columns): static
     {
         $this->columns = $columns;
 
@@ -91,7 +98,10 @@ class CheckboxList extends Field
         return $this;
     }
 
-    public function getColumns(): int
+    /**
+     * @return int|array<string|int, int|string>
+     */
+    public function getColumns(): int|array
     {
         return $this->columns;
     }

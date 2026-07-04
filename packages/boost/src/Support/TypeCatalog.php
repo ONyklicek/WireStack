@@ -6,6 +6,7 @@ namespace NyonCode\WireBoost\Support;
 
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Actions\BaseAction;
+use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 use NyonCode\WireCore\Infolists\Components\Entry;
 use NyonCode\WireCore\Modals\Modal;
 use NyonCode\WireCore\Widgets\Widget;
@@ -37,6 +38,7 @@ class TypeCatalog
         'infolist-entries' => Entry::class,
         'widgets' => Widget::class,
         'modals' => Modal::class,
+        'layouts' => LayoutComponent::class,
     ];
 
     /**
@@ -66,8 +68,11 @@ class TypeCatalog
         }
 
         $reflection = new ReflectionClass($base);
-        $directory = dirname((string) $reflection->getFileName());
-        $namespace = $reflection->getNamespaceName();
+        [$directory, $namespace] = $this->scanRoot(
+            $category,
+            (string) $reflection->getFileName(),
+            $reflection->getNamespaceName(),
+        );
 
         $types = [];
 
@@ -98,6 +103,28 @@ class TypeCatalog
         usort($types, static fn (array $a, array $b): int => strcmp($a['name'], $b['name']));
 
         return $types;
+    }
+
+    /**
+     * Directory + namespace to scan for a category's concrete types.
+     *
+     * Most categories ship their concrete types next to the canonical base
+     * class. Layout components are the exception: they extend LayoutComponent
+     * (Foundation/Components) but live in the sibling Foundation/Schema
+     * directory, so scan there instead.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function scanRoot(string $category, string $baseFile, string $baseNamespace): array
+    {
+        if ($category === 'layouts') {
+            return [
+                dirname(dirname($baseFile)).'/Schema',
+                Str::beforeLast($baseNamespace, '\\').'\\Schema',
+            ];
+        }
+
+        return [dirname($baseFile), $baseNamespace];
     }
 
     /**

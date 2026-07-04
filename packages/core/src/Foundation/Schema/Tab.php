@@ -18,7 +18,8 @@ class Tab extends LayoutComponent
 {
     protected ?string $icon = null;
 
-    protected int $columns = 1;
+    /** @var int|array<string|int, int|string> */
+    protected int|array $columns = 1;
 
     public function icon(string|Icon|null $icon): static
     {
@@ -27,7 +28,10 @@ class Tab extends LayoutComponent
         return $this;
     }
 
-    public function columns(int $columns): static
+    /**
+     * @param  int|array<string|int, int|string>  $columns
+     */
+    public function columns(int|array $columns): static
     {
         $this->columns = $columns;
 
@@ -39,7 +43,10 @@ class Tab extends LayoutComponent
         return $this->icon;
     }
 
-    public function getColumns(): int
+    /**
+     * @return int|array<string|int, int|string>
+     */
+    public function getColumns(): int|array
     {
         return $this->columns;
     }

@@ -520,3 +520,30 @@ test('edit option modal heading defaults and is overridable', function () {
     expect(Select::make('category')->getEditOptionModalHeading())->toBe('Edit option')
         ->and(Select::make('category')->editOptionModalHeading('Change')->getEditOptionModalHeading())->toBe('Change');
 });
+
+test('searchable selects default to a floating dropdown on mobile, plain ones to a sheet', function () {
+    // A searchable/remote select keeps the classic floating dropdown on mobile so
+    // the search input stays usable; a plain select follows the global sheet
+    // default; an explicit ->sheetOnMobile() always wins.
+    expect(Select::make('role')->usesSheetOnMobile())->toBeTrue()
+        ->and(Select::make('role')->searchable()->usesSheetOnMobile())->toBeFalse()
+        ->and(Select::make('role')->searchable()->sheetOnMobile()->usesSheetOnMobile())->toBeTrue()
+        ->and(Select::make('role')->sheetOnMobile(false)->usesSheetOnMobile())->toBeFalse();
+});
+
+test('per-component mobile breakpoint overrides the global default', function () {
+    config(['wire-core.mobile.breakpoint' => 'sm']);
+
+    expect(Select::make('r')->getMobileBreakpoint())->toBe('sm')
+        ->and(Select::make('r')->mobileBreakpoint('lg')->getMobileBreakpoint())->toBe('lg')
+        ->and(Select::make('r')->mobileBreakpoint('md')->getMobileBreakpoint())->toBe('md')
+        // Unknown value normalizes to sm.
+        ->and(Select::make('r')->mobileBreakpoint('bogus')->getMobileBreakpoint())->toBe('sm');
+
+    // Global default applies when not overridden per instance.
+    config(['wire-core.mobile.breakpoint' => 'md']);
+    expect(Select::make('r')->getMobileBreakpoint())->toBe('md')
+        ->and(Select::make('r')->mobileBreakpoint('sm')->getMobileBreakpoint())->toBe('sm');
+
+    config(['wire-core.mobile.breakpoint' => 'sm']);
+});

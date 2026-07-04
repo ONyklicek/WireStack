@@ -238,10 +238,12 @@ it('resolves canonical button size classes for labelled and icon-only buttons', 
         ->and(Concerns\HasSize::getButtonSizeClasses('lg'))->toBe('px-4 py-2.5 text-base gap-2')
         ->and(Concerns\HasSize::getButtonSizeClasses('sm'))->toBe('px-2.5 py-1.5 text-sm gap-1.5')
         ->and(Concerns\HasSize::getButtonSizeClasses('unknown'))->toBe('px-2.5 py-1.5 text-sm gap-1.5')
-        ->and(Concerns\HasSize::getButtonSizeClasses('xs', iconOnly: true))->toBe('p-1')
-        ->and(Concerns\HasSize::getButtonSizeClasses('md', iconOnly: true))->toBe('p-2')
-        ->and(Concerns\HasSize::getButtonSizeClasses('lg', iconOnly: true))->toBe('p-2.5')
-        ->and(Concerns\HasSize::getButtonSizeClasses('sm', iconOnly: true))->toBe('p-1.5');
+        // Icon-only padding is enlarged on mobile (tap target) and restored to the
+        // compact size from sm up.
+        ->and(Concerns\HasSize::getButtonSizeClasses('xs', iconOnly: true))->toBe('p-2 sm:p-1')
+        ->and(Concerns\HasSize::getButtonSizeClasses('md', iconOnly: true))->toBe('p-2.5 sm:p-2')
+        ->and(Concerns\HasSize::getButtonSizeClasses('lg', iconOnly: true))->toBe('p-3 sm:p-2.5')
+        ->and(Concerns\HasSize::getButtonSizeClasses('sm', iconOnly: true))->toBe('p-2.5 sm:p-1.5');
 });
 
 it('resolves canonical choice-surface color bundles per sub-surface', function () {

@@ -7,10 +7,12 @@ namespace NyonCode\WireCore\Infolists\Components;
 use Closure;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Components\ViewComponent;
+use NyonCode\WireCore\Foundation\Concerns\HasActions;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Concerns\HasIcon;
 use NyonCode\WireCore\Foundation\Concerns\HasPlaceholder;
 use NyonCode\WireCore\Foundation\Concerns\HasTooltip;
+use NyonCode\WireCore\Foundation\Contracts\HasFieldActions;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 
 /**
@@ -25,8 +27,9 @@ use NyonCode\WireCore\Foundation\Support\EnumResolver;
  *
  * @phpstan-consistent-constructor
  */
-abstract class Entry extends ViewComponent
+abstract class Entry extends ViewComponent implements HasFieldActions
 {
+    use HasActions;
     use HasColor;
     use HasIcon;
     use HasPlaceholder;

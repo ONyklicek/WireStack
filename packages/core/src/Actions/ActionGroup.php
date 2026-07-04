@@ -11,8 +11,10 @@ use Illuminate\Support\HtmlString;
 use NyonCode\WireCore\Actions\Concerns\HasColor;
 use NyonCode\WireCore\Actions\Concerns\HasIcons;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Concerns\HasSize;
 use NyonCode\WireCore\Foundation\Icons\Icon;
+use NyonCode\WireCore\Foundation\Support\MobileSheet;
 
 /**
  * Class ActionGroup - Enhanced with dividers, nested groups, badges, and auto-dividers.
@@ -38,6 +40,7 @@ class ActionGroup implements Htmlable
 {
     use HasColor;
     use HasIcons;
+    use HasSheetOnMobile;
 
     /** @var array<int, Action|ActionGroup> */
     public array $actions = [];
@@ -391,7 +394,7 @@ class ActionGroup implements Htmlable
      * Placement maps 1:1 to the fluent dropdownPosition() vocabulary; the offset
      * is the gap (px) between trigger and panel.
      *
-     * @return array{placement: string, offset: int}
+     * @return array{placement: string, offset: int, sheetOnMobile: bool}
      */
     public function getDropdownConfig(): array
     {
@@ -400,7 +403,12 @@ class ActionGroup implements Htmlable
             default => 'bottom-end',
         };
 
-        return ['placement' => $placement, 'offset' => 6];
+        return [
+            'placement' => $placement,
+            'offset' => 6,
+            'sheetOnMobile' => $this->usesSheetOnMobile(),
+            'sheetBreakpoint' => MobileSheet::px($this->getMobileBreakpoint()),
+        ];
     }
 
     /**

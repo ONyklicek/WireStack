@@ -114,6 +114,32 @@ class FieldPreview extends Component
                     'viewer' => 'Viewer',
                 ]),
 
+            // Per-component breakpoint: sheet up to lg (1024) even when the global
+            // default is sm — so it's a sheet on a tablet at ~900px.
+            'select-bp-lg' => Select::make('role')
+                ->label('Workspace role')
+                ->helperText('Controls what this member can access.')
+                ->mobileBreakpoint('lg')
+                ->options([
+                    'admin' => 'Administrator',
+                    'manager' => 'Manager',
+                    'editor' => 'Editor',
+                    'viewer' => 'Viewer',
+                ]),
+
+            // Searchable selects default to the classic floating dropdown on
+            // mobile (no explicit ->sheetOnMobile call needed).
+            'select-floating' => Select::make('role')
+                ->label('Workspace role')
+                ->helperText('Controls what this member can access.')
+                ->searchable()
+                ->options([
+                    'admin' => 'Administrator',
+                    'manager' => 'Manager',
+                    'editor' => 'Editor',
+                    'viewer' => 'Viewer',
+                ]),
+
             'checkbox' => Checkbox::make('agree')
                 ->label('I agree to the terms of service')
                 ->helperText('Required before the workspace can be created.'),
@@ -128,6 +154,22 @@ class FieldPreview extends Component
                     'delete' => 'Delete records',
                 ])
                 ->columns(2),
+
+            // Filament-style per-breakpoint columns: 1 on phones, 2 from md, 4 from xl.
+            'checkbox-list-responsive' => CheckboxList::make('permissions')
+                ->label('Permissions')
+                ->helperText('Per-breakpoint columns: 1 / md:2 / xl:4.')
+                ->options([
+                    'view' => 'View records',
+                    'create' => 'Create records',
+                    'edit' => 'Edit records',
+                    'delete' => 'Delete records',
+                    'export' => 'Export records',
+                    'import' => 'Import records',
+                    'share' => 'Share records',
+                    'archive' => 'Archive records',
+                ])
+                ->columns(['default' => 1, 'md' => 2, 'xl' => 4]),
 
             'radio' => Radio::make('plan')
                 ->label('Billing plan')

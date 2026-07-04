@@ -793,6 +793,14 @@ pre {
     color: inherit;
 }
 
+/* Torchlight preserves the raw source in a sibling <textarea> for the copy
+   button and hides it with an inline style. Hide it defensively too, so a
+   partial/failed highlight run can never leak it as duplicated raw code — the
+   visible code always lives in the <pre> above it. */
+.docs-article [data-torchlight-original] {
+    display: none !important;
+}
+
 .torchlight .line {
     display: block;
     min-height: 1.5em;

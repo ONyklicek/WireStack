@@ -44,6 +44,7 @@ Users should interact mainly with:
 
 - `Form`
 - `WithForms`
+- `Concerns\WithActions` — host trait for running standalone actions (modal/slide-over/wizard/confirmation/form + full lifecycle) in any Livewire component without a table. It composes the wire-core engine `Actions\Concerns\InteractsWithActions` (form-agnostic) with `Concerns\InteractsWithActionForms` (the form-hosting half). `WithTable` composes the same two, so the action runtime has one canonical owner. Render the mounted action with `<x-wire-actions::modal-host :component="$this" />`.
 
 Internal shape:
 

@@ -74,6 +74,43 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Mobile
+    |--------------------------------------------------------------------------
+    |
+    | How floating panels (action-group menus, dropdowns, select/date/tag
+    | pickers, table filter & column-toggle panels) and action modals behave on
+    | small screens. These are the GLOBAL DEFAULTS — every component can override
+    | them per-instance:
+    |
+    |   Sheet on/off (sheet vs. classic floating dropdown):
+    |     ->sheetOnMobile(true|false)          fields, filters, ActionGroup, Table
+    |     :sheet-on-mobile="false"             <x-wire::dropdown>
+    |
+    |   Breakpoint (where the sheet/full-screen kicks in):
+    |     ->mobileBreakpoint('sm'|'md'|'lg')   fields, filters, ActionGroup, Table,
+    |                                          action modals (HasModal)
+    |     :breakpoint="'md'"                   <x-wire::dropdown>
+    |
+    | Notes: searchable Select/SelectFilter default to floating (search stays
+    | usable); an explicit ->sheetOnMobile() still wins. Sheets add safe-area
+    | padding, a drag-to-dismiss grabber and a focus trap automatically.
+    |
+    */
+    'mobile' => [
+        // Default: present floating panels as a bottom sheet on mobile.
+        // false = classic trigger-anchored floating panel everywhere.
+        'sheet' => env('WIRE_MOBILE_SHEET', true),
+
+        // Default breakpoint below which panels present as a mobile sheet:
+        //   'sm' (< 640px, phones — default)
+        //   'md' (< 768px, incl. small tablets)
+        //   'lg' (< 1024px, incl. tablet portrait)
+        // From the breakpoint up, the classic desktop floating panel is used.
+        'breakpoint' => env('WIRE_MOBILE_BREAKPOINT', 'sm'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Audit Log
     |--------------------------------------------------------------------------
     |

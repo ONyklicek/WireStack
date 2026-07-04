@@ -115,7 +115,7 @@ row 2). A conditional field inside a repeater shows or hides based on **its own 
 not its siblings'.
 
 Multi-step forms get the same treatment: inside a Livewire host the standalone
-[Wizard](fields/wizard.md#per-step-validation) validates the current step on the server before
+[Wizard](../core/schema/layout/wizard.md#per-step-validation) validates the current step on the server before
 "Next" advances, and a failed submit jumps to the first step containing an error.
 
 ## Prefill a form from an action

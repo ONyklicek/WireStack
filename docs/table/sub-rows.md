@@ -233,7 +233,7 @@ The rollup constraint is keyed by relation name: a rollup over a *different*
 relation (say `->counts('payments')`) is untouched by an `items`-scoped filter
 and keeps aggregating all of its children.
 
-See [Filters — Filtering by Sub-Row Values](filters.md#filtering-by-sub-row-values).
+See [Filters — Filtering by Sub-Row Values](filters/relationships.md#filtering-by-sub-row-values).
 
 ## Row Actions
 
@@ -380,5 +380,5 @@ active, since per-parent filtering falls back to a safe per-parent query.
 
 - [Summaries](summaries.md) — aggregate types, scopes, formatting, rollups
 - [Table Overview](overview.md)
-- [Columns](columns.md)
+- [Columns](columns/index.md)
 - [Actions](actions.md)

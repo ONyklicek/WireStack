@@ -178,7 +178,7 @@ class TextEntry extends Entry
         return [$this->formatScalar($state)];
     }
 
-    private function formatScalar(mixed $value): string
+    protected function formatScalar(mixed $value): string
     {
         $value = $this->applyNumericAndDateFormatting($value);
 

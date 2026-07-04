@@ -41,11 +41,18 @@ class TablePreview extends Component
     private const EXPAND_FIRST_VARIANTS = ['subrows', 'subrows-limit', 'subrows-filter'];
 
     /** Variants that auto-open the header-action form modal for visual QA. */
-    private const MODAL_VARIANTS = ['modal-form', 'modal-slideover-mobile', 'modal-fullscreen-mobile', 'modal-wizard'];
+    private const MODAL_VARIANTS = ['modal-form', 'modal-slideover-mobile', 'modal-slideover-compose', 'modal-fullscreen-mobile', 'modal-wizard'];
 
     public function mount(string $variant = 'overview'): void
     {
         $this->variant = $variant;
+
+        // Verification aid: the *-tablet variants raise the mobile-sheet
+        // breakpoint to md so tablet-width screenshots show the sheet.
+        if (str_ends_with($variant, '-tablet')) {
+            config(['wire-core.mobile.breakpoint' => 'md']);
+            $this->variant = str_replace('-tablet', '', $variant);
+        }
     }
 
     /**
@@ -259,6 +266,7 @@ class TablePreview extends Component
 
         return match ($this->variant) {
             'modal-slideover-mobile' => $action->slideOverOnMobile(),
+            'modal-slideover-compose' => $action->slideOver()->slideOverOnMobile(),
             'modal-fullscreen-mobile' => $action->fullScreenOnMobile(),
             'modal-wizard' => $action->steps([
                 ModalStep::make('Account')->schema([

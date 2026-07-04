@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Core\Actions;
 
 use Closure;
-use NyonCode\WireCore\Core\Actions\Stages\ActionExecutionStage;
 use NyonCode\WireCore\Core\Actions\Stages\ActionStage;
 use NyonCode\WireCore\Core\Actions\Stages\AfterCallbacksStage;
 use NyonCode\WireCore\Core\Actions\Stages\BeforeCallbacksStage;
@@ -54,7 +53,7 @@ final class ActionPipeline
      */
     public function execute(ActionContext $context, Closure $action): ActionResult
     {
-        $stages = $this->resolveStages($action);
+        $stages = $this->resolveStages();
 
         $terminal = function (ActionContext $ctx) use ($action): ActionResult {
             $result = $action($ctx);
@@ -76,9 +75,13 @@ final class ActionPipeline
     /**
      * Resolve the stages to use, applying defaults if none provided.
      *
+     * The action itself runs at the pipeline's terminal (see {@see execute()}),
+     * so the default stages only wrap it: before-callbacks guard/halt ahead of
+     * it, and after-callbacks / notification / redirect post-process the result.
+     *
      * @return array<Closure|ActionStage>
      */
-    private function resolveStages(Closure $action): array
+    private function resolveStages(): array
     {
         if ($this->stages !== []) {
             return $this->stages;
@@ -86,7 +89,6 @@ final class ActionPipeline
 
         return [
             new BeforeCallbacksStage,
-            new ActionExecutionStage($action),
             new AfterCallbacksStage,
             new NotificationStage,
             new RedirectStage,

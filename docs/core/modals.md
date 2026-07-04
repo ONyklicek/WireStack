@@ -54,15 +54,21 @@ Action::make('edit')
     ->closeModalOnEscape()
 
     // Mobile adaptations
-    ->slideOverOnMobile()            // slide-over on mobile, modal on desktop
-    ->fullScreenOnMobile();          // full screen on mobile
+    ->slideOverOnMobile()            // bottom-sheet on mobile, dialog on desktop
+    ->fullScreenOnMobile()           // full screen on mobile
+    ->mobileBreakpoint('md');        // where the sheet kicks in (sm|md|lg)
 ```
 
-Below the `sm` breakpoint, `slideOverOnMobile()` renders the form modal as an
-edge-pinned, full-height panel sliding in from the right, and
-`fullScreenOnMobile()` fills the viewport; both scroll the body *inside* the
-panel so the footer buttons stay visible, and both keep the centered dialog
-unchanged on desktop.
+Below the mobile breakpoint, `slideOverOnMobile()` renders the form modal as a
+**bottom-sheet** that slides up from the bottom edge, and `fullScreenOnMobile()`
+fills the viewport; both scroll the body *inside* the panel so the footer buttons
+stay visible, and both keep the centered dialog unchanged on desktop. Sheets add
+safe-area padding, a drag-to-dismiss grabber and a focus trap automatically.
+
+The breakpoint defaults to the global `wire-core.mobile.breakpoint` (`sm`, i.e.
+`< 640px`) and can be raised per action with `->mobileBreakpoint('md')` (`< 768px`,
+includes small tablets) or `'lg'` (`< 1024px`). See
+[Configuration → Mobile](../configuration.md#mobile) for the global default.
 
 ## Modal Config Objects
 

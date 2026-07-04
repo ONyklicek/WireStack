@@ -33,6 +33,8 @@
             'searchable' => $filter->isSearchable(),
             'searchPrompt' => __('Search...'),
             'noResultsMessage' => __('No results found'),
+            'sheetOnMobile' => $filter->usesSheetOnMobile(),
+            'mobileBreakpoint' => $filter->getMobileBreakpoint(),
             // Filters must apply immediately — match the native path's wire:model.live.
             'live' => true,
         ])

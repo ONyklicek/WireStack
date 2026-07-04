@@ -325,6 +325,72 @@ Action::make('custom')
     ]);
 ```
 
+## Standalone Actions (without a table)
+
+Actions are not table-only. Any Livewire component can declare and fully run them
+— modal, slide-over, wizard, confirmation, form, validation and the whole
+lifecycle — with the `WithActions` trait. Declare named actions in `actions()`,
+render the buttons, and drop the modal host once.
+
+```php
+use Livewire\Component;
+use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireForms\Concerns\WithActions;
+
+class EditPanel extends Component
+{
+    use WithActions;
+
+    public Offer $offer;
+
+    /** @return array<int, Action> */
+    protected function actions(): array
+    {
+        return [$this->editOfferAction()];
+    }
+
+    public function editOfferAction(): Action
+    {
+        return Action::make('editOffer')
+            ->label('Edit')->icon('pencil')
+            ->slideOver()
+            ->form([TextInput::make('name')->required()])
+            ->fillFormUsing(fn () => ['name' => $this->offer->name])
+            ->action(fn (array $data) => $this->offer->update($data));
+    }
+
+    public function render()
+    {
+        return view('livewire.edit-panel');
+    }
+}
+```
+
+```blade
+{{-- The button auto-derives wire:click="mountAction('editOffer')" --}}
+<x-wire-actions::button :action="$this->editOfferAction()" />
+
+{{-- Render once — shows the mounted action's modal/slide-over/wizard/confirmation --}}
+<x-wire-actions::modal-host :component="$this" />
+```
+
+The trait adds these Livewire methods:
+
+| Method | Purpose |
+|--------|---------|
+| `mountAction($name, ['record' => $model])` | Open the action's modal, or run a plain action immediately. The optional `record` scopes it to a model. |
+| `callMountedAction()` | Validate the form and run the action callback. |
+| `unmountAction()` | Close the modal and clear its state. |
+| `nextActionModalStep()` / `prevActionModalStep()` | Wizard navigation. |
+| `callModalFooterAction($name)` | Run a custom footer action. |
+
+The modal form binds to the public `actionModalFormData` property, so
+`fillFormUsing`, field actions and `createOptionForm` behave exactly as they do
+in a table action modal. `WithActions` lives in `wire-forms` (a form-capable host
+needs the wire-forms field concerns); the same engine
+(`NyonCode\WireCore\Actions\Concerns\InteractsWithActions`) also backs `WithTable`.
+
 ## BaseAction API Reference
 
 Shared across Action, BulkAction, HeaderAction:
@@ -365,4 +431,5 @@ Shared across Action, BulkAction, HeaderAction:
 ```blade
 <x-wire-actions::button :action="$action" />
 <x-wire-actions::group :group="$group" />
+<x-wire-actions::modal-host :component="$this" />  {{-- for a WithActions host --}}
 ```

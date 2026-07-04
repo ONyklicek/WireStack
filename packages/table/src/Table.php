@@ -19,6 +19,7 @@ use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireTable\Columns\Column;
@@ -32,6 +33,7 @@ class Table implements Htmlable
 {
     use Concerns\HasGrouping;
     use Concerns\HasSubRows;
+    use HasSheetOnMobile;
     use HasSqlDebug;
     use Macroable;
 

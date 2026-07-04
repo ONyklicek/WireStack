@@ -94,12 +94,12 @@ test('cards with icons render an icon per option', function () {
         ->and($html)->toContain('<svg');
 });
 
-test('inline cards flow horizontally', function () {
+test('inline cards flow horizontally from sm up but stack on mobile', function () {
     $html = renderRadio(
         Radio::make('plan')->options(['a' => 'A', 'b' => 'B'])->cards()->inline()
     );
 
-    expect($html)->toContain('grid-flow-col');
+    expect($html)->toContain('grid-cols-1 sm:grid-cols-none sm:grid-flow-col sm:auto-cols-fr');
 });
 
 test('segmented variant renders a pill-track group', function () {

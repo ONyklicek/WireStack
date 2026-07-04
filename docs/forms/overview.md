@@ -321,9 +321,13 @@ class MyComponent extends Component
 
 ### Layout Components
 
-- [Grid](fields/grid.md) — CSS grid layout
-- [Section](fields/section.md) — collapsible section with heading
-- [Fieldset](fields/fieldset.md) — HTML fieldset
+Layout and schema components (Grid, Flex, Section, Fieldset, Tabs, Wizard,
+Callout, Empty State) live in the shared [Schema](../core/schema/overview.md)
+section — the same vocabulary is reused by forms, infolists, and modals.
+
+- [Grid](../core/schema/layout/grid.md) — CSS grid layout
+- [Section](../core/schema/layout/section.md) — collapsible section with heading
+- [Fieldset](../core/schema/layout/fieldset.md) — HTML fieldset
 
 ### Display Components
 

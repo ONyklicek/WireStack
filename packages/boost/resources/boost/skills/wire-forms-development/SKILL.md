@@ -81,6 +81,39 @@ EditAction::make()
     ->fillFormUsing(fn ($record) => ['name' => $record->name, 'role' => $record->role->value]);
 ```
 
+## Standalone actions outside a table
+
+To run modal/slide-over/wizard/confirmation actions with forms in a plain Livewire component (no
+table), use the `WithActions` trait instead of hand-rolling modal state:
+
+```php
+use NyonCode\WireForms\Concerns\WithActions;
+
+class EditPanel extends Component
+{
+    use WithActions;
+
+    protected function actions(): array
+    {
+        return [
+            Action::make('editOffer')->slideOver()
+                ->form([TextInput::make('name')->required()])
+                ->action(fn (array $data) => $this->offer->update($data)),
+        ];
+    }
+}
+```
+
+```blade
+<x-wire-actions::button :action="$this->offerAction()" />  {{-- auto wire:click=mountAction --}}
+<x-wire-actions::modal-host :component="$this" />           {{-- render once --}}
+```
+
+Livewire methods: `mountAction($name, ['record' => $model])`, `callMountedAction()`,
+`unmountAction()`, `nextActionModalStep()`/`prevActionModalStep()`, `callModalFooterAction($name)`.
+The modal form binds to the public `actionModalFormData` property; `fillFormUsing`, field actions and
+`createOptionForm` behave exactly as in a table modal. Same engine as `WithTable`.
+
 ## Rules
 
 - A field's `make($name)` argument is the key under the form `statePath`.

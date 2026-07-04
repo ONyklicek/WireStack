@@ -4,6 +4,7 @@
     assert($layout instanceof Fieldset);
 
     $columns = $layout->getColumns();
+    $columnsClass = is_array($columns) ? \NyonCode\WireCore\Foundation\Support\ResponsiveGrid::cols($columns) : '';
 @endphp
 
 <fieldset class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
@@ -15,6 +16,7 @@
 
     <div @class([
         'grid gap-4',
+        $columnsClass,
         'sm:grid-cols-1' => $columns === 1,
         'sm:grid-cols-2' => $columns === 2,
         'sm:grid-cols-2 md:grid-cols-3' => $columns === 3,

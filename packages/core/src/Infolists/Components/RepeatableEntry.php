@@ -4,9 +4,21 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Infolists\Components;
 
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Database\Eloquent\Model;
+
 /**
  * Repeatable entry — renders a nested entry schema once per item of an
  * iterable state (e.g. a `hasMany` relation or an array of rows).
+ *
+ * Actions declared via the inherited `actions()` render once per row and, when
+ * dispatched, receive that row's item as `$record` / `$state` — the host
+ * resolves the row by its zero-based index (see the host's
+ * callInfolistAction()).
+ *
+ * When the rows are Eloquent models whose child entries read nested relation
+ * paths (e.g. `product.name`), declare those relations with {@see with()} to
+ * eager-load them once instead of lazily per row (N+1).
  */
 class RepeatableEntry extends Entry
 {
@@ -16,6 +28,9 @@ class RepeatableEntry extends Entry
     protected int $columns = 1;
 
     protected bool $contained = true;
+
+    /** @var array<int, string> */
+    protected array $with = [];
 
     /**
      * @param  array<int, Entry>  $components
@@ -60,6 +75,31 @@ class RepeatableEntry extends Entry
     }
 
     /**
+     * Relations to eager-load on the row items before rendering, preventing N+1
+     * queries when child entries read nested relation paths. Accepts a single
+     * relation or a list; repeated calls merge.
+     *
+     * @param  array<int, string>|string  $relations
+     */
+    public function with(array|string $relations): static
+    {
+        $this->with = array_values(array_unique(array_merge(
+            $this->with,
+            is_array($relations) ? $relations : [$relations],
+        )));
+
+        return $this;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function getWith(): array
+    {
+        return $this->with;
+    }
+
+    /**
      * Deep-clone the child schema. A shallow clone would share child entry
      * instances with the original and every other clone — the same pattern that
      * leaked per-item state paths across Repeater items in forms. Matters as
@@ -75,12 +115,12 @@ class RepeatableEntry extends Entry
     }
 
     /**
-     * One row per state item, each a fresh clone of the schema bound to the
-     * item record.
+     * The raw row items resolved from the state, re-indexed from zero so a row's
+     * position is a stable key for per-row action dispatch.
      *
-     * @return array<int, array<int, Entry>>
+     * @return array<int, mixed>
      */
-    public function getRows(): array
+    public function getRowItems(): array
     {
         $items = $this->getState();
 
@@ -92,9 +132,50 @@ class RepeatableEntry extends Entry
             return [];
         }
 
+        $items = array_values($items);
+
+        $this->eagerLoadItems($items);
+
+        return $items;
+    }
+
+    /**
+     * Eager-load the declared relations across every model row in one query per
+     * relation. Rows are objects, so loading them onto a temporary collection
+     * populates the very instances the child entries render from; `loadMissing`
+     * skips relations already present.
+     *
+     * @param  array<int, mixed>  $items
+     */
+    protected function eagerLoadItems(array $items): void
+    {
+        if ($this->with === [] || $items === []) {
+            return;
+        }
+
+        $models = array_values(array_filter(
+            $items,
+            static fn ($item): bool => $item instanceof Model,
+        ));
+
+        if ($models === []) {
+            return;
+        }
+
+        (new EloquentCollection($models))->loadMissing($this->with);
+    }
+
+    /**
+     * One row per state item, each a fresh clone of the schema bound to the
+     * item record. Row order matches {@see getRowItems()} (zero-based).
+     *
+     * @return array<int, array<int, Entry>>
+     */
+    public function getRows(): array
+    {
         $rows = [];
 
-        foreach ($items as $item) {
+        foreach ($this->getRowItems() as $item) {
             $entries = [];
 
             foreach ($this->schema as $entry) {

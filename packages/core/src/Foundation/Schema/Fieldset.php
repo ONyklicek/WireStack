@@ -14,16 +14,23 @@ use NyonCode\WireCore\Foundation\Components\LayoutComponent;
  */
 class Fieldset extends LayoutComponent
 {
-    protected int $columns = 1;
+    /** @var int|array<string|int, int|string> */
+    protected int|array $columns = 1;
 
-    public function columns(int $columns): static
+    /**
+     * @param  int|array<string|int, int|string>  $columns
+     */
+    public function columns(int|array $columns): static
     {
         $this->columns = $columns;
 
         return $this;
     }
 
-    public function getColumns(): int
+    /**
+     * @return int|array<string|int, int|string>
+     */
+    public function getColumns(): int|array
     {
         return $this->columns;
     }

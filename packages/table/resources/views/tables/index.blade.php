@@ -19,6 +19,14 @@
     // Table state — read once via the state container; the legacy magic
     // properties ($component->tableFilters, …) build the deprecation map on
     // every access and must not be used in per-row/per-column loops.
+    // Floating filter/column-toggle panels present as a bottom sheet on mobile
+    // unless disabled via Table::sheetOnMobile(false) or the global config.
+    $sheetOnMobile = $table->usesSheetOnMobile();
+    $sheetBp = $table->getMobileBreakpoint();
+    $sheetBpPx = \NyonCode\WireCore\Foundation\Support\MobileSheet::px($sheetBp);
+    $sheetPanel = \NyonCode\WireCore\Foundation\Support\MobileSheet::panel($sheetBp);
+    $sheetMotion = \NyonCode\WireCore\Foundation\Support\MobileSheet::motion($sheetBp);
+    $sheetBackdrop = \NyonCode\WireCore\Foundation\Support\MobileSheet::backdropHide($sheetBp);
     $tableSearch = $component->tableState->get('search');
     $tableFilters = $component->tableState->get('filters', []) ?? [];
     $columnFilterValues = $component->tableState->get('columnFilters', []) ?? [];
@@ -227,7 +235,7 @@
                                 @if($hasFilters)
                                     @include('wire-core::partials.floating-assets')
 
-                                    <div x-data="wireDropdown({ placement: 'bottom-start', offset: 8 })" @keydown.escape.window="close()" class="relative">
+                                    <div x-data="wireDropdown({ placement: 'bottom-start', offset: 8{{ $sheetOnMobile ? ', sheetOnMobile: true, sheetBreakpoint: '.$sheetBpPx : '' }} })" @keydown.escape.window="close()" class="relative">
                                         <button
                                                 x-ref="trigger"
                                                 @click="toggle()"
@@ -244,31 +252,62 @@
                                             @endif
                                         </button>
 
-                                        {{-- Filters Dropdown (teleported + Floating UI) --}}
+                                        {{-- Filters dropdown: floating panel from sm up, bottom sheet on
+                                             a phone (max-sm: classes; wireDropdown skips Floating UI). --}}
                                         <template x-teleport="body">
-                                            <div
-                                                    x-ref="panel"
-                                                    x-show="open"
-                                                    @click.outside="close()"
-                                                    x-transition
-                                                    class="absolute top-0 left-0 z-50 w-72 origin-top-left rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-200 dark:ring-gray-700"
-                                                    x-cloak
-                                            >
-                                                <div class="p-4 space-y-4">
-                                                    @foreach($filters as $filter)
-                                                        @if($filter->canView())
-                                                            {!! $filter->render($tableFilters[$filter->getName()] ?? null) !!}
-                                                        @endif
-                                                    @endforeach
+                                            <div>
+                                                @if($sheetOnMobile)
+                                                {{-- Backdrop: mobile-only, taps to close. --}}
+                                                <div
+                                                        x-show="open"
+                                                        x-cloak
+                                                        x-transition:enter="transition ease-out duration-150"
+                                                        x-transition:enter-start="opacity-0"
+                                                        x-transition:enter-end="opacity-100"
+                                                        x-transition:leave="transition ease-in duration-100"
+                                                        x-transition:leave-start="opacity-100"
+                                                        x-transition:leave-end="opacity-0"
+                                                        @click="close()"
+                                                        class="fixed inset-0 z-40 bg-gray-500/60 dark:bg-gray-900/70 {{ $sheetBackdrop }}"
+                                                ></div>
+                                                @endif
 
-                                                    <div class="pt-3 border-t border-gray-100 dark:border-gray-700">
-                                                        <button
-                                                                type="button"
-                                                                wire:click="resetTableFilters"
-                                                                class="w-full text-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                                                        >
-                                                            {{ __('wire-table::messages.filter_reset') }}
-                                                        </button>
+                                                <div
+                                                        x-ref="panel"
+                                                        x-show="open"
+                                                        @click.outside="close()"
+                                                        @if($sheetOnMobile) x-focus-trap="open" tabindex="-1" data-sheet-bp="{{ $sheetBpPx }}" @endif
+                                                        x-transition:enter="transition ease-out duration-100"
+                                                        x-transition:enter-start="opacity-0 scale-95 {{ $sheetOnMobile ? $sheetMotion : '' }}"
+                                                        x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                                                        x-transition:leave="transition ease-in duration-75"
+                                                        x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                                                        x-transition:leave-end="opacity-0 scale-95 {{ $sheetOnMobile ? $sheetMotion : '' }}"
+                                                        @class([
+                                                            'absolute top-0 left-0 z-50 w-72 origin-top-left rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-200 dark:ring-gray-700',
+                                                            $sheetPanel => $sheetOnMobile,
+                                                        ])
+                                                        x-cloak
+                                                >
+                                                    @if($sheetOnMobile)
+                                                        @include('wire-core::partials.sheet-grabber', ['dismiss' => 'close()', 'breakpoint' => $sheetBp])
+                                                    @endif
+                                                    <div class="p-4 space-y-4">
+                                                        @foreach($filters as $filter)
+                                                            @if($filter->canView())
+                                                                {!! $filter->render($tableFilters[$filter->getName()] ?? null) !!}
+                                                            @endif
+                                                        @endforeach
+
+                                                        <div class="pt-3 border-t border-gray-100 dark:border-gray-700">
+                                                            <button
+                                                                    type="button"
+                                                                    wire:click="resetTableFilters"
+                                                                    class="w-full text-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                                            >
+                                                                {{ __('wire-table::messages.filter_reset') }}
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -308,7 +347,7 @@
                                     @include('wire-core::partials.floating-assets')
 
                                     <div
-                                            x-data="wireDropdown({ placement: 'bottom-end' })"
+                                            x-data="wireDropdown({ placement: 'bottom-end'{{ $sheetOnMobile ? ', sheetOnMobile: true, sheetBreakpoint: '.$sheetBpPx : '' }} })"
                                             @keydown.escape.window="close()"
                                             class="relative"
                                     >
@@ -322,20 +361,46 @@
                                             <x-wire::icon name="outline:view-columns" size="h-5 w-5" />
                                         </button>
 
+                                        {{-- Column toggle: floating panel from sm up, bottom sheet on a
+                                             phone (max-sm: classes; wireDropdown skips Floating UI). --}}
                                         <template x-teleport="body">
-                                            <div
+                                            <div>
+                                                @if($sheetOnMobile)
+                                                {{-- Backdrop: mobile-only, taps to close. --}}
+                                                <div
+                                                        x-show="open"
+                                                        x-cloak
+                                                        x-transition:enter="transition ease-out duration-150"
+                                                        x-transition:enter-start="opacity-0"
+                                                        x-transition:enter-end="opacity-100"
+                                                        x-transition:leave="transition ease-in duration-100"
+                                                        x-transition:leave-start="opacity-100"
+                                                        x-transition:leave-end="opacity-0"
+                                                        @click="close()"
+                                                        class="fixed inset-0 z-40 bg-gray-500/60 dark:bg-gray-900/70 {{ $sheetBackdrop }}"
+                                                ></div>
+                                                @endif
+
+                                                <div
                                                     x-ref="panel"
                                                     x-show="open"
                                                     @click.outside="close()"
+                                                    @if($sheetOnMobile) x-focus-trap="open" tabindex="-1" data-sheet-bp="{{ $sheetBpPx }}" @endif
                                                     x-transition:enter="transition ease-out duration-100"
-                                                    x-transition:enter-start="transform opacity-0 scale-95"
-                                                    x-transition:enter-end="transform opacity-100 scale-100"
+                                                    x-transition:enter-start="transform opacity-0 scale-95 {{ $sheetOnMobile ? $sheetMotion : '' }}"
+                                                    x-transition:enter-end="transform opacity-100 scale-100 translate-y-0"
                                                     x-transition:leave="transition ease-in duration-75"
-                                                    x-transition:leave-start="transform opacity-100 scale-100"
-                                                    x-transition:leave-end="transform opacity-0 scale-95"
-                                                    class="absolute top-0 left-0 origin-top-right w-56 rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-200 dark:ring-gray-700 z-50 max-h-80 overflow-y-auto"
+                                                    x-transition:leave-start="transform opacity-100 scale-100 translate-y-0"
+                                                    x-transition:leave-end="transform opacity-0 scale-95 {{ $sheetOnMobile ? $sheetMotion : '' }}"
+                                                    @class([
+                                                        'absolute top-0 left-0 origin-top-right w-56 rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-200 dark:ring-gray-700 z-50 max-h-80 overflow-y-auto',
+                                                        $sheetPanel => $sheetOnMobile,
+                                                    ])
                                                     x-cloak
                                             >
+                                                @if($sheetOnMobile)
+                                                    @include('wire-core::partials.sheet-grabber', ['dismiss' => 'close()', 'breakpoint' => $sheetBp])
+                                                @endif
                                                 <div class="p-2">
                                                 <div
                                                         class="px-3 py-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 mb-1">
@@ -363,7 +428,8 @@
                                                                 class="text-sm text-gray-700 dark:text-gray-300">{{ $column->getLabel() }}</span>
                                                     </label>
                                                 @endforeach
-                                            </div>
+                                                </div>
+                                                </div>
                                             </div>
                                         </template>
                                     </div>
@@ -691,43 +757,21 @@
                                 @empty
                                     <tr>
                                         <td colspan="{{ $colSpan }}" class="px-6 py-16 text-center">
-                                            <div class="flex flex-col items-center gap-3">
-                                                <div class="rounded-full bg-gray-100 dark:bg-gray-700 p-3">
-                                                    @if($isEmptyDueToFilter)
-                                                        {{-- Search/Filter empty icon --}}
-                                                        <x-wire::icon name="outline:magnifying-glass" size="h-8 w-8" class="text-gray-400" />
-                                                    @else
-                                                        {{-- Regular empty icon --}}
-                                                        <x-wire::icon name="outline:inbox" size="h-8 w-8" class="text-gray-400" />
-                                                    @endif
-                                                </div>
-                                                <div>
-                                                    <h3 class="text-base font-medium text-gray-900 dark:text-white">
-                                                        @if($isEmptyDueToFilter)
-                                                            {{ __('wire-table::messages.empty_filter_heading') }}
-                                                        @else
-                                                            {{ $table->getEmptyStateHeading() }}
-                                                        @endif
-                                                    </h3>
-                                                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                                        @if($isEmptyDueToFilter)
-                                                            {{ __('wire-table::messages.empty_no_records_match') }}
-                                                        @else
-                                                            {{ $table->getEmptyStateDescription() }}
-                                                        @endif
-                                                    </p>
-                                                </div>
-                                                @if($isEmptyDueToFilter)
-                                                    <button
-                                                            type="button"
-                                                            wire:click="resetTableFilters"
-                                                            class="mt-2 inline-flex items-center gap-2 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-                                                    >
-                                                        <x-wire::icon name="outline:arrow-path" size="w-4 h-4" />
-                                                        {{ __('wire-table::messages.filter_reset') }}
-                                                    </button>
-                                                @endif
-                                            </div>
+                                            {{-- Canonical empty-state surface; filter-empty adds a reset action. --}}
+                                            @include('wire-core::partials.empty-state', [
+                                                'icon' => $isEmptyDueToFilter
+                                                    ? 'outline:magnifying-glass'
+                                                    : ($table->getEmptyStateIcon() ?? 'outline:inbox'),
+                                                'heading' => $isEmptyDueToFilter
+                                                    ? __('wire-table::messages.empty_filter_heading')
+                                                    : $table->getEmptyStateHeading(),
+                                                'description' => $isEmptyDueToFilter
+                                                    ? __('wire-table::messages.empty_no_records_match')
+                                                    : $table->getEmptyStateDescription(),
+                                                'actions' => $isEmptyDueToFilter
+                                                    ? [view('wire-table::tables.partials.reset-filters-button')->render()]
+                                                    : [],
+                                            ])
                                         </td>
                                     </tr>
                                 @endforelse
