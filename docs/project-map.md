@@ -32,7 +32,7 @@ Wire is a Laravel Livewire package ecosystem split into four Composer packages. 
 |------|------------|-----------------|
 | Setup | [Getting Started](getting-started.md) | [Configuration](configuration.md), [Authorization](authorization.md) |
 | Forms | [Forms Overview](forms/overview.md) | [Field Reference](forms/fields/index.md), [Validation](forms/validation.md), [Save Lifecycle](forms/save-lifecycle.md) |
-| Tables | [Table Overview](table/overview.md) | [Columns](table/columns.md), [Filters](table/filters.md), [Actions](table/actions.md), [Exports](table/exports.md) |
+| Tables | [Table Overview](table/overview.md) | [Columns](table/columns/index.md), [Filters](table/filters/index.md), [Actions](table/actions.md), [Exports](table/exports.md) |
 | Sortable | [Sortable Overview](sortable/overview.md) | [Installation](sortable/installation.md), [Row Reordering](sortable/row-sorting.md), [Column Reordering](sortable/column-sorting.md) |
 | Core UI | [Core Actions](core/actions.md) | [Modals](core/modals.md), [Notifications](core/notifications.md), [Widgets](core/widgets.md), [Infolists](core/infolists.md), [Plugins](core/plugins.md), [Audit Log](core/audit.md) |
 | Boost (AI) | [Boost Overview](boost/overview.md) | [Installation](boost/installation.md), [MCP Server & Tools](boost/mcp-tools.md), [Guidelines & Skills](boost/guidelines-and-skills.md) |

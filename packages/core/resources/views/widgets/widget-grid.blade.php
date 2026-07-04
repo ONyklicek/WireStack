@@ -9,7 +9,7 @@
     ])>
         @foreach($widgets as $widget)
             @if($widget->isVisible())
-                <div class="{{ $widget->getColumnSpan() === 'full' ? 'col-span-full' : ($widget->getColumnSpan() ? 'col-span-' . $widget->getColumnSpan() : '') }}"
+                <div class="{{ $widget->getColumnSpanClass() }}"
                      @if($widget->isPolling()) {!! $widget->getPollingDirective() !!} @endif>
                     {{ $widget }}
                 </div>

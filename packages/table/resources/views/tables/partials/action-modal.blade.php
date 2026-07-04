@@ -24,6 +24,8 @@
                 :width="$modalData['width'] ?? 'md'"
                 :close-on-click-away="$modalData['closeOnClickAway'] ?? true"
                 :close-on-escape="$modalData['closeOnEscape'] ?? true"
+                :bottom-sheet-on-mobile="$isSlideOverOnMobile"
+                :breakpoint="$modalData['mobileBreakpoint'] ?? null"
                 close-action="closeActionModal"
             >
                 @if($isWizard)
@@ -116,6 +118,7 @@
                 :close-on-escape="$modalData['closeOnEscape'] ?? true"
                 :full-screen-on-mobile="$isFullScreenMobile"
                 :slide-over-on-mobile="$isSlideOverOnMobile"
+                :breakpoint="$modalData['mobileBreakpoint'] ?? null"
                 :sticky-footer="true"
                 close-action="closeActionModal"
             >

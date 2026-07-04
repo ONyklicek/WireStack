@@ -5,11 +5,16 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Filters;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireForms\Components\Select;
 
 class SelectFilter extends Filter
 {
+    use HasSheetOnMobile {
+        defaultSheetOnMobile as protected sheetConfigDefault;
+    }
+
     /** @var array<string, string>|string|Closure */
     protected array|string|Closure $options = [];
 
@@ -64,6 +69,16 @@ class SelectFilter extends Filter
     public function isSearchable(): bool
     {
         return $this->searchable;
+    }
+
+    /**
+     * Searchable filters default to the classic floating dropdown on mobile so
+     * the search input stays usable; non-searchable ones keep the global sheet
+     * default. An explicit ->sheetOnMobile() still wins.
+     */
+    protected function defaultSheetOnMobile(): bool
+    {
+        return $this->isSearchable() ? false : $this->sheetConfigDefault();
     }
 
     public function getFormFields(): array

@@ -1,9 +1,15 @@
+---
+order: 10
+---
+
 # Section
 
-Collapsible section with heading, description, and icon. Groups fields visually.
+Collapsible section with heading, description, and icon. Groups child components
+visually. Shared schema vocabulary — the same layout renders in forms and
+infolists.
 
 ```php
-use NyonCode\WireForms\Components\Layout\Section;
+use NyonCode\WireCore\Foundation\Schema\Section;
 ```
 
 ## Usage
@@ -57,3 +63,13 @@ Section::make('info')
 | `collapsed()` | Start collapsed |
 | `compact()` | Reduced padding |
 | `aside()` | Side-by-side layout |
+
+> In forms you may also import the thin `NyonCode\WireForms\Components\Layout\Section`
+> alias (deprecated in v2.0). It only swaps in form-specific markup; prefer the
+> canonical schema `Section` above.
+
+## Related Docs
+
+- [Grid](grid.md)
+- [Fieldset](fieldset.md)
+- [Tabs](tabs.md)

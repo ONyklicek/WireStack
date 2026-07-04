@@ -91,6 +91,8 @@ trait HasModal
 
     protected ?string $mobileModalWidth = null;
 
+    protected ?string $mobileBreakpoint = null;
+
     public function requiresConfirmation(bool $requires = true): static
     {
         $this->hasModal = $requires;
@@ -227,6 +229,23 @@ trait HasModal
         $this->mobileModalWidth = $width;
 
         return $this;
+    }
+
+    /**
+     * Breakpoint below which this action's modal presents as a mobile sheet /
+     * full-screen: 'sm' (< 640px), 'md' (< 768px) or 'lg' (< 1024px). Overrides
+     * the global `wire-core.mobile.breakpoint` for this modal only.
+     */
+    public function mobileBreakpoint(?string $breakpoint): static
+    {
+        $this->mobileBreakpoint = $breakpoint;
+
+        return $this;
+    }
+
+    public function getMobileBreakpoint(): ?string
+    {
+        return $this->mobileBreakpoint;
     }
 
     /**
@@ -742,6 +761,7 @@ trait HasModal
             'slideOverOnMobile' => $this->isSlideOverOnMobile(),
             'fullScreenOnMobile' => $this->isFullScreenOnMobile(),
             'mobileWidth' => $this->getMobileModalWidth(),
+            'mobileBreakpoint' => $this->getMobileBreakpoint(),
             'hasForm' => $this->hasFormModal(),
             'hasFormInstance' => $this->hasFormInstance(),
             'hasInfolist' => $this->hasInfolistModal(),

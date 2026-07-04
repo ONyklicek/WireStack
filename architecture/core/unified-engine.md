@@ -654,13 +654,9 @@ $redir->shouldRedirect(); // true
 ```php
 use NyonCode\WireCore\Core\Actions\ActionPipeline;
 
-$pipeline = new ActionPipeline([
-    new BeforeCallbacksStage(),
-    new ActionExecutionStage(),
-    new AfterCallbacksStage(),
-    new NotificationStage(),
-    new RedirectStage(),
-]);
+// The action callback itself runs at the pipeline's terminal; the default
+// stages only wrap it. Construct with no args to get the default stages.
+$pipeline = new ActionPipeline;
 
 $result = $pipeline->execute($context, function (ActionContext $ctx) {
     // core action logic
@@ -671,13 +667,22 @@ $result = $pipeline->execute($context, function (ActionContext $ctx) {
 
 ### Stages
 
+The action callback passed to `execute()` runs at the **terminal** (innermost)
+of the pipeline. The default stages wrap around it — `BeforeCallbacksStage` runs
+*before* the action (and can halt ahead of it), while the remaining stages
+post-process the returned `ActionResult` as it bubbles back out:
+
 | Stage | Responsibility |
 |-------|----------------|
-| `BeforeCallbacksStage` | Execute `before()` hooks, check for halt |
-| `ActionExecutionStage` | Run the action callback |
-| `AfterCallbacksStage` | Execute `after()` hooks |
-| `NotificationStage` | Send success/failure notifications |
-| `RedirectStage` | Handle redirect results |
+| `BeforeCallbacksStage` | Execute `before()` hooks; halt before the action if one returns false |
+| `AfterCallbacksStage` | Execute `after()` hooks with the result (an `after()` may still halt) |
+| `NotificationStage` | Lift a result notification into the context for delivery |
+| `RedirectStage` | Lift a result redirect into the context |
+
+> There is no separate `ActionExecutionStage`: the action already runs at the
+> terminal, so a dedicated execution stage would run it twice. Passing custom
+> stages to the constructor replaces the defaults but the action still runs at
+> the terminal.
 
 ### ActionRegistry
 

@@ -2,6 +2,15 @@
     use NyonCode\WireForms\Components\Tags;
     assert($field instanceof Tags);
     $wireModifier = $field->getWireModelModifier();
+    // Below the configured breakpoint the suggestions list becomes a bottom sheet
+    // instead of a floating panel — unless disabled via ->sheetOnMobile(false).
+    $sheetOnMobile = $field->usesSheetOnMobile();
+    $sheetBp = $field->getMobileBreakpoint();
+    $sheetBpPx = \NyonCode\WireCore\Foundation\Support\MobileSheet::px($sheetBp);
+    $sheetPanel = \NyonCode\WireCore\Foundation\Support\MobileSheet::panel($sheetBp);
+    $sheetMotion = \NyonCode\WireCore\Foundation\Support\MobileSheet::motion($sheetBp);
+    $sheetBackdrop = \NyonCode\WireCore\Foundation\Support\MobileSheet::backdropHide($sheetBp);
+    $sheetGrabber = \NyonCode\WireCore\Foundation\Support\MobileSheet::grabberShow($sheetBp);
 @endphp
 
 @include('wire-forms::partials.field-wrapper-start')
@@ -29,7 +38,7 @@
             this.$watch('showDropdown', (show) => {
                 if (show) {
                     this.$nextTick(() => {
-                        this._float = this.$float(this.$refs.trigger, this.$refs.panel, { placement: 'bottom-start', offset: 8, matchWidth: true });
+                        this._float = this.$float(this.$refs.trigger, this.$refs.panel, { placement: 'bottom-start', offset: 8, matchWidth: true{{ $sheetOnMobile ? ', sheetOnMobile: true, sheetBreakpoint: '.$sheetBpPx : '' }} });
                     });
                 } else if (this._float) {
                     this._float();
@@ -121,18 +130,46 @@
             />
 
             {{-- Suggestions dropdown (teleported + Floating UI) --}}
+            {{-- Suggestions: floating list from sm up, bottom sheet on a phone
+                 (max-sm: classes, $float skips Floating UI) with a backdrop. --}}
             <template x-teleport="body">
-            <ul
-                x-ref="panel"
-                x-show="showDropdown"
-                x-transition:enter="transition ease-out duration-100"
-                x-transition:enter-start="opacity-0 translate-y-1"
-                x-transition:enter-end="opacity-100 translate-y-0"
-                x-transition:leave="transition ease-in duration-75"
-                x-transition:leave-start="opacity-100"
-                x-transition:leave-end="opacity-0"
-                class="absolute top-0 left-0 z-50 max-h-56 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl ring-1 ring-black ring-opacity-5 dark:border-gray-700 dark:bg-gray-800"
-            >
+            <div>
+                @if($sheetOnMobile)
+                    {{-- Backdrop: mobile-only, taps to close. --}}
+                    <div
+                        x-show="showDropdown"
+                        x-cloak
+                        x-transition:enter="transition ease-out duration-150"
+                        x-transition:enter-start="opacity-0"
+                        x-transition:enter-end="opacity-100"
+                        x-transition:leave="transition ease-in duration-100"
+                        x-transition:leave-start="opacity-100"
+                        x-transition:leave-end="opacity-0"
+                        @click="focused = false"
+                        class="fixed inset-0 z-40 bg-gray-500/60 dark:bg-gray-900/70 {{ $sheetBackdrop }}"
+                    ></div>
+                @endif
+
+                <ul
+                    x-ref="panel"
+                    x-show="showDropdown"
+                    x-transition:enter="transition ease-out duration-100"
+                    x-transition:enter-start="opacity-0 translate-y-1 {{ $sheetOnMobile ? $sheetMotion : '' }}"
+                    x-transition:enter-end="opacity-100 translate-y-0"
+                    x-transition:leave="transition ease-in duration-75"
+                    x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0 {{ $sheetOnMobile ? $sheetMotion : '' }}"
+                    @class([
+                        'absolute top-0 left-0 z-50 max-h-56 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl ring-1 ring-black ring-opacity-5 dark:border-gray-700 dark:bg-gray-800',
+                        $sheetPanel => $sheetOnMobile,
+                    ])
+                >
+                @if($sheetOnMobile)
+                    {{-- Grabber (li keeps the <ul> valid); swipe down to dismiss. --}}
+                    <li aria-hidden="true" x-sheet-dismiss="focused = false" data-sheet-bp="{{ $sheetBpPx }}" class="{{ $sheetGrabber }} justify-center pt-2.5 pb-1 touch-none select-none">
+                        <span class="h-1.5 w-10 rounded-full bg-gray-300 dark:bg-gray-600"></span>
+                    </li>
+                @endif
                 <template x-for="(suggestion, i) in filteredSuggestions" :key="suggestion">
                     <li>
                         <button
@@ -154,6 +191,7 @@
                     </li>
                 </template>
             </ul>
+            </div>
             </template>
         </div>
     @endunless

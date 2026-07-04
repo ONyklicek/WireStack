@@ -55,6 +55,8 @@
         'remoteSearch' => $isRemoteSearch,
         'loadingMessage' => $field->getLoadingMessage(),
         'panelFooter' => $panelFooter,
+        'sheetOnMobile' => $field->usesSheetOnMobile(),
+        'mobileBreakpoint' => $field->getMobileBreakpoint(),
         // Honor live(): a live select must sync its selection to the server on
         // click (afterStateUpdated, visibleWhen siblings), not on the next
         // unrelated roundtrip.

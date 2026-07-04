@@ -35,13 +35,9 @@ Reference for the built-in Wire Forms field and layout components.
 
 ## Layout Components
 
-| Component | Purpose |
-|-----------|---------|
-| [Grid](grid.md) | Responsive multi-column layout |
-| [Section](section.md) | Group fields under a heading |
-| [Fieldset](fieldset.md) | Group related fields with a border |
-| [Tabs](tabs.md) | Client-side tabbed panels (all panels validate together) |
-| [Wizard](wizard.md) | Client-side multi-step layout with a step indicator |
+Layout components (Grid, Flex, Section, Fieldset, Tabs, Wizard) live in the
+shared [Schema](../../core/schema/overview.md) section — the same vocabulary is
+reused by forms, infolists, and modals.
 
 ## Display Components
 
@@ -129,7 +125,7 @@ Affix and hint actions run on the server with the field's reactive `$get` / `$se
 | `placeholder(string\|Closure)` | `->placeholder('Enter value...')` |
 | `autofocus()` | `->autofocus()` |
 | `extraAttributes(array)` | `->extraAttributes(['data-testid' => 'name'])` |
-| `columnSpan(int\|string)` | `->columnSpan(2)` — span columns inside a [Grid](grid.md) |
+| `columnSpan(int\|string)` | `->columnSpan(2)` — span columns inside a [Grid](../../core/schema/layout/grid.md) |
 
 ## Common Patterns
 

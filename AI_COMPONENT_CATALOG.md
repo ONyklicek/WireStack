@@ -115,13 +115,16 @@ Action concerns:
 - `Actions\Concerns\HasLoadingState`
 - `Actions\Concerns\HasModal`
 - `Actions\Concerns\HasVisibility`
+- `Actions\Concerns\InteractsWithActions` — canonical, form-agnostic action runtime (payload resolver, pipeline, halt/notification/redirect, infolist actions). Composed by `WithTable` and by the standalone `WithActions` host.
 
-Action views:
+Action views/components:
 
+- `Actions\View\ButtonComponent`, `BulkButtonComponent`, `GroupComponent`, `ModalHostComponent`
 - `packages/core/resources/views/actions/button.blade.php`
 - `packages/core/resources/views/actions/bulk-button.blade.php`
 - `packages/core/resources/views/actions/group.blade.php`
 - `packages/core/resources/views/actions/dropdown-item.blade.php`
+- `packages/core/resources/views/actions/modal-host.blade.php` (+ `partials/modal-host-*`)
 - `packages/core/resources/views/actions/partials/button-content.blade.php`
 
 ## Core Modals
@@ -288,6 +291,8 @@ Public entry points:
 
 - `Form`
 - `WithForms`
+- `Concerns\WithActions` — host trait to declare and run standalone actions (modal/slide-over/wizard/confirmation/form) in any Livewire component, no table. Composes the wire-core `InteractsWithActions` engine + the form bridge below.
+- `Concerns\InteractsWithActionForms` — form-hosting half of the action runtime (Form build/validate, wizard steps, halt form). Composed by both `WithActions` and `WithTable`.
 
 Config/runtime:
 

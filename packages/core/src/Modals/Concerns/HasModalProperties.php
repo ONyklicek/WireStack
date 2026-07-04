@@ -121,21 +121,28 @@ trait HasModalProperties
      * kept literal for Tailwind's JIT scanner; an unknown token falls back to
      * `max-w-md`.
      */
-    public static function getMaxWidthClass(string $width, bool $responsive = true): string
+    public static function getMaxWidthClass(string $width, bool $responsive = true, string $breakpoint = 'sm'): string
     {
         if ($responsive) {
-            return match ($width) {
-                'sm' => 'sm:max-w-sm',
-                'lg' => 'sm:max-w-lg',
-                'xl' => 'sm:max-w-xl',
-                '2xl' => 'sm:max-w-2xl',
-                '3xl' => 'sm:max-w-3xl',
-                '4xl' => 'sm:max-w-4xl',
-                '5xl' => 'sm:max-w-5xl',
-                '6xl' => 'sm:max-w-6xl',
-                '7xl' => 'sm:max-w-7xl',
-                'full' => 'sm:max-w-full',
-                default => 'sm:max-w-md',
+            return match ($breakpoint) {
+                'md' => match ($width) {
+                    'sm' => 'md:max-w-sm', 'lg' => 'md:max-w-lg', 'xl' => 'md:max-w-xl',
+                    '2xl' => 'md:max-w-2xl', '3xl' => 'md:max-w-3xl', '4xl' => 'md:max-w-4xl',
+                    '5xl' => 'md:max-w-5xl', '6xl' => 'md:max-w-6xl', '7xl' => 'md:max-w-7xl',
+                    'full' => 'md:max-w-full', default => 'md:max-w-md',
+                },
+                'lg' => match ($width) {
+                    'sm' => 'lg:max-w-sm', 'lg' => 'lg:max-w-lg', 'xl' => 'lg:max-w-xl',
+                    '2xl' => 'lg:max-w-2xl', '3xl' => 'lg:max-w-3xl', '4xl' => 'lg:max-w-4xl',
+                    '5xl' => 'lg:max-w-5xl', '6xl' => 'lg:max-w-6xl', '7xl' => 'lg:max-w-7xl',
+                    'full' => 'lg:max-w-full', default => 'lg:max-w-md',
+                },
+                default => match ($width) {
+                    'sm' => 'sm:max-w-sm', 'lg' => 'sm:max-w-lg', 'xl' => 'sm:max-w-xl',
+                    '2xl' => 'sm:max-w-2xl', '3xl' => 'sm:max-w-3xl', '4xl' => 'sm:max-w-4xl',
+                    '5xl' => 'sm:max-w-5xl', '6xl' => 'sm:max-w-6xl', '7xl' => 'sm:max-w-7xl',
+                    'full' => 'sm:max-w-full', default => 'sm:max-w-md',
+                },
             };
         }
 

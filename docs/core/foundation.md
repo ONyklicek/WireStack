@@ -389,7 +389,7 @@ so a semantic color resolves to the same hue everywhere (`success` → emerald,
 When adding a color or surface, extend the resolver here once — downstream
 columns, badges, actions, and toggles pick it up automatically. Keep utility
 names compatible with the lowest supported Tailwind version (see
-[ADR 0005](../../architecture/decisions/0005-tailwind-4-support.md)); use only
+[ADR 0005](https://github.com/ONyklicek/WireStack/blob/main/architecture/decisions/0005-tailwind-4-support.md)); use only
 standard hue names, never version-specific ones.
 
 ### Canonical sizing & typography resolvers
@@ -469,7 +469,7 @@ enum OrderStatus: string implements HasColor, HasLabel
 }
 ```
 
-See [Table → Enum & JSON Casts](../table/columns.md#enum-json-casts) for column-level usage.
+See [Table → Enum & JSON Casts](../table/columns/casts.md) for column-level usage.
 
 ## Support Utilities
 
@@ -500,3 +500,77 @@ Foundation provides base components under the `wire::` namespace:
     <x-wire::dropdown.item>Delete</x-wire::dropdown.item>
 </x-wire::dropdown>
 ```
+
+## Layout Components
+
+A canonical layout vocabulary lives in `NyonCode\WireCore\Foundation\Schema\*` and is shared by both
+**forms** and **infolists** (the forms `Layout\*` classes extend the core versions). Use these in any
+`->schema([...])` array instead of ad-hoc Blade grids.
+
+| Component | Purpose |
+|-----------|---------|
+| `Grid` | Responsive column grid |
+| `Section` | Titled card with heading/description |
+| `Fieldset` | Bordered group with a legend |
+| `Split` | Side-by-side row that stacks on mobile |
+| `Tabs` / `Tab` | Tabbed panels |
+| `Wizard` / `Step` | Multi-step layout |
+| `Callout` | Soft colored notice box |
+| `EmptyState` | Icon + heading + description + actions |
+
+```php
+use NyonCode\WireCore\Foundation\Schema\{Grid, Section, Split, Callout};
+
+Section::make('Team')
+    ->description('People with access.')
+    ->schema([
+        // Int reflow, or a Filament-style per-breakpoint map.
+        Grid::make()->columns(['default' => 1, 'md' => 2, 'lg' => 3])->schema([...]),
+    ]);
+
+// Split: control distribution, alignment, spacing, wrap and child growth.
+Split::make()->from('md')->justify('between')->align('center')->gap(6)->wrap()->grow(false)->schema([...]);
+
+// Callout — color hues delegate to the canonical alert palette.
+Callout::make()->warning()->heading('Heads up')->icon('exclamation-triangle')->dismissible()
+    ->content('Something worth noticing.');
+```
+
+`Callout` is the shared owner of the notice surface; the forms `Alert` field is its field-style alias.
+Column counts (`Grid`, `CheckboxList`, `Section`, …) accept an int **or** a per-breakpoint map keyed by
+`default`/`sm`/`md`/`lg`/`xl`/`2xl`.
+
+### Standalone Blade tags
+
+The same layouts are also exposed as slot-based `wire::` tags for plain Blade views (no schema array):
+
+```blade
+<x-wire::callout color="warning" heading="Storage almost full" icon="exclamation-triangle" dismissible>
+    You have used 95% of your quota.
+</x-wire::callout>
+
+<x-wire::grid :columns="['default' => 1, 'md' => 2, 'lg' => 3]" gap="gap-3">…</x-wire::grid>
+
+<x-wire::split from="md" justify="between" align="center" :gap="4">…</x-wire::split>
+
+<x-wire::section heading="Profile" description="Basic info">…</x-wire::section>
+<x-wire::fieldset legend="Billing address">…</x-wire::fieldset>
+
+<x-wire::empty-state icon="outline:inbox" heading="No invoices yet" description="They will show up here.">
+    <button>New invoice</button> {{-- slot becomes the action row --}}
+</x-wire::empty-state>
+
+{{-- Alpine-driven; client-side state only (no per-step validation) --}}
+<x-wire::tabs>
+    <x-wire::tab label="Profile">…</x-wire::tab>
+    <x-wire::tab label="Security">…</x-wire::tab>
+</x-wire::tabs>
+
+<x-wire::wizard>
+    <x-wire::step label="Account">…</x-wire::step>
+    <x-wire::step label="Confirm">…</x-wire::step>
+</x-wire::wizard>
+```
+
+For validated multi-step flows use action-modal wizards (`HasModal::steps()`) or the form schema `Wizard`
+instead — the standalone `<x-wire::tabs>` / `<x-wire::wizard>` only switch panels client-side.

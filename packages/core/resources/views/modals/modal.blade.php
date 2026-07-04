@@ -83,7 +83,9 @@
                         <button
                             type="button"
                             @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}"
-                            class="absolute right-3 top-3 sm:static sm:right-auto sm:top-auto sm:ml-auto sm:-mr-1.5 rounded-lg p-1.5 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            {{-- Larger tap target on mobile (p-2.5 ≈ 40px), back to the compact
+                             desktop size from sm up. --}}
+                            class="absolute right-2 top-2 sm:static sm:right-auto sm:top-auto sm:ml-auto sm:-mr-1.5 rounded-lg p-2.5 sm:p-1.5 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 touch-manipulation"
                         >
                             <span class="sr-only">{{ __('Close') }}</span>
                             <x-wire::icon name="outline:x-mark" size="h-5 w-5" />
@@ -103,10 +105,9 @@
                 'pt-5 sm:pt-6' => !$heading && !$icon,
                 'overflow-y-auto' => $maxHeight,
                 // Mobile variants scroll the body inside the full-height panel;
-                // ≥sm returns to the page-scroll layout (unless maxHeight opts
-                // the body into its own scrollbar anyway).
-                'flex-1 overflow-y-auto overscroll-contain sm:flex-none' => $mobileVariant() !== null,
-                'sm:overflow-visible' => $mobileVariant() !== null && ! $maxHeight,
+                // from the breakpoint up it returns to the page-scroll layout
+                // (breakpoint-aware, see ModalComponent::bodyVariantClasses()).
+                $bodyVariantClasses() => $mobileVariant() !== null,
             ])>
                 {{ $slot }}
             </div>

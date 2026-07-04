@@ -112,5 +112,5 @@ Disable the subtotal rows (keeping headers and the footer) with
 ## Related Docs
 
 - [Summaries](summaries.md) — aggregate types, scopes, formatting
-- [Columns](columns.md)
+- [Columns](columns/index.md)
 - [Table Overview](overview.md)

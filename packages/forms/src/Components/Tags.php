@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 
 /**
  * Free-form tag input with optional suggestions, limits, and relationship support.
  */
 class Tags extends Field
 {
+    use HasSheetOnMobile;
+
     /** @var array<int, string>|Closure */
     protected array|Closure $suggestions = [];
 

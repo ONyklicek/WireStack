@@ -56,18 +56,39 @@ Before you render the first component, make sure all of these are true:
 
 ## Tailwind CSS Configuration
 
-Add Wire view paths to your `tailwind.config.js`:
+Wire generates some utility classes from PHP (color/size resolvers, the mobile
+bottom-sheet classes, responsive grid columns, …), so Tailwind must scan both
+the package **views and `src`** — scanning views alone will miss those classes.
+
+**Tailwind 3** — add the paths to `tailwind.config.js`:
 
 ```js
 module.exports = {
     content: [
         // ...your paths
         './vendor/nyoncode/wire-core/resources/views/**/*.blade.php',
+        './vendor/nyoncode/wire-core/src/**/*.php',
         './vendor/nyoncode/wire-forms/resources/views/**/*.blade.php',
+        './vendor/nyoncode/wire-forms/src/**/*.php',
         './vendor/nyoncode/wire-table/resources/views/**/*.blade.php',
+        './vendor/nyoncode/wire-table/src/**/*.php',
         './vendor/nyoncode/wire-sortable/resources/views/**/*.blade.php',
+        './vendor/nyoncode/wire-sortable/src/**/*.php',
     ],
 }
+```
+
+**Tailwind 4** — add `@source` lines to your CSS entry (e.g. `app.css`):
+
+```css
+@source "../../vendor/nyoncode/wire-core/resources/views";
+@source "../../vendor/nyoncode/wire-core/src";
+@source "../../vendor/nyoncode/wire-forms/resources/views";
+@source "../../vendor/nyoncode/wire-forms/src";
+@source "../../vendor/nyoncode/wire-table/resources/views";
+@source "../../vendor/nyoncode/wire-table/src";
+@source "../../vendor/nyoncode/wire-sortable/resources/views";
+@source "../../vendor/nyoncode/wire-sortable/src";
 ```
 
 ### Primary Color
@@ -225,7 +246,7 @@ class UserTable extends Component
 </div>
 ```
 
-Next: [Columns](table/columns.md), [Filters](table/filters.md), [Actions](table/actions.md)
+Next: [Columns](table/columns/index.md), [Filters](table/filters/index.md), [Actions](table/actions.md)
 
 ---
 
@@ -327,7 +348,7 @@ composer analyse       # PHPStan level 6
 
 ## Next Steps
 
-- [Table columns](table/columns.md) — all 13 column types
+- [Table columns](table/columns/index.md) — all 13 column types
 - [Form fields](forms/overview.md) — all field types and Form API
 - [Actions](core/actions.md) — row, bulk, header actions
 - [Core plugins](core/plugins.md) — reusable app and package extensions

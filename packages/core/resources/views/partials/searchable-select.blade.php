@@ -47,6 +47,15 @@
     $loadingMessage ??= null;
     $searchable ??= true;
     $live ??= false;
+    // Below sm the listbox becomes a bottom sheet (comfortable native-style
+    // picker) instead of a trigger-anchored floating panel. Callers pass the
+    // resolved value; a bare include falls back to the global config.
+    $sheetOnMobile ??= (bool) config('wire-core.mobile.sheet', true);
+    $mobileBreakpoint ??= \NyonCode\WireCore\Foundation\Support\MobileSheet::breakpoint();
+    $sheetBpPx = \NyonCode\WireCore\Foundation\Support\MobileSheet::px($mobileBreakpoint);
+    $sheetPanel = \NyonCode\WireCore\Foundation\Support\MobileSheet::panel($mobileBreakpoint);
+    $sheetMotion = \NyonCode\WireCore\Foundation\Support\MobileSheet::motion($mobileBreakpoint);
+    $sheetBackdrop = \NyonCode\WireCore\Foundation\Support\MobileSheet::backdropHide($mobileBreakpoint);
     // Remote search cannot work without the input; force it on in that mode.
     $showSearch = $searchable || $remoteSearch;
 @endphp
@@ -72,7 +81,7 @@
             this.$watch('open', (open) => {
                 if (open) {
                     this.$nextTick(() => {
-                        this._float = this.$float(this.$refs.trigger, this.$refs.panel, { placement: 'bottom-start', offset: 4, matchWidth: true });
+                        this._float = this.$float(this.$refs.trigger, this.$refs.panel, { placement: 'bottom-start', offset: 4, matchWidth: true{{ $sheetOnMobile ? ', sheetOnMobile: true, sheetBreakpoint: '.$sheetBpPx : '' }} });
                         this.$refs.searchInput?.focus();
                     });
                 } else if (this._float) {
@@ -203,19 +212,47 @@
         <x-wire::icon name="chevron-down" class="w-4 h-4 text-gray-400 shrink-0 transition-transform duration-150" ::class="{ 'rotate-180': open }" />
     </button>
 
+    {{-- Floating listbox from sm up; bottom sheet on a phone (max-sm: classes,
+         $float skips Floating UI) with a dimming backdrop. --}}
+    {{-- Floating listbox from sm up; bottom sheet on a phone (max-sm: classes,
+         $float skips Floating UI) with a dimming backdrop. --}}
     <template x-teleport="body">
-        <div
-            x-ref="panel"
-            x-show="open"
-            @click.outside="open = false; activeIndex = -1"
-            x-transition:enter="transition ease-out duration-150"
-            x-transition:enter-start="opacity-0 -translate-y-1"
-            x-transition:enter-end="opacity-100 translate-y-0"
-            x-transition:leave="transition ease-in duration-100"
-            x-transition:leave-start="opacity-100 translate-y-0"
-            x-transition:leave-end="opacity-0 -translate-y-1"
-            class="absolute top-0 left-0 z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto"
-        >
+        <div>
+            @if($sheetOnMobile)
+                {{-- Backdrop: mobile-only, taps to close. --}}
+                <div
+                    x-show="open"
+                    x-cloak
+                    x-transition:enter="transition ease-out duration-150"
+                    x-transition:enter-start="opacity-0"
+                    x-transition:enter-end="opacity-100"
+                    x-transition:leave="transition ease-in duration-100"
+                    x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0"
+                    @click="open = false; activeIndex = -1"
+                    class="fixed inset-0 z-40 bg-gray-500/60 dark:bg-gray-900/70 {{ $sheetBackdrop }}"
+                ></div>
+            @endif
+
+            <div
+                x-ref="panel"
+                x-show="open"
+                @click.outside="open = false; activeIndex = -1"
+                @if($sheetOnMobile) x-focus-trap="open" tabindex="-1" data-sheet-bp="{{ $sheetBpPx }}" @endif
+                x-transition:enter="transition ease-out duration-150"
+                x-transition:enter-start="opacity-0 -translate-y-1 {{ $sheetOnMobile ? $sheetMotion : '' }}"
+                x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-100"
+                x-transition:leave-start="opacity-100 translate-y-0"
+                x-transition:leave-end="opacity-0 -translate-y-1 {{ $sheetOnMobile ? $sheetMotion : '' }}"
+                @class([
+                    'absolute top-0 left-0 z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto',
+                    $sheetPanel => $sheetOnMobile,
+                ])
+            >
+            @if($sheetOnMobile)
+                @include('wire-core::partials.sheet-grabber', ['dismiss' => 'open = false; activeIndex = -1', 'breakpoint' => $mobileBreakpoint])
+            @endif
             @if($showSearch)
             <div class="p-2">
                 <input
@@ -279,6 +316,7 @@
             @if($panelFooter !== null && $panelFooter !== '')
                 {!! $panelFooter !!}
             @endif
+            </div>
         </div>
     </template>
 </div>

@@ -5,7 +5,12 @@
             Chart.defaults.animation = false;
             Chart.defaults.font.family = 'Inter, ui-sans-serif, system-ui, sans-serif';
             Chart.defaults.plugins.legend.labels.usePointStyle = true;
+            // Pin the marker box to a small square so the point-style dot stays a
+            // tight circle. Without boxHeight/pointStyleWidth, Chart.js sizes the
+            // dot from the font and it overlaps the label text.
             Chart.defaults.plugins.legend.labels.boxWidth = 8;
+            Chart.defaults.plugins.legend.labels.boxHeight = 8;
+            Chart.defaults.plugins.legend.labels.pointStyleWidth = 8;
         }
     </script>
 

@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Foundation\Schema;
 
 use Closure;
+use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
+use NyonCode\WireCore\Foundation\Concerns\HasActions;
+use NyonCode\WireCore\Foundation\Contracts\HasFieldActions;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
@@ -16,13 +19,16 @@ use NyonCode\WireCore\Foundation\Icons\Icon;
  * (read-only display). Surface-specific chrome lives in each package's Blade
  * view; this class owns only the resolved configuration.
  */
-class Section extends LayoutComponent
+class Section extends LayoutComponent implements HasFieldActions
 {
+    use HasActions;
+
     protected string|Closure|null $description = null;
 
     protected ?string $icon = null;
 
-    protected int $columns = 1;
+    /** @var int|array<string|int, int|string> */
+    protected int|array $columns = 1;
 
     protected bool $collapsible = false;
 
@@ -46,7 +52,10 @@ class Section extends LayoutComponent
         return $this;
     }
 
-    public function columns(int $columns): static
+    /**
+     * @param  int|array<string|int, int|string>  $columns
+     */
+    public function columns(int|array $columns): static
     {
         $this->columns = $columns;
 
@@ -85,6 +94,27 @@ class Section extends LayoutComponent
         return $this;
     }
 
+    /**
+     * Interactive actions rendered in the section header (Filament-style).
+     * Alias for {@see HasActions::actions()} with header-slot semantics.
+     *
+     * @param  array<int, Action>  $actions
+     */
+    public function headerActions(array $actions): static
+    {
+        return $this->actions($actions);
+    }
+
+    /**
+     * The visible header actions, in declaration order.
+     *
+     * @return array<int, Action>
+     */
+    public function getHeaderActions(): array
+    {
+        return $this->getActions();
+    }
+
     public function getDescription(): ?string
     {
         return $this->evaluate($this->description);
@@ -95,7 +125,10 @@ class Section extends LayoutComponent
         return $this->icon;
     }
 
-    public function getColumns(): int
+    /**
+     * @return int|array<string|int, int|string>
+     */
+    public function getColumns(): int|array
     {
         return $this->columns;
     }

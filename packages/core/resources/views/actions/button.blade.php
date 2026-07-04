@@ -27,11 +27,24 @@
             'wireModifiers' => method_exists($action, 'getWireClickModifiers') ? $action->getWireClickModifiers() : '',
         ];
 
-    $wireClickAction = $wireClick ?? '';
+    // Auto-derive the wire:click for a standalone action host (WithActions):
+    // when no explicit handler and no url is given, a click mounts the action
+    // by name. mountAction() opens the modal/slide-over/wizard for modal actions
+    // and runs the callback directly for plain actions. An explicit wireClick
+    // (e.g. the table's openActionModal/executeTableAction) always wins, and
+    // url actions never mount.
+    $autoWireClick = ($data['url'] ?? null)
+        ? ''
+        : "mountAction('".$action->getName()."')";
+    $wireClickAction = $wireClick ?? $autoWireClick;
     $wireModifiers = $wireClickModifiers ?? $data['wireModifiers'] ?? '';
+
+    $isHiddenAction = method_exists($action, 'isHidden') ? $action->isHidden() : false;
 @endphp
 
-@if($data['url'] ?? null)
+@if($isHiddenAction)
+    {{-- Hidden actions render nothing. --}}
+@elseif($data['url'] ?? null)
     <a
             href="{{ $data['url'] }}"
             @if($data['target'] ?? null) target="{{ $data['target'] }}" @endif

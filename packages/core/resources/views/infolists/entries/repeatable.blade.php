@@ -6,6 +6,13 @@
     $spanClass = $field->getColumnSpanClass('col-span-full');
     $columns = $field->getColumns();
     $rows = $field->getRows();
+    $rowActions = $field->getActions();
+    $gridCols = match ($columns) {
+        2 => 'sm:grid-cols-2',
+        3 => 'sm:grid-cols-2 md:grid-cols-3',
+        4 => 'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4',
+        default => 'sm:grid-cols-1',
+    };
 @endphp
 
 <div class="{{ $spanClass }}">
@@ -18,20 +25,23 @@
     <div class="text-sm">
         @if(count($rows))
             <div class="space-y-3">
-                @foreach($rows as $entries)
-                    <div @class([
-                        'grid gap-4',
-                        'rounded-lg border border-gray-200 dark:border-gray-700 p-4' => $field->isContained(),
-                        'sm:grid-cols-1' => $columns === 1,
-                        'sm:grid-cols-2' => $columns === 2,
-                        'sm:grid-cols-2 md:grid-cols-3' => $columns === 3,
-                        'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' => $columns === 4,
-                    ])>
-                        @foreach($entries as $entry)
-                            @if($entry->isVisible())
-                                {{ $entry }}
-                            @endif
-                        @endforeach
+                @foreach($rows as $rowIndex => $entries)
+                    <div @class(['rounded-lg border border-gray-200 dark:border-gray-700 p-4' => $field->isContained()])>
+                        <div @class(['grid gap-4', $gridCols])>
+                            @foreach($entries as $entry)
+                                @if($entry->isVisible())
+                                    {{ $entry }}
+                                @endif
+                            @endforeach
+                        </div>
+
+                        @if($rowActions !== [])
+                            <div class="mt-3 flex flex-wrap items-center justify-end gap-1.5">
+                                @foreach($rowActions as $rowAction)
+                                    @include('wire-core::partials.component-action', ['action' => $rowAction, 'rowKey' => $rowIndex])
+                                @endforeach
+                            </div>
+                        @endif
                     </div>
                 @endforeach
             </div>

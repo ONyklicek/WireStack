@@ -36,4 +36,6 @@
             <span class="text-gray-400">{{ $field->getPlaceholder() ?? '-' }}</span>
         @endif
     </div>
+
+    @include('wire-core::infolists.entry-actions')
 </div>

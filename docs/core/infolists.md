@@ -96,7 +96,10 @@ That's the whole loop: **record in → schema → echo out.** `{{ $this->infolis
 | Entry | Class | Use for |
 |-------|-------|---------|
 | **Text** | `TextEntry` | Text, numbers, money, dates — plus badge, copy, list, and truncation |
+| **Badge** | `BadgeEntry` | A `TextEntry` preset as a colored pill |
 | **Icon** | `IconEntry` | Booleans and state → icon maps |
+| **Boolean** | `BooleanEntry` | An `IconEntry` preset to boolean check/x |
+| **List** | `ListEntry` | A collection as a bulleted list or badge chips |
 | **Image** | `ImageEntry` | Avatars and thumbnails (single or gallery) |
 | **Color** | `ColorEntry` | A color swatch + its value |
 | **Key-value** | `KeyValueEntry` | An array / JSON attribute as a key/value table |
@@ -114,13 +117,17 @@ That's the whole loop: **record in → schema → echo out.** `{{ $this->infolis
 3. [State resolution](#state-resolution)
 4. [Layout](#layout)
 5. [TextEntry](#textentry)
-6. [IconEntry](#iconentry)
-7. [ImageEntry](#imageentry)
-8. [ColorEntry](#colorentry)
-9. [KeyValueEntry](#keyvalueentry)
-10. [RepeatableEntry](#repeatableentry)
-11. [Inside an action modal](#inside-an-action-modal)
-12. [Infolist API](#infolist-api)
+6. [BadgeEntry](#badgeentry)
+7. [IconEntry](#iconentry)
+8. [BooleanEntry](#booleanentry)
+9. [ListEntry](#listentry)
+10. [ImageEntry](#imageentry)
+11. [ColorEntry](#colorentry)
+12. [KeyValueEntry](#keyvalueentry)
+13. [RepeatableEntry](#repeatableentry)
+14. [Actions](#actions)
+15. [Inside an action modal](#inside-an-action-modal)
+16. [Infolist API](#infolist-api)
 
 ## The Infolist object
 
@@ -279,6 +286,19 @@ Section::make('Billing')
 
 Every entry accepts `columnSpan(int)` / `columnSpanFull()` to span the grid.
 
+### Split
+
+`Split` arranges its children side by side on one horizontal axis, stacking vertically on small screens — useful for pairing a details card with a summary, or an avatar with a bio. Children grow to share the row evenly; `from()` sets the breakpoint (`sm` / `md` / `lg`, default `md`) at which the row becomes horizontal.
+
+```php
+use NyonCode\WireCore\Foundation\Schema\Split;
+
+Split::make()->from('lg')->schema([
+    Section::make('Details')->schema([ /* entries */ ]),
+    Section::make('Summary')->schema([ /* entries */ ]),
+]);
+```
+
 ## TextEntry
 
 The default entry. It shares the canonical `FormatsState` concern with table columns, so `money()`, `numeric()`, `date()`, `dateTime()`, and `since()` format a value exactly as the matching `TextColumn` would.
@@ -316,6 +336,18 @@ TextEntry::make('aliases')->listWithLineBreaks();       // array → line-separa
 | `listWithLineBreaks(bool = true)` / `bulleted(bool = true)` | Render an array state as a list |
 | `formatStateUsing(Closure)` | Transform the resolved value (`$state, $record`) |
 
+## BadgeEntry
+
+A first-class `TextEntry` preset to render as a badge — the ergonomic form of `TextEntry::make(...)->badge()`. It inherits the full `TextEntry` API (color, icon, formatting), so the badge chrome stays owned in one place.
+
+```php
+use NyonCode\WireCore\Infolists\Components\BadgeEntry;
+
+BadgeEntry::make('status')
+    ->color(fn ($state) => $state === 'active' ? Color::Success : Color::Gray)
+    ->icon('check-circle');
+```
+
 ## IconEntry
 
 Renders an icon derived from the state. Use `boolean()` for true/false, or `icons()` for a value → icon map.
@@ -342,6 +374,47 @@ IconEntry::make('status')
 | `trueColor()` / `falseColor()` | Override the boolean colors |
 | `icons(array\|Closure)` | Map state values to icon names |
 | `colors(array\|Closure)` | Map state values to color names |
+
+## BooleanEntry
+
+A first-class `IconEntry` preset to boolean mode — the ergonomic form of `IconEntry::make(...)->boolean()`. A truthy state renders the success check icon, a falsy state the danger x icon; the icons and colors stay overridable.
+
+```php
+use NyonCode\WireCore\Infolists\Components\BooleanEntry;
+
+BooleanEntry::make('is_verified');
+
+BooleanEntry::make('is_active')
+    ->trueIcon('check-badge')->trueColor('success')
+    ->falseIcon('no-symbol')->falseColor('gray');
+```
+
+## ListEntry
+
+Renders a collection state as a bulleted list or a row of badge chips — the middle ground between a single `TextEntry` and a full `RepeatableEntry`. The state may be an array/iterable, or a delimited string split with `separator()`. Items reuse the `TextEntry` formatting (number/money/date, `formatStateUsing()`, `limit()`).
+
+```php
+use NyonCode\WireCore\Infolists\Components\ListEntry;
+
+ListEntry::make('tags');                                  // bulleted list
+
+ListEntry::make('tags')->badge()->color('primary');       // badge chips
+
+ListEntry::make('roles')->separator(',');                 // "admin, editor" → two items
+
+ListEntry::make('categories')->badge()->limitList(3);     // first 3 chips + a "+N" pill
+```
+
+### ListEntry API
+
+| Method | Description |
+|--------|-------------|
+| `badge(bool = true)` | Render items as badge chips instead of a bulleted list |
+| `bulleted(bool = true)` | Toggle the list bullets (non-badge mode) |
+| `separator(?string)` | Split a scalar string state into items |
+| `limitList(?int)` | Cap the visible items; the rest collapse into a `+N` indicator |
+| `color(string\|Color\|Closure)` | Chip / text color |
+| `icon(string\|Closure)` | Leading icon on each chip |
 
 ## ImageEntry
 
@@ -402,6 +475,60 @@ RepeatableEntry::make('items')
 | `schema(array)` | Entry schema rendered per item |
 | `columns(int)` | Grid columns per row |
 | `contained(bool = true)` | Wrap each row in a bordered card |
+| `actions(array)` | Per-row action buttons (see [Actions](#actions)) |
+| `with(array\|string)` | Eager-load relations on the rows (see below) |
+
+### Avoiding N+1 on relation rows
+
+When the rows are Eloquent models whose child entries read a **nested** relation path (e.g. `product.name` on each order line), reading that path lazily loads the relation once per row — an N+1. Declare the relations with `with()` and they are eager-loaded across every row in a single query before rendering:
+
+```php
+RepeatableEntry::make('lines')
+    ->with(['product', 'tax'])              // one query per relation, not per row
+    ->schema([
+        TextEntry::make('product.name'),
+        TextEntry::make('tax.rate')->numeric(2),
+    ]);
+```
+
+`with()` is a no-op for array rows and merges across repeated calls. (The relation that backs the repeatable itself — `lines` — should be eager-loaded on the parent query as usual.)
+
+## Actions
+
+Entries, section headers, and repeatable rows can carry interactive [`Action`](actions.md) buttons — built from the same fluent `Action` API as table and modal actions, and sharing the field-action dispatch contract (`HasFieldActions`). Action **names must be unique** within an infolist.
+
+> **Host requirement.** Infolist actions dispatch through the host's `callInfolistAction()`, provided by the core action runtime (`InteractsWithActions`). They work out of the box when the infolist is shown [inside an action modal](#inside-an-action-modal) (the table / `WithActions` host composes it). A standalone infolist echoed in a plain Livewire component only dispatches if that component composes the action runtime.
+
+**Section header actions** — rendered in the section header, receive the bound record:
+
+```php
+Section::make('Profile')
+    ->headerActions([
+        Action::make('edit')->icon('pencil')->action(fn ($record) => /* … */),
+    ])
+    ->schema([ /* entries */ ]);
+```
+
+**Entry actions** — rendered below the value, receive the record and the entry's `$state`:
+
+```php
+TextEntry::make('api_token')
+    ->actions([
+        Action::make('regenerate')->icon('arrow-path')
+            ->action(fn ($record) => $record->regenerateToken()),
+    ]);
+```
+
+**Per-row actions** — declared on a `RepeatableEntry`, rendered once per row, and invoked with **that row's item** as `$record` / `$state`:
+
+```php
+RepeatableEntry::make('lines')
+    ->schema([TextEntry::make('sku'), TextEntry::make('qty')->numeric()])
+    ->actions([
+        Action::make('viewLine')->icon('eye')
+            ->action(fn ($record) => /* $record is the row item */),
+    ]);
+```
 
 ## Inside an action modal
 

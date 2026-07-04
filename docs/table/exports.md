@@ -236,7 +236,7 @@ When using a custom PDF view, design it as a regular Blade export template. The 
 | Document | What It Covers |
 |----------|----------------|
 | [Table Overview](overview.md) | Table setup and state |
-| [Columns](columns.md) | Column labels, visibility, and formatting |
-| [Filters](filters.md) | Filtered queries used by export |
+| [Columns](columns/index.md) | Column labels, visibility, and formatting |
+| [Filters](filters/index.md) | Filtered queries used by export |
 | [Summaries](summaries.md) | The totals appended to exports |
 | [Authorization](../authorization.md) | Restricting export actions by user |

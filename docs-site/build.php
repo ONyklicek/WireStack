@@ -310,7 +310,7 @@ $homeHtml = renderTemplate($siteRoot.'/templates/home.php', [
     'stats' => [
         ['label' => 'Docs pages', 'value' => (string) count($pages)],
         ['label' => 'Preview states', 'value' => '8'],
-        ['label' => 'Core sections', 'value' => '4'],
+        ['label' => 'Core sections', 'value' => '5'],
     ],
     'quickLinks' => [
         ['label' => 'Getting Started', 'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/getting-started/index.html')],
@@ -373,6 +373,9 @@ function pageManifest(string $root): array
             'sectionWeight' => sectionSortWeight($section),
             'navTitle' => $title !== '' ? $title : guessTitleFromFilename($sourceRelative),
             'order' => resolvePageOrder($frontMatter['order'] ?? null),
+            // Pages can opt out of the sidebar with `nav: false` in front matter;
+            // they are still built and reachable (e.g. from an index page's table).
+            'nav' => ! in_array($frontMatter['nav'] ?? true, [false, 'false', 'no', 0], true),
             'preview' => resolvePreviewKey($frontMatter['preview'] ?? null),
             'summary' => trim((string) ($frontMatter['summary'] ?? $frontMatter['excerpt'] ?? '')),
             'output' => outputPathForSource($sourceRelative),
@@ -435,6 +438,7 @@ function inferSectionFromSource(string $sourceRelative): string
         str_starts_with($sourceRelative, 'docs/forms/') => 'Forms',
         str_starts_with($sourceRelative, 'docs/table/') => 'Table',
         str_starts_with($sourceRelative, 'docs/sortable/') => 'Sortable',
+        str_starts_with($sourceRelative, 'docs/core/schema/') => 'Schema',
         str_starts_with($sourceRelative, 'docs/core/') => 'Core',
         str_starts_with($sourceRelative, 'docs/boost/') => 'Boost',
         str_starts_with($sourceRelative, 'docs/') => 'Start Here',
@@ -452,6 +456,7 @@ function normalizeSection(string $section): string
         'fields' => 'Fields',
         'table' => 'Table',
         'sortable' => 'Sortable',
+        'schema' => 'Schema',
         'core' => 'Core',
         'boost' => 'Boost',
         default => ucwords(str_replace(['-', '_'], ' ', $section)),
@@ -465,6 +470,7 @@ function sectionSortWeight(string $section): int
         'Forms' => 20,
         'Fields' => 30,
         'Table' => 40,
+        'Schema' => 45,
         'Sortable' => 50,
         'Core' => 60,
         'Boost' => 70,
@@ -626,6 +632,10 @@ function buildNavSections(array $pages, ?string $activeSource, string $distRoot)
     $fromFile = $activeOutput ?? $homeFile;
 
     foreach ($pages as $page) {
+        if (! ($page['nav'] ?? true)) {
+            continue;
+        }
+
         $sectionOrder[$page['section']] = true;
         $sections[$page['section']][] = [
             'title' => $page['navTitle'],

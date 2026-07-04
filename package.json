@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "postinstall": "patch-package",
     "dev": "vite",
     "build": "vite build",
     "docs:refresh": "bash scripts/refresh-docs-site.sh",
@@ -34,6 +35,7 @@
     "@torchlight-api/torchlight-cli": "^0.1.7",
     "esbuild": "^0.27.0",
     "laravel-vite-plugin": "^2.0.1",
+    "patch-package": "^8.0.1",
     "tailwindcss": "^4.1.8",
     "vite": "^7.1.3"
   }

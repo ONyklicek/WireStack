@@ -325,7 +325,7 @@ PollColumn::make('job_status')
     ->rowLevelPolling()
 ```
 
-See [Columns — PollColumn](columns.md#pollcolumn) for the complete PollColumn API.
+See [Columns — PollColumn](columns/poll.md) for the complete PollColumn API.
 
 ### Polling API
 

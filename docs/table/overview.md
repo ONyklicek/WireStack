@@ -224,7 +224,7 @@ $table->model(Order::class)->primaryKey('uuid');
 ->columns(array $columns)
 ```
 
-See [Columns Reference](columns.md) for all 13 column types.
+See [Columns Reference](columns/index.md) for all 13 column types.
 
 ### Filters
 
@@ -232,7 +232,7 @@ See [Columns Reference](columns.md) for all 13 column types.
 ->filters(array $filters)
 ```
 
-See [Filters Reference](filters.md) for all filter types.
+See [Filters Reference](filters/index.md) for all filter types.
 
 ### Actions
 
@@ -635,8 +635,8 @@ class UserTable extends Component
 
 | Document | What It Covers |
 |----------|---------------|
-| [Columns](columns.md) | All 13 column types — TextColumn, BadgeColumn, BooleanColumn, IconColumn, ImageColumn, ButtonColumn, ToggleColumn, SelectColumn, TextInputColumn, StackedColumn, SplitColumn, PollColumn |
-| [Filters](filters.md) | SelectFilter, DateFilter, NumberRangeFilter, TernaryFilter, custom filters, column-level filters |
+| [Columns](columns/index.md) | All 13 column types — TextColumn, BadgeColumn, BooleanColumn, IconColumn, ImageColumn, ButtonColumn, ToggleColumn, SelectColumn, TextInputColumn, StackedColumn, SplitColumn, PollColumn |
+| [Filters](filters/index.md) | SelectFilter, DateFilter, NumberRangeFilter, TernaryFilter, custom filters, column-level filters |
 | [Exports](exports.md) | CSV, Excel, and PDF exports for the current table query |
 | [Imports](imports.md) | CSV imports — header mapping, casting, per-row validation, updateExisting |
 | [Relation Managers](relation-managers.md) | Relationship-scoped tables as standalone Livewire components |

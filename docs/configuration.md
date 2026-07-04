@@ -26,6 +26,8 @@ You only need the tags for packages you installed.
 | `WIRE_AUDIT_ENABLED` | `true` | Core audit log |
 | `WIRE_AUDIT_USER_MODEL` | `App\Models\User` | Core audit log |
 | `WIRE_FORMS_UPLOAD_DISK` | `public` | Forms file upload |
+| `WIRE_MOBILE_SHEET` | `true` | Core mobile bottom-sheets |
+| `WIRE_MOBILE_BREAKPOINT` | `sm` | Core mobile sheet breakpoint |
 
 ## Core
 
@@ -152,6 +154,49 @@ Modal width values are Tailwind-style size tokens such as `sm`, `md`, `lg`, `xl`
 
 See [Core Modals](core/modals.md) for modal actions and slide-overs.
 
+### Mobile
+
+Floating panels (dropdowns, action-group menus, select/date/tag pickers, table filter & column-toggle
+panels) and the mobile modal variants present as a **bottom sheet** below a breakpoint. These are the
+global defaults — every component overrides them per instance.
+
+```php
+'mobile' => [
+    // Present floating panels as a bottom sheet on mobile. false = classic
+    // trigger-anchored floating panel everywhere.
+    'sheet' => env('WIRE_MOBILE_SHEET', true),
+
+    // Breakpoint below which panels become a sheet:
+    //   'sm' (< 640px, phones — default)
+    //   'md' (< 768px, incl. small tablets)
+    //   'lg' (< 1024px, incl. tablet portrait)
+    'breakpoint' => env('WIRE_MOBILE_BREAKPOINT', 'sm'),
+],
+```
+
+Per-component overrides (win over the global defaults):
+
+```php
+// Sheet on/off
+Select::make('role')->options([...])->sheetOnMobile(false);   // force floating
+Select::make('country')->searchable()->sheetOnMobile();       // force sheet even when searchable
+$table->sheetOnMobile(false);                                 // filter + column-toggle panels
+
+// Breakpoint (sm | md | lg)
+Select::make('role')->mobileBreakpoint('lg');                 // sheet up to 1024px
+$table->mobileBreakpoint('md');
+ActionGroup::make([...])->mobileBreakpoint('md');
+Action::make('edit')->form([...])->slideOverOnMobile()->mobileBreakpoint('md');
+```
+
+```blade
+<x-wire::dropdown :sheet-on-mobile="false" :breakpoint="'md'">…</x-wire::dropdown>
+```
+
+Priority: per-component (`->sheetOnMobile()` / `->mobileBreakpoint()`) > searchable-auto-floating > global
+config. Searchable selects default to floating so the search box stays usable. Sheets add safe-area
+padding, a drag-to-dismiss grabber and a focus trap automatically.
+
 ## Forms
 
 The `wire-forms` config controls date and time defaults, uploads, and the rich editor toolbar.
@@ -215,7 +260,7 @@ return [
 
 `notification_driver` may be left as `null`; the table then uses the core session driver. Set it only when a table needs a different driver class.
 
-See [Table Overview](table/overview.md), [Columns](table/columns.md), and [Exports](table/exports.md).
+See [Table Overview](table/overview.md), [Columns](table/columns/index.md), and [Exports](table/exports.md).
 
 ## Sortable
 

@@ -12,6 +12,7 @@ use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Actions\View\BulkButtonComponent;
 use NyonCode\WireCore\Actions\View\ButtonComponent;
 use NyonCode\WireCore\Actions\View\GroupComponent;
+use NyonCode\WireCore\Actions\View\ModalHostComponent;
 use NyonCode\WireCore\Audit\AuditEventSubscriber;
 use NyonCode\WireCore\Audit\Console\PruneAuditEntriesCommand;
 use NyonCode\WireCore\Core\Actions\ActionPipeline;
@@ -151,6 +152,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
         Blade::component('wire-actions::button', ButtonComponent::class);
         Blade::component('wire-actions::group', GroupComponent::class);
         Blade::component('wire-actions::bulk-button', BulkButtonComponent::class);
+        Blade::component('wire-actions::modal-host', ModalHostComponent::class);
     }
 
     // ─── Notifications ──────────────────────────────────────────

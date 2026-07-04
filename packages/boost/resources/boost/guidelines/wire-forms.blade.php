@@ -169,4 +169,49 @@ writer (`->submitsForm()` validates first, `->closesModal()` closes after):
             ->action(fn ($data, $set) => $set('slug', Str::slug($data['name'] ?? ''))),
     ]);
 
+### Standalone actions (`WithActions`)
+
+Run modal/slide-over/wizard/confirmation actions — with forms, validation and the full
+lifecycle — in ANY Livewire component, no table required. Add the `WithActions` trait, declare
+named actions in `actions()`, and drop the modal host in the view once:
+
+    use NyonCode\WireForms\Concerns\WithActions;
+
+    class EditPanel extends Component
+    {
+        use WithActions;
+
+        protected function actions(): array
+        {
+            return [$this->editOfferAction()];
+        }
+
+        protected function editOfferAction(): Action
+        {
+            return Action::make('editOffer')
+                ->slideOver()
+                ->form([TextInput::make('name')->required()])
+                ->fillFormUsing(fn () => ['name' => $this->offer->name])
+                ->action(fn (array $data) => $this->offer->update($data));
+        }
+    }
+
+@verbatim
+    {{-- view --}}
+    <x-wire-actions::button :action="$this->editOfferAction()" />
+    <x-wire-actions::modal-host :component="$this" />
+@endverbatim
+
+- The button auto-derives `wire:click="mountAction('<name>')"` when no `wire-click` is given
+  (an explicit one, or a `url()` action rendered as a link, wins). Hidden actions render nothing.
+- Livewire methods added: `mountAction($name, ['record' => $model])` (opens the modal, or runs a
+  plain action immediately), `callMountedAction()` (validate + run), `unmountAction()`,
+  `nextActionModalStep()`/`prevActionModalStep()` (wizards), `callModalFooterAction($name)`.
+- The form-data bag is the public `actionModalFormData` property; field actions, `createOptionForm`
+  and `fillFormUsing` all work exactly as in a table modal.
+- Same engine backs `WithTable`: the form-agnostic core lives in
+  `NyonCode\WireCore\Actions\Concerns\InteractsWithActions`, the form bridge in
+  `NyonCode\WireForms\Concerns\InteractsWithActionForms`. Prefer this over reimplementing action
+  handling on a component.
+
 Use `describe-component-api` to see a field's full fluent surface.

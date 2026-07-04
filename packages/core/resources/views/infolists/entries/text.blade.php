@@ -65,4 +65,6 @@
             </span>
         @endif
     </div>
+
+    @include('wire-core::infolists.entry-actions')
 </div>

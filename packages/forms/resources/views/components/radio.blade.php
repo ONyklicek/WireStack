@@ -102,9 +102,11 @@
     </div>
 @elseif($field->isCards())
     {{-- ─── Cards ───────────────────────────────────────────────── --}}
+    {{-- Inline cards sit in one auto-sized row from sm up, but stack on a phone
+         so a row of cards never overflows the viewport horizontally. --}}
     <div @class([
             'grid gap-3',
-            'grid-flow-col auto-cols-fr' => $field->isInline(),
+            'grid-cols-1 sm:grid-cols-none sm:grid-flow-col sm:auto-cols-fr' => $field->isInline(),
         ])>
         @foreach($options as $value => $label)
             @php $cc = HasColor::getChoiceColorClasses($optionColors[$value] ?? $groupColor); @endphp
