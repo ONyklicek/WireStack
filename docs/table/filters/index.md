@@ -181,3 +181,10 @@ $component->getActiveFilterIndicators();   // ['status' => 'Status: Active', ...
 $component->removeTableFilter('status');   // clear one filter (chip × button)
 $component->resetTableFilters();           // clear all filters + search
 ```
+
+## Mobile
+
+The filter bar and column-toggle menu open as a bottom sheet on a phone.
+Configure globally via the `wire-core.mobile` block, or per component with
+`->sheetOnMobile()` / `->mobileBreakpoint()` — see
+[mobile presentation](../../configuration.md#mobile).

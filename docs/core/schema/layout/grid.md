@@ -52,6 +52,6 @@ width.
 
 ## Related Docs
 
-- [Flex](flex.md)
+- [Split](split.md)
 - [Section](section.md)
 - [Fieldset](fieldset.md)

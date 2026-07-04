@@ -198,7 +198,7 @@ Radio::make('plan')->options([...])->cards()->color('success');
 Radio::make('align')->options([...])->buttons()->color(Color::Danger);
 ```
 
-Supported colors: `primary`, `success`, `danger`, `warning`, `info`, `gray`, `purple`, `pink`.
+Supported colors: the full Tailwind palette — the semantic roles (`primary`, `success`, `danger`, `warning`, `info`, `gray`) plus every raw hue family (`slate`, `zinc`, `neutral`, `stone`, `orange`, `lime`, `teal`, `sky`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`).
 
 ### Per-option colors
 

@@ -344,20 +344,28 @@ file rather than editing icon paths by hand.
 
 ## Colors
 
-Tailwind CSS color abstraction — 7 semantic color names:
+`->color()` accepts the **complete Tailwind palette** on every surface. Two vocabularies
+resolve through the same canonical map:
 
-| Name | Typical Mapping |
-|------|-----------------|
-| `primary` | Blue (brand) |
-| `secondary` | Gray |
-| `success` | Green |
-| `danger` | Red |
-| `warning` | Amber/Yellow |
-| `info` | Cyan/Sky |
-| `gray` | Neutral gray |
+**Semantic roles** — fixed brand hues that carry meaning:
+
+| Name | Resolves to |
+|------|-------------|
+| `primary` (alias `blue`) | Brand primary |
+| `success` (alias `green`, `emerald`) | Emerald |
+| `danger` (alias `red`) | Red |
+| `warning` (alias `yellow`, `amber`) | Amber |
+| `info` (alias `cyan`) | Cyan |
+| `gray` (alias `secondary`) | Neutral gray |
+
+**Raw hue families** — every Tailwind color, for finer control:
+
+`slate`, `zinc`, `neutral`, `stone`, `orange`, `lime`, `teal`, `sky`, `indigo`,
+`violet`, `purple`, `fuchsia`, `pink`, `rose`.
 
 ```php
-Action::make('delete')->color('danger');
+Action::make('delete')->color('danger');   // semantic role
+Action::make('archive')->color('teal');     // raw hue
 BadgeColumn::make('status')->colors([
     'active' => 'success',
     'pending' => 'warning',
@@ -365,7 +373,10 @@ BadgeColumn::make('status')->colors([
 ]);
 ```
 
-Each color resolves to Tailwind utility classes for bg, text, border, ring, and hover variants.
+The type-safe `Foundation\Colors\Color` enum has a case for every one of these
+(`Color::Danger`, `Color::Teal`, …). Each color resolves to Tailwind utility classes
+for bg, text, border, ring, and hover variants — the same value renders identically
+on a badge, a solid/outlined/link button, a modal, a choice card, and a chart bar.
 
 ### Canonical color resolvers (`HasColor`)
 
@@ -381,10 +392,13 @@ so a semantic color resolves to the same hue everywhere (`success` → emerald,
 | `getGhostColorClasses()` | dropdown / menu item |
 | `getIconButtonColorClasses()` | icon-only button |
 | `getLinkColorClasses()` | text/link button (underline on hover) |
-| `getSolidBgClass()` | bare fill only (toggle track, count badge) |
+| `getSolidBgClass()` / `getSoftBgClass()` | bare fill only (toggle on/off track, count badge) |
 | `getBadgeColorClasses()` | soft "pill" badge (bg + text) |
 | `getTextColorClasses()` | foreground-only text tint |
+| `getChoiceColorClasses()` | radio/segmented/card selected state bundle |
+| `getModalSubmitButtonClasses()` | modal confirm/submit button |
 | `getModalIconBgClass()` / `getModalIconTextClass()` | modal icon chip |
+| `getGradientFillClasses()` / `getFillTextClasses()` | bar-chart fill + accent (literal chart hues) |
 
 When adding a color or surface, extend the resolver here once — downstream
 columns, badges, actions, and toggles pick it up automatically. Keep utility

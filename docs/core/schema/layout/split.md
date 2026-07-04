@@ -2,11 +2,15 @@
 order: 10
 ---
 
-# Flex
+# Split
 
 Arranges child components side by side on a single horizontal axis, stacking
 vertically on small screens. Use it when you want a row of controls or panels
 rather than a fixed column grid.
+
+> The class is `Split` (mirroring Filament). Not to be confused with the table
+> [`SplitColumn`](../../../table/columns/split.md), which splits space *within a
+> single table cell*.
 
 ```php
 use NyonCode\WireCore\Foundation\Schema\Split;

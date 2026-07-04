@@ -183,6 +183,9 @@ Route::get('/previews/mobile', fn () => view('previews.mobile-index', [
 // Standalone layout Blade tags (<x-wire::grid|split|section|fieldset|callout|empty-state>).
 Route::get('/previews/layout-tags', fn () => view('previews.layout-tags'));
 
+// Full Tailwind palette rendered through the canonical HasColor resolvers.
+Route::get('/previews/palette', fn () => view('previews.palette'));
+
 // Interactive standalone Tabs + Wizard (Livewire host → Alpine + core JS bundle).
 Route::get('/previews/layout-live', fn () => view('previews.capture', [
     'component' => \Workbench\App\Livewire\Previews\LayoutPreview::class,

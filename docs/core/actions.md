@@ -23,6 +23,8 @@ All extend `BaseAction` and share the same fluent API for label, icon, color, si
 |-------|-------------|
 | `DeleteAction` | Single record delete with confirmation |
 | `DeleteBulkAction` | Bulk delete with confirmation |
+| `RestoreBulkAction` | Bulk restore of soft-deleted records, with confirmation |
+| `ForceDeleteBulkAction` | Bulk permanent delete of soft-deleted records, with confirmation |
 | `EditAction` | Opens edit modal/form |
 | `ViewAction` | Opens view modal |
 
@@ -32,6 +34,20 @@ use NyonCode\WireCore\Actions\DeleteBulkAction;
 
 $table->actions([DeleteAction::make()])
       ->bulkActions([DeleteBulkAction::make()]);
+```
+
+Each preset ships the label, icon, color and confirmation modal; you supply the
+behavior with `->action()`. The soft-delete presets pair with a table scoped to
+trashed records (e.g. `->query(User::onlyTrashed())`):
+
+```php
+use NyonCode\WireCore\Actions\ForceDeleteBulkAction;
+use NyonCode\WireCore\Actions\RestoreBulkAction;
+
+$table->bulkActions([
+    RestoreBulkAction::make()->action(fn ($records) => $records->each->restore()),
+    ForceDeleteBulkAction::make()->action(fn ($records) => $records->each->forceDelete()),
+]);
 ```
 
 ## Basic Usage
@@ -72,6 +88,10 @@ HeaderAction::make('create')
 ```
 
 ## Action Groups
+
+Collapse secondary actions into a dropdown menu. On a phone the menu opens as a
+bottom sheet — override with `->sheetOnMobile(false)` / `->mobileBreakpoint('md')`;
+see [mobile presentation](../configuration.md#mobile).
 
 ```php
 use NyonCode\WireCore\Actions\ActionGroup;

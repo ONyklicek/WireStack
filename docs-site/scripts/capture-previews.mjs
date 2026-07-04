@@ -37,6 +37,7 @@ const captures = [
   { slug: 'sortable-overview', path: 'sortable-overview' },
   { slug: 'sortable-detail', path: 'sortable-detail' },
   { slug: 'core-overview', path: 'core-overview' },
+  { slug: 'palette', path: 'palette' },
   { slug: 'core-modal', path: 'core-modal', selector: '[role="dialog"] .transform', pad: 88 },
   { slug: 'widgets-overview', path: 'widgets-overview' },
   { slug: 'widgets-chart', path: 'widgets-chart' },
