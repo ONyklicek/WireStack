@@ -128,16 +128,16 @@ class MoneyInput extends Field
         return $this->decimals;
     }
 
-    // Value is stored as an integer (cents).
+    // Value is stored as an integer (cents). [tl! focus:start]
     public function getStateType(): string
     {
         return 'int';
-    }
+    } // [tl! focus:end]
 
-    protected function viewName(): string
+    protected function viewName(): string // [tl! focus:start]
     {
         return 'forms.components.money-input';
-    }
+    } // [tl! focus:end]
 }
 ```
 

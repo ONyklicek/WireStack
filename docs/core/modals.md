@@ -84,26 +84,26 @@ use NyonCode\WireCore\Modals\Wizard;
 
 // Centered dialog
 Action::make('edit')->modal(
-    Modal::make()
+    Modal::make() // [tl! focus:start]
         ->heading('Edit record')
         ->description('Update the details below')
         ->width('lg')
-        ->icon('pencil', 'primary')
+        ->icon('pencil', 'primary') // [tl! focus:end]
 );
 
 // Slide-over panel (->mobileOnly() = slide-over on mobile, modal on desktop)
 Action::make('view')->modal(
-    SlideOver::make()->heading('Details')->width('xl')
+    SlideOver::make()->heading('Details')->width('xl') // [tl! focus]
 );
 
 // Confirmation dialog — with presets (delete / makeDanger / makeWarning / makeInfo)
 Action::make('delete')->modal(
-    ConfirmationDialog::delete('User')
+    ConfirmationDialog::delete('User') // [tl! focus]
 );
 
 // Multi-step wizard (see below)
 Action::make('create')->modal(
-    Wizard::make()->heading('Create user')->steps([/* ModalStep::make(...) */])
+    Wizard::make()->heading('Create user')->steps([/* ModalStep::make(...) */]) // [tl! focus]
 );
 ```
 

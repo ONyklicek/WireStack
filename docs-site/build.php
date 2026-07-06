@@ -12,29 +12,33 @@ require dirname(__DIR__).'/vendor/autoload.php';
 
 $root = dirname(__DIR__);
 $siteRoot = __DIR__;
-$distRoot = $siteRoot.'/dist';
+// The deploy job points every per-branch, per-locale build at one shared output
+// tree (DOCS_DIST_DIR) so the whole matrix assembles into a single dist/ without
+// any cell clobbering another; local builds default to docs-site/dist.
+$distRoot = rtrim((string) (getenv('DOCS_DIST_DIR') ?: $siteRoot.'/dist'), '/');
 
-$pages = pageManifest($root);
-$pageMap = [];
-
-foreach ($pages as $page) {
-    $pageMap[$page['source']] = $page;
-}
-
-// Documentation versions shown in the switcher.
+// Canonical matrix of locales x versions. The deploy job feeds ONE copy of this
+// file to every branch build via DOCS_VERSIONS_FILE so the switchers can never
+// drift between the 1.x and 2.x branches; the values baked into config.json are
+// the local-dev fallback.
 //
-// - `path`:      output sub-directory under dist/ ('' = the dist root). This is
-//                also the URL segment the switcher links to.
+// Each run builds exactly one (version, locale) cell — selected with
+// DOCS_BUILD_VERSION / DOCS_BUILD_LOCALE — into its own output root:
+//
+//   dist/            v1.x, default locale (EN)
+//   dist/cs/         v1.x, cs
+//   dist/v2/         v2.x, default locale
+//   dist/v2/cs/      v2.x, cs
+//
+// so the deploy job iterates the matrix, assembling every cell into a single
+// dist/ tree without any cell clobbering another (see recreate/preserve below).
+[$siteVersions, $locales] = loadSiteConfig($siteRoot);
+
+// - `path`:      output sub-directory ('' = the version/dist root). Also the URL
+//                segment the switcher links to.
 // - `available`: whether the version has been (or will be) built. Unavailable
 //                versions render as a disabled "coming soon" entry.
 //
-// Build a specific version with DOCS_BUILD_VERSION=<label>; with no env var the
-// first available version is built (and served from the dist root).
-$siteVersions = [
-    ['label' => 'v1.x', 'badge' => 'Latest', 'path' => '', 'available' => true],
-    ['label' => 'v2.x', 'badge' => 'Soon', 'path' => 'v2', 'available' => false],
-];
-
 // Resolve which version this run builds.
 $activeVersionLabel = (string) (getenv('DOCS_BUILD_VERSION') ?: '');
 $activeVersion = null;
@@ -58,25 +62,106 @@ if ($activeVersion === null) {
 $activeVersion ??= $siteVersions[0];
 $activeVersionLabel = $activeVersion['label'];
 $outputSubdir = trim((string) ($activeVersion['path'] ?? ''), '/');
-$versionRoot = $outputSubdir === '' ? $distRoot : $distRoot.'/'.$outputSubdir;
+$versionDir = $outputSubdir === '' ? $distRoot : $distRoot.'/'.$outputSubdir;
 
-// When rebuilding the root version, keep sibling version sub-directories intact
-// so they don't get wiped; a sub-directory build only recreates its own folder.
+// Resolve which locale this run builds. The default locale owns the version root
+// (no URL segment); every other locale lives in its own sub-directory.
+$activeLocaleCode = (string) (getenv('DOCS_BUILD_LOCALE') ?: '');
+$activeLocale = null;
+
+foreach ($locales as $locale) {
+    if ($activeLocaleCode !== '' && (string) ($locale['code'] ?? '') === $activeLocaleCode) {
+        $activeLocale = $locale;
+        break;
+    }
+}
+
+if ($activeLocale === null) {
+    foreach ($locales as $locale) {
+        if (! empty($locale['default'])) {
+            $activeLocale = $locale;
+            break;
+        }
+    }
+}
+
+$activeLocale ??= $locales[0];
+$activeLocaleCode = (string) ($activeLocale['code'] ?? 'en');
+$activeLocaleLabel = (string) ($activeLocale['label'] ?? $activeLocaleCode);
+$localeSubdir = trim((string) ($activeLocale['path'] ?? ''), '/');
+$localeIsDefault = $localeSubdir === '';
+$defaultLocaleCode = (string) ($locales[0]['code'] ?? 'en');
+foreach ($locales as $locale) {
+    if (! empty($locale['default'])) {
+        $defaultLocaleCode = (string) ($locale['code'] ?? $defaultLocaleCode);
+        break;
+    }
+}
+
+// The write root for this run: version dir, then locale sub-dir for non-default
+// locales. Every output path below is resolved against $versionRoot, so pointing
+// it at the locale root is all that is needed to relocate a whole language.
+$versionRoot = $localeIsDefault ? $versionDir : $versionDir.'/'.$localeSubdir;
+
+// Non-default locales own a docs/<code>/ overlay tree and a <version>/<path>/
+// output sub-directory; collect both so the manifest can skip overlay sources
+// and the recreate step can preserve sibling-locale output.
+$localeSubdirs = [];
+$overlayLocaleCodes = [];
+foreach ($locales as $locale) {
+    $path = trim((string) ($locale['path'] ?? ''), '/');
+    if ($path !== '') {
+        $localeSubdirs[] = $path;
+        $overlayLocaleCodes[] = (string) ($locale['code'] ?? '');
+    }
+}
+
+// Runtime locale state shared by every page: the client remembers the visitor's
+// choice (see templates) and, on the version-root landing only, redirects to it.
+$localePaths = [];
+foreach ($locales as $locale) {
+    $localePaths[(string) ($locale['code'] ?? '')] = trim((string) ($locale['path'] ?? ''), '/');
+}
+$localeState = (string) json_encode([
+    'storageKey' => 'wire-docs-locale',
+    'maxAgeDays' => 90,
+    'current' => $activeLocaleCode,
+    'default' => $defaultLocaleCode,
+    'paths' => $localePaths,
+], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+// UI-chrome translator: maps an English source string to the active locale, or
+// returns it unchanged (default locale, or no translation yet). See lang.php.
+$localeStrings = (array) ((require $siteRoot.'/lang.php')[$activeLocaleCode] ?? []);
+$t = static fn (string $string): string => $localeStrings[$string] ?? $string;
+
+$pages = pageManifest($root, $overlayLocaleCodes, $localeIsDefault ? '' : $activeLocaleCode);
+$pageMap = [];
+
+foreach ($pages as $page) {
+    $pageMap[$page['source']] = $page;
+}
+
+// Recreate only the (version, locale) cell this run owns, preserving every
+// sibling cell so the deploy job can assemble the matrix incrementally:
+//   - a non-default locale is a leaf directory -> wiped clean, no siblings inside;
+//   - the default locale owns the version root -> keep the locale sub-dirs;
+//   - the default version root is also the dist root -> keep sibling versions too.
 $preserveSubdirs = [];
-foreach ($siteVersions as $version) {
-    $path = trim((string) ($version['path'] ?? ''), '/');
-    if ($path !== '' && $path !== $outputSubdir) {
-        $preserveSubdirs[] = $path;
+if ($localeIsDefault) {
+    $preserveSubdirs = $localeSubdirs;
+    if ($outputSubdir === '') {
+        foreach ($siteVersions as $version) {
+            $path = trim((string) ($version['path'] ?? ''), '/');
+            if ($path !== '' && $path !== $outputSubdir) {
+                $preserveSubdirs[] = $path;
+            }
+        }
     }
 }
 
 ensureDirectory($distRoot);
-
-if ($outputSubdir === '') {
-    recreateDirectoryPreserving($distRoot, $preserveSubdirs);
-} else {
-    recreateDirectory($versionRoot);
-}
+recreateDirectoryPreserving($versionRoot, $preserveSubdirs);
 
 copyDirectory($siteRoot.'/assets', $versionRoot.'/assets');
 
@@ -168,7 +253,7 @@ foreach ($pages as $page) {
             'title' => $content['title'],
             'caption' => trim($content['excerpt']) !== ''
                 ? $content['excerpt']
-                : 'Rendered live through the Wire Forms runtime.',
+                : $t('Rendered live through the Wire Forms runtime.'),
         ];
 
         // Optional additional variant previews for the same field doc page.
@@ -181,8 +266,8 @@ foreach ($pages as $page) {
 
             $previewItems[] = [
                 'image' => relativeAssetPath($currentFile, $versionRoot.'/'.$image),
-                'title' => $extra['title'],
-                'caption' => $extra['caption'],
+                'title' => $t($extra['title']),
+                'caption' => $t($extra['caption']),
             ];
         }
     } else {
@@ -195,8 +280,8 @@ foreach ($pages as $page) {
 
             $previewItems[] = [
                 'image' => relativeAssetPath($currentFile, $versionRoot.'/'.$image),
-                'title' => $previewMeta[$slug]['title'],
-                'caption' => $previewMeta[$slug]['caption'],
+                'title' => $t($previewMeta[$slug]['title']),
+                'caption' => $t($previewMeta[$slug]['caption']),
             ];
         }
     }
@@ -205,9 +290,14 @@ foreach ($pages as $page) {
 
     $html = renderTemplate($siteRoot.'/templates/page.php', [
         'siteTitle' => 'Wire Docs',
+        't' => $t,
         'page' => array_merge($page, $content, ['previewUrl' => $previewUrl, 'previewItems' => $previewItems]),
         'navSections' => buildNavSections($pages, $page['source'], $versionRoot),
-        'versionMenu' => buildVersionMenu($siteVersions, $page['output'], $outputSubdir, $activeVersionLabel),
+        'versionMenu' => buildVersionMenu($siteVersions, $page['output'], $outputSubdir, $localeSubdir, $activeVersionLabel),
+        'localeMenu' => buildLocaleMenu($locales, $page['output'], $localeSubdir, $activeLocaleCode),
+        'htmlLang' => $activeLocaleCode,
+        'localeState' => $localeState,
+        'isVersionHome' => false,
         'searchIndexUrl' => relativeAssetPath($currentFile, $versionRoot.'/search-index.json'),
         'cssUrl' => relativeAssetPath($currentFile, $versionRoot.'/assets/site.css'),
         'jsUrl' => relativeAssetPath($currentFile, $versionRoot.'/assets/site.js'),
@@ -228,8 +318,13 @@ foreach ($pages as $page) {
 
 $homeHtml = renderTemplate($siteRoot.'/templates/home.php', [
     'siteTitle' => 'Wire Docs',
+    't' => $t,
     'navSections' => buildNavSections($pages, null, $versionRoot),
-    'versionMenu' => buildVersionMenu($siteVersions, 'index.html', $outputSubdir, $activeVersionLabel),
+    'versionMenu' => buildVersionMenu($siteVersions, 'index.html', $outputSubdir, $localeSubdir, $activeVersionLabel),
+    'localeMenu' => buildLocaleMenu($locales, 'index.html', $localeSubdir, $activeLocaleCode),
+    'htmlLang' => $activeLocaleCode,
+    'localeState' => $localeState,
+    'isVersionHome' => true,
     'searchIndexUrl' => 'search-index.json',
     'cssUrl' => 'assets/site.css',
     'jsUrl' => 'assets/site.js',
@@ -328,14 +423,62 @@ file_put_contents(
     json_encode($searchIndex, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
 );
 
-echo "Built docs site ({$activeVersionLabel}) in {$versionRoot}\n";
+echo "Built docs site ({$activeVersionLabel} · {$activeLocaleLabel}) in {$versionRoot}\n";
 
 /**
- * @return array<int, array<string, string>>
+ * Load the canonical locale x version matrix. DOCS_VERSIONS_FILE (set by the
+ * deploy job) wins so every branch build shares one source of truth; otherwise
+ * docs-site/config.json is used. Both fall back to sane defaults if unreadable.
+ *
+ * @return array{0:array<int, array<string, mixed>>, 1:array<int, array<string, mixed>>}
  */
-function pageManifest(string $root): array
+function loadSiteConfig(string $siteRoot): array
+{
+    $defaults = [
+        'versions' => [
+            ['label' => 'v1.x', 'badge' => 'Latest', 'path' => '', 'branch' => '1.x', 'available' => true],
+            ['label' => 'v2.x', 'badge' => 'Soon', 'path' => 'v2', 'branch' => '2.x', 'available' => false],
+        ],
+        'locales' => [
+            ['code' => 'en', 'label' => 'English', 'path' => '', 'default' => true],
+        ],
+    ];
+
+    $configPath = (string) (getenv('DOCS_VERSIONS_FILE') ?: $siteRoot.'/config.json');
+    $config = [];
+
+    if (is_file($configPath)) {
+        $decoded = json_decode((string) file_get_contents($configPath), true);
+        if (is_array($decoded)) {
+            $config = $decoded;
+        }
+    }
+
+    $versions = (isset($config['versions']) && is_array($config['versions']) && $config['versions'] !== [])
+        ? array_values($config['versions'])
+        : $defaults['versions'];
+    $locales = (isset($config['locales']) && is_array($config['locales']) && $config['locales'] !== [])
+        ? array_values($config['locales'])
+        : $defaults['locales'];
+
+    return [$versions, $locales];
+}
+
+/**
+ * Build the page manifest for one locale. Pages are always enumerated from the
+ * canonical (default-locale) docs/ tree, so identity — source key, output path,
+ * navigation — is locale-independent; only the markdown body is swapped for a
+ * translation when docs/<locale>/<same-path> exists. Missing translations fall
+ * back to the canonical body and are flagged `translated => false`.
+ *
+ * @param  array<int, string>  $overlayLocaleCodes  Codes whose docs/<code>/ trees are translation overlays (excluded from enumeration).
+ * @param  string  $localeCode  Locale being built ('' = default/canonical).
+ * @return array<int, array<string, mixed>>
+ */
+function pageManifest(string $root, array $overlayLocaleCodes, string $localeCode): array
 {
     $pages = [];
+    $isDefault = $localeCode === '';
 
     $iterator = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator($root.'/docs', FilesystemIterator::SKIP_DOTS)
@@ -352,12 +495,33 @@ function pageManifest(string $root): array
             continue;
         }
 
-        $markdown = file_get_contents($source);
-        if ($markdown === false) {
-            throw new RuntimeException('Unable to read markdown file: '.$source);
+        $sourceRelative = str_replace('\\', '/', substr($source, strlen($root) + 1));
+
+        // Skip translation overlays — they are pulled in as bodies for their own
+        // locale below, never enumerated as canonical pages of their own.
+        foreach ($overlayLocaleCodes as $code) {
+            if ($code !== '' && str_starts_with($sourceRelative, 'docs/'.$code.'/')) {
+                continue 2;
+            }
         }
 
-        $sourceRelative = substr($source, strlen($root) + 1);
+        // Read the translated body when present, else fall back to canonical.
+        $readFrom = $source;
+        $translated = true;
+        if (! $isDefault) {
+            $overlay = $root.'/docs/'.$localeCode.'/'.substr($sourceRelative, strlen('docs/'));
+            if (is_file($overlay)) {
+                $readFrom = $overlay;
+            } else {
+                $translated = false;
+            }
+        }
+
+        $markdown = file_get_contents($readFrom);
+        if ($markdown === false) {
+            throw new RuntimeException('Unable to read markdown file: '.$readFrom);
+        }
+
         $document = parseMarkdownDocument($markdown, $sourceRelative);
         $frontMatter = $document['frontMatter'];
         $section = normalizeSection($frontMatter['section'] ?? inferSectionFromSource($sourceRelative));
@@ -381,6 +545,7 @@ function pageManifest(string $root): array
             'preview' => resolvePreviewKey($frontMatter['preview'] ?? null),
             'summary' => trim((string) ($frontMatter['summary'] ?? $frontMatter['excerpt'] ?? '')),
             'output' => outputPathForSource($sourceRelative),
+            'translated' => $translated,
             'markdown' => $document['markdown'],
         ];
     }
@@ -665,17 +830,20 @@ function buildNavSections(array $pages, ?string $activeSource, string $distRoot)
  * path, dist/<path>/ otherwise); unavailable versions render as disabled.
  *
  * @param  array<int, array<string, mixed>>  $versions
- * @param  string  $pageOutput  Output path of the current page relative to its version root, e.g. 'table/overview/index.html'.
- * @param  string  $activeSubdir  Sub-directory of the version being built ('' = dist root).
+ * @param  string  $pageOutput  Output path of the current page relative to its locale root, e.g. 'table/overview/index.html'.
+ * @param  string  $activeVersionSubdir  Sub-directory of the version being built ('' = dist root).
+ * @param  string  $activeLocaleSubdir  Sub-directory of the locale being built ('' = version root).
  * @param  string  $activeLabel  Label of the version being built.
  * @return array{current:string, items:array<int, array{label:string, badge:string, current:bool, href:?string, disabled:bool}>}
  */
-function buildVersionMenu(array $versions, string $pageOutput, string $activeSubdir, string $activeLabel): array
+function buildVersionMenu(array $versions, string $pageOutput, string $activeVersionSubdir, string $activeLocaleSubdir, string $activeLabel): array
 {
-    // Steps up from the current page to the dist root.
-    $depthToVersionRoot = substr_count(trim($pageOutput, '/'), '/');
-    $depthToDistRoot = $depthToVersionRoot + ($activeSubdir === '' ? 0 : 1);
+    // Steps up from the current page to the dist root, then back down into the
+    // target version while keeping the current locale segment.
+    $depthToVersionRoot = substr_count(trim($pageOutput, '/'), '/') + ($activeLocaleSubdir === '' ? 0 : 1);
+    $depthToDistRoot = $depthToVersionRoot + ($activeVersionSubdir === '' ? 0 : 1);
     $up = str_repeat('../', $depthToDistRoot);
+    $localePrefix = $activeLocaleSubdir === '' ? '' : $activeLocaleSubdir.'/';
 
     $items = [];
 
@@ -687,7 +855,7 @@ function buildVersionMenu(array $versions, string $pageOutput, string $activeSub
 
         $href = null;
         if ($available || $isCurrent) {
-            $target = $up.($path === '' ? '' : $path.'/');
+            $target = $up.($path === '' ? '' : $path.'/').$localePrefix;
             $href = $target === '' ? './' : $target;
         }
 
@@ -701,6 +869,56 @@ function buildVersionMenu(array $versions, string $pageOutput, string $activeSub
     }
 
     return ['current' => $activeLabel, 'items' => $items];
+}
+
+/**
+ * Resolve the language switcher entries for the page being built. Because every
+ * locale mirrors the same page structure, a switch links to the *same* page in
+ * the sibling locale (up to the version root, then down the sibling's segment).
+ *
+ * @param  array<int, array<string, mixed>>  $locales
+ * @param  string  $pageOutput  Output path of the current page relative to its locale root.
+ * @param  string  $activeLocaleSubdir  Sub-directory of the locale being built ('' = version root).
+ * @param  string  $activeCode  Code of the locale being built.
+ * @return array{current:string, items:array<int, array{label:string, code:string, current:bool, href:string, disabled:bool}>}
+ */
+function buildLocaleMenu(array $locales, string $pageOutput, string $activeLocaleSubdir, string $activeCode): array
+{
+    if (count($locales) < 2) {
+        return ['current' => '', 'items' => []];
+    }
+
+    $pageOutput = trim($pageOutput, '/');
+    $pageDir = dirname($pageOutput);
+    $pageUrlRel = ($pageDir === '.' || $pageDir === '') ? '' : $pageDir.'/';
+    $depthToVersionRoot = substr_count($pageOutput, '/') + ($activeLocaleSubdir === '' ? 0 : 1);
+    $up = str_repeat('../', $depthToVersionRoot);
+
+    $currentLabel = '';
+    $items = [];
+
+    foreach ($locales as $locale) {
+        $code = (string) ($locale['code'] ?? '');
+        $label = (string) ($locale['label'] ?? $code);
+        $path = trim((string) ($locale['path'] ?? ''), '/');
+        $isCurrent = $code === $activeCode;
+
+        if ($isCurrent) {
+            $currentLabel = $label;
+        }
+
+        $target = $up.($path === '' ? '' : $path.'/').$pageUrlRel;
+
+        $items[] = [
+            'label' => $label,
+            'code' => $code,
+            'current' => $isCurrent,
+            'href' => $target === '' ? './' : $target,
+            'disabled' => false,
+        ];
+    }
+
+    return ['current' => $currentLabel, 'items' => $items];
 }
 
 function outputPathForSource(string $sourceRelative): string

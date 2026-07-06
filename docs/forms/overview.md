@@ -48,14 +48,14 @@ class CreateUser extends Component
 
     public function form(Form $form): Form
     {
-        return $form
+        return $form // [tl! focus:start]
             ->statePath('data')
             ->model(User::class)
             ->schema([
                 TextInput::make('name')->required(),
                 TextInput::make('email')->email()->required(),
             ])
-            ->successMessage('User created');
+            ->successMessage('User created'); // [tl! focus:end]
     }
 
     public function save(): void
@@ -88,24 +88,24 @@ class UserSettings extends Component
 
     public function profileForm(Form $form): Form
     {
-        return $form
+        return $form // [tl! focus:start]
             ->statePath('profileData')
             ->model($this->user)
             ->schema([
                 TextInput::make('name')->required(),
                 TextInput::make('bio'),
-            ]);
+            ]); // [tl! focus:end]
     }
 
     public function passwordForm(Form $form): Form
     {
-        return $form
+        return $form // [tl! focus:start]
             ->statePath('passwordData')
             ->schema([
                 TextInput::make('current_password')->password()->required(),
                 TextInput::make('password')->password()->required()->rules(['confirmed']),
                 TextInput::make('password_confirmation')->password()->required(),
-            ]);
+            ]); // [tl! focus:end]
     }
 
     public function saveProfile(): void
@@ -209,7 +209,10 @@ $form->model(User::class)->save();
 ->model(string|Model|null $model)    // Eloquent model (class for create, instance for edit)
 ->save(): mixed                      // full save lifecycle
 ->using(Closure $fn)                 // custom save callback (replaces default persist)
+->optimisticLock(?string $column = 'updated_at') // abort update if the record changed since fill
 ```
+
+See [Save Lifecycle → Optimistic Locking](save-lifecycle.md#optimistic-locking) for the concurrent-edit guard.
 
 ### Save Lifecycle Hooks
 
@@ -242,7 +245,7 @@ $form->model(User::class)->save();
 
 ```php
 ->authorize(bool $usePolicy = true)              // enable model policy auto-resolution (create/update)
-->authorizeUsing(?Closure $callback)             // fn(User $user): bool — custom auth check
+->authorizeUsing(?Closure $callback)             // fn(User $user, $record = null): bool — custom auth check
 ->canSave(): bool                                // whether the current user may save
 ->isReadOnly(): bool                             // true when authorization denies save
 ```

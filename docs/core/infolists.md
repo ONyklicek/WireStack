@@ -61,7 +61,7 @@ class ShowUser extends Component
     #[Computed]
     public function infolist(): Infolist
     {
-        return Infolist::make()
+        return Infolist::make() // [tl! focus:start]
             ->record($this->user)               // 1. give it the record
             ->schema([                           // 2. list what to show
                 Section::make('Profile')
@@ -70,7 +70,7 @@ class ShowUser extends Component
                         TextEntry::make('name'),         // reads $user->name
                         TextEntry::make('email')->copyable(),
                     ]),
-            ]);
+            ]); // [tl! focus:end]
     }
 
     public function render()

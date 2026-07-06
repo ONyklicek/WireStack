@@ -129,10 +129,10 @@ class CreateUser extends Component
 
     public function form(Form $form): Form
     {
-        return $form->statePath('data')->model(User::class)->schema([
+        return $form->statePath('data')->model(User::class)->schema([ // [tl! focus:start]
             TextInput::make('name')->required(),
             TextInput::make('email')->email()->required(),
-        ]);
+        ]); // [tl! focus:end]
     }
 
     public function save(): void

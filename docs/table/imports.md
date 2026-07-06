@@ -21,7 +21,7 @@ public function table(Table $table): Table
         ->model(Contact::class)
         ->columns([...])
         ->headerActions([
-            ImportAction::makeImport()
+            ImportAction::makeImport() // [tl! focus:start]
                 ->importConfig(
                     TableImport::make()
                         ->model(Contact::class)
@@ -35,7 +35,7 @@ public function table(Table $table): Table
                             ImportColumn::make('age')
                                 ->castStateUsing(fn ($value) => (int) $value),
                         ])
-                ),
+                ), // [tl! focus:end]
         ]);
 }
 ```

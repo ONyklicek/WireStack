@@ -140,18 +140,32 @@
             this.initialOptions = { ...this.initialOptions, [detail.value]: detail.label };
             this.options = { ...this.options, [detail.value]: detail.label };
         },
+        persistSelectedOption(value) {
+            // Persist a chosen remote option's label into the seed map so it
+            // survives the search reset that follows a selection (remote results
+            // are transient — fetchRemote rebuilds `options` from `initialOptions`
+            // plus the current term's matches, and an empty term returns nothing).
+            // Mirrors upsertOption and the server-side getSelectedOptionLabels seed
+            // so selectedLabel/isSelected stay readable without a page refresh.
+            if (value === null || value === undefined) return;
+            const label = this.options[value];
+            if (label === undefined) return;
+            this.initialOptions = { ...this.initialOptions, [value]: label };
+        },
         select(value) {
             if (this.multiple) {
                 let list = Array.isArray(this.selected) ? [...this.selected] : [];
                 const idx = list.map(String).indexOf(String(value));
                 if (idx === -1) {
                     list.push(value);
+                    this.persistSelectedOption(value);
                 } else {
                     list.splice(idx, 1);
                 }
                 this.selected = list;
                 return;
             }
+            this.persistSelectedOption(value);
             this.selected = value;
             this.open = false;
             this.search = '';

@@ -27,34 +27,39 @@
   });
 
   /* ----------------------------------------------------------
-     Version switcher dropdown
+     Sidebar dropdowns (version + language switchers)
      ---------------------------------------------------------- */
-  const versionSwitcher = document.querySelector('[data-version-switcher]');
-  if (versionSwitcher) {
-    const trigger = versionSwitcher.querySelector('[data-version-trigger]');
-    const menu = versionSwitcher.querySelector('[data-version-menu]');
+  const initSwitcher = (rootSelector, triggerSelector, menuSelector) => {
+    const root = document.querySelector(rootSelector);
+    if (!root) return;
 
-    const closeVersions = () => {
-      versionSwitcher.classList.remove('is-open');
+    const trigger = root.querySelector(triggerSelector);
+    const menu = root.querySelector(menuSelector);
+
+    const close = () => {
+      root.classList.remove('is-open');
       trigger?.setAttribute('aria-expanded', 'false');
       if (menu) menu.hidden = true;
     };
 
     trigger?.addEventListener('click', (event) => {
       event.stopPropagation();
-      const isOpen = versionSwitcher.classList.toggle('is-open');
+      const isOpen = root.classList.toggle('is-open');
       trigger.setAttribute('aria-expanded', String(isOpen));
       if (menu) menu.hidden = !isOpen;
     });
 
     document.addEventListener('click', (event) => {
-      if (!versionSwitcher.contains(event.target)) closeVersions();
+      if (!root.contains(event.target)) close();
     });
 
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') closeVersions();
+      if (event.key === 'Escape') close();
     });
-  }
+  };
+
+  initSwitcher('[data-version-switcher]', '[data-version-trigger]', '[data-version-menu]');
+  initSwitcher('[data-locale-switcher]', '[data-locale-trigger]', '[data-locale-menu]');
 
   /* ----------------------------------------------------------
      Collapsible sidebar sections (active section stays open)
@@ -355,4 +360,78 @@
       searchResults.hidden = true;
     }
   });
+
+  /* ----------------------------------------------------------
+     Motion — GSAP entrance + scroll reveal (opt-in via .has-motion,
+     set in <head> only when prefers-reduced-motion is not requested)
+     ---------------------------------------------------------- */
+  (() => {
+    const gsap = window.gsap;
+
+    // If motion is off, or GSAP did not load, reveal everything the CSS hid.
+    if (!root.classList.contains('has-motion') || !gsap) {
+      root.classList.remove('has-motion');
+      return;
+    }
+
+    const ScrollTrigger = window.ScrollTrigger;
+    if (ScrollTrigger) gsap.registerPlugin(ScrollTrigger);
+
+    // Reveal a batch of elements as they scroll into view (or immediately when
+    // ScrollTrigger is unavailable), with a soft stagger.
+    const batch = (selector, y = 26) => {
+      const els = gsap.utils.toArray(selector);
+      if (!els.length) return;
+      gsap.set(els, { opacity: 0, y });
+
+      if (!ScrollTrigger) {
+        gsap.to(els, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out', stagger: 0.08 });
+        return;
+      }
+
+      ScrollTrigger.batch(els, {
+        start: 'top 90%',
+        onEnter: (group) => gsap.to(group, {
+          opacity: 1, y: 0, duration: 0.7, ease: 'power3.out', stagger: 0.09, overwrite: true,
+        }),
+      });
+    };
+
+    // Home hero: a single entrance timeline on load.
+    if (document.querySelector('.home-hero-inner')) {
+      const bits = ['.hero-badge', '.home-hero h1', '.home-hero .lead', '.hero-actions > *'];
+      gsap.set(bits, { opacity: 0, y: 22 });
+      gsap.timeline({ defaults: { ease: 'power3.out', duration: 0.85 } })
+        .to('.hero-badge', { opacity: 1, y: 0 })
+        .to('.home-hero h1', { opacity: 1, y: 0 }, '-=0.6')
+        .to('.home-hero .lead', { opacity: 1, y: 0 }, '-=0.6')
+        .to('.hero-actions > *', { opacity: 1, y: 0, stagger: 0.09 }, '-=0.55');
+    }
+
+    // Home sections + card grids.
+    batch('.section-intro', 20);
+    batch('.feature-card');
+    batch('.preview-card');
+    batch('.stat-card', 18);
+    batch('.overview-panel');
+
+    // Doc pages: gentle load fade-up, per-heading scroll reveal, TOC slide-in.
+    const article = document.querySelector('.docs-article');
+    if (article) {
+      const hero = article.querySelector('.page-hero');
+      if (hero) {
+        gsap.set(hero, { opacity: 0, y: 20 });
+        gsap.to(hero, { opacity: 1, y: 0, duration: 0.75, ease: 'power3.out' });
+      }
+      batch('.docs-article > h2', 16);
+
+      const toc = document.querySelector('.page-toc');
+      if (toc) {
+        gsap.set(toc, { opacity: 0, x: 16 });
+        gsap.to(toc, { opacity: 1, x: 0, duration: 0.75, ease: 'power3.out', delay: 0.15 });
+      }
+    }
+
+    if (ScrollTrigger) ScrollTrigger.refresh();
+  })();
 })();
