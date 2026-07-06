@@ -51,6 +51,16 @@ $nextPage = ($activeIndex !== null && isset($flatNav[$activeIndex + 1])) ? $flat
             }
         })();
     </script>
+    <script>
+        // Opt into entrance/scroll motion unless the visitor prefers less of it.
+        try {
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.documentElement.classList.add('has-motion');
+            }
+        } catch (e) {}
+    </script>
+    <script defer src="<?= htmlspecialchars(str_replace('site.js', 'gsap.min.js', $jsUrl), ENT_QUOTES) ?>"></script>
+    <script defer src="<?= htmlspecialchars(str_replace('site.js', 'scrolltrigger.min.js', $jsUrl), ENT_QUOTES) ?>"></script>
     <script defer src="<?= htmlspecialchars($jsUrl, ENT_QUOTES) ?>"></script>
 </head>
 <body class="docs-body">

@@ -1687,3 +1687,161 @@ a.locale-item:hover { background: var(--surface-2); color: var(--text); }
 @media (prefers-reduced-motion: reduce) {
     * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
+
+/* ============================================================
+   2026 redesign — Vue/VitePress-flavoured surfaces + motion
+   Layered on top of the base theme; rules here intentionally
+   override the earlier hero / card / button definitions.
+   ============================================================ */
+
+:root {
+    --brand-grad: linear-gradient(115deg, #f59e0b 0%, #fb7185 48%, #d946ef 100%);
+    --brand-grad-soft: linear-gradient(115deg, rgba(245, 158, 11, 0.16), rgba(217, 70, 239, 0.14));
+    --ring-grad: linear-gradient(140deg, rgba(245, 158, 11, 0.55), rgba(217, 70, 239, 0.45));
+}
+
+/* Reveal targets start hidden ONLY when motion is enabled; JS animates them in
+   and clears .has-motion if GSAP is unavailable so nothing stays invisible. */
+.has-motion .hero-badge,
+.has-motion .home-hero h1,
+.has-motion .home-hero .lead,
+.has-motion .hero-actions > *,
+.has-motion .section-intro,
+.has-motion .feature-card,
+.has-motion .preview-card,
+.has-motion .stat-card,
+.has-motion .overview-panel,
+.has-motion .docs-article .page-hero,
+.has-motion .docs-article > h2,
+.has-motion .page-toc {
+    opacity: 0;
+}
+
+/* ---- Hero: animated aurora + gradient headline ---- */
+.home-hero {
+    padding: 104px 28px 84px;
+    border-bottom: 1px solid var(--border);
+    isolation: isolate;
+}
+
+.home-hero::before {
+    content: "";
+    position: absolute;
+    inset: -20% -10% auto -10%;
+    height: 520px;
+    background:
+        radial-gradient(38% 55% at 22% 8%, rgba(245, 158, 11, 0.30), transparent 70%),
+        radial-gradient(40% 55% at 82% 4%, rgba(217, 70, 239, 0.26), transparent 72%),
+        radial-gradient(45% 60% at 50% 0%, rgba(251, 113, 133, 0.22), transparent 70%);
+    filter: blur(8px);
+    pointer-events: none;
+    z-index: -1;
+    animation: hero-aurora 18s ease-in-out infinite alternate;
+}
+
+[data-theme="dark"] .home-hero::before { opacity: 0.72; }
+
+@keyframes hero-aurora {
+    0%   { transform: translate3d(-3%, 0, 0) scale(1); }
+    50%  { transform: translate3d(3%, 2%, 0) scale(1.06); }
+    100% { transform: translate3d(2%, -1%, 0) scale(1.02); }
+}
+
+.hero-badge {
+    backdrop-filter: blur(8px);
+    background: color-mix(in srgb, var(--surface) 78%, transparent);
+}
+
+.home-hero h1 { font-size: clamp(2.6rem, 6.4vw, 4.3rem); font-weight: 870; }
+
+.home-hero h1 .grad {
+    background: var(--brand-grad);
+    background-size: 220% 220%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: grad-shift 8s ease infinite;
+}
+
+@keyframes grad-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50%      { background-position: 100% 50%; }
+}
+
+/* ---- Buttons: gradient primary with glow ---- */
+.btn { height: 48px; border-radius: 999px; transition: transform 160ms cubic-bezier(.22,1,.36,1), box-shadow 200ms ease, filter 200ms ease; }
+
+.btn-primary {
+    background: var(--brand-grad);
+    background-size: 160% 160%;
+    color: #fff;
+    box-shadow: 0 12px 30px -10px rgba(217, 70, 239, 0.5), 0 6px 16px -8px rgba(245, 158, 11, 0.5);
+}
+.btn-primary:hover { transform: translateY(-2px); filter: saturate(1.08) brightness(1.03); box-shadow: 0 18px 40px -12px rgba(217, 70, 239, 0.6); }
+
+.btn-ghost { border-radius: 999px; }
+.btn-ghost:hover { transform: translateY(-2px); }
+
+/* ---- Cards: gradient-ring hover lift ---- */
+.feature-card,
+.preview-card,
+.overview-panel {
+    position: relative;
+    border-radius: var(--radius-lg);
+    transition: transform 260ms cubic-bezier(.22,1,.36,1), box-shadow 260ms ease, border-color 200ms ease;
+}
+
+.feature-card::after,
+.preview-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: var(--ring-grad);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 240ms ease;
+    pointer-events: none;
+}
+
+.feature-card:hover,
+.preview-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-lg);
+    border-color: transparent;
+}
+
+.feature-card:hover::after,
+.preview-card:hover::after { opacity: 1; }
+
+.stat-card { transition: transform 240ms cubic-bezier(.22,1,.36,1), box-shadow 240ms ease; }
+.stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+
+.stat-card strong {
+    background: var(--brand-grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* ---- Eyebrows pick up the brand gradient ---- */
+.section-intro .eyebrow,
+.page-hero .eyebrow {
+    background: var(--brand-grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 700;
+}
+
+/* ---- Smooth dropdown reveal for the switchers ---- */
+.version-menu:not([hidden]),
+.locale-menu:not([hidden]) { animation: menu-pop 160ms cubic-bezier(.22,1,.36,1); }
+
+@keyframes menu-pop {
+    from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
