@@ -14,6 +14,7 @@ use NyonCode\WireCore\Foundation\Schema\Wizard;
 use NyonCode\WireForms\Forms\Config\ConfigBuilder;
 use NyonCode\WireForms\Forms\Config\FormConfig;
 use NyonCode\WireForms\Forms\Runtime\FormRuntime;
+use NyonCode\WireForms\Forms\Runtime\StaleModelException;
 use NyonCode\WireForms\Forms\Runtime\StateManager;
 use NyonCode\WireForms\Rendering\FormRenderer;
 use NyonCode\WireForms\Validation\FormValidationResolver;
@@ -133,6 +134,25 @@ class Form implements Htmlable
     public function using(Closure $fn): static
     {
         $this->configBuilder->using($fn);
+        $this->invalidateConfig();
+
+        return $this;
+    }
+
+    /**
+     * Enable optimistic locking on updates.
+     *
+     * The lock column's value is captured when the form is filled from the
+     * record. On save the current database value is re-read and, if it no longer
+     * matches the captured baseline, the save is aborted with a
+     * {@see StaleModelException} so a stale
+     * write never silently overwrites a concurrent change.
+     *
+     * Set `->model($record)` before `->fill()` so the baseline can be captured.
+     */
+    public function optimisticLock(?string $column = 'updated_at'): static
+    {
+        $this->configBuilder->optimisticLock($column);
         $this->invalidateConfig();
 
         return $this;

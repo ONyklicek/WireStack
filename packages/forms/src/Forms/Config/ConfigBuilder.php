@@ -38,6 +38,8 @@ final class ConfigBuilder
 
     private bool $isLive = false;
 
+    private ?string $optimisticLockColumn = null;
+
     /**
      * @param  array<int, mixed>  $components
      */
@@ -121,6 +123,13 @@ final class ConfigBuilder
         return $this;
     }
 
+    public function optimisticLock(?string $column): self
+    {
+        $this->optimisticLockColumn = $column;
+
+        return $this;
+    }
+
     public function build(): FormConfig
     {
         return new FormConfig(
@@ -135,6 +144,7 @@ final class ConfigBuilder
             validationMessages: $this->validationMessages,
             isDisabled: $this->isDisabled,
             isLive: $this->isLive,
+            optimisticLockColumn: $this->optimisticLockColumn,
         );
     }
 

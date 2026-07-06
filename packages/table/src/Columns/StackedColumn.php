@@ -203,6 +203,10 @@ class StackedColumn extends Column
      */
     public function renderCell(Model $record): string
     {
+        if (! $this->canView() || ! $this->isVisibleForRecord($record)) {
+            return '';
+        }
+
         // Build content based on configuration
         $primaryValue = $this->primaryColumn ? $this->resolveColumnValue($record, $this->primaryColumn) : null;
         $secondaryValue = $this->secondaryColumn ? $this->resolveColumnValue($record, $this->secondaryColumn) : null;

@@ -135,6 +135,9 @@ class Column extends DataComponent implements Htmlable
     /** @var Closure|null Callback to determine if the column should be visible */
     protected ?Closure $visibleCallback = null;
 
+    /** @var Closure|null Per-record cell visibility (redact a single cell by row) */
+    protected ?Closure $visibleForRecordCallback = null;
+
     /** @var string|null Gate ability for inline editing */
     protected ?string $inlineEditAbility = null;
 
@@ -659,7 +662,7 @@ class Column extends DataComponent implements Htmlable
 
     public function renderCell(Model $record): string
     {
-        if (! $this->canView()) {
+        if (! $this->canView() || ! $this->isVisibleForRecord($record)) {
             return '';
         }
 
@@ -694,6 +697,35 @@ class Column extends DataComponent implements Htmlable
     public function canView(): bool
     {
         return $this->isAuthorized();
+    }
+
+    /**
+     * Show or hide this column's cell per record — e.g. redact salary/margin on
+     * some rows. Distinct from {@see canView()}: that is the column's *structural*
+     * presence (evaluated once, without a record, and consulted by the header,
+     * column toggle, export, …), whereas this runs at cell render with the row's
+     * record. The callback receives the record (and this column).
+     *
+     *   ->visibleForRecord(fn ($record) => auth()->user()->can('viewSalary', $record))
+     */
+    public function visibleForRecord(Closure $callback): static
+    {
+        $this->visibleForRecordCallback = $callback;
+
+        return $this;
+    }
+
+    /**
+     * Whether this column's cell is visible for the given record. Structural
+     * visibility ({@see canView()}) is checked separately by renderCell.
+     */
+    public function isVisibleForRecord(Model $record): bool
+    {
+        if ($this->visibleForRecordCallback === null) {
+            return true;
+        }
+
+        return (bool) ($this->visibleForRecordCallback)($record, $this);
     }
 
     /**

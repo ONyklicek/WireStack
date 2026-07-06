@@ -172,7 +172,7 @@ class SplitColumn extends Column
      */
     public function renderCell(Model $record): string
     {
-        if (! $this->canView()) {
+        if (! $this->canView() || ! $this->isVisibleForRecord($record)) {
             return '';
         }
 
@@ -180,7 +180,7 @@ class SplitColumn extends Column
         $textColumns = [];
 
         foreach ($this->columns as $column) {
-            if (! $column->canView()) {
+            if (! $column->canView() || ! $column->isVisibleForRecord($record)) {
                 continue;
             }
 

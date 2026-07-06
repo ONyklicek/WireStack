@@ -58,7 +58,14 @@ trait HasAuthorization
     /**
      * Authorize using a custom callback.
      *
-     * Example: ->authorizeUsing(fn (User $user) => $user->hasRole('admin'))
+     * The callback receives the authenticated user and, where the surface has
+     * one, the row's record — so authorization can be scoped per record:
+     *
+     *   ->authorizeUsing(fn (User $user) => $user->hasRole('admin'))
+     *   ->authorizeUsing(fn (User $user, $record) => $user->id === $record?->owner_id)
+     *
+     * The record is present for row actions; it is null for record-less
+     * surfaces (structural column/filter visibility, fields, widgets).
      */
     public function authorizeUsing(?Closure $callback): static
     {
@@ -94,9 +101,12 @@ trait HasAuthorization
             return false;
         }
 
-        // Custom authorize callback (highest priority)
+        // Custom authorize callback (highest priority). The context — the row's
+        // record where the caller has one (actions), null for record-less
+        // surfaces (structural column/filter visibility, fields, widgets) — is
+        // forwarded so callbacks can gate per record: fn ($user, $record) => …
         if ($this->authorizeCallback) {
-            return (bool) ($this->authorizeCallback)($user);
+            return (bool) ($this->authorizeCallback)($user, $context);
         }
 
         // Gate ability check

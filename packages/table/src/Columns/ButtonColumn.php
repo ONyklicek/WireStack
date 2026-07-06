@@ -77,9 +77,6 @@ class ButtonColumn extends Column
     /** @var string|Closure|null Loading text */
     protected string|Closure|null $loadingText = null;
 
-    /** @var Closure|null Condition for visibility */
-    protected ?Closure $visibleWhen = null;
-
     /** @var Closure|null Condition for enabled state */
     protected ?Closure $enabledWhen = null;
 
@@ -200,13 +197,12 @@ class ButtonColumn extends Column
     }
 
     /**
-     * Set condition for visibility.
+     * Set a per-record visibility condition. BC alias for the canonical
+     * {@see Column::visibleForRecord()}.
      */
     public function visibleWhen(Closure $callback): static
     {
-        $this->visibleWhen = $callback;
-
-        return $this;
+        return $this->visibleForRecord($callback);
     }
 
     /**
@@ -340,18 +336,6 @@ class ButtonColumn extends Column
             'loadingTarget' => $this->livewireAction ?? 'executeColumnAction',
             'removeTarget' => (string) $this->livewireAction,
         ]);
-    }
-
-    /**
-     * Check if button should be visible for this record.
-     */
-    public function isVisibleForRecord(Model $record): bool
-    {
-        if ($this->visibleWhen !== null) {
-            return (bool) ($this->visibleWhen)($record, $this);
-        }
-
-        return true;
     }
 
     /**
