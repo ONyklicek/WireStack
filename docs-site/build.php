@@ -130,6 +130,11 @@ $localeState = (string) json_encode([
     'paths' => $localePaths,
 ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
+// UI-chrome translator: maps an English source string to the active locale, or
+// returns it unchanged (default locale, or no translation yet). See lang.php.
+$localeStrings = (array) ((require $siteRoot.'/lang.php')[$activeLocaleCode] ?? []);
+$t = static fn (string $string): string => $localeStrings[$string] ?? $string;
+
 $pages = pageManifest($root, $overlayLocaleCodes, $localeIsDefault ? '' : $activeLocaleCode);
 $pageMap = [];
 
@@ -248,7 +253,7 @@ foreach ($pages as $page) {
             'title' => $content['title'],
             'caption' => trim($content['excerpt']) !== ''
                 ? $content['excerpt']
-                : 'Rendered live through the Wire Forms runtime.',
+                : $t('Rendered live through the Wire Forms runtime.'),
         ];
 
         // Optional additional variant previews for the same field doc page.
@@ -261,8 +266,8 @@ foreach ($pages as $page) {
 
             $previewItems[] = [
                 'image' => relativeAssetPath($currentFile, $versionRoot.'/'.$image),
-                'title' => $extra['title'],
-                'caption' => $extra['caption'],
+                'title' => $t($extra['title']),
+                'caption' => $t($extra['caption']),
             ];
         }
     } else {
@@ -275,8 +280,8 @@ foreach ($pages as $page) {
 
             $previewItems[] = [
                 'image' => relativeAssetPath($currentFile, $versionRoot.'/'.$image),
-                'title' => $previewMeta[$slug]['title'],
-                'caption' => $previewMeta[$slug]['caption'],
+                'title' => $t($previewMeta[$slug]['title']),
+                'caption' => $t($previewMeta[$slug]['caption']),
             ];
         }
     }
@@ -285,6 +290,7 @@ foreach ($pages as $page) {
 
     $html = renderTemplate($siteRoot.'/templates/page.php', [
         'siteTitle' => 'Wire Docs',
+        't' => $t,
         'page' => array_merge($page, $content, ['previewUrl' => $previewUrl, 'previewItems' => $previewItems]),
         'navSections' => buildNavSections($pages, $page['source'], $versionRoot),
         'versionMenu' => buildVersionMenu($siteVersions, $page['output'], $outputSubdir, $localeSubdir, $activeVersionLabel),
@@ -312,6 +318,7 @@ foreach ($pages as $page) {
 
 $homeHtml = renderTemplate($siteRoot.'/templates/home.php', [
     'siteTitle' => 'Wire Docs',
+    't' => $t,
     'navSections' => buildNavSections($pages, null, $versionRoot),
     'versionMenu' => buildVersionMenu($siteVersions, 'index.html', $outputSubdir, $localeSubdir, $activeVersionLabel),
     'localeMenu' => buildLocaleMenu($locales, 'index.html', $localeSubdir, $activeLocaleCode),

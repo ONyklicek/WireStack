@@ -71,7 +71,7 @@ $nextPage = ($activeIndex !== null && isset($flatNav[$activeIndex + 1])) ? $flat
                     <span class="brand-mark">W</span>
                     <span class="brand-name">WireStack</span>
                 </a>
-                <button class="sidebar-close" type="button" data-nav-close aria-label="Close navigation">
+                <button class="sidebar-close" type="button" data-nav-close aria-label="<?= htmlspecialchars($t('Close navigation'), ENT_QUOTES) ?>">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
                 </button>
             </div>
@@ -84,7 +84,7 @@ $nextPage = ($activeIndex !== null && isset($flatNav[$activeIndex + 1])) ? $flat
             <nav class="sidebar-nav">
                 <?php foreach ($navSections as $section) { ?>
                     <section class="nav-section">
-                        <h2><?= htmlspecialchars($section['title'], ENT_QUOTES) ?></h2>
+                        <h2><?= htmlspecialchars($t($section['title']), ENT_QUOTES) ?></h2>
                         <ul>
                             <?php foreach ($section['items'] as $item) { ?>
                                 <li>
@@ -104,7 +104,7 @@ $nextPage = ($activeIndex !== null && isset($flatNav[$activeIndex + 1])) ? $flat
         <main class="site-main">
             <div class="reading-progress" aria-hidden="true"><span data-reading-progress></span></div>
             <header class="topbar">
-                <button class="nav-toggle" type="button" data-nav-toggle aria-label="Open navigation">
+                <button class="nav-toggle" type="button" data-nav-toggle aria-label="<?= htmlspecialchars($t('Open navigation'), ENT_QUOTES) ?>">
                     <span></span><span></span><span></span>
                 </button>
 
@@ -112,21 +112,21 @@ $nextPage = ($activeIndex !== null && isset($flatNav[$activeIndex + 1])) ? $flat
                     <input
                         type="search"
                         class="search-input"
-                        placeholder="Search documentation…"
+                        placeholder="<?= htmlspecialchars($t('Search documentation…'), ENT_QUOTES) ?>"
                         autocomplete="off"
                         spellcheck="false"
                         data-search-input
                     >
                     <span class="search-kbd"><kbd>⌘</kbd><kbd>K</kbd></span>
-                    <button class="search-cancel" type="button" data-search-close>Cancel</button>
+                    <button class="search-cancel" type="button" data-search-close><?= htmlspecialchars($t('Cancel'), ENT_QUOTES) ?></button>
                     <div class="search-results" data-search-results hidden></div>
                 </div>
 
                 <div class="topbar-actions">
-                    <button class="icon-button search-trigger" type="button" data-search-open aria-label="Search documentation">
+                    <button class="icon-button search-trigger" type="button" data-search-open aria-label="<?= htmlspecialchars($t('Search documentation'), ENT_QUOTES) ?>">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                     </button>
-                    <button class="icon-button theme-toggle" type="button" data-theme-toggle aria-label="Toggle theme">
+                    <button class="icon-button theme-toggle" type="button" data-theme-toggle aria-label="<?= htmlspecialchars($t('Toggle theme'), ENT_QUOTES) ?>">
                         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
                         <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
                     </button>
@@ -140,16 +140,16 @@ $nextPage = ($activeIndex !== null && isset($flatNav[$activeIndex + 1])) ? $flat
                         <?php if (($htmlLang ?? 'en') !== 'en' && empty($page['translated'])) { ?>
                             <div class="translation-notice" role="note">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
-                                <span>This page hasn't been translated yet — showing the English version.</span>
+                                <span><?= htmlspecialchars($t("This page hasn't been translated yet — showing the English version."), ENT_QUOTES) ?></span>
                             </div>
                         <?php } ?>
                         <div class="page-hero<?= $page['previewUrl'] ? ' has-preview' : '' ?>">
-                            <nav class="breadcrumb" aria-label="Breadcrumb">
-                                <a href="<?= htmlspecialchars($homeUrl, ENT_QUOTES) ?>">Docs</a>
+                            <nav class="breadcrumb" aria-label="<?= htmlspecialchars($t('Breadcrumb'), ENT_QUOTES) ?>">
+                                <a href="<?= htmlspecialchars($homeUrl, ENT_QUOTES) ?>"><?= htmlspecialchars($t('Docs'), ENT_QUOTES) ?></a>
                                 <span class="sep">/</span>
-                                <span class="current"><?= htmlspecialchars($page['section'], ENT_QUOTES) ?></span>
+                                <span class="current"><?= htmlspecialchars($t($page['section']), ENT_QUOTES) ?></span>
                             </nav>
-                            <p class="eyebrow"><?= htmlspecialchars($page['section'], ENT_QUOTES) ?></p>
+                            <p class="eyebrow"><?= htmlspecialchars($t($page['section']), ENT_QUOTES) ?></p>
                             <h1><?= htmlspecialchars($page['title'], ENT_QUOTES) ?></h1>
                             <?php if ($page['excerpt'] !== '') { ?>
                                 <p class="lead"><?= htmlspecialchars($page['excerpt'], ENT_QUOTES) ?></p>
@@ -182,7 +182,7 @@ $nextPage = ($activeIndex !== null && isset($flatNav[$activeIndex + 1])) ? $flat
                         <?php if ($page['headings'] !== []) { ?>
                             <details class="mobile-toc">
                                 <summary>
-                                    <span class="mobile-toc-label">On this page</span>
+                                    <span class="mobile-toc-label"><?= htmlspecialchars($t('On this page'), ENT_QUOTES) ?></span>
                                     <svg class="mobile-toc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                                 </summary>
                                 <ul>
@@ -198,17 +198,17 @@ $nextPage = ($activeIndex !== null && isset($flatNav[$activeIndex + 1])) ? $flat
                         <?= $page['contentHtml'] ?>
 
                         <?php if ($prevPage || $nextPage) { ?>
-                            <nav class="page-nav" aria-label="Pagination">
+                            <nav class="page-nav" aria-label="<?= htmlspecialchars($t('Pagination'), ENT_QUOTES) ?>">
                                 <?php if ($prevPage) { ?>
                                     <a class="page-nav-link is-prev" href="<?= htmlspecialchars($prevPage['href'], ENT_QUOTES) ?>">
-                                        <span>← Previous</span>
+                                        <span><?= htmlspecialchars($t('← Previous'), ENT_QUOTES) ?></span>
                                         <strong><?= htmlspecialchars($prevPage['title'], ENT_QUOTES) ?></strong>
                                     </a>
                                 <?php } else { ?><span></span><?php } ?>
 
                                 <?php if ($nextPage) { ?>
                                     <a class="page-nav-link is-next" href="<?= htmlspecialchars($nextPage['href'], ENT_QUOTES) ?>">
-                                        <span>Next →</span>
+                                        <span><?= htmlspecialchars($t('Next →'), ENT_QUOTES) ?></span>
                                         <strong><?= htmlspecialchars($nextPage['title'], ENT_QUOTES) ?></strong>
                                     </a>
                                 <?php } else { ?><span></span><?php } ?>
@@ -218,7 +218,7 @@ $nextPage = ($activeIndex !== null && isset($flatNav[$activeIndex + 1])) ? $flat
 
                     <?php if ($page['headings'] !== []) { ?>
                         <aside class="page-toc">
-                            <p class="toc-title">On this page</p>
+                            <p class="toc-title"><?= htmlspecialchars($t('On this page'), ENT_QUOTES) ?></p>
                             <ul>
                                 <?php foreach ($page['headings'] as $heading) { ?>
                                     <li class="level-<?= (int) $heading['level'] ?>">
@@ -233,7 +233,7 @@ $nextPage = ($activeIndex !== null && isset($flatNav[$activeIndex + 1])) ? $flat
                 </div>
             </div>
 
-            <button class="back-to-top" type="button" data-back-to-top aria-label="Back to top">
+            <button class="back-to-top" type="button" data-back-to-top aria-label="<?= htmlspecialchars($t('Back to top'), ENT_QUOTES) ?>">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
             </button>
         </main>
