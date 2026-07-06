@@ -141,6 +141,7 @@ EditAction::make()
 Uvnitř toho formuláře se reaktivní accessory výše chovají přesně jako v samostatném formuláři — `$get`,
 `$set` a `afterStateUpdated()` se všechny resolvují proti živému modal bagu.
 
+<a id="modal-footer-actions"></a>
 ## Akce v patičce modalu
 
 Přidejte extra tlačítka do patičky action modalu pomocí `modalFooterActions()`. Každý
