@@ -34,6 +34,25 @@ Resolution order:
 | `authorize()` | Checks a Laravel Gate ability |
 | `permission()` | Checks a permission string through Gate |
 
+### Per-record authorization
+
+The `authorizeUsing()` callback receives the authenticated user and, where the surface has one, the **row's record** — so authorization can be scoped per record:
+
+```php
+Action::make('approve')
+    ->authorizeUsing(fn (User $user, $record) => $user->id === $record?->manager_id)
+    ->action(fn (Order $record) => $record->approve());
+```
+
+The record is present for **row actions**; it is `null` for record-less surfaces (structural column/filter visibility, fields, widgets), so a one-argument closure `fn ($user) => …` stays valid everywhere.
+
+This governs whether the whole column/action **exists** structurally (evaluated once). To hide or redact a **single cell per row** — e.g. show `salary` only on records the user may see — use the column's `visibleForRecord()` instead, which runs at cell render with that row's record:
+
+```php
+TextColumn::make('salary')
+    ->visibleForRecord(fn ($record) => auth()->user()->can('viewSalary', $record));
+```
+
 ## Table Policies
 
 Enable policy checks on a table with `authorize()`.
