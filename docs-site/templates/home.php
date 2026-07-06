@@ -62,13 +62,14 @@
                     <span class="brand-mark">W</span>
                     <span class="brand-name">WireStack</span>
                 </a>
-                <div class="sidebar-header-actions">
-                    <?php include __DIR__.'/partials/locale-switcher.php'; ?>
-                    <?php include __DIR__.'/partials/version-switcher.php'; ?>
-                    <button class="sidebar-close" type="button" data-nav-close aria-label="Close navigation">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-                    </button>
-                </div>
+                <button class="sidebar-close" type="button" data-nav-close aria-label="Close navigation">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="sidebar-tools">
+                <?php include __DIR__.'/partials/locale-switcher.php'; ?>
+                <?php include __DIR__.'/partials/version-switcher.php'; ?>
             </div>
 
             <nav class="sidebar-nav">

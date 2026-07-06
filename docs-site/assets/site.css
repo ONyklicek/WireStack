@@ -1223,11 +1223,17 @@ pre {
    Version switcher
    ============================================================ */
 
-.sidebar-header-actions {
+/* Switchers sit on their own row below the brand, so the brand name always has
+   the full header width and is never overlapped. */
+.sidebar-tools {
     display: flex;
     align-items: center;
     gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
 }
+
+.sidebar-tools .locale-switcher { margin-right: auto; }
 
 .sidebar-close {
     display: none;
