@@ -154,6 +154,7 @@ Hodnoty šířky modalu jsou size tokeny ve stylu Tailwindu jako `sm`, `md`, `lg
 
 Modální akce a slide-overy viz [Core Modály](core/modals.md).
 
+<a id="mobile"></a>
 ### Mobil
 
 Plovoucí panely (dropdowny, menu skupin akcí, select/date/tag pickery, panely filtrů a přepínání sloupců tabulky) a mobilní varianty modalů se pod breakpointem zobrazí jako **bottom sheet**. Toto jsou globální výchozí hodnoty — každá komponenta je přepisuje per instance.
