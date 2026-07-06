@@ -48,14 +48,14 @@ class CreateUser extends Component
 
     public function form(Form $form): Form
     {
-        return $form
+        return $form // [tl! focus:start]
             ->statePath('data')
             ->model(User::class)
             ->schema([
                 TextInput::make('name')->required(),
                 TextInput::make('email')->email()->required(),
             ])
-            ->successMessage('User created');
+            ->successMessage('User created'); // [tl! focus:end]
     }
 
     public function save(): void
@@ -88,24 +88,24 @@ class UserSettings extends Component
 
     public function profileForm(Form $form): Form
     {
-        return $form
+        return $form // [tl! focus:start]
             ->statePath('profileData')
             ->model($this->user)
             ->schema([
                 TextInput::make('name')->required(),
                 TextInput::make('bio'),
-            ]);
+            ]); // [tl! focus:end]
     }
 
     public function passwordForm(Form $form): Form
     {
-        return $form
+        return $form // [tl! focus:start]
             ->statePath('passwordData')
             ->schema([
                 TextInput::make('current_password')->password()->required(),
                 TextInput::make('password')->password()->required()->rules(['confirmed']),
                 TextInput::make('password_confirmation')->password()->required(),
-            ]);
+            ]); // [tl! focus:end]
     }
 
     public function saveProfile(): void

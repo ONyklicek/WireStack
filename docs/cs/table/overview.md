@@ -50,7 +50,7 @@ class UserTable extends Component
 
     public function table(Table $table): Table
     {
-        return $table
+        return $table // [tl! focus:start]
             ->model(User::class)
             ->columns([
                 TextColumn::make('name')
@@ -97,7 +97,7 @@ class UserTable extends Component
             ->searchable()
             ->paginated()
             ->striped()
-            ->hoverable();
+            ->hoverable(); // [tl! focus:end]
     }
 
     public function render()

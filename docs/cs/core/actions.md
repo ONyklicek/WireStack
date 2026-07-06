@@ -62,29 +62,29 @@ Action::make('edit')
     ->label('Edit')
     ->icon('pencil')
     ->color('primary')
-    ->url(fn (User $record) => route('users.edit', $record))
+    ->url(fn (User $record) => route('users.edit', $record)) // [tl! focus]
 
 // Řádková akce s callbackem
 Action::make('archive')
     ->label('Archive')
     ->icon('archive')
-    ->action(fn (User $record) => $record->update(['archived' => true]))
+    ->action(fn (User $record) => $record->update(['archived' => true])) // [tl! focus]
     ->successNotification('Archived!')
 
 // Hromadná akce
 BulkAction::make('export')
     ->label('Export Selected')
     ->icon('download')
-    ->action(fn (Collection $records) => Excel::download($records))
-    ->deselectRecordsAfterCompletion()
+    ->action(fn (Collection $records) => Excel::download($records)) // [tl! focus:start]
+    ->deselectRecordsAfterCompletion() // [tl! focus:end]
 
 // Hlavičková akce
 HeaderAction::make('create')
     ->label('New User')
     ->icon('plus')
     ->url(route('users.create'))
-    ->badge(fn () => User::whereNull('verified_at')->count())
-    ->badgeColor('danger')
+    ->badge(fn () => User::whereNull('verified_at')->count()) // [tl! focus:start]
+    ->badgeColor('danger') // [tl! focus:end]
 ```
 
 ## Skupiny akcí

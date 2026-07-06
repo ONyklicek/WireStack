@@ -291,7 +291,7 @@ class EditUser extends Component
                     ->required(),
                 Toggle::make('active'),
             ])
-            ->mutateDataBeforeSave(function (array $data): array {
+            ->mutateDataBeforeSave(function (array $data): array { // [tl! focus:start]
                 $data['updated_by'] = auth()->id();
                 return $data;
             })
@@ -302,7 +302,7 @@ class EditUser extends Component
                 Cache::forget("user:{$record->id}");
                 event(new UserUpdated($record));
             })
-            ->successMessage('User updated.');
+            ->successMessage('User updated.'); // [tl! focus:end]
     }
 
     public function save(): void

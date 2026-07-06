@@ -197,7 +197,7 @@ class UserTable extends Component
 
     public function table(Table $table): Table
     {
-        return $table
+        return $table // [tl! focus:start]
             ->model(User::class)
             ->columns([
                 TextColumn::make('name')
@@ -237,7 +237,7 @@ class UserTable extends Component
             ])
             ->defaultSort('name')
             ->searchable()
-            ->paginated();
+            ->paginated(); // [tl! focus:end]
     }
 }
 ```
@@ -275,7 +275,7 @@ class EditUser extends Component
 
     public function form(Form $form): Form
     {
-        return $form
+        return $form // [tl! focus:start]
             ->statePath('data')
             ->model(User::class)
             ->schema([
@@ -286,7 +286,7 @@ class EditUser extends Component
                     ->required(),
                 Toggle::make('active'),
             ])
-            ->successMessage('User saved.');
+            ->successMessage('User saved.'); // [tl! focus:end]
     }
 
     public function save(): void
