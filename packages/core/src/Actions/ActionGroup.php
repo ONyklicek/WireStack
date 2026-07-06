@@ -13,6 +13,8 @@ use NyonCode\WireCore\Actions\Concerns\HasIcons;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Concerns\HasSize;
+use NyonCode\WireCore\Foundation\Enums\Placement;
+use NyonCode\WireCore\Foundation\Enums\Size;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Support\MobileSheet;
 
@@ -105,9 +107,9 @@ class ActionGroup implements Htmlable
         return $this;
     }
 
-    public function size(?string $size): static
+    public function size(string|Size|null $size): static
     {
-        $this->size = $size;
+        $this->size = $size instanceof Size ? $size->value : $size;
 
         return $this;
     }
@@ -119,9 +121,9 @@ class ActionGroup implements Htmlable
         return $this;
     }
 
-    public function dropdownPosition(string $position): static
+    public function dropdownPosition(string|Placement $position): static
     {
-        $this->dropdownPosition = $position;
+        $this->dropdownPosition = $position instanceof Placement ? $position->value : $position;
 
         return $this;
     }
@@ -362,13 +364,7 @@ class ActionGroup implements Htmlable
 
     public function getDropdownPositionClasses(): string
     {
-        return match ($this->dropdownPosition) {
-            'bottom-start' => 'left-0 origin-top-left',
-            'bottom-end' => 'right-0 origin-top-right',
-            'top-start' => 'left-0 bottom-full origin-bottom-left',
-            'top-end' => 'right-0 bottom-full origin-bottom-right',
-            default => 'right-0 origin-top-right',
-        };
+        return Placement::resolve($this->dropdownPosition)->panelClasses();
     }
 
     /**
@@ -380,12 +376,7 @@ class ActionGroup implements Htmlable
      */
     public function getDropdownOriginClass(): string
     {
-        return match ($this->dropdownPosition) {
-            'bottom-start' => 'origin-top-left',
-            'top-start' => 'origin-bottom-left',
-            'top-end' => 'origin-bottom-right',
-            default => 'origin-top-right',
-        };
+        return Placement::resolve($this->dropdownPosition)->originClass();
     }
 
     /**
@@ -398,10 +389,7 @@ class ActionGroup implements Htmlable
      */
     public function getDropdownConfig(): array
     {
-        $placement = match ($this->dropdownPosition) {
-            'bottom-start', 'bottom-end', 'top-start', 'top-end' => $this->dropdownPosition,
-            default => 'bottom-end',
-        };
+        $placement = Placement::resolve($this->dropdownPosition)->value;
 
         return [
             'placement' => $placement,

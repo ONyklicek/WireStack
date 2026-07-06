@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Modals\Concerns;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Enums\ModalWidth;
 
 /**
  * Shared modal properties: heading, description, width, close behavior.
@@ -53,9 +54,9 @@ trait HasModalProperties
         return $this;
     }
 
-    public function width(string $width): static
+    public function width(string|ModalWidth $width): static
     {
-        $this->width = $width;
+        $this->width = $width instanceof ModalWidth ? $width->value : $width;
 
         return $this;
     }
@@ -121,8 +122,10 @@ trait HasModalProperties
      * kept literal for Tailwind's JIT scanner; an unknown token falls back to
      * `max-w-md`.
      */
-    public static function getMaxWidthClass(string $width, bool $responsive = true, string $breakpoint = 'sm'): string
+    public static function getMaxWidthClass(string|ModalWidth $width, bool $responsive = true, string $breakpoint = 'sm'): string
     {
+        $width = $width instanceof ModalWidth ? $width->value : $width;
+
         if ($responsive) {
             return match ($breakpoint) {
                 'md' => match ($width) {

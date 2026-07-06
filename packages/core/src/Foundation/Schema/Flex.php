@@ -7,15 +7,15 @@ namespace NyonCode\WireCore\Foundation\Schema;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 
 /**
- * Canonical split layout — arranges child components side by side on a single
- * horizontal axis, stacking vertically on small screens.
+ * Canonical flex layout — arranges child components side by side on a single
+ * horizontal (flexbox) axis, stacking vertically on small screens.
  *
  * Shared schema vocabulary consumed by forms and infolists; surface-specific
  * markup lives in each package's Blade view. Children grow to share the row
  * evenly by default. The breakpoint at which the row turns horizontal is
  * configurable via {@see from()}.
  */
-class Split extends LayoutComponent
+class Flex extends LayoutComponent
 {
     protected string $from = 'md';
 
@@ -153,6 +153,6 @@ class Split extends LayoutComponent
 
     protected function viewName(): string
     {
-        return 'wire-core::schema.split';
+        return 'wire-core::schema.flex';
     }
 }

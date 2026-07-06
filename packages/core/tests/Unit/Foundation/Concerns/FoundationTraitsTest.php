@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use NyonCode\WireCore\Foundation\Concerns;
+use NyonCode\WireCore\Foundation\Enums;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 
 // Test helper: create a class that uses Foundation traits
@@ -94,6 +95,10 @@ it('accepts icon position', function () {
     $field = makeFoundationField('name');
     $field->icon('pencil', 'after');
     expect($field->getIconPosition())->toBe('after');
+
+    // The canonical IconPosition enum is accepted the same as its string token.
+    $field->icon('pencil', Enums\IconPosition::Before);
+    expect($field->getIconPosition())->toBe('before');
 });
 
 // ─── HasState ───────────────────────────────────────────────
@@ -225,11 +230,44 @@ it('has md size by default', function () {
 
 it('accepts size shortcuts', function () {
     $field = makeFoundationField('name');
+    $field->xs();
+    expect($field->getSize())->toBe('xs');
+
     $field->sm();
     expect($field->getSize())->toBe('sm');
 
     $field->lg();
     expect($field->getSize())->toBe('lg');
+
+    $field->xl();
+    expect($field->getSize())->toBe('xl');
+});
+
+it('accepts a Size enum on the fluent setter', function () {
+    $field = makeFoundationField('name');
+    $field->size(Enums\Size::Lg);
+    expect($field->getSize())->toBe('lg');
+});
+
+it('resolves canonical badge size classes across the scale', function () {
+    expect(Concerns\HasSize::getBadgeSizeClasses('xs'))->toBe('px-1.5 py-0.5 text-[10px]')
+        ->and(Concerns\HasSize::getBadgeSizeClasses('sm'))->toBe('px-2 py-0.5 text-xs')
+        ->and(Concerns\HasSize::getBadgeSizeClasses('md'))->toBe('px-2.5 py-1 text-xs')
+        ->and(Concerns\HasSize::getBadgeSizeClasses('lg'))->toBe('px-3 py-1 text-sm')
+        ->and(Concerns\HasSize::getBadgeSizeClasses('unknown'))->toBe('px-2.5 py-1 text-xs');
+});
+
+it('normalizes a Size enum the same as its string token in resolvers', function () {
+    expect(Concerns\HasSize::getBadgeSizeClasses(Enums\Size::Lg))
+        ->toBe(Concerns\HasSize::getBadgeSizeClasses('lg'))
+        ->and(Concerns\HasSize::getButtonSizeClasses(Enums\Size::Xs))
+        ->toBe(Concerns\HasSize::getButtonSizeClasses('xs'))
+        ->and(Concerns\HasSize::getButtonSizeClasses(Enums\Size::Md, iconOnly: true))
+        ->toBe(Concerns\HasSize::getButtonSizeClasses('md', iconOnly: true))
+        ->and(Concerns\HasSize::getButtonIconSizeClasses(Enums\Size::Sm))
+        ->toBe(Concerns\HasSize::getButtonIconSizeClasses('sm'))
+        ->and(Concerns\HasSize::getIconSizeClasses(Enums\Size::Xl))
+        ->toBe(Concerns\HasSize::getIconSizeClasses('xl'));
 });
 
 it('resolves canonical button size classes for labelled and icon-only buttons', function () {
@@ -274,12 +312,18 @@ it('resolves canonical icon size classes for button-accompanying and standalone 
 
 it('resolves canonical font-weight classes from a safe allow-list', function () {
     expect(Concerns\HasFontWeight::getFontWeightClasses('thin'))->toBe('font-thin')
+        ->and(Concerns\HasFontWeight::getFontWeightClasses('extralight'))->toBe('font-extralight')
+        ->and(Concerns\HasFontWeight::getFontWeightClasses('light'))->toBe('font-light')
+        ->and(Concerns\HasFontWeight::getFontWeightClasses('medium'))->toBe('font-medium')
         ->and(Concerns\HasFontWeight::getFontWeightClasses('semibold'))->toBe('font-semibold')
         ->and(Concerns\HasFontWeight::getFontWeightClasses('bold'))->toBe('font-bold')
+        ->and(Concerns\HasFontWeight::getFontWeightClasses('extrabold'))->toBe('font-extrabold')
         ->and(Concerns\HasFontWeight::getFontWeightClasses('black'))->toBe('font-black')
         ->and(Concerns\HasFontWeight::getFontWeightClasses('normal'))->toBe('font-normal')
         ->and(Concerns\HasFontWeight::getFontWeightClasses(''))->toBe('font-normal')
-        ->and(Concerns\HasFontWeight::getFontWeightClasses('500'))->toBe('font-normal');
+        ->and(Concerns\HasFontWeight::getFontWeightClasses('500'))->toBe('font-normal')
+        // A FontWeight enum normalizes to the same class as its string token.
+        ->and(Concerns\HasFontWeight::getFontWeightClasses(Enums\FontWeight::SemiBold))->toBe('font-semibold');
 });
 
 // ─── HasPrefixAndSuffix ─────────────────────────────────────

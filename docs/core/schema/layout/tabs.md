@@ -44,4 +44,4 @@ tab bar scrolls horizontally instead of wrapping into multiple rows.
 - [Wizard](wizard.md)
 - [Grid](grid.md)
 - [Section](section.md)
-- [Split](split.md)
+- [Flex](flex.md)

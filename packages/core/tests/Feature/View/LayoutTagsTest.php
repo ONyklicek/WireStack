@@ -24,11 +24,11 @@ it('renders <x-wire::grid> with an integer column reflow', function () {
     expect($html)->toContain('grid-cols-1')->toContain('md:grid-cols-3');
 });
 
-it('renders <x-wire::split> with justify/align/gap/grow', function () {
+it('renders <x-wire::flex> with justify/align/gap/grow', function () {
     $html = Blade::render(<<<'BLADE'
-        <x-wire::split from="lg" justify="between" align="center" :gap="6">
+        <x-wire::flex from="lg" justify="between" align="center" :gap="6">
             <div>a</div><div>b</div>
-        </x-wire::split>
+        </x-wire::flex>
     BLADE);
 
     expect($html)->toContain('flex flex-col')

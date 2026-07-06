@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Foundation\Concerns;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Enums\IconPosition;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 
@@ -23,12 +24,12 @@ trait HasIcon
 
     protected ?string $iconPosition = 'before';
 
-    public function icon(string|Icon|Closure|null $icon, ?string $position = null): static
+    public function icon(string|Icon|Closure|null $icon, string|IconPosition|null $position = null): static
     {
         $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
 
         if ($position !== null) {
-            $this->iconPosition = $position;
+            $this->iconPosition = $position instanceof IconPosition ? $position->value : $position;
         }
 
         return $this;

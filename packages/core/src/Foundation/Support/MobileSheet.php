@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Foundation\Support;
 
+use NyonCode\WireCore\Foundation\Enums\Breakpoint;
+
 /**
  * Canonical Tailwind class vocabulary for the mobile bottom-sheet presentation,
  * parameterised by a breakpoint (sm / md / lg). Below the breakpoint a floating
@@ -21,10 +23,17 @@ final class MobileSheet
 
     /**
      * Resolve a breakpoint token: an explicit override wins, else the global
-     * config default; unknown values fall back to `sm`.
+     * config default; anything outside the sheet-supported subset (sm/md/lg)
+     * falls back to `sm`. Accepts the canonical {@see Breakpoint} enum too — its
+     * value is used, so a non-sheet breakpoint (xl/2xl) resolves to `sm` just like
+     * the equivalent string.
      */
-    public static function breakpoint(?string $override = null): string
+    public static function breakpoint(string|Breakpoint|null $override = null): string
     {
+        if ($override instanceof Breakpoint) {
+            $override = $override->value;
+        }
+
         $bp = $override ?? config('wire-core.mobile.breakpoint', 'sm');
 
         return in_array($bp, self::BREAKPOINTS, true) ? (string) $bp : 'sm';

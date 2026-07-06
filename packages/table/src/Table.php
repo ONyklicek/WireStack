@@ -20,6 +20,8 @@ use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
+use NyonCode\WireCore\Foundation\Enums\Alignment;
+use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireTable\Columns\Column;
@@ -993,9 +995,9 @@ class Table implements Htmlable
     /**
      * Set actions alignment ('left', 'center', 'right')
      */
-    public function actionsAlignment(string $alignment): static
+    public function actionsAlignment(string|Alignment $alignment): static
     {
-        $this->actionsAlignment = $alignment;
+        $this->actionsAlignment = $alignment instanceof Alignment ? $alignment->value : $alignment;
 
         return $this;
     }
@@ -1003,6 +1005,22 @@ class Table implements Htmlable
     public function getActionsAlignment(): string
     {
         return $this->actionsAlignment;
+    }
+
+    /**
+     * Canonical literal `text-*` class for the actions column header alignment.
+     */
+    public function getActionsAlignmentClass(): string
+    {
+        return Alignment::resolve($this->actionsAlignment)->textClass();
+    }
+
+    /**
+     * Canonical literal `justify-*` class for the actions row (flex main axis).
+     */
+    public function getActionsJustifyClass(): string
+    {
+        return Alignment::resolve($this->actionsAlignment)->justifyClass();
     }
 
     /**
@@ -1071,12 +1089,12 @@ class Table implements Htmlable
      * Enable stacked/card layout on mobile devices
      *
      * @param  bool  $stacked  Whether to use stacked layout
-     * @param  string  $breakpoint  Breakpoint below which to use stacked layout (sm, md, lg)
+     * @param  string|Breakpoint  $breakpoint  Breakpoint below which to use stacked layout (sm, md, lg)
      */
-    public function stackedOnMobile(bool $stacked = true, string $breakpoint = 'md'): static
+    public function stackedOnMobile(bool $stacked = true, string|Breakpoint $breakpoint = Breakpoint::Md): static
     {
         $this->stackedOnMobile = $stacked;
-        $this->stackedBreakpoint = $breakpoint;
+        $this->stackedBreakpoint = $breakpoint instanceof Breakpoint ? $breakpoint->value : $breakpoint;
 
         return $this;
     }
@@ -1104,12 +1122,7 @@ class Table implements Htmlable
             return '';
         }
 
-        return match ($this->stackedBreakpoint) {
-            'sm' => 'hidden sm:block',
-            'lg' => 'hidden lg:block',
-            'xl' => 'hidden xl:block',
-            default => 'hidden md:block',
-        };
+        return Breakpoint::resolve($this->stackedBreakpoint)->blockFromClass();
     }
 
     /**
@@ -1123,12 +1136,7 @@ class Table implements Htmlable
             return 'hidden';
         }
 
-        return match ($this->stackedBreakpoint) {
-            'sm' => 'sm:hidden',
-            'lg' => 'lg:hidden',
-            'xl' => 'xl:hidden',
-            default => 'md:hidden',
-        };
+        return Breakpoint::resolve($this->stackedBreakpoint)->hiddenAtClass();
     }
 
     /**

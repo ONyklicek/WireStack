@@ -61,7 +61,7 @@ User-facing documentation for the Wire ecosystem.
 |----------|-------------|
 | [Core Foundation](core/foundation.md) | Shared traits, icons, colors, and Blade helpers |
 | [Core Actions](core/actions.md) | Row, bulk, header actions, action groups |
-| [Core Schema](core/schema/overview.md) | Shared layout vocabulary — Grid, Section, Split, Tabs, Wizard, Callout, Empty State |
+| [Core Schema](core/schema/overview.md) | Shared layout vocabulary — Grid, Section, Flex, Tabs, Wizard, Callout, Empty State |
 | [Core Notifications](core/notifications.md) | Notification value objects and drivers |
 | [Core Modals](core/modals.md) | Confirmation, slide-over, and wizard components |
 | [Core Widgets](core/widgets.md) | Dashboard widgets and widget layout |

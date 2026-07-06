@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use NyonCode\WireCore\Foundation\Concerns\FormatsState;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Concerns\HasFontWeight;
+use NyonCode\WireCore\Foundation\Enums\FontWeight;
 
 /**
  * Text entry — the default entry. Supports number/money/date formatting (shared
@@ -66,9 +67,9 @@ class TextEntry extends Entry
     /**
      * Font weight: e.g. 'normal', 'medium', 'semibold', 'bold'.
      */
-    public function weight(?string $weight): static
+    public function weight(string|FontWeight|null $weight): static
     {
-        $this->weight = $weight;
+        $this->weight = $weight instanceof FontWeight ? $weight->value : $weight;
 
         return $this;
     }

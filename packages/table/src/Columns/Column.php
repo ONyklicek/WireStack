@@ -20,6 +20,9 @@ use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Concerns\HasFontWeight;
 use NyonCode\WireCore\Foundation\Concerns\HasIcon;
 use NyonCode\WireCore\Foundation\Concerns\HasSize;
+use NyonCode\WireCore\Foundation\Enums\Alignment;
+use NyonCode\WireCore\Foundation\Enums\Breakpoint;
+use NyonCode\WireCore\Foundation\Enums\FontWeight;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireTable\Concerns\HasResponsive;
@@ -611,11 +614,11 @@ class Column extends DataComponent implements Htmlable
     /**
      * Set the breakpoint that separates mobile from desktop.
      *
-     * @param  string  $breakpoint  sm, md, lg, xl, 2xl
+     * @param  string|Breakpoint  $breakpoint  sm, md, lg, xl, 2xl
      */
-    public function mobileBreakpoint(string $breakpoint): static
+    public function mobileBreakpoint(string|Breakpoint $breakpoint): static
     {
-        $this->mobileBreakpoint = $breakpoint;
+        $this->mobileBreakpoint = $breakpoint instanceof Breakpoint ? $breakpoint->value : $breakpoint;
 
         return $this;
     }
@@ -629,7 +632,7 @@ class Column extends DataComponent implements Htmlable
             return $this->renderCell($record);
         }
 
-        $bp = $this->mobileBreakpoint;
+        $bp = Breakpoint::resolve($this->mobileBreakpoint);
         $mobileContent = $this->renderMobileCell($record);
         $desktopContent = $this->renderDesktopCell($record);
 
@@ -639,7 +642,8 @@ class Column extends DataComponent implements Htmlable
         }
 
         return trim($this->renderView('tables.columns.responsive', [
-            'breakpoint' => $bp,
+            'mobileClass' => $bp->hiddenAtClass(),
+            'desktopClass' => $bp->inlineFromClass(),
             'mobileContent' => $mobileContent,
             'desktopContent' => $desktopContent,
         ]));
@@ -938,9 +942,9 @@ class Column extends DataComponent implements Htmlable
     /**
      * Set the text alignment of the column.
      */
-    public function alignment(string $alignment): static
+    public function alignment(string|Alignment $alignment): static
     {
-        $this->alignment = $alignment;
+        $this->alignment = $alignment instanceof Alignment ? $alignment->value : $alignment;
 
         return $this;
     }
@@ -967,6 +971,15 @@ class Column extends DataComponent implements Htmlable
     public function getAlignment(): string
     {
         return $this->alignment ?? 'left';
+    }
+
+    /**
+     * Canonical literal Tailwind text-alignment class for this column, so the
+     * view consumes a scannable utility instead of interpolating `text-{$align}`.
+     */
+    public function getAlignmentClass(): string
+    {
+        return Alignment::resolve($this->alignment ?? 'left')->textClass();
     }
 
     public function formatStateUsing(Closure $callback): static
@@ -1276,9 +1289,9 @@ class Column extends DataComponent implements Htmlable
         return $this->textSize;
     }
 
-    public function weight(string $weight): static
+    public function weight(string|FontWeight $weight): static
     {
-        $this->textWeight = $weight;
+        $this->textWeight = $weight instanceof FontWeight ? $weight->value : $weight;
 
         return $this;
     }

@@ -42,7 +42,7 @@ Wire is a Laravel Livewire package ecosystem split into four Composer packages. 
 | Path | Contents |
 |------|----------|
 | `packages/core/src/Actions` | Action, BulkAction, HeaderAction, presets, modal action helpers |
-| `packages/core/src/Foundation/Schema` | Shared layout vocabulary — Grid, Section, Fieldset, Split, Tabs/Tab, Wizard/Step, Callout, EmptyState |
+| `packages/core/src/Foundation/Schema` | Shared layout vocabulary — Grid, Section, Fieldset, Flex, Tabs/Tab, Wizard/Step, Callout, EmptyState |
 | `packages/core/src/Foundation/View` | Standalone `<x-wire::*>` Blade components mirroring the schema layouts |
 | `packages/core/src/Foundation/Support` | Shared helpers — `ResponsiveGrid` (per-breakpoint columns), `MobileSheet`, `EnumResolver` |
 | `packages/core/src/Foundation/Concerns` | Canonical shared traits — `HasColor`, `HasIcon`, `HasSize`, `HasVisibility`, `HasActions`, `HasSheetOnMobile`, … |

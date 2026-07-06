@@ -93,6 +93,8 @@
     // Action configuration
     $actionsPosition = $table->getActionsPosition(); // 'start' or 'end'
     $actionsAlignment = $table->getActionsAlignment(); // 'left', 'center', 'right'
+    $actionsAlignmentClass = $table->getActionsAlignmentClass(); // literal text-* utility
+    $actionsJustifyClass = $table->getActionsJustifyClass(); // literal justify-* utility
     $actionsColumnLabel = $table->getActionsColumnLabel() ?? __('wire-table::messages.actions_label');
     $actionsColumnWidth = $table->getActionsColumnWidth();
 
@@ -529,7 +531,7 @@
                                     @if($hasActions && $actionsPosition === 'start')
                                         <th
                                                 scope="col"
-                                                class="{{ $headerPadding }} font-semibold {{ $actionsAlignment === 'center' ? 'text-center' : ($actionsAlignment === 'right' ? 'text-right' : 'text-left') }}"
+                                                class="{{ $headerPadding }} font-semibold {{ $actionsAlignmentClass }}"
                                                 @if($actionsColumnWidth) style="width: {{ $actionsColumnWidth }}" @endif
                                         >
                                             {{ $actionsColumnLabel }}
@@ -541,7 +543,7 @@
                                         <th
                                                 scope="col"
                                                 data-column="{{ $column->getName() }}"
-                                                class="{{ $headerPadding }} text-{{ $column->getAlignment() }} font-semibold {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $column->getResponsiveClasses() }}"
+                                                class="{{ $headerPadding }} {{ $column->getAlignmentClass() }} font-semibold {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $column->getResponsiveClasses() }}"
                                                 @if($column->getWidth()) style="width: {{ $column->getWidth() }}" @endif
                                         >
                                             @if($column->isSortable() && $table->isSortable())
@@ -573,7 +575,7 @@
                                     @if($hasActions && $actionsPosition === 'end')
                                         <th
                                                 scope="col"
-                                                class="{{ $headerPadding }} font-semibold {{ $actionsAlignment === 'center' ? 'text-center' : ($actionsAlignment === 'right' ? 'text-right' : 'text-left') }}"
+                                                class="{{ $headerPadding }} font-semibold {{ $actionsAlignmentClass }}"
                                                 @if($actionsColumnWidth) style="width: {{ $actionsColumnWidth }}" @endif
                                         >
                                             {{ $actionsColumnLabel }}
@@ -686,7 +688,7 @@
                                         @if($hasActions && $actionsPosition === 'start')
                                             <td class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }}">
                                                 <div
-                                                        class="flex items-center gap-1 {{ $actionsAlignment === 'center' ? 'justify-center' : ($actionsAlignment === 'right' ? 'justify-end' : 'justify-start') }}">
+                                                        class="flex items-center gap-1 {{ $actionsJustifyClass }}">
                                                     @foreach($actions as $action)
                                                         {!! $action->render($record) !!}
                                                     @endforeach
@@ -696,7 +698,7 @@
 
                                         {{-- Column Cells --}}
                                         @foreach($visibleColumns as $column)
-                                            <td class="{{ $cellPadding }} {{ $column->shouldWrap() ? '' : 'whitespace-nowrap' }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} text-{{ $column->getAlignment() }} dark:text-white {{ $column->getResponsiveClasses() }}">
+                                            <td class="{{ $cellPadding }} {{ $column->shouldWrap() ? '' : 'whitespace-nowrap' }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $column->getAlignmentClass() }} dark:text-white {{ $column->getResponsiveClasses() }}">
                                                 @if($recordUrl && !$column->isEditable())
                                                     <a href="{{ $recordUrl }}"
                                                        class="hover:text-primary-600 dark:hover:text-primary-400">
@@ -712,7 +714,7 @@
                                         @if($hasActions && $actionsPosition === 'end')
                                             <td class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }}">
                                                 <div
-                                                        class="flex items-center gap-1 {{ $actionsAlignment === 'center' ? 'justify-center' : ($actionsAlignment === 'right' ? 'justify-end' : 'justify-start') }}">
+                                                        class="flex items-center gap-1 {{ $actionsJustifyClass }}">
                                                     @foreach($actions as $action)
                                                         {!! $action->render($record) !!}
                                                     @endforeach

@@ -58,7 +58,7 @@ a drag-to-dismiss grabber and a focus trap automatically — do not re-implement
 ### Layouts
 
 Canonical layout vocabulary shared by forms and infolists (`NyonCode\WireCore\Foundation\Schema\*`):
-`Grid`, `Section`, `Fieldset`, `Split` (side-by-side, stacks below `->from('md')`, with
+`Grid`, `Section`, `Fieldset`, `Flex` (side-by-side flexbox row, stacks below `->from('md')`, with
 `->justify()/->align()/->gap()/->wrap()/->grow()`), `Tabs`+`Tab`, `Wizard`+`Step`, `Callout`
 (`->heading()->color()/info()/success()/warning()/danger()->icon()->dismissible()`) and `EmptyState`
 (`->icon()->heading()->description()->actions([])`). Column counts accept an int or a Filament-style
@@ -66,7 +66,7 @@ per-breakpoint map: `->columns(['default' => 1, 'md' => 2, 'lg' => 3])`. Prefer 
 grids; the forms `Alert` field is the field-style alias of `Callout`.
 
 @verbatim
-Standalone Blade tags mirror them for plain views: `<x-wire::grid>`, `<x-wire::split>`, `<x-wire::section>`,
+Standalone Blade tags mirror them for plain views: `<x-wire::grid>`, `<x-wire::flex>`, `<x-wire::section>`,
 `<x-wire::fieldset>`, `<x-wire::callout>`, `<x-wire::empty-state>`, and the Alpine-driven `<x-wire::tabs>` /
 `<x-wire::wizard>` (with nested `<x-wire::tab>` / `<x-wire::step>`).
 @endverbatim
@@ -82,7 +82,7 @@ selected by `wire-core.notifications.default`.
 
 Read-only counterpart of forms. `Infolist::make()->schema([...])` with entries: `TextEntry`, `BadgeEntry`,
 `IconEntry`, `BooleanEntry`, `ListEntry`, `ImageEntry`, `ColorEntry`, `KeyValueEntry`, `RepeatableEntry`.
-Layouts: the shared vocabulary above (`Section`, `Grid`, `Fieldset`, `Split`, `Tabs`, `Wizard`, `Callout`,
+Layouts: the shared vocabulary above (`Section`, `Grid`, `Fieldset`, `Flex`, `Tabs`, `Wizard`, `Callout`,
 `EmptyState`) — see the Layouts section. Integrates with `ViewAction->infolist()`.
 
 Actions: `Section::headerActions([...])`, `Entry::actions([...])`, and `RepeatableEntry::actions([...])`
@@ -107,3 +107,16 @@ Suppress logging in seeders/imports with `AuditLogger::withoutAuditing(fn () => 
 
 Icons resolve by name through the `IconManager` (bundled Heroicons solid + `outline:` prefix). Use
 `list-icons` to find a name. Colors and sizes are semantic tokens owned by the Foundation palette.
+`->color()` accepts the full Tailwind palette on every surface — the semantic roles (`primary`,
+`success`, `danger`, `warning`, `info`, `gray`) and every raw hue family (`slate`, `zinc`, `neutral`,
+`stone`, `orange`, `lime`, `teal`, `sky`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`),
+as a string or the matching `Foundation\Colors\Color` enum case. Resolvers live in `HasColor`; unknown
+names fall back to gray.
+
+Every fluent token setter also accepts a canonical enum from `Foundation\Enums\` (interchangeable with
+the string, so both forms are fine): `Breakpoint` (`sm`…`2xl`) for column `visibleFrom()`/`hiddenFrom()`/
+`mobileBreakpoint()` + `stackedOnMobile()`, `Size` (`xs`…`xl`) for `size()`, `FontWeight` (`thin`…`black`)
+for `weight()`, `Alignment` (`left`/`center`/`right`) for `alignment()`/`actionsAlignment()`, `IconPosition`
+(`before`/`after`) for `->icon($icon, $position)`, `Placement` for `ActionGroup::dropdownPosition()`, and
+`ModalWidth` (`sm`…`7xl`/`full`) for modal `width()`. Each enum owns its vocabulary (`values()`/`resolve()`)
+and, where relevant, the literal Tailwind class its tokens map to — extend the enum, not a local `match`.

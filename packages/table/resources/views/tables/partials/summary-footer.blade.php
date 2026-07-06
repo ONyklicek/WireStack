@@ -70,7 +70,7 @@
                         $colSummaries = $summaries[$colName] ?? [];
                         $entry = $colSummaries[$i] ?? null;
                     @endphp
-                    <td class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} text-{{ $column->getAlignment() }}">
+                    <td class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $column->getAlignmentClass() }}">
                         @if($entry)
                             <div class="text-xs">
                                 <span class="text-gray-500 dark:text-gray-400">{{ $entry['label'] }}:</span>

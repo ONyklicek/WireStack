@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Foundation\Concerns;
 
+use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Foundation\Support\MobileSheet;
 
 /**
@@ -25,12 +26,12 @@ trait HasSheetOnMobile
     /**
      * Breakpoint below which this component presents as a sheet: 'sm' (< 640px),
      * 'md' (< 768px, incl. small tablets) or 'lg' (< 1024px, incl. tablet
-     * portrait). Overrides the global `wire-core.mobile.breakpoint` for this
-     * instance only.
+     * portrait). Accepts a raw token or the canonical {@see Breakpoint} enum.
+     * Overrides the global `wire-core.mobile.breakpoint` for this instance only.
      */
-    public function mobileBreakpoint(?string $breakpoint): static
+    public function mobileBreakpoint(string|Breakpoint|null $breakpoint): static
     {
-        $this->mobileBreakpoint = $breakpoint;
+        $this->mobileBreakpoint = $breakpoint instanceof Breakpoint ? $breakpoint->value : $breakpoint;
 
         return $this;
     }

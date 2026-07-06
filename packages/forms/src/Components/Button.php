@@ -7,6 +7,8 @@ namespace NyonCode\WireForms\Components;
 use Closure;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Enums\IconPosition;
+use NyonCode\WireCore\Foundation\Enums\Size;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireForms\Concerns\InteractsWithFieldActions;
 
@@ -56,7 +58,7 @@ class Button extends Field
         return parent::label($label);
     }
 
-    public function icon(string|Icon|Closure|null $icon, ?string $position = 'before'): static
+    public function icon(string|Icon|Closure|null $icon, string|IconPosition|null $position = 'before'): static
     {
         $this->buttonAction->icon($icon, $position);
 
@@ -70,7 +72,7 @@ class Button extends Field
         return $this;
     }
 
-    public function size(string|Closure $size): static
+    public function size(string|Size|Closure $size): static
     {
         $this->buttonAction->size($size);
 

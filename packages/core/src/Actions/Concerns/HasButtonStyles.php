@@ -7,6 +7,7 @@ namespace NyonCode\WireCore\Actions\Concerns;
 use NyonCode\WireCore\Actions\BaseAction;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasSize;
+use NyonCode\WireCore\Foundation\Enums\Size;
 
 /**
  * Trait HasButtonStyles
@@ -31,9 +32,9 @@ trait HasButtonStyles
         return $this;
     }
 
-    public function size(?string $size): static
+    public function size(string|Size|null $size): static
     {
-        $this->size = $size;
+        $this->size = $size instanceof Size ? $size->value : $size;
 
         return $this;
     }

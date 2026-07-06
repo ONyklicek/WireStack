@@ -1,7 +1,8 @@
 {{-- Responsive cell wrapper: separate mobile/desktop markup at a breakpoint. --}}
 @php
-    /** @var string $breakpoint */
+    /** @var string $mobileClass */
+    /** @var string $desktopClass */
     /** @var string $mobileContent */
     /** @var string $desktopContent */
 @endphp
-<span class="{{ $breakpoint }}:hidden">{!! $mobileContent !!}</span><span class="hidden {{ $breakpoint }}:inline">{!! $desktopContent !!}</span>
+<span class="{{ $mobileClass }}">{!! $mobileContent !!}</span><span class="{{ $desktopClass }}">{!! $desktopContent !!}</span>

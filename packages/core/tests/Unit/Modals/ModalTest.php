@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use NyonCode\WireCore\Foundation\Enums\ModalWidth;
 use NyonCode\WireCore\Modals\Modal;
 
 // ─── Factory ───────────────────────────────────────────────────────────
@@ -234,4 +235,29 @@ it('resolves unprefixed max-width classes for slide-over panels', function () {
     expect(Modal::getMaxWidthClass('lg', responsive: false))->toBe('max-w-lg')
         ->and(Modal::getMaxWidthClass('2xl', responsive: false))->toBe('max-w-2xl')
         ->and(Modal::getMaxWidthClass('unknown', responsive: false))->toBe('max-w-md');
+});
+
+it('accepts a ModalWidth enum on width() and the max-width resolver', function () {
+    expect(Modal::make()->width(ModalWidth::TwoXl)->getWidth())->toBe('2xl')
+        ->and(Modal::getMaxWidthClass(ModalWidth::TwoXl))->toBe(Modal::getMaxWidthClass('2xl'))
+        ->and(Modal::getMaxWidthClass(ModalWidth::Full, responsive: false))->toBe('max-w-full');
+});
+
+it('resolves every width across every sheet breakpoint and the unprefixed variant', function () {
+    $widths = ['sm', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl', '7xl', 'full'];
+
+    // Responsive dialogs gate the width at the sheet breakpoint (sm/md/lg).
+    foreach (['sm', 'md', 'lg'] as $bp) {
+        foreach ($widths as $w) {
+            expect(Modal::getMaxWidthClass($w, breakpoint: $bp))->toBe("{$bp}:max-w-{$w}");
+        }
+        expect(Modal::getMaxWidthClass('md', breakpoint: $bp))->toBe("{$bp}:max-w-md")
+            ->and(Modal::getMaxWidthClass('unknown', breakpoint: $bp))->toBe("{$bp}:max-w-md");
+    }
+
+    // Slide-over panels apply the width unconditionally (no breakpoint prefix).
+    foreach ($widths as $w) {
+        expect(Modal::getMaxWidthClass($w, responsive: false))->toBe("max-w-{$w}");
+    }
+    expect(Modal::getMaxWidthClass('unknown', responsive: false))->toBe('max-w-md');
 });

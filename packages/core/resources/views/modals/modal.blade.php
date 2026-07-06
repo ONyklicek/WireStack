@@ -103,7 +103,7 @@
                 'px-4 pb-4 sm:px-6 sm:pb-6',
                 'pt-4' => $heading || $icon,
                 'pt-5 sm:pt-6' => !$heading && !$icon,
-                'overflow-y-auto' => $maxHeight,
+                'overflow-y-auto overscroll-contain' => $maxHeight,
                 // Mobile variants scroll the body inside the full-height panel;
                 // from the breakpoint up it returns to the page-scroll layout
                 // (breakpoint-aware, see ModalComponent::bodyVariantClasses()).

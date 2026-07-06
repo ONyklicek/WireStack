@@ -8,6 +8,7 @@ use Workbench\App\Livewire\Previews\CorePreview;
 use Workbench\App\Livewire\Previews\FieldPreview;
 use Workbench\App\Livewire\Previews\FormPreview;
 use Workbench\App\Livewire\Previews\InfolistPreview;
+use Workbench\App\Livewire\Previews\LayoutPreview;
 use Workbench\App\Livewire\Previews\SortablePreview;
 use Workbench\App\Livewire\Previews\TablePreview;
 use Workbench\App\Livewire\Previews\WidgetPreview;
@@ -166,7 +167,7 @@ Route::get('/previews', function () {
             'slug' => 'infolists-order',
             'title' => 'Wire Core',
             'label' => 'Infolist order detail',
-            'copy' => 'A real order detail: Split layout, badge/boolean/list entries, and header/entry/per-row actions doing real work.',
+            'copy' => 'A real order detail: Flex layout, badge/boolean/list entries, and header/entry/per-row actions doing real work.',
             'component' => InfolistPreview::class,
             'variant' => 'order',
         ],
@@ -188,7 +189,7 @@ Route::get('/previews/palette', fn () => view('previews.palette'));
 
 // Interactive standalone Tabs + Wizard (Livewire host → Alpine + core JS bundle).
 Route::get('/previews/layout-live', fn () => view('previews.capture', [
-    'component' => \Workbench\App\Livewire\Previews\LayoutPreview::class,
+    'component' => LayoutPreview::class,
     'variant' => 'tabs-wizard',
     'title' => 'Layout tags · live',
     'subtitle' => 'Standalone Tabs + Wizard',
@@ -227,7 +228,7 @@ foreach ([
     'widgets-bar-chart' => ['title' => 'Wire Core Bar Chart Widget', 'subtitle' => 'Pure-CSS bar chart with finance, system, and horizontal progress modes.', 'component' => WidgetPreview::class, 'variant' => 'bar-chart'],
     'infolists-overview' => ['title' => 'Wire Core Infolist', 'subtitle' => 'Read-only record display with sections, a column grid, and formatted entries.', 'component' => InfolistPreview::class, 'variant' => 'overview'],
     'infolists-entries' => ['title' => 'Wire Core Infolist Entries', 'subtitle' => 'Gallery of every built-in infolist entry type bound to one record.', 'component' => InfolistPreview::class, 'variant' => 'entries'],
-    'infolists-order' => ['title' => 'Wire Core Infolist Order Detail', 'subtitle' => 'A real order detail: Split layout, badge/boolean/list entries, and header/entry/per-row actions.', 'component' => InfolistPreview::class, 'variant' => 'order'],
+    'infolists-order' => ['title' => 'Wire Core Infolist Order Detail', 'subtitle' => 'A real order detail: Flex layout, badge/boolean/list entries, and header/entry/per-row actions.', 'component' => InfolistPreview::class, 'variant' => 'order'],
 ] as $slug => $screen) {
     Route::get('/previews/'.$slug, fn () => view('previews.capture', $screen));
 }

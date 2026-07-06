@@ -11,6 +11,8 @@ use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
+use NyonCode\WireCore\Foundation\Enums\Breakpoint;
+use NyonCode\WireCore\Foundation\Enums\ModalWidth;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Infolists\Infolist;
 use NyonCode\WireCore\Modals\Contracts\ModalContract;
@@ -180,9 +182,9 @@ trait HasModal
         return $this;
     }
 
-    public function modalWidth(string $width): static
+    public function modalWidth(string|ModalWidth $width): static
     {
-        $this->modalWidth = $width;
+        $this->modalWidth = $width instanceof ModalWidth ? $width->value : $width;
 
         return $this;
     }
@@ -233,12 +235,13 @@ trait HasModal
 
     /**
      * Breakpoint below which this action's modal presents as a mobile sheet /
-     * full-screen: 'sm' (< 640px), 'md' (< 768px) or 'lg' (< 1024px). Overrides
-     * the global `wire-core.mobile.breakpoint` for this modal only.
+     * full-screen: 'sm' (< 640px), 'md' (< 768px) or 'lg' (< 1024px). Accepts a
+     * raw token or the canonical {@see Breakpoint} enum. Overrides the global
+     * `wire-core.mobile.breakpoint` for this modal only.
      */
-    public function mobileBreakpoint(?string $breakpoint): static
+    public function mobileBreakpoint(string|Breakpoint|null $breakpoint): static
     {
-        $this->mobileBreakpoint = $breakpoint;
+        $this->mobileBreakpoint = $breakpoint instanceof Breakpoint ? $breakpoint->value : $breakpoint;
 
         return $this;
     }

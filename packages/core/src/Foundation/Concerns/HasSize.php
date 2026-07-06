@@ -5,19 +5,29 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Foundation\Concerns;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Enums\Size;
 
 /**
- * Size property for components (sm, md, lg).
+ * Size property for components (xs, sm, md, lg, xl).
+ *
+ * Accepts either a raw size token or the canonical {@see Size} enum, so
+ * `->size('lg')` and `->size(Size::Lg)` are interchangeable. The size is stored
+ * as its string value so downstream getters/resolvers keep returning strings.
  */
 trait HasSize
 {
     protected string|Closure $size = 'md';
 
-    public function size(string|Closure $size): static
+    public function size(string|Size|Closure $size): static
     {
-        $this->size = $size;
+        $this->size = $size instanceof Size ? $size->value : $size;
 
         return $this;
+    }
+
+    public function xs(): static
+    {
+        return $this->size('xs');
     }
 
     public function sm(): static
@@ -35,6 +45,11 @@ trait HasSize
         return $this->size('lg');
     }
 
+    public function xl(): static
+    {
+        return $this->size('xl');
+    }
+
     public function getSize(): string
     {
         return $this->evaluate($this->size) ?? 'md';
@@ -47,8 +62,10 @@ trait HasSize
      * xs/sm/md/lg scale stays identical everywhere. Literal class strings are
      * kept verbatim for Tailwind's JIT scanner.
      */
-    public static function getBadgeSizeClasses(string $size): string
+    public static function getBadgeSizeClasses(string|Size $size): string
     {
+        $size = $size instanceof Size ? $size->value : $size;
+
         return match ($size) {
             'xs' => 'px-1.5 py-0.5 text-[10px]',
             'sm' => 'px-2 py-0.5 text-xs',
@@ -69,8 +86,10 @@ trait HasSize
      * up. Literal class strings are kept verbatim for Tailwind's JIT scanner
      * (safe allow-list).
      */
-    public static function getButtonSizeClasses(string $size, bool $iconOnly = false): string
+    public static function getButtonSizeClasses(string|Size $size, bool $iconOnly = false): string
     {
+        $size = $size instanceof Size ? $size->value : $size;
+
         if ($iconOnly) {
             return match ($size) {
                 'xs' => 'p-2 sm:p-1',
@@ -96,8 +115,10 @@ trait HasSize
      * the button text across every clickable surface. Literal class strings are kept
      * verbatim for Tailwind's JIT scanner.
      */
-    public static function getButtonIconSizeClasses(string $size): string
+    public static function getButtonIconSizeClasses(string|Size $size): string
     {
+        $size = $size instanceof Size ? $size->value : $size;
+
         return match ($size) {
             'xs' => 'w-3.5 h-3.5',
             'md' => 'w-5 h-5',
@@ -113,8 +134,10 @@ trait HasSize
      * itself rather than an accent beside a label. Literal class strings are kept
      * verbatim for Tailwind's JIT scanner.
      */
-    public static function getIconSizeClasses(string $size): string
+    public static function getIconSizeClasses(string|Size $size): string
     {
+        $size = $size instanceof Size ? $size->value : $size;
+
         return match ($size) {
             'xs' => 'w-4 h-4',
             'sm' => 'w-5 h-5',

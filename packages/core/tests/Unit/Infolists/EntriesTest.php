@@ -5,6 +5,7 @@ declare(strict_types=1);
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Contracts\HasFieldActions;
+use NyonCode\WireCore\Foundation\Enums\FontWeight;
 use NyonCode\WireCore\Infolists\Components\BadgeEntry;
 use NyonCode\WireCore\Infolists\Components\BooleanEntry;
 use NyonCode\WireCore\Infolists\Components\ColorEntry;
@@ -103,6 +104,12 @@ it('resolves the text color class through the canonical palette', function () {
 
     expect($coloured->getTextColorClass())->toBe('text-emerald-600 dark:text-emerald-400')
         ->and($plain->getTextColorClass())->toBe('text-gray-900 dark:text-white');
+});
+
+it('resolves the font-weight class, accepting a string or FontWeight enum', function () {
+    expect(TextEntry::make('a')->weight('bold')->getWeightClass())->toBe('font-bold')
+        ->and(TextEntry::make('a')->weight(FontWeight::SemiBold)->getWeightClass())->toBe('font-semibold')
+        ->and(TextEntry::make('a')->weight(null)->getWeightClass())->toBe('font-normal');
 });
 
 it('resolves the badge color class through the canonical palette', function () {
