@@ -27,34 +27,39 @@
   });
 
   /* ----------------------------------------------------------
-     Version switcher dropdown
+     Sidebar dropdowns (version + language switchers)
      ---------------------------------------------------------- */
-  const versionSwitcher = document.querySelector('[data-version-switcher]');
-  if (versionSwitcher) {
-    const trigger = versionSwitcher.querySelector('[data-version-trigger]');
-    const menu = versionSwitcher.querySelector('[data-version-menu]');
+  const initSwitcher = (rootSelector, triggerSelector, menuSelector) => {
+    const root = document.querySelector(rootSelector);
+    if (!root) return;
 
-    const closeVersions = () => {
-      versionSwitcher.classList.remove('is-open');
+    const trigger = root.querySelector(triggerSelector);
+    const menu = root.querySelector(menuSelector);
+
+    const close = () => {
+      root.classList.remove('is-open');
       trigger?.setAttribute('aria-expanded', 'false');
       if (menu) menu.hidden = true;
     };
 
     trigger?.addEventListener('click', (event) => {
       event.stopPropagation();
-      const isOpen = versionSwitcher.classList.toggle('is-open');
+      const isOpen = root.classList.toggle('is-open');
       trigger.setAttribute('aria-expanded', String(isOpen));
       if (menu) menu.hidden = !isOpen;
     });
 
     document.addEventListener('click', (event) => {
-      if (!versionSwitcher.contains(event.target)) closeVersions();
+      if (!root.contains(event.target)) close();
     });
 
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') closeVersions();
+      if (event.key === 'Escape') close();
     });
-  }
+  };
+
+  initSwitcher('[data-version-switcher]', '[data-version-trigger]', '[data-version-menu]');
+  initSwitcher('[data-locale-switcher]', '[data-locale-trigger]', '[data-locale-menu]');
 
   /* ----------------------------------------------------------
      Collapsible sidebar sections (active section stays open)

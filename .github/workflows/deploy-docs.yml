@@ -1,20 +1,30 @@
 name: Deploy Docs Site
 
-# Builds docs-site/dist and publishes it to the external GitHub Pages repo
-# NyonCode/wire-stack.github.io — same token-based pattern as split.yml.
+# Assembles the full docs matrix — every available version (built from its own
+# git branch) x every configured locale — into a single dist/ tree and publishes
+# it to the external GitHub Pages repo NyonCode/wire-stack.github.io.
+#
+# Why one job builds everything: the site is published with force_orphan, so a
+# per-branch deploy would orphan-wipe the other version. A single assembler that
+# lays every (version, locale) cell into one tree (each cell owns a disjoint
+# sub-directory, see docs-site/build.php) is the only clobber-safe design.
+#
+# The version -> branch and the locale matrix live in docs-site/config.json,
+# which is fed to every per-branch build via DOCS_VERSIONS_FILE so the version
+# and language switchers can never drift between branches. Keep config.json in
+# sync across branches (it is the single source of truth the deploy reads).
 #
 # One-time setup:
 #   1. Reuse the existing SPLIT_TOKEN secret (a PAT with write access to the
-#      NyonCode org), or add a dedicated token under the same name. It must be
-#      able to push to NyonCode/wire-stack.github.io.
+#      NyonCode org) able to push to NyonCode/wire-stack.github.io.
 #   2. (Optional) add TORCHLIGHT_TOKEN secret; otherwise the token committed
 #      in torchlight.config.cjs is used.
-#   3. In NyonCode/wire-stack.github.io → Settings → Pages → "Deploy from a
-#      branch" → branch: gh-pages, folder: / (root).
+#   3. In NyonCode/wire-stack.github.io -> Settings -> Pages -> "Deploy from a
+#      branch" -> branch: gh-pages, folder: / (root).
 
 on:
   push:
-    branches: [1.0.x]
+    branches: [1.x, 2.x]
     paths:
       - 'docs/**'
       - 'docs-site/**'
@@ -35,7 +45,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout (full history for cross-branch worktrees)
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -44,34 +57,77 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, fileinfo
           coverage: none
 
-      - name: Install Composer dependencies
-        run: composer install --prefer-dist --no-interaction --no-progress
-
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: '20'
 
-      - name: Install npm dependencies
+      - name: Install npm dependencies (Torchlight CLI)
         run: npm install --no-audit --no-fund
 
-      - name: Build static docs site
-        run: php docs-site/build.php
+      - name: Assemble the version x locale matrix
+        run: |
+          set -euo pipefail
+
+          DIST="$GITHUB_WORKSPACE/_site"
+          CONFIG="$GITHUB_WORKSPACE/docs-site/config.json"
+          CANON="$RUNNER_TEMP/docs-config.json"
+          rm -rf "$DIST"
+          mkdir -p "$DIST"
+
+          # Freeze one canonical config for every per-branch build so switchers
+          # stay identical no matter which branch the build runs from.
+          cp "$CONFIG" "$CANON"
+          export DOCS_VERSIONS_FILE="$CANON"
+          export DOCS_DIST_DIR="$DIST"
+
+          locales=$(jq -r '.locales[].code' "$CONFIG")
+
+          # Build each available version from its branch, all locales, into DIST.
+          jq -c '.versions[] | select(.available == true)' "$CONFIG" | while read -r version; do
+            label=$(echo "$version" | jq -r '.label')
+            branch=$(echo "$version" | jq -r '.branch')
+
+            if ! git rev-parse --verify --quiet "origin/$branch" >/dev/null; then
+              echo "::warning::Branch origin/$branch for $label not found — skipping."
+              continue
+            fi
+
+            work="$RUNNER_TEMP/wt-$branch"
+            rm -rf "$work"
+            git worktree add --force --detach "$work" "origin/$branch"
+
+            echo "==> composer install ($branch)"
+            composer install --working-dir="$work" --prefer-dist --no-interaction --no-progress --no-dev
+
+            for code in $locales; do
+              echo "==> build $label / $code"
+              DOCS_BUILD_VERSION="$label" DOCS_BUILD_LOCALE="$code" \
+                php "$work/docs-site/build.php"
+            done
+
+            git worktree remove --force "$work"
+          done
+
+          echo "Assembled matrix:"
+          find "$DIST" -maxdepth 2 -name index.html | sort
 
       - name: Highlight code blocks (Torchlight)
         env:
           TORCHLIGHT_TOKEN: ${{ secrets.TORCHLIGHT_TOKEN }}
-        run: npm run docs:highlight
+        run: |
+          node node_modules/@torchlight-api/torchlight-cli/dist/bin/torchlight.cjs.js \
+            -c torchlight.config.cjs -i "$GITHUB_WORKSPACE/_site"
 
       - name: Disable Jekyll processing
-        run: touch docs-site/dist/.nojekyll
+        run: touch "$GITHUB_WORKSPACE/_site/.nojekyll"
 
       - name: Publish to wire-stack.github.io
         uses: peaceiris/actions-gh-pages@v4
         with:
           personal_token: ${{ secrets.SPLIT_TOKEN }}
           external_repository: NyonCode/wire-stack.github.io
-          publish_dir: ./docs-site/dist
+          publish_dir: ./_site
           publish_branch: gh-pages
           cname: wirestack.nyoncode.cz
           force_orphan: true

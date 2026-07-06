@@ -102,7 +102,12 @@ if [[ "$CAPTURE_ENABLED" -eq 1 ]]; then
 fi
 
 if [[ "$SITE_BUILD_ENABLED" -eq 1 ]]; then
-    php docs-site/build.php
+    # Build every configured locale of the default version so the local preview
+    # has a working language switcher (CI assembles the full version matrix).
+    locales=$(php -r '$c=json_decode(file_get_contents("docs-site/config.json"),true);foreach($c["locales"] as $l){echo ($l["code"]??"")."\n";}')
+    for code in $locales; do
+        DOCS_BUILD_LOCALE="$code" php docs-site/build.php
+    done
 
     # Syntax-highlight code blocks in the generated HTML with Torchlight.
     # Requires a token in torchlight.config.cjs or the TORCHLIGHT_TOKEN env var.

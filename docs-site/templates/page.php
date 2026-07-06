@@ -16,10 +16,9 @@ foreach ($flatNav as $i => $item) {
 $prevPage = ($activeIndex !== null && isset($flatNav[$activeIndex - 1])) ? $flatNav[$activeIndex - 1] : null;
 $nextPage = ($activeIndex !== null && isset($flatNav[$activeIndex + 1])) ? $flatNav[$activeIndex + 1] : null;
 
-$githubUrl = 'https://github.com/ONyklicek/WireStack';
 ?>
 <!DOCTYPE html>
-<html lang="en" data-search-index="<?= htmlspecialchars($searchIndexUrl, ENT_QUOTES) ?>">
+<html lang="<?= htmlspecialchars($htmlLang ?? 'en', ENT_QUOTES) ?>" data-search-index="<?= htmlspecialchars($searchIndexUrl, ENT_QUOTES) ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -29,6 +28,18 @@ $githubUrl = 'https://github.com/ONyklicek/WireStack';
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="<?= htmlspecialchars($cssUrl, ENT_QUOTES) ?>">
+    <script>
+        // Remember the locale the visitor is actually reading — explicit
+        // navigation always wins and refreshes the stored preference.
+        (function () {
+            try {
+                var s = <?= $localeState ?? '{}' ?>;
+                if (s.storageKey) {
+                    localStorage.setItem(s.storageKey, JSON.stringify({ code: s.current, ts: Date.now() }));
+                }
+            } catch (e) {}
+        })();
+    </script>
     <script>
         (function () {
             try {
@@ -51,6 +62,7 @@ $githubUrl = 'https://github.com/ONyklicek/WireStack';
                     <span class="brand-name">WireStack</span>
                 </a>
                 <div class="sidebar-header-actions">
+                    <?php include __DIR__.'/partials/locale-switcher.php'; ?>
                     <?php include __DIR__.'/partials/version-switcher.php'; ?>
                     <button class="sidebar-close" type="button" data-nav-close aria-label="Close navigation">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -107,9 +119,6 @@ $githubUrl = 'https://github.com/ONyklicek/WireStack';
                         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
                         <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
                     </button>
-                    <a class="icon-button github-link" href="<?= htmlspecialchars($githubUrl, ENT_QUOTES) ?>" target="_blank" rel="noreferrer" aria-label="GitHub repository">
-                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2c-3.2.7-3.88-1.54-3.88-1.54-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.56-.29-5.26-1.28-5.26-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.18 1.18a11.02 11.02 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.58.23 2.75.12 3.04.74.81 1.18 1.83 1.18 3.09 0 4.42-2.7 5.39-5.28 5.68.42.36.79 1.06.79 2.14v3.17c0 .31.21.68.8.56A11.52 11.52 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5Z"/></svg>
-                    </a>
                 </div>
             </header>
             <div class="search-backdrop" data-search-close></div>
@@ -117,6 +126,12 @@ $githubUrl = 'https://github.com/ONyklicek/WireStack';
             <div class="page-body">
                 <div class="content-shell">
                     <article class="docs-article">
+                        <?php if (($htmlLang ?? 'en') !== 'en' && empty($page['translated'])) { ?>
+                            <div class="translation-notice" role="note">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+                                <span>This page hasn't been translated yet — showing the English version.</span>
+                            </div>
+                        <?php } ?>
                         <div class="page-hero<?= $page['previewUrl'] ? ' has-preview' : '' ?>">
                             <nav class="breadcrumb" aria-label="Breadcrumb">
                                 <a href="<?= htmlspecialchars($homeUrl, ENT_QUOTES) ?>">Docs</a>
