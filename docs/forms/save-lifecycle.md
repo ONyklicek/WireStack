@@ -176,6 +176,32 @@ $form->using(fn (array $data) => User::create(['name' => $data['name']]));
 
 If `model(null)` is set and no `using()` callback is provided, `save()` throws an `InvalidArgumentException`.
 
+### Optimistic Locking
+
+Concurrent edits can silently overwrite each other: two users open the same record, both save, and the second write clobbers the first. Enable a version check with `optimisticLock()`:
+
+```php
+$form->model($order)->optimisticLock();          // defaults to the 'updated_at' column
+$form->model($order)->optimisticLock('version'); // or any integer/version column
+```
+
+When enabled, the lock column's value is captured as the form is filled from the record and carried through the Livewire round trip. On save the **current database value is re-read**; if it no longer matches the captured baseline — someone else saved, or deleted, the record in the meantime — the save is aborted with a `NyonCode\WireForms\Forms\Runtime\StaleModelException` and a conflict notification (`wire-forms::messages.stale`), leaving the newer data intact.
+
+- Opt-in and backwards compatible — without `optimisticLock()` nothing changes.
+- Runs only in **update** mode (an existing model).
+- Set `->model($record)` **before** `->fill()` so the baseline can be captured; if no baseline is present the check fails open (does not block the save).
+- Catch `StaleModelException` if you want to handle the conflict yourself (e.g. reload and re-present the form):
+
+```php
+use NyonCode\WireForms\Forms\Runtime\StaleModelException;
+
+try {
+    $this->form->save();
+} catch (StaleModelException $e) {
+    // $e->model, $e->lockColumn — reload and let the user retry
+}
+```
+
 ---
 
 ## Step 6: Save Relationships
