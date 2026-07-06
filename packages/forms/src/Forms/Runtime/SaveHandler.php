@@ -134,6 +134,8 @@ final class SaveHandler
 
         // Update mode
         if ($model instanceof Model) {
+            $this->verifyOptimisticLock($model);
+
             $dehydrator->dehydrate($data, $model);
             $model->save();
 
@@ -176,6 +178,58 @@ final class SaveHandler
         }
 
         return $names;
+    }
+
+    /**
+     * Optimistic locking guard (opt-in via Form::optimisticLock()).
+     *
+     * Compares the baseline lock value captured at fill time (carried in form
+     * state) against the authoritative current database value. A mismatch means
+     * the record was changed — or deleted — by someone else since the form was
+     * opened, so the save is aborted before it can overwrite that change.
+     *
+     * @throws StaleModelException
+     */
+    private function verifyOptimisticLock(Model $model): void
+    {
+        $column = $this->config->optimisticLockColumn;
+
+        if ($column === null || ! $model->exists) {
+            return;
+        }
+
+        $state = $this->runtime->getStateManager()->getState();
+
+        // No baseline captured (e.g. ->fill() ran before ->model()) — cannot
+        // lock without a reference point, so fall through rather than block.
+        if (! array_key_exists($column, $state)) {
+            return;
+        }
+
+        $current = $model->newQueryWithoutScopes()
+            ->whereKey($model->getKey())
+            ->first()
+            ?->getRawOriginal($column);
+
+        if ((string) $state[$column] === (string) $current) {
+            return;
+        }
+
+        $this->notifyConflict();
+
+        throw new StaleModelException($model, $column);
+    }
+
+    private function notifyConflict(): void
+    {
+        $managerClass = 'NyonCode\\WireCore\\Notifications\\NotificationManager';
+
+        if (! class_exists($managerClass) || ! app()->bound($managerClass)) {
+            return;
+        }
+
+        $manager = app($managerClass);
+        $manager::error(trans('wire-forms::messages.stale'));
     }
 
     private function notifySuccess(mixed $record): void

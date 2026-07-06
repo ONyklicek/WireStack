@@ -61,7 +61,7 @@ class BooleanColumn extends Column
 
     public function renderCell(Model $record): string
     {
-        if (! $this->canView()) {
+        if (! $this->canView() || ! $this->isVisibleForRecord($record)) {
             return '';
         }
 

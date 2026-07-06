@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Foundation\Support;
 
+use NyonCode\WireCore\Foundation\Enums\Breakpoint;
+
 /**
  * Canonical owner of responsive grid-column classes. Accepts a Filament-style
  * per-breakpoint map — e.g. ['default' => 1, 'md' => 2, 'lg' => 3] — and returns
@@ -17,9 +19,6 @@ namespace NyonCode\WireCore\Foundation\Support;
  */
 final class ResponsiveGrid
 {
-    /** Standard breakpoint prefixes, in min-width order. '' is the base (mobile). */
-    private const PREFIXES = ['', 'sm:', 'md:', 'lg:', 'xl:', '2xl:'];
-
     /** Supported column counts (1–12, matching Tailwind's default grid scale). */
     private const MAX_COLUMNS = 12;
 
@@ -59,7 +58,8 @@ final class ResponsiveGrid
 
     /**
      * Resolve a breakpoint token to its Tailwind prefix, or null if unknown.
-     * '' / 'default' / 0 all map to the base (unprefixed) breakpoint.
+     * '' / 'default' / 0 all map to the base (unprefixed) breakpoint; every named
+     * breakpoint delegates to the canonical {@see Breakpoint} enum.
      */
     private static function prefix(string $breakpoint): ?string
     {
@@ -67,9 +67,7 @@ final class ResponsiveGrid
             return '';
         }
 
-        $candidate = $breakpoint.':';
-
-        return in_array($candidate, self::PREFIXES, true) ? $candidate : null;
+        return Breakpoint::tryFromToken($breakpoint)?->prefix();
     }
 
     /**

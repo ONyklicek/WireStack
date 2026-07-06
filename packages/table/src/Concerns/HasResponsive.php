@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Concerns;
 
+use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireTable\Columns\Column;
 
 /**
  * Trait HasResponsive
  *
- * Shared responsive display logic for columns.
+ * Shared responsive display logic for columns. Breakpoint tokens are normalized
+ * through the canonical {@see Breakpoint} enum, which owns the token → Tailwind
+ * class mapping.
  *
  * @phpstan-require-extends Column
  */
@@ -19,16 +22,16 @@ trait HasResponsive
 
     protected ?string $hiddenFrom = null;
 
-    public function visibleFrom(string $breakpoint): static
+    public function visibleFrom(string|Breakpoint $breakpoint): static
     {
-        $this->visibleFrom = $breakpoint;
+        $this->visibleFrom = $breakpoint instanceof Breakpoint ? $breakpoint->value : $breakpoint;
 
         return $this;
     }
 
-    public function hiddenFrom(string $breakpoint): static
+    public function hiddenFrom(string|Breakpoint $breakpoint): static
     {
-        $this->hiddenFrom = $breakpoint;
+        $this->hiddenFrom = $breakpoint instanceof Breakpoint ? $breakpoint->value : $breakpoint;
 
         return $this;
     }
@@ -39,25 +42,11 @@ trait HasResponsive
 
         if ($this->visibleFrom) {
             $classes[] = 'hidden';
-            $classes[] = match ($this->visibleFrom) {
-                'sm' => 'sm:table-cell',
-                'md' => 'md:table-cell',
-                'lg' => 'lg:table-cell',
-                'xl' => 'xl:table-cell',
-                '2xl' => '2xl:table-cell',
-                default => 'md:table-cell',
-            };
+            $classes[] = Breakpoint::resolve($this->visibleFrom)->tableCellClass();
         }
 
         if ($this->hiddenFrom) {
-            $classes[] = match ($this->hiddenFrom) {
-                'sm' => 'sm:hidden',
-                'md' => 'md:hidden',
-                'lg' => 'lg:hidden',
-                'xl' => 'xl:hidden',
-                '2xl' => '2xl:hidden',
-                default => 'md:hidden',
-            };
+            $classes[] = Breakpoint::resolve($this->hiddenFrom)->hiddenAtClass();
         }
 
         return implode(' ', $classes);

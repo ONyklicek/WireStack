@@ -33,6 +33,7 @@ final class FormConfig
         public readonly array $validationMessages = [],
         public readonly bool $isDisabled = false,
         public readonly bool $isLive = false,
+        public readonly ?string $optimisticLockColumn = null,
     ) {}
 
     public function isCreating(): bool

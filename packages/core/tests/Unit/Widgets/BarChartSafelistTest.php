@@ -17,7 +17,8 @@ $safelistPath = __DIR__.'/../../../resources/views/widgets/bar-chart/safelist.bl
 $colorKeys = [
     'primary', 'blue', 'green', 'success', 'emerald', 'danger', 'red',
     'warning', 'yellow', 'amber', 'info', 'cyan', 'sky', 'purple', 'violet',
-    'indigo', 'orange', 'teal', 'pink', 'gray', 'secondary', 'totally-unknown',
+    'indigo', 'orange', 'lime', 'teal', 'fuchsia', 'pink', 'rose', 'slate',
+    'zinc', 'neutral', 'stone', 'gray', 'secondary', 'totally-unknown',
 ];
 
 it('has a safelist file', function () use ($safelistPath) {

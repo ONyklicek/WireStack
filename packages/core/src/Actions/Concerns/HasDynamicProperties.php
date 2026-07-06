@@ -7,6 +7,8 @@ namespace NyonCode\WireCore\Actions\Concerns;
 use Closure;
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Enums\IconPosition;
+use NyonCode\WireCore\Foundation\Enums\Size;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 
@@ -157,7 +159,7 @@ trait HasDynamicProperties
      * Set icon as string, Icon enum, or Closure.
      * Closure signature: fn(Model $record): string|Icon|null
      */
-    public function icon(string|Icon|Closure|null $icon, ?string $position = 'before'): static
+    public function icon(string|Icon|Closure|null $icon, string|IconPosition|null $position = 'before'): static
     {
         if ($icon instanceof Closure) {
             $this->iconCallback = $icon;
@@ -165,7 +167,7 @@ trait HasDynamicProperties
             $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
             $this->iconCallback = null;
         }
-        $this->iconPosition = $position;
+        $this->iconPosition = $position instanceof IconPosition ? $position->value : $position;
 
         return $this;
     }
@@ -195,12 +197,12 @@ trait HasDynamicProperties
      * Set size as string or Closure.
      * Closure signature: fn(Model $record): string
      */
-    public function size(string|Closure|null $size): static
+    public function size(string|Size|Closure|null $size): static
     {
         if ($size instanceof Closure) {
             $this->sizeCallback = $size;
         } else {
-            $this->size = $size;
+            $this->size = $size instanceof Size ? $size->value : $size;
             $this->sizeCallback = null;
         }
 

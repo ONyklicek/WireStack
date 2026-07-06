@@ -24,7 +24,7 @@ it('discovers layout components from the sibling Schema directory', function () 
 
     // LayoutComponent lives in Foundation/Components but its concrete types are
     // shipped in Foundation/Schema — the catalog scans there for this category.
-    expect($names)->toContain('grid', 'section', 'split', 'fieldset', 'tabs', 'wizard', 'callout', 'empty-state')
+    expect($names)->toContain('grid', 'section', 'flex', 'fieldset', 'tabs', 'wizard', 'callout', 'empty-state')
         ->and($this->catalog->resolve('callout'))->toBe(Callout::class)
         ->and($this->catalog->resolve('empty-state'))->toBe(EmptyState::class);
 });

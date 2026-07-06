@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Storage;
+use NyonCode\WireCore\Foundation\Enums\Size;
 
 class ImageColumn extends Column
 {
@@ -36,9 +37,13 @@ class ImageColumn extends Column
      * (`string|Closure`) so loading/instantiating ImageColumn does not fatal on
      * the LSP contravariance check; a Closure is resolved to its string scale.
      */
-    public function size(string|Closure $size): static
+    public function size(string|Size|Closure $size): static
     {
-        $this->imageSize = $size instanceof Closure ? (string) $this->evaluate($size) : $size;
+        $this->imageSize = match (true) {
+            $size instanceof Closure => (string) $this->evaluate($size),
+            $size instanceof Size => $size->value,
+            default => $size,
+        };
 
         return $this;
     }
@@ -118,7 +123,7 @@ class ImageColumn extends Column
 
     public function renderCell(Model $record): string
     {
-        if (! $this->canView()) {
+        if (! $this->canView() || ! $this->isVisibleForRecord($record)) {
             return '';
         }
 

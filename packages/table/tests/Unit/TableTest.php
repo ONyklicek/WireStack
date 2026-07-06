@@ -8,6 +8,8 @@ use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Foundation\Enums\Alignment;
+use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Columns\TextColumn;
@@ -110,6 +112,20 @@ it('resolves responsive stacked layout classes from the breakpoint', function ()
 
     expect($default->getStackedTableHiddenClass())->toBe('hidden md:block')
         ->and($default->getStackedCardsVisibleClass())->toBe('md:hidden');
+
+    // A Breakpoint enum resolves the same as its string token.
+    $enum = Table::make()->stackedOnMobile(true, Breakpoint::Lg);
+
+    expect($enum->getStackedBreakpoint())->toBe('lg')
+        ->and($enum->getStackedTableHiddenClass())->toBe('hidden lg:block');
+});
+
+it('resolves canonical actions alignment/justify classes, accepting a string or Alignment enum', function () {
+    expect(Table::make()->getActionsAlignmentClass())->toBe('text-right')
+        ->and(Table::make()->actionsAlignment('left')->getActionsAlignmentClass())->toBe('text-left')
+        ->and(Table::make()->actionsAlignment('center')->getActionsJustifyClass())->toBe('justify-center')
+        ->and(Table::make()->actionsAlignment(Alignment::Right)->getActionsJustifyClass())->toBe('justify-end')
+        ->and(Table::make()->actionsAlignment(Alignment::Center)->getActionsAlignment())->toBe('center');
 });
 
 it('hides the cards layout when mobile stacking is disabled', function () {

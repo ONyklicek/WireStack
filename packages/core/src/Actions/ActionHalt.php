@@ -8,6 +8,7 @@ use NyonCode\WireCore\Actions\Concerns\HasIcons;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Enums\ModalWidth;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireForms\Forms\Form;
 
@@ -211,9 +212,9 @@ final class ActionHalt
         return $this;
     }
 
-    public function width(?string $width): static
+    public function width(string|ModalWidth|null $width): static
     {
-        $this->modalWidth = $width;
+        $this->modalWidth = $width instanceof ModalWidth ? $width->value : $width;
 
         return $this;
     }
@@ -266,7 +267,7 @@ final class ActionHalt
     }
 
     /** @deprecated Use width() instead. Will be removed in v2.0. */
-    public function modalWidth(?string $width): static
+    public function modalWidth(string|ModalWidth|null $width): static
     {
         Deprecation::method('modalWidth', 'width');
 

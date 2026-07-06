@@ -1,7 +1,7 @@
 @php
-    use NyonCode\WireCore\Foundation\Schema\Split;
+    use NyonCode\WireCore\Foundation\Schema\Flex;
 
-    assert($layout instanceof Split);
+    assert($layout instanceof Flex);
 @endphp
 
 <div @class([

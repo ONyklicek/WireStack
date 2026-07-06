@@ -5,7 +5,12 @@ declare(strict_types=1);
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Enums\Alignment;
+use NyonCode\WireCore\Foundation\Enums\Breakpoint;
+use NyonCode\WireCore\Foundation\Enums\FontWeight;
+use NyonCode\WireCore\Foundation\Enums\Size;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Columns\ImageColumn;
 use NyonCode\WireTable\Columns\TextColumn;
 use Workbench\App\Models\User;
 
@@ -31,6 +36,32 @@ it('builds responsive visibility classes for every breakpoint', function () {
     expect(TextColumn::make('a')->visibleFrom('weird')->getResponsiveClasses())->toBe('hidden md:table-cell')
         ->and(TextColumn::make('a')->hiddenFrom('weird')->getResponsiveClasses())->toBe('md:hidden')
         ->and(TextColumn::make('a')->getResponsiveClasses())->toBe('');
+});
+
+it('accepts a Breakpoint enum interchangeably with its string token', function () {
+    expect(TextColumn::make('a')->visibleFrom(Breakpoint::Lg)->getResponsiveClasses())
+        ->toBe(TextColumn::make('a')->visibleFrom('lg')->getResponsiveClasses())
+        ->and(TextColumn::make('a')->hiddenFrom(Breakpoint::Xl)->getResponsiveClasses())
+        ->toBe(TextColumn::make('a')->hiddenFrom('xl')->getResponsiveClasses());
+
+    expect(TextColumn::make('a')->mobileBreakpoint(Breakpoint::Lg))->toBeInstanceOf(TextColumn::class);
+});
+
+it('accepts a FontWeight enum on the weight setter', function () {
+    expect(TextColumn::make('a')->weight(FontWeight::Bold)->getTextWeight())->toBe('bold');
+});
+
+it('accepts a Size enum on the ImageColumn size setter', function () {
+    expect(ImageColumn::make('a')->size(Size::Xl)->getSizeClasses())
+        ->toBe(ImageColumn::make('a')->size('xl')->getSizeClasses());
+});
+
+it('resolves the alignment class, accepting a string or Alignment enum', function () {
+    expect(TextColumn::make('a')->getAlignmentClass())->toBe('text-left')
+        ->and(TextColumn::make('a')->alignCenter()->getAlignmentClass())->toBe('text-center')
+        ->and(TextColumn::make('a')->alignment('right')->getAlignmentClass())->toBe('text-right')
+        ->and(TextColumn::make('a')->alignment(Alignment::Center)->getAlignmentClass())->toBe('text-center')
+        ->and(TextColumn::make('a')->alignment(Alignment::Right)->getAlignment())->toBe('right');
 });
 
 it('reports responsive visibility and shorthand helpers', function () {

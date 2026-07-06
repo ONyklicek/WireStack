@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
+use NyonCode\WireCore\Foundation\Enums\Breakpoint;
+use NyonCode\WireCore\Foundation\Enums\IconPosition;
+use NyonCode\WireCore\Foundation\Enums\Placement;
 
 it('can be created with actions', function () {
     $group = ActionGroup::make([
@@ -132,4 +135,30 @@ it('exposes a Floating UI config mapping placement 1:1 with a safe fallback', fu
         ->toBe(['placement' => 'top-end', 'offset' => 6, 'sheetOnMobile' => true, 'sheetBreakpoint' => 639.98])
         ->and(ActionGroup::make([])->dropdownPosition('unknown')->getDropdownConfig())
         ->toBe(['placement' => 'bottom-end', 'offset' => 6, 'sheetOnMobile' => true, 'sheetBreakpoint' => 639.98]);
+});
+
+it('accepts a Breakpoint enum on the sheet mobileBreakpoint setter (HasSheetOnMobile)', function () {
+    expect(ActionGroup::make([])->mobileBreakpoint(Breakpoint::Md)->getMobileBreakpoint())->toBe('md')
+        ->and(ActionGroup::make([])->mobileBreakpoint('lg')->getMobileBreakpoint())->toBe('lg');
+});
+
+it('accepts a Breakpoint enum on the modal mobileBreakpoint setter (HasModal)', function () {
+    expect(Action::make('edit')->mobileBreakpoint(Breakpoint::Lg)->getMobileBreakpoint())->toBe('lg')
+        ->and(Action::make('edit')->mobileBreakpoint(null)->getMobileBreakpoint())->toBeNull();
+});
+
+it('accepts a Placement enum on dropdownPosition and resolves the same classes as the string', function () {
+    $enum = ActionGroup::make([])->dropdownPosition(Placement::TopStart);
+    $string = ActionGroup::make([])->dropdownPosition('top-start');
+
+    expect($enum->getDropdownPositionClasses())->toBe($string->getDropdownPositionClasses())
+        ->and($enum->getDropdownOriginClass())->toBe('origin-bottom-left')
+        ->and($enum->getDropdownConfig()['placement'])->toBe('top-start')
+        // An unknown position falls back to the canonical bottom-end default.
+        ->and(ActionGroup::make([])->dropdownPosition('weird')->getDropdownConfig()['placement'])->toBe('bottom-end');
+});
+
+it('accepts an IconPosition enum on the action icon setter (HasDynamicProperties)', function () {
+    expect(Action::make('edit')->icon('pencil', IconPosition::After)->getIconPosition())->toBe('after')
+        ->and(Action::make('edit')->icon('pencil', 'before')->getIconPosition())->toBe('before');
 });

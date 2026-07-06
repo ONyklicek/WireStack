@@ -55,6 +55,9 @@
                     :close-on-click-away="$modalData['closeOnClickAway'] ?? true"
                     :close-on-escape="$modalData['closeOnEscape'] ?? true"
                     :bottom-sheet-on-mobile="$isSlideOverOnMobile"
+                    :sticky-header="$modalData['stickyHeader'] ?? false"
+                    :sticky-footer="$modalData['stickyFooter'] ?? false"
+                    :max-height="$modalData['maxHeight'] ?? null"
                     close-action="{{ $closeAction }}"
                 >
                     @include('wire-core::actions.partials.modal-host-body')

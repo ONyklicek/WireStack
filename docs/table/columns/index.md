@@ -108,6 +108,22 @@ TextColumn::make('full_name')
 // Permission-based
 ->permission(?string $permission)            // visible only if user has permission
 ->visible(Closure $callback)                 // custom visibility callback (Closure only)
+
+// Per-record cell visibility (redact a single cell by row)
+->visibleForRecord(Closure $callback)        // fn ($record) => bool
+```
+
+`->hidden()`, `->permission()`, `->visible()` and `->authorize()` decide whether
+the column exists in the table at all — they are evaluated **once, without a
+record** (they also drive the header, column toggle and export). To hide or
+redact a **single cell per row** — e.g. show `salary` only for records the user
+may see — use `->visibleForRecord(fn ($record) => …)`, which runs at cell render
+with the row's record. A hidden cell renders empty; the column still occupies its
+place in every other row.
+
+```php
+TextColumn::make('salary')
+    ->visibleForRecord(fn ($record) => auth()->user()->can('viewSalary', $record));
 ```
 
 ### Responsive Breakpoints

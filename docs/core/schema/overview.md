@@ -58,7 +58,7 @@ TextInput::make('notes')->columnSpanFull(); // span the full row
 | Component | Purpose |
 |-----------|---------|
 | [Grid](layout/grid.md) | Responsive multi-column layout |
-| [Flex](layout/flex.md) | Arrange children on a single horizontal axis |
+| [Flex](layout/flex.md) | Arrange children on a single horizontal (flexbox) axis |
 | [Section](layout/section.md) | Group components under a heading, optionally collapsible |
 | [Fieldset](layout/fieldset.md) | Group related components with a bordered legend |
 | [Tabs](layout/tabs.md) | Client-side tabbed panels (all panels validate together) |

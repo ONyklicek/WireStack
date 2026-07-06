@@ -26,6 +26,9 @@
                 :close-on-escape="$modalData['closeOnEscape'] ?? true"
                 :bottom-sheet-on-mobile="$isSlideOverOnMobile"
                 :breakpoint="$modalData['mobileBreakpoint'] ?? null"
+                :sticky-header="$modalData['stickyHeader'] ?? false"
+                :sticky-footer="$modalData['stickyFooter'] ?? false"
+                :max-height="$modalData['maxHeight'] ?? null"
                 close-action="closeActionModal"
             >
                 @if($isWizard)

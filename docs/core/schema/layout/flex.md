@@ -4,18 +4,22 @@ order: 10
 
 # Flex
 
-Arranges child components side by side on a single horizontal axis, stacking
-vertically on small screens. Use it when you want a row of controls or panels
-rather than a fixed column grid.
+Arranges child components side by side on a single horizontal (flexbox) axis,
+stacking vertically on small screens. Use it when you want a row of controls or
+panels that grow to share the space, rather than a fixed column grid.
+
+> Not to be confused with the table
+> [`SplitColumn`](../../../table/columns/split.md), which splits space *within a
+> single table cell*.
 
 ```php
-use NyonCode\WireCore\Foundation\Schema\Split;
+use NyonCode\WireCore\Foundation\Schema\Flex;
 ```
 
 ## Usage
 
 ```php
-Split::make()->schema([
+Flex::make()->schema([
     TextInput::make('first_name'),
     TextInput::make('last_name'),
 ])
@@ -27,7 +31,7 @@ the `md` breakpoint, stacking vertically below it.
 ## Controlling the Layout
 
 ```php
-Split::make()
+Flex::make()
     ->from('lg')          // go horizontal at the lg breakpoint instead of md
     ->justify('between')  // distribute children along the main axis
     ->align('center')     // cross-axis alignment

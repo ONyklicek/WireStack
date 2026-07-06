@@ -160,6 +160,18 @@ $form->using(function (array $data): mixed {
 
 The `using()` callback replaces the entire default create/update logic. It receives `$data` (the mutated data array). The return value becomes the result of `save()`.
 
+**Relationship repeaters and `using()`.** `$data` contains every field's value, **including relationship `Repeater` arrays** (e.g. a `children` key for `Repeater::make('children')->relationship('children')`). The default persistence path strips those keys before writing the parent; `using()` does not. So:
+
+- Do **not** mass-assign `$data` wholesale — `User::create($data)` would try to write `children` as a column. Assign only the parent's own attributes.
+- **Return the persisted `Model`** and the relationship cascade (Step 6) still runs, saving the repeater rows to the relation for you:
+
+```php
+$form->using(fn (array $data) => User::create(['name' => $data['name']]));
+// → children repeater rows are cascaded onto $user->children()
+```
+
+- Return **anything other than a `Model`** (an id, a DTO, a command result) and the cascade is skipped — your callback owns persistence entirely, relations included.
+
 ### No Model
 
 If `model(null)` is set and no `using()` callback is provided, `save()` throws an `InvalidArgumentException`.
@@ -168,7 +180,7 @@ If `model(null)` is set and no `using()` callback is provided, `save()` throws a
 
 ## Step 6: Save Relationships
 
-After the model is persisted, `RelationshipSaveHandler` cascades any Repeater field data to the model's relations. This step only runs when the persist result is an Eloquent `Model` instance.
+After the model is persisted, `RelationshipSaveHandler` cascades any Repeater field data to the model's relations. This step only runs when the persist result is an Eloquent `Model` instance — which includes a `Model` returned from a custom `using()` callback (see [Custom Persistence](#custom-persistence)).
 
 User code does not interact with this step directly; it is handled automatically for Repeater fields with `->relationship()` configured.
 

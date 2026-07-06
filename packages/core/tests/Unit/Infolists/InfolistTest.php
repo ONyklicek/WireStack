@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Foundation\Contracts\HasFieldActions;
+use NyonCode\WireCore\Foundation\Schema\Flex;
 use NyonCode\WireCore\Foundation\Schema\Grid;
 use NyonCode\WireCore\Foundation\Schema\Section;
-use NyonCode\WireCore\Foundation\Schema\Split;
 use NyonCode\WireCore\Infolists\Components\ListEntry;
 use NyonCode\WireCore\Infolists\Components\RepeatableEntry;
 use NyonCode\WireCore\Infolists\Components\TextEntry;
@@ -173,13 +173,13 @@ it('renders a list entry as badge chips', function () {
         ->and($html)->toContain('beta');
 });
 
-// ─── Split layout ────────────────────────────────────────────────────────────
+// ─── Flex layout ─────────────────────────────────────────────────────────────
 
-it('renders split children side by side and propagates the record', function () {
+it('renders flex children side by side and propagates the record', function () {
     $html = Infolist::make()
         ->record(['first' => 'Ada', 'last' => 'Lovelace'])
         ->schema([
-            Split::make()->schema([
+            Flex::make()->schema([
                 TextEntry::make('first'),
                 TextEntry::make('last'),
             ]),
@@ -207,11 +207,11 @@ it('renders repeatable per-row action buttons keyed by row index', function () {
         ->and($html)->toContain('B2');
 });
 
-it('honors a custom split breakpoint and hides invisible children', function () {
+it('honors a custom flex breakpoint and hides invisible children', function () {
     $html = Infolist::make()
         ->record(['first' => 'Ada', 'secret' => 'hidden-value'])
         ->schema([
-            Split::make()->from('lg')->schema([
+            Flex::make()->from('lg')->schema([
                 TextEntry::make('first'),
                 TextEntry::make('secret')->visible(false),
             ]),

@@ -7,8 +7,8 @@ namespace Workbench\App\Livewire\Previews;
 use Livewire\Component;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Schema\Flex;
 use NyonCode\WireCore\Foundation\Schema\Section;
-use NyonCode\WireCore\Foundation\Schema\Split;
 use NyonCode\WireCore\Infolists\Components\BadgeEntry;
 use NyonCode\WireCore\Infolists\Components\BooleanEntry;
 use NyonCode\WireCore\Infolists\Components\ColorEntry;
@@ -126,7 +126,7 @@ class InfolistPreview extends Component
                         TextEntry::make('total')->label('Total')->money('Kč')->weight('semibold'),
                     ]),
 
-                Split::make()->from('md')->schema([
+                Flex::make()->from('md')->schema([
                     Section::make('Line items')
                         ->icon('list-bullet')
                         ->schema([

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Forms\Runtime;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 use NyonCode\WireCore\Core\State\StateHydrator;
 use NyonCode\WireCore\Foundation\Components\Component;
@@ -192,7 +193,36 @@ final class FormRuntime
             $data = (new StateHydrator)->hydrate($data, $definitions);
         }
 
+        $data = $this->captureOptimisticLockBaseline($data);
+
         $this->stateManager->fill($data);
+    }
+
+    /**
+     * When optimistic locking is enabled and a persisted model is configured,
+     * snapshot the lock column's raw database value into form state so the
+     * save-time comparison has a format-stable baseline that survives the
+     * Livewire round trip. No-op when locking is off or the model is not yet
+     * persisted (create mode).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function captureOptimisticLockBaseline(array $data): array
+    {
+        $column = $this->config->optimisticLockColumn;
+
+        if ($column === null) {
+            return $data;
+        }
+
+        $model = $this->config->model;
+
+        if ($model instanceof Model && $model->exists) {
+            $data[$column] = $model->getRawOriginal($column);
+        }
+
+        return $data;
     }
 
     /**

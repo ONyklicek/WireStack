@@ -6,6 +6,11 @@ Dropdown select with static or dynamic options, search, and multi-select.
 use NyonCode\WireForms\Components\Select;
 ```
 
+> **Mobile.** The dropdown/search panel opens as a bottom sheet below the
+> configured breakpoint (searchable selects stay a floating panel by default so
+> the search box stays usable). Override per field with `->sheetOnMobile()` /
+> `->mobileBreakpoint('md')` — see [mobile presentation](../../configuration.md#mobile).
+
 ## Basic Usage
 
 ```php

@@ -344,20 +344,28 @@ file rather than editing icon paths by hand.
 
 ## Colors
 
-Tailwind CSS color abstraction — 7 semantic color names:
+`->color()` accepts the **complete Tailwind palette** on every surface. Two vocabularies
+resolve through the same canonical map:
 
-| Name | Typical Mapping |
-|------|-----------------|
-| `primary` | Blue (brand) |
-| `secondary` | Gray |
-| `success` | Green |
-| `danger` | Red |
-| `warning` | Amber/Yellow |
-| `info` | Cyan/Sky |
-| `gray` | Neutral gray |
+**Semantic roles** — fixed brand hues that carry meaning:
+
+| Name | Resolves to |
+|------|-------------|
+| `primary` (alias `blue`) | Brand primary |
+| `success` (alias `green`, `emerald`) | Emerald |
+| `danger` (alias `red`) | Red |
+| `warning` (alias `yellow`, `amber`) | Amber |
+| `info` (alias `cyan`) | Cyan |
+| `gray` (alias `secondary`) | Neutral gray |
+
+**Raw hue families** — every Tailwind color, for finer control:
+
+`slate`, `zinc`, `neutral`, `stone`, `orange`, `lime`, `teal`, `sky`, `indigo`,
+`violet`, `purple`, `fuchsia`, `pink`, `rose`.
 
 ```php
-Action::make('delete')->color('danger');
+Action::make('delete')->color('danger');   // semantic role
+Action::make('archive')->color('teal');     // raw hue
 BadgeColumn::make('status')->colors([
     'active' => 'success',
     'pending' => 'warning',
@@ -365,7 +373,10 @@ BadgeColumn::make('status')->colors([
 ]);
 ```
 
-Each color resolves to Tailwind utility classes for bg, text, border, ring, and hover variants.
+The type-safe `Foundation\Colors\Color` enum has a case for every one of these
+(`Color::Danger`, `Color::Teal`, …). Each color resolves to Tailwind utility classes
+for bg, text, border, ring, and hover variants — the same value renders identically
+on a badge, a solid/outlined/link button, a modal, a choice card, and a chart bar.
 
 ### Canonical color resolvers (`HasColor`)
 
@@ -381,10 +392,13 @@ so a semantic color resolves to the same hue everywhere (`success` → emerald,
 | `getGhostColorClasses()` | dropdown / menu item |
 | `getIconButtonColorClasses()` | icon-only button |
 | `getLinkColorClasses()` | text/link button (underline on hover) |
-| `getSolidBgClass()` | bare fill only (toggle track, count badge) |
+| `getSolidBgClass()` / `getSoftBgClass()` | bare fill only (toggle on/off track, count badge) |
 | `getBadgeColorClasses()` | soft "pill" badge (bg + text) |
 | `getTextColorClasses()` | foreground-only text tint |
+| `getChoiceColorClasses()` | radio/segmented/card selected state bundle |
+| `getModalSubmitButtonClasses()` | modal confirm/submit button |
 | `getModalIconBgClass()` / `getModalIconTextClass()` | modal icon chip |
+| `getGradientFillClasses()` / `getFillTextClasses()` | bar-chart fill + accent (literal chart hues) |
 
 When adding a color or surface, extend the resolver here once — downstream
 columns, badges, actions, and toggles pick it up automatically. Keep utility
@@ -404,6 +418,37 @@ scanner.
 | `HasSize::getButtonSizeClasses($size, $iconOnly)` | button padding scale (action buttons, action-group triggers, `ButtonColumn`); `$iconOnly` returns square padding |
 | `HasFontWeight::getFontWeightClasses($weight)` | `font-*` weight utility (table columns, infolist entries); unknown weight → `font-normal` |
 | `Modals\Concerns\HasModalProperties::getMaxWidthClass($width, $responsive)` | modal `max-w-*` (centered dialogs gate at `sm:`; slide-overs pass `responsive: false`) |
+
+### Type-safe value enums
+
+Every fluent setter that takes a string token **also accepts a canonical enum** from
+`Foundation\Enums\` — `->size('lg')` and `->size(Size::Lg)` are interchangeable, and the
+string form stays fully supported. Each enum is the single owner of its vocabulary
+(`values()` + `resolve()`), so a token resolves to the same utility on every surface, and
+unknown tokens fall back to a sensible default instead of emitting an unscannable class.
+
+| Enum | Tokens | Setters that accept it |
+|------|--------|------------------------|
+| `Colors\Color` | semantic roles + every raw hue (see [Colors](#colors)) | `->color()` everywhere |
+| `Enums\Breakpoint` | `sm` `md` `lg` `xl` `2xl` | column `->visibleFrom()` / `->hiddenFrom()` / `->mobileBreakpoint()`, `Table::stackedOnMobile()`, `->mobileBreakpoint()` on sheets/modals, `Grid` per-breakpoint `columns` keys |
+| `Enums\Size` | `xs` `sm` `md` `lg` `xl` | `->size()` (+ `->sm()`/`->md()`/… shortcuts) on actions, buttons, badge/icon columns |
+| `Enums\FontWeight` | `thin` `extralight` `light` `normal` `medium` `semibold` `bold` `extrabold` `black` | column `->weight()`, infolist `TextEntry::weight()` |
+| `Enums\Alignment` | `left` `center` `right` | column `->alignment()`, `Table::actionsAlignment()` |
+| `Enums\IconPosition` | `before` `after` | `->icon($icon, $position)` on actions, buttons, fields |
+| `Enums\Placement` | `bottom-start` `bottom-end` `top-start` `top-end` | `ActionGroup::dropdownPosition()` |
+| `Enums\ModalWidth` | `sm` `md` `lg` `xl` `2xl` … `7xl` `full` | `->width()` / `->modalWidth()` on modals, slide-overs, action modals |
+
+```php
+use NyonCode\WireCore\Foundation\Enums\{Alignment, Breakpoint, ModalWidth, Size};
+
+TextColumn::make('email')->visibleFrom(Breakpoint::Md)->alignment(Alignment::Right);
+Action::make('edit')->size(Size::Lg)->modalWidth(ModalWidth::TwoXl);
+```
+
+The `Breakpoint`, `Alignment` and `Placement` enums additionally own the **literal** Tailwind
+classes their tokens map to (`Breakpoint::Md->tableCellClass()`, `Alignment::Right->textClass()`,
+`Placement::TopEnd->originClass()`), so the class map has one owner and Blade consumes a scannable
+utility instead of interpolating `text-{$align}`.
 
 ## Enums
 
@@ -512,14 +557,14 @@ A canonical layout vocabulary lives in `NyonCode\WireCore\Foundation\Schema\*` a
 | `Grid` | Responsive column grid |
 | `Section` | Titled card with heading/description |
 | `Fieldset` | Bordered group with a legend |
-| `Split` | Side-by-side row that stacks on mobile |
+| `Flex` | Side-by-side flexbox row that stacks on mobile |
 | `Tabs` / `Tab` | Tabbed panels |
 | `Wizard` / `Step` | Multi-step layout |
 | `Callout` | Soft colored notice box |
 | `EmptyState` | Icon + heading + description + actions |
 
 ```php
-use NyonCode\WireCore\Foundation\Schema\{Grid, Section, Split, Callout};
+use NyonCode\WireCore\Foundation\Schema\{Grid, Section, Flex, Callout};
 
 Section::make('Team')
     ->description('People with access.')
@@ -528,8 +573,8 @@ Section::make('Team')
         Grid::make()->columns(['default' => 1, 'md' => 2, 'lg' => 3])->schema([...]),
     ]);
 
-// Split: control distribution, alignment, spacing, wrap and child growth.
-Split::make()->from('md')->justify('between')->align('center')->gap(6)->wrap()->grow(false)->schema([...]);
+// Flex: control distribution, alignment, spacing, wrap and child growth.
+Flex::make()->from('md')->justify('between')->align('center')->gap(6)->wrap()->grow(false)->schema([...]);
 
 // Callout — color hues delegate to the canonical alert palette.
 Callout::make()->warning()->heading('Heads up')->icon('exclamation-triangle')->dismissible()
@@ -551,7 +596,7 @@ The same layouts are also exposed as slot-based `wire::` tags for plain Blade vi
 
 <x-wire::grid :columns="['default' => 1, 'md' => 2, 'lg' => 3]" gap="gap-3">…</x-wire::grid>
 
-<x-wire::split from="md" justify="between" align="center" :gap="4">…</x-wire::split>
+<x-wire::flex from="md" justify="between" align="center" :gap="4">…</x-wire::flex>
 
 <x-wire::section heading="Profile" description="Basic info">…</x-wire::section>
 <x-wire::fieldset legend="Billing address">…</x-wire::fieldset>

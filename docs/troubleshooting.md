@@ -35,13 +35,43 @@ purged from the build.
 ```js
 content: [
     './vendor/nyoncode/wire-core/resources/views/**/*.blade.php',
+    './vendor/nyoncode/wire-core/src/**/*.php',
     './vendor/nyoncode/wire-forms/resources/views/**/*.blade.php',
+    './vendor/nyoncode/wire-forms/src/**/*.php',
     './vendor/nyoncode/wire-table/resources/views/**/*.blade.php',
+    './vendor/nyoncode/wire-table/src/**/*.php',
     './vendor/nyoncode/wire-sortable/resources/views/**/*.blade.php',
+    './vendor/nyoncode/wire-sortable/src/**/*.php',
 ],
 ```
 
+The `src/**/*.php` paths matter: some components compose their utility classes
+in PHP (positioning, width, height), so scanning only the Blade views leaves
+those classes purged. On Tailwind 4, add the matching `@source` lines for both
+`resources/views` **and** `src` (see the getting-started guide).
+
 Rebuild assets afterward (`npm run build` or `npm run dev`).
+
+---
+
+## Slide-over is anchored left, overflows, or won't scroll
+
+**Symptom:** An action's slide-over (`->slideOver()`) appears pinned to the
+**left** with the dimmed page on the right, its content **overflows** past the
+viewport, the footer sits **off-screen at the bottom**, and the body won't
+scroll.
+
+**Cause:** The slide-over composes its positioning, width and height utilities
+in PHP (`SlideOverComponent`), not in a Blade file — classes like `sm:right-0`,
+`sm:pl-10`, `sm:h-full`, `max-h-[85vh]` and `sm:max-w-2xl`. If Tailwind only
+scans `resources/views` and not the package `src`, those classes are purged:
+without `sm:right-0` the panel falls to the left, and without the height
+utilities it is never height-constrained, so it overflows instead of scrolling
+its body.
+
+**Fix:** Add the `src/**/*.php` paths (Tailwind 3) or the matching `@source`
+lines (Tailwind 4) as shown in [Components render unstyled](#components-render-unstyled),
+then rebuild. See also the getting-started guide.
 
 ---
 

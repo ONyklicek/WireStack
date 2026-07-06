@@ -190,6 +190,40 @@ it('authorizeUsing(null) clears the callback', function () {
     expect($obj->isAuthorized())->toBeTrue();
 });
 
+it('forwards the context record to the callback for per-record authorization', function () {
+    $user = new class extends Authenticatable
+    {
+        protected $guarded = [];
+    };
+    $user->id = 7;
+
+    actAsAuthUser($user);
+
+    $obj = makeAuthorizableObject()
+        ->authorizeUsing(fn ($u, $record) => $record !== null && $record->owner_id === $u->id);
+
+    $ownRecord = (object) ['owner_id' => 7];
+    $othersRecord = (object) ['owner_id' => 99];
+
+    expect($obj->isAuthorized($ownRecord))->toBeTrue()
+        ->and($obj->isAuthorized($othersRecord))->toBeFalse()
+        ->and($obj->isAuthorized())->toBeFalse(); // no record → denied by this callback
+});
+
+it('still supports a single-argument callback (backward compatible)', function () {
+    $user = new class extends Authenticatable
+    {
+        protected $guarded = [];
+    };
+
+    actAsAuthUser($user);
+
+    // Legacy one-arg closure must keep working even though a context is passed.
+    $obj = makeAuthorizableObject()->authorizeUsing(fn ($u) => true);
+
+    expect($obj->isAuthorized((object) ['anything' => 1]))->toBeTrue();
+});
+
 // ─── Priority ──────────────────────────────────────────────────────────────
 
 it('custom callback takes priority over gate ability', function () {

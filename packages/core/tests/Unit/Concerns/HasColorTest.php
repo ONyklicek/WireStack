@@ -7,7 +7,80 @@ use NyonCode\WireCore\Actions\Concerns\HasColor;
 class TestColorClass
 {
     use HasColor;
+
+    // Expose the protected per-surface button resolvers so the full palette can
+    // be exercised directly (they are only called during rendering otherwise).
+    public function solid(string $color): string
+    {
+        return $this->getSolidColorClasses($color);
+    }
+
+    public function outlined(string $color): string
+    {
+        return $this->getOutlinedColorClasses($color);
+    }
+
+    public function ghost(string $color): string
+    {
+        return $this->getGhostColorClasses($color);
+    }
+
+    public function iconButton(string $color): string
+    {
+        return $this->getIconButtonColorClasses($color);
+    }
 }
+
+/**
+ * The extended (non-semantic) palette that every owner-facing surface now
+ * accepts, so `->color('purple')` looks the same on a solid button, an outlined
+ * button, a link, a modal submit button and a choice card — not just a badge.
+ */
+$extendedPalette = [
+    'orange', 'lime', 'teal', 'sky', 'indigo', 'violet', 'purple', 'fuchsia',
+    'pink', 'rose', 'slate', 'zinc', 'neutral', 'stone',
+];
+
+it('resolves the full extended palette for every button surface', function () use ($extendedPalette) {
+    $obj = new TestColorClass;
+
+    foreach ($extendedPalette as $color) {
+        expect($obj->solid($color))->toContain("bg-$color-")
+            ->and($obj->outlined($color))->toContain("border-$color-")
+            ->and($obj->ghost($color))->toContain("text-$color-")
+            ->and($obj->iconButton($color))->toContain("text-$color-")
+            ->and(TestColorClass::getLinkColorClasses($color))->toContain("text-$color-")
+            ->and(TestColorClass::getModalSubmitButtonClasses($color))->toContain("bg-$color-")
+            ->and(TestColorClass::getModalIconBgClass($color))->toContain("bg-$color-")
+            ->and(TestColorClass::getModalIconTextClass($color))->toContain("text-$color-")
+            ->and(TestColorClass::getSolidBgClass($color))->toContain("bg-$color-")
+            ->and(TestColorClass::getSoftBgClass($color))->toContain("bg-$color-")
+            ->and(TestColorClass::getChoiceColorClasses($color)['solid'])->toContain("bg-$color-");
+    }
+});
+
+it('keeps semantic aliases mapping to the same hue across button surfaces', function () {
+    $obj = new TestColorClass;
+
+    expect($obj->solid('emerald'))->toBe($obj->solid('success'))
+        ->and($obj->solid('amber'))->toBe($obj->solid('warning'))
+        ->and($obj->outlined('emerald'))->toBe($obj->outlined('success'))
+        ->and($obj->outlined('amber'))->toBe($obj->outlined('warning'))
+        ->and($obj->ghost('amber'))->toBe($obj->ghost('warning'))
+        ->and($obj->ghost('emerald'))->toBe($obj->ghost('success'))
+        ->and($obj->iconButton('emerald'))->toBe($obj->iconButton('success'))
+        ->and(TestColorClass::getModalIconBgClass('emerald'))->toBe(TestColorClass::getModalIconBgClass('success'))
+        ->and(TestColorClass::getModalIconTextClass('amber'))->toBe(TestColorClass::getModalIconTextClass('warning'));
+});
+
+it('resolves info/cyan on the button surfaces that previously fell back to gray', function () {
+    $obj = new TestColorClass;
+
+    expect($obj->ghost('info'))->toContain('cyan')
+        ->and($obj->iconButton('info'))->toContain('cyan')
+        ->and(TestColorClass::getModalSubmitButtonClasses('info'))->toContain('cyan')
+        ->and(TestColorClass::getModalIconBgClass('cyan'))->toContain('cyan');
+});
 
 it('returns correct badge color classes for primary', function () {
     expect(TestColorClass::getBadgeColorClasses('primary'))->toContain('bg-primary-100');

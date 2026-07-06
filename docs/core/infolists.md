@@ -286,14 +286,14 @@ Section::make('Billing')
 
 Every entry accepts `columnSpan(int)` / `columnSpanFull()` to span the grid.
 
-### Split
+### Flex
 
-`Split` arranges its children side by side on one horizontal axis, stacking vertically on small screens — useful for pairing a details card with a summary, or an avatar with a bio. Children grow to share the row evenly; `from()` sets the breakpoint (`sm` / `md` / `lg`, default `md`) at which the row becomes horizontal.
+`Flex` arranges its children side by side on one horizontal (flexbox) axis, stacking vertically on small screens — useful for pairing a details card with a summary, or an avatar with a bio. Children grow to share the row evenly; `from()` sets the breakpoint (`sm` / `md` / `lg`, default `md`) at which the row becomes horizontal.
 
 ```php
-use NyonCode\WireCore\Foundation\Schema\Split;
+use NyonCode\WireCore\Foundation\Schema\Flex;
 
-Split::make()->from('lg')->schema([
+Flex::make()->from('lg')->schema([
     Section::make('Details')->schema([ /* entries */ ]),
     Section::make('Summary')->schema([ /* entries */ ]),
 ]);

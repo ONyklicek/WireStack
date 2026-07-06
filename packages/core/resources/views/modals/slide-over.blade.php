@@ -83,9 +83,10 @@
                 </div>
 
                 {{-- Body --}}
+                {{-- overscroll-contain stops the scroll chaining to the page behind
+                     once the body reaches its top/bottom edge. --}}
                 <div @class([
-                    'relative flex-1 px-4 sm:px-6 py-4',
-                    'overflow-y-auto' => true,
+                    'relative flex-1 px-4 sm:px-6 py-4 overflow-y-auto overscroll-contain',
                 ])
                     @if($maxHeight) style="max-height: {{ $maxHeight }}" @endif
                 >

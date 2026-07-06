@@ -47,6 +47,7 @@ class AmvComponent extends Component
             'slide-over' => $action->slideOverOnMobile(),
             'full-screen' => $action->fullScreenOnMobile(),
             'compose' => $action->slideOver()->slideOverOnMobile(),
+            'sticky' => $action->slideOver()->stickyHeader()->stickyFooter(),
             default => $action,
         };
 
@@ -101,6 +102,16 @@ it('composes slideOver() + slideOverOnMobile() into a desktop slide-over that be
         ->assertSeeHtml('rounded-t-2xl sm:h-full sm:max-h-none sm:rounded-none')
         // Desktop slide-over: edge-pinned right with the breathing gap.
         ->assertSeeHtml('sm:right-0 sm:pl-10');
+});
+
+it('propagates stickyHeader()/stickyFooter() to the slide-over and contains overscroll (regression: flags were dropped, page scrolled behind)', function () {
+    Livewire::test(AmvComponent::class, ['mode' => 'sticky'])
+        ->call('openHeaderActionModal', 'invite')
+        // Sticky header + footer pinned inside the panel.
+        ->assertSeeHtml('sticky top-0 z-10 bg-white dark:bg-gray-800 border-b')
+        ->assertSeeHtml('sticky bottom-0 z-10 bg-white dark:bg-gray-800')
+        // Scrollable body must contain overscroll so the page behind stays put.
+        ->assertSeeHtml('overflow-y-auto overscroll-contain');
 });
 
 it('renders the default dialog without a mobile flag', function () {

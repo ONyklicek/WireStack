@@ -416,6 +416,92 @@ test('persist strips relationship repeater keys from parent payload and cascades
     Schema::dropIfExists('sh_parents');
 });
 
+// ─── using() + relationship cascade ───────────────────────────
+
+test('using() returning a Model still cascades relationship repeater children', function () {
+    Schema::dropIfExists('sh_children');
+    Schema::dropIfExists('sh_parents');
+    Schema::create('sh_parents', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->timestamps();
+    });
+    Schema::create('sh_children', function (Blueprint $table) {
+        $table->id();
+        $table->unsignedBigInteger('sh_parent_id');
+        $table->string('label');
+        $table->timestamps();
+    });
+
+    $config = new FormConfig(
+        schema: [
+            TextInput::make('name'),
+            Repeater::make('children')->relationship('children'),
+        ],
+        // Custom persistence: create the parent from column data only. Do NOT
+        // mass-assign the `children` array — the cascade owns the relation.
+        using: fn (array $data) => ShParentModel::create(['name' => $data['name']]),
+        mutateDataBeforeSave: fn (array $data) => [...$data, 'children' => [
+            ['label' => 'Child A'],
+            ['label' => 'Child B'],
+        ]],
+        successMessage: null,
+    );
+
+    $runtime = createRuntimeWithState($config, ['name' => 'Parent']);
+    $record = (new SaveHandler($config, $runtime))->save();
+
+    // Cascade runs for any Model result — including one returned from using().
+    expect($record)->toBeInstanceOf(ShParentModel::class)
+        ->and($record->children()->pluck('label')->all())->toBe(['Child A', 'Child B']);
+
+    Schema::dropIfExists('sh_children');
+    Schema::dropIfExists('sh_parents');
+});
+
+test('using() returning a non-Model skips the relationship cascade', function () {
+    Schema::dropIfExists('sh_children');
+    Schema::dropIfExists('sh_parents');
+    Schema::create('sh_parents', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->timestamps();
+    });
+    Schema::create('sh_children', function (Blueprint $table) {
+        $table->id();
+        $table->unsignedBigInteger('sh_parent_id');
+        $table->string('label');
+        $table->timestamps();
+    });
+
+    $config = new FormConfig(
+        schema: [
+            TextInput::make('name'),
+            Repeater::make('children')->relationship('children'),
+        ],
+        // Returns a scalar (e.g. a command result / id), not a Model: the library
+        // cannot know how to attach relations, so cascade is intentionally skipped.
+        using: function (array $data) {
+            ShParentModel::create(['name' => $data['name']]);
+
+            return 42;
+        },
+        mutateDataBeforeSave: fn (array $data) => [...$data, 'children' => [
+            ['label' => 'Orphan'],
+        ]],
+        successMessage: null,
+    );
+
+    $runtime = createRuntimeWithState($config, ['name' => 'Parent']);
+    $result = (new SaveHandler($config, $runtime))->save();
+
+    expect($result)->toBe(42)
+        ->and(ShChildModel::count())->toBe(0);
+
+    Schema::dropIfExists('sh_children');
+    Schema::dropIfExists('sh_parents');
+});
+
 // ─── Complete lifecycle ───────────────────────────────────────
 
 test('full save lifecycle with all hooks', function () {
