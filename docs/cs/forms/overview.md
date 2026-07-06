@@ -146,6 +146,7 @@ protected function getForms(): array
 
 ---
 
+<a id="model-modes"></a>
 ## Režimy modelu
 
 ```php
