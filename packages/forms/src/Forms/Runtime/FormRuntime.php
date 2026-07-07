@@ -193,9 +193,116 @@ final class FormRuntime
             $data = (new StateHydrator)->hydrate($data, $definitions);
         }
 
+        // Seed every schema key the caller did not provide with its field
+        // ->default() (create-mode intent) or, failing that, its type-correct
+        // blank. The union keeps incoming values, so a record's persisted value —
+        // even an intentional null — is never overwritten by a default; only
+        // genuinely-absent keys (create mode, or new/virtual fields the record
+        // has no column for) fall back. This makes a plain ->fill() self-seed:
+        // callers no longer have to list every field just so array inputs get an
+        // array instead of collapsing.
+        $data += $this->getInitialState();
+
         $data = $this->captureOptimisticLockBaseline($data);
 
         $this->stateManager->fill($data);
+    }
+
+    /**
+     * The schema-derived initial state: a key for every field (and top-level
+     * repeater) mapped to its ->default() when set, otherwise its type-correct
+     * blank. This is the single canonical seed both {@see fill()} and modal
+     * action hosts layer their fill/record/fillFormUsing data on top of.
+     *
+     * Read-only: it walks the raw schema without preparing the render-bound
+     * component tree, so a host can seed the Livewire state bag at mount without
+     * side effects on the instance that later renders.
+     *
+     * @return array<string, mixed>
+     */
+    public function getInitialState(): array
+    {
+        [$blank, $defaults, $types] = $this->collectInitialState($this->config->schema);
+
+        // Defaults win over the structural blank; every field still has a key.
+        $seed = $defaults + $blank;
+
+        if ($types !== [] && $seed !== []) {
+            $seed = (new StateHydrator)->hydrate($seed, $types);
+        }
+
+        return $seed;
+    }
+
+    /**
+     * Walk the schema collecting each stateful component's blank value, its
+     * explicit ->default() (only when non-null — an unset default must not
+     * override a field's structural blank), and its hydration type hint.
+     *
+     * Layouts are descended into; a repeater is treated as a leaf whose own key
+     * seeds to its default or an empty array — its per-item children live at
+     * wildcard paths and are seeded when rows are added, never at the template
+     * path.
+     *
+     * @param  array<int, mixed>  $components
+     * @return array{0: array<string, mixed>, 1: array<string, mixed>, 2: array<string, string>}
+     */
+    private function collectInitialState(array $components): array
+    {
+        $blank = [];
+        $defaults = [];
+        $types = [];
+
+        foreach ($components as $component) {
+            if ($component instanceof Repeater) {
+                $name = $component->getName();
+
+                if ($name !== '') {
+                    $blank[$name] = [];
+                    $types[$name] = 'array';
+
+                    $default = $component->getDefault();
+
+                    if ($default !== null) {
+                        $defaults[$name] = $default;
+                    }
+                }
+
+                continue;
+            }
+
+            if ($component instanceof LayoutComponent) {
+                [$nestedBlank, $nestedDefaults, $nestedTypes] = $this->collectInitialState($component->getSchema());
+
+                $blank += $nestedBlank;
+                $defaults += $nestedDefaults;
+                $types += $nestedTypes;
+
+                continue;
+            }
+
+            if ($component instanceof Field) {
+                $name = $component->getName();
+
+                if ($name !== '') {
+                    $blank[$name] = $component->getBlankState();
+
+                    $default = $component->getDefault();
+
+                    if ($default !== null) {
+                        $defaults[$name] = $default;
+                    }
+
+                    $type = $component->getStateType();
+
+                    if ($type !== 'string') {
+                        $types[$name] = $type;
+                    }
+                }
+            }
+        }
+
+        return [$blank, $defaults, $types];
     }
 
     /**

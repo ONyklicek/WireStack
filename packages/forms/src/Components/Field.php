@@ -119,4 +119,25 @@ abstract class Field extends Component implements HasFieldActions, HasStateAcces
     {
         return 'string';
     }
+
+    /**
+     * The type-correct empty value this field's state key holds before any
+     * value is filled.
+     *
+     * This is the structural seed the form applies to every field up front so a
+     * key always exists in Livewire state. Array fields (CheckboxList, Tags,
+     * KeyValue, multi-select…) MUST start as `[]` — a missing or null key makes
+     * Livewire collapse grouped array inputs into a single shared value. It is
+     * derived from {@see getStateType()} so each field declares its blank shape
+     * in one place; override only when a field needs a different empty than its
+     * cast implies.
+     */
+    public function getBlankState(): mixed
+    {
+        return match ($this->getStateType()) {
+            'array' => [],
+            'bool', 'boolean' => false,
+            default => null,
+        };
+    }
 }

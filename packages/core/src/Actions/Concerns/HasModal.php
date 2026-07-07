@@ -727,19 +727,55 @@ trait HasModal
     }
 
     /**
+     * The initial form-data bag seeded into Livewire state when this action's
+     * modal mounts.
+     *
+     * Two layers, closure wins:
+     *  1. the form schema's initial state — every field seeded with its
+     *     ->default() or type-correct blank, so array fields (CheckboxList, Tags,
+     *     multi-select…) start as `[]` instead of a missing/null key that makes
+     *     Livewire collapse grouped inputs into one shared value;
+     *  2. fillFormUsing overrides — record- or context-driven prefill on top.
+     *
+     * fillFormUsing still runs for header actions (context null): its
+     * zero-argument closure may seed keys the schema cannot know about.
+     *
      * @return array<string, mixed>
      */
     public function getFormDefaults(mixed $context = null): array
     {
-        // Header actions have no record, so $context is null. Their fillFormUsing
-        // closure takes no arguments and still needs to run, otherwise array
-        // fields (e.g. CheckboxList) are never seeded and Livewire collapses the
-        // grouped checkboxes into a single shared boolean (checking one checks all).
-        if ($this->fillFormUsing !== null) {
-            return ($this->fillFormUsing)($context);
+        $overrides = $this->fillFormUsing !== null
+            ? (array) (($this->fillFormUsing)($context))
+            : [];
+
+        $seed = $this->resolveFormForSeeding($context)?->getInitialState() ?? [];
+
+        return $overrides + $seed;
+    }
+
+    /**
+     * Resolve this action's Form for read-only seeding, honouring a closure or
+     * array schema. Unlike {@see getFormInstance()} it binds no Livewire
+     * component and sets no state path, so calling {@see Form::getInitialState()}
+     * on the result never mutates the instance that later renders.
+     */
+    protected function resolveFormForSeeding(mixed $context = null): ?Form
+    {
+        if ($this->formInstance instanceof Closure) {
+            $resolved = ($this->formInstance)($context);
+
+            if ($resolved instanceof Form) {
+                return $resolved;
+            }
+
+            return is_array($resolved) ? Form::make()->schema($resolved) : null;
         }
 
-        return [];
+        if ($this->formInstance instanceof Form) {
+            return $this->formInstance;
+        }
+
+        return null;
     }
 
     /**

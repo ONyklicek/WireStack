@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
+use NyonCode\WireForms\Components\CheckboxList;
 use NyonCode\WireForms\Components\Layout\Grid;
 use NyonCode\WireForms\Components\Layout\Section;
+use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireForms\Components\Toggle;
 use NyonCode\WireForms\Forms\Config\FormConfig;
 use NyonCode\WireForms\Forms\Runtime\FormRuntime;
 use NyonCode\WireForms\Forms\Runtime\StateManager;
@@ -280,4 +283,89 @@ test('save delegates to SaveHandler', function () {
     $result = $runtime->save();
 
     expect($result)->toBe(['name' => 'John']);
+});
+
+// ─── Initial state seeding ───────────────────────────────────────────────────
+
+function seedingRuntime(array $schema): FormRuntime
+{
+    return new FormRuntime(new FormConfig(schema: $schema), new StateManager);
+}
+
+test('getInitialState seeds field defaults, type-correct blanks and array fields', function () {
+    $runtime = seedingRuntime([
+        TextInput::make('title')->default('Untitled'),
+        TextInput::make('subtitle'),
+        Toggle::make('active'),
+        CheckboxList::make('permissions')->options(['a' => 'A']),
+    ]);
+
+    expect($runtime->getInitialState())->toBe([
+        'title' => 'Untitled',
+        'subtitle' => null,
+        'active' => false,
+        'permissions' => [],
+    ]);
+});
+
+test('getInitialState descends into layouts and seeds top-level repeaters', function () {
+    $runtime = seedingRuntime([
+        Section::make('Details')->schema([
+            TextInput::make('name'),
+        ]),
+        Repeater::make('rows')->schema([
+            TextInput::make('label'),
+        ]),
+        Repeater::make('contacts')
+            ->schema([TextInput::make('email')])
+            ->default([['email' => 'a@b.c']]),
+    ]);
+
+    // A repeater seeds its own key — its ->default() rows when set, otherwise an
+    // empty array — never its per-item child at the template path.
+    expect($runtime->getInitialState())->toEqual([
+        'name' => null,
+        'rows' => [],
+        'contacts' => [['email' => 'a@b.c']],
+    ]);
+});
+
+test('fill seeds every schema key the caller omitted (create mode)', function () {
+    $runtime = seedingRuntime([
+        TextInput::make('title')->default('Untitled'),
+        CheckboxList::make('permissions')->options(['a' => 'A']),
+    ]);
+
+    $runtime->fill([]);
+
+    expect($runtime->getState())->toBe([
+        'title' => 'Untitled',
+        'permissions' => [],
+    ]);
+});
+
+test('fill never overwrites an intentional null with a field default (edit mode)', function () {
+    $runtime = seedingRuntime([
+        TextInput::make('title')->default('Untitled'),
+    ]);
+
+    // The record supplies the key as null on purpose — the default must not
+    // resurrect a value the caller cleared.
+    $runtime->fill(['title' => null]);
+
+    expect($runtime->getState())->toBe(['title' => null]);
+});
+
+test('fill keeps caller values over defaults and blanks', function () {
+    $runtime = seedingRuntime([
+        TextInput::make('title')->default('Untitled'),
+        CheckboxList::make('permissions')->options(['a' => 'A', 'b' => 'B']),
+    ]);
+
+    $runtime->fill(['title' => 'Real', 'permissions' => ['a']]);
+
+    expect($runtime->getState())->toBe([
+        'title' => 'Real',
+        'permissions' => ['a'],
+    ]);
 });

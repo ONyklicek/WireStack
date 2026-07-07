@@ -85,6 +85,19 @@ TextInput::make('status')->default('draft')
 TextInput::make('user_id')->default(fn () => auth()->id())
 ```
 
+Při naplnění formuláře se každé pole ze schématu naseeduje automaticky: jeho
+`->default()`, pokud je nastaven, jinak **typově správná prázdná hodnota**
+(`''`/`null` u textu, `[]` u polí typu pole jako `CheckboxList`/`Tags`/
+multi-select, `false` u přepínačů). Nikdy nemusíš pole předvyplňovat jen proto,
+aby jeho klíč existoval — pole typu pole zejména začínají jako `[]` místo aby
+zkolabovala.
+
+Výchozí hodnoty doplní jen klíče, které příchozí data nedodala, takže se
+uplatní při vytváření a u nových/virtuálních polí a **nikdy nepřepíšou uloženou
+hodnotu záznamu — ani záměrný `null`.** Pro předvyplnění z recordu nebo kontextu
+nad rámec výchozích hodnot použij `fillFormUsing()` na akci (viz
+[Akce](../../core/actions.md)).
+
 ### Validace
 
 | Metoda | Příklad |
