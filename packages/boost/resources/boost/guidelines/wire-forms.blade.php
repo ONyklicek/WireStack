@@ -147,18 +147,24 @@ endpoint re-resolves the field and runs the closure.
 
 ### Prefill a form from an action
 
-Action modal forms read/write the `modal.action.formData` bag. Seed initial values with
-`fillFormUsing()` (the callback receives the record; `null` for header actions):
+Action modal forms read/write the `modal.action.formData` bag. The schema **self-seeds**: every
+field starts at its `->default()` or a type-correct blank (`[]` for `CheckboxList`/`Tags`/multi-`Select`,
+`false` for `Toggle`, else `null`), so you never hand-list a field just to give an array input its
+`[]` — it no longer collapses. Layer record/context prefill on top with `fillFormUsing()` (the
+callback receives the record; `null` for header actions); its values override the seed:
 
     EditAction::make()
         ->form([
             TextInput::make('name')->required(),
-            Select::make('role')->options(Role::class),
+            Select::make('role')->options(Role::class)->default('member'),
         ])
         ->fillFormUsing(fn ($record) => [
             'name' => $record->name,
             'role' => $record->role->value,
         ]);
+
+`fillFormUsing` (and a record's stored value) win over `->default()`; the seed only fills keys the
+data omits, so an intentional `null` from the record is never overwritten by a default.
 
 Add extra footer buttons that read/write the in-progress form without submitting it via
 `modalFooterActions()` — each `ModalFooterAction` callback gets the live `$data` bag and a `$set`

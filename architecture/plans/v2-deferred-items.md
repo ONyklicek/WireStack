@@ -1,5 +1,12 @@
 # V2 Plan — Odložené položky z v1
 
+> **⚠️ Konsolidace (2026-07-06):** Autoritativní pořadí/fázování V2 drží
+> [`v2-master-plan.md`](v2-master-plan.md). Tento dokument je **detailní
+> implementační reference** pro engine refaktory: #1 StateContainer **HOTOVO**,
+> #7 plugin runtime wiring **HOTOVO**; zbytek (#2 Metadata/Capabilities,
+> #3 Hydration, #4 StateHydrator) → **V2.2**, (#5 Filter views, #6 Modal shell)
+> → **V2.1**. Používej pro impl. detaily; sekvenci ber z master plánu.
+
 > **Status (2026-06-07):** Část položek už shipovala — ověřuj vždy proti aktuálnímu kódu, ne jen proti tomuto plánu.
 > - #1 StateContainer: `TableStateSynthesizer` existuje a WithTable už nedrží raw `public` state properties (synthesizer-backed).
 > - #2.3 / #2.4 / #2.5 (enum auto-options, relation chain, accessor inference): hotové, pokryté testy.

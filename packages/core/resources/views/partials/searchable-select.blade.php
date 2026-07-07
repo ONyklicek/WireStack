@@ -263,6 +263,8 @@
                     'absolute top-0 left-0 z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto',
                     $sheetPanel => $sheetOnMobile,
                 ])
+                x-cloak
+                style="display: none;"
             >
             @if($sheetOnMobile)
                 @include('wire-core::partials.sheet-grabber', ['dismiss' => 'open = false; activeIndex = -1', 'breakpoint' => $mobileBreakpoint])

@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireForms\Components\CheckboxList;
 use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireForms\Components\Toggle;
+use NyonCode\WireForms\Forms\Form;
 
 // Using Action as a concrete class that uses HasModal trait
 
@@ -212,13 +215,44 @@ it('can set validation attributes', function () {
     expect($action->getRawValidationAttributes())->toBe(['title' => 'Název']);
 });
 
-it('returns empty defaults without fillFormUsing', function () {
+it('seeds each field blank without fillFormUsing', function () {
+    // Without fillFormUsing the schema still seeds a key per field so array
+    // inputs never start missing/null; a plain text field blanks to null.
     $action = Action::make('edit')
         ->form([
             TextInput::make('title'),
         ]);
 
-    expect($action->getFormDefaults())->toBe([]);
+    expect($action->getFormDefaults())->toBe(['title' => null]);
+});
+
+it('seeds array fields as an empty array and applies field defaults', function () {
+    $action = Action::make('edit')
+        ->form([
+            TextInput::make('title')->default('Untitled'),
+            CheckboxList::make('permissions')->options(['a' => 'A']),
+            Toggle::make('active'),
+        ]);
+
+    expect($action->getFormDefaults())->toBe([
+        'title' => 'Untitled',
+        'permissions' => [],
+        'active' => false,
+    ]);
+});
+
+it('lets fillFormUsing override the schema seed', function () {
+    $action = Action::make('edit')
+        ->form([
+            TextInput::make('title')->default('Untitled'),
+            CheckboxList::make('permissions')->options(['a' => 'A', 'b' => 'B']),
+        ])
+        ->fillFormUsing(fn () => ['permissions' => ['a']]);
+
+    expect($action->getFormDefaults())->toBe([
+        'permissions' => ['a'],
+        'title' => 'Untitled',
+    ]);
 });
 
 it('can use fillFormUsing to provide defaults', function () {
@@ -240,6 +274,41 @@ it('seeds fillFormUsing defaults without a context (header actions)', function (
         ->fillFormUsing(fn () => ['name' => '', 'permissions' => []]);
 
     expect($action->getFormDefaults())->toBe(['name' => '', 'permissions' => []]);
+});
+
+it('seeds a schema provided via a form closure', function () {
+    $action = Action::make('edit')
+        ->form(fn () => Form::make()->schema([
+            CheckboxList::make('permissions')->options(['a' => 'A']),
+        ]));
+
+    expect($action->getFormDefaults())->toBe(['permissions' => []]);
+});
+
+it('seeds a schema from a closure that returns an array', function () {
+    $action = Action::make('edit')
+        ->form(fn () => [TextInput::make('title')->default('X')]);
+
+    expect($action->getFormDefaults())->toBe(['title' => 'X']);
+});
+
+it('falls back to fillFormUsing when a form closure yields no schema', function () {
+    $action = Action::make('edit')
+        ->form(fn () => null)
+        ->fillFormUsing(fn () => ['flag' => true]);
+
+    expect($action->getFormDefaults())->toBe(['flag' => true]);
+});
+
+it('returns fillFormUsing defaults when the action has no form', function () {
+    $action = Action::make('delete')
+        ->fillFormUsing(fn () => ['confirm' => true]);
+
+    expect($action->getFormDefaults())->toBe(['confirm' => true]);
+});
+
+it('returns no defaults when the action has neither form nor fillFormUsing', function () {
+    expect(Action::make('delete')->getFormDefaults())->toBe([]);
 });
 
 // ─── Multi-step Modal ───────────────────────────────────────────────────────

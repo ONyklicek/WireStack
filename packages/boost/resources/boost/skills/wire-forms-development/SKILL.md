@@ -72,12 +72,15 @@ TextInput::make('vat_id')
 refresh only its error bag; `requiredIf()` is honoured live. Cross-field string rules
 (`required_if:other,value`) validate on submit — prefer `requiredIf()` for the reactive version.
 
-Prefill an action modal form from the record with `fillFormUsing()` (callback gets the record,
-`null` for header actions):
+Every field self-seeds from its `->default()` or a type-correct blank (`[]` for array fields like
+`CheckboxList`/`Tags`, `false` for `Toggle`, else `null`), so array inputs never start collapsed and
+you don't hand-list a field just to give it a value. Layer record/context prefill on top with
+`fillFormUsing()` (callback gets the record, `null` for header actions); its values — and a record's
+stored value, even an intentional `null` — win over `->default()`, which only fills omitted keys:
 
 ```php
 EditAction::make()
-    ->form([TextInput::make('name'), Select::make('role')->options(Role::class)])
+    ->form([TextInput::make('name'), Select::make('role')->options(Role::class)->default('member')])
     ->fillFormUsing(fn ($record) => ['name' => $record->name, 'role' => $record->role->value]);
 ```
 

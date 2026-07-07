@@ -17,8 +17,9 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
 - Actions can open modals via `->modal(...)` and multi-step wizards via `->steps([...])`.
 - A wizard step's `->schema(fn (array $data) => [...])` Closure builds its fields from data entered in
   earlier steps; the bag is live even for header actions (no record), so later steps can branch on it.
-- An action with a form (`->form([...])`) seeds initial values with `->fillFormUsing(fn ($record) => [...])`
-  (`$record` is `null` for header actions). Inside the form, reactive fields use `$get`/`$set` and
+- An action with a form (`->form([...])`) self-seeds each field from its `->default()` (or a
+  type-correct blank), then layers record/context prefill on top with `->fillFormUsing(fn ($record) => [...])`
+  (`$record` is `null` for header actions), which overrides the seed. Inside the form, reactive fields use `$get`/`$set` and
   `->afterStateUpdated()` against the live `modal.action.formData` bag — see the wire-forms guideline.
 - Add extra footer buttons with `->modalFooterActions([ModalFooterAction::make('preview')->action(fn ($data, $set) => …)])`.
   The callback gets the live form `$data` and a `$set` writer; `->submitsForm()` validates first,

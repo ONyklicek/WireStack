@@ -11,6 +11,13 @@ related:
 
 # V1 gaps assessment
 
+> **⚠️ Konsolidace (2026-07-06):** Řešení těchto mezer drží
+> [`v2-master-plan.md`](v2-master-plan.md). Mapování: #1 owner vrstva → **V2.3**;
+> #2 tenancy, #3 workflow, #5 queue → **V2.4**; #6 saved views, #8 large-table UX
+> → **V2.5**; #4 import **HOTOVO**; #7 relation management → **V2.3** (owner vrstva
+> povýší `RelationManager`); #9 docs/Tailwind drift → pre-V2 hygiena. Tento
+> dokument zůstává jako **odůvodnění** (proč mezery bolí), ne jako plán řešení.
+
 Tento dokument zachycuje **produktové a provozní mezery V1**.
 
 Neřeší primárně strukturální refaktory typu `WithTable` / `Column` / `Core/`

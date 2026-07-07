@@ -290,6 +290,7 @@
                                                             $sheetPanel => $sheetOnMobile,
                                                         ])
                                                         x-cloak
+                                                        style="display: none;"
                                                 >
                                                     @if($sheetOnMobile)
                                                         @include('wire-core::partials.sheet-grabber', ['dismiss' => 'close()', 'breakpoint' => $sheetBp])
@@ -399,6 +400,7 @@
                                                         $sheetPanel => $sheetOnMobile,
                                                     ])
                                                     x-cloak
+                                                    style="display: none;"
                                             >
                                                 @if($sheetOnMobile)
                                                     @include('wire-core::partials.sheet-grabber', ['dismiss' => 'close()', 'breakpoint' => $sheetBp])

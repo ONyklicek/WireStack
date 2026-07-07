@@ -109,6 +109,19 @@ class Form implements Htmlable
         return $this->getRuntime()->getState();
     }
 
+    /**
+     * The schema-derived initial state: every field seeded with its ->default()
+     * or type-correct blank. Hosts (e.g. action modals) use this to seed the
+     * Livewire state bag so array fields never start missing/null, then layer
+     * their own record/fillFormUsing data on top.
+     *
+     * @return array<string, mixed>
+     */
+    public function getInitialState(): array
+    {
+        return $this->getRuntime()->getInitialState();
+    }
+
     // ─── Model & save ──────────────────────────────────────────────
 
     public function model(string|Model|null $model): static

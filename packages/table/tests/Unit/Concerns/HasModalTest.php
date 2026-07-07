@@ -212,13 +212,13 @@ it('can set validation attributes', function () {
     expect($action->getRawValidationAttributes())->toBe(['title' => 'Název']);
 });
 
-it('returns empty defaults without fillFormUsing', function () {
+it('seeds each field blank without fillFormUsing', function () {
     $action = Action::make('edit')
         ->form([
             TextInput::make('title'),
         ]);
 
-    expect($action->getFormDefaults())->toBe([]);
+    expect($action->getFormDefaults())->toBe(['title' => null]);
 });
 
 it('can use fillFormUsing to provide defaults', function () {

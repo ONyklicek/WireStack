@@ -339,6 +339,8 @@
                 ])
                 @if($sheetOnMobile) x-focus-trap="open" tabindex="-1" data-sheet-bp="{{ $sheetBpPx }}" @endif
                 @keydown.escape="open = false"
+                x-cloak
+                style="display: none;"
         >
             @if($sheetOnMobile)
                 @include('wire-core::partials.sheet-grabber', ['dismiss' => 'open = false', 'breakpoint' => $sheetBp])

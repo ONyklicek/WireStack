@@ -85,6 +85,18 @@ TextInput::make('status')->default('draft')
 TextInput::make('user_id')->default(fn () => auth()->id())
 ```
 
+When a form is filled, every field in the schema is seeded automatically: its
+`->default()` when set, otherwise a **type-correct blank** (`''`/`null` for
+text, `[]` for array fields like `CheckboxList`/`Tags`/multi-select, `false` for
+toggles). You never have to pre-list a field just so its key exists — array
+fields in particular start as `[]` instead of collapsing.
+
+Defaults fill only keys the incoming data does not provide, so they apply in
+create mode and to new/virtual fields, and **never overwrite a record's stored
+value — even an intentional `null`.** For record- or context-driven prefill on
+top of defaults, use `fillFormUsing()` on the action (see
+[Actions](../../core/actions.md)).
+
 ### Validation
 
 | Method | Example |
