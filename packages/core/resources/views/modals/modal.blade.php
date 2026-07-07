@@ -7,6 +7,7 @@
     x-data="{ show: @entangle($attributes->wire('model')) }"
     x-show="show"
     x-cloak
+    style="display: none;"
     @if($closeOnEscape) x-on:keydown.escape.window="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}" @endif
     class="fixed inset-0 z-50 overflow-y-auto"
     @if($id) id="{{ $id }}" @endif

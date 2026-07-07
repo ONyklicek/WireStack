@@ -163,6 +163,8 @@
                         'absolute top-0 left-0 z-50 max-h-56 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl ring-1 ring-black ring-opacity-5 dark:border-gray-700 dark:bg-gray-800',
                         $sheetPanel => $sheetOnMobile,
                     ])
+                    x-cloak
+                    style="display: none;"
                 >
                 @if($sheetOnMobile)
                     {{-- Grabber (li keeps the <ul> valid); swipe down to dismiss. --}}
