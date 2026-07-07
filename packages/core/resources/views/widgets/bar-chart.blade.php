@@ -23,6 +23,7 @@
                     </button>
                     <template x-teleport="body">
                         <div x-ref="panel" x-show="open" x-cloak x-transition @click.outside="close()"
+                             style="display: none;"
                              class="absolute top-0 left-0 z-50 w-40 origin-top-right rounded-xl border border-gray-100 bg-white py-1 text-sm text-slate-600 shadow-lg dark:border-gray-700 dark:bg-gray-800 dark:text-slate-300">
                             {{-- Menu affordance; host dashboards can wire actions here. --}}
                             <button type="button" class="block w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-slate-700">{{ __('Refresh') }}</button>

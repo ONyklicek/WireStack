@@ -50,6 +50,7 @@
                     'origin-top-left' => $position === 'bottom-start',
                     MobileSheet::panel($breakpoint) => $sheetOnMobile,
                 ])
+                style="display: none;"
             >
                 @if($sheetOnMobile)
                     @include('wire-core::partials.sheet-grabber', ['dismiss' => 'close()', 'breakpoint' => $breakpoint])
