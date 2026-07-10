@@ -33,7 +33,7 @@ class TablePreview extends Component
 
     /** Variants backed by the Invoice → InvoiceItem relationship. */
     private const INVOICE_VARIANTS = [
-        'subrows', 'summary',
+        'subrows', 'summary', 'row-color',
         'subrows-flatten', 'subrows-limit', 'subrows-filter',
     ];
 
@@ -91,9 +91,15 @@ class TablePreview extends Component
     public function table(Table $table): Table
     {
         if (in_array($this->variant, self::INVOICE_VARIANTS, true)) {
-            return $this->variant === 'summary'
-                ? $this->summaryTable($table)
-                : $this->subRowsTable($table);
+            return match ($this->variant) {
+                'summary' => $this->summaryTable($table),
+                'row-color' => $this->rowColorTable($table),
+                default => $this->subRowsTable($table),
+            };
+        }
+
+        if ($this->variant === 'column-filters') {
+            return $this->columnFiltersTable($table);
         }
 
         $table = $this->usersTable($table);
@@ -182,6 +188,69 @@ class TablePreview extends Component
     }
 
     /**
+     * Conditional whole-row coloring: each invoice row is tinted by its status
+     * (overdue → danger, pending → warning, paid → success) via a rowColor()
+     * Closure, plus a rowClass() Closure emphasising overdue rows.
+     */
+    private function rowColorTable(Table $table): Table
+    {
+        return $table
+            ->model(Invoice::class)
+            ->columns([
+                TextColumn::make('number')->label('Invoice')->sortable(),
+                TextColumn::make('customer')->label('Customer'),
+                BadgeColumn::make('status')->label('Status')->colors($this->statusColors()),
+                $this->invoiceTotalColumn(),
+            ])
+            ->rowColor(fn (Invoice $record) => match ($record->status) {
+                'overdue' => 'danger',
+                'pending' => 'warning',
+                'paid' => 'success',
+                default => null,
+            })
+            ->rowClass(fn (Invoice $record) => $record->status === 'overdue' ? 'font-semibold' : null)
+            ->defaultSort('number', 'asc')
+            ->striped()
+            ->stackedOnMobile()
+            ->paginated(false);
+    }
+
+    /**
+     * Per-column header filters showcase: a text filter, a single-select, the
+     * new multi-select (checkbox dropdown), and a boolean filter — each rendered
+     * inline in the header row.
+     */
+    private function columnFiltersTable(Table $table): Table
+    {
+        return $table
+            ->model(User::class)
+            ->columns([
+                TextColumn::make('name')->label('Name')->sortable()
+                    ->filterable(), // text filter (LIKE)
+                TextColumn::make('email')->label('Email')
+                    ->filterable(),
+                BadgeColumn::make('role')
+                    ->label('Role')
+                    ->colors([
+                        'admin' => 'primary',
+                        'manager' => 'info',
+                        'editor' => 'warning',
+                        'viewer' => 'gray',
+                    ])
+                    ->filterAsMultiSelect([
+                        'admin' => 'Administrator',
+                        'manager' => 'Manager',
+                        'editor' => 'Editor',
+                        'viewer' => 'Viewer',
+                    ], 'Any role'), // NEW: pick several roles → whereIn
+                BooleanColumn::make('is_active')->label('Active')
+                    ->filterAsBoolean('Active', 'Inactive'),
+            ])
+            ->searchable(false)
+            ->paginated(false);
+    }
+
+    /**
      * Original users table (overview + selection variants).
      */
     private function usersTable(Table $table): Table
@@ -222,7 +291,7 @@ class TablePreview extends Component
                     ]),
                 ]
                 : [
-                    Action::make('edit')->label('Edit')->icon('pencil')->color('primary'),
+                    Action::make('edit')->label(fn ($r) => "Edit $r->name")->icon('pencil')->color('primary'),
                     DeleteAction::make(),
                 ])
             ->bulkActions([
@@ -236,6 +305,14 @@ class TablePreview extends Component
             ->defaultSort('created_at', 'desc')
             ->searchable()
             ->selectable()
+            // Right-click a row → a dedicated context menu (declared separately
+            // from the ->actions() toolbar above).
+            ->rowContextMenu([
+                Action::make('view')->label('View')->icon('outline:eye'),
+                Action::make('edit')->label('Edit')->icon('pencil')->color('primary'),
+                Action::make('duplicate')->label('Duplicate')->icon('outline:document-duplicate'),
+                DeleteAction::make(),
+            ])
             ->paginated(false);
     }
 

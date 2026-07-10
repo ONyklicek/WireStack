@@ -7,6 +7,7 @@ use NyonCode\WireCore\Notifications\Concerns\InteractsWithNotifications;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireCore\Notifications\Drivers\NullDriver;
 use NyonCode\WireCore\Notifications\Notification;
+use NyonCode\WireCore\Notifications\NotificationAction;
 use NyonCode\WireCore\Notifications\NotificationManager;
 
 beforeEach(function () {
@@ -52,6 +53,86 @@ it('serializes to array filtering nulls', function () {
     expect($array)->toBe([
         'type' => 'success',
         'message' => 'Done',
+    ]);
+});
+
+// ─── Persistent / sticky ───────────────────────────────────────────────
+
+it('persistent sets a sticky zero duration', function () {
+    $sticky = Notification::info('Stay')->persistent();
+
+    expect($sticky->duration)->toBe(0)
+        ->and($sticky->toArray())->toHaveKey('duration', 0); // 0 survives the null filter
+});
+
+it('persistent(false) restores auto-dismiss', function () {
+    $n = Notification::info('Stay')->persistent()->persistent(false);
+
+    expect($n->duration)->toBeNull()
+        ->and($n->toArray())->not->toHaveKey('duration');
+});
+
+// ─── Actions ───────────────────────────────────────────────────────────
+
+it('appends an action from the label + event shorthand', function () {
+    $n = Notification::success('Deleted')->action('Undo', 'restore-record');
+
+    expect($n->actions)->toHaveCount(1)
+        ->and($n->actions[0])->toBeInstanceOf(NotificationAction::class)
+        ->and($n->actions[0]->label)->toBe('Undo')
+        ->and($n->actions[0]->event)->toBe('restore-record');
+});
+
+it('appends multiple actions and preserves order', function () {
+    $n = Notification::success('Saved')
+        ->action('Undo', 'undo')
+        ->action(NotificationAction::make('View', 'view')->payload(['id' => 7]));
+
+    expect($n->actions)->toHaveCount(2)
+        ->and($n->actions[1]->payload)->toBe(['id' => 7]);
+
+    $array = $n->toArray();
+    expect($array['actions'])->toBe([
+        ['label' => 'Undo', 'event' => 'undo', 'close' => true],
+        ['label' => 'View', 'event' => 'view', 'payload' => ['id' => 7], 'close' => true],
+    ]);
+});
+
+it('replaces the action set with actions()', function () {
+    $n = Notification::info('X')
+        ->action('A', 'a')
+        ->actions([NotificationAction::make('B', 'b')]);
+
+    expect($n->actions)->toHaveCount(1)
+        ->and($n->actions[0]->label)->toBe('B');
+});
+
+it('omits the actions key when there are none', function () {
+    expect(Notification::info('X')->toArray())->not->toHaveKey('actions');
+});
+
+// ─── NotificationAction ─────────────────────────────────────────────────
+
+it('builds a NotificationAction with fluent modifiers', function () {
+    $action = NotificationAction::make('Undo', 'restore')
+        ->payload(['id' => 1])
+        ->color('primary')
+        ->keepOpen();
+
+    expect($action->toArray())->toBe([
+        'label' => 'Undo',
+        'event' => 'restore',
+        'payload' => ['id' => 1],
+        'close' => false,
+        'color' => 'primary',
+    ]);
+});
+
+it('defaults a NotificationAction to closing the toast', function () {
+    expect(NotificationAction::make('Ok', 'ok')->toArray())->toBe([
+        'label' => 'Ok',
+        'event' => 'ok',
+        'close' => true,
     ]);
 });
 
@@ -178,4 +259,71 @@ it('wires the JS helper to a custom event name', function () {
     expect($html)
         ->toContain("eventName = 'my-toast'")
         ->toContain('x-on:my-toast.window');
+});
+
+it('renders the per-toast countdown bar by default', function () {
+    $html = Blade::render('<x-wire-notifications::toast-container />');
+
+    expect($html)
+        ->toContain('progress: true')
+        ->toContain('barWidth(toast)')
+        ->toContain('progress && ! toast.sticky'); // bar is hidden for sticky toasts
+});
+
+it('can disable the countdown bar', function () {
+    $html = Blade::render('<x-wire-notifications::toast-container :progress="false" />');
+
+    expect($html)->toContain('progress: false');
+});
+
+it('renders as a collapsible stack when enabled', function () {
+    $html = Blade::render('<x-wire-notifications::toast-container stack />');
+
+    expect($html)
+        ->toContain('stack: true')
+        ->toContain('cardStyle(index)')      // per-card pile transform
+        ->toContain('stack && ! expanded');  // grid-collapse toggle
+});
+
+it('is a plain list (not stacked) by default', function () {
+    $html = Blade::render('<x-wire-notifications::toast-container />');
+
+    expect($html)->toContain('stack: false');
+});
+
+it('resolves the fan-out direction from the anchor position', function () {
+    expect(Blade::render('<x-wire-notifications::toast-container position="top-right" />'))
+        ->toContain('topAnchored: true');
+
+    expect(Blade::render('<x-wire-notifications::toast-container position="bottom-left" />'))
+        ->toContain('topAnchored: false');
+});
+
+it('renders action buttons wired to a Livewire dispatch', function () {
+    $html = Blade::render('<x-wire-notifications::toast-container />');
+
+    expect($html)
+        ->toContain('handleAction(toast, action)')
+        ->toContain('window.Livewire.dispatch(action.event')
+        ->toContain('toast.actions && toast.actions.length');
+});
+
+it('exposes the max-visible overflow cap', function () {
+    $html = Blade::render('<x-wire-notifications::toast-container :max="5" />');
+
+    expect($html)
+        ->toContain('max: 5')
+        ->toContain('visibleList()')
+        ->toContain('hiddenCount()');
+});
+
+it('respects reduced motion and screen readers', function () {
+    $html = Blade::render('<x-wire-notifications::toast-container stack />');
+
+    expect($html)
+        ->toContain("matchMedia?.('(prefers-reduced-motion: reduce)')")
+        ->toContain('this.reduceMotion || ! this.stack')  // reduced motion never collapses the stack
+        ->toContain('motion-reduce:transition-none')
+        ->toContain('aria-live="polite"')
+        ->toContain('role="status"');
 });

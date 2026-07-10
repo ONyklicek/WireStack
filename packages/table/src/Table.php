@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
 use InvalidArgumentException;
@@ -19,6 +20,7 @@ use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Enums\Alignment;
 use NyonCode\WireCore\Foundation\Enums\Breakpoint;
@@ -27,6 +29,7 @@ use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Concerns\HasSqlDebug;
 use NyonCode\WireTable\Filters\Filter;
+use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
 use RuntimeException;
 
 /** @phpstan-consistent-constructor */
@@ -129,7 +132,11 @@ class Table implements Htmlable
 
     protected ?string $headerClass = null;
 
-    protected ?string $rowClass = null;
+    /** @var string|Closure|null Extra row class(es); a Closure receives the record. */
+    protected string|Closure|null $rowClass = null;
+
+    /** @var string|Closure|null Semantic/hue color tint for a whole row; a Closure receives the record. */
+    protected string|Closure|null $rowColor = null;
 
     // Responsive layout
     protected bool $stackedOnMobile = false;
@@ -171,6 +178,19 @@ class Table implements Htmlable
 
     // Notification driver
     protected ?NotificationDriver $notificationDriver = null;
+
+    // Per-user column preferences: stable key (null = disabled) + optional driver.
+    protected ?string $rememberColumnsKey = null;
+
+    protected ?TablePreferenceDriver $preferenceDriver = null;
+
+    /** @var array<int, Action|ActionGroup> Dedicated actions for the row right-click menu. */
+    protected array $rowContextMenuActions = [];
+
+    // Also send a notification (toast) when an inline edit hits an optimistic-lock
+    // conflict. Off by default — the conflict is always shown inline on the cell,
+    // so this needs no notification setup; opt in for a more prominent toast.
+    protected bool $notifyEditConflicts = false;
 
     public static function make(): static
     {
@@ -1170,18 +1190,191 @@ class Table implements Htmlable
     }
 
     /**
-     * Set custom row class (can use {record} placeholder)
+     * Add extra class(es) to every row, or per-record via a Closure.
+     *
+     * The Closure receives the record and returns a class string (or null):
+     * `->rowClass(fn ($record) => $record->is_flagged ? 'font-semibold' : null)`.
      */
-    public function rowClass(?string $class): static
+    public function rowClass(string|Closure|null $class): static
     {
         $this->rowClass = $class;
 
         return $this;
     }
 
-    public function getRowClass(): ?string
+    /**
+     * Resolve the custom row class for a record.
+     *
+     * Backwards compatible: with no record (or a static string) it returns the
+     * plain string; a Closure is only invoked when a record is supplied.
+     */
+    public function getRowClass(?Model $record = null): ?string
     {
+        if ($this->rowClass instanceof Closure) {
+            return $record === null ? null : ($this->rowClass)($record);
+        }
+
         return $this->rowClass;
+    }
+
+    /**
+     * Tint a whole row with a semantic role or raw Tailwind hue, statically or
+     * per-record via a Closure returning a color name (or null for no tint):
+     * `->rowColor(fn ($record) => $record->isOverdue() ? 'danger' : null)`.
+     *
+     * The tint is resolved by the canonical {@see HasColor::getRowTintClasses()}
+     * owner and replaces the neutral hover + zebra striping for that row.
+     */
+    public function rowColor(string|Closure|null $color): static
+    {
+        $this->rowColor = $color;
+
+        return $this;
+    }
+
+    /**
+     * Resolve the row color name for a record (null = no tint).
+     */
+    public function getRowColor(?Model $record = null): ?string
+    {
+        $color = $this->rowColor instanceof Closure
+            ? ($record === null ? null : ($this->rowColor)($record))
+            : $this->rowColor;
+
+        return $color === null || $color === '' ? null : (string) $color;
+    }
+
+    /**
+     * Compose the full `<tr>` class string for a record: row tint (if any),
+     * otherwise the neutral hover + zebra striping, plus any custom row class.
+     *
+     * Centralizing this keeps the row view free of layered conditionals and lets
+     * a colored row correctly suppress the gray hover / striping it would clash
+     * with. A colored row still receives its own same-hue hover from the tint.
+     */
+    public function getRowClasses(?Model $record, int $rowIndex): string
+    {
+        $tint = $record === null ? null : $this->getRowColor($record);
+
+        if ($tint !== null) {
+            $base = HasColor::getRowTintClasses($tint);
+        } else {
+            $hover = $this->isHoverable() ? 'hover:bg-gray-50 dark:hover:bg-gray-700/30' : '';
+            $stripe = $this->isStriped() && $rowIndex % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/30' : '';
+            $base = trim("{$hover} {$stripe}");
+        }
+
+        return trim("{$base} ".((string) $this->getRowClass($record)));
+    }
+
+    /**
+     * Companion of {@see getRowClasses()} for the mobile stacked-card view: the
+     * row tint (or the default white card background) plus the card border and
+     * any custom row class, so a colored row reads the same on phone and desktop.
+     */
+    public function getRowCardClasses(?Model $record): string
+    {
+        $tint = $record === null ? null : $this->getRowColor($record);
+        $background = $tint !== null
+            ? HasColor::getRowTintClasses($tint)
+            : 'bg-white dark:bg-gray-800';
+
+        return trim("{$background} border-b border-gray-200 dark:border-gray-700 ".((string) $this->getRowClass($record)));
+    }
+
+    /**
+     * Remember each user's column layout under a stable key.
+     *
+     * When set, the table loads the user's saved hidden-column set on mount and
+     * persists it whenever a column is toggled, via the configured
+     * {@see TablePreferenceDriver} (see `config('wire-table.preferences')`). The
+     * key identifies this table across the app — use a distinct, stable string
+     * per table (e.g. `'users-index'`). Different users are scoped by the driver,
+     * so one key serves everyone.
+     */
+    public function rememberColumns(string $key): static
+    {
+        $this->rememberColumnsKey = $key;
+
+        return $this;
+    }
+
+    /**
+     * The preferences key set by {@see rememberColumns()} (null = disabled).
+     */
+    public function getRememberColumnsKey(): ?string
+    {
+        return $this->rememberColumnsKey;
+    }
+
+    /**
+     * Persist this table's preferences through a specific driver, overriding the
+     * configured default (e.g. force the database driver for one critical table).
+     */
+    public function preferenceDriver(?TablePreferenceDriver $driver): static
+    {
+        $this->preferenceDriver = $driver;
+
+        return $this;
+    }
+
+    /**
+     * The per-table preference driver override, if any.
+     */
+    public function getPreferenceDriver(): ?TablePreferenceDriver
+    {
+        return $this->preferenceDriver;
+    }
+
+    /**
+     * Define a dedicated right-click context menu for each row — a power-user
+     * shortcut alongside the actions column. These actions are declared
+     * separately from `->actions()` (they are not the row action buttons), so
+     * the menu is explicit rather than an implicit mirror of the toolbar. Pass
+     * the same action objects if you want them to match. A row with no visible
+     * action shows no menu. Desktop pointer feature (touch has no context menu).
+     *
+     * @param  array<int, Action|ActionGroup>  $actions
+     */
+    public function rowContextMenu(array $actions): static
+    {
+        $this->rowContextMenuActions = $actions;
+
+        return $this;
+    }
+
+    /**
+     * Whether a row context menu has been configured.
+     */
+    public function hasRowContextMenu(): bool
+    {
+        return $this->rowContextMenuActions !== [];
+    }
+
+    /**
+     * @return array<int, Action|ActionGroup>
+     */
+    public function getRowContextMenuActions(): array
+    {
+        return $this->rowContextMenuActions;
+    }
+
+    /**
+     * Render a record's context-menu items (same markup as the ActionGroup
+     * dropdown). Returns empty HTML when the row has no visible action, so the
+     * view can skip the menu entirely.
+     */
+    public function getRowContextMenuHtml(Model $record): Htmlable
+    {
+        $html = '';
+
+        foreach ($this->rowContextMenuActions as $action) {
+            $html .= $action instanceof ActionGroup
+                ? $action->getDropdownItemsHtml($record)->toHtml()
+                : $action->renderForDropdown($record);
+        }
+
+        return new HtmlString($html);
     }
 
     // Lazy loading methods
@@ -1534,6 +1727,26 @@ class Table implements Htmlable
     public function getNotificationDriver(): ?NotificationDriver
     {
         return $this->notificationDriver;
+    }
+
+    /**
+     * Also surface an optimistic-lock edit conflict as a notification (toast),
+     * on top of the inline message shown on the cell. Opt-in — requires the
+     * notification system to be wired up (e.g. a toast container).
+     *
+     * Example:
+     *   $table->notifyEditConflicts();
+     */
+    public function notifyEditConflicts(bool $condition = true): static
+    {
+        $this->notifyEditConflicts = $condition;
+
+        return $this;
+    }
+
+    public function shouldNotifyEditConflicts(): bool
+    {
+        return $this->notifyEditConflicts;
     }
 
     /**

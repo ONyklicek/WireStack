@@ -17,6 +17,8 @@
             wire:click{{ $wireModifiers }}="{{ $wireClickAction }}"
         @endif
         class="{{ $classes }}"
+        data-testid="bulk-action-{{ $action->getName() }}"
+        @if($action->getLabel()) aria-label="{{ $action->getLabel() }}" @endif
         @if($action->getTooltip()) title="{{ $action->getTooltip() }}" @endif
 >
     @if($action->getIcon())

@@ -338,6 +338,7 @@ BarChartWidget::make()
     ->showGrid()           // 0% / 25% / 50% / 75% / 100% vodicí čáry
     ->showMenu()           // "⋯" prvek options v hlavičce karty
     ->maxValue(100)        // procentní režim (0–100 dráha)
+    ->verticalLabels()     // popisek každého sloupce otočený svisle vedle něj (vejdou se dlouhé názvy)
     ->items([
         ChartItem::make('CPU')->value(72)->formattedValue('72 %')->icon('cpu-chip')->color('blue')->percentage(72),
         ChartItem::make('RAM')->value(54)->formattedValue('54 %')->icon('circle-stack')->color('green')->percentage(54),
@@ -411,6 +412,8 @@ ChartItem::make('CPU')->percentage(120);  // vyhodí InvalidArgumentException (0
 ->getMaxValue(): ?float
 ->height(int $px)                    // výška vertikálního plotu (výchozí 240)
 ->getHeight(): int
+->verticalLabels(bool $on = true)    // popisek každého sloupce svisle vedle něj (vertikální grafy; dlouhé názvy)
+->hasVerticalLabels(): bool
 ->rounded(string $scale)             // radius karty: 'lg' | 'xl' | '2xl' (výchozí) | '3xl' | …
 ->getRounded(): string
 ->percentageFor(ChartItem $item): float   // resolvovaná 0–100 výplň

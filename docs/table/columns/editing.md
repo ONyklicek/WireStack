@@ -10,10 +10,20 @@ nav: false
 Beyond the dedicated Filter classes, any column can have an inline filter in its header.
 
 ```php
-// Select filter in column header
+// Select filter in column header (pick one)
 TextColumn::make('status')
     ->filterable()
     ->filterAsSelect(['active' => 'Active', 'inactive' => 'Inactive'])
+
+// Multi-select filter (pick several → matches any, whereIn). Renders the same
+// searchable combobox as the wire-forms Select — search is on by default.
+BadgeColumn::make('role')
+    ->filterAsMultiSelect([
+        'admin' => 'Administrator',
+        'editor' => 'Editor',
+        'viewer' => 'Viewer',
+    ], 'Any role')
+    ->filterSearchable(false)               // opt out of the search box for a short list
 
 // Boolean filter
 BooleanColumn::make('is_active')
@@ -47,7 +57,9 @@ TextColumn::make('age')
 ```php
 ->filterable(bool $filterable = true, string $type = 'text', array|string $options = [])
 ->isFilterable(): bool
-->filterAsSelect(array|string $options, ?string $placeholder = null)  // array or enum class
+->filterAsSelect(array|string $options, ?string $placeholder = null)       // single value; searchable combobox
+->filterAsMultiSelect(array|string $options, ?string $placeholder = null)  // several values (whereIn); searchable combobox
+->filterSearchable(bool $condition = true)                                 // toggle the in-panel search (on by default)
 ->filterAsDate(?string $minDate = null, ?string $maxDate = null)
 ->filterAsDateRange(?string $minDate = null, ?string $maxDate = null)
 ->filterAsNumberRange(?float $min = null, ?float $max = null, ?float $step = null)
@@ -81,3 +93,25 @@ TextColumn::make('category')
 The `options` argument of both `editable(type: 'select', …)` and `filterable()` /
 `filterAsSelect()` accepts a PHP enum class as well — it expands to `value => label` exactly
 like the dedicated `SelectColumn`/`SelectFilter`. See [Enum Options](#enum-options).
+
+### How inline saves work
+
+Saving a cell (`updateTableCell`) deliberately **does not re-render the table** — a DOM morph
+would reset the Alpine state of every editable cell. Instead each cell updates its own appearance
+**optimistically** and reconciles with the server, via one shared Alpine component
+(`wireEditableCell`): text inputs, selects and toggles all use it, so they behave consistently.
+
+- **Optimistic + rollback.** The cell shows the new value immediately, then calls the server; if
+  the save fails (validation, permission, error) it rolls back to the last server-confirmed value
+  and surfaces the message.
+- **Optimistic locking.** Each edit carries the row's version (`updated_at`). If the row changed
+  since the page loaded, the save is rejected as a conflict: the cell loads the current value and
+  shows the conflict message **inline on the cell itself** (a red state on the text/select/toggle,
+  no toast or `NotificationManager` setup required) — so two people (or two quick edits that bump
+  the row) can't silently clobber each other. Polling refreshes each cell's version on the next
+  cycle. Opt in to *also* raise a (more prominent) toast for conflicts with
+  `Table::notifyEditConflicts()` — this one needs the notification system wired up (a toast
+  container); the inline message works without it.
+- **Server-side authorization.** The client `disabled()` state is only cosmetic — a per-record
+  `disabled()` cell (and any column permission) is enforced again on the server in
+  `updateTableCell`, so a forged request can't write to a locked cell.

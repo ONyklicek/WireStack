@@ -17,6 +17,7 @@
                 role="tab"
                 :aria-selected="activeTab === {{ $index }}"
                 @click="activeTab = {{ $index }}"
+                data-testid="tab-{{ $index }}"
                 @class([
                     'flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors duration-150 focus:outline-none',
                 ])

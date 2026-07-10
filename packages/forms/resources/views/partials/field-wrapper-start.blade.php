@@ -6,6 +6,8 @@
 
 <div
     wire:key="field-{{ $statePath }}"
+    data-testid="form-field-{{ $statePath }}"
+    data-field="{{ $statePath }}"
     @class([
         'wire-field relative',
         'sm:col-span-1' => $columnSpan === 1,
@@ -36,6 +38,8 @@
                     wire:click="callFieldAction('{{ $field->getStatePath() }}', '{{ $hintAction->getName() }}')"
                     wire:loading.attr="disabled"
                     wire:target="callFieldAction"
+                    data-testid="field-action-{{ $statePath }}-{{ $hintAction->getName() }}"
+                    @if($hintAction->getLabel()) aria-label="{{ $hintAction->getLabel() }}" @endif
                     @if($hintAction->getTooltip()) title="{{ $hintAction->getTooltip() }}" @endif
                     class="inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
                 >

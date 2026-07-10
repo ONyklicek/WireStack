@@ -148,7 +148,7 @@ trait InteractsWithActions
      */
     protected function sendActionNotification(Notification $notification): void
     {
-        NotificationManager::send($notification, null, $this);
+        NotificationManager::send($notification);
     }
 
     /**

@@ -27,6 +27,7 @@ class WireTableServiceProvider extends PackageServiceProvider
             })
             ->hasConfig()
             ->hasViews()
+            ->hasMigrations()
             ->hasTranslations()
             ->hasAbout();
     }

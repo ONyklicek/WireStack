@@ -7,8 +7,13 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
+use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
+use NyonCode\WireCore\Notifications\Notification;
+use NyonCode\WireCore\Notifications\NotificationManager;
+use NyonCode\WireTable\Columns\SelectColumn;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Columns\TextInputColumn;
+use NyonCode\WireTable\Columns\ToggleColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Table;
 
@@ -65,9 +70,102 @@ class WtiEditableComponent extends Component
     }
 }
 
+class WtiToggleSelectComponent extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(WtiUser::class)
+            ->paginated(false)
+            ->columns([
+                // Record id 2 is disabled per-record; the rest are editable.
+                ToggleColumn::make('active')->disabled(fn (WtiUser $record) => (int) $record->getKey() === 2),
+                SelectColumn::make('status')
+                    ->options(['open' => 'Open', 'closed' => 'Closed'])
+                    ->disabled(fn (WtiUser $record) => (int) $record->getKey() === 2),
+            ]);
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+class WtiTsUser extends Model
+{
+    protected $table = 'wti_ts_users';
+
+    protected $guarded = [];
+    // Timestamped: updated_at drives optimistic-lock versioning.
+}
+
+class WtiTsComponent extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(WtiTsUser::class)
+            ->paginated(false)
+            ->columns([TextInputColumn::make('name')]);
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
 function wtiComponent(): WtiComponent
 {
     $component = new WtiComponent;
+    $component->mountWithTable();
+
+    return $component;
+}
+
+class WtiTsNotifyComponent extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(WtiTsUser::class)
+            ->paginated(false)
+            ->columns([TextInputColumn::make('name')])
+            ->notifyEditConflicts(); // opt in to a toast on conflict
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+function wtiTsComponent(): WtiTsComponent
+{
+    $component = new WtiTsComponent;
+    $component->mountWithTable();
+
+    return $component;
+}
+
+function wtiTsNotifyComponent(): WtiTsNotifyComponent
+{
+    $component = new WtiTsNotifyComponent;
+    $component->mountWithTable();
+
+    return $component;
+}
+
+function wtiToggleSelectComponent(): WtiToggleSelectComponent
+{
+    $component = new WtiToggleSelectComponent;
     $component->mountWithTable();
 
     return $component;
@@ -87,6 +185,7 @@ beforeEach(function () {
         $table->string('name');
         $table->string('status')->default('open');
         $table->integer('priority')->default(1);
+        $table->boolean('active')->default(false);
     });
 
     WtiUser::insert([
@@ -249,6 +348,86 @@ it('toggles row expansion state', function () {
 it('rejects updates to unknown or non-editable columns', function () {
     expect(wtiEditableComponent()->updateTableCell('1', 'nope', 'x')['success'])->toBeFalse()
         ->and(wtiComponent()->updateTableCell('1', 'name', 'x')['success'])->toBeFalse();
+});
+
+it('rejects a forged edit to a per-record disabled toggle or select cell', function () {
+    $component = wtiToggleSelectComponent();
+
+    // Record id 2 (Alice): active=false, status='closed' to start.
+    // Client-side disabled is only cosmetic; the server must reject a forged
+    // updateTableCell for a per-record disabled cell and NOT write.
+    expect($component->updateTableCell('2', 'active', true)['success'])->toBeFalse()
+        ->and($component->updateTableCell('2', 'status', 'open')['success'])->toBeFalse();
+
+    $locked = WtiUser::find(2);
+    expect((bool) $locked->active)->toBeFalse()      // unchanged
+        ->and($locked->status)->toBe('closed');      // unchanged
+
+    // An enabled record (id 1, Carol: active=false, status='open') still saves.
+    expect($component->updateTableCell('1', 'active', true)['success'])->toBeTrue()
+        ->and($component->updateTableCell('1', 'status', 'closed')['success'])->toBeTrue();
+
+    $editable = WtiUser::find(1);
+    expect((bool) $editable->active)->toBeTrue()
+        ->and($editable->status)->toBe('closed');
+});
+
+it('rejects a stale edit as an optimistic-lock conflict and returns the current value', function () {
+    Schema::create('wti_ts_users', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->timestamps();
+    });
+    WtiTsUser::create(['name' => 'Amelia']); // updated_at = now
+
+    // A stale, non-zero version ('1') never matches the row's real updated_at →
+    // optimistic-lock conflict. The client uses `currentValue`/`currentVersion`
+    // to reconcile and surfaces `message` inline on the cell (no NotificationManager
+    // required — see toggle/select blades).
+    $result = wtiTsComponent()->updateTableCell('1', 'name', 'Renamed', '1');
+
+    expect($result['success'])->toBeFalse()
+        ->and($result['conflict'] ?? false)->toBeTrue()
+        ->and($result['currentValue'])->toBe('Amelia')
+        ->and($result)->toHaveKeys(['message', 'currentVersion']);
+
+    // The edit was rejected — the row is untouched.
+    expect(WtiTsUser::find(1)->name)->toBe('Amelia');
+
+    Schema::dropIfExists('wti_ts_users');
+});
+
+it('optionally raises a notification on an edit conflict only when opted in', function () {
+    Schema::create('wti_ts_users', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->timestamps();
+    });
+    WtiTsUser::create(['name' => 'Amelia']);
+
+    $captured = new class implements NotificationDriver
+    {
+        /** @var array<int, Notification> */
+        public array $sent = [];
+
+        public function send(Notification $notification, mixed $livewireComponent = null): void
+        {
+            $this->sent[] = $notification;
+        }
+    };
+    NotificationManager::setDefaultDriver($captured);
+
+    // Default (opt-out): the conflict is inline-only — no notification.
+    wtiTsComponent()->updateTableCell('1', 'name', 'X', '1');
+    expect($captured->sent)->toBeEmpty();
+
+    // Opt-in via notifyEditConflicts(): the same conflict also raises a warning.
+    wtiTsNotifyComponent()->updateTableCell('1', 'name', 'X', '1');
+    expect($captured->sent)->toHaveCount(1)
+        ->and($captured->sent[0]->type)->toBe('warning');
+
+    NotificationManager::reset();
+    Schema::dropIfExists('wti_ts_users');
 });
 
 it('updates an editable cell and persists the value', function () {

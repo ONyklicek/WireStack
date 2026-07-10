@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace Workbench\App\Livewire\Previews;
 
+use Livewire\Attributes\On;
 use Livewire\Component;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\DeleteAction;
 use NyonCode\WireCore\Actions\ViewAction;
+use NyonCode\WireCore\Notifications\Notification;
+use NyonCode\WireCore\Notifications\NotificationAction;
+use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireCore\Widgets\Stat;
 use NyonCode\WireCore\Widgets\StatsOverviewWidget;
 use Workbench\App\Models\User;
@@ -29,8 +33,43 @@ class CorePreview extends Component
         $this->showPreviewModal = false;
     }
 
+    // ─── Toasts preview: server-side notification API ──────────────────────
+
+    /**
+     * Fires a toast straight through the manager WITHOUT passing $this — proving
+     * the default CurrentComponentDriver resolves the active Livewire component.
+     */
+    public function sendServerToast(): void
+    {
+        NotificationManager::send(
+            Notification::success('Order #1042 saved')
+                ->title('Saved')
+                ->action(NotificationAction::make('Undo', 'demo-undo')->color('primary'))
+        );
+    }
+
+    public function sendPersistentToast(): void
+    {
+        NotificationManager::send(
+            Notification::warning('Payment needs review before it can settle.')
+                ->title('Action required')
+                ->persistent()
+                ->action('Review now', 'demo-undo')
+        );
+    }
+
+    #[On('demo-undo')]
+    public function demoUndo(): void
+    {
+        NotificationManager::send(Notification::info('Change reverted'));
+    }
+
     public function render()
     {
+        if ($this->variant === 'toasts') {
+            return view('livewire.previews.core-toasts');
+        }
+
         $record = User::query()->firstOrFail();
 
         $stats = StatsOverviewWidget::make()

@@ -5,9 +5,12 @@ declare(strict_types=1);
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireForms\Components\FileUpload;
 use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Forms\Config\FormConfig;
@@ -75,6 +78,61 @@ test('mutateDataBeforeSave returning null cancels save', function () {
     $result = $handler->save();
 
     expect($result)->toBeNull();
+});
+
+// ─── File uploads (store-on-submit) ───────────────────────────
+
+test('save stores a single FileUpload upload and dehydrates its path', function () {
+    Storage::fake('public');
+
+    $config = new FormConfig(
+        schema: [FileUpload::make('avatar')->disk('public')->directory('avatars')],
+        using: fn (array $data) => $data,
+    );
+
+    $runtime = createRuntimeWithState($config, ['avatar' => UploadedFile::fake()->image('a.png')]);
+
+    $result = (new SaveHandler($config, $runtime))->save();
+
+    expect($result['avatar'])->toBeString()
+        ->and($result['avatar'])->toStartWith('avatars/');
+    Storage::disk('public')->assertExists($result['avatar']);
+});
+
+test('save merges existing paths with new uploads for a multiple FileUpload', function () {
+    Storage::fake('public');
+
+    $config = new FormConfig(
+        schema: [FileUpload::make('gallery')->multiple()->disk('public')->directory('g')],
+        using: fn (array $data) => $data,
+    );
+
+    $runtime = createRuntimeWithState($config, [
+        'gallery' => ['g/old.png', UploadedFile::fake()->image('new.png')],
+    ]);
+
+    $result = (new SaveHandler($config, $runtime))->save();
+
+    expect($result['gallery'])->toHaveCount(2)
+        ->and($result['gallery'][0])->toBe('g/old.png')          // existing path kept
+        ->and($result['gallery'][1])->toStartWith('g/');         // new upload stored
+    Storage::disk('public')->assertExists($result['gallery'][1]);
+});
+
+test('save leaves a FileUpload with no upload as null', function () {
+    Storage::fake('public');
+
+    $config = new FormConfig(
+        schema: [FileUpload::make('avatar')->disk('public')],
+        using: fn (array $data) => $data,
+    );
+
+    $runtime = createRuntimeWithState($config, ['avatar' => []]);
+
+    $result = (new SaveHandler($config, $runtime))->save();
+
+    expect($result['avatar'])->toBeNull();
+    expect(Storage::disk('public')->allFiles())->toBeEmpty();
 });
 
 // ─── Plugin hooks ─────────────────────────────────────────────

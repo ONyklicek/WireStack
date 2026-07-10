@@ -1,0 +1,13 @@
+diff --git a/node_modules/@torchlight-api/torchlight-cli/dist/bin/torchlight.cjs.js b/node_modules/@torchlight-api/torchlight-cli/dist/bin/torchlight.cjs.js
+index c9a3226..eade70d 100755
+--- a/node_modules/@torchlight-api/torchlight-cli/dist/bin/torchlight.cjs.js
++++ b/node_modules/@torchlight-api/torchlight-cli/dist/bin/torchlight.cjs.js
+@@ -451,7 +451,7 @@ function highlight$1(torchlight, source) {
+ 
+     const pristinePreElement = source.substring(pre.sourceCodeLocation.startOffset, pre.sourceCodeLocation.endOffset); // Swap out the original tag with the outerHTML of our modified tag.
+ 
+-    highlighted = highlighted.replace(pristinePreElement, $.html($pre));
++    highlighted = highlighted.replace(pristinePreElement, () => $.html($pre));
+   });
+ 
+   if (!blocks.length) {

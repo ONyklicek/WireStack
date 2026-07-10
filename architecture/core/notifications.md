@@ -11,12 +11,13 @@ The notification subsystem turns a single immutable **value object** (`Notificat
  (action / component)  └──────────────┬──────────────┘
                                        │ NotificationManager::send($n, $driver, $component)
                                        ▼
-                       ┌─────────────────────────────┐
-                       │  resolve driver:            │
-                       │  explicit > global > Session│
-                       └──────────────┬──────────────┘
+                       ┌─────────────────────────────────────┐
+                       │  resolve driver:                    │
+                       │  explicit > global >                │
+                       │  CurrentComponentDriver(Session)    │
+                       └──────────────┬──────────────────────┘
                                        ▼
-        SessionDriver │ LivewireEventDriver │ FlasherDriver │ NullDriver │ <custom>
+   CurrentComponentDriver │ SessionDriver │ LivewireEventDriver │ FlasherDriver │ NullDriver │ <custom>
                                        ▼
         session flash  /  Livewire browser event  /  flasher  /  discard
                                        ▼
@@ -58,8 +59,9 @@ The notification subsystem turns a single immutable **value object** (`Notificat
 | `icon` | `?string` | resolved icon name; an `Icon` enum is reduced to its `value()` |
 | `position` | `?string` | e.g. `top-right` (interpreted by the renderer) |
 | `extra` | `array<string,mixed>` | arbitrary payload merged via `extra()` |
+| `actions` | `list<NotificationAction>` | toast action buttons appended via `action()` / `actions()` |
 
-All properties are `public readonly`.
+All properties are `public readonly`. A `duration` of `0` marks the toast **sticky** (see `persistent()`).
 
 ### Factories
 
@@ -79,12 +81,15 @@ Notification::info('Heads up');
 $n = Notification::success('User updated')
     ->title('Done')
     ->duration(5000)          // ms
+    ->persistent()            // sticky: duration 0, no countdown bar (persistent(false) restores auto-dismiss)
     ->icon('check-circle')    // string | Icon | null  (Icon → ->value())
     ->position('bottom-right')
-    ->extra(['undo_url' => route('users.restore', $user)]);
+    ->extra(['undo_url' => route('users.restore', $user)])
+    ->action('Undo', 'restore-user')  // append an action button (label + Livewire event)
+    ->action(NotificationAction::make('View', 'view-user')->payload(['id' => $user->id]));
 ```
 
-Because each call returns a new object, ordering is irrelevant and instances are safe to share/cache. `extra()` **merges** into the existing extra array rather than replacing it.
+Because each call returns a new object, ordering is irrelevant and instances are safe to share/cache. `extra()` **merges** into the existing extra array; `action()` **appends** to the actions list, while `actions([...])` **replaces** it. See [`NotificationAction`](#notificationaction) below.
 
 ### Serialization
 
@@ -97,7 +102,22 @@ $n->toArray();
 // ]
 ```
 
-`toArray()` **strips null values** (and an empty `extra`). This is the wire format dispatched to the browser, so a notification built with only `success('msg')` produces just `{type, message}` — the renderer fills in the rest from its own defaults.
+`toArray()` **strips null values** (and an empty `extra`/`actions`). This is the wire format dispatched to the browser, so a notification built with only `success('msg')` produces just `{type, message}` — the renderer fills in the rest from its own defaults. When present, `actions` serializes to a list of `NotificationAction::toArray()` maps.
+
+### `NotificationAction`
+
+`final class NotificationAction` (`Notifications\NotificationAction`) is an immutable value object for a toast **action button**:
+
+```php
+use NyonCode\WireCore\Notifications\NotificationAction;
+
+NotificationAction::make('Undo', 'restore-user')  // label, Livewire event to dispatch on click
+    ->payload(['id' => 7])   // dispatched with the event
+    ->color('primary')       // button accent; falls back to the toast type
+    ->keepOpen();            // don't dismiss the toast after clicking (default: close)
+```
+
+Clicking the button runs `window.Livewire.dispatch(event, payload)` and (unless `keepOpen()`) removes the toast. The host component listens with a `#[On('restore-user')]` method. `toArray()` yields `{label, event, payload?, close, color?}`.
 
 ---
 
@@ -125,13 +145,13 @@ NotificationManager::send($notification, ?$driver = null, $livewireComponent = n
 
 // Driver management
 NotificationManager::setDefaultDriver($driver);   // global override
-NotificationManager::getDefaultDriver();          // current global (lazily a SessionDriver)
+NotificationManager::getDefaultDriver();          // current global (lazily a CurrentComponentDriver wrapping SessionDriver)
 NotificationManager::resolve(?$driver);           // apply the resolution rules
 NotificationManager::reset();                     // back to built-in default (tests)
 ```
 
 - `$driver` — an explicit per-call `NotificationDriver`; `null` falls back to the global default.
-- `$livewireComponent` — the Livewire component instance, needed by drivers that `dispatch()` browser events. Pass `$this` from inside a component.
+- `$livewireComponent` — **optional.** The built-in default (`CurrentComponentDriver`) resolves the active component via `Livewire::current()`, so call-sites normally omit it. Pass it only when routing through a bare driver that needs a specific component.
 
 ---
 
@@ -141,9 +161,9 @@ NotificationManager::reset();                     // back to built-in default (t
 
 1. **Explicit** driver passed to the call (e.g. a per-table/per-component override)
 2. **Global default** set via `NotificationManager::setDefaultDriver(...)`
-3. **Built-in `SessionDriver`** — lazily instantiated on first use
+3. **Built-in `CurrentComponentDriver`** wrapping `SessionDriver` — lazily instantiated on first use. It resolves `Livewire::current()` itself, so producers never thread `$this`.
 
-> **Gotcha — config does not auto-wire the static manager.** The service provider binds the container service `NotificationDriver::class` from `wire-core.notifications.default` (`session`/`livewire`/`flasher`/`null`). But `NotificationManager`'s static `$defaultDriver` is **independent** of that binding: if nobody calls `setDefaultDriver()`, the static manager always falls back to a plain `SessionDriver`, regardless of the config value.
+> **Gotcha — config does not auto-wire the static manager.** The service provider binds the container service `NotificationDriver::class` from `wire-core.notifications.default` (`session`/`livewire`/`flasher`/`null`). But `NotificationManager`'s static `$defaultDriver` is **independent** of that binding: if nobody calls `setDefaultDriver()`, the static manager always falls back to `CurrentComponentDriver(SessionDriver)`, regardless of the config value.
 >
 > If you want the configured driver to be the global default for the static API, bridge it explicitly — typically in `AppServiceProvider::boot()`:
 >
@@ -216,8 +236,9 @@ EditAction::make()
 
 | Driver | Use it when… | Don't use it when… |
 |--------|--------------|--------------------|
-| `SessionDriver` *(default)* | you want zero-setup, framework-native feedback that **survives full page loads / redirects** (flash message), with a basic live toast as a bonus. Good default for server-rendered flows and redirect-after-action. | you need rich live toasts with per-notification `title`/`duration` — it only transmits `type`+`message` over the live event. |
-| `LivewireEventDriver` | your UI is the Alpine **toast container** and you want **rich, instant toasts** (title, duration, icon, extra) without a page reload. The recommended pairing with `<x-wire-notifications::toast-container />`. | you have no Livewire component in scope (it then just falls back to a session flash). |
+| `CurrentComponentDriver` *(built-in default)* | you want the zero-config default: it resolves the active Livewire component itself and delegates to a wrapped driver (`SessionDriver`), so call-sites never pass `$this`. | you need to target a component other than the one currently rendering. |
+| `SessionDriver` | you want framework-native feedback that **survives full page loads / redirects** (flash message) **plus** a rich live toast — it now forwards the full `toArray()` payload over the event. | you never render server-side / never redirect and want to skip the session flash entirely (use `LivewireEventDriver`). |
+| `LivewireEventDriver` | your UI is the Alpine **toast container** and you want **rich, instant toasts** (title, duration, icon, actions) without any session flash. The leanest pairing with `<x-wire-notifications::toast-container />`. | you have no Livewire component in scope (it then just falls back to a session flash). |
 | `FlasherDriver` | your app already uses **[php-flasher](https://php-flasher.io)** (Toastr/Notyf/SweetAlert adapters) and you want Wire notifications to flow into that existing UI. | you rely on the built-in toast container — flasher renders its own UI and bypasses it. |
 | `NullDriver` | you want to **disable notifications** — tests, queued/background jobs, or contexts with no user to notify. | you actually want the user to see anything. |
 
@@ -240,10 +261,23 @@ interface NotificationDriver
 
 | Driver | Config key | Delivery | Carries full payload? | No-Livewire fallback |
 |--------|-----------|----------|-----------------------|----------------------|
-| `SessionDriver` *(built-in default)* | `session` | session flash **+** Livewire event (`type`,`message` only) | **No** — only type & message | n/a (always flashes) |
+| `CurrentComponentDriver` *(built-in default)* | — | decorator: resolves `Livewire::current()`, delegates to a wrapped driver (`SessionDriver`) | inherits the wrapped driver | inherits the wrapped driver |
+| `SessionDriver` | `session` | session flash **+** Livewire event with the full `toArray()` payload | **Yes** | n/a (always flashes) |
 | `LivewireEventDriver` | `livewire` | Livewire browser event with full `toArray()` | **Yes** | flashes to session |
 | `FlasherDriver` | `flasher` | php-flasher (`flash()`) | partial (title/timeout/position mapped) | flashes if flasher absent |
 | `NullDriver` | `null` | discards | — | — |
+
+### `CurrentComponentDriver`
+
+```php
+new CurrentComponentDriver(new SessionDriver);   // the built-in default
+```
+
+A **decorator**. When `send()` is called without a `$livewireComponent`, it resolves the currently rendering component via `app(LivewireManager::class)->current()` (guarded with `is_object`) and forwards it to the wrapped driver. This is what lets producers call `NotificationManager::send($n)` with no `$this`. Wrap any component-dependent driver in it to get the same auto-resolution:
+
+```php
+NotificationManager::setDefaultDriver(new CurrentComponentDriver(new LivewireEventDriver('toast')));
+```
 
 ### `SessionDriver`
 
@@ -251,7 +285,7 @@ interface NotificationDriver
 new SessionDriver(sessionKey: 'table-notification', eventName: 'table-notification');
 ```
 
-Does two things: flashes `['type','message']` under `$sessionKey`, and — if a Livewire component with a `dispatch()` method is supplied — dispatches `$eventName` with `type` and `message`. **Only those two fields travel through the event**, so `title`/`duration`/`icon` set on the notification will *not* reach a toast via this driver; the toast uses its own defaults. Choose `LivewireEventDriver` when you need the richer payload live.
+Does two things: flashes `['type','message']` under `$sessionKey`, and — if a Livewire component with a `dispatch()` method is supplied — dispatches `$eventName` with the **full** `toArray()` payload (`type`, `message`, `title`, `duration`, `icon`, `actions`, …). So rich toasts reach the container through this driver too; `LivewireEventDriver` differs only by skipping the session flash. (The session flash itself still carries just `type`+`message`, for the non-Livewire redirect case.)
 
 ### `LivewireEventDriver`
 
@@ -323,12 +357,13 @@ The toast container is just an Alpine listener on a **Livewire browser event**. 
 
 | Driver | Drives the toast container? | Detail |
 |--------|-----------------------------|--------|
-| `LivewireEventDriver` | ✅ **Yes — fully** | dispatches the full `toArray()` payload, so `type`/`message`/`title`/`duration`/`icon` all render |
-| `SessionDriver` | ✅ Yes — partially | dispatches the event too, but only `type`+`message`; `title`/`duration` fall back to the container's defaults. Also flashes to session for the non-Livewire case |
+| `CurrentComponentDriver` *(default)* | ✅ **Yes — fully** | resolves the active component and delegates to `SessionDriver`, forwarding the full payload |
+| `LivewireEventDriver` | ✅ **Yes — fully** | dispatches the full `toArray()` payload (`type`/`message`/`title`/`duration`/`icon`/`actions`) |
+| `SessionDriver` | ✅ **Yes — fully** | dispatches the full `toArray()` payload too; also flashes `type`+`message` to session for the non-Livewire case |
 | `FlasherDriver` | ❌ No | renders through php-flasher's own UI — bypasses this container entirely |
 | `NullDriver` | ❌ No | discards everything |
 
-**Bottom line:** use `LivewireEventDriver` for rich toasts (recommended when the toast container is your UI), `SessionDriver` for a lightweight type+message toast that also survives full page loads, and don't combine the toast container with `FlasherDriver` (you'd get flasher's UI instead). The event only fires when a Livewire component is in scope to `dispatch()` on (e.g. `$this` is passed); a pure session flash without a component won't pop a live toast until the next render that re-dispatches.
+**Bottom line:** the default `CurrentComponentDriver(SessionDriver)` already delivers rich toasts and survives full page loads — you rarely need to change it. Pick `LivewireEventDriver` only to skip the session flash, and don't combine the toast container with `FlasherDriver` (you'd get flasher's UI instead). The live toast fires when a Livewire component is in scope; the default driver resolves it via `Livewire::current()`, so you don't pass `$this`.
 
 ```blade
 <x-wire-notifications::toast-container />
@@ -345,7 +380,12 @@ Props:
 |------|---------|---------|
 | `position` | `top-right` | one of `top-left/top-center/top-right/bottom-left/bottom-center/bottom-right` → mapped to Tailwind classes by `positionClasses()` |
 | `duration` | `4000` | fallback auto-dismiss (ms) when a notification has no `duration` |
-| `eventName` | `table-notification` | the browser event it listens for (`x-on:{eventName}.window`) |
+| `event-name` | `table-notification` | the browser event it listens for (`x-on:{eventName}.window`) |
+| `progress` | `true` | per-toast countdown bar; hovering pauses it and the auto-dismiss |
+| `stack` | `false` | collapse toasts into a pile that fans out on hover (`topAnchored()` sets the direction) |
+| `max` | `0` | cap visible toasts (`0` = unlimited); the overflow collapses into a clickable “+N more” pill |
+
+The container is an `aria-live="polite"` region (error toasts get `role="alert"`) and honors `prefers-reduced-motion` (no collapse/fan-out, transitions disabled). Sticky toasts (`duration 0`) show no countdown bar. Action buttons render from each toast's `actions` and dispatch their Livewire event on click.
 
 ### Event contract
 
@@ -356,11 +396,12 @@ The container listens on `window` for `eventName` and reads `$event.detail`:
 | `type` | icon + color (`success`/`error`/`warning`/`info`) |
 | `message` | body text (always shown) |
 | `title` | bold heading (shown only if present) |
-| `duration` | per-toast dismiss timer; falls back to the container's `duration` prop |
+| `duration` | per-toast dismiss timer; falls back to the container's `duration` prop; `0` = sticky |
+| `actions` | list of `{label, event, payload?, close?, color?}` → action buttons |
 
-**The `eventName` must match the driver's event name** (both default to `table-notification`). If you instantiate `new LivewireEventDriver('toast')`, set `event-name="toast"` on the container. With `SessionDriver`/`LivewireEventDriver` defaults, no wiring is needed.
+**The `eventName` must match the driver's event name** (both default to `table-notification`). If you instantiate `new LivewireEventDriver('toast')`, set `event-name="toast"` on the container. With the default drivers, no wiring is needed.
 
-> Remember the payload asymmetry: under `SessionDriver` the event only carries `type`+`message`, so `title`/`duration` come from the container defaults. Under `LivewireEventDriver` the full payload arrives, so per-notification `title`/`duration` take effect.
+> All event-dispatching drivers now forward the **full** payload, so per-notification `title`/`duration`/`actions` take effect regardless of driver.
 
 ### Triggering toasts from JavaScript
 
@@ -458,9 +499,11 @@ NyonCode\WireCore\Notifications\NotificationManager
 - **Immutability:** every `Notification` modifier returns a new instance — `$n->title('x')` does nothing unless you keep the return value.
 - **Null stripping:** `toArray()` drops nulls and empty `extra`; renderers/drivers must tolerate missing fields.
 - **`error`, not `danger`:** the canonical failure type is `error`; only `FlasherDriver` accepts `danger` as a synonym.
-- **Static default ≠ config default:** the static `NotificationManager` defaults to `SessionDriver` until `setDefaultDriver()` is called; container-injected `NotificationDriver` honors config. Bridge them if you rely on the static API.
+- **Static default ≠ config default:** the static `NotificationManager` defaults to `CurrentComponentDriver(SessionDriver)` until `setDefaultDriver()` is called; container-injected `NotificationDriver` honors config. Bridge them if you rely on the static API.
+- **No `$this` threading:** the default driver resolves `Livewire::current()`, so producers call `send($n)` without a component. A bare component-dependent driver (used directly, not via the default) still needs one — wrap it in `CurrentComponentDriver`.
 - **Event-name matching:** the toast container's `event-name` must equal the driver's dispatched event, or toasts won't appear.
-- **Payload asymmetry:** `SessionDriver` only transmits `type`+`message` over the live event; richer fields require `LivewireEventDriver` (or a custom driver that spreads `toArray()`).
+- **Full payload everywhere:** all event-dispatching drivers spread `toArray()`, so `title`/`duration`/`actions` survive the round-trip (the `SessionDriver` *session flash* still carries only `type`+`message`, for redirect cases).
+- **`window.wireToast` binds to the first container:** with multiple containers, dispatch explicit `CustomEvent`s for the secondary ones.
 - **Never silently drop:** custom drivers should always provide a session-flash fallback for non-Livewire requests.
 
 ---

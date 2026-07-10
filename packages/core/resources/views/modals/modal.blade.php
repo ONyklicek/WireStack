@@ -84,6 +84,8 @@
                         <button
                             type="button"
                             @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}"
+                            data-testid="modal-close"
+                            aria-label="{{ __('Close') }}"
             {{-- Larger tap target on mobile (p-2.5 ≈ 40px), back to the compact
                              desktop size from sm up. --}}
                             class="absolute right-2 top-2 sm:static sm:right-auto sm:top-auto sm:ml-auto sm:-mr-1.5 rounded-lg p-2.5 sm:p-1.5 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 touch-manipulation"

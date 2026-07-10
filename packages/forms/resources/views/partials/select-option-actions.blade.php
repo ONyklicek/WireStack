@@ -14,7 +14,7 @@
         <button
             type="button"
             x-show="selected"
-            wire:click="mountEditOption('{{ $statePath }}')"
+            wire:click="mountEditOption('{{ $statePath }}')" data-testid="form-select-{{ $statePath }}-edit-option"
             @click="open = false"
             class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
         >
@@ -26,7 +26,7 @@
     @if($hasCreate)
         <button
             type="button"
-            wire:click="mountCreateOption('{{ $statePath }}')"
+            wire:click="mountCreateOption('{{ $statePath }}')" data-testid="form-select-{{ $statePath }}-create-option"
             @click="open = false"
             class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
         >

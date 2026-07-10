@@ -11,10 +11,20 @@ nav: false
 Kromě dedikovaných tříd Filter může mít jakýkoli sloupec inline filtr ve své hlavičce.
 
 ```php
-// Select filtr v hlavičce sloupce
+// Select filtr v hlavičce sloupce (jedna hodnota)
 TextColumn::make('status')
     ->filterable()
     ->filterAsSelect(['active' => 'Active', 'inactive' => 'Inactive'])
+
+// Multi-select filtr (více hodnot → odpovídá kterékoli, whereIn). Renderuje stejný
+// searchable combobox jako wire-forms Select — vyhledávání je defaultně zapnuté.
+BadgeColumn::make('role')
+    ->filterAsMultiSelect([
+        'admin' => 'Administrator',
+        'editor' => 'Editor',
+        'viewer' => 'Viewer',
+    ], 'Libovolná role')
+    ->filterSearchable(false)               // vypnutí vyhledávání pro krátký seznam
 
 // Boolean filtr
 BooleanColumn::make('is_active')
@@ -48,7 +58,9 @@ TextColumn::make('age')
 ```php
 ->filterable(bool $filterable = true, string $type = 'text', array|string $options = [])
 ->isFilterable(): bool
-->filterAsSelect(array|string $options, ?string $placeholder = null)  // pole nebo třída enumu
+->filterAsSelect(array|string $options, ?string $placeholder = null)       // jedna hodnota; searchable combobox
+->filterAsMultiSelect(array|string $options, ?string $placeholder = null)  // více hodnot (whereIn); searchable combobox
+->filterSearchable(bool $condition = true)                                 // přepnutí vyhledávání (defaultně zapnuté)
 ->filterAsDate(?string $minDate = null, ?string $maxDate = null)
 ->filterAsDateRange(?string $minDate = null, ?string $maxDate = null)
 ->filterAsNumberRange(?float $min = null, ?float $max = null, ?float $step = null)
@@ -82,3 +94,23 @@ TextColumn::make('category')
 Argument `options` u `editable(type: 'select', …)` i `filterable()` /
 `filterAsSelect()` přijímá i třídu PHP enumu — rozvine se na `value => label` přesně
 jako dedikovaný `SelectColumn`/`SelectFilter`. Viz [Enum Options](#enum-options).
+
+### Jak fungují inline uložení
+
+Uložení buňky (`updateTableCell`) záměrně **nepřekresluje tabulku** — DOM morph by resetoval
+Alpine stav všech editovatelných buněk. Místo toho každá buňka přepne svůj vzhled **optimisticky**
+a sesynchronizuje se serverem přes jednu sdílenou Alpine komponentu (`wireEditableCell`): text
+inputy, selecty i toggly ji používají, takže se chovají konzistentně.
+
+- **Optimistic + rollback.** Buňka hned ukáže novou hodnotu, pak zavolá server; když uložení selže
+  (validace, oprávnění, chyba), vrátí se na poslední serverem potvrzenou hodnotu a zobrazí zprávu.
+- **Optimistic locking.** Každý edit nese verzi řádku (`updated_at`). Když se řádek od načtení
+  stránky změnil, uložení se odmítne jako konflikt: buňka načte aktuální hodnotu a zobrazí zprávu o
+  konfliktu **přímo na buňce** (červený stav na text/select/toggle, bez toastu nebo nastavení
+  `NotificationManager`) — dva lidé (nebo dva rychlé edity, které řádek bumpnou) se tak tiše
+  nepřepíšou. Polling verzi buněk obnoví v dalším cyklu. Volitelně lze pro konflikty vyvolat i
+  (nápadnější) toast přes `Table::notifyEditConflicts()` — ten už vyžaduje zapojený notifikační
+  systém (toast container); inline hláška funguje i bez něj.
+- **Serverová autorizace.** Klientský `disabled()` stav je jen kosmetika — per-record `disabled()`
+  buňka (i oprávnění sloupce) se znovu vynutí na serveru v `updateTableCell`, takže forged request
+  nemůže zapsat do zamčené buňky.

@@ -84,6 +84,7 @@
                     <button
                         type="button"
                         @if($attributes->wire('click')->value()) {{ $attributes->wire('click') }} @endif
+                        data-testid="confirmation-confirm"
                         class="{{ $submitButtonClasses() }}"
                     >
                         {{ $submitLabel }}
@@ -94,6 +95,7 @@
                 <button
                     type="button"
                     @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}"
+                    data-testid="confirmation-cancel"
                     class="mt-3 inline-flex w-full justify-center rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 sm:mt-0 sm:w-auto"
                 >
                     {{ $cancelLabel }}

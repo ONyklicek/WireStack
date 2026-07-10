@@ -166,4 +166,17 @@ class SelectColumn extends Column
 
         return $this->disabled;
     }
+
+    /**
+     * Server-side edit guard consulted by WithTable::updateTableCell().
+     *
+     * The client-side `disabled` state is only cosmetic (a forged request could
+     * still hit updateTableCell), so a per-record disabled cell must also be
+     * rejected here. Column-level permissions are enforced separately by
+     * updateTableCell before the write.
+     */
+    public function canEdit(Model $record): bool
+    {
+        return ! $this->isDisabled($record);
+    }
 }

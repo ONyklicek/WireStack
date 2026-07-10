@@ -53,6 +53,48 @@ FileUpload::make('file')
     ->preserveFilenames()
 ```
 
+## Storage & merge (store-on-submit)
+
+Selecting (or dropping) a file uploads it to Livewire's **temporary** storage
+and lists it below the drop zone as a *pending* upload — it is **not** moved to
+permanent storage until you **save** the form. This keeps the model
+orphan-free: an abandoned form leaves nothing behind (the temporary upload
+expires on its own). On save, each pending upload is stored to the configured
+`disk()`/`directory()` (honouring `visibility()` and `preserveFilenames()`) and
+the field dehydrates to the stored path(s).
+
+- **single** fields keep the newest upload, and dehydrate to one path (or `null`);
+- **multiple** fields **merge** — new uploads are appended to the already-stored
+  paths, so uploading more never discards what was there, and dehydrate to an
+  array of paths.
+
+The host must compose the form runtime (`WithForms`, or a table/form action
+modal); the upload plumbing (Livewire's file handling, the merge step, and the
+save-time store) is wired in automatically.
+
+## Files list & removal
+
+The field lists everything currently in its state below the drop zone —
+already-stored paths (from the bound record or a previous save) **and** pending
+uploads. Image files show a thumbnail (stored via the disk URL, pending via a
+temporary preview), others a document icon; a stored file links to itself, a
+pending one is labelled *Pending upload*. Each has a **remove** button that
+drops it from the form state by index. Removing a stored file leaves the
+physical file on disk untouched (cleanup is the application's concern); removing
+a pending upload simply discards it.
+
+Stored paths resolve to URLs through the configured `disk()` (a value that is
+already a full URL is used as-is). Pass `deletable(false)` to show files
+read-only, without the remove control:
+
+```php
+FileUpload::make('gallery')
+    ->image()
+    ->multiple()
+    ->disk('public')
+    ->deletable(false)   // display files read-only
+```
+
 ## Methods
 
 | Method | Description |
@@ -72,6 +114,7 @@ FileUpload::make('file')
 | `imageResizeTargetWidth(int)` | Resize width in pixels |
 | `imageResizeTargetHeight(int)` | Resize height in pixels |
 | `imageCropAspectRatio(string)` | Crop aspect ratio (e.g. `16:9`) |
+| `deletable(bool)` | Whether already-stored files can be removed (default `true`) |
 | `disabled(bool\|Closure)` | Disable the uploader |
 | `required()` | Mark as required |
 

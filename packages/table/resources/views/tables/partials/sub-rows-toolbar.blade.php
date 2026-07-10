@@ -3,7 +3,7 @@
 @if($table->hasSubRows())
     <div class="flex items-center gap-2 text-xs">
         @if($table->isSubRowsExpandable())
-            <button type="button" wire:click="expandAllRows"
+            <button type="button" wire:click="expandAllRows" data-testid="subrows-expand-all"
                     class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
                 <span class="inline-flex items-center gap-1">
                     <x-wire::icon name="outline:arrows-pointing-out" size="w-3.5 h-3.5" />
@@ -11,7 +11,7 @@
                 </span>
             </button>
             <span class="text-gray-300 dark:text-gray-600">|</span>
-            <button type="button" wire:click="collapseAllRows"
+            <button type="button" wire:click="collapseAllRows" data-testid="subrows-collapse-all"
                     class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
                 <span class="inline-flex items-center gap-1">
                     <x-wire::icon name="outline:arrows-pointing-in" size="w-3.5 h-3.5" />
@@ -22,7 +22,7 @@
 
         <span class="text-gray-300 dark:text-gray-600">|</span>
 
-        <button type="button" wire:click="toggleFlattenMode"
+        <button type="button" wire:click="toggleFlattenMode" data-testid="subrows-scope-toggle"
                 class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
             <span class="inline-flex items-center gap-1">
                 @if($component->tableState->get('rows.flattenMode'))

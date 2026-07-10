@@ -60,16 +60,16 @@
     {{-- Toolbar --}}
     <div class="flex items-center gap-0.5 px-2 py-1.5 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
         @unless($field->isDisabled() || $field->isReadOnly())
-            <button type="button" @click="insertAround('**', '**')" title="{{ __('Bold') }}"
+            <button type="button" @click="insertAround('**', '**')" data-testid="form-editor-{{ $field->getStatePath() }}-bold" title="{{ __('Bold') }}"
                 class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-bold text-sm w-7 h-7 flex items-center justify-center">B</button>
-            <button type="button" @click="insertAround('*', '*')" title="{{ __('Italic') }}"
+            <button type="button" @click="insertAround('*', '*')" data-testid="form-editor-{{ $field->getStatePath() }}-italic" title="{{ __('Italic') }}"
                 class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors italic text-sm w-7 h-7 flex items-center justify-center">I</button>
             <button type="button" @click="insertAround('~~', '~~')" title="{{ __('Strikethrough') }}"
                 class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors line-through text-sm w-7 h-7 flex items-center justify-center">S</button>
             <button type="button" @click="insertAround('\`', '\`')" title="{{ __('Inline code') }}"
                 class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-mono text-sm w-7 h-7 flex items-center justify-center">&lt;/&gt;</button>
             <div class="w-px h-5 bg-gray-300 dark:bg-gray-500 mx-1"></div>
-            <button type="button" @click="insertLine('## ')" title="{{ __('Heading') }}"
+            <button type="button" @click="insertLine('## ')" data-testid="form-editor-{{ $field->getStatePath() }}-heading" title="{{ __('Heading') }}"
                 class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-xs font-bold w-7 h-7 flex items-center justify-center">H</button>
             <button type="button" @click="insertLine('- ')" title="{{ __('List') }}"
                 class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm w-7 h-7 flex items-center justify-center">
@@ -83,10 +83,10 @@
 
         @if($field->hasPreview() && !$field->isLivePreview())
             <div class="ml-auto flex rounded-md border border-gray-200 dark:border-gray-600 overflow-hidden text-xs">
-                <button type="button" @click="tab = 'write'"
+                <button type="button" @click="tab = 'write'" data-testid="form-editor-{{ $field->getStatePath() }}-write"
                     :class="tab === 'write' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'"
                     class="px-2.5 py-1 transition-colors">{{ __('Write') }}</button>
-                <button type="button" @click="tab = 'preview'"
+                <button type="button" @click="tab = 'preview'" data-testid="form-editor-{{ $field->getStatePath() }}-preview"
                     :class="tab === 'preview' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'"
                     class="px-2.5 py-1 border-l border-gray-200 dark:border-gray-600 transition-colors">{{ __('Preview') }}</button>
             </div>
@@ -97,6 +97,7 @@
         {{-- Side-by-side --}}
         <div class="grid grid-cols-2 divide-x divide-gray-200 dark:divide-gray-700">
             <textarea
+                data-testid="form-editor-{{ $field->getStatePath() }}"
                 x-ref="editor"
                 x-model="content"
                 rows="10"
@@ -117,6 +118,7 @@
         {{-- Tabbed --}}
         <div x-show="tab === 'write'">
             <textarea
+                data-testid="form-editor-{{ $field->getStatePath() }}"
                 x-ref="editor"
                 x-model="content"
                 rows="10"

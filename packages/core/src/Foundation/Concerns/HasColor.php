@@ -524,6 +524,46 @@ trait HasColor
     }
 
     /**
+     * Get tint classes for a whole painted table row (subtle fill + matching hover).
+     *
+     * Canonical owner for the "colored data row" surface (`Table::rowColor()`).
+     * A full-width row must read far softer than a badge or the toggle-track fill,
+     * so this uses the lightest tint (`-50` in light, translucent `-900/20` in dark)
+     * and pairs it with a same-hue hover so a hoverable colored row does not flip to
+     * the neutral gray hover. The row tint deliberately replaces the default gray
+     * hover and zebra striping for that row. Same hue vocabulary as the rest of the
+     * palette (success → emerald, blue/primary → primary, info → cyan); unknown
+     * names fall back to gray. Class strings are literal so Tailwind's JIT scanner
+     * can see them, which also keeps the mapping a safe allow-list.
+     */
+    public static function getRowTintClasses(string $color): string
+    {
+        return match ($color) {
+            'primary', 'blue' => 'bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30',
+            'success', 'green', 'emerald' => 'bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30',
+            'danger', 'red' => 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30',
+            'warning', 'yellow', 'amber' => 'bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30',
+            'info', 'cyan' => 'bg-cyan-50 dark:bg-cyan-900/20 hover:bg-cyan-100 dark:hover:bg-cyan-900/30',
+            'orange' => 'bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30',
+            'lime' => 'bg-lime-50 dark:bg-lime-900/20 hover:bg-lime-100 dark:hover:bg-lime-900/30',
+            'teal' => 'bg-teal-50 dark:bg-teal-900/20 hover:bg-teal-100 dark:hover:bg-teal-900/30',
+            'sky' => 'bg-sky-50 dark:bg-sky-900/20 hover:bg-sky-100 dark:hover:bg-sky-900/30',
+            'indigo' => 'bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30',
+            'violet' => 'bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100 dark:hover:bg-violet-900/30',
+            'purple' => 'bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30',
+            'fuchsia' => 'bg-fuchsia-50 dark:bg-fuchsia-900/20 hover:bg-fuchsia-100 dark:hover:bg-fuchsia-900/30',
+            'pink' => 'bg-pink-50 dark:bg-pink-900/20 hover:bg-pink-100 dark:hover:bg-pink-900/30',
+            'rose' => 'bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 dark:hover:bg-rose-900/30',
+            'slate' => 'bg-slate-50 dark:bg-slate-900/20 hover:bg-slate-100 dark:hover:bg-slate-900/30',
+            'zinc' => 'bg-zinc-50 dark:bg-zinc-900/20 hover:bg-zinc-100 dark:hover:bg-zinc-900/30',
+            'neutral' => 'bg-neutral-50 dark:bg-neutral-900/20 hover:bg-neutral-100 dark:hover:bg-neutral-900/30',
+            'stone' => 'bg-stone-50 dark:bg-stone-900/20 hover:bg-stone-100 dark:hover:bg-stone-900/30',
+            'gray', 'secondary' => 'bg-gray-50 dark:bg-gray-800/40 hover:bg-gray-100 dark:hover:bg-gray-800/60',
+            default => 'bg-gray-50 dark:bg-gray-800/40 hover:bg-gray-100 dark:hover:bg-gray-800/60',
+        };
+    }
+
+    /**
      * Get gradient fill classes (`from-* to-*`) for a progress/bar fill.
      *
      * Canonical source for the filled portion of bar/progress surfaces such as

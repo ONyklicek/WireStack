@@ -222,7 +222,7 @@
                     --}}
                     <button
                         type="button"
-                        @click.stop="removeTag(index)"
+                        @click.stop="removeTag(index)" :data-testid="'form-tags-{{ $field->getStatePath() }}-remove-' + index"
                         style="outline: none;"
                         class="-mr-0.5 flex h-6 w-6 items-center justify-center rounded-full text-gray-500 transition-colors duration-100 hover:bg-gray-300 hover:text-gray-800 active:bg-gray-400 dark:text-gray-400 dark:hover:bg-gray-600 dark:hover:text-gray-100"
                         :aria-label="'Remove ' + tag"

@@ -28,11 +28,9 @@ class SessionDriver implements NotificationDriver
         ]);
 
         if ($livewireComponent && method_exists($livewireComponent, 'dispatch')) {
-            $livewireComponent->dispatch(
-                $this->eventName,
-                type: $notification->type,
-                message: $notification->message,
-            );
+            // Forward the full payload (title, duration, actions, …) so rich
+            // toasts survive the server round-trip, not just type + message.
+            $livewireComponent->dispatch($this->eventName, ...$notification->toArray());
         }
     }
 }

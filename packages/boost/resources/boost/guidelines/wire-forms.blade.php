@@ -45,6 +45,7 @@ are addressed by name (`Wizard::make('signup')`).
 - Options accept arrays or an enum class: `->options(Status::class)` (shared `HasOptions`).
 - Reactivity is opt-in with `->live()`; default fields use deferred `wire:model`.
 - `Select`/`Radio`/`CheckboxList` share the same options API.
+- `FileUpload` is **store-on-submit** (orphan-free): `InteractsWithFileUploads` composes Livewire `WithFileUploads`; an upload stays a pending `TemporaryUploadedFile` (multiple fields merge/append via the `updating`-captured value, single keeps newest) and is moved to the `disk()`/`directory()` only on **save** by a `SaveHandler` step (`FileUpload::storeUploadedFile`). The view lists stored paths + pending uploads with index-based `removeUploadedFile`; `->deletable(false)` is read-only.
 - `Radio` has display variants: `->cards()` (selectable cards, `->inline()` for a row,
   `->hideIndicator()` to drop the dot), `->segmented()` (pill over a track), and `->buttons()`
   (separate buttons, selected filled; `->inline()` for a row). `->icons([value => name])` and
@@ -53,6 +54,20 @@ are addressed by name (`Wizard::make('signup')`).
   variants take a size via the shared `HasSize` API (`->sm()`/`->md()`/`->lg()`), and `->color(...)`
   sets one group accent (shared `HasColor`). On mobile the segmented track stretches its segments
   to the full width; from `sm` up it keeps intrinsic width.
+
+### Browser-testing hooks
+
+Every field is wrapped with `data-testid="form-field-{statePath}"` (+ `data-field`), and its label is associated (`<label for>`), so Pest v4 Browser Testing can scope to a field and act on it at the user level. Naming convention: a control is `form-{type}-{statePath}` and sub-controls append `-{action|value|index}` — every interactive control down to the micro level is tagged:
+- `form-toggle-{path}`, `form-checkbox-{path}`, `form-slider-{path}`, `form-button-{path}`
+- `form-radio-{path}-{value}`, `form-checklist-{path}-{value}` (+ `-select-all` / `-deselect-all` / `-search`)
+- `form-repeater-{path}-add|remove-{i}|reorder-{i}`, `form-keyvalue-{path}-add|remove-{i}`
+- `form-file-{path}-dropzone|remove-{i}`, `form-tags-{path}-remove-{i}`
+- `form-datetime-{path}-trigger|prev-month|next-month|day-{d}|hours-up|hours-down|minutes-up|minutes-down|seconds-up|seconds-down|clear|done`
+- `form-color-{path}` (+ `-hex` / `-swatch-{color}`), `form-rating-{path}-star-{n}`, `form-otp-{path}-{i}`
+- `form-editor-{path}` (body) + `-{command|index}` toolbar + `-write` / `-preview` tabs
+- field/affix/hint actions `field-action-{path}-{name}`
+
+The searchable Select combobox uses the shared `select-trigger` / `select-search` / `select-option-{value}` / `select-clear`, with create/edit-option modals `select-create-save|cancel` / `select-edit-save|cancel`.
 
 ### Reactive patterns
 
@@ -101,7 +116,9 @@ Conditional rules (`requiredIf()` etc.) are honoured live. Cross-field Laravel s
 All of this reactivity works for fields inside `Repeater` items too — `afterStateUpdated()`,
 live validation, field actions, remote search and conditional visibility (`visibleWhen()` /
 `visible(fn ($get) => …)`) resolve per item, and `$get`/`$set` read/write that item's own bag
-(so `$set('slug', …)` on row 2 touches only row 2).
+(so `$set('slug', …)` on row 2 touches only row 2). `Repeater::itemLabel(string|Closure)` names each
+item block next to its number (`fn(array $state, int $index): ?string`, e.g. from a field) — pair with a
+`->live()` field to update as the user types.
 
 Selects: `Select` supports server-driven options (`getSearchResultsUsing()` remote search,
 `getOptionLabelUsing()`, `preload()`) and create/edit-option modals (`createOptionForm()` +

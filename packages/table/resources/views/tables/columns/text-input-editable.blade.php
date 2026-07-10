@@ -19,97 +19,29 @@
 
     $wireKey = "tic-{$recordKey}-{$columnName}";
     $recordVersion = $record->updated_at ? (string) $record->updated_at->getTimestamp() : '0';
-
-    $msgError = __('wire-table::messages.error');
-    $msgSaveFailed = __('wire-table::messages.save_failed');
-    $msgInvalid = __('wire-table::messages.invalid');
 @endphp
 
+{{-- Optimistic value + rollback + optimistic-lock conflict handling + poll sync
+     all live in the shared wireEditableCell component; this cell adds live
+     validation, save-on-blur/enter, escape-to-revert and prefix/suffix chrome. --}}
 <div wire:key="{{ $wireKey }}"
      wire:ignore.self
-     x-data="{
+     x-data="wireEditableCell({
         value: {{ $valueJson }},
-        original: {{ $valueJson }},
-        serverValue: {{ $valueJson }},
         recordVersion: '{{ $recordVersion }}',
-        error: null,
-        saving: false,
-        success: false,
-        focused: false,
-        get dirty() { return this.value !== this.original },
-        init() {
-            if ({{ $liveValidation }}) {
-                this.$watch('value', Alpine.debounce(() => {
-                    if (this.dirty) this.doValidate();
-                }, {{ $debounce }}))
-            }
-
-            const observer = new MutationObserver((mutations) => {
-                for (const m of mutations) {
-                    if (m.attributeName === 'data-server-value') {
-                        const newVal = this.$el.dataset.serverValue;
-                        const newVer = this.$el.dataset.recordVersion;
-                        if (newVal !== this.serverValue) {
-                            this.syncFromServer(newVal, newVer);
-                        }
-                    }
-                }
-            });
-            observer.observe(this.$el, { attributes: true, attributeFilter: ['data-server-value', 'data-record-version'] });
-        },
-        syncFromServer(newVal, newVersion) {
-            if (this.saving) return;
-            if (this.focused && this.dirty) return;
-            this.value = newVal;
-            this.original = newVal;
-            this.serverValue = newVal;
-            if (newVersion) this.recordVersion = newVersion;
-            this.error = null;
-        },
-        onFocus() { this.focused = true; },
-        onBlur() {
-            this.focused = false;
-            if ({{ $saveOnBlur }} && this.dirty) this.save();
-        },
-        onEnter() { if ({{ $saveOnEnter }} && this.dirty) this.save(); },
-        onEscape() { this.value = this.original; this.error = null; this.$refs.input.blur(); },
-        async save() {
-            if (this.saving || !this.dirty) return;
-            this.saving = true;
-            this.error = null;
-            try {
-                const r = await $wire.updateTableCell('{{ $recordKey }}', '{{ $columnName }}', this.value, this.recordVersion);
-                if (r?.success === false) {
-                    this.error = r.message || r.errors?.[0] || this.$el.dataset.msgError;
-                    if (r?.conflict) {
-                        this.original = r.currentValue ?? this.original;
-                        this.recordVersion = r.currentVersion ?? this.recordVersion;
-                    }
-                } else {
-                    this.original = this.value;
-                    this.serverValue = this.value;
-                    if (r?.version) this.recordVersion = r.version;
-                    this.success = true;
-                    setTimeout(() => this.success = false, 1500);
-                }
-            } catch (e) {
-                this.error = this.$el.dataset.msgSaveFailed;
-            } finally {
-                this.saving = false;
-            }
-        },
-        async doValidate() {
-            try {
-                const r = await $wire.validateTableCell('{{ $recordKey }}', '{{ $columnName }}', this.value);
-                this.error = (r && !r.valid) ? (r.errors?.[0] || this.$el.dataset.msgInvalid) : null;
-            } catch (e) {}
-        }
-     }"
+        saveOnBlur: {{ $saveOnBlur }},
+        saveOnEnter: {{ $saveOnEnter }},
+        liveValidation: {{ $liveValidation }},
+        debounce: {{ $debounce }},
+     })"
+     data-record-key="{{ $recordKey }}"
+     data-column-name="{{ $columnName }}"
+    data-testid="table-editable-{{ $columnName }}"
      data-server-value="{{ $value }}"
      data-record-version="{{ $recordVersion }}"
-     data-msg-error="{{ $msgError }}"
-     data-msg-save-failed="{{ $msgSaveFailed }}"
-     data-msg-invalid="{{ $msgInvalid }}"
+     data-msg-error="{{ __('wire-table::messages.error') }}"
+     data-msg-save-failed="{{ __('wire-table::messages.save_failed') }}"
+     data-msg-invalid="{{ __('wire-table::messages.invalid') }}"
      class="relative"
 >
     {{-- Prefix --}}

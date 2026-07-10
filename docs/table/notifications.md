@@ -74,8 +74,9 @@ Notification delivery is driver-based.
 
 | Driver | Use when |
 |--------|----------|
-| SessionDriver | Default Laravel flash-style delivery |
-| LivewireEventDriver | You already have a JS toast layer |
+| CurrentComponentDriver | Built-in default — resolves the active Livewire component and delegates to `SessionDriver` (flash + full-payload live toast) |
+| SessionDriver | Laravel flash-style delivery plus a full-payload live event |
+| LivewireEventDriver | You want live toasts only, without the session flash |
 | FlasherDriver | You use `php-flasher` |
 | Custom driver | You need a project-specific integration |
 

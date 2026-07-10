@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
 use Livewire\Livewire;
+use NyonCode\WireForms\Components\FileUpload;
 use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Components\Toggle;
@@ -155,6 +158,31 @@ class RepeaterActionsComponent extends Component
     }
 }
 
+class FileUploadActionsComponent extends Component
+{
+    use WithForms;
+
+    public array $data = [
+        'gallery' => ['uploads/a.png', 'uploads/b.png', 'uploads/c.png'],
+        'avatar' => 'uploads/me.png',
+    ];
+
+    public function form(Form $form): Form
+    {
+        return $form
+            ->statePath('data')
+            ->schema([
+                FileUpload::make('gallery')->image()->multiple(),
+                FileUpload::make('avatar')->avatar(),
+            ]);
+    }
+
+    public function render(): string
+    {
+        return '<div></div>';
+    }
+}
+
 // ─── Single form tests ───────────────────────────────────────
 
 test('single form component resolves form via magic __get', function () {
@@ -271,6 +299,67 @@ test('repeater actions ignore non array state', function () {
         ->call('reorderRepeaterItems', 'data.contacts', [0]);
 
     expect($component->get('data')['contacts'])->toBe('not-array');
+});
+
+// ─── FileUpload remove-file action (by index) ─────────────────
+
+test('removeUploadedFile drops a file from a multiple field by index', function () {
+    $component = Livewire::test(FileUploadActionsComponent::class);
+
+    $component->call('removeUploadedFile', 'data.gallery', 1);
+
+    expect($component->get('data')['gallery'])->toBe([
+        'uploads/a.png',
+        'uploads/c.png',
+    ]);
+});
+
+test('removeUploadedFile clears a single-file field', function () {
+    $component = Livewire::test(FileUploadActionsComponent::class);
+
+    $component->call('removeUploadedFile', 'data.avatar', 0);
+
+    expect($component->get('data')['avatar'])->toBeNull();
+});
+
+test('removeUploadedFile ignores an out-of-range index', function () {
+    $component = Livewire::test(FileUploadActionsComponent::class);
+
+    $component->call('removeUploadedFile', 'data.gallery', 99);
+
+    expect($component->get('data')['gallery'])->toBe([
+        'uploads/a.png',
+        'uploads/b.png',
+        'uploads/c.png',
+    ]);
+});
+
+// ─── FileUpload merge on upload (store-on-submit: stays pending) ───
+
+test('uploading a single file keeps it pending and stores nothing yet', function () {
+    Storage::fake('public');
+
+    $component = Livewire::test(FileUploadActionsComponent::class)
+        ->set('data.avatar', UploadedFile::fake()->image('new.png'));
+
+    // Not moved to permanent storage — still a pending upload, disk untouched.
+    expect($component->get('data')['avatar'])->not->toBeString();
+    expect(Storage::disk('public')->allFiles())->toBeEmpty();
+});
+
+test('uploading to a multiple field merges the pending upload with existing paths', function () {
+    Storage::fake('public');
+
+    $component = Livewire::test(FileUploadActionsComponent::class)
+        ->set('data.gallery', [UploadedFile::fake()->image('d.png')]);
+
+    $gallery = $component->get('data')['gallery'];
+
+    // Existing three paths kept, the new upload appended (still pending).
+    expect($gallery)->toHaveCount(4)
+        ->and(array_slice($gallery, 0, 3))->toBe(['uploads/a.png', 'uploads/b.png', 'uploads/c.png'])
+        ->and($gallery[3])->not->toBeString();
+    expect(Storage::disk('public')->allFiles())->toBeEmpty();
 });
 
 // ─── afterStateUpdated() reactive hook ─────────────────────────

@@ -9,6 +9,8 @@
             copied = true;
             setTimeout(() => copied = false, 2000);
         "
+        data-testid="cell-copy"
+        aria-label="{{ $copyMessage ?? __('wire-table::messages.copy') }}"
         class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
         title="{{ __('wire-table::messages.copy') }}"
     >

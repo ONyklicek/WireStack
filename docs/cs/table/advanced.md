@@ -17,9 +17,11 @@ order: 80
 7. [SQL debug](#sql-debug)
 8. [Responzivní layout](#responsive-layout)
 9. [Přepínání sloupců](#column-toggling)
-10. [Notifikace per tabulka](#notifications-per-table)
-11. [Perzistence stavu v URL](#url-state-persistence)
-12. [Vlastní pohledy](#custom-views)
+10. [Kontextové menu řádku](#row-context-menu)
+11. [Notifikace per tabulka](#notifications-per-table)
+12. [Perzistence stavu v URL](#url-state-persistence)
+13. [Selektory pro browser testy](#browser-testing-selectors)
+14. [Vlastní pohledy](#custom-views)
 
 ---
 
@@ -603,7 +605,98 @@ TextColumn::make('notes')
     ->visibleFrom('lg')             // výchozí viditelné od lg, ale uživatel může přepsat
 ```
 
-Stav je uložen v `$hiddenColumns` (Livewire vlastnost). Přetrvá po dobu session.
+Ve výchozím stavu množina zobrazených/skrytých sloupců žije jen po dobu života
+komponenty (po úplném reloadu stránky se resetuje).
+
+### Zapamatování rozvržení pro každého uživatele
+
+Zavolej `rememberColumns()` se stabilním klíčem — tabulka při mountu načte uložené
+rozvržení aktuálního uživatele a při každém přepnutí sloupce ho uloží, takže si
+každý uživatel drží vlastní uspořádání sloupců i po reloadu. V přepínači se
+objeví tlačítko „Obnovit sloupce“ pro návrat na výchozí nastavení. [tl! focus:start]
+
+```php
+$table
+    ->columns([
+        TextColumn::make('name'),
+        TextColumn::make('email')->toggleable(),
+        TextColumn::make('phone')->toggleable()->hidden(),
+    ])
+    ->rememberColumns('users-index'); // stabilní, unikátní pro tabulku
+``` <!-- [tl! focus:end] -->
+
+Preference driver scopuje na `auth()->user()`, takže **jeden klíč slouží všem
+uživatelům** — funguje pro libovolný počet tabulek (různé klíče) i uživatelů.
+Uložený sloupec, který už neexistuje (přejmenovaný/odebraný), je při načtení
+ignorován.
+
+**Kam se ukládá** řídí driver zvolený v `config('wire-table.preferences')`:
+
+| Driver     | Persistence                                     | Nastavení |
+|------------|-------------------------------------------------|-----------|
+| `null`     | Neukládá se (výchozí)                            | — |
+| `session`  | Session uživatele                               | žádné |
+| `database` | Řádek `table_preferences` na (uživatel, tabulka)| publish + migrace |
+
+```php
+// config/wire-table.php
+'preferences' => [
+    'default' => env('WIRE_TABLE_PREFERENCES_DRIVER', 'null'), // přihlášení uživatelé
+    'guest'   => env('WIRE_TABLE_PREFERENCES_GUEST_DRIVER', 'session'), // návštěvníci
+    // ...
+],
+```
+
+Pro database driver publikuj a spusť migraci:
+
+```bash
+php artisan vendor:publish --tag="wire-table::migrations"
+php artisan migrate
+```
+
+Driver lze přepsat pro jednu tabulku (např. vynutit databázi i když je globální
+výchozí `session`), nebo zapojit vlastní úložiště implementující
+`TablePreferenceDriver`:
+
+```php
+$table
+    ->rememberColumns('reports')
+    ->preferenceDriver(app(DatabasePreferenceDriver::class));
+```
+
+---
+
+<a id="row-context-menu"></a>
+## Kontextové menu řádku
+
+Nech pokročilé uživatele **kliknout pravým tlačítkem na řádek** a otevřít menu
+akcí u kurzoru — zkratka vedle sloupce s akcemi. Akce menu se definují
+**samostatně** přes `rowContextMenu([...])` (nejsou to akce z `->actions()`
+toolbaru), takže je menu explicitní, ne implicitní kopie tlačítek řádku — pokud
+je chceš stejné, předej stejné objekty. Používá stejný styl položek jako dropdown
+action-group. [tl! focus:start]
+
+```php
+$table
+    ->columns([/* ... */])
+    ->actions([EditAction::make()])            // toolbar řádku
+    ->rowContextMenu([                          // samostatné pravé menu
+        ViewAction::make(),
+        EditAction::make(),
+        DeleteAction::make(),
+    ]);
+``` <!-- [tl! focus:end] -->
+
+- Menu ukáže přesně **viditelné** akce menu (skryté/neautorizované se vynechají);
+  řádek bez viditelné akce menu neukáže.
+- V jeden okamžik je otevřené **jen jedno** menu — kliknutí pravým na jiný řádek
+  předchozí zavře.
+- Je připnuté ke kurzoru a udrží se ve viewportu; zavře se kliknutím mimo,
+  klávesou `Escape`, scrollem nebo po zvolení akce (ta se spustí normálně, např.
+  otevře svůj modal).
+- Skupiny akcí se do menu zploští.
+- Jde o funkci pro **desktop ukazatel** — dotyková zařízení kontextové menu
+  nemají, takže sloupec s akcemi zůstává hlavním ovládáním.
 
 ---
 
@@ -678,6 +771,87 @@ $table->queryString('orders_');   // ?orders_search=…&orders_filter_status=…
 - URL se aktualizuje přes `history.replaceState`, takže psaní do vyhledávacího
   pole nezaplaví historii prohlížeče; parametry zase zmizí, když se stav vrátí
   na výchozí.
+
+---
+
+<a id="browser-testing-selectors"></a>
+## Selektory pro browser testy
+
+Každá interaktivní část tabulky nese stabilní `data-testid` (a přístupný
+název/role tam, kde je ovládač jen ikona), takže [Pest v4 Browser
+Testing](https://pestphp.com/docs/browser-testing) na ni umí cílit na
+uživatelské úrovni bez křehkých CSS selektorů.
+
+| Část | Selektor |
+|------|----------|
+| Vyhledávací pole | `data-testid="table-search"` (+ `aria-label`) |
+| Trigger filtrů | `data-testid="table-filters-trigger"` |
+| Reset filtrů | `data-testid="table-filter-reset"` |
+| Chip filtru / odebrání | `data-testid="filter-chip-{název}"` / `filter-chip-remove-{název}` |
+| Přepínač sloupců | `data-testid="table-column-toggle"` |
+| Výběr počtu na stránku | `data-testid="table-per-page"` |
+| Stránkování | `data-testid="table-page-prev"` / `table-page-next` / `table-page-{n}` |
+| Řaditelná hlavička | `data-testid="table-sort-{sloupec}"` |
+| Buňka filtru sloupce | `data-testid="table-filter-{sloupec}"` |
+| Buňka těla | `data-testid="table-cell-{sloupec}"` (+ `data-column`) |
+| Inline-edit buňka | `data-testid="table-editable-{sloupec}"` |
+| Řádek | `data-testid="table-row"` + `data-row-key="{klíč}"` (mobilní karta: `table-card`) |
+| Vybrat vše / řádek / karta | `data-testid="table-select-all"` / `table-row-select` / `table-card-select` (`role="checkbox"`, `aria-label`) |
+| Rozbalení podřádku | `data-testid="table-row-expand"` (`aria-expanded`) |
+| Akce řádku | `data-testid="action-{název}"` (+ `aria-label`) |
+| Hlavička / bulk / menu akce | `data-testid="header-action-{název}"` / `bulk-action-{název}` / `menu-action-{název}` |
+| Bulk lišta / zrušit výběr | `data-testid="table-bulk-bar"` / `table-deselect"` |
+
+Akce jdou cílit i přes viditelný popisek a volby filtru přes jejich text —
+preferuj je pro nejvěrnější uživatelské asserce:
+
+```php
+it('filtruje uživatele podle role', function () {
+    $page = visit('/users');
+
+    $page->assertSee('Ann')->assertSee('Bob');
+
+    // Otevři searchable Role filtr a vyber hodnotu (uživatelská úroveň).
+    $page->click('@table-filter-role')       // data-testid
+        ->fill('search', 'Man')
+        ->click('Manager');
+
+    $page->assertSee('Bob')->assertDontSee('Ann');
+});
+
+it('upraví první řádek přes jeho akci', function () {
+    visit('/users')
+        ->within('[data-row-key="1"]', fn ($row) => $row->click('@action-edit'))
+        ->assertSee('Upravit uživatele');
+});
+```
+
+Celá aktivní plocha — vyhledávání, řazení, filtry sloupců, výběr řádků, akce,
+kontextové menu i přepínač sloupců — je takto dosažitelná.
+
+**Mimo tabulku** platí stejná konvence napříč sdíleným UI, takže celý tok
+(otevřít modal, vyplnit formulář, potvrdit) je plně mapovatelný:
+
+Konvence názvů (aby šel odvodit jakýkoli hook): ovládač pole je
+`form-{typ}-{statePath}` a jeho podovládače přidávají `-{akce|hodnota|index}`.
+
+| Plocha | Selektor |
+|--------|----------|
+| Každé pole formuláře (kontejner) | `data-testid="form-field-{statePath}"` (+ `data-field`) |
+| Text / toggle / checkbox / slider | `form-input-{path}` (přes kontejner + `<label>`), `form-toggle-{path}`, `form-checkbox-{path}`, `form-slider-{path}` |
+| Radio / checkbox-list volby | `form-radio-{path}-{value}`, `form-checklist-{path}-{value}` (+ `-select-all` / `-deselect-all` / `-search`) |
+| Repeater / key-value | `form-repeater-{path}-add|remove-{i}|reorder-{i}`, `form-keyvalue-{path}-add|remove-{i}` |
+| File / tags | `form-file-{path}-dropzone|remove-{i}`, `form-tags-{path}-remove-{i}` |
+| Date-time picker | `form-datetime-{path}-trigger|prev-month|next-month|day-{d}|hours-up|hours-down|minutes-up|minutes-down|seconds-up|seconds-down|clear|done` |
+| Color / rating / OTP | `form-color-{path}` (+ `-hex` / `-swatch-{barva}`), `form-rating-{path}-star-{n}`, `form-otp-{path}-{i}` |
+| Editory (markdown/rich/tiptap) | `form-editor-{path}` (tělo) + `-{command|index}` toolbar tlačítka + `-write` / `-preview` taby |
+| Field / affix / hint akce | `field-action-{path}-{name}` |
+| Searchable select (formuláře + filtry) | `select-trigger` / `select-search` / `select-option-{value}` / `select-clear`; create/edit-option modaly: `select-create-save|cancel`, `select-edit-save|cancel` |
+| Modal / slide-over / potvrzení | `modal-close`, `slide-over-close`, `modal-cancel` / `modal-submit`, `modal-back` / `modal-next`, `confirmation-confirm` / `confirmation-cancel`, `modal-footer-action-{name}` |
+| Wizard / tabs / sekce / callout | `wizard-step-{i}` / `wizard-back` / `wizard-next`, `tab-{i}`, `section-toggle`, `callout-dismiss` |
+| Toasty | `toast-dismiss`, `toast-action-{i}`, `toast-expand` |
+| Akce infolistu | `infolist-action-{name}` |
+| Sortable úchyt | `sortable-handle` (`role="button"`, `aria-label`) |
 
 ---
 

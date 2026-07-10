@@ -50,6 +50,9 @@ class Repeater extends LayoutComponent implements HasValidation
 
     protected ?string $addButtonLabel = null;
 
+    /** @var string|Closure|null static label, or fn(array, int): ?string */
+    protected string|Closure|null $itemLabel = null;
+
     protected bool|Closure $isDisabled = false;
 
     /** @var Closure|null fn(array): array — mutate item data before saving */
@@ -128,6 +131,25 @@ class Repeater extends LayoutComponent implements HasValidation
         return $this;
     }
 
+    /**
+     * Give each repeater item a name shown next to its number in the header.
+     *
+     * Pass a static string, or a closure that receives the item's state and its
+     * (zero-based) index and returns a label — e.g. derive it from a field:
+     *
+     *   Repeater::make('contacts')
+     *       ->schema([TextInput::make('name')])
+     *       ->itemLabel(fn (array $state) => $state['name'] ?? null);
+     *
+     * @param  string|Closure|null  $label  string | fn(array $state, int $index): ?string
+     */
+    public function itemLabel(string|Closure|null $label): static
+    {
+        $this->itemLabel = $label;
+
+        return $this;
+    }
+
     public function disabled(bool|Closure $condition = true): static
     {
         $this->isDisabled = $condition;
@@ -187,6 +209,21 @@ class Repeater extends LayoutComponent implements HasValidation
     public function getAddButtonLabel(): string
     {
         return $this->addButtonLabel ?? __('Add item');
+    }
+
+    /**
+     * Resolve the per-item label (see {@see itemLabel()}). Returns null when no
+     * label is configured or the closure yields an empty value.
+     *
+     * @param  array<string, mixed>  $itemState
+     */
+    public function getItemLabel(array $itemState, int $index): ?string
+    {
+        $label = $this->itemLabel instanceof Closure
+            ? ($this->itemLabel)($itemState, $index)
+            : $this->itemLabel;
+
+        return ($label === null || $label === '') ? null : (string) $label;
     }
 
     public function isDisabled(): bool

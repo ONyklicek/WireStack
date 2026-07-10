@@ -19,6 +19,8 @@
             href="{{ $action->getUrl() }}"
             @if($action->shouldOpenUrlInNewTab()) target="_blank" @endif
             class="{{ $classes }} relative"
+            data-testid="header-action-{{ $action->getName() }}"
+            @if($action->getLabel()) aria-label="{{ $action->getLabel() }}" @endif
             @if($action->getTooltip()) title="{{ $action->getTooltip() }}" @endif
     >
         @if($action->getIcon())
@@ -41,6 +43,8 @@
             type="button"
             wire:click{{ $loadingState['wireModifiers'] }}="{{ $wireAction }}"
             class="{{ $classes }} relative"
+            data-testid="header-action-{{ $action->getName() }}"
+            @if($action->getLabel()) aria-label="{{ $action->getLabel() }}" @endif
             @if($action->getTooltip()) title="{{ $action->getTooltip() }}" @endif
             @if($shortcutAlpine)
                 x-on:keydown.{{ $shortcutAlpine }}.window.prevent="$el.click()"

@@ -54,6 +54,9 @@ class BarChartWidget extends Widget
     /** Tailwind rounded scale suffix for the card + bars (e.g. xl, 2xl, lg). */
     protected string $rounded = '2xl';
 
+    /** Render each bar's label rotated vertically beside the bar (fits long names). */
+    protected bool $verticalLabels = false;
+
     /**
      * @param  'vertical'|'horizontal'|string  $type
      */
@@ -185,6 +188,23 @@ class BarChartWidget extends Widget
     public function getRounded(): string
     {
         return $this->rounded;
+    }
+
+    /**
+     * Render each bar's label rotated vertically (reading bottom-to-top) beside
+     * the bar instead of horizontally in the header/caption — so long labels fit
+     * without truncating or overflowing. Vertical charts only.
+     */
+    public function verticalLabels(bool $condition = true): static
+    {
+        $this->verticalLabels = $condition;
+
+        return $this;
+    }
+
+    public function hasVerticalLabels(): bool
+    {
+        return $this->verticalLabels;
     }
 
     /**

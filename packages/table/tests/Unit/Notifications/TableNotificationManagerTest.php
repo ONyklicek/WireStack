@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
-use NyonCode\WireCore\Notifications\Drivers\SessionDriver;
+use NyonCode\WireCore\Notifications\Drivers\CurrentComponentDriver;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationManager;
 
@@ -13,8 +13,10 @@ beforeEach(function () {
 
 // ─── Default Driver ─────────────────────────────────────────────────────────
 
-it('uses SessionDriver as default', function () {
-    expect(NotificationManager::getDefaultDriver())->toBeInstanceOf(SessionDriver::class);
+it('uses CurrentComponentDriver as default', function () {
+    // The default wraps the backwards-compatible SessionDriver so it can
+    // resolve the active Livewire component without call-sites passing it.
+    expect(NotificationManager::getDefaultDriver())->toBeInstanceOf(CurrentComponentDriver::class);
 });
 
 it('can set custom default driver', function () {
@@ -24,12 +26,12 @@ it('can set custom default driver', function () {
     expect(NotificationManager::getDefaultDriver())->toBe($driver);
 });
 
-it('reset restores to SessionDriver', function () {
+it('reset restores the default CurrentComponentDriver', function () {
     $driver = Mockery::mock(NotificationDriver::class);
     NotificationManager::setDefaultDriver($driver);
     NotificationManager::reset();
 
-    expect(NotificationManager::getDefaultDriver())->toBeInstanceOf(SessionDriver::class);
+    expect(NotificationManager::getDefaultDriver())->toBeInstanceOf(CurrentComponentDriver::class);
 });
 
 // ─── Resolution ─────────────────────────────────────────────────────────────
@@ -42,7 +44,7 @@ it('resolves explicit driver over default', function () {
 });
 
 it('resolves to default when null passed', function () {
-    expect(NotificationManager::resolve(null))->toBeInstanceOf(SessionDriver::class);
+    expect(NotificationManager::resolve(null))->toBeInstanceOf(CurrentComponentDriver::class);
 });
 
 // ─── Send ───────────────────────────────────────────────────────────────────

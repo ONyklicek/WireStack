@@ -56,7 +56,7 @@
     @for($i = 1; $i <= $field->getMax(); $i++)
         <button
             type="button"
-            @click="clickStar({{ $i }}, $event)"
+            @click="clickStar({{ $i }}, $event)" data-testid="form-rating-{{ $field->getStatePath() }}-star-{{ $i }}" aria-label="{{ $i }}"
             @mousemove="setHalf({{ $i }}, $event)"
             @mouseleave="hovered = 0"
             :disabled="disabled"

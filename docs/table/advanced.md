@@ -17,9 +17,11 @@ order: 80
 7. [SQL Debug](#sql-debug)
 8. [Responsive Layout](#responsive-layout)
 9. [Column Toggling](#column-toggling)
-10. [Notifications Per-Table](#notifications-per-table)
-11. [URL State Persistence](#url-state-persistence)
-12. [Custom Views](#custom-views)
+10. [Row Context Menu](#row-context-menu)
+11. [Notifications Per-Table](#notifications-per-table)
+12. [URL State Persistence](#url-state-persistence)
+13. [Browser Testing Selectors](#browser-testing-selectors)
+14. [Custom Views](#custom-views)
 
 ---
 
@@ -593,7 +595,96 @@ TextColumn::make('notes')
     ->visibleFrom('lg')             // default visible from lg, but user can override
 ```
 
-State is stored in `$hiddenColumns` (Livewire property). Persists for the session.
+By default the shown/hidden set lives only for the component's lifetime (it
+resets on a full page reload).
+
+### Remember each user's layout
+
+Call `rememberColumns()` with a stable key and the table loads the current
+user's saved layout on mount and persists it whenever a column is toggled — so
+every user keeps their own column arrangement across reloads. A "Reset columns"
+control appears in the picker to return to the configured defaults. [tl! focus:start]
+
+```php
+$table
+    ->columns([
+        TextColumn::make('name'),
+        TextColumn::make('email')->toggleable(),
+        TextColumn::make('phone')->toggleable()->hidden(),
+    ])
+    ->rememberColumns('users-index'); // stable, unique per table
+``` <!-- [tl! focus:end] -->
+
+Preferences are scoped by the driver to `auth()->user()`, so **one key serves
+every user** — it works for any number of tables (distinct keys) and users. A
+stored column that no longer exists (renamed/removed) is ignored on load.
+
+**Where it is stored** is a driver, selected in `config('wire-table.preferences')`:
+
+| Driver     | Persistence                                   | Setup |
+|------------|-----------------------------------------------|-------|
+| `null`     | Not persisted (default)                       | — |
+| `session`  | The user's session                            | none |
+| `database` | A `table_preferences` row per (user, table)   | publish + migrate |
+
+```php
+// config/wire-table.php
+'preferences' => [
+    'default' => env('WIRE_TABLE_PREFERENCES_DRIVER', 'null'), // signed-in users
+    'guest'   => env('WIRE_TABLE_PREFERENCES_GUEST_DRIVER', 'session'), // visitors
+    // ...
+],
+```
+
+For the database driver, publish and run the migration:
+
+```bash
+php artisan vendor:publish --tag="wire-table::migrations"
+php artisan migrate
+```
+
+Override the driver for a single table (e.g. force the database even when the
+global default is `session`), or plug in your own store implementing
+`TablePreferenceDriver`:
+
+```php
+$table
+    ->rememberColumns('reports')
+    ->preferenceDriver(app(DatabasePreferenceDriver::class));
+```
+
+---
+
+## Row Context Menu
+
+Let power users **right-click a row** to open a menu of actions at the cursor —
+a shortcut alongside the actions column. The menu's actions are declared
+**separately** with `rowContextMenu([...])` (they are *not* the `->actions()`
+toolbar), so the menu is explicit rather than an implicit mirror of the row
+buttons — pass the same action objects if you want them to match. It uses the
+same menu-item styling as the action-group dropdown. [tl! focus:start]
+
+```php
+$table
+    ->columns([/* ... */])
+    ->actions([EditAction::make()])            // the row toolbar
+    ->rowContextMenu([                          // a separate right-click menu
+        ViewAction::make(),
+        EditAction::make(),
+        DeleteAction::make(),
+    ]);
+``` <!-- [tl! focus:end] -->
+
+- The menu lists exactly the **visible** menu actions (hidden/unauthorized
+  actions are skipped); a row with no visible action shows no menu.
+- Only **one** context menu is open at a time — right-clicking another row closes
+  the previous.
+- It is pinned at the pointer and clamped inside the viewport; it closes on
+  outside click, `Escape`, scroll, or after choosing an action (which runs the
+  action normally, e.g. opening its modal).
+- Action groups are flattened into the menu.
+- This is a **desktop pointer** feature — touch devices have no context menu, so
+  the actions column remains the primary affordance.
 
 ---
 
@@ -666,6 +757,87 @@ $table->queryString('orders_');   // ?orders_search=…&orders_filter_status=…
 - The URL updates via `history.replaceState`, so typing in the search box
   does not flood the browser history; parameters disappear again when the
   state returns to its default.
+
+---
+
+## Browser Testing Selectors
+
+Every interactive part of the table carries a stable `data-testid` (plus an
+accessible name/role where the control is icon-only), so [Pest v4 Browser
+Testing](https://pestphp.com/docs/browser-testing) can target it at the user
+level without brittle CSS.
+
+| Part | Selector |
+|------|----------|
+| Search box | `data-testid="table-search"` (also `aria-label`) |
+| Table filters trigger | `data-testid="table-filters-trigger"` |
+| Filter reset | `data-testid="table-filter-reset"` |
+| Active filter chip / remove | `data-testid="filter-chip-{name}"` / `filter-chip-remove-{name}` |
+| Column picker trigger | `data-testid="table-column-toggle"` |
+| Page-size selector | `data-testid="table-per-page"` |
+| Pagination | `data-testid="table-page-prev"` / `table-page-next` / `table-page-{n}` |
+| Sortable header | `data-testid="table-sort-{column}"` |
+| Per-column filter cell | `data-testid="table-filter-{column}"` |
+| Body cell | `data-testid="table-cell-{column}"` (+ `data-column`) |
+| Inline-edit cell | `data-testid="table-editable-{column}"` |
+| Row | `data-testid="table-row"` + `data-row-key="{key}"` (mobile card: `table-card`) |
+| Select-all / row / card | `data-testid="table-select-all"` / `table-row-select` / `table-card-select` (`role="checkbox"`, `aria-label`) |
+| Sub-row expand | `data-testid="table-row-expand"` (`aria-expanded`) |
+| Row action | `data-testid="action-{name}"` (+ `aria-label`) |
+| Header / bulk / menu action | `data-testid="header-action-{name}"` / `bulk-action-{name}` / `menu-action-{name}` |
+| Bulk bar / deselect | `data-testid="table-bulk-bar"` / `table-deselect"` |
+
+Actions are also targetable by their visible label, and filter options by their
+text — prefer those for the most user-faithful assertions:
+
+```php
+it('filters users by role', function () {
+    $page = visit('/users');
+
+    $page->assertSee('Ann')->assertSee('Bob');
+
+    // Open the searchable Role filter and pick a value (user-level).
+    $page->click('@table-filter-role')       // data-testid
+        ->fill('search', 'Man')
+        ->click('Manager');
+
+    $page->assertSee('Bob')->assertDontSee('Ann');
+});
+
+it('edits the first row via its action', function () {
+    visit('/users')
+        ->within('[data-row-key="1"]', fn ($row) => $row->click('@action-edit'))
+        ->assertSee('Edit user');
+});
+```
+
+The whole active surface — search, sort, per-column filters, row selection, row
+actions, the right-click context menu and the column picker — is reachable this
+way.
+
+**Beyond the table**, the same convention runs through the shared UI so an
+end-to-end flow (open a modal, fill a form, confirm) is fully mappable:
+
+Naming convention (so you can derive any hook): a form field control is
+`form-{type}-{statePath}` and its sub-controls append `-{action|value|index}`.
+
+| Surface | Selector |
+|---------|----------|
+| Every form field (container) | `data-testid="form-field-{statePath}"` (+ `data-field`) |
+| Text / toggle / checkbox / slider | `form-input-{path}` (via container + `<label>`), `form-toggle-{path}`, `form-checkbox-{path}`, `form-slider-{path}` |
+| Radio / checkbox-list options | `form-radio-{path}-{value}`, `form-checklist-{path}-{value}` (+ `-select-all` / `-deselect-all` / `-search`) |
+| Repeater / key-value | `form-repeater-{path}-add|remove-{i}|reorder-{i}`, `form-keyvalue-{path}-add|remove-{i}` |
+| File / tags | `form-file-{path}-dropzone|remove-{i}`, `form-tags-{path}-remove-{i}` |
+| Date-time picker | `form-datetime-{path}-trigger|prev-month|next-month|day-{d}|hours-up|hours-down|minutes-up|minutes-down|seconds-up|seconds-down|clear|done` |
+| Color / rating / OTP | `form-color-{path}` (+ `-hex` / `-swatch-{color}`), `form-rating-{path}-star-{n}`, `form-otp-{path}-{i}` |
+| Editors (markdown/rich/tiptap) | `form-editor-{path}` (body) + `-{command|index}` toolbar buttons + `-write` / `-preview` tabs |
+| Field / affix / hint actions | `field-action-{path}-{name}` |
+| Searchable select (forms + filters) | `select-trigger` / `select-search` / `select-option-{value}` / `select-clear`; create/edit-option modals: `select-create-save|cancel`, `select-edit-save|cancel` |
+| Modal / slide-over / confirmation | `modal-close`, `slide-over-close`, `modal-cancel` / `modal-submit`, `modal-back` / `modal-next`, `confirmation-confirm` / `confirmation-cancel`, `modal-footer-action-{name}` |
+| Wizard / tabs / section / callout | `wizard-step-{i}` / `wizard-back` / `wizard-next`, `tab-{i}`, `section-toggle`, `callout-dismiss` |
+| Toasts | `toast-dismiss`, `toast-action-{i}`, `toast-expand` |
+| Infolist actions | `infolist-action-{name}` |
+| Sortable drag handle | `sortable-handle` (`role="button"`, `aria-label`) |
 
 ---
 

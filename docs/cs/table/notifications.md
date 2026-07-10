@@ -74,8 +74,9 @@ Doručování notifikací je založené na driverech.
 
 | Driver | Použijte když |
 |--------|----------|
-| SessionDriver | Výchozí Laravel flash-style doručování |
-| LivewireEventDriver | Už máte JS toast vrstvu |
+| CurrentComponentDriver | Vestavěný výchozí — resolvuje aktivní Livewire komponentu a deleguje na `SessionDriver` (flash + live toast s plným payloadem) |
+| SessionDriver | Laravel flash-style doručování plus live událost s plným payloadem |
+| LivewireEventDriver | Chcete jen live toasty bez session flashe |
 | FlasherDriver | Používáte `php-flasher` |
 | Vlastní driver | Potřebujete integraci specifickou pro projekt |
 

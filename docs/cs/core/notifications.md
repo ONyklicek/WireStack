@@ -10,12 +10,13 @@ Zásuvný notifikační systém s více drivery.
 
 | Driver | Třída | Doručení | Požadavky |
 |--------|-------|----------|--------------|
-| Session | `SessionDriver` | `session()->flash()` **+** Livewire událost (jen `type` + `message`) | Žádné (výchozí) |
+| Aktuální komponenta | `CurrentComponentDriver` | Dekorátor — resolvuje aktivní Livewire komponentu přes `Livewire::current()`, pak deleguje na obalený driver (výchozí `SessionDriver`) | Žádné (výchozí) |
+| Session | `SessionDriver` | `session()->flash()` **+** Livewire událost nesoucí **plný** payload | Žádné |
 | Livewire | `LivewireEventDriver` | Livewire `$dispatch()` browser událost s **plným** payloadem | Frontend listener (toast kontejner) |
 | Flasher | `FlasherDriver` | Integrace [PHP Flasher](https://php-flasher.io) | `php-flasher/flasher-laravel` |
 | Null | `NullDriver` | No-op — zahodí vše | Žádné |
 
-Session driver je výchozí.
+Vestavěný výchozí je **`CurrentComponentDriver`** obalující `SessionDriver`: sám resolvuje právě renderovanou Livewire komponentu, takže call-sites nikdy nemusí předávat `$this`. `SessionDriver` i `LivewireEventDriver` forwardují **plný** payload (`title`, `duration`, `icon`, `actions`, …), takže bohaté toasty přežijí server round-trip.
 
 ### Který driver na co?
 
@@ -26,7 +27,7 @@ Session driver je výchozí.
 | Vaše aplikace už používá **php-flasher** (adaptéry Toastr / Notyf / SweetAlert) a chcete, aby notifikace tekly do toho existujícího UI. | `FlasherDriver` |
 | Chcete **vypnout notifikace** — testy, queued/background joby nebo jakýkoli kontext bez uživatele, kterého notifikovat. | `NullDriver` |
 
-> **Které drivery krmí toast kontejner?** `<x-wire-notifications::toast-container />` je Alpine listener na Livewire browser události, takže ho dosáhnou jen drivery odesílající události: **`LivewireEventDriver`** (plný `title`/`duration`/`icon`) a **`SessionDriver`** (jen `type`+`message`; `title`/`duration` spadnou na výchozí hodnoty kontejneru). `FlasherDriver` vykresluje **vlastní** UI a kontejner obchází; `NullDriver` nezobrazí nic.
+> **Které drivery krmí toast kontejner?** `<x-wire-notifications::toast-container />` je Alpine listener na Livewire browser události, takže ho dosáhnou jen drivery odesílající události: výchozí **`CurrentComponentDriver`**, **`SessionDriver`** a **`LivewireEventDriver`** — všechny forwardují plný `title`/`duration`/`icon`/`actions` payload. `FlasherDriver` vykresluje **vlastní** UI a kontejner obchází; `NullDriver` nezobrazí nic.
 
 ## Notification builder
 
@@ -70,12 +71,17 @@ Notification::info(string $message): static
 // Fluent immutable modifikátory (každý vrací novou instanci)
 ->title(?string $title): static
 ->duration(?int $ms): static      // čas auto-zavření, 0 = trvalé
+->persistent(bool $on = true): static   // sticky toast: duration 0, bez odpočtové lišty
 ->icon(?string $icon): static
 ->position(?string $position): static
 ->extra(array $data): static      // libovolná extra data (sloučená)
+->action(NotificationAction|string $action, ?string $event = null): static  // přidat akční tlačítko
+->actions(array $actions): static      // nahradit sadu akčních tlačítek
 ->toArray(): array                // serializovat do pole
 
 // Odesílání (přes NotificationManager)
+// $livewire je volitelný — výchozí CurrentComponentDriver si aktivní
+// komponentu resolvuje sám, takže ho běžně vynecháte.
 NotificationManager::send(Notification $n, ?NotificationDriver $driver = null, mixed $livewire = null): void
 NotificationManager::success(string $message, ...): void
 NotificationManager::error(string $message, ...): void
@@ -167,7 +173,7 @@ Když zavoláte `NotificationManager::send()` (nebo jeho zkratky), driver se res
 
 1. **Explicitní** driver předaný do volání / komponenty (`setNotificationDriver()`, argument `$driver`)
 2. **Globální výchozí** nastavený přes `NotificationManager::setDefaultDriver()`
-3. **Fallback:** vestavěný `SessionDriver`
+3. **Fallback:** vestavěný `CurrentComponentDriver` obalující `SessionDriver`
 
 > **Poznámka:** statický `NotificationManager` **nečte** `wire-core.notifications.default` sám o sobě — ta config jen krmí container binding. Aby se nakonfigurovaný driver stal globálním výchozím pro statické API, přemostěte ho jednou v service provideru:
 >
@@ -233,7 +239,85 @@ Můžete přizpůsobit pozici, fallback trvání auto-zavření a browser událo
 |------|---------|---------|
 | `position` | `top-right` | `top-left` / `top-center` / `top-right` / `bottom-left` / `bottom-center` / `bottom-right` |
 | `duration` | `4000` | fallback auto-zavření (ms) pro notifikace bez vlastního `duration` |
-| `eventName` | `table-notification` | `window` událost, které naslouchá (`x-on:{eventName}.window`) |
+| `event-name` | `table-notification` | `window` událost, které naslouchá (`x-on:{eventName}.window`) |
+| `progress` | `true` | zobrazit per-toast odpočtovou lištu (viz níže) |
+| `stack` | `false` | sbalit toasty do hromádky, která se na hover rozevře |
+| `max` | `0` | omezit počet viditelných toastů (`0` = neomezeno); přebytek se sbalí do pillu „+N more“ |
+
+## Toasty
+
+Vše níže vykresluje `<x-wire-notifications::toast-container />` — drivery jen odesílají payloady; kontejner rozhoduje, jak toast vypadá a jak se chová.
+
+### Odpočtová lišta
+
+Každý auto-zavírající toast má u spodní hrany tenkou **odpočtovou lištu**, která ubývá, jak toast stárne — uživatel tak vidí, za jak dlouho se zavře. **Najetí na jakýkoli toast pauzuje lištu i auto-zavření** (a po odjetí pokračuje). Lišta je defaultně zapnutá a obarvená podle typu notifikace.
+
+- Je **volitelná** — `:progress="false"` ji skryje.
+- **Trvalé toasty lištu nemají** — sticky toast neodpočítává, takže by neměl co ukazovat (viz níže).
+
+```blade
+<x-wire-notifications::toast-container :progress="false" />  {{-- bez odpočtové lišty --}}
+```
+
+### Trvalé toasty
+
+`->persistent()` (nebo `->duration(0)`) udělá toast **sticky**: zůstane, dokud ho uživatel nezavře, a nemá odpočtovou lištu. Ideální pro zprávy vyžadující rozhodnutí.
+
+```php
+NotificationManager::send(
+    Notification::warning('Platba potřebuje kontrolu, než se zúčtuje.')
+        ->title('Vyžaduje akci')
+        ->persistent()
+);
+```
+
+### Akční tlačítka
+
+Přidejte tlačítka, která po kliknutí dispatchnou Livewire událost — afordance „Undo". Hostitelská komponenta poslouchá přes `#[On(...)]`.
+
+```php
+use NyonCode\WireCore\Notifications\Notification;
+use NyonCode\WireCore\Notifications\NotificationAction;
+
+// zkratka: label + Livewire událost
+NotificationManager::send(
+    Notification::success('Položka smazána')->action('Vrátit', 'restore-record')
+);
+
+// plná kontrola
+NotificationManager::send(
+    Notification::success('Objednávka #1042 uložena')->action(
+        NotificationAction::make('Vrátit', 'restore-record')
+            ->payload(['id' => 1042])   // odešle se s dispatchnutou událostí
+            ->color('primary')          // akcent tlačítka (fallback na typ toastu)
+            ->keepOpen()                // po kliknutí toast nezavírat
+    )
+);
+```
+
+```php
+// v hostitelské Livewire komponentě
+#[On('restore-record')]
+public function restore(int $id): void
+{
+    // …
+}
+```
+
+`NotificationAction` je immutable hodnotový objekt: `make(label, event)`, `->payload([...])`, `->color(...)`, `->keepOpen()`. Klik dispatchne `Livewire.dispatch(event, payload)` a (pokud není `keepOpen()`) zavře toast.
+
+### Skládání a přetečení
+
+- **`stack`** sbalí toasty do úhledné hromádky; najetí na hromádku je rozevře do plného seznamu. Nejnovější toast je nejblíže kotvící hraně.
+- **`max`** omezí, kolik je jich vidět naráz; přebytek se sbalí do klikacího pillu **„+N more“**, který odhalí zbytek.
+
+```blade
+<x-wire-notifications::toast-container stack :max="5" />
+```
+
+### Přístupnost
+
+Kontejner je `aria-live="polite"` region (error toasty používají `role="alert"`), takže screen readery toasty ohlašují, jak přicházejí. Ctí i **`prefers-reduced-motion`**: při požadavku na omezený pohyb se hromádka nikdy nesbaluje/nerozevírá a přechody karet jsou vypnuté.
 
 ## Spouštění toastů z JavaScriptu
 

@@ -169,6 +169,35 @@ it('renders the card with heading and value', function () {
         ->and($html)->toContain('from-blue-500 to-blue-600');
 });
 
+// ─── Vertical (rotated) per-bar labels ────────────────────────────────────────
+
+it('does not use vertical labels by default and can enable them', function () {
+    expect(BarChartWidget::make()->hasVerticalLabels())->toBeFalse()
+        ->and(BarChartWidget::make()->verticalLabels()->hasVerticalLabels())->toBeTrue()
+        ->and(BarChartWidget::make()->verticalLabels(false)->hasVerticalLabels())->toBeFalse();
+});
+
+it('renders each bar label rotated vertically on both vertical variants when enabled', function () {
+    $item = ChartItem::make('Very Long Package Name')->value(60)->formattedValue('60%')->color('blue')->percentage(60);
+
+    $finance = BarChartWidget::make()->variant('finance')->verticalLabels()->items([$item])->toHtml();
+    expect($finance)->toContain('Very Long Package Name')
+        ->and($finance)->toContain('writing-mode: vertical-rl');
+
+    $system = BarChartWidget::make()->verticalLabels()->items([$item])->toHtml();
+    expect($system)->toContain('Very Long Package Name')
+        ->and($system)->toContain('writing-mode: vertical-rl');
+});
+
+it('keeps labels horizontal (no rotation) by default', function () {
+    $html = BarChartWidget::make()->variant('finance')
+        ->items([ChartItem::make('CPU')->value(60)->formattedValue('60%')->color('blue')->percentage(60)])
+        ->toHtml();
+
+    expect($html)->toContain('CPU')
+        ->and($html)->not->toContain('writing-mode: vertical-rl');
+});
+
 // ─── Card radius & partial selection ─────────────────────────────────────────
 
 it('maps the rounded value to a safe card radius class', function () {

@@ -17,6 +17,25 @@ it('configures a select filter', function () {
         ->and($column->getFilterPlaceholder())->toBe('Pick');
 });
 
+it('configures a multi-select filter', function () {
+    $column = TextColumn::make('role')->filterAsMultiSelect(['a' => 'A', 'b' => 'B'], 'Any');
+
+    expect($column->isFilterable())->toBeTrue()
+        ->and($column->getFilterType())->toBe('multi_select')
+        ->and($column->getFilterOptions())->toBe(['a' => 'A', 'b' => 'B'])
+        ->and($column->getFilterPlaceholder())->toBe('Any');
+});
+
+it('makes select filters searchable by default and can opt out', function () {
+    expect(TextColumn::make('role')->filterAsSelect(['a' => 'A'])->isFilterSearchable())->toBeTrue()
+        ->and(TextColumn::make('role')->filterAsMultiSelect(['a' => 'A'])->isFilterSearchable())->toBeTrue()
+        ->and(TextColumn::make('role')->filterAsSelect(['a' => 'A'])->filterSearchable(false)->isFilterSearchable())->toBeFalse();
+
+    // Searchable select renders the in-panel search input; disabling drops it.
+    expect(TextColumn::make('role')->filterAsSelect(['a' => 'A'])->renderFilter())->toContain('x-ref="searchInput"')
+        ->and(TextColumn::make('role')->filterAsSelect(['a' => 'A'])->filterSearchable(false)->renderFilter())->not->toContain('x-ref="searchInput"');
+});
+
 it('configures date, date range and number range filters', function () {
     $date = TextColumn::make('d')->filterAsDate('2026-01-01', '2026-12-31');
     expect($date->getFilterType())->toBe('date')
@@ -92,6 +111,19 @@ it('applies select filters for scalar and array values', function () {
     expect($array->toSql())->toContain('in (');
 });
 
+it('applies a multi-select filter as whereIn and skips an empty selection', function () {
+    $picked = TextColumn::make('role')
+        ->filterAsMultiSelect(['a' => 'A', 'b' => 'B'])
+        ->applyFilter(Task::query(), ['a', 'b']);
+    expect($picked->toSql())->toContain('in (');
+
+    // An empty array (nothing checked) must not constrain the query.
+    $empty = TextColumn::make('role')
+        ->filterAsMultiSelect(['a' => 'A'])
+        ->applyFilter(Task::query(), []);
+    expect($empty->toSql())->toBe(Task::query()->toSql());
+});
+
 it('applies date and date-range filters', function () {
     $date = TextColumn::make('due_at')->filterAsDate()->applyFilter(Task::query(), '2026-01-01');
     expect($date->getBindings())->toContain('2026-01-01');
@@ -163,7 +195,10 @@ it('renders nothing for a non-filterable column', function () {
 });
 
 it('renders a filter partial for each filter type', function () {
-    expect(TextColumn::make('a')->filterAsSelect(['x' => 'X'])->renderFilter())->toBeString()
+    // select + multi-select delegate to the canonical searchable combobox,
+    // bound to the column's columnFilters state path.
+    expect(TextColumn::make('a')->filterAsSelect(['x' => 'X'])->renderFilter())->toContain('tableState.columnFilters.a')
+        ->and(TextColumn::make('a')->filterAsMultiSelect(['x' => 'X', 'y' => 'Y'])->renderFilter())->toContain('tableState.columnFilters.a')
         ->and(TextColumn::make('a')->filterAsDate()->renderFilter())->toBeString()
         ->and(TextColumn::make('a')->filterAsDateRange()->renderFilter())->toBeString()
         ->and(TextColumn::make('a')->filterAsNumberRange()->renderFilter())->toBeString()

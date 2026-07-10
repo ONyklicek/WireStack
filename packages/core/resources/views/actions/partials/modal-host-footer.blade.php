@@ -17,20 +17,20 @@
     @endforeach
 
     {{-- Cancel --}}
-    <button type="button" wire:click="{{ $closeAction }}" class="{{ $secondaryButtonClasses }}">
+    <button type="button" wire:click="{{ $closeAction }}" data-testid="modal-cancel" class="{{ $secondaryButtonClasses }}">
         {{ $modalData['cancelLabel'] }}
     </button>
 
     {{-- Wizard back --}}
     @if($isWizard && $currentStep > 0)
-        <button type="button" wire:click="{{ $prevStepAction }}" class="{{ $secondaryButtonClasses }}">
+        <button type="button" wire:click="{{ $prevStepAction }}" data-testid="modal-back" class="{{ $secondaryButtonClasses }}">
             {{ $modalData['backLabel'] ?? __('Back') }}
         </button>
     @endif
 
     {{-- Wizard next --}}
     @if($isWizard && ! $isLastStep)
-        <button type="button" wire:click="{{ $nextStepAction }}" class="{{ $primaryButtonClasses }}">
+        <button type="button" wire:click="{{ $nextStepAction }}" data-testid="modal-next" class="{{ $primaryButtonClasses }}">
             {{ $modalData['nextLabel'] ?? __('Next') }}
         </button>
     @elseunless($hasInfolist)
@@ -40,6 +40,7 @@
             wire:click="{{ $submitAction }}"
             wire:loading.attr="disabled"
             wire:target="{{ $submitAction }}"
+            data-testid="modal-submit"
             @class(['inline-flex items-center gap-2', $primaryButtonClasses])
         >
             @include('wire-core::partials.spinner', ['wireTarget' => $submitAction, 'class' => 'h-4 w-4'])

@@ -73,7 +73,7 @@
 
         <input
             type="{{ $field->isMasked() ? 'password' : 'text' }}"
-            x-ref="digit-{{ $i }}"
+            x-ref="digit-{{ $i }}" data-testid="form-otp-{{ $field->getStatePath() }}-{{ $i }}"
             :value="digits[{{ $i }}]"
             @input="onInput({{ $i }}, $event)"
             @keydown="onKeydown({{ $i }}, $event)"

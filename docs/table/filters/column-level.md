@@ -12,6 +12,9 @@ TextColumn::make('status')
     ->filterable()
     ->filterAsSelect(['active' => 'Active', 'inactive' => 'Inactive'])
 
+BadgeColumn::make('role')
+    ->filterAsMultiSelect(['admin' => 'Admin', 'editor' => 'Editor']) // pick several → whereIn
+
 TextColumn::make('price')
     ->filterable()
     ->filterAsNumberRange(0, 10000)

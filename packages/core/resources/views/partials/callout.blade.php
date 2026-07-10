@@ -40,6 +40,8 @@
             <button
                 type="button"
                 @click="show = false"
+                data-testid="callout-dismiss"
+                aria-label="{{ __('Dismiss') }}"
                 class="ml-3 shrink-0 -mt-1 -mr-1 p-1 rounded-md hover:opacity-75 focus:outline-none"
             >
                 <span class="sr-only">{{ __('Dismiss') }}</span>

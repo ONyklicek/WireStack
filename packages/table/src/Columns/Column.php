@@ -28,6 +28,7 @@ use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireTable\Concerns\HasResponsive;
 use NyonCode\WireTable\Concerns\HasSummary;
 use NyonCode\WireTable\Concerns\HasView;
+use NyonCode\WireTable\Support\FilterControl;
 
 /** @phpstan-consistent-constructor */
 class Column extends DataComponent implements Htmlable
@@ -180,6 +181,9 @@ class Column extends DataComponent implements Htmlable
 
     /** @var array<string, string> Options for filter dropdowns */
     protected array $filterOptions = [];
+
+    /** @var bool Show a search input inside select / multi-select filter dropdowns. */
+    protected bool $filterSearchable = true;
 
     /** @var string|null Placeholder text for filter input */
     protected ?string $filterPlaceholder = null;
@@ -1396,6 +1400,42 @@ class Column extends DataComponent implements Htmlable
     }
 
     /**
+     * Configure as a multi-select column filter — the user can pick several
+     * values and the column matches any of them (`whereIn`). Renders a compact
+     * checkbox dropdown in the header row; accepts an array or an enum class.
+     *
+     * @param  array<string, string>|class-string  $options
+     */
+    public function filterAsMultiSelect(array|string $options, ?string $placeholder = null): static
+    {
+        $this->capabilities = $this->capabilities->add(Capability::Filterable);
+        $this->filterType = 'multi_select';
+        $this->filterOptions = EnumResolver::normalizeOptions($options);
+        if ($placeholder) {
+            $this->filterPlaceholder = $placeholder;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Toggle the in-panel search box on a select / multi-select column filter.
+     * On by default so large option lists are quick to narrow; call
+     * `->filterSearchable(false)` for a short list that needs no search.
+     */
+    public function filterSearchable(bool $condition = true): static
+    {
+        $this->filterSearchable = $condition;
+
+        return $this;
+    }
+
+    public function isFilterSearchable(): bool
+    {
+        return $this->filterSearchable;
+    }
+
+    /**
      * Configure as a date column filter.
      */
     public function filterAsDate(?string $minDate = null, ?string $maxDate = null): static
@@ -1596,8 +1636,8 @@ class Column extends DataComponent implements Htmlable
     public function applyFilterCondition(mixed $query, string $column, mixed $value): mixed
     {
         return match ($this->filterType) {
-            'select' => is_array($value)
-                ? $query->whereIn($column, $value)
+            'select', 'multi_select' => is_array($value)
+                ? (empty($value) ? $query : $query->whereIn($column, $value))
                 : $query->where($column, $value),
 
             'boolean' => $this->applyBooleanFilter($query, $column, $value),
@@ -1709,6 +1749,7 @@ class Column extends DataComponent implements Htmlable
 
         $viewName = match ($this->filterType) {
             'select' => 'tables.columns.partials.filter-select',
+            'multi_select' => 'tables.columns.partials.filter-multi-select',
             'date' => 'tables.columns.partials.filter-date',
             'date_range' => 'tables.columns.partials.filter-date-range',
             'number_range' => 'tables.columns.partials.filter-number-range',
@@ -1719,9 +1760,14 @@ class Column extends DataComponent implements Htmlable
         $namespacedView = "wire-table::$viewName";
         $resolvedView = view()->exists($namespacedView) ? $namespacedView : $viewName;
 
+        // Resolve the shared control style once (select-like types get the chevron
+        // variant) so every filter partial renders the same unified control.
+        $selectLike = in_array($this->filterType, ['select', 'multi_select', 'boolean'], true);
+
         return view($resolvedView, [
             'column' => $this,
             'value' => $value,
+            'controlClasses' => FilterControl::classes($selectLike),
         ])->render();
     }
 

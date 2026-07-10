@@ -76,8 +76,23 @@ form schema for validated flows.
 
 ### Notifications
 
-`Notification` is an immutable value object dispatched through a driver (session, livewire, flasher, null),
-selected by `wire-core.notifications.default`.
+`Notification` is an immutable value object dispatched through a driver (current-component, session, livewire,
+flasher, null), selected by `wire-core.notifications.default`. The built-in default is `CurrentComponentDriver`
+(decorates `SessionDriver`): it resolves the active Livewire component via `Livewire::current()` itself, so
+`NotificationManager::send($notification)` and the `InteractsWithNotifications`/`sendNotification` helpers no
+longer thread `$this`. A custom per-component driver that needs the component must wrap itself in
+`CurrentComponentDriver`.
+
+Fluent `Notification`: `->title()`, `->duration(ms)`, `->icon()`, `->position()`, `->persistent()` (sticky,
+duration 0, no countdown bar), and `->action('Undo', 'event')` / `->action(NotificationAction::make(...))` —
+action buttons dispatch a Livewire event on click (host listens with `#[On('event')]`). `NotificationAction`
+supports `->payload([...])`, `->color()`, `->keepOpen()`. The built-in drivers forward the full payload, so
+titles/actions/persistence survive the server round-trip.
+
+Toast container: `<x-wire-notifications::toast-container />` — props `position`, `duration`, `event-name`,
+`stack` (collapse into a pile that fans out on hover), `progress` (per-toast countdown bar, hover pauses it and
+the auto-dismiss), `max` (cap visible toasts, overflow into a "+N more" pill). Honors `prefers-reduced-motion`
+and exposes an `aria-live` region.
 
 ### Infolists
 
@@ -94,7 +109,7 @@ the rows to avoid N+1 when child entries read nested relation paths.
 ### Widgets
 
 `StatsOverviewWidget` / `Stat`, `ChartWidget` (+ `LineChartWidget`/`PieChartWidget`/`DoughnutChartWidget`
-presets and `->options([...])` Chart.js overrides), `BarChartWidget`, `TableWidget`, `CustomWidget`.
+presets and `->options([...])` Chart.js overrides), `BarChartWidget` (pure-CSS bars: `->type('vertical'|'horizontal')`, `->variant('finance'|'system')`, `->showGrid()`, `->verticalLabels()` to rotate each bar's label beside it for long names), `TableWidget`, `CustomWidget`.
 
 ### Audit log
 
@@ -103,6 +118,10 @@ rows automatically — the package registers the event subscriber itself, gated 
 `wire-core.audit.enabled`. No manual `Event::subscribe()` needed. Retention: configure
 `wire-core.audit.retention_days` and schedule `wire-core:audit-prune` (or run with `--days=N`).
 Suppress logging in seeders/imports with `AuditLogger::withoutAuditing(fn () => …)`.
+
+### Browser-testing hooks
+
+Every interactive control across the shared UI carries a stable `data-testid` (+ an accessible name/role where icon-only), so Pest v4 Browser Testing targets it at the user level: modals (`modal-close`, `slide-over-close`, `modal-cancel`/`modal-submit`/`modal-back`/`modal-next`, `confirmation-confirm`/`confirmation-cancel`, `modal-footer-action-{name}`), layout (`wizard-step-{i}`/`wizard-back`/`wizard-next`, `tab-{i}`, `section-toggle`, `callout-dismiss`), toasts (`toast-dismiss`, `toast-action-{i}`, `toast-expand`), the searchable select (`select-trigger`/`select-search`/`select-option-{value}`/`select-clear`), actions (`action-{name}` + header/bulk/menu variants), and infolist actions (`infolist-action-{name}`). Actions and options are also reachable by visible text/role.
 
 ### Icons & colors
 

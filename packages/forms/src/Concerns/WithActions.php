@@ -51,6 +51,7 @@ trait WithActions
         InteractsWithActionForms::resolveHaltModalForm insteadof InteractsWithActions;
     }
     use InteractsWithFieldActions;
+    use InteractsWithFileUploads;
     use InteractsWithNotifications;
     use InteractsWithRepeaters;
     use InteractsWithSelectCreation;

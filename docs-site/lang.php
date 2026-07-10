@@ -67,6 +67,8 @@ return [
         'Every Tailwind hue rendered through the canonical HasColor resolvers across solid, soft, badge, button, and text surfaces.' => 'Každý Tailwind odstín vykreslený přes kanonické HasColor resolvery napříč solid, soft, badge, button a text povrchy.',
         'Modal Surface' => 'Povrch modalu',
         'Real modal rendering from the shared core component set.' => 'Reálné vykreslení modalu ze sdílené sady core komponent.',
+        'Toast Notifications' => 'Toast notifikace',
+        'Countdown bar with hover-to-pause, action buttons, a collapsible stack, and a max-visible “+N more” cap.' => 'Odpočtová lišta s pauzou na hover, akční tlačítka, sbalitelná hromádka a strop „+N more“ pro počet viditelných.',
         'Widget Dashboard' => 'Dashboard widgetů',
         'A stats overview with sparklines and a Chart.js chart widget composed in a grid.' => 'Přehled statistik se sparkliny a Chart.js chart widgetem složeným v gridu.',
         'Chart Widget' => 'Chart widget',

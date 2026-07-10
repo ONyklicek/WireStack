@@ -78,7 +78,7 @@
         @if(in_array('bold', $toolbarButtons))
             <button
                     type="button"
-                    @click="exec('bold')"
+                    @click="exec('bold')" data-testid="form-editor-{{ $field->getStatePath() }}-bold"
                     :class="{ 'bg-gray-200 dark:bg-gray-600': activeFormats.bold }"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ __('Bold') }}"
@@ -90,7 +90,7 @@
         @if(in_array('italic', $toolbarButtons))
             <button
                     type="button"
-                    @click="exec('italic')"
+                    @click="exec('italic')" data-testid="form-editor-{{ $field->getStatePath() }}-italic"
                     :class="{ 'bg-gray-200 dark:bg-gray-600': activeFormats.italic }"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ __('Italic') }}"
@@ -102,7 +102,7 @@
         @if(in_array('underline', $toolbarButtons))
             <button
                     type="button"
-                    @click="exec('underline')"
+                    @click="exec('underline')" data-testid="form-editor-{{ $field->getStatePath() }}-underline"
                     :class="{ 'bg-gray-200 dark:bg-gray-600': activeFormats.underline }"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ __('Underline') }}"
@@ -114,7 +114,7 @@
         @if(in_array('strike', $toolbarButtons))
             <button
                     type="button"
-                    @click="exec('strikeThrough')"
+                    @click="exec('strikeThrough')" data-testid="form-editor-{{ $field->getStatePath() }}-strikeThrough"
                     :class="{ 'bg-gray-200 dark:bg-gray-600': activeFormats.strikeThrough }"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ __('Strikethrough') }}"
@@ -158,7 +158,7 @@
         @if(in_array('bulletList', $toolbarButtons))
             <button
                     type="button"
-                    @click="exec('insertUnorderedList')"
+                    @click="exec('insertUnorderedList')" data-testid="form-editor-{{ $field->getStatePath() }}-insertUnorderedList"
                     :class="{ 'bg-gray-200 dark:bg-gray-600': activeFormats.insertUnorderedList }"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ __('Bullet list') }}"
@@ -170,7 +170,7 @@
         @if(in_array('orderedList', $toolbarButtons))
             <button
                     type="button"
-                    @click="exec('insertOrderedList')"
+                    @click="exec('insertOrderedList')" data-testid="form-editor-{{ $field->getStatePath() }}-insertOrderedList"
                     :class="{ 'bg-gray-200 dark:bg-gray-600': activeFormats.insertOrderedList }"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ __('Numbered list') }}"
@@ -225,7 +225,7 @@
         @if(in_array('undo', $toolbarButtons))
             <button
                     type="button"
-                    @click="exec('undo')"
+                    @click="exec('undo')" data-testid="form-editor-{{ $field->getStatePath() }}-undo"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ __('Undo') }}"
             >
@@ -236,7 +236,7 @@
         @if(in_array('redo', $toolbarButtons))
             <button
                     type="button"
-                    @click="exec('redo')"
+                    @click="exec('redo')" data-testid="form-editor-{{ $field->getStatePath() }}-redo"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ __('Redo') }}"
             >
@@ -248,7 +248,7 @@
     {{-- Editable area --}}
     <div
             wire:ignore
-            x-ref="editor"
+            x-ref="editor" data-testid="form-editor-{{ $field->getStatePath() }}"
             contenteditable="{{ $field->isDisabled() || $field->isReadOnly() ? 'false' : 'true' }}"
             @input="onInput()"
             @click="updateActiveFormats()"

@@ -58,7 +58,7 @@
                         @endif
                     @endforeach
                     @if(!empty($subRowFilterValues))
-                        <button type="button" wire:click="resetSubRowFilters" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <button type="button" wire:click="resetSubRowFilters" data-testid="subrows-reset-filters" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                             ✕ {{ __('wire-table::messages.reset') }}
                         </button>
                     @endif
@@ -77,7 +77,7 @@
                                     @if($colSortable)
                                         @php $isActive = $activeSort && $activeSort['column'] === $subCol->getName(); @endphp
                                         <button type="button"
-                                                wire:click="sortSubRows('{{ $subCol->getName() }}')"
+                                                wire:click="sortSubRows('{{ $subCol->getName() }}')" data-testid="subrows-sort-{{ $subCol->getName() }}"
                                                 class="inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200 {{ $isActive ? 'text-gray-700 dark:text-gray-200' : '' }}">
                                             <span>{{ $subCol->getLabel() }}</span>
                                             @if($isActive)
@@ -134,7 +134,7 @@
                         <tr wire:key="sub-rows-more-{{ $recordKey }}">
                             <td colspan="{{ $totalColCount }}" class="px-3 py-2 text-center">
                                 <button type="button"
-                                        wire:click="showAllSubRows('{{ $recordKey }}')"
+                                        wire:click="showAllSubRows('{{ $recordKey }}')" data-testid="subrows-show-more"
                                         class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline">
                                     {{ __('wire-table::messages.show_more_count', ['count' => $remaining]) }}
                                 </button>

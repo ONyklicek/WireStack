@@ -39,6 +39,21 @@ Repeater::make('contacts')
     ->maxItems(10)
     ->addButtonLabel('Add contact')
     ->collapsible()
+    ->itemLabel(fn (array $state) => $state['name'] ?? null)   // pojmenované položky: „#1 Ada"
+```
+
+### Pojmenované položky
+
+Ve výchozím stavu je každý blok položky nadepsán svým číslem (`#1`, `#2`, …).
+`itemLabel()` přijme statický řetězec nebo closure nad stavem položky (a
+indexem) a zobrazí název vedle čísla — hodí se pro identifikaci sbalených
+položek. Label se překresluje v reaktivním cyklu položky, takže ho zkombinuj s
+polem `->live()`, aby se aktualizoval, jak uživatel píše.
+
+```php
+Repeater::make('contacts')
+    ->schema([TextInput::make('name')->live()])
+    ->itemLabel(fn (array $state, int $index) => $state['name'] ?? "Contact #{$index}");
 ```
 
 | Metoda | Účel |
@@ -57,6 +72,7 @@ Repeater::make('contacts')
 | `minItems(int\|null)` | Minimální počet položek |
 | `maxItems(int\|null)` | Maximální počet položek |
 | `addButtonLabel(string\|null)` | Label na tlačítku přidat |
+| `itemLabel(string\|Closure\|null)` | Název vedle čísla položky (`fn(array $state, int $index): ?string`) |
 | `disabled(bool\|Closure)` | Znepřístupnit ovládání add/delete/reorder |
 | `mutateRelationshipDataBeforeSaveUsing(Closure)` | Transformovat data položek před perzistencí |
 

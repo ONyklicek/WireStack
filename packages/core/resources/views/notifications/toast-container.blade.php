@@ -1,17 +1,124 @@
 {{-- Toast Notification Container --}}
-{{-- Listens for Livewire events and renders toast notifications with auto-dismiss. --}}
+{{-- Listens for Livewire events and renders toast notifications with a per-card --}}
+{{-- countdown bar, hover-to-pause, action buttons, an optional collapsible stack, --}}
+{{-- a max-visible overflow cap, and reduced-motion / screen-reader support. --}}
 <div
     x-data="{
         toasts: [],
+        hovered: false,
+        showAll: false,
+        reduceMotion: false,
+        stack: @js($stack),
+        progress: @js($progress),
+        topAnchored: @js($topAnchored()),
+        defaultDuration: {{ $duration }},
+        max: {{ $max }},
+        raf: null,
+        lastTs: null,
+
+        get expanded() {
+            // A stacked pile fans out while hovered; reduced motion never collapses.
+            return this.reduceMotion || ! this.stack || this.hovered;
+        },
+        get paused() {
+            // Hovering freezes every countdown (and the auto-dismiss with it).
+            return this.hovered;
+        },
+
         add(toast) {
             const id = Date.now() + Math.random();
-            this.toasts.push({ ...toast, id });
-            setTimeout(() => this.remove(id), toast.duration || {{ $duration }});
+            const raw = toast.duration;
+            const duration = (raw === null || raw === undefined)
+                ? this.defaultDuration
+                : Number(raw);
+            const sticky = ! (duration > 0);
+            this.toasts.push({ ...toast, id, duration, remaining: duration, sticky });
+            this.ensureLoop();
         },
         remove(id) {
             this.toasts = this.toasts.filter(t => t.id !== id);
+            if (this.max > 0 && this.toasts.length <= this.max) this.showAll = false;
         },
+
+        // Newest first: closest to the anchor edge and on top of the pile.
+        renderList() {
+            return [...this.toasts].reverse();
+        },
+        // Cap to `max` newest toasts unless the overflow has been expanded.
+        visibleList() {
+            const list = this.renderList();
+            if (this.max > 0 && ! this.showAll && list.length > this.max) {
+                return list.slice(0, this.max);
+            }
+            return list;
+        },
+        hiddenCount() {
+            return Math.max(0, this.toasts.length - this.visibleList().length);
+        },
+
+        // Fraction of life remaining, for the countdown bar width.
+        barWidth(toast) {
+            if (toast.sticky || ! toast.duration) return 0;
+            return Math.max(0, Math.min(100, (toast.remaining / toast.duration) * 100));
+        },
+        // Per-card transform for the collapsed pile (0 = front, at the anchor).
+        cardStyle(depth) {
+            if (! this.stack || this.expanded) return '';
+            const sign = this.topAnchored ? 1 : -1;
+            const offset = depth * 14 * sign;
+            const scale = Math.max(1 - depth * 0.05, 0.9);
+            const opacity = depth > 2 ? 0 : Math.max(1 - depth * 0.2, 0);
+            const events = depth === 0 ? 'auto' : 'none';
+            return `grid-area:1/1;transform:translateY(${offset}px) scale(${scale});opacity:${opacity};z-index:${100 - depth};pointer-events:${events};`;
+        },
+        // Semantic accent for an action button (falls back to the toast type).
+        actionColor(action, toast) {
+            const map = {
+                success: 'text-emerald-600 dark:text-emerald-400',
+                error: 'text-red-600 dark:text-red-400',
+                warning: 'text-amber-600 dark:text-amber-400',
+                info: 'text-blue-600 dark:text-blue-400',
+                primary: 'text-indigo-600 dark:text-indigo-400',
+                gray: 'text-gray-600 dark:text-gray-300',
+            };
+            return map[action.color] ?? map[toast.type] ?? 'text-gray-900 dark:text-white';
+        },
+        handleAction(toast, action) {
+            if (action.event && window.Livewire) {
+                window.Livewire.dispatch(action.event, action.payload || {});
+            }
+            if (action.close !== false) this.remove(toast.id);
+        },
+
+        ensureLoop() {
+            if (this.raf !== null) return;
+            this.lastTs = null;
+            this.raf = requestAnimationFrame(this.loop.bind(this));
+        },
+        loop(ts) {
+            if (this.lastTs === null) this.lastTs = ts;
+            const dt = ts - this.lastTs;
+            this.lastTs = ts;
+
+            if (! this.paused) {
+                for (const t of this.toasts) {
+                    if (t.sticky) continue;
+                    t.remaining = Math.max(0, t.remaining - dt);
+                }
+                this.toasts
+                    .filter(t => ! t.sticky && t.remaining <= 0)
+                    .forEach(t => this.remove(t.id));
+            }
+
+            if (this.toasts.length === 0) {
+                this.raf = null;
+                return;
+            }
+            this.raf = requestAnimationFrame(this.loop.bind(this));
+        },
+
         init() {
+            this.reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
             const eventName = @js($eventName);
             const dispatch = (payload) => window.dispatchEvent(
                 new CustomEvent(eventName, { detail: payload })
@@ -38,54 +145,114 @@
         }
     }"
     x-on:{{ $eventName }}.window="add($event.detail)"
-    class="fixed z-[99] {{ $positionClasses() }} flex flex-col gap-2 pointer-events-none"
-    style="max-width: 24rem;"
+    class="fixed z-[99] {{ $positionClasses() }} pointer-events-none"
+    style="width: 24rem; max-width: calc(100vw - 2rem);"
 >
-    <template x-for="toast in toasts" :key="toast.id">
-        <div
-            x-show="true"
-            x-transition:enter="transform ease-out duration-300 transition"
-            x-transition:enter-start="translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-2"
-            x-transition:enter-end="translate-y-0 opacity-100 sm:translate-x-0"
-            x-transition:leave="transition ease-in duration-200"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-            class="pointer-events-auto w-full overflow-hidden rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black/5 dark:ring-white/10"
-        >
-            <div class="p-4">
-                <div class="flex items-start gap-3">
-                    {{-- Icon --}}
-                    <div class="flex-shrink-0">
-                        <template x-if="toast.type === 'success'">
-                            <x-wire::icon name="outline:check-circle" size="h-5 w-5" class="text-emerald-500" />
-                        </template>
-                        <template x-if="toast.type === 'error'">
-                            <x-wire::icon name="outline:exclamation-circle" size="h-5 w-5" class="text-red-500" />
-                        </template>
-                        <template x-if="toast.type === 'warning'">
-                            <x-wire::icon name="outline:exclamation-triangle" size="h-5 w-5" class="text-amber-500" />
-                        </template>
-                        <template x-if="toast.type === 'info'">
-                            <x-wire::icon name="outline:information-circle" size="h-5 w-5" class="text-blue-500" />
-                        </template>
-                    </div>
+    <div
+        @mouseenter="hovered = true"
+        @mouseleave="hovered = false"
+        role="status"
+        aria-live="polite"
+        aria-atomic="false"
+        class="pointer-events-auto"
+        :class="stack && ! expanded
+            ? 'grid'
+            : (topAnchored ? 'flex flex-col gap-2' : 'flex flex-col-reverse gap-2')"
+    >
+        <template x-for="(toast, index) in visibleList()" :key="toast.id">
+            <div
+                x-show="true"
+                x-transition:enter="transform ease-out duration-300 transition motion-reduce:transition-none"
+                x-transition:enter-start="translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-2"
+                x-transition:enter-end="translate-y-0 opacity-100 sm:translate-x-0"
+                x-transition:leave="transition ease-in duration-200 motion-reduce:transition-none"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                :style="cardStyle(index)"
+                :role="toast.type === 'error' ? 'alert' : 'status'"
+                class="w-full overflow-hidden rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black/5 dark:ring-white/10 transition-[transform,opacity] duration-300 ease-out motion-reduce:transition-none"
+            >
+                <div class="p-4">
+                    <div class="flex items-start gap-3">
+                        {{-- Icon --}}
+                        <div class="flex-shrink-0">
+                            <template x-if="toast.type === 'success'">
+                                <x-wire::icon name="outline:check-circle" size="h-5 w-5" class="text-emerald-500" />
+                            </template>
+                            <template x-if="toast.type === 'error'">
+                                <x-wire::icon name="outline:exclamation-circle" size="h-5 w-5" class="text-red-500" />
+                            </template>
+                            <template x-if="toast.type === 'warning'">
+                                <x-wire::icon name="outline:exclamation-triangle" size="h-5 w-5" class="text-amber-500" />
+                            </template>
+                            <template x-if="toast.type === 'info'">
+                                <x-wire::icon name="outline:information-circle" size="h-5 w-5" class="text-blue-500" />
+                            </template>
+                        </div>
 
-                    {{-- Content --}}
-                    <div class="flex-1 min-w-0">
-                        <p x-show="toast.title" x-text="toast.title" class="text-sm font-semibold text-gray-900 dark:text-white"></p>
-                        <p x-text="toast.message" class="text-sm text-gray-600 dark:text-gray-300" :class="{ 'mt-1': toast.title }"></p>
-                    </div>
+                        {{-- Content --}}
+                        <div class="flex-1 min-w-0">
+                            <p x-show="toast.title" x-text="toast.title" class="text-sm font-semibold text-gray-900 dark:text-white"></p>
+                            <p x-text="toast.message" class="text-sm text-gray-600 dark:text-gray-300" :class="{ 'mt-1': toast.title }"></p>
 
-                    {{-- Close button --}}
-                    <button
-                        @click="remove(toast.id)"
-                        class="flex-shrink-0 rounded-lg p-1 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
-                    >
-                        <x-wire::icon name="outline:x-mark" size="h-4 w-4" />
-                        <span class="sr-only">{{ __('Close') }}</span>
-                    </button>
+                            {{-- Action buttons --}}
+                            <template x-if="toast.actions && toast.actions.length">
+                                <div class="mt-2 flex flex-wrap items-center gap-4">
+                                    <template x-for="(action, ai) in toast.actions" :key="ai">
+                                        <button
+                                            type="button"
+                                            @click="handleAction(toast, action)"
+                                            :data-testid="'toast-action-' + ai"
+                                            class="text-sm font-semibold hover:opacity-80 focus:outline-none focus-visible:underline"
+                                            :class="actionColor(action, toast)"
+                                            x-text="action.label"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+
+                        {{-- Close button --}}
+                        <button
+                            type="button"
+                            @click="remove(toast.id)"
+                            data-testid="toast-dismiss"
+                            aria-label="{{ __('Close') }}"
+                            class="flex-shrink-0 rounded-lg p-1 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
+                        >
+                            <x-wire::icon name="outline:x-mark" size="h-4 w-4" />
+                            <span class="sr-only">{{ __('Close') }}</span>
+                        </button>
+                    </div>
                 </div>
+
+                {{-- Countdown bar --}}
+                <template x-if="progress && ! toast.sticky">
+                    <div class="h-1 w-full bg-gray-100 dark:bg-white/5">
+                        <div
+                            class="h-full"
+                            :class="{
+                                'bg-emerald-500': toast.type === 'success',
+                                'bg-red-500': toast.type === 'error',
+                                'bg-amber-500': toast.type === 'warning',
+                                'bg-blue-500': toast.type === 'info',
+                            }"
+                            :style="`width:${barWidth(toast)}%`"
+                        ></div>
+                    </div>
+                </template>
             </div>
-        </div>
-    </template>
+        </template>
+
+        {{-- Overflow indicator: reveals the hidden (oldest) toasts on click --}}
+        <template x-if="hiddenCount() > 0">
+            <button
+                type="button"
+                @click="showAll = true"
+                data-testid="toast-expand"
+                class="pointer-events-auto self-center rounded-full bg-gray-900/80 px-3 py-1 text-xs font-medium text-white shadow-lg backdrop-blur hover:bg-gray-900 focus:outline-none dark:bg-white/15 dark:hover:bg-white/25"
+                x-text="'+' + hiddenCount() + ' {{ __('more') }}'"
+            ></button>
+        </template>
+    </div>
 </div>

@@ -116,7 +116,7 @@
                     <button
                         type="button"
                         @mousedown.prevent
-                        @click="{{ $b['action'] }}"
+                        @click="{{ $b['action'] }}" data-testid="form-editor-{{ $field->getStatePath() }}-{{ $loop->index }}"
                         :class="{ 'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-white': {{ $b['active'] }} }"
                         title="{{ $b['title'] }}"
                         class="inline-flex items-center justify-center w-7 h-7 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-100"
@@ -134,7 +134,7 @@
 
     {{-- ─── Editor mount point ─────────────────────────────────────── --}}
     <div
-        x-ref="editorContent"
+        x-ref="editorContent" data-testid="form-editor-{{ $field->getStatePath() }}"
         wire:ignore
         style="--tt-min-height: {{ $field->getMinHeight() }}px"
         @class([

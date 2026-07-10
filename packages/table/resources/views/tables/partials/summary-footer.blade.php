@@ -26,7 +26,7 @@
                         <div class="inline-flex rounded-md border border-gray-200 dark:border-gray-600 overflow-hidden text-xs">
                             @foreach($summaryScopeOptions as $option)
                                 <button type="button"
-                                        wire:click="setSummaryScope('{{ $option }}')"
+                                        wire:click="setSummaryScope('{{ $option }}')" data-testid="summary-scope-{{ $option }}"
                                         @class([
                                             'px-2.5 py-1 font-medium transition-colors',
                                             'bg-primary-600 text-white' => $summaryScope === $option,

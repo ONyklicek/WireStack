@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Notifications;
 
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
+use NyonCode\WireCore\Notifications\Drivers\CurrentComponentDriver;
 use NyonCode\WireCore\Notifications\Drivers\SessionDriver;
 
 /**
@@ -27,16 +28,15 @@ use NyonCode\WireCore\Notifications\Drivers\SessionDriver;
  *
  * ─── Sending notifications ─────────────────────────────────────
  *
- *   NotificationManager::send(
- *       Notification::success('Uloženo'),
- *       driver: $table->getNotificationDriver(),
- *       livewireComponent: $this,
- *   );
+ * The default driver resolves the active Livewire component itself
+ * (see CurrentComponentDriver), so no component has to be passed:
+ *
+ *   NotificationManager::send(Notification::success('Uloženo'));
  *
  * Or use the convenience methods:
  *
- *   NotificationManager::success('Uloženo', $driver, $this);
- *   NotificationManager::error('Chyba', $driver, $this);
+ *   NotificationManager::success('Uloženo');
+ *   NotificationManager::error('Chyba');
  */
 final class NotificationManager
 {
@@ -76,11 +76,14 @@ final class NotificationManager
 
     /**
      * Get the global default notification driver.
-     * Falls back to SessionDriver if none configured.
+     *
+     * Falls back to a CurrentComponentDriver wrapping the backwards-compatible
+     * SessionDriver: the driver resolves the active Livewire component itself,
+     * so call-sites don't have to pass it.
      */
     public static function getDefaultDriver(): NotificationDriver
     {
-        return self::$defaultDriver ??= new SessionDriver;
+        return self::$defaultDriver ??= new CurrentComponentDriver(new SessionDriver);
     }
 
     // ─── Convenience shortcuts ─────────────────────────────────

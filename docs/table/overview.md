@@ -349,17 +349,38 @@ selection-scope totals stay live.
 // Custom CSS class on <thead>
 ->headerClass(string $class)
 
-// Custom CSS class on <tr>
+// Custom CSS class on <tr>, static or computed per record
 ->rowClass(string|Closure $class)
+
+// Tint the whole row with a semantic color, static or computed per record
+->rowColor(string|Closure|null $color)
 ```
 
-Dynamic row classes:
+**Conditional row color.** `rowColor()` tints an entire row using the same
+semantic palette as badges and every other surface (`success`, `warning`,
+`danger`, `info`, `primary`, `gray`, or any raw Tailwind hue). Return `null`
+from the Closure to leave a row untinted. A tinted row automatically gets a
+matching same-hue hover and drops the neutral hover/zebra striping, so the
+color always reads cleanly: [tl! focus:start]
+
 ```php
-->rowClass(fn (User $record) => match(true) {
-    $record->is_banned => 'bg-red-50 dark:bg-red-900/10',
-    $record->is_admin => 'bg-blue-50 dark:bg-blue-900/10',
-    default => '',
+->rowColor(fn (Invoice $record) => match ($record->status) {
+    'overdue' => 'danger',
+    'pending' => 'warning',
+    'paid'    => 'success',
+    default   => null,
 })
+``` <!-- [tl! focus:end] -->
+
+Prefer `rowColor()` over hand-written background classes — it resolves through
+the canonical `HasColor` owner, so it stays consistent with the rest of the UI
+and works in light and dark mode. Use `rowClass()` when you need arbitrary
+utilities (font weight, ring, opacity) rather than a background tint; both can
+be combined on the same table:
+
+```php
+->rowColor(fn (Invoice $r) => $r->isOverdue() ? 'danger' : null)
+->rowClass(fn (Invoice $r) => $r->isOverdue() ? 'font-semibold' : null)
 ```
 
 ### Record URL (Clickable Rows)

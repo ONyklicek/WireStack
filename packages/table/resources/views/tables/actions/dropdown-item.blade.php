@@ -27,7 +27,7 @@
 
 @if($url && !$disabled)
     <a href="{{ $url }}" @if($action->shouldOpenUrlInNewTab()) target="_blank" @endif class="{{ $classes }}"
-       role="menuitem">
+       role="menuitem" data-testid="menu-action-{{ $action->getName() }}">
         @if($icon)
             {!! $action->renderIconSvg($icon, 'mr-3 h-4 w-4 text-gray-400 group-hover:text-gray-500 dark:group-hover:text-gray-300') !!}
         @endif
@@ -37,7 +37,7 @@
         @endif
     </a>
 @elseif($disabled)
-    <span class="{{ $classes }}" role="menuitem">
+    <span class="{{ $classes }}" role="menuitem" data-testid="menu-action-{{ $action->getName() }}" aria-disabled="true">
         @if($icon)
             {!! $action->renderIconSvg($icon, 'mr-3 h-4 w-4') !!}
         @endif
@@ -62,6 +62,7 @@
             @endif
             class="{{ $classes }}"
             role="menuitem"
+            data-testid="menu-action-{{ $actionName }}"
     >
         @if($icon)
             {!! $action->renderIconSvg($icon, 'mr-3 h-4 w-4 text-gray-400 group-hover:text-gray-500 dark:group-hover:text-gray-300') !!}

@@ -39,6 +39,21 @@ const captures = [
   { slug: 'core-overview', path: 'core-overview' },
   { slug: 'palette', path: 'palette' },
   { slug: 'core-modal', path: 'core-modal', selector: '[role="dialog"] .transform', pad: 88 },
+  {
+    slug: 'core-toasts',
+    path: 'core-toasts',
+    fullPage: true,
+    viewport: { width: 1440, height: 980 },
+    // Toasts live in fixed viewport corners, so fire a representative set and
+    // capture the whole frame instead of clipping to the panel.
+    action: `
+      const fire = (ev, detail) => window.dispatchEvent(new CustomEvent(ev, { detail }));
+      fire('table-notification', { type: 'success', title: 'Deleted', message: 'Item deleted', actions: [{ label: 'Undo', event: 'demo-undo', color: 'primary', close: true }] });
+      fire('table-notification', { type: 'warning', title: 'Action required', message: 'Payment needs review before it can settle.', duration: 0, actions: [{ label: 'Review now', event: 'demo-undo', close: true }] });
+      ['success','error','warning','info','info'].forEach((t,i)=>fire('demo-stack',{type:t,message:'Stacked '+(i+1)}));
+      for (let i=1;i<=8;i++) fire('demo-max',{type:['success','error','warning','info'][i%4],message:'Queued '+i});
+    `,
+  },
   { slug: 'widgets-overview', path: 'widgets-overview' },
   { slug: 'widgets-chart', path: 'widgets-chart' },
   { slug: 'widgets-bar-chart', path: 'widgets-bar-chart' },
@@ -78,17 +93,38 @@ try {
 
   await page('Page.enable');
   await page('Runtime.enable');
-  await page('Emulation.setDeviceMetricsOverride', {
-    width: 1600, height: 1600, deviceScaleFactor: 2, mobile: false,
-  });
 
   for (const capture of activeCaptures) {
     const url = `${previewBase}/${capture.path}`;
     const selector = capture.selector ?? '[data-preview-root]';
 
+    // Per-capture viewport (fixed-corner content needs a tighter frame).
+    const viewport = capture.viewport ?? { width: 1600, height: 1600 };
+    await page('Emulation.setDeviceMetricsOverride', {
+      width: viewport.width, height: viewport.height, deviceScaleFactor: 2, mobile: false,
+    });
+
     await page('Page.navigate', { url });
     await waitForLoad(cdp, sessionId);
     await sleep(2200);
+
+    // Optional pre-capture interaction (e.g. fire toasts before the shot).
+    if (capture.action) {
+      await page('Runtime.evaluate', { expression: capture.action, awaitPromise: true });
+      await sleep(capture.wait ?? 900);
+    }
+
+    // Full-page captures skip the element clip (content lives in fixed corners).
+    if (capture.fullPage) {
+      const { data } = await page('Page.captureScreenshot', {
+        format: 'png',
+        captureBeyondViewport: true,
+        clip: { x: 0, y: 0, width: viewport.width, height: viewport.height, scale: 1 },
+      });
+      await writeFile(new URL(`${capture.slug}.png`, outputDir), Buffer.from(data, 'base64'));
+      console.log(`captured ${capture.slug}`);
+      continue;
+    }
 
     const { result } = await page('Runtime.evaluate', {
       expression: `(() => {
