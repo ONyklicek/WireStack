@@ -32,6 +32,9 @@ return [
     // Filters
     'filters' => 'Filtry',
     'filter_all' => 'Vše',
+    'filter_search' => 'Hledat...',
+    'filter_no_results' => 'Nic nenalezeno',
+    'filter_selected_count' => '{1}:count vybrán|[2,4]:count vybrány|[5,*]:count vybráno',
     'filter_yes' => 'Ano',
     'filter_no' => 'Ne',
     'filter_min' => 'Min',
@@ -67,12 +70,14 @@ return [
     'copy' => 'Kopírovat',
     'actions_label' => 'Akce',
     'toggle_columns' => 'Přepnout sloupce',
+    'reset_columns' => 'Obnovit sloupce',
     'export_label' => 'Export',
     'import_label' => 'Import',
     'import_result' => 'Naimportováno :imported řádků, :failed selhalo.',
 
     // Selection
     'select_all' => 'Vybrat vše',
+    'select_row' => 'Vybrat řádek',
     'deselect' => 'Zrušit výběr',
 
     // Pagination
@@ -80,6 +85,9 @@ return [
     'showing' => 'Zobrazuje se',
     'of' => 'z',
     'records' => 'záznamů',
+    'pagination_previous' => 'Předchozí stránka',
+    'pagination_next' => 'Další stránka',
+    'pagination_goto' => 'Přejít na stránku :page',
 
     // Search
     'search' => 'Hledat',

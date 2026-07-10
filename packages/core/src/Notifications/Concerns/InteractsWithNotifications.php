@@ -35,7 +35,7 @@ trait InteractsWithNotifications
      */
     public function notify(Notification $notification): void
     {
-        NotificationManager::send($notification, $this->notificationDriver, $this);
+        NotificationManager::send($notification, $this->notificationDriver);
     }
 
     /**

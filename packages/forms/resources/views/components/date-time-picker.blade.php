@@ -274,7 +274,7 @@
                     type="text"
                     id="{{ $fieldId }}"
                     :value="displayValue"
-                    @click="open = !open"
+                    @click="open = !open" data-testid="form-datetime-{{ $field->getStatePath() }}-trigger"
                     @keydown.escape="open = false"
                     readonly
                     @if($field->getPlaceholder()) placeholder="{{ $field->getPlaceholder() }}" @endif
@@ -348,12 +348,12 @@
             @if($hasDate)
                 {{-- Month/year navigation --}}
                 <div class="flex items-center justify-between mb-3">
-                    <button type="button" @click="prevMonth()"
+                    <button type="button" @click="prevMonth()" data-testid="form-datetime-{{ $field->getStatePath() }}-prev-month" aria-label="Previous month"
                             class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors duration-150">
                         <x-wire::icon name="chevron-left" class="h-4 w-4"/>
                     </button>
                     <span class="text-sm font-semibold text-gray-900 dark:text-white" x-text="monthYearLabel"></span>
-                    <button type="button" @click="nextMonth()"
+                    <button type="button" @click="nextMonth()" data-testid="form-datetime-{{ $field->getStatePath() }}-next-month" aria-label="Next month"
                             class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors duration-150">
                         <x-wire::icon name="chevron-right" class="h-4 w-4"/>
                     </button>
@@ -373,6 +373,7 @@
                         <button
                                 type="button"
                                 @click="cell.current && selectDate(cell.date)"
+                                :data-testid="cell.current ? 'form-datetime-{{ $field->getStatePath() }}-day-' + cell.day : null"
                                 :disabled="!cell.current || isDisabled(cell.date)"
                                 :class="{
                                 'text-gray-900 dark:text-white': cell.current && !isDisabled(cell.date),
@@ -394,13 +395,13 @@
                 <div @class(['flex items-center justify-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-600 mt-3' => $hasDate, 'flex items-center justify-center gap-2' => !$hasDate])>
                     {{-- Hours --}}
                     <div class="flex flex-col items-center">
-                        <button type="button" @click="adjustHours(1)"
+                        <button type="button" @click="adjustHours(1)" data-testid="form-datetime-{{ $field->getStatePath() }}-hours-up" aria-label="Hours up"
                                 class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
                             <x-wire::icon name="chevron-up" class="h-4 w-4"/>
                         </button>
                         <span class="w-8 text-center text-sm font-medium text-gray-900 dark:text-white tabular-nums"
                               x-text="String(hours).padStart(2, '0')"></span>
-                        <button type="button" @click="adjustHours(-1)"
+                        <button type="button" @click="adjustHours(-1)" data-testid="form-datetime-{{ $field->getStatePath() }}-hours-down" aria-label="Hours down"
                                 class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
                             <x-wire::icon name="chevron-down" class="h-4 w-4"/>
                         </button>
@@ -410,13 +411,13 @@
 
                     {{-- Minutes --}}
                     <div class="flex flex-col items-center">
-                        <button type="button" @click="adjustMinutes(1)"
+                        <button type="button" @click="adjustMinutes(1)" data-testid="form-datetime-{{ $field->getStatePath() }}-minutes-up" aria-label="Minutes up"
                                 class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
                             <x-wire::icon name="chevron-up" class="h-4 w-4"/>
                         </button>
                         <span class="w-8 text-center text-sm font-medium text-gray-900 dark:text-white tabular-nums"
                               x-text="String(minutes).padStart(2, '0')"></span>
-                        <button type="button" @click="adjustMinutes(-1)"
+                        <button type="button" @click="adjustMinutes(-1)" data-testid="form-datetime-{{ $field->getStatePath() }}-minutes-down" aria-label="Minutes down"
                                 class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
                             <x-wire::icon name="chevron-down" class="h-4 w-4"/>
                         </button>
@@ -427,13 +428,13 @@
 
                         {{-- Seconds --}}
                         <div class="flex flex-col items-center">
-                            <button type="button" @click="adjustSeconds(1)"
+                            <button type="button" @click="adjustSeconds(1)" data-testid="form-datetime-{{ $field->getStatePath() }}-seconds-up" aria-label="Seconds up"
                                     class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
                                 <x-wire::icon name="chevron-up" class="h-4 w-4"/>
                             </button>
                             <span class="w-8 text-center text-sm font-medium text-gray-900 dark:text-white tabular-nums"
                                   x-text="String(seconds).padStart(2, '0')"></span>
-                            <button type="button" @click="adjustSeconds(-1)"
+                            <button type="button" @click="adjustSeconds(-1)" data-testid="form-datetime-{{ $field->getStatePath() }}-seconds-down" aria-label="Seconds down"
                                     class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
                                 <x-wire::icon name="chevron-down" class="h-4 w-4"/>
                             </button>
@@ -444,12 +445,12 @@
 
             {{-- Footer --}}
             <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-                <button type="button" @click="clear(); open = false"
+                <button type="button" @click="clear(); open = false" data-testid="form-datetime-{{ $field->getStatePath() }}-clear"
                         class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
                     {{ __('Clear') }}
                 </button>
                 @if($hasDate && $hasTime)
-                    <button type="button" @click="open = false"
+                    <button type="button" @click="open = false" data-testid="form-datetime-{{ $field->getStatePath() }}-done"
                             class="text-xs font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors duration-150">
                         {{ __('Done') }}
                     </button>

@@ -59,6 +59,43 @@ class RepeaterReactivityComponent extends Component
     }
 }
 
+class RepeaterItemLabelComponent extends Component
+{
+    use WithForms;
+
+    /** @var array<string, mixed> */
+    public array $data = [
+        'contacts' => [
+            ['name' => 'Ada'],
+            ['name' => 'Grace'],
+        ],
+    ];
+
+    public function form(Form $form): Form
+    {
+        return $form
+            ->statePath('data')
+            ->schema([
+                Repeater::make('contacts')
+                    ->schema([TextInput::make('name')])
+                    ->itemLabel(fn (array $state) => 'Contact: '.($state['name'] ?? '?')),
+            ]);
+    }
+
+    public function render(): string
+    {
+        return '<div>{{ $this->form }}</div>';
+    }
+}
+
+test('repeater renders a per-item label next to each item number', function () {
+    Livewire::test(RepeaterItemLabelComponent::class)
+        ->assertSeeHtml('#1')
+        ->assertSeeHtml('#2')
+        ->assertSee('Contact: Ada')      // label derived from item 0's state
+        ->assertSee('Contact: Grace');   // label derived from item 1's state
+});
+
 test('afterStateUpdated fires for a field inside a repeater item and $set writes into that item', function () {
     Livewire::test(RepeaterReactivityComponent::class)
         ->set('data.contacts.1.name', 'LOVELACE')

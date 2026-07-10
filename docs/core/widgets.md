@@ -337,6 +337,7 @@ BarChartWidget::make()
     ->showGrid()           // 0% / 25% / 50% / 75% / 100% guide lines
     ->showMenu()           // a "⋯" options affordance in the card header
     ->maxValue(100)        // percentage mode (0–100 track)
+    ->verticalLabels()     // rotate each bar's label vertically beside it (fits long names)
     ->items([
         ChartItem::make('CPU')->value(72)->formattedValue('72 %')->icon('cpu-chip')->color('blue')->percentage(72),
         ChartItem::make('RAM')->value(54)->formattedValue('54 %')->icon('circle-stack')->color('green')->percentage(54),
@@ -410,6 +411,8 @@ ChartItem::make('CPU')->percentage(120);  // throws InvalidArgumentException (0�
 ->getMaxValue(): ?float
 ->height(int $px)                    // vertical plot height (default 240)
 ->getHeight(): int
+->verticalLabels(bool $on = true)    // rotate each bar's label vertically beside it (vertical charts; fits long names)
+->hasVerticalLabels(): bool
 ->rounded(string $scale)             // card radius: 'lg' | 'xl' | '2xl' (default) | '3xl' | …
 ->getRounded(): string
 ->percentageFor(ChartItem $item): float   // resolved 0–100 fill

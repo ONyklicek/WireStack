@@ -9,6 +9,7 @@
         <input
             type="checkbox"
             id="{{ $field->getId() }}"
+            data-testid="form-checkbox-{{ $field->getStatePath() }}"
             {{ $wireAttr }}="{{ $field->getWireModelAttribute() }}"
             @if($field->isDisabled()) disabled @endif
             @if($field->isRequired()) required @endif

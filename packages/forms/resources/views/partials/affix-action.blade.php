@@ -6,7 +6,8 @@
 @endphp
 <button
     type="button"
-    wire:click="callFieldAction('{{ $statePath }}', '{{ $action->getName() }}')"
+    wire:click="callFieldAction('{{ $statePath }}', '{{ $action->getName() }}')" data-testid="field-action-{{ $statePath }}-{{ $action->getName() }}"
+    @if($action->getLabel()) aria-label="{{ $action->getLabel() }}" @endif
     wire:loading.attr="disabled"
     wire:target="callFieldAction"
     @if($action->getTooltip()) title="{{ $action->getTooltip() }}" @endif

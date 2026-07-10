@@ -6,6 +6,7 @@ namespace NyonCode\WireForms\Forms\Runtime;
 
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\UploadedFile;
 use InvalidArgumentException;
 use NyonCode\WireCore\Core\Hydration\CastResolver;
 use NyonCode\WireCore\Core\Hydration\Dehydrator;
@@ -14,6 +15,7 @@ use NyonCode\WireCore\Core\Plugin\Hooks\FormSavedPayload;
 use NyonCode\WireCore\Core\Plugin\Hooks\FormSavingPayload;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
+use NyonCode\WireForms\Components\FileUpload;
 use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Forms\Config\FormConfig;
 
@@ -47,6 +49,11 @@ final class SaveHandler
                 return null;
             }
         }
+
+        // 2.5 Store file uploads (store-on-submit): move validated temporary
+        // uploads to permanent storage and replace them with their paths, so an
+        // abandoned form never leaves an orphaned file behind.
+        $data = $this->storeFileUploads($data);
 
         // 3. Plugin hook: form.saving (can modify data)
         if (app()->bound(PluginManager::class)) {
@@ -148,6 +155,75 @@ final class SaveHandler
         $instance->save();
 
         return $instance;
+    }
+
+    /**
+     * Move any pending file uploads in the data to permanent storage and replace
+     * them with their stored paths, keeping already-stored paths as-is (merge).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function storeFileUploads(array $data): array
+    {
+        foreach ($this->collectFileUploadFields($this->config->schema) as $field) {
+            $name = $field->getName();
+
+            if (! array_key_exists($name, $data)) {
+                continue;
+            }
+
+            $data[$name] = $this->storeFieldFiles($field, $data[$name]);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Store a single FileUpload field's value: freshly-uploaded files become
+     * paths, existing string paths pass through. A multiple field yields a list
+     * of paths; a single field yields one path (or null).
+     */
+    private function storeFieldFiles(FileUpload $field, mixed $value): mixed
+    {
+        $values = match (true) {
+            is_array($value) => $value,
+            $value === null || $value === '' => [],
+            default => [$value],
+        };
+
+        $paths = [];
+
+        foreach ($values as $item) {
+            if ($item instanceof UploadedFile) {
+                $paths[] = $field->storeUploadedFile($item);
+            } elseif (is_string($item) && $item !== '') {
+                $paths[] = $item;
+            }
+        }
+
+        return $field->isMultiple() ? $paths : ($paths[0] ?? null);
+    }
+
+    /**
+     * Collect every FileUpload field in the schema, traversing nested layouts.
+     *
+     * @param  array<int, mixed>  $schema
+     * @return array<int, FileUpload>
+     */
+    private function collectFileUploadFields(array $schema): array
+    {
+        $fields = [];
+
+        foreach ($schema as $component) {
+            if ($component instanceof FileUpload) {
+                $fields[] = $component;
+            } elseif ($component instanceof LayoutComponent) {
+                $fields = array_merge($fields, $this->collectFileUploadFields($component->getSchema()));
+            }
+        }
+
+        return $fields;
     }
 
     /**

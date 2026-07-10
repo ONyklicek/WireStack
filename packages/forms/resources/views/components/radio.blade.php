@@ -39,6 +39,7 @@
                 ])>
                 <input
                         type="radio"
+                        data-testid="form-radio-{{ $field->getStatePath() }}-{{ $value }}"
                         id="{{ $field->getId() }}-{{ $value }}"
                         {{ $wireAttr }}="{{ $wireName }}"
                         value="{{ $value }}"
@@ -79,6 +80,7 @@
                 ])>
                 <input
                         type="radio"
+                        data-testid="form-radio-{{ $field->getStatePath() }}-{{ $value }}"
                         id="{{ $field->getId() }}-{{ $value }}"
                         {{ $wireAttr }}="{{ $wireName }}"
                         value="{{ $value }}"
@@ -117,6 +119,7 @@
                 ])>
                 <input
                         type="radio"
+                        data-testid="form-radio-{{ $field->getStatePath() }}-{{ $value }}"
                         id="{{ $field->getId() }}-{{ $value }}"
                         {{ $wireAttr }}="{{ $wireName }}"
                         value="{{ $value }}"
@@ -160,6 +163,7 @@
             <div class="flex items-start gap-2">
                 <input
                         type="radio"
+                        data-testid="form-radio-{{ $field->getStatePath() }}-{{ $value }}"
                         id="{{ $field->getId() }}-{{ $value }}"
                         {{ $wireAttr }}="{{ $wireName }}"
                         value="{{ $value }}"

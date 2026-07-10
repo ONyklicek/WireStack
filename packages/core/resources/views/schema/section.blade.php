@@ -19,7 +19,7 @@ class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-g
             'flex items-start justify-between',
             'mb-4' => !$isCollapsible || !$isCollapsed,
             'cursor-pointer' => $isCollapsible,
-        ]) @if($isCollapsible) @click="open = !open" @endif>
+        ]) @if($isCollapsible) @click="open = !open" data-testid="section-toggle" role="button" :aria-expanded="open" tabindex="0" @endif>
             <div>
                 @if($layout->getLabel())
                     <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">

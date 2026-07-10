@@ -49,6 +49,8 @@
             href="{{ $data['url'] }}"
             @if($data['target'] ?? null) target="{{ $data['target'] }}" @endif
             class="{{ $data['classes'] }}"
+            data-testid="action-{{ $action->getName() }}"
+            @if($action->getLabel()) aria-label="{{ $action->getLabel() }}" @endif
             @if($data['tooltip'] ?? null) title="{{ $data['tooltip'] }}" @endif
             @if($data['shortcutLabel'] ?? null) data-shortcut="{{ $data['shortcutLabel'] }}"@endif
 
@@ -65,6 +67,8 @@
             type="button"
             wire:click{{ $wireModifiers }}="{{ $wireClickAction }}"
             class="{{ $data['classes'] }}"
+            data-testid="action-{{ $action->getName() }}"
+            @if($action->getLabel()) aria-label="{{ $action->getLabel() }}" @endif
             @if($data['tooltip'] ?? null) title="{{ $data['tooltip'] }}" @endif
             @if($data['disabled'] ?? false) disabled @endif
             @if($data['shortcutAlpine'] ?? null)

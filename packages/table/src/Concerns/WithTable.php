@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Concerns;
 
 use Exception;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Pagination\CursorPaginator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\Pagination\Paginator;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOneOrMany;
 use Illuminate\Database\Eloquent\Relations\Relation as EloquentRelation;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -43,6 +45,7 @@ use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
 use NyonCode\WireForms\Concerns\InteractsWithActionForms;
 use NyonCode\WireForms\Concerns\InteractsWithFieldActions;
+use NyonCode\WireForms\Concerns\InteractsWithFileUploads;
 use NyonCode\WireForms\Concerns\InteractsWithRepeaters;
 use NyonCode\WireForms\Concerns\InteractsWithSelectCreation;
 use NyonCode\WireForms\Concerns\InteractsWithWizards;
@@ -56,6 +59,8 @@ use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Import\ImportAction;
 use NyonCode\WireTable\Import\ImportResult;
 use NyonCode\WireTable\Import\TableImport;
+use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
+use NyonCode\WireTable\Preferences\TablePreferenceManager;
 use NyonCode\WireTable\Table;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -73,6 +78,7 @@ trait WithTable
         InteractsWithActionForms::resolveHaltModalForm insteadof InteractsWithActions;
     }
     use InteractsWithFieldActions;
+    use InteractsWithFileUploads;
     use InteractsWithRepeaters;
     use InteractsWithSelectCreation;
     use InteractsWithWizards;
@@ -184,6 +190,22 @@ trait WithTable
         if ($hidden !== []) {
             $this->tableState->set('columns.hidden', $hidden);
         }
+
+        // Multi-select column filters must start as an array so Livewire treats
+        // their header checkboxes as an array group (toggle membership) rather
+        // than replacing a scalar on each click.
+        foreach ($table->getColumns() as $column) {
+            if ($column->isFilterable() && $column->getFilterType() === 'multi_select') {
+                $current = $this->tableState->get('columnFilters.'.$column->getName());
+                if (! is_array($current)) {
+                    $this->tableState->set('columnFilters.'.$column->getName(), []);
+                }
+            }
+        }
+
+        // Per-user column layout: a saved preference (if any) overrides the
+        // configured defaults above.
+        $this->loadColumnPreferences($table);
 
         // Query-string persistence: seed state from the URL (URL wins over
         // the defaults applied above) and register URL-tracking attributes.
@@ -1777,6 +1799,7 @@ trait WithTable
         }
 
         $this->tableState->set('columns.hidden', $hidden);
+        $this->persistColumnPreferences();
     }
 
     /**
@@ -1787,6 +1810,106 @@ trait WithTable
         $hidden = $this->tableState->get('columns.hidden', []);
 
         return ! in_array($column, $hidden, true);
+    }
+
+    /**
+     * Reset every toggleable column back to its configured default visibility,
+     * clearing any saved per-user preference.
+     */
+    public function resetColumns(): void
+    {
+        $table = $this->getTable();
+
+        $hidden = [];
+        foreach ($table->getColumns() as $column) {
+            if ($column->isToggleable() && ! $column->isVisible()) {
+                $hidden[] = $column->getName();
+            }
+        }
+
+        $this->tableState->set('columns.hidden', $hidden);
+
+        if (($key = $table->getRememberColumnsKey()) !== null) {
+            $this->resolvePreferenceDriver($table)->forget($key, $this->preferenceUser());
+        }
+    }
+
+    /**
+     * Seed the hidden-column set from the user's saved preference, if the table
+     * opted in with rememberColumns() and something has actually been stored.
+     * Stale names (columns that no longer exist or are no longer toggleable) are
+     * dropped so a renamed/removed column can never hide the wrong thing.
+     */
+    protected function loadColumnPreferences(Table $table): void
+    {
+        $key = $table->getRememberColumnsKey();
+
+        if ($key === null) {
+            return;
+        }
+
+        $preferences = $this->resolvePreferenceDriver($table)->load($key, $this->preferenceUser());
+
+        // Nothing saved yet → keep the configured defaults.
+        if (! array_key_exists('columns', $preferences) || ! is_array($preferences['columns'])) {
+            return;
+        }
+
+        $storedHidden = $preferences['columns']['hidden'] ?? [];
+        if (! is_array($storedHidden)) {
+            return;
+        }
+
+        $toggleable = [];
+        foreach ($table->getColumns() as $column) {
+            if ($column->isToggleable() && $column->canView()) {
+                $toggleable[] = $column->getName();
+            }
+        }
+
+        $this->tableState->set(
+            'columns.hidden',
+            array_values(array_intersect($storedHidden, $toggleable)),
+        );
+    }
+
+    /**
+     * Persist the current hidden-column set for the current user, when enabled.
+     */
+    protected function persistColumnPreferences(): void
+    {
+        $table = $this->getTable();
+        $key = $table->getRememberColumnsKey();
+
+        if ($key === null) {
+            return;
+        }
+
+        $this->resolvePreferenceDriver($table)->save($key, $this->preferenceUser(), [
+            'columns' => [
+                'hidden' => array_values($this->tableState->get('columns.hidden', [])),
+            ],
+        ]);
+    }
+
+    /**
+     * Resolve the preference driver for this table (per-table override > global
+     * config), picking the guest driver when no user is authenticated.
+     */
+    protected function resolvePreferenceDriver(Table $table): TablePreferenceDriver
+    {
+        return TablePreferenceManager::resolve(
+            $table->getPreferenceDriver(),
+            $this->preferenceUser() !== null,
+        );
+    }
+
+    /**
+     * The user whose preferences we read/write (null for a guest).
+     */
+    protected function preferenceUser(): ?Authenticatable
+    {
+        return Auth::user();
     }
 
     // ─── Record Selection ────────────────────────────────
@@ -2137,7 +2260,7 @@ trait WithTable
     {
         $driver = $this->getTable()->getNotificationDriver();
 
-        NotificationManager::send($notification, $driver, $this);
+        NotificationManager::send($notification, $driver);
     }
 
     /**
@@ -2902,6 +3025,14 @@ trait WithTable
 
                 // Clean internal keys before returning to client
                 unset($result['record'], $result['value'], $result['oldValue']);
+            }
+
+            // The conflict is always shown inline on the cell; a table can opt in
+            // to *also* raise a (more prominent) notification for it.
+            if (($result['conflict'] ?? false) === true && $table->shouldNotifyEditConflicts()) {
+                $this->sendNotification(Notification::warning(
+                    $result['message'] ?? __('wire-table::messages.record_conflict')
+                ));
             }
 
             return $result;

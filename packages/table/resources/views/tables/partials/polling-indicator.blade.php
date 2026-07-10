@@ -22,7 +22,7 @@
 
         <button
             type="button"
-            wire:click="toggleTablePolling"
+            wire:click="toggleTablePolling" data-testid="polling-toggle"
             class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 underline decoration-dotted underline-offset-2"
         >
             {{ ($pollingConfig['active'] ?? false) ? __('wire-table::messages.stop') : __('wire-table::messages.start') }}

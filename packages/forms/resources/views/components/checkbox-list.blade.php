@@ -23,6 +23,7 @@
                 <input
                     type="text"
                     x-model="search"
+                    data-testid="form-checklist-{{ $field->getStatePath() }}-search"
                     placeholder="{{ $field->getSearchPrompt() }}"
                     class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150 dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
                 />
@@ -31,11 +32,11 @@
 
         @if($field->isBulkToggleable())
             <div class="flex gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                <button type="button" @click="selectAll()" class="text-xs text-primary-600 hover:text-primary-700 font-medium">
+                <button type="button" @click="selectAll()" data-testid="form-checklist-{{ $field->getStatePath() }}-select-all" class="text-xs text-primary-600 hover:text-primary-700 font-medium">
                     {{ $field->getSelectAllLabel() }}
                 </button>
                 <span class="text-gray-300 dark:text-gray-600">|</span>
-                <button type="button" @click="deselectAll()" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 font-medium">
+                <button type="button" @click="deselectAll()" data-testid="form-checklist-{{ $field->getStatePath() }}-deselect-all" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 font-medium">
                     {{ $field->getDeselectAllLabel() }}
                 </button>
             </div>
@@ -60,6 +61,7 @@
                         <input
                             type="checkbox"
                             id="{{ $field->getId() }}-{{ $value }}"
+                            data-testid="form-checklist-{{ $field->getStatePath() }}-{{ $value }}"
                             {{ $wireAttr }}="{{ $field->getWireModelAttribute() }}"
                             value="{{ $value }}"
                             @if($field->isDisabled()) disabled @endif

@@ -340,14 +340,212 @@ const wireWizard = (initial = 0) => ({
     },
 })
 
+/*
+ * wireEditableCell — canonical inline-editable table cell.
+ *
+ * updateTableCell() calls skipRender() so the table is NOT re-rendered (a DOM
+ * morph would destroy Alpine cell state), which means every editable cell must
+ * switch its own appearance optimistically and reconcile with the server:
+ *
+ *  - commit(next): optimistic value → $wire.updateTableCell(key, col, next, ver);
+ *    on failure it rolls back to the last server-confirmed value, and on an
+ *    optimistic-lock conflict it adopts the server's current value + version.
+ *  - a MutationObserver on data-server-value / data-record-version reconciles
+ *    the cell when polling (or any external re-render) changes the row.
+ *
+ * recordKey / columnName are read from data-* attributes (never interpolated
+ * into this JS), so a primary key containing a quote can't break out. Text-style
+ * cells layer save-on-blur/enter, escape-to-revert, dirty tracking and live
+ * validation on top via config flags.
+ */
+const wireEditableCell = (config = {}) => ({
+    value: config.value,
+    serverValue: config.value,
+    recordVersion: config.recordVersion ?? '0',
+    recordKey: null,
+    columnName: null,
+    saving: false,
+    error: null,
+    success: false,
+    focused: false,
+
+    get dirty() {
+        return this.value !== this.serverValue
+    },
+
+    parse(raw) {
+        return config.parse ? config.parse(raw) : raw
+    },
+
+    messages: {},
+
+    init() {
+        // Read record identity + messages from data-* on the root here, where $el
+        // is reliably the x-data element (inside event-triggered methods $el can be
+        // the event target instead).
+        this.recordKey = this.$el.dataset.recordKey
+        this.columnName = this.$el.dataset.columnName
+        this.messages = {
+            error: this.messages.error,
+            saveFailed: this.messages.saveFailed,
+            invalid: this.messages.invalid,
+        }
+
+        if (config.liveValidation) {
+            this.$watch('value', window.Alpine.debounce(() => {
+                if (this.dirty) this.validate()
+            }, config.debounce ?? 500))
+        }
+
+        const observer = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                if (m.attributeName === 'data-server-value' || m.attributeName === 'data-record-version') {
+                    const next = this.parse(this.$el.dataset.serverValue)
+                    if (next !== this.serverValue) {
+                        this.syncFromServer(next, this.$el.dataset.recordVersion)
+                    }
+                }
+            }
+        })
+        observer.observe(this.$el, { attributes: true, attributeFilter: ['data-server-value', 'data-record-version'] })
+        this._observer = observer
+    },
+
+    destroy() {
+        this._observer?.disconnect()
+    },
+
+    syncFromServer(next, version) {
+        if (this.saving) return                 // never stomp an in-flight save
+        if (this.focused && this.dirty) return  // nor a field the user is editing
+        this.value = next
+        this.serverValue = next
+        if (version) this.recordVersion = version
+        this.error = null
+    },
+
+    onFocus() {
+        this.focused = true
+    },
+    onBlur() {
+        this.focused = false
+        if (config.saveOnBlur && this.dirty) this.save()
+    },
+    onEnter() {
+        if (config.saveOnEnter && this.dirty) this.save()
+    },
+    onEscape() {
+        this.value = this.serverValue
+        this.error = null
+        this.$refs.input?.blur()
+    },
+
+    save() {
+        if (this.dirty) this.commit(this.value)
+    },
+
+    async commit(next) {
+        if (this.saving) return
+        this.value = next                       // optimistic
+        this.saving = true
+        this.error = null
+        try {
+            const r = await this.$wire.updateTableCell(
+                this.recordKey,
+                this.columnName,
+                next,
+                this.recordVersion,
+            )
+            if (r?.success === false) {
+                this.value = this.serverValue   // rollback to last confirmed
+                this.error = r.message || r.errors?.[0] || this.messages.error
+                if (r?.conflict) {              // someone else won the race
+                    this.value = this.parse(r.currentValue)
+                    this.serverValue = this.value
+                    this.recordVersion = r.currentVersion ?? this.recordVersion
+                }
+            } else {
+                this.serverValue = next
+                if (r?.version) this.recordVersion = r.version
+                this.success = true
+                setTimeout(() => { this.success = false }, 1500)
+            }
+        } catch (e) {
+            this.value = this.serverValue       // rollback
+            this.error = this.messages.saveFailed
+        } finally {
+            this.saving = false
+        }
+    },
+
+    async validate() {
+        try {
+            const r = await this.$wire.validateTableCell(
+                this.recordKey,
+                this.columnName,
+                this.value,
+            )
+            this.error = (r && !r.valid) ? (r.errors?.[0] || this.messages.invalid) : null
+        } catch (e) {}
+    },
+})
+
+/**
+ * Right-click context menu for a table row. Unlike wireDropdown (anchored to a
+ * trigger via Floating UI), this pins a teleported, `position: fixed` panel at
+ * the pointer coordinates and clamps it inside the viewport. Opened from a
+ * `@contextmenu.prevent="openAt($event)"` on the row; closes on outside click,
+ * Escape, or scroll.
+ */
+// Module-level handle to the single open context menu, so opening one (or
+// right-clicking another row) always closes any other first.
+let openContextMenu = null
+
+const wireContextMenu = () => ({
+    open: false,
+    x: 0,
+    y: 0,
+
+    openAt(event) {
+        if (openContextMenu && openContextMenu !== this) openContextMenu.close()
+        openContextMenu = this
+        this.x = event.clientX
+        this.y = event.clientY
+        this.open = true
+        this.$nextTick(() => this.place())
+    },
+
+    // Position the panel at the cursor, nudged back inside the viewport so it is
+    // never clipped at the right/bottom edge.
+    place() {
+        const panel = this.$refs.panel
+        if (! panel) return
+        const pad = 8
+        const { width, height } = panel.getBoundingClientRect()
+        let x = this.x
+        let y = this.y
+        if (x + width + pad > window.innerWidth) x = window.innerWidth - width - pad
+        if (y + height + pad > window.innerHeight) y = window.innerHeight - height - pad
+        panel.style.left = `${Math.max(pad, x)}px`
+        panel.style.top = `${Math.max(pad, y)}px`
+    },
+
+    close() {
+        this.open = false
+        if (openContextMenu === this) openContextMenu = null
+    },
+})
+
 document.addEventListener('alpine:init', () => {
     // $float(reference, panel, config) → cleanup. For components that own their
     // open-state and want Floating UI positioning on a teleported panel.
     window.Alpine.magic('float', () => floatingAnchor)
 
     window.Alpine.data('wireDropdown', wireDropdown)
+    window.Alpine.data('wireContextMenu', wireContextMenu)
     window.Alpine.data('wireTabs', wireTabs)
     window.Alpine.data('wireWizard', wireWizard)
+    window.Alpine.data('wireEditableCell', wireEditableCell)
     registerSheetDismiss(window.Alpine)
     registerFocusTrap(window.Alpine)
 })

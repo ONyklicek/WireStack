@@ -190,6 +190,7 @@ $previewMeta = [
     'core-overview' => ['title' => 'Core Actions', 'caption' => 'Stats, actions, and shared runtime components.'],
     'palette' => ['title' => 'Full Color Palette', 'caption' => 'Every Tailwind hue rendered through the canonical HasColor resolvers across solid, soft, badge, button, and text surfaces.'],
     'core-modal' => ['title' => 'Modal Surface', 'caption' => 'Real modal rendering from the shared core component set.'],
+    'core-toasts' => ['title' => 'Toast Notifications', 'caption' => 'Countdown bar with hover-to-pause, action buttons, a collapsible stack, and a max-visible “+N more” cap.'],
     'widgets-overview' => ['title' => 'Widget Dashboard', 'caption' => 'A stats overview with sparklines and a Chart.js chart widget composed in a grid.'],
     'widgets-chart' => ['title' => 'Chart Widget', 'caption' => 'A single chart widget with heading, description, and a live quarter filter.'],
     'widgets-bar-chart' => ['title' => 'Bar Chart Widget', 'caption' => 'Pure-CSS bars: vertical finance, vertical system metrics with grid lines, and horizontal progress.'],
@@ -211,6 +212,7 @@ $pagePreviews = [
     'docs/core/actions.md' => ['core-overview'],
     'docs/core/foundation.md' => ['palette'],
     'docs/core/modals.md' => ['core-modal'],
+    'docs/core/notifications.md' => ['core-toasts'],
     'docs/core/widgets.md' => ['widgets-overview', 'widgets-chart', 'widgets-bar-chart'],
     'docs/core/infolists.md' => ['infolists-overview', 'infolists-entries'],
 ];
@@ -601,7 +603,7 @@ function extractFirstMarkdownHeading(string $markdown): ?string
 function inferSectionFromSource(string $sourceRelative): string
 {
     return match (true) {
-        str_starts_with($sourceRelative, 'docs/forms/fields/') => 'Fields',
+        str_starts_with($sourceRelative, 'docs/forms/fields/') => 'Forms',
         str_starts_with($sourceRelative, 'docs/forms/') => 'Forms',
         str_starts_with($sourceRelative, 'docs/table/') => 'Table',
         str_starts_with($sourceRelative, 'docs/sortable/') => 'Sortable',
@@ -620,7 +622,7 @@ function normalizeSection(string $section): string
     return match ($normalized) {
         'start here', 'start-here', 'start_here' => 'Start Here',
         'forms' => 'Forms',
-        'fields' => 'Fields',
+        'fields' => 'Forms',
         'table' => 'Table',
         'sortable' => 'Sortable',
         'schema' => 'Schema',
@@ -635,7 +637,6 @@ function sectionSortWeight(string $section): int
     return match ($section) {
         'Start Here' => 10,
         'Forms' => 20,
-        'Fields' => 30,
         'Table' => 40,
         'Schema' => 45,
         'Sortable' => 50,

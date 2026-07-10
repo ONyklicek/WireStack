@@ -19,7 +19,7 @@
         @if($step) step="{{ $step }}" @endif
         placeholder="{{ __('wire-table::messages.filter_min') }}"
         title="{{ __('wire-table::messages.filter_min') }}"
-        class="block w-full rounded-md border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs text-gray-600 dark:text-gray-300 placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 py-1 px-1"
+        class="{{ $controlClasses }}"
     >
     <span class="text-gray-400 text-xs flex-shrink-0">–</span>
     <input
@@ -30,6 +30,6 @@
         @if($step) step="{{ $step }}" @endif
         placeholder="{{ __('wire-table::messages.filter_max') }}"
         title="{{ __('wire-table::messages.filter_max') }}"
-        class="block w-full rounded-md border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs text-gray-600 dark:text-gray-300 placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 py-1 px-1"
+        class="{{ $controlClasses }}"
     >
 </div>

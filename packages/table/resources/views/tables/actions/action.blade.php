@@ -13,6 +13,8 @@
             href="{{ $data['url'] }}"
             @if($data['target']) target="{{ $data['target'] }}" @endif
             class="{{ $data['classes'] }}"
+            data-testid="action-{{ $action->getName() }}"
+            @if($action->getLabel()) aria-label="{{ $action->getLabel() }}" @endif
             @if($data['tooltip']) title="{{ $data['tooltip'] }}" @endif
             @if($data['shortcutLabel']) data-shortcut="{{ $data['shortcutLabel'] }}"
 @endif
@@ -33,6 +35,8 @@
                 wire:click{{ $data['wireModifiers'] }}="executeTableAction('{{ $data['recordKey'] }}', '{{ $data['actionName'] }}')"
             @endif
             class="{{ $data['classes'] }}"
+            data-testid="action-{{ $action->getName() }}"
+            @if($action->getLabel()) aria-label="{{ $action->getLabel() }}" @endif
             @if($data['tooltip']) title="{{ $data['tooltip'] }}" @endif
             @if($data['disabled']) disabled @endif
             @if($data['shortcutAlpine'])

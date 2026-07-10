@@ -65,7 +65,7 @@
                     class="border-0 border-r border-gray-200 dark:border-gray-700 ring-0 shadow-none focus:ring-inset focus:ring-1 focus:ring-primary-500 bg-transparent px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none disabled:opacity-50"
                 />
                 @if($field->isDeletable())
-                    <button type="button" @click="removePair(index)"
+                    <button type="button" @click="removePair(index)" :data-testid="'form-keyvalue-{{ $field->getStatePath() }}-remove-' + index"
                         class="flex items-center justify-center w-9 h-full text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors">
                         <x-wire::icon name="x-mark" class="w-4 h-4" />
                     </button>
@@ -85,7 +85,7 @@
     {{-- Add button --}}
     @if($field->isAddable())
         <div class="border-t border-gray-200 dark:border-gray-700 px-3 py-2 bg-gray-50 dark:bg-gray-700/30">
-            <button type="button" @click="addPair()"
+            <button type="button" @click="addPair()" data-testid="form-keyvalue-{{ $field->getStatePath() }}-add"
                 class="inline-flex items-center gap-1.5 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors">
                 <x-wire::icon name="plus" class="w-4 h-4" />
                 {{ __('Add entry') }}

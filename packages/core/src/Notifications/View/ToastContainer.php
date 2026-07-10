@@ -16,6 +16,9 @@ use Illuminate\View\Component;
  * Usage:
  *   <x-wire-notifications::toast-container />
  *   <x-wire-notifications::toast-container position="top-right" :duration="5000" />
+ *   <x-wire-notifications::toast-container stack />               {{-- collapse into a pile, fan out on hover --}}
+ *   <x-wire-notifications::toast-container :progress="false" />   {{-- hide the per-toast countdown bar --}}
+ *   <x-wire-notifications::toast-container :max="5" />            {{-- cap visible toasts, overflow into "+N more" --}}
  */
 class ToastContainer extends Component
 {
@@ -23,6 +26,9 @@ class ToastContainer extends Component
         public string $position = 'top-right',
         public int $duration = 4000,
         public string $eventName = 'table-notification',
+        public bool $stack = false,
+        public bool $progress = true,
+        public int $max = 0,
     ) {}
 
     public function positionClasses(): string
@@ -36,6 +42,17 @@ class ToastContainer extends Component
             'bottom-right' => 'bottom-4 right-4',
             default => 'top-4 right-4',
         };
+    }
+
+    /**
+     * Whether the container is anchored to the top edge.
+     *
+     * Drives the stack fan-out direction and expanded stacking order so the
+     * newest toast always sits closest to the anchor.
+     */
+    public function topAnchored(): bool
+    {
+        return str_starts_with($this->position, 'top');
     }
 
     public function render(): View

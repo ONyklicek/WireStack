@@ -156,12 +156,14 @@ Path: `packages/core/src/Notifications`
 Objects/managers:
 
 - `Notification`
+- `NotificationAction`
 - `NotificationManager`
 - `TableNotification`
 - `TableNotificationManager`
 
 Drivers:
 
+- `CurrentComponentDriver` *(built-in default; decorates `SessionDriver`, resolves `Livewire::current()`)*
 - `SessionDriver`
 - `LivewireEventDriver`
 - `FlasherDriver`

@@ -9,7 +9,7 @@
 
 <button
     type="button"
-    wire:click="callFieldAction('{{ $field->getStatePath() }}', '{{ $action->getName() }}')"
+    wire:click="callFieldAction('{{ $field->getStatePath() }}', '{{ $action->getName() }}')" data-testid="form-button-{{ $field->getStatePath() }}"
     wire:loading.attr="disabled"
     wire:target="callFieldAction"
     @if($field->isDisabled()) disabled @endif

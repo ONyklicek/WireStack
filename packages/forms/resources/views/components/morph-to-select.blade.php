@@ -27,7 +27,7 @@
     <select
         id="{{ $field->getId() }}_type"
         {{ $wireAttr }}.live="{{ $typeStatePath }}"
-        aria-label="{{ $field->getLabel() ? $field->getLabel() . ' — ' . __('Type') : __('Select type') }}"
+        aria-label="{{ $field->getLabel() ? $field->getLabel() . ' — ' . __('Type') : __('Select type') }}" data-testid="form-select-{{ $field->getStatePath() }}-type"
         @if($field->isDisabled()) disabled @endif
         {{-- Match the searchable combobox trigger so all selects share one design. --}}
         @class([
@@ -48,7 +48,7 @@
     <select
         id="{{ $field->getId() }}_id"
         {{ $wireAttr }}="{{ $idStatePath }}"
-        aria-label="{{ $field->getLabel() ? $field->getLabel() . ' — ' . __('Record') : __('Select record') }}"
+        aria-label="{{ $field->getLabel() ? $field->getLabel() . ' — ' . __('Record') : __('Select record') }}" data-testid="form-select-{{ $field->getStatePath() }}-record"
         x-bind:disabled="!selectedType"
         @if($field->isDisabled()) disabled @endif
         {{-- Match the searchable combobox trigger so all selects share one design. --}}

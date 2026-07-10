@@ -1,20 +1,24 @@
-{{-- Column select filter (inline, in table header row) --}}
+{{-- Column select filter (inline, in table header row).
+     Delegates to the canonical searchable combobox shared with forms Select and
+     the table SelectFilter — so it gains search + the exact forms design. --}}
 {{-- Variables: $column, $value --}}
 @php
     $name = $column->getName();
     $placeholder = $column->getFilterPlaceholder() ?? __('wire-table::messages.filter_all');
-    $options = $column->getFilterOptions();
-    $currentValue = is_scalar($value) ? (string) $value : '';
 @endphp
 
-<select
-    wire:model.live="tableState.columnFilters.{{ $name }}"
-    class="block w-full rounded-md border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs text-gray-600 dark:text-gray-300 focus:border-primary-500 focus:ring-primary-500 py-1"
->
-    <option value="">{{ $placeholder }}</option>
-    @foreach($options as $optionValue => $optionLabel)
-        <option value="{{ $optionValue }}" @if($currentValue === (string) $optionValue) selected @endif>
-            {{ $optionLabel }}
-        </option>
-    @endforeach
-</select>
+@include('wire-core::partials.searchable-select', [
+    'selectId' => 'colfilter-'.$name,
+    'statePath' => 'tableState.columnFilters.'.$name,
+    'options' => $column->getFilterOptions(),
+    'placeholder' => $placeholder,
+    'multiple' => false,
+    'searchable' => $column->isFilterSearchable(),
+    'searchPrompt' => __('wire-table::messages.filter_search'),
+    'noResultsMessage' => __('wire-table::messages.filter_no_results'),
+    // Searchable filters keep the floating panel on mobile so the search input
+    // stays usable; non-searchable ones use the global sheet default.
+    'sheetOnMobile' => $column->isFilterSearchable() ? false : (bool) config('wire-core.mobile.sheet', true),
+    // Column filters apply immediately.
+    'live' => true,
+])

@@ -373,3 +373,113 @@ it('can set and get livewire component', function () {
 
     expect($table->getLivewireComponent())->toBe($component);
 });
+
+// ─── Row color & class (conditional per-record) ─────────────────────────────
+
+function rowRecord(array $attributes): Model
+{
+    return (new class extends Model
+    {
+        protected $guarded = [];
+    })->forceFill($attributes);
+}
+
+it('keeps a static row class backwards compatible (no-arg getter)', function () {
+    $table = Table::make()->rowClass('custom-row');
+
+    expect($table->getRowClass())->toBe('custom-row')
+        ->and($table->getRowClass(rowRecord([])))->toBe('custom-row');
+});
+
+it('resolves a per-record row class closure', function () {
+    $table = Table::make()->rowClass(
+        fn (Model $record) => $record->flagged ? 'font-semibold' : null,
+    );
+
+    expect($table->getRowClass(rowRecord(['flagged' => true])))->toBe('font-semibold')
+        ->and($table->getRowClass(rowRecord(['flagged' => false])))->toBeNull()
+        // A closure with no record cannot run, so the no-arg getter stays null.
+        ->and($table->getRowClass())->toBeNull();
+});
+
+it('resolves a static row color to canonical tint classes', function () {
+    $table = Table::make()->rowColor('danger');
+
+    expect($table->getRowColor(rowRecord([])))->toBe('danger')
+        ->and($table->getRowClasses(rowRecord([]), 0))
+        ->toContain('bg-red-50')
+        ->toContain('dark:bg-red-900/20')
+        ->toContain('hover:bg-red-100');
+});
+
+it('resolves a per-record row color closure (null = no tint)', function () {
+    $table = Table::make()->rowColor(
+        fn (Model $record) => $record->overdue ? 'warning' : null,
+    );
+
+    expect($table->getRowColor(rowRecord(['overdue' => true])))->toBe('warning')
+        ->and($table->getRowColor(rowRecord(['overdue' => false])))->toBeNull()
+        ->and($table->getRowClasses(rowRecord(['overdue' => true]), 0))->toContain('bg-amber-50');
+});
+
+it('treats an empty-string row color as no tint', function () {
+    $table = Table::make()->rowColor(fn () => '');
+
+    expect($table->getRowColor(rowRecord([])))->toBeNull();
+});
+
+it('a tinted row suppresses the neutral hover and zebra striping', function () {
+    $table = Table::make()->striped()->hoverable()->rowColor('success');
+
+    $classes = $table->getRowClasses(rowRecord([]), 1); // odd row would normally stripe
+
+    expect($classes)->toContain('bg-emerald-50')
+        ->not->toContain('hover:bg-gray-50')
+        ->not->toContain('bg-gray-50/50');
+});
+
+it('an untinted row keeps hover and striping, plus the custom class', function () {
+    $table = Table::make()->striped()->hoverable()->rowClass('extra');
+
+    $odd = $table->getRowClasses(rowRecord([]), 1);
+    $even = $table->getRowClasses(rowRecord([]), 0);
+
+    expect($odd)->toContain('hover:bg-gray-50')
+        ->toContain('bg-gray-50/50')
+        ->toContain('extra')
+        ->and($even)->toContain('hover:bg-gray-50')
+        ->not->toContain('bg-gray-50/50');
+});
+
+it('combines a row color tint with an additional custom row class', function () {
+    $table = Table::make()
+        ->rowColor('info')
+        ->rowClass(fn (Model $record) => $record->pinned ? 'ring-2' : null);
+
+    $classes = $table->getRowClasses(rowRecord(['pinned' => true]), 0);
+
+    expect($classes)->toContain('bg-cyan-50')->toContain('ring-2');
+});
+
+it('falls back to a gray tint for an unknown row color', function () {
+    $table = Table::make()->rowColor('not-a-color');
+
+    expect($table->getRowClasses(rowRecord([]), 0))->toContain('bg-gray-50');
+});
+
+it('tints the mobile card the same as the desktop row', function () {
+    $table = Table::make()->rowColor('danger')->rowClass('font-semibold');
+
+    $card = $table->getRowCardClasses(rowRecord([]));
+
+    expect($card)->toContain('bg-red-50')
+        ->toContain('border-b') // keeps the card divider
+        ->toContain('font-semibold')
+        ->not->toContain('bg-white'); // tint replaces the default card background
+});
+
+it('keeps the default white card background when no row color is set', function () {
+    expect(Table::make()->getRowCardClasses(rowRecord([])))
+        ->toContain('bg-white')
+        ->toContain('border-b');
+});

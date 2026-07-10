@@ -257,23 +257,25 @@ Global defaults (`default_width`, `slide_over_width`, `close_on_click_away`, `cl
 
 Notification value objects and pluggable delivery. **Full content doc: [`architecture/core/notifications.md`](core/notifications.md).** Summary:
 
-- **`Notification`** — immutable value object; factories `make/success/error/warning/info`, fluent `title/duration/icon/position/extra`, `toArray()` (strips nulls). Canonical types: `success`, `error`, `warning`, `info` (note `error`, not `danger`).
-- **`NotificationManager`** — all-static facade; `success/error/warning/info/send` plus `setDefaultDriver/getDefaultDriver/resolve/reset`. Driver resolution priority: **explicit > global default > built-in `SessionDriver`**.
-- **`InteractsWithNotifications`** trait — for Livewire components: `notify()`, `notifySuccess/Error/Warning/Info()`, `setNotificationDriver()`.
+- **`Notification`** — immutable value object; factories `make/success/error/warning/info`, fluent `title/duration/icon/position/extra/persistent/action/actions`, `toArray()` (strips nulls). Canonical types: `success`, `error`, `warning`, `info` (note `error`, not `danger`). `persistent()` = sticky (`duration 0`); `action('Undo', 'event')` / `action(NotificationAction::make(...))` append toast buttons that dispatch a Livewire event on click.
+- **`NotificationAction`** — immutable VO for a toast button (`make(label, event)`, `payload/color/keepOpen`, `toArray`). Click → `Livewire.dispatch(event, payload)`, host listens with `#[On(event)]`.
+- **`NotificationManager`** — all-static facade; `success/error/warning/info/send` plus `setDefaultDriver/getDefaultDriver/resolve/reset`. Driver resolution priority: **explicit > global default > built-in `CurrentComponentDriver(SessionDriver)`**.
+- **`InteractsWithNotifications`** trait — for Livewire components: `notify()`, `notifySuccess/Error/Warning/Info()`, `setNotificationDriver()`. Call-sites do **not** pass `$this` — the default driver resolves the active component.
 - **Drivers** (`Notifications/Drivers/`), selected by `wire-core.notifications.default`:
 
 | Config value | Driver | Delivery |
 |--------------|--------|----------|
-| `session` *(default)* | `SessionDriver` | session flash **+** Livewire event (`type`+`message` only) |
+| *(built-in default)* | `CurrentComponentDriver` | decorator: resolves `Livewire::current()`, delegates to a wrapped driver (`SessionDriver`) |
+| `session` | `SessionDriver` | session flash **+** Livewire event with the full `toArray()` payload |
 | `livewire` | `LivewireEventDriver` | Livewire browser event with full `toArray()` payload |
 | `flasher` | `FlasherDriver` | integrates `php-flasher` (graceful session fallback) |
 | `null` | `NullDriver` | no-op (tests / disabling) |
 
 All implement `Contracts\NotificationDriver::send(Notification $notification, mixed $livewireComponent = null): void`. Write a custom driver by implementing that interface and registering it via `setDefaultDriver()` or the provider.
 
-**Frontend.** Toasts render via `<x-wire-notifications::toast-container />` (`Notifications/View/ToastContainer.php`), which listens for the driver's Livewire event (default `table-notification`).
+**Frontend.** Toasts render via `<x-wire-notifications::toast-container />` (`Notifications/View/ToastContainer.php`), which listens for the driver's Livewire event (default `table-notification`). Container props: `position`, `duration`, `event-name`, `progress` (countdown bar, hover-pauses), `stack` (collapsible pile, fans out on hover), `max` (visible cap + "+N more"). Honors `prefers-reduced-motion` and exposes an `aria-live` region.
 
-> ⚠️ Two known gotchas (detailed in the content doc): the static `NotificationManager` default is **independent of config** (defaults to `SessionDriver` unless bridged), and `SessionDriver` only transmits `type`+`message` over the live event — richer fields need `LivewireEventDriver`.
+> ⚠️ Gotcha: the static `NotificationManager` default is **independent of config** — it defaults to `CurrentComponentDriver(SessionDriver)` unless bridged from the container binding. All event-dispatching drivers forward the full payload; `window.wireToast` binds to the **first** mounted container (dispatch explicit `CustomEvent`s for secondary containers).
 
 > `TableNotification` and `TableNotificationManager` are **deprecated `class_alias`es** for `Notification` / `NotificationManager` (removal in v2.0), not separate table-scoped classes.
 

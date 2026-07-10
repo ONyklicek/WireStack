@@ -68,6 +68,7 @@
         <input
             type="range"
             x-model.number="value"
+            data-testid="form-slider-{{ $field->getStatePath() }}"
             :style="{ background: trackBackground }"
             style="--wf-fill: {{ $field->getColor() }}"
             min="{{ $field->getMin() }}"

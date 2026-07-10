@@ -102,6 +102,32 @@ test('add button label can be customized', function () {
     expect($repeater->getAddButtonLabel())->toBe('Add contact');
 });
 
+test('item label is null by default', function () {
+    expect(Repeater::make('items')->getItemLabel(['name' => 'Ada'], 0))->toBeNull();
+});
+
+test('item label can be a static string', function () {
+    $repeater = Repeater::make('items')->itemLabel('Contact');
+
+    expect($repeater->getItemLabel([], 0))->toBe('Contact')
+        ->and($repeater->getItemLabel(['name' => 'Ada'], 2))->toBe('Contact');
+});
+
+test('item label can be a closure of the item state and index', function () {
+    $repeater = Repeater::make('items')
+        ->itemLabel(fn (array $state, int $index) => ($state['name'] ?? 'New')." (#{$index})");
+
+    expect($repeater->getItemLabel(['name' => 'Ada'], 0))->toBe('Ada (#0)')
+        ->and($repeater->getItemLabel([], 3))->toBe('New (#3)');
+});
+
+test('item label closure returning null or empty yields null', function () {
+    $repeater = Repeater::make('items')->itemLabel(fn (array $state) => $state['name'] ?? null);
+
+    expect($repeater->getItemLabel([], 0))->toBeNull()
+        ->and($repeater->getItemLabel(['name' => ''], 0))->toBeNull();
+});
+
 test('disabled repeater prevents add and delete', function () {
     $repeater = Repeater::make('items')->disabled();
 

@@ -5,10 +5,11 @@
     $wireModifier = $field->getWireModelModifier();
     $wireAttr = 'wire:model' . ($wireModifier ? ".{$wireModifier}" : '');
     $acceptedTypes = $field->getAcceptedFileTypes();
-    $isImage = $field->isImage() || $field->isAvatar();
     $isMultiple = $field->isMultiple();
     $fieldId = $field->getId();
     $maxSize = $field->getMaxSize();
+    $filePreviews = $field->getFilePreviews(data_get($this, $field->getStatePath()));
+    $canDelete = $field->isDeletable() && ! $field->isDisabled();
 @endphp
 
 @include('wire-forms::partials.field-wrapper-start')
@@ -16,67 +17,25 @@
 <div
         x-data="{
         isDragging: false,
-        files: [],
-        previews: [],
-        isImage: @js($isImage),
-        isMultiple: @js($isMultiple),
         handleDrop(e) {
             this.isDragging = false;
-            const dt = e.dataTransfer;
-            if (dt.files.length) {
-                this.addFiles(dt.files);
-            }
-        },
-        addFiles(fileList) {
-            const newFiles = Array.from(fileList);
-            if (this.isMultiple) {
-                this.files = [...this.files, ...newFiles];
-            } else {
-                this.files = newFiles.slice(0, 1);
-            }
-            this.generatePreviews();
-            this.syncToInput();
-        },
-        removeFile(index) {
-            this.files.splice(index, 1);
-            this.previews.splice(index, 1);
-            this.syncToInput();
-        },
-        generatePreviews() {
-            this.previews = [];
-            this.files.forEach((file, i) => {
-                if (this.isImage && file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => { this.previews[i] = e.target.result; };
-                    reader.readAsDataURL(file);
-                } else {
-                    this.previews[i] = null;
-                }
-            });
-        },
-        syncToInput() {
+            const dropped = e.dataTransfer?.files;
+            if (! dropped || ! dropped.length) return;
+            // Feed the dropped files into the wire:model input so Livewire uploads them.
             const dt = new DataTransfer();
-            this.files.forEach(f => dt.items.add(f));
+            Array.from(dropped).forEach(f => dt.items.add(f));
             this.$refs.fileInput.files = dt.files;
             this.$refs.fileInput.dispatchEvent(new Event('change', { bubbles: true }));
         },
-        formatSize(bytes) {
-            if (bytes < 1024) return bytes + ' B';
-            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-            return (bytes / 1048576).toFixed(1) + ' MB';
-        },
         openPicker() {
             this.$refs.fileInput.click();
-        },
-        onInputChange(e) {
-            this.addFiles(e.target.files);
         }
     }"
         class="space-y-2"
 >
     {{-- Drop zone --}}
     <div
-            @click="openPicker()"
+            @click="openPicker()" data-testid="form-file-{{ $field->getStatePath() }}-dropzone"
             @dragover.prevent="isDragging = true"
             @dragleave.prevent="isDragging = false"
             @drop.prevent="handleDrop($event)"
@@ -134,43 +93,52 @@
         @if($field->isRequired())
             required
         @endif
-        @change="onInputChange($event)"
         class="sr-only"
         />
     </div>
 
-    {{-- File preview list --}}
-    <template x-if="files.length > 0">
+    {{-- Files in the field state: stored paths + pending uploads (store-on-submit) --}}
+    @if (! empty($filePreviews))
         <ul class="space-y-2">
-            <template x-for="(file, index) in files" :key="index">
+            @foreach ($filePreviews as $preview)
                 <li class="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-3">
-                    {{-- Image thumbnail --}}
-                    <template x-if="previews[index]">
-                        <img :src="previews[index]" class="h-10 w-10 rounded object-cover shrink-0" alt=""/>
-                    </template>
-                    {{-- File icon --}}
-                    <template x-if="!previews[index]">
+                    @if ($preview['url'] && $preview['isImage'])
+                        <img src="{{ $preview['url'] }}" class="h-10 w-10 rounded object-cover shrink-0" alt="{{ $preview['name'] }}"/>
+                    @else
                         <div class="flex h-10 w-10 items-center justify-center rounded bg-gray-100 dark:bg-gray-700 shrink-0">
                             <x-wire::icon name="outline:document" class="h-5 w-5 text-gray-400"/>
                         </div>
-                    </template>
+                    @endif
 
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-gray-700 dark:text-gray-300 truncate" x-text="file.name"></p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400" x-text="formatSize(file.size)"></p>
+                        @if ($preview['stored'] && $preview['url'])
+                            <a href="{{ $preview['url'] }}" target="_blank" rel="noopener"
+                               class="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 truncate block">
+                                {{ $preview['name'] }}
+                            </a>
+                        @else
+                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{{ $preview['name'] }}</p>
+                        @endif
+                        @unless ($preview['stored'])
+                            <p class="text-xs text-gray-400 dark:text-gray-500">{{ __('Pending upload') }}</p>
+                        @endunless
                     </div>
 
-                    <button
-                            type="button"
-                            @click="removeFile(index)"
-                            class="shrink-0 p-1 text-gray-400 hover:text-red-500 transition-colors duration-150"
-                    >
-                        <x-wire::icon name="x-mark" class="h-4 w-4"/>
-                    </button>
+                    @if ($canDelete)
+                        <button
+                                type="button"
+                                wire:click="removeUploadedFile('{{ $field->getStatePath() }}', {{ (int) $preview['index'] }})" data-testid="form-file-{{ $field->getStatePath() }}-remove-{{ (int) $preview['index'] }}"
+                                class="shrink-0 p-1 text-gray-400 hover:text-red-500 transition-colors duration-150"
+                        >
+                            <x-wire::icon name="x-mark" class="h-4 w-4"/>
+                            <span class="sr-only">{{ __('Remove') }}</span>
+                        </button>
+                    @endif
                 </li>
-            </template>
+            @endforeach
         </ul>
-    </template>
+    @endif
+
 </div>
 
 @include('wire-forms::partials.field-wrapper-end')

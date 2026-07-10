@@ -17,6 +17,7 @@
     <input
             type="color"
             id="{{ $field->getId() }}"
+            data-testid="form-color-{{ $field->getStatePath() }}"
             x-model="color"
             @if($field->isDisabled()) disabled @endif
             class="h-10 w-14 rounded border-gray-300 p-1 cursor-pointer dark:border-gray-600 transition-colors duration-150"
@@ -24,6 +25,7 @@
     <input
             type="text"
             x-model="color"
+            data-testid="form-color-{{ $field->getStatePath() }}-hex"
             @if($field->getPlaceholder()) placeholder="{{ $field->getPlaceholder() }}" @endif
             @if($field->isDisabled()) disabled @endif
             @if($field->isReadOnly()) readonly @endif
@@ -35,7 +37,7 @@
             @foreach($field->getSwatches() as $swatch)
                 <button
                     type="button"
-                    x-on:click="color = '{{ $swatch }}'"
+                    x-on:click="color = '{{ $swatch }}'" data-testid="form-color-{{ $field->getStatePath() }}-swatch-{{ $swatch }}" aria-label="{{ $swatch }}"
                     @if($field->isDisabled()) disabled @endif
                     class="h-6 w-6 rounded border border-gray-300 dark:border-gray-600 transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     style="background-color: {{ $swatch }}"

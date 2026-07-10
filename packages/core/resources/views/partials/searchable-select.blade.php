@@ -203,6 +203,7 @@
     <button
         type="button"
         id="{{ $selectId }}"
+        data-testid="select-trigger"
         x-ref="trigger"
         @click="open = !open"
         @keydown.arrow-down.prevent="onArrowDown()"
@@ -280,6 +281,7 @@
                     @keydown.escape="open = false; activeIndex = -1"
                     placeholder="{{ $searchPrompt }}"
                     aria-label="{{ $searchPrompt }}"
+                    data-testid="select-search"
                     class="w-full rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:border-primary-500 focus:ring-primary-500 transition-colors duration-150"
                     x-ref="searchInput"
                 />
@@ -292,6 +294,7 @@
                         <button
                             type="button"
                             @click="clear()"
+                            data-testid="select-clear"
                             class="w-full px-3 py-2 text-left text-sm text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
                         >
                             {{ $placeholder }}
@@ -304,6 +307,7 @@
                         <button
                             type="button"
                             @click="select(value)"
+                            :data-testid="'select-option-' + value"
                             @mouseenter="activeIndex = index"
                             class="flex items-center justify-between gap-2 w-full px-3 py-2 text-left text-sm dark:text-white transition-colors duration-150"
                             :class="{

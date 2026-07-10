@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use Livewire\Component;
 use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
 use NyonCode\WireForms\Concerns\InteractsWithFieldActions;
+use NyonCode\WireForms\Concerns\InteractsWithFileUploads;
 use NyonCode\WireForms\Concerns\InteractsWithRepeaters;
 use NyonCode\WireForms\Concerns\InteractsWithSelectCreation;
 use NyonCode\WireForms\Concerns\InteractsWithWizards;
@@ -26,6 +27,7 @@ trait WithForms
 {
     use DispatchesStateUpdates;
     use InteractsWithFieldActions;
+    use InteractsWithFileUploads;
     use InteractsWithRepeaters;
     use InteractsWithSelectCreation;
     use InteractsWithWizards;

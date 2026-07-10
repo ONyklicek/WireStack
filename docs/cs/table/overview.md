@@ -349,17 +349,38 @@ v rozsahu výběru zůstaly živé.
 // Vlastní CSS třída na <thead>
 ->headerClass(string $class)
 
-// Vlastní CSS třída na <tr>
+// Vlastní CSS třída na <tr>, staticky nebo počítaná per záznam
 ->rowClass(string|Closure $class)
+
+// Obarvení celého řádku sémantickou barvou, staticky nebo per záznam
+->rowColor(string|Closure|null $color)
 ```
 
-Dynamické třídy řádků:
+**Podmíněná barva řádku.** `rowColor()` obarví celý řádek stejnou sémantickou
+paletou jako odznaky a všechny ostatní plochy (`success`, `warning`, `danger`,
+`info`, `primary`, `gray` nebo libovolný raw Tailwind odstín). Vrácením `null`
+z Closure zůstane řádek bez tónu. Obarvený řádek automaticky dostane hover ve
+stejném odstínu a potlačí neutrální hover/zebrování, takže barva vždy vypadá
+čistě: [tl! focus:start]
+
 ```php
-->rowClass(fn (User $record) => match(true) {
-    $record->is_banned => 'bg-red-50 dark:bg-red-900/10',
-    $record->is_admin => 'bg-blue-50 dark:bg-blue-900/10',
-    default => '',
+->rowColor(fn (Invoice $record) => match ($record->status) {
+    'overdue' => 'danger',
+    'pending' => 'warning',
+    'paid'    => 'success',
+    default   => null,
 })
+``` <!-- [tl! focus:end] -->
+
+Preferuj `rowColor()` před ručně psanými background třídami — prochází
+kanonickým vlastníkem `HasColor`, takže zůstává konzistentní se zbytkem UI a
+funguje ve světlém i tmavém režimu. `rowClass()` použij, když potřebuješ
+libovolné utility (tučné písmo, ring, průhlednost) místo tónu pozadí; obojí lze
+kombinovat na téže tabulce:
+
+```php
+->rowColor(fn (Invoice $r) => $r->isOverdue() ? 'danger' : null)
+->rowClass(fn (Invoice $r) => $r->isOverdue() ? 'font-semibold' : null)
 ```
 
 ### URL záznamu (klikatelné řádky)

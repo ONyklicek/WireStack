@@ -45,13 +45,17 @@
             <div class="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-600">
                 <div class="flex items-center gap-2">
                     @if($field->isReorderable())
-                        <button type="button" x-sortable-handle class="cursor-grab text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <button type="button" x-sortable-handle  data-testid="form-repeater-{{ $statePath }}-reorder-{{ $index }}" aria-label="Reorder" class="cursor-grab text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                             <x-wire::icon name="outline:bars-3" class="w-4 h-4" />
                         </button>
                     @endif
 
+                    @php $itemLabel = $field->getItemLabel(is_array($item) ? $item : [], $index); @endphp
                     <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
                         #{{ $index + 1 }}
+                        @if($itemLabel !== null)
+                            <span class="ml-1 font-normal text-gray-500 dark:text-gray-400">{{ $itemLabel }}</span>
+                        @endif
                     </span>
                 </div>
 
@@ -69,7 +73,7 @@
                     @if($field->isDeletable() && ($field->getMinItems() === null || $itemCount > $field->getMinItems()))
                         <button
                             type="button"
-                            wire:click="removeRepeaterItem('{{ $statePath }}', {{ $index }})"
+                            wire:click="removeRepeaterItem('{{ $statePath }}', {{ $index }})" data-testid="form-repeater-{{ $statePath }}-remove-{{ $index }}"
                             class="p-1 text-red-400 hover:text-red-600"
                         >
                             <x-wire::icon name="trash" class="w-4 h-4" />
@@ -95,7 +99,7 @@
     @if($field->isAddable() && ($field->getMaxItems() === null || $itemCount < $field->getMaxItems()))
         <button
             type="button"
-            wire:click="addRepeaterItem('{{ $statePath }}')"
+            wire:click="addRepeaterItem('{{ $statePath }}')" data-testid="form-repeater-{{ $statePath }}-add"
             class="flex items-center gap-1 px-3 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg w-full justify-center hover:border-primary-300 dark:hover:border-primary-500 transition-colors"
         >
             <x-wire::icon name="plus" class="w-4 h-4" />

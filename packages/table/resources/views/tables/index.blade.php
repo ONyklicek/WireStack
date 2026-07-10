@@ -58,6 +58,7 @@
     $filters = $table->getFilters();
 
     $hasActions = $table->hasActions();
+    $rowContextMenuEnabled = $table->hasRowContextMenu(); // dedicated actions, independent of the actions column
     $hasBulkActions = !empty($bulkActions);
     $hasHeaderActions = !empty($headerActions);
     $hasFilters = !empty($filters);
@@ -78,6 +79,19 @@
     $isPaginated = $table->isPaginated();
     $visibleColumns = array_filter($table->getColumns(), fn($c) => $c->canView() && $component->isColumnVisible($c->getName()));
     $hasVisibleColumns = count($visibleColumns) > 0;
+    // Column-static render metadata: resolved once per column here instead of
+    // re-calling these getters for every cell (N rows × M columns → M). Reused by
+    // the header and body. Keyed by column name.
+    $columnMeta = [];
+    foreach ($visibleColumns as $col) {
+        $columnMeta[$col->getName()] = [
+            'wrapClass' => $col->shouldWrap() ? '' : 'whitespace-nowrap',
+            'alignment' => $col->getAlignmentClass(),
+            'responsive' => $col->getResponsiveClasses(),
+            'editable' => $col->isEditable(),
+            'responsiveDisplay' => $col->hasResponsiveDisplay(),
+        ];
+    }
     $filterableColumns = array_filter($table->getColumns(), fn($c) => $c->canView() && $c->isFilterable() && $component->isColumnVisible($c->getName()));
     $hasColumnFilters = count($filterableColumns) > 0;
     $hasSubRows = $table->hasSubRows();
@@ -101,7 +115,7 @@
     // Table styling
     $isCompact = $table->isCompact();
     $isBordered = $table->isBordered();
-    $isStriped = $table->isStriped();
+    // Row hover/striping/tint now composed in Table::getRowClasses($record, $rowIndex).
     $cellPadding = $isCompact ? 'px-4 py-2' : 'px-6 py-4';
     $headerPadding = $isCompact ? 'px-4 py-2' : 'px-6 py-3';
 
@@ -228,6 +242,8 @@
                                                 type="search"
                                                 wire:model.live.debounce.300ms="tableState.search"
                                                 placeholder="{{ __('wire-table::messages.search') }}..."
+                                                aria-label="{{ __('wire-table::messages.search') }}"
+                                                data-testid="table-search"
                                                 class="block w-full rounded-lg border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 pl-9 pr-3 py-2 text-sm placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 dark:text-white dark:placeholder-gray-500"
                                         >
                                     </div>
@@ -242,6 +258,8 @@
                                                 x-ref="trigger"
                                                 @click="toggle()"
                                                 type="button"
+                                                data-testid="table-filters-trigger"
+                                                aria-label="{{ __('wire-table::messages.filters') }}"
                                                 class="inline-flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
                                         >
                                             <x-wire::icon name="outline:funnel" size="h-4 w-4" />
@@ -360,6 +378,8 @@
                                                 type="button"
                                                 class="inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
                                                 title="{{ __('wire-table::messages.toggle_columns') }}"
+                                                aria-label="{{ __('wire-table::messages.toggle_columns') }}"
+                                                data-testid="table-column-toggle"
                                         >
                                             <x-wire::icon name="outline:view-columns" size="h-5 w-5" />
                                         </button>
@@ -432,6 +452,17 @@
                                                                 class="text-sm text-gray-700 dark:text-gray-300">{{ $column->getLabel() }}</span>
                                                     </label>
                                                 @endforeach
+                                                {{-- Reset to the configured defaults (clears the saved layout). --}}
+                                                @if($table->getRememberColumnsKey() !== null)
+                                                    <button
+                                                            type="button"
+                                                            wire:click="resetColumns"
+                                                            class="mt-1 flex w-full items-center gap-3 border-t border-gray-100 dark:border-gray-700 px-3 py-2 text-left text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg"
+                                                    >
+                                                        <x-wire::icon name="outline:arrow-path" size="h-4 w-4" />
+                                                        {{ __('wire-table::messages.reset_columns') }}
+                                                    </button>
+                                                @endif
                                                 </div>
                                                 </div>
                                             </div>
@@ -452,6 +483,7 @@
                         <div
                                 x-show="selected.length > 0"
                                 x-cloak
+                                data-testid="table-bulk-bar"
                                 class="px-4 lg:px-6 py-3 bg-primary-50 dark:bg-primary-900/20 border-b border-primary-100 dark:border-primary-800/30">
                             {{-- Stacks on mobile so multiple bulk-action buttons wrap instead of overflowing. --}}
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -483,6 +515,8 @@
                                     <button
                                             type="button"
                                             x-on:click="deselectAll()"
+                                            data-testid="table-deselect"
+                                            aria-label="{{ __('wire-table::messages.deselect') }}"
                                             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary-700 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200 hover:bg-primary-100 dark:hover:bg-primary-800/50 rounded-lg transition-colors"
                                     >
                                         <x-wire::icon name="outline:x-mark" size="w-4 h-4" />
@@ -508,6 +542,10 @@
                                                 <button
                                                         type="button"
                                                         x-on:click="toggleAll()"
+                                                        role="checkbox"
+                                                        :aria-checked="allSelected ? 'true' : (someSelected ? 'mixed' : 'false')"
+                                                        aria-label="{{ __('wire-table::messages.select_all') }}"
+                                                        data-testid="table-select-all"
                                                         class="relative h-4 w-4 rounded border focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors"
                                                         :class="(allSelected || someSelected) ? 'bg-primary-600 border-primary-600' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600'"
                                                 >
@@ -542,16 +580,18 @@
 
                                     {{-- Column Headers --}}
                                     @foreach($visibleColumns as $column)
+                                        @php $hm = $columnMeta[$column->getName()]; @endphp
                                         <th
                                                 scope="col"
                                                 data-column="{{ $column->getName() }}"
-                                                class="{{ $headerPadding }} {{ $column->getAlignmentClass() }} font-semibold {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $column->getResponsiveClasses() }}"
+                                                class="{{ $headerPadding }} {{ $hm['alignment'] }} font-semibold {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $hm['responsive'] }}"
                                                 @if($column->getWidth()) style="width: {{ $column->getWidth() }}" @endif
                                         >
                                             @if($column->isSortable() && $table->isSortable())
                                                 <button
                                                         type="button"
                                                         wire:click="sortTable('{{ $column->getName() }}')"
+                                                        data-testid="table-sort-{{ $column->getName() }}"
                                                         class="group inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200"
                                                 >
                                                     <span>{{ $column->getLabel() }}</span>
@@ -603,7 +643,7 @@
                                         @endif
 
                                         @foreach($visibleColumns as $column)
-                                            <th class="{{ $headerPadding }}">
+                                            <th class="{{ $headerPadding }}" @if($column->isFilterable()) data-testid="table-filter-{{ $column->getName() }}" @endif>
                                                 @if($column->isFilterable())
                                                     {!! $column->renderFilter($columnFilterValues[$column->getName()] ?? null) !!}
                                                 @endif
@@ -641,6 +681,13 @@
                                         $nextRecord = $hasGrouping ? ($records[$rowIndex + 1] ?? null) : null;
                                         $isGroupStart = $hasGrouping && ($prevRecord === null || $table->getGroupValue($prevRecord) !== $groupValue);
                                         $isGroupEnd = $hasGrouping && ($nextRecord === null || $table->getGroupValue($nextRecord) !== $groupValue);
+
+                                        // Right-click context menu: only render one for rows that
+                                        // actually have a visible action.
+                                        $rowContextMenuHtml = $rowContextMenuEnabled
+                                            ? trim($table->getRowContextMenuHtml($record)->toHtml())
+                                            : '';
+                                        $hasRowContextMenu = $rowContextMenuHtml !== '';
                                     @endphp
 
                                     {{-- Group header --}}
@@ -652,10 +699,43 @@
                                         ])
                                     @endif
                                     <tr
-                                            class="{{ $table->isHoverable() ? 'hover:bg-gray-50 dark:hover:bg-gray-700/30' : '' }} {{ $isStriped && $rowIndex % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/30' : '' }} {{ $table->getRowClass() }}"
+                                            class="{{ $table->getRowClasses($record, $rowIndex) }}"
                                             @if($isSelectable) :class="isSelected(@js((string) $recordKey)) ? 'bg-primary-50 dark:bg-primary-900/20' : ''" @endif
+                                            @if($hasRowContextMenu) x-data="wireContextMenu()" @contextmenu.prevent="openAt($event)" @endif
                                             wire:key="row-{{ $recordKey }}"
+                                            data-testid="table-row"
+                                            data-row-key="{{ $recordKey }}"
                                     >
+                                        @if($hasRowContextMenu)
+                                            @include('wire-core::partials.floating-assets')
+                                            {{-- <template> is a script-supporting element, valid as a direct
+                                                 child of <tr>. Teleported to <body>; a fixed panel pinned at
+                                                 the cursor (positioned by wireContextMenu.place()). --}}
+                                            <template x-teleport="body">
+                                                <div
+                                                        x-ref="panel"
+                                                        x-show="open"
+                                                        x-cloak
+                                                        @click.outside="close()"
+                                                        @keydown.escape.window="close()"
+                                                        @wheel.window="close()"
+                                                        @click="close()"
+                                                        x-transition:enter="transition ease-out duration-100"
+                                                        x-transition:enter-start="opacity-0 scale-95"
+                                                        x-transition:enter-end="opacity-100 scale-100"
+                                                        x-transition:leave="transition ease-in duration-75"
+                                                        x-transition:leave-start="opacity-100 scale-100"
+                                                        x-transition:leave-end="opacity-0 scale-95"
+                                                        class="fixed z-50 min-w-[12rem] origin-top-left rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black/5 dark:ring-white/10 focus:outline-none"
+                                                        style="display: none; left: 0; top: 0;"
+                                                        role="menu"
+                                                >
+                                                    <div class="py-1">
+                                                        {!! $rowContextMenuHtml !!}
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        @endif
                                         {{-- Selection Checkbox --}}
                                         @if($isSelectable)
                                             <td class="w-12 {{ $cellPadding }}">
@@ -663,6 +743,10 @@
                                                     <button
                                                             type="button"
                                                             x-on:click="toggle(@js((string) $recordKey))"
+                                                            role="checkbox"
+                                                            :aria-checked="isSelected(@js((string) $recordKey))"
+                                                            aria-label="{{ __('wire-table::messages.select_row') }}"
+                                                            data-testid="table-row-select"
                                                             class="relative h-4 w-4 rounded border focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors"
                                                             :class="isSelected(@js((string) $recordKey)) ? 'bg-primary-600 border-primary-600' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:border-gray-400'"
                                                     >
@@ -700,14 +784,19 @@
 
                                         {{-- Column Cells --}}
                                         @foreach($visibleColumns as $column)
-                                            <td class="{{ $cellPadding }} {{ $column->shouldWrap() ? '' : 'whitespace-nowrap' }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $column->getAlignmentClass() }} dark:text-white {{ $column->getResponsiveClasses() }}">
-                                                @if($recordUrl && !$column->isEditable())
+                                            @php $cm = $columnMeta[$column->getName()]; @endphp
+                                            <td
+                                                class="{{ $cellPadding }} {{ $cm['wrapClass'] }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $cm['alignment'] }} dark:text-white {{ $cm['responsive'] }}"
+                                                data-testid="table-cell-{{ $column->getName() }}"
+                                                data-column="{{ $column->getName() }}"
+                                            >
+                                                @if($recordUrl && !$cm['editable'])
                                                     <a href="{{ $recordUrl }}"
                                                        class="hover:text-primary-600 dark:hover:text-primary-400">
-                                                        {!! $column->hasResponsiveDisplay() ? $column->renderResponsiveCell($record) : $column->renderCell($record) !!}
+                                                        {!! $cm['responsiveDisplay'] ? $column->renderResponsiveCell($record) : $column->renderCell($record) !!}
                                                     </a>
                                                 @else
-                                                    {!! $column->hasResponsiveDisplay() ? $column->renderResponsiveCell($record) : $column->renderCell($record) !!}
+                                                    {!! $cm['responsiveDisplay'] ? $column->renderResponsiveCell($record) : $column->renderCell($record) !!}
                                                 @endif
                                             </td>
                                         @endforeach
@@ -835,7 +924,9 @@
                                     $recordUrl = $table->getRecordUrl($record);
                                 @endphp
                                 <div
-                                        class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
+                                        class="{{ $table->getRowCardClasses($record) }}"
+                                        data-testid="table-card"
+                                        data-row-key="{{ $recordKey }}"
                                         @if($isSelectable) :class="isSelected(@js((string) $recordKey)) ? 'ring-2 ring-primary-500 ring-inset bg-primary-50/50 dark:bg-primary-900/30' : ''" @endif
                                 >
                                     {{-- Card Header: First column as title + Actions --}}
@@ -846,9 +937,11 @@
                                                         type="checkbox"
                                                         x-on:change="toggle(@js((string) $recordKey))"
                                                         :checked="isSelected(@js((string) $recordKey))"
+                                                        data-testid="table-card-select"
+                                                        aria-label="{{ __('wire-table::messages.select_row') }}"
                                                         class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:focus:ring-offset-gray-800 touch-manipulation"
                                                 >
-                                                <span class="sr-only">Vybrat</span>
+                                                <span class="sr-only">{{ __('wire-table::messages.select_row') }}</span>
                                             </label>
                                         @endif
 
@@ -989,6 +1082,8 @@
                                     <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('wire-table::messages.show') }}</span>
                                     <select
                                             wire:model.live="tableState.pagination.perPage"
+                                            data-testid="table-per-page"
+                                            aria-label="{{ __('wire-table::messages.show') }}"
                                             class="rounded-lg border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 focus:border-primary-500 focus:ring-primary-500 py-1.5"
                                     >
                                         @foreach($table->getPerPageOptions() as $option)

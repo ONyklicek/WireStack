@@ -68,6 +68,8 @@
                             <button
                                 type="button"
                                 @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}"
+                                data-testid="slide-over-close"
+                                aria-label="{{ __('Close') }}"
                                 class="-m-1.5 rounded-md p-1.5 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 touch-manipulation"
                             >
                                 <span class="sr-only">{{ __('Close') }}</span>

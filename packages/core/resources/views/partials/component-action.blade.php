@@ -12,6 +12,8 @@
     wire:click="callInfolistAction('{{ $action->getName() }}'@if($actionRowKey !== null), {{ $actionRowKey }}@endif)"
     wire:loading.attr="disabled"
     wire:target="callInfolistAction"
+    data-testid="infolist-action-{{ $action->getName() }}"
+    @if($actionLabel) aria-label="{{ $actionLabel }}" @endif
     @if($action->getTooltip()) title="{{ $action->getTooltip() }}" @endif
     @class([
         'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',

@@ -10,16 +10,23 @@ use NyonCode\WireCore\Foundation\Icons\Icon;
  * Immutable value object representing a notification.
  *
  * Carries all metadata a notification driver might need:
- * type, message, title, duration, and arbitrary extra data.
+ * type, message, title, duration, actions, and arbitrary extra data.
  *
  * Usage in actions:
  *   ->successNotification('Uloženo')
  *   ->successNotification(
  *       Notification::make('success', 'Uloženo')->title('Hotovo')->duration(5000)
  *   )
+ *   ->successNotification(
+ *       Notification::success('Deleted')->persistent()->action('Undo', 'restore')
+ *   )
  */
 final class Notification
 {
+    /**
+     * @param  array<string, mixed>  $extra
+     * @param  list<NotificationAction>  $actions
+     */
     private function __construct(
         public readonly string $type,
         public readonly string $message,
@@ -27,8 +34,8 @@ final class Notification
         public readonly ?int $duration = null,
         public readonly ?string $icon = null,
         public readonly ?string $position = null,
-        /** @var array<string, mixed> */
         public readonly array $extra = [],
+        public readonly array $actions = [],
     ) {}
 
     /**
@@ -66,13 +73,22 @@ final class Notification
     public function title(?string $title): self
     {
         return new self($this->type, $this->message, $title, $this->duration, $this->icon, $this->position,
-            $this->extra);
+            $this->extra, $this->actions);
     }
 
     public function duration(?int $milliseconds): self
     {
         return new self($this->type, $this->message, $this->title, $milliseconds, $this->icon, $this->position,
-            $this->extra);
+            $this->extra, $this->actions);
+    }
+
+    /**
+     * Mark the toast as sticky: it stays until dismissed (duration 0, no
+     * countdown bar). Pass false to restore the default auto-dismiss.
+     */
+    public function persistent(bool $persistent = true): self
+    {
+        return $this->duration($persistent ? 0 : null);
     }
 
     public function icon(string|Icon|null $icon): self
@@ -80,13 +96,13 @@ final class Notification
         $resolved = $icon instanceof Icon ? $icon->value() : $icon;
 
         return new self($this->type, $this->message, $this->title, $this->duration, $resolved, $this->position,
-            $this->extra);
+            $this->extra, $this->actions);
     }
 
     public function position(?string $position): self
     {
         return new self($this->type, $this->message, $this->title, $this->duration, $this->icon, $position,
-            $this->extra);
+            $this->extra, $this->actions);
     }
 
     /**
@@ -95,7 +111,32 @@ final class Notification
     public function extra(array $extra): self
     {
         return new self($this->type, $this->message, $this->title, $this->duration, $this->icon, $this->position,
-            array_merge($this->extra, $extra));
+            array_merge($this->extra, $extra), $this->actions);
+    }
+
+    /**
+     * Append an action button. Accepts a NotificationAction or the shorthand
+     * label + Livewire event to dispatch on click.
+     */
+    public function action(NotificationAction|string $action, ?string $event = null): self
+    {
+        $resolved = $action instanceof NotificationAction
+            ? $action
+            : NotificationAction::make($action, (string) $event);
+
+        return new self($this->type, $this->message, $this->title, $this->duration, $this->icon, $this->position,
+            $this->extra, [...$this->actions, $resolved]);
+    }
+
+    /**
+     * Replace the action button set.
+     *
+     * @param  array<array-key, NotificationAction>  $actions
+     */
+    public function actions(array $actions): self
+    {
+        return new self($this->type, $this->message, $this->title, $this->duration, $this->icon, $this->position,
+            $this->extra, array_values($actions));
     }
 
     // ─── Serialization ─────────────────────────────────────────
@@ -113,6 +154,9 @@ final class Notification
             'icon' => $this->icon,
             'position' => $this->position,
             'extra' => $this->extra ?: null,
+            'actions' => $this->actions
+                ? array_map(fn (NotificationAction $a) => $a->toArray(), $this->actions)
+                : null,
         ], fn ($v) => $v !== null);
     }
 }

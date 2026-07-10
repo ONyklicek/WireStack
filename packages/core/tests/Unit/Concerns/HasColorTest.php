@@ -55,6 +55,8 @@ it('resolves the full extended palette for every button surface', function () us
             ->and(TestColorClass::getModalIconTextClass($color))->toContain("text-$color-")
             ->and(TestColorClass::getSolidBgClass($color))->toContain("bg-$color-")
             ->and(TestColorClass::getSoftBgClass($color))->toContain("bg-$color-")
+            ->and(TestColorClass::getRowTintClasses($color))->toContain("bg-$color-50")
+            ->and(TestColorClass::getRowTintClasses($color))->toContain("hover:bg-$color-100")
             ->and(TestColorClass::getChoiceColorClasses($color)['solid'])->toContain("bg-$color-");
     }
 });

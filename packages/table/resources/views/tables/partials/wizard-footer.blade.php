@@ -9,7 +9,7 @@
 @endphp
 <div class="flex w-full flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
-        <button type="button" wire:click="closeActionModal" class="{{ $secondaryClasses }}">
+        <button type="button" wire:click="closeActionModal" data-testid="modal-cancel" class="{{ $secondaryClasses }}">
             {{ $modalData['cancelLabel'] }}
         </button>
         @include('wire-table::tables.partials.modal-footer-actions', [
@@ -27,7 +27,7 @@
         @unless($isFirstStep)
             <button
                 type="button"
-                wire:click="prevActionModalStep"
+                wire:click="prevActionModalStep" data-testid="wizard-back"
                 wire:loading.attr="disabled"
                 wire:target="prevActionModalStep"
                 class="{{ $secondaryClasses }}"
@@ -39,7 +39,7 @@
         @if($isLastStep)
             <button
                 type="button"
-                wire:click="submitActionModal"
+                wire:click="submitActionModal" data-testid="modal-submit"
                 wire:loading.attr="disabled"
                 wire:target="submitActionModal"
                 class="{{ $primaryClasses }}"
@@ -51,7 +51,7 @@
         @else
             <button
                 type="button"
-                wire:click="nextActionModalStep"
+                wire:click="nextActionModalStep" data-testid="wizard-next"
                 wire:loading.attr="disabled"
                 wire:target="nextActionModalStep"
                 class="{{ $primaryClasses }}"

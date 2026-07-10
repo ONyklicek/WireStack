@@ -194,7 +194,12 @@ it('keeps raw markup in html mode through the text partial', function () {
 it('renders ToggleColumn through its partial', function () {
     $html = ToggleColumn::make('active')->renderCell(partialRecord(['id' => 1, 'active' => true]));
 
+    // Optimistic Alpine cell: commit() (which calls $wire.updateTableCell from the
+    // shared wireEditableCell component) + record identity via data-attributes.
     expect($html)->toContain('<button')
         ->and($html)->toContain('role="switch"')
-        ->and($html)->toContain('updateTableCell');
+        ->and($html)->toContain('wireEditableCell(')
+        ->and($html)->toContain('commit(! value)')
+        ->and($html)->toContain('data-record-key="1"')
+        ->and($html)->toContain('data-column-name="active"');
 });

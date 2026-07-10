@@ -97,3 +97,21 @@ test('the shipped bundle registers the tabs and wizard Alpine data', function ()
         ->toContain('wireWizard')
         ->toContain('registerStep');
 });
+
+test('the shipped bundle registers the editable-cell Alpine data', function () {
+    $bundle = WireCoreServiceProvider::ASSETS_PATH.'/wire-core-dropdown.js';
+
+    // Inline-editable table cells (TextInput/Select/Toggle columns) depend on the
+    // shared wireEditableCell factory; fails if the dist drifts from source.
+    expect(file_get_contents($bundle))
+        ->toContain('wireEditableCell')
+        ->toContain('updateTableCell');
+});
+
+test('the shipped bundle registers the row context-menu Alpine data', function () {
+    $bundle = WireCoreServiceProvider::ASSETS_PATH.'/wire-core-dropdown.js';
+
+    // Table::rowContextMenu() renders x-data="wireContextMenu()"; fails if the
+    // dist drifts from source (needs a rebuild via `npm run build:core-assets`).
+    expect(file_get_contents($bundle))->toContain('wireContextMenu');
+});

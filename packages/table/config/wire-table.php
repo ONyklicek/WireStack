@@ -1,6 +1,9 @@
 <?php
 
 declare(strict_types=1);
+use NyonCode\WireTable\Preferences\Drivers\DatabasePreferenceDriver;
+use NyonCode\WireTable\Preferences\Drivers\NullPreferenceDriver;
+use NyonCode\WireTable\Preferences\Drivers\SessionPreferenceDriver;
 
 return [
 
@@ -43,5 +46,34 @@ return [
     |
     */
     'notification_driver' => null, // null = SessionDriver (default)
+
+    /*
+    |--------------------------------------------------------------------------
+    | Per-user Table Preferences
+    |--------------------------------------------------------------------------
+    |
+    | Where a table remembers each user's column layout when it opts in with
+    | Table::rememberColumns('key'). 'default' is used for signed-in users,
+    | 'guest' for unauthenticated visitors (so a database-backed default can
+    | still fall back to per-session memory for guests).
+    |
+    | Built-in drivers:
+    |   - null     : do not persist (column toggles last only for the request)
+    |   - session  : store in the session (no migration needed)
+    |   - database : store in the `table_preferences` table (publish + run the
+    |                migration: vendor:publish --tag="wire-table::migrations")
+    |
+    | Point an alias at your own class to use a custom store.
+    |
+    */
+    'preferences' => [
+        'default' => env('WIRE_TABLE_PREFERENCES_DRIVER', 'null'),
+        'guest' => env('WIRE_TABLE_PREFERENCES_GUEST_DRIVER', 'session'),
+        'drivers' => [
+            'null' => NullPreferenceDriver::class,
+            'session' => SessionPreferenceDriver::class,
+            'database' => DatabasePreferenceDriver::class,
+        ],
+    ],
 
 ];

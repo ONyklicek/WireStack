@@ -6,24 +6,49 @@
     /** @var bool $disabled */
     /** @var string $onColorClass canonical "on" track fill from HasColor::getSolidBgClass */
     /** @var string $offColorClass canonical "off" track fill from HasColor::getSoftBgClass */
+    /** @var string $recordVersion optimistic-lock version (updated_at timestamp) */
 
-    $bgColor = $state ? $onColorClass : $offColorClass;
     $cursorClass = $disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer';
-    $translateClass = $state ? 'translate-x-5' : 'translate-x-0';
+    $wireKey = "tgl-{$recordKey}-{$columnName}";
 @endphp
 
-<button
-    type="button"
-    @unless($disabled)
-        wire:click="updateTableCell('{{ $recordKey }}', '{{ $columnName }}', {{ $state ? 'false' : 'true' }})"
-    @endunless
-    class="relative inline-flex h-6 w-11 flex-shrink-0 {{ $cursorClass }} rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {{ $bgColor }}"
-    role="switch"
-    aria-checked="{{ $state ? 'true' : 'false' }}"
+<div
+    wire:key="{{ $wireKey }}"
+    wire:ignore.self
+    x-data="wireEditableCell({
+        value: {{ $state ? 'true' : 'false' }},
+        recordVersion: '{{ $recordVersion }}',
+        parse: (v) => v === true || v === 1 || v === '1' || v === 'true',
+    })"
+    data-record-key="{{ $recordKey }}"
+    data-column-name="{{ $columnName }}"
+    data-testid="table-editable-{{ $columnName }}"
+    data-server-value="{{ $state ? '1' : '0' }}"
+    data-record-version="{{ $recordVersion }}"
+    data-msg-error="{{ __('wire-table::messages.error') }}"
+    data-msg-save-failed="{{ __('wire-table::messages.save_failed') }}"
 >
-    <span class="sr-only">Toggle</span>
-    <span
-        aria-hidden="true"
-        class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {{ $translateClass }}"
-    ></span>
-</button>
+    <button
+        type="button"
+        role="switch"
+        :aria-checked="value ? 'true' : 'false'"
+        :title="error"
+        @if($disabled) disabled @else @click="commit(! value)" :disabled="saving" @endif
+        :class="{
+            '{{ $onColorClass }}': value && ! error,
+            '{{ $offColorClass }}': ! value && ! error,
+            'bg-red-100 dark:bg-red-900/30 ring-2 ring-red-500': error,
+        }"
+        class="relative inline-flex h-6 w-11 flex-shrink-0 {{ $cursorClass }} rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+    >
+        <span class="sr-only">Toggle</span>
+        <span
+            aria-hidden="true"
+            :class="value ? 'translate-x-5' : 'translate-x-0'"
+            class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+        ></span>
+    </button>
+
+    {{-- Inline error (e.g. optimistic-lock conflict) — self-contained, no toast needed. --}}
+    <p x-show="error" x-cloak x-text="error" class="mt-1 text-xs text-red-600 dark:text-red-400"></p>
+</div>

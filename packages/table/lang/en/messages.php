@@ -32,6 +32,9 @@ return [
     // Filters
     'filters' => 'Filters',
     'filter_all' => 'All',
+    'filter_search' => 'Search...',
+    'filter_no_results' => 'No results found',
+    'filter_selected_count' => '{1}:count selected|[2,*]:count selected',
     'filter_yes' => 'Yes',
     'filter_no' => 'No',
     'filter_min' => 'Min',
@@ -67,12 +70,14 @@ return [
     'copy' => 'Copy',
     'actions_label' => 'Actions',
     'toggle_columns' => 'Toggle columns',
+    'reset_columns' => 'Reset columns',
     'export_label' => 'Export',
     'import_label' => 'Import',
     'import_result' => 'Imported :imported row(s), :failed failed.',
 
     // Selection
     'select_all' => 'Select all',
+    'select_row' => 'Select row',
     'deselect' => 'Deselect',
 
     // Pagination
@@ -80,6 +85,9 @@ return [
     'showing' => 'Showing',
     'of' => 'of',
     'records' => 'records',
+    'pagination_previous' => 'Previous page',
+    'pagination_next' => 'Next page',
+    'pagination_goto' => 'Go to page :page',
 
     // Search
     'search' => 'Search',

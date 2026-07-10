@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use NyonCode\WireForms\Components\Checkbox;
 use NyonCode\WireForms\Components\CheckboxList;
 use NyonCode\WireForms\Components\ColorPicker;
@@ -307,6 +309,71 @@ test('file upload preserve filenames', function () {
     $field = FileUpload::make('file')->preserveFilenames();
 
     expect($field->shouldPreserveFilenames())->toBeTrue();
+});
+
+test('file upload is deletable by default and can opt out', function () {
+    expect(FileUpload::make('doc')->isDeletable())->toBeTrue()
+        ->and(FileUpload::make('doc')->deletable(false)->isDeletable())->toBeFalse();
+});
+
+test('file upload lists already-stored files from array state', function () {
+    Storage::fake('public');
+
+    $files = FileUpload::make('gallery')->image()->multiple()
+        ->getStoredFiles(['uploads/a.png', 'uploads/b.png']);
+
+    expect($files)->toHaveCount(2)
+        ->and($files[0]['path'])->toBe('uploads/a.png')
+        ->and($files[0]['name'])->toBe('a.png')
+        ->and($files[0]['isImage'])->toBeTrue()
+        ->and($files[0]['url'])->toContain('uploads/a.png');
+});
+
+test('file upload accepts a single string path as stored state', function () {
+    Storage::fake('public');
+
+    $files = FileUpload::make('avatar')->getStoredFiles('uploads/me.png');
+
+    expect($files)->toHaveCount(1)
+        ->and($files[0]['name'])->toBe('me.png');
+});
+
+test('file upload skips temporary uploads and empty stored values', function () {
+    Storage::fake('public');
+
+    // Non-string entries (a fresh TemporaryUploadedFile is an object), null and
+    // empty strings are not persisted paths — only the real path survives.
+    $files = FileUpload::make('doc')->getStoredFiles([null, '', new stdClass, 'uploads/keep.pdf']);
+
+    expect($files)->toHaveCount(1)
+        ->and($files[0]['name'])->toBe('keep.pdf');
+});
+
+test('file upload passes a full URL through and reflects non-image type', function () {
+    $files = FileUpload::make('doc')->getStoredFiles(['https://cdn.example.com/x.pdf']);
+
+    expect($files[0]['url'])->toBe('https://cdn.example.com/x.pdf')
+        ->and($files[0]['isImage'])->toBeFalse();
+});
+
+test('file upload stores a file to the configured disk and directory', function () {
+    Storage::fake('public');
+
+    $path = FileUpload::make('avatar')->disk('public')->directory('avatars')
+        ->storeUploadedFile(UploadedFile::fake()->image('me.png'));
+
+    expect($path)->toStartWith('avatars/');
+    Storage::disk('public')->assertExists($path);
+});
+
+test('file upload preserves the original filename when configured', function () {
+    Storage::fake('public');
+
+    $path = FileUpload::make('doc')->disk('public')->directory('docs')->preserveFilenames()
+        ->storeUploadedFile(UploadedFile::fake()->create('report.pdf'));
+
+    expect($path)->toBe('docs/report.pdf');
+    Storage::disk('public')->assertExists('docs/report.pdf');
 });
 
 // ─── RichEditor ────────────────────────────────────────��───────

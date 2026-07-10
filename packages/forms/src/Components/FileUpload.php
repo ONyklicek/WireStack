@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Closure;
+use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 /**
  * File upload field with image mode, multiple files, disk/directory configuration.
@@ -35,6 +39,8 @@ class FileUpload extends Field
     protected string $visibility = 'public';
 
     protected bool $preserveFilenames = false;
+
+    protected bool $deletable = true;
 
     protected ?int $imageResizeTargetWidth = null;
 
@@ -133,6 +139,17 @@ class FileUpload extends Field
     public function preserveFilenames(bool $condition = true): static
     {
         $this->preserveFilenames = $condition;
+
+        return $this;
+    }
+
+    /**
+     * Whether already-stored files can be removed from the field (shows a
+     * delete control next to each existing file). Defaults to true.
+     */
+    public function deletable(bool $condition = true): static
+    {
+        $this->deletable = $condition;
 
         return $this;
     }
@@ -236,6 +253,129 @@ class FileUpload extends Field
     public function getImageCropAspectRatio(): ?string
     {
         return $this->imageCropAspectRatio;
+    }
+
+    public function isDeletable(): bool
+    {
+        return $this->deletable;
+    }
+
+    /**
+     * Turn the bound state into displayable descriptors for **already-stored**
+     * files. Freshly-uploaded `TemporaryUploadedFile` instances (and empty
+     * values) are skipped — those are previewed client-side by the Alpine view;
+     * only persisted string paths / URLs become entries here.
+     *
+     * Accepts a single path or an array of paths (the field's state type is
+     * `array`, but a single-file field may hold a bare string).
+     *
+     * @return list<array{path: string, url: string, name: string, isImage: bool}>
+     */
+    public function getStoredFiles(mixed $state): array
+    {
+        $values = is_array($state) ? $state : [$state];
+
+        $files = [];
+
+        foreach ($values as $value) {
+            if (! is_string($value) || $value === '') {
+                continue;
+            }
+
+            $files[] = [
+                'path' => $value,
+                'url' => $this->resolveFileUrl($value),
+                'name' => basename($value),
+                'isImage' => $this->isImage(),
+            ];
+        }
+
+        return $files;
+    }
+
+    /**
+     * Unified list of every file currently in the field state — already-stored
+     * paths **and** pending {@see TemporaryUploadedFile} uploads (not yet moved
+     * to permanent storage under the store-on-submit model). Each entry carries
+     * its `index` in the state array so the remove control can target it.
+     *
+     * @return list<array{index: int|string, name: string, url: ?string, isImage: bool, stored: bool}>
+     */
+    public function getFilePreviews(mixed $state): array
+    {
+        $values = match (true) {
+            is_array($state) => $state,
+            $state === null || $state === '' => [],
+            default => [$state],
+        };
+
+        $previews = [];
+
+        foreach ($values as $index => $value) {
+            if (is_string($value) && $value !== '') {
+                $previews[] = [
+                    'index' => $index,
+                    'name' => basename($value),
+                    'url' => $this->resolveFileUrl($value),
+                    'isImage' => $this->isImage(),
+                    'stored' => true,
+                ];
+            } elseif ($value instanceof TemporaryUploadedFile) {
+                $previewable = $this->isImage() && $value->isPreviewable();
+
+                $previews[] = [
+                    'index' => $index,
+                    'name' => $value->getClientOriginalName(),
+                    'url' => $previewable ? $value->temporaryUrl() : null,
+                    'isImage' => $previewable,
+                    'stored' => false,
+                ];
+            }
+        }
+
+        return $previews;
+    }
+
+    /**
+     * Move a freshly-uploaded file to permanent storage on the configured disk
+     * and return its stored path (relative to the disk root), honouring the
+     * field's directory, visibility, and preserve-filenames settings.
+     */
+    public function storeUploadedFile(UploadedFile $file): string
+    {
+        $disk = $this->getDisk();
+        $directory = $this->getDirectory();
+        $public = $this->getVisibility() === 'public';
+
+        if ($this->shouldPreserveFilenames()) {
+            $name = $file->getClientOriginalName();
+
+            $path = $public
+                ? $file->storePubliclyAs($directory, $name, $disk)
+                : $file->storeAs($directory, $name, $disk);
+        } else {
+            $path = $public
+                ? $file->storePublicly($directory, $disk)
+                : $file->store($directory, $disk);
+        }
+
+        return is_string($path) ? $path : '';
+    }
+
+    /**
+     * Resolve a stored path to a browser URL. A value that is already a full URL
+     * is returned as-is; otherwise it is resolved through the configured disk.
+     */
+    public function resolveFileUrl(string $path): string
+    {
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            return $path;
+        }
+
+        /** @var FilesystemAdapter $disk */
+        $disk = Storage::disk($this->getDisk());
+
+        return $disk->url($path);
     }
 
     public function getStateType(): string

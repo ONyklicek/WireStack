@@ -10,12 +10,13 @@ Pluggable notification system with multiple drivers.
 
 | Driver | Class | Delivery | Requirements |
 |--------|-------|----------|--------------|
-| Session | `SessionDriver` | `session()->flash()` **+** a Livewire event (`type` + `message` only) | None (default) |
+| Current component | `CurrentComponentDriver` | Decorator — resolves the active Livewire component via `Livewire::current()`, then delegates to a wrapped driver (`SessionDriver` by default) | None (default) |
+| Session | `SessionDriver` | `session()->flash()` **+** a Livewire event carrying the **full** payload | None |
 | Livewire | `LivewireEventDriver` | Livewire `$dispatch()` browser event with the **full** payload | Frontend listener (toast container) |
 | Flasher | `FlasherDriver` | [PHP Flasher](https://php-flasher.io) integration | `php-flasher/flasher-laravel` |
 | Null | `NullDriver` | No-op — discards everything | None |
 
-The session driver is the default.
+The built-in default is **`CurrentComponentDriver`** wrapping `SessionDriver`: it resolves the currently rendering Livewire component itself, so call-sites never have to pass `$this`. Both `SessionDriver` and `LivewireEventDriver` forward the **full** payload (`title`, `duration`, `icon`, `actions`, …), so rich toasts survive the server round-trip.
 
 ### Which driver for what?
 
@@ -26,7 +27,7 @@ The session driver is the default.
 | Your app already uses **php-flasher** (Toastr / Notyf / SweetAlert adapters) and you want notifications to flow into that existing UI. | `FlasherDriver` |
 | You want to **disable notifications** — tests, queued/background jobs, or any context with no user to notify. | `NullDriver` |
 
-> **Which drivers feed the toast container?** `<x-wire-notifications::toast-container />` is an Alpine listener on a Livewire browser event, so only event-dispatching drivers reach it: **`LivewireEventDriver`** (full `title`/`duration`/`icon`) and **`SessionDriver`** (only `type`+`message`; `title`/`duration` fall back to the container defaults). `FlasherDriver` renders its **own** UI and bypasses the container; `NullDriver` shows nothing.
+> **Which drivers feed the toast container?** `<x-wire-notifications::toast-container />` is an Alpine listener on a Livewire browser event, so only event-dispatching drivers reach it: the default **`CurrentComponentDriver`**, **`SessionDriver`**, and **`LivewireEventDriver`** — all forward the full `title`/`duration`/`icon`/`actions` payload. `FlasherDriver` renders its **own** UI and bypasses the container; `NullDriver` shows nothing.
 
 ## Notification Builder
 
@@ -70,12 +71,17 @@ Notification::info(string $message): static
 // Fluent immutable modifiers (each returns a new instance)
 ->title(?string $title): static
 ->duration(?int $ms): static      // auto-dismiss time, 0 = persistent
+->persistent(bool $on = true): static   // sticky toast: duration 0, no countdown bar
 ->icon(?string $icon): static
 ->position(?string $position): static
 ->extra(array $data): static      // arbitrary extra data (merged)
+->action(NotificationAction|string $action, ?string $event = null): static  // append an action button
+->actions(array $actions): static      // replace the action button set
 ->toArray(): array                // serialize to array
 
 // Sending (via NotificationManager)
+// $livewire is optional — the default CurrentComponentDriver resolves the
+// active component itself, so you normally omit it.
 NotificationManager::send(Notification $n, ?NotificationDriver $driver = null, mixed $livewire = null): void
 NotificationManager::success(string $message, ...): void
 NotificationManager::error(string $message, ...): void
@@ -167,7 +173,7 @@ When you call `NotificationManager::send()` (or its shortcuts), the driver is re
 
 1. **Explicit** driver passed to the call / component (`setNotificationDriver()`, the `$driver` argument)
 2. **Global default** set via `NotificationManager::setDefaultDriver()`
-3. **Fallback:** built-in `SessionDriver`
+3. **Fallback:** built-in `CurrentComponentDriver` wrapping `SessionDriver`
 
 > **Note:** the static `NotificationManager` does **not** read `wire-core.notifications.default` on its own — that config only feeds the container binding. To make the configured driver the global default for the static API, bridge it once in a service provider:
 >
@@ -233,7 +239,85 @@ You can customize the position, the fallback auto-dismiss duration, and the brow
 |------|---------|---------|
 | `position` | `top-right` | `top-left` / `top-center` / `top-right` / `bottom-left` / `bottom-center` / `bottom-right` |
 | `duration` | `4000` | fallback auto-dismiss (ms) for notifications without their own `duration` |
-| `eventName` | `table-notification` | the `window` event it listens for (`x-on:{eventName}.window`) |
+| `event-name` | `table-notification` | the `window` event it listens for (`x-on:{eventName}.window`) |
+| `progress` | `true` | show the per-toast countdown bar (see below) |
+| `stack` | `false` | collapse toasts into a pile that fans out on hover |
+| `max` | `0` | cap the number of visible toasts (`0` = unlimited); the overflow collapses into a “+N more” pill |
+
+## Toasts
+
+Everything below is rendered by `<x-wire-notifications::toast-container />` — the drivers only dispatch payloads; the container decides how a toast looks and behaves.
+
+### Countdown bar
+
+Each auto-dismissing toast shows a thin **countdown bar** along its bottom edge that depletes as the toast ages, so users can see how long until it closes. **Hovering any toast pauses the bar and the auto-dismiss** (and resumes on leave). The bar is on by default and colored by the notification type.
+
+- It is **optional** — pass `:progress="false"` to hide it.
+- **Persistent toasts have no bar** — a sticky toast never counts down, so there is nothing to show (see below).
+
+```blade
+<x-wire-notifications::toast-container :progress="false" />  {{-- no countdown bar --}}
+```
+
+### Persistent toasts
+
+Call `->persistent()` (or `->duration(0)`) to make a toast **sticky**: it stays until the user dismisses it and shows no countdown bar. Ideal for messages that require a decision.
+
+```php
+NotificationManager::send(
+    Notification::warning('Payment needs review before it can settle.')
+        ->title('Action required')
+        ->persistent()
+);
+```
+
+### Action buttons
+
+Add buttons that dispatch a Livewire event on click — the "Undo" affordance. Your host component listens with `#[On(...)]`.
+
+```php
+use NyonCode\WireCore\Notifications\Notification;
+use NyonCode\WireCore\Notifications\NotificationAction;
+
+// shorthand: label + Livewire event
+NotificationManager::send(
+    Notification::success('Item deleted')->action('Undo', 'restore-record')
+);
+
+// full control
+NotificationManager::send(
+    Notification::success('Order #1042 saved')->action(
+        NotificationAction::make('Undo', 'restore-record')
+            ->payload(['id' => 1042])   // sent with the dispatched event
+            ->color('primary')          // button accent (falls back to the toast type)
+            ->keepOpen()                // don't dismiss the toast after clicking
+    )
+);
+```
+
+```php
+// in the host Livewire component
+#[On('restore-record')]
+public function restore(int $id): void
+{
+    // …
+}
+```
+
+`NotificationAction` is an immutable value object: `make(label, event)`, `->payload([...])`, `->color(...)`, `->keepOpen()`. Clicking dispatches `Livewire.dispatch(event, payload)` and (unless `keepOpen()`) closes the toast.
+
+### Stacking & overflow
+
+- **`stack`** collapses toasts into a tidy pile; hovering the pile fans them out into the full list. The newest toast sits closest to the anchor edge.
+- **`max`** caps how many are visible at once; extras collapse into a clickable **“+N more”** pill that reveals the rest.
+
+```blade
+<x-wire-notifications::toast-container stack :max="5" />
+```
+
+### Accessibility
+
+The container is an `aria-live="polite"` region (error toasts use `role="alert"`), so screen readers announce toasts as they arrive. It also honors **`prefers-reduced-motion`**: when reduced motion is requested, the stack never collapses/fans out and card transitions are disabled.
 
 ## Triggering Toasts from JavaScript
 
