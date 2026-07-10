@@ -11,6 +11,7 @@ use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireCore\Actions\DeleteAction;
 use NyonCode\WireCore\Actions\DeleteBulkAction;
 use NyonCode\WireCore\Actions\HeaderAction;
+use NyonCode\WireCore\Actions\ModalFooterAction;
 use NyonCode\WireCore\Actions\ModalStep;
 use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Components\Textarea;
@@ -41,7 +42,7 @@ class TablePreview extends Component
     private const EXPAND_FIRST_VARIANTS = ['subrows', 'subrows-limit', 'subrows-filter'];
 
     /** Variants that auto-open the header-action form modal for visual QA. */
-    private const MODAL_VARIANTS = ['modal-form', 'modal-slideover-mobile', 'modal-slideover-compose', 'modal-fullscreen-mobile', 'modal-wizard'];
+    private const MODAL_VARIANTS = ['modal-form', 'modal-slideover-mobile', 'modal-slideover-compose', 'modal-fullscreen-mobile', 'modal-wizard', 'modal-nested'];
 
     public function mount(string $variant = 'overview'): void
     {
@@ -73,7 +74,12 @@ class TablePreview extends Component
         }
 
         if (in_array($this->variant, self::MODAL_VARIANTS, true)) {
-            $this->openHeaderActionModal('invite');
+            // booted() runs on every request; only open the modal once, or a
+            // stacked/nested modal would be re-suspended and its form reset on
+            // each roundtrip.
+            if (! $this->tableState->get('modal.action.show') && $this->suspendedActionCount() === 0) {
+                $this->openHeaderActionModal('invite');
+            }
 
             return;
         }
@@ -299,9 +305,9 @@ class TablePreview extends Component
                 BulkAction::make('export')->label('Export selected')->icon('outline:arrow-down-tray')->color('gray'),
                 DeleteBulkAction::make(),
             ])
-            ->headerActions([
-                $this->inviteHeaderAction(),
-            ])
+            ->headerActions($this->variant === 'modal-nested'
+                ? [$this->inviteHeaderAction(), $this->quickRoleHeaderAction()]
+                : [$this->inviteHeaderAction()])
             ->defaultSort('created_at', 'desc')
             ->searchable()
             ->selectable()
@@ -357,8 +363,32 @@ class TablePreview extends Component
                     Textarea::make('note')->label('Personal note')->rows(3),
                 ]),
             ]),
+            // A footer action that stacks a second modal on top of "Invite user".
+            'modal-nested' => $action->modalFooterActions([
+                ModalFooterAction::make('quickRole')
+                    ->label('Add a role first')
+                    ->icon('plus')
+                    ->color('gray')
+                    ->action(fn ($component) => $component->openHeaderActionModal('quickRole')),
+            ]),
             default => $action,
         };
+    }
+
+    /**
+     * A small secondary modal, opened *on top of* the invite modal, to
+     * demonstrate stacked (nested) modals.
+     */
+    private function quickRoleHeaderAction(): HeaderAction
+    {
+        return HeaderAction::make('quickRole')
+            ->label('Quick role')
+            ->modalHeading('New role')
+            ->modalDescription('This modal is stacked on top of "Invite user".')
+            ->form([
+                TextInput::make('role_name')->label('Role name')->required(),
+                Textarea::make('role_desc')->label('Description')->rows(3),
+            ]);
     }
 
     /**

@@ -241,6 +241,7 @@ foreach ([
     'table-modal-slideover-compose-tablet' => ['title' => 'Wire Table Modal · compose · tablet', 'subtitle' => 'Compose slide-over as a sheet up to md.', 'component' => TablePreview::class, 'variant' => 'modal-slideover-compose-tablet'],
     'table-modal-fullscreen-mobile' => ['title' => 'Wire Table Modal · fullScreenOnMobile', 'subtitle' => 'Form modal that fills the viewport on mobile.', 'component' => TablePreview::class, 'variant' => 'modal-fullscreen-mobile'],
     'table-modal-wizard' => ['title' => 'Wire Table Wizard Modal', 'subtitle' => 'Multi-step action modal with step indicator and wizard footer.', 'component' => TablePreview::class, 'variant' => 'modal-wizard'],
+    'table-modal-nested' => ['title' => 'Wire Table Nested Modal', 'subtitle' => 'A footer action stacks a second modal on top of the first.', 'component' => TablePreview::class, 'variant' => 'modal-nested'],
     'table-actions-group' => ['title' => 'Wire Table Action Group', 'subtitle' => 'Row actions collapsed into a dropdown group.', 'component' => TablePreview::class, 'variant' => 'actions-group'],
     'table-actions-group-tablet' => ['title' => 'Wire Table Action Group · tablet', 'subtitle' => 'Action group as a sheet up to md (tablet breakpoint).', 'component' => TablePreview::class, 'variant' => 'actions-group-tablet'],
     'table-paginated' => ['title' => 'Wire Table Pagination', 'subtitle' => 'Paginated table with per-page selector and page links.', 'component' => TablePreview::class, 'variant' => 'paginated'],

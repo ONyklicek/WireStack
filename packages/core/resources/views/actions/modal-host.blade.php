@@ -24,7 +24,20 @@
         $isLastStep = ! $isWizard || $currentStep >= ($totalSteps - 1);
         $primaryButtonClasses = 'inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm '
             .($modalData['submitButtonClasses'] ?? HasColor::getModalSubmitButtonClasses($modalData['actionColor'] ?? 'primary'));
+
+        // Modal stacking: draw a dimmed, inert shell for each suspended parent
+        // modal behind the active one, then layer the active modal on top.
+        $suspendedModals = $component->getSuspendedActionModals();
+        $stackDepth = count($suspendedModals);
+        $activeZIndex = $stackDepth > 0 ? 50 + $stackDepth * 10 : null;
     @endphp
+
+    @foreach($suspendedModals as $suspendedIndex => $suspendedModalData)
+        @include('wire-core::modals.suspended', [
+            'modalData' => $suspendedModalData,
+            'zIndex' => 50 + $suspendedIndex * 10,
+        ])
+    @endforeach
 
     @if(! empty($modalData) && isset($modalData['heading']))
         {{-- Confirmation --}}
@@ -42,6 +55,7 @@
                 :color="$modalData['actionColor'] ?? 'primary'"
                 :close-on-click-away="$modalData['closeOnClickAway'] ?? true"
                 :close-on-escape="$modalData['closeOnEscape'] ?? true"
+                :z-index="$activeZIndex"
                 close-action="{{ $closeAction }}"
             />
         @else
@@ -54,6 +68,7 @@
                     :width="$modalData['width'] ?? 'md'"
                     :close-on-click-away="$modalData['closeOnClickAway'] ?? true"
                     :close-on-escape="$modalData['closeOnEscape'] ?? true"
+                    :z-index="$activeZIndex"
                     :bottom-sheet-on-mobile="$isSlideOverOnMobile"
                     :sticky-header="$modalData['stickyHeader'] ?? false"
                     :sticky-footer="$modalData['stickyFooter'] ?? false"
@@ -73,6 +88,7 @@
                     :width="$modalData['width'] ?? 'md'"
                     :close-on-click-away="$modalData['closeOnClickAway'] ?? true"
                     :close-on-escape="$modalData['closeOnEscape'] ?? true"
+                    :z-index="$activeZIndex"
                     :full-screen-on-mobile="$isFullScreenMobile"
                     :slide-over-on-mobile="$isSlideOverOnMobile"
                     :sticky-footer="true"

@@ -44,6 +44,85 @@ it('renders close action handlers for modal components', function () {
         ->assertSeeHtml('$wire.closePanel()');
 });
 
+// ─── Modal stacking z-index ───────────────────────────────────────
+
+class ModalZIndexComponent extends Component
+{
+    public bool $show = true;
+
+    public ?int $z = null;
+
+    public function mount(?int $z = null): void
+    {
+        $this->z = $z;
+    }
+
+    public function render(): string
+    {
+        return <<<'BLADE'
+            <div>
+                <x-wire-modals::modal wire:model="show" heading="Edit" :z-index="$z">Body</x-wire-modals::modal>
+                <x-wire-modals::confirmation wire:model="show" heading="Delete?" :z-index="$z" />
+                <x-wire-modals::slide-over wire:model="show" heading="Details" :z-index="$z">Body</x-wire-modals::slide-over>
+            </div>
+        BLADE;
+    }
+}
+
+it('plugs a stacking z-index into each modal surface when given', function () {
+    Livewire::test(ModalZIndexComponent::class, ['z' => 70])
+        ->assertSeeHtml('z-index: 70');
+});
+
+it('omits an inline z-index when no stacking level is set', function () {
+    Livewire::test(ModalZIndexComponent::class)
+        ->assertDontSeeHtml('z-index:');
+});
+
+// ─── Suspended (parent) modal shell ───────────────────────────────
+
+class SuspendedShellComponent extends Component
+{
+    public bool $slideOver = false;
+
+    public function mount(bool $slideOver = false): void
+    {
+        $this->slideOver = $slideOver;
+    }
+
+    public function render(): string
+    {
+        return <<<'BLADE'
+            <div>
+                @include('wire-core::modals.suspended', [
+                    'modalData' => [
+                        'heading' => 'Parent heading',
+                        'description' => 'Parent description',
+                        'width' => 'lg',
+                        'slideOver' => $slideOver,
+                    ],
+                    'zIndex' => 50,
+                ])
+            </div>
+        BLADE;
+    }
+}
+
+it('renders a dimmed, inert suspended modal shell with its heading and z-index', function () {
+    Livewire::test(SuspendedShellComponent::class)
+        ->assertSeeHtml('Parent heading')
+        ->assertSeeHtml('Parent description')
+        ->assertSeeHtml('z-index: 50')
+        ->assertSeeHtml('pointer-events-none')
+        ->assertSeeHtml('opacity-60');
+});
+
+it('renders the suspended shell in its slide-over form', function () {
+    Livewire::test(SuspendedShellComponent::class, ['slideOver' => true])
+        ->assertSeeHtml('Parent heading')
+        ->assertSeeHtml('fixed inset-y-0 right-0');
+});
+
 // ─── Mobile presentation variants (regression: slideOverOnMobile was a dead flag) ───
 
 class ModalMobileVariantComponent extends Component

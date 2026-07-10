@@ -2180,6 +2180,9 @@ trait WithTable
             return;
         }
 
+        // Stack on top of an already-open modal instead of replacing it.
+        $this->suspendActiveActionIfOpen();
+
         $this->tableState->set('modal.action.name', $actionName);
         $this->tableState->set('modal.action.recordKey', $recordKey);
         $this->tableState->set('modal.action.isBulk', false);
@@ -2279,6 +2282,9 @@ trait WithTable
 
         // Get selected records for dynamic form fields/defaults
         $selectedRecords = $this->getSelectedRecords();
+
+        // Stack on top of an already-open modal instead of replacing it.
+        $this->suspendActiveActionIfOpen();
 
         $this->tableState->set('modal.action.name', $actionName);
         $this->tableState->set('modal.action.recordKey', null);
@@ -2387,6 +2393,8 @@ trait WithTable
             }
         }
 
+        $depthBefore = $this->suspendedActionCount();
+
         // Execute action
         if ($isHeaderAction) {
             $this->executeHeaderActionWithData($actionName, $formData);
@@ -2400,14 +2408,22 @@ trait WithTable
             );
         }
 
-        $this->closeActionModal();
+        // If the action opened a nested modal, keep it open instead of closing.
+        if ($this->suspendedActionCount() <= $depthBefore) {
+            $this->closeActionModal();
+        }
     }
 
     /**
-     * Close action modal
+     * Close action modal. When a parent modal is stacked behind it, the parent is
+     * resumed into the active slot instead of clearing (modal stacking).
      */
     public function closeActionModal(): void
     {
+        if ($this->resumeSuspendedAction()) {
+            return;
+        }
+
         $this->tableState->set('modal.action.show', false);
         $this->tableState->set('modal.action.name', null);
         $this->tableState->set('modal.action.recordKey', null);
@@ -2430,6 +2446,112 @@ trait WithTable
     protected function closeMountedAction(): void
     {
         $this->closeActionModal();
+    }
+
+    // ==========================================
+    // Modal stacking seams (StateContainer-backed)
+    // ==========================================
+
+    protected function suspendCurrentAction(): void
+    {
+        $stack = $this->tableState->get('modal.suspended', []);
+        $stack = is_array($stack) ? $stack : [];
+
+        $stack[] = [
+            'name' => $this->tableState->get('modal.action.name'),
+            'recordKey' => $this->tableState->get('modal.action.recordKey'),
+            'isBulk' => $this->tableState->get('modal.action.isBulk'),
+            'isHeaderAction' => $this->tableState->get('modal.action.isHeaderAction'),
+            'currentStep' => $this->tableState->get('modal.action.currentStep', 0),
+            'formData' => $this->tableState->get('modal.action.formData', []),
+        ];
+
+        $this->tableState->set('modal.suspended', $stack);
+
+        // The incoming action re-resolves its own form/infolist instances.
+        $this->actionModalFormInstance = null;
+        $this->actionModalInfolistInstance = null;
+        $this->actionModalConfigCache = [];
+    }
+
+    protected function resumeSuspendedAction(): bool
+    {
+        $stack = $this->tableState->get('modal.suspended', []);
+        $stack = is_array($stack) ? $stack : [];
+
+        if ($stack === []) {
+            return false;
+        }
+
+        $frame = array_pop($stack);
+        $this->tableState->set('modal.suspended', $stack);
+
+        $this->tableState->set('modal.action.name', $frame['name'] ?? null);
+        $this->tableState->set('modal.action.recordKey', $frame['recordKey'] ?? null);
+        $this->tableState->set('modal.action.isBulk', $frame['isBulk'] ?? false);
+        $this->tableState->set('modal.action.isHeaderAction', $frame['isHeaderAction'] ?? false);
+        $this->tableState->set('modal.action.currentStep', $frame['currentStep'] ?? 0);
+        $this->tableState->set('modal.action.formData', $frame['formData'] ?? []);
+        $this->tableState->set('modal.action.show', true);
+
+        // Force the resumed parent to re-resolve its form/infolist/config.
+        $this->actionModalFormInstance = null;
+        $this->actionModalInfolistInstance = null;
+        $this->actionModalConfigCache = [];
+
+        // Fetch fresh data for the resumed parent.
+        $this->invalidateTable();
+
+        return true;
+    }
+
+    protected function suspendedActionCount(): int
+    {
+        $stack = $this->tableState->get('modal.suspended', []);
+
+        return is_array($stack) ? count($stack) : 0;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function getSuspendedActionModals(): array
+    {
+        $modals = [];
+
+        $stack = $this->tableState->get('modal.suspended', []);
+        $stack = is_array($stack) ? $stack : [];
+
+        foreach ($stack as $frame) {
+            $name = $frame['name'] ?? null;
+
+            if (! $name) {
+                continue;
+            }
+
+            $isBulk = (bool) ($frame['isBulk'] ?? false);
+            $isHeader = (bool) ($frame['isHeaderAction'] ?? false);
+
+            $action = match (true) {
+                $isHeader => $this->findHeaderAction((string) $name),
+                $isBulk => $this->findBulkAction((string) $name),
+                default => $this->findAction((string) $name),
+            };
+
+            if ($action === null) {
+                continue;
+            }
+
+            $context = match (true) {
+                $isBulk => $this->getSelectedRecords(),
+                $isHeader => null,
+                default => ($frame['recordKey'] ?? null) !== null ? $this->getRecord($frame['recordKey']) : null,
+            };
+
+            $modals[] = $action->getModalConfig($context);
+        }
+
+        return $modals;
     }
 
     /**
@@ -2801,6 +2923,9 @@ trait WithTable
 
             return;
         }
+
+        // Stack on top of an already-open modal instead of replacing it.
+        $this->suspendActiveActionIfOpen();
 
         $this->tableState->set('modal.action.name', $actionName);
         $this->tableState->set('modal.action.recordKey', null);

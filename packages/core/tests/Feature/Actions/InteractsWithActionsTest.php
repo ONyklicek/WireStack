@@ -102,6 +102,49 @@ class CoreActionsHost extends Component
         $this->haltState[$key] = $value;
     }
 
+    /** @var array<int, array<string, mixed>> */
+    public array $suspendedStack = [];
+
+    protected function suspendCurrentAction(): void
+    {
+        $this->suspendedStack[] = ['meta' => $this->mountedAction, 'formData' => $this->actionFormData];
+        $this->actionModalConfigCache = [];
+    }
+
+    protected function resumeSuspendedAction(): bool
+    {
+        if ($this->suspendedStack === []) {
+            return false;
+        }
+
+        $frame = array_pop($this->suspendedStack);
+        $this->mountedAction = $frame['meta'];
+        $this->actionFormData = $frame['formData'];
+        $this->actionModalConfigCache = [];
+
+        return true;
+    }
+
+    protected function suspendedActionCount(): int
+    {
+        return count($this->suspendedStack);
+    }
+
+    public function getSuspendedActionModals(): array
+    {
+        $modals = [];
+
+        foreach ($this->suspendedStack as $frame) {
+            $name = $frame['meta']['name'] ?? null;
+
+            if ($name && isset($this->catalog()[$name])) {
+                $modals[] = $this->catalog()[$name]->getModalConfig();
+            }
+        }
+
+        return $modals;
+    }
+
     protected function resolveCurrentModalAction(): array
     {
         $name = $this->mountedAction['name'] ?? null;

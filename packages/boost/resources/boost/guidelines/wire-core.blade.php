@@ -24,6 +24,10 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
 - Add extra footer buttons with `->modalFooterActions([ModalFooterAction::make('preview')->action(fn ($data, $set) => …)])`.
   The callback gets the live form `$data` and a `$set` writer; `->submitsForm()` validates first,
   `->closesModal()` closes after, `->position('before'|'after')` places it around Cancel/Submit.
+- Modals **stack**: opening an action while a modal is open (from any callback with the host `$component` —
+  a footer/field/infolist action calling `$component->mountAction(...)` / `$component->openActionModal(...)`)
+  layers the new modal on top with the parent dimmed behind. Closing the top (Escape/close/backdrop) pops
+  just that level and resumes the parent with its form data intact. No special API; depth is unlimited.
   `->requiresConfirmation()` asks before running (native `wire:confirm`, translated default message);
   `->confirm('Really reset?')` sets a custom message.
 - Color, icon and visibility come from the shared `HasColor`, `HasIcons`, `HasVisibility` concerns.

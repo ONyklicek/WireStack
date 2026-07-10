@@ -46,6 +46,7 @@ class ConfirmationComponent extends Component
         public bool $closeOnEscape = true,
         public ?string $id = null,
         public ?string $closeAction = null,
+        public ?int $zIndex = null,
     ) {
         $this->submitLabel ??= Trans::get('wire-core::actions.confirm_submit');
         $this->cancelLabel ??= Trans::get('wire-core::actions.confirm_cancel');

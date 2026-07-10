@@ -265,6 +265,63 @@ Action::make('edit')
     ]);
 ```
 
+## Vrstvené (vnořené) modaly
+
+Otevření akce, když už je nějaký modal otevřený, **navrství** nový modal nad ten
+současný místo jeho nahrazení. Původní modal zůstane otevřený, ztlumený, za novým;
+zavření vrchního modalu vás vrátí zpět na rodiče včetně zachovaných dat formuláře.
+Není k tomu potřeba žádné speciální API — jakýkoli callback, který dostane hostitele
+`$component` (akce v patičce, akce pole, akce infolistu), může otevřít další akci a ta
+se prostě navrství:
+
+```php
+Action::make('editOrder')
+    ->modalHeading('Upravit objednávku')
+    ->form([
+        TextInput::make('reference')->required(),
+        Select::make('customer_id')->options($customers),
+    ])
+    ->modalFooterActions([
+        // Otevře druhý modal nad „Upravit objednávku". Rodič zůstane otevřený
+        // za ním; zavření potomka vás vrátí sem s nedotčeným formulářem.
+        ModalFooterAction::make('newCustomer')
+            ->label('Nový zákazník')
+            ->icon('plus')
+            ->action(fn ($component) => $component->mountAction('createCustomer')), // [tl! focus]
+    ])
+    ->action(fn (array $data) => $this->saveOrder($data));
+
+Action::make('createCustomer')
+    ->modalHeading('Vytvořit zákazníka')
+    ->form([TextInput::make('name')->required()])
+    ->action(fn (array $data) => Customer::create($data));
+```
+
+V tabulce otevřete vnořený modal z akce úplně stejně — hostitel se předává jako
+`$component`:
+
+```php
+Action::make('review')
+    ->modalHeading('Kontrola')
+    ->modalFooterActions([
+        ModalFooterAction::make('flag')
+            ->label('Označit k dořešení')
+            ->action(fn ($component, $record) => $component->openActionModal((string) $record->getKey(), 'addFlag')), // [tl! focus]
+    ]);
+```
+
+Poznámky k chování:
+
+- **Hloubka vrstvení není omezená** — každá úroveň se vrství nad předchozí se
+  zvyšujícím se `z-indexem` a každé pozadí prohloubí ztmavení pro jasný pocit hloubky.
+- **Zavření vrací k rodiči.** `Escape`, tlačítko zavřít, kliknutí na pozadí i akce
+  v patičce, která modal zavírá, popnou jen **vrchní** modal a obnoví rodiče. Poslední
+  zavření vyprázdní celý zásobník.
+- **Data formuláře jsou zachována** pro každou úroveň, takže rodičovský modal zůstane
+  přesně tak, jak jste ho opustili.
+- Akce v patičce, která vnořený modal *otevře*, se poté automaticky **nezavírá**, takže
+  modal, který otevřela, zůstane navrchu.
+
 ## Lifecycle hooky
 
 ```php

@@ -50,6 +50,7 @@ final class TableStateSchema
                 'scope' => 'query',
             ],
             'modal' => [
+                'suspended' => [],
                 'action' => [
                     'show' => false,
                     'name' => null,

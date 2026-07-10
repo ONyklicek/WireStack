@@ -90,6 +90,26 @@ trait WithActions
     /** The record a record-scoped action operates on, if any. */
     public ?Model $mountedActionRecord = null;
 
+    /**
+     * Suspended (parent) action modals stacked behind the active one. Each frame
+     * holds the parent's meta bag + its live form-data, so it can be restored
+     * into the active slot when the modal on top of it closes (modal stacking).
+     *
+     * @var array<int, array{meta: array<string, mixed>, formData: array<string, mixed>}>
+     */
+    public array $suspendedActions = [];
+
+    /**
+     * Record descriptors (`['class' => ..., 'key' => ...]`) for the suspended
+     * action modals, index-aligned with {@see $suspendedActions}. Stored as
+     * plain scalars rather than Model instances so the stack serializes cleanly
+     * across Livewire requests; the model is re-resolved by key when the parent
+     * modal is resumed.
+     *
+     * @var array<int, array{class: class-string<Model>, key: mixed}|null>
+     */
+    public array $suspendedActionRecords = [];
+
     // ==========================================
     // Action registry
     // ==========================================
@@ -140,14 +160,18 @@ trait WithActions
             return;
         }
 
-        $this->mountedActionRecord = $record;
-
         if (! $action->hasModal()) {
+            $this->mountedActionRecord = $record;
             $this->runStandaloneAction($action, $record, []);
             $this->mountedActionRecord = null;
 
             return;
         }
+
+        // Stack on top of an already-open modal instead of replacing it.
+        $this->suspendActiveActionIfOpen();
+
+        $this->mountedActionRecord = $record;
 
         $this->mountedAction = [
             'name' => $name,
@@ -182,16 +206,26 @@ trait WithActions
 
         $this->validateMountedActionForm();
 
+        $depthBefore = $this->suspendedActionCount();
+
         $this->runStandaloneAction($action, $this->mountedActionRecord, $this->getMountedActionFormData());
 
-        $this->unmountAction();
+        // If the action opened a nested modal, keep it open instead of closing.
+        if ($this->suspendedActionCount() <= $depthBefore) {
+            $this->unmountAction();
+        }
     }
 
     /**
-     * Close the mounted action modal and clear its state.
+     * Close the mounted action modal. When a parent modal is stacked behind it,
+     * the parent is resumed into the active slot instead of clearing everything.
      */
     public function unmountAction(): void
     {
+        if ($this->resumeSuspendedAction()) {
+            return;
+        }
+
         $this->closeMountedAction();
 
         $this->mountedAction = [];
@@ -264,6 +298,105 @@ trait WithActions
     protected function setHaltModalState(string $key, mixed $value): void
     {
         $this->mountedHalt[$key] = $value;
+    }
+
+    // ==========================================
+    // Modal stacking seams
+    // ==========================================
+
+    protected function suspendCurrentAction(): void
+    {
+        $this->suspendedActions[] = [
+            'meta' => $this->mountedAction,
+            'formData' => $this->actionModalFormData,
+        ];
+        $this->suspendedActionRecords[] = $this->describeSuspendedRecord($this->mountedActionRecord);
+
+        // The incoming action re-resolves its own form/infolist instances.
+        $this->actionModalFormInstance = null;
+        $this->actionModalInfolistInstance = null;
+        $this->actionModalConfigCache = [];
+    }
+
+    protected function resumeSuspendedAction(): bool
+    {
+        if ($this->suspendedActions === []) {
+            return false;
+        }
+
+        $frame = array_pop($this->suspendedActions);
+        $this->mountedActionRecord = $this->resolveSuspendedRecord(array_pop($this->suspendedActionRecords));
+        $this->mountedAction = is_array($frame['meta'] ?? null) ? $frame['meta'] : [];
+        $this->actionModalFormData = is_array($frame['formData'] ?? null) ? $frame['formData'] : [];
+
+        // Force the resumed parent to re-resolve its form/infolist/config.
+        $this->actionModalFormInstance = null;
+        $this->actionModalInfolistInstance = null;
+        $this->actionModalConfigCache = [];
+
+        return true;
+    }
+
+    /**
+     * Reduce a record to a serializable `{class, key}` descriptor for the
+     * suspended stack. Returns null for a transient/keyless model.
+     *
+     * @return array{class: class-string<Model>, key: mixed}|null
+     */
+    protected function describeSuspendedRecord(?Model $record): ?array
+    {
+        if ($record === null || $record->getKey() === null) {
+            return null;
+        }
+
+        return ['class' => $record::class, 'key' => $record->getKey()];
+    }
+
+    /**
+     * Re-resolve a suspended record descriptor back to a Model instance.
+     *
+     * @param  array{class: class-string<Model>, key: mixed}|null  $descriptor
+     */
+    protected function resolveSuspendedRecord(?array $descriptor): ?Model
+    {
+        if ($descriptor === null || ! isset($descriptor['class'], $descriptor['key'])) {
+            return null;
+        }
+
+        $class = $descriptor['class'];
+
+        return $class::query()->find($descriptor['key']);
+    }
+
+    protected function suspendedActionCount(): int
+    {
+        return count($this->suspendedActions);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function getSuspendedActionModals(): array
+    {
+        $modals = [];
+
+        foreach ($this->suspendedActions as $index => $frame) {
+            $name = $frame['meta']['name'] ?? null;
+
+            if (! $name) {
+                continue;
+            }
+
+            $action = $this->resolveAction((string) $name);
+
+            if ($action === null) {
+                continue;
+            }
+
+            $modals[] = $action->getModalConfig($this->resolveSuspendedRecord($this->suspendedActionRecords[$index] ?? null));
+        }
+
+        return $modals;
     }
 
     /**

@@ -265,6 +265,62 @@ Action::make('edit')
     ]);
 ```
 
+## Stacked (Nested) Modals
+
+Opening an action while a modal is already open **stacks** the new modal on top of
+the current one instead of replacing it. The original modal stays open, dimmed,
+behind the new one; closing the top modal returns you to the parent with its form
+data intact. There is no special API — any callback that receives the host
+`$component` (a footer action, a field action, an infolist action) can open another
+action, and it just stacks:
+
+```php
+Action::make('editOrder')
+    ->modalHeading('Edit order')
+    ->form([
+        TextInput::make('reference')->required(),
+        Select::make('customer_id')->options($customers),
+    ])
+    ->modalFooterActions([
+        // Opens a second modal on top of "Edit order". The parent stays open
+        // behind it; closing the child returns here with the form untouched.
+        ModalFooterAction::make('newCustomer')
+            ->label('New customer')
+            ->icon('plus')
+            ->action(fn ($component) => $component->mountAction('createCustomer')), // [tl! focus]
+    ])
+    ->action(fn (array $data) => $this->saveOrder($data));
+
+Action::make('createCustomer')
+    ->modalHeading('Create customer')
+    ->form([TextInput::make('name')->required()])
+    ->action(fn (array $data) => Customer::create($data));
+```
+
+Inside a table, open a nested modal from within an action the same way — the host
+is passed as `$component`:
+
+```php
+Action::make('review')
+    ->modalHeading('Review')
+    ->modalFooterActions([
+        ModalFooterAction::make('flag')
+            ->label('Flag for follow-up')
+            ->action(fn ($component, $record) => $component->openActionModal((string) $record->getKey(), 'addFlag')), // [tl! focus]
+    ]);
+```
+
+Behaviour notes:
+
+- **Stacking depth is unlimited** — each level layers above the previous one with an
+  increasing `z-index`, and each backdrop deepens the dimming for a clear sense of depth.
+- **Close returns to the parent.** `Escape`, the close button, clicking the backdrop,
+  or a footer action that closes the modal all pop just the **top** modal and resume the
+  parent. The last close clears the stack.
+- **Form data is preserved** per level, so the parent modal is exactly as you left it.
+- A footer action that *opens* a nested modal is **not** auto-closed afterwards, so the
+  modal it opened stays on top.
+
 ## Lifecycle Hooks
 
 ```php
