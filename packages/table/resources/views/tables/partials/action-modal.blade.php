@@ -12,7 +12,20 @@
         $isWizard = is_array($wizardSteps) && count($wizardSteps) > 0;
         $wizardCurrentStep = $isWizard ? (int) $component->tableState->get('modal.action.currentStep', 0) : 0;
         $wizardTotalSteps = $isWizard ? count($wizardSteps) : 0;
+
+        // Modal stacking: draw a dimmed, inert shell for each suspended parent
+        // modal behind the active one, then layer the active modal on top.
+        $suspendedModals = $component->getSuspendedActionModals();
+        $stackDepth = count($suspendedModals);
+        $activeZIndex = $stackDepth > 0 ? 50 + $stackDepth * 10 : null;
     @endphp
+
+    @foreach($suspendedModals as $suspendedIndex => $suspendedModalData)
+        @include('wire-core::modals.suspended', [
+            'modalData' => $suspendedModalData,
+            'zIndex' => 50 + $suspendedIndex * 10,
+        ])
+    @endforeach
 
     @if(!empty($modalData) && isset($modalData['heading']))
         @if($isSlideOver)
@@ -24,6 +37,7 @@
                 :width="$modalData['width'] ?? 'md'"
                 :close-on-click-away="$modalData['closeOnClickAway'] ?? true"
                 :close-on-escape="$modalData['closeOnEscape'] ?? true"
+                :z-index="$activeZIndex"
                 :bottom-sheet-on-mobile="$isSlideOverOnMobile"
                 :breakpoint="$modalData['mobileBreakpoint'] ?? null"
                 :sticky-header="$modalData['stickyHeader'] ?? false"
@@ -108,6 +122,7 @@
                 :color="$modalData['actionColor'] ?? 'primary'"
                 :close-on-click-away="$modalData['closeOnClickAway'] ?? true"
                 :close-on-escape="$modalData['closeOnEscape'] ?? true"
+                :z-index="$activeZIndex"
                 close-action="closeActionModal"
             />
         @else
@@ -119,6 +134,7 @@
                 :width="$modalData['width'] ?? 'md'"
                 :close-on-click-away="$modalData['closeOnClickAway'] ?? true"
                 :close-on-escape="$modalData['closeOnEscape'] ?? true"
+                :z-index="$activeZIndex"
                 :full-screen-on-mobile="$isFullScreenMobile"
                 :slide-over-on-mobile="$isSlideOverOnMobile"
                 :breakpoint="$modalData['mobileBreakpoint'] ?? null"

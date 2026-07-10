@@ -40,6 +40,7 @@ class SlideOverComponent extends Component
         public ?string $closeAction = null,
         public bool $bottomSheetOnMobile = false,
         public ?string $breakpoint = null,
+        public ?int $zIndex = null,
     ) {}
 
     private function bp(): string

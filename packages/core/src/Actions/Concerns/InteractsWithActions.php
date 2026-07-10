@@ -102,6 +102,51 @@ trait InteractsWithActions
     abstract protected function resolveCurrentModalAction(): array;
 
     // ==========================================
+    // Modal stacking seams (host-provided storage)
+    // ==========================================
+
+    /**
+     * Push the currently active action modal onto the suspended stack so a newly
+     * mounted action can stack on top of it instead of replacing it. Hosts save
+     * the active slot's meta + form-data (and record/context) and reset the
+     * non-serialized resolved instances so the incoming action re-resolves.
+     */
+    abstract protected function suspendCurrentAction(): void;
+
+    /**
+     * Restore the most recently suspended (parent) action modal back into the
+     * active slot. Returns true when a parent was resumed, false when the
+     * suspended stack was empty (i.e. this was the last/only modal).
+     */
+    abstract protected function resumeSuspendedAction(): bool;
+
+    /**
+     * How many parent modals are currently stacked behind the active one.
+     */
+    abstract protected function suspendedActionCount(): int;
+
+    /**
+     * Resolved modal render data for every suspended (parent) modal, ordered
+     * shallowest first, so the view can draw a dimmed, inert shell behind the
+     * active modal for each stacked level.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    abstract public function getSuspendedActionModals(): array;
+
+    /**
+     * If an action modal is already open, suspend it before mounting another so
+     * the new action stacks on top instead of clobbering the parent. Called by
+     * every host mount path.
+     */
+    protected function suspendActiveActionIfOpen(): void
+    {
+        if ($this->getMountedActionState('show')) {
+            $this->suspendCurrentAction();
+        }
+    }
+
+    // ==========================================
     // Lifecycle hooks (overridable)
     // ==========================================
 
@@ -528,6 +573,12 @@ trait InteractsWithActions
 
         $callback = $footer->getActionCallback();
 
+        // Capture stacking depth before the callback runs: a footer callback may
+        // open a nested modal (which suspends this one), and in that case we must
+        // NOT auto-close afterwards — closing would immediately pop the modal the
+        // callback just opened.
+        $depthBefore = $this->suspendedActionCount();
+
         if ($callback !== null) {
             $formData = $this->getMountedActionFormData();
             $isBulk = (bool) $this->getMountedActionState('isBulk');
@@ -545,7 +596,7 @@ trait InteractsWithActions
             ]);
         }
 
-        if ($footer->shouldCloseModal()) {
+        if ($footer->shouldCloseModal() && $this->suspendedActionCount() <= $depthBefore) {
             $this->closeMountedAction();
         }
     }
@@ -560,11 +611,17 @@ trait InteractsWithActions
     }
 
     /**
-     * Close the currently mounted action. Hosts override with their concrete
-     * teardown (clearing meta bag, form/infolist instances, caches).
+     * Close the currently mounted action. When a parent modal is suspended behind
+     * it, the parent is resumed into the active slot instead of clearing (modal
+     * stacking). Hosts override with their concrete teardown (clearing meta bag,
+     * form/infolist instances, caches).
      */
     protected function closeMountedAction(): void
     {
+        if ($this->resumeSuspendedAction()) {
+            return;
+        }
+
         $this->setMountedActionState('show', false);
         $this->setMountedActionState('name', null);
         $this->setMountedActionState('currentStep', 0);

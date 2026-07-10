@@ -45,6 +45,7 @@ class ModalComponent extends Component
         public ?string $id = null,
         public ?string $closeAction = null,
         public ?string $breakpoint = null,
+        public ?int $zIndex = null,
     ) {}
 
     private function bp(): string

@@ -41,6 +41,11 @@ class ActionModalPartialRenderComponent extends Component
         return null;
     }
 
+    public function getSuspendedActionModals(): array
+    {
+        return [];
+    }
+
     public function closeActionModal(): void {}
 
     public function submitActionModal(): void {}
