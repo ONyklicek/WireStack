@@ -278,7 +278,9 @@ class FileUpload extends Field
         $files = [];
 
         foreach ($values as $value) {
-            if (! is_string($value) || $value === '') {
+            // Only genuine stored references (relative path / URL); a leaked
+            // absolute temp path is never rendered.
+            if (! is_string($value) || ! $this->isStoredReference($value)) {
                 continue;
             }
 
@@ -312,7 +314,7 @@ class FileUpload extends Field
         $previews = [];
 
         foreach ($values as $index => $value) {
-            if (is_string($value) && $value !== '') {
+            if (is_string($value) && $this->isStoredReference($value)) {
                 $previews[] = [
                     'index' => $index,
                     'name' => basename($value),
@@ -376,6 +378,62 @@ class FileUpload extends Field
         $disk = Storage::disk($this->getDisk());
 
         return $disk->url($path);
+    }
+
+    /**
+     * Whether a bare string value is a legitimate **stored** reference — a
+     * disk-relative path or a full URL — rather than a raw absolute filesystem
+     * path that leaked into state (e.g. a `/tmp/phpXXX` PHP upload tmp_name, whose
+     * file no longer exists after its upload request).
+     *
+     * {@see storeUploadedFile()} always returns a disk-relative path, so an
+     * absolute filesystem path is never a value this field legitimately stored.
+     * Treating one as "already stored" would persist a dead temp path (and later
+     * try to render it), so every consumer classifies string state through here.
+     */
+    public function isStoredReference(string $value): bool
+    {
+        if ($value === '') {
+            return false;
+        }
+
+        // A full URL is a legitimate external stored value.
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            return true;
+        }
+
+        // Absolute filesystem paths are raw upload paths, never a stored
+        // disk-relative path.
+        return ! $this->isAbsoluteFilesystemPath($value);
+    }
+
+    /**
+     * Rescue a bare absolute filesystem path (a raw upload path that leaked into
+     * state) by moving it onto the configured disk **only if the file still
+     * exists**. Returns the stored disk-relative path, or null when the file is
+     * already gone — so the caller drops the dead reference instead of persisting
+     * it. Legitimate stored references never reach here (see {@see isStoredReference()}).
+     */
+    public function storeFileFromPath(string $path): ?string
+    {
+        if (! is_file($path)) {
+            return null;
+        }
+
+        // test: true bypasses the is_uploaded_file() guard — this is a rescue of
+        // an already-moved upload path, not a live HTTP upload.
+        $file = new UploadedFile($path, basename($path), null, null, true);
+
+        $stored = $this->storeUploadedFile($file);
+
+        return $stored === '' ? null : $stored;
+    }
+
+    private function isAbsoluteFilesystemPath(string $value): bool
+    {
+        return str_starts_with($value, '/')                       // POSIX absolute
+            || str_starts_with($value, '\\')                      // UNC path
+            || (bool) preg_match('#^[A-Za-z]:[\\\\/]#', $value);  // Windows drive
     }
 
     public function getStateType(): string
