@@ -102,6 +102,7 @@ class SuspendedShellComponent extends Component
                         'slideOver' => $slideOver,
                     ],
                     'zIndex' => 50,
+                    'depthBelowTop' => 1,
                 ])
             </div>
         BLADE;
@@ -114,7 +115,12 @@ it('renders a dimmed, inert suspended modal shell with its heading and z-index',
         ->assertSeeHtml('Parent description')
         ->assertSeeHtml('z-index: 50')
         ->assertSeeHtml('pointer-events-none')
-        ->assertSeeHtml('opacity-60');
+        // Inert + aria-hidden so keyboard/AT skip the suspended parent entirely.
+        ->assertSeeHtml('inert')
+        ->assertSeeHtml('aria-hidden="true"')
+        ->assertSeeHtml('opacity-70')
+        // No backdrop of its own — the active modal draws the single scrim.
+        ->assertDontSeeHtml('bg-gray-500/75');
 });
 
 it('renders the suspended shell in its slide-over form', function () {

@@ -100,6 +100,20 @@ trait WithTableQueryString
             }
         }
 
+        // Column header filters store state unwrapped under columnFilters.<name>,
+        // so the single "value" field maps to the root path (no .value sub-key)
+        // while multi-field ranges keep their sub-keys. A distinct col_ param
+        // prefix avoids colliding with a panel filter of the same name.
+        foreach ($this->queryStringableColumnFilters($table) as [$name, $filter]) {
+            foreach ($filter->getQueryStringFields() as $field => $suffix) {
+                $entries[] = [
+                    'path' => $field === 'value' ? "columnFilters.{$name}" : "columnFilters.{$name}.{$field}",
+                    'param' => $prefix.'col_'.$name.$suffix,
+                    'except' => '',
+                ];
+            }
+        }
+
         return $entries;
     }
 
@@ -129,6 +143,7 @@ trait WithTableQueryString
         }
 
         $this->seedFiltersFromQueryString($table, $prefix);
+        $this->seedColumnFiltersFromQueryString($table, $prefix);
     }
 
     protected function seedFiltersFromQueryString(Table $table, string $prefix): void
@@ -164,6 +179,42 @@ trait WithTableQueryString
         }
     }
 
+    protected function seedColumnFiltersFromQueryString(Table $table, string $prefix): void
+    {
+        $columnFilters = $this->tableState->get('columnFilters', []);
+        $changed = false;
+
+        foreach ($this->queryStringableColumnFilters($table) as [$name, $filter]) {
+            foreach ($filter->getQueryStringFields() as $field => $suffix) {
+                $value = $this->tableQueryStringParam($prefix.'col_'.$name.$suffix);
+
+                if (is_array($value)) {
+                    if (! $filter->isMultiple()) {
+                        continue;
+                    }
+                    $value = array_values(array_filter($value, 'is_scalar'));
+                    if ($value === []) {
+                        continue;
+                    }
+                } elseif (! is_string($value) || $value === '') {
+                    continue;
+                }
+
+                // Single "value" field lives at the unwrapped root; ranges nest.
+                if ($field === 'value') {
+                    $columnFilters[$name] = $value;
+                } else {
+                    $columnFilters[$name][$field] = $value;
+                }
+                $changed = true;
+            }
+        }
+
+        if ($changed) {
+            $this->tableState->set('columnFilters', $columnFilters);
+        }
+    }
+
     /**
      * Filters eligible for query-string persistence: viewable, and without
      * dots in the name (flat state key vs. JS dot-path mismatch).
@@ -176,6 +227,31 @@ trait WithTableQueryString
             $table->getFilters(),
             fn (Filter $filter) => $filter->canView() && ! Str::contains($filter->getName(), '.'),
         ));
+    }
+
+    /**
+     * Column header filters eligible for query-string persistence, as
+     * [columnName, Filter] pairs: viewable, and without dots in the name (same
+     * flat-key / JS dot-path constraint as panel filters).
+     *
+     * @return array<int, array{0: string, 1: Filter}>
+     */
+    protected function queryStringableColumnFilters(Table $table): array
+    {
+        $result = [];
+
+        foreach ($table->getColumns() as $column) {
+            $filter = $column->getFilter();
+            $name = $column->getName();
+
+            if ($filter === null || ! $filter->canView() || Str::contains($name, '.')) {
+                continue;
+            }
+
+            $result[] = [$name, $filter];
+        }
+
+        return $result;
     }
 
     /**

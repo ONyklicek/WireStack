@@ -6,6 +6,7 @@ use Livewire\Component;
 use Livewire\Livewire;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ModalFooterAction;
+use NyonCode\WireCore\Modals\ModalStack;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Concerns\WithActions;
 
@@ -116,4 +117,62 @@ it('keeps the nested modal open when a footer action opened it', function () {
         ->assertSet('mountedAction.name', 'child')
         ->assertSet('mountedAction.show', true)
         ->tap(fn ($c) => expect($c->get('suspendedActions'))->toHaveCount(1));
+});
+
+it('stacks three levels deep and pops back one at a time', function () {
+    $c = Livewire::test(ModalStackHost::class)
+        ->call('mountAction', 'parent')   // level 0 (active)
+        ->set('actionModalFormData.a', 'A')
+        ->call('mountAction', 'child')    // level 1 (active), parent suspended
+        ->set('actionModalFormData.b', 'B')
+        ->call('mountAction', 'withFooter'); // level 2 (active), parent+child suspended
+
+    // Two parents suspended behind the active third modal.
+    expect($c->get('suspendedActions'))->toHaveCount(2)
+        ->and($c->get('mountedAction')['name'])->toBe('withFooter');
+
+    // Render shows all three modal levels at once, z-indexed by depth.
+    $c->assertSeeHtml('Parent modal')   // suspended shell, z 50
+        ->assertSeeHtml('Child modal')  // suspended shell, z 60
+        ->assertSeeHtml('With footer')  // active, z 70
+        ->assertSeeHtml('z-index: 50')
+        ->assertSeeHtml('z-index: 60')
+        ->assertSeeHtml('z-index: 70');
+
+    // Close pops one level at a time, restoring each parent's data in order.
+    $c->call('unmountAction')
+        ->assertSet('mountedAction.name', 'child')
+        ->assertSet('actionModalFormData.b', 'B')
+        ->tap(fn ($x) => expect($x->get('suspendedActions'))->toHaveCount(1));
+
+    $c->call('unmountAction')
+        ->assertSet('mountedAction.name', 'parent')
+        ->assertSet('actionModalFormData.a', 'A')
+        ->tap(fn ($x) => expect($x->get('suspendedActions'))->toBeEmpty());
+
+    $c->call('unmountAction')
+        ->assertSet('mountedAction.show', null);
+});
+
+it('recedes each deeper suspended level with a scale/translate depth cue', function () {
+    Livewire::test(ModalStackHost::class)
+        ->call('mountAction', 'parent')
+        ->call('mountAction', 'child')
+        ->call('mountAction', 'withFooter')
+        // Stacked-card cue: the suspended shells carry an inline scale/translate.
+        ->assertSeeHtml('scale(')
+        ->assertSeeHtml('translateY(');
+});
+
+it('caps stacking at the safety depth to guard against runaway re-entrancy', function () {
+    $c = Livewire::test(ModalStackHost::class)->call('mountAction', 'parent');
+
+    // Try to stack far more than the cap; each opens 'child' on top of the last.
+    for ($i = 0; $i < 20; $i++) {
+        $c->call('mountAction', 'child');
+    }
+
+    // active modal + suspended parents never exceeds ModalStack::MAX_DEPTH.
+    expect($c->get('suspendedActions'))
+        ->toHaveCount(ModalStack::MAX_DEPTH - 1);
 });

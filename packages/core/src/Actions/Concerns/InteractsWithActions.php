@@ -23,6 +23,7 @@ use NyonCode\WireCore\Foundation\Schema\Section;
 use NyonCode\WireCore\Infolists\Components\Entry;
 use NyonCode\WireCore\Infolists\Components\RepeatableEntry;
 use NyonCode\WireCore\Infolists\Infolist;
+use NyonCode\WireCore\Modals\ModalStack;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationManager;
 use ReflectionFunction;
@@ -138,12 +139,26 @@ trait InteractsWithActions
      * If an action modal is already open, suspend it before mounting another so
      * the new action stacks on top instead of clobbering the parent. Called by
      * every host mount path.
+     *
+     * Returns false when the caller must NOT proceed to open a modal: the stack
+     * is already at {@see ModalStack::MAX_DEPTH} (a runaway-re-entrancy guard).
+     * Returns true when nothing was open, or the open modal was suspended and the
+     * caller is free to mount the new one on top.
      */
-    protected function suspendActiveActionIfOpen(): void
+    protected function suspendActiveActionIfOpen(): bool
     {
-        if ($this->getMountedActionState('show')) {
-            $this->suspendCurrentAction();
+        if (! $this->getMountedActionState('show')) {
+            return true;
         }
+
+        // active modal + suspended parents; opening one more must not exceed the cap.
+        if ($this->suspendedActionCount() >= ModalStack::MAX_DEPTH - 1) {
+            return false;
+        }
+
+        $this->suspendCurrentAction();
+
+        return true;
     }
 
     // ==========================================
