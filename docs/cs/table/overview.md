@@ -361,7 +361,7 @@ paletou jako odznaky a všechny ostatní plochy (`success`, `warning`, `danger`,
 `info`, `primary`, `gray` nebo libovolný raw Tailwind odstín). Vrácením `null`
 z Closure zůstane řádek bez tónu. Obarvený řádek automaticky dostane hover ve
 stejném odstínu a potlačí neutrální hover/zebrování, takže barva vždy vypadá
-čistě: [tl! focus:start]
+čistě:
 
 ```php
 ->rowColor(fn (Invoice $record) => match ($record->status) {
@@ -370,7 +370,7 @@ stejném odstínu a potlačí neutrální hover/zebrování, takže barva vždy 
     'paid'    => 'success',
     default   => null,
 })
-``` <!-- [tl! focus:end] -->
+```
 
 Preferuj `rowColor()` před ručně psanými background třídami — prochází
 kanonickým vlastníkem `HasColor`, takže zůstává konzistentní se zbytkem UI a

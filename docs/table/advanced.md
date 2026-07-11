@@ -603,7 +603,7 @@ resets on a full page reload).
 Call `rememberColumns()` with a stable key and the table loads the current
 user's saved layout on mount and persists it whenever a column is toggled — so
 every user keeps their own column arrangement across reloads. A "Reset columns"
-control appears in the picker to return to the configured defaults. [tl! focus:start]
+control appears in the picker to return to the configured defaults.
 
 ```php
 $table
@@ -613,7 +613,7 @@ $table
         TextColumn::make('phone')->toggleable()->hidden(),
     ])
     ->rememberColumns('users-index'); // stable, unique per table
-``` <!-- [tl! focus:end] -->
+```
 
 Preferences are scoped by the driver to `auth()->user()`, so **one key serves
 every user** — it works for any number of tables (distinct keys) and users. A
@@ -662,7 +662,7 @@ a shortcut alongside the actions column. The menu's actions are declared
 **separately** with `rowContextMenu([...])` (they are *not* the `->actions()`
 toolbar), so the menu is explicit rather than an implicit mirror of the row
 buttons — pass the same action objects if you want them to match. It uses the
-same menu-item styling as the action-group dropdown. [tl! focus:start]
+same menu-item styling as the action-group dropdown.
 
 ```php
 $table
@@ -673,7 +673,7 @@ $table
         EditAction::make(),
         DeleteAction::make(),
     ]);
-``` <!-- [tl! focus:end] -->
+```
 
 - The menu lists exactly the **visible** menu actions (hidden/unauthorized
   actions are skipped); a row with no visible action shows no menu.

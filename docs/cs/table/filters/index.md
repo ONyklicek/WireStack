@@ -4,7 +4,7 @@ order: 30
 
 # Filtry
 
-Wire Table poskytuje **4 vestavěné typy filtrů** plus možnost postavit vlastní
+Wire Table poskytuje **5 vestavěných typů filtrů** plus možnost postavit vlastní
 filtry. Filtry žijí v liště filtrů nad tabulkou a přetrvávají ve stavu Livewire
 přes `$tableFilters`. Tato stránka pokrývá tok a sdílené API; každý typ má svou
 vlastní stránku.
@@ -13,6 +13,7 @@ vlastní stránku.
 
 | Filtr | Použití pro |
 |--------|---------|
+| [TextFilter](text.md) | Textová shoda s operátorem (`like`, `starts_with`, …) |
 | [SelectFilter](select.md) | Jednoduchý/vícenásobný výběr z options, relací nebo enumů |
 | [DateFilter](date.md) | Jedno datum, rozsah dat nebo měsíc + rok |
 | [NumberRangeFilter](number-range.md) | Min/max číselný rozsah |
@@ -179,6 +180,14 @@ aplikovaný. Skryté/neautorizované filtry nikdy nevytvoří chipy.
 $component->getActiveFilterIndicators();   // ['status' => 'Status: Active', ...]
 $component->removeTableFilter('status');   // vyčistit jeden filtr (× tlačítko chipu)
 $component->resetTableFilters();           // vyčistit všechny filtry + hledání
+```
+
+[Filtry hlavičky sloupce](column-level.md) tvoří stejné chipy vedle panelových
+filtrů (jsou to také kanonické objekty `Filter`), s vlastními handlery:
+
+```php
+$component->getActiveColumnFilterIndicators();  // ['name' => 'Name: Widget', ...]
+$component->removeColumnFilter('name');         // vyčistit jeden filtr sloupce
 ```
 
 ## Mobil

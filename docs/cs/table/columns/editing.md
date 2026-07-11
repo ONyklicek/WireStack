@@ -55,9 +55,16 @@ TextColumn::make('age')
 
 ### API filtru na úrovni sloupce
 
+Filtr hlavičky sloupce je umístění kanonického `Filter` — pomocné metody
+`filterAs*()` jsou tenké factory nad `TextFilter` / `SelectFilter` / `DateFilter` /
+`NumberRangeFilter` / `TernaryFilter`, nebo předej hotový přes `->filter()`. Sdílený
+engine, chipy a query-string persistenci viz [Filtry na úrovni sloupce](../filters/column-level.md).
+
 ```php
 ->filterable(bool $filterable = true, string $type = 'text', array|string $options = [])
 ->isFilterable(): bool
+->filter(Filter $filter)                                                   // připoj hotový kanonický filtr
+->getFilter(): ?Filter
 ->filterAsSelect(array|string $options, ?string $placeholder = null)       // jedna hodnota; searchable combobox
 ->filterAsMultiSelect(array|string $options, ?string $placeholder = null)  // více hodnot (whereIn); searchable combobox
 ->filterSearchable(bool $condition = true)                                 // přepnutí vyhledávání (defaultně zapnuté)

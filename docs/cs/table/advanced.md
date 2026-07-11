@@ -613,7 +613,7 @@ komponenty (po úplném reloadu stránky se resetuje).
 Zavolej `rememberColumns()` se stabilním klíčem — tabulka při mountu načte uložené
 rozvržení aktuálního uživatele a při každém přepnutí sloupce ho uloží, takže si
 každý uživatel drží vlastní uspořádání sloupců i po reloadu. V přepínači se
-objeví tlačítko „Obnovit sloupce“ pro návrat na výchozí nastavení. [tl! focus:start]
+objeví tlačítko „Obnovit sloupce“ pro návrat na výchozí nastavení.
 
 ```php
 $table
@@ -623,7 +623,7 @@ $table
         TextColumn::make('phone')->toggleable()->hidden(),
     ])
     ->rememberColumns('users-index'); // stabilní, unikátní pro tabulku
-``` <!-- [tl! focus:end] -->
+```
 
 Preference driver scopuje na `auth()->user()`, takže **jeden klíč slouží všem
 uživatelům** — funguje pro libovolný počet tabulek (různé klíče) i uživatelů.
@@ -674,7 +674,7 @@ akcí u kurzoru — zkratka vedle sloupce s akcemi. Akce menu se definují
 **samostatně** přes `rowContextMenu([...])` (nejsou to akce z `->actions()`
 toolbaru), takže je menu explicitní, ne implicitní kopie tlačítek řádku — pokud
 je chceš stejné, předej stejné objekty. Používá stejný styl položek jako dropdown
-action-group. [tl! focus:start]
+action-group.
 
 ```php
 $table
@@ -685,7 +685,7 @@ $table
         EditAction::make(),
         DeleteAction::make(),
     ]);
-``` <!-- [tl! focus:end] -->
+```
 
 - Menu ukáže přesně **viditelné** akce menu (skryté/neautorizované se vynechají);
   řádek bez viditelné akce menu neukáže.

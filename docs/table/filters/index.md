@@ -4,7 +4,7 @@ order: 30
 
 # Filters
 
-Wire Table provides **4 built-in filter types** plus the ability to build custom
+Wire Table provides **5 built-in filter types** plus the ability to build custom
 filters. Filters live in the filter bar above the table and persist in Livewire
 state via `$tableFilters`. This page covers the flow and the shared API; each
 type has its own page.
@@ -13,6 +13,7 @@ type has its own page.
 
 | Filter | Use for |
 |--------|---------|
+| [TextFilter](text.md) | Free-text match with an operator (`like`, `starts_with`, …) |
 | [SelectFilter](select.md) | Single/multi choice from options, relations, or enums |
 | [DateFilter](date.md) | Single date, date range, or month + year |
 | [NumberRangeFilter](number-range.md) | Min/max numeric range |
@@ -180,6 +181,14 @@ the filter stays applied. Hidden/unauthorized filters never produce chips.
 $component->getActiveFilterIndicators();   // ['status' => 'Status: Active', ...]
 $component->removeTableFilter('status');   // clear one filter (chip × button)
 $component->resetTableFilters();           // clear all filters + search
+```
+
+[Column-level header filters](column-level.md) produce the same chips alongside
+panel filters (they are canonical `Filter` objects too), with their own handlers:
+
+```php
+$component->getActiveColumnFilterIndicators();  // ['name' => 'Name: Widget', ...]
+$component->removeColumnFilter('name');         // clear one column filter
 ```
 
 ## Mobile

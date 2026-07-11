@@ -361,7 +361,7 @@ semantic palette as badges and every other surface (`success`, `warning`,
 `danger`, `info`, `primary`, `gray`, or any raw Tailwind hue). Return `null`
 from the Closure to leave a row untinted. A tinted row automatically gets a
 matching same-hue hover and drops the neutral hover/zebra striping, so the
-color always reads cleanly: [tl! focus:start]
+color always reads cleanly:
 
 ```php
 ->rowColor(fn (Invoice $record) => match ($record->status) {
@@ -370,7 +370,7 @@ color always reads cleanly: [tl! focus:start]
     'paid'    => 'success',
     default   => null,
 })
-``` <!-- [tl! focus:end] -->
+```
 
 Prefer `rowColor()` over hand-written background classes — it resolves through
 the canonical `HasColor` owner, so it stays consistent with the rest of the UI
