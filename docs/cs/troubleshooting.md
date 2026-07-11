@@ -174,4 +174,3 @@ cestu asertujte v testech.
 - U problémů s runtime/stavem spusťte Integration sadu, zda se chování reprodukuje:
   `vendor/bin/pest --configuration phpunit.xml --testsuite "Integration"`.
 - Zkontrolujte [Návod k upgradu](upgrade.md), pokud problém začal po aktualizaci.
-```

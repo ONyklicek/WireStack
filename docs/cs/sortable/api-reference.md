@@ -277,4 +277,3 @@ Smazat záznam pořadí sloupců pro kombinaci uživatel + model + tabulka.
 |---|---|---|---|
 | `reorder` | Reorder | Přeuspořádat | Label toggle tlačítka (neaktivní) |
 | `done_reordering` | Done reordering | Hotovo | Label toggle tlačítka (aktivní) |
-```

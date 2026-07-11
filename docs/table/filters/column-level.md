@@ -28,7 +28,7 @@ Column filters use the `$columnFilters` Livewire property (separate from `$table
 
 ## One filter engine
 
-A column header filter is a **placement** of the same canonical `Filter` object used by the dedicated [filter panel](./overview.md) — not a separate engine. The `filterAs*()` helpers are thin factories over `TextFilter`, `SelectFilter`, `DateFilter`, `NumberRangeFilter` and `TernaryFilter`; the column owns *where* the control renders (the header cell) and *which attribute* it targets, while the `Filter` owns *how* it applies, renders, and persists. Because of that, every column filter is planned through the same `QueryPlanner` as a panel filter (joins + qualification handled once), and inherits authorization (`->can()` / `->visible()`) for free.
+A column header filter is a **placement** of the same canonical `Filter` object used by the dedicated [filter panel](./index.md) — not a separate engine. The `filterAs*()` helpers are thin factories over `TextFilter`, `SelectFilter`, `DateFilter`, `NumberRangeFilter` and `TernaryFilter`; the column owns *where* the control renders (the header cell) and *which attribute* it targets, while the `Filter` owns *how* it applies, renders, and persists. Because of that, every column filter is planned through the same `QueryPlanner` as a panel filter (joins + qualification handled once), and inherits authorization (`->can()` / `->visible()`) for free.
 
 You can also pass a ready-made filter with `->filter()` when you need full control:
 

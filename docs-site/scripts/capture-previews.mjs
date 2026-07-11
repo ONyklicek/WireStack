@@ -80,11 +80,22 @@ const chrome = spawn(chromeBin, [
   `--remote-debugging-port=${devtoolsPort}`,
   `--user-data-dir=${userDataDir}`,
   'about:blank',
-], { stdio: 'ignore' });
+], { stdio: ['ignore', 'ignore', 'pipe'] });
+
+// Keep Chrome's own output so a failed launch can be diagnosed instead of
+// surfacing only an opaque "endpoint did not become available" timeout.
+let chromeOutput = '';
+let chromeExit = null;
+chrome.stderr?.on('data', (chunk) => { chromeOutput += chunk.toString(); });
+chrome.on('error', (err) => { chromeExit = { error: err }; });
+chrome.on('exit', (code, signal) => { chromeExit = chromeExit ?? { code, signal }; });
 
 let cdp;
 try {
-  const wsUrl = await waitForDevtools(devtoolsPort);
+  const wsUrl = await waitForDevtools(devtoolsPort, {
+    getExit: () => chromeExit,
+    getOutput: () => chromeOutput,
+  });
   cdp = await connect(wsUrl);
 
   const { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank' });
@@ -168,8 +179,20 @@ console.log('Captured preview screenshots into docs-site/assets/previews');
 
 /* ---------- CDP helpers ---------- */
 
-async function waitForDevtools(port) {
+async function waitForDevtools(port, hooks = {}) {
+  const { getExit = () => null, getOutput = () => '' } = hooks;
   for (let i = 0; i < 60; i++) {
+    // Fail fast (with the real reason) if Chrome died instead of listening.
+    const exit = getExit();
+    if (exit) {
+      const detail = exit.error
+        ? `spawn error: ${exit.error.message}`
+        : `exited early (code ${exit.code}, signal ${exit.signal})`;
+      throw new Error(
+        `Chrome ${detail}. Check CHROME_BIN (${chromeBin}).`
+        + (getOutput().trim() ? `\nChrome output:\n${getOutput().trim()}` : ''),
+      );
+    }
     try {
       const res = await fetch(`http://127.0.0.1:${port}/json/version`);
       const json = await res.json();
@@ -177,7 +200,12 @@ async function waitForDevtools(port) {
     } catch {}
     await sleep(250);
   }
-  throw new Error('Chrome DevTools endpoint did not become available.');
+  throw new Error(
+    `Chrome DevTools endpoint did not become available on port ${port} after 15s.`
+    + ' Another process may be holding the port, or the machine is under load'
+    + ` (set CHROME_PORT to a free port).`
+    + (getOutput().trim() ? `\nChrome output:\n${getOutput().trim()}` : ''),
+  );
 }
 
 function connect(wsUrl) {

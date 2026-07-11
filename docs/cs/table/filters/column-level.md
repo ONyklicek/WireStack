@@ -28,7 +28,7 @@ Filtry sloupců používají Livewire vlastnost `$columnFilters` (oddělenou od 
 
 ## Jeden filtrovací engine
 
-Hlavičkový filtr sloupce je **umístění** téhož kanonického objektu `Filter`, který používá i dedikovaný [panel filtrů](./overview.md) — ne samostatný engine. Pomocné metody `filterAs*()` jsou tenké factory nad `TextFilter`, `SelectFilter`, `DateFilter`, `NumberRangeFilter` a `TernaryFilter`; sloupec vlastní *kde* se ovládací prvek vykreslí (hlavičková buňka) a *který atribut* cílí, zatímco `Filter` vlastní *jak* se aplikuje, vykresluje a persistuje. Díky tomu se každý filtr sloupce plánuje stejným `QueryPlanner`em jako panel filtr (joiny + kvalifikace vyřešeny jednou) a zdarma dědí autorizaci (`->can()` / `->visible()`).
+Hlavičkový filtr sloupce je **umístění** téhož kanonického objektu `Filter`, který používá i dedikovaný [panel filtrů](./index.md) — ne samostatný engine. Pomocné metody `filterAs*()` jsou tenké factory nad `TextFilter`, `SelectFilter`, `DateFilter`, `NumberRangeFilter` a `TernaryFilter`; sloupec vlastní *kde* se ovládací prvek vykreslí (hlavičková buňka) a *který atribut* cílí, zatímco `Filter` vlastní *jak* se aplikuje, vykresluje a persistuje. Díky tomu se každý filtr sloupce plánuje stejným `QueryPlanner`em jako panel filtr (joiny + kvalifikace vyřešeny jednou) a zdarma dědí autorizaci (`->can()` / `->visible()`).
 
 Když potřebuješ plnou kontrolu, můžeš předat hotový filtr přes `->filter()`:
 

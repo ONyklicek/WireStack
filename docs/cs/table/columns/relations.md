@@ -52,4 +52,3 @@ TextColumn::make('commentable.title')          // polymorfní
 4. HasMany/morphMany → eager load (jen zobrazení)
 5. Agregáty → `withCount()` / `withSum()` podotázky
 6. Pivot → JOIN mezitabulky
-```
