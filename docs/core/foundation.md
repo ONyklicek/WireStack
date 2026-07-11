@@ -514,7 +514,7 @@ enum OrderStatus: string implements HasColor, HasLabel
 }
 ```
 
-See [Table → Enum & JSON Casts](../table/columnclaudes/casts.md) for column-level usage.
+See [Table → Enum & JSON Casts](../table/columns/casts.md) for column-level usage.
 
 ## Support Utilities
 

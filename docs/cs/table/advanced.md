@@ -613,7 +613,7 @@ komponenty (po úplném reloadu stránky se resetuje).
 Zavolej `rememberColumns()` se stabilním klíčem — tabulka při mountu načte uložené
 rozvržení aktuálního uživatele a při každém přepnutí sloupce ho uloží, takže si
 každý uživatel drží vlastní uspořádání sloupců i po reloadu. V přepínači se
-objeví tlačítko „Obnovit sloupce“ pro návrat na výchozí nastavení. [tl! focus:start]
+objeví tlačítko „Obnovit sloupce“ pro návrat na výchozí nastavení.
 
 ```php
 $table
@@ -623,7 +623,7 @@ $table
         TextColumn::make('phone')->toggleable()->hidden(),
     ])
     ->rememberColumns('users-index'); // stabilní, unikátní pro tabulku
-``` <!-- [tl! focus:end] -->
+```
 
 Preference driver scopuje na `auth()->user()`, takže **jeden klíč slouží všem
 uživatelům** — funguje pro libovolný počet tabulek (různé klíče) i uživatelů.
@@ -674,7 +674,7 @@ akcí u kurzoru — zkratka vedle sloupce s akcemi. Akce menu se definují
 **samostatně** přes `rowContextMenu([...])` (nejsou to akce z `->actions()`
 toolbaru), takže je menu explicitní, ne implicitní kopie tlačítek řádku — pokud
 je chceš stejné, předej stejné objekty. Používá stejný styl položek jako dropdown
-action-group. [tl! focus:start]
+action-group.
 
 ```php
 $table
@@ -685,7 +685,7 @@ $table
         EditAction::make(),
         DeleteAction::make(),
     ]);
-``` <!-- [tl! focus:end] -->
+```
 
 - Menu ukáže přesně **viditelné** akce menu (skryté/neautorizované se vynechají);
   řádek bez viditelné akce menu neukáže.
@@ -801,6 +801,13 @@ uživatelské úrovni bez křehkých CSS selektorů.
 | Akce řádku | `data-testid="action-{název}"` (+ `aria-label`) |
 | Hlavička / bulk / menu akce | `data-testid="header-action-{název}"` / `bulk-action-{název}` / `menu-action-{název}` |
 | Bulk lišta / zrušit výběr | `data-testid="table-bulk-bar"` / `table-deselect"` |
+| Ovládač filtru v panelu | `data-testid="filter-{name}"` (vstup uvnitř Select / Ternary / vlastního panelového filtru — odlišné od buňky hlavičky `table-filter-{column}`) |
+| Trigger action group | `data-testid="action-group-trigger"` |
+| Kopírovací tlačítko buňky | `data-testid="cell-copy"` |
+| Buňka ButtonColumn | `data-testid="column-button"` |
+| Přepínač pollingu | `data-testid="polling-toggle"` |
+| Ovládače sub-řádků | `data-testid="subrows-expand-all"` / `subrows-collapse-all` / `subrows-reset-filters` / `subrows-scope-toggle` / `subrows-show-more` / `subrows-sort-{column}` |
+| Přepínač rozsahu souhrnu | `data-testid="summary-scope-{value}"` |
 
 Akce jdou cílit i přes viditelný popisek a volby filtru přes jejich text —
 preferuj je pro nejvěrnější uživatelské asserce:
@@ -832,13 +839,16 @@ kontextové menu i přepínač sloupců — je takto dosažitelná.
 **Mimo tabulku** platí stejná konvence napříč sdíleným UI, takže celý tok
 (otevřít modal, vyplnit formulář, potvrdit) je plně mapovatelný:
 
-Konvence názvů (aby šel odvodit jakýkoli hook): ovládač pole je
-`form-{typ}-{statePath}` a jeho podovládače přidávají `-{akce|hodnota|index}`.
+Konvence názvů (aby šel odvodit jakýkoli hook): **každé** pole formuláře má
+kontejner `form-field-{statePath}`; interaktivní typy navíc vystavují ovládač
+`form-{typ}-{statePath}`, jehož podovládače přidávají `-{akce|hodnota|index}`.
+Prosté text / number inputy mají jen kontejner (cil ho, nebo `<input>` uvnitř) —
+žádný `form-text-{path}` hook neexistuje.
 
 | Plocha | Selektor |
 |--------|----------|
 | Každé pole formuláře (kontejner) | `data-testid="form-field-{statePath}"` (+ `data-field`) |
-| Text / toggle / checkbox / slider | `form-input-{path}` (přes kontejner + `<label>`), `form-toggle-{path}`, `form-checkbox-{path}`, `form-slider-{path}` |
+| Toggle / checkbox / slider | `form-toggle-{path}`, `form-checkbox-{path}`, `form-slider-{path}` |
 | Radio / checkbox-list volby | `form-radio-{path}-{value}`, `form-checklist-{path}-{value}` (+ `-select-all` / `-deselect-all` / `-search`) |
 | Repeater / key-value | `form-repeater-{path}-add|remove-{i}|reorder-{i}`, `form-keyvalue-{path}-add|remove-{i}` |
 | File / tags | `form-file-{path}-dropzone|remove-{i}`, `form-tags-{path}-remove-{i}` |
@@ -846,7 +856,8 @@ Konvence názvů (aby šel odvodit jakýkoli hook): ovládač pole je
 | Color / rating / OTP | `form-color-{path}` (+ `-hex` / `-swatch-{barva}`), `form-rating-{path}-star-{n}`, `form-otp-{path}-{i}` |
 | Editory (markdown/rich/tiptap) | `form-editor-{path}` (tělo) + `-{command|index}` toolbar tlačítka + `-write` / `-preview` taby |
 | Field / affix / hint akce | `field-action-{path}-{name}` |
-| Searchable select (formuláře + filtry) | `select-trigger` / `select-search` / `select-option-{value}` / `select-clear`; create/edit-option modaly: `select-create-save|cancel`, `select-edit-save|cancel` |
+| Searchable select (formuláře + filtry) | `select-trigger` / `select-search` / `select-option-{value}` / `select-clear`; triggery akcí volby `form-select-{path}-create-option` / `-edit-option`; create/edit-option modaly: `select-create-save|cancel`, `select-edit-save|cancel` |
+| MorphToSelect | `form-select-{path}-type` (typ morphu) / `form-select-{path}-record` (výběr záznamu) |
 | Modal / slide-over / potvrzení | `modal-close`, `slide-over-close`, `modal-cancel` / `modal-submit`, `modal-back` / `modal-next`, `confirmation-confirm` / `confirmation-cancel`, `modal-footer-action-{name}` |
 | Wizard / tabs / sekce / callout | `wizard-step-{i}` / `wizard-back` / `wizard-next`, `tab-{i}`, `section-toggle`, `callout-dismiss` |
 | Toasty | `toast-dismiss`, `toast-action-{i}`, `toast-expand` |

@@ -28,6 +28,12 @@ use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireTable\Concerns\HasResponsive;
 use NyonCode\WireTable\Concerns\HasSummary;
 use NyonCode\WireTable\Concerns\HasView;
+use NyonCode\WireTable\Filters\DateFilter;
+use NyonCode\WireTable\Filters\Filter;
+use NyonCode\WireTable\Filters\NumberRangeFilter;
+use NyonCode\WireTable\Filters\SelectFilter;
+use NyonCode\WireTable\Filters\TernaryFilter;
+use NyonCode\WireTable\Filters\TextFilter;
 use NyonCode\WireTable\Support\FilterControl;
 
 /** @phpstan-consistent-constructor */
@@ -174,53 +180,15 @@ class Column extends DataComponent implements Htmlable
     // Note: $filterable boolean removed in v2. Use capabilities.
 
     /**
-     * Type of filter input.
-     * Supported: 'text', 'select', 'date', 'date_range', 'number_range', 'boolean'
+     * The canonical Filter that backs this column's inline header filter.
+     *
+     * A column filter is a *placement* of a canonical {@see Filter} in the
+     * header row — the column owns where it renders and which attribute it
+     * targets, the Filter owns how to apply / render / indicate / persist.
+     * Built by filterable() / filterAs*(); null means the column is not
+     * filterable.
      */
-    protected ?string $filterType = 'text';
-
-    /** @var array<string, string> Options for filter dropdowns */
-    protected array $filterOptions = [];
-
-    /** @var bool Show a search input inside select / multi-select filter dropdowns. */
-    protected bool $filterSearchable = true;
-
-    /** @var string|null Placeholder text for filter input */
-    protected ?string $filterPlaceholder = null;
-
-    /** @var Closure|null Custom filter query logic */
-    protected ?Closure $filterQueryCallback = null;
-
-    /**
-     * SQL operator for text filter.
-     * Supported: 'like' (default), 'equals', 'starts_with', 'ends_with',
-     *            '>', '>=', '<', '<=', '!=', 'between'
-     */
-    protected string $filterOperator = 'like';
-
-    /** @var string|null Minimum date for date/date_range filters */
-    protected ?string $filterMinDate = null;
-
-    /** @var string|null Maximum date for date/date_range filters */
-    protected ?string $filterMaxDate = null;
-
-    /** @var float|null Min value for number_range filter input */
-    protected ?float $filterMinValue = null;
-
-    /** @var float|null Max value for number_range filter input */
-    protected ?float $filterMaxValue = null;
-
-    /** @var float|null Step for number_range filter */
-    protected ?float $filterStep = null;
-
-    /** @var int Debounce in milliseconds for text/number column filters */
-    protected int $filterDebounce = 300;
-
-    /** @var string|null Boolean filter true label */
-    protected ?string $filterTrueLabel = null;
-
-    /** @var string|null Boolean filter false label */
-    protected ?string $filterFalseLabel = null;
+    protected ?Filter $filter = null;
 
     // Text styling properties
     /** @var string|null Text size class or value (e.g., 'sm', 'lg', '1.2rem') */
@@ -1368,71 +1336,130 @@ class Column extends DataComponent implements Htmlable
     }
 
     /**
+     * Enable a header filter for this column.
+     *
+     * With no type this is a substring text filter; the legacy `$type` string
+     * ('select', 'multi_select', 'date', 'date_range', 'number_range',
+     * 'boolean') is kept for backward compatibility and maps to the matching
+     * canonical {@see Filter}. Prefer the fluent filterAs*() helpers or pass a
+     * ready Filter to {@see Filter()}.
+     *
      * @param  array<string, string>|class-string  $options
      */
     public function filterable(bool $filterable = true, string $type = 'text', array|string $options = []): static
     {
-        $this->capabilities = $filterable
-            ? $this->capabilities->add(Capability::Filterable)
-            : $this->capabilities->remove(Capability::Filterable);
+        if (! $filterable) {
+            $this->filter = null;
+            $this->capabilities = $this->capabilities->remove(Capability::Filterable);
 
-        $this->filterType = $type;
-        $this->filterOptions = EnumResolver::normalizeOptions($options);
+            return $this;
+        }
+
+        return $this->filter($this->makeFilterOfType($type, $options));
+    }
+
+    /**
+     * Build the canonical Filter for a legacy filter-type string.
+     *
+     * @param  array<string, string>|class-string  $options
+     */
+    protected function makeFilterOfType(string $type, array|string $options = []): Filter
+    {
+        return match ($type) {
+            'select' => SelectFilter::make($this->name)->options($options)->searchable(),
+            'multi_select' => SelectFilter::make($this->name)->multiple()->options($options)->searchable(),
+            'date' => DateFilter::make($this->name),
+            'date_range' => DateFilter::make($this->name)->range(),
+            'number_range' => NumberRangeFilter::make($this->name),
+            'boolean' => TernaryFilter::make($this->name)->nullable(),
+            default => TextFilter::make($this->name),
+        };
+    }
+
+    /**
+     * Attach a fully-configured canonical Filter as this column's header
+     * filter. The column injects its state-path prefix + inline variant when it
+     * resolves the filter (see {@see resolveFilter()}).
+     */
+    public function filter(Filter $filter): static
+    {
+        $this->filter = $filter;
+        $this->capabilities = $this->capabilities->add(Capability::Filterable);
 
         return $this;
     }
 
+    public function getFilter(): ?Filter
+    {
+        return $this->filter;
+    }
+
     /**
-     * Configure as a select column filter.
+     * The header filter with the column's inline variant + `columnFilters`
+     * state-path prefix applied, or null when the column is not filterable.
+     */
+    public function resolveFilter(): ?Filter
+    {
+        return $this->filter
+            ?->statePathPrefix('tableState.columnFilters')
+            ->inline();
+    }
+
+    /**
+     * Lazily create a default (text) filter so modifier setters
+     * (filterOperator / filterSearchable / …) work before any filterAs*().
+     */
+    protected function ensureFilter(): Filter
+    {
+        if ($this->filter === null) {
+            $this->filter(TextFilter::make($this->name));
+        }
+
+        return $this->filter;
+    }
+
+    /**
+     * Configure as a searchable select column filter (single choice).
      *
      * @param  array<string, string>|class-string  $options
      */
     public function filterAsSelect(array|string $options, ?string $placeholder = null): static
     {
-        $this->capabilities = $this->capabilities->add(Capability::Filterable);
-        $this->filterType = 'select';
-        $this->filterOptions = EnumResolver::normalizeOptions($options);
+        $filter = SelectFilter::make($this->name)->options($options)->searchable();
         if ($placeholder) {
-            $this->filterPlaceholder = $placeholder;
+            $filter->placeholder($placeholder);
         }
 
-        return $this;
+        return $this->filter($filter);
     }
 
     /**
      * Configure as a multi-select column filter — the user can pick several
-     * values and the column matches any of them (`whereIn`). Renders a compact
-     * checkbox dropdown in the header row; accepts an array or an enum class.
+     * values and the column matches any of them (`whereIn`).
      *
      * @param  array<string, string>|class-string  $options
      */
     public function filterAsMultiSelect(array|string $options, ?string $placeholder = null): static
     {
-        $this->capabilities = $this->capabilities->add(Capability::Filterable);
-        $this->filterType = 'multi_select';
-        $this->filterOptions = EnumResolver::normalizeOptions($options);
+        $filter = SelectFilter::make($this->name)->multiple()->options($options)->searchable();
         if ($placeholder) {
-            $this->filterPlaceholder = $placeholder;
+            $filter->placeholder($placeholder);
         }
 
-        return $this;
+        return $this->filter($filter);
     }
 
     /**
      * Toggle the in-panel search box on a select / multi-select column filter.
-     * On by default so large option lists are quick to narrow; call
-     * `->filterSearchable(false)` for a short list that needs no search.
      */
     public function filterSearchable(bool $condition = true): static
     {
-        $this->filterSearchable = $condition;
+        $filter = $this->ensureFilter();
+        if ($filter instanceof SelectFilter) {
+            $filter->searchable($condition);
+        }
 
         return $this;
-    }
-
-    public function isFilterSearchable(): bool
-    {
-        return $this->filterSearchable;
     }
 
     /**
@@ -1440,12 +1467,9 @@ class Column extends DataComponent implements Htmlable
      */
     public function filterAsDate(?string $minDate = null, ?string $maxDate = null): static
     {
-        $this->capabilities = $this->capabilities->add(Capability::Filterable);
-        $this->filterType = 'date';
-        $this->filterMinDate = $minDate;
-        $this->filterMaxDate = $maxDate;
-
-        return $this;
+        return $this->filter(
+            DateFilter::make($this->name)->minDate($minDate)->maxDate($maxDate),
+        );
     }
 
     /**
@@ -1453,12 +1477,9 @@ class Column extends DataComponent implements Htmlable
      */
     public function filterAsDateRange(?string $minDate = null, ?string $maxDate = null): static
     {
-        $this->capabilities = $this->capabilities->add(Capability::Filterable);
-        $this->filterType = 'date_range';
-        $this->filterMinDate = $minDate;
-        $this->filterMaxDate = $maxDate;
-
-        return $this;
+        return $this->filter(
+            DateFilter::make($this->name)->range()->minDate($minDate)->maxDate($maxDate),
+        );
     }
 
     /**
@@ -1466,13 +1487,9 @@ class Column extends DataComponent implements Htmlable
      */
     public function filterAsNumberRange(?float $min = null, ?float $max = null, ?float $step = null): static
     {
-        $this->capabilities = $this->capabilities->add(Capability::Filterable);
-        $this->filterType = 'number_range';
-        $this->filterMinValue = $min;
-        $this->filterMaxValue = $max;
-        $this->filterStep = $step;
-
-        return $this;
+        return $this->filter(
+            NumberRangeFilter::make($this->name)->min($min)->max($max)->step($step),
+        );
     }
 
     /**
@@ -1480,252 +1497,88 @@ class Column extends DataComponent implements Htmlable
      */
     public function filterAsBoolean(?string $trueLabel = null, ?string $falseLabel = null): static
     {
-        $this->capabilities = $this->capabilities->add(Capability::Filterable);
-        $this->filterType = 'boolean';
-        $this->filterTrueLabel = $trueLabel;
-        $this->filterFalseLabel = $falseLabel;
-
-        return $this;
+        return $this->filter(
+            TernaryFilter::make($this->name)->nullable()->trueLabel($trueLabel)->falseLabel($falseLabel),
+        );
     }
 
     /**
-     * Set the filter SQL operator.
+     * Set the filter SQL operator (text filters only).
      * Supported: 'like', 'equals', 'starts_with', 'ends_with', '>', '>=', '<', '<=', '!='
      */
     public function filterOperator(string $operator): static
     {
-        $this->filterOperator = $operator;
+        $filter = $this->ensureFilter();
+        if ($filter instanceof TextFilter) {
+            $filter->operator($operator);
+        }
 
         return $this;
-    }
-
-    public function getFilterOperator(): string
-    {
-        return $this->filterOperator;
     }
 
     /**
-     * Set debounce for text/number column filter input (in ms).
+     * Set debounce for the text column filter input (in ms).
      */
     public function filterDebounce(int $ms): static
     {
-        $this->filterDebounce = $ms;
+        $filter = $this->ensureFilter();
+        if ($filter instanceof TextFilter) {
+            $filter->debounce($ms);
+        }
 
         return $this;
-    }
-
-    public function getFilterDebounce(): int
-    {
-        return $this->filterDebounce;
-    }
-
-    public function getFilterMinDate(): ?string
-    {
-        return $this->filterMinDate;
-    }
-
-    public function getFilterMaxDate(): ?string
-    {
-        return $this->filterMaxDate;
-    }
-
-    public function getFilterMinValue(): ?float
-    {
-        return $this->filterMinValue;
-    }
-
-    public function getFilterMaxValue(): ?float
-    {
-        return $this->filterMaxValue;
-    }
-
-    public function getFilterStep(): ?float
-    {
-        return $this->filterStep;
-    }
-
-    public function getFilterTrueLabel(): string
-    {
-        return $this->filterTrueLabel ?? Trans::get('wire-table::messages.filter_yes');
-    }
-
-    public function getFilterFalseLabel(): string
-    {
-        return $this->filterFalseLabel ?? Trans::get('wire-table::messages.filter_no');
     }
 
     public function isFilterable(): bool
     {
-        return $this->hasCapability(Capability::Filterable);
-    }
-
-    public function getFilterType(): string
-    {
-        return $this->filterType;
+        return $this->filter !== null;
     }
 
     /**
-     * @return array<string, string>
+     * Whether the filter binds an array state (multi-select), so the host can
+     * seed `columnFilters.<name>` to [] for correct checkbox-group binding.
      */
-    public function getFilterOptions(): array
+    public function filterExpectsArray(): bool
     {
-        return $this->filterOptions;
+        return $this->filter !== null && $this->filter->isMultiple();
     }
 
     public function filterPlaceholder(?string $placeholder): static
     {
-        $this->filterPlaceholder = $placeholder;
+        $this->ensureFilter()->placeholder($placeholder);
 
         return $this;
-    }
-
-    public function getFilterPlaceholder(): ?string
-    {
-        return $this->filterPlaceholder;
     }
 
     public function filterUsing(Closure $callback): static
     {
-        $this->filterQueryCallback = $callback;
+        $this->ensureFilter()->query($callback);
 
         return $this;
     }
 
-    public function getFilterQueryCallback(): ?Closure
-    {
-        return $this->filterQueryCallback;
-    }
-
+    /**
+     * Apply this column's header filter to the query, delegating to the
+     * canonical Filter. A bare, non-relation column is qualified against the
+     * base table so it stays unambiguous under joins (relation-manager pivots);
+     * the clone keeps the stored filter (used for planning/render) untouched.
+     */
     public function applyFilter(mixed $query, mixed $value): mixed
     {
         if ($value === null || $value === '' || $value === []) {
             return $query;
         }
 
-        // 1. Custom filter callback takes priority
-        if ($this->filterQueryCallback) {
-            return ($this->filterQueryCallback)($query, $value);
-        }
-
-        $column = $this->name;
-
-        // 2. Handle relation columns
-        if ($this->hasRelation()) {
-            $relation = $this->getRelation();
-            $attribute = $this->getRelationshipAttribute();
-
-            return $query->whereHas($relation, function ($q) use ($attribute, $value) {
-                $this->applyFilterCondition($q, $attribute, $value);
-            });
-        }
-
-        // 3. Standard column — qualify against the base table so the clause stays
-        // unambiguous when the base query carries joins (e.g. a belongs-to-many
-        // relation manager). Already-qualified dotted names pass through; select
-        // aliases are unaffected because SQL forbids aliases in WHERE anyway.
-        if (! str_contains($column, '.') && $query instanceof Builder) {
-            $column = $query->qualifyColumn($column);
-        }
-
-        return $this->applyFilterCondition($query, $column, $value);
-    }
-
-    /**
-     * Apply the actual filter condition based on filterType and filterOperator.
-     */
-    public function applyFilterCondition(mixed $query, string $column, mixed $value): mixed
-    {
-        return match ($this->filterType) {
-            'select', 'multi_select' => is_array($value)
-                ? (empty($value) ? $query : $query->whereIn($column, $value))
-                : $query->where($column, $value),
-
-            'boolean' => $this->applyBooleanFilter($query, $column, $value),
-
-            'date' => $query->whereDate($column, $value),
-
-            'date_range' => $this->applyDateRangeFilter($query, $column, $value),
-
-            'number_range' => $this->applyNumberRangeFilter($query, $column, $value),
-
-            default => $this->applyTextFilter($query, $column, $value),
-        };
-    }
-
-    /**
-     * Apply text filter with configurable operator.
-     */
-    protected function applyTextFilter(mixed $query, string $column, mixed $value): mixed
-    {
-        // Crafted/stale state can deliver an array here; guard against
-        // "Array to string conversion" in the LIKE/comparison branches.
-        if (! is_scalar($value)) {
+        $filter = $this->resolveFilter();
+        if ($filter === null || ! $filter->canView()) {
             return $query;
         }
 
-        return match ($this->filterOperator) {
-            'equals', '=' => $query->where($column, $value),
-            'starts_with' => $query->where($column, 'like', "$value%"),
-            'ends_with' => $query->where($column, 'like', "%$value"),
-            '>', '>=', '<', '<=', '!=' => $query->where($column, $this->filterOperator, $value),
-            default => $query->where($column, 'like', "%$value%"),
-        };
-    }
-
-    /**
-     * Apply boolean filter (true/false/null).
-     */
-    protected function applyBooleanFilter(mixed $query, string $column, mixed $value): mixed
-    {
-        if ($value === 'true' || $value === '1' || $value === true) {
-            return $query->where($column, true);
+        if (! $this->hasRelation() && ! str_contains($this->name, '.') && $query instanceof Builder) {
+            $filter = (clone $filter)->column($query->qualifyColumn($this->name));
         }
 
-        if ($value === 'false' || $value === '0' || $value === false) {
-            return $query->where(function ($q) use ($column) {
-                $q->where($column, false)->orWhereNull($column);
-            });
-        }
-
-        return $query;
-    }
-
-    /**
-     * Apply date range filter (from/to).
-     */
-    protected function applyDateRangeFilter(mixed $query, string $column, mixed $value): mixed
-    {
-        if (! is_array($value)) {
-            return $query->whereDate($column, $value);
-        }
-
-        if (! empty($value['from'])) {
-            $query->whereDate($column, '>=', $value['from']);
-        }
-        if (! empty($value['to'])) {
-            $query->whereDate($column, '<=', $value['to']);
-        }
-
-        return $query;
-    }
-
-    /**
-     * Apply number range filter (min/max).
-     */
-    protected function applyNumberRangeFilter(mixed $query, string $column, mixed $value): mixed
-    {
-        if (! is_array($value)) {
-            return $query->where($column, $value);
-        }
-
-        if (isset($value['min']) && $value['min'] !== '') {
-            $query->where($column, '>=', (float) $value['min']);
-        }
-        if (isset($value['max']) && $value['max'] !== '') {
-            $query->where($column, '<=', (float) $value['max']);
-        }
-
-        return $query;
+        return $filter->apply($query, $value);
     }
 
     /**
@@ -1743,31 +1596,22 @@ class Column extends DataComponent implements Htmlable
 
     public function renderFilter(mixed $value = null): string
     {
-        if (! $this->isFilterable()) {
+        $filter = $this->resolveFilter();
+        if ($filter === null || ! $filter->canView()) {
             return '';
         }
 
-        $viewName = match ($this->filterType) {
-            'select' => 'tables.columns.partials.filter-select',
-            'multi_select' => 'tables.columns.partials.filter-multi-select',
-            'date' => 'tables.columns.partials.filter-date',
-            'date_range' => 'tables.columns.partials.filter-date-range',
-            'number_range' => 'tables.columns.partials.filter-number-range',
-            'boolean' => 'tables.columns.partials.filter-boolean',
-            default => 'tables.columns.partials.filter-text',
-        };
-
+        // The Filter owns its compact inline (header-cell) view; the shared
+        // control style resolves the chevron variant for select-like filters.
+        $viewName = $filter->inlineView();
         $namespacedView = "wire-table::$viewName";
         $resolvedView = view()->exists($namespacedView) ? $namespacedView : $viewName;
 
-        // Resolve the shared control style once (select-like types get the chevron
-        // variant) so every filter partial renders the same unified control.
-        $selectLike = in_array($this->filterType, ['select', 'multi_select', 'boolean'], true);
-
         return view($resolvedView, [
             'column' => $this,
+            'filter' => $filter,
             'value' => $value,
-            'controlClasses' => FilterControl::classes($selectLike),
+            'controlClasses' => FilterControl::classes($filter->isSelectLike()),
         ])->render();
     }
 

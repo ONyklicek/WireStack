@@ -180,7 +180,10 @@ final class TableQueryService
 
         // ── 2. Build QueryPlanner inputs (only for columns/filters WITHOUT custom callbacks) ──
         $plannerColumns = $this->buildPlannerColumns($columns);
-        $plannerFilters = $this->buildPlannerFilters($filters, $filterValues, $subRowRelation !== null);
+        $plannerFilters = [
+            ...$this->buildPlannerFilters($filters, $filterValues, $subRowRelation !== null),
+            ...$this->buildPlannerColumnFilters($columns, $columnFilterValues),
+        ];
         $plannerSorts = $this->buildPlannerSorts($sortColumn, $sortDirection, $columns, $customSortCallback !== null);
         $searchTerm = ! empty($search) && ! empty($customSearchCallbacks) ? null : $search;
 
@@ -275,16 +278,22 @@ final class TableQueryService
             $query = call_user_func($item['callback'], $query, $item['value']);
         }
 
-        // Column-level filters. Both custom-callback and plain columns are applied
-        // through the canonical Column::applyFilter() so the configured filterType
-        // and filterOperator (default "like") are honoured identically to sub-row
-        // filtering — instead of a hard-coded "=" in the planner.
+        // Column header filters that the planner cannot express as a single
+        // column/operator/value clause (date whereDate, boolean "= false OR
+        // IS NULL", or a custom ->filterUsing() callback) are applied here,
+        // post-planner, through the canonical Column::applyFilter(). The rest
+        // were folded into the QueryPlanner as FilterDefinitions above, so join
+        // handling + qualification are shared with panel filters.
         foreach ($columns as $column) {
             if (! $column->isFilterable()) {
                 continue;
             }
             $value = $columnFilterValues[$column->getName()] ?? null;
-            if ($value === null || $value === '') {
+            if ($value === null || $value === '' || $value === []) {
+                continue;
+            }
+            // Skip filters already expressed in the plan.
+            if ($column->getFilter()?->toPlannerDefinitions($value) !== []) {
                 continue;
             }
 
@@ -584,9 +593,41 @@ final class TableQueryService
             );
         }
 
-        // Column-level filters are applied post-planner through Column::applyFilter()
-        // (see buildQuery) so their filterType/filterOperator is honoured; they are
-        // intentionally not converted to planner FilterDefinitions here.
+        // Column header filters are added by buildPlannerColumnFilters().
+
+        return $definitions;
+    }
+
+    /**
+     * Convert active column header-filter values → FilterDefinition[] for the
+     * planner. Each column delegates to its canonical Filter's
+     * toPlannerDefinitions(); filters the planner cannot express (date, boolean,
+     * custom callbacks) return [] and are applied post-planner via
+     * Column::applyFilter() in buildQuery().
+     *
+     * @param  array<int, Column>  $columns
+     * @param  array<string, mixed>  $columnFilterValues
+     * @return array<int, FilterDefinition>
+     */
+    private function buildPlannerColumnFilters(array $columns, array $columnFilterValues): array
+    {
+        $definitions = [];
+
+        foreach ($columns as $column) {
+            $filter = $column->getFilter();
+            if ($filter === null || ! $filter->canView()) {
+                continue;
+            }
+
+            $value = $columnFilterValues[$column->getName()] ?? null;
+            if ($value === null || $value === '' || $value === []) {
+                continue;
+            }
+
+            foreach ($filter->toPlannerDefinitions($value) as $definition) {
+                $definitions[] = $definition;
+            }
+        }
 
         return $definitions;
     }

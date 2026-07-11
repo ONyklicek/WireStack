@@ -3,6 +3,7 @@
      entirely by the host's action engine. --}}
 @php
     use NyonCode\WireCore\Foundation\Concerns\HasColor;
+    use NyonCode\WireCore\Modals\ModalStack;
 
     /** @var object $component The Livewire host (WithActions). */
     $secondaryButtonClasses = 'inline-flex w-full sm:w-auto justify-center rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600';
@@ -29,13 +30,14 @@
         // modal behind the active one, then layer the active modal on top.
         $suspendedModals = $component->getSuspendedActionModals();
         $stackDepth = count($suspendedModals);
-        $activeZIndex = $stackDepth > 0 ? 50 + $stackDepth * 10 : null;
+        $activeZIndex = $stackDepth > 0 ? ModalStack::zIndexForDepth($stackDepth) : null;
     @endphp
 
     @foreach($suspendedModals as $suspendedIndex => $suspendedModalData)
         @include('wire-core::modals.suspended', [
             'modalData' => $suspendedModalData,
-            'zIndex' => 50 + $suspendedIndex * 10,
+            'zIndex' => ModalStack::zIndexForDepth($suspendedIndex),
+            'depthBelowTop' => $stackDepth - $suspendedIndex,
         ])
     @endforeach
 

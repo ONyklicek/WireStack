@@ -6,6 +6,7 @@ namespace NyonCode\WireTable\Filters;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Query\FilterDefinition;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireForms\Components\TextInput;
 
@@ -111,6 +112,37 @@ class NumberRangeFilter extends Filter
         }
 
         return $query->where($column, $value);
+    }
+
+    /**
+     * Express the min/max bounds as a single BETWEEN clause so the range plans
+     * through the QueryPlanner (the ApplyFilters pipe degrades a one-sided
+     * BETWEEN to a `>=` / `<=` comparison). Returns [] when neither bound is
+     * set so nothing is planned.
+     */
+    public function toPlannerDefinitions(mixed $value): array
+    {
+        if ($this->queryCallback !== null || ! is_array($value)) {
+            return [];
+        }
+
+        $min = (isset($value['min']) && $value['min'] !== '') ? (float) $value['min'] : null;
+        $max = (isset($value['max']) && $value['max'] !== '') ? (float) $value['max'] : null;
+
+        if ($min === null && $max === null) {
+            return [];
+        }
+
+        return [FilterDefinition::make(
+            column: $this->getColumn(),
+            operator: 'BETWEEN',
+            value: [$min, $max],
+        )];
+    }
+
+    public function inlineView(): string
+    {
+        return 'tables.columns.partials.filter-number-range';
     }
 
     public function getFormFields(): array

@@ -96,6 +96,16 @@ class TernaryFilter extends Filter
         return $query;
     }
 
+    public function inlineView(): string
+    {
+        return 'tables.columns.partials.filter-boolean';
+    }
+
+    public function isSelectLike(): bool
+    {
+        return true;
+    }
+
     public function getFormFields(): array
     {
         return [

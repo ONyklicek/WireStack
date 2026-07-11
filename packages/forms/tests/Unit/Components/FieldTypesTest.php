@@ -356,6 +356,61 @@ test('file upload passes a full URL through and reflects non-image type', functi
         ->and($files[0]['isImage'])->toBeFalse();
 });
 
+test('isStoredReference accepts relative paths and URLs but rejects absolute temp paths', function () {
+    $field = FileUpload::make('doc');
+
+    expect($field->isStoredReference('uploads/a.png'))->toBeTrue()
+        ->and($field->isStoredReference('https://cdn.example.com/x.pdf'))->toBeTrue()
+        ->and($field->isStoredReference(''))->toBeFalse()
+        // Raw absolute filesystem paths (leaked PHP upload tmp_name) are not stored refs.
+        ->and($field->isStoredReference('/tmp/phpA1B2C3'))->toBeFalse()
+        ->and($field->isStoredReference('/private/var/tmp/phpXYZ'))->toBeFalse()
+        ->and($field->isStoredReference('C:\\Windows\\Temp\\php1'))->toBeFalse();
+});
+
+test('getStoredFiles skips a leaked absolute temp path', function () {
+    Storage::fake('public');
+
+    // A relative path is a real stored file; the absolute temp path is dropped.
+    $files = FileUpload::make('gallery')->multiple()
+        ->getStoredFiles(['uploads/keep.png', '/tmp/phpDEAD']);
+
+    expect($files)->toHaveCount(1)
+        ->and($files[0]['path'])->toBe('uploads/keep.png');
+});
+
+test('getFilePreviews skips a leaked absolute temp path', function () {
+    Storage::fake('public');
+
+    $previews = FileUpload::make('gallery')->multiple()
+        ->getFilePreviews(['uploads/keep.png', '/tmp/phpDEAD']);
+
+    expect($previews)->toHaveCount(1)
+        ->and($previews[0]['name'])->toBe('keep.png')
+        ->and($previews[0]['stored'])->toBeTrue();
+});
+
+test('storeFileFromPath returns null when the file is gone and stores it when present', function () {
+    Storage::fake('public');
+
+    $field = FileUpload::make('avatar')->disk('public')->directory('avatars');
+
+    // Gone → null (never persist a dead path).
+    expect($field->storeFileFromPath('/tmp/php'.uniqid()))->toBeNull();
+
+    // Present → moved onto the disk, disk-relative path returned.
+    $tmp = tempnam(sys_get_temp_dir(), 'up');
+    file_put_contents($tmp, 'data');
+
+    $stored = $field->storeFileFromPath($tmp);
+
+    expect($stored)->toBeString()
+        ->and($stored)->toStartWith('avatars/');
+    Storage::disk('public')->assertExists($stored);
+
+    @unlink($tmp);
+});
+
 test('file upload stores a file to the configured disk and directory', function () {
     Storage::fake('public');
 

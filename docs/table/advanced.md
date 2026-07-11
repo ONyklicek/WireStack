@@ -603,7 +603,7 @@ resets on a full page reload).
 Call `rememberColumns()` with a stable key and the table loads the current
 user's saved layout on mount and persists it whenever a column is toggled — so
 every user keeps their own column arrangement across reloads. A "Reset columns"
-control appears in the picker to return to the configured defaults. [tl! focus:start]
+control appears in the picker to return to the configured defaults.
 
 ```php
 $table
@@ -613,7 +613,7 @@ $table
         TextColumn::make('phone')->toggleable()->hidden(),
     ])
     ->rememberColumns('users-index'); // stable, unique per table
-``` <!-- [tl! focus:end] -->
+```
 
 Preferences are scoped by the driver to `auth()->user()`, so **one key serves
 every user** — it works for any number of tables (distinct keys) and users. A
@@ -662,7 +662,7 @@ a shortcut alongside the actions column. The menu's actions are declared
 **separately** with `rowContextMenu([...])` (they are *not* the `->actions()`
 toolbar), so the menu is explicit rather than an implicit mirror of the row
 buttons — pass the same action objects if you want them to match. It uses the
-same menu-item styling as the action-group dropdown. [tl! focus:start]
+same menu-item styling as the action-group dropdown.
 
 ```php
 $table
@@ -673,7 +673,7 @@ $table
         EditAction::make(),
         DeleteAction::make(),
     ]);
-``` <!-- [tl! focus:end] -->
+```
 
 - The menu lists exactly the **visible** menu actions (hidden/unauthorized
   actions are skipped); a row with no visible action shows no menu.
@@ -786,6 +786,13 @@ level without brittle CSS.
 | Row action | `data-testid="action-{name}"` (+ `aria-label`) |
 | Header / bulk / menu action | `data-testid="header-action-{name}"` / `bulk-action-{name}` / `menu-action-{name}` |
 | Bulk bar / deselect | `data-testid="table-bulk-bar"` / `table-deselect"` |
+| Panel filter control | `data-testid="filter-{name}"` (the input inside a Select / Ternary / custom panel filter — distinct from the header `table-filter-{column}` cell) |
+| Action group trigger | `data-testid="action-group-trigger"` |
+| Copyable cell button | `data-testid="cell-copy"` |
+| Button column cell | `data-testid="column-button"` |
+| Polling toggle | `data-testid="polling-toggle"` |
+| Sub-row controls | `data-testid="subrows-expand-all"` / `subrows-collapse-all` / `subrows-reset-filters` / `subrows-scope-toggle` / `subrows-show-more` / `subrows-sort-{column}` |
+| Summary scope toggle | `data-testid="summary-scope-{value}"` |
 
 Actions are also targetable by their visible label, and filter options by their
 text — prefer those for the most user-faithful assertions:
@@ -818,13 +825,16 @@ way.
 **Beyond the table**, the same convention runs through the shared UI so an
 end-to-end flow (open a modal, fill a form, confirm) is fully mappable:
 
-Naming convention (so you can derive any hook): a form field control is
-`form-{type}-{statePath}` and its sub-controls append `-{action|value|index}`.
+Naming convention (so you can derive any hook): **every** form field has a
+`form-field-{statePath}` container; interactive types additionally expose a
+`form-{type}-{statePath}` control, whose sub-controls append `-{action|value|index}`.
+Plain text / number inputs carry only the container (target it, or the `<input>`
+within) — there is no `form-text-{path}` hook.
 
 | Surface | Selector |
 |---------|----------|
 | Every form field (container) | `data-testid="form-field-{statePath}"` (+ `data-field`) |
-| Text / toggle / checkbox / slider | `form-input-{path}` (via container + `<label>`), `form-toggle-{path}`, `form-checkbox-{path}`, `form-slider-{path}` |
+| Toggle / checkbox / slider | `form-toggle-{path}`, `form-checkbox-{path}`, `form-slider-{path}` |
 | Radio / checkbox-list options | `form-radio-{path}-{value}`, `form-checklist-{path}-{value}` (+ `-select-all` / `-deselect-all` / `-search`) |
 | Repeater / key-value | `form-repeater-{path}-add|remove-{i}|reorder-{i}`, `form-keyvalue-{path}-add|remove-{i}` |
 | File / tags | `form-file-{path}-dropzone|remove-{i}`, `form-tags-{path}-remove-{i}` |
@@ -832,7 +842,8 @@ Naming convention (so you can derive any hook): a form field control is
 | Color / rating / OTP | `form-color-{path}` (+ `-hex` / `-swatch-{color}`), `form-rating-{path}-star-{n}`, `form-otp-{path}-{i}` |
 | Editors (markdown/rich/tiptap) | `form-editor-{path}` (body) + `-{command|index}` toolbar buttons + `-write` / `-preview` tabs |
 | Field / affix / hint actions | `field-action-{path}-{name}` |
-| Searchable select (forms + filters) | `select-trigger` / `select-search` / `select-option-{value}` / `select-clear`; create/edit-option modals: `select-create-save|cancel`, `select-edit-save|cancel` |
+| Searchable select (forms + filters) | `select-trigger` / `select-search` / `select-option-{value}` / `select-clear`; option-action triggers `form-select-{path}-create-option` / `-edit-option`; create/edit-option modals: `select-create-save|cancel`, `select-edit-save|cancel` |
+| MorphToSelect | `form-select-{path}-type` (morph type) / `form-select-{path}-record` (record select) |
 | Modal / slide-over / confirmation | `modal-close`, `slide-over-close`, `modal-cancel` / `modal-submit`, `modal-back` / `modal-next`, `confirmation-confirm` / `confirmation-cancel`, `modal-footer-action-{name}` |
 | Wizard / tabs / section / callout | `wizard-step-{i}` / `wizard-back` / `wizard-next`, `tab-{i}`, `section-toggle`, `callout-dismiss` |
 | Toasts | `toast-dismiss`, `toast-action-{i}`, `toast-expand` |

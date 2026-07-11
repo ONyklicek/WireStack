@@ -195,7 +195,7 @@ trait WithTable
         // their header checkboxes as an array group (toggle membership) rather
         // than replacing a scalar on each click.
         foreach ($table->getColumns() as $column) {
-            if ($column->isFilterable() && $column->getFilterType() === 'multi_select') {
+            if ($column->isFilterable() && $column->filterExpectsArray()) {
                 $current = $this->tableState->get('columnFilters.'.$column->getName());
                 if (! is_array($current)) {
                     $this->tableState->set('columnFilters.'.$column->getName(), []);
@@ -915,6 +915,57 @@ trait WithTable
         }
 
         return $indicators;
+    }
+
+    /**
+     * Indicator labels for active column header filters, keyed by column name.
+     *
+     * Column filter state is stored unwrapped under columnFilters.<name>, which
+     * Filter::getIndicator() consumes directly (a scalar/keyed-array passes
+     * through extractValue()), so header filters reuse the same chip pipeline as
+     * the panel filters.
+     *
+     * @return array<string, string>
+     */
+    public function getActiveColumnFilterIndicators(): array
+    {
+        $values = $this->tableState->get('columnFilters', []);
+        $indicators = [];
+
+        foreach ($this->getTable()->getColumns() as $column) {
+            $filter = $column->getFilter();
+            if ($filter === null || ! $filter->canView()) {
+                continue;
+            }
+
+            $indicator = $filter->getIndicator($values[$column->getName()] ?? null);
+
+            if ($indicator !== null) {
+                $indicators[$column->getName()] = $indicator;
+            }
+        }
+
+        return $indicators;
+    }
+
+    /**
+     * Clear a single column header filter (used by its indicator chip's remove
+     * button), mirroring removeTableFilter() for panel filters.
+     */
+    public function removeColumnFilter(string $name): void
+    {
+        $columnFilters = $this->tableState->get('columnFilters', []);
+        Arr::forget($columnFilters, $name);
+
+        if (str_contains($name, '.')) {
+            $parent = substr($name, 0, (int) strrpos($name, '.'));
+            if (Arr::get($columnFilters, $parent) === []) {
+                Arr::forget($columnFilters, $parent);
+            }
+        }
+
+        $this->tableState->set('columnFilters', $columnFilters);
+        $this->resetPage();
     }
 
     /**
@@ -2180,8 +2231,11 @@ trait WithTable
             return;
         }
 
-        // Stack on top of an already-open modal instead of replacing it.
-        $this->suspendActiveActionIfOpen();
+        // Stack on top of an already-open modal instead of replacing it
+        // (refused only at the safety depth cap).
+        if (! $this->suspendActiveActionIfOpen()) {
+            return;
+        }
 
         $this->tableState->set('modal.action.name', $actionName);
         $this->tableState->set('modal.action.recordKey', $recordKey);
@@ -2283,8 +2337,11 @@ trait WithTable
         // Get selected records for dynamic form fields/defaults
         $selectedRecords = $this->getSelectedRecords();
 
-        // Stack on top of an already-open modal instead of replacing it.
-        $this->suspendActiveActionIfOpen();
+        // Stack on top of an already-open modal instead of replacing it
+        // (refused only at the safety depth cap).
+        if (! $this->suspendActiveActionIfOpen()) {
+            return;
+        }
 
         $this->tableState->set('modal.action.name', $actionName);
         $this->tableState->set('modal.action.recordKey', null);
@@ -2924,8 +2981,11 @@ trait WithTable
             return;
         }
 
-        // Stack on top of an already-open modal instead of replacing it.
-        $this->suspendActiveActionIfOpen();
+        // Stack on top of an already-open modal instead of replacing it
+        // (refused only at the safety depth cap).
+        if (! $this->suspendActiveActionIfOpen()) {
+            return;
+        }
 
         $this->tableState->set('modal.action.name', $actionName);
         $this->tableState->set('modal.action.recordKey', null);

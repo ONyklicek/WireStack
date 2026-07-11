@@ -11,6 +11,7 @@ use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use JsonSerializable;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use SplFileInfo;
 use Stringable;
 use UnitEnum;
 
@@ -62,6 +63,16 @@ final class StateSerializer
     public function serializeValue(mixed $value): mixed
     {
         if ($value === null || is_scalar($value)) {
+            return $value;
+        }
+
+        // File-upload / file objects (Illuminate\Http\UploadedFile and Livewire's
+        // TemporaryUploadedFile both extend SplFileInfo) are Stringable via
+        // SplFileInfo::__toString(), which returns the pathname. Stringifying one
+        // here would collapse a live upload to a raw /tmp path *before* Livewire's
+        // own file-upload dehydration runs — losing the file. Hand file objects
+        // straight to Livewire's $dehydrateChild untouched instead.
+        if ($value instanceof SplFileInfo) {
             return $value;
         }
 

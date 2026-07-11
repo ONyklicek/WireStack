@@ -135,6 +135,66 @@ test('save leaves a FileUpload with no upload as null', function () {
     expect(Storage::disk('public')->allFiles())->toBeEmpty();
 });
 
+test('save drops a leaked absolute temp path whose file is gone instead of persisting it', function () {
+    Storage::fake('public');
+
+    $config = new FormConfig(
+        schema: [FileUpload::make('avatar')->disk('public')],
+        using: fn (array $data) => $data,
+    );
+
+    // A raw PHP upload tmp_name that leaked into state; the file no longer exists.
+    $runtime = createRuntimeWithState($config, ['avatar' => '/tmp/php'.uniqid()]);
+
+    $result = (new SaveHandler($config, $runtime))->save();
+
+    // The dead temp path must never be written as if it were a stored path.
+    expect($result['avatar'])->toBeNull();
+    expect(Storage::disk('public')->allFiles())->toBeEmpty();
+});
+
+test('save rescues a leaked absolute path whose file still exists onto the disk', function () {
+    Storage::fake('public');
+
+    $config = new FormConfig(
+        schema: [FileUpload::make('avatar')->disk('public')->directory('avatars')],
+        using: fn (array $data) => $data,
+    );
+
+    // Simulate an absolute path that still points at a real file at save time.
+    $tmp = tempnam(sys_get_temp_dir(), 'up');
+    file_put_contents($tmp, 'binary');
+
+    $runtime = createRuntimeWithState($config, ['avatar' => $tmp]);
+
+    $result = (new SaveHandler($config, $runtime))->save();
+
+    expect($result['avatar'])->toBeString()
+        ->and($result['avatar'])->toStartWith('avatars/')
+        ->and($result['avatar'])->not->toStartWith('/');
+    Storage::disk('public')->assertExists($result['avatar']);
+
+    @unlink($tmp);
+});
+
+test('save filters a leaked temp path out of a multiple field but keeps real stored paths', function () {
+    Storage::fake('public');
+
+    $config = new FormConfig(
+        schema: [FileUpload::make('gallery')->multiple()->disk('public')->directory('g')],
+        using: fn (array $data) => $data,
+    );
+
+    $runtime = createRuntimeWithState($config, [
+        'gallery' => ['g/old.png', '/tmp/php'.uniqid()],
+    ]);
+
+    $result = (new SaveHandler($config, $runtime))->save();
+
+    // Only the legitimate relative path survives; the dead temp path is dropped.
+    expect($result['gallery'])->toBe(['g/old.png']);
+});
+
 // ─── Plugin hooks ─────────────────────────────────────────────
 
 test('form.saving hook can modify data before beforeSave and persistence', function () {

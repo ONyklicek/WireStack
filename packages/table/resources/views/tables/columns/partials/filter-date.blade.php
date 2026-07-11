@@ -1,9 +1,9 @@
 {{-- Column date filter (inline, in table header row) --}}
-{{-- Variables: $column, $value --}}
+{{-- Variables: $column, $filter, $value, $controlClasses --}}
 @php
     $name = $column->getName();
-    $minDate = $column->getFilterMinDate();
-    $maxDate = $column->getFilterMaxDate();
+    $minDate = $filter->getMinDate();
+    $maxDate = $filter->getMaxDate();
 @endphp
 
 <input

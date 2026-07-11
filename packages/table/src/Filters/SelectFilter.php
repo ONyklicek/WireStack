@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Filters;
 
 use Closure;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireForms\Components\Select;
@@ -12,7 +14,7 @@ use NyonCode\WireForms\Components\Select;
 class SelectFilter extends Filter
 {
     use HasSheetOnMobile {
-        defaultSheetOnMobile as protected sheetConfigDefault;
+        HasSheetOnMobile::defaultSheetOnMobile as protected sheetConfigDefault;
     }
 
     /** @var array<string, string>|string|Closure */
@@ -79,6 +81,55 @@ class SelectFilter extends Filter
     protected function defaultSheetOnMobile(): bool
     {
         return $this->isSearchable() ? false : $this->sheetConfigDefault();
+    }
+
+    /**
+     * A select matches by membership: any array value is a whereIn (matching
+     * any of the picked options), whether or not the filter is `multiple` and
+     * through the relation when one is present. Scalars fall back to the base
+     * equality / whereHas behaviour.
+     *
+     * @param  Builder<Model>  $query
+     * @return Builder<Model>
+     */
+    public function apply(Builder $query, mixed $value): Builder
+    {
+        if ($value === null || $value === '' || $value === []) {
+            return $query;
+        }
+
+        if ($this->queryCallback) {
+            return ($this->queryCallback)($query, $value);
+        }
+
+        if (! is_array($value)) {
+            return parent::apply($query, $value);
+        }
+
+        if ($this->getRelation() !== null) {
+            $attribute = $this->getRelationshipAttribute();
+
+            /** @var Builder<Model> */
+            return $query->whereHas(
+                $this->getRelation(),
+                fn (Builder $q) => $q->whereIn($attribute, $value),
+            );
+        }
+
+        /** @var Builder<Model> */
+        return $query->whereIn($this->getColumn(), $value);
+    }
+
+    public function inlineView(): string
+    {
+        return $this->multiple
+            ? 'tables.columns.partials.filter-multi-select'
+            : 'tables.columns.partials.filter-select';
+    }
+
+    public function isSelectLike(): bool
+    {
+        return true;
     }
 
     public function getFormFields(): array

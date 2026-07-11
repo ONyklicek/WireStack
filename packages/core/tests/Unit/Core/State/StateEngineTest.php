@@ -328,6 +328,22 @@ it('deserializes a value with a given type', function () {
         ->and($serializer->deserializeValue('true', 'bool'))->toBeTrue();
 });
 
+it('leaves a file-upload object untouched instead of stringifying it to its path', function () {
+    $serializer = new StateSerializer;
+
+    // UploadedFile is Stringable via SplFileInfo::__toString() (the pathname).
+    // The serializer must NOT collapse it to that path — Livewire's own
+    // file-upload dehydration needs the object.
+    $file = \Illuminate\Http\UploadedFile::fake()->image('avatar.png');
+
+    expect($serializer->serializeValue($file))->toBe($file);
+
+    // …even nested deep in the state tree (where action-modal uploads live).
+    $result = $serializer->serialize(['modal' => ['action' => ['formData' => ['image' => $file]]]]);
+
+    expect($result['modal']['action']['formData']['image'])->toBe($file);
+});
+
 it('serializes and deserializes state roundtrip', function () {
     $serializer = new StateSerializer;
     $original = ['name' => 'Test', 'count' => 5, 'items' => [1, 2, 3]];

@@ -257,10 +257,10 @@ it('can be set to filterable', function () {
 });
 
 it('expands an enum class into filter options', function () {
-    expect(Column::make('status')->filterAsSelect(ColTestStatus::class)->getFilterOptions())
+    expect(Column::make('status')->filterAsSelect(ColTestStatus::class)->getFilter()->getOptions())
         ->toBe(['draft' => 'Draft', 'published' => 'Published']);
 
-    expect(Column::make('status')->filterable(type: 'select', options: ColTestStatus::class)->getFilterOptions())
+    expect(Column::make('status')->filterable(type: 'select', options: ColTestStatus::class)->getFilter()->getOptions())
         ->toBe(['draft' => 'Draft', 'published' => 'Published']);
 });
 
@@ -271,11 +271,19 @@ it('ignores a non-scalar text filter value instead of throwing (regression)', fu
     });
     DB::table('col_filter_items')->insert([['name' => 'a'], ['name' => 'b']]);
 
-    $query = DB::table('col_filter_items');
+    $model = new class extends Model
+    {
+        protected $table = 'col_filter_items';
+
+        public $timestamps = false;
+
+        protected $guarded = [];
+    };
 
     // A crafted/stale array value used to cause "Array to string conversion"
-    // when building the LIKE clause; it must now be ignored, returning all rows.
-    $result = Column::make('name')->applyFilterCondition($query, 'name', ['x', 'y']);
+    // when building the LIKE clause; the text filter must now ignore it and
+    // return all rows.
+    $result = Column::make('name')->filterable()->applyFilter($model->newQuery(), ['x', 'y']);
 
     expect($result->count())->toBe(2);
 

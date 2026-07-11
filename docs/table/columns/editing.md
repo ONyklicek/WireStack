@@ -54,9 +54,17 @@ TextColumn::make('age')
 
 ### Column-Level Filter API
 
+A column header filter is a placement of a canonical `Filter` — the `filterAs*()`
+helpers are thin factories over `TextFilter` / `SelectFilter` / `DateFilter` /
+`NumberRangeFilter` / `TernaryFilter`, or pass a ready one with `->filter()`. See
+[Column-Level Filters](../filters/column-level.md) for the shared engine, chips
+and query-string persistence.
+
 ```php
 ->filterable(bool $filterable = true, string $type = 'text', array|string $options = [])
 ->isFilterable(): bool
+->filter(Filter $filter)                                                   // attach a ready-made canonical filter
+->getFilter(): ?Filter
 ->filterAsSelect(array|string $options, ?string $placeholder = null)       // single value; searchable combobox
 ->filterAsMultiSelect(array|string $options, ?string $placeholder = null)  // several values (whereIn); searchable combobox
 ->filterSearchable(bool $condition = true)                                 // toggle the in-panel search (on by default)

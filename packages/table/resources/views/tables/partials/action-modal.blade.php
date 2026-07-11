@@ -17,13 +17,14 @@
         // modal behind the active one, then layer the active modal on top.
         $suspendedModals = $component->getSuspendedActionModals();
         $stackDepth = count($suspendedModals);
-        $activeZIndex = $stackDepth > 0 ? 50 + $stackDepth * 10 : null;
+        $activeZIndex = $stackDepth > 0 ? \NyonCode\WireCore\Modals\ModalStack::zIndexForDepth($stackDepth) : null;
     @endphp
 
     @foreach($suspendedModals as $suspendedIndex => $suspendedModalData)
         @include('wire-core::modals.suspended', [
             'modalData' => $suspendedModalData,
-            'zIndex' => 50 + $suspendedIndex * 10,
+            'zIndex' => \NyonCode\WireCore\Modals\ModalStack::zIndexForDepth($suspendedIndex),
+            'depthBelowTop' => $stackDepth - $suspendedIndex,
         ])
     @endforeach
 

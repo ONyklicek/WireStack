@@ -168,8 +168,11 @@ trait WithActions
             return;
         }
 
-        // Stack on top of an already-open modal instead of replacing it.
-        $this->suspendActiveActionIfOpen();
+        // Stack on top of an already-open modal instead of replacing it
+        // (refused only at the safety depth cap).
+        if (! $this->suspendActiveActionIfOpen()) {
+            return;
+        }
 
         $this->mountedActionRecord = $record;
 

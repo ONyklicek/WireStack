@@ -36,9 +36,9 @@ class WtqsComponent extends Component
             ->queryString()
             ->perPageOptions([10, 25, 50])
             ->columns([
-                Column::make('name')->sortable()->searchable(),
-                Column::make('status'),
-                Column::make('price'),
+                Column::make('name')->sortable()->searchable()->filterAsMultiSelect(['x' => 'Xray', 'y' => 'Yankee']),
+                Column::make('status')->filterAsSelect(['active' => 'Active', 'archived' => 'Archived']),
+                Column::make('price')->filterAsNumberRange(),
             ])
             ->filters([
                 SelectFilter::make('status')->options(['active' => 'Active', 'archived' => 'Archived']),
@@ -183,6 +183,29 @@ it('uses the configured prefix for every parameter', function () {
         ->and($state->get('filters'))->toBe(['status' => ['value' => 'active']]);
 });
 
+// ─── Column header filters ───────────────────────────────────────────────────
+
+it('seeds a single-value column filter from a col_ parameter', function () {
+    expect(wtqsState(['col_status' => 'active'])->get('columnFilters.status'))->toBe('active');
+});
+
+it('seeds column number-range filter bounds from suffixed col_ parameters', function () {
+    expect(wtqsState(['col_price_min' => '20', 'col_price_max' => '60'])->get('columnFilters')['price'])
+        ->toBe(['min' => '20', 'max' => '60']);
+});
+
+it('seeds array values for a multi-select column filter', function () {
+    expect(wtqsState(['col_name' => ['x', 'y']])->get('columnFilters.name'))
+        ->toBe(['x', 'y']);
+});
+
+it('applies a seeded column filter to the rendered records', function () {
+    Livewire::withQueryParams(['col_status' => 'archived'])
+        ->test(WtqsComponent::class)
+        ->assertSee('Gadget')
+        ->assertDontSee('Doohickey');
+});
+
 // ─── URL-tracking attribute registration ─────────────────────────────────────
 
 it('registers TableUrl attributes for every tracked state path', function () {
@@ -203,6 +226,10 @@ it('registers TableUrl attributes for every tracked state path', function () {
         ['tableState.filters.statuses.value', 'filter_statuses'],
         ['tableState.filters.price.min', 'filter_price_min'],
         ['tableState.filters.price.max', 'filter_price_max'],
+        ['tableState.columnFilters.name', 'col_name'],
+        ['tableState.columnFilters.status', 'col_status'],
+        ['tableState.columnFilters.price.min', 'col_price_min'],
+        ['tableState.columnFilters.price.max', 'col_price_max'],
     ]);
 });
 

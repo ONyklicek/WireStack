@@ -1,9 +1,9 @@
 {{-- Column boolean filter (inline, in table header row) --}}
-{{-- Variables: $column, $value --}}
+{{-- Variables: $column, $filter, $value, $controlClasses --}}
 @php
     $name = $column->getName();
-    $trueLabel = $column->getFilterTrueLabel();
-    $falseLabel = $column->getFilterFalseLabel();
+    $trueLabel = $filter->getTrueLabel();
+    $falseLabel = $filter->getFalseLabel();
 @endphp
 
 <div class="relative">

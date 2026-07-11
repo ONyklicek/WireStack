@@ -198,7 +198,19 @@ final class SaveHandler
             if ($item instanceof UploadedFile) {
                 $paths[] = $field->storeUploadedFile($item);
             } elseif (is_string($item) && $item !== '') {
-                $paths[] = $item;
+                if ($field->isStoredReference($item)) {
+                    // A legitimate disk-relative path or URL — keep as-is.
+                    $paths[] = $item;
+                } else {
+                    // A raw absolute/temp path leaked into state (e.g. /tmp/phpXXX):
+                    // rescue the file if it still exists, otherwise drop the dead
+                    // reference — never persist a temp path as if it were stored.
+                    $rescued = $field->storeFileFromPath($item);
+
+                    if ($rescued !== null) {
+                        $paths[] = $rescued;
+                    }
+                }
             }
         }
 

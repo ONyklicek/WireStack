@@ -661,4 +661,3 @@ balíček testuje vestavěná pole. Spusťte je pomocí `composer test:forms`.
 - [Životní cyklus ukládání](save-lifecycle.md) — per-form save callbacky
 - [Validace](validation.md) — sběr pravidel a zprávy
 - [Core Pluginy](../core/plugins.md) — hooky, makra, registry typů, balíčkování
-```
