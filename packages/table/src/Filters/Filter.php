@@ -9,6 +9,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use NyonCode\WireCore\Core\Query\FilterDefinition;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Concerns\HasAuthorization;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
@@ -45,6 +46,21 @@ class Filter implements Htmlable
 
     /** Whether this filter targets the table's sub-row relation instead of parent columns */
     protected bool $appliesToSubRows = false;
+
+    /**
+     * Base wire:model state path the render layer binds the filter's field(s)
+     * under. The filter panel binds to `tableState.filters.{name}`; a column
+     * header filter binds to `tableState.columnFilters.{name}` instead (see
+     * Column::resolveFilter()). The `.{name}` (and `.{fieldName}` for
+     * multi-field filters) is appended by the views.
+     */
+    protected string $statePathPrefix = 'tableState.filters';
+
+    /**
+     * Whether this filter renders in the compact inline (table header cell)
+     * variant instead of the full filter-panel row.
+     */
+    protected bool $inline = false;
 
     public function __construct(string $name)
     {
@@ -256,6 +272,135 @@ class Filter implements Htmlable
     }
 
     /**
+     * Set the base wire:model state path the render layer binds under.
+     * Defaults to `tableState.filters`; column header filters set
+     * `tableState.columnFilters` so header state stays under its own key.
+     */
+    public function statePathPrefix(string $prefix): static
+    {
+        $this->statePathPrefix = $prefix;
+
+        return $this;
+    }
+
+    public function getStatePathPrefix(): string
+    {
+        return $this->statePathPrefix;
+    }
+
+    /**
+     * The full base wire:model path for this filter's field group, e.g.
+     * `tableState.columnFilters.status`. Views append `.{fieldName}` for
+     * multi-field filters, or bind directly for single-field ones.
+     */
+    public function getStatePath(): string
+    {
+        return $this->statePathPrefix.'.'.$this->name;
+    }
+
+    /**
+     * Render this filter in the compact inline (table header cell) variant.
+     */
+    public function inline(bool $inline = true): static
+    {
+        $this->inline = $inline;
+
+        return $this;
+    }
+
+    public function isInline(): bool
+    {
+        return $this->inline;
+    }
+
+    /**
+     * The compact inline (table header cell) Blade partial for this filter.
+     * Concrete filters override to select their control; the base is a text
+     * input. Distinct header controls stay separate reusable surfaces (per the
+     * design-system guidance) while all sharing the canonical Filter data.
+     */
+    public function inlineView(): string
+    {
+        return 'tables.columns.partials.filter-text';
+    }
+
+    /**
+     * Whether the inline control is a dropdown (reserves room for the shared
+     * chevron overlay). Select / boolean filters override to true.
+     */
+    public function isSelectLike(): bool
+    {
+        return false;
+    }
+
+    /**
+     * Convert an active filter value into planner FilterDefinition(s), so the
+     * constraint is expressed through the canonical QueryPlanner alongside
+     * column/relation metadata (joins, qualification) instead of a bespoke
+     * post-planner pass.
+     *
+     * Returns [] when the filter cannot be expressed as a simple
+     * column/operator/value clause — a custom ->query() callback, a
+     * planner-incompatible constraint (bypassesPlanner()), or a multi-field
+     * array on a non-multiple filter (ranges). Those keep flowing through
+     * apply(). Concrete filters override to emit LIKE / IN / BETWEEN clauses.
+     *
+     * @return array<int, FilterDefinition>
+     */
+    public function toPlannerDefinitions(mixed $value): array
+    {
+        if ($this->queryCallback !== null || $this->bypassesPlanner()) {
+            return [];
+        }
+
+        if ($value === null || $value === '' || $value === []) {
+            return [];
+        }
+
+        // A keyed array on a non-multiple filter is a range/compound shape the
+        // planner can't express as one clause — let apply() handle it.
+        if (is_array($value) && ! $this->multiple) {
+            return [];
+        }
+
+        $operator = ($this->multiple && is_array($value)) ? 'in' : '=';
+
+        return [FilterDefinition::make(
+            column: $this->getColumn(),
+            operator: $operator,
+            value: $value,
+        )];
+    }
+
+    /**
+     * Canonical owner of relation wrapping for filter constraints: apply the
+     * given column-level condition directly, or wrapped in a `whereHas` against
+     * the parsed relation (matching parents with at least one qualifying child).
+     * Concrete filters express only the per-column constraint and delegate the
+     * relation dimension here, so relation handling lives in one place instead
+     * of being re-encoded in every subclass.
+     *
+     * @param  Builder<Model>  $query
+     * @param  Closure(Builder<Model>, string): mixed  $condition  fn ($q, $column)
+     * @return Builder<Model>
+     */
+    protected function applyToColumn(Builder $query, Closure $condition): Builder
+    {
+        if ($this->relation !== null) {
+            $attribute = (string) $this->getRelationshipAttribute();
+
+            return $query->whereHas(
+                $this->relation,
+                static fn (Builder $q) => $condition($q, $attribute),
+            );
+        }
+
+        $condition($query, $this->getColumn());
+
+        return $query;
+    }
+
+    /**
      * @param  Builder<Model>  $query
      * @return Builder<Model>
      */
@@ -276,7 +421,7 @@ class Filter implements Htmlable
             $attribute = $this->getRelationshipAttribute();
 
             return $query->whereHas($relation, function ($q) use ($attribute, $value) {
-                if ($this->multiple && is_array($value)) {
+                if (is_array($value)) {
                     $q->whereIn($attribute, $value);
                 } else {
                     $q->where($attribute, $value);

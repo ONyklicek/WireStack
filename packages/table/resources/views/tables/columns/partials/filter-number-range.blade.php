@@ -1,11 +1,11 @@
 {{-- Column number range filter (inline, in table header row) --}}
-{{-- Variables: $column, $value --}}
+{{-- Variables: $column, $filter, $value, $controlClasses --}}
 @php
     $name = $column->getName();
-    $minValue = $column->getFilterMinValue();
-    $maxValue = $column->getFilterMaxValue();
-    $step = $column->getFilterStep();
-    $debounce = $column->getFilterDebounce();
+    $minValue = $filter->getMin();
+    $maxValue = $filter->getMax();
+    $step = $filter->getStep();
+    $debounce = 300;
     $fromValue = is_array($value) ? ($value['min'] ?? '') : '';
     $toValue = is_array($value) ? ($value['max'] ?? '') : '';
 @endphp

@@ -1,9 +1,9 @@
 {{-- Column date range filter (inline, in table header row) --}}
-{{-- Variables: $column, $value --}}
+{{-- Variables: $column, $filter, $value, $controlClasses --}}
 @php
     $name = $column->getName();
-    $minDate = $column->getFilterMinDate();
-    $maxDate = $column->getFilterMaxDate();
+    $minDate = $filter->getMinDate();
+    $maxDate = $filter->getMaxDate();
     $fromValue = is_array($value) ? ($value['from'] ?? '') : '';
     $toValue = is_array($value) ? ($value['to'] ?? '') : '';
 @endphp

@@ -2,21 +2,21 @@
      Delegates to the canonical searchable combobox (multiple mode) shared with
      forms Select and the table SelectFilter — search + the exact forms design,
      matching any of the picked values (whereIn). --}}
-{{-- Variables: $column, $value --}}
+{{-- Variables: $column, $filter, $value, $controlClasses --}}
 @php
     $name = $column->getName();
-    $placeholder = $column->getFilterPlaceholder() ?? __('wire-table::messages.filter_all');
+    $placeholder = $filter->placeholder ?? __('wire-table::messages.filter_all');
 @endphp
 
 @include('wire-core::partials.searchable-select', [
     'selectId' => 'colfilter-'.$name,
     'statePath' => 'tableState.columnFilters.'.$name,
-    'options' => $column->getFilterOptions(),
+    'options' => $filter->getOptions(),
     'placeholder' => $placeholder,
     'multiple' => true,
-    'searchable' => $column->isFilterSearchable(),
+    'searchable' => $filter->isSearchable(),
     'searchPrompt' => __('wire-table::messages.filter_search'),
     'noResultsMessage' => __('wire-table::messages.filter_no_results'),
-    'sheetOnMobile' => $column->isFilterSearchable() ? false : (bool) config('wire-core.mobile.sheet', true),
+    'sheetOnMobile' => $filter->isSearchable() ? false : (bool) config('wire-core.mobile.sheet', true),
     'live' => true,
 ])

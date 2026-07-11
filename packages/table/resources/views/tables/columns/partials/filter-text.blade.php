@@ -1,13 +1,14 @@
 {{-- Column text filter (inline, in table header row) --}}
-{{-- Variables: $column --}}
+{{-- Variables: $column, $filter, $value, $controlClasses --}}
 @php
     $name = $column->getName();
-    $placeholder = $column->getFilterPlaceholder() ?? __('wire-table::messages.filter_placeholder');
+    $placeholder = $filter->placeholder ?? __('wire-table::messages.filter_placeholder');
+    $debounce = $filter->getDebounce() ?? 300;
 @endphp
 
 <input
     type="text"
-    wire:model.live.debounce.300ms="tableState.columnFilters.{{ $name }}"
+    wire:model.live.debounce.{{ $debounce }}ms="tableState.columnFilters.{{ $name }}"
     placeholder="{{ $placeholder }}"
     class="{{ $controlClasses }}"
 >

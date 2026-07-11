@@ -33,7 +33,7 @@ class WtfiComponent extends Component
         return $table
             ->model(WtfiItem::class)
             ->columns([
-                Column::make('name'),
+                Column::make('name')->filterAsSelect(['Widget' => 'Widget', 'Gadget' => 'Gadget']),
                 Column::make('status'),
                 Column::make('price'),
             ])
@@ -141,6 +141,53 @@ it('removes a dotted (relation) filter from nested state (regression)', function
     $component->removeTableFilter('category.name');
 
     expect($component->tableState->get('filters'))->toBe(['status' => ['value' => 'active']]);
+});
+
+// ─── Column header filter indicators ─────────────────────────────────────────
+
+it('has no column filter indicators when none is active', function () {
+    $component = new WtfiComponent;
+    $component->mountWithTable();
+
+    expect($component->getActiveColumnFilterIndicators())->toBe([]);
+});
+
+it('returns indicators for active column filters keyed by column name', function () {
+    $component = new WtfiComponent;
+    $component->mountWithTable();
+    $component->tableState->set('columnFilters', ['name' => 'Widget']);
+
+    expect($component->getActiveColumnFilterIndicators())->toBe([
+        'name' => 'Name: Widget',
+    ]);
+});
+
+it('removes a single column filter and keeps the others', function () {
+    $component = new WtfiComponent;
+    $component->mountWithTable();
+    $component->tableState->set('columnFilters', ['name' => 'Widget', 'status' => 'active']);
+
+    $component->removeColumnFilter('name');
+
+    expect($component->tableState->get('columnFilters'))->toBe(['status' => 'active']);
+});
+
+it('renders column filter chips with the column remove handler', function () {
+    Livewire::test(WtfiComponent::class)
+        ->set('tableState.columnFilters.name', 'Widget')
+        ->assertSee('Name: Widget')
+        ->assertSee('removeColumnFilter')
+        ->call('removeColumnFilter', 'name')
+        ->assertDontSee('Name: Widget');
+});
+
+it('counts panel + column filters together for the reset-all link', function () {
+    Livewire::test(WtfiComponent::class)
+        ->set('tableState.filters.status.value', 'active')
+        ->set('tableState.columnFilters.name', 'Widget')
+        ->assertSee('Status: Active')
+        ->assertSee('Name: Widget')
+        ->assertSee('table-filter-reset');
 });
 
 // ─── Rendering ───────────────────────────────────────────────────────────────

@@ -44,14 +44,18 @@ The same four-way choice applies to icons: `->icon()`, `->icons([...])`, `->icon
 `SelectFilter`, `DateFilter`, `NumberRangeFilter`, `TernaryFilter`. A filter query callback must return the
 Builder. Use `->indicator()` for filter chips and `->subRows()` to scope sub-row filtering.
 
-Per-column header filters live on the column, not as a Filter object: `->filterable()` (text, with
-`->filterOperator()`), `->filterAsSelect()` (single), `->filterAsMultiSelect()` (several values →
-`whereIn`), `->filterAsBoolean()`, `->filterAsDate()`, `->filterAsDateRange()`, `->filterAsNumberRange()`.
+Per-column header filters are a **placement of the same canonical `Filter`** in the header cell (not a
+separate engine): `->filterable()` (text, with `->filterOperator()`), `->filterAsSelect()` (single),
+`->filterAsMultiSelect()` (several values → `whereIn`), `->filterAsBoolean()`, `->filterAsDate()`,
+`->filterAsDateRange()`, `->filterAsNumberRange()` — thin factories over `TextFilter` / `SelectFilter` /
+`DateFilter` / `NumberRangeFilter` / `TernaryFilter`. Or pass a ready filter with `->filter(SelectFilter::make(...))`.
 Options accept an array or enum class. `filterAsSelect`/`filterAsMultiSelect` render the **canonical
 searchable combobox** (the same `searchable-select` used by wire-forms `Select` and the table `SelectFilter`)
 — search is on by default; `->filterSearchable(false)` drops it. All controls share one style owner
 (`Support\FilterControl`) that mirrors the wire-forms field look. They write to the `columnFilters` state
-(separate from table `filters`).
+(separate from table `filters`), are planned through the same `QueryPlanner` as panel filters (date/boolean
+fall back to `Filter::apply()`), and inherit authorization, **indicator chips** (removable, alongside panel
+chips), and **query-string persistence** (`Table::queryString()`, under a `col_<column>` URL parameter).
 
 ### More
 
@@ -62,6 +66,6 @@ searchable combobox** (the same `searchable-select` used by wire-forms `Select` 
 - Per-user column memory: `Table::rememberColumns('key')` loads each user's saved hidden-column set on mount and persists it on every toggle, scoped to `auth()->user()` (one key serves all users; stale column names are ignored). Storage is a driver chosen in `config('wire-table.preferences')` — `null` (default, no persistence), `session`, or `database` (publish `wire-table::migrations` → `table_preferences` table). `Table::preferenceDriver($driver)` overrides per table; a "Reset columns" control clears the saved layout. Implement `TablePreferenceDriver` for a custom store.
 - `Table::rowContextMenu([...actions])` lets users right-click a row to open a menu of actions at the cursor. The actions are declared **separately** from `->actions()` (not a mirror of the toolbar — pass the same objects to match); action-group menu styling, groups flattened, only visible actions shown. Only one menu open at a time; closes on outside-click/Escape/scroll/choose. Desktop pointer feature; the actions column stays for touch.
 - `Table::queryString()` persists state to the URL.
-- Browser-testing hooks: every active part carries a stable `data-testid` — `table-search`, `table-filters-trigger`, `table-filter-reset`, `filter-chip-{name}`, `table-column-toggle`, `table-per-page`, `table-page-prev|next|{n}`, `table-sort-{col}`, `table-filter-{col}`, `table-cell-{col}`, `table-editable-{col}`, `table-row` (+ `data-row-key`; mobile `table-card`), `table-select-all` / `table-row-select`, `table-row-expand`, `table-bulk-bar` / `table-deselect`, and `action-{name}` / `header-action-{name}` / `bulk-action-{name}` / `menu-action-{name}` (all with `aria-label`) — so Pest v4 Browser Testing targets them at the user level. Actions and filter options are also reachable by visible text. Column-static render metadata is resolved once per column (`$columnMeta`) instead of per cell.
+- Browser-testing hooks: every active part carries a stable `data-testid` — `table-search`, `table-filters-trigger`, `table-filter-reset`, `filter-chip-{name}`, `column-filter-chip-{name}`, `table-column-toggle`, `table-per-page`, `table-page-prev|next|{n}`, `table-sort-{col}`, `table-filter-{col}`, `table-cell-{col}`, `table-editable-{col}`, `table-row` (+ `data-row-key`; mobile `table-card`), `table-select-all` / `table-row-select`, `table-row-expand`, `table-bulk-bar` / `table-deselect`, and `action-{name}` / `header-action-{name}` / `bulk-action-{name}` / `menu-action-{name}` (all with `aria-label`) — so Pest v4 Browser Testing targets them at the user level. Actions and filter options are also reachable by visible text. Column-static render metadata is resolved once per column (`$columnMeta`) instead of per cell.
 
 Use `describe-table` on an existing component to see its resolved columns, filters and actions.

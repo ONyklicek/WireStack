@@ -164,6 +164,24 @@ class DateFilter extends Filter
         return $query;
     }
 
+    /**
+     * Date filtering always wants date-truncated comparison (whereDate /
+     * whereYear+whereMonth), which the planner's plain column comparison cannot
+     * express, so it is never planned — every mode routes through apply().
+     * (bypassesPlanner() stays mode-specific for the sub-row/legacy path.)
+     */
+    public function toPlannerDefinitions(mixed $value): array
+    {
+        return [];
+    }
+
+    public function inlineView(): string
+    {
+        return $this->range
+            ? 'tables.columns.partials.filter-date-range'
+            : 'tables.columns.partials.filter-date';
+    }
+
     public function getFormFields(): array
     {
         if ($this->monthMode) {
@@ -249,9 +267,14 @@ class DateFilter extends Filter
         if ($this->monthMode && is_string($value) && preg_match('/^\d{4}-\d{1,2}$/', $value)) {
             try {
                 return Carbon::createFromFormat('Y-m', $value)->translatedFormat('F Y');
+                // @codeCoverageIgnoreStart
+                // Carbon overflows an out-of-range month (e.g. 2026-99) instead of
+                // throwing, so with a regex-valid value this catch is unreachable —
+                // kept as a defensive guard against locale/parser edge cases.
             } catch (\Throwable) {
                 return $value;
             }
+            // @codeCoverageIgnoreEnd
         }
 
         return parent::getIndicatorValueLabel($value);
