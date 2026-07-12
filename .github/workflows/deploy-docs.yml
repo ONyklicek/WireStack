@@ -65,12 +65,8 @@ jobs:
       - name: Install npm dependencies (Torchlight CLI)
         run: npm install --no-audit --no-fund
 
-      # Fail fast before building/deploying: source Markdown integrity (fences,
-      # leaked [tl!] markers, broken links), required build assets present, a
-      # clean build.php run for every locale, and structural soundness.
-      - name: Verify docs build
-        run: node docs-site/scripts/verify-docs.mjs "$GITHUB_WORKSPACE"
-
+      # The docs build is verified separately by docs-check.yml (runs on PRs and
+      # pushes). This workflow only assembles and publishes.
       - name: Assemble the version x locale matrix
         run: |
           set -euo pipefail

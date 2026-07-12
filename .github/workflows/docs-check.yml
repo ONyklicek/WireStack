@@ -1,0 +1,60 @@
+name: Docs Check
+
+# Fast, deterministic docs-build gate — runs on every PR and push that touches
+# docs, independently of the deploy. It does NOT need the Torchlight API (token,
+# flaky), so it stays deterministic. It catches source Markdown integrity
+# defects (fences, leaked [tl!] markers, broken links), missing build assets, a
+# clean build.php run for every locale, and structural soundness of the output.
+#
+# This is the "test" half; deploy-docs.yml is the "deploy" half. Keeping them
+# separate means docs breakage is caught on PRs without waiting for a deploy.
+
+on:
+  push:
+    branches: [1.x, 2.x]
+    paths:
+      - 'docs/**'
+      - 'docs-site/**'
+      - 'torchlight.config.cjs'
+      - '.github/workflows/docs-check.yml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'docs-site/**'
+      - 'torchlight.config.cjs'
+      - '.github/workflows/docs-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Verify docs build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, curl, libxml, mbstring, zip, fileinfo
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+
+      - name: Install npm dependencies
+        run: npm install --no-audit --no-fund
+
+      # verify-docs.mjs runs build.php, which requires vendor/autoload.php.
+      - name: Install PHP dependencies (docs build)
+        run: composer install --prefer-dist --no-interaction --no-progress --no-dev
+
+      - name: Verify docs build
+        run: node docs-site/scripts/verify-docs.mjs "$GITHUB_WORKSPACE"
