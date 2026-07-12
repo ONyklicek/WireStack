@@ -118,6 +118,11 @@ jobs:
         run: |
           node node_modules/@torchlight-api/torchlight-cli/dist/bin/torchlight.cjs.js \
             -c torchlight.config.cjs -i "$GITHUB_WORKSPACE/_site"
+          # Remove Torchlight's hidden copy-source textareas: the site copies the
+          # visible code (site.js reads code.innerText), so they are dead weight
+          # that also holds raw `$`-containing source — the surface behind the
+          # `->prefix('$')` leak. Belt-and-suspenders alongside the pinned CLI.
+          node docs-site/scripts/strip-copy-source.mjs "$GITHUB_WORKSPACE/_site"
 
       - name: Disable Jekyll processing
         run: touch "$GITHUB_WORKSPACE/_site/.nojekyll"

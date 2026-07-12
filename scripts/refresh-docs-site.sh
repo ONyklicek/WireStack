@@ -90,6 +90,11 @@ wait_for_url() {
 }
 
 if [[ "$CAPTURE_ENABLED" -eq 1 ]]; then
+    # Build the workbench (create SQLite DB, migrate-fresh, seed) so table,
+    # widget, and infolist previews have data. Without this the preview server
+    # serves 500s ("no such table") for every DB-backed preview.
+    vendor/bin/testbench workbench:build
+
     vendor/bin/testbench serve --host=127.0.0.1 --port="$PREVIEW_PORT" >/tmp/wire-preview-server.log 2>&1 &
     SERVER_PID="$!"
 
