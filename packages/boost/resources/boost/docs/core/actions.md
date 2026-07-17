@@ -480,10 +480,44 @@ Uses Alpine.js `@keydown` under the hood.
 
 ```php
 Action::make('cancel')
-    ->outlined()                    // outline variant instead of solid
+    ->outlined()                    // outline variant, instead of the default solid fill
     ->color('gray')
     ->size('sm');                   // xs, sm, md, lg
 ```
+
+## Quiet Row Actions
+
+By default a table's row actions render as solid, always-colored buttons. Set the
+table's action style to `quiet` for a calmer, more professional look — actions
+rest as neutral text and reveal their color only on hover or keyboard focus, so a
+row full of actions stops competing with the data.
+
+```php
+$table->actionsStyle('quiet'); // default is 'solid'
+```
+
+Behaviour of the quiet style:
+
+- Non-destructive actions rest neutral gray and gain their `->color()` on hover/focus.
+- **Destructive actions stay legible at rest** (red text), because touch devices have
+  no hover — a `DeleteAction` still reads as dangerous without interaction.
+- Every action keeps a visible keyboard focus ring.
+
+Keep a single action prominent by opting it back into the solid fill with `->solid()`:
+
+```php
+$table
+    ->actions([
+        Action::make('view')->icon('outline:eye'),
+        Action::make('edit')->icon('pencil')->color('primary'),
+        Action::make('approve')->icon('check')->color('success')->solid(), // stays a filled button
+        DeleteAction::make(),                                              // legible red at rest
+    ])
+    ->actionsStyle('quiet');
+```
+
+The quiet style is opt-in; existing tables are unaffected. `->solid()` and
+`->outlined()` remain available as per-action overrides.
 
 ## Extra Attributes
 
@@ -594,6 +628,13 @@ Shared across Action, BulkAction, HeaderAction:
 ->failureNotification(string $message)
 ->keyboardShortcut(string $keys)
 ->extraAttributes(array $attrs)
+```
+
+Row-action (`Action`) presentation overrides, honored under `Table::actionsStyle('quiet')`:
+
+```php
+->quiet(bool $quiet = true)   // neutral at rest, color on hover/focus (usually set table-wide)
+->solid(bool $solid = true)   // force the solid fill even under a quiet table
 ```
 
 ## Blade Components

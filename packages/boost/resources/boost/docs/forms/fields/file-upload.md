@@ -76,12 +76,45 @@ FileUpload::make('avatar')
 
 ## Storage
 
+Files store to any disk from `config/filesystems.php` via `disk()` (defaults to
+the `wire-forms.file_upload.disk` config, env `WIRE_FORMS_UPLOAD_DISK`, fallback
+`public`). `directory()` sets the target folder (nested paths are fine).
+
 ```php
 FileUpload::make('file')
     ->disk('s3')
     ->directory('uploads/2024')
     ->visibility('public')
     ->preserveFilenames()
+```
+
+By default the stored filename is a random hash; `preserveFilenames()` keeps the
+original client name.
+
+### Custom filename & path
+
+For a specific name, use `fileNameUsing()` — it receives the `UploadedFile` and
+returns the bare filename to store under (within `directory()` on `disk()`).
+Return an empty value to fall back to the default naming:
+
+```php
+FileUpload::make('invoice')
+    ->disk('s3')
+    ->directory('invoices')
+    ->fileNameUsing(fn (UploadedFile $file) => $order->id.'.'.$file->extension())
+    // → invoices/42.pdf
+```
+
+For full control over the **whole** stored path — pick the folder and write to
+the disk yourself — use `storeFileUsing()`. It takes precedence over
+`directory()` / `preserveFilenames()` / `fileNameUsing()`; the field keeps
+whatever path (relative to the disk) you return:
+
+```php
+FileUpload::make('scan')
+    ->disk('s3')
+    ->storeFileUsing(fn (UploadedFile $file, string $disk) =>
+        $file->storeAs("reports/{$year}", 'summary.pdf', $disk))
 ```
 
 ## Storage & merge (store-on-submit)
@@ -110,13 +143,12 @@ already-stored paths (from the bound record or a previous save) **and** pending
 uploads. Image files show a thumbnail (stored via the disk URL, pending via a
 temporary preview), others a document icon; a stored file links to itself, a
 pending one is labelled *Pending upload*. Each has a **remove** button that
-drops it from the form state by index. Removing a stored file leaves the
-physical file on disk untouched (cleanup is the application's concern); removing
+drops it from the form state by index. By default, removing a stored file only
+drops the *reference* — the physical file is left on disk (cleanup is the
+application's concern; see [Deleting from disk](#deleting-from-disk)); removing
 a pending upload simply discards it.
 
-Stored paths resolve to URLs through the configured `disk()` (a value that is
-already a full URL is used as-is). Pass `deletable(false)` to show files
-read-only, without the remove control:
+Pass `deletable(false)` to show files read-only, without the remove control:
 
 ```php
 FileUpload::make('gallery')
@@ -126,14 +158,79 @@ FileUpload::make('gallery')
     ->deletable(false)   // display files read-only
 ```
 
+## Private disks & previews
+
+Stored paths resolve to a browser URL based on `visibility()`:
+
+- a value that is already a full URL or a `data:` URI is used as-is;
+- a **public** file gets a plain disk URL (`Storage::disk()->url()`);
+- a **private** file gets a **signed, expiring** URL
+  (`Storage::disk()->temporaryUrl()`) — set its lifetime with
+  `signedUrlExpiration(minutes)` (default `5`).
+
+```php
+FileUpload::make('contract')
+    ->disk('s3')
+    ->visibility('private')
+    ->signedUrlExpiration(30)   // signed URL valid for 30 minutes
+```
+
+Some drivers cannot produce a URL at all — the `local` driver throws on both
+`url()` and `temporaryUrl()` unless served through Laravel's temporary-url
+route. Rather than fatalling the field, such a file degrades to *no thumbnail*
+(the filename still shows). To give private files on those disks a real preview,
+supply the URL yourself with `previewUrlUsing()` — it receives the stored path
+and returns a URL or a `data:` URI (or `null` for no preview):
+
+```php
+FileUpload::make('scan')
+    ->disk('local')
+    ->visibility('private')
+    ->previewUrlUsing(fn (string $path) => route('files.show', ['path' => $path]))
+```
+
+## Deleting from disk
+
+Removing a stored file from the field only drops the reference by default. Opt
+into physically deleting the file when the field owns its lifecycle:
+
+```php
+FileUpload::make('gallery')
+    ->multiple()
+    ->disk('s3')
+    ->deletesFromDisk()   // remove also deletes the file from the disk
+```
+
+For custom teardown — deleting a derived thumbnail too, detaching a record —
+use `deleteUsing()`. Providing a callback implies `deletesFromDisk()` and fully
+replaces the built-in delete; it receives the stored path:
+
+```php
+FileUpload::make('photo')
+    ->disk('s3')
+    ->deleteUsing(function (string $path) {
+        Storage::disk('s3')->delete($path);
+        Storage::disk('s3')->delete(thumbnailPathFor($path));
+    })
+```
+
+A full URL or `data:` URI (an external reference the field never stored) is
+never deleted, even with `deletesFromDisk()`.
+
 ## Methods
 
 | Method | Description |
 |--------|-------------|
 | `disk(string)` | Storage disk |
 | `directory(string)` | Upload directory |
-| `visibility(string)` | File visibility (`public`, `private`) |
+| `visibility(string)` | File visibility (`public`, `private`) — `private` previews use a signed URL |
+| `signedUrlExpiration(int)` | Lifetime (minutes) of the signed URL for a private-disk preview (default `5`) |
+| `previewUrlUsing(Closure)` | Supply the preview URL yourself; receives the stored path, returns a URL/`data:` URI or `null` |
+| `deletesFromDisk(bool)` | Also delete the physical file when a stored file is removed (default `false`) |
+| `deleteUsing(Closure)` | Custom teardown on remove (implies `deletesFromDisk`); receives the stored path |
 | `preserveFilenames()` | Keep original filenames |
+| `fileNameUsing(Closure)` | Name the stored file; receives the `UploadedFile`, returns the filename |
+| `storeFileUsing(Closure)` | Own the whole store step; receives the `UploadedFile` and disk name, returns the stored path |
 | `acceptedFileTypes(array)` | Allowed MIME types |
 | `maxSize(int)` | Max file size in KB |
 | `minSize(int)` | Min file size in KB |
