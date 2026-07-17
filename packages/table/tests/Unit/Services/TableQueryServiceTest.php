@@ -225,6 +225,16 @@ afterEach(function () {
     Schema::dropIfExists('tqs_countries');
 });
 
+/**
+ * Identifier-quote-agnostic SQL. SQLite and Postgres quote identifiers with `"`,
+ * MySQL/MariaDB with backticks; stripping both lets the join/where assertions
+ * hold on every database the CI matrix runs.
+ */
+function tqsUnquoted(string $sql): string
+{
+    return str_replace(['`', '"'], '', $sql);
+}
+
 // ─── Basic Query Building ────────────────────────────────────────────────────
 
 it('builds a basic query without search/filter/sort', function () {
@@ -791,15 +801,18 @@ it('sorts by a belongsTo relation column via a LEFT JOIN', function () {
     );
 
     // A real LEFT JOIN on the related table, ordered by the joined column.
-    expect($query->toSql())
-        ->toContain('left join "tqs_companies"')
+    expect(tqsUnquoted($query->toSql()))
+        ->toContain('left join tqs_companies')
         ->toContain('order by')
         // The base select is qualified so `name` is unambiguous.
-        ->toContain('"tqs_users".*');
+        ->toContain('tqs_users.*');
 
-    // Alice + Charlie are at Acme, Bob at Evil → ascending by company groups
-    // the two Acme users before the Evil one.
-    expect($query->get()->pluck('name')->all())->toBe(['Alice', 'Charlie', 'Bob']);
+    // Alice + Charlie (Acme) sort before Bob (Evil). The Acme pair ties on the
+    // company name, so assert the group, not a DB-specific intra-tie order.
+    $names = $query->get()->pluck('name')->all();
+    expect($names[2])->toBe('Bob')
+        ->and([$names[0], $names[1]])->toContain('Alice')
+        ->and([$names[0], $names[1]])->toContain('Charlie');
 });
 
 it('does not corrupt a base column that shares a name with the joined table', function () {
@@ -816,8 +829,12 @@ it('does not corrupt a base column that shares a name with the joined table', fu
         sortColumn: 'company.name',
     )->get();
 
-    // `name` is the user's name, not the joined company name.
-    expect($rows->pluck('name')->all())->toBe(['Alice', 'Charlie', 'Bob'])
+    // `name` is the user's own name, not the joined company name. Bob (Evil)
+    // sorts last; the Acme pair leads in a DB-defined tie order.
+    $names = $rows->pluck('name')->all();
+    expect($names[2])->toBe('Bob')
+        ->and([$names[0], $names[1]])->toContain('Alice')
+        ->and([$names[0], $names[1]])->toContain('Charlie')
         // …and the related value is still reachable for display via eager load.
         ->and($rows->first()->company->name)->toBe('Acme Corp');
 });
@@ -845,8 +862,8 @@ it('leaves a plain query untouched when no relation column is sorted', function 
 
     $sql = (new TableQueryService)->buildQuery(baseQuery: TqsUser::query(), table: $table)->toSql();
 
-    expect($sql)->not->toContain('left join')
-        ->and($sql)->not->toContain('"tqs_users".*');
+    expect(tqsUnquoted($sql))->not->toContain('left join')
+        ->and(tqsUnquoted($sql))->not->toContain('tqs_users.*');
 });
 
 it('sorts by a hasOne relation column via a LEFT JOIN', function () {
@@ -865,12 +882,13 @@ it('sorts by a hasOne relation column via a LEFT JOIN', function () {
         sortDirection: 'asc',
     );
 
-    expect($query->toSql())
-        ->toContain('left join "tqs_profiles"')
-        ->toContain('"tqs_users"."id"')       // hasOne joins on the parent key…
-        ->toContain('"tqs_users".*')
+    expect(tqsUnquoted($query->toSql()))
+        ->toContain('left join tqs_profiles')
+        ->toContain('tqs_users.id')       // hasOne joins on the parent key…
+        ->toContain('tqs_users.*')
         ->toContain('order by');
 
+    // Bios sort Alpha < Mike < Zulu (unique keys), so the order is deterministic.
     expect($query->get()->pluck('name')->all())->toBe(['Alice', 'Charlie', 'Bob']);
 });
 
@@ -887,7 +905,7 @@ it('filters by a hasOne relation column via the LEFT JOIN', function () {
         filterValues: ['profile' => ['bio' => 'Zulu']],
     );
 
-    expect($query->toSql())->toContain('left join "tqs_profiles"');
+    expect(tqsUnquoted($query->toSql()))->toContain('left join tqs_profiles');
     // Only Bob has the Zulu bio.
     expect($query->get()->pluck('name')->all())->toBe(['Bob']);
 });
@@ -915,9 +933,9 @@ it('filters by a belongsTo relation column through the LEFT JOIN', function () {
     );
 
     // Constrained in SQL on the joined table, base select still qualified.
-    expect($query->toSql())
-        ->toContain('left join "tqs_companies"')
-        ->toContain('"tqs_users".*')
+    expect(tqsUnquoted($query->toSql()))
+        ->toContain('left join tqs_companies')
+        ->toContain('tqs_users.*')
         ->toContain('where');
 
     // Only Acme users (Alice, Charlie) survive; Bob (Evil) is filtered out.
@@ -962,7 +980,7 @@ it('filters by a belongsTo column through the column header filter too', functio
         columnFilterValues: ['company.name' => 'Evil Corp'],
     );
 
-    expect($query->toSql())->toContain('left join "tqs_companies"');
+    expect(tqsUnquoted($query->toSql()))->toContain('left join tqs_companies');
     expect($query->get()->pluck('name')->all())->toBe(['Bob']);
 });
 
@@ -983,7 +1001,7 @@ it('accepts the relation path directly in the filter name (dot notation)', funct
         filterValues: ['company' => ['name' => 'Acme Corp']],
     );
 
-    expect($query->toSql())->toContain('left join "tqs_companies"');
+    expect(tqsUnquoted($query->toSql()))->toContain('left join tqs_companies');
     expect($query->get()->pluck('name')->sort()->values()->all())->toBe(['Alice', 'Charlie']);
 });
 
@@ -1003,11 +1021,11 @@ it('sorts through a nested belongsTo chain (user -> company -> country)', functi
     );
 
     // Two chained joins, base select qualified, ordered by the leaf column.
-    expect(substr_count($query->toSql(), 'left join'))->toBe(2);
-    expect($query->toSql())
-        ->toContain('left join "tqs_companies"')
-        ->toContain('left join "tqs_countries"')
-        ->toContain('"tqs_users".*');
+    expect(substr_count(tqsUnquoted($query->toSql()), 'left join'))->toBe(2);
+    expect(tqsUnquoted($query->toSql()))
+        ->toContain('left join tqs_companies')
+        ->toContain('left join tqs_countries')
+        ->toContain('tqs_users.*');
 
     // All three users resolve (every company shares Wonderland); no error.
     expect($query->get())->toHaveCount(3);
@@ -1031,13 +1049,13 @@ it('sorts through a hasOneThrough via two chained joins (base -> intermediate ->
     );
 
     // Two joins: the intermediate cars table and the far owners table.
-    expect(substr_count($query->toSql(), 'left join'))->toBe(2);
-    expect($query->toSql())
-        ->toContain('left join "tqs_cars"')
-        ->toContain('left join "tqs_owners"')
-        ->toContain('"tqs_mechanics".*');
+    expect(substr_count(tqsUnquoted($query->toSql()), 'left join'))->toBe(2);
+    expect(tqsUnquoted($query->toSql()))
+        ->toContain('left join tqs_cars')
+        ->toContain('left join tqs_owners')
+        ->toContain('tqs_mechanics.*');
 
-    // Owners Anna < Mona < Zara → Mo, Jack, Manny.
+    // Owners sort Anna < Mona < Zara (unique keys) → Mo, Jack, Manny.
     expect($query->get()->pluck('name')->all())->toBe(['Mo', 'Jack', 'Manny']);
 });
 
@@ -1095,6 +1113,6 @@ it('does not join a HasManyThrough column (to-many stays display-only)', functio
         sortDirection: 'asc',
     )->toSql();
 
-    expect($sql)->not->toContain('left join')
-        ->and($sql)->not->toContain('"tqs_mechanics".*');
+    expect(tqsUnquoted($sql))->not->toContain('left join')
+        ->and(tqsUnquoted($sql))->not->toContain('tqs_mechanics.*');
 });
