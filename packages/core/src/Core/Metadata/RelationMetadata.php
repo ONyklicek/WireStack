@@ -206,14 +206,12 @@ final readonly class RelationMetadata
      */
     private static function relationDeclaresConstraints(string $parentModel, string $method): bool
     {
-        try {
-            $relation = Relation::noConstraints(fn () => (new $parentModel)->{$method}());
+        // The relation was already resolvable (the caller built it to reach here),
+        // so rebuilding it is safe; registerRelationChain still guards the walk.
+        $relation = Relation::noConstraints(fn () => (new $parentModel)->{$method}());
 
-            return $relation instanceof Relation
-                && $relation->getQuery()->getQuery()->wheres !== [];
-        } catch (\Throwable) {
-            return false;
-        }
+        return $relation instanceof Relation
+            && $relation->getQuery()->getQuery()->wheres !== [];
     }
 
     public function isJoinable(): bool

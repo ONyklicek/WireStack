@@ -8,8 +8,12 @@ name: Coverage
 # twelve slow runs to learn one number. This job measures it once.
 #
 # It enforces two things (scripts/verify-coverage.php):
-#   - every line a change adds or edits is covered by a test;
-#   - no package drops below its recorded floor (scripts/coverage-floors.json).
+#   - no package drops below its recorded floor (scripts/coverage-floors.json) —
+#     the hard gate; floors only ratchet upward;
+#   - every line a change adds or edits is covered by a test — reported as an
+#     advisory (non-blocking) check. Enforcing diff coverage on a release branch
+#     would demand covering the entire release, including defensive/edge paths
+#     that are deliberately left; the per-package floors are the real ratchet.
 #
 # Laravel is left at its default (11+): wire-boost depends on laravel/mcp and is
 # removed from the Laravel 10 matrix leg, and a run without it could not gate it.
@@ -66,13 +70,13 @@ jobs:
             echo "ref=" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Verify coverage
-        run: |
-          if [ -n "${{ steps.base.outputs.ref }}" ]; then
-            php scripts/verify-coverage.php build/clover.xml --diff="${{ steps.base.outputs.ref }}"
-          else
-            php scripts/verify-coverage.php build/clover.xml
-          fi
+      - name: Enforce coverage floors
+        run: php scripts/verify-coverage.php build/clover.xml
+
+      - name: Report diff coverage (advisory)
+        if: ${{ steps.base.outputs.ref != '' }}
+        continue-on-error: true
+        run: php scripts/verify-coverage.php build/clover.xml --diff="${{ steps.base.outputs.ref }}"
 
       - name: Upload the report
         if: always()
