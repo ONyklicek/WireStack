@@ -64,11 +64,20 @@ final readonly class RelationMetadata
             || is_a($relationClass, MorphTo::class, true)
             || is_a($relationClass, MorphToMany::class, true);
 
-        $isToMany = is_a($relationClass, HasMany::class, true)
+        // HasOneThrough is singular, but on Laravel 10 it extends HasManyThrough
+        // (Laravel 11 moved both onto a shared HasOneOrManyThrough), so the
+        // HasManyThrough check below would wrongly flag it as to-many there.
+        // Compute it up front, on the bare class-string, so it stays singular on
+        // every version.
+        $isSingularThrough = is_a($relationClass, HasOneThrough::class, true);
+
+        $isToMany = ! $isSingularThrough && (
+            is_a($relationClass, HasMany::class, true)
             || is_a($relationClass, BelongsToMany::class, true)
             || is_a($relationClass, HasManyThrough::class, true)
             || is_a($relationClass, MorphMany::class, true)
-            || is_a($relationClass, MorphToMany::class, true);
+            || is_a($relationClass, MorphToMany::class, true)
+        );
 
         $foreignKey = method_exists($relation, 'getForeignKeyName')
             ? $relation->getForeignKeyName()
