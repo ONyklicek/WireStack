@@ -89,7 +89,7 @@ class ShowUser extends Component
 
 To je celá smyčka: **záznam dovnitř → schéma → vyechovat ven.** `{{ $this->infolist }}` funguje, protože `Infolist` je `Htmlable` a `$this->infolist` resolvuje computed property — žádný speciální helper ani trait.
 
-> Metodu můžete pojmenovat jakkoli (`$this->orderInfolist`, `$this->summary`, …) a mít jich na jedné komponentě několik — viz [Skládání schématu](#composing-the-schema).
+> Metodu můžete pojmenovat jakkoli (`$this->orderInfolist`, `$this->summary`, …) a mít jich na jedné komponentě několik — viz [Skládání schématu](#skladani-schematu).
 
 ## Typy entries přehledně
 
@@ -108,13 +108,13 @@ To je celá smyčka: **záznam dovnitř → schéma → vyechovat ven.** `{{ $th
 > **Enum casty.** Entries čtou enum-cast atributy bezpečně: `TextEntry` vykreslí label enumu
 > (přes kontrakt `Enum\HasLabel`, jinak backing hodnota / název case) a `IconEntry`
 > auto-resolvuje svou ikonu a barvu z enumu implementujícího `Enum\HasColor` / `Enum\HasIcon`.
-> Viz [Foundation → Enumy](foundation.md#enums).
+> Viz [Foundation → Enumy](foundation.md#enumy).
 
 ## Obsah
 
-1. [Objekt Infolist](#the-infolist-object)
-2. [Skládání schématu](#composing-the-schema)
-3. [Resolvování stavu](#state-resolution)
+1. [Objekt Infolist](#objekt-infolist)
+2. [Skládání schématu](#skladani-schematu)
+3. [Resolvování stavu](#resolvovani-stavu)
 4. [Layout](#layout)
 5. [TextEntry](#textentry)
 6. [BadgeEntry](#badgeentry)
@@ -125,8 +125,8 @@ To je celá smyčka: **záznam dovnitř → schéma → vyechovat ven.** `{{ $th
 11. [ColorEntry](#colorentry)
 12. [KeyValueEntry](#keyvalueentry)
 13. [RepeatableEntry](#repeatableentry)
-14. [Akce](#actions)
-15. [Uvnitř action modalu](#inside-an-action-modal)
+14. [Akce](#akce)
+15. [Uvnitř action modalu](#uvnitr-action-modalu)
 16. [Infolist API](#infolist-api)
 
 <a id="the-infolist-object"></a>
@@ -479,7 +479,7 @@ RepeatableEntry::make('items')
 | `schema(array)` | Schéma entries vykreslené per položka |
 | `columns(int)` | Sloupce gridu per řádek |
 | `contained(bool = true)` | Obalit každý řádek do ohraničené karty |
-| `actions(array)` | Akční tlačítka per řádek (viz [Akce](#actions)) |
+| `actions(array)` | Akční tlačítka per řádek (viz [Akce](#akce)) |
 | `with(array\|string)` | Eager-load relací na řádcích (viz níže) |
 
 ### Předcházení N+1 na řádcích relace
@@ -502,7 +502,7 @@ RepeatableEntry::make('lines')
 
 Entries, hlavičky sekcí a repeatable řádky mohou nést interaktivní [`Action`](actions.md) tlačítka — postavená ze stejného fluent `Action` API jako table a modal akce a sdílející field-action dispatch kontrakt (`HasFieldActions`). Názvy akcí **musí být unikátní** v rámci infolistu.
 
-> **Požadavek na hostitele.** Akce infolistu dispatchují přes hostitelův `callInfolistAction()`, poskytovaný core action runtime (`InteractsWithActions`). Fungují hned, když je infolist zobrazen [uvnitř action modalu](#inside-an-action-modal) (table / `WithActions` hostitel ho skládá). Samostatný infolist vyechovaný v prosté Livewire komponentě dispatchuje jen když ta komponenta skládá action runtime.
+> **Požadavek na hostitele.** Akce infolistu dispatchují přes hostitelův `callInfolistAction()`, poskytovaný core action runtime (`InteractsWithActions`). Fungují hned, když je infolist zobrazen [uvnitř action modalu](#uvnitr-action-modalu) (table / `WithActions` hostitel ho skládá). Samostatný infolist vyechovaný v prosté Livewire komponentě dispatchuje jen když ta komponenta skládá action runtime.
 
 **Hlavičkové akce sekce** — vykreslené v hlavičce sekce, dostanou navázaný záznam:
 

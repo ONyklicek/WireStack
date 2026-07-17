@@ -14,34 +14,29 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use Illuminate\Database\Eloquent\Relations\MorphOneOrMany;
-use Illuminate\Database\Eloquent\Relations\Relation as EloquentRelation;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\WithPagination;
 use NyonCode\WireCore\Actions\Action;
-use NyonCode\WireCore\Actions\ActionGroup;
-use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireCore\Actions\Concerns\InteractsWithActions;
-use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Core\Events\CellUpdated;
 use NyonCode\WireCore\Core\Events\CellUpdating;
 use NyonCode\WireCore\Core\Events\TableFiltered;
 use NyonCode\WireCore\Core\Events\TableFiltering;
-use NyonCode\WireCore\Core\Events\TableRefreshed;
 use NyonCode\WireCore\Core\Events\TableSearched;
 use NyonCode\WireCore\Core\Events\TableSearching;
 use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
-use NyonCode\WireCore\Infolists\Infolist;
+use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
+use NyonCode\WireCore\Foundation\Contracts\HydratesState;
+use NyonCode\WireCore\Foundation\Support\RecordVersion;
 use NyonCode\WireCore\Notifications\Notification;
-use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
 use NyonCode\WireForms\Concerns\InteractsWithActionForms;
 use NyonCode\WireForms\Concerns\InteractsWithFieldActions;
@@ -51,7 +46,6 @@ use NyonCode\WireForms\Concerns\InteractsWithSelectCreation;
 use NyonCode\WireForms\Concerns\InteractsWithWizards;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireTable\Columns\Column;
-use NyonCode\WireTable\Columns\SummaryBatch;
 use NyonCode\WireTable\Export\ExportAction;
 use NyonCode\WireTable\Export\ExportFormat;
 use NyonCode\WireTable\Export\TableExport;
@@ -61,26 +55,42 @@ use NyonCode\WireTable\Import\ImportResult;
 use NyonCode\WireTable\Import\TableImport;
 use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
 use NyonCode\WireTable\Preferences\TablePreferenceManager;
+use NyonCode\WireTable\Services\CellValueWriter;
+use NyonCode\WireTable\Services\SummaryBatch;
+use NyonCode\WireTable\Services\TableQueryService;
 use NyonCode\WireTable\Table;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /** @phpstan-require-extends Component */
 trait WithTable
 {
+    use CanExpandSubRows;
+    use CanSelectRecords;
     use DispatchesStateUpdates;
     use HasSqlDebug;
 
     // Shared, form-agnostic action engine (wire-core) + the form-hosting bridge
     // (wire-forms). WithTable keeps thin, record-scoped wrappers on top; the
     // bridge overrides the engine's form extension points.
-    use InteractsWithActionForms, InteractsWithActions {
+    // The last four lines were silent overrides while these methods lived in this
+    // trait's own body: a method defined here beats an imported trait's without
+    // any insteadof, and without any trace. Splitting them into
+    // InteractsWithTableActions turned them into real collisions, which is an
+    // improvement — the table's answers now say out loud that they replace the
+    // engine's defaults.
+    use InteractsWithActionForms, InteractsWithActions, InteractsWithTableActions {
         InteractsWithActionForms::validateMountedActionForm insteadof InteractsWithActions;
         InteractsWithActionForms::resolveHaltModalForm insteadof InteractsWithActions;
+        InteractsWithTableActions::haltModalFormStatePath insteadof InteractsWithActionForms;
+        InteractsWithTableActions::afterActionExecuted insteadof InteractsWithActions;
+        InteractsWithTableActions::resolveActionRecordIds insteadof InteractsWithActions;
+        InteractsWithTableActions::sendActionNotification insteadof InteractsWithActions;
     }
     use InteractsWithFieldActions;
     use InteractsWithFileUploads;
     use InteractsWithRepeaters;
     use InteractsWithSelectCreation;
+    use InteractsWithTableModals;
     use InteractsWithWizards;
     use WithPagination;
     use WithTableQueryString;
@@ -98,14 +108,11 @@ trait WithTable
      */
     public StateContainer $tableState;
 
-    /** @var Form|null Resolved Form instance for the current action modal */
-    protected ?Form $actionModalFormInstance = null;
-
-    /** @var Infolist|null Resolved Infolist instance for the current action modal */
-    protected ?Infolist $actionModalInfolistInstance = null;
-
-    /** @var Form|null Resolved Form instance for the halt modal */
-    protected ?Form $haltModalFormInstance = null;
+    // $actionModalFormInstance and $haltModalFormInstance come from
+    // InteractsWithActionForms; $actionModalInfolistInstance and
+    // $actionModalConfigCache from InteractsWithActions. This trait used to
+    // redeclare all four identically — legal, because PHP only rejects an
+    // *incompatible* redeclaration, and therefore invisible.
 
     /**
      * Previous modal form-data values captured in updatingTableState() so the
@@ -119,9 +126,6 @@ trait WithTable
 
     protected ?Table $tableInstance = null;
 
-    /** @var array Modal config - not a public Livewire property */
-    protected array $actionModalConfigCache = [];
-
     /** @var LengthAwarePaginator|Paginator|CursorPaginator|Collection|null Cached records for current request lifecycle */
     protected LengthAwarePaginator|Paginator|CursorPaginator|Collection|null $cachedRecords = null;
 
@@ -131,8 +135,7 @@ trait WithTable
     /** @var TableQueryService|null Shared query service instance */
     protected ?TableQueryService $queryService = null;
 
-    /** @var Collection|null Memoized selected records — cleared when the selection mutates */
-    protected ?Collection $cachedSelectedRecords = null;
+    // $cachedSelectedRecords comes from CanSelectRecords.
 
     /**
      * Memoized page records partitioned by group value, in page order.
@@ -166,15 +169,25 @@ trait WithTable
             $this->tableState->set('rows.flattenMode', true);
         }
 
-        // Initialize filters with defaults (wrapped to match form-field state shape)
+        // Initialize filters with defaults (wrapped to match form-field state shape).
+        // Every *rendered* filter gets a slot, not only the ones with a default:
+        // non-native filters bind through $wire.entangle(), and Livewire's entangle
+        // silently no-ops when the path is undefined at render, so a filter without
+        // a default would never reach the server. A null value stays inactive
+        // everywhere — apply() ignores it and it is not counted as an active filter.
         $filters = [];
         foreach ($table->getFilters() as $filter) {
             $default = $filter->getDefault();
-            if ($default !== null) {
-                // Arr::set so dotted (relation) filter names nest the same way the
-                // live wire:model binding writes them — keeps init and UI in sync.
-                Arr::set($filters, $filter->getName(), $filter->wrapValue($default));
+
+            // A hidden filter renders no control to bind, so it only needs a slot
+            // when a default actually forces a value into the query.
+            if ($default === null && ! $filter->canView()) {
+                continue;
             }
+
+            // Arr::set so dotted (relation) filter names nest the same way the
+            // live wire:model binding writes them — keeps init and UI in sync.
+            Arr::set($filters, $filter->getName(), $filter->wrapValue($default));
         }
         if ($filters !== []) {
             $this->tableState->set('filters', $filters);
@@ -191,15 +204,31 @@ trait WithTable
             $this->tableState->set('columns.hidden', $hidden);
         }
 
-        // Multi-select column filters must start as an array so Livewire treats
-        // their header checkboxes as an array group (toggle membership) rather
-        // than replacing a scalar on each click.
+        // Every column filter needs a state slot up front, for the same reason the
+        // panel filters above do: the header controls entangle their path, and an
+        // undefined path makes Livewire's entangle a silent no-op.
+        //
+        // Multi-select filters must specifically start as an *array* so Livewire
+        // treats their header checkboxes as an array group (toggle membership)
+        // rather than replacing a scalar on each click.
         foreach ($table->getColumns() as $column) {
-            if ($column->isFilterable() && $column->filterExpectsArray()) {
-                $current = $this->tableState->get('columnFilters.'.$column->getName());
+            if (! $column->isFilterable()) {
+                continue;
+            }
+
+            $path = 'columnFilters.'.$column->getName();
+            $current = $this->tableState->get($path);
+
+            if ($column->filterExpectsArray()) {
                 if (! is_array($current)) {
-                    $this->tableState->set('columnFilters.'.$column->getName(), []);
+                    $this->tableState->set($path, []);
                 }
+
+                continue;
+            }
+
+            if ($current === null) {
+                $this->tableState->set($path, null);
             }
         }
 
@@ -343,7 +372,7 @@ trait WithTable
      */
     private function isModalFormDataPath(string $path): bool
     {
-        return str_starts_with($path, 'modal.action.formData.')
+        return (str_starts_with($path, 'modal.actions.') && str_contains($path, '.data.'))
             || str_starts_with($path, 'modal.halt.formData.');
     }
 
@@ -375,7 +404,9 @@ trait WithTable
     protected function getQueryService(): TableQueryService
     {
         if ($this->queryService === null) {
-            $this->queryService = new TableQueryService;
+            // Resolved, not shared: the service memoises the last query plan, so
+            // a container singleton would leak one table's plan into the next.
+            $this->queryService = app(TableQueryService::class);
         }
 
         return $this->queryService;
@@ -400,7 +431,7 @@ trait WithTable
         // causing morph to overwrite whatever the user has typed. Keeping
         // wire:poll in the DOM means polling resumes automatically on the next
         // tick once the modal closes — no extra work needed.
-        if ($this->tableState->get('modal.action.show') || $this->tableState->get('modal.halt.show')) {
+        if ($this->actionFrameCount() > 0 || $this->tableState->get('modal.halt.show')) {
             return;
         }
 
@@ -640,6 +671,50 @@ trait WithTable
         $this->eagerLoadSubRows($this->cachedRecords);
 
         return $this->cachedRecords;
+    }
+
+    /**
+     * Re-anchor the paginator when the current page no longer exists.
+     *
+     * After records are mutated — most commonly a delete that removes the last
+     * row on the current page — the stored page number can point past the end
+     * of the result set, stranding the user on an empty page. Clamp it down to
+     * the last populated page so they land on the page below instead.
+     *
+     * Only length-aware pagination can compute a last page; simple and cursor
+     * modes have no total to clamp against, so they are left untouched.
+     */
+    public function clampPageToBounds(): void
+    {
+        $table = $this->getTable();
+
+        // Only length-aware pagination knows its last page; simple and cursor
+        // modes have no total to clamp against (confirmed by the instanceof
+        // guard below once the records are fetched).
+        if (! $table->isPaginated() || in_array($table->getPaginationMode(), ['simple', 'cursor'], true)) {
+            return;
+        }
+
+        // Page 1 always exists (even when empty), so nothing to clamp.
+        if ((int) $this->getPage() <= 1) {
+            return;
+        }
+
+        $records = $this->getTableRecords();
+
+        if (! $records instanceof LengthAwarePaginator) {
+            return;
+        }
+
+        $lastPage = max(1, $records->lastPage());
+
+        if ($records->currentPage() > $lastPage) {
+            $this->setPage($lastPage);
+
+            // Drop the empty-page result so the next render re-queries the
+            // clamped page instead of serving the cached empty page.
+            $this->cachedRecords = null;
+        }
     }
 
     /**
@@ -984,490 +1059,6 @@ trait WithTable
         return null;
     }
 
-    // ─── Sub-Rows ────────────────────────────────────────
-
-    /**
-     * Toggle expansion of a parent row to show/hide its sub-rows.
-     */
-    public function toggleRowExpansion(mixed $recordKey): void
-    {
-        $key = (string) $recordKey;
-        $expanded = $this->tableState->get('rows.expanded', []);
-
-        if (in_array($key, $expanded, true)) {
-            $expanded = array_values(array_diff($expanded, [$key]));
-        } else {
-            $expanded[] = $key;
-        }
-
-        $this->tableState->set('rows.expanded', $expanded);
-    }
-
-    /**
-     * Expand all rows to show sub-rows.
-     */
-    public function expandAllRows(): void
-    {
-        $table = $this->getTable();
-        if (! $table->hasSubRows()) {
-            return;
-        }
-
-        if ($table->isSubRowsDefaultExpanded()) {
-            // Default expanded: clear the "collapsed" list
-            $this->tableState->set('rows.expanded', []);
-        } else {
-            $records = $this->getTableRecords();
-            $this->tableState->set('rows.expanded', $records->pluck($table->getPrimaryKey())
-                ->map(fn ($k) => (string) $k)
-                ->all());
-        }
-    }
-
-    /**
-     * Collapse all expanded rows.
-     */
-    public function collapseAllRows(): void
-    {
-        $table = $this->getTable();
-
-        if ($table->hasSubRows() && $table->isSubRowsDefaultExpanded()) {
-            // Default expanded: add all to "collapsed" list
-            $records = $this->getTableRecords();
-            $this->tableState->set('rows.expanded', $records->pluck($table->getPrimaryKey())
-                ->map(fn ($k) => (string) $k)
-                ->all());
-        } else {
-            $this->tableState->set('rows.expanded', []);
-        }
-    }
-
-    /**
-     * Check if a row is expanded.
-     */
-    public function isRowExpanded(mixed $recordKey): bool
-    {
-        $expanded = $this->tableState->get('rows.expanded', []);
-        $isInList = in_array((string) $recordKey, $expanded, true);
-
-        // When default expanded, the expandedRows list tracks *collapsed* rows
-        if ($this->getTable()->isSubRowsDefaultExpanded()) {
-            return ! $isInList;
-        }
-
-        return $isInList;
-    }
-
-    /**
-     * Toggle flatten mode (show all sub-rows as regular rows).
-     */
-    public function toggleFlattenMode(): void
-    {
-        $this->tableState->set('rows.flattenMode', ! $this->tableState->get('rows.flattenMode'));
-    }
-
-    /**
-     * Get sub-rows for a parent record.
-     * Applies sub-row filters if enabled.
-     * When no relation is set, returns the record itself as a single-item collection.
-     */
-    public function getSubRows(mixed $record): Collection
-    {
-        $table = $this->getTable();
-        if (! $table->hasSubRows()) {
-            return collect();
-        }
-
-        // No relation — detail row mode: show the record itself
-        if ($table->getSubRowRelation() === null) {
-            return collect([$record]);
-        }
-
-        // Resolve active sort and "show all" flag for this specific parent.
-        $relation = $table->getSubRowRelation();
-        $sort = $this->getSubRowSort();
-        $parentKey = $record->getKey();
-        $showAll = (bool) ($this->tableState->get('rows.subRowsShowAll', [])[$parentKey] ?? false);
-
-        // Fast path: sub-rows were eager-loaded for the whole page in one query
-        // (see eagerLoadSubRows). Read from memory instead of querying per parent.
-        //
-        // Only safe when no sub-row filters are active. The relation may also be
-        // eager-loaded by the caller's base query (e.g. Invoice::with('items')),
-        // in which case the loaded set is unfiltered — fall through to the query
-        // path so active rows.subRowFilters are honoured.
-        if ($record->relationLoaded($relation) && ! $this->hasActiveSubRowFilters()) {
-            $items = $record->getRelation($relation);
-
-            // A limited eager load (subRowsLimit) ships a loadCount alongside.
-            // If show-all was enabled after loading, memory holds only `limit`
-            // rows — fall through to the query for this parent's full set.
-            $loadedCount = $record->getAttribute(Str::snake($relation).'_count');
-            $isPartialLoad = $loadedCount !== null && $items->count() < (int) $loadedCount;
-
-            if (! ($showAll && $isPartialLoad)) {
-                if (! $showAll && $table->getSubRowsLimit()) {
-                    $items = $items->take($table->getSubRowsLimit());
-                }
-
-                return $items->values();
-            }
-        }
-
-        $query = $table->getSubRowsQuery($record, $sort, applyLimit: ! $showAll);
-
-        // Main-table filters scoped to sub-rows (Filter::subRows()) constrain
-        // the displayed children the same way they constrained the parents.
-        $query = $this->applySubRowScopedFilters($query);
-
-        // Apply sub-row filters
-        $query = $this->applyInteractiveSubRowFilters($query);
-
-        return $query->get();
-    }
-
-    /**
-     * Eager-load sub-rows for the records that will actually render them
-     * (expanded rows, or every row in flatten mode), in a single query —
-     * replacing the per-parent N+1 queries.
-     *
-     * Skipped when sub-row filters are active, since per-parent filtering with
-     * custom filter callbacks can't be expressed safely inside one eager-load
-     * closure; those fall back to the per-parent query path in getSubRows().
-     *
-     * @param  LengthAwarePaginator<int, Model>|Paginator<int, Model>|CursorPaginator<int, Model>|Collection<int, Model>  $records
-     */
-    protected function eagerLoadSubRows(LengthAwarePaginator|Paginator|CursorPaginator|Collection $records): void
-    {
-        $table = $this->getTable();
-
-        if (! $table->hasSubRows() || $table->getSubRowRelation() === null) {
-            return;
-        }
-
-        // Don't eager-load when sub-row filters are active (correctness over speed).
-        if ($this->hasActiveSubRowFilters()) {
-            return;
-        }
-
-        $collection = $records instanceof Collection ? $records : $records->getCollection();
-        if ($collection->isEmpty()) {
-            return;
-        }
-
-        // Only load sub-rows that will be displayed.
-        $flatten = (bool) $this->tableState->get('rows.flattenMode');
-        $target = $flatten
-            ? $collection
-            : $collection->filter(fn ($record) => $this->isRowExpanded($record->getKey()));
-
-        if ($target->isEmpty()) {
-            return;
-        }
-
-        $relation = $table->getSubRowRelation();
-        $sort = $this->getSubRowSort();
-        $callback = $table->getSubRowQueryCallback();
-        $limit = $table->getSubRowsLimit();
-
-        $constrain = function ($query) use ($table, $sort, $callback) {
-            if ($callback) {
-                $query = $callback($query) ?? $query;
-            }
-
-            // Sub-row scoped main filters are global (same constraint for every
-            // parent), so unlike interactive per-parent filters they are safe
-            // to express inside the single eager-load closure.
-            $this->applySubRowScopedFilters($query);
-
-            $sortColumn = $sort['column'] ?? $table->getSubRowsDefaultSort();
-            $sortDirection = $sort['direction'] ?? $table->getSubRowsDefaultSortDirection();
-
-            if ($sortColumn !== null && $table->isSubRowColumnSortable($sortColumn)) {
-                $query->orderBy($sortColumn, $sortDirection === 'desc' ? 'desc' : 'asc');
-            }
-        };
-
-        // No display limit, or the framework can't limit an eager load per
-        // parent (Laravel < 11): load the full sets in one query. getSubRows()
-        // applies the display limit in memory and counts the loaded relation,
-        // so behaviour stays correct — only the memory win is lost.
-        if (! $limit || ! $this->supportsPerParentEagerLimit()) {
-            $target->load([$relation => $constrain]);
-
-            return;
-        }
-
-        // With a limit, loading full child sets just to count them wastes
-        // memory on large relations. Parents flagged "show all" still need the
-        // full set; the rest load only `limit` rows per parent (native
-        // eager-load limit — window function) plus an exact count for the
-        // "show more" affordance (read via getSubRowsTotalCount()).
-        $showAll = $this->tableState->get('rows.subRowsShowAll', []);
-
-        [$fullTargets, $limitedTargets] = $target->partition(
-            fn ($record) => (bool) ($showAll[$record->getKey()] ?? false),
-        );
-
-        if ($fullTargets->isNotEmpty()) {
-            $fullTargets->load([$relation => $constrain]);
-        }
-
-        if ($limitedTargets->isNotEmpty()) {
-            $limitedTargets->load([$relation => function ($query) use ($constrain, $limit) {
-                $constrain($query);
-                $query->limit($limit);
-            }]);
-
-            // Counts ignore ordering — apply only the row constraints.
-            $limitedTargets->loadCount([$relation => function ($query) use ($callback) {
-                if ($callback) {
-                    $query = $callback($query) ?? $query;
-                }
-
-                $this->applySubRowScopedFilters($query);
-            }]);
-        }
-    }
-
-    /**
-     * Whether the framework can limit an eager load per parent.
-     *
-     * Per-parent eager-load limits (a window function under the hood) arrived
-     * in Laravel 11 via Query\Builder::groupLimit(). On Laravel 10 calling
-     * ->limit() inside an eager-load closure applies a single global LIMIT
-     * across all parents, so the limited fast path must be skipped there.
-     */
-    protected function supportsPerParentEagerLimit(): bool
-    {
-        return method_exists(\Illuminate\Database\Query\Builder::class, 'groupLimit');
-    }
-
-    /**
-     * Reset sub-row filters.
-     */
-    public function resetSubRowFilters(): void
-    {
-        $this->tableState->set('rows.subRowFilters', []);
-    }
-
-    /**
-     * Main-table filters scoped to the sub-row relation (Filter::subRows())
-     * paired with their active values. Empty when sub-rows are not relation-backed.
-     *
-     * @return array<int, array{0: Filter, 1: mixed}>
-     */
-    protected function getActiveSubRowScopedFilters(): array
-    {
-        $table = $this->getTable();
-
-        if ($table->getSubRowRelation() === null) {
-            return [];
-        }
-
-        $filterValues = $this->tableState->get('filters', []);
-        $active = [];
-
-        foreach ($table->getFilters() as $filter) {
-            if (! $filter->appliesToSubRows() || ! $filter->canView()) {
-                continue;
-            }
-
-            $raw = data_get($filterValues, $filter->getName());
-            if ($raw === null || $raw === '' || $raw === []) {
-                continue;
-            }
-
-            $value = $filter->extractValue($raw);
-            if ($value === null || $value === '' || $value === []) {
-                continue;
-            }
-
-            $active[] = [$filter, $value];
-        }
-
-        return $active;
-    }
-
-    /**
-     * Constrain a child query by the active sub-row scoped main filters —
-     * the same constraint TableQueryService used to whereHas the parents.
-     *
-     * Accepts either an Eloquent Builder or a Relation (eager-load closures
-     * receive the latter); filters always run against the Eloquent Builder.
-     *
-     * @template TQuery of Builder<Model>|EloquentRelation<Model, Model, mixed>
-     *
-     * @param  TQuery  $query
-     * @return TQuery
-     */
-    protected function applySubRowScopedFilters(Builder|EloquentRelation $query): Builder|EloquentRelation
-    {
-        $builder = $query instanceof EloquentRelation ? $query->getQuery() : $query;
-
-        foreach ($this->getActiveSubRowScopedFilters() as [$filter, $value]) {
-            $filter->apply($builder, $value);
-        }
-
-        return $query;
-    }
-
-    /**
-     * Constrain a child query by the active interactive sub-row filter bar
-     * values (subRowsFilterable()) — the per-column filters typed by the user.
-     *
-     * @param  Builder<Model>  $query
-     * @return Builder<Model>
-     */
-    protected function applyInteractiveSubRowFilters(Builder $query): Builder
-    {
-        $table = $this->getTable();
-        $subRowFilters = $this->tableState->get('rows.subRowFilters', []);
-
-        if (! $table->isSubRowsFilterable() || empty($subRowFilters)) {
-            return $query;
-        }
-
-        foreach ($table->getSubRowColumns() as $column) {
-            $filterValue = $subRowFilters[$column->getName()] ?? null;
-
-            if ($filterValue !== null && $filterValue !== '' && $column->isFilterable()) {
-                $query = $column->applyFilter($query, $filterValue);
-            }
-        }
-
-        return $query;
-    }
-
-    /**
-     * Whether the table has sub-row filtering enabled and at least one active
-     * sub-row filter value. Used to disable eager-load / in-memory fast paths
-     * that would otherwise bypass per-parent filtering.
-     */
-    protected function hasActiveSubRowFilters(): bool
-    {
-        if (! $this->getTable()->isSubRowsFilterable()) {
-            return false;
-        }
-
-        $subRowFilters = $this->tableState->get('rows.subRowFilters', []);
-
-        foreach ($subRowFilters as $value) {
-            if ($value !== null && $value !== '') {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Livewire hook for sub-row filter updates.
-     */
-    public function updatedSubRowFilters(): void
-    {
-        // Sub-row filters don't need pagination reset
-    }
-
-    /**
-     * Current sub-row sort state, or null when none is active.
-     *
-     * @return array{column: string, direction: string}|null
-     */
-    public function getSubRowSort(): ?array
-    {
-        $sort = $this->tableState->get('rows.subRowSort');
-
-        if (! is_array($sort) || empty($sort['column'])) {
-            return null;
-        }
-
-        return [
-            'column' => (string) $sort['column'],
-            'direction' => ($sort['direction'] ?? 'asc') === 'desc' ? 'desc' : 'asc',
-        ];
-    }
-
-    /**
-     * Toggle sub-row sorting by a column. Clicking the active column flips the
-     * direction; clicking a new column sorts it ascending.
-     */
-    public function sortSubRows(string $column): void
-    {
-        $table = $this->getTable();
-
-        if (! $table->isSubRowColumnSortable($column)) {
-            return;
-        }
-
-        $current = $this->getSubRowSort();
-
-        if ($current !== null && $current['column'] === $column) {
-            $direction = $current['direction'] === 'asc' ? 'desc' : 'asc';
-        } else {
-            $direction = 'asc';
-        }
-
-        $this->tableState->set('rows.subRowSort', ['column' => $column, 'direction' => $direction]);
-    }
-
-    /**
-     * Reveal all sub-rows for a parent, bypassing the configured subRowsLimit.
-     */
-    public function showAllSubRows(string|int $parentKey): void
-    {
-        $showAll = $this->tableState->get('rows.subRowsShowAll', []);
-        $showAll[$parentKey] = true;
-        $this->tableState->set('rows.subRowsShowAll', $showAll);
-    }
-
-    /**
-     * Whether a parent currently has its sub-rows fully expanded (show-all).
-     */
-    public function isSubRowsShowAll(string|int $parentKey): bool
-    {
-        return (bool) ($this->tableState->get('rows.subRowsShowAll', [])[$parentKey] ?? false);
-    }
-
-    /**
-     * Total (unlimited) count of a parent's sub-rows, honouring sub-row filters.
-     * Used to decide whether a "show more" affordance is needed.
-     */
-    public function getSubRowsTotalCount(mixed $record): int
-    {
-        $table = $this->getTable();
-
-        if (! $table->hasSubRows() || $table->getSubRowRelation() === null) {
-            return 0;
-        }
-
-        // Use the eager-loaded relation when present — no extra count query.
-        // Skipped when sub-row filters are active: a caller-eager-loaded relation
-        // (e.g. Invoice::with('items')) is unfiltered, so counting it would ignore
-        // rows.subRowFilters and over-count the "show more" affordance.
-        $relation = $table->getSubRowRelation();
-        if ($record->relationLoaded($relation) && ! $this->hasActiveSubRowFilters()) {
-            // Limited eager loads (subRowsLimit) ship an exact loadCount
-            // alongside — prefer it; the loaded relation itself holds only
-            // `limit` rows, so counting it would always cap at the limit.
-            $loadedCount = $record->getAttribute(Str::snake($relation).'_count');
-
-            if ($loadedCount !== null) {
-                return (int) $loadedCount;
-            }
-
-            return $record->getRelation($relation)->count();
-        }
-
-        $query = $table->getSubRowsQuery($record, $this->getSubRowSort(), applyLimit: false);
-
-        // Honour the same constraints used when listing.
-        $query = $this->applySubRowScopedFilters($query);
-        $query = $this->applyInteractiveSubRowFilters($query);
-
-        return $query->count();
-    }
-
     // ─── Summaries ───────────────────────────────────────
 
     /**
@@ -1514,7 +1105,7 @@ trait WithTable
 
         // Batch all SQL-native query-scope aggregates into at most two queries
         // instead of one query per summary per column on every render.
-        $batched = $query !== null ? SummaryBatch::compute($columns, $query) : [];
+        $batched = $query !== null ? app(SummaryBatch::class)->compute($columns, $query) : [];
 
         foreach ($columns as $column) {
             if ($column->hasSummary()) {
@@ -1700,7 +1291,7 @@ trait WithTable
 
         // The child query is identical for every sub-row column — batch the
         // SQL-native aggregates into one query instead of one per summary.
-        $batched = SummaryBatch::compute($subRowColumns, $childQuery, ['query']);
+        $batched = app(SummaryBatch::class)->compute($subRowColumns, $childQuery, ['query']);
 
         foreach ($subRowColumns as $column) {
             if (! $column->hasSummaryInScope('query')) {
@@ -1963,888 +1554,6 @@ trait WithTable
         return Auth::user();
     }
 
-    // ─── Record Selection ────────────────────────────────
-
-    /**
-     * Toggle record selection
-     */
-    public function toggleRecordSelection(string $key): void
-    {
-        $selected = $this->tableState->get('selection.records', []);
-        $index = array_search($key, $selected, true);
-
-        if ($index !== false) {
-            unset($selected[$index]);
-            $selected = array_values($selected);
-        } else {
-            $selected[] = $key;
-        }
-
-        $this->tableState->set('selection.records', $selected);
-        $this->cachedSelectedRecords = null;
-    }
-
-    /**
-     * Select all visible records
-     */
-    public function selectAllRecords(): void
-    {
-        $records = $this->getTableRecords();
-        $primaryKey = $this->getTable()->getPrimaryKey();
-
-        $selected = [];
-        foreach ($records as $record) {
-            $selected[] = (string) $record->{$primaryKey};
-        }
-
-        $this->tableState->set('selection.records', $selected);
-        $this->cachedSelectedRecords = null;
-    }
-
-    /**
-     * Check if record is selected
-     */
-    public function isRecordSelected(string $key): bool
-    {
-        $selected = $this->tableState->get('selection.records', []);
-
-        return in_array($key, $selected, true);
-    }
-
-    /**
-     * Get selected records count
-     */
-    public function getSelectedRecordsCount(): int
-    {
-        return count($this->tableState->get('selection.records', []));
-    }
-
-    /**
-     * Check if some (but not all) visible records are selected
-     */
-    public function areSomeVisibleSelected(): bool
-    {
-        if (empty($this->tableState->get('selection.records', []))) {
-            return false;
-        }
-
-        return ! $this->areAllVisibleSelected();
-    }
-
-    /**
-     * Check if all visible records are selected
-     */
-    public function areAllVisibleSelected(): bool
-    {
-        $records = $this->getTableRecords();
-
-        if ($records->isEmpty()) {
-            return false;
-        }
-
-        $selected = $this->tableState->get('selection.records', []);
-        $primaryKey = $this->getTable()->getPrimaryKey();
-
-        foreach ($records as $record) {
-            $key = (string) $record->{$primaryKey};
-            if (! in_array($key, $selected, true)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Get array of selected record keys
-     */
-    public function getSelectedRecordKeys(): array
-    {
-        return $this->tableState->get('selection.records', []);
-    }
-
-    /**
-     * Deselect all records
-     */
-    public function deselectAllRecords(): void
-    {
-        $this->tableState->set('selection.records', []);
-        $this->cachedSelectedRecords = null;
-    }
-
-    /**
-     * Get Collection of selected records (fetched from database).
-     *
-     * Memoized per request — selection-scope summaries, grand totals, and bulk
-     * modals may all ask for the set within one render. The memo is cleared
-     * whenever the selection mutates or the table cache is invalidated.
-     */
-    public function getSelectedRecords(): Collection
-    {
-        if ($this->cachedSelectedRecords !== null) {
-            return $this->cachedSelectedRecords;
-        }
-
-        $selectedKeys = $this->getSelectedRecordKeys();
-
-        if (empty($selectedKeys)) {
-            return collect();
-        }
-
-        $table = $this->getTable();
-
-        $query = $table->getQuery()->whereIn($table->getPrimaryKey(), $selectedKeys);
-
-        // Apply the same withCount/withSum aggregate subqueries that buildTableQuery()
-        // adds, so aggregate columns (e.g. ->sums('items', 'line_total')) expose their
-        // computed attribute on the selected models. Without this, selection-scope
-        // summaries pluck a missing attribute and render as 0. Filters/sort are
-        // intentionally not applied — selection is an explicit set of keys.
-        foreach ($table->getColumns() as $column) {
-            if (! $column->isAggregate()) {
-                continue;
-            }
-
-            $relation = $column->getAggregateRelation();
-            $aggregateCol = $column->getAggregateColumn();
-
-            match ($column->getAggregateFunction()) {
-                'count' => $query->withCount($relation),
-                'sum' => $query->withSum($relation, $aggregateCol),
-                'avg' => $query->withAvg($relation, $aggregateCol),
-                'min' => $query->withMin($relation, $aggregateCol),
-                'max' => $query->withMax($relation, $aggregateCol),
-                default => null,
-            };
-        }
-
-        return $this->cachedSelectedRecords = $query->get();
-    }
-
-    // ==========================================
-    // Action System
-    // ==========================================
-
-    // ==========================================
-    // Action engine seams (back the shared InteractsWithActions engine with
-    // the table's StateContainer bag under `modal.action.*` / `modal.halt.*`).
-    // ==========================================
-
-    protected function setMountedActionState(string $key, mixed $value): void
-    {
-        $this->tableState->set('modal.action.'.$key, $value);
-    }
-
-    protected function getMountedActionState(string $key, mixed $default = null): mixed
-    {
-        return $this->tableState->get('modal.action.'.$key, $default);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    protected function getMountedActionFormData(): array
-    {
-        $data = $this->tableState->get('modal.action.formData', []);
-
-        return is_array($data) ? $data : [];
-    }
-
-    /**
-     * @param  array<string, mixed>  $data
-     */
-    protected function setMountedActionFormData(array $data): void
-    {
-        $this->tableState->set('modal.action.formData', $data);
-    }
-
-    protected function setMountedActionFormDataValue(string $path, mixed $value): void
-    {
-        $this->tableState->set('modal.action.formData.'.$path, $value);
-    }
-
-    protected function setHaltModalState(string $key, mixed $value): void
-    {
-        $this->tableState->set('modal.halt.'.$key, $value);
-    }
-
-    protected function haltModalFormStatePath(): string
-    {
-        return 'tableState.modal.halt.formData';
-    }
-
-    /**
-     * The table honours a custom primary key when collecting affected record IDs.
-     *
-     * @param  array<string, mixed>  $payload
-     * @return array<int, mixed>
-     */
-    protected function resolveActionRecordIds(array $payload): array
-    {
-        $pk = $this->getTable()->getPrimaryKey();
-
-        if (isset($payload['record'])) {
-            return [$payload['record']->{$pk}];
-        }
-
-        if (isset($payload['records'])) {
-            return $payload['records']->pluck($pk)->all();
-        }
-
-        return [];
-    }
-
-    /**
-     * Route action notifications through the table's configured driver.
-     */
-    protected function sendActionNotification(Notification $notification): void
-    {
-        $this->sendNotification($notification);
-    }
-
-    /**
-     * Refresh the cached table instance after a successful action.
-     */
-    protected function afterActionExecuted(): void
-    {
-        $this->invalidateTable();
-    }
-
-    /**
-     * Open action modal (confirmation or form)
-     */
-    public function openActionModal(string $recordKey, string $actionName): void
-    {
-        $action = $this->findAction($actionName);
-
-        if (! $action || ! $action->hasModal()) {
-            // No modal, execute directly
-            $this->executeTableAction($recordKey, $actionName);
-
-            return;
-        }
-
-        $table = $this->getTable();
-        $record = $table->getQuery()->where($table->getPrimaryKey(), $recordKey)->first();
-
-        if (! $record) {
-            return;
-        }
-
-        // Stack on top of an already-open modal instead of replacing it
-        // (refused only at the safety depth cap).
-        if (! $this->suspendActiveActionIfOpen()) {
-            return;
-        }
-
-        $this->tableState->set('modal.action.name', $actionName);
-        $this->tableState->set('modal.action.recordKey', $recordKey);
-        $this->tableState->set('modal.action.isBulk', false);
-        $this->tableState->set('modal.action.isHeaderAction', false);
-        $this->tableState->set('modal.action.currentStep', 0);
-        $this->actionModalConfigCache = $action->getModalConfig($record);
-        $this->tableState->set('modal.action.formData', $action->getFormDefaults($record));
-        $this->actionModalFormInstance = $this->buildModalActionFormInstance($action, $record);
-        $this->tableState->set('modal.action.show', true);
-    }
-
-    /**
-     * Find an action by name (including actions inside ActionGroups)
-     */
-    protected function findAction(string $name): ?Action
-    {
-        $table = $this->getTable();
-
-        foreach ($table->getActions() as $action) {
-            // Check if it's an ActionGroup
-            if ($action instanceof ActionGroup) {
-                foreach ($action->getActions() as $groupedAction) {
-                    if ($groupedAction instanceof Action && $groupedAction->getName() === $name) {
-                        return $groupedAction;
-                    }
-                }
-            } elseif ($action instanceof Action && $action->getName() === $name) {
-                return $action;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Execute table action
-     */
-    public function executeTableAction(string $recordKey, string $actionName, bool $confirmed = false): void
-    {
-        $action = $this->findAction($actionName);
-
-        if (! $action) {
-            return;
-        }
-
-        $table = $this->getTable();
-        $record = $table->getQuery()->find($recordKey);
-
-        if (! $record || ! $action->canExecute($record)) {
-            return;
-        }
-
-        $this->executeActionPipeline($action, [
-            'record' => $record,
-            'data' => [],
-        ], $recordKey, 'row', $confirmed);
-    }
-
-    /**
-     * Invalidate cached table instance so that the next render fetches fresh data.
-     */
-    public function invalidateTable(): void
-    {
-        $this->tableInstance = null;
-        $this->cachedRecords = null;
-        $this->cachedQuery = null;
-        $this->queryService = null;
-        $this->cachedSelectedRecords = null;
-        $this->cachedGroupPartitions = null;
-
-        event(new TableRefreshed(static::class));
-    }
-
-    /**
-     * Send a notification through the resolved notification driver.
-     */
-    public function sendNotification(Notification $notification): void
-    {
-        $driver = $this->getTable()->getNotificationDriver();
-
-        NotificationManager::send($notification, $driver);
-    }
-
-    /**
-     * Open bulk action modal
-     */
-    public function openBulkActionModal(string $actionName): void
-    {
-        $action = $this->findBulkAction($actionName);
-
-        if (! $action || ! $action->hasModal()) {
-            // No modal, execute directly
-            $this->executeBulkAction($actionName);
-
-            return;
-        }
-
-        // Get selected records for dynamic form fields/defaults
-        $selectedRecords = $this->getSelectedRecords();
-
-        // Stack on top of an already-open modal instead of replacing it
-        // (refused only at the safety depth cap).
-        if (! $this->suspendActiveActionIfOpen()) {
-            return;
-        }
-
-        $this->tableState->set('modal.action.name', $actionName);
-        $this->tableState->set('modal.action.recordKey', null);
-        $this->tableState->set('modal.action.isBulk', true);
-        $this->tableState->set('modal.action.isHeaderAction', false);
-        $this->tableState->set('modal.action.currentStep', 0);
-        $this->actionModalConfigCache = $action->getModalConfig($selectedRecords);
-        $this->tableState->set('modal.action.formData', $action->getFormDefaults($selectedRecords));
-        $this->actionModalFormInstance = $this->buildModalActionFormInstance($action, $selectedRecords);
-        $this->tableState->set('modal.action.show', true);
-    }
-
-    /**
-     * Find a bulk action by name
-     */
-    protected function findBulkAction(string $name): ?BulkAction
-    {
-        $table = $this->getTable();
-
-        foreach ($table->getBulkActions() as $action) {
-            if ($action->getName() === $name) {
-                return $action;
-            }
-        }
-
-        return null;
-    }
-
-    // ==========================================
-    // Modal System
-    // ==========================================
-
-    /**
-     * Execute bulk action
-     */
-    public function executeBulkAction(string $actionName, bool $confirmed = false): void
-    {
-        $action = $this->findBulkAction($actionName);
-
-        if (! $action || ! $action->canExecute()) {
-            return;
-        }
-
-        $selectedKeys = $this->getSelectedRecordKeys();
-
-        if (empty($selectedKeys)) {
-            return;
-        }
-
-        $table = $this->getTable();
-        $records = $table->getQuery()->whereIn($table->getPrimaryKey(), $selectedKeys)->get();
-
-        $this->executeActionPipeline($action, [
-            'records' => $records,
-            'data' => [],
-        ], '__bulk__', 'bulk', $confirmed);
-    }
-
-    /**
-     * Submit action modal (execute action with form data)
-     */
-    public function submitActionModal(): void
-    {
-        $isHeaderAction = (bool) $this->tableState->get('modal.action.isHeaderAction');
-        $isBulkAction = (bool) $this->tableState->get('modal.action.isBulk');
-        $actionName = $this->tableState->get('modal.action.name');
-        $recordKey = $this->tableState->get('modal.action.recordKey');
-        $formData = $this->tableState->get('modal.action.formData', []);
-
-        if (! $actionName) {
-            $this->closeActionModal();
-
-            return;
-        }
-
-        $action = match (true) {
-            $isHeaderAction => $this->findHeaderAction($actionName),
-            $isBulkAction => $this->findBulkAction($actionName),
-            default => $this->findAction($actionName),
-        };
-
-        if (! $action) {
-            $this->closeActionModal();
-
-            return;
-        }
-
-        $context = $isBulkAction ? ($this->getSelectedRecords()) : ($recordKey ? $this->getRecord($recordKey) : null);
-
-        if ($action->hasMultipleSteps()) {
-            // Validate every step's schema and rules against the shared form data
-            // before executing. afterValidation hooks already ran while stepping
-            // forward, so they are skipped here to avoid firing twice.
-            for ($step = 0; $step < $action->getStepCount(); $step++) {
-                $this->validateModalStep($action, $context, $step, runAfterValidation: false);
-            }
-        } else {
-            // Re-resolve Form instance (not serialized between Livewire requests)
-            if ($this->actionModalFormInstance === null) {
-                $this->actionModalFormInstance = $action->getFormInstance($this, $context);
-            }
-
-            // Validate via Form instance
-            if ($this->actionModalFormInstance !== null) {
-                $this->actionModalFormInstance->validate();
-            }
-        }
-
-        $depthBefore = $this->suspendedActionCount();
-
-        // Execute action
-        if ($isHeaderAction) {
-            $this->executeHeaderActionWithData($actionName, $formData);
-        } elseif ($isBulkAction) {
-            $this->executeBulkActionWithData($actionName, $formData);
-        } else {
-            $this->executeTableActionWithData(
-                $recordKey,
-                $actionName,
-                $formData,
-            );
-        }
-
-        // If the action opened a nested modal, keep it open instead of closing.
-        if ($this->suspendedActionCount() <= $depthBefore) {
-            $this->closeActionModal();
-        }
-    }
-
-    /**
-     * Close action modal. When a parent modal is stacked behind it, the parent is
-     * resumed into the active slot instead of clearing (modal stacking).
-     */
-    public function closeActionModal(): void
-    {
-        if ($this->resumeSuspendedAction()) {
-            return;
-        }
-
-        $this->tableState->set('modal.action.show', false);
-        $this->tableState->set('modal.action.name', null);
-        $this->tableState->set('modal.action.recordKey', null);
-        $this->tableState->set('modal.action.isBulk', false);
-        $this->tableState->set('modal.action.isHeaderAction', false);
-        $this->tableState->set('modal.action.formData', []);
-        $this->tableState->set('modal.action.currentStep', 0);
-        $this->actionModalFormInstance = null;
-        $this->actionModalInfolistInstance = null;
-        $this->actionModalConfigCache = [];
-
-        // Invalidate table cache so next render fetches fresh data
-        $this->invalidateTable();
-    }
-
-    /**
-     * The shared engine closes a mounted action via closeMountedAction(); route
-     * it to the table's full teardown (which also invalidates the table cache).
-     */
-    protected function closeMountedAction(): void
-    {
-        $this->closeActionModal();
-    }
-
-    // ==========================================
-    // Modal stacking seams (StateContainer-backed)
-    // ==========================================
-
-    protected function suspendCurrentAction(): void
-    {
-        $stack = $this->tableState->get('modal.suspended', []);
-        $stack = is_array($stack) ? $stack : [];
-
-        $stack[] = [
-            'name' => $this->tableState->get('modal.action.name'),
-            'recordKey' => $this->tableState->get('modal.action.recordKey'),
-            'isBulk' => $this->tableState->get('modal.action.isBulk'),
-            'isHeaderAction' => $this->tableState->get('modal.action.isHeaderAction'),
-            'currentStep' => $this->tableState->get('modal.action.currentStep', 0),
-            'formData' => $this->tableState->get('modal.action.formData', []),
-        ];
-
-        $this->tableState->set('modal.suspended', $stack);
-
-        // The incoming action re-resolves its own form/infolist instances.
-        $this->actionModalFormInstance = null;
-        $this->actionModalInfolistInstance = null;
-        $this->actionModalConfigCache = [];
-    }
-
-    protected function resumeSuspendedAction(): bool
-    {
-        $stack = $this->tableState->get('modal.suspended', []);
-        $stack = is_array($stack) ? $stack : [];
-
-        if ($stack === []) {
-            return false;
-        }
-
-        $frame = array_pop($stack);
-        $this->tableState->set('modal.suspended', $stack);
-
-        $this->tableState->set('modal.action.name', $frame['name'] ?? null);
-        $this->tableState->set('modal.action.recordKey', $frame['recordKey'] ?? null);
-        $this->tableState->set('modal.action.isBulk', $frame['isBulk'] ?? false);
-        $this->tableState->set('modal.action.isHeaderAction', $frame['isHeaderAction'] ?? false);
-        $this->tableState->set('modal.action.currentStep', $frame['currentStep'] ?? 0);
-        $this->tableState->set('modal.action.formData', $frame['formData'] ?? []);
-        $this->tableState->set('modal.action.show', true);
-
-        // Force the resumed parent to re-resolve its form/infolist/config.
-        $this->actionModalFormInstance = null;
-        $this->actionModalInfolistInstance = null;
-        $this->actionModalConfigCache = [];
-
-        // Fetch fresh data for the resumed parent.
-        $this->invalidateTable();
-
-        return true;
-    }
-
-    protected function suspendedActionCount(): int
-    {
-        $stack = $this->tableState->get('modal.suspended', []);
-
-        return is_array($stack) ? count($stack) : 0;
-    }
-
-    /**
-     * @return array<int, array<string, mixed>>
-     */
-    public function getSuspendedActionModals(): array
-    {
-        $modals = [];
-
-        $stack = $this->tableState->get('modal.suspended', []);
-        $stack = is_array($stack) ? $stack : [];
-
-        foreach ($stack as $frame) {
-            $name = $frame['name'] ?? null;
-
-            if (! $name) {
-                continue;
-            }
-
-            $isBulk = (bool) ($frame['isBulk'] ?? false);
-            $isHeader = (bool) ($frame['isHeaderAction'] ?? false);
-
-            $action = match (true) {
-                $isHeader => $this->findHeaderAction((string) $name),
-                $isBulk => $this->findBulkAction((string) $name),
-                default => $this->findAction((string) $name),
-            };
-
-            if ($action === null) {
-                continue;
-            }
-
-            $context = match (true) {
-                $isBulk => $this->getSelectedRecords(),
-                $isHeader => null,
-                default => ($frame['recordKey'] ?? null) !== null ? $this->getRecord($frame['recordKey']) : null,
-            };
-
-            $modals[] = $action->getModalConfig($context);
-        }
-
-        return $modals;
-    }
-
-    /**
-     * Find header action by name
-     */
-    protected function findHeaderAction(string $actionName): ?HeaderAction
-    {
-        $table = $this->getTable();
-
-        foreach ($table->getHeaderActions() as $action) {
-            if ($action->getName() === $actionName) {
-                return $action;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Get a single record by its primary key
-     */
-    public function getRecord(mixed $key): ?object
-    {
-        if ($key === null) {
-            return null;
-        }
-
-        $table = $this->getTable();
-
-        return $table->getQuery()->where($table->getPrimaryKey(), $key)->first();
-    }
-
-    // ==========================================
-    // Legacy Confirmation Modal (Backwards Compatibility)
-    // ==========================================
-
-    /**
-     * Execute header action with form data
-     */
-    public function executeHeaderActionWithData(string $actionName, array $data = [], bool $confirmed = false): void
-    {
-        $action = $this->findHeaderAction($actionName);
-
-        if (! $action || ! $action->canExecute()) {
-            return;
-        }
-
-        $this->executeActionPipeline($action, [
-            'data' => $data,
-        ], '__header__', 'header', $confirmed);
-    }
-
-    /**
-     * Execute bulk action with form data
-     */
-    public function executeBulkActionWithData(string $actionName, array $data = [], bool $confirmed = false): void
-    {
-        $action = $this->findBulkAction($actionName);
-
-        if (! $action || ! $action->canExecute()) {
-            return;
-        }
-
-        $selectedKeys = $this->getSelectedRecordKeys();
-
-        if (empty($selectedKeys)) {
-            return;
-        }
-
-        $table = $this->getTable();
-        $records = $table->getQuery()->whereIn($table->getPrimaryKey(), $selectedKeys)->get();
-
-        $this->executeActionPipeline($action, [
-            'records' => $records,
-            'data' => $data,
-        ], '__bulk__', 'bulk', $confirmed);
-    }
-
-    /**
-     * Execute table action with form data
-     */
-    public function executeTableActionWithData(
-        string $recordKey,
-        string $actionName,
-        array $data = [],
-        bool $confirmed = false,
-    ): void {
-        $action = $this->findAction($actionName);
-
-        if (! $action) {
-            return;
-        }
-
-        $table = $this->getTable();
-        $record = $table->getQuery()->where($table->getPrimaryKey(), $recordKey)->first();
-
-        if (! $record || ! $action->canExecute($record)) {
-            return;
-        }
-
-        $this->executeActionPipeline($action, [
-            'record' => $record,
-            'data' => $data,
-        ], $recordKey, 'row', $confirmed);
-    }
-
-    /**
-     * Resolve the action backing the currently open modal together with its
-     * record/selection context.
-     *
-     * @return array{0: Action|BulkAction|HeaderAction|null, 1: mixed}
-     */
-    protected function resolveCurrentModalAction(): array
-    {
-        $actionName = $this->tableState->get('modal.action.name');
-
-        if (! $actionName) {
-            return [null, null];
-        }
-
-        if ($this->tableState->get('modal.action.isHeaderAction')) {
-            // Header actions have no record/selection context, so expose the live
-            // form-data bag instead. This lets a multi-step wizard's later steps
-            // build their schema (and validation) from values entered earlier.
-            $formData = $this->tableState->get('modal.action.formData', []);
-
-            return [$this->findHeaderAction($actionName), is_array($formData) ? $formData : []];
-        }
-
-        if ($this->tableState->get('modal.action.isBulk')) {
-            return [$this->findBulkAction($actionName), $this->getSelectedRecords()];
-        }
-
-        $recordKey = $this->tableState->get('modal.action.recordKey');
-
-        return [$this->findAction($actionName), $recordKey ? $this->getRecord($recordKey) : null];
-    }
-
-    /**
-     * Get the resolved Infolist instance for the current action modal, if any.
-     * Re-resolves on demand since it is not serialized between Livewire requests.
-     */
-    public function getActionModalInfolistInstance(): ?Infolist
-    {
-        if ($this->actionModalInfolistInstance === null && $this->tableState->get('modal.action.show') && $this->tableState->get('modal.action.name')) {
-            $this->resolveActionModalInfolistInstance();
-        }
-
-        return $this->actionModalInfolistInstance;
-    }
-
-    /**
-     * Resolve the Infolist instance from the current action, bound to its record.
-     */
-    protected function resolveActionModalInfolistInstance(): void
-    {
-        $actionName = $this->tableState->get('modal.action.name');
-        if (! $actionName) {
-            return;
-        }
-
-        $action = null;
-        $context = null;
-        $recordKey = $this->tableState->get('modal.action.recordKey');
-
-        if ($this->tableState->get('modal.action.isHeaderAction')) {
-            $action = $this->findHeaderAction($actionName);
-        } elseif ($this->tableState->get('modal.action.isBulk')) {
-            $action = $this->findBulkAction($actionName);
-            $context = $this->getSelectedRecords();
-        } else {
-            $action = $this->findAction($actionName);
-            $context = $recordKey ? $this->getRecord($recordKey) : null;
-        }
-
-        if ($action) {
-            $this->actionModalInfolistInstance = $action->getInfolistInstance($context);
-        }
-    }
-
-    /**
-     * Regenerate modal config from action
-     */
-    protected function regenerateModalConfig(): void
-    {
-        $actionName = $this->tableState->get('modal.action.name');
-        if (! $actionName) {
-            return;
-        }
-
-        $recordKey = $this->tableState->get('modal.action.recordKey');
-
-        if ($this->tableState->get('modal.action.isHeaderAction')) {
-            $action = $this->findHeaderAction($actionName);
-            if ($action) {
-                $this->actionModalConfigCache = $action->getModalConfig();
-            }
-        } elseif ($this->tableState->get('modal.action.isBulk')) {
-            $action = $this->findBulkAction($actionName);
-            if ($action) {
-                $selectedRecords = $this->getSelectedRecords();
-                $this->actionModalConfigCache = $action->getModalConfig($selectedRecords);
-            }
-        } else {
-            $action = $this->findAction($actionName);
-            if ($action) {
-                $record = $recordKey ? $this->getRecord($recordKey) : null;
-                $this->actionModalConfigCache = $action->getModalConfig($record);
-            }
-        }
-    }
-
-    /**
-     * @deprecated Use halt modal system instead. Will be removed in v2.0.
-     */
-    public function confirmTableAction(string $recordKey, string $actionName): void
-    {
-        Deprecation::method('confirmTableAction', 'executeActionPipeline with halt');
-    }
-
-    /**
-     * @deprecated Use halt modal system instead. Will be removed in v2.0.
-     */
-    public function executeConfirmedAction(): void
-    {
-        Deprecation::method('executeConfirmedAction', 'submitHaltModal');
-    }
-
-    /**
-     * @deprecated Use halt modal system instead. Will be removed in v2.0.
-     */
-    public function closeConfirmationModal(): void
-    {
-        Deprecation::method('closeConfirmationModal', 'closeHaltModal');
-    }
-
     // ==========================================
     // Halt Modal System (Dynamic Confirmation)
     // ==========================================
@@ -2970,7 +1679,10 @@ trait WithTable
     /**
      * Open header action modal
      */
-    public function openHeaderActionModal(string $actionName): void
+    /**
+     * @param  array<string, mixed>  $arguments  Exposed to callbacks as `$arguments`.
+     */
+    public function openHeaderActionModal(string $actionName, array $arguments = []): void
     {
         $action = $this->findHeaderAction($actionName);
 
@@ -2981,21 +1693,24 @@ trait WithTable
             return;
         }
 
-        // Stack on top of an already-open modal instead of replacing it
-        // (refused only at the safety depth cap).
-        if (! $this->suspendActiveActionIfOpen()) {
+        // Stack a new live frame on top instead of replacing the current modal
+        // (refused only at the runaway safety depth cap).
+        if (! $this->canMountAnotherActionFrame()) {
             return;
         }
 
-        $this->tableState->set('modal.action.name', $actionName);
-        $this->tableState->set('modal.action.recordKey', null);
-        $this->tableState->set('modal.action.isBulk', false);
-        $this->tableState->set('modal.action.isHeaderAction', true);
-        $this->tableState->set('modal.action.currentStep', 0);
+        $this->pushActionFrame([
+            'name' => $actionName,
+            'recordKey' => null,
+            'isBulk' => false,
+            'isHeaderAction' => true,
+            'currentStep' => 0,
+            'arguments' => $arguments,
+            'data' => $action->getFormDefaults(),
+        ]);
+
         $this->actionModalConfigCache = $action->getModalConfig();
-        $this->tableState->set('modal.action.formData', $action->getFormDefaults());
         $this->actionModalFormInstance = $this->buildModalActionFormInstance($action, null);
-        $this->tableState->set('modal.action.show', true);
     }
 
     /**
@@ -3055,8 +1770,12 @@ trait WithTable
         }
 
         // ── Format & validate (before transaction — no DB writes) ──
-        if (method_exists($column, 'formatForSave')) {
-            $value = $column->formatForSave($value, null);
+        // Hold on to the state the client sent. The record-aware pass inside the
+        // transaction dehydrates from this, never from the output below.
+        $state = $value;
+
+        if ($column instanceof DehydratesState) {
+            $value = $column->dehydrateState($state, null);
         }
 
         // Pre-validate without record context (basic rules)
@@ -3083,7 +1802,7 @@ trait WithTable
 
         // ── Atomic update with optimistic locking ───────────────
         try {
-            $result = DB::transaction(function () use ($table, $column, $columnName, $recordKey, $value, $recordVersion) {
+            $result = DB::transaction(function () use ($table, $column, $columnName, $recordKey, $state, $recordVersion) {
                 // Lock the row
                 $record = $table->getQuery()
                     ->where($table->getPrimaryKey(), $recordKey)
@@ -3103,28 +1822,31 @@ trait WithTable
                 }
 
                 // ── Optimistic locking ──
-                if ($recordVersion !== null && $recordVersion !== '0' && $record->updated_at) {
-                    $currentVersion = (string) $record->updated_at->getTimestamp();
-                    if ($currentVersion !== $recordVersion) {
-                        $currentValue = $record->{$columnName};
-                        if (method_exists($column, 'formatAfterLoad')) {
-                            $currentValue = $column->formatAfterLoad($currentValue, $record);
-                        }
+                $version = app(RecordVersion::class);
 
-                        return [
-                            'success' => false,
-                            'message' => __('wire-table::messages.record_conflict'),
-                            'conflict' => true,
-                            'currentValue' => (string) ($currentValue ?? ''),
-                            'currentVersion' => $currentVersion,
-                        ];
+                if ($version->conflicts($record, $recordVersion)) {
+                    $currentValue = $record->{$columnName};
+                    if ($column instanceof HydratesState) {
+                        $currentValue = $column->hydrateState($currentValue, $record);
                     }
+
+                    return [
+                        'success' => false,
+                        'message' => __('wire-table::messages.record_conflict'),
+                        'conflict' => true,
+                        'currentValue' => (string) ($currentValue ?? ''),
+                        'currentVersion' => $version->stamp($record),
+                    ];
                 }
 
-                // ── Re-format with record context ──
-                if (method_exists($column, 'formatForSave')) {
-                    $value = $column->formatForSave($value, $record);
-                }
+                // ── Dehydrate with record context ──
+                // From the original state, not from the record-less pass above:
+                // dehydrateState() is a pure function of its arguments, which does
+                // not make it idempotent under self-composition. Feeding its own
+                // output back in would apply a beforeSave() closure twice.
+                $value = $column instanceof DehydratesState
+                    ? $column->dehydrateState($state, $record)
+                    : $state;
 
                 // ── Validate with record context ──
                 if (method_exists($column, 'validate')) {
@@ -3139,60 +1861,15 @@ trait WithTable
                 }
 
                 // ── Save ──
-                // Custom save callback
-                if (method_exists($column, 'getSaveCallback') && $column->getSaveCallback()) {
-                    call_user_func($column->getSaveCallback(), $record, $value, $column);
-                    $record->refresh();
-                    $newVersion = $record->updated_at ? (string) $record->updated_at->getTimestamp() : null;
+                $record = app(CellValueWriter::class)->write($column, $record, $columnName, $value);
 
-                    return ['success' => true, 'version' => $newVersion, 'record' => $record, 'value' => $value, 'oldValue' => $oldValue];
-                }
-
-                // Custom update callback (legacy)
-                $editableCallback = $column->getEditableCallback();
-                if ($editableCallback) {
-                    call_user_func($editableCallback, $record, $value);
-                    $record->refresh();
-                    $newVersion = $record->updated_at ? (string) $record->updated_at->getTimestamp() : null;
-
-                    return ['success' => true, 'version' => $newVersion, 'record' => $record, 'value' => $value, 'oldValue' => $oldValue];
-                }
-
-                // Pivot update
-                if ($column->isPivot()) {
-                    $attribute = $column->getRelationshipAttribute();
-                    if ($record->pivot && $attribute !== null) {
-                        $record->pivot->{$attribute} = $value;
-                        $record->pivot->save();
-                    }
-                    $record->refresh();
-                    $newVersion = $record->updated_at ? (string) $record->updated_at->getTimestamp() : null;
-
-                    return ['success' => true, 'version' => $newVersion, 'record' => $record, 'value' => $value, 'oldValue' => $oldValue];
-                }
-
-                // Relation update
-                if ($column->getRelation()) {
-                    $relation = $column->getRelation();
-                    $attribute = $column->getRelationshipAttribute();
-                    $related = data_get($record, $relation);
-                    if ($related instanceof Model && $attribute !== null) {
-                        $related->{$attribute} = $value;
-                        $related->save();
-                    }
-                    $record->refresh();
-                    $newVersion = $record->updated_at ? (string) $record->updated_at->getTimestamp() : null;
-
-                    return ['success' => true, 'version' => $newVersion, 'record' => $record, 'value' => $value, 'oldValue' => $oldValue];
-                }
-
-                // Direct update
-                $record->{$columnName} = $value;
-                $record->save();
-
-                $newVersion = $record->updated_at ? (string) $record->updated_at->getTimestamp() : null;
-
-                return ['success' => true, 'version' => $newVersion, 'record' => $record, 'value' => $value];
+                return [
+                    'success' => true,
+                    'version' => $version->stamp($record),
+                    'record' => $record,
+                    'value' => $value,
+                    'oldValue' => $oldValue,
+                ];
             });
 
             // ── Post-transaction callbacks (outside lock) ──
@@ -3254,9 +1931,10 @@ trait WithTable
             return ['valid' => false, 'errors' => [__('wire-table::messages.record_not_found')]];
         }
 
-        // Apply formatters before validation (for TextInputColumn)
-        if (method_exists($column, 'formatForSave')) {
-            $value = $column->formatForSave($value, $record);
+        // Apply the column's own dehydration before validating, so rules see the
+        // value that would actually be stored.
+        if ($column instanceof DehydratesState) {
+            $value = $column->dehydrateState($value, $record);
         }
 
         // Use column's validate method (for TextInputColumn)
@@ -3514,7 +2192,7 @@ trait WithTable
     protected function getFilteredTableQuery(): Builder
     {
         $table = $this->getTable();
-        $service = new TableQueryService;
+        $service = app(TableQueryService::class);
 
         return $this->applyGroupOrdering($service->buildQuery(
             baseQuery: $table->getQuery(),

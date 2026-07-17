@@ -32,7 +32,7 @@ CheckboxList::make('roles')
 
 Předejte třídu PHP enumu pro rozvinutí jeho case na options `value => label`. Labely pocházejí z
 `getLabel()`, když enum implementuje `Foundation\Contracts\Enum\HasLabel`, jinak se
-z názvu case udělá headline. Detaily viz [Select › Options z enumu](select.md#enum-options).
+z názvu case udělá headline. Detaily viz [Select › Options z enumu](select.md#options-z-enumu).
 
 ```php
 CheckboxList::make('permissions')->options(Permission::class)
@@ -96,4 +96,4 @@ Volání `groups()` automaticky zapne seskupený layout. Můžete také zavolat 
 | `required()` | — | Označit jako povinné |
 | `live()` | — | Spustit Livewire update při změně |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#common-field-api).
+Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

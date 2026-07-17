@@ -9,10 +9,10 @@ Vzhled si přizpůsobíte na čtyřech úrovních, od nejlehčí po nejtěžší
 
 | Úroveň | Dosah | Náročnost |
 |-------|-------|--------|
-| [Barvy](#colors) | Akcentová a neutrální paleta všude | Tailwind config |
-| [Ikony](#icons) | Výměna nebo přidání ikon globálně | `wire-core` config |
-| [Per-komponenta](#per-component-tweaks) | Jedno pole/sloupec/akce | Fluent API |
-| [Přepis pohledů](#overriding-views) | Markup libovolné komponenty | Publish + editace Blade |
+| [Barvy](#barvy) | Akcentová a neutrální paleta všude | Tailwind config |
+| [Ikony](#ikony) | Výměna nebo přidání ikon globálně | `wire-core` config |
+| [Per-komponenta](#upravy-per-komponenta) | Jedno pole/sloupec/akce | Fluent API |
+| [Přepis pohledů](#prepis-pohledu) | Markup libovolné komponenty | Publish + editace Blade |
 
 ---
 
@@ -24,7 +24,7 @@ tlačítka, focus ringy, aktivní stavy) a **`gray`** (plochy, ohraničení, tex
 `primary` je **povinná** — bez ní se interaktivní prvky vykreslí neviditelně.
 
 Definujte ji v konfiguraci Tailwindu podle
-[Začínáme → Barva primary](getting-started.md#primary-color). Stručně:
+[Začínáme → Barva primary](getting-started.md#barva-primary). Stručně:
 
 ```js
 // tailwind.config.js (Tailwind 3)
@@ -94,7 +94,7 @@ stala neprefixovaným základem:
 
 Přibalený `DefaultIconSet` je kompletní sada Heroicons solid. Kompletní API,
 model `prefix:name`, vlastní sady a přístupnost viz
-[Core → Foundation → Ikony](core/foundation.md#icons).
+[Core → Foundation → Ikony](core/foundation.md#ikony).
 
 ---
 

@@ -21,7 +21,7 @@ It owns:
 - `packages/table/src/WireTableServiceProvider.php`
 - `packages/table/src/Table.php`
 - `packages/table/src/Concerns/WithTable.php`
-- `packages/table/src/Concerns/TableQueryService.php`
+- `packages/table/src/Services/TableQueryService.php`
 - `packages/table/src/Columns/Column.php`
 - `packages/table/src/Filters/Filter.php`
 - `packages/table/src/Livewire/TableStateSynthesizer.php`
@@ -53,7 +53,7 @@ Use here for:
 - modal/open-close table behavior
 - orchestration across sub-features
 
-### `Concerns/TableQueryService.php`
+### `Services/TableQueryService.php`
 
 This is the main table-to-core query seam.
 

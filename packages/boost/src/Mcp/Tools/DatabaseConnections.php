@@ -13,7 +13,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 #[Description('List the configured database connections and their drivers, including the default connection.')]
 class DatabaseConnections extends BoostTool
 {
-    public function handle(Request $request): Response
+    protected function run(Request $request): Response
     {
         /** @var array<string, array<string, mixed>> $connections */
         $connections = (array) config('database.connections', []);

@@ -16,17 +16,22 @@ use NyonCode\WireTable\Columns\IconColumn;
 ```php
 IconColumn::make('status')
     ->icons([
-        'check-circle' => 'active',
-        'clock' => 'pending',
-        'x-circle' => 'inactive',
-        'exclamation' => 'error',
+        'active' => 'check-circle',
+        'pending' => 'clock',
+        'inactive' => 'x-circle',
+        'error' => 'exclamation',
     ])
     ->colors([
-        'success' => 'active',
-        'warning' => 'pending',
-        'danger' => ['inactive', 'error'],  // více stavů → jedna barva
+        'active' => 'success',
+        'pending' => 'warning',
+        'inactive' => 'danger',     // jeden záznam na každý stav
+        'error' => 'danger',
     ])
 ```
+
+Obě mapy jsou klíčované **stavem**. Stav, který mapa neuvádí, spadne zpět na
+vlastní `->icon()` / `->color()` sloupce — bez nastavené barvy na `gray`, bez
+nastavené ikony se ikona nezobrazí.
 
 ## Dynamické resolvování
 
@@ -65,10 +70,10 @@ IconColumn::make('rating')
 ## API IconColumn
 
 ```php
-->icons(array $map)                  // ['icon_name' => 'state_value', ...]
-->iconUsing(Closure $fn)             // fn($state) => 'icon_name'
-->colors(array $map)                 // ['color_name' => 'state_value'|['values'], ...]
-->colorUsing(Closure $fn)            // fn($state) => 'color_name'
+->icons(array $map)                  // ['state_value' => 'icon_name'|Icon, ...]
+->iconUsing(Closure $fn)             // fn($state) => 'icon_name'|Icon|null
+->colors(array $map)                 // ['state_value' => 'color_name'|Color, ...]
+->colorUsing(Closure $fn)            // fn($state) => 'color_name'|Color|null
 ->iconSize(string $size)             // 'xs', 'sm', 'md', 'lg', 'xl'
 ->boolean(string|Icon $trueIcon = 'check-circle', string|Icon $falseIcon = 'x-circle')  // zapnout boolean režim
 ->trueIcon(string|Icon|null $icon)

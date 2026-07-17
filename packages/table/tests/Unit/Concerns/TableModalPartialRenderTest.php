@@ -20,10 +20,16 @@ class ActionModalPartialRenderComponent extends Component
     {
         $this->tableState = new StateContainer([
             'modal' => [
-                'action' => ['show' => true],
+                'actions' => [['show' => true]],
+                'open' => true,
             ],
         ]);
         $this->modalData = $modalData;
+    }
+
+    public function isActionModalVisible(): bool
+    {
+        return (bool) $this->tableState->get('modal.open');
     }
 
     public function getActionModalData(): array
@@ -41,9 +47,19 @@ class ActionModalPartialRenderComponent extends Component
         return null;
     }
 
-    public function getSuspendedActionModals(): array
+    public function getActionModalFormInstanceForDepth(int $depth): null
     {
-        return [];
+        return null;
+    }
+
+    public function getMountedActionStepIndex(): int
+    {
+        return 0;
+    }
+
+    public function getMountedActionModals(): array
+    {
+        return $this->isActionModalVisible() ? [$this->modalData] : [];
     }
 
     public function closeActionModal(): void {}
@@ -112,10 +128,10 @@ it('passes close action through action modal variants', function (array $modalDa
             'actionColor' => 'primary',
         ], $modalData),
     ])
-        ->assertSeeHtml("entangle('tableState.modal.action.show')")
+        ->assertSeeHtml("entangle('tableState.modal.open')")
         ->assertSeeHtml('$wire.closeActionModal()')
         ->assertSeeHtml('wire:click="submitActionModal"')
-        ->set('tableState.modal.action.show', false)
+        ->set('tableState.modal.open', false)
         ->assertDontSeeHtml('wire:click="submitActionModal"');
 })->with([
     'confirmation' => [['isConfirmation' => true]],

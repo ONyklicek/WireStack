@@ -47,7 +47,7 @@ Toggle::make('published')
 |--------|------|-------------|
 | `onLabel(string\|Closure\|null)` | string | Label zobrazený, když je zapnuto |
 | `offLabel(string\|Closure\|null)` | string | Label zobrazený, když je vypnuto |
-| `onColor(string\|Color)` | string | Barva když zapnuto (`primary`, `success`, `warning`, `danger`, `gray`) |
+| `onColor(string\|Color)` | string | Barva když zapnuto — libovolná barva palety (viz [Colors](../../core/foundation.md#barvy)) |
 | `offColor(string\|Color)` | string | Barva když vypnuto |
 | `onIcon(string\|Icon\|null)` | string | Ikona když zapnuto |
 | `offIcon(string\|Icon\|null)` | string | Ikona když vypnuto |
@@ -57,4 +57,4 @@ Toggle::make('published')
 | `required()` | — | Označit jako povinné |
 | `live()` | — | Spustit Livewire update při změně |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#common-field-api).
+Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

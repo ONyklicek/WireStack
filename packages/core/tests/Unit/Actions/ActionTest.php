@@ -109,6 +109,61 @@ it('builds icon button render data from canonical icon button resolver', functio
         ->and($data['iconHtml'])->toContain('w-5 h-5');
 });
 
+it('builds quiet button render data (neutral at rest, color on intent)', function () {
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 1]);
+
+    $data = Action::make('edit')->quiet()->color('primary')->getRenderData($record);
+
+    expect($data['classes'])->toContain('text-gray-600')
+        ->and($data['classes'])->toContain('hover:text-primary-600')
+        ->and($data['classes'])->toContain('focus:ring-primary-500')
+        ->and($data['classes'])->not->toContain('bg-primary-600'); // no solid fill
+});
+
+it('honors ->solid() as an escape hatch under a quiet table', function () {
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 1]);
+
+    $data = Action::make('approve')->quiet()->solid()->color('success')->getRenderData($record);
+
+    // solid() wins: the filled button returns, quiet is ignored.
+    expect($data['classes'])->toContain('bg-emerald-600 text-white');
+});
+
+it('leaves outlined and icon buttons unaffected by quiet', function () {
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 1]);
+
+    $outlined = Action::make('edit')->quiet()->outlined()->color('primary')->getRenderData($record);
+    $icon = Action::make('delete')->quiet()->icon('trash')->iconButton()->color('danger')->getRenderData($record);
+
+    expect($outlined['classes'])->toContain('border border-primary-600')
+        ->and($icon['classes'])->toContain('text-red-600 hover:bg-red-50');
+});
+
+// ─── Quiet / Solid presentation ─────────────────────────────────────────────
+
+it('is not quiet or solid by default', function () {
+    $action = Action::make('test');
+    expect($action->isQuiet())->toBeFalse()
+        ->and($action->isSolid())->toBeFalse();
+});
+
+it('can be flagged quiet and solid', function () {
+    expect(Action::make('test')->quiet()->isQuiet())->toBeTrue()
+        ->and(Action::make('test')->solid()->isSolid())->toBeTrue();
+});
+
 // ─── Icon Button ────────────────────────────────────────────────────────────
 
 it('is not an icon button by default', function () {

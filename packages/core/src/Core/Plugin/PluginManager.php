@@ -8,8 +8,8 @@ use NyonCode\WireCore\Core\Plugin\Contracts\HasConfiguration;
 use NyonCode\WireCore\Core\Plugin\Contracts\HasDependencies;
 use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
 use NyonCode\WireCore\Core\Query\Contracts\QueryPipe;
+use NyonCode\WireCore\Exceptions\PluginRegistrationException;
 use ReflectionFunction;
-use RuntimeException;
 
 /**
  * Central plugin manager for the Wire ecosystem.
@@ -46,23 +46,20 @@ final class PluginManager
     /**
      * Register a plugin.
      *
-     * @throws RuntimeException If a plugin with the same ID is already registered
-     * @throws RuntimeException If a required dependency is not registered
+     * @throws PluginRegistrationException If the ID is taken or a dependency is missing
      */
     public function register(Plugin $plugin): void
     {
         $id = $plugin->getId();
 
         if (isset($this->plugins[$id])) {
-            throw new RuntimeException("Plugin '{$id}' is already registered.");
+            throw PluginRegistrationException::alreadyRegistered($id);
         }
 
         if ($plugin instanceof HasDependencies) {
             foreach ($plugin->dependencies() as $dep) {
                 if (! $this->has($dep)) {
-                    throw new RuntimeException(
-                        "Plugin '{$id}' requires '{$dep}' which is not registered."
-                    );
+                    throw PluginRegistrationException::missingDependency($id, $dep);
                 }
             }
         }

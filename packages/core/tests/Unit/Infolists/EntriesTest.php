@@ -140,6 +140,35 @@ it('maps state to icon via a map', function () {
     expect($entry->getResolvedIcon())->toBe('check');
 });
 
+it('evaluates a closure icon map against the record', function () {
+    // icons() also accepts a Closure, resolved lazily against the state.
+    $entry = IconEntry::make('status')
+        ->icons(fn () => ['draft' => 'pencil', 'published' => 'check'])
+        ->record(['status' => 'draft']);
+
+    expect($entry->getResolvedIcon())->toBe('pencil');
+});
+
+it('evaluates a closure color map against the record', function () {
+    $entry = IconEntry::make('status')
+        ->colors(fn () => ['draft' => 'warning', 'published' => 'success'])
+        ->record(['status' => 'published']);
+
+    expect($entry->getResolvedColor())->toBe('success');
+});
+
+it('renders the resolved color as a text-colour class, falling back to gray', function () {
+    $coloured = IconEntry::make('status')
+        ->colors(['draft' => 'danger'])
+        ->record(['status' => 'draft']);
+
+    $plain = IconEntry::make('status')->record(['status' => 'x']);
+
+    expect($coloured->getIconColorClass())->toContain('text-red-')
+        // No colour resolves -> the gray fallback, never an empty class.
+        ->and($plain->getIconColorClass())->toContain('text-gray-');
+});
+
 // ─── ImageEntry ──────────────────────────────────────────────────────────────
 
 it('uses absolute urls verbatim', function () {

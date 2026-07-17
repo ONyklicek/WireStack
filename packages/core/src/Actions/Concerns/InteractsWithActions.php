@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Actions\Concerns;
 
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionHalt;
+use NyonCode\WireCore\Actions\BaseAction;
 use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Actions\ModalFooterAction;
@@ -55,110 +56,285 @@ trait InteractsWithActions
     /** @var array<string, mixed> Modal config cache — not a public Livewire property */
     protected array $actionModalConfigCache = [];
 
-    // ==========================================
-    // State seams (host-provided storage)
-    // ==========================================
-
     /**
-     * Write a meta value for the currently mounted action (name, recordKey,
-     * isBulk, isHeaderAction, currentStep, show, …).
-     */
-    abstract protected function setMountedActionState(string $key, mixed $value): void;
-
-    /**
-     * Read a meta value for the currently mounted action.
-     */
-    abstract protected function getMountedActionState(string $key, mixed $default = null): mixed;
-
-    /**
-     * The live form-data bag backing the current action modal.
+     * Arguments for a modal-less action currently executing, so `$arguments` is
+     * available in its callback even though it has no frame on the stack. Modal
+     * actions read their arguments from the top frame instead.
      *
-     * @return array<string, mixed>
+     * @var array<string, mixed>
      */
-    abstract protected function getMountedActionFormData(): array;
+    protected array $currentActionArguments = [];
 
     /**
-     * Replace the whole form-data bag.
+     * Per-request counter bumped on every frame push and pop. A submit/footer
+     * path captures it before running a callback and compares afterwards: any
+     * change means the callback itself mutated the stack (opened a nested modal,
+     * closed via `$close()`, or replaced the active one via `replaceMountedAction`),
+     * so the auto-close step must stand down. Counting mutations — not comparing
+     * frame counts — is what makes a pop+push replacement (net-zero count) still
+     * read as "the callback handled the modal". Not a Livewire property, so it
+     * resets to 0 each request and only ever reflects mutations within it.
+     */
+    protected int $actionStackVersion = 0;
+
+    // ==========================================
+    // Frame state seams (host-provided, depth-addressed)
+    // ==========================================
+
+    /**
+     * Read a meta value (name, recordKey, isBulk, isHeaderAction, currentStep,
+     * show, arguments, …) for the frame at the given stack depth.
+     */
+    abstract protected function getActionFrameState(int $depth, string $key, mixed $default = null): mixed;
+
+    /**
+     * Write a meta value for the frame at the given stack depth.
+     */
+    abstract protected function setActionFrameState(int $depth, string $key, mixed $value): void;
+
+    /**
+     * Replace the whole form-data bag of the frame at the given stack depth.
      *
      * @param  array<string, mixed>  $data
      */
-    abstract protected function setMountedActionFormData(array $data): void;
+    abstract protected function setActionFrameData(int $depth, array $data): void;
 
     /**
-     * Write a single dotted value into the form-data bag.
+     * Resolve the action + record/selection context backing the frame at the
+     * given stack depth. Returns `[null, null]` when the depth is out of range.
+     *
+     * @return array{0: Action|BulkAction|HeaderAction|null, 1: mixed}
      */
-    abstract protected function setMountedActionFormDataValue(string $path, mixed $value): void;
+    abstract protected function resolveActionForFrame(int $depth): array;
 
     /**
      * Write a value into the halt-modal meta bag.
      */
     abstract protected function setHaltModalState(string $key, mixed $value): void;
 
+    // ==========================================
+    // Top-frame convenience (the active modal)
+    // ==========================================
+
     /**
-     * Resolve the action backing the currently open modal together with its
-     * record/selection context.
+     * Read a meta value for the currently mounted (top) action.
+     */
+    protected function getMountedActionState(string $key, mixed $default = null): mixed
+    {
+        return $this->getActionFrameState($this->topActionFrameIndex(), $key, $default);
+    }
+
+    /**
+     * Write a meta value for the currently mounted (top) action.
+     */
+    protected function setMountedActionState(string $key, mixed $value): void
+    {
+        $this->setActionFrameState($this->topActionFrameIndex(), $key, $value);
+    }
+
+    /**
+     * The live form-data bag backing the active modal.
+     *
+     * @return array<string, mixed>
+     */
+    protected function getMountedActionFormData(): array
+    {
+        return $this->readActionFrameData($this->topActionFrameIndex());
+    }
+
+    /**
+     * Replace the active modal's whole form-data bag.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    protected function setMountedActionFormData(array $data): void
+    {
+        $this->setActionFrameData($this->topActionFrameIndex(), $data);
+    }
+
+    /**
+     * Write a single dotted value into the active modal's form-data bag.
+     */
+    protected function setMountedActionFormDataValue(string $path, mixed $value): void
+    {
+        $this->writeActionFrameData($this->topActionFrameIndex(), $path, $value);
+    }
+
+    /**
+     * Resolve the action backing the currently open (top) modal with its context.
      *
      * @return array{0: Action|BulkAction|HeaderAction|null, 1: mixed}
      */
-    abstract protected function resolveCurrentModalAction(): array;
+    protected function resolveCurrentModalAction(): array
+    {
+        return $this->resolveActionForFrame($this->topActionFrameIndex());
+    }
 
     // ==========================================
     // Modal stacking seams (host-provided storage)
     // ==========================================
 
     /**
-     * Push the currently active action modal onto the suspended stack so a newly
-     * mounted action can stack on top of it instead of replacing it. Hosts save
-     * the active slot's meta + form-data (and record/context) and reset the
-     * non-serialized resolved instances so the incoming action re-resolves.
+     * How many action modals are currently open (0 = none). Each open modal is a
+     * live frame; the top-most (highest depth) is the interactive one.
      */
-    abstract protected function suspendCurrentAction(): void;
+    abstract protected function actionFrameCount(): int;
 
     /**
-     * Restore the most recently suspended (parent) action modal back into the
-     * active slot. Returns true when a parent was resumed, false when the
-     * suspended stack was empty (i.e. this was the last/only modal).
+     * Append a new frame on top of the stack (becomes the active modal). The
+     * frame carries its meta (name/currentStep/isBulk/…), its own form-data bag,
+     * its record/context descriptor, and any caller `arguments`.
+     *
+     * @param  array<string, mixed>  $frame
      */
-    abstract protected function resumeSuspendedAction(): bool;
+    abstract protected function pushActionFrame(array $frame): void;
 
     /**
-     * How many parent modals are currently stacked behind the active one.
+     * Remove the top frame and clear that depth's non-serialized resolved
+     * instances (form/infolist/config). When frames remain, the new top becomes
+     * the active modal (its parent naturally resumes, live). When the stack
+     * empties, the host performs a full teardown.
      */
-    abstract protected function suspendedActionCount(): int;
+    abstract protected function popActionFrame(): void;
 
     /**
-     * Resolved modal render data for every suspended (parent) modal, ordered
-     * shallowest first, so the view can draw a dimmed, inert shell behind the
-     * active modal for each stacked level.
+     * The Livewire binding base for the frame at the given stack depth
+     * (0 = bottom-most). Fields, wire:model, and validation all namespace under
+     * this path, so each level is an independently bound, reactive form.
+     *
+     * Standalone host → `mountedActions.{depth}.data`;
+     * table host → `tableState.modal.actions.{depth}.data`.
+     */
+    abstract protected function actionFrameStatePath(int $depth): string;
+
+    /**
+     * Write a dotted value into a frame's form-data bag by depth. No-op when the
+     * depth is out of range (e.g. `$setParent` at the root). Backs the
+     * `$set`/`$setParent`/`$setFrame` callback bindings that let a nested action
+     * return data into an ancestor form.
+     */
+    abstract protected function writeActionFrameData(int $depth, string $path, mixed $value): void;
+
+    /**
+     * Read a frame's form-data bag by depth. Returns an empty array when the
+     * depth is out of range.
+     *
+     * @return array<string, mixed>
+     */
+    abstract protected function readActionFrameData(int $depth): array;
+
+    /**
+     * Resolved modal render config for every open frame, ordered bottom-first, so
+     * the view can layer each live modal at its stack depth. The top-most entry
+     * is the active modal; the rest render live but click-inert behind it.
      *
      * @return array<int, array<string, mixed>>
      */
-    abstract public function getSuspendedActionModals(): array;
+    public function getMountedActionModals(): array
+    {
+        $modals = [];
+
+        // One entry per open frame, index === stack depth. A frame whose action
+        // no longer resolves (e.g. removed from the registry between requests)
+        // yields an empty config rather than being skipped, so the view keeps its
+        // depth/z-index alignment with getActionModalFormInstanceForDepth().
+        for ($depth = 0; $depth < $this->actionFrameCount(); $depth++) {
+            [$action, $context] = $this->resolveActionForFrame($depth);
+
+            $modals[] = $action === null ? [] : $action->getModalConfig($context);
+        }
+
+        return $modals;
+    }
 
     /**
-     * If an action modal is already open, suspend it before mounting another so
-     * the new action stacks on top instead of clobbering the parent. Called by
-     * every host mount path.
-     *
-     * Returns false when the caller must NOT proceed to open a modal: the stack
-     * is already at {@see ModalStack::MAX_DEPTH} (a runaway-re-entrancy guard).
-     * Returns true when nothing was open, or the open modal was suspended and the
-     * caller is free to mount the new one on top.
+     * The stack depth of the active (top-most) modal, or -1 when none is open.
      */
-    protected function suspendActiveActionIfOpen(): bool
+    protected function topActionFrameIndex(): int
     {
-        if (! $this->getMountedActionState('show')) {
-            return true;
+        return $this->actionFrameCount() - 1;
+    }
+
+    /**
+     * Guard the modal stack depth before mounting another action. Returns false
+     * when opening one more would exceed {@see ModalStack::MAX_DEPTH} (a
+     * runaway-re-entrancy guard, not a UX limit); true when the caller may mount.
+     */
+    protected function canMountAnotherActionFrame(): bool
+    {
+        return $this->actionFrameCount() < ModalStack::MAX_DEPTH;
+    }
+
+    /**
+     * Depth-first match of an action (and its inline nested actions declared via
+     * `HasModal::registerActions()`) by name. Lets a modal opened from within
+     * another resolve a nested action without it being registered at the top
+     * level. Works across every action kind (row {@see Action}, {@see HeaderAction},
+     * {@see BulkAction}) since `registerActions()` lives on the shared
+     * {@see BaseAction}; callers filter the result to
+     * the kind they expect. Shared by the standalone host's `resolveAction()` and
+     * wire-table's `findAction()`/`findHeaderAction()`/`findBulkAction()`.
+     */
+    protected function matchRegisteredAction(BaseAction $action, string $name): ?BaseAction
+    {
+        if ($action->getName() === $name) {
+            return $action;
         }
 
-        // active modal + suspended parents; opening one more must not exceed the cap.
-        if ($this->suspendedActionCount() >= ModalStack::MAX_DEPTH - 1) {
-            return false;
+        foreach ($action->getRegisteredActions() as $nested) {
+            if ($nested instanceof BaseAction) {
+                $found = $this->matchRegisteredAction($nested, $name);
+
+                if ($found !== null) {
+                    return $found;
+                }
+            }
         }
 
-        $this->suspendCurrentAction();
+        return null;
+    }
 
-        return true;
+    /**
+     * Common callback bindings injected into every action/footer callback so a
+     * nested modal can compose freely: write its own frame, an ancestor frame, or
+     * an arbitrary depth; read the parent; open more actions; or close itself.
+     *
+     * Because all frames are state of one Livewire component, any write
+     * re-renders every open modal — so a `$setParent(...)` from a child is
+     * immediately reflected in the (live, but click-inert) parent form.
+     *
+     * @return array<string, mixed>
+     */
+    protected function actionCallbackBindings(): array
+    {
+        return [
+            'set' => function (string $path, mixed $value): void {
+                $this->writeActionFrameData($this->topActionFrameIndex(), $path, $value);
+            },
+            // `$setParent` on the bottom-most (root) modal is a safe no-op: there
+            // is no parent frame, so writeActionFrameData(-1, …) writes nowhere.
+            'setParent' => function (string $path, mixed $value): void {
+                $this->writeActionFrameData($this->topActionFrameIndex() - 1, $path, $value);
+            },
+            'setFrame' => function (int $depth, string $path, mixed $value): void {
+                $this->writeActionFrameData($depth, $path, $value);
+            },
+            'parentData' => $this->readActionFrameData($this->topActionFrameIndex() - 1),
+            'arguments' => $this->getMountedActionState('arguments', $this->currentActionArguments),
+            'close' => function (): void {
+                $this->closeMountedAction();
+            },
+            // Swap the active modal for another in place (parents untouched).
+            'replace' => function (string $name, array $arguments = []): void {
+                $this->replaceMountedAction($name, $arguments);
+            },
+            // Close this modal and its parents — the whole stack, or up to (and
+            // including) the nearest ancestor with the given action name.
+            'cancelParents' => function (?string $upTo = null): void {
+                $this->cancelParentActions($upTo);
+            },
+            'component' => $this,
+        ];
     }
 
     // ==========================================
@@ -363,8 +539,9 @@ trait InteractsWithActions
             foreach ($action->getBeforeCallbacks() as $i => $beforeCallback) {
                 $wrappedBefore[] = function (ActionContext $ctx) use ($action, $beforeCallback, $i): mixed {
                     $this->invokeActionCallback($beforeCallback, array_merge(
+                        $this->actionCallbackBindings(),
                         $this->contextToPayload($ctx),
-                        ['action' => $action, 'confirmed' => false, 'component' => $this],
+                        ['action' => $action, 'confirmed' => false],
                     ));
 
                     $pendingHalt = $action->consumePendingHalt();
@@ -387,8 +564,9 @@ trait InteractsWithActions
             foreach ($action->getAfterCallbacks() as $i => $afterCallback) {
                 $wrappedAfter[] = function (ActionContext $ctx, ActionResult $result) use ($action, $afterCallback, $i): void {
                     $this->invokeActionCallback($afterCallback, array_merge(
+                        $this->actionCallbackBindings(),
                         $this->contextToPayload($ctx),
-                        ['action' => $action, 'result' => $result, 'confirmed' => $ctx->get('confirmed', false), 'component' => $this],
+                        ['action' => $action, 'result' => $result, 'confirmed' => $ctx->get('confirmed', false)],
                     ));
 
                     $pendingHalt = $action->consumePendingHalt();
@@ -410,8 +588,9 @@ trait InteractsWithActions
 
             $halt = fn () => ActionHalt::make();
             $result = $this->invokeActionCallback($callback, array_merge(
+                $this->actionCallbackBindings(),
                 $this->contextToPayload($ctx),
-                ['halt' => $halt, 'confirmed' => $ctx->get('confirmed', false), 'component' => $this],
+                ['halt' => $halt, 'confirmed' => $ctx->get('confirmed', false)],
             ));
 
             if ($result instanceof ActionHalt) {
@@ -588,30 +767,26 @@ trait InteractsWithActions
 
         $callback = $footer->getActionCallback();
 
-        // Capture stacking depth before the callback runs: a footer callback may
-        // open a nested modal (which suspends this one), and in that case we must
-        // NOT auto-close afterwards — closing would immediately pop the modal the
-        // callback just opened.
-        $depthBefore = $this->suspendedActionCount();
+        // Snapshot the stack version before the callback runs: a footer callback
+        // may open a nested modal, close itself via $close(), or replace the
+        // active one — in any of those cases the callback already settled the
+        // modal state and we must NOT auto-close on top of it.
+        $stackVersionBefore = $this->actionStackVersion;
 
         if ($callback !== null) {
             $formData = $this->getMountedActionFormData();
             $isBulk = (bool) $this->getMountedActionState('isBulk');
             $isHeader = (bool) $this->getMountedActionState('isHeaderAction');
 
-            $this->invokeActionCallback($callback, [
+            $this->invokeActionCallback($callback, array_merge($this->actionCallbackBindings(), [
                 'data' => $formData,
-                'set' => function (string $path, mixed $value): void {
-                    $this->setMountedActionFormDataValue($path, $value);
-                },
                 'context' => $context,
                 'record' => (! $isBulk && ! $isHeader) ? $context : null,
                 'records' => $isBulk ? $context : null,
-                'component' => $this,
-            ]);
+            ]));
         }
 
-        if ($footer->shouldCloseModal() && $this->suspendedActionCount() <= $depthBefore) {
+        if ($footer->shouldCloseModal() && $this->actionStackVersion === $stackVersionBefore) {
             $this->closeMountedAction();
         }
     }
@@ -633,17 +808,80 @@ trait InteractsWithActions
      */
     protected function closeMountedAction(): void
     {
-        if ($this->resumeSuspendedAction()) {
-            return;
-        }
+        // Pop the top frame. When frames remain, the new top becomes active and
+        // its parent resumes live; when the stack empties the host tears down.
+        $this->popActionFrame();
 
-        $this->setMountedActionState('show', false);
-        $this->setMountedActionState('name', null);
-        $this->setMountedActionState('currentStep', 0);
-        $this->setMountedActionFormData([]);
+        // The active-slot resolved instances are re-resolved for the new top.
         $this->actionModalInfolistInstance = null;
         $this->actionModalConfigCache = [];
     }
+
+    /**
+     * Replace the active (top) modal in place with another action: pop the
+     * current top, then mount `$name` at the same depth. Parent frames are
+     * untouched, so the new modal takes the place of the one it replaced instead
+     * of stacking on top of it — the modal equivalent of a same-slot navigation
+     * (e.g. a "back to step one" footer button, or swapping an edit modal for a
+     * confirm modal). Callable directly (wire:click) or from a callback as
+     * `$replace(name, arguments)` / `$component->replaceMountedAction(...)`.
+     *
+     * When the replaced modal was a single-record (row) action, its record is
+     * inherited unless the caller passes an explicit `record`/`recordKey`, so
+     * "replace within the same record" needs no extra wiring.
+     *
+     * @param  array<string, mixed>  $arguments
+     */
+    public function replaceMountedAction(string $name, array $arguments = []): void
+    {
+        if ($this->actionFrameCount() > 0) {
+            [, $context] = $this->resolveCurrentModalAction();
+
+            // Inherit a single record (Model) but not a bulk selection (iterable).
+            if (! array_key_exists('record', $arguments)
+                && is_object($context)
+                && ! is_iterable($context)) {
+                $arguments['record'] = $context;
+            }
+
+            $this->closeMountedAction();
+        }
+
+        $this->mountActionByName($name, $arguments);
+    }
+
+    /**
+     * Close the active modal together with its parents. With no argument the
+     * whole stack is torn down; with a name, closing walks up from the top and
+     * stops after the nearest ancestor whose action carries that name (that
+     * ancestor is closed too). Callable directly (wire:click) or from a callback
+     * as `$cancelParents(?upTo)` / `$component->cancelParentActions(...)`.
+     *
+     * Mirrors Filament's `cancelParentActions()`: a deep nested flow can abandon
+     * the whole thing (a "Cancel" that dismisses every level) or unwind back out
+     * of a named sub-flow in one call.
+     */
+    public function cancelParentActions(?string $upTo = null): void
+    {
+        while ($this->actionFrameCount() > 0) {
+            $name = $this->getMountedActionState('name');
+            $this->closeMountedAction();
+
+            if ($upTo !== null && $name === $upTo) {
+                break;
+            }
+        }
+    }
+
+    /**
+     * Mount an action by name at the top of the stack using the host's own
+     * resolution rules (row / header / bulk) and mount path. Backs
+     * {@see replaceMountedAction()}; each host implements it over its concrete
+     * open* entry points.
+     *
+     * @param  array<string, mixed>  $arguments
+     */
+    abstract protected function mountActionByName(string $name, array $arguments): void;
 
     // ==========================================
     // Modal config + infolist (both core-owned)
@@ -657,7 +895,7 @@ trait InteractsWithActions
     public function getActionModalData(): array
     {
         if (empty($this->actionModalConfigCache)
-            && $this->getMountedActionState('show')
+            && $this->isActionModalVisible()
             && $this->getMountedActionState('name')) {
             $this->regenerateModalConfig();
         }
@@ -680,12 +918,26 @@ trait InteractsWithActions
     }
 
     /**
-     * Whether an action modal is currently mounted/visible. Used by the
-     * modal-host view.
+     * Whether an action modal is currently mounted/visible. The canonical truth
+     * is the frame count: any open frame means the modal host renders. (The
+     * separate `actionModalOpen`/`modal.open` flag is only the client-side
+     * `wire:model` mirror the modal element entangles for its transition.)
      */
     public function isActionModalVisible(): bool
     {
-        return (bool) $this->getMountedActionState('show');
+        return $this->actionFrameCount() > 0;
+    }
+
+    /**
+     * How many action modal frames are open (0 = none). A cheap public read of
+     * the frame count — unlike {@see getMountedActionModals()} it does not rebuild
+     * any form/config, so it is safe to call mid-render (e.g. a field's own Blade,
+     * which already runs inside a frame's form). Used to layer a Select's
+     * create/edit-option overlay one step above the action modal it opened from.
+     */
+    public function actionStackDepth(): int
+    {
+        return $this->actionFrameCount();
     }
 
     /**
@@ -703,7 +955,7 @@ trait InteractsWithActions
     public function getActionModalInfolistInstance(): ?Infolist
     {
         if ($this->actionModalInfolistInstance === null
-            && $this->getMountedActionState('show')
+            && $this->isActionModalVisible()
             && $this->getMountedActionState('name')) {
             [$action, $context] = $this->resolveCurrentModalAction();
 

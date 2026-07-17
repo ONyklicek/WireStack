@@ -275,7 +275,7 @@ TextColumn::make('title')
 
 Dostupné agregáty: `'sum'`, `'avg'`, `'count'`, `'min'`, `'max'`, `'range'`
 
-Detaily viz [Pokročilé — Souhrn](../advanced.md#summary-footer).
+Detaily viz [Pokročilé — Souhrn](../advanced.md#souhrnna-paticka-agregaty).
 
 ### Extra HTML atributy
 

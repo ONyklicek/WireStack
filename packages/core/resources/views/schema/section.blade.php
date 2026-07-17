@@ -8,16 +8,27 @@
     $isCollapsible = $layout->isCollapsible();
     $isCollapsed = $layout->isCollapsed();
     $headerActions = $layout->getHeaderActions();
+    // aside(): heading beside the fields instead of above them. Implemented as a
+    // grid around the two blocks that already exist, so collapsing, the column
+    // grid and the header actions all keep working untouched.
+    $isAside = $layout->isAside();
 @endphp
 
 <div
         @if($isCollapsible) x-data="{ open: {{ $isCollapsed ? 'false' : 'true' }} }" @endif
-class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 {{ $layout->isCompact() ? 'p-3' : 'p-4 sm:p-6' }}"
+@class([
+    'bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700',
+    $layout->isCompact() ? 'p-3' : 'p-4 sm:p-6',
+    'md:grid md:grid-cols-3 md:gap-6' => $isAside,
+])
 >
     @if($layout->getLabel() || $layout->getDescription() || $headerActions !== [])
         <div @class([
             'flex items-start justify-between',
-            'mb-4' => !$isCollapsible || !$isCollapsed,
+            // Beside the fields the heading needs no bottom margin — the grid gap
+            // already separates them on md+, and it still stacks below that.
+            'mb-4' => (! $isCollapsible || ! $isCollapsed) && ! $isAside,
+            'mb-4 md:mb-0' => $isAside,
             'cursor-pointer' => $isCollapsible,
         ]) @if($isCollapsible) @click="open = !open" data-testid="section-toggle" role="button" :aria-expanded="open" tabindex="0" @endif>
             <div>
@@ -57,6 +68,7 @@ class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-g
             @if($isCollapsible) x-show="open" x-collapse @endif
             @class([
                 'grid gap-4',
+                'md:col-span-2' => $isAside,
                 $columnsClass,
                 'sm:grid-cols-1' => $columns === 1,
                 'sm:grid-cols-2' => $columns === 2,

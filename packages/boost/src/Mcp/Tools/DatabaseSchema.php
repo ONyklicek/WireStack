@@ -16,7 +16,7 @@ use Throwable;
 #[Description('Read the database schema: the list of tables and, for each, its columns with types and nullability. Pass a table name to inspect a single table.')]
 class DatabaseSchema extends BoostTool
 {
-    public function handle(Request $request): Response
+    protected function run(Request $request): Response
     {
         $connection = trim((string) $request->get('connection'));
         $only = trim((string) $request->get('table'));
@@ -45,7 +45,7 @@ class DatabaseSchema extends BoostTool
 
             return $this->json(['tables' => $schema]);
         } catch (Throwable $e) {
-            return $this->json(['error' => $e->getMessage()]);
+            return Response::error($e->getMessage());
         }
     }
 

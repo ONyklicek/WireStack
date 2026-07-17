@@ -128,6 +128,49 @@ function wtiComponent(): WtiComponent
     return $component;
 }
 
+/**
+ * Counts how many times its beforeSave() closure runs per updateTableCell().
+ * A non-idempotent transform (append) makes a double application visible in the
+ * stored value rather than only in the counter.
+ */
+class WtiDehydrateComponent extends Component
+{
+    use WithTable;
+
+    public static int $beforeSaveCalls = 0;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(WtiUser::class)
+            ->paginated(false)
+            ->columns([
+                TextInputColumn::make('name')
+                    ->trim()
+                    ->uppercase()
+                    ->beforeSave(function (mixed $value): mixed {
+                        static::$beforeSaveCalls++;
+
+                        return $value.'!';
+                    }),
+            ]);
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+function wtiDehydrateComponent(): WtiDehydrateComponent
+{
+    WtiDehydrateComponent::$beforeSaveCalls = 0;
+    $component = new WtiDehydrateComponent;
+    $component->mountWithTable();
+
+    return $component;
+}
+
 class WtiTsNotifyComponent extends Component
 {
     use WithTable;
@@ -344,6 +387,35 @@ it('toggles row expansion state', function () {
 });
 
 // ─── Inline cell editing ─────────────────────────────────────────
+
+// ADR 0021: the table discovers the write-path transform through the
+// DehydratesState contract. An unqualified `instanceof` against an unimported
+// interface resolves to the *host's* namespace and silently returns false — so
+// this asserts the pipeline actually ran, not merely that the save succeeded.
+it('dehydrates an edited cell through the column contract', function () {
+    $component = wtiDehydrateComponent();
+
+    expect($component->updateTableCell('1', 'name', '  carol  ')['success'])->toBeTrue();
+
+    // trim → uppercase → beforeSave('!'), applied to the stored value.
+    expect(WtiUser::find(1)->name)->toBe('CAROL!');
+});
+
+// The record-less pre-validation pass and the record-aware pass inside the
+// transaction must both dehydrate from the client's state. Composing the
+// transform with its own output would append '!' twice.
+it('dehydrates from the original state, never from its own output', function () {
+    $component = wtiDehydrateComponent();
+
+    expect($component->updateTableCell('1', 'name', '  carol  ')['success'])->toBeTrue();
+
+    expect(WtiUser::find(1)->name)->toBe('CAROL!')
+        ->and(WtiUser::find(1)->name)->not->toBe('CAROL!!');
+
+    // Called twice by design (pre-validate, then with the locked record) — the
+    // contract permits that; feeding it its own output is what it forbids.
+    expect(WtiDehydrateComponent::$beforeSaveCalls)->toBe(2);
+});
 
 it('rejects updates to unknown or non-editable columns', function () {
     expect(wtiEditableComponent()->updateTableCell('1', 'nope', 'x')['success'])->toBeFalse()

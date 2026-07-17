@@ -178,7 +178,12 @@ it('dispatches CellUpdating and CellUpdated on successful cell update', function
     });
 
     Event::assertDispatched(CellUpdated::class, function (CellUpdated $event) {
+        // oldValue was never asserted, which is how it went unnoticed that a
+        // plain attribute write — the default path — dropped it: four of the five
+        // save branches returned 'oldValue', and the direct one did not, so the
+        // event carried null for the most common edit there is.
         return $event->column === 'name'
+            && $event->oldValue === 'Alice'
             && $event->newValue === 'Alice Updated';
     });
 });

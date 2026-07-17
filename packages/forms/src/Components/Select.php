@@ -6,6 +6,7 @@ namespace NyonCode\WireForms\Components;
 
 use Closure;
 use Livewire\Component;
+use NyonCode\WireCore\Foundation\Concerns\HasNativeControl;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireForms\Concerns\HasOptions;
@@ -29,6 +30,7 @@ use NyonCode\WireForms\Forms\Form;
  */
 class Select extends Field implements ProvidesImplicitValidationRules
 {
+    use HasNativeControl;
     use HasOptions;
     use HasSheetOnMobile {
         HasSheetOnMobile::defaultSheetOnMobile as protected sheetConfigDefault;
@@ -37,8 +39,6 @@ class Select extends Field implements ProvidesImplicitValidationRules
     protected bool $searchable = false;
 
     protected bool $multiple = false;
-
-    protected bool $native = false;
 
     protected bool $preload = false;
 
@@ -74,8 +74,6 @@ class Select extends Field implements ProvidesImplicitValidationRules
 
     protected ?string $searchPrompt = null;
 
-    protected bool $allowHtml = false;
-
     /** @var array<string|int>|Closure */
     protected array|Closure $disabledOptionValues = [];
 
@@ -93,13 +91,6 @@ class Select extends Field implements ProvidesImplicitValidationRules
     public function multiple(bool $condition = true): static
     {
         $this->multiple = $condition;
-
-        return $this;
-    }
-
-    public function native(bool $condition = true): static
-    {
-        $this->native = $condition;
 
         return $this;
     }
@@ -282,13 +273,6 @@ class Select extends Field implements ProvidesImplicitValidationRules
         return $this;
     }
 
-    public function allowHtml(bool $condition = true): static
-    {
-        $this->allowHtml = $condition;
-
-        return $this;
-    }
-
     /**
      * @param  array<string|int>|Closure  $values  Option keys that should be rendered as disabled.
      */
@@ -339,11 +323,6 @@ class Select extends Field implements ProvidesImplicitValidationRules
         return $this->multiple;
     }
 
-    public function isNative(): bool
-    {
-        return $this->native;
-    }
-
     public function getMaxItems(): ?int
     {
         return $this->maxItems;
@@ -367,11 +346,6 @@ class Select extends Field implements ProvidesImplicitValidationRules
     public function getSearchPrompt(): string
     {
         return $this->searchPrompt ?? trans('wire-forms::fields.search');
-    }
-
-    public function isAllowHtml(): bool
-    {
-        return $this->allowHtml;
     }
 
     /**

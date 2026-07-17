@@ -9,6 +9,8 @@ use Workbench\App\Livewire\Previews\FieldPreview;
 use Workbench\App\Livewire\Previews\FormPreview;
 use Workbench\App\Livewire\Previews\InfolistPreview;
 use Workbench\App\Livewire\Previews\LayoutPreview;
+use Workbench\App\Livewire\Previews\ModalStackingPreview;
+use Workbench\App\Livewire\Previews\PanelPreview;
 use Workbench\App\Livewire\Previews\SortablePreview;
 use Workbench\App\Livewire\Previews\TablePreview;
 use Workbench\App\Livewire\Previews\WidgetPreview;
@@ -44,6 +46,14 @@ Route::get('/previews', function () {
             'variant' => 'overview',
         ],
         [
+            'slug' => 'table-actions-quiet',
+            'title' => 'Wire Table',
+            'label' => 'Table quiet actions',
+            'copy' => 'Quiet row actions: neutral at rest, colour on hover/focus, a solid "Approve", and a legible Delete.',
+            'component' => TablePreview::class,
+            'variant' => 'actions-quiet',
+        ],
+        [
             'slug' => 'table-selection',
             'title' => 'Wire Table',
             'label' => 'Table selection',
@@ -74,6 +84,14 @@ Route::get('/previews', function () {
             'copy' => 'Per-column header filters: text, single-select, multi-select, and boolean.',
             'component' => TablePreview::class,
             'variant' => 'column-filters',
+        ],
+        [
+            'slug' => 'table-image-gallery',
+            'title' => 'Wire Table',
+            'label' => 'Table image gallery',
+            'copy' => 'ImageColumn: a single image, an array rendered as a gallery, and a stacked one capped with a "+N" chip.',
+            'component' => TablePreview::class,
+            'variant' => 'image-gallery',
         ],
         [
             'slug' => 'table-row-color',
@@ -122,6 +140,14 @@ Route::get('/previews', function () {
             'copy' => 'Closer reorder surface focused on rows, handles, and ordering affordances.',
             'component' => SortablePreview::class,
             'variant' => 'detail',
+        ],
+        [
+            'slug' => 'actions-modal-stacking',
+            'title' => 'Wire Actions',
+            'label' => 'Nested modal stacking',
+            'copy' => 'Six live configurations of the nested-modal frame stack: create-and-select, deep $setFrame, inline registerActions, slide-over, and a stacked wizard.',
+            'component' => ModalStackingPreview::class,
+            'variant' => 'gallery',
         ],
         [
             'slug' => 'core-overview',
@@ -225,12 +251,15 @@ foreach ([
     'forms-wizard' => ['title' => 'Wire Forms Wizard', 'subtitle' => 'Standalone multi-step wizard layout.', 'component' => FormPreview::class, 'variant' => 'wizard'],
     'forms-wizard-live' => ['title' => 'Wire Forms Wizard (Live)', 'subtitle' => 'Per-step validation, dynamic steps, live select with create-option.', 'component' => FormPreview::class, 'variant' => 'wizard-live'],
     'forms-repeater' => ['title' => 'Wire Forms Repeater', 'subtitle' => 'Focused nested repeater preview.', 'component' => FormPreview::class, 'variant' => 'repeater'],
+    'forms-enum-defaults' => ['title' => 'Wire Forms Enum Defaults', 'subtitle' => 'Create-mode defaults: an enum-instance default, a clearable enum select, and a numeric default.', 'component' => FormPreview::class, 'variant' => 'enum-defaults'],
+    'forms-default-on-null' => ['title' => 'Wire Forms defaultOnNull', 'subtitle' => 'Edit mode with an all-null record: only ->defaultOnNull() fields resurrect their default; a plain default keeps the null.', 'component' => FormPreview::class, 'variant' => 'default-on-null'],
     'table-overview' => ['title' => 'Wire Table', 'subtitle' => 'Live table preview with search, filters, and actions.', 'component' => TablePreview::class, 'variant' => 'overview'],
     'table-selection' => ['title' => 'Wire Table Selection', 'subtitle' => 'Selected-record state with bulk toolbar and active filters.', 'component' => TablePreview::class, 'variant' => 'selection'],
     'table-subrows' => ['title' => 'Wire Table Sub-rows', 'subtitle' => 'Expandable invoice line items with sortable headers, row actions, and a subtotal.', 'component' => TablePreview::class, 'variant' => 'subrows'],
     'table-summary' => ['title' => 'Wire Table Summary', 'subtitle' => 'Rollup totals, a multi-aggregate footer, and the page/all scope toggle.', 'component' => TablePreview::class, 'variant' => 'summary'],
     'table-row-color' => ['title' => 'Wire Table Row Color', 'subtitle' => 'Conditional whole-row tint by record status, plus an emphasised row class.', 'component' => TablePreview::class, 'variant' => 'row-color'],
     'table-column-filters' => ['title' => 'Wire Table Column Filters', 'subtitle' => 'Per-column header filters: text, single-select, multi-select, and boolean.', 'component' => TablePreview::class, 'variant' => 'column-filters'],
+    'table-image-gallery' => ['title' => 'Wire Table Image Gallery', 'subtitle' => 'ImageColumn: single image, an array as a gallery, and a stacked one capped with a "+N" chip.', 'component' => TablePreview::class, 'variant' => 'image-gallery'],
     'table-subrows-flatten' => ['title' => 'Wire Table Flatten', 'subtitle' => 'Flatten mode rendering every child as a regular row.', 'component' => TablePreview::class, 'variant' => 'subrows-flatten'],
     'table-subrows-limit' => ['title' => 'Wire Table Show More', 'subtitle' => 'Limited child rows with the "show more" affordance.', 'component' => TablePreview::class, 'variant' => 'subrows-limit'],
     'table-subrows-filter' => ['title' => 'Wire Table Sub-row Filters', 'subtitle' => 'Per-child interactive filter bar above the sub-row table.', 'component' => TablePreview::class, 'variant' => 'subrows-filter'],
@@ -242,11 +271,13 @@ foreach ([
     'table-modal-fullscreen-mobile' => ['title' => 'Wire Table Modal · fullScreenOnMobile', 'subtitle' => 'Form modal that fills the viewport on mobile.', 'component' => TablePreview::class, 'variant' => 'modal-fullscreen-mobile'],
     'table-modal-wizard' => ['title' => 'Wire Table Wizard Modal', 'subtitle' => 'Multi-step action modal with step indicator and wizard footer.', 'component' => TablePreview::class, 'variant' => 'modal-wizard'],
     'table-modal-nested' => ['title' => 'Wire Table Nested Modal', 'subtitle' => 'A footer action stacks a second modal on top of the first.', 'component' => TablePreview::class, 'variant' => 'modal-nested'],
+    'table-actions-quiet' => ['title' => 'Wire Table Quiet Actions', 'subtitle' => 'Quiet row actions: neutral at rest, colour on hover/focus, a solid Approve, and a legible Delete.', 'component' => TablePreview::class, 'variant' => 'actions-quiet'],
     'table-actions-group' => ['title' => 'Wire Table Action Group', 'subtitle' => 'Row actions collapsed into a dropdown group.', 'component' => TablePreview::class, 'variant' => 'actions-group'],
     'table-actions-group-tablet' => ['title' => 'Wire Table Action Group · tablet', 'subtitle' => 'Action group as a sheet up to md (tablet breakpoint).', 'component' => TablePreview::class, 'variant' => 'actions-group-tablet'],
     'table-paginated' => ['title' => 'Wire Table Pagination', 'subtitle' => 'Paginated table with per-page selector and page links.', 'component' => TablePreview::class, 'variant' => 'paginated'],
     'sortable-overview' => ['title' => 'Wire Sortable', 'subtitle' => 'Full reorderable task table preview.', 'component' => SortablePreview::class, 'variant' => 'overview'],
     'sortable-detail' => ['title' => 'Wire Sortable Detail', 'subtitle' => 'Closer reorder-surface preview.', 'component' => SortablePreview::class, 'variant' => 'detail'],
+    'actions-modal-stacking' => ['title' => 'Wire Actions · Nested Modal Stacking', 'subtitle' => 'Six live configurations of the nested-modal frame stack — create-and-select ($setParent), deep $setFrame, inline registerActions, slide-over, and a stacked wizard.', 'component' => ModalStackingPreview::class, 'variant' => 'gallery'],
     'core-overview' => ['title' => 'Wire Core', 'subtitle' => 'Stats, actions, and shared primitives.', 'component' => CorePreview::class, 'variant' => 'overview'],
     'core-modal' => ['title' => 'Wire Core Modal', 'subtitle' => 'Real modal surface from the core runtime.', 'component' => CorePreview::class, 'variant' => 'modal'],
     'core-dropdown' => ['title' => 'Wire Core Dropdown', 'subtitle' => 'Generic dropdown that becomes a bottom sheet on mobile.', 'component' => CorePreview::class, 'variant' => 'dropdown'],
@@ -257,6 +288,7 @@ foreach ([
     'infolists-overview' => ['title' => 'Wire Core Infolist', 'subtitle' => 'Read-only record display with sections, a column grid, and formatted entries.', 'component' => InfolistPreview::class, 'variant' => 'overview'],
     'infolists-entries' => ['title' => 'Wire Core Infolist Entries', 'subtitle' => 'Gallery of every built-in infolist entry type bound to one record.', 'component' => InfolistPreview::class, 'variant' => 'entries'],
     'infolists-order' => ['title' => 'Wire Core Infolist Order Detail', 'subtitle' => 'A real order detail: Flex layout, badge/boolean/list entries, and header/entry/per-row actions.', 'component' => InfolistPreview::class, 'variant' => 'order'],
+    'panels-editable' => ['title' => 'Wire Core Editable Panel', 'subtitle' => 'A Model-backed record panel: toggle, select, and text edits write straight to the row with optimistic UI. Read-only email entry mixed in.', 'component' => PanelPreview::class, 'variant' => 'default'],
 ] as $slug => $screen) {
     Route::get('/previews/'.$slug, fn () => view('previews.capture', $screen));
 }

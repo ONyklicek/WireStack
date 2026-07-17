@@ -9,6 +9,7 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
+use NyonCode\WireBoost\Exceptions\UnresolvableComponentException;
 use NyonCode\WireBoost\Support\TypeCatalog;
 
 #[Name('list-component-types')]
@@ -17,15 +18,12 @@ class ListComponentTypes extends BoostTool
 {
     public function __construct(private TypeCatalog $catalog) {}
 
-    public function handle(Request $request): Response
+    protected function run(Request $request): Response
     {
         $category = (string) $request->get('category');
 
         if (! $this->catalog->has($category)) {
-            return $this->json([
-                'error' => "Unknown category [{$category}].",
-                'categories' => $this->catalog->categories(),
-            ]);
+            throw UnresolvableComponentException::unknownCategory($category, $this->catalog->categories());
         }
 
         return $this->json([

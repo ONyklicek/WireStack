@@ -9,7 +9,7 @@ use NyonCode\WireForms\Components\Select;
 > **Mobil.** Dropdown/hledací panel se otevře jako bottom sheet pod
 > nakonfigurovaným breakpointem (searchable selecty zůstanou plovoucím panelem ve výchozím stavu,
 > aby vyhledávací box zůstal použitelný). Přepište per pole pomocí `->sheetOnMobile()` /
-> `->mobileBreakpoint('md')` — viz [mobilní prezentace](../../configuration.md#mobile).
+> `->mobileBreakpoint('md')` — viz [mobilní prezentace](../../configuration.md#mobil).
 
 ## Základní použití
 
@@ -177,7 +177,7 @@ Select::make('author_id')
 ## Nativní vs vlastní
 
 Každý `Select` se ve výchozím stavu vykresluje přes vlastní combobox, takže searchable a
-non-searchable selecty sdílejí jeden design — [`searchable()`](#searchable) jen přidá
+non-searchable selecty sdílejí jeden design — [`searchable()`](#vyhledavatelne) jen přidá
 in-panel search input. Použijte `native()` pro nativní
 `<select>` element prohlížeče.
 
@@ -217,16 +217,6 @@ Select::make('tier')
     ->disabledOptions(fn () => Plan::unavailable()->pluck('id')->toArray())
 ```
 
-## HTML v options
-
-```php
-Select::make('color')
-    ->allowHtml()
-    ->options([
-        'red' => '<span class="text-red-500">Red</span>',
-    ])
-```
-
 ## Metody
 
 | Metoda | Typ | Popis |
@@ -234,14 +224,13 @@ Select::make('color')
 | `options(array\|string\|Closure)` | array | Statické, dynamické nebo enum-class options (`value => label`) |
 | `searchable()` | bool | Zapnout hledání options |
 | `multiple()` | bool | Povolit více výběrů |
-| `native()` | bool | Použít nativní `<select>` element prohlížeče |
+| `native(bool $native = true)` | bool | Použít nativní `<select>` prohlížeče místo comboboxu (výchozí: `false`) |
 | `maxItems(int\|null)` | int | Maximum vybraných položek (multi-select) |
 | `minItems(int\|null)` | int | Minimum vybraných položek (multi-select) |
 | `disabledOptions(array\|Closure)` | array | Klíče options vykreslené jako disabled |
 | `noSearchResultsMessage(string\|null)` | string | Zpráva, když hledání nic nenajde |
 | `loadingMessage(string\|null)` | string | Zpráva během načítání options |
 | `searchPrompt(string\|null)` | string | Prompt zobrazený v hledacím boxu |
-| `allowHtml()` | bool | Vykreslit labely options jako HTML |
 | `boolean()` | — | Zkratka pro Yes/No options |
 | `relationship(string, string)` | — | Načíst options z relace |
 | `getSearchResultsUsing(Closure)` | — | Remote hledání: resolvovat shody na serveru (implikuje `searchable()`) |
@@ -255,4 +244,4 @@ Select::make('color')
 | `required()` | — | Označit jako povinné |
 | `live()` | — | Spustit Livewire update při změně |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#common-field-api).
+Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

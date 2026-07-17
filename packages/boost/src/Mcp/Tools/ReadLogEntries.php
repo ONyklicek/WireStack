@@ -17,7 +17,7 @@ class ReadLogEntries extends BoostTool
 {
     use ReadsLogFile;
 
-    public function handle(Request $request): Response
+    protected function run(Request $request): Response
     {
         $limit = (int) ($request->get('entries') ?? 25);
         $lines = $this->tailLines($limit);

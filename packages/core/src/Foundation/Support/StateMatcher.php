@@ -26,4 +26,23 @@ final class StateMatcher
 
         return $current === $expected;
     }
+
+    /**
+     * A condition comparing a sibling field's live value against an expectation.
+     *
+     * `$get` is injected by {@see EvaluatesClosures} only on state-aware
+     * components; elsewhere it arrives null and the condition answers
+     * `$whenMissing`, so a surface with no state context keeps its default
+     * rather than guessing.
+     */
+    public static function condition(string $field, mixed $value, bool $whenMissing): \Closure
+    {
+        return static function (?callable $get = null) use ($field, $value, $whenMissing): bool {
+            if ($get === null) {
+                return $whenMissing;
+            }
+
+            return self::matches($get($field), $value);
+        };
+    }
 }

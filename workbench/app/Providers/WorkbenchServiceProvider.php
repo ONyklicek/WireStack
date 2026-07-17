@@ -11,6 +11,8 @@ use Workbench\App\Livewire\Previews\CorePreview;
 use Workbench\App\Livewire\Previews\FieldPreview;
 use Workbench\App\Livewire\Previews\FormPreview;
 use Workbench\App\Livewire\Previews\InfolistPreview;
+use Workbench\App\Livewire\Previews\ModalStackingPreview;
+use Workbench\App\Livewire\Previews\PanelPreview;
 use Workbench\App\Livewire\Previews\SortablePreview;
 use Workbench\App\Livewire\Previews\TablePreview;
 use Workbench\App\Livewire\Previews\WidgetPreview;
@@ -40,6 +42,8 @@ class WorkbenchServiceProvider extends ServiceProvider
             FieldPreview::class,
             FormPreview::class,
             InfolistPreview::class,
+            ModalStackingPreview::class,
+            PanelPreview::class,
             SortablePreview::class,
             TablePreview::class,
             WidgetPreview::class,

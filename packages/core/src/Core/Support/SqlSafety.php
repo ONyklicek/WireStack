@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Core\Support;
 
-use InvalidArgumentException;
+use NyonCode\WireCore\Exceptions\UnsafeSqlException;
 
 /**
  * Validates SQL identifiers and prevents injection edge cases.
@@ -34,24 +34,20 @@ final class SqlSafety
     /**
      * Validate a SQL identifier (column name, table name, alias).
      *
-     * @throws InvalidArgumentException if the identifier is not safe
+     * @throws UnsafeSqlException if the identifier is not safe
      */
     public static function assertValidIdentifier(string $identifier): void
     {
         if ($identifier === '') {
-            throw new InvalidArgumentException('SQL identifier cannot be empty.');
+            throw UnsafeSqlException::emptyIdentifier();
         }
 
         if (! preg_match(self::IDENTIFIER_PATTERN, $identifier)) {
-            throw new InvalidArgumentException(
-                "Invalid SQL identifier [{$identifier}]. Only letters, digits, underscores, and dots are allowed."
-            );
+            throw UnsafeSqlException::malformedIdentifier($identifier);
         }
 
         if (in_array(strtoupper($identifier), self::RESERVED_WORDS, true)) {
-            throw new InvalidArgumentException(
-                "SQL identifier [{$identifier}] is a reserved word and cannot be used as a bare identifier."
-            );
+            throw UnsafeSqlException::reservedIdentifier($identifier);
         }
     }
 
@@ -70,14 +66,12 @@ final class SqlSafety
     /**
      * Validate a sort direction.
      *
-     * @throws InvalidArgumentException if direction is not asc/desc
+     * @throws UnsafeSqlException if direction is not asc/desc
      */
     public static function assertValidDirection(string $direction): void
     {
         if (! in_array(strtolower($direction), ['asc', 'desc'], true)) {
-            throw new InvalidArgumentException(
-                "Invalid sort direction [{$direction}]. Must be 'asc' or 'desc'."
-            );
+            throw UnsafeSqlException::invalidDirection($direction);
         }
     }
 
@@ -115,7 +109,7 @@ final class SqlSafety
     /**
      * Validate an SQL operator.
      *
-     * @throws InvalidArgumentException if operator is not allowed
+     * @throws UnsafeSqlException if operator is not allowed
      */
     public static function assertValidOperator(string $operator): void
     {
@@ -128,16 +122,14 @@ final class SqlSafety
         ];
 
         if (! in_array(strtoupper($operator), $allowed, true)) {
-            throw new InvalidArgumentException(
-                "Invalid SQL operator [{$operator}]."
-            );
+            throw UnsafeSqlException::invalidOperator($operator);
         }
     }
 
     /**
      * Validate a qualified column reference (alias.column or just column).
      *
-     * @throws InvalidArgumentException if invalid
+     * @throws UnsafeSqlException if invalid
      */
     public static function assertValidQualifiedColumn(string $column): void
     {

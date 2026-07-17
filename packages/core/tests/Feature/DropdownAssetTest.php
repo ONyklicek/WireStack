@@ -105,7 +105,27 @@ test('the shipped bundle registers the editable-cell Alpine data', function () {
     // shared wireEditableCell factory; fails if the dist drifts from source.
     expect(file_get_contents($bundle))
         ->toContain('wireEditableCell')
-        ->toContain('updateTableCell');
+        ->toContain('updateTableCell')
+        // Sibling cells of one record sync their optimistic-lock version after a
+        // commit so editing several fields of the same record (a panel, or two
+        // cells of one table row) does not falsely conflict. Fails if the dist
+        // drifts from source.
+        ->toContain('wire-editable-committed');
+});
+
+test('the shipped bundle lifts a teleported panel above the surface that owns it', function () {
+    $bundle = WireCoreServiceProvider::ASSETS_PATH.'/wire-core-dropdown.js';
+
+    // Teleporting to <body> is what lets a panel escape an ancestor's overflow,
+    // but it also drops the panel into the ROOT stacking context, where its
+    // `z-50` class loses to a stacked action modal's ModalStack z-index (60 at
+    // depth 1) — the panel then renders behind the modal it belongs to while
+    // still reporting as visible to any DOM assertion. The bundle must resolve
+    // the trigger's own layer and pin the panel above it. Fails if the dist
+    // drifts from source (needs `npm run build:core-assets`).
+    expect(file_get_contents($bundle))
+        ->toContain('zIndex')
+        ->toContain('getComputedStyle');
 });
 
 test('the shipped bundle registers the row context-menu Alpine data', function () {

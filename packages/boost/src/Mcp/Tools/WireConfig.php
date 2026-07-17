@@ -16,7 +16,7 @@ class WireConfig extends BoostTool
 {
     private const NAMESPACES = ['wire-core', 'wire-forms', 'wire-table', 'wire-sortable', 'wire-boost'];
 
-    public function handle(Request $request): Response
+    protected function run(Request $request): Response
     {
         $key = trim((string) $request->get('key'));
 

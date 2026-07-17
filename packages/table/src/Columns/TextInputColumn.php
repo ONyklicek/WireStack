@@ -9,10 +9,12 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Validator;
 use NyonCode\WireCore\Core\Capabilities\Capability;
+use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
+use NyonCode\WireCore\Foundation\Contracts\HydratesState;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireTable\Concerns\HasView;
 
-class TextInputColumn extends Column
+class TextInputColumn extends Column implements DehydratesState, HydratesState
 {
     use HasView;
 
@@ -446,7 +448,17 @@ class TextInputColumn extends Column
         return $this;
     }
 
+    /**
+     * @deprecated Renamed to dehydrateState() when ADR 0021 gave the save path a
+     *             named seam. Kept because, unlike native(), this method works —
+     *             removing it would break real behaviour, not a fiction.
+     */
     public function formatForSave(mixed $value, ?Model $record): mixed
+    {
+        return $this->dehydrateState($value, $record);
+    }
+
+    public function dehydrateState(mixed $value, ?Model $record = null): mixed
     {
         if ($this->trim && is_string($value)) {
             $value = trim($value);
@@ -571,7 +583,15 @@ class TextInputColumn extends Column
         return $this->renderEditableCell($state, $record);
     }
 
+    /**
+     * @deprecated Renamed to hydrateState() — see formatForSave().
+     */
     public function formatAfterLoad(mixed $value, Model $record): mixed
+    {
+        return $this->hydrateState($value, $record);
+    }
+
+    public function hydrateState(mixed $value, ?Model $record = null): mixed
     {
         // Format number for display
         if ($this->decimals !== null && $value !== null && $value !== '') {

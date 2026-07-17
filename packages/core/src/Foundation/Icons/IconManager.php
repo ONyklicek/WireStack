@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Foundation\Icons;
 
-use InvalidArgumentException;
+use NyonCode\WireCore\Exceptions\IconSetRegistrationException;
 use NyonCode\WireCore\Foundation\Icons\Icon as IconEnum;
 
 /**
@@ -71,23 +71,16 @@ final class IconManager
      * Only the bundled Heroicons set is available unprefixed; registering any
      * other set without a prefix throws, keeping resolution unambiguous.
      *
-     * @throws InvalidArgumentException when the prefix is empty or reserved.
+     * @throws IconSetRegistrationException when the prefix is reserved or contains a colon.
      */
     public function registerIconSet(IconSet $iconSet, string $prefix = ''): self
     {
         if ($prefix === self::DEFAULT_PREFIX || $prefix === 'default') {
-            throw new InvalidArgumentException(
-                'Only the bundled Heroicons set is available unprefixed. Register additional '
-                .'icon sets under a unique prefix, e.g. registerIconSet($set, "lucide"), and '
-                .'reference their icons as "lucide:home".'
-            );
+            throw IconSetRegistrationException::prefixReserved();
         }
 
         if (str_contains($prefix, ':')) {
-            throw new InvalidArgumentException(
-                "Icon set prefix [{$prefix}] must not contain a colon; the colon separates "
-                .'the prefix from the icon name (e.g. "lucide:home").'
-            );
+            throw IconSetRegistrationException::prefixContainsColon($prefix);
         }
 
         $this->sets[$prefix] = $iconSet;

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Http\UploadedFile;
 use NyonCode\WireCore\Core\State\DirtyStateTracker;
 use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\State\StateHydrator;
@@ -334,7 +335,7 @@ it('leaves a file-upload object untouched instead of stringifying it to its path
     // UploadedFile is Stringable via SplFileInfo::__toString() (the pathname).
     // The serializer must NOT collapse it to that path — Livewire's own
     // file-upload dehydration needs the object.
-    $file = \Illuminate\Http\UploadedFile::fake()->image('avatar.png');
+    $file = UploadedFile::fake()->image('avatar.png');
 
     expect($serializer->serializeValue($file))->toBe($file);
 

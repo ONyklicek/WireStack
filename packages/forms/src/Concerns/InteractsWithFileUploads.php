@@ -6,6 +6,7 @@ namespace NyonCode\WireForms\Concerns;
 
 use Illuminate\Http\UploadedFile;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireForms\Components\FileUpload;
@@ -100,24 +101,51 @@ trait InteractsWithFileUploads
      * Remove a file (a stored path or a still-pending upload) from a FileUpload
      * field's state by its index in the rendered list.
      *
-     * Only removes the reference from the form state — a stored physical file is
-     * left untouched (cleanup is the application's concern); a pending upload is
-     * simply dropped and its temporary file expires on its own.
+     * Removes the reference from the form state. A stored physical file is left
+     * on disk by default (cleanup is the application's concern) unless the field
+     * opts in via {@see FileUpload::deletesFromDisk()} / {@see FileUpload::deleteUsing()},
+     * in which case it is torn down here; a pending upload is simply dropped and
+     * its temporary file expires on its own.
      */
     public function removeUploadedFile(string $statePath, int $index): void
     {
         $state = data_get($this, $statePath);
 
         if (is_array($state)) {
+            $removed = $state[$index] ?? null;
+
             unset($state[$index]);
 
             StateContainer::writeInto($this, $statePath, array_values($state));
+
+            $this->deleteRemovedStoredFile($statePath, $removed);
 
             return;
         }
 
         // Single-file field holding a bare value — any index clears it.
         StateContainer::writeInto($this, $statePath, null);
+
+        $this->deleteRemovedStoredFile($statePath, $state);
+    }
+
+    /**
+     * Physically tear down a just-removed stored file when its field opts into
+     * disk cleanup. A pending {@see TemporaryUploadedFile}
+     * or an empty slot is never a stored reference, so it is left alone — the
+     * field itself decides whether (and how) a real stored file is deleted.
+     */
+    protected function deleteRemovedStoredFile(string $statePath, mixed $removed): void
+    {
+        if (! is_string($removed) || $removed === '') {
+            return;
+        }
+
+        $field = $this->resolveFileUploadField($statePath);
+
+        if ($field instanceof FileUpload && $field->isStoredReference($removed)) {
+            $field->deleteStoredFile($removed);
+        }
     }
 
     private function containsUploadedFile(mixed $value): bool

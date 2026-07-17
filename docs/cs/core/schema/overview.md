@@ -84,4 +84,4 @@ než jen formuláře:
   používá přímo.
 - **Infolisty** znovupoužívají stejný layout slovník pro read-only detailní pohledy.
 - **Action modaly** používají [Wizard](layout/wizard.md) pro vícekrokové toky — viz
-  [Modaly → Vícekrokový wizard](../modals.md#multi-step-wizard).
+  [Modaly → Vícekrokový wizard](../modals.md#vicekrokovy-wizard).

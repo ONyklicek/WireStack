@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
 use NyonCode\WireCore\Actions\Action;
@@ -88,33 +89,33 @@ it('runs a plain action immediately on mount without opening a modal', function 
     Livewire::test(WithActionsHost::class)
         ->call('mountAction', 'greet')
         ->assertSet('log', 'greeted')
-        ->assertSet('mountedAction', []);
+        ->assertSet('mountedActions', []);
 });
 
 it('opens a modal for a form action and runs it on callMountedAction', function () {
     Livewire::test(WithActionsHost::class)
         ->call('mountAction', 'editName')
-        ->assertSet('mountedAction.show', true)
-        ->assertSet('mountedAction.name', 'editName')
-        ->set('actionModalFormData.name', 'Ada')
+        ->assertSet('actionModalOpen', true)
+        ->assertSet('mountedActions.0.name', 'editName')
+        ->set('mountedActions.0.data.name', 'Ada')
         ->call('callMountedAction')
         ->assertSet('log', 'saved:Ada')
-        ->assertSet('mountedAction', []);
+        ->assertSet('mountedActions', []);
 });
 
 it('validates the modal form before running the action', function () {
     Livewire::test(WithActionsHost::class)
         ->call('mountAction', 'editName')
-        ->set('actionModalFormData.name', '')
+        ->set('mountedActions.0.data.name', '')
         ->call('callMountedAction')
-        ->assertHasErrors('actionModalFormData.name')
+        ->assertHasErrors('mountedActions.0.data.name')
         ->assertSet('log', '');
 });
 
 it('opens a confirmation modal and runs the action only after confirming', function () {
     Livewire::test(WithActionsHost::class)
         ->call('mountAction', 'confirmDelete')
-        ->assertSet('mountedAction.show', true)
+        ->assertSet('actionModalOpen', true)
         ->assertSet('log', '')
         ->call('callMountedAction')
         ->assertSet('log', 'deleted');
@@ -144,16 +145,16 @@ it('renders the modal-host shell only while an action is mounted', function () {
 it('closes the mounted action on unmount', function () {
     Livewire::test(WithActionsHost::class)
         ->call('mountAction', 'editName')
-        ->assertSet('mountedAction.show', true)
+        ->assertSet('actionModalOpen', true)
         ->call('unmountAction')
-        ->assertSet('mountedAction', [])
-        ->assertSet('actionModalFormData', []);
+        ->assertSet('mountedActions', [])
+        ->assertSet('mountedActions', []);
 });
 
 it('runs an infolist entry action from the open action modal', function () {
     Livewire::test(WithActionsHost::class)
         ->call('mountAction', 'viewProfile')
-        ->assertSet('mountedAction.show', true)
+        ->assertSet('actionModalOpen', true)
         ->call('callInfolistAction', 'markVerified')
         ->assertSet('log', 'verified::');
 });
@@ -230,6 +231,13 @@ class WithActionsAdvancedHost extends Component
                 ])
                 ->action(fn (array $data) => $this->log = 'onboard:'.$data['first'].'-'.$data['second']),
 
+            // Record-scoped form action: mounting pushes a frame (so the record
+            // is serialized to a {class,key} descriptor) and submitting restores
+            // it for the callback across the request.
+            Action::make('editRecord')
+                ->form([TextInput::make('name')])
+                ->action(fn ($record, array $data) => $this->log = 'edited:'.$record->name.'->'.$data['name']),
+
             // Form action with a custom footer action that fills a field.
             Action::make('editWithFooter')
                 ->form([TextInput::make('name')])
@@ -273,50 +281,76 @@ it('runs a record-scoped action with the bound record', function () {
         ->assertSet('log', 'touched:Grace');
 });
 
+it('serializes a records identity into its frame and restores it on submit', function () {
+    // The record survives the Livewire round-trip as a {class, key} descriptor:
+    // describeFrameRecord() stores it on mount, resolveFrameRecord() re-queries
+    // it when the submitted callback asks for $record.
+    Schema::create('with_actions_records', function ($t) {
+        $t->id();
+        $t->string('name');
+    });
+    $record = WithActionsRecord::create(['id' => 7, 'name' => 'Grace']);
+
+    $test = Livewire::test(WithActionsAdvancedHost::class)
+        ->call('mountAction', 'editRecord', ['record' => $record]);
+
+    // The frame carries the descriptor, not the model itself.
+    expect($test->get('mountedActions.0.record'))->toBe([
+        'class' => WithActionsRecord::class,
+        'key' => 7,
+    ]);
+
+    $test->set('mountedActions.0.data.name', 'Grace H.')
+        ->call('callMountedAction')
+        ->assertSet('log', 'edited:Grace->Grace H.');
+
+    Schema::dropIfExists('with_actions_records');
+});
+
 it('steps a wizard forward and runs it on the final submit', function () {
     Livewire::test(WithActionsAdvancedHost::class)
         ->call('mountAction', 'onboard')
-        ->assertSet('mountedAction.show', true)
-        ->set('actionModalFormData.first', 'a')
+        ->assertSet('actionModalOpen', true)
+        ->set('mountedActions.0.data.first', 'a')
         ->call('nextActionModalStep')
-        ->assertSet('mountedAction.currentStep', 1)
-        ->set('actionModalFormData.second', 'b')
+        ->assertSet('mountedActions.0.currentStep', 1)
+        ->set('mountedActions.0.data.second', 'b')
         ->call('callMountedAction')
         ->assertSet('log', 'onboard:a-b')
-        ->assertSet('mountedAction', []);
+        ->assertSet('mountedActions', []);
 });
 
 it('validates the current wizard step before advancing', function () {
     Livewire::test(WithActionsAdvancedHost::class)
         ->call('mountAction', 'onboard')
         ->call('nextActionModalStep')
-        ->assertHasErrors('actionModalFormData.first')
-        ->assertSet('mountedAction.currentStep', 0);
+        ->assertHasErrors('mountedActions.0.data.first')
+        ->assertSet('mountedActions.0.currentStep', 0);
 });
 
 it('steps a wizard back without validation', function () {
     Livewire::test(WithActionsAdvancedHost::class)
         ->call('mountAction', 'onboard')
-        ->set('actionModalFormData.first', 'a')
+        ->set('mountedActions.0.data.first', 'a')
         ->call('nextActionModalStep')
-        ->assertSet('mountedAction.currentStep', 1)
+        ->assertSet('mountedActions.0.currentStep', 1)
         ->call('prevActionModalStep')
-        ->assertSet('mountedAction.currentStep', 0);
+        ->assertSet('mountedActions.0.currentStep', 0);
 });
 
 it('runs a custom modal footer action that mutates the form data', function () {
     Livewire::test(WithActionsAdvancedHost::class)
         ->call('mountAction', 'editWithFooter')
         ->call('callModalFooterAction', 'autofill')
-        ->assertSet('actionModalFormData.name', 'Auto');
+        ->assertSet('mountedActions.0.data.name', 'Auto');
 });
 
 it('dispatches a field action on the open action modal form', function () {
     Livewire::test(WithActionsAdvancedHost::class)
         ->call('mountAction', 'editWithFieldAction')
-        ->set('actionModalFormData.name', 'ada')
-        ->call('callFieldAction', 'actionModalFormData.name', 'upper')
-        ->assertSet('actionModalFormData.name', 'ADA');
+        ->set('mountedActions.0.data.name', 'ada')
+        ->call('callFieldAction', 'mountedActions.0.data.name', 'upper')
+        ->assertSet('mountedActions.0.data.name', 'ADA');
 });
 
 it('attaches a form to the halt modal of a standalone action', function () {
@@ -342,15 +376,15 @@ class WithActionsEmptyHost extends Component
 it('no-ops when mounting, submitting or stepping with no actions', function () {
     Livewire::test(WithActionsEmptyHost::class)
         ->call('mountAction', 'missing')
-        ->assertSet('mountedAction', [])
+        ->assertSet('mountedActions', [])
         ->call('callMountedAction')
-        ->assertSet('mountedAction', [])
+        ->assertSet('mountedActions', [])
         ->call('callModalFooterAction', 'whatever')
-        ->assertSet('mountedAction', [])
+        ->assertSet('mountedActions', [])
         ->call('nextActionModalStep')
         ->call('prevActionModalStep')
         ->call('unmountAction')
-        ->assertSet('mountedAction', []);
+        ->assertSet('mountedActions', []);
 });
 
 class WithActionsToggleHost extends Component
@@ -391,17 +425,17 @@ class WithActionsToggleHost extends Component
 it('unmounts when the mounted action vanishes from the registry before submit', function () {
     Livewire::test(WithActionsToggleHost::class)
         ->call('mountAction', 'vanishes')
-        ->assertSet('mountedAction.show', true)
+        ->assertSet('actionModalOpen', true)
         ->set('available', false)
         ->call('callMountedAction')
         ->assertSet('log', '')
-        ->assertSet('mountedAction', []);
+        ->assertSet('mountedActions', []);
 });
 
 it('does not run an action that became hidden before submit', function () {
     Livewire::test(WithActionsToggleHost::class)
         ->call('mountAction', 'hidesLater')
-        ->assertSet('mountedAction.show', true)
+        ->assertSet('actionModalOpen', true)
         ->set('available', false)
         ->call('callMountedAction')
         ->assertSet('log', '');

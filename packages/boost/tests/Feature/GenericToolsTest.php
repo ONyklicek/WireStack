@@ -41,16 +41,18 @@ it('reads the database schema', function () {
         ->assertOk()
         ->assertSee('widgets');
 
+    // A connection that does not exist is a failure, and must report as one:
+    // an error smuggled into a success payload leaves the agent unable to tell
+    // "no tables" from "could not look".
     WireBoostServer::tool(DatabaseSchema::class, ['connection' => 'bogus'])
-        ->assertOk()
-        ->assertSee('error');
+        ->assertHasErrors();
 });
 
 it('guards the database-query tool behind a config flag', function () {
     config()->set('wire-boost.tools.database_query', false);
 
     WireBoostServer::tool(DatabaseQuery::class, ['query' => 'select 1'])
-        ->assertOk()
+        ->assertHasErrors()
         ->assertSee('disabled');
 });
 
@@ -69,15 +71,16 @@ it('blocks write queries', function () {
     config()->set('wire-boost.tools.database_query', true);
 
     WireBoostServer::tool(DatabaseQuery::class, ['query' => 'delete from widgets'])
-        ->assertOk()
+        ->assertHasErrors()
         ->assertSee('read-only');
 
     WireBoostServer::tool(DatabaseQuery::class, ['query' => 'with t as (select 1) delete from widgets'])
-        ->assertOk()
+        ->assertHasErrors()
         ->assertSee('read-only');
 
+    // A query against a table that is not there failed; saying so is the answer.
     WireBoostServer::tool(DatabaseQuery::class, ['query' => 'select * from nope_missing'])
-        ->assertOk();
+        ->assertHasErrors();
 });
 
 it('converts a relative path to an absolute url', function () {
@@ -145,7 +148,7 @@ it('guards the tinker tool behind a config flag', function () {
     config()->set('wire-boost.tools.tinker', false);
 
     WireBoostServer::tool(Tinker::class, ['code' => '1 + 1'])
-        ->assertOk()
+        ->assertHasErrors()
         ->assertSee('disabled');
 });
 
@@ -177,18 +180,17 @@ it('rejects empty or invalid tinker code', function () {
     config()->set('wire-boost.tools.tinker', true);
 
     WireBoostServer::tool(Tinker::class, ['code' => '  '])
-        ->assertOk()
+        ->assertHasErrors()
         ->assertSee('No code');
 
     WireBoostServer::tool(Tinker::class, ['code' => 'this is not valid php $$'])
-        ->assertOk()
-        ->assertSee('error');
+        ->assertHasErrors();
 });
 
 it('reads browser logs', function () {
     config()->set('wire-boost.tools.browser_logs', false);
     WireBoostServer::tool(BrowserLogs::class)
-        ->assertOk()
+        ->assertHasErrors()
         ->assertSee('disabled');
 
     config()->set('wire-boost.tools.browser_logs', true);

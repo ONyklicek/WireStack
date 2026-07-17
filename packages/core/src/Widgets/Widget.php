@@ -6,9 +6,11 @@ namespace NyonCode\WireCore\Widgets;
 
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Contracts\View\View;
+use NyonCode\WireCore\Foundation\Concerns\CanBeDisabled;
 use NyonCode\WireCore\Foundation\Concerns\HasColumnSpan;
 use NyonCode\WireCore\Foundation\Concerns\HasExtraAttributes;
 use NyonCode\WireCore\Foundation\Concerns\HasVisibility;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithStateConditions;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 use NyonCode\WireCore\Widgets\Concerns\HasPolling;
 
@@ -19,11 +21,13 @@ use NyonCode\WireCore\Widgets\Concerns\HasPolling;
  */
 abstract class Widget implements Htmlable
 {
+    use CanBeDisabled;
     use EvaluatesClosures;
     use HasColumnSpan;
     use HasExtraAttributes;
     use HasPolling;
     use HasVisibility;
+    use InteractsWithStateConditions;
 
     protected ?string $heading = null;
 

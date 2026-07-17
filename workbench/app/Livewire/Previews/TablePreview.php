@@ -19,6 +19,7 @@ use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Components\Toggle;
 use NyonCode\WireTable\Columns\BadgeColumn;
 use NyonCode\WireTable\Columns\BooleanColumn;
+use NyonCode\WireTable\Columns\ImageColumn;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Filters\SelectFilter;
@@ -75,9 +76,9 @@ class TablePreview extends Component
 
         if (in_array($this->variant, self::MODAL_VARIANTS, true)) {
             // booted() runs on every request; only open the modal once, or a
-            // stacked/nested modal would be re-suspended and its form reset on
-            // each roundtrip.
-            if (! $this->tableState->get('modal.action.show') && $this->suspendedActionCount() === 0) {
+            // stacked/nested modal would be re-opened and its form reset on each
+            // roundtrip. No open frames = nothing mounted yet.
+            if ($this->actionFrameCount() === 0) {
                 $this->openHeaderActionModal('invite');
             }
 
@@ -106,6 +107,10 @@ class TablePreview extends Component
 
         if ($this->variant === 'column-filters') {
             return $this->columnFiltersTable($table);
+        }
+
+        if ($this->variant === 'image-gallery') {
+            return $this->imageGalleryTable($table);
         }
 
         $table = $this->usersTable($table);
@@ -259,6 +264,43 @@ class TablePreview extends Component
     /**
      * Original users table (overview + selection variants).
      */
+    /**
+     * ImageColumn gallery: an array state renders every image, stacked ones
+     * overlap and a stackLimit summarises the rest as a "+N" chip.
+     */
+    private function imageGalleryTable(Table $table): Table
+    {
+        // Deterministic, dependency-free avatars — an <svg> data URI, so the
+        // preview never waits on (or is broken by) a remote image host.
+        $avatar = static fn (string $hue): string => 'data:image/svg+xml;utf8,'.rawurlencode(
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="'.$hue.'"/></svg>'
+        );
+
+        $palette = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#a855f7'];
+
+        return $table
+            ->model(User::class)
+            ->columns([
+                TextColumn::make('name')->label('Name'),
+                ImageColumn::make('single')
+                    ->label('Single')
+                    ->circular()
+                    ->state(fn ($record) => $avatar($palette[0])),
+                ImageColumn::make('gallery')
+                    ->label('Gallery')
+                    ->state(fn ($record) => array_map($avatar, array_slice($palette, 0, 3))),
+                ImageColumn::make('team')
+                    ->label('Stacked (limit 3)')
+                    ->circular()
+                    ->stacked()
+                    ->stackLimit(3)
+                    // 6 avatars against a limit of 3 => three images plus "+3".
+                    ->state(fn ($record) => array_map($avatar, $palette)),
+            ])
+            ->searchable(false)
+            ->paginated(false);
+    }
+
     private function usersTable(Table $table): Table
     {
         return $table
@@ -287,19 +329,30 @@ class TablePreview extends Component
                         'viewer' => 'Viewer',
                     ]),
             ])
-            ->actions($this->variant === 'actions-group'
-                ? [
+            ->actions(match ($this->variant) {
+                'actions-group' => [
                     ActionGroup::make([
                         Action::make('view')->label('View')->icon('outline:eye'),
                         Action::make('edit')->label('Edit')->icon('pencil')->color('primary'),
                         Action::make('duplicate')->label('Duplicate')->icon('outline:document-duplicate'),
                         DeleteAction::make(),
                     ]),
-                ]
-                : [
+                ],
+                // Quiet row actions: neutral at rest, colour on hover/focus. The
+                // green "Approve" uses ->solid() to stay prominent despite the
+                // quiet table; Delete stays legible red at rest.
+                'actions-quiet' => [
+                    Action::make('view')->label('View')->icon('outline:eye'),
+                    Action::make('edit')->label('Edit')->icon('pencil')->color('primary'),
+                    Action::make('approve')->label('Approve')->icon('check')->color('success')->solid(),
+                    DeleteAction::make(),
+                ],
+                default => [
                     Action::make('edit')->label(fn ($r) => "Edit $r->name")->icon('pencil')->color('primary'),
                     DeleteAction::make(),
-                ])
+                ],
+            })
+            ->actionsStyle($this->variant === 'actions-quiet' ? 'quiet' : 'solid')
             ->bulkActions([
                 BulkAction::make('activate')->label('Activate')->icon('check')->color('success'),
                 BulkAction::make('export')->label('Export selected')->icon('outline:arrow-down-tray')->color('gray'),

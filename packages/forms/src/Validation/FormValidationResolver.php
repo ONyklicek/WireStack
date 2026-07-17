@@ -9,6 +9,7 @@ use NyonCode\WireCore\Core\Validation\ValidationResult;
 use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Contracts\HasValidation;
+use NyonCode\WireForms\Contracts\ProvidesItemValidationRules;
 
 /**
  * Collects validation rules from form field components and produces
@@ -69,6 +70,17 @@ final class FormValidationResolver
             $key = $this->resolveKey($component);
             $componentRules = $component->getValidationRules();
             $rules[$key] = ! empty($componentRules) ? $componentRules : ['nullable'];
+
+            // A list field's own rules describe the list; these describe one item
+            // and mount at the wildcard path, because `max:` cannot mean both a
+            // count and a file size at once.
+            if ($component instanceof ProvidesItemValidationRules) {
+                $itemRules = $component->itemValidationRules();
+
+                if ($itemRules !== []) {
+                    $rules["{$key}.*"] = $itemRules;
+                }
+            }
         }
 
         // Repeaters: container rules at the repeater path, child rules at the

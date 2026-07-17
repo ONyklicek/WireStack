@@ -48,8 +48,6 @@ class Radio extends Field implements ProvidesImplicitValidationRules
 
     protected bool $inline = false;
 
-    protected bool $boolean = false;
-
     /** Accent color of the selected option across every variant. */
     protected string $color = 'primary';
 
@@ -141,10 +139,16 @@ class Radio extends Field implements ProvidesImplicitValidationRules
         return $this;
     }
 
+    /**
+     * Shorthand for a Yes/No radio group.
+     *
+     * Also wrote a $boolean flag until 2026-07-15 that only its own getter read.
+     * Nothing needs it: the options below *are* the boolean-ness, and a flag
+     * driving getStateType() would make the state a bool on load and a string
+     * after a click — worse than not having it.
+     */
     public function boolean(bool $condition = true): static
     {
-        $this->boolean = $condition;
-
         if ($condition) {
             $this->options([
                 true => trans('wire-forms::fields.yes'),
@@ -304,11 +308,6 @@ class Radio extends Field implements ProvidesImplicitValidationRules
     public function isInline(): bool
     {
         return $this->inline;
-    }
-
-    public function isBoolean(): bool
-    {
-        return $this->boolean;
     }
 
     protected function viewName(): string

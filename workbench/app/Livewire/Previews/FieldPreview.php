@@ -248,6 +248,7 @@ class FieldPreview extends Component
             'color-picker' => ColorPicker::make('brand_color')
                 ->label('Brand color')
                 ->helperText('Used across buttons, links, and highlights.')
+                ->rgb()
                 ->swatches(['#ef4444', '#f97316', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7']),
 
             'slider' => Slider::make('volume')
@@ -284,12 +285,17 @@ class FieldPreview extends Component
             'date-time-picker' => DateTimePicker::make('event_at')
                 ->label('Event start')
                 ->helperText('Pick a date and time.')
+                ->displayFormat('j. n. Y H:i')
+                ->closeOnDateSelection()
                 ->mode('datetime'),
 
             'file-upload' => FileUpload::make('photo')
                 ->label('Cover image')
                 ->helperText('PNG or JPG up to 5 MB.')
-                ->image(),
+                ->image()
+                ->imageCropAspectRatio('16:9')
+                ->imageResizeTargetWidth(320)
+                ->cropInteractively(),
 
             default => TextInput::make('name')
                 ->label('Full name')

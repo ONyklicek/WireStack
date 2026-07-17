@@ -11,6 +11,45 @@ import { computePosition, autoUpdate, flip, shift, offset, size } from '@floatin
  */
 
 /**
+ * How far a teleported panel sits above the surface that owns its trigger.
+ * Deliberately +1, not +10: it must clear its own modal without ever reaching
+ * the next modal depth (ModalStack::Z_INDEX_STEP), so a modal opened on top of
+ * an open panel still covers it.
+ */
+const LAYER_OFFSET = 1
+
+/**
+ * The z-index a panel needs to clear the surface its `reference` lives in, or
+ * null when the trigger sits on the page itself (no explicit layer → the view's
+ * own `z-50` class is right).
+ *
+ * Teleporting to <body> is what lets a panel escape an ancestor's overflow, but
+ * it also means the panel competes in the ROOT stacking context rather than its
+ * trigger's local one — the wrapper the panel lands in is `position: static`, so
+ * it establishes no stacking context of its own. A panel inside a stacked action
+ * modal therefore renders *behind* it: the panel's `z-50` class loses to the
+ * modal's `ModalStack::zIndexForDepth()` inline z-index (60 at depth 1).
+ *
+ * Takes the OUTERMOST explicit z-index on the trigger's ancestor chain, not the
+ * nearest: the nearest match for a trigger inside a modal's sticky header would
+ * be that header's `z-10`, which would pin the panel under the modal itself.
+ * Only the root-level layer is comparable to where the panel actually lands.
+ */
+const layerAbove = (reference) => {
+    let layer = null
+
+    for (let el = reference.parentElement; el && el !== document.body; el = el.parentElement) {
+        const z = parseInt(getComputedStyle(el).zIndex, 10)
+
+        if (! Number.isNaN(z)) {
+            layer = z
+        }
+    }
+
+    return layer === null ? null : layer + LAYER_OFFSET
+}
+
+/**
  * Position `floating` next to `reference` and keep it there until cleanup.
  *
  * When `sheetOnMobile` is set the panel becomes a viewport-pinned bottom sheet
@@ -43,6 +82,14 @@ export const floatingAnchor = (reference, floating, config = {}) => {
     const naturalMax = parseFloat(getComputedStyle(floating).maxHeight)
     const cappedMax = Number.isNaN(naturalMax) ? Infinity : naturalMax
 
+    // Likewise capture the view's own layer (its `z-50` class) before any inline
+    // write, so the resolved layer below can only ever *raise* the panel. A
+    // trigger on the page can sit inside a low-z ancestor (a table's sticky
+    // toolbar at `z-10`); without this floor the panel would drop from 50 to 11
+    // and slide under unrelated page chrome.
+    const naturalZ = parseInt(getComputedStyle(floating).zIndex, 10)
+    const floorZ = Number.isNaN(naturalZ) ? -Infinity : naturalZ
+
     // `size` runs after flip/shift, so `availableHeight` is the room left on the
     // chosen side. Capping to it (with overflow) means a tall panel — a calendar,
     // a long option list — scrolls inside itself on a short (e.g. landscape phone)
@@ -66,6 +113,9 @@ export const floatingAnchor = (reference, floating, config = {}) => {
         }),
     ]
 
+    // The layer this panel must clear, resolved when it opens (see layerAbove).
+    let panelZ = null
+
     const reposition = () => {
         // A Livewire morph can detach/replace the trigger; positioning against a
         // node that is no longer in the document collapses to (0,0) and throws the
@@ -76,6 +126,12 @@ export const floatingAnchor = (reference, floating, config = {}) => {
 
         computePosition(reference, floating, { placement, middleware }).then(({ x, y }) => {
             Object.assign(floating.style, { left: `${x}px`, top: `${y}px` })
+            // Re-assert the layer here, not just on open: a morph strips the whole
+            // inline style attribute (it is absent from the server HTML), which
+            // would drop the panel back to its `z-50` class and behind its modal.
+            if (panelZ !== null) {
+                floating.style.zIndex = `${panelZ}`
+            }
         })
     }
 
@@ -89,13 +145,24 @@ export const floatingAnchor = (reference, floating, config = {}) => {
 
     const startFloating = () => {
         if (isSheet()) {
-            Object.assign(floating.style, { position: '', top: '', left: '', maxHeight: '', overflowY: '', minWidth: '' })
+            // A bottom sheet is viewport-pinned by its own `max-sm:` classes, so
+            // hand every inline style back — including the layer, which the sheet's
+            // own z-index class owns.
+            Object.assign(floating.style, { position: '', top: '', left: '', maxHeight: '', overflowY: '', minWidth: '', zIndex: '' })
+            panelZ = null
 
             return
         }
 
         // Float above any stacking context now that we live on <body>.
+        const resolved = layerAbove(reference)
+        panelZ = (resolved !== null && resolved > floorZ) ? resolved : null
         Object.assign(floating.style, { position: 'absolute', top: '0', left: '0' })
+
+        if (panelZ !== null) {
+            floating.style.zIndex = `${panelZ}`
+        }
+
         stopAutoUpdate = autoUpdate(reference, floating, reposition)
 
         // Livewire DOM morphs strip the inline left/top Floating UI writes (they
@@ -140,6 +207,32 @@ export const floatingAnchor = (reference, floating, config = {}) => {
         stopFloating()
         sheetQuery?.removeEventListener('change', onBreakpointChange)
     }
+}
+
+/**
+ * Is `target` inside `container`, following teleports?
+ *
+ * Every floating panel here is teleported to <body>, so a panel opened from
+ * inside another panel becomes a DOM *sibling* of it rather than a descendant.
+ * A plain `contains()` outside-check therefore reads a click in the inner panel
+ * as "outside" the outer one and closes it — picking an option in a select
+ * filter used to shut the whole table Filters panel before the choice applied.
+ *
+ * Walk the ancestor chain, hopping from a teleported subtree back to the
+ * `<template x-teleport>` it was cloned from (Alpine links the clone via
+ * `_x_teleportBack`), so containment follows the nesting the author wrote
+ * rather than the flattened DOM.
+ */
+const containsThroughTeleports = (container, target) => {
+    if (!container || !target) return false
+
+    let node = target
+    while (node) {
+        if (node === container) return true
+        node = node._x_teleportBack ?? node.parentElement
+    }
+
+    return false
 }
 
 /**
@@ -362,8 +455,17 @@ const wireEditableCell = (config = {}) => ({
     value: config.value,
     serverValue: config.value,
     recordVersion: config.recordVersion ?? '0',
+    // Livewire methods the cell commits/validates against. Default to the table
+    // host so existing editable columns are unchanged; other surfaces (e.g. an
+    // editable infolist) point these at their own host methods with the same
+    // (recordKey, name, value, version) contract.
+    commitMethod: config.commitMethod ?? 'updateTableCell',
+    validateMethod: config.validateMethod ?? 'validateTableCell',
     recordKey: null,
     columnName: null,
+    // Livewire component id of the host, used to scope sibling version syncing to
+    // cells of the same table row / same panel record (see below).
+    componentId: null,
     saving: false,
     error: null,
     success: false,
@@ -409,10 +511,32 @@ const wireEditableCell = (config = {}) => ({
         })
         observer.observe(this.$el, { attributes: true, attributeFilter: ['data-server-value', 'data-record-version'] })
         this._observer = observer
+
+        // Sibling version sync. Every editable cell captures the record's
+        // optimistic-lock version at render time. When one cell commits, the host
+        // skips re-rendering (to preserve Alpine state), so sibling cells bound to
+        // the SAME record keep a now-stale version and would falsely conflict on
+        // their next write — invisible in tables (one record per row) but the
+        // common case for a panel (many fields of one record). On a successful
+        // commit we broadcast the new version; siblings of the same host component
+        // and record adopt it. A genuine external change still never dispatches
+        // this event, so real cross-client conflicts are still caught.
+        this.componentId = this.$el.closest('[wire\\:id]')?.getAttribute('wire:id') ?? null
+        this._onSiblingCommit = (e) => {
+            const d = e.detail || {}
+            if (d.componentId !== this.componentId) return
+            if (String(d.recordKey) !== String(this.recordKey)) return
+            if (d.column === this.columnName) return   // that was us
+            if (this.saving) return                    // don't disturb an in-flight save
+            if (this.focused && this.dirty) return     // nor a field being edited
+            if (d.version) this.recordVersion = d.version
+        }
+        window.addEventListener('wire-editable-committed', this._onSiblingCommit)
     },
 
     destroy() {
         this._observer?.disconnect()
+        window.removeEventListener('wire-editable-committed', this._onSiblingCommit)
     },
 
     syncFromServer(next, version) {
@@ -450,7 +574,7 @@ const wireEditableCell = (config = {}) => ({
         this.saving = true
         this.error = null
         try {
-            const r = await this.$wire.updateTableCell(
+            const r = await this.$wire[this.commitMethod](
                 this.recordKey,
                 this.columnName,
                 next,
@@ -469,6 +593,19 @@ const wireEditableCell = (config = {}) => ({
                 if (r?.version) this.recordVersion = r.version
                 this.success = true
                 setTimeout(() => { this.success = false }, 1500)
+                // Tell sibling cells of the same record their optimistic-lock
+                // version just advanced, so the next field edited on the same
+                // record does not falsely conflict.
+                if (r?.version) {
+                    window.dispatchEvent(new CustomEvent('wire-editable-committed', {
+                        detail: {
+                            componentId: this.componentId,
+                            recordKey: this.recordKey,
+                            column: this.columnName,
+                            version: r.version,
+                        },
+                    }))
+                }
             }
         } catch (e) {
             this.value = this.serverValue       // rollback
@@ -480,7 +617,7 @@ const wireEditableCell = (config = {}) => ({
 
     async validate() {
         try {
-            const r = await this.$wire.validateTableCell(
+            const r = await this.$wire[this.validateMethod](
                 this.recordKey,
                 this.columnName,
                 this.value,
@@ -540,6 +677,12 @@ document.addEventListener('alpine:init', () => {
     // $float(reference, panel, config) → cleanup. For components that own their
     // open-state and want Floating UI positioning on a teleported panel.
     window.Alpine.magic('float', () => floatingAnchor)
+
+    // $clickedInside($event) → true when the event came from inside this element
+    // *or* from a panel nested in it through a teleport. Guards `@click.outside`
+    // on any panel that can host another floating panel:
+    //     @click.outside="$clickedInside($event) || close()"
+    window.Alpine.magic('clickedInside', (el) => (event) => containsThroughTeleports(el, event?.target))
 
     window.Alpine.data('wireDropdown', wireDropdown)
     window.Alpine.data('wireContextMenu', wireContextMenu)

@@ -14,6 +14,10 @@ parameters:
         # Every other concrete WithTable host (tests, workbench, wire-sortable) is
         # likewise outside the analysed paths; RelationManager is such a host base.
         - packages/table/src/RelationManagers/RelationManager.php
+        # PanelComponent is a concrete Livewire host composing WithEditablePanel;
+        # like RelationManager it depends on Livewire runtime magic and is only
+        # analysable via the trait's @phpstan-require-extends, not as a class.
+        - packages/core/src/Panels/PanelComponent.php
     scanFiles:
         - stubs/phpstan/optional-exporters.php
     ignoreErrors:
@@ -23,6 +27,7 @@ parameters:
         - { identifier: trait.unused, path: packages/core/src/Audit/Concerns/HasAuditable.php }
         - { identifier: trait.unused, path: packages/core/src/Foundation/Concerns/HasLivewire.php }
         - { identifier: trait.unused, path: packages/core/src/Infolists/Concerns/WithInfolists.php }
+        - { identifier: trait.unused, path: packages/core/src/Panels/Concerns/WithEditablePanel.php }
         - { identifier: trait.unused, path: packages/core/src/Notifications/Concerns/InteractsWithNotifications.php }
         - { identifier: trait.unused, path: packages/core/src/Widgets/Concerns/WithWidgets.php }
         - { identifier: trait.unused, path: packages/forms/src/Concerns/DispatchesStateUpdates.php }
@@ -34,5 +39,9 @@ parameters:
         - { identifier: trait.unused, path: packages/forms/src/Concerns/InteractsWithSelectCreation.php }
         - { identifier: trait.unused, path: packages/forms/src/Concerns/InteractsWithWizards.php }
         - { identifier: trait.unused, path: packages/forms/src/Forms/WithForms.php }
+        - { identifier: trait.unused, path: packages/table/src/Concerns/CanExpandSubRows.php }
+        - { identifier: trait.unused, path: packages/table/src/Concerns/InteractsWithTableActions.php }
+        - { identifier: trait.unused, path: packages/table/src/Concerns/InteractsWithTableModals.php }
+        - { identifier: trait.unused, path: packages/table/src/Concerns/CanSelectRecords.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTable.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTableQueryString.php }

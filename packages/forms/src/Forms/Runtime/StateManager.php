@@ -7,7 +7,6 @@ namespace NyonCode\WireForms\Forms\Runtime;
 use Livewire\Component;
 use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
-use UnitEnum;
 
 /**
  * Manages form state and wire:model bindings.
@@ -63,32 +62,14 @@ final class StateManager
         // A model with enum-cast attributes fills raw enum instances; collapse them to
         // their scalar key so the bound Livewire state is wire-safe and matches the
         // <option> values, while still round-tripping back to the cast on save.
-        $data = $this->normaliseEnums($data);
+        /** @var array<string, mixed> $data */
+        $data = EnumResolver::scalarDeep($data);
 
         $this->container->replaceClean($data);
 
         if ($this->livewire && $this->statePath) {
             $this->writeLivewireState($this->statePath, $data);
         }
-    }
-
-    /**
-     * Recursively reduce any enum instances in filled data to their scalar form.
-     *
-     * @param  array<string, mixed>  $data
-     * @return array<string, mixed>
-     */
-    private function normaliseEnums(array $data): array
-    {
-        foreach ($data as $key => $value) {
-            $data[$key] = match (true) {
-                is_array($value) => $this->normaliseEnums($value),
-                $value instanceof UnitEnum => EnumResolver::scalar($value),
-                default => $value,
-            };
-        }
-
-        return $data;
     }
 
     /**

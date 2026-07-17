@@ -54,13 +54,6 @@ RichEditor::make('content')
     ->disableAllToolbarButtons()   // prostý rich text, bez toolbaru
 ```
 
-## Přílohy souborů
-
-```php
-RichEditor::make('content')
-    ->fileAttachmentsDirectory('content-images')
-```
-
 ## Limit znaků
 
 ```php
@@ -75,10 +68,9 @@ RichEditor::make('summary')
 | `toolbarButtons(array)` | array | Nahradit toolbar touto sadou tlačítek |
 | `disableToolbarButtons(array)` | array | Odstranit konkrétní tlačítka z toolbaru |
 | `disableAllToolbarButtons()` | — | Nezobrazovat toolbar (prostý rich text) |
-| `fileAttachmentsDirectory(string\|null)` | string | Adresář uploadu pro vložené obrázky/soubory |
 | `maxLength(int\|null)` | int | Limit znaků |
 | `disabled(bool\|Closure)` | bool | Znepřístupnit editor |
 | `readOnly(bool\|Closure)` | bool | Read-only režim |
 | `required()` | — | Označit jako povinné |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#common-field-api).
+Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

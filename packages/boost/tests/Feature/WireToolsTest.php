@@ -60,8 +60,10 @@ it('lists component types for a category', function () {
 
 it('reports an unknown component category', function () {
     WireBoostServer::tool(ListComponentTypes::class, ['category' => 'bogus'])
-        ->assertOk()
-        ->assertSee('Unknown category');
+        ->assertHasErrors()
+        ->assertSee('Unknown category')
+        // The message names the valid categories, so the agent can recover.
+        ->assertSee('columns');
 });
 
 it('describes a component api by fully-qualified class name', function () {
@@ -78,8 +80,9 @@ it('describes a component api by short name', function () {
 
 it('reports an unresolvable component api', function () {
     WireBoostServer::tool(DescribeComponentApi::class, ['class' => 'nope'])
-        ->assertOk()
-        ->assertSee('Could not resolve');
+        ->assertHasErrors()
+        ->assertSee('Could not resolve')
+        ->assertSee('list-component-types');
 });
 
 it('lists icons and filters them', function () {

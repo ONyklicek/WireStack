@@ -6,12 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use NyonCode\WireTable\Columns\Column;
-use NyonCode\WireTable\Concerns\TableQueryService;
 use NyonCode\WireTable\Filters\DateFilter;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Filters\NumberRangeFilter;
 use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Filters\TernaryFilter;
+use NyonCode\WireTable\Services\TableQueryService;
 use NyonCode\WireTable\Table;
 
 // ─── Test Model ──────────────────────────────────────────────────────────────

@@ -20,15 +20,20 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
 - An action with a form (`->form([...])`) self-seeds each field from its `->default()` (or a
   type-correct blank), then layers record/context prefill on top with `->fillFormUsing(fn ($record) => [...])`
   (`$record` is `null` for header actions), which overrides the seed. Inside the form, reactive fields use `$get`/`$set` and
-  `->afterStateUpdated()` against the live `modal.action.formData` bag — see the wire-forms guideline.
+  `->afterStateUpdated()` against the live per-frame form-data bag (`mountedActions.{depth}.data`) — see the wire-forms guideline.
 - Add extra footer buttons with `->modalFooterActions([ModalFooterAction::make('preview')->action(fn ($data, $set) => …)])`.
   The callback gets the live form `$data` and a `$set` writer; `->submitsForm()` validates first,
   `->closesModal()` closes after, `->position('before'|'after')` places it around Cancel/Submit.
-- Modals **stack**: opening an action while a modal is open (from any callback with the host `$component` —
-  a footer/field/infolist action calling `$component->mountAction(...)` / `$component->openActionModal(...)`)
-  layers the new modal on top with the parent dimmed behind. Closing the top (Escape/close/backdrop) pops
-  just that level and resumes the parent with its form data intact. No special API; deep nesting works
-  (capped at `Modals\ModalStack::MAX_DEPTH` as a runaway guard), and only the top modal takes focus/Escape.
+- Modals **stack as a live frame array** (not one active + frozen parents): opening an action while a
+  modal is open (from any callback with the host `$component` — a footer/field/infolist action calling
+  `$component->mountAction(...)` / `$component->openActionModal(...)`) layers the new modal on top while
+  **every parent stays a live, reactive form** behind it (dimmed + click-inert; only the top is interactive).
+  A nested callback can write back into an ancestor via `$setParent(path, value)` / `$setFrame(depth, path, value)`,
+  read `$parentData`, and receive `$arguments` (passed to `mountAction($name, [...])`) — so a sub-form can
+  create-and-select into the form that opened it. Declare a nested action inline next to its opener with
+  `->registerActions([Action::make('createCustomer')->…])` (resolved by name; no top-level registration needed).
+  Closing the top (Escape/close/backdrop) pops just that level and resumes the parent with its data intact.
+  Deep nesting works (capped at `Modals\ModalStack::MAX_DEPTH` as a runaway guard); only the top takes focus/Escape.
   `->requiresConfirmation()` asks before running (native `wire:confirm`, translated default message);
   `->confirm('Really reset?')` sets a custom message.
 - Color, icon and visibility come from the shared `HasColor`, `HasIcons`, `HasVisibility` concerns.
@@ -111,6 +116,27 @@ Actions: `Section::headerActions([...])`, `Entry::actions([...])`, and `Repeatab
 `WithActions` host); names must be unique per infolist. `RepeatableEntry::with([...])` eager-loads relations on
 the rows to avoid N+1 when child entries read nested relation paths.
 
+### Editable panels
+
+An infolist you can edit: same declarative schema, but editable entries write **straight back to the
+record**, one commit per change — no Save button, no form buffer. `Panel::make()->record($model)->schema([...])`
+(namespace `Panels\`, `PanelComponent` base or compose `Panels\Concerns\WithEditablePanel` into an existing
+component and implement `panel()`). The view must `@@include('wire-core::partials.floating-assets')` to load
+the shared `wireEditableCell` engine.
+
+Editable entries (`Panels\Components\`): `ToggleEntry`, `CheckboxEntry`, `SelectEntry`, `TextInputEntry`.
+They extend the infolist `Entry`, so read-only entries (`TextEntry`, `BadgeEntry`, …) mix freely into the
+same schema. Same write path — optimistic UI + optimistic locking — as editable table columns
+(`ToggleColumn`/`SelectColumn`/`TextInputColumn`); do not invent a second one.
+
+`->rules([...])` validates server-side before the write. `->disabled()` (closure gets the `$record`) and
+`->permission('ability')` reject the write server-side, not just cosmetically. Being declared an editable
+entry in the schema **is** the write whitelist: a read-only entry name, or any attribute not in the schema,
+is refused by the host. Override persistence with `->saveUsing()`, run side effects with `->afterStateUpdated()`.
+
+Choose: infolist = read-only by contract; panel = read *and* edit one record in place; form = buffered
+multi-field edit with one Save.
+
 ### Widgets
 
 `StatsOverviewWidget` / `Stat`, `ChartWidget` (+ `LineChartWidget`/`PieChartWidget`/`DoughnutChartWidget`
@@ -133,10 +159,14 @@ Every interactive control across the shared UI carries a stable `data-testid` (+
 Icons resolve by name through the `IconManager` (bundled Heroicons solid + `outline:` prefix). Use
 `list-icons` to find a name. Colors and sizes are semantic tokens owned by the Foundation palette.
 `->color()` accepts the full Tailwind palette on every surface — the semantic roles (`primary`,
-`success`, `danger`, `warning`, `info`, `gray`) and every raw hue family (`slate`, `zinc`, `neutral`,
-`stone`, `orange`, `lime`, `teal`, `sky`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`),
-as a string or the matching `Foundation\Colors\Color` enum case. Resolvers live in `HasColor`; unknown
-names fall back to gray.
+`success`, `danger`, `warning`, `info`, `gray`), every raw hue family (`blue`, `green`, `red`, `yellow`,
+`cyan`, `slate`, `zinc`, `neutral`, `stone`, `orange`, `lime`, `teal`, `sky`, `indigo`, `violet`,
+`purple`, `fuchsia`, `pink`, `rose`) and the adaptive achromatic endpoints (`white`, `black`), as a
+string or the matching `Foundation\Colors\Color` enum case. The literal hues are NOT aliases: `blue` is
+distinct from the re-themeable brand `primary`, `green` from `success`/`emerald`, `yellow` from
+`warning`/`amber` (only `emerald`/`amber`/`secondary` remain true role aliases). `white`/`black` resolve
+adaptively — dark in light mode, flipped in dark mode. Resolvers live in `HasColor`; unknown names fall
+back to gray.
 
 Every fluent token setter also accepts a canonical enum from `Foundation\Enums\` (interchangeable with
 the string, so both forms are fine): `Breakpoint` (`sm`…`2xl`) for column `visibleFrom()`/`hiddenFrom()`/

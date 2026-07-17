@@ -27,6 +27,12 @@ class Action extends BaseAction
 
     protected bool $iconButton = false;
 
+    /** Render with the "quiet" resting style (neutral until hover/focus). Set by the table. */
+    protected bool $quiet = false;
+
+    /** Escape hatch: force the solid filled button even under a quiet table. */
+    protected bool $solid = false;
+
     protected bool $isDivider = false;
 
     /**
@@ -45,6 +51,29 @@ class Action extends BaseAction
     public function iconButton(bool $iconButton = true): static
     {
         $this->iconButton = $iconButton;
+
+        return $this;
+    }
+
+    /**
+     * Render with the quiet resting style (neutral text at rest, color on
+     * hover/focus). Normally set for the whole table via Table::actionsStyle('quiet');
+     * exposed fluently so a single action can opt in too.
+     */
+    public function quiet(bool $quiet = true): static
+    {
+        $this->quiet = $quiet;
+
+        return $this;
+    }
+
+    /**
+     * Force the solid filled button, overriding a quiet table. Use for the one
+     * deliberately prominent action in a row (e.g. "Approve").
+     */
+    public function solid(bool $solid = true): static
+    {
+        $this->solid = $solid;
 
         return $this;
     }
@@ -90,6 +119,16 @@ class Action extends BaseAction
     public function isIconButton(): bool
     {
         return $this->iconButton;
+    }
+
+    public function isQuiet(): bool
+    {
+        return $this->quiet;
+    }
+
+    public function isSolid(): bool
+    {
+        return $this->solid;
     }
 
     public function isHideLabel(): bool
@@ -177,7 +216,9 @@ class Action extends BaseAction
             ? $this->resolveIconButtonColorClasses($color)
             : ($this->isOutlined()
                 ? $this->resolveOutlinedColorClasses($color)
-                : $this->resolveSolidColorClasses($color));
+                : ($this->quiet && ! $this->solid
+                    ? $this->resolveQuietColorClasses($color)
+                    : $this->resolveSolidColorClasses($color)));
 
         $base = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800';
         $sizeClasses = $this->resolveButtonSizeClasses($this->isIconButton(), $size);

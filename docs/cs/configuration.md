@@ -111,7 +111,7 @@ Příklady použití viz [Core Notifikace](core/notifications.md).
 
 Sady se používají společně s deterministickým, kolizím-odolným vyhodnocením.
 Kompletní API, model `prefix:name`, vlastní sady a přístupnost viz
-[Core → Foundation → Ikony](core/foundation.md#icons).
+[Core → Foundation → Ikony](core/foundation.md#ikony).
 
 ### Pluginy
 

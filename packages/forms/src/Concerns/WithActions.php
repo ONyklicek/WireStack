@@ -58,20 +58,34 @@ trait WithActions
     use InteractsWithWizards;
 
     /**
-     * Meta bag for the currently mounted action (name, currentStep, show).
+     * The live modal stack. Each open action modal is one frame; the last entry
+     * is the active (top) modal and the rest render live but click-inert behind
+     * it. Every frame carries its own meta and its own form-data bag, bound via
+     * `wire:model="mountedActions.{depth}.data.*"`, so each level is an
+     * independently reactive form and a nested modal can write back into an
+     * ancestor's data (see the `$setParent`/`$setFrame` callback bindings).
      *
-     * @var array<string, mixed>
+     * Frame shape:
+     *   ['name'=>string, 'currentStep'=>int, 'isBulk'=>bool,
+     *    'isHeaderAction'=>bool, 'record'=>['class'=>..,'key'=>..]|null,
+     *    'arguments'=>array<string,mixed>, 'data'=>array<string,mixed>]
+     *
+     * Records are stored as serializable `{class,key}` descriptors (not Model
+     * instances, which Livewire does not reliably serialize inside arrays) and
+     * re-resolved by key on demand.
+     *
+     * @var array<int, array<string, mixed>>
      */
-    public array $mountedAction = [];
+    public array $mountedActions = [];
 
     /**
-     * Live form-data bag bound to the action modal's fields. The path
-     * `actionModalFormData` matches HasModal's non-table state path so the Form
-     * runtime binds and fills correctly.
-     *
-     * @var array<string, mixed>
+     * Whether the active (top) modal is shown. The modal-host binds its
+     * `wire:model`/entangle to this stable flag rather than a per-frame,
+     * depth-indexed path: the active modal element is reused across pushes/pops,
+     * so a stable binding avoids an Alpine re-init (which would reset the enter
+     * transition and briefly hide a resuming parent). Managed by push/pop.
      */
-    public array $actionModalFormData = [];
+    public bool $actionModalOpen = false;
 
     /**
      * Live form-data bag for a halt modal's form.
@@ -86,29 +100,6 @@ trait WithActions
      * @var array<string, mixed>
      */
     public array $mountedHalt = [];
-
-    /** The record a record-scoped action operates on, if any. */
-    public ?Model $mountedActionRecord = null;
-
-    /**
-     * Suspended (parent) action modals stacked behind the active one. Each frame
-     * holds the parent's meta bag + its live form-data, so it can be restored
-     * into the active slot when the modal on top of it closes (modal stacking).
-     *
-     * @var array<int, array{meta: array<string, mixed>, formData: array<string, mixed>}>
-     */
-    public array $suspendedActions = [];
-
-    /**
-     * Record descriptors (`['class' => ..., 'key' => ...]`) for the suspended
-     * action modals, index-aligned with {@see $suspendedActions}. Stored as
-     * plain scalars rather than Model instances so the stack serializes cleanly
-     * across Livewire requests; the model is re-resolved by key when the parent
-     * modal is resumed.
-     *
-     * @var array<int, array{class: class-string<Model>, key: mixed}|null>
-     */
-    public array $suspendedActionRecords = [];
 
     // ==========================================
     // Action registry
@@ -130,8 +121,12 @@ trait WithActions
     protected function resolveAction(string $name): ?Action
     {
         foreach ($this->actions() as $action) {
-            if ($action instanceof Action && $action->getName() === $name) {
-                return $action;
+            if ($action instanceof Action) {
+                $found = $this->matchRegisteredAction($action, $name);
+
+                if ($found instanceof Action) {
+                    return $found;
+                }
             }
         }
 
@@ -161,45 +156,43 @@ trait WithActions
         }
 
         if (! $action->hasModal()) {
-            $this->mountedActionRecord = $record;
-            $this->runStandaloneAction($action, $record, []);
-            $this->mountedActionRecord = null;
+            $this->runStandaloneAction($action, $record, [], $arguments);
 
             return;
         }
 
-        // Stack on top of an already-open modal instead of replacing it
-        // (refused only at the safety depth cap).
-        if (! $this->suspendActiveActionIfOpen()) {
+        // Stack a new live frame on top instead of replacing the current modal
+        // (refused only at the runaway safety depth cap).
+        if (! $this->canMountAnotherActionFrame()) {
             return;
         }
 
-        $this->mountedActionRecord = $record;
+        // The record is stored as a serializable {class,key} descriptor below and
+        // re-exposed to callbacks as $record; drop it from the persisted
+        // $arguments bag so a raw Model never re-enters a serialized frame.
+        $storedArguments = $arguments;
+        unset($storedArguments['record']);
 
-        $this->mountedAction = [
+        $this->pushActionFrame([
             'name' => $name,
             'currentStep' => 0,
-            'show' => true,
-        ];
+            'isBulk' => false,
+            'isHeaderAction' => $record === null,
+            'record' => $this->describeFrameRecord($record),
+            'arguments' => $storedArguments,
+            'data' => $action->getFormDefaults($record),
+        ]);
+
         $this->actionModalConfigCache = $action->getModalConfig($record);
-        $this->setMountedActionFormData($action->getFormDefaults($record));
         $this->actionModalFormInstance = $this->buildModalActionFormInstance($action, $record);
     }
 
     /**
-     * Validate the mounted action's form and run its callback with the form data.
+     * Validate the active modal's form and run its callback with the form data.
      */
     public function callMountedAction(): void
     {
-        $name = $this->mountedAction['name'] ?? null;
-
-        if (! $name) {
-            $this->unmountAction();
-
-            return;
-        }
-
-        $action = $this->resolveAction((string) $name);
+        [$action, $record] = $this->resolveCurrentModalAction();
 
         if ($action === null) {
             $this->unmountAction();
@@ -209,40 +202,40 @@ trait WithActions
 
         $this->validateMountedActionForm();
 
-        $depthBefore = $this->suspendedActionCount();
+        $stackVersionBefore = $this->actionStackVersion;
 
-        $this->runStandaloneAction($action, $this->mountedActionRecord, $this->getMountedActionFormData());
+        $this->runStandaloneAction(
+            $action,
+            $record instanceof Model ? $record : null,
+            $this->getMountedActionFormData(),
+            (array) $this->getMountedActionState('arguments', []),
+        );
 
-        // If the action opened a nested modal, keep it open instead of closing.
-        if ($this->suspendedActionCount() <= $depthBefore) {
+        // Auto-close only if the callback left the stack alone. If it opened a
+        // nested modal, closed itself via $close(), or replaced this one, the
+        // stack version changed and we leave whatever it settled on in place.
+        if ($this->actionStackVersion === $stackVersionBefore) {
             $this->unmountAction();
         }
     }
 
     /**
-     * Close the mounted action modal. When a parent modal is stacked behind it,
-     * the parent is resumed into the active slot instead of clearing everything.
+     * Close the active modal. Pops the top frame; when a parent frame remains it
+     * becomes the active modal (live, with its preserved/returned data), and only
+     * when the stack empties is everything torn down.
      */
     public function unmountAction(): void
     {
-        if ($this->resumeSuspendedAction()) {
-            return;
-        }
-
         $this->closeMountedAction();
-
-        $this->mountedAction = [];
-        $this->mountedActionRecord = null;
-        $this->actionModalFormInstance = null;
-        $this->haltModalFormInstance = null;
     }
 
     /**
      * Run a resolved action through the shared lifecycle pipeline.
      *
      * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $arguments
      */
-    protected function runStandaloneAction(Action $action, ?Model $record, array $data): void
+    protected function runStandaloneAction(Action $action, ?Model $record, array $data, array $arguments = []): void
     {
         if (! $action->canExecute($record)) {
             return;
@@ -255,47 +248,128 @@ trait WithActions
 
         $haltKey = $record instanceof Model ? (string) $record->getKey() : '__action__';
 
-        $this->executeActionPipeline(
-            $action,
-            $payload,
-            $haltKey,
-            $record instanceof Model ? 'row' : 'header',
-        );
+        // Exposed to the callback as `$arguments` when the action has no frame.
+        $this->currentActionArguments = $arguments;
+
+        try {
+            $this->executeActionPipeline(
+                $action,
+                $payload,
+                $haltKey,
+                $record instanceof Model ? 'row' : 'header',
+            );
+        } finally {
+            $this->currentActionArguments = [];
+        }
     }
 
     // ==========================================
-    // State seams (backed by public props)
+    // Frame state seams (backed by $mountedActions)
     // ==========================================
 
-    protected function setMountedActionState(string $key, mixed $value): void
+    protected function actionFrameCount(): int
     {
-        $this->mountedAction[$key] = $value;
+        return count($this->mountedActions);
     }
 
-    protected function getMountedActionState(string $key, mixed $default = null): mixed
+    /**
+     * @param  array<string, mixed>  $frame
+     */
+    protected function pushActionFrame(array $frame): void
     {
-        return $this->mountedAction[$key] ?? $default;
+        $this->mountedActions[] = $frame;
+        $this->actionModalOpen = true;
+        $this->actionStackVersion++;
+        $this->resolvedActionFrameCache = [];
+
+        // The incoming frame re-resolves its own form/infolist/config instances.
+        $this->actionModalFormInstance = null;
+        $this->actionModalInfolistInstance = null;
+        $this->actionModalConfigCache = [];
+    }
+
+    protected function popActionFrame(): void
+    {
+        array_pop($this->mountedActions);
+
+        // Stays true while a parent frame remains (it becomes the active modal),
+        // flips false only when the stack empties so the modal transitions out.
+        $this->actionModalOpen = $this->mountedActions !== [];
+        $this->actionStackVersion++;
+        $this->resolvedActionFrameCache = [];
+
+        $this->actionModalFormInstance = null;
+        $this->actionModalInfolistInstance = null;
+        $this->actionModalConfigCache = [];
+
+        if ($this->mountedActions === []) {
+            $this->haltModalFormInstance = null;
+        }
+    }
+
+    /**
+     * Mount an action by name at the top of the stack (backs
+     * {@see replaceMountedAction()}). The standalone host has a single mount
+     * path, so this delegates to {@see mountAction()} — the record travels in
+     * `$arguments['record']` exactly as a direct mount.
+     *
+     * @param  array<string, mixed>  $arguments
+     */
+    protected function mountActionByName(string $name, array $arguments): void
+    {
+        $this->mountAction($name, $arguments);
+    }
+
+    protected function actionFrameStatePath(int $depth): string
+    {
+        return "mountedActions.{$depth}.data";
+    }
+
+    protected function getActionFrameState(int $depth, string $key, mixed $default = null): mixed
+    {
+        return $this->mountedActions[$depth][$key] ?? $default;
+    }
+
+    protected function setActionFrameState(int $depth, string $key, mixed $value): void
+    {
+        if ($depth < 0 || $depth >= $this->actionFrameCount()) {
+            return;
+        }
+
+        $this->mountedActions[$depth][$key] = $value;
     }
 
     /**
      * @return array<string, mixed>
      */
-    protected function getMountedActionFormData(): array
+    protected function readActionFrameData(int $depth): array
     {
-        return $this->actionModalFormData;
+        $data = $this->mountedActions[$depth]['data'] ?? [];
+
+        return is_array($data) ? $data : [];
     }
 
     /**
      * @param  array<string, mixed>  $data
      */
-    protected function setMountedActionFormData(array $data): void
+    protected function setActionFrameData(int $depth, array $data): void
     {
-        $this->actionModalFormData = $data;
+        if ($depth < 0 || $depth >= $this->actionFrameCount()) {
+            return;
+        }
+
+        $this->mountedActions[$depth]['data'] = $data;
     }
 
-    protected function setMountedActionFormDataValue(string $path, mixed $value): void
+    protected function writeActionFrameData(int $depth, string $path, mixed $value): void
     {
-        data_set($this->actionModalFormData, $path, $value);
+        if ($depth < 0 || $depth >= $this->actionFrameCount()) {
+            return;
+        }
+
+        $data = $this->readActionFrameData($depth);
+        data_set($data, $path, $value);
+        $this->mountedActions[$depth]['data'] = $data;
     }
 
     protected function setHaltModalState(string $key, mixed $value): void
@@ -303,50 +377,50 @@ trait WithActions
         $this->mountedHalt[$key] = $value;
     }
 
-    // ==========================================
-    // Modal stacking seams
-    // ==========================================
+    /**
+     * Per-request memo of resolved `[action, context]` per depth, so one render
+     * (config + form + validation reading the same frame) re-resolves the action
+     * and re-hydrates its record only once. Not a Livewire property — rebuilt each
+     * request; cleared on push/pop since a frame's record never changes in place.
+     *
+     * @var array<int, array{0: Action|null, 1: mixed}>
+     */
+    protected array $resolvedActionFrameCache = [];
 
-    protected function suspendCurrentAction(): void
+    /**
+     * Resolve the action + record context for the frame at the given depth.
+     *
+     * @return array{0: Action|null, 1: mixed}
+     */
+    protected function resolveActionForFrame(int $depth): array
     {
-        $this->suspendedActions[] = [
-            'meta' => $this->mountedAction,
-            'formData' => $this->actionModalFormData,
-        ];
-        $this->suspendedActionRecords[] = $this->describeSuspendedRecord($this->mountedActionRecord);
-
-        // The incoming action re-resolves its own form/infolist instances.
-        $this->actionModalFormInstance = null;
-        $this->actionModalInfolistInstance = null;
-        $this->actionModalConfigCache = [];
-    }
-
-    protected function resumeSuspendedAction(): bool
-    {
-        if ($this->suspendedActions === []) {
-            return false;
+        if (array_key_exists($depth, $this->resolvedActionFrameCache)) {
+            return $this->resolvedActionFrameCache[$depth];
         }
 
-        $frame = array_pop($this->suspendedActions);
-        $this->mountedActionRecord = $this->resolveSuspendedRecord(array_pop($this->suspendedActionRecords));
-        $this->mountedAction = is_array($frame['meta'] ?? null) ? $frame['meta'] : [];
-        $this->actionModalFormData = is_array($frame['formData'] ?? null) ? $frame['formData'] : [];
+        $name = $this->mountedActions[$depth]['name'] ?? null;
 
-        // Force the resumed parent to re-resolve its form/infolist/config.
-        $this->actionModalFormInstance = null;
-        $this->actionModalInfolistInstance = null;
-        $this->actionModalConfigCache = [];
+        if (! $name) {
+            return [null, null];
+        }
 
-        return true;
+        $action = $this->resolveAction((string) $name);
+
+        if ($action === null) {
+            return [null, null];
+        }
+
+        return $this->resolvedActionFrameCache[$depth]
+            = [$action, $this->resolveFrameRecord($this->mountedActions[$depth]['record'] ?? null)];
     }
 
     /**
-     * Reduce a record to a serializable `{class, key}` descriptor for the
-     * suspended stack. Returns null for a transient/keyless model.
+     * Reduce a record to a serializable `{class, key}` descriptor for a frame.
+     * Returns null for a transient/keyless model.
      *
      * @return array{class: class-string<Model>, key: mixed}|null
      */
-    protected function describeSuspendedRecord(?Model $record): ?array
+    protected function describeFrameRecord(?Model $record): ?array
     {
         if ($record === null || $record->getKey() === null) {
             return null;
@@ -356,11 +430,11 @@ trait WithActions
     }
 
     /**
-     * Re-resolve a suspended record descriptor back to a Model instance.
+     * Re-resolve a frame's record descriptor back to a Model instance.
      *
      * @param  array{class: class-string<Model>, key: mixed}|null  $descriptor
      */
-    protected function resolveSuspendedRecord(?array $descriptor): ?Model
+    protected function resolveFrameRecord(?array $descriptor): ?Model
     {
         if ($descriptor === null || ! isset($descriptor['class'], $descriptor['key'])) {
             return null;
@@ -369,52 +443,5 @@ trait WithActions
         $class = $descriptor['class'];
 
         return $class::query()->find($descriptor['key']);
-    }
-
-    protected function suspendedActionCount(): int
-    {
-        return count($this->suspendedActions);
-    }
-
-    /**
-     * @return array<int, array<string, mixed>>
-     */
-    public function getSuspendedActionModals(): array
-    {
-        $modals = [];
-
-        foreach ($this->suspendedActions as $index => $frame) {
-            $name = $frame['meta']['name'] ?? null;
-
-            if (! $name) {
-                continue;
-            }
-
-            $action = $this->resolveAction((string) $name);
-
-            if ($action === null) {
-                continue;
-            }
-
-            $modals[] = $action->getModalConfig($this->resolveSuspendedRecord($this->suspendedActionRecords[$index] ?? null));
-        }
-
-        return $modals;
-    }
-
-    /**
-     * Resolve the action + record context for the currently mounted action.
-     *
-     * @return array{0: Action|null, 1: mixed}
-     */
-    protected function resolveCurrentModalAction(): array
-    {
-        $name = $this->mountedAction['name'] ?? null;
-
-        if (! $name) {
-            return [null, null];
-        }
-
-        return [$this->resolveAction((string) $name), $this->mountedActionRecord];
     }
 }

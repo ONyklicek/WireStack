@@ -38,12 +38,12 @@ it('renders without error when options are provided as a closure', function () {
     expect($filter->render('paid'))->toBeString();
 });
 
-it('is native by default', function () {
-    expect(SelectFilter::make('status')->isNative())->toBeTrue();
+it('is not native by default so it matches the forms Select surface', function () {
+    expect(SelectFilter::make('status')->isNative())->toBeFalse();
 });
 
-it('can be set to non-native', function () {
-    expect(SelectFilter::make('status')->native(false)->isNative())->toBeFalse();
+it('can be set to native', function () {
+    expect(SelectFilter::make('status')->native()->isNative())->toBeTrue();
 });
 
 it('is not searchable by default', function () {
@@ -65,9 +65,22 @@ it('an explicit native() after searchable() forces the native element', function
         ->and($filter->isNative())->toBeTrue();
 });
 
-it('renders a native select when not searchable', function () {
+it('renders the combobox by default so it matches the forms Select', function () {
     $html = SelectFilter::make('status')
         ->options(['paid' => 'Paid', 'due' => 'Due'])
+        ->render();
+
+    expect($html)
+        ->toContain('x-teleport')
+        ->toContain("\$wire.entangle('tableState.filters.status.value').live")
+        ->not->toContain('<select')
+        ->not->toContain('x-ref="searchInput"');
+});
+
+it('renders a native select when native() is opted into', function () {
+    $html = SelectFilter::make('status')
+        ->options(['paid' => 'Paid', 'due' => 'Due'])
+        ->native()
         ->render();
 
     expect($html)

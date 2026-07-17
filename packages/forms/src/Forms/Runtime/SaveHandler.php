@@ -6,8 +6,6 @@ namespace NyonCode\WireForms\Forms\Runtime;
 
 use Closure;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Http\UploadedFile;
-use InvalidArgumentException;
 use NyonCode\WireCore\Core\Hydration\CastResolver;
 use NyonCode\WireCore\Core\Hydration\Dehydrator;
 use NyonCode\WireCore\Core\Hydration\ValueTransformer;
@@ -15,8 +13,10 @@ use NyonCode\WireCore\Core\Plugin\Hooks\FormSavedPayload;
 use NyonCode\WireCore\Core\Plugin\Hooks\FormSavingPayload;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
-use NyonCode\WireForms\Components\FileUpload;
+use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
+use NyonCode\WireForms\Components\Field;
 use NyonCode\WireForms\Components\Repeater;
+use NyonCode\WireForms\Exceptions\FormConfigurationException;
 use NyonCode\WireForms\Forms\Config\FormConfig;
 
 /**
@@ -50,10 +50,12 @@ final class SaveHandler
             }
         }
 
-        // 2.5 Store file uploads (store-on-submit): move validated temporary
-        // uploads to permanent storage and replace them with their paths, so an
-        // abandoned form never leaves an orphaned file behind.
-        $data = $this->storeFileUploads($data);
+        // 2.5 Let each field shape its own value before it is persisted — the
+        // write-path counterpart of getStateType() (ADR 0021). This is how a
+        // FileUpload moves validated temporary uploads to permanent storage (so
+        // an abandoned form leaves no orphan) and how a date field applies its
+        // storage format and timezone.
+        $data = $this->dehydrateFields($data);
 
         // 3. Plugin hook: form.saving (can modify data)
         if (app()->bound(PluginManager::class)) {
@@ -126,7 +128,7 @@ final class SaveHandler
         $model = $this->config->model;
 
         if ($model === null) {
-            throw new InvalidArgumentException('Form has no model configured. Call ->model() or ->using() before save().');
+            throw FormConfigurationException::noModel();
         }
 
         // Relationship-backed repeaters (e.g. Repeater::make('children')->relationship('children'))
@@ -164,74 +166,45 @@ final class SaveHandler
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    private function storeFileUploads(array $data): array
+    /**
+     * Apply every field's own dehydration to the data about to be persisted.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function dehydrateFields(array $data): array
     {
-        foreach ($this->collectFileUploadFields($this->config->schema) as $field) {
+        foreach ($this->collectDehydratingFields($this->config->schema) as $field) {
             $name = $field->getName();
 
             if (! array_key_exists($name, $data)) {
                 continue;
             }
 
-            $data[$name] = $this->storeFieldFiles($field, $data[$name]);
+            $data[$name] = $field->dehydrateState($data[$name], $this->config->model instanceof Model ? $this->config->model : null);
         }
 
         return $data;
     }
 
     /**
-     * Store a single FileUpload field's value: freshly-uploaded files become
-     * paths, existing string paths pass through. A multiple field yields a list
-     * of paths; a single field yields one path (or null).
-     */
-    private function storeFieldFiles(FileUpload $field, mixed $value): mixed
-    {
-        $values = match (true) {
-            is_array($value) => $value,
-            $value === null || $value === '' => [],
-            default => [$value],
-        };
-
-        $paths = [];
-
-        foreach ($values as $item) {
-            if ($item instanceof UploadedFile) {
-                $paths[] = $field->storeUploadedFile($item);
-            } elseif (is_string($item) && $item !== '') {
-                if ($field->isStoredReference($item)) {
-                    // A legitimate disk-relative path or URL — keep as-is.
-                    $paths[] = $item;
-                } else {
-                    // A raw absolute/temp path leaked into state (e.g. /tmp/phpXXX):
-                    // rescue the file if it still exists, otherwise drop the dead
-                    // reference — never persist a temp path as if it were stored.
-                    $rescued = $field->storeFileFromPath($item);
-
-                    if ($rescued !== null) {
-                        $paths[] = $rescued;
-                    }
-                }
-            }
-        }
-
-        return $field->isMultiple() ? $paths : ($paths[0] ?? null);
-    }
-
-    /**
-     * Collect every FileUpload field in the schema, traversing nested layouts.
+     * Collect every field that dehydrates its own state, traversing nested layouts.
+     *
+     * Only a Field carries the name that keys the data array — a layout could
+     * implement the contract without one.
      *
      * @param  array<int, mixed>  $schema
-     * @return array<int, FileUpload>
+     * @return array<int, Field&DehydratesState>
      */
-    private function collectFileUploadFields(array $schema): array
+    private function collectDehydratingFields(array $schema): array
     {
         $fields = [];
 
         foreach ($schema as $component) {
-            if ($component instanceof FileUpload) {
+            if ($component instanceof DehydratesState && $component instanceof Field) {
                 $fields[] = $component;
             } elseif ($component instanceof LayoutComponent) {
-                $fields = array_merge($fields, $this->collectFileUploadFields($component->getSchema()));
+                $fields = array_merge($fields, $this->collectDehydratingFields($component->getSchema()));
             }
         }
 

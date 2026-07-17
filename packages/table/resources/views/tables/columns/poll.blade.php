@@ -6,6 +6,7 @@
     /** @var bool $shouldPoll */
     /** @var bool $isBadge */
     /** @var bool $showLoadingIndicator */
+    /** @var bool $keepContentWhileLoading */
     /** @var string $loadingIndicator */
     /** @var string $position before|after */
     /** @var string $pollDirective wire:poll attribute (only when polling) */
@@ -18,6 +19,12 @@
     }
 
     if ($showLoadingIndicator) {
+        // keepContentWhileLoading(false): the stale value is hidden during a
+        // refresh and only the indicator shows, rather than sitting next to it.
+        if (! $keepContentWhileLoading) {
+            $inner = '<span wire:loading.remove>'.$inner.'</span>';
+        }
+
         $inner = $position === 'before'
             ? '<span class="inline-flex items-center gap-0"><span wire:loading>'.$loadingIndicator.'</span>'.$inner.'</span>'
             : '<span class="inline-flex items-center gap-0">'.$inner.'<span wire:loading class="ml-1">'.$loadingIndicator.'</span></span>';

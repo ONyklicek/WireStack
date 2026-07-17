@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Forms\Runtime\RelationshipSaveHandler;
@@ -254,6 +256,58 @@ function createRshParent(): Model
     return RshParentModel::create(['name' => 'Parent 1']);
 }
 
+test('syncs a belongsToMany repeater: applies the mutator and skips malformed rows', function () {
+    Schema::create('rsh_tags', function (Blueprint $t) {
+        $t->id();
+        $t->string('label');
+    });
+    Schema::create('rsh_parent_tag', function (Blueprint $t) {
+        $t->id();
+        $t->unsignedBigInteger('parent_id');
+        $t->unsignedBigInteger('tag_id');
+        $t->string('note')->nullable();
+    });
+
+    $tag = RshTag::create(['label' => 'x']);
+    $parent = RshBtmParent::create(['name' => 'P']);
+
+    // A spy mutator records every row it is handed. The order of the guards is
+    // the contract: a non-array row is skipped BEFORE the mutator (so the spy
+    // never sees it), while a row missing the related key is mutated first and
+    // skipped AFTER.
+    $seen = [];
+    $repeater = Repeater::make('tags')
+        ->relationship('tags')
+        ->mutateRelationshipDataBeforeSaveUsing(function (array $d) use (&$seen) {
+            $seen[] = $d;
+
+            return array_merge($d, ['note' => 'mutated']);
+        });
+
+    (new RelationshipSaveHandler)->save($parent, [$repeater], [
+        'tags' => [
+            ['id' => $tag->id],           // valid: mutated, then synced
+            'not-an-array',               // skipped before the mutator
+            ['note' => 'no related key'], // mutated, then skipped (no related id)
+        ],
+    ]);
+
+    // The mutator saw the two array rows, never the string, proving the
+    // non-array guard runs first.
+    expect($seen)->toHaveCount(2)
+        ->and($seen[0])->toBe(['id' => $tag->id]);
+
+    // Only the row that kept a related id was written to the pivot, carrying the
+    // mutator's note.
+    $pivot = DB::table('rsh_parent_tag')->get();
+    expect($pivot)->toHaveCount(1)
+        ->and((int) $pivot->first()->tag_id)->toBe($tag->id)
+        ->and($pivot->first()->note)->toBe('mutated');
+
+    Schema::dropIfExists('rsh_parent_tag');
+    Schema::dropIfExists('rsh_tags');
+});
+
 class RshParentModel extends Model
 {
     protected $table = 'rsh_parents';
@@ -271,6 +325,28 @@ class RshChildModel extends Model
     protected $table = 'rsh_children';
 
     protected $guarded = [];
+}
+
+class RshTag extends Model
+{
+    protected $table = 'rsh_tags';
+
+    protected $guarded = [];
+
+    public $timestamps = false;
+}
+
+class RshBtmParent extends Model
+{
+    protected $table = 'rsh_parents';
+
+    protected $guarded = [];
+
+    /** @return BelongsToMany<RshTag, $this> */
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(RshTag::class, 'rsh_parent_tag', 'parent_id', 'tag_id')->withPivot('note');
+    }
 }
 
 class RshSoftChildModel extends Model

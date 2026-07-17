@@ -7,6 +7,8 @@ use NyonCode\WireCore\Core\Actions\ActionResult;
 use NyonCode\WireCore\Core\Plugin\Hooks\ActionExecutedPayload;
 use NyonCode\WireCore\Core\Plugin\Hooks\ActionExecutingPayload;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Core\State\StateContainer;
+use NyonCode\WireTable\Concerns\TableStateSchema;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Table;
 
@@ -36,6 +38,11 @@ it('dispatches action plugin hooks around action pipeline execution', function (
     $component = new class
     {
         use WithTable;
+
+        public function __construct()
+        {
+            $this->tableState = new StateContainer(TableStateSchema::defaults());
+        }
 
         public function table(Table $table): Table
         {
@@ -99,6 +106,11 @@ it('dispatches typed action plugin hooks with payload DTOs', function () {
     $component = new class
     {
         use WithTable;
+
+        public function __construct()
+        {
+            $this->tableState = new StateContainer(TableStateSchema::defaults());
+        }
 
         public function table(Table $table): Table
         {

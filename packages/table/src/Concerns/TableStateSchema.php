@@ -50,15 +50,13 @@ final class TableStateSchema
                 'scope' => 'query',
             ],
             'modal' => [
-                'suspended' => [],
-                'action' => [
-                    'show' => false,
-                    'name' => null,
-                    'recordKey' => null,
-                    'isBulk' => false,
-                    'formData' => [],
-                    'isHeaderAction' => false,
-                ],
+                // The live modal stack: one frame per open action modal (the last
+                // is the active/top one, the rest render live but click-inert
+                // behind it). Each frame carries its own meta + depth-scoped
+                // form-data bag, bound via `modal.actions.{depth}.data.*`.
+                'actions' => [],
+                // Stable visibility flag the modal-host entangles (see WithTable).
+                'open' => false,
                 'halt' => [
                     'show' => false,
                     'actionName' => null,
@@ -99,12 +97,9 @@ final class TableStateSchema
             'expandedRows' => 'rows.expanded',
             'flattenMode' => 'rows.flattenMode',
             'subRowFilters' => 'rows.subRowFilters',
-            'showActionModal' => 'modal.action.show',
-            'actionModalName' => 'modal.action.name',
-            'actionModalRecordKey' => 'modal.action.recordKey',
-            'actionModalIsBulk' => 'modal.action.isBulk',
-            'actionModalFormData' => 'modal.action.formData',
-            'actionModalIsHeaderAction' => 'modal.action.isHeaderAction',
+            // The single-slot `modal.action.*` aliases are intentionally gone:
+            // action modals are now a live stack under `modal.actions.{depth}.*`
+            // (there is no stable single path to alias). Halt modal is unchanged.
             'showHaltModal' => 'modal.halt.show',
             'haltActionName' => 'modal.halt.actionName',
             'haltRecordKey' => 'modal.halt.recordKey',

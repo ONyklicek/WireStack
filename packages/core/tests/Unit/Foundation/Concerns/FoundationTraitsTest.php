@@ -12,6 +12,7 @@ function makeFoundationField(string $name = 'test_field'): object
     return new class($name)
     {
         use Concerns\BelongsToComponent;
+        use Concerns\CanBeDisabled;
         use Concerns\CanBeLive;
         use Concerns\CanBeReadOnly;
         use Concerns\HasColumnSpan;
@@ -30,6 +31,7 @@ function makeFoundationField(string $name = 'test_field'): object
         use Concerns\HasState;
         use Concerns\HasTooltip;
         use Concerns\HasVisibility;
+        use Concerns\InteractsWithStateConditions;
         use EvaluatesClosures;
 
         public function __construct(string $name)
@@ -137,6 +139,17 @@ it('accepts closure default', function () {
     $field = makeFoundationField('role');
     $field->default(fn () => 'admin');
     expect($field->getDefault())->toBe('admin');
+});
+
+it('does not fill defaults over null unless opted in', function () {
+    $field = makeFoundationField('role');
+    expect($field->isDefaultOnNull())->toBeFalse();
+
+    $field->defaultOnNull();
+    expect($field->isDefaultOnNull())->toBeTrue();
+
+    $field->defaultOnNull(false);
+    expect($field->isDefaultOnNull())->toBeFalse();
 });
 
 // ─── HasVisibility ──────────────────────────────────────────

@@ -163,6 +163,18 @@ composer analyse
 Use quality checks when touching shared PHP APIs, broad refactors, or before a
 release-style change.
 
+Coverage:
+
+```bash
+composer coverage:verify
+```
+
+CI gates every line a change adds or edits: it must be covered by a test. It
+also holds each package to the floor in `scripts/coverage-floors.json`. Write the
+test with the code — not as a follow-up — and if a line genuinely cannot be
+reached, say why rather than leaving it bare. If a floor rises because of your
+work, record it with `composer coverage:floors`.
+
 ## Phase 7: Post-Change Report
 
 Report:

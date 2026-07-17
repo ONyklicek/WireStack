@@ -1,6 +1,12 @@
 /docs/migration/
 /.claude
 /vendor
+/node_modules
+/build/
+
+# IDE
+/.idea
+/.run
 composer.lock
 # Torchlight highlight cache
 docs-site/.torchlight-cache/

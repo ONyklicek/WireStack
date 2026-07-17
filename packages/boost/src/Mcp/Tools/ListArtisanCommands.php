@@ -17,7 +17,7 @@ class ListArtisanCommands extends BoostTool
 {
     public function __construct(private Kernel $kernel) {}
 
-    public function handle(Request $request): Response
+    protected function run(Request $request): Response
     {
         $this->kernel->bootstrap();
         $filter = trim((string) $request->get('filter'));

@@ -17,7 +17,7 @@ class DescribeForm extends BoostTool
 {
     public function __construct(private ComponentReflector $reflector) {}
 
-    public function handle(Request $request): Response
+    protected function run(Request $request): Response
     {
         return $this->json($this->reflector->describeForm((string) $request->get('component')));
     }

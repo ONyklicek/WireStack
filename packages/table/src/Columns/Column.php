@@ -15,38 +15,45 @@ use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Core\Components\DataComponent;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
-use NyonCode\WireCore\Foundation\Concerns\HasAuthorization;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
+use NyonCode\WireCore\Foundation\Concerns\HasDefault;
 use NyonCode\WireCore\Foundation\Concerns\HasFontWeight;
 use NyonCode\WireCore\Foundation\Concerns\HasIcon;
+use NyonCode\WireCore\Foundation\Concerns\HasPlaceholder;
 use NyonCode\WireCore\Foundation\Concerns\HasSize;
+use NyonCode\WireCore\Foundation\Concerns\HasTooltip;
+use NyonCode\WireCore\Foundation\Concerns\HasVisibility;
 use NyonCode\WireCore\Foundation\Enums\Alignment;
 use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Foundation\Enums\FontWeight;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireTable\Concerns\CanBeFiltered;
+use NyonCode\WireTable\Concerns\CanBeSummarized;
 use NyonCode\WireTable\Concerns\HasResponsive;
-use NyonCode\WireTable\Concerns\HasSummary;
 use NyonCode\WireTable\Concerns\HasView;
-use NyonCode\WireTable\Filters\DateFilter;
 use NyonCode\WireTable\Filters\Filter;
-use NyonCode\WireTable\Filters\NumberRangeFilter;
-use NyonCode\WireTable\Filters\SelectFilter;
-use NyonCode\WireTable\Filters\TernaryFilter;
-use NyonCode\WireTable\Filters\TextFilter;
 use NyonCode\WireTable\Support\FilterControl;
 
 /** @phpstan-consistent-constructor */
 class Column extends DataComponent implements Htmlable
 {
-    use HasAuthorization;
+    // HasVisibility composes HasAuthorization — an unauthorized column is not a
+    // visible one — so it is not listed separately, matching core's Component.
+    // A column is never *disabled*, so CanBeDisabled is deliberately not here.
+    use CanBeFiltered;
+
+    use CanBeSummarized;
     use HasColor;
+    use HasDefault;
     use HasFontWeight;
     use HasIcon;
+    use HasPlaceholder;
     use HasResponsive;
     use HasSize;
-    use HasSummary;
+    use HasTooltip;
     use HasView;
+    use HasVisibility;
 
     // Note: $sortable and $searchable booleans removed in v2.
     // Use capabilities as single source of truth via isSortable()/isSearchable().
@@ -59,9 +66,6 @@ class Column extends DataComponent implements Htmlable
 
     /** @var Closure|null Custom sort query callback: fn(Builder, string) => */
     protected ?Closure $sortCallback = null;
-
-    /** @var bool Whether the column is hidden by default */
-    protected bool $hidden = false;
 
     // Responsive visibility ($visibleFrom/$hiddenFrom, visibleFrom()/hiddenFrom(),
     // getResponsiveClasses()) is owned by the HasResponsive trait.
@@ -90,11 +94,8 @@ class Column extends DataComponent implements Htmlable
     /** @var Closure|null Custom display logic for the cell */
     protected ?Closure $displayUsing = null;
 
-    /** @var mixed Default value when the cell value is empty */
-    protected mixed $default = null;
-
-    /** @var string|null Tooltip text shown on hover */
-    protected ?string $tooltip = null;
+    // $default comes from Foundation\Concerns\HasDefault.
+    // $tooltip comes from Foundation\Concerns\HasTooltip.
 
     /** @var bool Whether the cell content is copyable */
     protected bool $copyable = false;
@@ -113,9 +114,6 @@ class Column extends DataComponent implements Htmlable
 
     /** @var int|null Maximum number of characters to show before truncating */
     protected ?int $limit = null;
-
-    /** @var string|null Placeholder text when value is empty */
-    protected ?string $placeholder = null;
 
     /** @var string|null Text to prepend to the cell content */
     protected ?string $prefix = null;
@@ -138,9 +136,6 @@ class Column extends DataComponent implements Htmlable
 
     /** @var bool Whether the cell content contains raw HTML */
     protected bool $html = false;
-
-    /** @var Closure|null Callback to determine if the column should be visible */
-    protected ?Closure $visibleCallback = null;
 
     /** @var Closure|null Per-record cell visibility (redact a single cell by row) */
     protected ?Closure $visibleForRecordCallback = null;
@@ -176,19 +171,8 @@ class Column extends DataComponent implements Htmlable
     /** @var Closure|null Callback to handle the edit action */
     protected ?Closure $editableCallback = null;
 
-    // Column filtering properties
-    // Note: $filterable boolean removed in v2. Use capabilities.
-
-    /**
-     * The canonical Filter that backs this column's inline header filter.
-     *
-     * A column filter is a *placement* of a canonical {@see Filter} in the
-     * header row — the column owns where it renders and which attribute it
-     * targets, the Filter owns how to apply / render / indicate / persist.
-     * Built by filterable() / filterAs*(); null means the column is not
-     * filterable.
-     */
-    protected ?Filter $filter = null;
+    // $filter and the filterable()/filterAs*() API come from CanBeFiltered.
+    // Note: the $filterable boolean was removed in v2 — use capabilities.
 
     // Text styling properties
     /** @var string|null Text size class or value (e.g., 'sm', 'lg', '1.2rem') */
@@ -208,8 +192,6 @@ class Column extends DataComponent implements Htmlable
 
     /** @var Closure|null Callback to determine the state of the column */
     protected ?Closure $stateCallback = null;
-
-    protected Closure $hiddenCallback;
 
     /**
      * Constructor.
@@ -486,25 +468,9 @@ class Column extends DataComponent implements Htmlable
     /**
      * Set whether the column is hidden.
      */
-    public function hidden(bool|Closure $hidden = true): static
-    {
-        if ($hidden instanceof Closure) {
-            $this->hiddenCallback = $hidden;
-        } else {
-            $this->hidden = $hidden;
-        }
-
-        return $this;
-    }
-
     /**
      * Check if the column is hidden.
      */
-    public function isHidden(): bool
-    {
-        return $this->hidden;
-    }
-
     /**
      * Show column only on tablet and up (hidden below sm).
      */
@@ -763,6 +729,19 @@ class Column extends DataComponent implements Htmlable
         return $record->{$name};
     }
 
+    /**
+     * What an empty cell shows.
+     *
+     * Distinct from `placeholder()`, which is the hint an *input* shows while it
+     * is empty. The two only looked like one concept because `getPlaceholder()`
+     * used to hard-code a `-` fallback, so it could never answer null — which is
+     * how `TextInputColumn` came to offer `-` to its input as a hint.
+     */
+    public function getEmptyCellText(): string
+    {
+        return $this->getPlaceholder() ?? '-';
+    }
+
     public function formatValue(mixed $value, Model $record): string
     {
         // Enum- and array/JSON-cast attributes arrive as raw instances; normalise to a
@@ -770,9 +749,7 @@ class Column extends DataComponent implements Htmlable
         $value = EnumResolver::display($value);
 
         if ($value === null || $value === '') {
-            // getPlaceholder() always resolves to a string (defaults to '-'); the
-            // cast keeps the string return type without an unreachable ?? branch.
-            return (string) $this->getPlaceholder();
+            return $this->getEmptyCellText();
         }
 
         $formatted = (string) $value;
@@ -790,11 +767,6 @@ class Column extends DataComponent implements Htmlable
         }
 
         return $formatted;
-    }
-
-    public function getPlaceholder(): ?string
-    {
-        return $this->placeholder ?? '-';
     }
 
     public function limit(?int $limit): static
@@ -1000,30 +972,6 @@ class Column extends DataComponent implements Htmlable
         return $this;
     }
 
-    public function default(mixed $default): static
-    {
-        $this->default = $default;
-
-        return $this;
-    }
-
-    public function getDefault(): mixed
-    {
-        return $this->default;
-    }
-
-    public function tooltip(?string $tooltip): static
-    {
-        $this->tooltip = $tooltip;
-
-        return $this;
-    }
-
-    public function getTooltip(): ?string
-    {
-        return $this->tooltip;
-    }
-
     public function copyable(bool $copyable = true, ?string $copyMessage = null): static
     {
         $this->copyable = $copyable;
@@ -1096,13 +1044,6 @@ class Column extends DataComponent implements Htmlable
         return $this->limit;
     }
 
-    public function placeholder(?string $placeholder): static
-    {
-        $this->placeholder = $placeholder;
-
-        return $this;
-    }
-
     public function prefix(?string $prefix): static
     {
         $this->prefix = $prefix;
@@ -1166,22 +1107,6 @@ class Column extends DataComponent implements Htmlable
     public function isHtml(): bool
     {
         return $this->html;
-    }
-
-    public function visible(Closure $callback): static
-    {
-        $this->visibleCallback = $callback;
-
-        return $this;
-    }
-
-    public function isVisible(): bool
-    {
-        if ($this->visibleCallback) {
-            return ($this->visibleCallback)();
-        }
-
-        return ! $this->hidden;
     }
 
     /**
@@ -1333,252 +1258,6 @@ class Column extends DataComponent implements Htmlable
     public function getDescription(): string|Closure|null
     {
         return $this->description;
-    }
-
-    /**
-     * Enable a header filter for this column.
-     *
-     * With no type this is a substring text filter; the legacy `$type` string
-     * ('select', 'multi_select', 'date', 'date_range', 'number_range',
-     * 'boolean') is kept for backward compatibility and maps to the matching
-     * canonical {@see Filter}. Prefer the fluent filterAs*() helpers or pass a
-     * ready Filter to {@see Filter()}.
-     *
-     * @param  array<string, string>|class-string  $options
-     */
-    public function filterable(bool $filterable = true, string $type = 'text', array|string $options = []): static
-    {
-        if (! $filterable) {
-            $this->filter = null;
-            $this->capabilities = $this->capabilities->remove(Capability::Filterable);
-
-            return $this;
-        }
-
-        return $this->filter($this->makeFilterOfType($type, $options));
-    }
-
-    /**
-     * Build the canonical Filter for a legacy filter-type string.
-     *
-     * @param  array<string, string>|class-string  $options
-     */
-    protected function makeFilterOfType(string $type, array|string $options = []): Filter
-    {
-        return match ($type) {
-            'select' => SelectFilter::make($this->name)->options($options)->searchable(),
-            'multi_select' => SelectFilter::make($this->name)->multiple()->options($options)->searchable(),
-            'date' => DateFilter::make($this->name),
-            'date_range' => DateFilter::make($this->name)->range(),
-            'number_range' => NumberRangeFilter::make($this->name),
-            'boolean' => TernaryFilter::make($this->name)->nullable(),
-            default => TextFilter::make($this->name),
-        };
-    }
-
-    /**
-     * Attach a fully-configured canonical Filter as this column's header
-     * filter. The column injects its state-path prefix + inline variant when it
-     * resolves the filter (see {@see resolveFilter()}).
-     */
-    public function filter(Filter $filter): static
-    {
-        $this->filter = $filter;
-        $this->capabilities = $this->capabilities->add(Capability::Filterable);
-
-        return $this;
-    }
-
-    public function getFilter(): ?Filter
-    {
-        return $this->filter;
-    }
-
-    /**
-     * The header filter with the column's inline variant + `columnFilters`
-     * state-path prefix applied, or null when the column is not filterable.
-     */
-    public function resolveFilter(): ?Filter
-    {
-        return $this->filter
-            ?->statePathPrefix('tableState.columnFilters')
-            ->inline();
-    }
-
-    /**
-     * Lazily create a default (text) filter so modifier setters
-     * (filterOperator / filterSearchable / …) work before any filterAs*().
-     */
-    protected function ensureFilter(): Filter
-    {
-        if ($this->filter === null) {
-            $this->filter(TextFilter::make($this->name));
-        }
-
-        return $this->filter;
-    }
-
-    /**
-     * Configure as a searchable select column filter (single choice).
-     *
-     * @param  array<string, string>|class-string  $options
-     */
-    public function filterAsSelect(array|string $options, ?string $placeholder = null): static
-    {
-        $filter = SelectFilter::make($this->name)->options($options)->searchable();
-        if ($placeholder) {
-            $filter->placeholder($placeholder);
-        }
-
-        return $this->filter($filter);
-    }
-
-    /**
-     * Configure as a multi-select column filter — the user can pick several
-     * values and the column matches any of them (`whereIn`).
-     *
-     * @param  array<string, string>|class-string  $options
-     */
-    public function filterAsMultiSelect(array|string $options, ?string $placeholder = null): static
-    {
-        $filter = SelectFilter::make($this->name)->multiple()->options($options)->searchable();
-        if ($placeholder) {
-            $filter->placeholder($placeholder);
-        }
-
-        return $this->filter($filter);
-    }
-
-    /**
-     * Toggle the in-panel search box on a select / multi-select column filter.
-     */
-    public function filterSearchable(bool $condition = true): static
-    {
-        $filter = $this->ensureFilter();
-        if ($filter instanceof SelectFilter) {
-            $filter->searchable($condition);
-        }
-
-        return $this;
-    }
-
-    /**
-     * Configure as a date column filter.
-     */
-    public function filterAsDate(?string $minDate = null, ?string $maxDate = null): static
-    {
-        return $this->filter(
-            DateFilter::make($this->name)->minDate($minDate)->maxDate($maxDate),
-        );
-    }
-
-    /**
-     * Configure as a date range column filter (from/to).
-     */
-    public function filterAsDateRange(?string $minDate = null, ?string $maxDate = null): static
-    {
-        return $this->filter(
-            DateFilter::make($this->name)->range()->minDate($minDate)->maxDate($maxDate),
-        );
-    }
-
-    /**
-     * Configure as a number range column filter (min/max).
-     */
-    public function filterAsNumberRange(?float $min = null, ?float $max = null, ?float $step = null): static
-    {
-        return $this->filter(
-            NumberRangeFilter::make($this->name)->min($min)->max($max)->step($step),
-        );
-    }
-
-    /**
-     * Configure as a boolean (yes/no/all) column filter.
-     */
-    public function filterAsBoolean(?string $trueLabel = null, ?string $falseLabel = null): static
-    {
-        return $this->filter(
-            TernaryFilter::make($this->name)->nullable()->trueLabel($trueLabel)->falseLabel($falseLabel),
-        );
-    }
-
-    /**
-     * Set the filter SQL operator (text filters only).
-     * Supported: 'like', 'equals', 'starts_with', 'ends_with', '>', '>=', '<', '<=', '!='
-     */
-    public function filterOperator(string $operator): static
-    {
-        $filter = $this->ensureFilter();
-        if ($filter instanceof TextFilter) {
-            $filter->operator($operator);
-        }
-
-        return $this;
-    }
-
-    /**
-     * Set debounce for the text column filter input (in ms).
-     */
-    public function filterDebounce(int $ms): static
-    {
-        $filter = $this->ensureFilter();
-        if ($filter instanceof TextFilter) {
-            $filter->debounce($ms);
-        }
-
-        return $this;
-    }
-
-    public function isFilterable(): bool
-    {
-        return $this->filter !== null;
-    }
-
-    /**
-     * Whether the filter binds an array state (multi-select), so the host can
-     * seed `columnFilters.<name>` to [] for correct checkbox-group binding.
-     */
-    public function filterExpectsArray(): bool
-    {
-        return $this->filter !== null && $this->filter->isMultiple();
-    }
-
-    public function filterPlaceholder(?string $placeholder): static
-    {
-        $this->ensureFilter()->placeholder($placeholder);
-
-        return $this;
-    }
-
-    public function filterUsing(Closure $callback): static
-    {
-        $this->ensureFilter()->query($callback);
-
-        return $this;
-    }
-
-    /**
-     * Apply this column's header filter to the query, delegating to the
-     * canonical Filter. A bare, non-relation column is qualified against the
-     * base table so it stays unambiguous under joins (relation-manager pivots);
-     * the clone keeps the stored filter (used for planning/render) untouched.
-     */
-    public function applyFilter(mixed $query, mixed $value): mixed
-    {
-        if ($value === null || $value === '' || $value === []) {
-            return $query;
-        }
-
-        $filter = $this->resolveFilter();
-        if ($filter === null || ! $filter->canView()) {
-            return $query;
-        }
-
-        if (! $this->hasRelation() && ! str_contains($this->name, '.') && $query instanceof Builder) {
-            $filter = (clone $filter)->column($query->qualifyColumn($this->name));
-        }
-
-        return $filter->apply($query, $value);
     }
 
     /**

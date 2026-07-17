@@ -45,8 +45,17 @@
         <span
             aria-hidden="true"
             :class="value ? 'translate-x-5' : 'translate-x-0'"
-            class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
-        ></span>
+            class="pointer-events-none inline-flex items-center justify-center h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+        >
+            {{-- Optional state icons ride inside the knob; x-show swaps them with
+                 the live Alpine value, so the knob stays a single moving element. --}}
+            @if($onIcon)
+                <span x-show="value" x-cloak>{!! $onIcon !!}</span>
+            @endif
+            @if($offIcon)
+                <span x-show="!value" x-cloak>{!! $offIcon !!}</span>
+            @endif
+        </span>
     </button>
 
     {{-- Inline error (e.g. optimistic-lock conflict) — self-contained, no toast needed. --}}

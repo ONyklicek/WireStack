@@ -7,20 +7,20 @@ namespace NyonCode\WireTable\Filters;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Foundation\Concerns\HasNativeControl;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireForms\Components\Select;
 
 class SelectFilter extends Filter
 {
+    use HasNativeControl;
     use HasSheetOnMobile {
         HasSheetOnMobile::defaultSheetOnMobile as protected sheetConfigDefault;
     }
 
     /** @var array<string, string>|string|Closure */
     protected array|string|Closure $options = [];
-
-    protected bool $native = true;
 
     protected bool $searchable = false;
 
@@ -40,18 +40,6 @@ class SelectFilter extends Filter
     public function getOptions(): array
     {
         return $this->normalizeOptions($this->options);
-    }
-
-    public function native(bool $native = true): static
-    {
-        $this->native = $native;
-
-        return $this;
-    }
-
-    public function isNative(): bool
-    {
-        return $this->native;
     }
 
     public function searchable(bool $searchable = true): static

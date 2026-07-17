@@ -5,15 +5,21 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Forms\Runtime;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 use NyonCode\WireForms\Components\Repeater;
 
 /**
- * Handles saving relationship data (Repeater HasMany cascade save).
+ * Handles saving relationship data from repeaters (owned-rows cascade and
+ * BelongsToMany pivot sync).
  *
- * Called after the parent model is saved to sync children.
+ * Called after the parent model is saved to sync children. An owned relation
+ * (`HasMany` / `MorphMany`, both `HasOneOrMany`) creates/updates/deletes its rows
+ * — a morph relation's `create()` sets the morph type/id automatically; a
+ * `BelongsToMany` repeater syncs the pivot (attach/detach/update pivot columns),
+ * keyed by the related model's key.
  *
  * @internal
  */
@@ -62,9 +68,6 @@ final class RelationshipSaveHandler
         }
 
         $relation = $record->{$relationName}();
-        if (! $relation instanceof HasMany) {
-            return;
-        }
 
         $fieldName = $repeater->getName();
         $items = $data[$fieldName] ?? [];
@@ -73,6 +76,19 @@ final class RelationshipSaveHandler
         }
 
         $mutator = $repeater->getMutateRelationshipDataBeforeSaveUsing();
+
+        if ($relation instanceof BelongsToMany) {
+            $this->syncBelongsToMany($record, $relationName, $items, $mutator);
+
+            return;
+        }
+
+        // HasMany and MorphMany (both HasOneOrMany) share the same create/update/
+        // delete cascade — a morph create() sets the *_type/*_id on its own.
+        if (! $relation instanceof HasOneOrMany) {
+            return;
+        }
+
         $relatedModel = $relation->getRelated();
         $primaryKey = $relatedModel->getKeyName();
 
@@ -107,5 +123,44 @@ final class RelationshipSaveHandler
         if (! empty($toDelete)) {
             $record->{$relationName}()->whereIn($primaryKey, $toDelete)->get()->each->delete();
         }
+    }
+
+    /**
+     * Sync a BelongsToMany from repeater rows. Each row carries the related
+     * model's key (under its key name) plus any pivot columns; the whole set is
+     * `sync()`ed so unlisted rows detach, listed ones attach, and pivot columns
+     * update — in one statement.
+     *
+     * @param  array<int, mixed>  $items
+     */
+    private function syncBelongsToMany(Model $record, string $relationName, array $items, ?\Closure $mutator): void
+    {
+        $relatedKeyName = $record->{$relationName}()->getRelated()->getKeyName();
+
+        /** @var array<int|string, array<string, mixed>> $sync */
+        $sync = [];
+
+        foreach ($items as $itemData) {
+            if (! is_array($itemData)) {
+                continue;
+            }
+
+            if ($mutator) {
+                $itemData = $mutator($itemData);
+            }
+
+            $relatedId = $itemData[$relatedKeyName] ?? null;
+
+            if ($relatedId === null || $relatedId === '') {
+                continue;
+            }
+
+            // Everything but the related key is pivot data.
+            unset($itemData[$relatedKeyName]);
+
+            $sync[$relatedId] = $itemData;
+        }
+
+        $record->{$relationName}()->sync($sync);
     }
 }

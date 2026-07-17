@@ -58,7 +58,7 @@ DateFilter::make('billed_at')
 // Hodnota "2026-06" aplikuje: WHERE YEAR(billed_at) = 2026 AND MONTH(billed_at) = 6
 ```
 
-Zkombinujte s [`subRows()`](relationships.md#filtering-by-sub-row-values) pro filtrování rodičů podle
+Zkombinujte s [`subRows()`](relationships.md#filtrovani-podle-hodnot-podradku) pro filtrování rodičů podle
 měsíce jejich dětských záznamů.
 
 ## Omezení data

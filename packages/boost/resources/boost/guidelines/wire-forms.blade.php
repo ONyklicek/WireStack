@@ -181,7 +181,10 @@ callback receives the record; `null` for header actions); its values override th
         ]);
 
 `fillFormUsing` (and a record's stored value) win over `->default()`; the seed only fills keys the
-data omits, so an intentional `null` from the record is never overwritten by a default.
+data omits, so an intentional `null` from the record is never overwritten by a default. To opt one
+field out of that rule — treating an edit-mode `null` or empty string as unset so its default fills
+there too — add `->defaultOnNull()`. Use it only where `null` is not a value the user can choose
+(e.g. a column that must always carry a value); otherwise leave it off so a cleared value survives.
 
 Add extra footer buttons that read/write the in-progress form without submitting it via
 `modalFooterActions()` — each `ModalFooterAction` callback gets the live `$data` bag and a `$set`
@@ -230,8 +233,11 @@ named actions in `actions()`, and drop the modal host in the view once:
 - Livewire methods added: `mountAction($name, ['record' => $model])` (opens the modal, or runs a
   plain action immediately), `callMountedAction()` (validate + run), `unmountAction()`,
   `nextActionModalStep()`/`prevActionModalStep()` (wizards), `callModalFooterAction($name)`.
-- The form-data bag is the public `actionModalFormData` property; field actions, `createOptionForm`
-  and `fillFormUsing` all work exactly as in a table modal.
+- Modals stack as a live frame array in the public `mountedActions` property; each open modal's
+  form-data bag lives at `mountedActions.{depth}.data`. Field actions, `createOptionForm` and
+  `fillFormUsing` all work exactly as in a table modal.
+- Nested modals can return data: action/footer callbacks receive `$set`/`$setParent`/`$setFrame`/
+  `$parentData`/`$arguments` bindings, so a child sub-form can write straight back into its parent.
 - Same engine backs `WithTable`: the form-agnostic core lives in
   `NyonCode\WireCore\Actions\Concerns\InteractsWithActions`, the form bridge in
   `NyonCode\WireForms\Concerns\InteractsWithActionForms`. Prefer this over reimplementing action

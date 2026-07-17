@@ -115,7 +115,7 @@ i pro pole uvnitř `Repeater` položek: dispatch vyresolvuje pole per položka a
 ne svých sousedů.
 
 Vícekrokové formuláře dostávají stejné zacházení: uvnitř Livewire hostitele samostatný
-[Wizard](../core/schema/layout/wizard.md#per-step-validation) zvaliduje aktuální krok na serveru, než
+[Wizard](../core/schema/layout/wizard.md#validace-po-krocich) zvaliduje aktuální krok na serveru, než
 „Další" postoupí, a neúspěšné odeslání skočí na první krok obsahující chybu.
 
 ## Předvyplnění formuláře z akce

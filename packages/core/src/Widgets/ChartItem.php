@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Widgets;
 
-use InvalidArgumentException;
+use NyonCode\WireCore\Exceptions\InvalidChartDataException;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasExtraAttributes;
 use NyonCode\WireCore\Foundation\Icons\Icon;
@@ -96,9 +96,7 @@ class ChartItem
         $percentage = (float) $percentage;
 
         if ($percentage < 0 || $percentage > 100) {
-            throw new InvalidArgumentException(
-                "Chart item percentage must be between 0 and 100, [{$percentage}] given."
-            );
+            throw InvalidChartDataException::percentageOutOfRange($percentage);
         }
 
         $this->percentage = $percentage;

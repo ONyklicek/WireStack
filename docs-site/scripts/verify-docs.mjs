@@ -42,8 +42,63 @@ function walk(dir, ext, out = []) {
 }
 const rel = (p) => p.slice(REPO.length + 1);
 
+/*
+ * Mirrors build.php's slugify(), which is Laravel's Str::slug().
+ *
+ * NFD-decompose then drop the combining marks: that reproduces Str::slug for
+ * every letter these docs contain (asserted below across every heading in the
+ * tree). The two would only part ways on a character with no decomposition that
+ * Laravel maps by hand — ß → "ss", Æ → "ae" — which no heading here uses. If one
+ * ever does, the equivalence check fails rather than the ids silently drifting.
+ */
+const slugify = (value) => {
+  // Follows Str::slug step for step. The order is the point: punctuation is
+  // *removed* before separators are collapsed, so "Date/Time" is "datetime",
+  // not "date-time" — a naive [^a-z0-9]+ → '-' gets that wrong, and 37 of this
+  // repo's headings hit it.
+  let v = value.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // ≈ Str::ascii
+  v = v.replace(/_+/g, '-');            // dashes/underscores → separator
+  v = v.replace(/@/g, '-at-');
+  v = v.toLowerCase();
+  v = v.replace(/[^-\p{L}\p{N}\s]+/gu, ''); // drop anything else outright
+  v = v.replace(/[-\s]+/g, '-');         // collapse separators + whitespace
+  v = v.replace(/^-+|-+$/g, '');
+
+  return v !== '' ? v : 'section';
+};
+
+// Approximate the rendered textContent build.php slugifies: inline markdown is
+// gone by then, and a link contributes its text, never its href.
+const headingText = (raw) =>
+  raw
+    .replace(/`([^`]*)`/g, '$1')
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/[*_]{1,3}([^*_]+)[*_]{1,3}/g, '$1')
+    .replace(/<[^>]+>/g, '')
+    .trim();
+
+/*
+ * Heading ids, mirroring build.php. Two structural details matter beyond the
+ * slug itself: only h1..h3 get an id (a link to an h4 is dead however it is
+ * spelled), and duplicate slugs get a "-2", "-3" … suffix in document order.
+ */
+const headingIds = (text) => {
+  const withoutCode = text.replace(/```[\s\S]*?```/g, '');
+  const counts = new Map();
+  const ids = new Set();
+  for (const m of withoutCode.matchAll(/^(#{1,3})\s+(.*)$/gm)) {
+    const base = slugify(headingText(m[2]));
+    const seen = counts.get(base) ?? 0;
+    counts.set(base, seen + 1);
+    ids.add(seen === 0 ? base : `${base}-${seen + 1}`);
+  }
+  return ids;
+};
+
 // ── 1. source markdown integrity ─────────────────────────────────────────
 const mdFiles = walk(DOCS, '.md');
+const idsByFile = new Map(mdFiles.map((md) => [md, headingIds(readFileSync(md, 'utf8'))]));
+
 for (const md of mdFiles) {
   const text = readFileSync(md, 'utf8');
   const lines = text.split('\n');
@@ -63,12 +118,29 @@ for (const md of mdFiles) {
   });
   if (fenceCount % 2 !== 0) fail(`${rel(md)} — unbalanced code fences (${fenceCount})`);
 
-  // broken relative .md links
-  const linkRe = /\]\((?!https?:|#|mailto:)([^)#]+\.md)(#[^)]*)?\)/g;
+  // broken relative .md links — and, when present, the anchor they point at
+  const linkRe = /\]\((?!https?:|#|mailto:)([^)#]+\.md)(?:#([^)]*))?\)/g;
   let m;
   while ((m = linkRe.exec(text)) !== null) {
     const target = resolve(join(md, '..', m[1]));
-    if (!existsSync(target)) fail(`${rel(md)} — broken relative link: ${m[1]}`);
+    if (!existsSync(target)) {
+      fail(`${rel(md)} — broken relative link: ${m[1]}`);
+      continue;
+    }
+    if (m[2] && !idsByFile.get(target)?.has(m[2])) {
+      fail(`${rel(md)} — link to a heading that does not exist: ${m[1]}#${m[2]}`);
+    }
+  }
+
+  // Same-page anchors. These rot silently: translating a heading changes its id,
+  // and nothing but this check notices the link still points at the old English
+  // slug (49 CS links had drifted this way).
+  const ownIds = idsByFile.get(md);
+  for (const a of text.replace(/```[\s\S]*?```/g, '').matchAll(/\]\((#[^)\s]+)\)/g)) {
+    const anchor = a[1].slice(1);
+    if (!ownIds.has(anchor)) {
+      fail(`${rel(md)} — dead anchor: #${anchor} (no h1–h3 on this page has that id)`);
+    }
   }
 }
 
@@ -121,6 +193,21 @@ if (built) {
 }
 
 rmSync(tmpDist, { recursive: true, force: true });
+
+// ── 6. docs match the actual public API ──────────────────────────────────
+// Reflection-based, so it catches both an undocumented method and a documented
+// one that does not exist. Known gaps live in api-docs-baseline.txt; only new
+// drift fails here.
+try {
+  execFileSync('php', [join(REPO, 'docs-site/scripts/verify-api-docs.php'), REPO], { stdio: 'pipe' });
+} catch (e) {
+  const out = `${e.stdout ?? ''}${e.stderr ?? ''}`.trim();
+  for (const line of out.split('\n')) {
+    const m = line.match(/^\s*✗\s*(.*)$/);
+    if (m) fail(m[1]);
+  }
+  if (!out.includes('✗')) fail(`api-docs check could not run: ${out.slice(0, 200)}`);
+}
 
 // ── report ───────────────────────────────────────────────────────────────
 if (failures.length) {

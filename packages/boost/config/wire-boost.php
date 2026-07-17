@@ -54,9 +54,11 @@ return [
     | Documentation Search
     |--------------------------------------------------------------------------
     |
-    | The "search-wire-docs" tool always indexes the curated guideline and
-    | skill corpus shipped with wire-boost. Add extra absolute directories of
-    | Markdown here to broaden the index for your own project.
+    | The "search-wire-docs" and "fetch-wire-doc" tools always index the corpus
+    | shipped with wire-boost: the complete English wireStack documentation plus
+    | the curated guidelines and skills. Add extra absolute directories of
+    | Markdown here to index your own project's documentation alongside it; each
+    | is addressed under a root named after its directory.
     |
     */
     'docs' => [

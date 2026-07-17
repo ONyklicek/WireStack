@@ -52,7 +52,7 @@
     $activeTableFilters = array_filter($tableFilters, $filterHasValue);
     $activeColumnFilters = array_filter($columnFilterValues, $filterHasValue);
 
-    $actions = $table->getActions();
+    $actions = $table->getRowActionsForDisplay(); // applies the configured row-action style (solid/quiet)
     $bulkActions = $table->getBulkActions();
     $headerActions = $table->getHeaderActions();
     $filters = $table->getFilters();
@@ -295,7 +295,7 @@
                                                 <div
                                                         x-ref="panel"
                                                         x-show="open"
-                                                        @click.outside="close()"
+                                                        @click.outside="$clickedInside($event) || close()"
                                                         @if($sheetOnMobile) x-focus-trap="open" tabindex="-1" data-sheet-bp="{{ $sheetBpPx }}" @endif
                                                         x-transition:enter="transition ease-out duration-100"
                                                         x-transition:enter-start="opacity-0 scale-95 {{ $sheetOnMobile ? $sheetMotion : '' }}"
@@ -407,7 +407,7 @@
                                                 <div
                                                     x-ref="panel"
                                                     x-show="open"
-                                                    @click.outside="close()"
+                                                    @click.outside="$clickedInside($event) || close()"
                                                     @if($sheetOnMobile) x-focus-trap="open" tabindex="-1" data-sheet-bp="{{ $sheetBpPx }}" @endif
                                                     x-transition:enter="transition ease-out duration-100"
                                                     x-transition:enter-start="transform opacity-0 scale-95 {{ $sheetOnMobile ? $sheetMotion : '' }}"
@@ -716,7 +716,7 @@
                                                         x-ref="panel"
                                                         x-show="open"
                                                         x-cloak
-                                                        @click.outside="close()"
+                                                        @click.outside="$clickedInside($event) || close()"
                                                         @keydown.escape.window="close()"
                                                         @wheel.window="close()"
                                                         @click="close()"

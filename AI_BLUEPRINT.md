@@ -164,7 +164,7 @@ Start files:
 - `packages/table/src/WireTableServiceProvider.php`
 - `packages/table/src/Table.php`
 - `packages/table/src/Concerns/WithTable.php`
-- `packages/table/src/Concerns/TableQueryService.php`
+- `packages/table/src/Services/TableQueryService.php`
 - `packages/table/src/Columns/Column.php`
 - `packages/table/src/Filters/Filter.php`
 - `packages/table/src/Livewire/TableStateSynthesizer.php`
@@ -301,7 +301,7 @@ Read these first when a change touches more than one package:
 - Forms into actions:
   `packages/forms/src/Integration/ActionMacros.php`
 - Table into core query runtime:
-  `packages/table/src/Concerns/TableQueryService.php`
+  `packages/table/src/Services/TableQueryService.php`
 - Table state into Livewire:
   `packages/table/src/Livewire/TableStateSynthesizer.php`
 - Sortable into table and plugins:
@@ -318,7 +318,7 @@ Treat these as high blast-radius files. Read surrounding tests before editing:
 - `packages/forms/src/Forms/Runtime/SaveHandler.php`
 - `packages/forms/src/Integration/ActionMacros.php`
 - `packages/table/src/Concerns/WithTable.php`
-- `packages/table/src/Concerns/TableQueryService.php`
+- `packages/table/src/Services/TableQueryService.php`
 - `packages/table/src/Columns/Column.php`
 - `packages/table/src/Livewire/TableStateSynthesizer.php`
 - `packages/table/resources/views/tables/index.blade.php`

@@ -63,7 +63,7 @@ Před upgradem ověřte, že je vaše aplikace splňuje.
    - `lang/vendor/wire-*/…`
 
    Čím méně pohledů přepisujete, tím méně je zde ke sladění — viz
-   [Vzhled → Přepis pohledů](theming.md#overriding-views).
+   [Vzhled → Přepis pohledů](theming.md#prepis-pohledu).
 
 4. **Vyčistěte cache a přebuildujte assety.**
 

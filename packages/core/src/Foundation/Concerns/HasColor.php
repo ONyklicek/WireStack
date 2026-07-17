@@ -11,13 +11,21 @@ namespace NyonCode\WireCore\Foundation\Concerns;
  * Used across Actions, Badges, Notifications, and Form components.
  *
  * Every owner-facing surface accepts the **complete Tailwind color palette**:
- * the semantic aliases (`primary`/`blue`, `success`/`green`/`emerald`,
- * `danger`/`red`, `warning`/`yellow`/`amber`, `info`/`cyan`, `gray`/`secondary`)
- * plus every raw Tailwind hue family — `slate`, `zinc`, `neutral`, `stone`,
- * `orange`, `lime`, `teal`, `sky`, `indigo`, `violet`, `purple`, `fuchsia`,
- * `pink`, `rose`. So `->color('fuchsia')` renders the same on a solid button,
- * an outlined button, a link, a badge, a modal submit button and a choice card,
- * not just the ones that used to special-case a curated subset.
+ * the semantic roles (`primary`, `success`/`emerald`, `danger`, `warning`/`amber`,
+ * `info`, `gray`/`secondary`) plus every raw Tailwind hue family — `blue`, `green`,
+ * `red`, `yellow`, `cyan`, `slate`, `zinc`, `neutral`, `stone`, `orange`, `lime`,
+ * `teal`, `sky`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose` — and the
+ * achromatic endpoints `white`/`black`. So `->color('fuchsia')` renders the same on
+ * a solid button, an outlined button, a link, a badge, a modal submit button and a
+ * choice card, not just the ones that used to special-case a curated subset.
+ *
+ * The literal hues are first-class, NOT aliases of the semantic roles: `blue`
+ * renders literal Tailwind blue (distinct from the re-themeable brand `primary`),
+ * `green` renders literal green (distinct from `success`/`emerald`) and `yellow`
+ * renders literal yellow (distinct from `warning`/`amber`). `red`/`cyan` share the
+ * same hue as `danger`/`info`. `white`/`black` have no numeric Tailwind scale, so
+ * they resolve adaptively — `black` is a dark ink/fill in light mode and flips to
+ * white in dark mode, `white` is the inverse — keeping them readable on both themes.
  *
  * Class strings are kept literal (never interpolated from the owner-supplied
  * color) so Tailwind's JIT scanner sees every hue and the match arms double as a
@@ -37,16 +45,16 @@ trait HasColor
         $cacheKey = "solid_$color";
 
         return static::$colorClassCache[$cacheKey] ??= match ($color) {
-            'primary',
-            'blue' => 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 dark:bg-primary-500 dark:hover:bg-primary-600',
+            'primary' => 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 dark:bg-primary-500 dark:hover:bg-primary-600',
+            'blue' => 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600',
             'success',
-            'green',
             'emerald' => 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-600',
+            'green' => 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500 dark:bg-green-500 dark:hover:bg-green-600',
             'danger',
             'red' => 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 dark:bg-red-500 dark:hover:bg-red-600',
             'warning',
-            'yellow',
             'amber' => 'bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-500 dark:bg-amber-400 dark:hover:bg-amber-500',
+            'yellow' => 'bg-yellow-500 text-white hover:bg-yellow-600 focus:ring-yellow-500 dark:bg-yellow-400 dark:hover:bg-yellow-500',
             'info',
             'cyan' => 'bg-cyan-600 text-white hover:bg-cyan-700 focus:ring-cyan-500 dark:bg-cyan-500 dark:hover:bg-cyan-600',
             'orange' => 'bg-orange-500 text-white hover:bg-orange-600 focus:ring-orange-500 dark:bg-orange-400 dark:hover:bg-orange-500',
@@ -63,6 +71,8 @@ trait HasColor
             'zinc' => 'bg-zinc-600 text-white hover:bg-zinc-700 focus:ring-zinc-500 dark:bg-zinc-500 dark:hover:bg-zinc-600',
             'neutral' => 'bg-neutral-600 text-white hover:bg-neutral-700 focus:ring-neutral-500 dark:bg-neutral-500 dark:hover:bg-neutral-600',
             'stone' => 'bg-stone-600 text-white hover:bg-stone-700 focus:ring-stone-500 dark:bg-stone-500 dark:hover:bg-stone-600',
+            'black' => 'bg-gray-900 text-white hover:bg-black focus:ring-gray-500 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100',
+            'white' => 'bg-white text-gray-900 border border-gray-200 hover:bg-gray-50 focus:ring-gray-300 dark:bg-gray-900 dark:text-white dark:border-gray-700 dark:hover:bg-gray-800',
             'gray',
             'secondary' => 'bg-gray-100 text-gray-600 hover:bg-gray-200 focus:ring-gray-500 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600',
             default => 'bg-gray-100 text-gray-600 hover:bg-gray-200 focus:ring-gray-500 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600',
@@ -78,16 +88,16 @@ trait HasColor
         $cacheKey = "outlined_$color";
 
         return static::$colorClassCache[$cacheKey] ??= match ($color) {
-            'primary',
-            'blue' => 'border border-primary-600 text-primary-600 hover:bg-primary-50 focus:ring-primary-500 dark:border-primary-400 dark:text-primary-400 dark:hover:bg-primary-900/20',
+            'primary' => 'border border-primary-600 text-primary-600 hover:bg-primary-50 focus:ring-primary-500 dark:border-primary-400 dark:text-primary-400 dark:hover:bg-primary-900/20',
+            'blue' => 'border border-blue-600 text-blue-600 hover:bg-blue-50 focus:ring-blue-500 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-900/20',
             'success',
-            'green',
             'emerald' => 'border border-emerald-600 text-emerald-600 hover:bg-emerald-50 focus:ring-emerald-500 dark:border-emerald-400 dark:text-emerald-400 dark:hover:bg-emerald-900/20',
+            'green' => 'border border-green-600 text-green-600 hover:bg-green-50 focus:ring-green-500 dark:border-green-400 dark:text-green-400 dark:hover:bg-green-900/20',
             'danger',
             'red' => 'border border-red-600 text-red-600 hover:bg-red-50 focus:ring-red-500 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20',
             'warning',
-            'yellow',
             'amber' => 'border border-amber-600 text-amber-600 hover:bg-amber-50 focus:ring-amber-500 dark:border-amber-400 dark:text-amber-400 dark:hover:bg-amber-900/20',
+            'yellow' => 'border border-yellow-600 text-yellow-600 hover:bg-yellow-50 focus:ring-yellow-500 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-900/20',
             'info',
             'cyan' => 'border border-cyan-600 text-cyan-600 hover:bg-cyan-50 focus:ring-cyan-500 dark:border-cyan-400 dark:text-cyan-400 dark:hover:bg-cyan-900/20',
             'orange' => 'border border-orange-600 text-orange-600 hover:bg-orange-50 focus:ring-orange-500 dark:border-orange-400 dark:text-orange-400 dark:hover:bg-orange-900/20',
@@ -104,6 +114,8 @@ trait HasColor
             'zinc' => 'border border-zinc-600 text-zinc-600 hover:bg-zinc-50 focus:ring-zinc-500 dark:border-zinc-400 dark:text-zinc-400 dark:hover:bg-zinc-900/20',
             'neutral' => 'border border-neutral-600 text-neutral-600 hover:bg-neutral-50 focus:ring-neutral-500 dark:border-neutral-400 dark:text-neutral-400 dark:hover:bg-neutral-900/20',
             'stone' => 'border border-stone-600 text-stone-600 hover:bg-stone-50 focus:ring-stone-500 dark:border-stone-400 dark:text-stone-400 dark:hover:bg-stone-900/20',
+            'black' => 'border border-gray-900 text-gray-900 hover:bg-gray-100 focus:ring-gray-500 dark:border-white dark:text-white dark:hover:bg-white/10',
+            'white' => 'border border-white text-white hover:bg-white/10 focus:ring-gray-300 dark:border-gray-900 dark:text-gray-900 dark:hover:bg-gray-900/10',
             'gray',
             'secondary' => 'border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-gray-500',
             default => 'border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-gray-500',
@@ -120,12 +132,13 @@ trait HasColor
 
         return static::$colorClassCache[$cacheKey] ??= match ($color) {
             'danger', 'red' => 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20',
-            'warning', 'yellow', 'amber' => 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20',
+            'warning', 'amber' => 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20',
+            'yellow' => 'text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20',
             'success',
-            'green',
             'emerald' => 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20',
-            'primary',
-            'blue' => 'text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20',
+            'green' => 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20',
+            'primary' => 'text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20',
+            'blue' => 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20',
             'info', 'cyan' => 'text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/20',
             'orange' => 'text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20',
             'lime' => 'text-lime-600 dark:text-lime-400 hover:bg-lime-50 dark:hover:bg-lime-900/20',
@@ -141,6 +154,8 @@ trait HasColor
             'zinc' => 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900/20',
             'neutral' => 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900/20',
             'stone' => 'text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-900/20',
+            'black' => 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10',
+            'white' => 'text-white dark:text-gray-900 hover:bg-white/10 dark:hover:bg-gray-100',
             default => 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700',
         };
     }
@@ -154,14 +169,15 @@ trait HasColor
         $cacheKey = "icon_$color";
 
         return static::$colorClassCache[$cacheKey] ??= match ($color) {
-            'primary',
-            'blue' => 'text-primary-600 hover:bg-primary-50 focus:ring-primary-500 dark:text-primary-400 dark:hover:bg-primary-900/20',
+            'primary' => 'text-primary-600 hover:bg-primary-50 focus:ring-primary-500 dark:text-primary-400 dark:hover:bg-primary-900/20',
+            'blue' => 'text-blue-600 hover:bg-blue-50 focus:ring-blue-500 dark:text-blue-400 dark:hover:bg-blue-900/20',
             'danger',
             'red' => 'text-red-600 hover:bg-red-50 focus:ring-red-500 dark:text-red-400 dark:hover:bg-red-900/20',
             'success',
-            'green',
             'emerald' => 'text-emerald-600 hover:bg-emerald-50 focus:ring-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-900/20',
-            'warning', 'yellow', 'amber' => 'text-amber-600 hover:bg-amber-50 focus:ring-amber-500 dark:text-amber-400 dark:hover:bg-amber-900/20',
+            'green' => 'text-green-600 hover:bg-green-50 focus:ring-green-500 dark:text-green-400 dark:hover:bg-green-900/20',
+            'warning', 'amber' => 'text-amber-600 hover:bg-amber-50 focus:ring-amber-500 dark:text-amber-400 dark:hover:bg-amber-900/20',
+            'yellow' => 'text-yellow-600 hover:bg-yellow-50 focus:ring-yellow-500 dark:text-yellow-400 dark:hover:bg-yellow-900/20',
             'info', 'cyan' => 'text-cyan-600 hover:bg-cyan-50 focus:ring-cyan-500 dark:text-cyan-400 dark:hover:bg-cyan-900/20',
             'orange' => 'text-orange-600 hover:bg-orange-50 focus:ring-orange-500 dark:text-orange-400 dark:hover:bg-orange-900/20',
             'lime' => 'text-lime-600 hover:bg-lime-50 focus:ring-lime-500 dark:text-lime-400 dark:hover:bg-lime-900/20',
@@ -177,7 +193,67 @@ trait HasColor
             'zinc' => 'text-zinc-600 hover:bg-zinc-50 focus:ring-zinc-500 dark:text-zinc-400 dark:hover:bg-zinc-900/20',
             'neutral' => 'text-neutral-600 hover:bg-neutral-50 focus:ring-neutral-500 dark:text-neutral-400 dark:hover:bg-neutral-900/20',
             'stone' => 'text-stone-600 hover:bg-stone-50 focus:ring-stone-500 dark:text-stone-400 dark:hover:bg-stone-900/20',
+            'black' => 'text-gray-900 hover:bg-gray-100 focus:ring-gray-500 dark:text-white dark:hover:bg-white/10',
+            'white' => 'text-white hover:bg-white/10 focus:ring-gray-300 dark:text-gray-900 dark:hover:bg-gray-100',
             default => 'text-gray-500 hover:bg-gray-100 focus:ring-gray-500 dark:text-gray-400 dark:hover:bg-gray-700',
+        };
+    }
+
+    /**
+     * Get "quiet" button color classes (neutral at rest, color on intent).
+     *
+     * The resting state is deliberately achromatic — `text-gray-600 dark:text-gray-300`,
+     * a transparent background — so a row full of these buttons stops competing with
+     * the data. The owner-supplied hue only appears on `hover:`/`focus:` (a tinted
+     * background plus, for non-neutral hues, a colored label). Every arm sets an
+     * explicit `focus:ring-{hue}-500` because the shared button base always applies
+     * `focus:ring-2`; without a ring color the keyboard focus indicator would be
+     * invisible (WCAG 2.4.7).
+     *
+     * Exception: `danger`/`red` keep their red label **at rest**. Touch devices have
+     * no hover, so a destructive action must read as dangerous without interaction —
+     * matching how GitHub/Linear keep "Delete" red in a quiet menu.
+     *
+     * Literal class strings (JIT-safe allow-list), same convention as the sibling
+     * resolvers above.
+     */
+    protected function getQuietButtonColorClasses(?string $color = null): string
+    {
+        $color ??= $this->getColor();
+        $cacheKey = "quiet_$color";
+
+        // Neutral resting label shared by every non-destructive hue.
+        $rest = 'text-gray-600 dark:text-gray-300';
+
+        return static::$colorClassCache[$cacheKey] ??= match ($color) {
+            // Destructive stays legible at rest (no reliance on hover / touch).
+            'danger', 'red' => 'text-red-600 dark:text-red-400 hover:bg-red-50 focus:ring-red-500 dark:hover:bg-red-900/20',
+
+            'primary' => "$rest hover:text-primary-600 hover:bg-primary-50 focus:ring-primary-500 dark:hover:text-primary-400 dark:hover:bg-primary-900/20",
+            'blue' => "$rest hover:text-blue-600 hover:bg-blue-50 focus:ring-blue-500 dark:hover:text-blue-400 dark:hover:bg-blue-900/20",
+            'success', 'emerald' => "$rest hover:text-emerald-600 hover:bg-emerald-50 focus:ring-emerald-500 dark:hover:text-emerald-400 dark:hover:bg-emerald-900/20",
+            'green' => "$rest hover:text-green-600 hover:bg-green-50 focus:ring-green-500 dark:hover:text-green-400 dark:hover:bg-green-900/20",
+            'warning', 'amber' => "$rest hover:text-amber-600 hover:bg-amber-50 focus:ring-amber-500 dark:hover:text-amber-400 dark:hover:bg-amber-900/20",
+            'yellow' => "$rest hover:text-yellow-600 hover:bg-yellow-50 focus:ring-yellow-500 dark:hover:text-yellow-400 dark:hover:bg-yellow-900/20",
+            'info', 'cyan' => "$rest hover:text-cyan-600 hover:bg-cyan-50 focus:ring-cyan-500 dark:hover:text-cyan-400 dark:hover:bg-cyan-900/20",
+            'orange' => "$rest hover:text-orange-600 hover:bg-orange-50 focus:ring-orange-500 dark:hover:text-orange-400 dark:hover:bg-orange-900/20",
+            'lime' => "$rest hover:text-lime-600 hover:bg-lime-50 focus:ring-lime-500 dark:hover:text-lime-400 dark:hover:bg-lime-900/20",
+            'teal' => "$rest hover:text-teal-600 hover:bg-teal-50 focus:ring-teal-500 dark:hover:text-teal-400 dark:hover:bg-teal-900/20",
+            'sky' => "$rest hover:text-sky-600 hover:bg-sky-50 focus:ring-sky-500 dark:hover:text-sky-400 dark:hover:bg-sky-900/20",
+            'indigo' => "$rest hover:text-indigo-600 hover:bg-indigo-50 focus:ring-indigo-500 dark:hover:text-indigo-400 dark:hover:bg-indigo-900/20",
+            'violet' => "$rest hover:text-violet-600 hover:bg-violet-50 focus:ring-violet-500 dark:hover:text-violet-400 dark:hover:bg-violet-900/20",
+            'purple' => "$rest hover:text-purple-600 hover:bg-purple-50 focus:ring-purple-500 dark:hover:text-purple-400 dark:hover:bg-purple-900/20",
+            'fuchsia' => "$rest hover:text-fuchsia-600 hover:bg-fuchsia-50 focus:ring-fuchsia-500 dark:hover:text-fuchsia-400 dark:hover:bg-fuchsia-900/20",
+            'pink' => "$rest hover:text-pink-600 hover:bg-pink-50 focus:ring-pink-500 dark:hover:text-pink-400 dark:hover:bg-pink-900/20",
+            'rose' => "$rest hover:text-rose-600 hover:bg-rose-50 focus:ring-rose-500 dark:hover:text-rose-400 dark:hover:bg-rose-900/20",
+            'slate' => "$rest hover:text-slate-700 hover:bg-slate-100 focus:ring-slate-500 dark:hover:text-slate-200 dark:hover:bg-slate-800/60",
+            'zinc' => "$rest hover:text-zinc-700 hover:bg-zinc-100 focus:ring-zinc-500 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/60",
+            'neutral' => "$rest hover:text-neutral-700 hover:bg-neutral-100 focus:ring-neutral-500 dark:hover:text-neutral-200 dark:hover:bg-neutral-800/60",
+            'stone' => "$rest hover:text-stone-700 hover:bg-stone-100 focus:ring-stone-500 dark:hover:text-stone-200 dark:hover:bg-stone-800/60",
+            'black' => "$rest hover:text-gray-900 hover:bg-gray-100 focus:ring-gray-500 dark:hover:text-white dark:hover:bg-white/10",
+            'white' => "$rest hover:text-gray-900 hover:bg-gray-100 focus:ring-gray-300 dark:hover:text-white dark:hover:bg-white/10",
+            'gray', 'secondary' => "$rest hover:text-gray-900 hover:bg-gray-100 focus:ring-gray-500 dark:hover:text-white dark:hover:bg-gray-700",
+            default => "$rest hover:text-gray-900 hover:bg-gray-100 focus:ring-gray-500 dark:hover:text-white dark:hover:bg-gray-700",
         };
     }
 
@@ -193,10 +269,13 @@ trait HasColor
     public static function getBadgeColorClasses(string $color): string
     {
         return match ($color) {
-            'primary', 'blue' => 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400',
-            'success', 'green', 'emerald' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+            'primary' => 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400',
+            'blue' => 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+            'success', 'emerald' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+            'green' => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
             'danger', 'red' => 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-            'warning', 'yellow', 'amber' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+            'warning', 'amber' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+            'yellow' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
             'info', 'cyan' => 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
             'orange' => 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
             'lime' => 'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-400',
@@ -212,6 +291,8 @@ trait HasColor
             'zinc' => 'bg-zinc-100 text-zinc-700 dark:bg-zinc-900/30 dark:text-zinc-400',
             'neutral' => 'bg-neutral-100 text-neutral-700 dark:bg-neutral-900/30 dark:text-neutral-400',
             'stone' => 'bg-stone-100 text-stone-700 dark:bg-stone-900/30 dark:text-stone-400',
+            'black' => 'bg-gray-900 text-white dark:bg-white dark:text-gray-900',
+            'white' => 'bg-white text-gray-900 border border-gray-200 dark:bg-gray-900 dark:text-white dark:border-gray-700',
             'gray', 'secondary' => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
             default => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
         };
@@ -236,12 +317,26 @@ trait HasColor
     public static function getChoiceColorClasses(string $color): array
     {
         return match ($color) {
-            'success', 'green', 'emerald' => [
+            'success', 'emerald' => [
                 'input' => 'text-emerald-600 focus:ring-emerald-500',
                 'solid' => 'peer-checked:border-emerald-600 peer-checked:bg-emerald-600 peer-checked:text-white',
                 'text' => 'peer-checked:text-emerald-600 dark:peer-checked:text-emerald-400',
                 'card' => 'peer-checked:border-emerald-500 peer-checked:ring-emerald-500/40 peer-checked:[&_.wf-card-icon]:text-emerald-600 dark:peer-checked:[&_.wf-card-icon]:text-emerald-400',
                 'indicator' => 'peer-checked:[&_.wf-card-indicator]:border-emerald-600 peer-checked:[&_.wf-card-indicator]:bg-emerald-600',
+            ],
+            'green' => [
+                'input' => 'text-green-600 focus:ring-green-500',
+                'solid' => 'peer-checked:border-green-600 peer-checked:bg-green-600 peer-checked:text-white',
+                'text' => 'peer-checked:text-green-600 dark:peer-checked:text-green-400',
+                'card' => 'peer-checked:border-green-500 peer-checked:ring-green-500/40 peer-checked:[&_.wf-card-icon]:text-green-600 dark:peer-checked:[&_.wf-card-icon]:text-green-400',
+                'indicator' => 'peer-checked:[&_.wf-card-indicator]:border-green-600 peer-checked:[&_.wf-card-indicator]:bg-green-600',
+            ],
+            'blue' => [
+                'input' => 'text-blue-600 focus:ring-blue-500',
+                'solid' => 'peer-checked:border-blue-600 peer-checked:bg-blue-600 peer-checked:text-white',
+                'text' => 'peer-checked:text-blue-600 dark:peer-checked:text-blue-400',
+                'card' => 'peer-checked:border-blue-500 peer-checked:ring-blue-500/40 peer-checked:[&_.wf-card-icon]:text-blue-600 dark:peer-checked:[&_.wf-card-icon]:text-blue-400',
+                'indicator' => 'peer-checked:[&_.wf-card-indicator]:border-blue-600 peer-checked:[&_.wf-card-indicator]:bg-blue-600',
             ],
             'danger', 'red' => [
                 'input' => 'text-red-600 focus:ring-red-500',
@@ -250,12 +345,19 @@ trait HasColor
                 'card' => 'peer-checked:border-red-500 peer-checked:ring-red-500/40 peer-checked:[&_.wf-card-icon]:text-red-600 dark:peer-checked:[&_.wf-card-icon]:text-red-400',
                 'indicator' => 'peer-checked:[&_.wf-card-indicator]:border-red-600 peer-checked:[&_.wf-card-indicator]:bg-red-600',
             ],
-            'warning', 'yellow', 'amber' => [
+            'warning', 'amber' => [
                 'input' => 'text-amber-500 focus:ring-amber-500',
                 'solid' => 'peer-checked:border-amber-500 peer-checked:bg-amber-500 peer-checked:text-white',
                 'text' => 'peer-checked:text-amber-600 dark:peer-checked:text-amber-400',
                 'card' => 'peer-checked:border-amber-500 peer-checked:ring-amber-500/40 peer-checked:[&_.wf-card-icon]:text-amber-600 dark:peer-checked:[&_.wf-card-icon]:text-amber-400',
                 'indicator' => 'peer-checked:[&_.wf-card-indicator]:border-amber-500 peer-checked:[&_.wf-card-indicator]:bg-amber-500',
+            ],
+            'yellow' => [
+                'input' => 'text-yellow-500 focus:ring-yellow-500',
+                'solid' => 'peer-checked:border-yellow-500 peer-checked:bg-yellow-500 peer-checked:text-white',
+                'text' => 'peer-checked:text-yellow-600 dark:peer-checked:text-yellow-400',
+                'card' => 'peer-checked:border-yellow-500 peer-checked:ring-yellow-500/40 peer-checked:[&_.wf-card-icon]:text-yellow-600 dark:peer-checked:[&_.wf-card-icon]:text-yellow-400',
+                'indicator' => 'peer-checked:[&_.wf-card-indicator]:border-yellow-500 peer-checked:[&_.wf-card-indicator]:bg-yellow-500',
             ],
             'info', 'cyan' => [
                 'input' => 'text-cyan-600 focus:ring-cyan-500',
@@ -362,6 +464,20 @@ trait HasColor
                 'card' => 'peer-checked:border-stone-500 peer-checked:ring-stone-500/40 peer-checked:[&_.wf-card-icon]:text-stone-600 dark:peer-checked:[&_.wf-card-icon]:text-stone-300',
                 'indicator' => 'peer-checked:[&_.wf-card-indicator]:border-stone-600 peer-checked:[&_.wf-card-indicator]:bg-stone-600',
             ],
+            'black' => [
+                'input' => 'text-gray-900 focus:ring-gray-500',
+                'solid' => 'peer-checked:border-gray-900 peer-checked:bg-gray-900 peer-checked:text-white',
+                'text' => 'peer-checked:text-gray-900 dark:peer-checked:text-white',
+                'card' => 'peer-checked:border-gray-900 peer-checked:ring-gray-900/40 peer-checked:[&_.wf-card-icon]:text-gray-900 dark:peer-checked:[&_.wf-card-icon]:text-white',
+                'indicator' => 'peer-checked:[&_.wf-card-indicator]:border-gray-900 peer-checked:[&_.wf-card-indicator]:bg-gray-900',
+            ],
+            'white' => [
+                'input' => 'text-gray-400 focus:ring-gray-300',
+                'solid' => 'peer-checked:border-gray-300 peer-checked:bg-white peer-checked:text-gray-900',
+                'text' => 'peer-checked:text-gray-900 dark:peer-checked:text-white',
+                'card' => 'peer-checked:border-gray-300 peer-checked:ring-gray-300/40 peer-checked:[&_.wf-card-icon]:text-gray-900 dark:peer-checked:[&_.wf-card-icon]:text-white',
+                'indicator' => 'peer-checked:[&_.wf-card-indicator]:border-gray-400 peer-checked:[&_.wf-card-indicator]:bg-white',
+            ],
             'gray', 'secondary' => [
                 'input' => 'text-gray-600 focus:ring-gray-500',
                 'solid' => 'peer-checked:border-gray-600 peer-checked:bg-gray-600 peer-checked:text-white',
@@ -391,10 +507,13 @@ trait HasColor
     public static function getTextColorClasses(string $color): string
     {
         return match ($color) {
-            'primary', 'blue' => 'text-primary-600 dark:text-primary-400',
-            'success', 'green', 'emerald' => 'text-emerald-600 dark:text-emerald-400',
+            'primary' => 'text-primary-600 dark:text-primary-400',
+            'blue' => 'text-blue-600 dark:text-blue-400',
+            'success', 'emerald' => 'text-emerald-600 dark:text-emerald-400',
+            'green' => 'text-green-600 dark:text-green-400',
             'danger', 'red' => 'text-red-600 dark:text-red-400',
-            'warning', 'yellow', 'amber' => 'text-amber-600 dark:text-amber-400',
+            'warning', 'amber' => 'text-amber-600 dark:text-amber-400',
+            'yellow' => 'text-yellow-600 dark:text-yellow-400',
             'info', 'cyan' => 'text-cyan-600 dark:text-cyan-400',
             'orange' => 'text-orange-600 dark:text-orange-400',
             'lime' => 'text-lime-600 dark:text-lime-400',
@@ -410,6 +529,8 @@ trait HasColor
             'zinc' => 'text-zinc-600 dark:text-zinc-400',
             'neutral' => 'text-neutral-600 dark:text-neutral-400',
             'stone' => 'text-stone-600 dark:text-stone-400',
+            'black' => 'text-gray-900 dark:text-white',
+            'white' => 'text-white dark:text-gray-900',
             'gray', 'secondary' => 'text-gray-600 dark:text-gray-400',
             default => 'text-gray-600 dark:text-gray-400',
         };
@@ -427,10 +548,13 @@ trait HasColor
     public static function getLinkColorClasses(string $color): string
     {
         return match ($color) {
-            'primary', 'blue' => 'text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 hover:underline',
-            'success', 'green', 'emerald' => 'text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 hover:underline',
+            'primary' => 'text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 hover:underline',
+            'blue' => 'text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline',
+            'success', 'emerald' => 'text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 hover:underline',
+            'green' => 'text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 hover:underline',
             'danger', 'red' => 'text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 hover:underline',
-            'warning', 'yellow', 'amber' => 'text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 hover:underline',
+            'warning', 'amber' => 'text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 hover:underline',
+            'yellow' => 'text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300 hover:underline',
             'info', 'cyan' => 'text-cyan-600 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300 hover:underline',
             'orange' => 'text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-300 hover:underline',
             'lime' => 'text-lime-600 hover:text-lime-800 dark:text-lime-400 dark:hover:text-lime-300 hover:underline',
@@ -446,6 +570,8 @@ trait HasColor
             'zinc' => 'text-zinc-600 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-300 hover:underline',
             'neutral' => 'text-neutral-600 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-300 hover:underline',
             'stone' => 'text-stone-600 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-300 hover:underline',
+            'black' => 'text-gray-900 hover:text-black dark:text-white dark:hover:text-gray-200 hover:underline',
+            'white' => 'text-white hover:text-gray-200 dark:text-gray-900 dark:hover:text-black hover:underline',
             'gray', 'secondary' => 'text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 hover:underline',
             default => 'text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 hover:underline',
         };
@@ -462,10 +588,13 @@ trait HasColor
     public static function getSolidBgClass(string $color): string
     {
         return match ($color) {
-            'primary', 'blue' => 'bg-primary-600',
-            'success', 'green', 'emerald' => 'bg-emerald-600',
+            'primary' => 'bg-primary-600',
+            'blue' => 'bg-blue-600',
+            'success', 'emerald' => 'bg-emerald-600',
+            'green' => 'bg-green-600',
             'danger', 'red' => 'bg-red-600',
-            'warning', 'yellow', 'amber' => 'bg-amber-500',
+            'warning', 'amber' => 'bg-amber-500',
+            'yellow' => 'bg-yellow-500',
             'info', 'cyan' => 'bg-cyan-500',
             'orange' => 'bg-orange-500',
             'lime' => 'bg-lime-600',
@@ -481,6 +610,8 @@ trait HasColor
             'zinc' => 'bg-zinc-600',
             'neutral' => 'bg-neutral-600',
             'stone' => 'bg-stone-600',
+            'black' => 'bg-gray-900 dark:bg-white',
+            'white' => 'bg-white dark:bg-gray-900',
             'gray', 'secondary' => 'bg-gray-600',
             default => 'bg-primary-600',
         };
@@ -499,10 +630,13 @@ trait HasColor
     public static function getSoftBgClass(string $color): string
     {
         return match ($color) {
-            'primary', 'blue' => 'bg-primary-200 dark:bg-primary-900',
-            'success', 'green', 'emerald' => 'bg-emerald-200 dark:bg-emerald-900',
+            'primary' => 'bg-primary-200 dark:bg-primary-900',
+            'blue' => 'bg-blue-200 dark:bg-blue-900',
+            'success', 'emerald' => 'bg-emerald-200 dark:bg-emerald-900',
+            'green' => 'bg-green-200 dark:bg-green-900',
             'danger', 'red' => 'bg-red-200 dark:bg-red-900',
-            'warning', 'yellow', 'amber' => 'bg-amber-200 dark:bg-amber-900',
+            'warning', 'amber' => 'bg-amber-200 dark:bg-amber-900',
+            'yellow' => 'bg-yellow-200 dark:bg-yellow-900',
             'info', 'cyan' => 'bg-cyan-200 dark:bg-cyan-900',
             'orange' => 'bg-orange-200 dark:bg-orange-900',
             'lime' => 'bg-lime-200 dark:bg-lime-900',
@@ -518,6 +652,8 @@ trait HasColor
             'zinc' => 'bg-zinc-200 dark:bg-zinc-900',
             'neutral' => 'bg-neutral-200 dark:bg-neutral-900',
             'stone' => 'bg-stone-200 dark:bg-stone-900',
+            'black' => 'bg-gray-800 dark:bg-gray-200',
+            'white' => 'bg-gray-100 dark:bg-gray-800',
             'gray', 'secondary' => 'bg-gray-200 dark:bg-gray-700',
             default => 'bg-gray-200 dark:bg-gray-700',
         };
@@ -539,10 +675,13 @@ trait HasColor
     public static function getRowTintClasses(string $color): string
     {
         return match ($color) {
-            'primary', 'blue' => 'bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30',
-            'success', 'green', 'emerald' => 'bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30',
+            'primary' => 'bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30',
+            'blue' => 'bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30',
+            'success', 'emerald' => 'bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30',
+            'green' => 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30',
             'danger', 'red' => 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30',
-            'warning', 'yellow', 'amber' => 'bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30',
+            'warning', 'amber' => 'bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30',
+            'yellow' => 'bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/30',
             'info', 'cyan' => 'bg-cyan-50 dark:bg-cyan-900/20 hover:bg-cyan-100 dark:hover:bg-cyan-900/30',
             'orange' => 'bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30',
             'lime' => 'bg-lime-50 dark:bg-lime-900/20 hover:bg-lime-100 dark:hover:bg-lime-900/30',
@@ -558,6 +697,8 @@ trait HasColor
             'zinc' => 'bg-zinc-50 dark:bg-zinc-900/20 hover:bg-zinc-100 dark:hover:bg-zinc-900/30',
             'neutral' => 'bg-neutral-50 dark:bg-neutral-900/20 hover:bg-neutral-100 dark:hover:bg-neutral-900/30',
             'stone' => 'bg-stone-50 dark:bg-stone-900/20 hover:bg-stone-100 dark:hover:bg-stone-900/30',
+            'black' => 'bg-gray-100 dark:bg-gray-800/60 hover:bg-gray-200 dark:hover:bg-gray-800/80',
+            'white' => 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800',
             'gray', 'secondary' => 'bg-gray-50 dark:bg-gray-800/40 hover:bg-gray-100 dark:hover:bg-gray-800/60',
             default => 'bg-gray-50 dark:bg-gray-800/40 hover:bg-gray-100 dark:hover:bg-gray-800/60',
         };
@@ -588,7 +729,8 @@ trait HasColor
             'green' => 'from-green-500 to-green-600',
             'success', 'emerald' => 'from-emerald-500 to-emerald-600',
             'danger', 'red' => 'from-red-500 to-red-600',
-            'warning', 'yellow', 'amber' => 'from-amber-500 to-amber-600',
+            'warning', 'amber' => 'from-amber-500 to-amber-600',
+            'yellow' => 'from-yellow-500 to-yellow-600',
             'info', 'cyan' => 'from-cyan-500 to-cyan-600',
             'orange' => 'from-orange-500 to-orange-600',
             'lime' => 'from-lime-500 to-lime-600',
@@ -604,6 +746,8 @@ trait HasColor
             'zinc' => 'from-zinc-500 to-zinc-600',
             'neutral' => 'from-neutral-500 to-neutral-600',
             'stone' => 'from-stone-500 to-stone-600',
+            'black' => 'from-gray-700 to-gray-900',
+            'white' => 'from-gray-100 to-gray-300',
             'gray', 'secondary' => 'from-slate-400 to-slate-500',
             default => 'from-primary-500 to-primary-600',
         };
@@ -626,7 +770,8 @@ trait HasColor
             'green' => 'text-green-600 dark:text-green-400',
             'success', 'emerald' => 'text-emerald-600 dark:text-emerald-400',
             'danger', 'red' => 'text-red-600 dark:text-red-400',
-            'warning', 'yellow', 'amber' => 'text-amber-600 dark:text-amber-400',
+            'warning', 'amber' => 'text-amber-600 dark:text-amber-400',
+            'yellow' => 'text-yellow-600 dark:text-yellow-400',
             'info', 'cyan' => 'text-cyan-600 dark:text-cyan-400',
             'orange' => 'text-orange-600 dark:text-orange-400',
             'lime' => 'text-lime-600 dark:text-lime-400',
@@ -642,6 +787,8 @@ trait HasColor
             'zinc' => 'text-zinc-600 dark:text-zinc-400',
             'neutral' => 'text-neutral-600 dark:text-neutral-400',
             'stone' => 'text-stone-600 dark:text-stone-400',
+            'black' => 'text-gray-900 dark:text-white',
+            'white' => 'text-white dark:text-gray-900',
             'gray', 'secondary' => 'text-slate-600 dark:text-slate-400',
             default => 'text-primary-600 dark:text-primary-400',
         };
@@ -661,8 +808,11 @@ trait HasColor
     {
         return match ($color) {
             'danger', 'red' => 'bg-red-600 hover:bg-red-700 active:bg-red-800 focus:ring-red-500',
-            'success', 'green', 'emerald' => 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 focus:ring-emerald-500',
-            'warning', 'yellow', 'amber' => 'bg-amber-500 hover:bg-amber-600 active:bg-amber-700 focus:ring-amber-500',
+            'blue' => 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 focus:ring-blue-500',
+            'success', 'emerald' => 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 focus:ring-emerald-500',
+            'green' => 'bg-green-600 hover:bg-green-700 active:bg-green-800 focus:ring-green-500',
+            'warning', 'amber' => 'bg-amber-500 hover:bg-amber-600 active:bg-amber-700 focus:ring-amber-500',
+            'yellow' => 'bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 focus:ring-yellow-500',
             'info', 'cyan' => 'bg-cyan-600 hover:bg-cyan-700 active:bg-cyan-800 focus:ring-cyan-500',
             'orange' => 'bg-orange-500 hover:bg-orange-600 active:bg-orange-700 focus:ring-orange-500',
             'lime' => 'bg-lime-600 hover:bg-lime-700 active:bg-lime-800 focus:ring-lime-500',
@@ -678,6 +828,8 @@ trait HasColor
             'zinc' => 'bg-zinc-600 hover:bg-zinc-700 active:bg-zinc-800 focus:ring-zinc-500',
             'neutral' => 'bg-neutral-600 hover:bg-neutral-700 active:bg-neutral-800 focus:ring-neutral-500',
             'stone' => 'bg-stone-600 hover:bg-stone-700 active:bg-stone-800 focus:ring-stone-500',
+            'black' => 'bg-gray-900 hover:bg-black active:bg-black focus:ring-gray-500',
+            'white' => 'bg-white !text-gray-900 border border-gray-200 hover:bg-gray-100 active:bg-gray-200 focus:ring-gray-300',
             default => 'bg-primary-600 hover:bg-primary-700 active:bg-primary-800 focus:ring-primary-500',
         };
     }
@@ -696,9 +848,13 @@ trait HasColor
     public static function getAlertColorClasses(string $color): string
     {
         return match ($color) {
-            'success', 'green', 'emerald' => 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-300',
-            'warning', 'yellow', 'amber' => 'bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300',
+            'success', 'emerald' => 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-300',
+            'green' => 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300',
+            'warning', 'amber' => 'bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300',
+            'yellow' => 'bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-300',
             'danger', 'red' => 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300',
+            'black' => 'bg-gray-900 border-gray-700 text-white dark:bg-white dark:border-gray-300 dark:text-gray-900',
+            'white' => 'bg-white border-gray-200 text-gray-900 dark:bg-gray-900 dark:border-gray-700 dark:text-white',
             default => 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300',
         };
     }
@@ -716,8 +872,10 @@ trait HasColor
     {
         return match ($color) {
             'danger', 'red' => 'bg-red-100 dark:bg-red-900/30',
-            'warning', 'yellow', 'amber' => 'bg-amber-100 dark:bg-amber-900/30',
-            'success', 'green', 'emerald' => 'bg-emerald-100 dark:bg-emerald-900/30',
+            'warning', 'amber' => 'bg-amber-100 dark:bg-amber-900/30',
+            'yellow' => 'bg-yellow-100 dark:bg-yellow-900/30',
+            'success', 'emerald' => 'bg-emerald-100 dark:bg-emerald-900/30',
+            'green' => 'bg-green-100 dark:bg-green-900/30',
             'info', 'blue' => 'bg-blue-100 dark:bg-blue-900/30',
             'cyan' => 'bg-cyan-100 dark:bg-cyan-900/30',
             'primary' => 'bg-primary-100 dark:bg-primary-900/30',
@@ -735,6 +893,8 @@ trait HasColor
             'zinc' => 'bg-zinc-100 dark:bg-zinc-900/30',
             'neutral' => 'bg-neutral-100 dark:bg-neutral-900/30',
             'stone' => 'bg-stone-100 dark:bg-stone-900/30',
+            'black' => 'bg-gray-900 dark:bg-white',
+            'white' => 'bg-white border border-gray-200 dark:bg-gray-900 dark:border-gray-700',
             'gray', 'secondary' => 'bg-gray-100 dark:bg-gray-700',
             default => 'bg-gray-100 dark:bg-gray-700',
         };
@@ -750,8 +910,10 @@ trait HasColor
     {
         return match ($color) {
             'danger', 'red' => 'text-red-600 dark:text-red-400',
-            'warning', 'yellow', 'amber' => 'text-amber-600 dark:text-amber-400',
-            'success', 'green', 'emerald' => 'text-emerald-600 dark:text-emerald-400',
+            'warning', 'amber' => 'text-amber-600 dark:text-amber-400',
+            'yellow' => 'text-yellow-600 dark:text-yellow-400',
+            'success', 'emerald' => 'text-emerald-600 dark:text-emerald-400',
+            'green' => 'text-green-600 dark:text-green-400',
             'info', 'blue' => 'text-blue-600 dark:text-blue-400',
             'cyan' => 'text-cyan-600 dark:text-cyan-400',
             'primary' => 'text-primary-600 dark:text-primary-400',
@@ -769,6 +931,8 @@ trait HasColor
             'zinc' => 'text-zinc-600 dark:text-zinc-400',
             'neutral' => 'text-neutral-600 dark:text-neutral-400',
             'stone' => 'text-stone-600 dark:text-stone-400',
+            'black' => 'text-gray-900 dark:text-white',
+            'white' => 'text-white dark:text-gray-900',
             'gray', 'secondary' => 'text-gray-600 dark:text-gray-400',
             default => 'text-gray-600 dark:text-gray-400',
         };

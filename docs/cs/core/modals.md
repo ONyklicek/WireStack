@@ -68,7 +68,7 @@ safe-area padding, úchyt pro zavření tažením a focus trap automaticky.
 Breakpoint je ve výchozím stavu globální `wire-core.mobile.breakpoint` (`sm`, tj.
 `< 640px`) a lze ho zvýšit per akce pomocí `->mobileBreakpoint('md')` (`< 768px`,
 zahrnuje malé tablety) nebo `'lg'` (`< 1024px`). Globální výchozí viz
-[Konfigurace → Mobil](../configuration.md#mobile).
+[Konfigurace → Mobil](../configuration.md#mobil).
 
 ## Modal config objekty
 
@@ -204,7 +204,7 @@ Action::make('create')
     ->modalSavingLabel('Creating…');
 ```
 
-[`modalFooterActions()`](../forms/reactive-fields.md#modal-footer-actions) se vykreslí
+[`modalFooterActions()`](../forms/reactive-fields.md#akce-v-paticce-modalu) se vykreslí
 i v patičce wizardu, vedle Back / Next / Submit.
 
 ### Sestavení kroku z dřívějších dat

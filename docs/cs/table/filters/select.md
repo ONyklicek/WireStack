@@ -7,6 +7,10 @@ nav: false
 
 Dropdown filtr pro předdefinované options. Nejběžnější typ filtru.
 
+Vykresluje se přes stejný combobox jako `Select` field ve formulářích, takže
+otevřený filtr vypadá stejně jako otevřený formulářový select. Nativní `<select>`
+prohlížeče je opt-in přes [`->native()`](#nativni-html-select).
+
 ```php
 use NyonCode\WireTable\Filters\SelectFilter;
 ```
@@ -56,15 +60,19 @@ SelectFilter::make('country')
     ->label('Country')
 ```
 
-Vykreslí vyhledávatelný dropdown (poháněný Alpine.js) místo nativního `<select>`.
+Přidá do dropdownu vyhledávací input. Povrch je stejný combobox jako u
+nevyhledávatelného filtru — jen navíc s vyhledávacím inputem.
 
 ## Nativní HTML select
 
 ```php
 SelectFilter::make('type')
     ->options([...])
-    ->native()                       // nativní <select> element (rychlejší render)
+    ->native()                       // nativní <select> element prohlížeče (rychlejší render)
 ```
+
+Odhlásí filtr ze sdíleného comboboxu, takže přestane odpovídat formulářovému
+selectu. Používej jen tam, kde je cena renderu důležitější než jednotný vzhled.
 
 ## Z databáze
 
@@ -108,6 +116,6 @@ SelectFilter::make('has_avatar')
 ```php
 ->options(array|string|Closure $options) // ['value' => 'Label', ...] nebo třída enumu
 ->multiple(bool $multiple = true)    // režim multi-select
-->searchable(bool $searchable = true) // vyhledávatelný dropdown
-->native(bool $native = true)        // nativní <select>
+->searchable(bool $searchable = true) // přidá vyhledávací input do dropdownu
+->native(bool $native = true)        // opt-in nativní <select> prohlížeče (výchozí: false)
 ```

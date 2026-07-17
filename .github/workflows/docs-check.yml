@@ -15,12 +15,16 @@ on:
     paths:
       - 'docs/**'
       - 'docs-site/**'
+      - 'packages/boost/resources/boost/docs/**'
+      - 'scripts/sync-boost-docs.php'
       - 'torchlight.config.cjs'
       - '.github/workflows/docs-check.yml'
   pull_request:
     paths:
       - 'docs/**'
       - 'docs-site/**'
+      - 'packages/boost/resources/boost/docs/**'
+      - 'scripts/sync-boost-docs.php'
       - 'torchlight.config.cjs'
       - '.github/workflows/docs-check.yml'
   workflow_dispatch:
@@ -29,6 +33,26 @@ permissions:
   contents: read
 
 jobs:
+  # wire-boost ships its own copy of the English docs so the MCP search/fetch
+  # tools work inside a host app that never sees this repo. Catch the copy
+  # drifting the moment docs/ changes — a stale corpus teaches agents old APIs.
+  boost-corpus:
+    name: Verify bundled boost docs corpus
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Verify the bundled corpus matches docs/
+        run: php scripts/sync-boost-docs.php "$GITHUB_WORKSPACE" --check
+
   check:
     name: Verify docs build
     runs-on: ubuntu-latest

@@ -30,6 +30,16 @@ SelectColumn::make('category_id')
     ->relationship('category', 'name')   // načíst options ze souvisejícího modelu
 ```
 
+Související seznam je pro každý řádek stejný, takže se načte **jednou za render**
+a znovu použije — ne jednou za buňku. Explicitní `->options()` má přednost.
+
+```php
+// Naplnit seznam sám ze známého záznamu (zřídka potřeba).
+SelectColumn::make('category_id')
+    ->relationship('category', 'name')
+    ->loadRelationshipOptions($record)
+```
+
 ## Options z enumu
 
 Předejte třídu PHP enumu pro rozvinutí jeho case na options `value => label`. Labely pocházejí z
@@ -40,15 +50,18 @@ z názvu case udělá headline. Kontrakty viz [Enum a JSON casty](casts.md).
 SelectColumn::make('status')->options(OrderStatus::class)
 ```
 
-## Nativní vs stylovaný
+## Vždy nativní select
 
-```php
-// Nativní HTML <select> (výchozí)
-SelectColumn::make('type')->options([...])->native()
+Editovatelná buňka vždy renderuje nativní `<select>` prohlížeče a žádný přepínač
+`->native()` nenabízí. Je to jediná select plocha, která **nesdílí** combobox používaný ve
+[`SelectFilter`](../filters/select.md), [`TernaryFilter`](../filters/ternary.md) a `Select`
+fieldu ve formulářích: buňka commituje přes `wireEditableCell` (bind přes `x-model`,
+uložení při změně), ne přes entangled statePath, což je jediný binding, který sdílený
+combobox umí.
 
-// Vlastní stylovaný dropdown
-SelectColumn::make('type')->options([...])->native(false)
-```
+Pokud potřebuješ vyhledávatelný dropdown, použij [`SelectFilter`](../filters/select.md)
+pro filtrování, nebo `Select` field ve formuláři uvnitř [edit akce](../actions.md)
+pro editaci.
 
 ## Podmíněné disabled
 
@@ -62,9 +75,8 @@ SelectColumn::make('role')
 
 ```php
 ->options(array|string|Closure $options) // ['value' => 'Label', ...] nebo třída enumu
-->native(bool $native = true)       // použít nativní <select> element
-->isNative(): bool
 ->disabled(bool|Closure $disabled = true)
 ->isDisabled(Model $record): bool
-->relationship(string $name, string $titleAttribute)  // options z relace
+->relationship(string $name, string $titleAttribute)  // options z relace, načtené jednou za render
+->loadRelationshipOptions(Model $record)             // naplnit seznam explicitně
 ```

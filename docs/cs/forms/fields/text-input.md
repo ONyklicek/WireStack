@@ -58,7 +58,7 @@ TextInput::make('price')
 ## Affix a hint akce
 
 Umístěte interaktivní `Action` před/za input nebo vedle hintu. Callback běží na
-serveru se stejným reaktivním `$get` / `$set` kontextem jako [`afterStateUpdated()`](../reactive-fields.md#field-actions-and-buttons)
+serveru se stejným reaktivním `$get` / `$set` kontextem jako [`afterStateUpdated()`](../reactive-fields.md#field-akce-a-tlacitka)
 — použijte ho pro lookupy (ARES, ověření adresy), generování hodnoty z jiného pole nebo
 inline akci:
 
@@ -95,7 +95,7 @@ TextInput::make('city')
 ```
 
 Předejte třídu PHP enumu pro použití labelů jeho case jako návrhů (stejné resolvování labelu jako
-[options `Select`](select.md#enum-options)):
+[options `Select`](select.md#options-z-enumu)):
 
 ```php
 TextInput::make('city')->datalist(City::class)
@@ -131,4 +131,4 @@ TextInput::make('bio')
     ->autofocus()
 ```
 
-Kompletní seznam sdílených metod viz [Společné API pole](index.md#common-field-api).
+Kompletní seznam sdílených metod viz [Společné API pole](index.md#spolecne-api-pole).

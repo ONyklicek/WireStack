@@ -2,7 +2,7 @@
 {{-- Teleported to <body> so a transformed/overflow ancestor can never break the
      fixed overlay's viewport positioning. (Floating UI N/A — modals are centered,
      not anchored to a trigger.) --}}
-<template x-teleport="body">
+<template x-teleport="body" wire:key="wire-modal-modal">
 <div
     x-data="{ show: @entangle($attributes->wire('model')) }"
     x-show="show"

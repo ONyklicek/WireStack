@@ -14,7 +14,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 #[Description('Convert a relative path into an absolute URL using the application URL, so generated links are valid.')]
 class GetAbsoluteUrl extends BoostTool
 {
-    public function handle(Request $request): Response
+    protected function run(Request $request): Response
     {
         $path = (string) $request->get('path');
 

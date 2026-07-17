@@ -72,4 +72,4 @@ KeyValue::make('headers')
 | `disabled(bool\|Closure)` | bool | Znepřístupnit všechny interakce |
 | `required()` | — | Označit jako povinné |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#common-field-api).
+Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

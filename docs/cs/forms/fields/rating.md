@@ -32,7 +32,7 @@ Rating::make('priority')
 
 ```php
 Rating::make('satisfaction')
-    ->color('primary')   // primary, success, danger, warning (výchozí)
+    ->color('primary')   // libovolná barva palety (výchozí 'primary')
 ```
 
 ## Bez možnosti vyčištění
@@ -48,11 +48,11 @@ Rating::make('score')
 |--------|------|-------------|
 | `max(int)` | int | Počet hvězd (výchozí `5`) |
 | `allowHalf(bool)` | bool | Zapnout výběr půlhvězdy (výchozí `false`) |
-| `color(string)` | string | Barva vyplněné hvězdy: `warning`, `primary`, `success`, `danger` |
+| `color(string)` | string | Barva vyplněné hvězdy — libovolná barva palety (viz [Colors](../../core/foundation.md#barvy)) |
 | `clearable(bool)` | bool | Kliknutí na aktivní hvězdu resetuje na 0 (výchozí `true`) |
 | `default(int\|float\|Closure)` | number | Předvyplněná hodnota |
 | `disabled(bool\|Closure)` | bool | Znepřístupnit hodnocení |
 | `required()` | — | Označit jako povinné |
 | `live()` | — | Spustit Livewire update při kliknutí |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#common-field-api).
+Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

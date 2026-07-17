@@ -13,12 +13,13 @@ Tato stránka pokrývá, od nejméně po nejvíce náročné:
 
 | Potřebujete… | Použijte |
 |-----------|-----|
-| Jednorázový vlastní pohled uvnitř formuláře | [`ViewField`](#quick-custom-view-viewfield) |
-| Statický zobrazovací blok (bez inputu) | [Zobrazovací komponentu](#display-only-components) |
-| Znovupoužitelný input s vlastním API | [Vlastní pole](#building-a-custom-field) |
-| Stejný preset aplikovaný napříč mnoha formuláři | [Form makra](#reusable-presets-with-macros) |
-| Logiku kolem každého uložení | [Save hooky](#hooking-into-the-save-lifecycle) |
-| Pole dodané v balíčku | [Balíčkování polí do pluginu](#packaging-fields-into-a-plugin) |
+| Jednorázový vlastní pohled uvnitř formuláře | [`ViewField`](#rychly-vlastni-pohled-viewfield) |
+| Statický zobrazovací blok (bez inputu) | [Zobrazovací komponentu](#pouze-zobrazovaci-komponenty) |
+| Znovupoužitelný input s vlastním API | [Vlastní pole](#stavba-vlastniho-pole) |
+| Stejný preset aplikovaný napříč mnoha formuláři | [Form makra](#znovupouzitelne-presety) |
+| Pole, které ukládá něco jiného, než zobrazuje | [Transformace stavu](#transformace-stavu-pole) |
+| Logiku kolem každého uložení | [Save hooky](#zapojeni-do-zivotniho-cyklu-ukladani) |
+| Pole dodané v balíčku | [Balíčkování polí do pluginu](#balickovani-poli-do-pluginu) |
 
 > Nejdřív preferujte fluent API. Po vlastním poli sáhněte jen když se má stejné
 > chování znovupoužít, nebo když žádné vestavěné pole nelze nakonfigurovat, aby
@@ -78,6 +79,11 @@ Pole také deklaruje svůj **typ stavu** pomocí `getStateType()` (výchozí
 `'string'`). State hydrator ho používá k přetypování surových request hodnot, než
 dorazí do stavu formuláře — vraťte `'int'`, `'float'`, `'bool'` nebo `'array'`, když
 vaše hodnota není řetězec.
+
+`getStateType()` tvaruje hodnotu na cestě *dovnitř*. Když ji vaše pole potřebuje
+tvarovat i na cestě *ven* — tedy uložit něco jiného, než drží widget —
+implementujte [`DehydratesState`](#transformace-stavu-pole), místo abyste
+tu práci přehazovali na každý formulář, který pole použije.
 
 Jediná abstraktní metoda, kterou musíte implementovat, je `viewName()`.
 
@@ -263,7 +269,7 @@ class StatBlock extends ViewComponent
 Když nepotřebujete novou komponentu, jen **preset** existujících fluent volání,
 máte dvě přesné možnosti. (Form pole nejsou `Macroable` — na rozdíl od `Table`
 a `Action`, které podporují `::macro()`; table/action makra viz
-[Core Pluginy → Přidávání tlačítek a akcí](../core/plugins.md#adding-buttons-and-actions).)
+[Core Pluginy → Přidávání tlačítek a akcí](../core/plugins.md#pridavani-tlacitek-a-akci).)
 
 **Statická factory** drží preset na jednom místě a čte se čistě na místě volání:
 
@@ -310,13 +316,89 @@ class SlugInput extends TextInput
 ```
 
 Použijte **factory nebo podtřídu**, když skládáte existující metody polí, a
-plné [vlastní pole](#building-a-custom-field), když potřebujete nový stav, nový
+plné [vlastní pole](#stavba-vlastniho-pole), když potřebujete nový stav, nový
 pohled nebo nový markup.
+
+---
+
+<a id="shaping-the-value-a-field-stores"></a>
+## Transformace stavu pole
+
+Stav pole je to, co vyrobil jeho widget. Obvykle je to přesně to, co se má uložit —
+ale ne vždy. Input date pickeru umí parsovat jen svůj vlastní formát, zatímco
+sloupec chce jiný; upload drží dočasnou cestu, zatímco sloupec chce tu uloženou;
+peněžní pole zobrazuje `1 234,50` a ukládá centy.
+
+Dva kontrakty v `NyonCode\WireCore\Foundation\Contracts` pokrývají oba směry. Jsou
+nezávislé — implementujte jen ten, který potřebujete:
+
+| Kontrakt | Metoda | Kdy běží |
+|---|---|---|
+| `HydratesState` | `hydrateState($value, ?Model $record)` | hodnota z modelu → stav, po přetypování dle `getStateType()` |
+| `DehydratesState` | `dehydrateState($state, ?Model $record)` | stav → ukládaná hodnota, při ukládání |
+
+Všimněte si, že [`MoneyInput`](#stavba-vlastniho-pole) výše nepotřebuje *ani jeden*:
+jeho stav už je ten integer, který ukládá, což plně vyjádří `getStateType(): 'int'`.
+Kontrakty se vyplatí až tam, kde se stav a ukládaná hodnota opravdu liší — jako
+zde, kde input zobrazuje plaintext a sloupec drží šifrovanou hodnotu:
+
+```php
+<?php
+
+namespace App\Forms\Components;
+
+use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
+use NyonCode\WireCore\Foundation\Contracts\HydratesState;
+use NyonCode\WireForms\Components\Field;
+
+class EncryptedInput extends Field implements DehydratesState, HydratesState
+{
+    // Uložené → zobrazené. [tl! focus:start]
+    public function hydrateState(mixed $value, ?Model $record = null): mixed
+    {
+        return $value === null || $value === '' ? $value : decrypt($value);
+    }
+
+    // Zobrazené → uložené.
+    public function dehydrateState(mixed $state, ?Model $record = null): mixed
+    {
+        return $state === null || $state === '' ? $state : encrypt($state);
+    } // [tl! focus:end]
+
+    protected function viewName(): string
+    {
+        return 'forms.components.encrypted-input';
+    }
+}
+```
+
+Stejné dva kontrakty pohánějí i [editovatelné sloupce tabulky](../table/columns/editing.md) —
+`TextInputColumn` je používá pro svůj trim/velikost písmen/čísla pipeline — takže
+komponenta, která je implementuje, se chová stejně ve formuláři i v inline
+editované buňce.
+
+> **Oba směry, nebo žádný.** Pokud transformace hodnotu posouvá (převod timezone,
+> změna jednotek), implementovat jen `hydrateState()` znamená, že se posunutý stav
+> při uložení zapíše rovnou zpátky — a hodnota se s každým round tripem posune zas
+> o kus dál. Jednostranná transformace je horší než žádná.
+
+**`dehydrateState()` musí být čistá funkce svých argumentů.** Hostitel ji smí
+zavolat víc než jednou za uložení — tabulka dehydratuje jednou bez záznamu, aby
+mohla validovat před otevřením transakce, a pak znovu se zamčeným záznamem.
+Hostitelé vždy předávají původní stav, nikdy výsledek dřívějšího volání, takže
+i transformace, která by se dvojím uplatněním rozbila, je v bezpečí. `$record` je
+`null`, když hostitel žádný nemá (create formulář); buňka tabulky ho má vždy.
 
 ---
 
 <a id="hooking-into-the-save-lifecycle"></a>
 ## Zapojení do životního cyklu ukládání
+
+Kontrakty výše patří *poli* — cestují s ním do každého formuláře. Dvě vrstvy níže
+patří **formuláři** nebo **aplikaci**. Sáhněte po nich, když ta znalost není
+polem: `DehydratesState` na „tohle pole vždycky ukládá centy", hook na „každý
+formulář razítkuje tenanta".
 
 Existují dvě vrstvy a skládají se:
 
@@ -516,7 +598,7 @@ funguje v jakémkoli schématu bez dalšího nastavení.
 Plugin přidejte, když chcete dodat víc než třídu pole — například
 znovupoužitelné **preset makro**, **save hook** nebo **výchozí konfiguraci**. Form
 pole nejsou `Macroable`, takže field presety se dodávají jako statická factory nebo
-podtřída (viz [Znovupoužitelné presety](#reusable-presets)); plugin je místo, kde
+podtřída (viz [Znovupoužitelné presety](#znovupouzitelne-presety)); plugin je místo, kde
 registrujete `Table`/`Action` makra, hooky a config.
 
 ```php
@@ -565,7 +647,7 @@ final class AcmeMoneyPlugin implements HasConfiguration, Plugin
 Plugin je automaticky zapojen callbackem `resolving()` service provideru v kroku 3,
 takže konzumenti dostanou pole, jeho pohledy a jeho hooky jen instalací
 balíčku. Registrační vzor a `has()` guard viz
-[Core Pluginy → Registrace pluginů z balíčku](../core/plugins.md#register-plugins-from-a-package).
+[Core Pluginy → Registrace pluginů z balíčku](../core/plugins.md#registrace-pluginu-z-balicku).
 
 ### 5. Konzumenti ho instalují
 

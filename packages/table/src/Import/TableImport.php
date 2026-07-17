@@ -7,9 +7,9 @@ namespace NyonCode\WireTable\Import;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Validator;
+use NyonCode\WireTable\Exceptions\ImportException;
 use NyonCode\WireTable\Export\TableExport;
 use NyonCode\WireTable\Import\Contracts\Importer;
-use RuntimeException;
 
 /**
  * Configures and runs a CSV import into an Eloquent model.
@@ -181,7 +181,7 @@ class TableImport
         }
 
         if ($missing !== []) {
-            throw new RuntimeException('Missing required column(s) in the imported file: '.implode(', ', $missing).'.');
+            throw ImportException::missingColumns($missing);
         }
 
         return $mapping;
@@ -204,9 +204,7 @@ class TableImport
         );
 
         if ($unmapped !== []) {
-            throw new RuntimeException(
-                'The updateExisting() attribute(s) ['.implode(', ', $unmapped).'] are not mapped to any column in the imported file.'
-            );
+            throw ImportException::unmappedUpdateAttributes($unmapped);
         }
     }
 
@@ -274,7 +272,7 @@ class TableImport
         }
 
         if ($this->model === null) {
-            throw new RuntimeException('TableImport requires a model() or a createUsing() handler.');
+            throw ImportException::noModelOrHandler();
         }
 
         $query = $this->model::query();

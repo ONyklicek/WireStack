@@ -6,8 +6,9 @@ namespace NyonCode\WireCore\Infolists\Components;
 
 use Closure;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithStateColor;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithStateIcon;
 use NyonCode\WireCore\Foundation\Icons\Icon;
-use NyonCode\WireCore\Foundation\Support\EnumResolver;
 
 /**
  * Icon entry — renders an icon derived from the state.
@@ -19,6 +20,11 @@ use NyonCode\WireCore\Foundation\Support\EnumResolver;
  */
 class IconEntry extends Entry
 {
+    // colors()/colorUsing()/getColorForState() come from InteractsWithStateColor;
+    // icons()/iconUsing()/getIconForState() from InteractsWithStateIcon.
+    use InteractsWithStateColor;
+    use InteractsWithStateIcon;
+
     protected bool $boolean = false;
 
     protected string $trueIcon = 'check-circle';
@@ -28,12 +34,6 @@ class IconEntry extends Entry
     protected string $trueColor = 'success';
 
     protected string $falseColor = 'danger';
-
-    /** @var array<int|string, string>|Closure|null */
-    protected array|Closure|null $iconMap = null;
-
-    /** @var array<int|string, string>|Closure|null */
-    protected array|Closure|null $colorMap = null;
 
     public function boolean(bool $condition = true): static
     {
@@ -70,95 +70,76 @@ class IconEntry extends Entry
         return $this;
     }
 
-    /**
-     * Map state values to icon names.
-     *
-     * @param  array<int|string, string>|Closure  $map
-     */
-    public function icons(array|Closure $map): static
-    {
-        $this->iconMap = $map;
-
-        return $this;
-    }
-
-    /**
-     * Map state values to color names.
-     *
-     * @param  array<int|string, string>|Closure  $map
-     */
-    public function colors(array|Closure $map): static
-    {
-        $this->colorMap = $map;
-
-        return $this;
-    }
-
     public function getResolvedIcon(): ?string
     {
-        $state = $this->getState();
+        return $this->getIconForState($this->getState());
+    }
 
-        if ($this->boolean) {
-            return $state ? $this->trueIcon : $this->falseIcon;
+    /** boolean() mode answers from the truthiness of the state, before any map. */
+    protected function resolveStateIconOverride(mixed $state): ?string
+    {
+        if (! $this->boolean) {
+            return null;
         }
 
-        // Enum-cast state cannot index a map directly; resolve a scalar key first.
-        $key = EnumResolver::scalar($state);
+        return $state ? $this->trueIcon : $this->falseIcon;
+    }
 
-        if ($this->iconMap !== null) {
-            $map = $this->iconMap instanceof Closure
-                ? $this->evaluateForState($this->iconMap)
-                : $this->iconMap;
+    /**
+     * An entry's map may be a Closure resolved against the state and record.
+     *
+     * @return array<array-key, string|Icon>|null
+     */
+    protected function resolveStateIconMap(): ?array
+    {
+        $map = $this->stateIconMap instanceof Closure
+            ? $this->evaluateForState($this->stateIconMap)
+            : $this->stateIconMap;
 
-            if (is_array($map) && is_scalar($key) && array_key_exists($key, $map)) {
-                return $map[$key];
-            }
-        }
-
-        // Enum carrying its own icon via the opt-in HasIcon contract.
-        $enumIcon = EnumResolver::icon($state);
-
-        if ($enumIcon !== null) {
-            return $enumIcon instanceof Icon ? $enumIcon->value() : $enumIcon;
-        }
-
-        return $this->getIcon();
+        return is_array($map) ? $map : null;
     }
 
     public function getResolvedColor(): ?string
     {
-        $state = $this->getState();
+        return $this->getColorForState($this->getState());
+    }
 
-        if ($this->boolean) {
-            return $state ? $this->trueColor : $this->falseColor;
+    /** boolean() mode answers from the truthiness of the state, before any map. */
+    protected function resolveStateColorOverride(mixed $state): ?string
+    {
+        if (! $this->boolean) {
+            return null;
         }
 
-        // Enum-cast state cannot index a map directly; resolve a scalar key first.
-        $key = EnumResolver::scalar($state);
+        return $state ? $this->trueColor : $this->falseColor;
+    }
 
-        if ($this->colorMap !== null) {
-            $map = $this->colorMap instanceof Closure
-                ? $this->evaluateForState($this->colorMap)
-                : $this->colorMap;
+    /**
+     * An entry's map may be a Closure resolved against the state and record.
+     *
+     * @return array<array-key, string|Color>|null
+     */
+    protected function resolveStateColorMap(): ?array
+    {
+        $map = $this->stateColorMap instanceof Closure
+            ? $this->evaluateForState($this->stateColorMap)
+            : $this->stateColorMap;
 
-            if (is_array($map) && is_scalar($key) && array_key_exists($key, $map)) {
-                return $map[$key];
-            }
-        }
+        return is_array($map) ? $map : null;
+    }
 
-        // Enum carrying its own color via the opt-in HasColor contract.
-        $enumColor = EnumResolver::color($state);
-
-        if ($enumColor !== null) {
-            return $enumColor instanceof Color ? $enumColor->value : $enumColor;
-        }
-
+    /**
+     * An entry has no neutral floor: a state that maps to nothing falls back to
+     * the entry's own color(), which may legitimately be unset.
+     */
+    protected function getDefaultStateColor(): ?string
+    {
         return $this->getColor();
     }
 
     public function getIconColorClass(): string
     {
-        return self::getTextColorClasses($this->getResolvedColor() ?? 'gray');
+        return self::getTextColorClasses($this->getResolvedColor() ?? Color::Gray->value);
     }
 
     protected function viewName(): string

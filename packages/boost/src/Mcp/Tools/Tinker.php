@@ -15,17 +15,17 @@ use Throwable;
 #[Description('Evaluate a snippet of PHP within the application context and return its result and any echoed output. Disabled by default; enable with WIRE_BOOST_TINKER=true.')]
 class Tinker extends BoostTool
 {
-    public function handle(Request $request): Response
+    protected function run(Request $request): Response
     {
         if (! config('wire-boost.tools.tinker', false)) {
-            return $this->json(['error' => 'The tinker tool is disabled. Set WIRE_BOOST_TINKER=true to enable it.']);
+            return Response::error('The tinker tool is disabled. Set WIRE_BOOST_TINKER=true to enable it.');
         }
 
         $code = trim((string) $request->get('code'));
         $code = rtrim($code, ';');
 
         if ($code === '') {
-            return $this->json(['error' => 'No code provided.']);
+            return Response::error('No code provided.');
         }
 
         try {
@@ -43,7 +43,7 @@ class Tinker extends BoostTool
                 ob_end_clean();
             }
 
-            return $this->json(['error' => $e->getMessage()]);
+            return Response::error($e->getMessage());
         }
     }
 

@@ -11,6 +11,14 @@
         && data_get($livewire, 'mountedCreateOptionSelect') === $field->getStatePath();
     $isEditModalMounted = $field->hasEditOptionForm() && ! $field->isMultiple()
         && data_get($livewire, 'mountedEditOptionSelect') === $field->getStatePath();
+
+    // When the Select lives inside a stacked action modal, the option overlay must
+    // sit one layer above the top action frame — otherwise it renders behind the
+    // modal it was opened from. Outside any action modal (depth 0) the default
+    // base layer is fine. The depth read is side-effect-free (no form rebuild).
+    $optionModalZ = (is_object($livewire) && method_exists($livewire, 'actionStackDepth') && $livewire->actionStackDepth() > 0)
+        ? \NyonCode\WireCore\Modals\ModalStack::zIndexForDepth($livewire->actionStackDepth())
+        : null;
 @endphp
 
 @if($isCreateModalMounted)
@@ -18,6 +26,7 @@
         wire:model="mountedCreateOptionSelect"
         :heading="$field->getCreateOptionModalHeading()"
         width="md"
+        :zIndex="$optionModalZ"
         closeAction="unmountCreateOption"
     >
         <div class="space-y-4" wire:key="create-option-{{ $field->getId() }}">
@@ -51,6 +60,7 @@
         wire:model="mountedEditOptionSelect"
         :heading="$field->getEditOptionModalHeading()"
         width="md"
+        :zIndex="$optionModalZ"
         closeAction="unmountEditOption"
     >
         <div class="space-y-4" wire:key="edit-option-{{ $field->getId() }}">

@@ -4,25 +4,20 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Columns;
 
-use Closure;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasSize;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithStateColor;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithStateIcon;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
-use NyonCode\WireCore\Foundation\Support\EnumResolver;
 
 class IconColumn extends Column
 {
-    /** @var array<string, string> state → resolved icon name */
-    protected array $icons = [];
-
-    /** @var array<string, string> state → resolved color name */
-    protected array $colors = [];
-
-    protected ?Closure $iconCallback = null;
-
-    protected ?Closure $colorCallback = null;
+    // colors()/colorUsing()/getColorForState() come from InteractsWithStateColor;
+    // icons()/iconUsing()/getIconForState() from InteractsWithStateIcon.
+    use InteractsWithStateColor;
+    use InteractsWithStateIcon;
 
     protected string $iconSize = 'md';
 
@@ -35,46 +30,6 @@ class IconColumn extends Column
     protected string $trueColor = 'success';
 
     protected string $falseColor = 'danger';
-
-    /**
-     * @param  array<string, string|Icon>  $icons
-     */
-    public function icons(array $icons): static
-    {
-        $this->icons = array_map(
-            static fn (string|Icon $icon): string => $icon instanceof Icon ? $icon->value() : $icon,
-            $icons,
-        );
-
-        return $this;
-    }
-
-    public function iconUsing(Closure $callback): static
-    {
-        $this->iconCallback = $callback;
-
-        return $this;
-    }
-
-    /**
-     * @param  array<string, string|Color>  $colors
-     */
-    public function colors(array $colors): static
-    {
-        $this->colors = array_map(
-            static fn (string|Color $color): string => $color instanceof Color ? $color->value : $color,
-            $colors,
-        );
-
-        return $this;
-    }
-
-    public function colorUsing(Closure $callback): static
-    {
-        $this->colorCallback = $callback;
-
-        return $this;
-    }
 
     public function iconSize(string $size): static
     {
@@ -139,7 +94,7 @@ class IconColumn extends Column
         $color = $this->getColorForState($state);
 
         if (! $icon) {
-            return $this->getPlaceholder();
+            return $this->getEmptyCellText();
         }
 
         return $this->renderView('tables.columns.icon', [
@@ -148,60 +103,24 @@ class IconColumn extends Column
         ]);
     }
 
-    public function getIconForState(mixed $state): ?string
+    /** boolean() mode answers from the truthiness of the state, before any map. */
+    protected function resolveStateIconOverride(mixed $state): ?string
     {
-        if ($this->boolean) {
-            return $state ? $this->trueIcon : $this->falseIcon;
+        if (! $this->boolean) {
+            return null;
         }
 
-        if ($this->iconCallback) {
-            $result = ($this->iconCallback)($state);
-
-            return $result instanceof Icon ? $result->value() : $result;
-        }
-
-        $key = EnumResolver::scalar($state);
-
-        if (isset($this->icons[$key])) {
-            return $this->icons[$key];
-        }
-
-        // Enum carrying its own icon via the opt-in HasIcon contract.
-        $enumIcon = EnumResolver::icon($state);
-
-        if ($enumIcon !== null) {
-            return $enumIcon instanceof Icon ? $enumIcon->value() : $enumIcon;
-        }
-
-        return null;
+        return $state ? $this->trueIcon : $this->falseIcon;
     }
 
-    public function getColorForState(mixed $state): ?string
+    /** boolean() mode answers from the truthiness of the state, before any map. */
+    protected function resolveStateColorOverride(mixed $state): ?string
     {
-        if ($this->boolean) {
-            return $state ? $this->trueColor : $this->falseColor;
+        if (! $this->boolean) {
+            return null;
         }
 
-        if ($this->colorCallback) {
-            $result = ($this->colorCallback)($state);
-
-            return $result instanceof Color ? $result->value : $result;
-        }
-
-        $key = EnumResolver::scalar($state);
-
-        if (isset($this->colors[$key])) {
-            return $this->colors[$key];
-        }
-
-        // Enum carrying its own color via the opt-in HasColor contract.
-        $enumColor = EnumResolver::color($state);
-
-        if ($enumColor !== null) {
-            return $enumColor instanceof Color ? $enumColor->value : $enumColor;
-        }
-
-        return 'gray';
+        return $state ? $this->trueColor : $this->falseColor;
     }
 
     public function getSizeClass(): string

@@ -39,6 +39,11 @@ Build a data table inside a Livewire component using the `WithTable` trait and a
 - nothing at all when the state is an enum implementing `HasColor` — the color resolves automatically.
 The same four-way choice applies to icons: `->icon()`, `->icons([...])`, `->iconUsing(fn ($state) => …)`, or an enum with `HasIcon`.
 
+Dot-notation relation columns (`TextColumn::make('company.name')`) sort and filter through a real `LEFT JOIN`
+for singular relations (`belongsTo`/`hasOne`/`hasOneThrough`, including nested chains like `company.country.name`);
+the joined side is a scoped subquery that honours the related model's global scopes and any `->where()` on the
+relation, while to-many/morph relations are eager-loaded for display only.
+
 ### Filters
 
 `SelectFilter`, `DateFilter`, `NumberRangeFilter`, `TernaryFilter`. A filter query callback must return the
@@ -56,6 +61,20 @@ searchable combobox** (the same `searchable-select` used by wire-forms `Select` 
 (separate from table `filters`), are planned through the same `QueryPlanner` as panel filters (date/boolean
 fall back to `Filter::apply()`), and inherit authorization, **indicator chips** (removable, alongside panel
 chips), and **query-string persistence** (`Table::queryString()`, under a `col_<column>` URL parameter).
+
+### Relation managers
+
+A relationship-scoped table as a standalone Livewire component. Extend `RelationManagers\RelationManager`,
+set `protected string $relationship` (and optional `protected ?string $title`), and define `table()` exactly
+as in any `WithTable` component — columns, filters, actions, exports, search and sorting all work. The base
+class pins `query()` to the owner record's relationship, so a subclass cannot widen it. Render with
+`@@livewire(PostsRelationManager::class, ['ownerRecord' => $author])`.
+
+Any relationship type can be listed; for belongs-to-many the query selects `related.*` so pivot columns
+cannot overwrite related attributes or the row key. Create/attach/detach actions call the base helpers —
+`$this->createRelatedRecord([...])` (sets the FK; creates + attaches for belongs-to-many),
+`$this->attachRelated($id, [...pivot])` and `$this->detachRelated($id)` (belongs-to-many only, `null`
+detaches all). Using one against an unsupported relationship type throws a clear `RuntimeException`.
 
 ### More
 

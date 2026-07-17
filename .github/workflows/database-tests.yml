@@ -108,4 +108,4 @@ jobs:
           packages/table/tests/Feature
           packages/sortable/tests/Feature
           tests/Integration
-          packages/table/tests/Unit/Concerns/TableQueryServiceTest.php
+          packages/table/tests/Unit/Services/TableQueryServiceTest.php

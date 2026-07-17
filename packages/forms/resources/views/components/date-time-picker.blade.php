@@ -81,6 +81,8 @@
             hoursStep: @js($hoursStep),
             minutesStep: @js($minutesStep),
             secondsStep: @js($secondsStep),
+            displayFormat: @js($field->getDisplayFormat()),
+            closeOnDateSelection: @js($field->shouldCloseOnDateSelection()),
 
             currentMonth: null,
             currentYear: null,
@@ -222,7 +224,10 @@
             selectDate(dateStr) {
                 if (this.isDisabled(dateStr)) return;
                 this.commitValue(dateStr);
-                if (!this.hasTime) {
+                // A date-only picker has nothing left to ask, so it always closes.
+                // With a time part the panel stays open to pick it — unless the
+                // owner opted out via closeOnDateSelection().
+                if (!this.hasTime || this.closeOnDateSelection) {
                     this.open = false;
                 }
             },
@@ -254,7 +259,36 @@
 
             get displayValue() {
                 if (!this.value) return '';
-                return this.value;
+                if (!this.displayFormat) return this.value;
+
+                // State is always a widget-parseable string (Y-m-d, Y-m-d\TH:i,
+                // H:i, Y-m). Read it without Date(), which would drag the
+                // browser's timezone into a value that carries none.
+                const [datePart = '', timePart = ''] = String(this.value).split(/[T ]/);
+                const [y, mo, d] = datePart.split('-');
+                const [h, mi, sec] = timePart.split(':');
+
+                const pad = (v) => String(v ?? '').padStart(2, '0');
+                const num = (v) => String(parseInt(v ?? '0', 10) || 0);
+
+                // PHP date() tokens the picker can honour; anything else is
+                // passed through, and \\x escapes a literal.
+                const tokens = {
+                    d: pad(d), j: num(d),
+                    m: pad(mo), n: num(mo),
+                    Y: y ?? '', y: (y ?? '').slice(-2),
+                    H: pad(h), G: num(h),
+                    i: pad(mi), s: pad(sec),
+                };
+
+                let out = '';
+                for (let i = 0; i < this.displayFormat.length; i++) {
+                    const c = this.displayFormat[i];
+                    if (c === '\\\\') { out += this.displayFormat[++i] ?? ''; continue; }
+                    out += (c in tokens) ? tokens[c] : c;
+                }
+
+                return out;
             },
 
             get monthYearLabel() {
@@ -326,7 +360,7 @@
             <div
                 x-ref="panel"
                 x-show="open"
-                @click.outside="open = false"
+                @click.outside="$clickedInside($event) || (open = false)"
                 x-transition:enter="transition ease-out duration-150"
                 x-transition:enter-start="opacity-0 -translate-y-1 {{ $sheetOnMobile ? $sheetMotion : '' }}"
                 x-transition:enter-end="opacity-100 translate-y-0"

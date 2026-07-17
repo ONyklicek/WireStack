@@ -226,7 +226,7 @@ Column::make('computed_score')
 | Soubor | Změna |
 |--------|-------|
 | `packages/table/src/Concerns/WithTable.php` | Auto-register model metadata |
-| `packages/table/src/Concerns/TableQueryService.php` | Resolve capabilities z registry |
+| `packages/table/src/Services/TableQueryService.php` | Resolve capabilities z registry |
 | `packages/table/src/Columns/Column.php` | Auto-resolve capabilities pokud nejsou explicitní |
 | `packages/table/src/Filters/Filter.php` | Přístup k MetadataRegistry |
 | `packages/core/src/Core/Capabilities/CapabilityResolver.php` | Rozšířit o filter capabilities |
@@ -739,7 +739,7 @@ Opravy jsou rozdělené na **P-A (kritické — runtime wiring)** a **P-B (vylep
 ##### 7A.1 Hook dispatch v TableQueryService
 
 ```php
-// packages/table/src/Concerns/TableQueryService.php — buildQuery()
+// packages/table/src/Services/TableQueryService.php — buildQuery()
 
 // Před plan (hook: table.configuring)
 if (app()->bound(PluginManager::class)) {
@@ -847,7 +847,7 @@ private function getDefaultPipes(Builder $builder, ?string $searchTerm): array
 **Varianta B — TableQueryService předává pipes přes `withPipes()`:**
 
 ```php
-// packages/table/src/Concerns/TableQueryService.php
+// packages/table/src/Services/TableQueryService.php
 $executor = new QueryExecutor;
 
 if (app()->bound(PluginManager::class)) {
@@ -1151,7 +1151,7 @@ public function getActionTypes(): array
 | `packages/core/src/Core/Plugin/Hooks/FormSavedPayload.php` | NOVÝ |
 | `packages/core/src/Core/Plugin/Hooks/ActionExecutingPayload.php` | NOVÝ |
 | `packages/core/src/Core/Plugin/Hooks/ActionExecutedPayload.php` | NOVÝ |
-| `packages/table/src/Concerns/TableQueryService.php` | Hook dispatch (configuring, querying, queried) + plugin pipes |
+| `packages/table/src/Services/TableQueryService.php` | Hook dispatch (configuring, querying, queried) + plugin pipes |
 | `packages/table/src/Concerns/WithTable.php` | Hook dispatch (action.executing, action.executed) |
 | `packages/forms/src/Forms/Runtime/SaveHandler.php` | Hook dispatch (form.saving, form.saved) |
 | `packages/core/tests/Unit/Core/Plugin/PluginManagerTest.php` | Nové testy pro priority, typed hooks, dependencies, config |

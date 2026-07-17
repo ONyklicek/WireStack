@@ -459,8 +459,9 @@ test('rich editor disable all toolbar buttons', function () {
     expect($field->getToolbarButtons())->toBe([]);
 });
 
-test('rich editor file attachments directory', function () {
-    $field = RichEditor::make('content')->fileAttachmentsDirectory('attachments');
-
-    expect($field->getFileAttachmentsDirectory())->toBe('attachments');
+// The editor uploads nothing — no view or JS ever read this directory — so the
+// setter is gone rather than pretending. Guards against it being re-added.
+test('rich editor exposes no fileAttachmentsDirectory for an upload it cannot do', function () {
+    expect(method_exists(RichEditor::class, 'fileAttachmentsDirectory'))->toBeFalse()
+        ->and(method_exists(RichEditor::class, 'getFileAttachmentsDirectory'))->toBeFalse();
 });

@@ -29,6 +29,7 @@
     <div class="from-emerald-500 to-emerald-600"></div>
     <div class="from-red-500 to-red-600"></div>
     <div class="from-amber-500 to-amber-600"></div>
+    <div class="from-yellow-500 to-yellow-600"></div>
     <div class="from-cyan-500 to-cyan-600"></div>
     <div class="from-sky-500 to-sky-600"></div>
     <div class="from-purple-500 to-purple-600"></div>
@@ -44,6 +45,8 @@
     <div class="from-zinc-500 to-zinc-600"></div>
     <div class="from-neutral-500 to-neutral-600"></div>
     <div class="from-stone-500 to-stone-600"></div>
+    <div class="from-gray-700 to-gray-900"></div>
+    <div class="from-gray-100 to-gray-300"></div>
     <div class="from-slate-400 to-slate-500"></div>
 
     {{-- Accent text: every variant getFillTextClasses() can return. --}}
@@ -53,6 +56,7 @@
     <div class="text-emerald-600 dark:text-emerald-400"></div>
     <div class="text-red-600 dark:text-red-400"></div>
     <div class="text-amber-600 dark:text-amber-400"></div>
+    <div class="text-yellow-600 dark:text-yellow-400"></div>
     <div class="text-cyan-600 dark:text-cyan-400"></div>
     <div class="text-sky-600 dark:text-sky-400"></div>
     <div class="text-purple-600 dark:text-purple-400"></div>
@@ -67,5 +71,7 @@
     <div class="text-zinc-600 dark:text-zinc-400"></div>
     <div class="text-neutral-600 dark:text-neutral-400"></div>
     <div class="text-stone-600 dark:text-stone-400"></div>
+    <div class="text-gray-900 dark:text-white"></div>
+    <div class="text-white dark:text-gray-900"></div>
     <div class="text-slate-600 dark:text-slate-400"></div>
 </div>

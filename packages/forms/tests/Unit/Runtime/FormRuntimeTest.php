@@ -8,11 +8,18 @@ use NyonCode\WireForms\Components\CheckboxList;
 use NyonCode\WireForms\Components\Layout\Grid;
 use NyonCode\WireForms\Components\Layout\Section;
 use NyonCode\WireForms\Components\Repeater;
+use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Components\Toggle;
 use NyonCode\WireForms\Forms\Config\FormConfig;
 use NyonCode\WireForms\Forms\Runtime\FormRuntime;
 use NyonCode\WireForms\Forms\Runtime\StateManager;
+
+enum FormRuntimeStatus: string
+{
+    case Draft = 'draft';
+    case Published = 'published';
+}
 
 test('validate returns validated data on success', function () {
     $config = new FormConfig(
@@ -308,6 +315,24 @@ test('getInitialState seeds field defaults, type-correct blanks and array fields
     ]);
 });
 
+test('getInitialState reduces enum defaults to their scalar key', function () {
+    $runtime = seedingRuntime([
+        Select::make('status')
+            ->options(FormRuntimeStatus::class)
+            ->default(FormRuntimeStatus::Draft),
+        Repeater::make('rows')
+            ->schema([TextInput::make('label')])
+            ->default([['label' => 'a', 'status' => FormRuntimeStatus::Published]]),
+    ]);
+
+    // The seed feeds Livewire state directly; an enum instance there cannot
+    // round-trip to the browser and would never match an <option> value.
+    expect($runtime->getInitialState())->toBe([
+        'status' => 'draft',
+        'rows' => [['label' => 'a', 'status' => 'published']],
+    ]);
+});
+
 test('getInitialState descends into layouts and seeds top-level repeaters', function () {
     $runtime = seedingRuntime([
         Section::make('Details')->schema([
@@ -354,6 +379,38 @@ test('fill never overwrites an intentional null with a field default (edit mode)
     $runtime->fill(['title' => null]);
 
     expect($runtime->getState())->toBe(['title' => null]);
+});
+
+test('defaultOnNull fills an edit-mode null, scoped to the opted-in field', function () {
+    $runtime = seedingRuntime([
+        // Opts in: an edit-mode null is treated as unset and takes the default.
+        TextInput::make('title')->default('Untitled')->defaultOnNull(),
+        // Enum default still scalarises through the same path.
+        Select::make('status')->options(FormRuntimeStatus::class)->default(FormRuntimeStatus::Draft)->defaultOnNull(),
+        // Empty string counts as empty for an opted-in field too.
+        TextInput::make('code')->default('AUTO')->defaultOnNull(),
+        // Does NOT opt in: its null must be preserved.
+        TextInput::make('note')->default('n/a'),
+    ]);
+
+    $runtime->fill(['title' => null, 'status' => null, 'code' => '', 'note' => null]);
+
+    expect($runtime->getState())->toBe([
+        'title' => 'Untitled',
+        'status' => 'draft',
+        'code' => 'AUTO',
+        'note' => null,
+    ]);
+});
+
+test('defaultOnNull leaves a real edit-mode value untouched', function () {
+    $runtime = seedingRuntime([
+        TextInput::make('title')->default('Untitled')->defaultOnNull(),
+    ]);
+
+    $runtime->fill(['title' => 'Real']);
+
+    expect($runtime->getState())->toBe(['title' => 'Real']);
 });
 
 test('fill keeps caller values over defaults and blanks', function () {

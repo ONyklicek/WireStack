@@ -184,6 +184,32 @@ it('reports no actions when empty', function () {
     expect(Table::make()->hasActions())->toBeFalse();
 });
 
+it('defaults to the solid row-action style', function () {
+    $table = Table::make()->actions([Action::make('edit'), Action::make('delete')]);
+
+    expect($table->getActionsStyle())->toBe('solid');
+
+    foreach ($table->getRowActionsForDisplay() as $action) {
+        expect($action->isQuiet())->toBeFalse();
+    }
+});
+
+it('flags row actions quiet when actionsStyle(quiet) is set', function () {
+    $table = Table::make()
+        ->actions([Action::make('edit'), Action::divider(), Action::make('delete')])
+        ->actionsStyle('quiet');
+
+    expect($table->getActionsStyle())->toBe('quiet');
+
+    $display = $table->getRowActionsForDisplay();
+
+    // Real actions are flagged quiet; the divider is left untouched.
+    expect($display[0]->isQuiet())->toBeTrue()
+        ->and($display[1]->isDivider())->toBeTrue()
+        ->and($display[1]->isQuiet())->toBeFalse()
+        ->and($display[2]->isQuiet())->toBeTrue();
+});
+
 it('expands action groups in getAllActions()', function () {
     $table = Table::make()->actions([
         Action::make('view'),

@@ -6,7 +6,7 @@ order: 10
 
 Vícekrokový wizard layout: indikátor kroků nad sadou panelů s ovládáním Previous /
 Next — samostatný protějšek
-[wizardu action modalu](../../modals.md#multi-step-wizard). Všechny kroky zůstávají
+[wizardu action modalu](../../modals.md#vicekrokovy-wizard). Všechny kroky zůstávají
 v DOM, takže vnořená pole validují společně při odeslání bez ohledu na aktivní
 krok.
 
@@ -71,4 +71,4 @@ wizard se resolvuje na první ve schématu.
 ## Související dokumentace
 
 - [Tabs](tabs.md)
-- [Modaly — Vícekrokový wizard](../../modals.md#multi-step-wizard)
+- [Modaly — Vícekrokový wizard](../../modals.md#vicekrokovy-wizard)

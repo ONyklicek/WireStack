@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Components;
 
+use Carbon\Carbon;
 use Closure;
+use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Foundation\Concerns\HasNativeControl;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
+use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
+use NyonCode\WireCore\Foundation\Contracts\HydratesState;
 
 /**
  * Unified date/time picker field.
@@ -15,8 +20,11 @@ use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
  *
  * @see ADR 0008
  */
-class DateTimePicker extends Field
+class DateTimePicker extends Field implements DehydratesState, HydratesState
 {
+    use HasNativeControl {
+        HasNativeControl::isNative as protected nativeChoice;
+    }
     use HasSheetOnMobile;
 
     protected string $mode = 'datetime';
@@ -28,8 +36,6 @@ class DateTimePicker extends Field
     protected string|Closure|null $minDate = null;
 
     protected string|Closure|null $maxDate = null;
-
-    protected bool $native = false;
 
     protected ?int $firstDayOfWeek = null;
 
@@ -90,6 +96,13 @@ class DateTimePicker extends Field
         return $this;
     }
 
+    /**
+     * How the picked value is shown to the user, in PHP date() tokens
+     * (`d.m.Y`, `j. n. Y H:i`, …). The stored value is unaffected.
+     *
+     * Honoured by the custom picker only: a native input's display format is
+     * the browser's business, driven by the user's locale.
+     */
     public function displayFormat(?string $format): static
     {
         $this->displayFormat = $format;
@@ -109,13 +122,6 @@ class DateTimePicker extends Field
     public function maxDate(string|Closure|null $date): static
     {
         $this->maxDate = $date;
-
-        return $this;
-    }
-
-    public function native(bool $condition = true): static
-    {
-        $this->native = $condition;
 
         return $this;
     }
@@ -228,9 +234,13 @@ class DateTimePicker extends Field
         return $this->evaluate($this->maxDate);
     }
 
+    /**
+     * Month mode has no custom picker — the browser's <input type="month"> is the
+     * only UI there — so it forces the native control even over ->native(false).
+     */
     public function isNative(): bool
     {
-        return $this->native || $this->mode === 'month';
+        return $this->nativeChoice() || $this->mode === 'month';
     }
 
     public function getFirstDayOfWeek(): int
@@ -292,6 +302,95 @@ class DateTimePicker extends Field
             'time' => 'time',
             default => 'datetime-local',
         };
+    }
+
+    /**
+     * Stored value → widget state.
+     *
+     * State must stay in the widget's own parseable format (a native
+     * <input type="date"> demands Y-m-d; the custom picker parses Y-m-d,
+     * Y-m-d\TH:i and H:i), so format() cannot reach here — it describes how the
+     * value is *stored*, and applies on the way out instead.
+     *
+     * timezone() does apply here: the value is stored in the app zone and shown
+     * in the field's. Its counterpart in dehydrateState() converts back, and the
+     * two must always ship together — converting only inbound would write the
+     * shifted value straight back and silently move the time.
+     */
+    public function hydrateState(mixed $value, ?Model $record = null): mixed
+    {
+        $zone = $this->getTimezone();
+
+        if ($zone === null || $value === null || $value === '' || ! $this->hasTimeComponent()) {
+            return $value;
+        }
+
+        return $this->parse($value, config('app.timezone'))
+            ?->setTimezone($zone)
+            ->format($this->getStateFormat());
+    }
+
+    /**
+     * Widget state → stored value: apply the field's timezone and format().
+     */
+    public function dehydrateState(mixed $state, ?Model $record = null): mixed
+    {
+        if ($state === null || $state === '') {
+            return null;
+        }
+
+        // A date-only or time-only value carries no instant to convert; only a
+        // datetime does. Shifting a bare date by a timezone would move the day.
+        $zone = $this->hasTimeComponent() ? $this->getTimezone() : null;
+
+        // Both knobs are opt-in. Without them the state IS what should be
+        // stored, and reformatting anyway would be a silent BC break: getFormat()
+        // falls back to config('wire-forms.date_format') — 'd.m.Y' in a default
+        // install — so every field that never called format() would quietly start
+        // writing '09.03.2026' into a date column that had held '2026-03-09'.
+        if ($this->format === null && $zone === null) {
+            return $state;
+        }
+
+        $date = $this->parse($state, $zone ?? config('app.timezone'));
+
+        if ($date === null) {
+            return $state;
+        }
+
+        if ($zone !== null) {
+            $date = $date->setTimezone(config('app.timezone'));
+        }
+
+        // Only an explicit format() may change the stored shape; a timezone-only
+        // field keeps writing the state's own format.
+        return $date->format($this->format ?? $this->getStateFormat());
+    }
+
+    /**
+     * Only a datetime has an instant a timezone can move; 'date', 'month' and
+     * 'time' are wall-clock values that a conversion would corrupt.
+     */
+    private function hasTimeComponent(): bool
+    {
+        return $this->mode === 'datetime';
+    }
+
+    private function parse(mixed $value, string $timezone): ?Carbon
+    {
+        try {
+            return Carbon::parse((string) $value, $timezone);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * The format the widget's state is written in — what getStateType() casts to.
+     */
+    private function getStateFormat(): string
+    {
+        return substr($this->getStateType(), 5);
     }
 
     public function getStateType(): string

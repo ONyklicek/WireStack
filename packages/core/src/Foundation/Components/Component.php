@@ -21,6 +21,7 @@ use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 abstract class Component implements Htmlable
 {
     use Concerns\BelongsToComponent;
+    use Concerns\CanBeDisabled;
     use Concerns\HasColumnSpan;
     use Concerns\HasDefault;
     use Concerns\HasExtraAttributes;
@@ -32,6 +33,7 @@ abstract class Component implements Htmlable
     use Concerns\HasSize;
     use Concerns\HasState;
     use Concerns\HasVisibility;
+    use Concerns\InteractsWithStateConditions;
     use Conditionable;
     use EvaluatesClosures;
 

@@ -195,4 +195,4 @@ $component->removeColumnFilter('name');         // vyčistit jeden filtr sloupce
 Lišta filtrů a menu přepínání sloupců se na telefonu otevřou jako bottom sheet.
 Konfigurujte globálně přes blok `wire-core.mobile`, nebo per komponenta pomocí
 `->sheetOnMobile()` / `->mobileBreakpoint()` — viz
-[mobilní prezentace](../../configuration.md#mobile).
+[mobilní prezentace](../../configuration.md#mobil).

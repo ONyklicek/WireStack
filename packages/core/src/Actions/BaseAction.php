@@ -139,6 +139,14 @@ abstract class BaseAction implements Htmlable
     }
 
     /**
+     * Resolve "quiet" color classes (neutral at rest, color on hover/focus).
+     */
+    protected function resolveQuietColorClasses(string $color): string
+    {
+        return $this->getQuietButtonColorClasses($color);
+    }
+
+    /**
      * Canonical color classes for a rendered action button (solid or outlined).
      *
      * Delegates to the shared Foundation color resolver so action views never

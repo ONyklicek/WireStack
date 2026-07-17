@@ -18,6 +18,7 @@ use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Components\Toggle;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\WithForms;
+use Workbench\App\Enums\PreviewStatus;
 
 class FormPreview extends Component
 {
@@ -32,6 +33,26 @@ class FormPreview extends Component
     public function mount(string $variant = 'overview'): void
     {
         $this->variant = $variant;
+
+        if ($variant === 'enum-defaults') {
+            // A create-mode host: fill() with no record is what seeds each
+            // field's ->default() into the bound state.
+            $this->data = [];
+            $this->form->fill([]);
+
+            return;
+        }
+
+        if ($variant === 'default-on-null') {
+            // An edit-mode host: the "record" carries an intentional null for
+            // every field. Only the ->defaultOnNull() field should take its
+            // default; the plain-default field must keep the null.
+            $this->data = [];
+            $this->form->fill(['status' => null, 'kind' => null, 'qty' => null]);
+
+            return;
+        }
+
         $contacts = $variant === 'repeater'
             ? [
                 ['label' => 'Support', 'value' => 'support@example.com'],
@@ -70,12 +91,75 @@ class FormPreview extends Component
     public function form(Form $form): Form
     {
         return match ($this->variant) {
+            'enum-defaults' => $this->buildEnumDefaultsForm($form),
+            'default-on-null' => $this->buildDefaultOnNullForm($form),
             'repeater' => $this->buildRepeaterForm($form),
             'tabs' => $this->buildTabsForm($form),
             'wizard' => $this->buildWizardForm($form),
             'wizard-live' => $this->buildWizardLiveForm($form),
             default => $this->buildOverviewForm($form),
         };
+    }
+
+    /**
+     * Create-mode defaults: an enum-sourced select seeded with an enum-instance
+     * ->default(), a clearable enum select (empty value), and a numeric input
+     * whose ->default() must reach the rendered value attribute.
+     */
+    protected function buildEnumDefaultsForm(Form $form): Form
+    {
+        return $form
+            ->statePath('data')
+            ->schema([
+                Select::make('status')
+                    ->label('Status')
+                    ->options(PreviewStatus::class)
+                    ->default(PreviewStatus::Draft),
+                Select::make('priority')
+                    ->label('Priority (clearable)')
+                    ->options(PreviewStatus::class)
+                    ->placeholder('No priority'),
+                TextInput::make('qty')
+                    ->label('Quantity')
+                    ->numeric()
+                    ->minValue(1)
+                    ->default(1),
+            ]);
+    }
+
+    /**
+     * Edit mode with an all-null record: only the ->defaultOnNull() fields
+     * (status, qty) resurrect their default; the plain-default field (kind)
+     * keeps the record's null.
+     */
+    protected function buildDefaultOnNullForm(Form $form): Form
+    {
+        return $form
+            ->statePath('data')
+            ->schema([
+                Select::make('status')
+                    ->label('Status (defaultOnNull)')
+                    ->options(PreviewStatus::class)
+                    ->default(PreviewStatus::Draft)
+                    ->defaultOnNull(),
+                Select::make('kind')
+                    ->label('Kind (plain default)')
+                    ->options(PreviewStatus::class)
+                    ->default(PreviewStatus::Published)
+                    ->placeholder('No kind'),
+                TextInput::make('qty')
+                    ->label('Quantity (defaultOnNull)')
+                    ->numeric()
+                    ->default(1)
+                    ->defaultOnNull(),
+            ]);
+    }
+
+    /** Validate the current state and surface the outcome for the driver to read. */
+    public function submitPreview(): void
+    {
+        $this->form->validate();
+        $this->dispatch('preview-validated');
     }
 
     /**

@@ -186,7 +186,7 @@ faktura viditelným rodičovským sloupcem:
 (`scope: 'subRows'`) a souhrn ve výchozím rozsahu pro celkový součet — ten se
 vykreslí v hlavní patičce, spočtený v SQL nad přesně těmi dětmi, které filtr
 povoluje (viz
-[Celkové součty ze sloupců podřádků](summaries.md#grand-totals-from-sub-row-columns)):
+[Celkové součty ze sloupců podřádků](summaries.md#celkove-soucty-ze-sloupcu-podradku)):
 
 ```php
 $table
@@ -204,7 +204,7 @@ $table
     ]);
 ```
 
-**Částka jako rodičovský sloupec.** Použijte [rollup sloupec](summaries.md#rollup-columns)
+**Částka jako rodičovský sloupec.** Použijte [rollup sloupec](summaries.md#rollup-sloupce)
 nad **stejnou relací** jako `subRows()` — shoda relace je to, co filtru umožňuje
 ji omezit. Buňka pak ukazuje součet *odpovídajících* položek každé faktury (sloupec
 `5 000 Kč` v diagramu) a její souhrn je celkový součet v patičce. Uložený rodičovský
@@ -231,7 +231,7 @@ Omezení rollupu je klíčované názvem relace: rollup nad *jinou* relací (ře
 `->counts('payments')`) zůstane `items`-scopnutým filtrem nedotčen a dál agreguje
 všechny své děti.
 
-Viz [Filtry — Filtrování podle hodnot podřádků](filters/relationships.md#filtering-by-sub-row-values).
+Viz [Filtry — Filtrování podle hodnot podřádků](filters/relationships.md#filtrovani-podle-hodnot-podradku).
 
 ## Řádkové akce
 
@@ -285,8 +285,8 @@ Platí zde všechny typy agregací a formátování čísel ze stránky [Souhrny
 Pro součet **napříč** všemi rodiči v hlavní patičce přidejte druhý souhrn ve
 výchozím rozsahu na stejný sloupec podřádku — `->summarizeSum('Celkem')` — nebo
 dejte rodičovskému rollup sloupci vlastní souhrn.
-Viz [Celkové součty ze sloupců podřádků](summaries.md#grand-totals-from-sub-row-columns)
-a [Celkové součty přes všechny děti](summaries.md#grand-totals-across-all-children).
+Viz [Celkové součty ze sloupců podřádků](summaries.md#celkove-soucty-ze-sloupcu-podradku)
+a [Celkové součty přes všechny děti](summaries.md#celkove-soucty-pres-vsechny-deti).
 
 ## Flatten režim
 

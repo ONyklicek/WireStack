@@ -67,10 +67,10 @@ $table->columns([
 
     BadgeColumn::make('status')
         ->colors([
-            'gray' => 'draft',
-            'warning' => 'sent',
-            'success' => 'paid',
-            'danger' => 'overdue',
+            'draft' => 'gray',
+            'sent' => 'warning',
+            'paid' => 'success',
+            'overdue' => 'danger',
         ]),
 
     PollColumn::make('payment_status')

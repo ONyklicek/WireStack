@@ -14,10 +14,10 @@ use Laravel\Mcp\Server\Attributes\Name;
 #[Description('Read the most recent browser console log entries captured to the configured wire-boost browser log file.')]
 class BrowserLogs extends BoostTool
 {
-    public function handle(Request $request): Response
+    protected function run(Request $request): Response
     {
         if (! config('wire-boost.tools.browser_logs', true)) {
-            return $this->json(['error' => 'The browser-logs tool is disabled.']);
+            return Response::error('The browser-logs tool is disabled.');
         }
 
         $path = (string) config('wire-boost.browser_logs.path', storage_path('wire-boost/browser.log'));

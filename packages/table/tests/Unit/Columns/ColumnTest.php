@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Foundation\Contracts\Enum\HasLabel;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Columns\TextInputColumn;
 
 enum ColTestStatus: string implements HasLabel
 {
@@ -152,8 +153,26 @@ it('can set placeholder', function () {
     expect(Column::make('name')->placeholder('N/A')->getPlaceholder())->toBe('N/A');
 });
 
-it('has default placeholder', function () {
-    expect(Column::make('name')->getPlaceholder())->toBe('-');
+it('shows a dash for an empty cell, but hands an input no placeholder', function () {
+    // Two concepts, not one: getEmptyCellText() is what an empty cell renders,
+    // getPlaceholder() is the hint an input shows. They used to be the same
+    // property, which is why TextInputColumn offered "-" as a hint.
+    expect(Column::make('name')->getEmptyCellText())->toBe('-')
+        ->and(Column::make('name')->getPlaceholder())->toBeNull();
+});
+
+it('lets placeholder() override the empty-cell text', function () {
+    expect(Column::make('name')->placeholder('n/a')->getEmptyCellText())->toBe('n/a');
+});
+
+it('resolves a closure placeholder', function () {
+    // Came free with the canonical concern; the column's own copy took strings only.
+    expect(Column::make('name')->placeholder(fn () => 'none')->getEmptyCellText())->toBe('none');
+});
+
+it('does not offer a dash as an input hint', function () {
+    // The regression the split fixes: the input rendered placeholder="-".
+    expect(TextInputColumn::make('name')->getPlaceholder())->toBeNull();
 });
 
 it('can set width', function () {

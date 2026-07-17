@@ -81,12 +81,21 @@ it('can set color via fluent api', function () {
 });
 
 it('color aliases work', function () {
-    // Verify the trait handles color aliases (blue=primary, red=danger, etc.)
-    // by testing badge classes which use the same color resolution
-    $blueClasses = Action::getBadgeColorClasses('blue');
-    $primaryClasses = Action::getBadgeColorClasses('primary');
+    // Verify the trait handles the true semantic aliases (emerald=success,
+    // amber=warning, secondary=gray) by testing badge classes which use the
+    // same color resolution.
+    expect(Action::getBadgeColorClasses('emerald'))->toBe(Action::getBadgeColorClasses('success'))
+        ->and(Action::getBadgeColorClasses('amber'))->toBe(Action::getBadgeColorClasses('warning'))
+        ->and(Action::getBadgeColorClasses('secondary'))->toBe(Action::getBadgeColorClasses('gray'));
+});
 
-    expect($blueClasses)->toBe($primaryClasses);
+it('resolves literal hues distinct from the semantic role', function () {
+    // blue/green/yellow are first-class literal hues, not aliases of the brand
+    // primary / success / warning roles.
+    expect(Action::getBadgeColorClasses('blue'))->not->toBe(Action::getBadgeColorClasses('primary'))
+        ->and(Action::getBadgeColorClasses('blue'))->toContain('blue')
+        ->and(Action::getBadgeColorClasses('green'))->toContain('green')
+        ->and(Action::getBadgeColorClasses('yellow'))->toContain('yellow');
 });
 
 // ─── getSolidColorClasses via HasColor trait (public static on trait) ──────
