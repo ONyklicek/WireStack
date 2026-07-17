@@ -91,6 +91,28 @@ test('enum options add an implicit in: validation rule', function () {
         ->and((string) $inRule)->toBe('in:"draft","published"');
 });
 
+test('an optional enum select pairs the implicit in: rule with nullable', function () {
+    $field = Select::make('status')->options(SelectTestStatus::class);
+
+    $rules = $field->getValidationRules();
+
+    // Clearing the combobox writes null, not ''; a bare in: rule would reject it.
+    expect($rules[0])->toBe('nullable')
+        ->and(validator(['status' => null], ['status' => $rules])->passes())->toBeTrue()
+        ->and(validator(['status' => 'draft'], ['status' => $rules])->passes())->toBeTrue()
+        ->and(validator(['status' => 'bogus'], ['status' => $rules])->passes())->toBeFalse();
+});
+
+test('a required enum select rejects null through required, not nullable', function () {
+    $field = Select::make('status')->options(SelectTestStatus::class)->required();
+
+    $rules = $field->getValidationRules();
+
+    expect($rules)->not->toContain('nullable')
+        ->and(validator(['status' => null], ['status' => $rules])->passes())->toBeFalse()
+        ->and(validator(['status' => 'draft'], ['status' => $rules])->passes())->toBeTrue();
+});
+
 test('plain array options add no implicit validation rule', function () {
     $field = Select::make('role')->options(['admin' => 'Admin', 'user' => 'User']);
 
@@ -220,10 +242,13 @@ test('boolean helper', function () {
     expect($options)->toHaveCount(2);
 });
 
-test('allow html flag', function () {
-    $field = Select::make('icon')->allowHtml();
-
-    expect($field->isAllowHtml())->toBeTrue();
+// allowHtml() was documented but dead: the combobox renders every label through
+// x-text, so nothing ever rendered HTML. Removed rather than switched on —
+// x-html here would open an XSS hole in a library that escapes everywhere else.
+// Guards against it being re-added without that conversation.
+test('select exposes no allowHtml, which would have meant unescaped labels', function () {
+    expect(method_exists(Select::class, 'allowHtml'))->toBeFalse()
+        ->and(method_exists(Select::class, 'isAllowHtml'))->toBeFalse();
 });
 
 test('state type is string for single and array for multiple (regression)', function () {

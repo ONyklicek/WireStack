@@ -7,10 +7,15 @@ namespace NyonCode\WireTable\Filters;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireCore\Foundation\Concerns\HasNativeControl;
+use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireForms\Components\Select;
 
 class TernaryFilter extends Filter
 {
+    use HasNativeControl;
+    use HasSheetOnMobile;
+
     protected ?string $trueLabel = null;
 
     protected ?string $falseLabel = null;
@@ -94,6 +99,21 @@ class TernaryFilter extends Filter
         }
 
         return $query;
+    }
+
+    /**
+     * The ternary states as select options. "All" is deliberately not an option:
+     * it is the placeholder, i.e. clearing the filter — which lets this render
+     * through the same select surface as every other optional select.
+     *
+     * @return array<string, string>
+     */
+    public function getOptions(): array
+    {
+        return [
+            'true' => $this->getTrueLabel(),
+            'false' => $this->getFalseLabel(),
+        ];
     }
 
     public function inlineView(): string

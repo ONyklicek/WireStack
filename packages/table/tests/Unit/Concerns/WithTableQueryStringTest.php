@@ -132,8 +132,20 @@ it('rejects per page values outside the configured options', function () {
 });
 
 it('seeds a single-value filter', function () {
-    expect(wtqsState(['filter_status' => 'active'])->get('filters'))
-        ->toBe(['status' => ['value' => 'active']]);
+    expect(wtqsState(['filter_status' => 'active'])->get('filters.status'))
+        ->toBe(['value' => 'active']);
+});
+
+// Non-native filters bind via $wire.entangle(), which silently no-ops when the
+// path is undefined at render — so every rendered filter needs a slot up front,
+// value or not.
+it('gives every rendered filter a state slot even without a value', function () {
+    $filters = wtqsState([])->get('filters');
+
+    expect($filters)->toHaveKey('status')
+        ->and($filters['status'])->toBe(['value' => null])
+        ->and($filters)->toHaveKey('statuses')
+        ->and($filters['statuses'])->toBe(['value' => null]);
 });
 
 it('applies a seeded filter to the rendered records', function () {
@@ -144,25 +156,25 @@ it('applies a seeded filter to the rendered records', function () {
 });
 
 it('seeds number range filter bounds from suffixed parameters', function () {
-    expect(wtqsState(['filter_price_min' => '20', 'filter_price_max' => '60'])->get('filters'))
-        ->toBe(['price' => ['min' => '20', 'max' => '60']]);
+    expect(wtqsState(['filter_price_min' => '20', 'filter_price_max' => '60'])->get('filters.price'))
+        ->toBe(['min' => '20', 'max' => '60']);
 });
 
 it('seeds array values for multiple filters', function () {
-    expect(wtqsState(['filter_statuses' => ['active', 'archived']])->get('filters'))
-        ->toBe(['statuses' => ['value' => ['active', 'archived']]]);
+    expect(wtqsState(['filter_statuses' => ['active', 'archived']])->get('filters.statuses'))
+        ->toBe(['value' => ['active', 'archived']]);
 });
 
 it('rejects array values for non-multiple filters', function () {
-    expect(wtqsState(['filter_status' => ['active']])->get('filters'))->toBe([]);
+    expect(wtqsState(['filter_status' => ['active']])->get('filters.status'))->toBe(['value' => null]);
 });
 
 it('ignores parameters for unknown filters', function () {
-    expect(wtqsState(['filter_nope' => 'x'])->get('filters'))->toBe([]);
+    expect(wtqsState(['filter_nope' => 'x'])->get('filters'))->not->toHaveKey('nope');
 });
 
 it('does not seed hidden filters', function () {
-    expect(wtqsState(['filter_secret' => 'a'])->get('filters'))->toBe([]);
+    expect(wtqsState(['filter_secret' => 'a'])->get('filters'))->not->toHaveKey('secret');
 });
 
 it('does not seed anything when query string persistence is disabled', function () {
@@ -180,7 +192,7 @@ it('uses the configured prefix for every parameter', function () {
     ], WtqsPrefixedComponent::class);
 
     expect($state->get('search'))->toBe('widget')
-        ->and($state->get('filters'))->toBe(['status' => ['value' => 'active']]);
+        ->and($state->get('filters.status'))->toBe(['value' => 'active']);
 });
 
 // ─── Column header filters ───────────────────────────────────────────────────

@@ -1,19 +1,22 @@
-{{-- Column boolean filter (inline, in table header row) --}}
+{{-- Column boolean filter (inline, in table header row).
+     Delegates to the canonical searchable combobox shared with the table
+     SelectFilter and the forms Select — so a boolean header filter matches the
+     select ones sitting next to it. "All" is the placeholder (clears the filter). --}}
 {{-- Variables: $column, $filter, $value, $controlClasses --}}
 @php
     $name = $column->getName();
-    $trueLabel = $filter->getTrueLabel();
-    $falseLabel = $filter->getFalseLabel();
 @endphp
 
-<div class="relative">
-    <select
-        wire:model.live="tableState.columnFilters.{{ $name }}"
-        class="{{ $controlClasses }}"
-    >
-        <option value="">{{ __('wire-table::messages.filter_all') }}</option>
-        <option value="true" @if($value === 'true' || $value === '1') selected @endif>{{ $trueLabel }}</option>
-        <option value="false" @if($value === 'false' || $value === '0') selected @endif>{{ $falseLabel }}</option>
-    </select>
-    @include('wire-table::tables.columns.partials.filter-chevron')
-</div>
+@include('wire-core::partials.searchable-select', [
+    'selectId' => 'colfilter-'.$name,
+    'statePath' => 'tableState.columnFilters.'.$name,
+    'options' => $filter->getOptions(),
+    'placeholder' => $filter->getAllLabel(),
+    'multiple' => false,
+    'searchable' => false,
+    'searchPrompt' => __('wire-table::messages.filter_search'),
+    'noResultsMessage' => __('wire-table::messages.filter_no_results'),
+    'sheetOnMobile' => (bool) config('wire-core.mobile.sheet', true),
+    // Column filters apply immediately.
+    'live' => true,
+])

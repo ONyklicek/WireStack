@@ -315,8 +315,15 @@ it('covers searchable and sortable configuration with callbacks', function () {
 // ─── Remaining branch coverage ──────────────────────────────────
 
 it('covers hidden/visible closures and editable removal', function () {
-    // hidden() accepts a Closure (stored, not evaluated by isHidden).
-    expect(TextColumn::make('a')->hidden(fn () => true)->isHidden())->toBeFalse();
+    // A hidden() Closure is evaluated. This used to assert toBeFalse(), with a
+    // comment reading "stored, not evaluated by isHidden" — the column swallowed
+    // the Closure and stayed visible, and the test froze that in place chasing
+    // branch coverage. Adopting the canonical HasVisibility fixed it.
+    expect(TextColumn::make('a')->hidden(fn () => true)->isHidden())->toBeTrue()
+        ->and(TextColumn::make('a')->hidden(fn () => false)->isHidden())->toBeFalse();
+
+    // hidden() and visible() compose: either one hiding wins.
+    expect(TextColumn::make('a')->hidden(fn () => true)->isVisible())->toBeFalse();
 
     // visible() Closure drives isVisible().
     expect(TextColumn::make('a')->visible(fn () => false)->isVisible())->toBeFalse()

@@ -11,8 +11,8 @@ use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Livewire\Component;
 use NyonCode\WireTable\Concerns\WithTable;
+use NyonCode\WireTable\Exceptions\RelationManagerException;
 use NyonCode\WireTable\Table;
-use RuntimeException;
 
 /**
  * Base for a relation-scoped table — the standalone counterpart to Filament's
@@ -64,7 +64,7 @@ abstract class RelationManager extends Component
     public function getOwnerRecord(): Model
     {
         if (! $this->ownerRecord instanceof Model) {
-            throw new RuntimeException(static::class.' requires an ownerRecord.');
+            throw RelationManagerException::missingOwnerRecord(static::class);
         }
 
         return $this->ownerRecord;
@@ -73,7 +73,7 @@ abstract class RelationManager extends Component
     public function getRelationshipName(): string
     {
         if ($this->relationship === '') {
-            throw new RuntimeException(static::class.' must define a $relationship name.');
+            throw RelationManagerException::missingRelationshipName(static::class);
         }
 
         return $this->relationship;
@@ -88,9 +88,7 @@ abstract class RelationManager extends Component
         $relation = $this->getOwnerRecord()->{$name}();
 
         if (! $relation instanceof Relation) {
-            throw new RuntimeException(
-                static::class.": [$name] is not an Eloquent relationship on ".$this->getOwnerRecord()::class.'.'
-            );
+            throw RelationManagerException::notARelationship(static::class, $name, $this->getOwnerRecord()::class);
         }
 
         return $relation;
@@ -142,9 +140,7 @@ abstract class RelationManager extends Component
             return $relation->create($data);
         }
 
-        throw new RuntimeException(
-            "The [{$this->getRelationshipName()}] relationship does not support creating related records."
-        );
+        throw RelationManagerException::cannotCreateRelated($this->getRelationshipName());
     }
 
     /**
@@ -173,9 +169,7 @@ abstract class RelationManager extends Component
         $relation = $this->getRelationship();
 
         if (! $relation instanceof BelongsToMany) {
-            throw new RuntimeException(
-                static::class."::$operation() requires a belongs-to-many relationship, [{$this->getRelationshipName()}] given."
-            );
+            throw RelationManagerException::requiresBelongsToMany(static::class, $operation, $this->getRelationshipName());
         }
 
         return $relation;

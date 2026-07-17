@@ -35,11 +35,8 @@ class CoreActionsHost extends Component
 {
     use InteractsWithActions;
 
-    /** @var array<string, mixed> */
-    public array $mountedAction = [];
-
-    /** @var array<string, mixed> */
-    public array $actionFormData = [];
+    /** @var array<int, array<string, mixed>> */
+    public array $mountedActions = [];
 
     /** @var array<string, mixed> */
     public array $haltState = [];
@@ -71,30 +68,85 @@ class CoreActionsHost extends Component
         ];
     }
 
-    // ── engine seams (plain public-prop storage) ──
-    protected function setMountedActionState(string $key, mixed $value): void
+    // ── engine frame seams (plain frames-array storage) ──
+    protected function actionFrameCount(): int
     {
-        $this->mountedAction[$key] = $value;
+        return count($this->mountedActions);
     }
 
-    protected function getMountedActionState(string $key, mixed $default = null): mixed
+    protected function pushActionFrame(array $frame): void
     {
-        return $this->mountedAction[$key] ?? $default;
+        $this->mountedActions[] = $frame;
+        $this->actionStackVersion++;
+        $this->actionModalConfigCache = [];
     }
 
-    protected function getMountedActionFormData(): array
+    protected function popActionFrame(): void
     {
-        return $this->actionFormData;
+        array_pop($this->mountedActions);
+        $this->actionStackVersion++;
+        $this->actionModalConfigCache = [];
     }
 
-    protected function setMountedActionFormData(array $data): void
+    protected function mountActionByName(string $name, array $arguments): void
     {
-        $this->actionFormData = $data;
+        $action = $this->catalog()[$name] ?? null;
+
+        if ($action === null) {
+            return;
+        }
+
+        $this->pushActionFrame([
+            'name' => $name,
+            'currentStep' => 0,
+            'isBulk' => false,
+            'isHeaderAction' => true,
+            'record' => null,
+            'arguments' => $arguments,
+            'data' => [],
+        ]);
     }
 
-    protected function setMountedActionFormDataValue(string $path, mixed $value): void
+    protected function actionFrameStatePath(int $depth): string
     {
-        data_set($this->actionFormData, $path, $value);
+        return "mountedActions.{$depth}.data";
+    }
+
+    protected function getActionFrameState(int $depth, string $key, mixed $default = null): mixed
+    {
+        return $this->mountedActions[$depth][$key] ?? $default;
+    }
+
+    protected function setActionFrameState(int $depth, string $key, mixed $value): void
+    {
+        if (isset($this->mountedActions[$depth])) {
+            $this->mountedActions[$depth][$key] = $value;
+        }
+    }
+
+    protected function readActionFrameData(int $depth): array
+    {
+        $data = $this->mountedActions[$depth]['data'] ?? [];
+
+        return is_array($data) ? $data : [];
+    }
+
+    protected function setActionFrameData(int $depth, array $data): void
+    {
+        if (isset($this->mountedActions[$depth])) {
+            $this->mountedActions[$depth]['data'] = $data;
+        }
+    }
+
+    protected function writeActionFrameData(int $depth, string $path, mixed $value): void
+    {
+        if (! isset($this->mountedActions[$depth])) {
+            return;
+        }
+
+        $data = $this->readActionFrameData($depth);
+        data_set($data, $path, $value);
+        $this->mountedActions[$depth]['data'] = $data;
     }
 
     protected function setHaltModalState(string $key, mixed $value): void
@@ -102,52 +154,9 @@ class CoreActionsHost extends Component
         $this->haltState[$key] = $value;
     }
 
-    /** @var array<int, array<string, mixed>> */
-    public array $suspendedStack = [];
-
-    protected function suspendCurrentAction(): void
+    protected function resolveActionForFrame(int $depth): array
     {
-        $this->suspendedStack[] = ['meta' => $this->mountedAction, 'formData' => $this->actionFormData];
-        $this->actionModalConfigCache = [];
-    }
-
-    protected function resumeSuspendedAction(): bool
-    {
-        if ($this->suspendedStack === []) {
-            return false;
-        }
-
-        $frame = array_pop($this->suspendedStack);
-        $this->mountedAction = $frame['meta'];
-        $this->actionFormData = $frame['formData'];
-        $this->actionModalConfigCache = [];
-
-        return true;
-    }
-
-    protected function suspendedActionCount(): int
-    {
-        return count($this->suspendedStack);
-    }
-
-    public function getSuspendedActionModals(): array
-    {
-        $modals = [];
-
-        foreach ($this->suspendedStack as $frame) {
-            $name = $frame['meta']['name'] ?? null;
-
-            if ($name && isset($this->catalog()[$name])) {
-                $modals[] = $this->catalog()[$name]->getModalConfig();
-            }
-        }
-
-        return $modals;
-    }
-
-    protected function resolveCurrentModalAction(): array
-    {
-        $name = $this->mountedAction['name'] ?? null;
+        $name = $this->mountedActions[$depth]['name'] ?? null;
 
         return [$name ? ($this->catalog()[$name] ?? null) : null, null];
     }
@@ -172,14 +181,14 @@ class CoreActionsHost extends Component
 
     public function openFooter(): void
     {
-        $this->mountedAction = ['name' => 'footer', 'show' => true];
+        $this->mountedActions = [['name' => 'footer', 'show' => true, 'data' => []]];
         $this->actionModalConfigCache = $this->catalog()['footer']->getModalConfig();
     }
 
     /** Mounts a name that resolves to no action, then reads the modal config. */
     public function peekGhostConfig(): void
     {
-        $this->mountedAction = ['name' => 'ghost', 'show' => true];
+        $this->mountedActions = [['name' => 'ghost', 'show' => true, 'data' => []]];
         $this->actionModalConfigCache = [];
         $this->getActionModalData();
     }
@@ -276,13 +285,13 @@ it('runs a modal footer action validating through the no-op form seam', function
     Livewire::test(CoreActionsHost::class)
         ->call('openFooter')
         ->call('callModalFooterAction', 'touch')
-        ->assertSet('actionFormData.touched', true);
+        ->assertSet('mountedActions.0.data.touched', true);
 });
 
 it('reports modal visibility and step index from the engine', function () {
     $component = Livewire::test(CoreActionsHost::class)
         ->call('openFooter')
-        ->assertSet('mountedAction.show', true);
+        ->assertSet('mountedActions.0.show', true);
 
     expect($component->instance()->isActionModalVisible())->toBeTrue()
         ->and($component->instance()->getMountedActionStepIndex())->toBe(0);
@@ -291,5 +300,5 @@ it('reports modal visibility and step index from the engine', function () {
 it('skips modal config regeneration when the mounted name resolves to no action', function () {
     Livewire::test(CoreActionsHost::class)
         ->call('peekGhostConfig')
-        ->assertSet('mountedAction.name', 'ghost');
+        ->assertSet('mountedActions.0.name', 'ghost');
 });

@@ -252,7 +252,7 @@
             <div
                 x-ref="panel"
                 x-show="open"
-                @click.outside="open = false; activeIndex = -1"
+                @click.outside="if (! $clickedInside($event)) { open = false; activeIndex = -1 }"
                 @if($sheetOnMobile) x-focus-trap="open" tabindex="-1" data-sheet-bp="{{ $sheetBpPx }}" @endif
                 x-transition:enter="transition ease-out duration-150"
                 x-transition:enter-start="opacity-0 -translate-y-1 {{ $sheetOnMobile ? $sheetMotion : '' }}"

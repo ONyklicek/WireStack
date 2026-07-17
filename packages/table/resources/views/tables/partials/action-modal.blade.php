@@ -1,5 +1,15 @@
 {{-- Action Modal (Confirmation or Form) - uses wire-core modal components --}}
-@if($component->tableState->get('modal.action.show'))
+
+{{-- Preload the floating-dropdown bundle on the table's initial render (this
+     partial is always included, even with no modal open). An action modal opened
+     by a header/row action can contain a searchable Select / dropdown whose
+     `$float` magic must already be registered — its own @assets sits inside the
+     teleported modal that only appears on the action roundtrip, which Livewire
+     does not inject in time. Idempotent: @assets registers once even if the
+     table's filters / column toggle already loaded it. --}}
+@include('wire-core::partials.floating-assets')
+
+@if($component->isActionModalVisible())
     @php
         $modalData = $component->getActionModalData();
         $actionFormInstance = $component->getActionModalFormInstance();
@@ -10,29 +20,34 @@
         $isFullScreenMobile = $modalData['fullScreenOnMobile'] ?? false;
         $wizardSteps = $modalData['steps'] ?? null;
         $isWizard = is_array($wizardSteps) && count($wizardSteps) > 0;
-        $wizardCurrentStep = $isWizard ? (int) $component->tableState->get('modal.action.currentStep', 0) : 0;
+        $wizardCurrentStep = $isWizard ? $component->getMountedActionStepIndex() : 0;
         $wizardTotalSteps = $isWizard ? count($wizardSteps) : 0;
 
-        // Modal stacking: draw a dimmed, inert shell for each suspended parent
-        // modal behind the active one, then layer the active modal on top.
-        $suspendedModals = $component->getSuspendedActionModals();
-        $stackDepth = count($suspendedModals);
+        // Modal stacking: every open modal is a live frame. Draw each parent
+        // frame (all but the top) as a dimmed, click-inert — but still live —
+        // form behind the active one, then layer the active modal on top.
+        $mountedModals = $component->getMountedActionModals();
+        $stackDepth = max(0, count($mountedModals) - 1);
         $activeZIndex = $stackDepth > 0 ? \NyonCode\WireCore\Modals\ModalStack::zIndexForDepth($stackDepth) : null;
+        // The active modal binds to a stable flag (not a per-depth path) so the
+        // reused modal element is not re-initialised by Alpine on push/pop.
+        $activeShowModel = 'tableState.modal.open';
     @endphp
 
-    @foreach($suspendedModals as $suspendedIndex => $suspendedModalData)
+    @for($depth = 0; $depth < $stackDepth; $depth++)
         @include('wire-core::modals.suspended', [
-            'modalData' => $suspendedModalData,
-            'zIndex' => \NyonCode\WireCore\Modals\ModalStack::zIndexForDepth($suspendedIndex),
-            'depthBelowTop' => $stackDepth - $suspendedIndex,
+            'modalData' => $mountedModals[$depth],
+            'formInstance' => $component->getActionModalFormInstanceForDepth($depth),
+            'zIndex' => \NyonCode\WireCore\Modals\ModalStack::zIndexForDepth($depth),
+            'depthBelowTop' => $stackDepth - $depth,
         ])
-    @endforeach
+    @endfor
 
     @if(!empty($modalData) && isset($modalData['heading']))
         @if($isSlideOver)
             {{-- Slide Over Panel --}}
             <x-wire-modals::slide-over
-                wire:model="tableState.modal.action.show"
+                wire:model="{{ $activeShowModel }}"
                 :heading="$modalData['heading']"
                 :description="$modalData['description'] ?? null"
                 :width="$modalData['width'] ?? 'md'"
@@ -111,7 +126,7 @@
                 $iconColor = $modalData['iconColor'] ?? 'warning';
             @endphp
             <x-wire-modals::confirmation
-                wire:model="tableState.modal.action.show"
+                wire:model="{{ $activeShowModel }}"
                 wire:click="submitActionModal" data-testid="modal-submit"
                 :heading="$modalData['heading']"
                 :description="$modalData['description'] ?? null"
@@ -129,7 +144,7 @@
         @else
             {{-- Form Modal --}}
             <x-wire-modals::modal
-                wire:model="tableState.modal.action.show"
+                wire:model="{{ $activeShowModel }}"
                 :heading="$modalData['heading']"
                 :description="$modalData['description'] ?? null"
                 :width="$modalData['width'] ?? 'md'"

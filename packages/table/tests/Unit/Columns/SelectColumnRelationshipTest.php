@@ -97,14 +97,29 @@ test('loadRelationshipOptions returns self for non-existent method', function ()
         ->and($column->getOptions())->toBe([]);
 });
 
-test('native defaults to true', function () {
-    $column = SelectColumn::make('status');
+// The editable cell commits through wireEditableCell (x-model + commit-on-change),
+// which the shared combobox has no binding for — so unlike every other select-like
+// surface this one is always a browser-native <select>.
+test('the cell renders a native select', function () {
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 3, 'status' => 'active']);
 
-    expect($column->isNative())->toBeTrue();
+    $column = SelectColumn::make('status')
+        ->options(['active' => 'Active', 'archived' => 'Archived']);
+
+    expect($column->renderCell($record))
+        ->toContain('<select')
+        ->toContain('wireEditableCell')
+        ->not->toContain('x-teleport');
 });
 
-test('native can be disabled', function () {
-    $column = SelectColumn::make('status')->native(false);
-
-    expect($column->isNative())->toBeFalse();
+// Because that choice does not exist, the API must not pretend it does: a
+// native()/isNative() pair here could only ever be a no-op that reads like a real
+// switch. Guards against someone reflexively adding HasNativeControl back.
+test('exposes no native() toggle to pretend the choice exists', function () {
+    expect(method_exists(SelectColumn::class, 'native'))->toBeFalse()
+        ->and(method_exists(SelectColumn::class, 'isNative'))->toBeFalse();
 });

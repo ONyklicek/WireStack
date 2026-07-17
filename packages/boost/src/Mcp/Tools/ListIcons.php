@@ -17,7 +17,7 @@ class ListIcons extends BoostTool
 {
     public function __construct(private IconManager $icons) {}
 
-    public function handle(Request $request): Response
+    protected function run(Request $request): Response
     {
         $names = $this->icons->allNames();
         $filter = trim((string) $request->get('filter'));

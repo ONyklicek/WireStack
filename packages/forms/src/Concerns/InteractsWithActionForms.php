@@ -58,7 +58,7 @@ trait InteractsWithActionForms
     public function getActionModalFormInstance(): ?Form
     {
         if ($this->actionModalFormInstance === null
-            && $this->getMountedActionState('show')
+            && $this->isActionModalVisible()
             && $this->getMountedActionState('name')) {
             $this->resolveActionModalFormInstance();
         }
@@ -79,19 +79,69 @@ trait InteractsWithActionForms
     }
 
     /**
-     * Resolve the Form instance for an action modal, honouring multi-step
-     * wizards. A wizard renders only the current step's schema while all steps
-     * share the same form-data bag.
+     * Resolve the Form instance for the open modal at the given stack depth, so
+     * the view can render every live frame. Each frame binds to its own
+     * depth-scoped state path ({@see actionFrameStatePath()}), which keeps the
+     * parent form live and reactive behind the active one.
      */
-    protected function buildModalActionFormInstance(Action|BulkAction|HeaderAction $action, mixed $context): ?Form
+    public function getActionModalFormInstanceForDepth(int $depth): ?Form
     {
-        if ($action->hasMultipleSteps()) {
-            $step = (int) $this->getMountedActionState('currentStep', 0);
+        [$action, $context] = $this->resolveActionForFrame($depth);
 
-            return $action->getStepFormInstance($this, $context, $step);
+        if ($action === null) {
+            return null;
         }
 
-        return $action->getFormInstance($this, $context);
+        return $this->buildModalActionFormInstance($action, $context, $depth);
+    }
+
+    /**
+     * Resolve the Form instance for an action modal, honouring multi-step
+     * wizards. A wizard renders only the current step's schema while all steps
+     * share the same form-data bag. Binds to the frame's depth-scoped state path.
+     */
+    protected function buildModalActionFormInstance(Action|BulkAction|HeaderAction $action, mixed $context, ?int $depth = null): ?Form
+    {
+        $depth ??= $this->topActionFrameIndex();
+        $statePath = $this->actionFrameStatePath($depth);
+        $context = $this->actionFormContext($depth, $context);
+
+        if ($action->hasMultipleSteps()) {
+            $step = (int) $this->getActionFrameState($depth, 'currentStep', 0);
+
+            return $action->getStepFormInstance($this, $context, $step, $statePath);
+        }
+
+        return $action->getFormInstance($this, $context, $statePath);
+    }
+
+    /**
+     * The context an action's FORM builds from at the given depth. A header
+     * action has no record, so its schema/validation closures receive the live
+     * form-data bag — this is what lets a wizard's later steps build from values
+     * entered earlier. Every other action keeps its record/records context.
+     *
+     * This is the single home for that nuance: config and infolist resolution
+     * deliberately keep the canonical (record) context from resolveActionForFrame.
+     */
+    protected function actionFormContext(int $depth, mixed $fallback): mixed
+    {
+        return $this->getActionFrameState($depth, 'isHeaderAction')
+            ? $this->readActionFrameData($depth)
+            : $fallback;
+    }
+
+    /**
+     * The active (top) action together with the context its form should build
+     * from ({@see actionFormContext()}).
+     *
+     * @return array{0: Action|BulkAction|HeaderAction|null, 1: mixed}
+     */
+    protected function resolveCurrentActionForm(): array
+    {
+        [$action, $context] = $this->resolveCurrentModalAction();
+
+        return [$action, $this->actionFormContext($this->topActionFrameIndex(), $context)];
     }
 
     /**
@@ -100,7 +150,7 @@ trait InteractsWithActionForms
      */
     protected function validateMountedActionForm(): void
     {
-        [$action, $context] = $this->resolveCurrentModalAction();
+        [$action, $context] = $this->resolveCurrentActionForm();
 
         // Defensive: every caller (callMountedAction / callModalFooterAction)
         // already resolved a non-null action before validating.
@@ -121,9 +171,11 @@ trait InteractsWithActionForms
             return;
         }
 
-        // Re-resolve Form instance (not serialized between Livewire requests).
+        // Re-resolve Form instance (not serialized between Livewire requests),
+        // bound to the active frame's depth-scoped state path so error keys and
+        // field bindings line up with the top modal.
         if ($this->actionModalFormInstance === null) {
-            $this->actionModalFormInstance = $action->getFormInstance($this, $context);
+            $this->actionModalFormInstance = $action->getFormInstance($this, $context, $this->actionFrameStatePath($this->topActionFrameIndex()));
         }
 
         $this->actionModalFormInstance?->validate();
@@ -138,7 +190,7 @@ trait InteractsWithActionForms
      */
     public function nextActionModalStep(): void
     {
-        [$action, $context] = $this->resolveCurrentModalAction();
+        [$action, $context] = $this->resolveCurrentActionForm();
 
         if (! $action || ! $action->hasMultipleSteps()) {
             return;
@@ -174,7 +226,7 @@ trait InteractsWithActionForms
      */
     protected function validateModalStep(Action|BulkAction|HeaderAction $action, mixed $context, int $stepIndex, bool $runAfterValidation = true): void
     {
-        $action->getStepFormInstance($this, $context, $stepIndex)?->validate();
+        $action->getStepFormInstance($this, $context, $stepIndex, $this->actionFrameStatePath($this->topActionFrameIndex()))?->validate();
 
         $step = $action->getModalStep($stepIndex);
 

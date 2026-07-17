@@ -82,34 +82,34 @@ afterEach(function () {
 it('creates and selects a new option from inside a table action modal (StateContainer bag write)', function () {
     $test = Livewire::test(ScotComponent::class)
         ->call('openHeaderActionModal', 'create')
-        ->call('mountCreateOption', 'tableState.modal.action.formData.category')
-        ->assertSet('mountedCreateOptionSelect', 'tableState.modal.action.formData.category')
+        ->call('mountCreateOption', 'tableState.modal.actions.0.data.category')
+        ->assertSet('mountedCreateOptionSelect', 'tableState.modal.actions.0.data.category')
         ->set('createOptionFormData.name', 'Fresh')
         ->call('createSelectOption')
         ->assertSet('mountedCreateOptionSelect', null);
 
     // The write goes through StateContainer::writeInto — a plain data_set would
     // silently drop it on the tableState bag.
-    expect($test->instance()->tableState->get('modal.action.formData.category'))->toBe('created-Fresh');
+    expect($test->instance()->tableState->get('modal.actions.0.data.category'))->toBe('created-Fresh');
 });
 
 it('appends the created option for a multi-select inside a table action modal', function () {
     $test = Livewire::test(ScotComponent::class)
         ->call('openHeaderActionModal', 'create')
-        ->set('tableState.modal.action.formData', ['tags' => ['a']])
-        ->call('mountCreateOption', 'tableState.modal.action.formData.tags')
+        ->set('tableState.modal.actions.0.data', ['tags' => ['a']])
+        ->call('mountCreateOption', 'tableState.modal.actions.0.data.tags')
         ->set('createOptionFormData.name', 'b')
         ->call('createSelectOption');
 
-    expect($test->instance()->tableState->get('modal.action.formData.tags'))->toBe(['a', 'b']);
+    expect($test->instance()->tableState->get('modal.actions.0.data.tags'))->toBe(['a', 'b']);
 });
 
 it('keeps the create-option modal open with errors when the option form is invalid', function () {
     Livewire::test(ScotComponent::class)
         ->call('openHeaderActionModal', 'create')
-        ->call('mountCreateOption', 'tableState.modal.action.formData.category')
+        ->call('mountCreateOption', 'tableState.modal.actions.0.data.category')
         ->set('createOptionFormData.name', '')
         ->call('createSelectOption')
         ->assertHasErrors()
-        ->assertSet('mountedCreateOptionSelect', 'tableState.modal.action.formData.category');
+        ->assertSet('mountedCreateOptionSelect', 'tableState.modal.actions.0.data.category');
 });

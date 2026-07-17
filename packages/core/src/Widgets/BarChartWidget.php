@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Widgets;
 
-use InvalidArgumentException;
+use NyonCode\WireCore\Exceptions\InvalidChartDataException;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
 
 /**
@@ -63,9 +63,7 @@ class BarChartWidget extends Widget
     public function type(string $type): static
     {
         if (! in_array($type, self::TYPES, true)) {
-            throw new InvalidArgumentException(
-                sprintf('Invalid chart type [%s]. Allowed: %s.', $type, implode(', ', self::TYPES))
-            );
+            throw InvalidChartDataException::unknownType($type, self::TYPES);
         }
 
         $this->type = $type;
@@ -84,9 +82,7 @@ class BarChartWidget extends Widget
     public function variant(string $variant): static
     {
         if (! in_array($variant, self::VARIANTS, true)) {
-            throw new InvalidArgumentException(
-                sprintf('Invalid chart variant [%s]. Allowed: %s.', $variant, implode(', ', self::VARIANTS))
-            );
+            throw InvalidChartDataException::unknownVariant($variant, self::VARIANTS);
         }
 
         $this->variant = $variant;
@@ -111,9 +107,7 @@ class BarChartWidget extends Widget
     {
         foreach ($items as $item) {
             if (! $item instanceof ChartItem) {
-                throw new InvalidArgumentException(
-                    'BarChartWidget::items() expects an array of '.ChartItem::class.' instances.'
-                );
+                throw InvalidChartDataException::notChartItems(ChartItem::class);
             }
         }
 

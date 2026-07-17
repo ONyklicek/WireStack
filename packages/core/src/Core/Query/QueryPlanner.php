@@ -9,6 +9,7 @@ use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Core\Components\DataComponent;
 use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
 use NyonCode\WireCore\Core\Metadata\RelationMetadata;
+use NyonCode\WireCore\Core\Query\Contracts\HasSearchColumns;
 use NyonCode\WireCore\Core\Query\Strategies\MorphRelationStrategy;
 use NyonCode\WireCore\Core\Relations\AggregateSegment;
 use NyonCode\WireCore\Core\Relations\RelationGraphBuilder;
@@ -144,11 +145,23 @@ final class QueryPlanner
         if ($search !== null && $component->hasCapability(Capability::Searchable)) {
             $sqlExpression = $metadata?->sqlExpression;
 
-            $searchClauses[] = new SearchClause(
-                column: $columnName,
-                tableAlias: $baseTable,
-                sqlExpression: $sqlExpression,
-            );
+            // A composite column (a stacked name-over-email cell) is searched
+            // across the columns it actually shows; an ordinary one across its
+            // own. The strategies OR the clauses inside one where(), so several
+            // clauses widen the match rather than narrowing it.
+            $searchColumns = $component instanceof HasSearchColumns && $component->getSearchColumns() !== []
+                ? $component->getSearchColumns()
+                : [$columnName];
+
+            foreach ($searchColumns as $searchColumn) {
+                $searchClauses[] = new SearchClause(
+                    column: $searchColumn,
+                    // A sqlExpression describes the component's own column, so it
+                    // cannot speak for a different one.
+                    tableAlias: $baseTable,
+                    sqlExpression: $searchColumn === $columnName ? $sqlExpression : null,
+                );
+            }
         }
     }
 
@@ -411,6 +424,10 @@ final class QueryPlanner
         // Pre-compute the alias so we can reference it in join columns
         $alias = $this->joinRegistry->getAliasGenerator()->generate($baseTable, $pathSoFar);
 
+        if ($relation->isThrough()) {
+            return $this->registerThroughJoin($relation, $baseTable, $pathSoFar, $currentTableOrAlias, $relatedTable, $alias);
+        }
+
         if ($relation->type === 'BelongsTo') {
             // BelongsTo: parent.foreign_key = related.local_key (usually related PK)
             $localKey = $relation->localKey ?? 'id';
@@ -423,6 +440,7 @@ final class QueryPlanner
                 operator: '=',
                 secondColumn: "{$alias}.{$localKey}",
                 type: 'left',
+                scope: $relation->scope,
             );
         }
 
@@ -437,6 +455,52 @@ final class QueryPlanner
             operator: '=',
             secondColumn: "{$alias}.{$relation->foreignKey}",
             type: 'left',
+            scope: $relation->scope,
+        );
+    }
+
+    /**
+     * Register the two joins a HasOneThrough needs: base -> intermediate, then
+     * intermediate -> far. The intermediate gets its own synthetic alias so a
+     * second reference to the same relation (e.g. sort + filter) still dedupes,
+     * and it is registered first so the far join can reference it.
+     *
+     * @param  array<int, string>  $pathSoFar
+     */
+    private function registerThroughJoin(
+        RelationMetadata $relation,
+        string $baseTable,
+        array $pathSoFar,
+        string $currentTableOrAlias,
+        string $relatedTable,
+        string $farAlias,
+    ): string {
+        $localKey = $relation->localKey ?? 'id';
+
+        // Intermediate join: through.first_key = base.local_key
+        $throughPath = [...$pathSoFar, '__via'];
+        $throughAlias = $this->joinRegistry->getAliasGenerator()->generate($baseTable, $throughPath);
+        $this->joinRegistry->registerJoin(
+            baseTable: $baseTable,
+            relationPath: $throughPath,
+            joinTable: (string) $relation->throughTable,
+            firstColumn: "{$throughAlias}.{$relation->firstKey}",
+            operator: '=',
+            secondColumn: "{$currentTableOrAlias}.{$localKey}",
+            type: 'left',
+            scope: $relation->throughScope,
+        );
+
+        // Far join: far.foreign_key = through.second_local_key
+        return $this->joinRegistry->registerJoin(
+            baseTable: $baseTable,
+            relationPath: $pathSoFar,
+            joinTable: $relatedTable,
+            firstColumn: "{$farAlias}.{$relation->foreignKey}",
+            operator: '=',
+            secondColumn: "{$throughAlias}.{$relation->secondLocalKey}",
+            type: 'left',
+            scope: $relation->scope,
         );
     }
 

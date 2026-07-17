@@ -23,7 +23,7 @@ class ApplicationInfo extends BoostTool
         'livewire/livewire',
     ];
 
-    public function handle(Request $request): Response
+    protected function run(Request $request): Response
     {
         $packages = [];
 

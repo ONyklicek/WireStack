@@ -94,6 +94,11 @@ trait HasAuthorization
             /** @var Authenticatable|null $user */
             $user = auth()->guard()->user();
         } catch (Throwable) {
+            // Fail closed, deliberately. If the guard cannot be resolved at all
+            // (no auth context — console, queue, a misconfigured guard) then
+            // nothing here can be authorized, and denying is the only safe
+            // answer. Rethrowing would turn an unauthenticated context into a
+            // crash on a permission-gated component that should simply hide.
             return false;
         }
 

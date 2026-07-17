@@ -203,3 +203,21 @@ it('renders ToggleColumn through its partial', function () {
         ->and($html)->toContain('data-record-key="1"')
         ->and($html)->toContain('data-column-name="active"');
 });
+
+// fontFamily() was a dead setter: getTextClasses() knew about size and weight but
+// never the family, so the value went nowhere.
+it('renders the text column in its configured font family', function () {
+    $record = partialRecord(['name' => 'Ada']);
+
+    expect(TextColumn::make('name')->fontFamily('mono')->renderCell($record))->toContain('font-mono')
+        ->and(TextColumn::make('name')->fontFamily('serif')->renderCell($record))->toContain('font-serif')
+        ->and(TextColumn::make('name')->renderCell($record))->not->toContain('font-');
+});
+
+it('keeps text size and weight when a font family is added', function () {
+    // size() is the column's structural size; textSize() is the font size.
+    $html = TextColumn::make('name')->textSize('lg')->weight('bold')->fontFamily('mono')
+        ->renderCell(partialRecord(['name' => 'Ada']));
+
+    expect($html)->toContain('text-lg')->toContain('font-mono');
+});

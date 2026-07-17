@@ -560,7 +560,7 @@ trait HasModal
      * When a closure was passed to form(), it will be resolved here.
      * The Form is automatically configured with statePath and livewire binding.
      */
-    public function getFormInstance(?Component $livewire = null, mixed $context = null): ?Form
+    public function getFormInstance(?Component $livewire = null, mixed $context = null, ?string $statePath = null): ?Form
     {
         $form = null;
 
@@ -579,7 +579,9 @@ trait HasModal
             return null;
         }
 
-        $statePath = $this->resolveModalFormStatePath($livewire);
+        // The host resolves the frame's binding path (per stack depth); the
+        // binary legacy/table resolver is only a fallback for host-less calls.
+        $statePath ??= $this->resolveModalFormStatePath($livewire);
         $form->statePath($statePath);
 
         // Fields stay deferred (plain wire:model) by default: Livewire sends
@@ -623,10 +625,13 @@ trait HasModal
      */
     protected function getCurrentModalFormState(Component $livewire, string $statePath): array
     {
-        if ($statePath === self::TABLE_ACTION_FORM_STATE_PATH
+        // A table frame binds under the StateContainer (e.g.
+        // `tableState.modal.actions.0.data`); read it through the container so a
+        // per-depth frame path resolves as well as the legacy single-slot path.
+        if (str_starts_with($statePath, 'tableState.')
             && isset($livewire->tableState)
             && $livewire->tableState instanceof StateContainer) {
-            $state = $livewire->tableState->get('modal.action.formData', []);
+            $state = $livewire->tableState->get(substr($statePath, strlen('tableState.')), []);
 
             return is_array($state) ? $state : [];
         }
@@ -647,9 +652,19 @@ trait HasModal
     /**
      * @return array<string, mixed>
      */
-    public function getFormValidation(mixed $context = null): array
+    public function getFormValidation(mixed $context = null, ?string $statePath = null): array
     {
-        return $this->prefixValidationRules($this->getRawFormValidation($context));
+        return $this->prefixValidationRules($this->getRawFormValidation($context), $this->validationPrefixFor($statePath));
+    }
+
+    /**
+     * The dotted prefix rules/messages are namespaced under. Derives from the
+     * frame's binding path when the host supplies one (per stack depth), else
+     * the legacy single-slot bag.
+     */
+    protected function validationPrefixFor(?string $statePath): string
+    {
+        return ($statePath ?? self::LEGACY_ACTION_FORM_STATE_PATH).'.';
     }
 
     /**
@@ -681,13 +696,13 @@ trait HasModal
     /**
      * @return array<string, mixed>
      */
-    public function getValidationMessages(mixed $context = null): array
+    public function getValidationMessages(mixed $context = null, ?string $statePath = null): array
     {
         $messages = ($this->modalFormValidationMessagesCallback !== null && $context !== null)
             ? ($this->modalFormValidationMessagesCallback)($context)
             : ($this->modalFormValidationMessages ?? []);
 
-        return $this->prefixValidationRules($messages);
+        return $this->prefixValidationRules($messages, $this->validationPrefixFor($statePath));
     }
 
     /**
@@ -705,13 +720,13 @@ trait HasModal
     /**
      * @return array<string, mixed>
      */
-    public function getValidationAttributes(mixed $context = null): array
+    public function getValidationAttributes(mixed $context = null, ?string $statePath = null): array
     {
         $attributes = ($this->modalFormValidationAttributesCallback !== null && $context !== null)
             ? ($this->modalFormValidationAttributesCallback)($context)
             : ($this->modalFormValidationAttributes ?? []);
 
-        return $this->prefixValidationRules($attributes);
+        return $this->prefixValidationRules($attributes, $this->validationPrefixFor($statePath));
     }
 
     /**
@@ -837,6 +852,18 @@ trait HasModal
     protected array $modalHeaderActions = [];
 
     /**
+     * Nested actions declared inline next to the action that opens them, so a
+     * modal opened from within this one (via `$component->mountAction($name)` /
+     * `openActionModal(...)`) resolves without polluting the top-level registry.
+     * Hosts' action resolvers recurse into these. Because they live in the same
+     * `actions()`/`table()` closure that is re-run every request, they survive
+     * Livewire roundtrips (a raw closure-carrying inline instance would not).
+     *
+     * @var array<int, object>
+     */
+    protected array $registeredActions = [];
+
+    /**
      * Define multi-step modal wizard.
      *
      * @param  array<int, mixed>  $steps
@@ -878,6 +905,29 @@ trait HasModal
         $this->modalFooterActions = $actions;
 
         return $this;
+    }
+
+    /**
+     * Declare nested actions inline that a modal opened from within this one can
+     * resolve by name (see {@see $registeredActions}).
+     *
+     * @param  array<int, object>  $actions
+     */
+    public function registerActions(array $actions): static
+    {
+        $this->registeredActions = array_values($actions);
+
+        return $this;
+    }
+
+    /**
+     * The inline nested actions declared via {@see registerActions()}.
+     *
+     * @return array<int, object>
+     */
+    public function getRegisteredActions(): array
+    {
+        return $this->registeredActions;
     }
 
     /**
@@ -945,7 +995,7 @@ trait HasModal
      * `modal.action.formData` bag and data persists as the user moves between
      * steps. Returns null when this action is not a multi-step wizard.
      */
-    public function getStepFormInstance(?Component $livewire = null, mixed $context = null, int $stepIndex = 0): ?Form
+    public function getStepFormInstance(?Component $livewire = null, mixed $context = null, int $stepIndex = 0, ?string $statePath = null): ?Form
     {
         $step = $this->getModalStep($stepIndex);
 
@@ -955,7 +1005,7 @@ trait HasModal
 
         $form = Form::make()->schema($step->getSchema($context));
 
-        $form->statePath($this->resolveModalFormStatePath($livewire));
+        $form->statePath($statePath ?? $this->resolveModalFormStatePath($livewire));
 
         if ($livewire) {
             $form->livewire($livewire);

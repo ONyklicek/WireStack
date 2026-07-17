@@ -16,16 +16,16 @@ use Throwable;
 #[Description('Execute a read-only (SELECT) SQL query against the database and return the rows. Disabled by default; enable with WIRE_BOOST_DATABASE_QUERY=true.')]
 class DatabaseQuery extends BoostTool
 {
-    public function handle(Request $request): Response
+    protected function run(Request $request): Response
     {
         if (! config('wire-boost.tools.database_query', false)) {
-            return $this->json(['error' => 'The database-query tool is disabled. Set WIRE_BOOST_DATABASE_QUERY=true to enable it.']);
+            return Response::error('The database-query tool is disabled. Set WIRE_BOOST_DATABASE_QUERY=true to enable it.');
         }
 
         $query = trim((string) $request->get('query'));
 
         if (! $this->isReadOnly($query)) {
-            return $this->json(['error' => 'Only read-only SELECT queries are allowed.']);
+            return Response::error('Only read-only SELECT queries are allowed.');
         }
 
         try {
@@ -37,7 +37,7 @@ class DatabaseQuery extends BoostTool
                 'rows' => array_map(static fn (object $row): array => (array) $row, $rows),
             ]);
         } catch (Throwable $e) {
-            return $this->json(['error' => $e->getMessage()]);
+            return Response::error($e->getMessage());
         }
     }
 

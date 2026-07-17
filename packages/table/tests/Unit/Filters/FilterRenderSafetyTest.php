@@ -18,13 +18,15 @@ it('renders a single select filter when state holds an array value', function ()
         ->and($filter->render(['paid', 'pending']))->toBeString();
 });
 
-it('marks matching options selected for both single and multiple selects', function () {
-    $single = SelectFilter::make('status')->options(['paid' => 'Paid', 'pending' => 'Pending']);
+// The selected-option markup only exists on the opt-in native <select> path;
+// the default combobox reflects the selection through its entangled state.
+it('marks matching options selected for both single and multiple native selects', function () {
+    $single = SelectFilter::make('status')->native()->options(['paid' => 'Paid', 'pending' => 'Pending']);
     expect($single->render('paid'))
         ->toMatch('/value="paid"\s+selected/')
         ->not->toMatch('/value="pending"\s+selected/');
 
-    $multiple = SelectFilter::make('status')->multiple()->options(['paid' => 'Paid', 'pending' => 'Pending']);
+    $multiple = SelectFilter::make('status')->native()->multiple()->options(['paid' => 'Paid', 'pending' => 'Pending']);
     expect($multiple->render(['value' => ['paid', 'pending']]))
         ->toMatch('/value="paid"\s+selected/')
         ->toMatch('/value="pending"\s+selected/');

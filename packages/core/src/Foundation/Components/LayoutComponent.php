@@ -21,10 +21,12 @@ use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 abstract class LayoutComponent implements HasStateAccessors, Htmlable
 {
     use Concerns\BelongsToComponent;
+    use Concerns\CanBeDisabled;
     use Concerns\HasColumnSpan;
     use Concerns\HasLabel;
     use Concerns\HasVisibility;
     use Concerns\InteractsWithState;
+    use Concerns\InteractsWithStateConditions;
     use EvaluatesClosures;
 
     /** @var array<int, Component|LayoutComponent> */

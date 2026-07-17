@@ -17,8 +17,6 @@ class RichEditor extends Field
 
     protected ?int $maxLength = null;
 
-    protected ?string $fileAttachmentsDirectory = null;
-
     /**
      * @param  array<int, string>  $buttons
      */
@@ -53,13 +51,6 @@ class RichEditor extends Field
         return $this;
     }
 
-    public function fileAttachmentsDirectory(?string $directory): static
-    {
-        $this->fileAttachmentsDirectory = $directory;
-
-        return $this;
-    }
-
     /**
      * @return array<int, string>
      */
@@ -79,11 +70,6 @@ class RichEditor extends Field
     public function getMaxLength(): ?int
     {
         return $this->maxLength;
-    }
-
-    public function getFileAttachmentsDirectory(): ?string
-    {
-        return $this->fileAttachmentsDirectory;
     }
 
     protected function viewName(): string

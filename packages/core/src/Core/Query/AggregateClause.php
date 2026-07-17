@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Core\Query;
 
-use InvalidArgumentException;
+use NyonCode\WireCore\Exceptions\InvalidAggregateException;
 
 /**
  * Immutable representation of an aggregate clause in a query plan.
@@ -35,21 +35,15 @@ final readonly class AggregateClause
         public array $constraints = [],
     ) {
         if (! in_array($this->function, self::VALID_FUNCTIONS, true)) {
-            throw new InvalidArgumentException(
-                "Invalid aggregate function [{$this->function}]. Valid: ".implode(', ', self::VALID_FUNCTIONS)
-            );
+            throw InvalidAggregateException::unknownFunction($this->function, self::VALID_FUNCTIONS);
         }
 
         if (! in_array($this->strategy, self::VALID_STRATEGIES, true)) {
-            throw new InvalidArgumentException(
-                "Invalid aggregate strategy [{$this->strategy}]. Valid: ".implode(', ', self::VALID_STRATEGIES)
-            );
+            throw InvalidAggregateException::unknownStrategy($this->strategy, self::VALID_STRATEGIES);
         }
 
         if (in_array($this->function, ['sum', 'avg', 'min', 'max'], true) && $this->column === null) {
-            throw new InvalidArgumentException(
-                "Aggregate function [{$this->function}] requires a column."
-            );
+            throw InvalidAggregateException::columnRequired($this->function);
         }
     }
 

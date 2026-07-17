@@ -17,7 +17,7 @@ class DescribeInfolist extends BoostTool
 {
     public function __construct(private ComponentReflector $reflector) {}
 
-    public function handle(Request $request): Response
+    protected function run(Request $request): Response
     {
         return $this->json($this->reflector->describeInfolist((string) $request->get('component')));
     }

@@ -23,6 +23,10 @@ interface HasForm
 
     /**
      * Resolve the Form instance for this action's modal.
+     *
+     * $statePath is the frame's binding base resolved by the host (per modal
+     * stack depth); when null the action falls back to the legacy single-slot
+     * path for host-less callers.
      */
-    public function getFormInstance(?Component $livewire = null, mixed $context = null): ?Form;
+    public function getFormInstance(?Component $livewire = null, mixed $context = null, ?string $statePath = null): ?Form;
 }

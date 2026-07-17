@@ -16,7 +16,7 @@ class LastError extends BoostTool
 {
     use ReadsLogFile;
 
-    public function handle(Request $request): Response
+    protected function run(Request $request): Response
     {
         $lines = $this->tailLines(500);
 

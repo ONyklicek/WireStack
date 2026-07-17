@@ -11,14 +11,21 @@ use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireTable\Concerns\HasView;
 
+/**
+ * Inline editable select cell — always a browser-native <select>.
+ *
+ * Deliberately the one select-like surface that does *not* use the shared
+ * Foundation\Concerns\HasNativeControl: the cell commits through wireEditableCell
+ * (x-model + commit-on-change) and has no binding for the shared combobox, so a
+ * native() / isNative() pair here could only ever be a no-op that reads like a
+ * real switch. Better to not offer the choice than to offer a fake one.
+ */
 class SelectColumn extends Column
 {
     use HasView;
 
     /** @var array<string, string> */
     protected array $options = [];
-
-    protected bool $native = true;
 
     protected bool $disabled = false;
 
@@ -29,6 +36,9 @@ class SelectColumn extends Column
 
     /** @var string|null Display attribute on the related model */
     protected ?string $titleAttribute = null;
+
+    /** Guards the one relationship query per render — the list is the same for every row. */
+    protected bool $relationshipOptionsLoaded = false;
 
     public function __construct(string $name)
     {
@@ -45,7 +55,6 @@ class SelectColumn extends Column
     {
         $resolved = is_callable($options) ? $options() : $options;
         $this->options = EnumResolver::normalizeOptions($resolved);
-        $this->editableOptions = $this->options;
 
         return $this;
     }
@@ -56,18 +65,6 @@ class SelectColumn extends Column
     public function getOptions(): array
     {
         return $this->options;
-    }
-
-    public function native(bool $native = true): static
-    {
-        $this->native = $native;
-
-        return $this;
-    }
-
-    public function isNative(): bool
-    {
-        return $this->native;
     }
 
     public function disabled(bool|Closure $disabled = true): static
@@ -86,6 +83,8 @@ class SelectColumn extends Column
         if (! $this->canView() || ! $this->isVisibleForRecord($record)) {
             return '';
         }
+
+        $this->resolveRelationshipOptions($record);
 
         $state = $this->getState($record);
 
@@ -132,8 +131,30 @@ class SelectColumn extends Column
     }
 
     /**
+     * Fill the option list from relationship() the first time a cell renders.
+     *
+     * The related list is identical for every row, so this runs once per render
+     * and is then memoized — loading it per cell would be a query per row. An
+     * explicit ->options() always wins: it is the caller being specific.
+     */
+    protected function resolveRelationshipOptions(Model $record): void
+    {
+        if ($this->relationshipOptionsLoaded || $this->relationship === null) {
+            return;
+        }
+
+        $this->relationshipOptionsLoaded = true;
+
+        if ($this->options === []) {
+            $this->loadRelationshipOptions($record);
+        }
+    }
+
+    /**
      * Load options from the relationship's related model.
-     * Call this with a model instance to auto-populate options.
+     *
+     * Called automatically on the first render when {@see relationship()} is set;
+     * public so a caller can pre-seed the list from a known record.
      */
     public function loadRelationshipOptions(Model $record): static
     {

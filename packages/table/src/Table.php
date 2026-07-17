@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
-use InvalidArgumentException;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
@@ -28,9 +27,11 @@ use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Concerns\HasSqlDebug;
+use NyonCode\WireTable\Exceptions\TableConfigurationException;
+use NyonCode\WireTable\Exceptions\TableHasNoDataSourceException;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
-use RuntimeException;
+use NyonCode\WireTable\Services\TableQueryService;
 
 /** @phpstan-consistent-constructor */
 #[\AllowDynamicProperties]
@@ -259,7 +260,7 @@ class Table implements Htmlable
         } elseif ($this->model) {
             $query = $this->model::query();
         } else {
-            throw new RuntimeException('No model or query defined for table.');
+            throw TableHasNoDataSourceException::make();
         }
 
         // Apply query modification callback if set
@@ -469,7 +470,7 @@ class Table implements Htmlable
         ?string $sortColumn = null,
         string $sortDirection = 'asc',
     ): array {
-        $service = new Concerns\TableQueryService;
+        $service = app(TableQueryService::class);
         $baseQuery = $this->getQuery();
 
         // Build query to populate the plan
@@ -1431,7 +1432,7 @@ class Table implements Htmlable
     public function poll(string $interval = '5s'): static
     {
         if (! preg_match('/^\d+(ms|s|m|h)$/', $interval)) {
-            throw new InvalidArgumentException('Interval must be like "5s", "500ms", "10m" or "1h".');
+            throw TableConfigurationException::invalidPollInterval();
         }
 
         $this->polling = true;

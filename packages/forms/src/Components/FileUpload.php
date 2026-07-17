@@ -5,15 +5,19 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Closure;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
+use NyonCode\WireForms\Contracts\ProvidesImplicitValidationRules;
+use NyonCode\WireForms\Contracts\ProvidesItemValidationRules;
 
 /**
  * File upload field with image mode, multiple files, disk/directory configuration.
  */
-class FileUpload extends Field
+class FileUpload extends Field implements DehydratesState, ProvidesImplicitValidationRules, ProvidesItemValidationRules
 {
     /** @var array<int, string>|Closure */
     protected array|Closure $acceptedFileTypes = [];
@@ -47,6 +51,8 @@ class FileUpload extends Field
     protected ?int $imageResizeTargetHeight = null;
 
     protected ?string $imageCropAspectRatio = null;
+
+    protected bool $interactiveCrop = false;
 
     /**
      * @param  array<int, string>|Closure  $types
@@ -110,6 +116,9 @@ class FileUpload extends Field
 
         if ($condition) {
             $this->image();
+
+            // An avatar is square by definition; an explicit ratio still wins.
+            $this->imageCropAspectRatio ??= '1:1';
         }
 
         return $this;
@@ -168,6 +177,12 @@ class FileUpload extends Field
         return $this;
     }
 
+    /**
+     * Crop the picked image to this ratio before uploading: "16:9", "4/3", "1.5".
+     *
+     * The crop is taken from the centre and happens in the browser, so an
+     * oversized original never travels. Non-raster images (SVG) pass through.
+     */
     public function imageCropAspectRatio(?string $ratio): static
     {
         $this->imageCropAspectRatio = $ratio;
@@ -213,6 +228,54 @@ class FileUpload extends Field
     public function isImage(): bool
     {
         return $this->image;
+    }
+
+    /**
+     * Let the user place the crop frame instead of taking the centre.
+     *
+     * Only meaningful with {@see imageCropAspectRatio()} (or {@see avatar()}):
+     * without a ratio there is nothing to place. A batch selection and any
+     * non-raster image still go straight through — there is no sensible frame to
+     * drag over five files at once, or over an SVG.
+     */
+    public function cropInteractively(bool $condition = true): static
+    {
+        $this->interactiveCrop = $condition;
+
+        return $this;
+    }
+
+    public function cropsInteractively(): bool
+    {
+        return $this->interactiveCrop && $this->imageCropAspectRatio !== null;
+    }
+
+    /**
+     * Does this field rewrite the image before upload?
+     *
+     * Drives the two-input markup: without processing the field keeps its plain
+     * wire:model input, so an ordinary upload path stays exactly as it was.
+     */
+    public function processesImages(): bool
+    {
+        return $this->imageCropAspectRatio !== null
+            || $this->imageResizeTargetWidth !== null
+            || $this->imageResizeTargetHeight !== null;
+    }
+
+    /**
+     * The processing config handed to the browser.
+     *
+     * @return array{aspectRatio: string|null, targetWidth: int|null, targetHeight: int|null, interactive: bool}
+     */
+    public function getImageProcessingConfig(): array
+    {
+        return [
+            'aspectRatio' => $this->imageCropAspectRatio,
+            'targetWidth' => $this->imageResizeTargetWidth,
+            'targetHeight' => $this->imageResizeTargetHeight,
+            'interactive' => $this->cropsInteractively(),
+        ];
     }
 
     public function isAvatar(): bool
@@ -343,6 +406,115 @@ class FileUpload extends Field
      * and return its stored path (relative to the disk root), honouring the
      * field's directory, visibility, and preserve-filenames settings.
      */
+    /**
+     * Store-on-submit: freshly-uploaded files become paths, existing string
+     * paths pass through. A multiple field yields a list of paths, a single one
+     * yields one path (or null).
+     *
+     * Ran as a hardcoded `instanceof FileUpload` step inside SaveHandler until
+     * ADR 0021 gave the save path a seam; the logic is unchanged, it just lives
+     * with the field that owns it now.
+     */
+    /**
+     * Per-file size limits for a multiple upload.
+     *
+     * On a single upload these live on the field's own key (the value *is* the
+     * file). On a multiple one that key holds an array, where `max:` would mean
+     * a count — so the size rules belong to each item instead.
+     *
+     * @return array<int, mixed>
+     */
+    public function itemValidationRules(): array
+    {
+        if (! $this->multiple) {
+            return [];
+        }
+
+        return array_values(array_filter([
+            $this->maxSize !== null ? 'max:'.$this->maxSize : null,
+            $this->minSize !== null ? 'min:'.$this->minSize : null,
+        ]));
+    }
+
+    /**
+     * Turn the field's own limits into real validation.
+     *
+     * Until now maxSize()/minSize()/maxFiles()/minFiles() reached nothing but the
+     * hint text under the dropzone: the field advertised "up to 5 MB" and then
+     * accepted anything, because no rule was ever derived from the config. A
+     * client-side limit is not a limit.
+     *
+     * The same words mean different things to Laravel depending on the state:
+     * on a single upload `max:` is kilobytes of file, on a multiple upload the
+     * state is an array and `max:` is a count of items.
+     *
+     * Per-file size on a multiple upload is not here but in
+     * {@see itemValidationRules()}, which the resolver mounts at `field.*`.
+     *
+     * @return array<int, mixed>
+     */
+    public function implicitValidationRules(): array
+    {
+        $rules = [];
+
+        if ($this->multiple) {
+            // Array state: these bound the number of files.
+            if ($this->maxFiles !== null) {
+                $rules[] = 'max:'.$this->maxFiles;
+            }
+
+            if ($this->minFiles !== null) {
+                $rules[] = 'min:'.$this->minFiles;
+            }
+
+            return $rules;
+        }
+
+        // Single upload: the value is the file, so these bound its size in KB.
+        if ($this->maxSize !== null) {
+            $rules[] = 'max:'.$this->maxSize;
+        }
+
+        if ($this->minSize !== null) {
+            $rules[] = 'min:'.$this->minSize;
+        }
+
+        return $rules;
+    }
+
+    public function dehydrateState(mixed $state, ?Model $record = null): mixed
+    {
+        $values = match (true) {
+            is_array($state) => $state,
+            $state === null || $state === '' => [],
+            default => [$state],
+        };
+
+        $paths = [];
+
+        foreach ($values as $item) {
+            if ($item instanceof UploadedFile) {
+                $paths[] = $this->storeUploadedFile($item);
+            } elseif (is_string($item) && $item !== '') {
+                if ($this->isStoredReference($item)) {
+                    // A legitimate disk-relative path or URL — keep as-is.
+                    $paths[] = $item;
+                } else {
+                    // A raw absolute/temp path leaked into state (e.g. /tmp/phpXXX):
+                    // rescue the file if it still exists, otherwise drop the dead
+                    // reference — never persist a temp path as if it were stored.
+                    $rescued = $this->storeFileFromPath($item);
+
+                    if ($rescued !== null) {
+                        $paths[] = $rescued;
+                    }
+                }
+            }
+        }
+
+        return $this->isMultiple() ? $paths : ($paths[0] ?? null);
+    }
+
     public function storeUploadedFile(UploadedFile $file): string
     {
         $disk = $this->getDisk();

@@ -50,6 +50,24 @@ final class EnumResolver
     }
 
     /**
+     * Recursively reduce every enum instance in a value to its scalar key form.
+     *
+     * Same rules as {@see scalar()}, but descends into arrays so a nested state bag
+     * (repeater rows, multi-select selections) carries no enum instances. Use wherever
+     * a whole state structure — not a single cell — must become wire-safe: an enum left
+     * in Livewire state cannot round-trip to the browser, and a `<select>` compares its
+     * options against the scalar key, never the case object.
+     */
+    public static function scalarDeep(mixed $value): mixed
+    {
+        if (is_array($value)) {
+            return array_map(static fn (mixed $item): mixed => self::scalarDeep($item), $value);
+        }
+
+        return self::scalar($value);
+    }
+
+    /**
      * Normalise a value to its human-facing label.
      *
      * Enums resolve through one canonical order: the {@see HasLabel} contract's `getLabel()`,

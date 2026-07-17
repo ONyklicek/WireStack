@@ -18,7 +18,8 @@ $colorKeys = [
     'primary', 'blue', 'green', 'success', 'emerald', 'danger', 'red',
     'warning', 'yellow', 'amber', 'info', 'cyan', 'sky', 'purple', 'violet',
     'indigo', 'orange', 'lime', 'teal', 'fuchsia', 'pink', 'rose', 'slate',
-    'zinc', 'neutral', 'stone', 'gray', 'secondary', 'totally-unknown',
+    'zinc', 'neutral', 'stone', 'gray', 'secondary', 'white', 'black',
+    'totally-unknown',
 ];
 
 it('has a safelist file', function () use ($safelistPath) {

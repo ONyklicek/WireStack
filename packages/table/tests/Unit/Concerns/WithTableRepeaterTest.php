@@ -146,47 +146,47 @@ it('exposes the repeater item actions on a WithTable component', function () {
 });
 
 it('adds a repeater item into the table modal form-data bag', function () {
-    $path = 'tableState.modal.action.formData.contacts';
+    $path = 'tableState.modal.actions.0.data.contacts';
 
     $test = Livewire::test(WtrComponent::class)
         ->call('openHeaderActionModal', 'create')
         ->call('addRepeaterItem', $path)
         ->call('addRepeaterItem', $path);
 
-    $contacts = $test->instance()->tableState->get('modal.action.formData.contacts');
+    $contacts = $test->instance()->tableState->get('modal.actions.0.data.contacts');
 
     expect($contacts)->toBeArray()->toHaveCount(2);
 });
 
 it('removes a repeater item by index from the table modal bag', function () {
-    $path = 'tableState.modal.action.formData.contacts';
+    $path = 'tableState.modal.actions.0.data.contacts';
 
     $test = Livewire::test(WtrComponent::class)
         ->call('openHeaderActionModal', 'create')
-        ->set('tableState.modal.action.formData.contacts', [
+        ->set('tableState.modal.actions.0.data.contacts', [
             ['label' => 'a'],
             ['label' => 'b'],
         ])
         ->call('removeRepeaterItem', $path, 0);
 
-    $contacts = $test->instance()->tableState->get('modal.action.formData.contacts');
+    $contacts = $test->instance()->tableState->get('modal.actions.0.data.contacts');
 
     expect($contacts)->toHaveCount(1)
         ->and($contacts[0]['label'])->toBe('b');
 });
 
 it('reorders repeater items in the table modal bag', function () {
-    $path = 'tableState.modal.action.formData.contacts';
+    $path = 'tableState.modal.actions.0.data.contacts';
 
     $test = Livewire::test(WtrComponent::class)
         ->call('openHeaderActionModal', 'create')
-        ->set('tableState.modal.action.formData.contacts', [
+        ->set('tableState.modal.actions.0.data.contacts', [
             ['label' => 'a'],
             ['label' => 'b'],
         ])
         ->call('reorderRepeaterItems', $path, [1, 0]);
 
-    $contacts = $test->instance()->tableState->get('modal.action.formData.contacts');
+    $contacts = $test->instance()->tableState->get('modal.actions.0.data.contacts');
 
     expect($contacts[0]['label'])->toBe('b')
         ->and($contacts[1]['label'])->toBe('a');
@@ -197,18 +197,18 @@ it('reorders repeater items in the table modal bag', function () {
 it('runs afterStateUpdated for a field in a header action modal form', function () {
     $test = Livewire::test(WtrReactiveComponent::class)
         ->call('openHeaderActionModal', 'create')
-        ->set('tableState.modal.action.formData.type', 'business');
+        ->set('tableState.modal.actions.0.data.type', 'business');
 
-    expect($test->instance()->tableState->get('modal.action.formData.vat_id'))->toBe('AUTO');
+    expect($test->instance()->tableState->get('modal.actions.0.data.vat_id'))->toBe('AUTO');
 });
 
 it('afterStateUpdated clears the dependent field when the trigger is not business', function () {
     $test = Livewire::test(WtrReactiveComponent::class)
         ->call('openHeaderActionModal', 'create')
-        ->set('tableState.modal.action.formData.vat_id', 'preset')
-        ->set('tableState.modal.action.formData.type', 'individual');
+        ->set('tableState.modal.actions.0.data.vat_id', 'preset')
+        ->set('tableState.modal.actions.0.data.type', 'individual');
 
-    expect($test->instance()->tableState->get('modal.action.formData.vat_id'))->toBeNull();
+    expect($test->instance()->tableState->get('modal.actions.0.data.vat_id'))->toBeNull();
 });
 
 // ─── Modal footer actions (Action::modalFooterActions()) ─────────────────────
@@ -216,7 +216,7 @@ it('afterStateUpdated clears the dependent field when the trigger is not busines
 it('runs a footer action callback with the live form-data bag', function () {
     $test = Livewire::test(WtrFooterActionComponent::class)
         ->call('openHeaderActionModal', 'create')
-        ->set('tableState.modal.action.formData.name', 'Bob')
+        ->set('tableState.modal.actions.0.data.name', 'Bob')
         ->call('callModalFooterAction', 'echo');
 
     expect($test->instance()->footerLog)->toBe(['Bob']);
@@ -227,7 +227,7 @@ it('a footer action can $set values back into the form-data bag', function () {
         ->call('openHeaderActionModal', 'create')
         ->call('callModalFooterAction', 'seed');
 
-    expect($test->instance()->tableState->get('modal.action.formData.name'))->toBe('SEEDED');
+    expect($test->instance()->tableState->get('modal.actions.0.data.name'))->toBe('SEEDED');
 });
 
 it('a footer action with closesModal() closes the modal', function () {
@@ -235,7 +235,8 @@ it('a footer action with closesModal() closes the modal', function () {
         ->call('openHeaderActionModal', 'create')
         ->call('callModalFooterAction', 'done');
 
-    expect($test->instance()->tableState->get('modal.action.show'))->toBeFalse();
+    // closesModal() pops the frame off the stack entirely (no modal is open).
+    expect($test->instance()->isActionModalVisible())->toBeFalse();
 });
 
 it('a submitsForm() footer action validates the form first', function () {
@@ -244,7 +245,7 @@ it('a submitsForm() footer action validates the form first', function () {
         ->call('openHeaderActionModal', 'create')
         ->call('callModalFooterAction', 'validate');
 
-    $test->assertHasErrors('tableState.modal.action.formData.name');
+    $test->assertHasErrors('tableState.modal.actions.0.data.name');
     expect($test->instance()->footerLog)->toBe([]);
 });
 
@@ -254,5 +255,5 @@ it('ignores an unknown footer action name', function () {
         ->call('callModalFooterAction', 'nope');
 
     expect($test->instance()->footerLog)->toBe([])
-        ->and($test->instance()->tableState->get('modal.action.show'))->toBeTrue();
+        ->and($test->instance()->tableState->get('modal.open'))->toBeTrue();
 });

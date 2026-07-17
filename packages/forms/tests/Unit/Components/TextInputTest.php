@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\MessageBag;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Foundation\Contracts\Enum\HasLabel;
 use NyonCode\WireForms\Components\TextInput;
@@ -285,4 +286,27 @@ test('url type', function () {
 
     expect($field->getInputType())->toBe('url')
         ->and($field->getInputMode())->toBe('url');
+});
+
+// revealable() was a dead setter: the value stayed masked forever because
+// nothing read the flag.
+test('a revealable input gets a toggle that swaps the type client-side', function () {
+    $field = TextInput::make('secret')->password()->revealable();
+    $html = view($field->render()->name(), ['field' => $field])
+        ->withErrors(new MessageBag)->render();
+
+    expect($html)->toContain('x-data="{ revealed: false }"')
+        ->toContain('revealed = ! revealed')
+        // The type is swapped by Alpine, so the secret never leaves the input.
+        ->toContain(":type=\"revealed ? 'text' : 'password'\"")
+        ->toContain('-reveal"');
+});
+
+test('an ordinary input gets no reveal toggle', function () {
+    $field = TextInput::make('name');
+    $html = view($field->render()->name(), ['field' => $field])
+        ->withErrors(new MessageBag)->render();
+
+    expect($html)->not->toContain('revealed')
+        ->and($html)->toContain('type="text"');
 });

@@ -57,6 +57,20 @@ searchable combobox** (the same `searchable-select` used by wire-forms `Select` 
 fall back to `Filter::apply()`), and inherit authorization, **indicator chips** (removable, alongside panel
 chips), and **query-string persistence** (`Table::queryString()`, under a `col_<column>` URL parameter).
 
+### Relation managers
+
+A relationship-scoped table as a standalone Livewire component. Extend `RelationManagers\RelationManager`,
+set `protected string $relationship` (and optional `protected ?string $title`), and define `table()` exactly
+as in any `WithTable` component — columns, filters, actions, exports, search and sorting all work. The base
+class pins `query()` to the owner record's relationship, so a subclass cannot widen it. Render with
+`@@livewire(PostsRelationManager::class, ['ownerRecord' => $author])`.
+
+Any relationship type can be listed; for belongs-to-many the query selects `related.*` so pivot columns
+cannot overwrite related attributes or the row key. Create/attach/detach actions call the base helpers —
+`$this->createRelatedRecord([...])` (sets the FK; creates + attaches for belongs-to-many),
+`$this->attachRelated($id, [...pivot])` and `$this->detachRelated($id)` (belongs-to-many only, `null`
+detaches all). Using one against an unsupported relationship type throws a clear `RuntimeException`.
+
 ### More
 
 - Summaries: per-column `->summarize(...)` with footer scope toggles; grand totals computed in SQL.

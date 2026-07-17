@@ -8,8 +8,9 @@ use Closure;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\HtmlString;
+use NyonCode\WireCore\Core\Query\Contracts\HasSearchColumns;
 
-class StackedColumn extends Column
+class StackedColumn extends Column implements HasSearchColumns
 {
     protected ?string $primaryColumn = null;
 

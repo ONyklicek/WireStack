@@ -7,9 +7,16 @@
     $debounceModifier = $field->getDebounceModifier();
     $wireAttr = 'wire:model' . ($wireModifier ? ".{$wireModifier}" : '') . $debounceModifier;
     $hasAffix = $field->hasAffix();
+    // revealable(): a password the user can unmask. Alpine owns the swap so the
+    // secret never leaves the input — no roundtrip, no value in the DOM.
+    $isRevealable = $field->isRevealable();
 @endphp
 
 @include('wire-forms::partials.field-wrapper-start')
+
+@if($isRevealable)
+    <div x-data="{ revealed: false }" class="relative">
+@endif
 
 @if($hasAffix)
     <div class="flex rounded-md shadow-sm">
@@ -31,7 +38,11 @@
         @endif
 
         <input
-                type="{{ $field->getInputType() }}"
+                @if($isRevealable)
+                    :type="revealed ? 'text' : '{{ $field->getInputType() }}'"
+                @else
+                    type="{{ $field->getInputType() }}"
+                @endif
                 id="{{ $field->getId() }}"
         {{ $wireAttr }}="{{ $field->getWireModelAttribute() }}"
         @if($field->getPlaceholder())
@@ -84,8 +95,25 @@
             'border-red-500 focus:border-red-500 focus:ring-red-500' => $errors->has($field->getStatePath()),
             'rounded-l-none' => $hasAffix && $field->hasPrefixContent(),
             'rounded-r-none' => $hasAffix && $field->hasSuffixContent(),
+            // Room for the reveal button.
+            'pr-10' => $isRevealable && ! $hasAffix,
         ])
         />
+
+        @if($isRevealable)
+            <button
+                    type="button"
+                    @click="revealed = ! revealed"
+                    data-testid="form-input-{{ $field->getStatePath() }}-reveal"
+                    :aria-label="revealed ? @js(__('Hide')) : @js(__('Show'))"
+                    :aria-pressed="revealed"
+                    tabindex="-1"
+                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+                <span x-show="!revealed"><x-wire::icon name="outline:eye" class="w-5 h-5"/></span>
+                <span x-show="revealed" x-cloak><x-wire::icon name="outline:eye-slash" class="w-5 h-5"/></span>
+            </button>
+        @endif
 
         @if($hasAffix)
             @if($field->getSuffixAction())
@@ -103,6 +131,10 @@
                     {{ $field->getSuffix() }}
                 </span>
             @endif
+    </div>
+@endif
+
+@if($isRevealable)
     </div>
 @endif
 

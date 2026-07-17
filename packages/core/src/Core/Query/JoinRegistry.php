@@ -34,6 +34,7 @@ final class JoinRegistry
         string $operator,
         string $secondColumn,
         string $type = 'left',
+        ?JoinScope $scope = null,
     ): string {
         $alias = $this->aliasGenerator->generate($baseTable, $relationPath);
         $key = $alias;
@@ -46,6 +47,7 @@ final class JoinRegistry
                 operator: $operator,
                 secondColumn: $secondColumn,
                 type: $type,
+                scope: $scope,
             );
         }
 

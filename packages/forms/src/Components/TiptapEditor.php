@@ -33,8 +33,6 @@ class TiptapEditor extends Field
 
     protected bool $withHighlight = false;
 
-    protected ?string $fileAttachmentsDirectory = null;
-
     /** Default toolbar shown when no override is given. */
     public const DEFAULT_TOOLBAR = [
         'bold', 'italic', 'underline', 'strike',
@@ -158,13 +156,6 @@ class TiptapEditor extends Field
         return $this;
     }
 
-    public function fileAttachmentsDirectory(?string $directory): static
-    {
-        $this->fileAttachmentsDirectory = $directory;
-
-        return $this;
-    }
-
     // ─── Getters ───────────────────────────────────────────────────
 
     /**
@@ -213,11 +204,6 @@ class TiptapEditor extends Field
     public function isWithHighlight(): bool
     {
         return $this->withHighlight;
-    }
-
-    public function getFileAttachmentsDirectory(): ?string
-    {
-        return $this->fileAttachmentsDirectory;
     }
 
     /**

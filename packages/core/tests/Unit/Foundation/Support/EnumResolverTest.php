@@ -70,6 +70,36 @@ it('passes scalar and non-enum values through unchanged', function () {
         ->and(EnumResolver::scalar(['a' => 1]))->toBe(['a' => 1]);
 });
 
+// ─── scalarDeep() ────────────────────────────────────────────────────────────
+
+it('reduces a bare enum like scalar() does', function () {
+    expect(EnumResolver::scalarDeep(ErBackedStatus::Active))->toBe('active')
+        ->and(EnumResolver::scalarDeep(ErUnitStatus::High))->toBe('High')
+        ->and(EnumResolver::scalarDeep('plain'))->toBe('plain')
+        ->and(EnumResolver::scalarDeep(null))->toBeNull();
+});
+
+it('reduces enums nested at any depth while preserving keys', function () {
+    $value = [
+        'status' => ErBackedStatus::Active,
+        'rows' => [
+            ['priority' => ErUnitStatus::High, 'title' => 'keep me'],
+        ],
+    ];
+
+    expect(EnumResolver::scalarDeep($value))->toBe([
+        'status' => 'active',
+        'rows' => [
+            ['priority' => 'High', 'title' => 'keep me'],
+        ],
+    ]);
+});
+
+it('leaves an array free of enums untouched', function () {
+    expect(EnumResolver::scalarDeep(['a' => 1, 'b' => [null, 'x']]))
+        ->toBe(['a' => 1, 'b' => [null, 'x']]);
+});
+
 // ─── label() ─────────────────────────────────────────────────────────────────
 
 it('uses getLabel() for enums implementing HasLabel', function () {

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Forms;
 
-use InvalidArgumentException;
 use Livewire\Component;
 use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
 use NyonCode\WireForms\Concerns\InteractsWithFieldActions;
@@ -12,6 +11,7 @@ use NyonCode\WireForms\Concerns\InteractsWithFileUploads;
 use NyonCode\WireForms\Concerns\InteractsWithRepeaters;
 use NyonCode\WireForms\Concerns\InteractsWithSelectCreation;
 use NyonCode\WireForms\Concerns\InteractsWithWizards;
+use NyonCode\WireForms\Exceptions\FormConfigurationException;
 use ReflectionMethod;
 use ReflectionNamedType;
 
@@ -101,7 +101,7 @@ trait WithForms
         $methodName = $this->getFormMethodName($name);
 
         if (! method_exists($this, $methodName)) {
-            throw new InvalidArgumentException("Form method [{$methodName}()] does not exist on ".static::class);
+            throw FormConfigurationException::unknownFormMethod($methodName, static::class);
         }
 
         $form = app(Form::class);
@@ -224,11 +224,7 @@ trait WithForms
             }
 
             if (str_ends_with($method, 'Form') && $this->isFormMethod($method)) {
-                throw new InvalidArgumentException(
-                    'Component ['.static::class.'] cannot have both form() and '.$method.'() methods. '
-                    .'Use either a single form() method or multiple *Form() methods, not both. '
-                    .'See ADR 0009 for details.'
-                );
+                throw FormConfigurationException::mixedFormMethods(static::class, $method);
             }
         }
     }

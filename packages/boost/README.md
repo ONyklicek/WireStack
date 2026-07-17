@@ -30,11 +30,21 @@ It exposes the following tools:
 | `describe-table` | Resolve a table's columns, filters, actions, default sort, searchability |
 | `describe-form` | Resolve a form's flattened field schema |
 | `describe-infolist` | Resolve an infolist's entry schema |
+| `validate-wire-component` | Report unknown colors, unregistered icons and unresolvable attribute names |
 | `list-component-types` | Built-in types for a category (columns, fields, filters, actions, …) |
-| `describe-component-api` | Public fluent API (method signatures) of a component type |
+| `describe-component-api` | Public fluent API of a component type — signatures, defaults, accepted values |
 | `list-icons` | Icon names registered with the wire `IconManager` |
 | `wire-config` | Effective `wire-*` configuration |
-| `search-wire-docs` | Search the bundled guideline/skill corpus |
+| `search-wire-docs` | Section-level search over the full bundled wireStack documentation |
+| `fetch-wire-doc` | Read a documentation section, or a document outline, by id |
+
+The complete English documentation ships inside the package, so search works offline and without a
+checkout of the wire repo. `search-wire-docs` returns ranked **sections** with ids; pass an id to
+`fetch-wire-doc` to read one in full.
+
+`validate-wire-component` targets the faults that never throw: an unknown color renders gray, an
+unregistered icon renders nothing, and a name the model cannot resolve renders an empty cell — none of
+which a render test catches.
 
 **General (parity with laravel/boost)**
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use NyonCode\WireBoost\Support\TypeCatalog;
 use NyonCode\WireCore\Foundation\Schema\Callout;
 use NyonCode\WireCore\Foundation\Schema\EmptyState;
+use NyonCode\WireCore\Panels\Components\ToggleEntry;
 use NyonCode\WireForms\Components\Display\Html;
 use NyonCode\WireForms\Components\Display\Placeholder;
 use NyonCode\WireTable\Columns\BadgeColumn;
@@ -16,7 +17,19 @@ beforeEach(function () {
 
 it('lists the known categories', function () {
     expect($this->catalog->categories())
-        ->toContain('columns', 'filters', 'fields', 'displays', 'actions', 'infolist-entries', 'widgets', 'modals', 'layouts');
+        ->toContain('columns', 'filters', 'fields', 'displays', 'actions', 'infolist-entries', 'panel-entries', 'widgets', 'modals', 'layouts');
+});
+
+it('catalogs editable panel entries', function () {
+    // These extend the infolist Entry but live in a sibling directory, so the
+    // infolist-entries scan cannot see them.
+    expect(array_column($this->catalog->types('panel-entries'), 'name'))
+        ->toBe(['checkbox-entry', 'select-entry', 'text-input-entry', 'toggle-entry']);
+});
+
+it('resolves a panel entry by its short name', function () {
+    expect($this->catalog->resolve('toggle-entry'))
+        ->toBe(ToggleEntry::class);
 });
 
 it('discovers layout components from the sibling Schema directory', function () {

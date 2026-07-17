@@ -75,9 +75,9 @@ class TablePreview extends Component
 
         if (in_array($this->variant, self::MODAL_VARIANTS, true)) {
             // booted() runs on every request; only open the modal once, or a
-            // stacked/nested modal would be re-suspended and its form reset on
-            // each roundtrip.
-            if (! $this->tableState->get('modal.action.show') && $this->suspendedActionCount() === 0) {
+            // stacked/nested modal would be re-opened and its form reset on each
+            // roundtrip. No open frames = nothing mounted yet.
+            if ($this->actionFrameCount() === 0) {
                 $this->openHeaderActionModal('invite');
             }
 

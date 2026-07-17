@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Icons\Icon;
+use NyonCode\WireCore\Foundation\Icons\IconManager;
 
 class ToggleColumn extends Column
 {
@@ -56,6 +57,16 @@ class ToggleColumn extends Column
         $this->offIcon = $icon instanceof Icon ? $icon->value() : $icon;
 
         return $this;
+    }
+
+    public function getOnIcon(): ?string
+    {
+        return $this->onIcon;
+    }
+
+    public function getOffIcon(): ?string
+    {
+        return $this->offIcon;
     }
 
     public function disabled(bool|\Closure $disabled = true): static
@@ -118,6 +129,9 @@ class ToggleColumn extends Column
             'onColorClass' => $this->getOnColorClass(),
             'offColorClass' => $this->getOffColorClass(),
             'recordVersion' => $this->recordVersion($record),
+            // Resolved here, not in Blade: the column owns icon semantics.
+            'onIcon' => $this->onIcon ? app(IconManager::class)->render($this->onIcon, 'w-3 h-3') : '',
+            'offIcon' => $this->offIcon ? app(IconManager::class)->render($this->offIcon, 'w-3 h-3') : '',
         ]);
     }
 

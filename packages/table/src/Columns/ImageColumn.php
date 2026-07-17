@@ -20,15 +20,21 @@ class ImageColumn extends Column
 
     protected ?string $disk = null;
 
-    protected ?string $visibility = 'protected';
+    /**
+     * 'public' builds a plain Storage URL; anything else asks the disk for a
+     * signed temporary URL instead. Defaults to 'public' because that is what
+     * this column has always rendered — a different default would silently
+     * change every existing ->disk() column.
+     */
+    protected ?string $visibility = 'public';
+
+    protected int $urlExpiryMinutes = 5;
 
     protected bool $stacked = false;
 
     protected int $stackLimit = 3;
 
     protected int $ring = 0;
-
-    protected ?int $ringColor = null;
 
     /**
      * Set the image size scale (xs|sm|md|lg|xl|2xl).
@@ -82,11 +88,35 @@ class ImageColumn extends Column
         return $this->disk;
     }
 
+    /**
+     * 'public' (default) renders a plain Storage URL; any other value makes the
+     * disk sign a temporary URL. Only meaningful together with {@see disk()}.
+     */
     public function visibility(?string $visibility): static
     {
         $this->visibility = $visibility;
 
         return $this;
+    }
+
+    public function getVisibility(): ?string
+    {
+        return $this->visibility;
+    }
+
+    /**
+     * How long a non-public image's signed URL stays valid.
+     */
+    public function urlExpiry(int $minutes): static
+    {
+        $this->urlExpiryMinutes = $minutes;
+
+        return $this;
+    }
+
+    public function getUrlExpiry(): int
+    {
+        return $this->urlExpiryMinutes;
     }
 
     public function stacked(bool $stacked = true): static
@@ -113,10 +143,18 @@ class ImageColumn extends Column
         return $this->stackLimit;
     }
 
-    public function ring(int $ring, ?int $color = null): static
+    /**
+     * Width of the ring separating stacked images from the background.
+     *
+     * Took a second `?int $color` until 2026-07-15 that nothing ever read — an
+     * int cannot name a colour in this palette, no caller ever passed one, and
+     * its meaning did not survive the commit that introduced it. The ring uses
+     * the canonical white/dark-gray separator; a real colour knob would go
+     * through HasColor, and can be added when someone actually needs it.
+     */
+    public function ring(int $ring): static
     {
         $this->ring = $ring;
-        $this->ringColor = $color;
 
         return $this;
     }
@@ -127,25 +165,77 @@ class ImageColumn extends Column
             return '';
         }
 
-        $state = $this->getState($record);
-        $url = $this->resolveImageUrl($state);
+        $urls = $this->resolveImageUrls($this->getState($record));
 
-        if (! $url) {
-            return $this->getPlaceholder() ?? '';
+        if ($urls === []) {
+            return $this->getEmptyCellText();
+        }
+
+        // A stacked gallery only shows the first stackLimit images; the rest are
+        // summarised as a "+N" chip so a long list cannot blow the row height.
+        $overflow = 0;
+        if ($this->stacked && count($urls) > $this->stackLimit) {
+            $overflow = count($urls) - $this->stackLimit;
+            $urls = array_slice($urls, 0, $this->stackLimit);
         }
 
         return $this->renderView('tables.columns.image', [
-            'url' => $url,
+            'urls' => $urls,
+            'overflow' => $overflow,
+            'stacked' => $this->stacked,
             'sizeClasses' => $this->getSizeClasses(),
             'shapeClasses' => $this->circular ? 'rounded-full' : 'rounded-md',
             'ringClasses' => $this->ring > 0 ? "ring-$this->ring ring-white dark:ring-gray-800" : '',
         ]);
     }
 
+    /**
+     * Resolve the cell's state to a list of image URLs.
+     *
+     * An array (or JSON array, as an `array`-cast column arrives) renders as a
+     * gallery; a scalar stays a single image. The empty list means "nothing to
+     * show" and lets the caller fall back to the placeholder.
+     *
+     * @return array<int, string>
+     */
+    private function resolveImageUrls(mixed $state): array
+    {
+        if (is_string($state) && str_starts_with(trim($state), '[')) {
+            $decoded = json_decode($state, true);
+            if (is_array($decoded)) {
+                $state = $decoded;
+            }
+        }
+
+        $states = is_array($state) ? array_values($state) : [$state];
+
+        $urls = [];
+        foreach ($states as $single) {
+            $url = $this->resolveImageUrl($single);
+            if ($url !== null && $url !== '') {
+                $urls[] = $url;
+            }
+        }
+
+        // A single empty state still deserves the default image, if configured.
+        if ($urls === [] && $this->defaultImageUrl !== null && ! is_array($state)) {
+            $urls[] = $this->defaultImageUrl;
+        }
+
+        return $urls;
+    }
+
     private function resolveImageUrl(mixed $state): ?string
     {
-        if (empty($state)) {
+        if (empty($state) || ! is_string($state)) {
             return $this->defaultImageUrl;
+        }
+
+        // An inline image is already a complete source. FILTER_VALIDATE_URL
+        // rejects a data: URI, which would otherwise send it down the storage
+        // path and render src="/storage/data:image/...".
+        if (str_starts_with($state, 'data:')) {
+            return $state;
         }
 
         // If it's already a full URL
@@ -158,11 +248,31 @@ class ImageColumn extends Column
             /** @var FilesystemAdapter $diskInstance */
             $diskInstance = Storage::disk($this->disk);
 
+            if ($this->visibility !== 'public') {
+                return $this->temporaryUrl($diskInstance, $state);
+            }
+
             return $diskInstance->url($state);
         }
 
         // Assume it's a path in public storage
         return Storage::url($state);
+    }
+
+    /**
+     * A signed, expiring URL for a non-public file.
+     *
+     * Not every driver can sign one — the `local` driver throws unless served
+     * through Laravel's temporary-url route — so fall back to the plain URL
+     * rather than breaking the whole table over one image.
+     */
+    private function temporaryUrl(FilesystemAdapter $disk, string $path): string
+    {
+        try {
+            return $disk->temporaryUrl($path, now()->addMinutes($this->urlExpiryMinutes));
+        } catch (\Throwable) {
+            return $disk->url($path);
+        }
     }
 
     public function disk(?string $disk): static

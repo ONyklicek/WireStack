@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Core\Metadata;
 
 use Illuminate\Database\Eloquent\Model;
-use InvalidArgumentException;
+use NyonCode\WireCore\Exceptions\ModelNotRegisteredException;
 
 /**
  * Central registry for model metadata.
@@ -83,7 +83,7 @@ final class MetadataRegistry
     public function getModelMetadata(string $modelClass): ModelMetadata
     {
         return $this->models[$modelClass]
-            ?? throw new InvalidArgumentException("Model [{$modelClass}] not registered in MetadataRegistry.");
+            ?? throw ModelNotRegisteredException::make($modelClass);
     }
 
     /**

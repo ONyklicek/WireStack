@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Core\Relations;
 
-use InvalidArgumentException;
 use NyonCode\WireCore\Core\Relations\Contracts\Segment;
+use NyonCode\WireCore\Exceptions\InvalidRelationPathException;
 
 /**
  * Parsed relation path — structured AST replacing explode('.', $path).
@@ -29,7 +29,7 @@ final readonly class RelationPath
     private function __construct(array $segments)
     {
         if ($segments === []) {
-            throw new InvalidArgumentException('RelationPath must have at least one segment.');
+            throw InvalidRelationPathException::noSegments();
         }
 
         $this->segments = $segments;
@@ -38,7 +38,7 @@ final readonly class RelationPath
     public static function parse(string $path): self
     {
         if ($path === '') {
-            throw new InvalidArgumentException('RelationPath cannot be empty.');
+            throw InvalidRelationPathException::empty();
         }
 
         // Check for aggregate syntax: "relation->function(column)"
@@ -77,7 +77,7 @@ final readonly class RelationPath
     {
         // Format: "relation->function(column)" or "relation->function()"
         if (! preg_match('/^(.+)->(\w+)\((\w*)\)$/', $path, $matches)) {
-            throw new InvalidArgumentException("Invalid aggregate syntax: {$path}");
+            throw InvalidRelationPathException::malformedAggregate($path);
         }
 
         $relationParts = explode('.', $matches[1]);

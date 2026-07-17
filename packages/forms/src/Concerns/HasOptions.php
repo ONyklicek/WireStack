@@ -53,6 +53,10 @@ trait HasOptions
      * array state cannot be expressed as a single `in:` rule here. Satisfies
      * {@see ProvidesImplicitValidationRules}.
      *
+     * An optional field is paired with `nullable`, because clearing the canonical combobox
+     * writes `null` (not `''`) and Laravel fails a bare `in:` on null — an owner who never
+     * asked for the constraint must not have to hand-patch it back to optional.
+     *
      * @return array<int, mixed>
      */
     public function implicitValidationRules(): array
@@ -67,6 +71,12 @@ trait HasOptions
 
         $keys = array_keys($this->getOptions());
 
-        return $keys === [] ? [] : [Rule::in($keys)];
+        if ($keys === []) {
+            return [];
+        }
+
+        return $this->isRequired()
+            ? [Rule::in($keys)]
+            : ['nullable', Rule::in($keys)];
     }
 }

@@ -4,17 +4,22 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Foundation\Enums;
 
-use NyonCode\WireCore\Modals\Concerns\HasModalProperties;
-
 /**
  * Canonical modal/dialog/slide-over width enum (`sm`…`7xl`, `full`).
  *
  * Owns the Tailwind `max-w-*` width vocabulary shared by the modal, confirmation
  * dialog and slide-over surfaces, so `->modalWidth('2xl')` and
- * `->modalWidth(ModalWidth::TwoXl)` are interchangeable. The token → `max-w-*`
- * class mapping stays in {@see HasModalProperties::getMaxWidthClass()}
- * (literal, scannable, breakpoint-aware); this enum only owns the vocabulary +
- * token normalization.
+ * `->modalWidth(ModalWidth::TwoXl)` are interchangeable. This enum owns only the
+ * vocabulary + token normalization; the token → `max-w-*` class mapping lives one
+ * layer up, in `Modals\Concerns\HasModalProperties::getMaxWidthClass()` (literal,
+ * scannable, breakpoint-aware) — Modals is its only consumer, so Modals is the
+ * lowest layer that can own it.
+ *
+ * That mapping is named in prose on purpose. It must NOT become a `{@see}` tag:
+ * Pint's `fully_qualified_strict_types` (laravel preset) rewrites such a tag into
+ * a real `use` import, which would give Foundation — the bottom layer — a
+ * compile-time dependency on `Modals`, purely to render a doc link. Harmless
+ * today, a package cycle the moment Modals is split out of core.
  */
 enum ModalWidth: string
 {

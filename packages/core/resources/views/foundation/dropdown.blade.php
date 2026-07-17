@@ -35,7 +35,7 @@
             <div
                 x-ref="panel"
                 x-show="open"
-                @click.outside="close()"
+                @click.outside="$clickedInside($event) || close()"
                 @if($sheetOnMobile) x-focus-trap="open" tabindex="-1" data-sheet-bp="{{ MobileSheet::px($breakpoint) }}" @endif
                 x-transition:enter="transition ease-out duration-100"
                 x-transition:enter-start="opacity-0 scale-95 {{ $sheetOnMobile ? MobileSheet::motion($breakpoint) : '' }}"

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Concerns;
 
 use Closure;
-use InvalidArgumentException;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireTable\Exceptions\TableConfigurationException;
 
 /**
  * Trait HasGrouping
@@ -42,10 +42,7 @@ trait HasGrouping
     public function groupBy(string $column): static
     {
         if (str_contains($column, '.')) {
-            throw new InvalidArgumentException(
-                "groupBy() only supports direct columns, got [{$column}]. ".
-                'Expose the related value as a column on the query (join/select alias) and group by that.',
-            );
+            throw TableConfigurationException::relationPathNotGroupable($column);
         }
 
         $this->groupColumn = $column;

@@ -23,7 +23,6 @@ class ModalHostComponent extends Component
 {
     public function __construct(
         public mixed $component = null,
-        public string $showModel = 'mountedAction.show',
         public string $submitAction = 'callMountedAction',
         public string $closeAction = 'unmountAction',
         public string $nextStepAction = 'nextActionModalStep',

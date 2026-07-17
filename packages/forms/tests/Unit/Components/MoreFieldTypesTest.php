@@ -270,7 +270,6 @@ test('tiptap editor defaults', function () {
         ->and($field->isWithTables())->toBeFalse()
         ->and($field->isWithTextAlign())->toBeFalse()
         ->and($field->isWithHighlight())->toBeFalse()
-        ->and($field->getFileAttachmentsDirectory())->toBeNull()
         ->and($field->render()->name())->toBe('wire-forms::components.tiptap-editor');
 });
 
@@ -300,8 +299,7 @@ test('tiptap editor extensions append toolbar buttons', function () {
         ->withTextAlign()
         ->withHighlight()
         ->minHeight(320)
-        ->maxLength(2000)
-        ->fileAttachmentsDirectory('uploads');
+        ->maxLength(2000);
 
     expect($field->isWithImages())->toBeTrue()
         ->and($field->isWithTables())->toBeTrue()
@@ -309,7 +307,6 @@ test('tiptap editor extensions append toolbar buttons', function () {
         ->and($field->isWithHighlight())->toBeTrue()
         ->and($field->getMinHeight())->toBe(320)
         ->and($field->getMaxLength())->toBe(2000)
-        ->and($field->getFileAttachmentsDirectory())->toBe('uploads')
         ->and($field->getToolbarButtons())->toContain('image', 'table', 'alignLeft', 'highlight');
 });
 
@@ -336,4 +333,12 @@ test('tiptap editor alpine config exposes editor settings', function () {
     ])
         ->and($config['outputFormat'])->toBe('json')
         ->and($config['withImages'])->toBeTrue();
+});
+
+// The editor inserts images by URL (`setImage({ src })`) and uploads nothing, so
+// fileAttachmentsDirectory() configured a directory for a feature that does not
+// exist — no view or JS ever read it. Guards against it being added back.
+test('tiptap editor exposes no fileAttachmentsDirectory for an upload it cannot do', function () {
+    expect(method_exists(TiptapEditor::class, 'fileAttachmentsDirectory'))->toBeFalse()
+        ->and(method_exists(TiptapEditor::class, 'getFileAttachmentsDirectory'))->toBeFalse();
 });

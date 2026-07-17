@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Columns;
 
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Query\Contracts\HasSearchColumns;
 
-class SplitColumn extends Column
+class SplitColumn extends Column implements HasSearchColumns
 {
     /** @var array<int, Column> */
     protected array $columns = [];

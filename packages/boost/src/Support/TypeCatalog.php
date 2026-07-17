@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace NyonCode\WireBoost\Support;
 
 use Illuminate\Support\Str;
+use NyonCode\WireBoost\Exceptions\UnresolvableComponentException;
 use NyonCode\WireCore\Actions\BaseAction;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 use NyonCode\WireCore\Infolists\Components\Entry;
 use NyonCode\WireCore\Modals\Modal;
+use NyonCode\WireCore\Panels\Components\EditableEntry;
 use NyonCode\WireCore\Widgets\Widget;
 use NyonCode\WireForms\Components\Display\Display;
 use NyonCode\WireForms\Components\Field;
@@ -36,6 +38,9 @@ class TypeCatalog
         'displays' => Display::class,
         'actions' => BaseAction::class,
         'infolist-entries' => Entry::class,
+        // Panel entries extend the infolist Entry but ship from a sibling
+        // directory, so the scan of Infolists/Components never sees them.
+        'panel-entries' => EditableEntry::class,
         'widgets' => Widget::class,
         'modals' => Modal::class,
         'layouts' => LayoutComponent::class,
@@ -128,8 +133,27 @@ class TypeCatalog
     }
 
     /**
+     * Resolve a component type, or fail saying so.
+     *
+     * The throwing counterpart of {@see self::resolve()}: use this when the
+     * caller has no sensible answer for "not found", so the failure travels to
+     * the boundary instead of being re-described at every call site.
+     *
+     * @return class-string
+     *
+     * @throws UnresolvableComponentException
+     */
+    public function resolveOrFail(string $name): string
+    {
+        return $this->resolve($name) ?? throw UnresolvableComponentException::unknownType($name);
+    }
+
+    /**
      * Resolve a component type to its fully-qualified class name, accepting an
      * exact FQCN or a built-in type short name (e.g. "text-column").
+     *
+     * Returns null rather than throwing: this is a query, and callers such as
+     * the catalog's own listing legitimately ask about names that may not exist.
      *
      * @return class-string|null
      */

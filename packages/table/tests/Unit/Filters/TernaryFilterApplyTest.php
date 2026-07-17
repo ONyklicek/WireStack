@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
-use NyonCode\WireTable\Concerns\TableQueryService;
 use NyonCode\WireTable\Filters\TernaryFilter;
+use NyonCode\WireTable\Services\TableQueryService;
 use NyonCode\WireTable\Table;
 
 class TfUser extends Model

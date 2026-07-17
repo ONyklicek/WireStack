@@ -21,14 +21,9 @@ class DescribeComponentApi extends BoostTool
         private TypeCatalog $catalog,
     ) {}
 
-    public function handle(Request $request): Response
+    protected function run(Request $request): Response
     {
-        $input = (string) $request->get('class');
-        $class = $this->catalog->resolve($input);
-
-        if ($class === null) {
-            return $this->json(['error' => "Could not resolve component type [{$input}]."]);
-        }
+        $class = $this->catalog->resolveOrFail((string) $request->get('class'));
 
         return $this->json($this->reflector->describeType($class));
     }

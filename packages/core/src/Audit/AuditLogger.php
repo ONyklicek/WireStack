@@ -157,6 +157,10 @@ class AuditLogger
 
             return $user?->getAuthIdentifier();
         } catch (Throwable) {
+            // "No user" is a legitimate answer, not a failure: seeders, queued
+            // jobs and console commands audit changes with no auth context at
+            // all. An audit entry without an actor is still worth writing —
+            // losing the entry to protect its user column would be the bug.
             return null;
         }
     }
@@ -180,6 +184,8 @@ class AuditLogger
                 'user_agent' => $request->userAgent(),
             ]);
         } catch (Throwable) {
+            // As above: outside an HTTP request there is no IP or agent to
+            // record, which is missing context rather than a failed audit.
             return [];
         }
     }

@@ -132,8 +132,8 @@ it('opens a wizard action modal at the first step', function () {
     $test = Livewire::test(WtwComponent::class)->call('openHeaderActionModal', 'wizard');
     $component = $test->instance();
 
-    expect($component->tableState->get('modal.action.show'))->toBeTrue()
-        ->and($component->tableState->get('modal.action.currentStep'))->toBe(0)
+    expect($component->tableState->get('modal.open'))->toBeTrue()
+        ->and($component->tableState->get('modal.actions.0.currentStep'))->toBe(0)
         ->and($component->getActionModalFormInstance())->toBeInstanceOf(Form::class);
 });
 
@@ -142,33 +142,33 @@ it('opens a wizard action modal at the first step', function () {
 it('advances to the next step when the current step is valid', function () {
     $test = Livewire::test(WtwComponent::class)
         ->call('openHeaderActionModal', 'wizard')
-        ->set('tableState.modal.action.formData', ['name' => 'Jane'])
+        ->set('tableState.modal.actions.0.data', ['name' => 'Jane'])
         ->call('nextActionModalStep')
         ->assertHasNoErrors();
 
-    expect($test->instance()->tableState->get('modal.action.currentStep'))->toBe(1);
+    expect($test->instance()->tableState->get('modal.actions.0.currentStep'))->toBe(1);
 });
 
 it('blocks advancing when the current step fails validation', function () {
     $test = Livewire::test(WtwComponent::class)
         ->call('openHeaderActionModal', 'wizard')
-        ->set('tableState.modal.action.formData', ['name' => 'J'])
+        ->set('tableState.modal.actions.0.data', ['name' => 'J'])
         ->call('nextActionModalStep')
         ->assertHasErrors('name');
 
-    expect($test->instance()->tableState->get('modal.action.currentStep'))->toBe(0);
+    expect($test->instance()->tableState->get('modal.actions.0.currentStep'))->toBe(0);
 });
 
 it('does not advance past the last step', function () {
     $test = Livewire::test(WtwComponent::class)
         ->call('openHeaderActionModal', 'wizard')
-        ->set('tableState.modal.action.formData', ['name' => 'Jane'])
+        ->set('tableState.modal.actions.0.data', ['name' => 'Jane'])
         ->call('nextActionModalStep')
-        ->set('tableState.modal.action.formData', ['name' => 'Jane', 'email' => 'jane@example.com'])
+        ->set('tableState.modal.actions.0.data', ['name' => 'Jane', 'email' => 'jane@example.com'])
         ->call('nextActionModalStep')
         ->assertHasNoErrors();
 
-    expect($test->instance()->tableState->get('modal.action.currentStep'))->toBe(1);
+    expect($test->instance()->tableState->get('modal.actions.0.currentStep'))->toBe(1);
 });
 
 // ─── Hooks ───────────────────────────────────────────────────────
@@ -176,10 +176,10 @@ it('does not advance past the last step', function () {
 it('runs afterValidation on advance and prefills the next step via before', function () {
     $test = Livewire::test(WtwComponent::class)
         ->call('openHeaderActionModal', 'wizard')
-        ->set('tableState.modal.action.formData', ['name' => 'Jane'])
+        ->set('tableState.modal.actions.0.data', ['name' => 'Jane'])
         ->call('nextActionModalStep');
 
-    $formData = $test->instance()->tableState->get('modal.action.formData');
+    $formData = $test->instance()->tableState->get('modal.actions.0.data');
 
     expect(WtwComponent::$afterRan)->toBeTrue()
         ->and($formData['email'] ?? null)->toBe('pre@filled.com');
@@ -190,13 +190,13 @@ it('runs afterValidation on advance and prefills the next step via before', func
 it('steps back without validating', function () {
     $test = Livewire::test(WtwComponent::class)
         ->call('openHeaderActionModal', 'wizard')
-        ->set('tableState.modal.action.formData', ['name' => 'Jane'])
+        ->set('tableState.modal.actions.0.data', ['name' => 'Jane'])
         ->call('nextActionModalStep')
-        ->set('tableState.modal.action.formData', ['name' => '']) // invalid, but back skips validation
+        ->set('tableState.modal.actions.0.data', ['name' => '']) // invalid, but back skips validation
         ->call('prevActionModalStep')
         ->assertHasNoErrors();
 
-    expect($test->instance()->tableState->get('modal.action.currentStep'))->toBe(0);
+    expect($test->instance()->tableState->get('modal.actions.0.currentStep'))->toBe(0);
 });
 
 it('does not step back before the first step', function () {
@@ -204,7 +204,7 @@ it('does not step back before the first step', function () {
         ->call('openHeaderActionModal', 'wizard')
         ->call('prevActionModalStep');
 
-    expect($test->instance()->tableState->get('modal.action.currentStep'))->toBe(0);
+    expect($test->instance()->tableState->get('modal.actions.0.currentStep'))->toBe(0);
 });
 
 // ─── Submit ──────────────────────────────────────────────────────
@@ -212,7 +212,7 @@ it('does not step back before the first step', function () {
 it('validates every step cumulatively on submit', function () {
     Livewire::test(WtwComponent::class)
         ->call('openHeaderActionModal', 'wizard')
-        ->set('tableState.modal.action.formData', ['name' => 'Jane', 'email' => 'not-an-email'])
+        ->set('tableState.modal.actions.0.data', ['name' => 'Jane', 'email' => 'not-an-email'])
         ->call('submitActionModal')
         ->assertHasErrors('email');
 
@@ -222,7 +222,7 @@ it('validates every step cumulatively on submit', function () {
 it('executes the action when all steps are valid', function () {
     Livewire::test(WtwComponent::class)
         ->call('openHeaderActionModal', 'wizard')
-        ->set('tableState.modal.action.formData', ['name' => 'Jane', 'email' => 'jane@example.com'])
+        ->set('tableState.modal.actions.0.data', ['name' => 'Jane', 'email' => 'jane@example.com'])
         ->call('submitActionModal')
         ->assertHasNoErrors();
 
@@ -234,7 +234,7 @@ it('executes the action when all steps are valid', function () {
 it('passes the live form-data bag as context to a header wizard step schema', function () {
     Livewire::test(WtwCtxComponent::class)
         ->call('openHeaderActionModal', 'wizard')
-        ->set('tableState.modal.action.formData', ['name' => 'Jane'])
+        ->set('tableState.modal.actions.0.data', ['name' => 'Jane'])
         ->call('nextActionModalStep')
         ->assertHasNoErrors();
 
@@ -244,7 +244,7 @@ it('passes the live form-data bag as context to a header wizard step schema', fu
 it('builds the second step schema from first-step data', function () {
     $test = Livewire::test(WtwCtxComponent::class)
         ->call('openHeaderActionModal', 'wizard')
-        ->set('tableState.modal.action.formData', ['name' => 'Jane'])
+        ->set('tableState.modal.actions.0.data', ['name' => 'Jane'])
         ->call('nextActionModalStep');
 
     $form = $test->instance()->getActionModalFormInstance();
@@ -261,7 +261,7 @@ it('renders the step indicator and Back/Next controls', function () {
     Livewire::test(WtwComponent::class)
         ->call('openHeaderActionModal', 'wizard')
         ->assertSeeHtml('wire:click="nextActionModalStep"')
-        ->set('tableState.modal.action.formData', ['name' => 'Jane'])
+        ->set('tableState.modal.actions.0.data', ['name' => 'Jane'])
         ->call('nextActionModalStep')
         ->assertSeeHtml('wire:click="prevActionModalStep"')
         ->assertSeeHtml('wire:click="submitActionModal"');

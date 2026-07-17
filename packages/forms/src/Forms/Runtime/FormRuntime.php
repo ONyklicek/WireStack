@@ -9,8 +9,10 @@ use Illuminate\Validation\ValidationException;
 use NyonCode\WireCore\Core\State\StateHydrator;
 use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
+use NyonCode\WireCore\Foundation\Contracts\HydratesState;
 use NyonCode\WireCore\Foundation\Schema\Step;
 use NyonCode\WireCore\Foundation\Schema\Wizard;
+use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireForms\Components\Field;
 use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Forms\Config\FormConfig;
@@ -193,6 +195,11 @@ final class FormRuntime
             $data = (new StateHydrator)->hydrate($data, $definitions);
         }
 
+        // Then let each field shape the cast value into its own state — the read
+        // counterpart of SaveHandler's dehydration step (ADR 0021). Runs after
+        // StateHydrator so a field receives the type-correct value, not raw input.
+        $data = $this->hydrateFields($data);
+
         // Seed every schema key the caller did not provide with its field
         // ->default() (create-mode intent) or, failing that, its type-correct
         // blank. The union keeps incoming values, so a record's persisted value —
@@ -203,9 +210,45 @@ final class FormRuntime
         // array instead of collapsing.
         $data += $this->getInitialState();
 
+        // Opt-in only: a field marked ->defaultOnNull() treats an edit-mode null
+        // (or empty string) as unset and takes its default too. The union above
+        // has already covered absent keys; this covers present-but-empty ones.
+        $data = $this->applyDefaultOnNull($data);
+
         $data = $this->captureOptimisticLockBaseline($data);
 
         $this->stateManager->fill($data);
+    }
+
+    /**
+     * Fill the default of every ->defaultOnNull() field whose current value is
+     * null or an empty string. Scoped to opted-in fields so no other field's
+     * intentional null is ever overwritten.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function applyDefaultOnNull(array $data): array
+    {
+        foreach ($this->getFlatComponents() as $component) {
+            if (! $component instanceof Field || ! $component->isDefaultOnNull()) {
+                continue;
+            }
+
+            $name = $component->getName();
+
+            if ($name === '' || ! in_array($data[$name] ?? null, [null, ''], true)) {
+                continue;
+            }
+
+            $default = EnumResolver::scalarDeep($component->getDefault());
+
+            if ($default !== null) {
+                $data[$name] = $default;
+            }
+        }
+
+        return $data;
     }
 
     /**
@@ -261,7 +304,7 @@ final class FormRuntime
                     $blank[$name] = [];
                     $types[$name] = 'array';
 
-                    $default = $component->getDefault();
+                    $default = EnumResolver::scalarDeep($component->getDefault());
 
                     if ($default !== null) {
                         $defaults[$name] = $default;
@@ -287,7 +330,10 @@ final class FormRuntime
                 if ($name !== '') {
                     $blank[$name] = $component->getBlankState();
 
-                    $default = $component->getDefault();
+                    // An enum-cast column's ->default(Status::Draft) is an enum instance;
+                    // the seed feeds Livewire state directly, so it must be scalar here for
+                    // the same reason fill() normalises (see StateManager::fill()).
+                    $default = EnumResolver::scalarDeep($component->getDefault());
 
                     if ($default !== null) {
                         $defaults[$name] = $default;
@@ -335,6 +381,36 @@ final class FormRuntime
     /**
      * Collect state type hints from all field components in the schema.
      *
+     * @return array<string, string>
+     */
+    /**
+     * Apply every field's own hydration to the state about to be filled.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function hydrateFields(array $data): array
+    {
+        $record = $this->config->model instanceof Model ? $this->config->model : null;
+
+        foreach ($this->getFlatComponents() as $component) {
+            if (! $component instanceof HydratesState || ! $component instanceof Field) {
+                continue;
+            }
+
+            $name = $component->getName();
+
+            if ($name === '' || ! array_key_exists($name, $data)) {
+                continue;
+            }
+
+            $data[$name] = $component->hydrateState($data[$name], $record);
+        }
+
+        return $data;
+    }
+
+    /**
      * @return array<string, string>
      */
     private function buildStateDefinitions(): array
@@ -394,6 +470,58 @@ final class FormRuntime
         }
 
         $this->isPrepared = true;
+
+        // Give relationship-aware fields (e.g. BelongsToSelect) the form's parent
+        // record, so they can resolve their related model — both to auto-load
+        // options and to auto-create a new option from createOptionForm() without
+        // an explicit createOptionUsing(). Only a Model instance carries a usable
+        // relationship; a bare class string is instantiated for introspection.
+        // Runs after isPrepared is set so getFlatComponents() (which calls
+        // prepare()) short-circuits instead of recursing.
+        $this->propagateRecordToFields();
+    }
+
+    /**
+     * Hand the form's parent record to every field exposing a record() setter.
+     */
+    private function propagateRecordToFields(): void
+    {
+        $model = $this->config->model;
+
+        $record = match (true) {
+            $model instanceof Model => $model,
+            is_string($model) && is_a($model, Model::class, true) => new $model,
+            default => null,
+        };
+
+        if ($record === null) {
+            return;
+        }
+
+        $this->applyRecordToSchema($this->config->schema, $record);
+    }
+
+    /**
+     * Recursively set the parent record on record-aware fields throughout the
+     * schema — including inside layouts and Repeater templates. A Repeater is a
+     * LayoutComponent, so descending into its template schema is enough: each
+     * per-item field is a (deep) clone of that template built in
+     * getItemSchema(), and cloning carries the record reference into every item
+     * (and hence into a repeater item's create/edit-option flow).
+     *
+     * @param  array<int, mixed>  $components
+     */
+    private function applyRecordToSchema(array $components, Model $record): void
+    {
+        foreach ($components as $component) {
+            if (method_exists($component, 'record')) {
+                $component->record($record);
+            }
+
+            if ($component instanceof LayoutComponent) {
+                $this->applyRecordToSchema($component->getSchema(), $record);
+            }
+        }
     }
 
     /**

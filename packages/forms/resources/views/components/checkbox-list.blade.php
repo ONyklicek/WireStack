@@ -6,6 +6,10 @@
     // Per-breakpoint map (['md' => 2, 'lg' => 3]) → literal grid-cols classes;
     // a plain int keeps the mobile-first reflow arms below.
     $columnsClass = is_array($columns) ? \NyonCode\WireCore\Foundation\Support\ResponsiveGrid::cols($columns) : '';
+    // groups(['Fruit' => ['apple' => 'Apple'], …]) renders a heading per group.
+    // Without an explicit map, grouped() alone has nothing to group by, so the
+    // list stays flat rather than inventing a grouping.
+    $groups = $field->isGrouped() ? $field->getGroups() : [];
 @endphp
 
 @include('wire-forms::partials.field-wrapper-start')
@@ -45,34 +49,37 @@
         <div class="max-h-60 overflow-y-auto p-3">
             {{-- Multi-column lists reflow down on narrow screens so option labels
                  stay readable on a phone (a 3–4 wide grid is unusable at 360px). --}}
-            <div @class([
-                'grid gap-2',
-                $columnsClass,
-                'grid-cols-1' => $columns === 1,
-                'grid-cols-1 sm:grid-cols-2' => $columns === 2,
-                'grid-cols-1 sm:grid-cols-3' => $columns === 3,
-                'grid-cols-2 sm:grid-cols-4' => $columns === 4,
-            ])>
-                @foreach($options as $value => $label)
-                    <div
-                        class="flex items-center gap-2"
-                        @if($field->isSearchable()) x-show="!search || @js(strtolower($label)).includes(search.toLowerCase())" @endif
-                    >
-                        <input
-                            type="checkbox"
-                            id="{{ $field->getId() }}-{{ $value }}"
-                            data-testid="form-checklist-{{ $field->getStatePath() }}-{{ $value }}"
-                            {{ $wireAttr }}="{{ $field->getWireModelAttribute() }}"
-                            value="{{ $value }}"
-                            @if($field->isDisabled()) disabled @endif
-                            class="rounded border-gray-300 text-primary-600 shadow-sm focus:ring-primary-500 transition-colors duration-150 dark:bg-gray-800 dark:border-gray-600"
-                        />
-                        <label for="{{ $field->getId() }}-{{ $value }}" class="text-sm text-gray-700 dark:text-gray-300">
-                            {{ $label }}
-                        </label>
+            @php
+                $gridClasses = \Illuminate\Support\Arr::toCssClasses([
+                    'grid gap-2',
+                    $columnsClass,
+                    'grid-cols-1' => $columns === 1,
+                    'grid-cols-1 sm:grid-cols-2' => $columns === 2,
+                    'grid-cols-1 sm:grid-cols-3' => $columns === 3,
+                    'grid-cols-2 sm:grid-cols-4' => $columns === 4,
+                ]);
+            @endphp
+
+            @if($groups !== [])
+                @foreach($groups as $groupLabel => $groupOptions)
+                    <div class="mb-3 last:mb-0" data-testid="form-checklist-{{ $field->getStatePath() }}-group">
+                        <p class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            {{ $groupLabel }}
+                        </p>
+                        <div class="{{ $gridClasses }}">
+                            @foreach($groupOptions as $value => $label)
+                                @include('wire-forms::partials.checkbox-list-option', compact('field', 'wireAttr', 'value', 'label'))
+                            @endforeach
+                        </div>
                     </div>
                 @endforeach
-            </div>
+            @else
+                <div class="{{ $gridClasses }}">
+                    @foreach($options as $value => $label)
+                        @include('wire-forms::partials.checkbox-list-option', compact('field', 'wireAttr', 'value', 'label'))
+                    @endforeach
+                </div>
+            @endif
         </div>
     </div>
 

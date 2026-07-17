@@ -7,12 +7,15 @@ namespace NyonCode\WireTable\Columns;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithStateColor;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 
 class PollColumn extends Column
 {
+    use InteractsWithStateColor;
+
     /** @var int|Closure Polling interval in milliseconds */
     protected int|Closure $interval = 2000;
 
@@ -26,8 +29,6 @@ class PollColumn extends Column
     protected bool $pollForever = false;
 
     /** @var int|null Maximum number of poll cycles (null = unlimited) */
-    protected ?int $maxPolls = null;
-
     /** @var array<string, Closure> State-based display callbacks */
     protected array $stateDisplays = [];
 
@@ -47,8 +48,6 @@ class PollColumn extends Column
     protected string|Closure|null $loadingIndicator = null;
 
     /** @var Closure|null Callback when polling completes */
-    protected ?Closure $onComplete = null;
-
     /** @var bool Whether to keep last content visible while loading */
     protected bool $keepContentWhileLoading = true;
 
@@ -72,12 +71,7 @@ class PollColumn extends Column
 
     protected bool $isBadge = false;
 
-    /** @var array<string, string> */
-    protected array $colors = [];
-
     // $size is provided by Foundation\Concerns\HasSize (via Column).
-
-    protected ?Closure $colorCallback = null;
 
     /**
      * Set the polling interval in milliseconds.
@@ -112,13 +106,6 @@ class PollColumn extends Column
     /**
      * Set maximum number of poll cycles.
      */
-    public function maxPolls(?int $max): static
-    {
-        $this->maxPolls = $max;
-
-        return $this;
-    }
-
     public function badge(bool $badge = true): static
     {
         $this->isBadge = $badge;
@@ -126,26 +113,7 @@ class PollColumn extends Column
         return $this;
     }
 
-    /**
-     * @param  array<string, string|Color>  $colors
-     */
-    public function colors(array $colors): static
-    {
-        $this->colors = array_map(
-            static fn (string|Color $color): string => $color instanceof Color ? $color->value : $color,
-            $colors,
-        );
-
-        return $this;
-    }
-
-    public function colorUsing(Closure $callback): static
-    {
-        $this->colorCallback = $callback;
-
-        return $this;
-    }
-
+    // colors()/colorUsing()/getColorForState() come from InteractsWithStateColor.
     // size()/getSize() come from Foundation\Concerns\HasSize (via Column).
 
     /**
@@ -274,23 +242,6 @@ class PollColumn extends Column
     /**
      * Set callback when polling completes.
      */
-    public function onComplete(Closure $callback): static
-    {
-        $this->onComplete = $callback;
-
-        return $this;
-    }
-
-    /**
-     * Callback for when polling should complete.
-     */
-    public function handlePollComplete(Model $record): void
-    {
-        if ($this->onComplete) {
-            ($this->onComplete)($record, $this);
-        }
-    }
-
     /**
      * Configure for job/task status polling.
      */
@@ -450,7 +401,11 @@ class PollColumn extends Column
         $shouldPoll = $this->shouldPoll($record);
         $state = $this->getCurrentState($record);
         $stateClasses = $this->getStateClasses($record, $state);
-        $color = $this->getColorForState($state);
+        // The scalar state keys the class/icon/content maps, but it has already
+        // collapsed an enum cast to its value. Colour resolution gets the raw
+        // state instead, so an enum can still answer through its own HasColor
+        // contract the way BadgeColumn and IconColumn let it.
+        $color = $this->getColorForState($this->getStateForColor($record, $state));
         $colorClass = $color ? $this->getColorClass($color) : '';
 
         // Wrap with state classes
@@ -468,8 +423,11 @@ class PollColumn extends Column
         if ($shouldPoll) {
             $interval = $this->getInterval($record);
             $recordKey = $record->getKey();
+            // refreshMethod() names the host method a row-level poll calls;
+            // refreshRow() is the WithTable default.
+            $method = $this->refreshMethod ?? 'refreshRow';
             $pollDirective = $this->rowLevelPolling
-                ? "wire:poll.{$interval}ms=\"refreshRow('$recordKey')\""
+                ? "wire:poll.{$interval}ms=\"{$method}('$recordKey')\""
                 : "wire:poll.{$interval}ms";
             $wireKey = "poll-{$this->name}-{$recordKey}";
         }
@@ -481,6 +439,7 @@ class PollColumn extends Column
             'shouldPoll' => $shouldPoll,
             'isBadge' => $this->isBadge(),
             'showLoadingIndicator' => $shouldPoll && $this->showLoadingIndicator,
+            'keepContentWhileLoading' => $this->keepContentWhileLoading,
             'loadingIndicator' => $this->renderLoadingIndicator($record),
             'position' => $this->evaluateForRecord($this->loadingPosition, $record),
             'pollDirective' => $pollDirective,
@@ -525,6 +484,18 @@ class PollColumn extends Column
         }
 
         return null;
+    }
+
+    /**
+     * The value colour resolution should see.
+     *
+     * A stateResolver defines the state itself, so its output is authoritative.
+     * Otherwise the raw attribute is, because getCurrentState() has flattened
+     * any enum away and an enum may carry its own colour.
+     */
+    protected function getStateForColor(Model $record, ?string $state): mixed
+    {
+        return $this->stateResolver !== null ? $state : $this->getState($record);
     }
 
     /**
@@ -577,18 +548,9 @@ class PollColumn extends Column
         return $colors[$state] ?? null;
     }
 
-    public function getColorForState(mixed $state): string
+    public function getColorClasses(?string $color): string
     {
-        if ($this->colorCallback) {
-            return ($this->colorCallback)($state) ?? 'gray';
-        }
-
-        return $this->colors[$state] ?? 'gray';
-    }
-
-    public function getColorClasses(string $color): string
-    {
-        return self::getBadgeColorClasses($color);
+        return self::getBadgeColorClasses($color ?? Color::Gray->value);
     }
 
     public function getSizeClasses(): string

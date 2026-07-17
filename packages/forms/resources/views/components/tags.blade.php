@@ -96,7 +96,7 @@
             }
         }
     }"
-    @click.outside="focused = false"
+    @click.outside="$clickedInside($event) || (focused = false)"
     @class([
         'rounded-xl border bg-white dark:bg-gray-900',
         'border-gray-300 dark:border-gray-600',

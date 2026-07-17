@@ -16,7 +16,7 @@ class ListWireComponents extends BoostTool
 {
     public function __construct(private ComponentScanner $scanner) {}
 
-    public function handle(Request $request): Response
+    protected function run(Request $request): Response
     {
         $components = $this->scanner->scan();
 

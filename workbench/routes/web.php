@@ -9,6 +9,8 @@ use Workbench\App\Livewire\Previews\FieldPreview;
 use Workbench\App\Livewire\Previews\FormPreview;
 use Workbench\App\Livewire\Previews\InfolistPreview;
 use Workbench\App\Livewire\Previews\LayoutPreview;
+use Workbench\App\Livewire\Previews\ModalStackingPreview;
+use Workbench\App\Livewire\Previews\PanelPreview;
 use Workbench\App\Livewire\Previews\SortablePreview;
 use Workbench\App\Livewire\Previews\TablePreview;
 use Workbench\App\Livewire\Previews\WidgetPreview;
@@ -122,6 +124,14 @@ Route::get('/previews', function () {
             'copy' => 'Closer reorder surface focused on rows, handles, and ordering affordances.',
             'component' => SortablePreview::class,
             'variant' => 'detail',
+        ],
+        [
+            'slug' => 'actions-modal-stacking',
+            'title' => 'Wire Actions',
+            'label' => 'Nested modal stacking',
+            'copy' => 'Six live configurations of the nested-modal frame stack: create-and-select, deep $setFrame, inline registerActions, slide-over, and a stacked wizard.',
+            'component' => ModalStackingPreview::class,
+            'variant' => 'gallery',
         ],
         [
             'slug' => 'core-overview',
@@ -247,6 +257,7 @@ foreach ([
     'table-paginated' => ['title' => 'Wire Table Pagination', 'subtitle' => 'Paginated table with per-page selector and page links.', 'component' => TablePreview::class, 'variant' => 'paginated'],
     'sortable-overview' => ['title' => 'Wire Sortable', 'subtitle' => 'Full reorderable task table preview.', 'component' => SortablePreview::class, 'variant' => 'overview'],
     'sortable-detail' => ['title' => 'Wire Sortable Detail', 'subtitle' => 'Closer reorder-surface preview.', 'component' => SortablePreview::class, 'variant' => 'detail'],
+    'actions-modal-stacking' => ['title' => 'Wire Actions · Nested Modal Stacking', 'subtitle' => 'Six live configurations of the nested-modal frame stack — create-and-select ($setParent), deep $setFrame, inline registerActions, slide-over, and a stacked wizard.', 'component' => ModalStackingPreview::class, 'variant' => 'gallery'],
     'core-overview' => ['title' => 'Wire Core', 'subtitle' => 'Stats, actions, and shared primitives.', 'component' => CorePreview::class, 'variant' => 'overview'],
     'core-modal' => ['title' => 'Wire Core Modal', 'subtitle' => 'Real modal surface from the core runtime.', 'component' => CorePreview::class, 'variant' => 'modal'],
     'core-dropdown' => ['title' => 'Wire Core Dropdown', 'subtitle' => 'Generic dropdown that becomes a bottom sheet on mobile.', 'component' => CorePreview::class, 'variant' => 'dropdown'],
@@ -257,6 +268,7 @@ foreach ([
     'infolists-overview' => ['title' => 'Wire Core Infolist', 'subtitle' => 'Read-only record display with sections, a column grid, and formatted entries.', 'component' => InfolistPreview::class, 'variant' => 'overview'],
     'infolists-entries' => ['title' => 'Wire Core Infolist Entries', 'subtitle' => 'Gallery of every built-in infolist entry type bound to one record.', 'component' => InfolistPreview::class, 'variant' => 'entries'],
     'infolists-order' => ['title' => 'Wire Core Infolist Order Detail', 'subtitle' => 'A real order detail: Flex layout, badge/boolean/list entries, and header/entry/per-row actions.', 'component' => InfolistPreview::class, 'variant' => 'order'],
+    'panels-editable' => ['title' => 'Wire Core Editable Panel', 'subtitle' => 'A Model-backed record panel: toggle, select, and text edits write straight to the row with optimistic UI. Read-only email entry mixed in.', 'component' => PanelPreview::class, 'variant' => 'default'],
 ] as $slug => $screen) {
     Route::get('/previews/'.$slug, fn () => view('previews.capture', $screen));
 }

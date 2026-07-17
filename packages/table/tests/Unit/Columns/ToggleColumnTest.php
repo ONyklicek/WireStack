@@ -98,3 +98,29 @@ it('renders toggle off-color via the canonical Foundation palette', function () 
         ->and(ToggleColumn::make('active')->offColor('success')->renderCell($record))->toContain('bg-emerald-200')
         ->and(ToggleColumn::make('active')->renderCell($record))->toContain('bg-gray-200');
 });
+
+// onIcon()/offIcon() were dead setters: the knob had no icons at all, so the
+// values went nowhere.
+it('renders the configured state icons inside the knob', function () {
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 7, 'active' => true]);
+
+    $html = ToggleColumn::make('active')->onIcon('check')->offIcon('x-mark')->renderCell($record);
+
+    expect($html)->toContain('x-show="value"')
+        ->toContain('x-show="!value"')
+        ->and(substr_count($html, '<svg'))->toBe(2);
+});
+
+it('renders no icon markup when none is configured', function () {
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 7, 'active' => true]);
+
+    expect(ToggleColumn::make('active')->renderCell($record))->not->toContain('<svg');
+});

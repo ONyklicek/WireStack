@@ -68,15 +68,15 @@ afterEach(function () {
 it('runs a field affix action inside an action modal form', function () {
     $test = Livewire::test(FatComponent::class)
         ->call('openHeaderActionModal', 'create')
-        ->set('tableState.modal.action.formData', ['title' => 'hello'])
-        ->call('callFieldAction', 'tableState.modal.action.formData.title', 'to_upper');
+        ->set('tableState.modal.actions.0.data', ['title' => 'hello'])
+        ->call('callFieldAction', 'tableState.modal.actions.0.data.title', 'to_upper');
 
-    expect($test->instance()->tableState->get('modal.action.formData.title'))->toBe('HELLO');
+    expect($test->instance()->tableState->get('modal.actions.0.data.title'))->toBe('HELLO');
 });
 
 it('ignores a field action when no modal form is open', function () {
     $test = Livewire::test(FatComponent::class)
-        ->call('callFieldAction', 'tableState.modal.action.formData.title', 'to_upper');
+        ->call('callFieldAction', 'tableState.modal.actions.0.data.title', 'to_upper');
 
-    expect($test->instance()->tableState->get('modal.action.formData.title'))->toBeNull();
+    expect($test->instance()->tableState->get('modal.actions.0.data.title'))->toBeNull();
 });

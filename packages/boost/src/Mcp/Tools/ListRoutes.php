@@ -17,7 +17,7 @@ class ListRoutes extends BoostTool
 {
     public function __construct(private Router $router) {}
 
-    public function handle(Request $request): Response
+    protected function run(Request $request): Response
     {
         $filter = trim((string) $request->get('filter'));
         $routes = [];
