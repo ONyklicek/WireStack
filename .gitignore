@@ -1,6 +1,7 @@
 /docs/migration/
 /.claude
 /vendor
+/build/
 composer.lock
 # Torchlight highlight cache
 docs-site/.torchlight-cache/

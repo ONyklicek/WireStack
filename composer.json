@@ -83,6 +83,12 @@
         "test": "vendor/bin/pest",
         "coverage": "vendor/bin/pest --coverage",
         "coverage:enforce": "vendor/bin/pest --coverage --min=100",
+        "coverage:clover": "php -d memory_limit=-1 vendor/bin/pest --coverage-clover=build/clover.xml",
+        "coverage:verify": [
+            "@coverage:clover",
+            "php scripts/verify-coverage.php build/clover.xml"
+        ],
+        "coverage:floors": "php scripts/verify-coverage.php build/clover.xml --update-floors",
         "test:coverage": "@coverage",
         "test:core": "vendor/bin/pest --configuration packages/core/phpunit.xml",
         "test:forms": "vendor/bin/pest --configuration packages/forms/phpunit.xml",
@@ -90,7 +96,11 @@
         "test:sortable": "vendor/bin/pest --configuration packages/sortable/phpunit.xml",
         "test:boost": "vendor/bin/pest --configuration packages/boost/phpunit.xml",
         "lint": "vendor/bin/pint",
-        "analyse": "vendor/bin/phpstan analyse --ansi"
+        "analyse": "vendor/bin/phpstan analyse --ansi",
+        "api:dead": "php scripts/verify-dead-api.php .",
+        "api:instanceof": "php scripts/verify-instanceof-imports.php .",
+        "boost:sync-docs": "php scripts/sync-boost-docs.php .",
+        "boost:check-docs": "php scripts/sync-boost-docs.php . --check"
     },
     "config": {
         "allow-plugins": {

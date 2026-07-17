@@ -68,6 +68,7 @@ trait WithTable
     use CanSelectRecords;
     use DispatchesStateUpdates;
     use HasSqlDebug;
+
     // Shared, form-agnostic action engine (wire-core) + the form-hosting bridge
     // (wire-forms). WithTable keeps thin, record-scoped wrappers on top; the
     // bridge overrides the engine's form extension points.
@@ -85,7 +86,6 @@ trait WithTable
         InteractsWithTableActions::resolveActionRecordIds insteadof InteractsWithActions;
         InteractsWithTableActions::sendActionNotification insteadof InteractsWithActions;
     }
-
     use InteractsWithFieldActions;
     use InteractsWithFileUploads;
     use InteractsWithRepeaters;
@@ -671,6 +671,50 @@ trait WithTable
         $this->eagerLoadSubRows($this->cachedRecords);
 
         return $this->cachedRecords;
+    }
+
+    /**
+     * Re-anchor the paginator when the current page no longer exists.
+     *
+     * After records are mutated — most commonly a delete that removes the last
+     * row on the current page — the stored page number can point past the end
+     * of the result set, stranding the user on an empty page. Clamp it down to
+     * the last populated page so they land on the page below instead.
+     *
+     * Only length-aware pagination can compute a last page; simple and cursor
+     * modes have no total to clamp against, so they are left untouched.
+     */
+    public function clampPageToBounds(): void
+    {
+        $table = $this->getTable();
+
+        // Only length-aware pagination knows its last page; simple and cursor
+        // modes have no total to clamp against (confirmed by the instanceof
+        // guard below once the records are fetched).
+        if (! $table->isPaginated() || in_array($table->getPaginationMode(), ['simple', 'cursor'], true)) {
+            return;
+        }
+
+        // Page 1 always exists (even when empty), so nothing to clamp.
+        if ((int) $this->getPage() <= 1) {
+            return;
+        }
+
+        $records = $this->getTableRecords();
+
+        if (! $records instanceof LengthAwarePaginator) {
+            return;
+        }
+
+        $lastPage = max(1, $records->lastPage());
+
+        if ($records->currentPage() > $lastPage) {
+            $this->setPage($lastPage);
+
+            // Drop the empty-page result so the next render re-queries the
+            // clamped page instead of serving the cached empty page.
+            $this->cachedRecords = null;
+        }
     }
 
     /**

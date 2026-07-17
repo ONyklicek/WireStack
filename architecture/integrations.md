@@ -34,7 +34,7 @@ Use this seam for:
 
 Read:
 
-- `packages/table/src/Concerns/TableQueryService.php`
+- `packages/table/src/Services/TableQueryService.php`
 - `packages/core/src/Core/Query/`
 - `packages/core/src/Core/Metadata/`
 

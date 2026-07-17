@@ -1,0 +1,84 @@
+name: Coverage
+
+# The coverage gate, deliberately split from tests.yml.
+#
+# tests.yml runs a 12-combination PHP × Laravel matrix with `coverage: none`,
+# because compatibility is what that matrix is for. Coverage is a property of
+# the code, not of the interpreter, so measuring it twelve times would cost
+# twelve slow runs to learn one number. This job measures it once.
+#
+# It enforces two things (scripts/verify-coverage.php):
+#   - every line a change adds or edits is covered by a test;
+#   - no package drops below its recorded floor (scripts/coverage-floors.json).
+#
+# Laravel is left at its default (11+): wire-boost depends on laravel/mcp and is
+# removed from the Laravel 10 matrix leg, and a run without it could not gate it.
+
+on:
+  push:
+    branches: [1.x, 2.x]
+  pull_request:
+    branches: ['*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    name: Verify coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          # The diff gate needs the history back to the base commit.
+          fetch-depth: 0
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite
+          # pcov is several times faster than xdebug for a coverage-only run.
+          coverage: pcov
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Generate coverage report
+        # memory_limit=-1: building the report over ~450 source files exhausts
+        # the default limit, and the resulting fatal still exits 0 — a green
+        # run that measured nothing.
+        run: php -d memory_limit=-1 vendor/bin/pest --coverage-clover=build/clover.xml
+
+      - name: Resolve the diff base
+        id: base
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "ref=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            echo "ref=${{ github.event.before }}" >> "$GITHUB_OUTPUT"
+          else
+            # A new branch or a force push has no usable "before"; the floors
+            # still apply, the diff simply has nothing to compare against.
+            echo "ref=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify coverage
+        run: |
+          if [ -n "${{ steps.base.outputs.ref }}" ]; then
+            php scripts/verify-coverage.php build/clover.xml --diff="${{ steps.base.outputs.ref }}"
+          else
+            php scripts/verify-coverage.php build/clover.xml
+          fi
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clover-coverage
+          path: build/clover.xml
+          retention-days: 7
+          if-no-files-found: warn

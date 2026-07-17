@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Str;
 use League\CommonMark\Environment\Environment;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
 use League\CommonMark\Extension\GithubFlavoredMarkdownExtension;
@@ -179,8 +180,10 @@ $previewMeta = [
     'forms-overview' => ['title' => 'Form Layout', 'caption' => 'Sections, grid layout, toggle, textarea, and action footer.'],
     'forms-repeater' => ['title' => 'Repeater', 'caption' => 'Nested rows with add, remove, and reorder controls.'],
     'table-overview' => ['title' => 'Table Surface', 'caption' => 'Search, filters, actions, and full row rendering.'],
+    'table-actions-quiet' => ['title' => 'Quiet Row Actions', 'caption' => 'Neutral at rest, colour on hover/focus; a solid Approve stays prominent and Delete stays legibly red.'],
     'table-selection' => ['title' => 'Selection State', 'caption' => 'Bulk-selected rows with the active selection toolbar.'],
     'table-subrows' => ['title' => 'Sub-rows', 'caption' => 'Expanded invoice line items with sortable headers, row actions, and a per-invoice subtotal.'],
+    'table-image-gallery' => ['title' => 'Image Gallery', 'caption' => 'A single image, an array state rendered as a gallery, and a stacked one capped with a “+N” chip.'],
     'table-summary' => ['title' => 'Summary Footer', 'caption' => 'Per-row rollup totals, a sum + average footer, and the page/all scope toggle.'],
     'table-subrows-flatten' => ['title' => 'Flatten Mode', 'caption' => 'Every child record rendered inline as a regular table row.'],
     'table-subrows-limit' => ['title' => 'Show More', 'caption' => 'Limited child rows with the per-parent “show more” affordance.'],
@@ -205,11 +208,12 @@ $pagePreviews = [
     'docs/forms/fields/repeater.md' => ['forms-repeater'],
     'docs/table/overview.md' => ['table-overview', 'table-selection'],
     'docs/table/actions.md' => ['table-selection'],
+    'docs/table/columns/image.md' => ['table-image-gallery'],
     'docs/table/summaries.md' => ['table-summary', 'table-subrows'],
     'docs/table/sub-rows.md' => ['table-subrows', 'table-subrows-limit', 'table-subrows-filter', 'table-subrows-flatten'],
     'docs/sortable/overview.md' => ['sortable-overview', 'sortable-detail'],
     'docs/sortable/row-sorting.md' => ['sortable-detail'],
-    'docs/core/actions.md' => ['core-overview'],
+    'docs/core/actions.md' => ['core-overview', 'table-actions-quiet'],
     'docs/core/foundation.md' => ['palette'],
     'docs/core/modals.md' => ['core-modal'],
     'docs/core/notifications.md' => ['core-toasts'],
@@ -1061,13 +1065,22 @@ function relativePath(string $from, string $to): string
     return implode('/', array_merge(array_fill(0, count($fromParts), '..'), $toParts)) ?: '.';
 }
 
+/**
+ * Heading → anchor id.
+ *
+ * Transliterates rather than discards: a byte-wise strtolower() plus [^a-z0-9]
+ * left every Czech heading mangled ("Režimy" → "re-imy", "Souhrnná patička"
+ * → "souhrnn-pati-ka"), so the whole CS site had unreadable, collision-prone
+ * anchors.
+ *
+ * Str::slug over a hand-rolled transliteration on purpose: it is Laravel's own,
+ * needs no ext-intl (which this repo does not require), and is mirrored in
+ * docs-site/scripts/verify-docs.mjs — the two are asserted to agree on every
+ * heading in the docs.
+ */
 function slugify(string $value): string
 {
-    $value = strtolower($value);
-    $value = preg_replace('/[^a-z0-9]+/u', '-', $value) ?? '';
-    $value = trim($value, '-');
-
-    return $value !== '' ? $value : 'section';
+    return Str::slug($value) ?: 'section';
 }
 
 /**

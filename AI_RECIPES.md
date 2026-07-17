@@ -230,7 +230,7 @@ Read first:
 - existing filters: `SelectFilter`, `DateFilter`, `NumberRangeFilter`,
   `TernaryFilter`
 - filter views in `packages/table/resources/views/tables/filters/`
-- `packages/table/src/Concerns/TableQueryService.php`
+- `packages/table/src/Services/TableQueryService.php`
 - `packages/table/tests/Unit/Filters/`
 
 Files usually changed:

@@ -26,6 +26,29 @@ jobs:
       - name: Run PHPStan
         run: vendor/bin/phpstan analyse --ansi
 
+  # An `instanceof` against an unimported contract resolves to the current
+  # namespace, does not exist, and silently returns false — a seam that quietly
+  # stops working. PHPStan and Pint are both clean on that code, so it needs its
+  # own gate. See ADR 0021.
+  instanceof:
+    name: instanceof imports
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Verify every instanceof target resolves
+        run: composer api:instanceof
+
   pint:
     name: Laravel Pint
     runs-on: ubuntu-latest

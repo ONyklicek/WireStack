@@ -7,16 +7,20 @@ Token-efficient routing file for Claude/Codex in this repository.
 Use the smallest useful context first.
 
 1. Read this file.
-2. Read `AI_BLUEPRINT.md` for the repo contract and package ownership rules.
-3. Read one package doc only if the task is local:
+2. Read `AI_CODING_STANDARD.md` before writing or changing any code. It is
+   binding: composition over inheritance, interfaces before implementations,
+   no business logic in traits, `InteractsWith*` / `CanBe*` trait naming, and
+   the `Contracts/ Concerns/ Actions/ Services/ Managers/ Support/` layout.
+3. Read `AI_BLUEPRINT.md` for the repo contract and package ownership rules.
+4. Read one package doc only if the task is local:
    - `architecture/core.md`
    - `architecture/forms.md`
    - `architecture/table.md`
    - `architecture/sortable.md`
-4. Read `architecture/integrations.md` only for cross-package behavior.
-5. Read `architecture/audit.md` only for full analysis, inconsistency hunting, or code review.
-6. Read `architecture/decisions/` only when the current behavior is unclear or a design tradeoff matters.
-7. Read generated output only if the task explicitly targets generated assets.
+5. Read `architecture/integrations.md` only for cross-package behavior.
+6. Read `architecture/audit.md` only for full analysis, inconsistency hunting, or code review.
+7. Read `architecture/decisions/` only when the current behavior is unclear or a design tradeoff matters.
+8. Read generated output only if the task explicitly targets generated assets.
 
 ## Repo Graph
 
@@ -96,7 +100,7 @@ Before changing shared behavior, ask:
 Read these first when a change crosses package boundaries:
 
 - `packages/forms/src/Integration/ActionMacros.php`
-- `packages/table/src/Concerns/TableQueryService.php`
+- `packages/table/src/Services/TableQueryService.php`
 - `packages/table/src/Livewire/TableStateSynthesizer.php`
 - `packages/core/src/Core/Plugin/PluginManager.php`
 - `packages/sortable/src/WireSortableServiceProvider.php`
@@ -152,6 +156,13 @@ vendor/bin/pest --configuration phpunit.xml --testsuite "Integration"
 composer lint
 composer analyse
 
+# Coverage gate (CI runs this on PRs and on pushes to 1.x/2.x).
+# Every line you add or edit must be covered; no package may drop below its
+# floor in scripts/coverage-floors.json.
+composer coverage:verify
+php scripts/verify-coverage.php build/clover.xml --diff=origin/1.x  # as CI checks it
+composer coverage:floors                                            # raise a floor you improved
+
 vendor/bin/testbench serve --host=127.0.0.1 --port=8085
 npm run dev
 npm run build
@@ -163,6 +174,7 @@ npm run docs:refresh
 
 ## Deep Docs
 
+- `AI_CODING_STANDARD.md`
 - `AI_BLUEPRINT.md`
 - `AI_CHANGE_PROTOCOL.md`
 - `AI_RECIPES.md`

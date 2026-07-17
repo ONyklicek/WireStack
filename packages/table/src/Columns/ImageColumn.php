@@ -6,9 +6,8 @@ namespace NyonCode\WireTable\Columns;
 
 use Closure;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Filesystem\FilesystemAdapter;
-use Illuminate\Support\Facades\Storage;
 use NyonCode\WireCore\Foundation\Enums\Size;
+use NyonCode\WireCore\Foundation\Support\StoredFileUrlResolver;
 
 class ImageColumn extends Column
 {
@@ -227,52 +226,17 @@ class ImageColumn extends Column
 
     private function resolveImageUrl(mixed $state): ?string
     {
-        if (empty($state) || ! is_string($state)) {
-            return $this->defaultImageUrl;
-        }
+        // Signing is only meaningful once a disk is named; a diskless column has
+        // always rendered a plain default-disk URL regardless of visibility.
+        $visibility = $this->disk !== null ? ($this->visibility ?? 'public') : 'public';
 
-        // An inline image is already a complete source. FILTER_VALIDATE_URL
-        // rejects a data: URI, which would otherwise send it down the storage
-        // path and render src="/storage/data:image/...".
-        if (str_starts_with($state, 'data:')) {
-            return $state;
-        }
-
-        // If it's already a full URL
-        if (filter_var($state, FILTER_VALIDATE_URL)) {
-            return $state;
-        }
-
-        // If using disk storage
-        if ($this->disk) {
-            /** @var FilesystemAdapter $diskInstance */
-            $diskInstance = Storage::disk($this->disk);
-
-            if ($this->visibility !== 'public') {
-                return $this->temporaryUrl($diskInstance, $state);
-            }
-
-            return $diskInstance->url($state);
-        }
-
-        // Assume it's a path in public storage
-        return Storage::url($state);
-    }
-
-    /**
-     * A signed, expiring URL for a non-public file.
-     *
-     * Not every driver can sign one — the `local` driver throws unless served
-     * through Laravel's temporary-url route — so fall back to the plain URL
-     * rather than breaking the whole table over one image.
-     */
-    private function temporaryUrl(FilesystemAdapter $disk, string $path): string
-    {
-        try {
-            return $disk->temporaryUrl($path, now()->addMinutes($this->urlExpiryMinutes));
-        } catch (\Throwable) {
-            return $disk->url($path);
-        }
+        return StoredFileUrlResolver::resolve(
+            is_string($state) ? $state : null,
+            $this->disk,
+            $visibility,
+            $this->urlExpiryMinutes,
+            $this->defaultImageUrl,
+        );
     }
 
     public function disk(?string $disk): static

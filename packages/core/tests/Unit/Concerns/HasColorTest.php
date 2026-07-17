@@ -30,6 +30,11 @@ class TestColorClass
     {
         return $this->getIconButtonColorClasses($color);
     }
+
+    public function quietButton(string $color): string
+    {
+        return $this->getQuietButtonColorClasses($color);
+    }
 }
 
 /**
@@ -51,6 +56,7 @@ function colorSurfaces(): array
         'outlined' => fn (string $c): string => $obj->outlined($c),
         'ghost' => fn (string $c): string => $obj->ghost($c),
         'iconButton' => fn (string $c): string => $obj->iconButton($c),
+        'quiet' => fn (string $c): string => $obj->quietButton($c),
         'badge' => fn (string $c): string => TestColorClass::getBadgeColorClasses($c),
         // The only resolver returning an array; flattened so it can be compared
         // like the rest.
@@ -135,6 +141,38 @@ it('resolves info/cyan on the button surfaces that previously fell back to gray'
         ->and($obj->iconButton('info'))->toContain('cyan')
         ->and(TestColorClass::getModalSubmitButtonClasses('info'))->toContain('cyan')
         ->and(TestColorClass::getModalIconBgClass('cyan'))->toContain('cyan');
+});
+
+it('renders the quiet surface neutral at rest, with color only on intent', function () {
+    $obj = new TestColorClass;
+
+    // A non-destructive hue rests neutral gray (no solid fill) and reveals its
+    // color only on hover/focus.
+    expect($obj->quietButton('primary'))
+        ->toContain('text-gray-600')
+        ->toContain('dark:text-gray-300')
+        ->toContain('hover:text-primary-600')
+        ->toContain('hover:bg-primary-50')
+        ->not->toContain('bg-primary-600'); // never a solid fill at rest
+});
+
+it('keeps the destructive hue legible at rest on the quiet surface', function () {
+    $obj = new TestColorClass;
+
+    // Touch has no hover, so danger must read as danger without interaction.
+    expect($obj->quietButton('danger'))
+        ->toContain('text-red-600')
+        ->and($obj->quietButton('danger'))->toBe($obj->quietButton('red'));
+});
+
+it('sets an explicit focus ring on every quiet arm (WCAG 2.4.7)', function () {
+    $obj = new TestColorClass;
+
+    // The shared button base always applies focus:ring-2; without a ring color
+    // the keyboard focus indicator is invisible.
+    foreach (Color::values() as $color) {
+        $this->assertStringContainsString('focus:ring-', $obj->quietButton($color), "[quiet] [{$color}] has no focus ring color.");
+    }
 });
 
 it('returns correct badge color classes for primary', function () {

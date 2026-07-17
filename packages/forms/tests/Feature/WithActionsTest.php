@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
 use NyonCode\WireCore\Actions\Action;
@@ -230,6 +231,13 @@ class WithActionsAdvancedHost extends Component
                 ])
                 ->action(fn (array $data) => $this->log = 'onboard:'.$data['first'].'-'.$data['second']),
 
+            // Record-scoped form action: mounting pushes a frame (so the record
+            // is serialized to a {class,key} descriptor) and submitting restores
+            // it for the callback across the request.
+            Action::make('editRecord')
+                ->form([TextInput::make('name')])
+                ->action(fn ($record, array $data) => $this->log = 'edited:'.$record->name.'->'.$data['name']),
+
             // Form action with a custom footer action that fills a field.
             Action::make('editWithFooter')
                 ->form([TextInput::make('name')])
@@ -271,6 +279,32 @@ it('runs a record-scoped action with the bound record', function () {
     Livewire::test(WithActionsAdvancedHost::class)
         ->call('mountAction', 'touch', ['record' => $record])
         ->assertSet('log', 'touched:Grace');
+});
+
+it('serializes a records identity into its frame and restores it on submit', function () {
+    // The record survives the Livewire round-trip as a {class, key} descriptor:
+    // describeFrameRecord() stores it on mount, resolveFrameRecord() re-queries
+    // it when the submitted callback asks for $record.
+    Schema::create('with_actions_records', function ($t) {
+        $t->id();
+        $t->string('name');
+    });
+    $record = WithActionsRecord::create(['id' => 7, 'name' => 'Grace']);
+
+    $test = Livewire::test(WithActionsAdvancedHost::class)
+        ->call('mountAction', 'editRecord', ['record' => $record]);
+
+    // The frame carries the descriptor, not the model itself.
+    expect($test->get('mountedActions.0.record'))->toBe([
+        'class' => WithActionsRecord::class,
+        'key' => 7,
+    ]);
+
+    $test->set('mountedActions.0.data.name', 'Grace H.')
+        ->call('callMountedAction')
+        ->assertSet('log', 'edited:Grace->Grace H.');
+
+    Schema::dropIfExists('with_actions_records');
 });
 
 it('steps a wizard forward and runs it on the final submit', function () {

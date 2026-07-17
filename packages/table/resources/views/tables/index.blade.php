@@ -52,7 +52,7 @@
     $activeTableFilters = array_filter($tableFilters, $filterHasValue);
     $activeColumnFilters = array_filter($columnFilterValues, $filterHasValue);
 
-    $actions = $table->getActions();
+    $actions = $table->getRowActionsForDisplay(); // applies the configured row-action style (solid/quiet)
     $bulkActions = $table->getBulkActions();
     $headerActions = $table->getHeaderActions();
     $filters = $table->getFilters();

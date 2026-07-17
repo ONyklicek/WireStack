@@ -377,8 +377,12 @@ Columns:
 
 Summaries:
 
-- `SummaryBatch`
-- `SummaryType`
+- `Columns\SummaryType`
+- `Concerns\CanBeSummarized` — config + fluent API only
+- `Services\SummaryCalculator` — one summary, in SQL or in PHP
+- `Services\SummaryFormatter` — rendering
+- `Services\SummaryBatch` — many summaries in one aggregate query
+- `Support\SummaryFormat`, `Support\SummaryTarget` — what the services need to know about a column
 
 Column views:
 
@@ -449,11 +453,14 @@ Public/config:
 Main concerns:
 
 - `Concerns\WithTable`
-- `Concerns\TableQueryService`
 - `Concerns\HasGrouping`
 - `Concerns\HasResponsive`
 - `Concerns\HasSqlDebug`
 - `Concerns\HasSubRows`
+
+Services:
+
+- `Services\TableQueryService` — the table-to-core query seam
 
 State:
 

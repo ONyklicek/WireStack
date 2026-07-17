@@ -200,6 +200,64 @@ trait HasColor
     }
 
     /**
+     * Get "quiet" button color classes (neutral at rest, color on intent).
+     *
+     * The resting state is deliberately achromatic — `text-gray-600 dark:text-gray-300`,
+     * a transparent background — so a row full of these buttons stops competing with
+     * the data. The owner-supplied hue only appears on `hover:`/`focus:` (a tinted
+     * background plus, for non-neutral hues, a colored label). Every arm sets an
+     * explicit `focus:ring-{hue}-500` because the shared button base always applies
+     * `focus:ring-2`; without a ring color the keyboard focus indicator would be
+     * invisible (WCAG 2.4.7).
+     *
+     * Exception: `danger`/`red` keep their red label **at rest**. Touch devices have
+     * no hover, so a destructive action must read as dangerous without interaction —
+     * matching how GitHub/Linear keep "Delete" red in a quiet menu.
+     *
+     * Literal class strings (JIT-safe allow-list), same convention as the sibling
+     * resolvers above.
+     */
+    protected function getQuietButtonColorClasses(?string $color = null): string
+    {
+        $color ??= $this->getColor();
+        $cacheKey = "quiet_$color";
+
+        // Neutral resting label shared by every non-destructive hue.
+        $rest = 'text-gray-600 dark:text-gray-300';
+
+        return static::$colorClassCache[$cacheKey] ??= match ($color) {
+            // Destructive stays legible at rest (no reliance on hover / touch).
+            'danger', 'red' => 'text-red-600 dark:text-red-400 hover:bg-red-50 focus:ring-red-500 dark:hover:bg-red-900/20',
+
+            'primary' => "$rest hover:text-primary-600 hover:bg-primary-50 focus:ring-primary-500 dark:hover:text-primary-400 dark:hover:bg-primary-900/20",
+            'blue' => "$rest hover:text-blue-600 hover:bg-blue-50 focus:ring-blue-500 dark:hover:text-blue-400 dark:hover:bg-blue-900/20",
+            'success', 'emerald' => "$rest hover:text-emerald-600 hover:bg-emerald-50 focus:ring-emerald-500 dark:hover:text-emerald-400 dark:hover:bg-emerald-900/20",
+            'green' => "$rest hover:text-green-600 hover:bg-green-50 focus:ring-green-500 dark:hover:text-green-400 dark:hover:bg-green-900/20",
+            'warning', 'amber' => "$rest hover:text-amber-600 hover:bg-amber-50 focus:ring-amber-500 dark:hover:text-amber-400 dark:hover:bg-amber-900/20",
+            'yellow' => "$rest hover:text-yellow-600 hover:bg-yellow-50 focus:ring-yellow-500 dark:hover:text-yellow-400 dark:hover:bg-yellow-900/20",
+            'info', 'cyan' => "$rest hover:text-cyan-600 hover:bg-cyan-50 focus:ring-cyan-500 dark:hover:text-cyan-400 dark:hover:bg-cyan-900/20",
+            'orange' => "$rest hover:text-orange-600 hover:bg-orange-50 focus:ring-orange-500 dark:hover:text-orange-400 dark:hover:bg-orange-900/20",
+            'lime' => "$rest hover:text-lime-600 hover:bg-lime-50 focus:ring-lime-500 dark:hover:text-lime-400 dark:hover:bg-lime-900/20",
+            'teal' => "$rest hover:text-teal-600 hover:bg-teal-50 focus:ring-teal-500 dark:hover:text-teal-400 dark:hover:bg-teal-900/20",
+            'sky' => "$rest hover:text-sky-600 hover:bg-sky-50 focus:ring-sky-500 dark:hover:text-sky-400 dark:hover:bg-sky-900/20",
+            'indigo' => "$rest hover:text-indigo-600 hover:bg-indigo-50 focus:ring-indigo-500 dark:hover:text-indigo-400 dark:hover:bg-indigo-900/20",
+            'violet' => "$rest hover:text-violet-600 hover:bg-violet-50 focus:ring-violet-500 dark:hover:text-violet-400 dark:hover:bg-violet-900/20",
+            'purple' => "$rest hover:text-purple-600 hover:bg-purple-50 focus:ring-purple-500 dark:hover:text-purple-400 dark:hover:bg-purple-900/20",
+            'fuchsia' => "$rest hover:text-fuchsia-600 hover:bg-fuchsia-50 focus:ring-fuchsia-500 dark:hover:text-fuchsia-400 dark:hover:bg-fuchsia-900/20",
+            'pink' => "$rest hover:text-pink-600 hover:bg-pink-50 focus:ring-pink-500 dark:hover:text-pink-400 dark:hover:bg-pink-900/20",
+            'rose' => "$rest hover:text-rose-600 hover:bg-rose-50 focus:ring-rose-500 dark:hover:text-rose-400 dark:hover:bg-rose-900/20",
+            'slate' => "$rest hover:text-slate-700 hover:bg-slate-100 focus:ring-slate-500 dark:hover:text-slate-200 dark:hover:bg-slate-800/60",
+            'zinc' => "$rest hover:text-zinc-700 hover:bg-zinc-100 focus:ring-zinc-500 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/60",
+            'neutral' => "$rest hover:text-neutral-700 hover:bg-neutral-100 focus:ring-neutral-500 dark:hover:text-neutral-200 dark:hover:bg-neutral-800/60",
+            'stone' => "$rest hover:text-stone-700 hover:bg-stone-100 focus:ring-stone-500 dark:hover:text-stone-200 dark:hover:bg-stone-800/60",
+            'black' => "$rest hover:text-gray-900 hover:bg-gray-100 focus:ring-gray-500 dark:hover:text-white dark:hover:bg-white/10",
+            'white' => "$rest hover:text-gray-900 hover:bg-gray-100 focus:ring-gray-300 dark:hover:text-white dark:hover:bg-white/10",
+            'gray', 'secondary' => "$rest hover:text-gray-900 hover:bg-gray-100 focus:ring-gray-500 dark:hover:text-white dark:hover:bg-gray-700",
+            default => "$rest hover:text-gray-900 hover:bg-gray-100 focus:ring-gray-500 dark:hover:text-white dark:hover:bg-gray-700",
+        };
+    }
+
+    /**
      * Get badge color classes (soft background + text).
      *
      * Canonical palette shared by Badges, BadgeColumn, PollColumn and any soft

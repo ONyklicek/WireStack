@@ -6,11 +6,11 @@ namespace NyonCode\WireForms\Components;
 
 use Closure;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
+use NyonCode\WireCore\Foundation\Support\StoredFileUrlResolver;
 use NyonCode\WireForms\Contracts\ProvidesImplicitValidationRules;
 use NyonCode\WireForms\Contracts\ProvidesItemValidationRules;
 
@@ -45,6 +45,22 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
     protected bool $preserveFilenames = false;
 
     protected bool $deletable = true;
+
+    protected int $urlExpiryMinutes = 5;
+
+    /** @var (Closure(string): (string|null))|null */
+    protected ?Closure $previewUrlUsing = null;
+
+    protected bool $deletesFromDisk = false;
+
+    /** @var (Closure(string): void)|null */
+    protected ?Closure $deleteUsing = null;
+
+    /** @var (Closure(UploadedFile): (string|null))|null */
+    protected ?Closure $fileNameUsing = null;
+
+    /** @var (Closure(UploadedFile, string): (string|null))|null */
+    protected ?Closure $storeFileUsing = null;
 
     protected ?int $imageResizeTargetWidth = null;
 
@@ -153,12 +169,111 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
     }
 
     /**
+     * Name the stored file yourself instead of the hashed default or the
+     * original client name ({@see preserveFilenames()}).
+     *
+     * The callback receives the {@see UploadedFile} and returns the bare filename
+     * to store under (within {@see directory()} on {@see disk()}) — return an
+     * empty string or non-string to fall back to the default naming. For full
+     * control over the whole path, use {@see storeFileUsing()} instead.
+     *
+     * @param  Closure(UploadedFile): (string|null)  $callback
+     */
+    public function fileNameUsing(Closure $callback): static
+    {
+        $this->fileNameUsing = $callback;
+
+        return $this;
+    }
+
+    /**
+     * Own the entire store step — build the full path, choose the folder, write
+     * to the disk however you like.
+     *
+     * Takes precedence over {@see directory()} / {@see preserveFilenames()} /
+     * {@see fileNameUsing()}: when set, the field runs only your callback and
+     * keeps whatever stored path (relative to the disk) it returns. The callback
+     * receives the {@see UploadedFile} and the resolved disk name.
+     *
+     * @param  Closure(UploadedFile, string): (string|null)  $callback
+     */
+    public function storeFileUsing(Closure $callback): static
+    {
+        $this->storeFileUsing = $callback;
+
+        return $this;
+    }
+
+    /**
      * Whether already-stored files can be removed from the field (shows a
      * delete control next to each existing file). Defaults to true.
      */
     public function deletable(bool $condition = true): static
     {
         $this->deletable = $condition;
+
+        return $this;
+    }
+
+    /**
+     * Lifetime of the signed temporary URL generated for a stored file on a
+     * non-public disk (see {@see visibility()}). Ignored for public disks, which
+     * render a plain, non-expiring URL.
+     */
+    public function signedUrlExpiration(int $minutes): static
+    {
+        $this->urlExpiryMinutes = $minutes;
+
+        return $this;
+    }
+
+    /**
+     * Supply the browser URL for an already-stored file yourself.
+     *
+     * The escape hatch for a private disk whose driver cannot produce a URL — a
+     * `local` disk with no temporary-url route throws on both `url()` and
+     * `temporaryUrl()` — or simply to serve previews through your own signed
+     * route. The callback receives the stored `$path` and returns a URL or a
+     * `data:` URI (or null for "no preview, show the filename only"). When set it
+     * takes precedence over the built-in disk resolution.
+     *
+     * @param  Closure(string): (string|null)  $callback
+     */
+    public function previewUrlUsing(Closure $callback): static
+    {
+        $this->previewUrlUsing = $callback;
+
+        return $this;
+    }
+
+    /**
+     * Also delete the physical file from disk when a stored file is removed from
+     * the field.
+     *
+     * Off by default: removing a stored file from the field only drops the
+     * reference, leaving the file on disk (cleanup stays the application's
+     * concern). Opt in when the field owns the file's lifecycle.
+     */
+    public function deletesFromDisk(bool $condition = true): static
+    {
+        $this->deletesFromDisk = $condition;
+
+        return $this;
+    }
+
+    /**
+     * Run custom teardown when a stored file is removed from the field — delete
+     * the file plus a derived thumbnail, detach a record, anything.
+     *
+     * Providing a callback implies {@see deletesFromDisk()}: it means "yes, tear
+     * the stored file down", and your callback owns exactly how. The callback
+     * receives the stored `$path` and fully replaces the built-in disk delete.
+     *
+     * @param  Closure(string): void  $callback
+     */
+    public function deleteUsing(Closure $callback): static
+    {
+        $this->deleteUsing = $callback;
 
         return $this;
     }
@@ -332,7 +447,7 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
      * Accepts a single path or an array of paths (the field's state type is
      * `array`, but a single-file field may hold a bare string).
      *
-     * @return list<array{path: string, url: string, name: string, isImage: bool}>
+     * @return list<array{path: string, url: string|null, name: string, isImage: bool}>
      */
     public function getStoredFiles(mixed $state): array
     {
@@ -518,12 +633,22 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
     public function storeUploadedFile(UploadedFile $file): string
     {
         $disk = $this->getDisk();
+
+        // Full control: the callback owns the entire stored path.
+        if ($this->storeFileUsing !== null) {
+            $path = $this->evaluate($this->storeFileUsing, ['file' => $file, 'disk' => $disk]);
+
+            return is_string($path) ? $path : '';
+        }
+
         $directory = $this->getDirectory();
         $public = $this->getVisibility() === 'public';
 
-        if ($this->shouldPreserveFilenames()) {
-            $name = $file->getClientOriginalName();
+        // A custom filename (fileNameUsing / preserveFilenames) wins over the
+        // hashed default; null means "let the disk generate a hashed name".
+        $name = $this->resolveStoredFileName($file);
 
+        if ($name !== null) {
             $path = $public
                 ? $file->storePubliclyAs($directory, $name, $disk)
                 : $file->storeAs($directory, $name, $disk);
@@ -537,19 +662,89 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
     }
 
     /**
-     * Resolve a stored path to a browser URL. A value that is already a full URL
-     * is returned as-is; otherwise it is resolved through the configured disk.
+     * The filename to store an upload under, or null to let the disk generate a
+     * hashed one. A {@see fileNameUsing()} callback wins; otherwise
+     * {@see preserveFilenames()} keeps the original client name.
      */
-    public function resolveFileUrl(string $path): string
+    private function resolveStoredFileName(UploadedFile $file): ?string
     {
-        if (filter_var($path, FILTER_VALIDATE_URL)) {
-            return $path;
+        if ($this->fileNameUsing !== null) {
+            $name = $this->evaluate($this->fileNameUsing, ['file' => $file]);
+
+            return is_string($name) && $name !== '' ? $name : null;
         }
 
-        /** @var FilesystemAdapter $disk */
-        $disk = Storage::disk($this->getDisk());
+        if ($this->shouldPreserveFilenames()) {
+            return $file->getClientOriginalName();
+        }
 
-        return $disk->url($path);
+        return null;
+    }
+
+    /**
+     * Resolve a stored path to a browser URL.
+     *
+     * A caller-supplied {@see previewUrlUsing()} wins outright; otherwise the
+     * shared {@see StoredFileUrlResolver} handles the full URL / `data:` URI /
+     * public `url()` / private signed-URL ladder, honouring {@see visibility()}.
+     *
+     * A private `local` disk with no temporary-url route cannot produce a URL at
+     * all — both `url()` and `temporaryUrl()` throw — so a failed resolution
+     * degrades to `null` (the file shows as a filename without a thumbnail)
+     * rather than fatalling the whole field. Configure {@see previewUrlUsing()}
+     * to give such files a real preview.
+     */
+    public function resolveFileUrl(string $path): ?string
+    {
+        if ($this->previewUrlUsing !== null) {
+            $resolved = $this->evaluate($this->previewUrlUsing, ['path' => $path]);
+
+            return is_string($resolved) ? $resolved : null;
+        }
+
+        try {
+            return StoredFileUrlResolver::resolve(
+                $path,
+                $this->getDisk(),
+                $this->getVisibility(),
+                $this->urlExpiryMinutes,
+            );
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    public function shouldDeleteFromDisk(): bool
+    {
+        return $this->deletesFromDisk || $this->deleteUsing !== null;
+    }
+
+    /**
+     * Physically tear down a stored file when the field is configured to
+     * ({@see deletesFromDisk()} / {@see deleteUsing()}), otherwise a no-op.
+     *
+     * A custom {@see deleteUsing()} callback owns teardown entirely. Without one,
+     * the file is deleted from the configured disk — but only a genuine
+     * disk-relative path is ours to remove; a full URL / `data:` URI (an external
+     * reference the field never stored) is left untouched.
+     */
+    public function deleteStoredFile(string $path): void
+    {
+        if (! $this->shouldDeleteFromDisk()) {
+            return;
+        }
+
+        if ($this->deleteUsing !== null) {
+            $this->evaluate($this->deleteUsing, ['path' => $path]);
+
+            return;
+        }
+
+        if (! $this->isStoredReference($path) || filter_var($path, FILTER_VALIDATE_URL)) {
+            return;
+        }
+
+        Storage::disk($this->getDisk())->delete($path);
     }
 
     /**

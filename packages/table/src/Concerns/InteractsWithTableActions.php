@@ -179,6 +179,10 @@ trait InteractsWithTableActions
     protected function afterActionExecuted(): void
     {
         $this->invalidateTable();
+
+        // A delete may have emptied the current page; step back to the last
+        // populated page so the user is not stranded on an empty page.
+        $this->clampPageToBounds();
     }
 
     /**

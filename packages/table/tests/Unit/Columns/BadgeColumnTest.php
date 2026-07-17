@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireTable\Columns\BadgeColumn;
@@ -117,4 +118,18 @@ it('icon callback can return Icon enum', function () {
 
     expect($column->getIconForState('active'))->toBe('check')
         ->and($column->getIconForState('other'))->toBeNull();
+});
+
+it('renders the empty-cell text instead of a badge for a null state', function () {
+    // An empty value must not render an empty coloured pill; it shows the
+    // empty-cell placeholder like any other column.
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 1, 'status' => null]);
+
+    $column = BadgeColumn::make('status')->placeholder('—');
+
+    expect($column->renderCell($record))->toBe('—');
 });

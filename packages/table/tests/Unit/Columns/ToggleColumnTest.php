@@ -124,3 +124,19 @@ it('renders no icon markup when none is configured', function () {
 
     expect(ToggleColumn::make('active')->renderCell($record))->not->toContain('<svg');
 });
+
+it('exposes the configured on/off icons through its getters', function () {
+    // The getters mirror the setters as public API; the knob view reads the
+    // properties directly, so nothing else exercises them.
+    $column = ToggleColumn::make('active')->onIcon('check')->offIcon('x-mark');
+
+    expect($column->getOnIcon())->toBe('check')
+        ->and($column->getOffIcon())->toBe('x-mark');
+});
+
+it('has no on/off icons until they are set', function () {
+    $column = ToggleColumn::make('active');
+
+    expect($column->getOnIcon())->toBeNull()
+        ->and($column->getOffIcon())->toBeNull();
+});

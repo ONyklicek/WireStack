@@ -46,6 +46,14 @@ it('passes an unparseable value through untouched instead of throwing', function
     expect(DateTimePicker::make('d')->asDate()->dehydrateState('not a date'))->toBe('not a date');
 });
 
+it('returns an unparseable value verbatim when a format forces a parse attempt', function () {
+    // With a display format set, dehydrateState() parses the state to reformat
+    // it. An unparseable value makes the parse throw; it is caught and the raw
+    // state is handed back unchanged rather than fataling the save.
+    expect(DateTimePicker::make('d')->format('d/m/Y')->dehydrateState('zzz not a date zzz'))
+        ->toBe('zzz not a date zzz');
+});
+
 // ─── timezone(): both directions, or the time moves ─────────────────────────
 
 it('shows a stored app-zone datetime in the field timezone', function () {

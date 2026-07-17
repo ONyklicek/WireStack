@@ -122,3 +122,17 @@ it('can set font family', function () {
 it('has no font family by default', function () {
     expect(TextColumn::make('name')->getFontFamily())->toBeNull();
 });
+
+it('renders the font family into the text classes', function () {
+    // The setter storing the value is not enough — it has to reach the cell's
+    // classes. Each keyword maps to its Tailwind utility; anything else is
+    // passed through as font-<name>.
+    expect(TextColumn::make('a')->fontFamily('sans')->getTextClasses())->toContain('font-sans')
+        ->and(TextColumn::make('a')->fontFamily('serif')->getTextClasses())->toContain('font-serif')
+        ->and(TextColumn::make('a')->fontFamily('mono')->getTextClasses())->toContain('font-mono')
+        ->and(TextColumn::make('a')->fontFamily('brand')->getTextClasses())->toContain('font-brand');
+});
+
+it('adds no font utility when no family is set', function () {
+    expect(TextColumn::make('a')->getTextClasses())->not->toContain('font-');
+});

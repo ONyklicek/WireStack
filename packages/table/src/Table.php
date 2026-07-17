@@ -124,6 +124,9 @@ class Table implements Htmlable
 
     protected ?string $actionsColumnWidth = null;
 
+    /** Row-action presentation: 'solid' (default, filled buttons) or 'quiet' (neutral at rest, color on hover/focus). */
+    protected string $actionsStyle = 'solid';
+
     // Table styling
     protected bool $compact = false;
 
@@ -1072,6 +1075,49 @@ class Table implements Htmlable
     public function getActionsColumnWidth(): ?string
     {
         return $this->actionsColumnWidth;
+    }
+
+    /**
+     * Set the row-action presentation style.
+     *
+     * - 'solid' (default): filled, always-colored buttons — the current look.
+     * - 'quiet': neutral text at rest, semantic color on hover/focus, so a row
+     *   of actions stops competing with the data. Destructive actions stay
+     *   legible (red at rest); mark one action ->solid() to keep it prominent.
+     */
+    public function actionsStyle(string $style): static
+    {
+        $this->actionsStyle = $style;
+
+        return $this;
+    }
+
+    public function getActionsStyle(): string
+    {
+        return $this->actionsStyle;
+    }
+
+    /**
+     * Canonical owner of row-action presentation: returns the configured actions
+     * with the current style applied, so both actions-cell positions render
+     * identically. Applying quiet is idempotent (the same Action instance already
+     * renders for every row).
+     *
+     * @return array<int, Action|ActionGroup>
+     */
+    public function getRowActionsForDisplay(): array
+    {
+        $actions = array_values($this->actions);
+
+        if ($this->actionsStyle === 'quiet') {
+            foreach ($actions as $action) {
+                if ($action instanceof Action && ! $action->isDivider()) {
+                    $action->quiet();
+                }
+            }
+        }
+
+        return $actions;
     }
 
     // Table styling methods

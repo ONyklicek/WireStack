@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Columns\TextInputColumn;
 use NyonCode\WireTable\Services\CellValueWriter;
 
 /*
@@ -18,6 +19,19 @@ use NyonCode\WireTable\Services\CellValueWriter;
 class CvwAuthor extends Model
 {
     protected $table = 'cvw_authors';
+
+    protected $guarded = [];
+
+    public function tags()
+    {
+        return $this->belongsToMany(CvwTag::class, 'cvw_author_tag', 'author_id', 'tag_id')
+            ->withPivot('note');
+    }
+}
+
+class CvwTag extends Model
+{
+    protected $table = 'cvw_tags';
 
     protected $guarded = [];
 }
@@ -45,6 +59,18 @@ beforeEach(function () {
         $t->string('title');
         $t->foreignId('author_id')->nullable();
         $t->timestamps();
+    });
+
+    Schema::create('cvw_tags', function (Blueprint $t) {
+        $t->id();
+        $t->string('label');
+        $t->timestamps();
+    });
+    Schema::create('cvw_author_tag', function (Blueprint $t) {
+        $t->id();
+        $t->foreignId('author_id');
+        $t->foreignId('tag_id');
+        $t->string('note')->nullable();
     });
 
     $this->writer = new CellValueWriter;
@@ -85,4 +111,35 @@ test('a relation column with no loaded relation writes nothing rather than throw
     $record = $this->writer->write(Column::make('author.name'), $orphan, 'author.name', 'Nobody');
 
     expect($record->title)->toBe('Orphan');
+});
+
+test('an author save callback (saveUsing) outranks the built-in paths', function () {
+    // getSaveCallback() is the highest-priority path, distinct from the legacy
+    // editableUsing() callback the previous test covers.
+    $seen = null;
+    $column = TextInputColumn::make('title')->saveUsing(function ($record, $value, $col) use (&$seen) {
+        $seen = $value;
+        $record->title = "[{$value}]";
+        $record->save();
+    });
+
+    $this->writer->write($column, $this->post, 'title', 'wrapped');
+
+    expect($seen)->toBe('wrapped')
+        ->and(CvwPost::find($this->post->id)->title)->toBe('[wrapped]');
+});
+
+test('a pivot column writes onto the loaded pivot record', function () {
+    // Inline-editing a belongsToMany pivot attribute: the value lands on the
+    // row's loaded ->pivot model, not on the related model or the parent.
+    $tag = CvwTag::create(['label' => 'featured']);
+    $this->author->tags()->attach($tag->id, ['note' => 'old']);
+
+    // The record is the related model as loaded through the relation, carrying
+    // its pivot.
+    $loaded = $this->author->tags()->where('cvw_tags.id', $tag->id)->first();
+
+    $this->writer->write(Column::make('tags.note')->pivot(), $loaded, 'tags.note', 'new');
+
+    expect($this->author->tags()->where('cvw_tags.id', $tag->id)->first()->pivot->note)->toBe('new');
 });
