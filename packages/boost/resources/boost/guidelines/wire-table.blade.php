@@ -39,6 +39,11 @@ Build a data table inside a Livewire component using the `WithTable` trait and a
 - nothing at all when the state is an enum implementing `HasColor` — the color resolves automatically.
 The same four-way choice applies to icons: `->icon()`, `->icons([...])`, `->iconUsing(fn ($state) => …)`, or an enum with `HasIcon`.
 
+Dot-notation relation columns (`TextColumn::make('company.name')`) sort and filter through a real `LEFT JOIN`
+for singular relations (`belongsTo`/`hasOne`/`hasOneThrough`, including nested chains like `company.country.name`);
+the joined side is a scoped subquery that honours the related model's global scopes and any `->where()` on the
+relation, while to-many/morph relations are eager-loaded for display only.
+
 ### Filters
 
 `SelectFilter`, `DateFilter`, `NumberRangeFilter`, `TernaryFilter`. A filter query callback must return the
