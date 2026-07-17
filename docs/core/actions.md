@@ -268,9 +268,10 @@ Action::make('edit')
 ## Stacked (Nested) Modals
 
 Opening an action while a modal is already open **stacks** the new modal on top of
-the current one instead of replacing it. The original modal stays open, dimmed,
-behind the new one; closing the top modal returns you to the parent with its form
-data intact. There is no special API — any callback that receives the host
+the current one instead of replacing it. Every open modal is a **live frame**: the
+parent stays a fully reactive form behind the active one (dimmed and click-inert,
+but still re-rendering), and closing the top modal returns you to the parent with its
+form data intact. There is no special API — any callback that receives the host
 `$component` (a footer action, a field action, an infolist action) can open another
 action, and it just stacks:
 
@@ -310,16 +311,109 @@ Action::make('review')
     ]);
 ```
 
+The nested action can live in the top-level list, or be declared **inline** next
+to the action that opens it with `registerActions()` — the resolver finds it by
+name either way:
+
+```php
+Action::make('editOrder')
+    ->registerActions([                                            // [tl! focus]
+        Action::make('createCustomer')->form([...])->action(...),  // [tl! focus]
+    ])                                                             // [tl! focus]
+    ->modalFooterActions([
+        ModalFooterAction::make('newCustomer')
+            ->action(fn ($component) => $component->mountAction('createCustomer')),
+    ]);
+```
+
+### Returning data to the parent
+
+Because every level is a live frame in one component, a nested action can write
+straight back into an ancestor's form. Every action and footer callback receives
+these bindings alongside the usual `$data`/`$record`/`$component`:
+
+- `$set(path, value)` — write your own frame's form data.
+- `$setParent(path, value)` — write the **parent** frame's form data.
+- `$parentData` — read the parent frame's current form data.
+- `$setFrame(depth, path, value)` — write any frame by stack depth (power users).
+- `$arguments` — the arbitrary array you passed to `mountAction($name, [...])`.
+
+This is the canonical "create + select" pattern — a sub-form that fills a field on
+the form that opened it:
+
+```php
+Action::make('editOrder')
+    ->form([
+        TextInput::make('reference')->required(),
+        Select::make('customer_id')->options(fn () => Customer::pluck('name', 'id')),
+    ])
+    ->modalFooterActions([
+        ModalFooterAction::make('newCustomer')
+            ->label('New customer')->icon('plus')
+            ->action(fn ($component) => $component->mountAction('createCustomer')),
+    ])
+    ->action(fn (array $data) => $this->saveOrder($data));
+
+Action::make('createCustomer')
+    ->modalHeading('Create customer')
+    ->form([TextInput::make('name')->required()])
+    // Create the record and hand its id back to the parent's Select, then close.
+    ->action(function (array $data, $setParent) {                 // [tl! focus]
+        $customer = Customer::create($data);                      // [tl! focus]
+        $setParent('customer_id', $customer->id);                 // [tl! focus]
+    });                                                           // [tl! focus]
+```
+
+The write re-renders the whole stack, so the parent `Select` shows the new value
+the moment the child closes.
+
 Behaviour notes:
 
-- **Stacking depth is unlimited** — each level layers above the previous one with an
-  increasing `z-index`, and each backdrop deepens the dimming for a clear sense of depth.
+- **Stack as deep as you need** — each level layers above the previous one with an
+  increasing `z-index`; a single scrim covers everything beneath the top modal so a deep
+  stack never darkens into black. (A safety cap guards against runaway re-entrancy.)
+- **The parent stays live** — only the top modal is interactive, but every parent below
+  it keeps re-rendering, so a `$setParent(...)` write shows up behind the active modal
+  immediately.
 - **Close returns to the parent.** `Escape`, the close button, clicking the backdrop,
   or a footer action that closes the modal all pop just the **top** modal and resume the
   parent. The last close clears the stack.
 - **Form data is preserved** per level, so the parent modal is exactly as you left it.
 - A footer action that *opens* a nested modal is **not** auto-closed afterwards, so the
   modal it opened stays on top.
+
+### Navigating the stack
+
+Two more callback bindings compose deep flows without stacking another layer:
+
+- `$replace(name, arguments = [])` — swap the **active** modal for another **in place**.
+  The current top is popped and the named action mounts at the same depth, so parents
+  stay untouched. Use it to move *within* a modal — a "back to step one" button, or
+  trading an edit modal for a confirm modal — instead of piling on a new level. A
+  replaced row action's record is inherited automatically (pass `record`/`recordKey` in
+  `arguments` to override).
+- `$cancelParents(?upTo = null)` — close the active modal **and its parents**. With no
+  argument it dismisses the whole stack (one "Cancel all"); pass an action name to unwind
+  up to and including the nearest ancestor with that name.
+
+```php
+Action::make('editOrder')
+    ->form([/* … */])
+    ->modalFooterActions([
+        // Swap this modal for a confirmation, in place — no extra layer.
+        ModalFooterAction::make('archive')
+            ->label('Archive…')
+            ->action(fn ($replace) => $replace('confirmArchive')),        // [tl! focus]
+        // Abandon the entire nested flow at once.
+        ModalFooterAction::make('discard')
+            ->label('Discard all')
+            ->action(fn ($cancelParents) => $cancelParents()),            // [tl! focus]
+    ])
+    ->action(fn (array $data) => $this->saveOrder($data));
+```
+
+Both are also public methods (`$this->replaceMountedAction(...)`, `$this->cancelParentActions(...)`)
+so you can call them straight from `wire:click` or from `$component`.
 
 ## Lifecycle Hooks
 
@@ -386,10 +480,44 @@ Uses Alpine.js `@keydown` under the hood.
 
 ```php
 Action::make('cancel')
-    ->outlined()                    // outline variant instead of solid
+    ->outlined()                    // outline variant, instead of the default solid fill
     ->color('gray')
     ->size('sm');                   // xs, sm, md, lg
 ```
+
+## Quiet Row Actions
+
+By default a table's row actions render as solid, always-colored buttons. Set the
+table's action style to `quiet` for a calmer, more professional look — actions
+rest as neutral text and reveal their color only on hover or keyboard focus, so a
+row full of actions stops competing with the data.
+
+```php
+$table->actionsStyle('quiet'); // default is 'solid'
+```
+
+Behaviour of the quiet style:
+
+- Non-destructive actions rest neutral gray and gain their `->color()` on hover/focus.
+- **Destructive actions stay legible at rest** (red text), because touch devices have
+  no hover — a `DeleteAction` still reads as dangerous without interaction.
+- Every action keeps a visible keyboard focus ring.
+
+Keep a single action prominent by opting it back into the solid fill with `->solid()`:
+
+```php
+$table
+    ->actions([
+        Action::make('view')->icon('outline:eye'),
+        Action::make('edit')->icon('pencil')->color('primary'),
+        Action::make('approve')->icon('check')->color('success')->solid(), // stays a filled button
+        DeleteAction::make(),                                              // legible red at rest
+    ])
+    ->actionsStyle('quiet');
+```
+
+The quiet style is opt-in; existing tables are unaffected. `->solid()` and
+`->outlined()` remain available as per-action overrides.
 
 ## Extra Attributes
 
@@ -500,6 +628,13 @@ Shared across Action, BulkAction, HeaderAction:
 ->failureNotification(string $message)
 ->keyboardShortcut(string $keys)
 ->extraAttributes(array $attrs)
+```
+
+Row-action (`Action`) presentation overrides, honored under `Table::actionsStyle('quiet')`:
+
+```php
+->quiet(bool $quiet = true)   // neutral at rest, color on hover/focus (usually set table-wide)
+->solid(bool $solid = true)   // force the solid fill even under a quiet table
 ```
 
 ## Blade Components
