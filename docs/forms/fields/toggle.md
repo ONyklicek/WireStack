@@ -47,7 +47,7 @@ Toggle::make('published')
 |--------|------|-------------|
 | `onLabel(string\|Closure\|null)` | string | Label shown when toggled on |
 | `offLabel(string\|Closure\|null)` | string | Label shown when toggled off |
-| `onColor(string\|Color)` | string | Color when on (`primary`, `success`, `warning`, `danger`, `gray`) |
+| `onColor(string\|Color)` | string | Color when on — any palette color (see [Colors](../../core/foundation.md#colors)) |
 | `offColor(string\|Color)` | string | Color when off |
 | `onIcon(string\|Icon\|null)` | string | Icon when on |
 | `offIcon(string\|Icon\|null)` | string | Icon when off |

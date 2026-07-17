@@ -50,7 +50,7 @@ všechna tři místa najednou:
   sečtou v hlavní patičce jen odpovídající děti.
 
 Kompletní rozpracovaný příklad filtrů + rollupů + součtů viz
-[Podřádky — Sestavení diagramu](../sub-rows.md#building-the-diagram).
+[Podřádky — Sestavení diagramu](../sub-rows.md#sestaveni-diagramu).
 
 ```php
 $table

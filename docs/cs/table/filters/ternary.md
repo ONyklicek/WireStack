@@ -7,6 +7,11 @@ nav: false
 
 Trojstavový filtr: Yes / No / All. Ideální pro boolean sloupce a relace „má/nemá".
 
+Vykresluje se přes stejný combobox jako [`SelectFilter`](select.md) a `Select`
+field ve formulářích, takže otevřený boolean filtr vypadá stejně jako kterýkoli
+jiný select. „All" je placeholder — jeho výběrem se filtr zruší. Nativní `<select>`
+prohlížeče je opt-in přes [`->native()`](#nativni-html-select).
+
 ```php
 use NyonCode\WireTable\Filters\TernaryFilter;
 ```
@@ -59,6 +64,16 @@ TernaryFilter::make('overdue')
         : $query->where('due_at', '>=', now()))
 ```
 
+## Nativní HTML select
+
+```php
+TernaryFilter::make('is_active')
+    ->native()                      // nativní <select> element prohlížeče (rychlejší render)
+```
+
+Odhlásí filtr ze sdíleného comboboxu, takže přestane odpovídat ostatním selectům.
+Používej jen tam, kde je cena renderu důležitější než jednotný vzhled.
+
 ## API TernaryFilter
 
 ```php
@@ -66,6 +81,7 @@ TernaryFilter::make('overdue')
 ->falseLabel(string $label)         // výchozí: 'No'
 ->allLabel(string $label)           // placeholder pro option „bez filtru"
 ->nullable(bool $nullable = true)   // „false" také odpovídá IS NULL
+->native(bool $native = true)       // opt-in nativní <select> prohlížeče (výchozí: false)
 ->query(Closure $fn)                // vlastní dotaz: fn(Builder $q, $value)
 ```
 

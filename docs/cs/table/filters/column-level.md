@@ -5,7 +5,7 @@ nav: false
 
 # Filtry na úrovni sloupce
 
-Kromě dedikovaných komponent filtrů může mít jakýkoli sloupec inline filtr přímo ve své hlavičkové buňce. Viz [Sloupce — Filtrování na úrovni sloupce](../columns/editing.md#column-level-filtering).
+Kromě dedikovaných komponent filtrů může mít jakýkoli sloupec inline filtr přímo ve své hlavičkové buňce. Viz [Sloupce — Filtrování na úrovni sloupce](../columns/editing.md#filtrovani-na-urovni-sloupce).
 
 ```php
 TextColumn::make('status')

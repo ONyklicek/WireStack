@@ -62,6 +62,7 @@ Section::make('info')
 | `collapsed()` | Začít sbalené |
 | `compact()` | Zmenšený padding |
 | `aside()` | Layout vedle sebe |
+| `headerActions(array)` | Akce vykreslené v hlavičce sekce (alias pro `actions()`) |
 
 > Ve formulářích můžete také importovat tenký alias `NyonCode\WireForms\Components\Layout\Section`
 > (deprecated ve v2.0). Jen vymění form-specifický markup; preferujte kanonický

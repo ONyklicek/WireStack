@@ -26,4 +26,4 @@ Hidden::make('status')
     ->rules(['in:draft,published,archived'])
 ```
 
-Všechny sdílené metody viz [Společné API pole](index.md#common-field-api).
+Všechny sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

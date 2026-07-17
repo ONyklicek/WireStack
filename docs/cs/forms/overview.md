@@ -359,7 +359,8 @@ Každé pole dědí:
 ->disabled(bool|Closure $disabled = true)
 ->size('sm'|'md'|'lg'|'xl')
 ->columnSpan(int|string $span)          // šířka sloupce v gridu
-->default(mixed $value)                 // výchozí hodnota
+->default(mixed $value)                 // výchozí hodnota (create mód / chybějící klíče)
+->defaultOnNull(bool $condition = true) // doplnit výchozí hodnotu i pro null v edit módu
 ->extraAttributes(array $attrs)         // HTML atributy
 ->live()                                // wire:model.live
 ->debounce(int $ms = 500)              // wire:model.blur s debounce

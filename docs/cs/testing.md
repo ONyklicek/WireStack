@@ -221,7 +221,7 @@ zavolejte jeho settery a asertujte na jeho gettery nebo `toHtml()`.
 ## Testování pluginů
 
 Instancujte `PluginManager` přímo pro test registrace, bootu a hooků. Kompletní
-vzor viz [Core Pluginy → Testování pluginů](core/plugins.md#testing-plugins).
+vzor viz [Core Pluginy → Testování pluginů](core/plugins.md#testovani-pluginu).
 
 ```php
 use NyonCode\WireCore\Core\Plugin\PluginManager;

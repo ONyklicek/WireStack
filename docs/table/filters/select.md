@@ -7,6 +7,10 @@ nav: false
 
 Dropdown filter for predefined options. The most common filter type.
 
+Renders through the same combobox as the forms `Select` field, so an open filter
+looks identical to an open form select. Opt into a browser-native `<select>` with
+[`->native()`](#native-html-select).
+
 ```php
 use NyonCode\WireTable\Filters\SelectFilter;
 ```
@@ -56,15 +60,19 @@ SelectFilter::make('country')
     ->label('Country')
 ```
 
-Renders a searchable dropdown (Alpine.js powered) instead of native `<select>`.
+Adds a search input to the dropdown. The surface is the same combobox as a
+non-searchable filter — only the search input is added.
 
 ## Native HTML Select
 
 ```php
 SelectFilter::make('type')
     ->options([...])
-    ->native()                       // native <select> element (faster render)
+    ->native()                       // browser-native <select> element (faster render)
 ```
+
+Opts out of the shared combobox, so the filter no longer matches the form select.
+Prefer it only where render cost matters more than a consistent look.
 
 ## From Database
 
@@ -108,6 +116,6 @@ SelectFilter::make('has_avatar')
 ```php
 ->options(array|string|Closure $options) // ['value' => 'Label', ...] or an enum class
 ->multiple(bool $multiple = true)    // multi-select mode
-->searchable(bool $searchable = true) // searchable dropdown
-->native(bool $native = true)        // native <select>
+->searchable(bool $searchable = true) // add a search input to the dropdown
+->native(bool $native = true)        // opt into a browser-native <select> (default: false)
 ```

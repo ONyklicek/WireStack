@@ -32,7 +32,7 @@ Rating::make('priority')
 
 ```php
 Rating::make('satisfaction')
-    ->color('primary')   // primary, success, danger, warning (default)
+    ->color('primary')   // any palette color ('primary' is the default)
 ```
 
 ## Non-Clearable
@@ -48,7 +48,7 @@ Rating::make('score')
 |--------|------|-------------|
 | `max(int)` | int | Number of stars (default `5`) |
 | `allowHalf(bool)` | bool | Enable half-star selection (default `false`) |
-| `color(string)` | string | Filled-star colour: `warning`, `primary`, `success`, `danger` |
+| `color(string)` | string | Filled-star colour — any palette color (see [Colors](../../core/foundation.md#colors)) |
 | `clearable(bool)` | bool | Click active star to reset to 0 (default `true`) |
 | `default(int\|float\|Closure)` | number | Pre-filled value |
 | `disabled(bool\|Closure)` | bool | Disable the rating |

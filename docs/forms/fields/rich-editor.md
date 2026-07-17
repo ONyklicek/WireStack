@@ -54,13 +54,6 @@ RichEditor::make('content')
     ->disableAllToolbarButtons()   // plain rich text, no toolbar
 ```
 
-## File Attachments
-
-```php
-RichEditor::make('content')
-    ->fileAttachmentsDirectory('content-images')
-```
-
 ## Character Limit
 
 ```php
@@ -75,7 +68,6 @@ RichEditor::make('summary')
 | `toolbarButtons(array)` | array | Replace the toolbar with this set of buttons |
 | `disableToolbarButtons(array)` | array | Remove specific buttons from the toolbar |
 | `disableAllToolbarButtons()` | — | Show no toolbar (plain rich text) |
-| `fileAttachmentsDirectory(string\|null)` | string | Upload directory for embedded images/files |
 | `maxLength(int\|null)` | int | Character limit |
 | `disabled(bool\|Closure)` | bool | Disable the editor |
 | `readOnly(bool\|Closure)` | bool | Read-only mode |

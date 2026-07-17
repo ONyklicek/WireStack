@@ -100,7 +100,7 @@ TextColumn::make('category')
 
 The `options` argument of both `editable(type: 'select', …)` and `filterable()` /
 `filterAsSelect()` accepts a PHP enum class as well — it expands to `value => label` exactly
-like the dedicated `SelectColumn`/`SelectFilter`. See [Enum Options](#enum-options).
+like the dedicated `SelectColumn`/`SelectFilter`. See [Enum Options](select.md#enum-options).
 
 ### How inline saves work
 

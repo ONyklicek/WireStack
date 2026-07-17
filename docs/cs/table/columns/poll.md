@@ -42,7 +42,7 @@ PollColumn::make('status')
 PollColumn::make('job_status')
     ->forJobStatus()           // předkonfigurováno pro stavy Laravel Jobu
     ->intervalSeconds(3)
-    ->stopWhen(fn ($state) => in_array($state, ['completed', 'failed']))
+    ->stopWhen(fn ($record) => in_array($record->job_status, ['completed', 'failed']))
 ```
 
 ## Preset progress baru
@@ -51,7 +51,7 @@ PollColumn::make('job_status')
 PollColumn::make('progress')
     ->forProgress()            // UI progress baru (0-100)
     ->intervalSeconds(2)
-    ->stopWhen(fn ($state) => $state >= 100)
+    ->stopWhen(fn ($record) => $record->progress >= 100)
 ```
 
 ## Podmíněný polling
@@ -59,10 +59,14 @@ PollColumn::make('progress')
 ```php
 PollColumn::make('sync_status')
     ->intervalSeconds(5)
-    ->pollWhile(fn ($state) => $state === 'syncing')   // pollovat jen během syncování
+    ->pollWhile(fn ($record) => $record->sync_state === 'syncing')   // pollovat jen během syncování
     ->pollForever(false)                                // zastavit, když podmínka selže
-    ->maxPolls(60)                                      // bezpečnostní limit
 ```
+
+> Limit počtu pollů neexistuje. `maxPolls()` ho sliboval a nevynucoval nic:
+> sloupec nevidí, kolikrát už polloval — počítadlo by muselo žít v hostiteli,
+> který ho nikdy nevedl. Polling omez přes `stopWhen()` / `pollWhile()` /
+> `stopOnComplete()`, což jsou podmínky, které sloupec vyhodnotit umí.
 
 ## Vlastní resolvování stavu
 
@@ -78,12 +82,18 @@ PollColumn::make('deployment')
 PollColumn::make('status')
     ->badge()
     ->colors([
-        'success' => 'online',
-        'danger' => 'offline',
-        'warning' => 'degraded',
+        'online' => 'success',
+        'offline' => 'danger',
+        'degraded' => 'warning',
     ])
     ->intervalSeconds(30)
 ```
+
+Mapa je klíčovaná **stavem**, stejně jako u `BadgeColumn` — a stejně jako
+`->stateColors()` výše. Stav, který mapa neuvádí, spadne zpět na vlastní
+`->color()` sloupce, a když ani ten není nastavený, na `gray`. Pokud je
+pollovaný atribut enum cast implementující kontrakt `HasColor`, obarví si badge
+sám i bez mapy.
 
 ## Indikátor načítání
 
@@ -99,9 +109,23 @@ PollColumn::make('data')
 ```php
 PollColumn::make('batch_progress')
     ->intervalSeconds(3)
-    ->onComplete(fn ($record) => Notification::success("Batch {$record->id} done"))
-    ->stopWhen(fn ($state) => $state === 'done')
+    ->stopWhen(fn ($record) => $record->batch_progress === 'done')
 ```
+
+## Zastavení na koncovém stavu
+
+`stopOnComplete()` je vypsaná obvyklá varianta: zastavit, jakmile stavový sloupec
+dosáhne koncové hodnoty.
+
+```php
+PollColumn::make('status')
+    ->stopOnComplete()                       // status v completed|failed|cancelled
+    ->stopOnComplete('state', ['done'])      // jiný sloupec a stavy
+```
+
+> Callbacky dostanou **záznam**, ne stav buňky — `stopWhen(fn ($record) => …)`.
+> Closure porovnávající svůj argument s řetězcem by se nikdy netrefila a sloupec
+> by polloval donekonečna.
 
 ## API PollColumn
 
@@ -110,9 +134,9 @@ PollColumn::make('batch_progress')
 ->interval(int|Closure $milliseconds)    // raw milisekundy (např. 5000)
 ->intervalSeconds(int|Closure $seconds)  // sekundy (použijte pro intervaly ve stylu '5s')
 ->pollForever(bool $forever = true)      // nezastavovat
-->maxPolls(int $max)                     // bezpečnostní limit
-->stopWhen(Closure $fn)                  // fn($state) => bool
-->pollWhile(Closure $fn)                 // fn($state) => bool
+->stopWhen(Closure $fn)                  // fn($record, $column) => bool — zastaví, jakmile vrátí true
+->stopOnComplete(string $statusColumn = 'status', array $completeStates = ['completed', 'failed', 'cancelled'])
+->pollWhile(Closure $fn)                 // fn($record, $column) => bool — polluje, dokud vrací true
 ->pollWhilePending()                     // zkratka: pollovat během 'pending'
 
 // Zobrazení stavu
@@ -130,8 +154,8 @@ PollColumn::make('batch_progress')
 
 // UI volby
 ->badge(bool $badge = true)              // vykreslit jako badge
-->colors(array $map)                     // mapa barev badge
-->colorUsing(Closure $fn)                // dynamická barva
+->colors(array $map)                     // ['state_value' => 'color_name'|Color, ...]
+->colorUsing(Closure $fn)                // fn($state) => 'color_name'|Color|null
 ->size(string $size)                     // velikost badge
 ->loadingIndicator(?string $type)        // 'spinner', 'dots', 'pulse'
 ->withoutLoadingIndicator()
@@ -142,6 +166,5 @@ PollColumn::make('batch_progress')
 ->rowLevelPolling(bool $rowLevel = true) // pollovat per řádek (ne celou tabulku)
 
 // Callbacky
-->onComplete(Closure $fn)
 ->refreshMethod(string $method)          // Livewire metoda při obnovení
 ```

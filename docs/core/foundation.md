@@ -347,23 +347,34 @@ file rather than editing icon paths by hand.
 `->color()` accepts the **complete Tailwind palette** on every surface. Two vocabularies
 resolve through the same canonical map:
 
-<div class="wire-swatches"><p class="wire-swatch-group">Semantic roles</p><div class="wire-swatch-grid"><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: var(--primary)"></span><span class="wire-swatch__name">primary</span><span class="wire-swatch__alias">your accent</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #6b7280"></span><span class="wire-swatch__name">gray</span><span class="wire-swatch__alias">secondary</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #10b981"></span><span class="wire-swatch__name">success</span><span class="wire-swatch__alias">green · emerald</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #ef4444"></span><span class="wire-swatch__name">danger</span><span class="wire-swatch__alias">red</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #f59e0b"></span><span class="wire-swatch__name">warning</span><span class="wire-swatch__alias">amber · yellow</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #06b6d4"></span><span class="wire-swatch__name">info</span><span class="wire-swatch__alias">cyan</span></div></div><p class="wire-swatch-group">Raw hue families</p><div class="wire-swatch-grid"><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #64748b"></span><span class="wire-swatch__name">slate</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #71717a"></span><span class="wire-swatch__name">zinc</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #737373"></span><span class="wire-swatch__name">neutral</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #78716c"></span><span class="wire-swatch__name">stone</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #f97316"></span><span class="wire-swatch__name">orange</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #84cc16"></span><span class="wire-swatch__name">lime</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #14b8a6"></span><span class="wire-swatch__name">teal</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #0ea5e9"></span><span class="wire-swatch__name">sky</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #6366f1"></span><span class="wire-swatch__name">indigo</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #8b5cf6"></span><span class="wire-swatch__name">violet</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #a855f7"></span><span class="wire-swatch__name">purple</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #d946ef"></span><span class="wire-swatch__name">fuchsia</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #ec4899"></span><span class="wire-swatch__name">pink</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #f43f5e"></span><span class="wire-swatch__name">rose</span></div></div></div>
+<div class="wire-swatches"><p class="wire-swatch-group">Semantic roles</p><div class="wire-swatch-grid"><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: var(--primary)"></span><span class="wire-swatch__name">primary</span><span class="wire-swatch__alias">your accent</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #6b7280"></span><span class="wire-swatch__name">gray</span><span class="wire-swatch__alias">secondary</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #10b981"></span><span class="wire-swatch__name">success</span><span class="wire-swatch__alias">emerald</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #ef4444"></span><span class="wire-swatch__name">danger</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #f59e0b"></span><span class="wire-swatch__name">warning</span><span class="wire-swatch__alias">amber</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #06b6d4"></span><span class="wire-swatch__name">info</span></div></div><p class="wire-swatch-group">Raw hue families</p><div class="wire-swatch-grid"><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #3b82f6"></span><span class="wire-swatch__name">blue</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #22c55e"></span><span class="wire-swatch__name">green</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #ef4444"></span><span class="wire-swatch__name">red</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #eab308"></span><span class="wire-swatch__name">yellow</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #06b6d4"></span><span class="wire-swatch__name">cyan</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #64748b"></span><span class="wire-swatch__name">slate</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #71717a"></span><span class="wire-swatch__name">zinc</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #737373"></span><span class="wire-swatch__name">neutral</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #78716c"></span><span class="wire-swatch__name">stone</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #f97316"></span><span class="wire-swatch__name">orange</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #84cc16"></span><span class="wire-swatch__name">lime</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #14b8a6"></span><span class="wire-swatch__name">teal</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #0ea5e9"></span><span class="wire-swatch__name">sky</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #6366f1"></span><span class="wire-swatch__name">indigo</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #8b5cf6"></span><span class="wire-swatch__name">violet</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #a855f7"></span><span class="wire-swatch__name">purple</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #d946ef"></span><span class="wire-swatch__name">fuchsia</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #ec4899"></span><span class="wire-swatch__name">pink</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #f43f5e"></span><span class="wire-swatch__name">rose</span></div></div><p class="wire-swatch-group">Achromatic (adaptive)</p><div class="wire-swatch-grid"><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #ffffff; box-shadow: inset 0 0 0 1px #d1d5db"></span><span class="wire-swatch__name">white</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #000000"></span><span class="wire-swatch__name">black</span></div></div></div>
 
 **Semantic roles** — fixed brand hues that carry meaning:
 
 | Name | Resolves to |
 |------|-------------|
-| `primary` (alias `blue`) | Brand primary |
-| `success` (alias `green`, `emerald`) | Emerald |
-| `danger` (alias `red`) | Red |
-| `warning` (alias `yellow`, `amber`) | Amber |
-| `info` (alias `cyan`) | Cyan |
+| `primary` | Brand primary |
+| `success` (alias `emerald`) | Emerald |
+| `danger` | Red |
+| `warning` (alias `amber`) | Amber |
+| `info` | Cyan |
 | `gray` (alias `secondary`) | Neutral gray |
 
 **Raw hue families** — every Tailwind color, for finer control:
 
-`slate`, `zinc`, `neutral`, `stone`, `orange`, `lime`, `teal`, `sky`, `indigo`,
-`violet`, `purple`, `fuchsia`, `pink`, `rose`.
+`blue`, `green`, `red`, `yellow`, `cyan`, `slate`, `zinc`, `neutral`, `stone`,
+`orange`, `lime`, `teal`, `sky`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`,
+`rose`.
+
+> **Literal hues are not aliases.** `blue`, `green` and `yellow` are their own
+> literal Tailwind hues — `blue` is distinct from the re-themeable brand `primary`,
+> `green` from `success`/`emerald`, and `yellow` from `warning`/`amber`. `red` and
+> `cyan` render the same hue as `danger`/`info` but stay available by name.
+
+**Achromatic endpoints** — `white` and `black`. Tailwind has no numeric
+`white`/`black` scale, so these resolve **adaptively**: `black` is a dark ink/fill in
+light mode and flips to white in dark mode, `white` is the inverse — so they stay
+readable on both themes.
 
 ```php
 Action::make('delete')->color('danger');   // semantic role
@@ -385,7 +396,9 @@ on a badge, a solid/outlined/link button, a modal, a choice card, and a chart ba
 `Foundation\Concerns\HasColor` is the **single source of truth** for color → Tailwind
 class mapping. Every surface delegates to it instead of re-encoding `match` maps,
 so a semantic color resolves to the same hue everywhere (`success` → emerald,
-`info` → cyan, `blue`/`primary` → primary).
+`info` → cyan, `primary` → your brand accent), while literal hues like `blue`,
+`green` and `yellow` and the adaptive `white`/`black` endpoints resolve to
+themselves.
 
 | Resolver | Surface |
 |----------|---------|

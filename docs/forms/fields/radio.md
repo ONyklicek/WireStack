@@ -198,7 +198,7 @@ Radio::make('plan')->options([...])->cards()->color('success');
 Radio::make('align')->options([...])->buttons()->color(Color::Danger);
 ```
 
-Supported colors: the full Tailwind palette — the semantic roles (`primary`, `success`, `danger`, `warning`, `info`, `gray`) plus every raw hue family (`slate`, `zinc`, `neutral`, `stone`, `orange`, `lime`, `teal`, `sky`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`).
+Supported colors: the full Tailwind palette — the semantic roles (`primary`, `success`, `danger`, `warning`, `info`, `gray`), every raw hue family (`blue`, `green`, `red`, `yellow`, `cyan`, `slate`, `zinc`, `neutral`, `stone`, `orange`, `lime`, `teal`, `sky`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`) and the adaptive achromatic endpoints (`white`, `black`). The literal hues are distinct from the semantic roles — `blue` ≠ `primary`, `green` ≠ `success`, `yellow` ≠ `warning`.
 
 ### Per-option colors
 

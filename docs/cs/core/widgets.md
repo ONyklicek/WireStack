@@ -35,8 +35,8 @@ Každý widget sdílí stejný fluent builder, takže nadpis, viditelnost, autor
 8. [CustomWidget](#customwidget)
 9. [Polling](#polling)
 10. [Dashboard layout (WithWidgets)](#dashboard-layout-withwidgets)
-11. [Autorizace](#authorization)
-12. [Reference Widget API](#widget-api-reference)
+11. [Autorizace](#autorizace)
+12. [Reference Widget API](#reference-widget-api)
 
 ---
 
@@ -161,7 +161,7 @@ Stat::make('Active Users', '2,847')
 Stat::make(string $label, string $value)
 ->description(?string $description)       // sekundární text
 ->descriptionIcon(?string $icon)          // ikona vedle popisu
-->color(?string $color)                   // 'success', 'danger', 'warning', 'primary', 'gray'
+->color(?string $color)                   // libovolný klíč barvy palety (např. 'success', 'danger', 'primary')
 ->icon(?string $icon)                     // ikona stat karty
 ->chart(array $data)                      // sparkline datové body (int|float)
 ->extraAttributes(array $attrs)           // vlastní HTML atributy
@@ -635,7 +635,7 @@ interface HasWidgets
 <a id="authorization"></a>
 ## Autorizace
 
-Widgety dědí autorizaci z `HasVisibility`, který používá trait `HasAuthorization`. Detaily viz [Autorizace](#authorization).
+Widgety dědí autorizaci z `HasVisibility`, který používá trait `HasAuthorization`. Detaily viz [Autorizace](#autorizace).
 
 ```php
 StatsOverviewWidget::make()

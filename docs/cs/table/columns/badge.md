@@ -13,33 +13,44 @@ use NyonCode\WireTable\Columns\BadgeColumn;
 
 ## Základní použití
 
+Mapa je klíčovaná **stavem**, hodnota je barva, kterou pro něj badge dostane:
+
 ```php
 BadgeColumn::make('status')
     ->colors([
-        'success' => 'active',      // zelený badge pro 'active'
-        'danger' => 'banned',       // červený badge pro 'banned'
-        'warning' => 'pending',     // žlutý badge pro 'pending'
-        'gray' => 'draft',          // šedý badge pro 'draft'
-        'primary' => 'featured',    // modrý badge pro 'featured'
-        'info' => 'processing',     // azurový badge pro 'processing'
+        'active' => 'success',      // zelený badge pro 'active'
+        'banned' => 'danger',       // červený badge pro 'banned'
+        'pending' => 'warning',     // žlutý badge pro 'pending'
+        'draft' => 'gray',          // šedý badge pro 'draft'
+        'featured' => 'primary',    // modrý badge pro 'featured'
+        'processing' => 'info',     // azurový badge pro 'processing'
     ])
 ```
 
+Stav, který mapa neuvádí, spadne zpět na vlastní `->color()` sloupce, a když ani
+ten není nastavený, na `gray`. Hodnoty jde zapsat i enumem `Color`
+(`'active' => Color::Success`).
+
 ## S ikonami
+
+`->icons()` je klíčovaná stavem úplně stejně a stav, který mapa neuvádí, spadne
+zpět na vlastní `->icon()` sloupce — když ani ten není nastavený, ikona se
+nezobrazí. Enum stav implementující kontrakt `HasIcon` si ikonu vybere sám i bez
+mapy.
 
 ```php
 BadgeColumn::make('priority')
     ->colors([
-        'danger' => 'critical',
-        'warning' => 'high',
-        'info' => 'medium',
-        'gray' => 'low',
+        'critical' => 'danger',
+        'high' => 'warning',
+        'medium' => 'info',
+        'low' => 'gray',
     ])
     ->icons([
-        'exclamation' => 'critical',
-        'arrow-up' => 'high',
-        'minus' => 'medium',
-        'arrow-down' => 'low',
+        'critical' => 'exclamation',
+        'high' => 'arrow-up',
+        'medium' => 'minus',
+        'low' => 'arrow-down',
     ])
 ```
 
@@ -68,9 +79,9 @@ BadgeColumn::make('role')
         default => ucfirst($state),
     })
     ->colors([
-        'danger' => 'super_admin',
-        'primary' => 'admin',
-        'success' => 'editor',
+        'super_admin' => 'danger',
+        'admin' => 'primary',
+        'editor' => 'success',
     ])
 ```
 
@@ -84,12 +95,12 @@ BadgeColumn::make('tag')
 ## API BadgeColumn
 
 ```php
-->colors(array $map)                 // ['color_name' => 'state_value', ...]
-->colorUsing(Closure $fn)            // fn($state) => 'color_name'
-->icons(array $map)                  // ['icon_name' => 'state_value', ...]
-->iconUsing(Closure $fn)             // fn($state) => 'icon_name'
+->colors(array $map)                 // ['state_value' => 'color_name'|Color, ...]
+->colorUsing(Closure $fn)            // fn($state) => 'color_name'|Color|null
+->icons(array $map)                  // ['state_value' => 'icon_name'|Icon, ...]
+->iconUsing(Closure $fn)             // fn($state) => 'icon_name'|Icon|null
 ->size(string $size)                 // 'xs', 'sm', 'md', 'lg'
 ->getSize(): string
-->getColorForState($state): string
+->getColorForState($state): ?string
 ->getIconForState($state): ?string
 ```

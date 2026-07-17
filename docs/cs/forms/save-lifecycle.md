@@ -208,7 +208,7 @@ try {
 
 ## Krok 6: Uložení relací
 
-Po perzistenci modelu `RelationshipSaveHandler` nakaskáduje data Repeater polí do relací modelu. Tento krok běží jen když je výsledek perzistence instance Eloquent `Model` — což zahrnuje `Model` vrácený z vlastního callbacku `using()` (viz [Vlastní perzistence](#custom-persistence)).
+Po perzistenci modelu `RelationshipSaveHandler` nakaskáduje data Repeater polí do relací modelu. Tento krok běží jen když je výsledek perzistence instance Eloquent `Model` — což zahrnuje `Model` vrácený z vlastního callbacku `using()` (viz [Vlastní perzistence](#vlastni-perzistence)).
 
 Uživatelský kód s tímto krokem přímo neinteraguje; řeší se automaticky pro Repeater pole s nakonfigurovaným `->relationship()`.
 

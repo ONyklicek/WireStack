@@ -118,7 +118,7 @@ přes miliony řádků — nikdy je nenačítá do paměti.
 Na **sloupci podřádku** se rozsahy dělí stejně: `subRows` vykreslí mezisoučet
 per rodič uvnitř rozbaleného panelu, zatímco `query` (výchozí) vykreslí
 **celkový součet všech dětí napříč všemi rodiči** v hlavní patičce — viz
-[Celkové součty ze sloupců podřádků](#grand-totals-from-sub-row-columns).
+[Celkové součty ze sloupců podřádků](#celkove-soucty-ze-sloupcu-podradku).
 
 ### Přepínač rozsahu
 
@@ -273,7 +273,7 @@ v hlavní patičce, bez rollup sloupce:
 
 Součet se počítá v SQL nad dětskou tabulkou, omezený na aktuální množinu rodičů,
 a respektuje vše, co respektují zobrazené děti:
-[`Filter::subRows()`](filters/relationships.md#filtering-by-sub-row-values) zúžené filtry,
+[`Filter::subRows()`](filters/relationships.md#filtrovani-podle-hodnot-podradku) zúžené filtry,
 `subRowQuery()` a interaktivní lišta filtrů podřádků. Přepínač rozsahu patičky
 platí také — `All` sečte děti všech filtrovaných rodičů, `This page` jen děti
 rodičů na aktuální stránce, `Selection` jen děti zaškrtnutých rodičů.

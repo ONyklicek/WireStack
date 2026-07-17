@@ -10,13 +10,13 @@ a upravte.
 
 | Chci… | Recept |
 |------------|--------|
-| Zobrazit pole jen když má jiné pole hodnotu | [Podmíněná pole](#conditional-fields) |
-| Transformovat data před uložením | [Hashovat heslo při uložení](#hash-a-password-on-save) |
-| Načíst existující záznam do formuláře | [Editovat existující záznam](#edit-an-existing-record) |
-| Nahradit výchozí perzistenci | [Vlastní save logika](#custom-save-logic) |
-| Spustit side efekty po úspěšném uložení | [Side efekty po uložení](#side-effects-after-save) |
-| Zúžit tabulku na aktuálního uživatele/tenanta | [Zúžit dotaz tabulky](#scope-a-table-query) |
-| Předvyplnit výchozí hodnoty z requestu nebo auth uživatele | [Dynamické výchozí hodnoty](#dynamic-defaults) |
+| Zobrazit pole jen když má jiné pole hodnotu | [Podmíněná pole](#podminena-pole) |
+| Transformovat data před uložením | [Hashovat heslo při uložení](#hashovat-heslo-pri-ulozeni) |
+| Načíst existující záznam do formuláře | [Editovat existující záznam](#editovat-existujici-zaznam) |
+| Nahradit výchozí perzistenci | [Vlastní save logika](#vlastni-save-logika) |
+| Spustit side efekty po úspěšném uložení | [Side efekty po uložení](#side-efekty-po-ulozeni) |
+| Zúžit tabulku na aktuálního uživatele/tenanta | [Zúžit dotaz tabulky](#zuzit-dotaz-tabulky) |
+| Předvyplnit výchozí hodnoty z requestu nebo auth uživatele | [Dynamické výchozí hodnoty](#dynamicke-vychozi-hodnoty) |
 
 ---
 

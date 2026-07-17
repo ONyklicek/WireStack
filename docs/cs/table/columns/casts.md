@@ -124,4 +124,4 @@ TextColumn::make('meta')   // vykreslí kompaktní JSON: {"k":"v"} — nikdy dos
 Stejná normalizace běží všude, kde se cast hodnota zobrazuje nebo zapisuje: text/badge/icon/select
 sloupce, **exporty** (CSV/Excel/PDF exportují label zobrazení / kompaktní JSON), **`groupBy()`**
 hlavičky a **souhrny**, **indikátorové chipy filtrů** a **infolist entries**. Podkladový
-`EnumResolver` a kontrakty viz [Foundation → Enumy](../../core/foundation.md#enums).
+`EnumResolver` a kontrakty viz [Foundation → Enumy](../../core/foundation.md#enumy).

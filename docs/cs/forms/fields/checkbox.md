@@ -52,4 +52,4 @@ Checkbox::make('show_advanced')
 | `required()` | — | Označit jako povinné |
 | `live()` | — | Spustit Livewire update při změně |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#common-field-api).
+Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

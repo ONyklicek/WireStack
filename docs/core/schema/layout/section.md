@@ -63,6 +63,7 @@ Section::make('info')
 | `collapsed()` | Start collapsed |
 | `compact()` | Reduced padding |
 | `aside()` | Side-by-side layout |
+| `headerActions(array)` | Actions rendered in the section header (alias for `actions()`) |
 
 > In forms you may also import the thin `NyonCode\WireForms\Components\Layout\Section`
 > alias (deprecated in v2.0). It only swaps in form-specific markup; prefer the

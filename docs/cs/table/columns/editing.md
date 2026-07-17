@@ -100,7 +100,7 @@ TextColumn::make('category')
 
 Argument `options` u `editable(type: 'select', …)` i `filterable()` /
 `filterAsSelect()` přijímá i třídu PHP enumu — rozvine se na `value => label` přesně
-jako dedikovaný `SelectColumn`/`SelectFilter`. Viz [Enum Options](#enum-options).
+jako dedikovaný `SelectColumn`/`SelectFilter`. Viz [Enum Options](select.md#options-z-enumu).
 
 ### Jak fungují inline uložení
 

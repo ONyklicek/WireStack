@@ -358,7 +358,8 @@ Every field inherits:
 ->disabled(bool|Closure $disabled = true)
 ->size('sm'|'md'|'lg'|'xl')
 ->columnSpan(int|string $span)          // grid column span
-->default(mixed $value)                 // default value
+->default(mixed $value)                 // default value (create mode / absent keys)
+->defaultOnNull(bool $condition = true) // also fill the default over an edit-mode null
 ->extraAttributes(array $attrs)         // HTML attributes
 ->live()                                // wire:model.live
 ->debounce(int $ms = 500)              // wire:model.blur with debounce

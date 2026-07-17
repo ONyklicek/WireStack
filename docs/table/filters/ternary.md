@@ -7,6 +7,11 @@ nav: false
 
 Three-state filter: Yes / No / All. Perfect for boolean columns and "has/doesn't have" relationships.
 
+Renders through the same combobox as [`SelectFilter`](select.md) and the forms
+`Select` field, so an open boolean filter looks identical to any other select.
+"All" is the placeholder — picking it clears the filter. Opt into a browser-native
+`<select>` with [`->native()`](#native-html-select).
+
 ```php
 use NyonCode\WireTable\Filters\TernaryFilter;
 ```
@@ -59,6 +64,16 @@ TernaryFilter::make('overdue')
         : $query->where('due_at', '>=', now()))
 ```
 
+## Native HTML Select
+
+```php
+TernaryFilter::make('is_active')
+    ->native()                      // browser-native <select> element (faster render)
+```
+
+Opts out of the shared combobox, so the filter no longer matches the other
+selects. Prefer it only where render cost matters more than a consistent look.
+
 ## TernaryFilter API
 
 ```php
@@ -66,6 +81,7 @@ TernaryFilter::make('overdue')
 ->falseLabel(string $label)         // default: 'No'
 ->allLabel(string $label)           // placeholder for the "no filter" option
 ->nullable(bool $nullable = true)   // "false" also matches IS NULL
+->native(bool $native = true)       // opt into a browser-native <select> (default: false)
 ->query(Closure $fn)                // custom query: fn(Builder $q, $value)
 ```
 

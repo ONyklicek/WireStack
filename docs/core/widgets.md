@@ -160,7 +160,7 @@ Stat::make('Active Users', '2,847')
 Stat::make(string $label, string $value)
 ->description(?string $description)       // secondary text
 ->descriptionIcon(?string $icon)          // icon next to description
-->color(?string $color)                   // 'success', 'danger', 'warning', 'primary', 'gray'
+->color(?string $color)                   // any palette color key (e.g. 'success', 'danger', 'primary')
 ->icon(?string $icon)                     // stat card icon
 ->chart(array $data)                      // sparkline data points (int|float)
 ->extraAttributes(array $attrs)           // custom HTML attributes

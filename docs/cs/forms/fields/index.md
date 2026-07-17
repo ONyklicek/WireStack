@@ -98,6 +98,23 @@ hodnotu záznamu — ani záměrný `null`.** Pro předvyplnění z recordu nebo
 nad rámec výchozích hodnot použij `fillFormUsing()` na akci (viz
 [Akce](../../core/actions.md)).
 
+#### Doplnění výchozí hodnoty i pro null
+
+Jednotlivé pole můžeš přihlásit k tomu, aby `null` (nebo prázdný řetězec) v edit
+módu bralo jako nenastavené, takže se i tam doplní jeho výchozí hodnota:
+
+```php
+TextInput::make('quantity')->numeric()->default(1)->defaultOnNull()
+Select::make('status')->options(Status::class)->default(Status::Draft)->defaultOnNull()
+```
+
+Používej to **jen** tam, kde `null` není hodnota, kterou si uživatel může
+záměrně zvolit — třeba u sloupce, který musí vždy nést hodnotu. Pokud pole
+uživatel může vědomě vymazat, nech `defaultOnNull()` vypnuté, ať jeho volba
+zůstane; pro nápovědu k prázdnému stavu použij radši `placeholder()`. Když sloupec
+jen nikdy nemá být `null`, dej přednost výchozí hodnotě na modelu/v DB, ať jsou
+create i edit konzistentní už na datové vrstvě.
+
 ### Validace
 
 | Metoda | Příklad |
@@ -129,7 +146,7 @@ Dostupné na TextInput, Textarea a Select.
 | `hintAction(Action)` | `->hintAction(Action::make('help'))` |
 
 Affix a hint akce běží na serveru s reaktivním `$get` / `$set` kontextem pole — viz
-[Field akce a tlačítka](../reactive-fields.md#field-actions-and-buttons).
+[Field akce a tlačítka](../reactive-fields.md#field-akce-a-tlacitka).
 
 ### Ostatní
 

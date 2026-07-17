@@ -214,16 +214,6 @@ Select::make('tier')
     ->disabledOptions(fn () => Plan::unavailable()->pluck('id')->toArray())
 ```
 
-## HTML in Options
-
-```php
-Select::make('color')
-    ->allowHtml()
-    ->options([
-        'red' => '<span class="text-red-500">Red</span>',
-    ])
-```
-
 ## Methods
 
 | Method | Type | Description |
@@ -231,14 +221,13 @@ Select::make('color')
 | `options(array\|string\|Closure)` | array | Static, dynamic, or enum-class options (`value => label`) |
 | `searchable()` | bool | Enable option search |
 | `multiple()` | bool | Allow multiple selections |
-| `native()` | bool | Use the browser-native `<select>` element |
+| `native(bool $native = true)` | bool | Use the browser-native `<select>` instead of the combobox (default: `false`) |
 | `maxItems(int\|null)` | int | Maximum selected items (multi-select) |
 | `minItems(int\|null)` | int | Minimum selected items (multi-select) |
 | `disabledOptions(array\|Closure)` | array | Option keys that are rendered as disabled |
 | `noSearchResultsMessage(string\|null)` | string | Message when search finds nothing |
 | `loadingMessage(string\|null)` | string | Message while options are loading |
 | `searchPrompt(string\|null)` | string | Prompt shown in the search box |
-| `allowHtml()` | bool | Render option labels as HTML |
 | `boolean()` | — | Shorthand for Yes/No options |
 | `relationship(string, string)` | — | Load options from a relationship |
 | `getSearchResultsUsing(Closure)` | — | Remote search: resolve matches on the server (implies `searchable()`) |

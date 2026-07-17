@@ -16,7 +16,8 @@ This page covers, from least to most involved:
 | A one-off custom view inside a form | [`ViewField`](#quick-custom-view-viewfield) |
 | A static display block (no input) | [Display component](#display-only-components) |
 | A reusable input with its own API | [Custom field](#building-a-custom-field) |
-| The same preset applied across many forms | [Form macros](#reusable-presets-with-macros) |
+| The same preset applied across many forms | [Form macros](#reusable-presets) |
+| A field that stores something other than what it shows | [State transforms](#shaping-the-value-a-field-stores) |
 | Logic around every save | [Save hooks](#hooking-into-the-save-lifecycle) |
 | A field shipped in a package | [Packaging fields into a plugin](#packaging-fields-into-a-plugin) |
 
@@ -79,6 +80,11 @@ A field also declares its **state type** with `getStateType()` (default
 `'string'`). The state hydrator uses it to cast raw request values before they
 reach the form state — return `'int'`, `'float'`, `'bool'`, or `'array'` when
 your value is not a string.
+
+`getStateType()` shapes the value on the way *in*. When your field also needs to
+shape it on the way *out* — to store something other than what the widget holds —
+implement [`DehydratesState`](#shaping-the-value-a-field-stores) rather than
+pushing the job onto every form that uses the field.
 
 The only abstract method you must implement is `viewName()`.
 
@@ -315,7 +321,81 @@ view, or new markup.
 
 ---
 
+## Shaping the Value a Field Stores
+
+A field's state is whatever its widget produced. Usually that is exactly what
+should be persisted — but not always. A date picker's input parses only its own
+format while the column wants another; an upload holds a temporary path while the
+column wants the stored one; a money field shows `1 234,50` and stores cents.
+
+Two contracts in `NyonCode\WireCore\Foundation\Contracts` cover the two
+directions. They are independent — implement only the one you need:
+
+| Contract | Method | Runs |
+|---|---|---|
+| `HydratesState` | `hydrateState($value, ?Model $record)` | model value → state, after the `getStateType()` cast |
+| `DehydratesState` | `dehydrateState($state, ?Model $record)` | state → stored value, during save |
+
+Note that the [`MoneyInput`](#building-a-custom-field) above needs *neither*: its
+state is already the integer it stores, which `getStateType(): 'int'` is enough to
+express. The contracts earn their keep only when state and stored value genuinely
+differ — as here, where the input shows plaintext and the column holds ciphertext:
+
+```php
+<?php
+
+namespace App\Forms\Components;
+
+use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
+use NyonCode\WireCore\Foundation\Contracts\HydratesState;
+use NyonCode\WireForms\Components\Field;
+
+class EncryptedInput extends Field implements DehydratesState, HydratesState
+{
+    // Stored → shown. [tl! focus:start]
+    public function hydrateState(mixed $value, ?Model $record = null): mixed
+    {
+        return $value === null || $value === '' ? $value : decrypt($value);
+    }
+
+    // Shown → stored.
+    public function dehydrateState(mixed $state, ?Model $record = null): mixed
+    {
+        return $state === null || $state === '' ? $state : encrypt($state);
+    } // [tl! focus:end]
+
+    protected function viewName(): string
+    {
+        return 'forms.components.encrypted-input';
+    }
+}
+```
+
+The same two contracts drive [editable table columns](../table/columns/editing.md) —
+`TextInputColumn` uses them for its trim/case/number pipeline — so a component
+that implements them behaves the same in a form and in an inline-edited cell.
+
+> **Both directions, or neither.** If a transform moves the value (a timezone
+> conversion, a unit change), implementing only `hydrateState()` means the shifted
+> state gets written straight back on save, moving the value a little further on
+> every round trip. A one-sided transform is worse than none.
+
+**`dehydrateState()` must be a pure function of its arguments.** A host may call
+it more than once per save — the table dehydrates once without a record to
+validate before opening its transaction, then again with the locked record. Hosts
+always pass the original state, never the result of an earlier call, so a
+transform that would break if applied twice is still safe. The `$record` is
+`null` when the host has none (a create form); a table cell always has one.
+
+---
+
 ## Hooking Into the Save Lifecycle
+
+The contracts above belong to a *field* — they travel with it into every form.
+The two layers here belong to a **form** or to the **app**. Reach for them when
+the knowledge is not the field's: use `DehydratesState` for "this field always
+stores cents", a hook for "every form stamps a tenant".
 
 Two layers exist, and they compose:
 

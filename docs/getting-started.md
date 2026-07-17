@@ -207,9 +207,9 @@ class UserTable extends Component
 
                 BadgeColumn::make('role')
                     ->colors([
-                        'primary' => 'admin',
-                        'success' => 'editor',
-                        'gray' => 'viewer',
+                        'admin' => 'primary',
+                        'editor' => 'success',
+                        'viewer' => 'gray',
                     ]),
 
                 TextColumn::make('created_at')

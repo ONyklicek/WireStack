@@ -929,19 +929,19 @@ class OrderTable extends Component
 
                 BadgeColumn::make('status')
                     ->colors([
-                        'gray' => 'draft',
-                        'warning' => 'pending',
-                        'info' => 'processing',
-                        'success' => 'shipped',
-                        'primary' => 'delivered',
-                        'danger' => 'cancelled',
+                        'draft' => 'gray',
+                        'pending' => 'warning',
+                        'processing' => 'info',
+                        'shipped' => 'success',
+                        'delivered' => 'primary',
+                        'cancelled' => 'danger',
                     ])
                     ->icons([
-                        'clock' => 'pending',
-                        'refresh' => 'processing',
-                        'truck' => 'shipped',
-                        'check' => 'delivered',
-                        'x' => 'cancelled',
+                        'pending' => 'clock',
+                        'processing' => 'refresh',
+                        'shipped' => 'truck',
+                        'delivered' => 'check',
+                        'cancelled' => 'x',
                     ]),
 
                 TextColumn::make('created_at')

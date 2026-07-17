@@ -54,7 +54,7 @@ Foundation je trvalé jádro `wire-core`. Poskytuje sdílené traity, základní
 | `HasModal` | `requiresConfirmation()`, `modalHeading()`, `slideOver()`, ... | Konfigurace modalu |
 
 > CSS třídy tlačítek/badge pocházejí z kanonických `HasColor` resolverů (viz
-> [Kanonické color resolvery](#canonical-color-resolvers-hascolor)), ne z
+> [Kanonické color resolvery](#kanonicke-color-resolvery-hascolor)), ne z
 > per-komponentní mapy. `HasButtonStyles` zůstává jen jako deprecated alias.
 
 ### Vyhodnocování closur
@@ -94,7 +94,7 @@ Kompletní kolekce [Heroicons](https://heroicons.com) **solid** (324 ikon,
 `20x20` viewBox) je přibalena inline — bez externích závislostí, bez extra balíčku.
 Je to **výchozí sada**, adresovaná holými názvy (`pencil`, `user`). Můžete
 zaregistrovat libovolný počet dalších sad (Lucide, Feather, vlastní brand ikony)
-vedle ní — viz [Použití více sad ikon](#using-multiple-icon-sets).
+vedle ní — viz [Použití více sad ikon](#pouziti-vice-sad-ikon).
 
 Každá ikona nese svůj vlastní `viewBox` a fill/stroke stylování, takže 20×20 fill-based
 Heroicons a 24×24 stroke-based sady se vykreslí správně vedle sebe.
@@ -350,23 +350,34 @@ soubor místo ruční editace cest ikon.
 `->color()` přijímá **kompletní Tailwind paletu** na každém surface. Dva slovníky
 resolvují přes stejnou kanonickou mapu:
 
-<div class="wire-swatches"><p class="wire-swatch-group">Sémantické role</p><div class="wire-swatch-grid"><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: var(--primary)"></span><span class="wire-swatch__name">primary</span><span class="wire-swatch__alias">váš akcent</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #6b7280"></span><span class="wire-swatch__name">gray</span><span class="wire-swatch__alias">secondary</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #10b981"></span><span class="wire-swatch__name">success</span><span class="wire-swatch__alias">green · emerald</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #ef4444"></span><span class="wire-swatch__name">danger</span><span class="wire-swatch__alias">red</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #f59e0b"></span><span class="wire-swatch__name">warning</span><span class="wire-swatch__alias">amber · yellow</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #06b6d4"></span><span class="wire-swatch__name">info</span><span class="wire-swatch__alias">cyan</span></div></div><p class="wire-swatch-group">Základní odstíny</p><div class="wire-swatch-grid"><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #64748b"></span><span class="wire-swatch__name">slate</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #71717a"></span><span class="wire-swatch__name">zinc</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #737373"></span><span class="wire-swatch__name">neutral</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #78716c"></span><span class="wire-swatch__name">stone</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #f97316"></span><span class="wire-swatch__name">orange</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #84cc16"></span><span class="wire-swatch__name">lime</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #14b8a6"></span><span class="wire-swatch__name">teal</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #0ea5e9"></span><span class="wire-swatch__name">sky</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #6366f1"></span><span class="wire-swatch__name">indigo</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #8b5cf6"></span><span class="wire-swatch__name">violet</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #a855f7"></span><span class="wire-swatch__name">purple</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #d946ef"></span><span class="wire-swatch__name">fuchsia</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #ec4899"></span><span class="wire-swatch__name">pink</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #f43f5e"></span><span class="wire-swatch__name">rose</span></div></div></div>
+<div class="wire-swatches"><p class="wire-swatch-group">Sémantické role</p><div class="wire-swatch-grid"><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: var(--primary)"></span><span class="wire-swatch__name">primary</span><span class="wire-swatch__alias">váš akcent</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #6b7280"></span><span class="wire-swatch__name">gray</span><span class="wire-swatch__alias">secondary</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #10b981"></span><span class="wire-swatch__name">success</span><span class="wire-swatch__alias">emerald</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #ef4444"></span><span class="wire-swatch__name">danger</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #f59e0b"></span><span class="wire-swatch__name">warning</span><span class="wire-swatch__alias">amber</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #06b6d4"></span><span class="wire-swatch__name">info</span></div></div><p class="wire-swatch-group">Základní odstíny</p><div class="wire-swatch-grid"><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #3b82f6"></span><span class="wire-swatch__name">blue</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #22c55e"></span><span class="wire-swatch__name">green</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #ef4444"></span><span class="wire-swatch__name">red</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #eab308"></span><span class="wire-swatch__name">yellow</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #06b6d4"></span><span class="wire-swatch__name">cyan</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #64748b"></span><span class="wire-swatch__name">slate</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #71717a"></span><span class="wire-swatch__name">zinc</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #737373"></span><span class="wire-swatch__name">neutral</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #78716c"></span><span class="wire-swatch__name">stone</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #f97316"></span><span class="wire-swatch__name">orange</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #84cc16"></span><span class="wire-swatch__name">lime</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #14b8a6"></span><span class="wire-swatch__name">teal</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #0ea5e9"></span><span class="wire-swatch__name">sky</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #6366f1"></span><span class="wire-swatch__name">indigo</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #8b5cf6"></span><span class="wire-swatch__name">violet</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #a855f7"></span><span class="wire-swatch__name">purple</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #d946ef"></span><span class="wire-swatch__name">fuchsia</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #ec4899"></span><span class="wire-swatch__name">pink</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #f43f5e"></span><span class="wire-swatch__name">rose</span></div></div><p class="wire-swatch-group">Achromatické (adaptivní)</p><div class="wire-swatch-grid"><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #ffffff; box-shadow: inset 0 0 0 1px #d1d5db"></span><span class="wire-swatch__name">white</span></div><div class="wire-swatch"><span class="wire-swatch__chip" style="--swatch: #000000"></span><span class="wire-swatch__name">black</span></div></div></div>
 
 **Sémantické role** — pevné brand odstíny nesoucí význam:
 
 | Název | Resolvuje na |
 |------|-------------|
-| `primary` (alias `blue`) | Brand primary |
-| `success` (alias `green`, `emerald`) | Emerald |
-| `danger` (alias `red`) | Red |
-| `warning` (alias `yellow`, `amber`) | Amber |
-| `info` (alias `cyan`) | Cyan |
+| `primary` | Brand primary |
+| `success` (alias `emerald`) | Emerald |
+| `danger` | Red |
+| `warning` (alias `amber`) | Amber |
+| `info` | Cyan |
 | `gray` (alias `secondary`) | Neutrální šedá |
 
 **Surové rodiny odstínů** — každá Tailwind barva, pro jemnější kontrolu:
 
-`slate`, `zinc`, `neutral`, `stone`, `orange`, `lime`, `teal`, `sky`, `indigo`,
-`violet`, `purple`, `fuchsia`, `pink`, `rose`.
+`blue`, `green`, `red`, `yellow`, `cyan`, `slate`, `zinc`, `neutral`, `stone`,
+`orange`, `lime`, `teal`, `sky`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`,
+`rose`.
+
+> **Literal odstíny nejsou aliasy.** `blue`, `green` a `yellow` jsou vlastní
+> literal Tailwind odstíny — `blue` je odlišný od přebarvitelného brand `primary`,
+> `green` od `success`/`emerald` a `yellow` od `warning`/`amber`. `red` a `cyan`
+> vykreslí stejný odstín jako `danger`/`info`, ale zůstávají dostupné pod svým jménem.
+
+**Achromatické krajní body** — `white` a `black`. Tailwind nemá číselnou škálu
+`white`/`black`, takže se resolvují **adaptivně**: `black` je tmavá výplň/inkoust ve
+světlém režimu a překlopí se na bílou v tmavém, `white` je opačně — takže zůstanou
+čitelné v obou motivech.
 
 ```php
 Action::make('delete')->color('danger');   // sémantická role
@@ -389,7 +400,8 @@ na badge, solid/outlined/link tlačítku, modalu, choice kartě a chart baru.
 `Foundation\Concerns\HasColor` je **jediný zdroj pravdy** pro mapování barva → Tailwind
 třída. Každý surface na něj deleguje místo re-enkódování `match` map,
 takže sémantická barva resolvuje na stejný odstín všude (`success` → emerald,
-`info` → cyan, `blue`/`primary` → primary).
+`info` → cyan, `primary` → váš brand akcent), zatímco literal odstíny jako `blue`,
+`green` a `yellow` a adaptivní krajní body `white`/`black` resolvují samy na sebe.
 
 | Resolver | Surface |
 |----------|---------|
@@ -435,7 +447,7 @@ neznámé tokeny spadnou na rozumný výchozí místo emitování nescannovateln
 
 | Enum | Tokeny | Settery, které ho přijímají |
 |------|--------|------------------------|
-| `Colors\Color` | sémantické role + každý surový odstín (viz [Barvy](#colors)) | `->color()` všude |
+| `Colors\Color` | sémantické role + každý surový odstín (viz [Barvy](#barvy)) | `->color()` všude |
 | `Enums\Breakpoint` | `sm` `md` `lg` `xl` `2xl` | sloupec `->visibleFrom()` / `->hiddenFrom()` / `->mobileBreakpoint()`, `Table::stackedOnMobile()`, `->mobileBreakpoint()` na sheetech/modalech, `Grid` per-breakpoint `columns` klíče |
 | `Enums\Size` | `xs` `sm` `md` `lg` `xl` | `->size()` (+ zkratky `->sm()`/`->md()`/…) na akcích, tlačítkách, badge/icon sloupcích |
 | `Enums\FontWeight` | `thin` `extralight` `light` `normal` `medium` `semibold` `bold` `extrabold` `black` | sloupec `->weight()`, infolist `TextEntry::weight()` |
@@ -489,7 +501,7 @@ table `SelectColumn` a `SelectFilter`, plus generický `Column::editable()` / `f
 `filterAsSelect()` — přijímá `->options(Status::class)` a deleguje rozvinutí sem. Každý case
 klíčuje přes `scalar()` a labeluje přes stejné kanonické `label()` resolvování, takže option čte
 identicky jako odpovídající display buňka. Jednohodnotové form pole, jehož options pocházejí z enumu,
-také získá automatické `in:` validační pravidlo (viz [Formuláře → Select](../forms/fields/select.md#enum-options)).
+také získá automatické `in:` validační pravidlo (viz [Formuláře → Select](../forms/fields/select.md#options-z-enumu)).
 
 ### Opt-in enum kontrakty
 

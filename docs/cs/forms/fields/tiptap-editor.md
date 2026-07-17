@@ -176,4 +176,4 @@ TiptapEditor::make('content')
 | `live()` | — | Spustit Livewire update při každé změně |
 | `debounce(int)` | ms | Debounce prodleva pro `live()` |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#common-field-api).
+Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

@@ -30,7 +30,7 @@ Radio::make('plan')
 Předejte třídu PHP enumu pro rozvinutí jeho case na options `value => label`. Labely pocházejí z
 `getLabel()`, když enum implementuje `Foundation\Contracts\Enum\HasLabel`, jinak se
 z názvu case udělá headline. Pole je také auto-omezeno na hodnoty enumu pravidlem `in:`.
-Detaily viz [Select › Options z enumu](select.md#enum-options).
+Detaily viz [Select › Options z enumu](select.md#options-z-enumu).
 
 ```php
 Radio::make('status')->options(Status::class)
@@ -117,7 +117,7 @@ Radio::make('plan')
 ### Karty s ikonami
 
 Poskytněte mapu `value => icon` (nebo nechte `HasIcon` enum je dodat automaticky — viz
-[Options z enumu](#enum-options)).
+[Options z enumu](#options-z-enumu)).
 
 ```php
 Radio::make('plan')
@@ -199,12 +199,12 @@ Radio::make('plan')->options([...])->cards()->color('success');
 Radio::make('align')->options([...])->buttons()->color(Color::Danger);
 ```
 
-Podporované barvy: kompletní Tailwind paleta — sémantické role (`primary`, `success`, `danger`, `warning`, `info`, `gray`) plus každá surová rodina odstínů (`slate`, `zinc`, `neutral`, `stone`, `orange`, `lime`, `teal`, `sky`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`).
+Podporované barvy: kompletní Tailwind paleta — sémantické role (`primary`, `success`, `danger`, `warning`, `info`, `gray`), každá surová rodina odstínů (`blue`, `green`, `red`, `yellow`, `cyan`, `slate`, `zinc`, `neutral`, `stone`, `orange`, `lime`, `teal`, `sky`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`) a adaptivní achromatické krajní body (`white`, `black`). Literal odstíny jsou odlišné od sémantických rolí — `blue` ≠ `primary`, `green` ≠ `success`, `yellow` ≠ `warning`.
 
 ### Barvy per option
 
 Dejte každé možnosti vlastní akcent pomocí `->colors([value => color])`, nebo nechte `HasColor` enum
-je dodat z `->options(Enum::class)` (viz [Options z enumu](#enum-options)). Barva per option
+je dodat z `->options(Enum::class)` (viz [Options z enumu](#options-z-enumu)). Barva per option
 vyhrává nad skupinovým `->color()`; možnosti bez ní na něj spadnou.
 
 ```php
@@ -251,4 +251,4 @@ Radio::make('delivery_method')
 | `required()` | — | Označit jako povinné |
 | `live()` | — | Spustit Livewire update při změně |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#common-field-api).
+Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

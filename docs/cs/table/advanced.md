@@ -8,20 +8,20 @@ order: 80
 
 ## Obsah
 
-1. [Podřádky (rozbalitelné řádky)](#sub-rows-expandable-rows)
-2. [Souhrnná patička (agregáty)](#summary-footer-aggregates)
-3. [Polling (auto-obnovení)](#polling-auto-refresh)
+1. [Podřádky (rozbalitelné řádky)](#podradky-rozbalitelne-radky)
+2. [Souhrnná patička (agregáty)](#souhrnna-paticka-agregaty)
+3. [Polling (auto-obnovení)](#polling-auto-obnoveni)
 4. [Lazy loading](#lazy-loading)
-5. [Optimalizace výkonu](#performance-optimization)
-6. [Debugging dotazů](#query-debugging)
+5. [Optimalizace výkonu](#optimalizace-vykonu)
+6. [Debugging dotazů](#debugging-dotazu)
 7. [SQL debug](#sql-debug)
-8. [Responzivní layout](#responsive-layout)
-9. [Přepínání sloupců](#column-toggling)
-10. [Kontextové menu řádku](#row-context-menu)
-11. [Notifikace per tabulka](#notifications-per-table)
-12. [Perzistence stavu v URL](#url-state-persistence)
-13. [Selektory pro browser testy](#browser-testing-selectors)
-14. [Vlastní pohledy](#custom-views)
+8. [Responzivní layout](#responzivni-layout)
+9. [Přepínání sloupců](#prepinani-sloupcu)
+10. [Kontextové menu řádku](#kontextove-menu-radku)
+11. [Notifikace per tabulka](#notifikace-per-tabulka)
+12. [Perzistence stavu v URL](#perzistence-stavu-v-url)
+13. [Selektory pro browser testy](#selektory-pro-browser-testy)
+14. [Vlastní pohledy](#vlastni-pohledy)
 
 ---
 
@@ -944,19 +944,19 @@ class OrderTable extends Component
 
                 BadgeColumn::make('status')
                     ->colors([
-                        'gray' => 'draft',
-                        'warning' => 'pending',
-                        'info' => 'processing',
-                        'success' => 'shipped',
-                        'primary' => 'delivered',
-                        'danger' => 'cancelled',
+                        'draft' => 'gray',
+                        'pending' => 'warning',
+                        'processing' => 'info',
+                        'shipped' => 'success',
+                        'delivered' => 'primary',
+                        'cancelled' => 'danger',
                     ])
                     ->icons([
-                        'clock' => 'pending',
-                        'refresh' => 'processing',
-                        'truck' => 'shipped',
-                        'check' => 'delivered',
-                        'x' => 'cancelled',
+                        'pending' => 'clock',
+                        'processing' => 'refresh',
+                        'shipped' => 'truck',
+                        'delivered' => 'check',
+                        'cancelled' => 'x',
                     ]),
 
                 TextColumn::make('created_at')

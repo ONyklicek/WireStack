@@ -275,7 +275,7 @@ TextColumn::make('title')
 
 Available aggregates: `'sum'`, `'avg'`, `'count'`, `'min'`, `'max'`, `'range'`
 
-See [Advanced — Summary](../advanced.md#summary-footer) for details.
+See [Advanced — Summary](../advanced.md#summary-footer-aggregates) for details.
 
 ### Extra HTML Attributes
 

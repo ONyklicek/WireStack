@@ -18,8 +18,8 @@ zmizí úplně.
 každý akcent, takže bez ní tyto prvky nemají barvu.
 
 **Náprava:** Definujte `primary` v konfiguraci Tailwindu — viz
-[Začínáme → Barva primary](getting-started.md#primary-color) a
-[Vzhled → Barvy](theming.md#colors).
+[Začínáme → Barva primary](getting-started.md#barva-primary) a
+[Vzhled → Barvy](theming.md#barvy).
 
 ---
 
@@ -69,7 +69,7 @@ panel spadne vlevo a bez výškových utilit není nikdy omezený na výšku, ta
 přetéká místo scrollování těla.
 
 **Náprava:** Přidejte cesty `src/**/*.php` (Tailwind 3) nebo odpovídající `@source`
-řádky (Tailwind 4) podle [Komponenty se vykreslují bez stylů](#components-render-unstyled),
+řádky (Tailwind 4) podle [Komponenty se vykreslují bez stylů](#komponenty-se-vykresluji-bez-stylu),
 pak přebuildujte. Viz také průvodce začínáme.
 
 ---
@@ -118,7 +118,7 @@ nespustí.
 **Náprava:** Načtěte skript pomocí direktivy `@assets` Livewire (vestavěný
 `TiptapEditor` to dělá). Pokud stavíte vlastní JS pole, následujte stejný
 vzor — viz
-[Rozšíření formulářů → JS-based pole](forms/custom-fields.md#js-backed-fields).
+[Rozšíření formulářů → JS-based pole](forms/custom-fields.md#js-based-pole).
 
 ---
 
@@ -132,7 +132,7 @@ co uložit.
 **Náprava:** Buď nastavte model (`->model(User::class)` pro create,
 `->model($user)` pro update), poskytněte vlastní perzistenci pomocí
 `->using(...)`, nebo místo toho zavolejte `->validate()`, když potřebujete jen
-data. Viz [Režimy modelu](forms/overview.md#model-modes).
+data. Viz [Režimy modelu](forms/overview.md#rezimy-modelu).
 
 ---
 
@@ -148,7 +148,7 @@ data. Viz [Režimy modelu](forms/overview.md#model-modes).
 <x-wire-notifications::toast-container />
 ```
 
-Layout viz [Začínáme](getting-started.md#layout-template) a
+Layout viz [Začínáme](getting-started.md#sablona-layoutu) a
 [Core → Notifikace](core/notifications.md).
 
 ---

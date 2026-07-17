@@ -97,6 +97,23 @@ value — even an intentional `null`.** For record- or context-driven prefill on
 top of defaults, use `fillFormUsing()` on the action (see
 [Actions](../../core/actions.md)).
 
+#### Filling defaults over null
+
+Opt a single field into treating an edit-mode `null` (or empty string) as unset,
+so its default fills there too:
+
+```php
+TextInput::make('quantity')->numeric()->default(1)->defaultOnNull()
+Select::make('status')->options(Status::class)->default(Status::Draft)->defaultOnNull()
+```
+
+Use this only where `null` is **not** a value the user can deliberately choose —
+for example a column that must always carry a value. If the user can clear the
+field on purpose, leave `defaultOnNull()` off so their choice survives; to show a
+hint for the empty state use `placeholder()` instead. When the column should
+simply never be `null`, prefer a model/DB default so create and edit stay
+consistent at the data layer.
+
 ### Validation
 
 | Method | Example |

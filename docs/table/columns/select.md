@@ -30,6 +30,16 @@ SelectColumn::make('category_id')
     ->relationship('category', 'name')   // load options from a related model
 ```
 
+The related list is the same for every row, so it is fetched **once per render**
+and reused — not once per cell. An explicit `->options()` wins over it.
+
+```php
+// Pre-seed the list yourself from a known record (rarely needed).
+SelectColumn::make('category_id')
+    ->relationship('category', 'name')
+    ->loadRelationshipOptions($record)
+```
+
 ## Enum Options
 
 Pass a PHP enum class to expand its cases into `value => label` options. Labels come from
@@ -40,15 +50,17 @@ case name is headlined. See [Enum & JSON Casts](casts.md) for the contracts.
 SelectColumn::make('status')->options(OrderStatus::class)
 ```
 
-## Native vs Styled
+## Always a Native Select
 
-```php
-// Native HTML <select> (default)
-SelectColumn::make('type')->options([...])->native()
+An editable cell always renders a browser-native `<select>`, and offers no `->native()`
+toggle. This is the one select surface that does **not** share the combobox used by
+[`SelectFilter`](../filters/select.md), [`TernaryFilter`](../filters/ternary.md) and the
+forms `Select`: the cell commits through `wireEditableCell` (bound with `x-model`, saved on
+change) rather than through an entangled state path, which is the only binding the shared
+combobox supports.
 
-// Custom styled dropdown
-SelectColumn::make('type')->options([...])->native(false)
-```
+If you need a searchable dropdown, use [`SelectFilter`](../filters/select.md) for filtering,
+or a forms `Select` inside an [edit action](../actions.md) for editing.
 
 ## Conditional Disabled
 
@@ -62,9 +74,8 @@ SelectColumn::make('role')
 
 ```php
 ->options(array|string|Closure $options) // ['value' => 'Label', ...] or an enum class
-->native(bool $native = true)       // use native <select> element
-->isNative(): bool
 ->disabled(bool|Closure $disabled = true)
 ->isDisabled(Model $record): bool
-->relationship(string $name, string $titleAttribute)  // options from a relation
+->relationship(string $name, string $titleAttribute)  // options from a relation, loaded once per render
+->loadRelationshipOptions(Model $record)             // pre-seed that list explicitly
 ```

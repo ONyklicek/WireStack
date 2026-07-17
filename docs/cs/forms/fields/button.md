@@ -46,9 +46,9 @@ Button::make('verify')
 ## Poznámky
 
 - Tlačítko dispatchuje přes stejný endpoint `callFieldAction()` jako field
-  [affix akce](../reactive-fields.md#field-actions-and-buttons); funguje v samostatném
+  [affix akce](../reactive-fields.md#field-akce-a-tlacitka); funguje v samostatném
   `WithForms` formuláři i uvnitř action modalu tabulky.
 - Button není součástí stavu formuláře a nepřidává žádnou validaci — je to spouštěč, ne input.
 - Respektuje `disabled()` a `visible()` jako jakékoli jiné pole.
 
-Sdílené metody viz [Společné API pole](index.md#common-field-api).
+Sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

@@ -81,4 +81,4 @@ Slider::make('health')
 | `disabled(bool\|Closure)` | bool | Znepřístupnit slider |
 | `live()` | — | Spustit Livewire update při každém pohybu |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#common-field-api).
+Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

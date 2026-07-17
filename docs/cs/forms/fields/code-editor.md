@@ -62,4 +62,4 @@ Plné zvýrazňování syntaxe vyžaduje integraci externí knihovny (např. Cod
 | `live()` | — | Spustit Livewire update při každém stisku klávesy |
 | `debounce(int)` | ms | Debounce prodleva pro `live()` |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#common-field-api).
+Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).
