@@ -6,11 +6,11 @@
     packages/core/src/Foundation/Concerns/HasColor.php. Those literal class
     strings live only in PHP source.
 
-    A consuming app configures Tailwind to scan the package *views*
-    (resources/views/**/*.blade.php) but not the package *src* (see
-    docs/getting-started.md). Without this file the gradient/text utilities a bar
-    can use would never be emitted into the host CSS, so bars would render with
-    width/height but no visible color.
+    docs/getting-started.md tells a consuming app to scan BOTH the package
+    *src* (where these HasColor literals live) and its *views*. This file is the
+    safety net for a consumer that scans only *views* (not *src*): without it,
+    the gradient/text utilities a bar can use would never be emitted into that
+    host's CSS, so bars would render with width/height but no visible color.
 
     This element is never rendered (it is not @include-d anywhere); it exists only
     so Tailwind's source scanner sees every utility the widget can produce. It is

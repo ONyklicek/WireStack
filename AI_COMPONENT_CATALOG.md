@@ -400,14 +400,11 @@ Column views:
 - `packages/table/resources/views/tables/columns/text-input-editable.blade.php`
 - `packages/table/resources/views/tables/columns/text-input-readonly.blade.php`
 - `packages/table/resources/views/tables/columns/responsive.blade.php`
-- `packages/table/resources/views/tables/columns/cell.blade.php`
 
 Shared column partials:
 
 - `copyable`
-- `spinner` (thin delegate to the canonical `wire-core::partials.spinner`)
 - `progress`
-- `check-icon`
 - filter UI partials under `tables/columns/partials/filter-*`
 
 Canonical shared partials (owned in `core`, consumed cross-package):
