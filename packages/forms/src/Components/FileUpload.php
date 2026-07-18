@@ -80,6 +80,7 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
         return $this;
     }
 
+    /** Set the maximum size per file, in kilobytes. */
     public function maxSize(?int $kilobytes): static
     {
         $this->maxSize = $kilobytes;
@@ -87,6 +88,7 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
         return $this;
     }
 
+    /** Set the minimum size per file, in kilobytes. */
     public function minSize(?int $kilobytes): static
     {
         $this->minSize = $kilobytes;
@@ -94,6 +96,7 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
         return $this;
     }
 
+    /** Set the maximum number of files (multiple mode). */
     public function maxFiles(?int $count): static
     {
         $this->maxFiles = $count;
@@ -101,6 +104,7 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
         return $this;
     }
 
+    /** Set the minimum number of files (multiple mode). */
     public function minFiles(?int $count): static
     {
         $this->minFiles = $count;
@@ -108,6 +112,7 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
         return $this;
     }
 
+    /** Allow uploading several files. */
     public function multiple(bool $condition = true): static
     {
         $this->multiple = $condition;
@@ -115,6 +120,7 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
         return $this;
     }
 
+    /** Accept image files only. */
     public function image(bool $condition = true): static
     {
         $this->image = $condition;
@@ -126,6 +132,7 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
         return $this;
     }
 
+    /** Single-image avatar mode (round crop UI). */
     public function avatar(bool $condition = true): static
     {
         $this->avatar = $condition;
@@ -140,6 +147,7 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
         return $this;
     }
 
+    /** Set the storage disk the file is moved to on save. */
     public function disk(?string $disk): static
     {
         $this->disk = $disk;
@@ -147,6 +155,7 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
         return $this;
     }
 
+    /** Set the storage directory the file is moved to on save. */
     public function directory(?string $directory): static
     {
         $this->directory = $directory;
@@ -154,6 +163,7 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
         return $this;
     }
 
+    /** Set the stored file visibility (public or private). */
     public function visibility(string $visibility): static
     {
         $this->visibility = $visibility;
@@ -161,6 +171,7 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
         return $this;
     }
 
+    /** Keep the original filename instead of a hashed name. */
     public function preserveFilenames(bool $condition = true): static
     {
         $this->preserveFilenames = $condition;
@@ -278,6 +289,7 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
         return $this;
     }
 
+    /** Resize uploaded images to this target width. */
     public function imageResizeTargetWidth(?int $width): static
     {
         $this->imageResizeTargetWidth = $width;
@@ -285,6 +297,7 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
         return $this;
     }
 
+    /** Resize uploaded images to this target height. */
     public function imageResizeTargetHeight(?int $height): static
     {
         $this->imageResizeTargetHeight = $height;

@@ -39,6 +39,7 @@ class TextInput extends Field
 
     // ─── Type variants ─────────────────────────────────────────────
 
+    /** Set the HTML input type directly. */
     public function type(string $type): static
     {
         $this->inputType = $type;
@@ -46,6 +47,7 @@ class TextInput extends Field
         return $this;
     }
 
+    /** Type preset: email (sets the matching inputmode). */
     public function email(): static
     {
         $this->inputType = 'email';
@@ -54,6 +56,7 @@ class TextInput extends Field
         return $this;
     }
 
+    /** Type preset: password (see `revealable()` for a show/hide toggle). */
     public function password(): static
     {
         $this->inputType = 'password';
@@ -61,6 +64,7 @@ class TextInput extends Field
         return $this;
     }
 
+    /** Type preset: tel (sets the matching inputmode). */
     public function tel(): static
     {
         $this->inputType = 'tel';
@@ -69,6 +73,7 @@ class TextInput extends Field
         return $this;
     }
 
+    /** Type preset: url (sets the matching inputmode). */
     public function url(): static
     {
         $this->inputType = 'url';
@@ -77,6 +82,7 @@ class TextInput extends Field
         return $this;
     }
 
+    /** Type preset: decimal number (type=number, decimal inputmode). */
     public function numeric(): static
     {
         $this->inputType = 'number';
@@ -85,6 +91,7 @@ class TextInput extends Field
         return $this;
     }
 
+    /** Type preset: whole number (type=number, numeric inputmode, step 1). */
     public function integer(): static
     {
         $this->inputType = 'number';
@@ -94,6 +101,7 @@ class TextInput extends Field
         return $this;
     }
 
+    /** Type preset: search. */
     public function search(): static
     {
         $this->inputType = 'search';
@@ -103,6 +111,7 @@ class TextInput extends Field
 
     // ─── Constraints ───────────────────────────────────────────────
 
+    /** Set the minimum character length (adds the `min` validation rule). */
     public function minLength(?int $length): static
     {
         $this->minLength = $length;
@@ -110,6 +119,7 @@ class TextInput extends Field
         return $this;
     }
 
+    /** Set the maximum character length (adds the `max` validation rule). */
     public function maxLength(?int $length): static
     {
         $this->maxLength = $length;
@@ -117,6 +127,7 @@ class TextInput extends Field
         return $this;
     }
 
+    /** Set the minimum numeric value (a value or a `$get`-aware Closure). */
     public function minValue(int|float|string|Closure|null $value): static
     {
         $this->minValue = $value;
@@ -124,6 +135,7 @@ class TextInput extends Field
         return $this;
     }
 
+    /** Set the maximum numeric value (a value or a `$get`-aware Closure). */
     public function maxValue(int|float|string|Closure|null $value): static
     {
         $this->maxValue = $value;
@@ -131,6 +143,7 @@ class TextInput extends Field
         return $this;
     }
 
+    /** Set the numeric step increment. */
     public function step(int|float|string|null $step): static
     {
         $this->step = $step;
@@ -140,6 +153,7 @@ class TextInput extends Field
 
     // ─── Extras ────────────────────────────────────────────────────
 
+    /** Apply an input mask pattern to the field. */
     public function mask(?string $mask): static
     {
         $this->mask = $mask;
@@ -147,6 +161,7 @@ class TextInput extends Field
         return $this;
     }
 
+    /** Set the HTML `inputmode` (the virtual-keyboard hint on mobile). */
     public function inputMode(?string $mode): static
     {
         $this->inputMode = $mode;
@@ -154,6 +169,7 @@ class TextInput extends Field
         return $this;
     }
 
+    /** Set the HTML `autocomplete` attribute. */
     public function autocomplete(?string $value): static
     {
         $this->autocomplete = $value;
@@ -180,6 +196,7 @@ class TextInput extends Field
         return $this;
     }
 
+    /** Add a show/hide toggle to the field (for `password()` inputs). */
     public function revealable(bool $condition = true): static
     {
         $this->isRevealable = $condition;

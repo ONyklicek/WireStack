@@ -65,6 +65,7 @@ class Repeater extends LayoutComponent implements HasValidation
 
     // ─── Configuration ─────────────────────────────────────────────
 
+    /** Bind the repeater to a hasMany or belongsToMany relationship (rows saved through the model). */
     public function relationship(?string $name): static
     {
         $this->relationship = $name;
@@ -72,6 +73,7 @@ class Repeater extends LayoutComponent implements HasValidation
         return $this;
     }
 
+    /** Whether the user can add rows. */
     public function addable(bool $condition = true): static
     {
         $this->addable = $condition;
@@ -79,6 +81,7 @@ class Repeater extends LayoutComponent implements HasValidation
         return $this;
     }
 
+    /** Whether the user can remove rows. */
     public function deletable(bool $condition = true): static
     {
         $this->deletable = $condition;
@@ -86,6 +89,7 @@ class Repeater extends LayoutComponent implements HasValidation
         return $this;
     }
 
+    /** Whether rows can be drag-reordered. */
     public function reorderable(bool $condition = true): static
     {
         $this->reorderable = $condition;
@@ -93,6 +97,7 @@ class Repeater extends LayoutComponent implements HasValidation
         return $this;
     }
 
+    /** Whether rows can be collapsed. */
     public function collapsible(bool $condition = true): static
     {
         $this->collapsible = $condition;
@@ -100,6 +105,7 @@ class Repeater extends LayoutComponent implements HasValidation
         return $this;
     }
 
+    /** Start rows collapsed. */
     public function collapsed(bool $condition = true): static
     {
         $this->collapsed = $condition;
@@ -110,6 +116,7 @@ class Repeater extends LayoutComponent implements HasValidation
         return $this;
     }
 
+    /** Require at least this many rows. */
     public function minItems(?int $count): static
     {
         $this->minItems = $count;
@@ -117,6 +124,7 @@ class Repeater extends LayoutComponent implements HasValidation
         return $this;
     }
 
+    /** Cap the number of rows. */
     public function maxItems(?int $count): static
     {
         $this->maxItems = $count;
@@ -124,6 +132,7 @@ class Repeater extends LayoutComponent implements HasValidation
         return $this;
     }
 
+    /** Set the add-row button label. */
     public function addButtonLabel(?string $label): static
     {
         $this->addButtonLabel = $label;
@@ -150,6 +159,7 @@ class Repeater extends LayoutComponent implements HasValidation
         return $this;
     }
 
+    /** Disable the repeater (a bool or a live-state Closure). */
     public function disabled(bool|Closure $condition = true): static
     {
         $this->isDisabled = $condition;
@@ -157,6 +167,7 @@ class Repeater extends LayoutComponent implements HasValidation
         return $this;
     }
 
+    /** Transform each rows data before it is saved to the relationship. */
     public function mutateRelationshipDataBeforeSaveUsing(?Closure $callback): static
     {
         $this->mutateRelationshipDataBeforeSaveUsing = $callback;
