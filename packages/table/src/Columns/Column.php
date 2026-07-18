@@ -890,6 +890,7 @@ class Column extends DataComponent implements Htmlable
         return $formatted;
     }
 
+    /** Truncate the displayed text to at most N characters (adds an ellipsis); null removes the limit. */
     public function limit(?int $limit): static
     {
         $this->limit = $limit;
@@ -1099,6 +1100,7 @@ class Column extends DataComponent implements Htmlable
         return Alignment::resolve($this->alignment ?? 'left')->textClass();
     }
 
+    /** Transform the raw cell value before display; the Closure receives the state and returns the formatted value. */
     public function formatStateUsing(Closure $callback): static
     {
         $this->formatStateUsing = $callback;
@@ -1106,6 +1108,7 @@ class Column extends DataComponent implements Htmlable
         return $this;
     }
 
+    /** Replace the rendered cell entirely; the Closure receives `$state, $record` and returns the display value (string or Htmlable). */
     public function displayUsing(Closure $callback): static
     {
         $this->displayUsing = $callback;
@@ -1113,6 +1116,7 @@ class Column extends DataComponent implements Htmlable
         return $this;
     }
 
+    /** Make the cell click-to-copy, with an optional confirmation message. */
     public function copyable(bool $copyable = true, ?string $copyMessage = null): static
     {
         $this->copyable = $copyable;
@@ -1121,6 +1125,7 @@ class Column extends DataComponent implements Htmlable
         return $this;
     }
 
+    /** Set the click-to-copy confirmation message. */
     public function copyMessage(string $copyMessage): static
     {
         $this->copyMessage = $copyMessage;
@@ -1138,6 +1143,7 @@ class Column extends DataComponent implements Htmlable
         return $this->copyMessage;
     }
 
+    /** Add extra HTML attributes to the cell (a raw attribute string). */
     public function extraAttributes(string $attributes): static
     {
         $this->extraAttributes = $attributes;
@@ -1168,6 +1174,7 @@ class Column extends DataComponent implements Htmlable
         return $this->extraHeaderAttributes;
     }
 
+    /** Let the cell text wrap onto multiple lines instead of truncating to one. */
     public function wrap(bool $wrap = true): static
     {
         $this->wrap = $wrap;
@@ -1185,6 +1192,7 @@ class Column extends DataComponent implements Htmlable
         return $this->limit;
     }
 
+    /** Prepend static text before the cell value. */
     public function prefix(?string $prefix): static
     {
         $this->prefix = $prefix;
@@ -1197,6 +1205,7 @@ class Column extends DataComponent implements Htmlable
         return $this->prefix;
     }
 
+    /** Append static text after the cell value. */
     public function suffix(?string $suffix): static
     {
         $this->suffix = $suffix;
@@ -1209,6 +1218,7 @@ class Column extends DataComponent implements Htmlable
         return $this->suffix;
     }
 
+    /** Turn the cell into a link; the Closure receives `$record` and returns the URL (optionally opening in a new tab). */
     public function actionUrl(Closure $callback, bool $openInNewTab = false): static
     {
         $this->urlCallback = $callback;
@@ -1222,6 +1232,7 @@ class Column extends DataComponent implements Htmlable
         return $this->openUrlInNewTab;
     }
 
+    /** Set one fixed cell color for every row (a palette name or `Color` enum). For per-row color use a `BadgeColumn` with `colorUsing()`. */
     public function color(string|Color|null $color): static
     {
         $this->color = $color instanceof Color ? $color->value : $color;
@@ -1236,6 +1247,7 @@ class Column extends DataComponent implements Htmlable
 
     // icon(), getIcon() and getIconPosition() come from Foundation\Concerns\HasIcon.
 
+    /** Render the cell value as raw HTML instead of escaped text (trusted content only). */
     public function html(bool $html = true): static
     {
         $this->html = $html;
@@ -1312,6 +1324,7 @@ class Column extends DataComponent implements Htmlable
         return $this->editableOptions;
     }
 
+    /** Validation rules for the inline-editable cell; the Closure receives `$record` and returns a rules array. */
     public function editableRules(Closure $callback): static
     {
         $this->editableRules = $callback;
@@ -1331,6 +1344,7 @@ class Column extends DataComponent implements Htmlable
         return [];
     }
 
+    /** Persist an inline edit with a custom callback (`$record, $value`) instead of the default attribute write. */
     public function editableUsing(Closure $callback): static
     {
         $this->editableCallback = $callback;
@@ -1347,6 +1361,7 @@ class Column extends DataComponent implements Htmlable
     // now control the column's structural size. Text font-size moved to the
     // dedicated textSize() setter below (breaking change in v2).
 
+    /** Set the cell text size on the Tailwind text scale (distinct from `size()`, which is the structural size). */
     public function textSize(string $size): static
     {
         $this->textSize = $size;
@@ -1359,6 +1374,7 @@ class Column extends DataComponent implements Htmlable
         return $this->textSize;
     }
 
+    /** Set the cell font weight (a `FontWeight` enum or keyword like `semibold`). */
     public function weight(string|FontWeight $weight): static
     {
         $this->textWeight = $weight instanceof FontWeight ? $weight->value : $weight;
@@ -1373,6 +1389,7 @@ class Column extends DataComponent implements Htmlable
 
     // Column filtering methods
 
+    /** Set the cell text color (a palette name or `Color` enum). */
     public function textColor(string|Color $color): static
     {
         $this->textColor = $color instanceof Color ? $color->value : $color;

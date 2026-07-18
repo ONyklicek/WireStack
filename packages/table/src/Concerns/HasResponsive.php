@@ -22,6 +22,7 @@ trait HasResponsive
 
     protected ?string $hiddenFrom = null;
 
+    /** Show the column only from this breakpoint up (hidden on smaller screens). */
     public function visibleFrom(string|Breakpoint $breakpoint): static
     {
         $this->visibleFrom = $breakpoint instanceof Breakpoint ? $breakpoint->value : $breakpoint;
@@ -29,6 +30,7 @@ trait HasResponsive
         return $this;
     }
 
+    /** Hide the column from this breakpoint up (visible on smaller screens). */
     public function hiddenFrom(string|Breakpoint $breakpoint): static
     {
         $this->hiddenFrom = $breakpoint instanceof Breakpoint ? $breakpoint->value : $breakpoint;

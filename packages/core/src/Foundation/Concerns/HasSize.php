@@ -18,6 +18,7 @@ trait HasSize
 {
     protected string|Closure $size = 'md';
 
+    /** Set the component size on the xs–xl scale (a `Size` enum, a keyword string, or a Closure). */
     public function size(string|Size|Closure $size): static
     {
         $this->size = $size instanceof Size ? $size->value : $size;
@@ -25,26 +26,31 @@ trait HasSize
         return $this;
     }
 
+    /** Size preset: extra-small. */
     public function xs(): static
     {
         return $this->size('xs');
     }
 
+    /** Size preset: small. */
     public function sm(): static
     {
         return $this->size('sm');
     }
 
+    /** Size preset: medium (the default). */
     public function md(): static
     {
         return $this->size('md');
     }
 
+    /** Size preset: large. */
     public function lg(): static
     {
         return $this->size('lg');
     }
 
+    /** Size preset: extra-large. */
     public function xl(): static
     {
         return $this->size('xl');

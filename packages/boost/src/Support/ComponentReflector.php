@@ -162,6 +162,8 @@ class ComponentReflector
 
         foreach (preg_split('/\R/', $doc) ?: [] as $raw) {
             $line = trim(ltrim(trim($raw), '/* '));
+            // Strip the closing delimiter of a single-line `/** Summary. */` docblock.
+            $line = trim((string) preg_replace('~\*/\s*$~', '', $line));
 
             if ($line !== '' && ! str_starts_with($line, '@') && ! str_starts_with($line, '/')) {
                 return $line;

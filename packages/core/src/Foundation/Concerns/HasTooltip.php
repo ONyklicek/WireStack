@@ -13,6 +13,7 @@ trait HasTooltip
 {
     protected string|Closure|null $tooltip = null;
 
+    /** Set the hover tooltip text (a string or a Closure resolved per component). */
     public function tooltip(string|Closure|null $tooltip): static
     {
         $this->tooltip = $tooltip;
