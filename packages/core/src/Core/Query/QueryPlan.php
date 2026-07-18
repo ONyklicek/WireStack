@@ -21,7 +21,6 @@ final readonly class QueryPlan
      * @param  array<int, FilterClause>  $filters
      * @param  array<int, SearchClause>  $searchClauses
      * @param  array<int, SortClause>  $sortClauses
-     * @param  array<int, string>  $selectedColumns
      * @param  array<int, string>  $scopes
      * @param  bool  $withSoftDeletes  Whether to include soft-deleted records
      */
@@ -32,7 +31,6 @@ final readonly class QueryPlan
         public array $filters = [],
         public array $searchClauses = [],
         public array $sortClauses = [],
-        public array $selectedColumns = [],
         public array $scopes = [],
         public ?RelationGraph $relationGraph = null,
         public bool $withSoftDeletes = false,
@@ -98,7 +96,6 @@ final readonly class QueryPlan
             filters: $this->filters,
             searchClauses: $this->searchClauses,
             sortClauses: $this->sortClauses,
-            selectedColumns: $this->selectedColumns,
             scopes: $this->scopes,
             relationGraph: $this->relationGraph,
             withSoftDeletes: $this->withSoftDeletes,
@@ -119,7 +116,6 @@ final readonly class QueryPlan
             filters: $this->filters,
             searchClauses: $this->searchClauses,
             sortClauses: $this->sortClauses,
-            selectedColumns: $this->selectedColumns,
             scopes: $this->scopes,
             relationGraph: $this->relationGraph,
             withSoftDeletes: $this->withSoftDeletes,
@@ -140,7 +136,6 @@ final readonly class QueryPlan
             filters: $this->filters,
             searchClauses: $this->searchClauses,
             sortClauses: $this->sortClauses,
-            selectedColumns: $this->selectedColumns,
             scopes: $this->scopes,
             relationGraph: $this->relationGraph,
             withSoftDeletes: $this->withSoftDeletes,

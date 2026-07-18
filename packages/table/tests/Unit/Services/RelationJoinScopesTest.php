@@ -285,7 +285,7 @@ it('keeps a plain direct join for a relation whose model has no global scopes', 
 
 // ─── Global scopes on both hops of a hasOneThrough ───────────
 
-it('scopes both the intermediate and far subqueries of a through relation', function () {
+it('excludes a through match whose intermediate is soft-deleted, via whereHas', function () {
     ScMechanic::insert([['id' => 1, 'name' => 'Manny'], ['id' => 2, 'name' => 'Mo']]);
     ScCar::withoutGlobalScopes()->insert([
         ['id' => 101, 'mechanic_id' => 1, 'deleted_at' => null],
@@ -306,9 +306,12 @@ it('scopes both the intermediate and far subqueries of a through relation', func
         filterValues: ['owner' => ['name' => 'Anna']],
     );
 
-    // Two scoped subqueries (intermediate + far), each soft-delete-guarded.
-    expect(substr_count($query->toSql(), 'left join (select'))->toBe(2);
-    // Anna's car is trashed → intermediate scope drops it → no match.
+    // The through filter is a nested EXISTS (whereHas), and the display column
+    // eager-loads — neither joins the scoped subquery any more.
+    expect(strtolower($query->toSql()))->toContain('exists')
+        ->and($query->toSql())->not->toContain('left join (select');
+    // Anna's car is trashed → the intermediate soft-delete scope inside the
+    // EXISTS drops it → no match.
     expect($query->get()->pluck('name')->all())->toBe([]);
 });
 

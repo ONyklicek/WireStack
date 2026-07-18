@@ -100,6 +100,12 @@ class RmdPost extends Model
     {
         return $this->belongsTo(RmdUser::class, 'user_id');
     }
+
+    public function userByCode(): BelongsTo
+    {
+        // Non-`id` owner key — the join must key on the owner column, not `.id`.
+        return $this->belongsTo(RmdUser::class, 'user_id', 'code');
+    }
 }
 
 class RmdRole extends Model
@@ -146,7 +152,21 @@ it('classifies a belongs-to as a joinable single relation', function () {
         ->and($meta->relatedModel)->toBe(RmdUser::class)
         ->and($meta->parentModel)->toBe(RmdPost::class)
         ->and($meta->name)->toBe('user')
-        ->and($meta->foreignKey)->toBe('user_id');
+        ->and($meta->foreignKey)->toBe('user_id')
+        // The join's related-side key is the belongsTo OWNER key (default `id`),
+        // read via getOwnerKeyName — not null (which fell back to `.id` and could
+        // still be right by coincidence, but see the custom-owner-key test below).
+        ->and($meta->localKey)->toBe('id');
+});
+
+it('resolves a belongs-to custom owner key so the join keys on the right column', function () {
+    // Regression: getOwnerKeyName was never read, so a non-`id` owner key resolved
+    // to null and the planner joined on `.id` (wrong rows / none).
+    $meta = rmdMeta(new RmdPost, 'userByCode');
+
+    expect($meta->type)->toBe('BelongsTo')
+        ->and($meta->foreignKey)->toBe('user_id')
+        ->and($meta->localKey)->toBe('code');
 });
 
 it('classifies a has-one as a joinable single relation with a local key', function () {

@@ -254,6 +254,23 @@ final class TableQueryService
 
         $query = $executor->execute($baseQuery, $this->lastPlan, $searchTerm);
 
+        // ── 4.4 Explicit eager-load hints (Column::loadRelations()) ──
+        // For relations a display/url/color closure dereferences per row but which
+        // have no column path, so the planner cannot discover them. Without this the
+        // relation lazy-loads once per row (an N+1 the framework can't see inside a
+        // closure); with() is additive and Laravel de-dupes against planned loads.
+        /** @var array<int, string> $extraEagerLoads */
+        $extraEagerLoads = [];
+        foreach ($columns as $column) {
+            foreach ($column->getEagerLoadRelations() as $relation) {
+                $extraEagerLoads[] = $relation;
+            }
+        }
+        if ($extraEagerLoads !== []) {
+            // with() de-dupes internally against the planned eager loads.
+            $query->with($extraEagerLoads);
+        }
+
         // ── 4.5 Apply aggregate subqueries (withCount, withSum, etc.) ──
         // Rollups over the sub-row relation honour active sub-row scoped filters,
         // so rollup cells and footer grand totals reflect the filtered children.

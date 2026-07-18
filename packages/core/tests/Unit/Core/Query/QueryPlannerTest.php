@@ -111,7 +111,7 @@ beforeEach(function () {
 
 // ── Simple columns ───────────────────────────────────────────
 
-it('plans simple columns on base table', function () {
+it('plans base columns without joins or eager loads', function () {
     $columns = [
         TextComponent::make('name')->addCapability(Capability::Searchable),
         TextComponent::make('email'),
@@ -119,9 +119,11 @@ it('plans simple columns on base table', function () {
 
     $plan = $this->planner->plan('App\\Models\\User', $columns);
 
-    expect($plan->selectedColumns)->toContain('users.name', 'users.email')
-        ->and($plan->hasJoins())->toBeFalse()
-        ->and($plan->hasEagerLoads())->toBeFalse();
+    // Base columns need neither a join nor an eager load — the default select
+    // covers them (no column projection is planned any more).
+    expect($plan->hasJoins())->toBeFalse()
+        ->and($plan->hasEagerLoads())->toBeFalse()
+        ->and($plan->isEmpty())->toBeTrue();
 });
 
 // ── Search planning ──────────────────────────────────────────
@@ -172,34 +174,31 @@ it('plans search with sql expression', function () {
 
 // ── Relation column planning ─────────────────────────────────
 
-it('plans join for BelongsTo relation column', function () {
+it('eager loads a BelongsTo relation column for display, without a join', function () {
     $columns = [
         TextComponent::make('company.name'),
     ];
 
     $plan = $this->planner->plan('App\\Models\\User', $columns);
 
-    expect($plan->hasJoins())->toBeTrue()
-        ->and($plan->joins)->toHaveCount(1)
-        ->and($plan->joins[0]->table)->toBe('companies')
-        ->and($plan->joins[0]->alias)->toBe('users_company')
-        ->and($plan->joins[0]->type)->toBe('left');
+    // A display-only relation column is read via data_get on the eager-loaded
+    // relation; it no longer registers a JOIN (that is only for sort/search).
+    expect($plan->hasJoins())->toBeFalse()
+        ->and($plan->eagerLoads)->toContain('company');
 });
 
-it('plans nested relation joins', function () {
+it('eager loads a nested relation column for display, without joins', function () {
     $columns = [
         TextComponent::make('company.address.city'),
     ];
 
     $plan = $this->planner->plan('App\\Models\\User', $columns);
 
-    expect($plan->hasJoins())->toBeTrue()
-        ->and($plan->joins)->toHaveCount(2)
-        ->and($plan->joins[0]->alias)->toBe('users_company')
-        ->and($plan->joins[1]->alias)->toBe('users_company_address');
+    expect($plan->hasJoins())->toBeFalse()
+        ->and($plan->eagerLoads)->toContain('company.address');
 });
 
-it('deduplicates joins for same relation', function () {
+it('deduplicates eager loads for the same relation', function () {
     $columns = [
         TextComponent::make('company.name'),
         TextComponent::make('company.email'),
@@ -207,7 +206,9 @@ it('deduplicates joins for same relation', function () {
 
     $plan = $this->planner->plan('App\\Models\\User', $columns);
 
-    expect($plan->joins)->toHaveCount(1);
+    // Two columns on the same relation eager-load it once, and never join.
+    expect($plan->hasJoins())->toBeFalse()
+        ->and(array_filter($plan->eagerLoads, fn ($p) => $p === 'company'))->toHaveCount(1);
 });
 
 it('plans search through relation join', function () {
@@ -220,6 +221,34 @@ it('plans search through relation join', function () {
     expect($plan->searchClauses)->toHaveCount(1)
         ->and($plan->searchClauses[0]->isRelation)->toBeTrue()
         ->and($plan->searchClauses[0]->tableAlias)->toBe('users_company');
+});
+
+it('does not join-search a to-many relation column, eager loading it instead', function () {
+    // A searchable column on a non-morph to-many relation cannot be join-searched
+    // (a join would multiply rows); it is eager-loaded for display and emits no
+    // search clause or join.
+    $this->registry->registerRelation('App\\Models\\User', new RelationMetadata(
+        name: 'posts',
+        type: 'HasMany',
+        parentModel: 'App\\Models\\User',
+        relatedModel: 'App\\Models\\Company',
+        foreignKey: 'user_id',
+        localKey: 'id',
+        morphType: null,
+        pivotTable: null,
+        isMorph: false,
+        isToMany: true,
+    ));
+
+    $columns = [
+        TextComponent::make('posts.title')->addCapability(Capability::Searchable),
+    ];
+
+    $plan = $this->planner->plan('App\\Models\\User', $columns, search: 'hello');
+
+    expect($plan->hasJoins())->toBeFalse()
+        ->and($plan->searchClauses)->toHaveCount(0)
+        ->and($plan->eagerLoads)->toContain('posts');
 });
 
 // ── Morph relation planning ──────────────────────────────────
@@ -278,18 +307,70 @@ it('plans simple filter', function () {
         ->and($plan->filters[0]->tableAlias)->toBe('users');
 });
 
-it('plans relation filter with join', function () {
+it('plans relation filter natively without a join', function () {
     $filters = [
         FilterDefinition::make('company.name', '=', 'Acme'),
     ];
 
     $plan = $this->planner->plan('App\\Models\\User', filters: $filters);
 
+    // Relation filters are applied via whereHas() in ApplyFilters, not a JOIN:
+    // no alias, no join registered, just the relation path + terminal column.
     expect($plan->filters)->toHaveCount(1)
         ->and($plan->filters[0]->column)->toBe('name')
-        ->and($plan->filters[0]->tableAlias)->toBe('users_company')
+        ->and($plan->filters[0]->tableAlias)->toBeNull()
         ->and($plan->filters[0]->isRelation)->toBeTrue()
-        ->and($plan->hasJoins())->toBeTrue();
+        ->and($plan->filters[0]->relationPath)->toBe('company')
+        ->and($plan->hasJoins())->toBeFalse();
+});
+
+it('plans a morph relation filter as an eager load, still applied via whereHas', function () {
+    $filters = [
+        FilterDefinition::make('comments.body', 'LIKE', '%hi%'),
+    ];
+
+    $plan = $this->planner->plan('App\\Models\\User', filters: $filters);
+
+    // Morph filters emit a relation clause (whereHas at apply time) and add the
+    // relation as a display eager-load; they never register a join.
+    expect($plan->filters)->toHaveCount(1)
+        ->and($plan->filters[0]->column)->toBe('body')
+        ->and($plan->filters[0]->isRelation)->toBeTrue()
+        ->and($plan->filters[0]->relationPath)->toBe('comments')
+        ->and($plan->hasJoins())->toBeFalse()
+        ->and($plan->eagerLoads)->toContain('comments');
+});
+
+it('plans a to-many relation filter (whereHas can express what a join cannot)', function () {
+    $filters = [
+        FilterDefinition::make('posts.title', 'LIKE', '%hello%'),
+    ];
+
+    $plan = $this->planner->plan('App\\Models\\User', filters: $filters);
+
+    // A join-based planner silently dropped to-many filters; whereHas keeps them.
+    expect($plan->filters)->toHaveCount(1)
+        ->and($plan->filters[0]->column)->toBe('title')
+        ->and($plan->filters[0]->isRelation)->toBeTrue()
+        ->and($plan->filters[0]->relationPath)->toBe('posts')
+        ->and($plan->hasJoins())->toBeFalse();
+});
+
+it('plans an aggregate filter as an aggregate clause (whereHas, no join/HAVING)', function () {
+    $filters = [
+        FilterDefinition::make('orders->count()', '>', 5),
+    ];
+
+    $plan = $this->planner->plan('App\\Models\\User', filters: $filters);
+
+    expect($plan->filters)->toHaveCount(1)
+        ->and($plan->filters[0]->isAggregate)->toBeTrue()
+        ->and($plan->filters[0]->aggregateRelation)->toBe('orders')
+        ->and($plan->filters[0]->aggregateFunction)->toBe('count')
+        ->and($plan->filters[0]->operator)->toBe('>')
+        ->and($plan->filters[0]->value)->toBe(5)
+        ->and($plan->filters[0]->isRelation)->toBeFalse()
+        ->and($plan->hasJoins())->toBeFalse();
 });
 
 // ── Sort planning ────────────────────────────────────────────

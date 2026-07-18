@@ -85,11 +85,19 @@ final readonly class RelationMetadata
                 ? last(explode('.', $relation->getQualifiedForeignKeyName()))
                 : null);
 
+        // The join's key on the RELATED (joined) side. HasOne/Many expose it as
+        // getLocalKeyName, BelongsToMany as getParentKeyName, and BelongsTo as
+        // getOwnerKeyName — which BelongsTo is the ONLY source for. Without the
+        // getOwnerKeyName fallback, every BelongsTo resolved to null and the planner
+        // fell back to `.id`, so a `belongsTo(..., $fk, $ownerKey)` with a non-`id`
+        // owner key (or any related model whose PK isn't `id`) joined on the wrong column.
         $localKey = method_exists($relation, 'getLocalKeyName')
             ? $relation->getLocalKeyName()
             : (method_exists($relation, 'getParentKeyName')
                 ? $relation->getParentKeyName()
-                : null);
+                : (method_exists($relation, 'getOwnerKeyName')
+                    ? $relation->getOwnerKeyName()
+                    : null));
 
         $morphType = null;
         if (method_exists($relation, 'getMorphType')) {
