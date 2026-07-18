@@ -108,6 +108,8 @@ class ExcelExporter implements Exporter
             return $value;
         }
 
-        return (string) $value;
+        // Force literal text for anything OpenSpout would turn into a formula cell
+        // (a leading `=`) or a spreadsheet would evaluate on open.
+        return $this->escapeFormula((string) $value);
     }
 }

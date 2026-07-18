@@ -39,4 +39,25 @@ trait ResolvesExportValue
         // JSON), matching the on-screen table; scalar values pass through untouched.
         return EnumResolver::display($value);
     }
+
+    /**
+     * Neutralise CSV/spreadsheet formula injection. A string a spreadsheet would
+     * evaluate — leading `=`, `@`, tab or CR, or a leading `+`/`-` that is not a
+     * plain number — is prefixed with a single quote so Excel/Sheets treat it as
+     * literal text (OpenSpout also turns a leading-`=` string into a live
+     * formula cell). A leading `+`/`-` on a numeric value is left alone so numeric
+     * exports stay numeric.
+     */
+    protected function escapeFormula(string $value): string
+    {
+        if ($value === '') {
+            return $value;
+        }
+
+        $first = $value[0];
+        $risky = in_array($first, ['=', '@', "\t", "\r"], true)
+            || (in_array($first, ['+', '-'], true) && ! is_numeric($value));
+
+        return $risky ? "'".$value : $value;
+    }
 }

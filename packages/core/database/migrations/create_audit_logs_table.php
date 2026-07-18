@@ -14,8 +14,12 @@ return new class extends Migration
             $table->id();
             $table->string('event');
             $table->string('auditable_type');
-            $table->unsignedBigInteger('auditable_id')->nullable();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            // String, not bigint: the audited model and the actor may use a
+            // non-integer key (UUID/ULID). No FK on user_id — an audit entry must
+            // survive the actor's deletion (retain who did it), which a
+            // constrained nullOnDelete would erase.
+            $table->string('auditable_id')->nullable();
+            $table->string('user_id')->nullable();
             $table->json('old_values')->nullable();
             $table->json('new_values')->nullable();
             $table->json('metadata')->nullable();

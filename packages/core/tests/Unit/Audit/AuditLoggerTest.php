@@ -2,8 +2,28 @@
 
 declare(strict_types=1);
 
+use Illuminate\Auth\GenericUser;
 use NyonCode\WireCore\Audit\AuditLogger;
 use NyonCode\WireCore\Audit\Contracts\AuditableEvent;
+
+// ─── Actor resolution ────────────────────────────────────────────────────────
+
+it('resolves a string (UUID/ULID) actor id without dropping it', function () {
+    // Regression M6: resolveUserId() was typed ?int, so a non-integer actor key
+    // threw a TypeError under strict_types that the catch swallowed — the actor
+    // was silently recorded as null.
+    $logger = new class extends AuditLogger
+    {
+        public function actorId(): int|string|null
+        {
+            return $this->resolveUserId();
+        }
+    };
+
+    $this->actingAs(new GenericUser(['id' => '550e8400-e29b-41d4-a716-446655440000']));
+
+    expect($logger->actorId())->toBe('550e8400-e29b-41d4-a716-446655440000');
+});
 
 // ─── withoutAuditing ─────────────────────────────────────────────────────────
 
