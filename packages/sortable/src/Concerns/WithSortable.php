@@ -175,20 +175,27 @@ trait WithSortable
             return;
         }
 
-        $orderColumn = $table->getOrderColumn();
-        $modelClass = $this->resolveModelClass($table);
-
-        if ($modelClass === null) {
+        // Authorization seam (defense-in-depth on top of the base-query scope below):
+        // override canReorder() to enforce a policy/Gate check on the reorder action.
+        if (! $this->canReorder($items)) {
             return;
         }
 
-        $this->beforeReorder($items);
-
+        $orderColumn = $table->getOrderColumn();
         $primaryKey = $table->getPrimaryKey();
 
-        DB::transaction(function () use ($items, $orderColumn, $modelClass, $primaryKey) {
+        $this->beforeReorder($items);
+
+        DB::transaction(function () use ($items, $orderColumn, $primaryKey, $table) {
             foreach ($items as $item) {
-                $modelClass::where($primaryKey, $item['value'])
+                // Scope every write through the table's base query so a developer
+                // `->query(Task::where('team_id', $tid))` / modifyQueryCallback applies:
+                // a client-supplied primary key outside the visible/scoped set matches
+                // NOTHING and is never written. Previously this used a model-global
+                // `$modelClass::where(...)` that rewrote the order column of ANY row of
+                // the model by client key — an IDOR write.
+                (clone $table->getQuery())
+                    ->where($primaryKey, $item['value'])
                     ->update([$orderColumn => $item['order']]);
             }
         });
@@ -196,6 +203,19 @@ trait WithSortable
         $this->afterReorder($items);
 
         $this->cachedRecords = null;
+    }
+
+    /**
+     * Authorization hook for a reorder write. The table's base query already scopes
+     * WHICH rows can be touched; override this to gate WHETHER the current user may
+     * reorder at all (e.g. `return Gate::allows('reorder', $this->getTable()->getModel())`).
+     * Defaults to allow.
+     *
+     * @param  array<int, array{value: string|int, order: int}>  $items
+     */
+    protected function canReorder(array $items): bool
+    {
+        return true;
     }
 
     /**

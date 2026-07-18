@@ -1758,15 +1758,15 @@ trait WithTable
             return ['success' => false, 'message' => __('wire-table::messages.column_not_editable')];
         }
 
-        // ── Permission checks (before transaction — read-only) ──
-        if ($column->getPermission()) {
-            $user = auth()->user();
-            if (! $user) {
-                return ['success' => false, 'message' => __('wire-table::messages.no_permission')];
-            }
-            if (method_exists($user, 'hasPermissionTo') && ! $user->hasPermissionTo($column->getPermission())) {
-                return ['success' => false, 'message' => __('wire-table::messages.no_permission_view')];
-            }
+        // ── Permission check (before transaction — read-only). Delegate to the
+        // canonical fail-CLOSED authorization owner (HasAuthorization::isAuthorized),
+        // a Gate check that works with Laravel Gate/policies AND Spatie. The previous
+        // hand-rolled `method_exists($user, 'hasPermissionTo')` probe failed OPEN for
+        // any user model without that method (e.g. plain Gate/policy auth), silently
+        // bypassing `->permission()`. `isAuthorized()` returns true when no permission
+        // is set, so unrestricted editable columns are unaffected. ──
+        if (! $column->isAuthorized()) {
+            return ['success' => false, 'message' => __('wire-table::messages.no_permission_view')];
         }
 
         // ── Format & validate (before transaction — no DB writes) ──

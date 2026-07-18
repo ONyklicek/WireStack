@@ -27,6 +27,7 @@ beforeEach(function () {
         $table->unsignedBigInteger('rsh_parent_id');
         $table->string('label');
         $table->integer('sort_order')->default(0);
+        $table->json('meta')->nullable();
         $table->timestamps();
     });
 });
@@ -89,6 +90,28 @@ test('deletes removed children', function () {
     ]);
 
     expect($parent->children()->count())->toBe(1);
+});
+
+test('editing an existing relation row applies casts (no cast bypass / corruption)', function () {
+    // Regression: the update branch used a query-builder ->update() that bypasses
+    // casts/mutators/events, so an 'array'-cast column bound to a PHP array wrote
+    // corrupt data (Array to string conversion). Both create AND edit must persist
+    // it as JSON via the model.
+    $parent = createRshParent();
+    $child = $parent->children()->create(['label' => 'C', 'sort_order' => 0, 'meta' => ['first']]);
+
+    $handler = new RelationshipSaveHandler;
+    $repeater = Repeater::make('children')->relationship('children');
+
+    $handler->save($parent, [$repeater], [
+        'children' => [
+            ['id' => $child->id, 'label' => 'C', 'sort_order' => 0, 'meta' => ['a', 'b']],
+        ],
+    ]);
+
+    $reloaded = RshChildModel::find($child->id);
+    expect($reloaded->meta)->toBe(['a', 'b']);            // array cast survived the edit
+    expect($reloaded->getRawOriginal('meta'))->toBeString(); // stored as JSON, not "Array"
 });
 
 test('handles mixed create update and delete', function () {
@@ -325,6 +348,8 @@ class RshChildModel extends Model
     protected $table = 'rsh_children';
 
     protected $guarded = [];
+
+    protected $casts = ['meta' => 'array'];
 }
 
 class RshTag extends Model

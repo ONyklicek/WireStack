@@ -64,12 +64,12 @@ trait WithEditablePanel
             return ['success' => false, 'message' => __('wire-core::messages.entry_not_editable')];
         }
 
-        // ── Permission (record-independent, read-only) ──
-        if ($entry->getPermission()) {
-            $user = auth()->user();
-            if (! $user || (method_exists($user, 'hasPermissionTo') && ! $user->hasPermissionTo($entry->getPermission()))) {
-                return ['success' => false, 'message' => __('wire-core::messages.no_permission')];
-            }
+        // ── Permission (record-independent, read-only). Canonical fail-CLOSED Gate
+        // check (HasAuthorization::isAuthorized) — the previous `method_exists(...,
+        // 'hasPermissionTo')` probe failed OPEN for user models without that method,
+        // silently bypassing `->permission()`. Returns true when no permission is set. ──
+        if (! $entry->isAuthorized()) {
+            return ['success' => false, 'message' => __('wire-core::messages.no_permission')];
         }
 
         // ── Resolve the record from the host, not the client ──

@@ -21,6 +21,17 @@ class WireConfig extends BoostTool
         $key = trim((string) $request->get('key'));
 
         if ($key !== '') {
+            // Restrict a free-form key to the wireStack namespaces. Without this the
+            // tool read ANY application config into the model context — e.g.
+            // `app.key`, `database.connections.*.password`, `services.*.secret`.
+            $namespace = explode('.', $key, 2)[0];
+            if (! in_array($namespace, self::NAMESPACES, true)) {
+                return Response::error(
+                    'wire-config only exposes the wireStack namespaces ('.implode(', ', self::NAMESPACES).'); '
+                    .'it does not read application config or secrets.'
+                );
+            }
+
             return $this->json([
                 'key' => $key,
                 'value' => config($key),

@@ -50,11 +50,19 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
 
 ### Modals
 
-`Modal`, `ConfirmationDialog`, `SlideOver` and `Wizard`. Prefer attaching a modal to an action over
-building bespoke modal state. Mobile presentation is per action: `->slideOverOnMobile()` renders the
-form modal as a bottom-sheet that slides up from the bottom edge, `->fullScreenOnMobile()` fills the
-viewport; both keep the centered dialog on desktop and scroll the body inside the panel. Combine
-`->slideOver()->slideOverOnMobile()` for a desktop slide-over that becomes a mobile bottom-sheet.
+`Modal`, `ConfirmationDialog`, `SlideOver` and `Wizard` (modal **config** objects). Prefer attaching a
+modal to an action over building bespoke modal state. Mobile presentation is per action:
+`->slideOverOnMobile()` renders the form modal as a bottom-sheet that slides up from the bottom edge,
+`->fullScreenOnMobile()` fills the viewport; both keep the centered dialog on desktop and scroll the body
+inside the panel. Combine `->slideOver()->slideOverOnMobile()` for a desktop slide-over that becomes a
+mobile bottom-sheet.
+
+For a **standalone** modal in your own view use the component tag —
+@verbatim`<x-wire-modals::modal wire:model="show" heading="…">…<x-slot:footer>…</x-slot:footer></x-wire-modals::modal>`@endverbatim
+(also `::confirmation`, `::slide-over`). For **PHP-first** rendering without a `<x-*>` tag, echo the
+Htmlable render object: @verbatim`{{ new NyonCode\WireCore\Modals\Html\Modal(heading: '…', wireModel: 'show', body: $form) }}`@endverbatim.
+Both render the same shell. (Three families under `Modals\`: `Html\*` = Htmlable render objects,
+`Modals\Modal` etc. = config, `Modals\View\*Component` = the Blade components — don't conflate.)
 
 ### Mobile sheets
 
@@ -99,7 +107,7 @@ action buttons dispatch a Livewire event on click (host listens with `#[On('even
 supports `->payload([...])`, `->color()`, `->keepOpen()`. The built-in drivers forward the full payload, so
 titles/actions/persistence survive the server round-trip.
 
-Toast container: `<x-wire-notifications::toast-container />` — props `position`, `duration`, `event-name`,
+Toast container: @verbatim`<x-wire-notifications::toast-container />`@endverbatim — props `position`, `duration`, `event-name`,
 `stack` (collapse into a pile that fans out on hover), `progress` (per-toast countdown bar, hover pauses it and
 the auto-dismiss), `max` (cap visible toasts, overflow into a "+N more" pill). Honors `prefers-reduced-motion`
 and exposes an `aria-live` region.
@@ -157,7 +165,13 @@ Every interactive control across the shared UI carries a stable `data-testid` (+
 ### Icons & colors
 
 Icons resolve by name through the `IconManager` (bundled Heroicons solid + `outline:` prefix). Use
-`list-icons` to find a name. Colors and sizes are semantic tokens owned by the Foundation palette.
+`list-icons` to find a name. In a Blade view use @verbatim`<x-wire::icon name="check" class="w-5 h-5" />`@endverbatim
+— the component API, which also forwards Alpine/`data-*` attributes onto the `<svg>`. In **custom
+column / entry / partial views** rendered per row, prefer the `icon()` helper —
+@verbatim`{!! icon('check', 'w-5 h-5') !!}`@endverbatim — a plain PHP function returning the cached
+`IconManager` `<svg>` string (no per-row view render, unlike the component); pass `$attributes` (5th
+arg) for an Alpine-bound icon. Never hardcode an inline `<svg>` (breaks theming). Colors and sizes are
+semantic tokens owned by the Foundation palette.
 `->color()` accepts the full Tailwind palette on every surface — the semantic roles (`primary`,
 `success`, `danger`, `warning`, `info`, `gray`), every raw hue family (`blue`, `green`, `red`, `yellow`,
 `cyan`, `slate`, `zinc`, `neutral`, `stone`, `orange`, `lime`, `teal`, `sky`, `indigo`, `violet`,

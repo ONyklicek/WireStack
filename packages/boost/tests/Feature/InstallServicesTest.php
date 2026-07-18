@@ -91,6 +91,22 @@ it('composes the shipped guidelines', function () {
     expect(GuidelineComposer::default()->compose())->toContain('WireStack');
 });
 
+it('emits example component tags literally instead of rendering them (blade guidelines are Blade-rendered)', function () {
+    // Regression H5: the guideline files are compiled through Blade::render, so a
+    // bare `<x-wire-notifications::toast-container />` used as documentation would
+    // actually be rendered — emitting live Alpine/Livewire markup into the text
+    // (or throwing when the component needs a runtime). @verbatim keeps them as
+    // the literal example tags a reader (or the MCP client) is meant to copy.
+    $composed = GuidelineComposer::default()->compose();
+
+    expect($composed)
+        ->toContain('<x-wire-notifications::toast-container />')
+        ->toContain('<x-wire-actions::modal-host />')
+        // If a tag had actually rendered, its compiled Alpine attributes would leak.
+        ->not->toContain('x-data="wireToast')
+        ->not->toContain('wire:snapshot');
+});
+
 it('returns an empty string when no guideline directory exists', function () {
     expect((new GuidelineComposer(['/no/such/dir']))->compose())->toBe('');
 });
