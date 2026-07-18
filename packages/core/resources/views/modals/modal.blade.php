@@ -2,9 +2,15 @@
 {{-- Teleported to <body> so a transformed/overflow ancestor can never break the
      fixed overlay's viewport positioning. (Floating UI N/A — modals are centered,
      not anchored to a trigger.) --}}
+@php
+    // wire:model comes from the <x-wire-modals::modal> tag's attribute bag
+    // (consumer path) or the Htmlable Modal object, which passes $wireModel
+    // (Rule 5). isset()/?? keep $attributes untouched off the component path.
+    $modelBinding = $wireModel ?? (isset($attributes) ? $attributes->wire('model') : null);
+@endphp
 <template x-teleport="body" wire:key="wire-modal-modal">
 <div
-    x-data="{ show: @entangle($attributes->wire('model')) }"
+    x-data="{ show: @entangle($modelBinding) }"
     x-show="show"
     x-cloak
     style="display: none;@if($zIndex !== null) z-index: {{ $zIndex }};@endif"
@@ -15,7 +21,7 @@
     role="dialog"
     aria-modal="true"
 >
-    <div class="{{ $containerClasses() }}">
+    <div class="{{ $style->containerClasses() }}">
         {{-- Backdrop --}}
         <div
             x-show="show"
@@ -32,7 +38,7 @@
         <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
 
         {{-- Modal Panel --}}
-        @php $transitions = $transitionClasses(); @endphp
+        @php $transitions = $style->transitionClasses(); @endphp
         <div
             x-show="show"
             x-transition:enter="ease-out duration-300"
@@ -43,8 +49,8 @@
             x-transition:leave-end="{{ $transitions['leaveEnd'] }}"
             @class([
                 'relative inline-block w-full transform overflow-hidden bg-white dark:bg-gray-800 text-left align-bottom shadow-xl transition-all sm:align-middle',
-                $widthClass(),
-                $panelVariantClasses(),
+                $style->widthClass(),
+                $style->panelVariantClasses(),
             ])
             @if($maxHeight) style="max-height: {{ $maxHeight }}" @endif
         >
@@ -56,8 +62,8 @@
                 ])>
                     <div class="sm:flex sm:items-start">
                         @if($icon)
-                            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full {{ $iconBgClass() }} sm:mx-0 sm:h-10 sm:w-10">
-                                <x-wire::icon :name="$icon" :class="'h-6 w-6 ' . $iconColorClass()" />
+                            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full {{ $style->iconBgClass() }} sm:mx-0 sm:h-10 sm:w-10">
+                                {!! icon($icon, 'w-4 h-4', 'h-6 w-6 ' . $style->iconColorClass()) !!}
                             </div>
                         @endif
 
@@ -91,7 +97,7 @@
                             class="absolute right-2 top-2 sm:static sm:right-auto sm:top-auto sm:ml-auto sm:-mr-1.5 rounded-lg p-2.5 sm:p-1.5 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 touch-manipulation"
                         >
                             <span class="sr-only">{{ __('Close') }}</span>
-                            <x-wire::icon name="outline:x-mark" size="h-5 w-5" />
+                            {!! icon('outline:x-mark', 'h-5 w-5') !!}
                         </button>
                     </div>
 
@@ -109,21 +115,34 @@
                 'overflow-y-auto overscroll-contain' => $maxHeight,
                 // Mobile variants scroll the body inside the full-height panel;
                 // from the breakpoint up it returns to the page-scroll layout
-                // (breakpoint-aware, see ModalComponent::bodyVariantClasses()).
-                $bodyVariantClasses() => $mobileVariant() !== null,
+                // (breakpoint-aware, see ModalStyle::bodyVariantClasses()).
+                $style->bodyVariantClasses() => $style->mobileVariant() !== null,
             ])>
-                {{ $slot }}
+                {{-- Body: a component slot (consumer tag), an @include'd partial
+                     ($bodyView), or a pre-rendered Htmlable ($body) from the
+                     Modal object (Rule 5). --}}
+                @if(isset($bodyView))
+                    @include($bodyView, $bodyData ?? [])
+                @elseif(! empty($body))
+                    {!! $body !!}
+                @else
+                    {{ $slot ?? '' }}
+                @endif
             </div>
 
             {{-- Footer --}}
-            @isset($footer)
+            @if(isset($footerView) || isset($footer))
                 <div @class([
                     'px-4 pb-4 sm:px-6 sm:pb-6',
                     'sticky bottom-0 z-10 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 pt-4' => $stickyFooter,
                 ])>
-                    {{ $footer }}
+                    @isset($footerView)
+                        @include($footerView, $footerData ?? [])
+                    @else
+                        {!! $footer !!}
+                    @endisset
                 </div>
-            @endisset
+            @endif
         </div>
     </div>
 </div>

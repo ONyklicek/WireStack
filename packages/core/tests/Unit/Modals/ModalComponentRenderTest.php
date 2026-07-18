@@ -218,24 +218,27 @@ it('bottom-sheet wins when both mobile flags are set', function () {
         fullScreenOnMobile: true,
     );
 
-    expect($component->mobileVariant())->toBe('bottom-sheet');
+    // Layout logic now lives in the extracted ModalStyle (Rule 5 Phase 0); the
+    // component exposes it via style().
+    expect($component->style()->mobileVariant())->toBe('bottom-sheet');
 });
 
 it('gates the modal sheet switch on the configured breakpoint', function () {
     $sheet = new ModalComponent(slideOverOnMobile: true);
 
-    // Default sm: the desktop reset + width cap gate at sm.
+    // Default sm: the desktop reset + width cap gate at sm. style() reads the
+    // config fresh on each call, so it tracks the runtime breakpoint change.
     config(['wire-core.mobile.breakpoint' => 'sm']);
-    expect($sheet->containerClasses())->toContain('sm:block')
-        ->and($sheet->widthClass())->toBe('sm:max-w-md')
-        ->and($sheet->panelVariantClasses())->toContain('sm:inline-block');
+    expect($sheet->style()->containerClasses())->toContain('sm:block')
+        ->and($sheet->style()->widthClass())->toBe('sm:max-w-md')
+        ->and($sheet->style()->panelVariantClasses())->toContain('sm:inline-block');
 
     // md (tablets): everything shifts to md so the sheet spans up to 768px.
     config(['wire-core.mobile.breakpoint' => 'md']);
-    expect($sheet->containerClasses())->toContain('md:block')->not->toContain('sm:block')
-        ->and($sheet->widthClass())->toBe('md:max-w-md')
-        ->and($sheet->panelVariantClasses())->toContain('md:inline-block')
-        ->and($sheet->transitionClasses()['enterStart'])->toContain('md:translate-y-0');
+    expect($sheet->style()->containerClasses())->toContain('md:block')->not->toContain('sm:block')
+        ->and($sheet->style()->widthClass())->toBe('md:max-w-md')
+        ->and($sheet->style()->panelVariantClasses())->toContain('md:inline-block')
+        ->and($sheet->style()->transitionClasses()['enterStart'])->toContain('md:translate-y-0');
 
     config(['wire-core.mobile.breakpoint' => 'sm']);
 });
@@ -243,16 +246,18 @@ it('gates the modal sheet switch on the configured breakpoint', function () {
 it('gates the compose slide-over sheet switch on the configured breakpoint', function () {
     $so = new SlideOverComponent(bottomSheetOnMobile: true);
 
+    // Layout logic now lives in the extracted SlideOverStyle (Rule 5 Phase 0);
+    // exposed via style(), read fresh so it tracks the runtime breakpoint change.
     config(['wire-core.mobile.breakpoint' => 'sm']);
-    expect($so->positionClasses())->toContain('sm:right-0')
-        ->and($so->panelClasses())->toContain('sm:h-full')
-        ->and($so->widthClass())->toBe('sm:max-w-md');
+    expect($so->style()->positionClasses())->toContain('sm:right-0')
+        ->and($so->style()->panelClasses())->toContain('sm:h-full')
+        ->and($so->style()->widthClass())->toBe('sm:max-w-md');
 
     config(['wire-core.mobile.breakpoint' => 'md']);
-    expect($so->positionClasses())->toContain('md:right-0')->not->toContain('sm:right-0')
-        ->and($so->panelClasses())->toContain('md:h-full')
-        ->and($so->widthWrapperClasses())->toBe('w-full md:w-screen')
-        ->and($so->widthClass())->toBe('md:max-w-md');
+    expect($so->style()->positionClasses())->toContain('md:right-0')->not->toContain('sm:right-0')
+        ->and($so->style()->panelClasses())->toContain('md:h-full')
+        ->and($so->style()->widthWrapperClasses())->toBe('w-full md:w-screen')
+        ->and($so->style()->widthClass())->toBe('md:max-w-md');
 
     config(['wire-core.mobile.breakpoint' => 'sm']);
 });

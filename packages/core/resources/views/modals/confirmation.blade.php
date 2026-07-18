@@ -2,9 +2,17 @@
 {{-- Teleported to <body> so a transformed/overflow ancestor can never break the
      fixed overlay's viewport positioning. (Floating UI N/A — confirmations are
      centered on the viewport, not anchored to a trigger.) --}}
+@php
+    // wire:model / wire:click come from the <x-wire-modals::confirmation> tag's
+    // attribute bag (consumer path) or from the Htmlable Confirmation object,
+    // which passes $wireModel / $wireClick strings (Rule 5 — no <x-*> needed).
+    // isset()/?? keep $attributes untouched when it is absent (object path).
+    $modelBinding = $wireModel ?? (isset($attributes) ? $attributes->wire('model') : null);
+    $confirmClick = ($wireClick ?? (isset($attributes) ? $attributes->wire('click')->value() : null)) ?: null;
+@endphp
 <template x-teleport="body" wire:key="wire-modal-confirmation">
 <div
-    x-data="{ show: @entangle($attributes->wire('model')) }"
+    x-data="{ show: @entangle($modelBinding) }"
     x-show="show"
     x-cloak
     style="display: none;@if($zIndex !== null) z-index: {{ $zIndex }};@endif"
@@ -42,14 +50,14 @@
             x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             @class([
                 'relative inline-block transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:p-6 sm:align-middle',
-                $widthClass(),
+                $style->widthClass(),
             ])
         >
             <div class="sm:flex sm:items-start">
                 {{-- Icon --}}
                 @if($icon)
-                    <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full {{ $iconBgClass() }} sm:mx-0 sm:h-10 sm:w-10">
-                        <x-wire::icon :name="$icon" :class="'h-6 w-6 ' . $iconColorClass()" />
+                    <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full {{ $style->iconBgClass() }} sm:mx-0 sm:h-10 sm:w-10">
+                        {!! icon($icon, 'w-4 h-4', 'h-6 w-6 ' . $style->iconColorClass()) !!}
                     </div>
                 @endif
 
@@ -68,8 +76,18 @@
                         </div>
                     @endif
 
-                    {{-- Extra body content --}}
-                    @if($slot->isNotEmpty())
+                    {{-- Extra body content: a component slot (consumer tag), an
+                         @include'd partial ($bodyView), or a pre-rendered Htmlable
+                         ($body) from the Confirmation object (Rule 5). --}}
+                    @if(isset($bodyView))
+                        <div class="mt-4">
+                            @include($bodyView, $bodyData ?? [])
+                        </div>
+                    @elseif(! empty($body))
+                        <div class="mt-4">
+                            {!! $body !!}
+                        </div>
+                    @elseif(isset($slot) && $slot->isNotEmpty())
                         <div class="mt-4">
                             {{ $slot }}
                         </div>
@@ -77,15 +95,24 @@
                 </div>
             </div>
 
-            {{-- Buttons --}}
+            {{-- Buttons. The row is reversed, so the first child renders rightmost:
+                 [before…] [cancel] [submit] [after…] visually (matching the general
+                 modal footer). Additional footer actions use the Action API. --}}
             <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse gap-3">
+                {{-- 'after' footer actions → rightmost --}}
+                @foreach(($footerActions ?? []) as $footerAction)
+                    @if(($footerAction['position'] ?? 'before') === 'after')
+                        @include('wire-core::actions.partials.modal-host-footer-action', ['footerAction' => $footerAction])
+                    @endif
+                @endforeach
+
                 {{-- Submit button (hidden for informative dialogs) --}}
                 @unless($isInformative)
                     <button
                         type="button"
-                        @if($attributes->wire('click')->value()) {{ $attributes->wire('click') }} @endif
+                        @if($confirmClick) wire:click="{{ $confirmClick }}" @endif
                         data-testid="confirmation-confirm"
-                        class="{{ $submitButtonClasses() }}"
+                        class="{{ $style->submitButtonClasses() }}"
                     >
                         {{ $submitLabel }}
                     </button>
@@ -100,6 +127,13 @@
                 >
                     {{ $cancelLabel }}
                 </button>
+
+                {{-- 'before' footer actions → leftmost --}}
+                @foreach(($footerActions ?? []) as $footerAction)
+                    @if(($footerAction['position'] ?? 'before') === 'before')
+                        @include('wire-core::actions.partials.modal-host-footer-action', ['footerAction' => $footerAction])
+                    @endif
+                @endforeach
             </div>
         </div>
     </div>
