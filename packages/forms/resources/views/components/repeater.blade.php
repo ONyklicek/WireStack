@@ -10,10 +10,18 @@
 @endphp
 
 <div
+    {{-- x-data must stay byte-identical across Livewire morphs: baking a
+         per-item collapsed array (length = item count) meant adding/removing a
+         row changed the attribute text, so Alpine re-initialised and reset every
+         row's collapse state. Key collapse state by index in an object instead;
+         the only interpolated value now is the static default. --}}
     x-data="{
-        collapsed: @js(array_fill(0, $itemCount, $field->isCollapsed())),
+        collapsed: {},
+        isCollapsed(index) {
+            return this.collapsed[index] ?? {{ $field->isCollapsed() ? 'true' : 'false' }};
+        },
         toggleCollapse(index) {
-            this.collapsed[index] = !this.collapsed[index];
+            this.collapsed[index] = !this.isCollapsed(index);
         }
     }"
     @if($field->isReorderable())
@@ -66,7 +74,7 @@
                             @click="toggleCollapse({{ $index }})"
                             class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                         >
-                            {!! icon('chevron-down', 'w-4 h-4', 'w-4 h-4 transition-transform', '', [':class' => "{ 'rotate-180': !collapsed[{$index}] }"]) !!}
+                            {!! icon('chevron-down', 'w-4 h-4', 'w-4 h-4 transition-transform', '', [':class' => "{ 'rotate-180': !isCollapsed({$index}) }"]) !!}
                         </button>
                     @endif
 
@@ -83,7 +91,7 @@
             </div>
 
             <div
-                x-show="!collapsed[{{ $index }}]"
+                x-show="!isCollapsed({{ $index }})"
                 x-collapse
                 class="p-4 space-y-4"
             >

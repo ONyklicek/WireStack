@@ -23,7 +23,9 @@
         </div>
     @endif
 
-    <div class="wire-chart-canvas">
+    {{-- wire:ignore: Chart.js owns this canvas DOM. Without it a Livewire morph
+         can touch the canvas mid-render and fight Chart.js for it. --}}
+    <div class="wire-chart-canvas" wire:ignore>
         <canvas x-ref="canvas" style="width: 100%; height: 250px;"></canvas>
     </div>
 </div>
@@ -51,6 +53,15 @@
                         data: { labels: this.labels, datasets: this.datasets },
                         options: this.options,
                     });
+                },
+
+                destroy() {
+                    // Without this, an Alpine re-init (Livewire morph that changes
+                    // the datasets baked into x-data) leaks the previous Chart.js
+                    // instance and its RAF/listeners, and the next new Chart() throws
+                    // "Canvas is already in use".
+                    this.chart?.destroy();
+                    this.chart = null;
                 },
 
                 updateChart() {
