@@ -70,12 +70,16 @@
         remote: @js($remoteSearch),
         loading: false,
         initialOptions: @js((object) $options),
-        options: @js((object) $options),
+        {{-- Seeded from initialOptions in init(); avoids embedding the whole
+             options map twice in the HTML for every select instance. --}}
+        options: {},
         placeholder: @js($placeholder ?? ''),
         selected: $wire.entangle('{{ $statePath }}'){!! $live ? '.live' : '' !!},
         activeIndex: -1,
         _float: null,
         init() {
+            this.options = this.initialOptions;
+
             // Teleport + Floating UI: pin the listbox to the trigger while open,
             // tearing the auto-updater down on close.
             this.$watch('open', (open) => {

@@ -1431,7 +1431,7 @@ class Column extends DataComponent implements Htmlable
             'column' => $this,
             'filter' => $filter,
             'value' => $value,
-            'controlClasses' => FilterControl::classes($filter->isSelectLike()),
+            'controlClasses' => FilterControl::classes(),
         ])->render();
     }
 
