@@ -245,7 +245,10 @@ class Action extends BaseAction implements RendersAsButton
             'isButton' => ! $url,
             'classes' => $static['classes'],
             'iconHtml' => $static['iconHtml'],
-            'label' => $this->hideLabel ? '' : e($this->getLabel($record)),
+            // Not escaped here: the button-content view echoes this through {{ }},
+            // which escapes it. Pre-escaping produced double-encoded labels (a
+            // literal `&amp;` for `&`, `&lt;` shown as text).
+            'label' => $this->hideLabel ? '' : $this->getLabel($record),
             'tooltip' => $this->getTooltip($record),
             'target' => $this->openUrlInNewTab ? '_blank' : null,
             'disabled' => $record ? $this->isDisabled($record) : false,

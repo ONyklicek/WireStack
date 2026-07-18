@@ -66,7 +66,7 @@
                 heading: $modalData['heading'],
                 description: $modalData['description'] ?? null,
                 width: $modalData['width'] ?? 'md',
-                icon: 'exclamation-triangle',
+                icon: $modalData['icon'] ?? 'exclamation-triangle',
                 iconColor: $modalData['iconColor'] ?? 'warning',
                 submitLabel: $modalData['submitLabel'],
                 cancelLabel: $modalData['cancelLabel'],

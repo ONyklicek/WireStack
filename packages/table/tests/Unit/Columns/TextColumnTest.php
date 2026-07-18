@@ -95,6 +95,34 @@ it('can format as since (diffForHumans)', function () {
         ->and($result)->not->toBeEmpty();
 });
 
+it('formats as since() even without date()/dateTime()', function () {
+    // Regression M4: since() alone was a no-op — the diffForHumans branch was
+    // gated behind date()/dateTime() being set, so ->since() by itself returned
+    // the raw value.
+    $column = TextColumn::make('created_at')->since();
+    $record = Mockery::mock(Model::class);
+
+    $result = $column->formatValue('2024-01-01', $record);
+
+    expect($result)->toBeString()
+        ->and($result)->not->toBe('2024-01-01');
+});
+
+it('renders a per-record closure icon without a TypeError', function () {
+    // Regression M2: a Closure icon reached renderIcon(string) raw → TypeError.
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 1, 'name' => 'Ada']);
+
+    $column = TextColumn::make('name')->icon(fn ($record) => $record->name === 'Ada' ? 'check' : 'x-mark');
+
+    $html = $column->renderCell($record);
+
+    expect($html)->toContain('Ada')->toContain('<svg');
+});
+
 // ─── Null / Empty Handling ──────────────────────────────────────────────────
 
 it('returns placeholder for null values', function () {

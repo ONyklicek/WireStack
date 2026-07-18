@@ -116,7 +116,7 @@ trait FormatsState
         $value = EnumResolver::display($value);
 
         // Date / datetime
-        if (($this->date || $this->dateTime) && $value) {
+        if (($this->date || $this->dateTime || $this->since) && $value) {
             $value = $this->since
                 ? ($value instanceof Carbon
                     ? $value->diffForHumans()

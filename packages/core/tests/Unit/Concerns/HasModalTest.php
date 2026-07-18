@@ -84,6 +84,15 @@ it('can set modal icon with color', function () {
         ->and($action->getModalIconColor())->toBe('danger');
 });
 
+it('carries the configured icon into getModalConfig (the confirmation reads this)', function () {
+    // Regression M5: the confirmation modal-host hardcoded 'exclamation-triangle'
+    // and ignored this value, so ->modalIcon(...) never reached the dialog.
+    $config = Action::make('delete')->modalIcon('trash', 'danger')->getModalConfig();
+
+    expect($config['icon'])->toBe('trash')
+        ->and($config['iconColor'])->toBe('danger');
+});
+
 it('has default warning icon color', function () {
     expect(Action::make('test')->getModalIconColor())->toBe('warning');
 });

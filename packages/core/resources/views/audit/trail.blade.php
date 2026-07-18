@@ -68,7 +68,7 @@
                 </div>
 
                 {{-- Changes diff --}}
-                @php($changes = $entry->getChanges())
+                @php($changes = $entry->getChangeDiff())
                 @if(!empty($changes))
                     <div class="mt-2 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                         <table class="min-w-full text-xs">

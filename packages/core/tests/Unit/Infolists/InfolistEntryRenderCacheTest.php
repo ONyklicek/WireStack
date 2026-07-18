@@ -58,6 +58,25 @@ it('collapses rows sharing a state to ONE view render (the fuse)', function () {
     expect($html)->toHaveCount(60);
 });
 
+it('flushViewRenderCache clears the shared static so the next render re-renders (the Octane hook)', function () {
+    // Regression M13: the memo is a class static that survives across requests in
+    // a long-lived Octane worker. The RequestTerminated hook calls
+    // flushViewRenderCache(); this proves the flush actually empties the store.
+    IconEntry::flushViewRenderCache();
+    $renders = 0;
+    View::composer('wire-core::infolists.entries.icon', function () use (&$renders) {
+        $renders++;
+    });
+
+    (string) clone iconEntryFor('active');
+    (string) clone iconEntryFor('active');
+    expect($renders)->toBe(1); // second render served from the memo
+
+    IconEntry::flushViewRenderCache();
+    (string) clone iconEntryFor('active');
+    expect($renders)->toBe(2); // memo cleared ⇒ renders again
+});
+
 it('is byte-identical to the un-memoised render for the same state', function () {
     $memoised = (string) clone iconEntryFor('active');
 

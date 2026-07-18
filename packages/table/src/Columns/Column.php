@@ -26,6 +26,7 @@ use NyonCode\WireCore\Foundation\Concerns\HasVisibility;
 use NyonCode\WireCore\Foundation\Enums\Alignment;
 use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Foundation\Enums\FontWeight;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireTable\Concerns\CanBeFiltered;
@@ -648,7 +649,7 @@ class Column extends DataComponent implements Htmlable
             'content' => $content,
             'textClasses' => $this->getTextClasses(),
             'isHtml' => $this->html,
-            'iconHtml' => $this->icon ? $this->renderIcon($this->icon) : '',
+            'iconHtml' => $this->iconHtmlFor($record),
             'iconPosition' => $this->iconPosition ?? 'before',
             'url' => $this->getUrl($record),
             'openInNewTab' => $this->openUrlInNewTab,
@@ -725,7 +726,9 @@ class Column extends DataComponent implements Htmlable
     {
         return $this->urlCallback === null
             && ! $this->copyable
-            && ! ($this->description instanceof Closure);
+            && ! ($this->description instanceof Closure)
+            // A closure icon is per-record, so the cell is not fully static.
+            && ! ($this->icon instanceof Closure);
     }
 
     private function cellSkeleton(): string
@@ -735,7 +738,9 @@ class Column extends DataComponent implements Htmlable
             'textClasses' => $this->getTextClasses(),
             // Build raw so the token is not escaped; the per-row splice escapes state.
             'isHtml' => true,
-            'iconHtml' => $this->icon ? $this->renderIcon($this->icon) : '',
+            // A closure icon is per-record and excluded from the skeleton
+            // (isCellSkeletonable), so here $this->icon is only ever a literal.
+            'iconHtml' => $this->iconHtmlFor(null),
             'iconPosition' => $this->iconPosition ?? 'before',
             'url' => null,
             'openInNewTab' => $this->openUrlInNewTab,
@@ -925,6 +930,26 @@ class Column extends DataComponent implements Htmlable
         }
 
         return implode(' ', $classes);
+    }
+
+    /**
+     * Resolve the column icon to its rendered SVG for a given record.
+     *
+     * The icon may be a per-record Closure ({@see HasIcon::icon()}); it is
+     * resolved with the record (evaluated closures may also return an Icon enum),
+     * so a closure icon can never reach renderIcon(string) raw. Passing a null
+     * record (the shared skeleton path) resolves only a literal icon — closure
+     * icons are excluded from the skeleton by isCellSkeletonable().
+     */
+    private function iconHtmlFor(?Model $record): string
+    {
+        $icon = $this->icon instanceof Closure
+            ? ($record !== null ? $this->evaluate($this->icon, ['record' => $record]) : null)
+            : $this->icon;
+
+        $icon = $icon instanceof Icon ? $icon->value() : $icon;
+
+        return is_string($icon) && $icon !== '' ? $this->renderIcon($icon) : '';
     }
 
     /**

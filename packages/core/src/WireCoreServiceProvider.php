@@ -21,6 +21,7 @@ use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
 use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
+use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Icons\IconSet;
 use NyonCode\WireCore\Foundation\View\FloatingAssets;
@@ -142,6 +143,18 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // returns the memoised IconManager <svg> string (zero view renders) and can
         // forward Alpine/data-* attributes via its $attributes argument.
         Blade::componentNamespace('NyonCode\\WireCore\\Foundation\\View', 'wire');
+
+        // Octane: the state-driven view-render memo is a class static that would
+        // otherwise accumulate across requests in a long-lived worker (unbounded
+        // growth; potential cross-tenant bleed). Flush it as each request ends.
+        // Referenced by string, not ::class import: laravel/octane is an optional
+        // dependency the package does not require, so the symbol may not exist.
+        $octaneRequestTerminated = 'Laravel\\Octane\\Events\\RequestTerminated';
+        if (class_exists($octaneRequestTerminated)) {
+            Event::listen($octaneRequestTerminated, static function (): void {
+                Component::flushViewRenderCache();
+            });
+        }
     }
 
     // ─── Core Infrastructure ──────────────────────────────────

@@ -19,7 +19,7 @@ use Illuminate\Support\Carbon;
  * @property string $event
  * @property string $auditable_type
  * @property int|string|null $auditable_id
- * @property int|null $user_id
+ * @property int|string|null $user_id
  * @property array<string, mixed>|null $old_values
  * @property array<string, mixed>|null $new_values
  * @property array<string, mixed>|null $metadata
@@ -117,11 +117,15 @@ class AuditEntry extends Model
     }
 
     /**
-     * Get the changed attributes as a diff (keys present in both old and new).
+     * Get the changed attributes as an old/new diff.
+     *
+     * Named getChangeDiff (not getChanges) so it does not shadow Eloquent's
+     * Model::getChanges(), whose return shape (flat dirty attributes) differs
+     * and is relied on by the framework internals.
      *
      * @return array<string, array{old: mixed, new: mixed}>
      */
-    public function getChanges(): array
+    public function getChangeDiff(): array
     {
         $old = $this->old_values ?? [];
         $new = $this->new_values ?? [];
