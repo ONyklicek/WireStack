@@ -83,6 +83,7 @@ abstract class BaseAction implements Htmlable
 
     // ─── Fluent setters ─────────────────────────────────────────
 
+    /** Render the action as an outlined button instead of a solid one. */
     public function outlined(bool $outlined = true): static
     {
         $this->outlined = $outlined;
@@ -90,6 +91,7 @@ abstract class BaseAction implements Htmlable
         return $this;
     }
 
+    /** Set the callback run when the action executes (receives the record where applicable). */
     public function action(Closure $callback): static
     {
         $this->actionCallback = $callback;
