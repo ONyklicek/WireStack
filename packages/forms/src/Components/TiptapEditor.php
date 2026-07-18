@@ -207,6 +207,16 @@ class TiptapEditor extends Field
     }
 
     /**
+     * Whether this editor needs the opt-in extension addon chunk (tables, images,
+     * highlight, text-align). When false — the default — the page loads only the
+     * core editor entry + shared chunk and never downloads the addon.
+     */
+    public function needsExtensionAddon(): bool
+    {
+        return $this->withImages || $this->withTables || $this->withTextAlign || $this->withHighlight;
+    }
+
+    /**
      * @return array<string, mixed> Config passed to the Alpine tiptapEditor() component.
      */
     public function getAlpineConfig(): array

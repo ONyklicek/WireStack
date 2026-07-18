@@ -3,14 +3,14 @@ import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
 import Placeholder from '@tiptap/extension-placeholder'
-import TextAlign from '@tiptap/extension-text-align'
-import Highlight from '@tiptap/extension-highlight'
-import Image from '@tiptap/extension-image'
-import Table from '@tiptap/extension-table'
-import TableRow from '@tiptap/extension-table-row'
-import TableHeader from '@tiptap/extension-table-header'
-import TableCell from '@tiptap/extension-table-cell'
 import CharacterCount from '@tiptap/extension-character-count'
+
+// The opt-in extensions (tables/images/highlight/text-align) default OFF yet were
+// bundled into every editor page. They now ship in a separate ESM chunk
+// (tiptap-editor-addons.js) that publishes window.WireTiptapAddons and is injected
+// via @assets only when a field enables one of them. esbuild --splitting keeps the
+// shared @tiptap/core + ProseMirror in one chunk both bundles import, so a table
+// page loads the extra extensions once, not a duplicate core.
 
 const tiptapEditor = (config = {}) => {
     // IMPORTANT: the Editor instance is kept OUT of Alpine's reactive data (it is
@@ -165,21 +165,26 @@ function buildTiptapExtensions(config) {
         Placeholder.configure({ placeholder: config.placeholder ?? '' }),
     ]
 
-    if (config.withTextAlign) {
-        extensions.push(TextAlign.configure({ types: ['heading', 'paragraph'] }))
+    // Opt-in extensions come from the addon chunk's registry. The `&& addons.X`
+    // guard is defensive: if a field enables tables but the addon somehow did not
+    // load, the editor still boots (without tables) rather than throwing.
+    const addons = window.WireTiptapAddons ?? {}
+
+    if (config.withTextAlign && addons.TextAlign) {
+        extensions.push(addons.TextAlign.configure({ types: ['heading', 'paragraph'] }))
     }
-    if (config.withHighlight) {
-        extensions.push(Highlight)
+    if (config.withHighlight && addons.Highlight) {
+        extensions.push(addons.Highlight)
     }
-    if (config.withImages) {
-        extensions.push(Image.configure({ inline: false }))
+    if (config.withImages && addons.Image) {
+        extensions.push(addons.Image.configure({ inline: false }))
     }
-    if (config.withTables) {
+    if (config.withTables && addons.Table) {
         extensions.push(
-            Table.configure({ resizable: true }),
-            TableRow,
-            TableHeader,
-            TableCell,
+            addons.Table.configure({ resizable: true }),
+            addons.TableRow,
+            addons.TableHeader,
+            addons.TableCell,
         )
     }
     if (config.maxLength) {

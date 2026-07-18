@@ -59,5 +59,22 @@ class WireFormsServiceProvider extends PackageServiceProvider
         })
             ->where('asset', '[A-Za-z0-9_-]+')
             ->name('wire-forms.asset');
+
+        // The TipTap editor ships as an ESM code-split bundle (entry + shared core
+        // chunk + opt-in addon entry); serve any .js from dist/tiptap by filename so
+        // an entry's relative `import "./chunk-<hash>.js"` resolves. basename() bars
+        // path traversal; the hashed chunk name is its own cache key.
+        Route::get('/wire-forms/tiptap/{file}', function (string $file): BinaryFileResponse {
+            $path = self::ASSETS_PATH.'/tiptap/'.basename($file);
+
+            abort_unless(is_file($path) && str_ends_with($path, '.js'), 404);
+
+            return response()
+                ->file($path, ['Content-Type' => 'application/javascript; charset=utf-8'])
+                ->setPublic()
+                ->setMaxAge(31536000);
+        })
+            ->where('file', '[A-Za-z0-9_.-]+')
+            ->name('wire-forms.tiptap');
     }
 }

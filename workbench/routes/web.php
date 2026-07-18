@@ -298,6 +298,8 @@ foreach ([
 $fieldPreviews = [
     'text-input' => 'Text Input',
     'textarea' => 'Textarea',
+    'tiptap' => 'TipTap (core)',
+    'tiptap-tables' => 'TipTap (with tables)',
     'select' => 'Select',
     'select-floating' => 'Select · floating on mobile (opt-out)',
     'select-bp-lg' => 'Select · per-component breakpoint lg',
