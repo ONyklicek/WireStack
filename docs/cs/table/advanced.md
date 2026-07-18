@@ -563,6 +563,30 @@ V naskládaném režimu:
 - Každý sloupec se vykreslí jako `Label: Value`
 - `visibleFrom()`/`hiddenFrom()` sloupce stále platí
 
+Akce řádku se v hlavičce každé karty vykreslují vedle sebe. Když má řádek více
+akcí, sbal je do jednoho rozbalovacího menu, aby hlavička zůstala přehledná:
+
+```php
+$table
+    ->stackedOnMobile()
+    ->collapseActionsOnMobile()   // jeden spouštěč "⋮" na kartu místo akcí vedle sebe
+```
+
+Sbalení se zapne, až když má řádek **3 a více** akcí; při méně je karta nechá
+vedle sebe. Práh nastavíš druhým argumentem:
+
+```php
+->collapseActionsOnMobile(threshold: 2)   // sbalit od 2 akcí
+->collapseActionsOnMobile(threshold: 1)   // sbalit vždy
+```
+
+Ovlivněny jsou pouze naskládané karty na mobilu — desktopová tabulka si ponechá
+akční tlačítka vedle sebe. Případné existující `ActionGroup` se sloučí do jednoho
+mobilního menu (oddělovače se při sloučení zahodí) a karta s jedinou viditelnou
+akcí ji stále zobrazí přímo. Menu přebírá nastavení tabulky `sheetOnMobile()` /
+`mobileBreakpoint()` (na malých obrazovkách se ve výchozím stavu chová jako
+spodní sheet).
+
 ### Breakpointy sloupců
 
 ```php
