@@ -25,6 +25,7 @@ use NyonCode\WireCore\Foundation\Enums\Alignment;
 use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
+use NyonCode\WireTable\Actions\TableActionClickResolver;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Concerns\HasSqlDebug;
 use NyonCode\WireTable\Exceptions\TableConfigurationException;
@@ -146,6 +147,12 @@ class Table implements Htmlable
     protected bool $stackedOnMobile = false;
 
     protected string $stackedBreakpoint = 'md';
+
+    /** Collapse row actions into a single dropdown group in the mobile stacked-card view. */
+    protected bool $collapseActionsOnMobile = false;
+
+    /** Minimum number of row actions before the mobile card collapses them into a dropdown. */
+    protected int $collapseActionsOnMobileThreshold = 3;
 
     // Lazy loading
     protected bool $lazy = false;
@@ -526,7 +533,6 @@ class Table implements Htmlable
                     'table_alias' => $s->tableAlias ?? null,
                     'is_relation' => $s->isRelation,
                 ], $plan->sortClauses),
-                'selected_columns' => $plan->selectedColumns,
                 'scopes' => $plan->scopes,
                 'with_soft_deletes' => $plan->withSoftDeletes,
             ],
@@ -1207,6 +1213,89 @@ class Table implements Htmlable
     }
 
     /**
+     * Collapse the row actions into one dropdown group in the mobile stacked-card
+     * view, so a card header shows a single "⋮" trigger instead of several inline
+     * buttons. No effect on the desktop table, and only meaningful together with
+     * {@see stackedOnMobile()}.
+     *
+     * The collapse only kicks in once a row has at least `$threshold` actions
+     * (default 3); with fewer actions the card keeps them inline. Pass a lower
+     * threshold to collapse sooner, or 1 to always collapse.
+     */
+    public function collapseActionsOnMobile(bool $collapse = true, int $threshold = 3): static
+    {
+        $this->collapseActionsOnMobile = $collapse;
+        $this->collapseActionsOnMobileThreshold = max(1, $threshold);
+
+        return $this;
+    }
+
+    public function getCollapseActionsOnMobileThreshold(): int
+    {
+        return $this->collapseActionsOnMobileThreshold;
+    }
+
+    /**
+     * Whether the mobile card should collapse its row actions: the feature is
+     * enabled and the row carries at least the configured threshold of actions.
+     * The count flattens nested groups and ignores dividers, matching what the
+     * dropdown would actually contain.
+     */
+    public function shouldCollapseActionsOnMobile(): bool
+    {
+        return $this->collapseActionsOnMobile
+            && count($this->flattenMobileRowActions()) >= $this->collapseActionsOnMobileThreshold;
+    }
+
+    /**
+     * Flatten the configured row actions into a single list, expanding nested
+     * {@see ActionGroup}s and dropping dividers. Shared by the collapse threshold
+     * check and {@see getMobileActionGroup()} so both count the same actions.
+     *
+     * @return array<int, Action>
+     */
+    protected function flattenMobileRowActions(): array
+    {
+        $flat = [];
+
+        foreach ($this->getRowActionsForDisplay() as $action) {
+            if ($action instanceof ActionGroup) {
+                foreach ($action->getActions() as $inner) {
+                    if ($inner instanceof Action && $inner->isDivider()) {
+                        continue;
+                    }
+
+                    $flat[] = $inner;
+                }
+
+                continue;
+            }
+
+            if ($action->isDivider()) {
+                continue;
+            }
+
+            $flat[] = $action;
+        }
+
+        return $flat;
+    }
+
+    /**
+     * Canonical builder for the mobile card's collapsed action dropdown: wraps the
+     * row actions in a single {@see ActionGroup}, flattening any existing groups so
+     * everything lands under one trigger. The group inherits the table's mobile
+     * bottom-sheet settings and collapses to a lone inline button when only one
+     * action is visible (handled by ActionGroup itself).
+     */
+    public function getMobileActionGroup(): ActionGroup
+    {
+        return ActionGroup::make($this->flattenMobileRowActions())
+            ->sheetOnMobile($this->usesSheetOnMobile())
+            ->mobileBreakpoint($this->getMobileBreakpoint());
+    }
+
+    /**
      * Set custom table class
      */
     public function tableClass(?string $class): static
@@ -1414,11 +1503,12 @@ class Table implements Htmlable
     public function getRowContextMenuHtml(Model $record): Htmlable
     {
         $html = '';
+        $click = new TableActionClickResolver;
 
         foreach ($this->rowContextMenuActions as $action) {
             $html .= $action instanceof ActionGroup
-                ? $action->getDropdownItemsHtml($record)->toHtml()
-                : $action->renderForDropdown($record);
+                ? $action->getDropdownItemsHtml($record, $click)->toHtml()
+                : $action->renderForDropdown($record, $click);
         }
 
         return new HtmlString($html);

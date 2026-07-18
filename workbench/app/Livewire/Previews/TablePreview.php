@@ -303,6 +303,10 @@ class TablePreview extends Component
 
     private function usersTable(Table $table): Table
     {
+        if ($this->variant === 'stacked-actions-collapse') {
+            $table->stackedOnMobile()->collapseActionsOnMobile();
+        }
+
         return $table
             ->model(User::class)
             ->columns([
@@ -338,6 +342,16 @@ class TablePreview extends Component
                         DeleteAction::make(),
                     ]),
                 ],
+                // Same group, deferred: the menu markup is built client-side on open
+                // (ActionGroup::lazyMenu()). Used to CDP-verify the lazy path.
+                'actions-group-lazy' => [
+                    ActionGroup::make([
+                        Action::make('view')->label('View')->icon('outline:eye'),
+                        Action::make('edit')->label('Edit')->icon('pencil')->color('primary'),
+                        Action::make('duplicate')->label('Duplicate')->icon('outline:document-duplicate'),
+                        DeleteAction::make(),
+                    ])->lazyMenu(),
+                ],
                 // Quiet row actions: neutral at rest, colour on hover/focus. The
                 // green "Approve" uses ->solid() to stay prominent despite the
                 // quiet table; Delete stays legible red at rest.
@@ -345,6 +359,13 @@ class TablePreview extends Component
                     Action::make('view')->label('View')->icon('outline:eye'),
                     Action::make('edit')->label('Edit')->icon('pencil')->color('primary'),
                     Action::make('approve')->label('Approve')->icon('check')->color('success')->solid(),
+                    DeleteAction::make(),
+                ],
+                // Three inline row actions; on the mobile stacked card these collapse
+                // into a single "⋮" dropdown once the count reaches the threshold.
+                'stacked-actions-collapse' => [
+                    Action::make('view')->label('View')->icon('outline:eye'),
+                    Action::make('edit')->label('Edit')->icon('pencil')->color('primary'),
                     DeleteAction::make(),
                 ],
                 default => [

@@ -13,13 +13,18 @@
 @endphp
 
 @if($actionCount === 1)
-    {{ $group->getSingleActionHtml($record) }}
+    {{ $group->getSingleActionHtml($record, $click ?? null) }}
 @elseif($actionCount > 1)
-    @include('wire-core::partials.floating-assets')
+    {{-- Scaffolding is identical for every dropdown; emit it once per request
+         instead of once per row-group (and per desktop/mobile layout). --}}
+    @once
+        @include('wire-core::partials.floating-assets')
+    @endonce
 
+    @php $lazyMenuItems = $group->isLazyMenu() ? $group->getDropdownItemSpecs($record, $click ?? null) : null; @endphp
     <div
         class="relative inline-block text-left"
-        x-data="wireDropdown(@js($group->getDropdownConfig()))"
+        x-data="wireDropdown(@js($group->getDropdownConfig()), @js($lazyMenuItems))"
         @keydown.escape.window="close()"
     >
         <button
@@ -91,7 +96,52 @@
                         @include('wire-core::partials.sheet-grabber', ['dismiss' => 'close()', 'breakpoint' => $sheetBp])
                     @endif
                     <div class="py-1">
-                        {{ $group->getDropdownItemsHtml($record) }}
+                        @if($group->isLazyMenu())
+                            {{-- Lazy menu: the row ships NO menu Blade markup (zero
+                                 dropdown-item view renders); the items are built
+                                 client-side from the serialized spec into this hidden,
+                                 teleported panel and revealed on open. The click calls
+                                 the $wire captured at init (survives the teleport), never
+                                 an evaluated string (CSP-safe). --}}
+                            <template x-for="(item, i) in (items || [])" :key="i">
+                                <div>
+                                    <template x-if="item.type === 'divider'">
+                                        <div class="my-1 border-t border-gray-100 dark:border-gray-700/60"></div>
+                                    </template>
+                                    <template x-if="item.type === 'html'">
+                                        <div x-html="item.html"></div>
+                                    </template>
+                                    <template x-if="item.type === 'link'">
+                                        <a :href="item.href" :target="item.newTab ? '_blank' : null" :class="item.classes"
+                                           role="menuitem" :data-testid="item.testId">
+                                            <span class="contents" x-html="item.iconHtml"></span>
+                                            <span class="flex-1" x-text="item.label"></span>
+                                            <template x-if="item.shortcut">
+                                                <kbd class="ml-auto pl-2 text-[10px] font-mono text-gray-400" x-text="item.shortcut"></kbd>
+                                            </template>
+                                        </a>
+                                    </template>
+                                    <template x-if="item.type === 'disabled'">
+                                        <span :class="item.classes" role="menuitem" aria-disabled="true" :data-testid="item.testId">
+                                            <span class="contents" x-html="item.iconHtml"></span>
+                                            <span class="flex-1" x-text="item.label"></span>
+                                        </span>
+                                    </template>
+                                    <template x-if="item.type === 'button'">
+                                        <button type="button" :class="item.classes" role="menuitem" :data-testid="item.testId"
+                                                @click="runAction(item); close()">
+                                            <span class="contents" x-html="item.iconHtml"></span>
+                                            <span class="flex-1" x-text="item.label"></span>
+                                            <template x-if="item.shortcut">
+                                                <kbd class="ml-auto pl-2 text-[10px] font-mono text-gray-400" x-text="item.shortcut"></kbd>
+                                            </template>
+                                        </button>
+                                    </template>
+                                </div>
+                            </template>
+                        @else
+                            {{ $group->getDropdownItemsHtml($record, $click ?? null) }}
+                        @endif
                     </div>
                 </div>
             </div>

@@ -43,6 +43,13 @@ abstract class BaseAction implements Htmlable
     use HasVisibility;
     use Macroable;
 
+    /**
+     * Canonical base class string for every rendered action button. The single
+     * source consumed by both {@see getButtonClasses()} (record-less fallback)
+     * and {@see Action::toButtonRenderArray()} (per-record assembly).
+     */
+    public const BUTTON_BASE_CLASSES = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800';
+
     public string $name;
 
     protected ?string $label = null;
@@ -169,11 +176,10 @@ abstract class BaseAction implements Htmlable
      */
     public function getButtonClasses(): string
     {
-        $base = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800';
         $isIconButton = method_exists($this, 'isIconButton') && $this->isIconButton();
         $size = $this->getSize();
 
-        return "$base {$this->resolveButtonSizeClasses($isIconButton, $size)} {$this->getButtonColorClasses()}";
+        return self::BUTTON_BASE_CLASSES." {$this->resolveButtonSizeClasses($isIconButton, $size)} {$this->getButtonColorClasses()}";
     }
 
     /**

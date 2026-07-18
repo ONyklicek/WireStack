@@ -239,9 +239,29 @@ const containsThroughTeleports = (container, target) => {
  * Self-contained dropdown for simple owner menus (ActionGroup, x-wire::dropdown,
  * toolbar buttons). Expects x-ref="trigger" and x-ref="panel" in scope.
  */
-const wireDropdown = (config = {}) => ({
+const wireDropdown = (config = {}, items = null) => ({
     open: false,
     _cleanup: null,
+
+    // Lazy menu (ActionGroup::lazyMenu()): the item spec is rendered client-side on
+    // first open, so the row ships no menu markup. null when the group renders eagerly.
+    items,
+    _wire: null,
+
+    init() {
+        // Capture $wire while the component is in its live DOM position, before the
+        // panel teleports to <body> where $wire may not resolve. Lazy menu clicks go
+        // through this reference, so they work from the teleported panel.
+        this._wire = this.$wire ?? null
+    },
+
+    // Invoke a lazy menu item's action: $wire[method](...args). The method + args
+    // are pre-split server-side, so nothing is evaluated from a string (CSP-safe).
+    runAction(item) {
+        if (item && item.method && this._wire && typeof this._wire[item.method] === 'function') {
+            this._wire[item.method](...(item.args || []))
+        }
+    },
 
     toggle() {
         this.open ? this.close() : this.show()

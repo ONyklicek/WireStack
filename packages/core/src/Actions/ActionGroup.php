@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\HtmlString;
 use NyonCode\WireCore\Actions\Concerns\HasColor;
 use NyonCode\WireCore\Actions\Concerns\HasIcons;
+use NyonCode\WireCore\Actions\Contracts\ResolvesActionClick;
+use NyonCode\WireCore\Actions\Support\MountActionClickResolver;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Concerns\HasSize;
@@ -67,6 +69,15 @@ class ActionGroup implements Htmlable
     protected int|Closure|null $badge = null;
 
     protected ?string $badgeColor = null;
+
+    /**
+     * When true, the dropdown renders only its trigger plus a serialized spec of
+     * its items; the menu markup is built client-side on first open. Opt-in because
+     * it changes first-paint DOM and how a click is wired (a captured `$wire` call
+     * instead of a server-rendered `wire:click`). See
+     * architecture/plans/render-engine-htmlable-first.md §6.
+     */
+    protected bool $lazyMenu = false;
 
     /**
      * @param  array<int, Action|ActionGroup>  $actions
@@ -160,6 +171,24 @@ class ActionGroup implements Htmlable
     /**
      * Set badge color.
      */
+    /**
+     * Defer the dropdown menu markup to the client. The row only renders the
+     * trigger and a JSON spec of the items; the menu is built on first open. Trades
+     * a small open-time cost for a large drop in per-row render work on tables with
+     * many action-group rows. Opt-in — the default eager render is unchanged.
+     */
+    public function lazyMenu(bool $lazy = true): static
+    {
+        $this->lazyMenu = $lazy;
+
+        return $this;
+    }
+
+    public function isLazyMenu(): bool
+    {
+        return $this->lazyMenu;
+    }
+
     public function badgeColor(string|Color|null $color): static
     {
         $this->badgeColor = $color instanceof Color ? $color->value : $color;
@@ -443,14 +472,14 @@ class ActionGroup implements Htmlable
     /**
      * Render the single visible action inline (used when the group collapses).
      */
-    public function getSingleActionHtml(Model $record): Htmlable
+    public function getSingleActionHtml(Model $record, ?ResolvesActionClick $click = null): Htmlable
     {
         foreach ($this->getVisibleActions($record) as $item) {
             if ($item instanceof Action && $item->isDivider()) {
                 continue;
             }
 
-            return new HtmlString($item->render($record));
+            return new HtmlString($item->render($record, $click));
         }
 
         return new HtmlString('');
@@ -463,29 +492,121 @@ class ActionGroup implements Htmlable
      * (divided()) and manual Action::divider() entries are resolved here so the
      * group views only emit {{ $group->getDropdownItemsHtml($record) }}.
      */
-    public function getDropdownItemsHtml(Model $record): Htmlable
+    public function getDropdownItemsHtml(Model $record, ?ResolvesActionClick $click = null): Htmlable
     {
         $html = '';
 
         foreach ($this->getVisibleActionsWithDividers($record) as $item) {
             $html .= $item instanceof self
-                ? $item->render($record)
-                : $item->renderForDropdown($record);
+                ? $item->render($record, $click)
+                : $item->renderForDropdown($record, $click);
         }
 
         return new HtmlString($html);
     }
 
-    public function render(Model $record): string
+    /**
+     * Serialize the dropdown items to a spec the client renders on first open
+     * ({@see lazyMenu()}). This is the data-shaped mirror of dropdown-item.blade.php:
+     * each item carries its already-resolved content (icon SVG, label, classes) and
+     * click target, so a lazy menu ships one JSON array per row instead of rendering
+     * N Blade views. A nested group is not expanded lazily — its rendered fragment is
+     * shipped as-is.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getDropdownItemSpecs(Model $record, ?ResolvesActionClick $click = null): array
+    {
+        $click ??= new MountActionClickResolver;
+        $specs = [];
+
+        foreach ($this->getVisibleActionsWithDividers($record) as $item) {
+            if ($item instanceof self) {
+                $specs[] = ['type' => 'html', 'html' => $item->render($record, $click)];
+
+                continue;
+            }
+
+            if ($item->isDivider()) {
+                $specs[] = ['type' => 'divider'];
+
+                continue;
+            }
+
+            $icon = $item->getIcon($record);
+            $disabled = $item->isDisabled($record);
+            $url = $item->getUrl($record);
+
+            $base = [
+                'label' => (string) $item->getLabel($record),
+                'iconHtml' => $icon ? $item->renderIconSvg($icon, 'mr-3 h-4 w-4 text-gray-400 group-hover:text-gray-500 dark:group-hover:text-gray-300') : '',
+                'testId' => 'menu-action-'.$item->getName(),
+                'shortcut' => $item->getKeyboardShortcutLabel(),
+                'shortcutKeydown' => $item->getAlpineKeydownExpression(),
+            ];
+
+            if ($url && ! $disabled) {
+                $specs[] = [...$base, 'type' => 'link', 'href' => $url, 'newTab' => $item->shouldOpenUrlInNewTab(), 'classes' => $this->menuItemClasses($item, $record, false)];
+
+                continue;
+            }
+
+            if ($disabled) {
+                $specs[] = [...$base, 'type' => 'disabled', 'classes' => $this->menuItemClasses($item, $record, true)];
+
+                continue;
+            }
+
+            [$method, $args] = self::parseClickExpression($click->clickHandler($item, $record));
+            $specs[] = [...$base, 'type' => 'button', 'method' => $method, 'args' => $args, 'classes' => $this->menuItemClasses($item, $record, false)];
+        }
+
+        return $specs;
+    }
+
+    /**
+     * Menu-item classes, byte-identical to dropdown-item.blade.php so a lazily
+     * rendered item looks the same as an eagerly rendered one.
+     */
+    private function menuItemClasses(Action $item, Model $record, bool $disabled): string
+    {
+        $base = 'group flex w-full items-center px-4 py-2 text-sm text-left';
+
+        return $disabled
+            ? "{$base} text-gray-400 dark:text-gray-500 cursor-not-allowed"
+            : "{$base} {$item->getMenuItemColorClasses($item->getColor($record))}";
+    }
+
+    /**
+     * Split a bare Livewire click expression (`method('a', 'b')`) into its method
+     * and single-quoted scalar arguments, so the client can invoke it as
+     * `$wire[method](...args)` without evaluating a string (CSP-safe). Resolvers in
+     * this project only ever emit that shape.
+     *
+     * @return array{0: string, 1: array<int, string>}
+     */
+    private static function parseClickExpression(string $expr): array
+    {
+        if (! preg_match('/^(\w+)\((.*)\)$/s', $expr, $m)) {
+            return [$expr, []];
+        }
+
+        preg_match_all("/'([^']*)'/", $m[2], $args);
+
+        return [$m[1], $args[1]];
+    }
+
+    public function render(Model $record, ?ResolvesActionClick $click = null): string
     {
         $visible = $this->getVisibleActions($record);
         if (empty($visible)) {
             return '';
         }
 
-        return view('wire-table::tables.actions.action-group', [
+        return view('wire-core::actions.group', [
             'group' => $this,
             'record' => $record,
+            'click' => $click,
         ])->render();
     }
 

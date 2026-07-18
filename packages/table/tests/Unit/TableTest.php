@@ -135,6 +135,89 @@ it('hides the cards layout when mobile stacking is disabled', function () {
         ->and($table->getStackedCardsVisibleClass())->toBe('hidden');
 });
 
+it('does not collapse mobile actions by default', function () {
+    $threeActions = [Action::make('a'), Action::make('b'), Action::make('c')];
+
+    expect(Table::make()->actions($threeActions)->shouldCollapseActionsOnMobile())->toBeFalse()
+        ->and(Table::make()->getCollapseActionsOnMobileThreshold())->toBe(3);
+});
+
+it('collapses mobile actions only once the row reaches the threshold (default 3)', function () {
+    $twoActions = [Action::make('a'), Action::make('b')];
+    $threeActions = [Action::make('a'), Action::make('b'), Action::make('c')];
+
+    // Enabled but below the default threshold → stays inline.
+    expect(Table::make()->actions($twoActions)->collapseActionsOnMobile()->shouldCollapseActionsOnMobile())->toBeFalse()
+        // Reaches the default threshold of 3 → collapses.
+        ->and(Table::make()->actions($threeActions)->collapseActionsOnMobile()->shouldCollapseActionsOnMobile())->toBeTrue();
+});
+
+it('honours a custom collapse threshold and clamps it to at least 1', function () {
+    $twoActions = [Action::make('a'), Action::make('b')];
+
+    // Lower threshold collapses sooner.
+    expect(Table::make()->actions($twoActions)->collapseActionsOnMobile(threshold: 2)->shouldCollapseActionsOnMobile())->toBeTrue()
+        ->and(Table::make()->actions($twoActions)->collapseActionsOnMobile(threshold: 2)->getCollapseActionsOnMobileThreshold())->toBe(2)
+        // A zero/negative threshold is clamped to 1 (always collapse when any action exists).
+        ->and(Table::make()->actions([Action::make('a')])->collapseActionsOnMobile(threshold: 0)->shouldCollapseActionsOnMobile())->toBeTrue()
+        ->and(Table::make()->collapseActionsOnMobile(threshold: 0)->getCollapseActionsOnMobileThreshold())->toBe(1);
+});
+
+it('counts flattened non-divider actions against the collapse threshold', function () {
+    // A group of 2 + a divider + 1 action = 3 executable actions, dividers ignored.
+    $table = Table::make()
+        ->actions([
+            ActionGroup::make([Action::make('edit'), Action::make('delete')]),
+            Action::divider(),
+            Action::make('view'),
+        ])
+        ->collapseActionsOnMobile();
+
+    expect($table->shouldCollapseActionsOnMobile())->toBeTrue();
+
+    // Two real actions plus a divider stays below the threshold of 3.
+    $below = Table::make()
+        ->actions([Action::make('edit'), Action::divider(), Action::make('view')])
+        ->collapseActionsOnMobile();
+
+    expect($below->shouldCollapseActionsOnMobile())->toBeFalse();
+});
+
+it('is disabled outright when collapse is turned off, regardless of action count', function () {
+    $manyActions = [Action::make('a'), Action::make('b'), Action::make('c'), Action::make('d')];
+
+    expect(Table::make()->actions($manyActions)->collapseActionsOnMobile(false)->shouldCollapseActionsOnMobile())->toBeFalse();
+});
+
+it('flattens row actions and nested groups into one mobile action group', function () {
+    $table = Table::make()->actions([
+        Action::make('view'),
+        ActionGroup::make([
+            Action::make('edit'),
+            Action::make('delete'),
+        ]),
+    ]);
+
+    $group = $table->getMobileActionGroup();
+
+    expect($group)->toBeInstanceOf(ActionGroup::class)
+        // view + edit + delete, all under a single trigger.
+        ->and($group->getActions())->toHaveCount(3)
+        ->and($group->getActions())->each->toBeInstanceOf(Action::class);
+});
+
+it('the mobile action group inherits the table mobile-sheet settings', function () {
+    $table = Table::make()
+        ->actions([Action::make('edit'), Action::make('delete')])
+        ->sheetOnMobile(false)
+        ->mobileBreakpoint('lg');
+
+    $group = $table->getMobileActionGroup();
+
+    expect($group->usesSheetOnMobile())->toBeFalse()
+        ->and($group->getMobileBreakpoint())->toBe('lg');
+});
+
 // ─── Columns ────────────────────────────────────────────────────────────────
 
 it('can set and get columns', function () {
