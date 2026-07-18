@@ -11,6 +11,7 @@ trait HasState
 {
     protected ?string $statePath = null;
 
+    /** Set the state key this component binds to (under the form's state path). */
     public function statePath(?string $path): static
     {
         $this->statePath = $path;

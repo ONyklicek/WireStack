@@ -14,6 +14,7 @@ trait HasLabel
 {
     protected string|Closure|null $label = null;
 
+    /** Set the display label (defaults to a humanised version of the name). */
     public function label(string|Closure|null $label): static
     {
         $this->label = $label;

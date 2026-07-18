@@ -11,6 +11,7 @@ trait HasColumnSpan
 {
     protected int|string|null $columnSpan = null;
 
+    /** Set how many grid columns this component spans (an int, or a per-breakpoint string). */
     public function columnSpan(int|string $span): static
     {
         $this->columnSpan = $span;
@@ -18,6 +19,7 @@ trait HasColumnSpan
         return $this;
     }
 
+    /** Span the full width of the grid row. */
     public function columnSpanFull(): static
     {
         $this->columnSpan = 'full';

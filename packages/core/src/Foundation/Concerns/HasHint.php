@@ -19,6 +19,7 @@ trait HasHint
 
     protected string|Closure|null $hintColor = null;
 
+    /** Set hint text shown beside the label. */
     public function hint(string|Closure|null $hint): static
     {
         $this->hint = $hint;
@@ -26,6 +27,7 @@ trait HasHint
         return $this;
     }
 
+    /** Set an icon shown next to the hint. */
     public function hintIcon(string|Icon|Closure|null $icon): static
     {
         $this->hintIcon = $icon instanceof Icon ? $icon->value() : $icon;
@@ -33,6 +35,7 @@ trait HasHint
         return $this;
     }
 
+    /** Set the hint's color (a palette name or `Color` enum). */
     public function hintColor(string|Color|Closure|null $color): static
     {
         $this->hintColor = $color instanceof Color ? $color->value : $color;

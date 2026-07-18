@@ -11,6 +11,7 @@ trait BelongsToComponent
 {
     protected mixed $livewire = null;
 
+    /** Bind this component to its host Livewire component (wired internally; rarely set by hand). */
     public function livewire(mixed $livewire): static
     {
         $this->livewire = $livewire;
