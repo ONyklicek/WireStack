@@ -44,7 +44,7 @@
                     class="inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
                 >
                     @if($hintAction->getIcon())
-                        <x-wire::icon :name="$hintAction->getIcon()" class="w-3.5 h-3.5" />
+                        {!! icon($hintAction->getIcon(), 'w-4 h-4', 'w-3.5 h-3.5') !!}
                     @endif
                     @unless($hintAction->isHideLabel())
                         <span>{{ $hintAction->getLabel() }}</span>

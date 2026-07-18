@@ -20,9 +20,9 @@
         $action->getButtonColorClasses(),
     ])
 >
-    @include('wire-core::partials.spinner', ['wireTarget' => 'callInfolistAction', 'class' => 'h-4 w-4'])
+    {!! app(\NyonCode\WireCore\Foundation\View\Primitives::class)->spinner('h-4 w-4', 'callInfolistAction') !!}
     @if($actionIcon)
-        <x-wire::icon :name="$actionIcon" class="w-4 h-4"/>
+        {!! icon($actionIcon, 'w-4 h-4', 'w-4 h-4') !!}
     @endif
     @unless($action->isHideLabel())
         <span>{{ $actionLabel }}</span>

@@ -42,7 +42,6 @@ class Column extends DataComponent implements Htmlable
     // visible one — so it is not listed separately, matching core's Component.
     // A column is never *disabled*, so CanBeDisabled is deliberately not here.
     use CanBeFiltered;
-
     use CanBeSummarized;
     use HasColor;
     use HasDefault;
@@ -208,6 +207,36 @@ class Column extends DataComponent implements Htmlable
     public function getRelation(): ?string
     {
         return $this->getRelationName();
+    }
+
+    /** @var array<int, string> */
+    protected array $eagerLoadRelations = [];
+
+    /**
+     * Eager-load relations this column touches ONLY inside a closure
+     * (`displayUsing`/`url`/`color`), which have no column path for the query planner
+     * to discover — without this hint they lazy-load once per row (an N+1 the
+     * framework cannot introspect out of a closure).
+     *
+     *   TextColumn::make('company')
+     *       ->displayUsing(fn ($state, $record) => $record->company->name)
+     *       ->loadRelations('company');
+     *
+     * @param  string|array<int, string>  $relations
+     */
+    public function loadRelations(string|array $relations): static
+    {
+        $this->eagerLoadRelations = array_values(array_unique(
+            [...$this->eagerLoadRelations, ...(array) $relations]
+        ));
+
+        return $this;
+    }
+
+    /** @return array<int, string> */
+    public function getEagerLoadRelations(): array
+    {
+        return $this->eagerLoadRelations;
     }
 
     /**
@@ -625,9 +654,96 @@ class Column extends DataComponent implements Htmlable
             'openInNewTab' => $this->openUrlInNewTab,
             'copyable' => $this->copyable,
             'copyValue' => EnumResolver::scalar($state),
-            'copyMessage' => $this->copyMessage ?? Trans::get('wire-table::messages.copied'),
+            // Only a copyable cell uses this; resolving the translated default for
+            // every non-copyable cell (every row) was wasted work. When copyable,
+            // copyable() has already resolved $copyMessage, so the fallback is a guard.
+            'copyMessage' => $this->copyable ? ($this->copyMessage ?? Trans::get('wire-table::messages.copied')) : null,
             'tooltip' => $this->tooltip,
             'description' => $description,
+            'descriptionPosition' => $this->descriptionPosition,
+        ]));
+    }
+
+    /**
+     * §7 proof-of-concept: an Htmlable cell skeleton.
+     *
+     * For a plain display column the text partial's per-record variation is *only*
+     * the content string — classes, icon, static tooltip/description are column-static.
+     * So the partial is rendered ONCE into a skeleton with a content placeholder, and
+     * every row splices its escaped state in — a string op, not a `view()->render()`.
+     * Falls back to {@see renderCell()} when a per-record structural bit is present
+     * (url / copy / description-closure), which a single skeleton cannot splice.
+     */
+    private const CELL_TOKEN = 'ᐊWIRE_CELL_a3f9e1ᐊ';
+
+    private ?string $cellSkeleton = null;
+
+    public function renderCellFast(Model $record): string
+    {
+        if (! $this->canView() || ! $this->isVisibleForRecord($record)) {
+            return '';
+        }
+
+        // Subclasses that override renderCell render a different view than the text
+        // skeleton, and non-skeletonable columns vary structurally per row — both
+        // fall back to the full, byte-identical render.
+        if (! $this->supportsCellSkeleton() || ! $this->isCellSkeletonable()) {
+            return $this->renderCell($record);
+        }
+
+        $state = $this->getState($record);
+        $content = $this->displayUsing
+            ? (string) ($this->displayUsing)($state, $record)
+            : $this->formatValue($state, $record);
+
+        return trim(str_replace(
+            self::CELL_TOKEN,
+            $this->html ? $content : e($content),
+            $this->cellSkeleton(),
+        ));
+    }
+
+    /** @var array<class-string, bool> */
+    private static array $skeletonSupport = [];
+
+    /**
+     * The text skeleton is only correct when this column renders through the base
+     * `tables.columns.text` path — i.e. it has NOT overridden renderCell (Badge/Icon/…
+     * render their own view). Resolved once per class via reflection, then cached.
+     */
+    private function supportsCellSkeleton(): bool
+    {
+        return self::$skeletonSupport[static::class] ??=
+            (new \ReflectionMethod($this, 'renderCell'))->getDeclaringClass()->getName() === self::class;
+    }
+
+    /**
+     * Skeletonable = the only per-record value is the content. A per-record url,
+     * copy affordance, or description-closure changes structure row to row.
+     */
+    private function isCellSkeletonable(): bool
+    {
+        return $this->urlCallback === null
+            && ! $this->copyable
+            && ! ($this->description instanceof Closure);
+    }
+
+    private function cellSkeleton(): string
+    {
+        return $this->cellSkeleton ??= trim($this->renderView('tables.columns.text', [
+            'content' => self::CELL_TOKEN,
+            'textClasses' => $this->getTextClasses(),
+            // Build raw so the token is not escaped; the per-row splice escapes state.
+            'isHtml' => true,
+            'iconHtml' => $this->icon ? $this->renderIcon($this->icon) : '',
+            'iconPosition' => $this->iconPosition ?? 'before',
+            'url' => null,
+            'openInNewTab' => $this->openUrlInNewTab,
+            'copyable' => false,
+            'copyValue' => null,
+            'copyMessage' => null,
+            'tooltip' => $this->tooltip,
+            'description' => is_string($this->description) ? $this->description : null,
             'descriptionPosition' => $this->descriptionPosition,
         ]));
     }

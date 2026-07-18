@@ -14,6 +14,6 @@
             class="inline-flex items-center justify-center rounded-full p-0.5 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-500/20 hover:text-primary-800 dark:hover:text-primary-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
     >
         <span class="sr-only">{{ __('wire-table::messages.filter_remove') }}: {{ $label }}</span>
-        <x-wire::icon name="outline:x-mark" size="h-3.5 w-3.5" />
+        {!! icon('outline:x-mark', 'h-3.5 w-3.5') !!}
     </button>
 </span>

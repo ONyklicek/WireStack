@@ -6,7 +6,7 @@
             <div class="mb-2 flex items-center justify-between gap-3">
                 <span class="flex min-w-0 items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
                     @if($item->getIcon())
-                        <x-wire::icon :name="$item->getIcon()" class="h-4 w-4 shrink-0 {{ $widget->textClassesFor($item) }}" />
+                        {!! icon($item->getIcon(), 'w-4 h-4', 'h-4 w-4 shrink-0 '.$widget->textClassesFor($item)) !!}
                     @endif
                     <span class="truncate">{{ $item->getLabel() }}</span>
                 </span>

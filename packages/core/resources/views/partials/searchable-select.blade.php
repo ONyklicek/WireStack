@@ -224,7 +224,7 @@
         ])
     >
         <span x-text="selectedLabel || placeholder" :class="{ 'text-gray-400': !selectedLabel }"></span>
-        <x-wire::icon name="chevron-down" class="w-4 h-4 text-gray-400 shrink-0 transition-transform duration-150" ::class="{ 'rotate-180': open }" />
+        {!! icon('chevron-down', 'w-4 h-4', 'w-4 h-4 text-gray-400 shrink-0 transition-transform duration-150', '', [':class' => "{ 'rotate-180': open }"]) !!}
     </button>
 
     {{-- Floating listbox from sm up; bottom sheet on a phone (max-sm: classes,
@@ -317,7 +317,7 @@
                             }"
                         >
                             <span x-text="label"></span>
-                            <x-wire::icon name="check" class="w-4 h-4 shrink-0" x-show="isSelected(value)" x-cloak />
+                            {!! icon('check', 'w-4 h-4', 'w-4 h-4 shrink-0', '', ['x-show' => 'isSelected(value)', 'x-cloak' => '']) !!}
                         </button>
                     </li>
                 </template>

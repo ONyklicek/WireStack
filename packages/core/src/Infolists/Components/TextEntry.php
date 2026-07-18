@@ -200,6 +200,30 @@ class TextEntry extends Entry
         return $formatted;
     }
 
+    /**
+     * Only the badge surface is state-driven and low-cardinality (a categorical
+     * value → colored pill), so rows sharing a value render once. Plain / list /
+     * copyable text is content-driven — unique per row, exactly like a table
+     * TextColumn — where a render memo is pure overhead; opt those out (null).
+     * Actions embed per-entry wiring and must not be shared either.
+     */
+    protected function renderCacheSignature(): ?string
+    {
+        if (! $this->isBadge() || $this->hasActions()) {
+            return null;
+        }
+
+        return implode("\0", [
+            (string) $this->getColumnSpan(),
+            (string) $this->getLabel(),
+            $this->getWeightClass(),
+            (string) $this->getTooltip(),
+            $this->getBadgeColorClass(),
+            (string) $this->getIcon(),
+            $this->getFormattedState(),
+        ]);
+    }
+
     protected function viewName(): string
     {
         return 'wire-core::infolists.entries.text';

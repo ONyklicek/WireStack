@@ -58,11 +58,22 @@
     $filters = $table->getFilters();
 
     $hasActions = $table->hasActions();
+    // Mobile stacked cards can collapse the row actions into one dropdown group.
+    $collapseMobileActions = $table->shouldCollapseActionsOnMobile();
+    $mobileActionGroup = $collapseMobileActions ? $table->getMobileActionGroup() : null;
+    // Host click resolver: the single place that maps a row action to the table's
+    // executeTableAction/openActionModal (core action views stay host-agnostic).
+    $actionClick = new \NyonCode\WireTable\Actions\TableActionClickResolver();
     $rowContextMenuEnabled = $table->hasRowContextMenu(); // dedicated actions, independent of the actions column
     $hasBulkActions = !empty($bulkActions);
     $hasHeaderActions = !empty($headerActions);
     $hasFilters = !empty($filters);
     $isSelectable = $table->isSelectable();
+    // Record-invariant chrome icon resolved once per render (IconManager owns the
+    // SVG cache); the row loop echoes the string instead of re-entering @icon per row.
+    $selectCheckIcon = $isSelectable
+        ? app(\NyonCode\WireCore\Foundation\Icons\IconManager::class)->render('check', 'h-4 w-4', 'absolute inset-0 text-white')
+        : '';
     $hasSummaries = $component->tableHasSummaries();
 
     // Selection is managed client-side (Alpine) and entangled deferred — a
@@ -236,7 +247,7 @@
                                     <div class="relative flex-1 max-w-xs">
                                         <div
                                                 class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                            <x-wire::icon name="outline:magnifying-glass" size="h-4 w-4" class="text-gray-400" />
+                                            {!! icon('outline:magnifying-glass', 'h-4 w-4', 'text-gray-400') !!}
                                         </div>
                                         <input
                                                 type="search"
@@ -262,7 +273,7 @@
                                                 aria-label="{{ __('wire-table::messages.filters') }}"
                                                 class="inline-flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
                                         >
-                                            <x-wire::icon name="outline:funnel" size="h-4 w-4" />
+                                            {!! icon('outline:funnel', 'h-4 w-4') !!}
                                             <span>{{ __('wire-table::messages.filters') }}</span>
                                             @if($activeTableFilters !== [])
                                                 <span
@@ -381,7 +392,7 @@
                                                 aria-label="{{ __('wire-table::messages.toggle_columns') }}"
                                                 data-testid="table-column-toggle"
                                         >
-                                            <x-wire::icon name="outline:view-columns" size="h-5 w-5" />
+                                            {!! icon('outline:view-columns', 'h-5 w-5') !!}
                                         </button>
 
                                         {{-- Column toggle: floating panel from sm up, bottom sheet on a
@@ -459,7 +470,7 @@
                                                             wire:click="resetColumns"
                                                             class="mt-1 flex w-full items-center gap-3 border-t border-gray-100 dark:border-gray-700 px-3 py-2 text-left text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg"
                                                     >
-                                                        <x-wire::icon name="outline:arrow-path" size="h-4 w-4" />
+                                                        {!! icon('outline:arrow-path', 'h-4 w-4') !!}
                                                         {{ __('wire-table::messages.reset_columns') }}
                                                     </button>
                                                 @endif
@@ -519,7 +530,7 @@
                                             aria-label="{{ __('wire-table::messages.deselect') }}"
                                             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary-700 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200 hover:bg-primary-100 dark:hover:bg-primary-800/50 rounded-lg transition-colors"
                                     >
-                                        <x-wire::icon name="outline:x-mark" size="w-4 h-4" />
+                                        {!! icon('outline:x-mark', 'w-4 h-4') !!}
                                         {{ __('wire-table::messages.deselect') }}
                                     </button>
                                 </div>
@@ -550,10 +561,10 @@
                                                         :class="(allSelected || someSelected) ? 'bg-primary-600 border-primary-600' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600'"
                                                 >
                                                     <span x-show="allSelected" x-cloak>
-                                                        <x-wire::icon name="check" size="h-4 w-4" class="absolute inset-0 text-white" />
+                                                        {!! icon('check', 'h-4 w-4', 'absolute inset-0 text-white') !!}
                                                     </span>
                                                     <span x-show="someSelected" x-cloak>
-                                                        <x-wire::icon name="minus" size="h-4 w-4" class="absolute inset-0 text-white" />
+                                                        {!! icon('minus', 'h-4 w-4', 'absolute inset-0 text-white') !!}
                                                     </span>
                                                 </button>
                                             </div>
@@ -598,12 +609,12 @@
                                                     <span class="flex-none">
                                                 @if($sortColumn === $column->getName())
                                                             @if($sortDirection === 'asc')
-                                                                <x-wire::icon name="outline:chevron-up" size="h-4 w-4" class="text-gray-500 dark:text-gray-400" />
+                                                                {!! icon('outline:chevron-up', 'h-4 w-4', 'text-gray-500 dark:text-gray-400') !!}
                                                             @else
-                                                                <x-wire::icon name="outline:chevron-down" size="h-4 w-4" class="text-gray-500 dark:text-gray-400" />
+                                                                {!! icon('outline:chevron-down', 'h-4 w-4', 'text-gray-500 dark:text-gray-400') !!}
                                                             @endif
                                                         @else
-                                                            <x-wire::icon name="outline:chevron-up-down" size="h-4 w-4" class="text-gray-500 dark:text-gray-400 opacity-0 group-hover:opacity-100" />
+                                                            {!! icon('outline:chevron-up-down', 'h-4 w-4', 'text-gray-500 dark:text-gray-400 opacity-0 group-hover:opacity-100') !!}
                                                         @endif
                                             </span>
                                                 </button>
@@ -660,7 +671,7 @@
                                                             class="inline-flex items-center justify-center p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                                                             title="{{ __('wire-table::messages.filter_reset_column') }}"
                                                     >
-                                                        <x-wire::icon name="outline:x-mark" size="w-4 h-4" />
+                                                        {!! icon('outline:x-mark', 'w-4 h-4') !!}
                                                     </button>
                                                 @endif
                                             </th>
@@ -707,7 +718,11 @@
                                             data-row-key="{{ $recordKey }}"
                                     >
                                         @if($hasRowContextMenu)
-                                            @include('wire-core::partials.floating-assets')
+                                            {{-- Scaffolding is identical for every row; emit it once per
+                                                 request, not once per row. --}}
+                                            @once
+                                                @include('wire-core::partials.floating-assets')
+                                            @endonce
                                             {{-- <template> is a script-supporting element, valid as a direct
                                                  child of <tr>. Teleported to <body>; a fixed panel pinned at
                                                  the cursor (positioned by wireContextMenu.place()). --}}
@@ -751,7 +766,7 @@
                                                             :class="isSelected(@js((string) $recordKey)) ? 'bg-primary-600 border-primary-600' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:border-gray-400'"
                                                     >
                                                         <span x-show="isSelected(@js((string) $recordKey))" x-cloak>
-                                                            <x-wire::icon name="check" size="h-4 w-4" class="absolute inset-0 text-white" />
+                                                            {!! $selectCheckIcon !!}
                                                         </span>
                                                     </button>
                                                 </div>
@@ -774,9 +789,9 @@
                                         @if($hasActions && $actionsPosition === 'start')
                                             <td class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }}">
                                                 <div
-                                                        class="flex items-center gap-1 {{ $actionsJustifyClass }}">
+                                                        class="flex flex-wrap items-center gap-1 {{ $actionsJustifyClass }}">
                                                     @foreach($actions as $action)
-                                                        {!! $action->render($record) !!}
+                                                        {!! $action->render($record, $actionClick) !!}
                                                     @endforeach
                                                 </div>
                                             </td>
@@ -793,10 +808,10 @@
                                                 @if($recordUrl && !$cm['editable'])
                                                     <a href="{{ $recordUrl }}"
                                                        class="hover:text-primary-600 dark:hover:text-primary-400">
-                                                        {!! $cm['responsiveDisplay'] ? $column->renderResponsiveCell($record) : $column->renderCell($record) !!}
+                                                        {!! $cm['responsiveDisplay'] ? $column->renderResponsiveCell($record) : $column->renderCellFast($record) !!}
                                                     </a>
                                                 @else
-                                                    {!! $cm['responsiveDisplay'] ? $column->renderResponsiveCell($record) : $column->renderCell($record) !!}
+                                                    {!! $cm['responsiveDisplay'] ? $column->renderResponsiveCell($record) : $column->renderCellFast($record) !!}
                                                 @endif
                                             </td>
                                         @endforeach
@@ -805,9 +820,9 @@
                                         @if($hasActions && $actionsPosition === 'end')
                                             <td class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }}">
                                                 <div
-                                                        class="flex items-center gap-1 {{ $actionsJustifyClass }}">
+                                                        class="flex flex-wrap items-center gap-1 {{ $actionsJustifyClass }}">
                                                     @foreach($actions as $action)
-                                                        {!! $action->render($record) !!}
+                                                        {!! $action->render($record, $actionClick) !!}
                                                     @endforeach
                                                 </div>
                                             </td>
@@ -895,7 +910,7 @@
                             <div class="px-6 py-16 text-center">
                                 <div class="flex flex-col items-center gap-3">
                                     <div class="rounded-full bg-amber-100 dark:bg-amber-900/30 p-3">
-                                        <x-wire::icon name="outline:eye-slash" size="h-8 w-8" class="text-amber-500 dark:text-amber-400" />
+                                        {!! icon('outline:eye-slash', 'h-8 w-8', 'text-amber-500 dark:text-amber-400') !!}
                                     </div>
                                     <div>
                                         <h3 class="text-base font-medium text-gray-900 dark:text-white">
@@ -950,7 +965,7 @@
                                                 @php
                                                     $firstContent = $firstColumn->hasResponsiveDisplay()
                                                         ? $firstColumn->renderMobileCell($record)
-                                                        : $firstColumn->renderCell($record);
+                                                        : $firstColumn->renderCellFast($record);
                                                 @endphp
                                                 @if($recordUrl)
                                                     <a href="{{ $recordUrl }}"
@@ -970,10 +985,14 @@
                                         </div>
 
                                         @if($hasActions)
-                                            <div class="flex items-center gap-1 flex-shrink-0 -mr-1">
-                                                @foreach($actions as $action)
-                                                    {!! $action->render($record) !!}
-                                                @endforeach
+                                            <div class="flex flex-wrap items-center justify-end gap-1 flex-shrink-0 -mr-1">
+                                                @if($collapseMobileActions)
+                                                    {!! $mobileActionGroup->render($record, $actionClick) !!}
+                                                @else
+                                                    @foreach($actions as $action)
+                                                        {!! $action->render($record, $actionClick) !!}
+                                                    @endforeach
+                                                @endif
                                             </div>
                                         @endif
                                     </div>
@@ -987,7 +1006,7 @@
                                                     @php
                                                         $colContent = $column->hasResponsiveDisplay()
                                                             ? $column->renderMobileCell($record)
-                                                            : $column->renderCell($record);
+                                                            : $column->renderCellFast($record);
                                                         $isLastOdd = ($index === $restCount - 1) && ($restCount % 2 === 1);
                                                     @endphp
                                                     <div class="{{ $isLastOdd ? 'col-span-2' : 'col-span-1' }}">
@@ -1015,7 +1034,7 @@
                                                         wire:click="toggleRowExpansion('{{ $recordKey }}')"
                                                         class="w-full flex items-center gap-2 px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400"
                                                     >
-                                                        <x-wire::icon name="outline:chevron-right" size="w-3 h-3" class="rotate-90" />
+                                                        {!! icon('outline:chevron-right', 'w-3 h-3', 'rotate-90') !!}
                                                         {{ $table->getSubRowsToggleLabel() ?? __('wire-table::messages.details') }}
                                                     </button>
                                                 @endif
@@ -1028,7 +1047,7 @@
                                                                     {{ $subCol->getLabel() }}
                                                                 </dt>
                                                                 <dd class="text-sm text-gray-700 dark:text-gray-300">
-                                                                    {!! $subCol->renderCell($subRow) !!}
+                                                                    {!! $subCol->renderCellFast($subRow) !!}
                                                                 </dd>
                                                             </div>
                                                         @endforeach
@@ -1043,7 +1062,7 @@
                                                 wire:click="toggleRowExpansion('{{ $recordKey }}')"
                                                 class="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                                             >
-                                                <x-wire::icon name="outline:chevron-right" size="w-3 h-3" />
+                                                {!! icon('outline:chevron-right', 'w-3 h-3') !!}
                                                 {{ $table->getSubRowsToggleLabel() ?? __('wire-table::messages.details') }}
                                             </button>
                                         </div>
@@ -1053,7 +1072,7 @@
                                 <div class="px-4 py-12 text-center bg-white dark:bg-gray-800">
                                     <div class="flex flex-col items-center gap-3">
                                         <div class="rounded-full bg-gray-100 dark:bg-gray-700 p-3">
-                                            <x-wire::icon name="outline:inbox" size="h-6 w-6" class="text-gray-400" />
+                                            {!! icon('outline:inbox', 'h-6 w-6', 'text-gray-400') !!}
                                         </div>
                                         <p class="text-sm text-gray-500 dark:text-gray-400">
                                             {{ $table->getEmptyStateHeading() ?? __('wire-table::messages.empty_heading') }}

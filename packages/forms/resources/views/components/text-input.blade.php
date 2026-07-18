@@ -28,7 +28,7 @@
             ])
         @elseif($field->getPrefixIcon())
             <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm">
-                    <x-wire::icon :name="$field->getPrefixIcon()" class="w-4 h-4"/>
+                    {!! icon($field->getPrefixIcon(), 'w-4 h-4', 'w-4 h-4') !!}
                 </span>
         @elseif($field->getPrefix())
             <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm">
@@ -110,8 +110,8 @@
                     tabindex="-1"
                     class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             >
-                <span x-show="!revealed"><x-wire::icon name="outline:eye" class="w-5 h-5"/></span>
-                <span x-show="revealed" x-cloak><x-wire::icon name="outline:eye-slash" class="w-5 h-5"/></span>
+                <span x-show="!revealed">{!! icon('outline:eye', 'w-4 h-4', 'w-5 h-5') !!}</span>
+                <span x-show="revealed" x-cloak>{!! icon('outline:eye-slash', 'w-4 h-4', 'w-5 h-5') !!}</span>
             </button>
         @endif
 
@@ -124,7 +124,7 @@
                 ])
             @elseif($field->getSuffixIcon())
                 <span class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm">
-                    <x-wire::icon :name="$field->getSuffixIcon()" class="w-4 h-4"/>
+                    {!! icon($field->getSuffixIcon(), 'w-4 h-4', 'w-4 h-4') !!}
                 </span>
             @elseif($field->getSuffix())
                 <span class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm">

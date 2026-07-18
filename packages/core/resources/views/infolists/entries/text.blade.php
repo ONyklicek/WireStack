@@ -36,7 +36,7 @@
                 $field->getBadgeColorClass(),
             ])>
                 @if($field->getIcon())
-                    <x-wire::icon :name="$field->getIcon()" class="w-3.5 h-3.5"/>
+                    {!! icon($field->getIcon(), 'w-4 h-4', 'w-3.5 h-3.5') !!}
                 @endif
                 {{ $field->getFormattedState() }}
             </span>
@@ -55,16 +55,16 @@
                 @endif
             >
                 @if($field->getIcon())
-                    <x-wire::icon :name="$field->getIcon()" class="w-4 h-4 text-gray-400"/>
+                    {!! icon($field->getIcon(), 'w-4 h-4', 'w-4 h-4 text-gray-400') !!}
                 @endif
                 {{ $field->getFormattedState() }}
                 @if($field->isCopyable())
-                    <x-wire::icon name="clipboard" class="w-3.5 h-3.5 text-gray-400" x-show="!copied"/>
-                    <x-wire::icon name="check" class="w-3.5 h-3.5 text-emerald-500" x-show="copied" x-cloak/>
+                    {!! icon('clipboard', 'w-4 h-4', 'w-3.5 h-3.5 text-gray-400', '', ['x-show' => '!copied']) !!}
+                    {!! icon('check', 'w-4 h-4', 'w-3.5 h-3.5 text-emerald-500', '', ['x-show' => 'copied', 'x-cloak' => '']) !!}
                 @endif
             </span>
         @endif
     </div>
 
-    @include('wire-core::infolists.entry-actions')
+    @if($field->hasActions())@include('wire-core::infolists.entry-actions')@endif
 </div>

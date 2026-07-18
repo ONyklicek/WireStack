@@ -70,7 +70,9 @@ class BooleanColumn extends Column
         $color = $state ? $this->trueColor : $this->falseColor;
         $label = $state ? $this->trueLabel : $this->falseLabel;
 
-        return $this->renderView('tables.columns.boolean', [
+        // §7: only two states (true/false) → memoise the view render by its data so
+        // the whole column renders at most twice, not once per row.
+        return $this->renderViewCached('tables.columns.boolean', [
             'colorClass' => $this->resolveColorClass($color),
             'iconHtml' => app(IconManager::class)->render($icon, 'w-5 h-5'),
             'label' => $label,

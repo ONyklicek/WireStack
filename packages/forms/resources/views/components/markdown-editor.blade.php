@@ -73,7 +73,7 @@
                 class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-xs font-bold w-7 h-7 flex items-center justify-center">H</button>
             <button type="button" @click="insertLine('- ')" title="{{ __('List') }}"
                 class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm w-7 h-7 flex items-center justify-center">
-                <x-wire::icon name="list-bullet" class="w-4 h-4" />
+                {!! icon('list-bullet', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
             <button type="button" @click="insertLine('> ')" title="{{ __('Blockquote') }}"
                 class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm w-7 h-7 flex items-center justify-center">

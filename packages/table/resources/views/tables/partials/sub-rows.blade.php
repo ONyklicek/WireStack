@@ -82,13 +82,13 @@
                                             <span>{{ $subCol->getLabel() }}</span>
                                             @if($isActive)
                                                 @if($activeSort['direction'] === 'asc')
-                                                    <x-wire::icon name="outline:chevron-up" size="w-4 h-4" class="text-gray-500 dark:text-gray-400"
+                                                    {!! icon('outline:chevron-up', 'w-4 h-4', 'text-gray-500 dark:text-gray-400') !!}
                                                 @else
-                                                    <x-wire::icon name="outline:chevron-down" size="w-4 h-4" class="text-gray-500 dark:text-gray-400"
+                                                    {!! icon('outline:chevron-down', 'w-4 h-4', 'text-gray-500 dark:text-gray-400') !!}
                                                 @endif
                                             @else
                                                 <span class="text-[10px] opacity-30">
-                                                    <x-wire::icon name="outline:chevron-up-down" size="w-4 h-4" class="text-gray-500 dark:text-gray-400 opacity-0 hover:opacity-100" />
+                                                    {!! icon('outline:chevron-up-down', 'w-4 h-4', 'text-gray-500 dark:text-gray-400 opacity-0 hover:opacity-100') !!}
                                                 </span>
                                             @endif
                                         </button>
@@ -108,7 +108,7 @@
                             <td class="w-8"></td>
                             @foreach($visibleSubRowColumns as $subCol)
                                 <td class="px-3 py-2 text-gray-700 dark:text-gray-300 {{ $subCol->shouldWrap() ? '' : 'whitespace-nowrap' }}">
-                                    {!! $subCol->renderCell($subRow) !!}
+                                    {!! $subCol->renderCellFast($subRow) !!}
                                 </td>
                             @endforeach
                             @if($hasSubRowActions)

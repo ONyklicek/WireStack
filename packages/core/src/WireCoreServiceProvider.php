@@ -23,6 +23,8 @@ use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Icons\IconSet;
+use NyonCode\WireCore\Foundation\View\FloatingAssets;
+use NyonCode\WireCore\Foundation\View\Primitives;
 use NyonCode\WireCore\Modals\View\ConfirmationComponent;
 use NyonCode\WireCore\Modals\View\ModalComponent;
 use NyonCode\WireCore\Modals\View\SlideOverComponent;
@@ -121,11 +123,24 @@ class WireCoreServiceProvider extends PackageServiceProvider
 
             return $manager;
         });
+
+        // Canonical owner of record-invariant primitive markup (spinner, success
+        // check). Singleton so its per-request string memo spans the whole request.
+        $this->app->singleton(Primitives::class);
+
+        // Canonical owner of the floating-dropdown asset URL. Singleton so the route
+        // + mtime resolve once per request, not per @include of the partial.
+        $this->app->singleton(FloatingAssets::class);
     }
 
     protected function bootFoundation(): void
     {
-        // Register <x-wire::icon />, <x-wire::badge />, etc.
+        // Register <x-wire::icon />, <x-wire::badge />, etc. `<x-wire::icon>` stays
+        // the consumer-facing Blade API. The framework's OWN partials never render
+        // icons through it (a full Blade component = one view render per call);
+        // they call the `icon()` helper — `{!! icon('check', 'w-5 h-5') !!}` — which
+        // returns the memoised IconManager <svg> string (zero view renders) and can
+        // forward Alpine/data-* attributes via its $attributes argument.
         Blade::componentNamespace('NyonCode\\WireCore\\Foundation\\View', 'wire');
     }
 

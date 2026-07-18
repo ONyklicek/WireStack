@@ -120,6 +120,22 @@ it('icon callback can return Icon enum', function () {
         ->and($column->getIconForState('other'))->toBeNull();
 });
 
+it('escapes the badge value by default (no stored XSS) and emits raw only with ->html()', function () {
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 1, 'status' => '<img src=x onerror=alert(1)>']);
+
+    // Default: the cell state is HTML-escaped, exactly like a plain TextColumn.
+    $default = BadgeColumn::make('status')->renderCell($record);
+    expect($default)->toContain('&lt;img')->not->toContain('<img src=x');
+
+    // Opt-in ->html() renders raw (trusted-content escape hatch).
+    $raw = BadgeColumn::make('status')->html()->renderCell($record);
+    expect($raw)->toContain('<img src=x');
+});
+
 it('renders the empty-cell text instead of a badge for a null state', function () {
     // An empty value must not render an empty coloured pill; it shows the
     // empty-cell placeholder like any other column.

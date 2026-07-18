@@ -21,7 +21,7 @@
                         @if($stat->getDescription())
                             <p class="mt-1 flex items-center gap-1 text-sm {{ $stat->getDescriptionColorClass() }}">
                                 @if($stat->getDescriptionIcon())
-                                    <x-wire::icon :name="$stat->getDescriptionIcon()" class="h-4 w-4" />
+                                    {!! icon($stat->getDescriptionIcon(), 'w-4 h-4', 'h-4 w-4') !!}
                                 @endif
                                 {{ $stat->getDescription() }}
                             </p>
@@ -30,7 +30,7 @@
 
                     @if($stat->getIcon())
                         <div class="ml-4">
-                            <x-wire::icon :name="$stat->getIcon()" class="h-8 w-8 text-gray-400 dark:text-gray-500" />
+                            {!! icon($stat->getIcon(), 'w-4 h-4', 'h-8 w-8 text-gray-400 dark:text-gray-500') !!}
                         </div>
                     @endif
                 </div>

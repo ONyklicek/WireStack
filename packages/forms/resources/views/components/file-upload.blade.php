@@ -81,8 +81,7 @@
     >
         <div class="pointer-events-none text-center" wire:loading.remove
              wire:target="{{ $field->getWireModelAttribute() }}">
-            <x-wire::icon name="outline:arrow-up-tray" class="mx-auto h-10 w-10 text-gray-400"
-                          ::class="{ 'text-primary-500': isDragging }"/>
+            {!! icon('outline:arrow-up-tray', 'w-4 h-4', 'mx-auto h-10 w-10 text-gray-400', '', [':class' => "{ 'text-primary-500': isDragging }"]) !!}
             <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
                 <span class="font-medium text-primary-600 dark:text-primary-400">{{ __('Click to upload') }}</span>
                 {{ __('or drag and drop') }}
@@ -159,7 +158,7 @@
                         <img src="{{ $preview['url'] }}" class="h-10 w-10 {{ $thumbShape }} object-cover shrink-0" alt="{{ $preview['name'] }}"/>
                     @else
                         <div class="flex h-10 w-10 items-center justify-center {{ $thumbShape }} bg-gray-100 dark:bg-gray-700 shrink-0">
-                            <x-wire::icon name="outline:document" class="h-5 w-5 text-gray-400"/>
+                            {!! icon('outline:document', 'w-4 h-4', 'h-5 w-5 text-gray-400') !!}
                         </div>
                     @endif
 
@@ -183,7 +182,7 @@
                                 wire:click="removeUploadedFile('{{ $field->getStatePath() }}', {{ (int) $preview['index'] }})" data-testid="form-file-{{ $field->getStatePath() }}-remove-{{ (int) $preview['index'] }}"
                                 class="shrink-0 p-1 text-gray-400 hover:text-red-500 transition-colors duration-150"
                         >
-                            <x-wire::icon name="x-mark" class="h-4 w-4"/>
+                            {!! icon('x-mark', 'w-4 h-4', 'h-4 w-4') !!}
                             <span class="sr-only">{{ __('Remove') }}</span>
                         </button>
                     @endif

@@ -142,6 +142,28 @@ class IconEntry extends Entry
         return self::getTextColorClasses($this->getResolvedColor() ?? Color::Gray->value);
     }
 
+    /**
+     * The icon entry's markup is a pure function of its resolved icon + color
+     * (from a low-cardinality state) and its column-static chrome — no per-record
+     * identity. So rows sharing a state render once. With actions the entry
+     * embeds per-entry action wiring, which must not be shared: opt out.
+     */
+    protected function renderCacheSignature(): ?string
+    {
+        if ($this->hasActions()) {
+            return null;
+        }
+
+        return implode("\0", [
+            $this->getColumnSpanClass(),
+            (string) $this->getLabel(),
+            (string) $this->getResolvedIcon(),
+            $this->getIconColorClass(),
+            (string) $this->getTooltip(),
+            (string) $this->getPlaceholder(),
+        ]);
+    }
+
     protected function viewName(): string
     {
         return 'wire-core::infolists.entries.icon';

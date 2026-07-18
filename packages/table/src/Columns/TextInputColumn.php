@@ -7,11 +7,13 @@ namespace NyonCode\WireTable\Columns;
 use Closure;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
 use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
 use NyonCode\WireCore\Foundation\Contracts\HydratesState;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireCore\Foundation\View\Primitives;
 use NyonCode\WireTable\Concerns\HasView;
 
 class TextInputColumn extends Column implements DehydratesState, HydratesState
@@ -683,12 +685,62 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return (string) (EnumResolver::display($value) ?? '');
     }
 
+    // §7 boundary evaluation — inline-edit multi-token skeleton (prototype).
+    // The editable cell's per-record variation is exactly three values: the record
+    // key, the state value, and the row version. `value` appears in TWO encodings
+    // (JSON in the Alpine config, HTML attr in data-server-value) from one variable,
+    // so distinct control-char sentinels tag each position and are spliced with the
+    // matching encoding. Structure is otherwise column-static.
+    private const EDIT_VAL = "\x01\x01__WCVAL__\x01\x01";
+
+    // The record key is int-cast by the model, so it cannot be a string sentinel —
+    // use a distinctive number. e() is context-free (char-by-char), so splicing
+    // e($key) into "tic-<sentinel>-<col>" reproduces e("tic-<key>-<col>") exactly.
+    private const EDIT_KEY = '1717171718';
+
+    private const EDIT_VER = '1717171717';
+
+    private ?string $editableSkeleton = null;
+
+    public function renderEditableCellFast(Model $record): string
+    {
+        $state = $this->getState($record);
+        $key = (string) $record->getKey();
+        $value = (string) ($state ?? '');
+        $updatedAt = $record->getAttribute('updated_at');
+        $version = $updatedAt ? (string) $updatedAt->getTimestamp() : '0';
+
+        return strtr($this->editableSkeleton ??= $this->buildEditableSkeleton(), [
+            e(json_encode(self::EDIT_VAL)) => e(json_encode($value)),  // Alpine config
+            e(self::EDIT_VAL) => e($value),                           // data-server-value
+            self::EDIT_KEY => e($key),                                // wire:key + data-record-key
+            self::EDIT_VER => $version,                               // version (numeric)
+        ]);
+    }
+
+    private function buildEditableSkeleton(): string
+    {
+        $sentinel = new class extends Model
+        {
+            protected $guarded = [];
+        };
+        $sentinel->forceFill([
+            'id' => self::EDIT_KEY,
+            'updated_at' => Carbon::createFromTimestamp((int) self::EDIT_VER),
+        ]);
+
+        return $this->renderEditableCell(self::EDIT_VAL, $sentinel);
+    }
+
     protected function renderEditableCell(mixed $state, Model $record): string
     {
         return $this->renderView('tables.columns.text-input-editable', [
             'column' => $this,
             'record' => $record,
             'state' => $state,
+            // Record-invariant primitives resolved once per request (not @included per row).
+            'spinnerHtml' => app(Primitives::class)->spinner(),
+            'checkHtml' => app(Primitives::class)->successCheck(),
         ]);
     }
 
@@ -731,7 +783,23 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
 
     // ─── Build methods ──────────────────────────────────────────
 
+    /** @var array<string, string> */
+    private array $inputClassesCache = [];
+
+    private ?string $inputAttributesCache = null;
+
+    /**
+     * Tier-2g: the input classes/attributes are a pure function of column config, so
+     * they are memoised per column instead of rebuilt for every editable cell. (The
+     * instance is rebuilt each Livewire render, so no cross-render staleness.)
+     */
     public function buildInputClasses(bool $hasPrefix, bool $hasSuffix): string
+    {
+        return $this->inputClassesCache[((int) $hasPrefix).((int) $hasSuffix)]
+            ??= $this->computeInputClasses($hasPrefix, $hasSuffix);
+    }
+
+    private function computeInputClasses(bool $hasPrefix, bool $hasSuffix): string
     {
         $classes = [
             'block w-full rounded-md border-gray-300 shadow-sm',
@@ -757,6 +825,11 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
     }
 
     public function buildInputAttributes(): string
+    {
+        return $this->inputAttributesCache ??= $this->computeInputAttributes();
+    }
+
+    private function computeInputAttributes(): string
     {
         $attrs = [];
 

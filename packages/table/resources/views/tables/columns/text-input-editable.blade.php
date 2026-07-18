@@ -67,12 +67,12 @@
 
         {{-- Saving spinner --}}
         <span x-show="saving" x-cloak class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-            @include('wire-table::tables.columns.partials.spinner')
+            {!! $spinnerHtml !!}
         </span>
 
         {{-- Success check --}}
         <span x-show="success" x-cloak x-transition class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-            @include('wire-table::tables.columns.partials.check-icon')
+            {!! $checkHtml !!}
         </span>
 
         {{-- Suffix --}}

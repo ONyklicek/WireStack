@@ -26,7 +26,7 @@
                     : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300'"
             >
                 @if($tab->getIcon())
-                    <x-wire::icon :name="$tab->getIcon()" class="w-4 h-4 shrink-0" />
+                    {!! icon($tab->getIcon(), 'w-4 h-4', 'w-4 h-4 shrink-0') !!}
                 @endif
                 <span>{{ $tab->getLabel() }}</span>
             </button>

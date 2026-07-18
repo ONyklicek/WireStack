@@ -19,7 +19,7 @@
                             x-on:click="toggle()"
                             class="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700"
                             aria-label="{{ __('Options') }}">
-                        <x-wire::icon name="ellipsis-horizontal" class="h-5 w-5" />
+                        {!! icon('ellipsis-horizontal', 'w-4 h-4', 'h-5 w-5') !!}
                     </button>
                     <template x-teleport="body">
                         <div x-ref="panel" x-show="open" x-cloak x-transition @click.outside="$clickedInside($event) || close()"

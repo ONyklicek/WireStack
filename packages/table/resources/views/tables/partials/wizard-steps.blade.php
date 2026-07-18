@@ -15,7 +15,7 @@
                     'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500' => ! $isCurrent && ! $isDone,
                 ])>
                     @if($isDone)
-                        <x-wire::icon name="check" class="h-4 w-4" />
+                        {!! icon('check', 'w-4 h-4', 'h-4 w-4') !!}
                     @else
                         {{ $index + 1 }}
                     @endif

@@ -39,5 +39,5 @@
         @endif
     </div>
 
-    @include('wire-core::infolists.entry-actions')
+    @if($field->hasActions())@include('wire-core::infolists.entry-actions')@endif
 </div>

@@ -97,7 +97,9 @@ class IconColumn extends Column
             return $this->getEmptyCellText();
         }
 
-        return $this->renderView('tables.columns.icon', [
+        // §7: markup is a function of the (low-cardinality) state — memoise the view
+        // render by its data so rows sharing a state reuse one render.
+        return $this->renderViewCached('tables.columns.icon', [
             'colorClass' => $this->resolveColorClass($color ?? 'gray'),
             'iconHtml' => app(IconManager::class)->render($icon, $this->getSizeClass()),
         ]);

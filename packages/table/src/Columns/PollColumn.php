@@ -11,6 +11,7 @@ use NyonCode\WireCore\Foundation\Concerns\InteractsWithStateColor;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireCore\Foundation\View\Primitives;
 
 class PollColumn extends Column
 {
@@ -572,9 +573,7 @@ class PollColumn extends Column
             return (string) $customIndicator;
         }
 
-        return trim($this->renderView('tables.columns.partials.spinner', [
-            'class' => 'w-4 h-4 text-gray-400',
-        ]));
+        return app(Primitives::class)->spinner('w-4 h-4 text-gray-400');
     }
 
     private function isBadge(): bool

@@ -5,9 +5,12 @@ import { join } from 'node:path';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 
 /*
- * Phase 3 rollout: the searchable-select listbox opens as a bottom sheet on a
- * phone (fixed, bottom-pinned, full-width, backdrop) and as a trigger-anchored
- * floating panel on desktop. See .claude/skills/verify-preview.
+ * A **searchable** select listbox stays a trigger-anchored **floating** panel on
+ * BOTH mobile and desktop — searchable selects deliberately opt out of the mobile
+ * bottom sheet (typing needs the keyboard, not a sheet). The mobile bottom-sheet
+ * path for NON-searchable selects is covered by `verify-select-sheet`. This guards
+ * that `field-select-floating` (a `->searchable()` select) never becomes a sheet.
+ * See .claude/skills/verify-preview.
  */
 
 const base = process.env.PREVIEW_BASE ?? 'http://127.0.0.1:8085/previews';
@@ -81,9 +84,9 @@ try {
   console.log('mobile:', JSON.stringify(m));
   await shot('01-select-FLOATING-390');
   check('select opens on mobile', m.open === true);
-  check('select is a fixed bottom sheet', m.open && m.position === 'fixed' && Math.abs(m.rect.bottom - m.vh) <= 2, `pos=${m.position} bottom=${m.rect?.bottom} vh=${m.vh}`);
-  check('select sheet is full-width', m.open && m.rect.left <= 1 && Math.abs(m.rect.right - m.vw) <= 2, `left=${m.rect?.left} right=${m.rect?.right} vw=${m.vw}`);
-  check('mobile shows a dimming backdrop', m.open && m.backdropVisible === true);
+  check('searchable select FLOATS on mobile (opts out of the bottom sheet)', m.open && m.position === 'absolute', `pos=${m.position}`);
+  check('mobile floating panel is NOT a full-viewport bottom sheet', m.open && ! (m.rect.left <= 1 && Math.abs(m.rect.right - m.vw) <= 2 && Math.abs(m.rect.bottom - m.vh) <= 2), `left=${m.rect?.left} right=${m.rect?.right} bottom=${m.rect?.bottom} vw=${m.vw} vh=${m.vh}`);
+  check('mobile shows NO dimming backdrop (floating, not a sheet)', m.open && m.backdropVisible === false);
 
   const d = await openAndProbe(1400, 900);
   console.log('desktop:', JSON.stringify(d));

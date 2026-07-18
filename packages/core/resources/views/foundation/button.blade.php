@@ -9,10 +9,10 @@
     {{ $attributes->merge(['class' => 'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800']) }}
 >
     @if($icon && $iconPosition === 'before')
-        <x-wire::icon :name="$icon" size="w-4 h-4" />
+        {!! icon($icon, 'w-4 h-4') !!}
     @endif
     {{ $slot }}
     @if($icon && $iconPosition === 'after')
-        <x-wire::icon :name="$icon" size="w-4 h-4" />
+        {!! icon($icon, 'w-4 h-4') !!}
     @endif
 </{{ $tag }}>

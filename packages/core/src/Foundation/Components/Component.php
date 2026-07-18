@@ -32,6 +32,7 @@ abstract class Component implements Htmlable
     use Concerns\HasName;
     use Concerns\HasSize;
     use Concerns\HasState;
+    use Concerns\HasViewRenderCache;
     use Concerns\HasVisibility;
     use Concerns\InteractsWithStateConditions;
     use Conditionable;
@@ -59,7 +60,7 @@ abstract class Component implements Htmlable
 
     public function toHtml(): string
     {
-        return $this->render()->render();
+        return $this->renderCachedHtml();
     }
 
     public function __toString(): string
