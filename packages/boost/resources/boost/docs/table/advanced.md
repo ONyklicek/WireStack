@@ -554,6 +554,30 @@ In stacked mode:
 - Each column renders as `Label: Value`
 - Column `visibleFrom()`/`hiddenFrom()` still applies
 
+Row actions render inline in each card header. When a row has several actions,
+collapse them into a single dropdown group so the header stays tidy:
+
+```php
+$table
+    ->stackedOnMobile()
+    ->collapseActionsOnMobile()   // one "⋮" trigger per card instead of inline buttons
+```
+
+The collapse only kicks in once a row has **3 or more** actions; with fewer, the
+card keeps them inline. Tune the threshold with the second argument:
+
+```php
+->collapseActionsOnMobile(threshold: 2)   // collapse from 2 actions up
+->collapseActionsOnMobile(threshold: 1)   // always collapse
+```
+
+Only the mobile stacked cards are affected — the desktop table keeps its inline
+action buttons. Any existing `ActionGroup`s are flattened into the single mobile
+dropdown (dividers are dropped in the merge), and a card with only one visible
+action still shows that action inline. The dropdown inherits the table's
+`sheetOnMobile()` / `mobileBreakpoint()` settings (bottom-sheet on small screens
+by default).
+
 ### Column Breakpoints
 
 ```php

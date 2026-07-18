@@ -8,25 +8,31 @@ use NyonCode\WireForms\Components\TiptapEditor;
 
 ## Nastavení
 
-Žádné. JavaScript editoru (TipTap + všechna rozšíření) se dodává **předbundlovaný uvnitř
-balíčku** a Blade pohled pole ho automaticky injektuje. Žádný npm
-install, žádný build krok a žádný `app.js` import — jen použijte pole a
-funguje hned.
+Žádné. JavaScript editoru se dodává **předbundlovaný uvnitř balíčku** a Blade
+pohled pole ho automaticky injektuje. Žádný npm install, žádný build krok a žádný
+`app.js` import — jen použijte pole a funguje hned.
 
-Bundle servíruje balíček na `/wire-forms/assets/tiptap.js` a script
-tag se emituje jednou za stránku přes `@once`. Registruje Alpine komponentu
-`tiptapEditor`, na kterou pohled spoléhá (Alpine se dodává s Livewire).
+Editor je **code-split**: základní bundle (jádro TipTapu + vždy zapnutá rozšíření)
+se servíruje na `/wire-forms/tiptap/tiptap-editor.js`, a volitelná rozšíření
+(`withTables()` / `withImages()` / `withHighlight()` / `withTextAlign()`) jsou v
+samostatném addon bundlu, který se načte jen když je nějaké pole na stránce zapne.
+Oba sdílejí jeden chunk s jádrem, takže stránka bez těchto rozšíření stáhne méně a
+zapnutí tabulek nikdy neposílá druhou kopii jádra editoru. Script tagy
+`<script type="module">` se injektují jednou za stránku přes Livewire direktivu
+`@assets`; registrují Alpine komponentu `tiptapEditor`, na kterou pohled spoléhá
+(Alpine se dodává s Livewire).
 
-> **Publikování assetu (volitelné).** Pokud dáváte přednost servírování souboru přes
-> vlastní asset pipeline/CDN, publikujte ho pomocí:
+> **Publikování assetu (volitelné).** Pokud dáváte přednost servírování souborů přes
+> vlastní asset pipeline/CDN, publikujte je pomocí:
 > ```bash
 > php artisan vendor:publish --tag=wire-forms::assets
 > ```
-> To zkopíruje bundle do `public/vendor/wire-forms/`.
+> To zkopíruje bundly do `public/vendor/wire-forms/`.
 
-> **Přispěvatelé.** Bundle se generuje z
-> `packages/forms/resources/js/tiptap-editor.js` a commituje do
-> `packages/forms/dist/`. Po editaci zdroje ho přebuildujte pomocí:
+> **Přispěvatelé.** Bundly se generují z
+> `packages/forms/resources/js/tiptap-editor.js` a `tiptap-editor-addons.js` a
+> commitují (se sdíleným chunkem) do `packages/forms/dist/tiptap/`. Po editaci
+> zdroje je přebuildujte pomocí:
 > ```bash
 > npm run build:forms-assets
 > ```

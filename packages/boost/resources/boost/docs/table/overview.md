@@ -400,6 +400,9 @@ be combined on the same table:
 ```php
 // Stack columns vertically on mobile; 2nd arg is the breakpoint (default 'md')
 ->stackedOnMobile(bool $stacked = true, string $breakpoint = 'md')   // 'sm','md','lg','xl'
+
+// Collapse the mobile card's row actions into one dropdown group (from N actions up)
+->collapseActionsOnMobile(bool $collapse = true, int $threshold = 3)
 ```
 
 ### Empty State
