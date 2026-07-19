@@ -18,11 +18,11 @@
 >
     @include('wire-core::partials.spinner', ['wireTarget' => 'callFieldAction', 'class' => 'h-4 w-4'])
     @if($action->getIcon() && $action->getIconPosition() === 'before')
-        <x-wire::icon :name="$action->getIcon()" class="w-4 h-4" />
+        {!! icon($action->getIcon(), 'w-4 h-4', 'w-4 h-4') !!}
     @endif
     <span>{{ $action->getLabel() }}</span>
     @if($action->getIcon() && $action->getIconPosition() === 'after')
-        <x-wire::icon :name="$action->getIcon()" class="w-4 h-4" />
+        {!! icon($action->getIcon(), 'w-4 h-4', 'w-4 h-4') !!}
     @endif
 </button>
 

@@ -27,6 +27,7 @@ trait HasNativeControl
     /** null = follow {@see defaultNative()}; an explicit native() call pins it. */
     protected ?bool $native = null;
 
+    /** Use the browser's native control instead of the custom combobox/picker. */
     public function native(bool $native = true): static
     {
         $this->native = $native;

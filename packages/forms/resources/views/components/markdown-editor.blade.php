@@ -16,7 +16,9 @@
         renderMd(text) {
             if (!text) return '';
             let html = text
-                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                // Neutralise raw HTML first, including the double quote so a link
+                // URL can never break out of the href attribute (DOM-XSS).
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;')
                 .replace(/^### (.+)$/gm, '<h3 class=\"text-base font-semibold mt-3 mb-1\">$1</h3>')
                 .replace(/^## (.+)$/gm, '<h2 class=\"text-lg font-bold mt-4 mb-1\">$1</h2>')
                 .replace(/^# (.+)$/gm, '<h1 class=\"text-xl font-bold mt-4 mb-2\">$1</h1>')
@@ -24,7 +26,11 @@
                 .replace(/\*(.+?)\*/g, '<em>$1</em>')
                 .replace(/~~(.+?)~~/g, '<del>$1</del>')
                 .replace(/`([^`\n]+)`/g, '<code class=\"bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-xs font-mono\">$1</code>')
-                .replace(/\[(.+?)\]\((.+?)\)/g, '<a href=\"$2\" class=\"text-primary-600 hover:underline\" target=\"_blank\">$1</a>')
+                .replace(/\[(.+?)\]\((.+?)\)/g, (m, label, url) => {
+                    // Only allow safe URL schemes — block javascript:/data: etc.
+                    const safe = /^(https?:|mailto:|#|\/)/i.test(url.trim()) ? url : '#';
+                    return '<a href=\"' + safe + '\" class=\"text-primary-600 hover:underline\" target=\"_blank\" rel=\"noopener noreferrer\">' + label + '</a>';
+                })
                 .replace(/^> (.+)$/gm, '<blockquote class=\"border-l-4 border-gray-300 dark:border-gray-600 pl-3 text-gray-600 dark:text-gray-400 italic\">$1</blockquote>')
                 .replace(/^- (.+)$/gm, '<li class=\"ml-4 list-disc\">$1</li>')
                 .replace(/^\d+\. (.+)$/gm, '<li class=\"ml-4 list-decimal\">$1</li>')
@@ -73,7 +79,7 @@
                 class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-xs font-bold w-7 h-7 flex items-center justify-center">H</button>
             <button type="button" @click="insertLine('- ')" title="{{ __('List') }}"
                 class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm w-7 h-7 flex items-center justify-center">
-                <x-wire::icon name="list-bullet" class="w-4 h-4" />
+                {!! icon('list-bullet', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
             <button type="button" @click="insertLine('> ')" title="{{ __('Blockquote') }}"
                 class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm w-7 h-7 flex items-center justify-center">

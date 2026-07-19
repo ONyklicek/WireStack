@@ -7,11 +7,13 @@ namespace NyonCode\WireTable\Columns;
 use Closure;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
 use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
 use NyonCode\WireCore\Foundation\Contracts\HydratesState;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireCore\Foundation\View\Primitives;
 use NyonCode\WireTable\Concerns\HasView;
 
 class TextInputColumn extends Column implements DehydratesState, HydratesState
@@ -109,6 +111,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
     // Input Type Methods
     // ==========================================
 
+    /** Set the HTML input type (e.g. "text", "number", "email"). */
     public function type(string $type): static
     {
         $this->inputType = $type;
@@ -121,6 +124,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this->inputType;
     }
 
+    /** Use a numeric input. */
     public function numeric(): static
     {
         $this->inputType = 'number';
@@ -128,6 +132,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Use a numeric input restricted to whole numbers. */
     public function integer(): static
     {
         $this->inputType = 'number';
@@ -136,6 +141,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Use a numeric input with the given number of decimal places. */
     public function decimal(int $places = 2): static
     {
         $this->inputType = 'number';
@@ -166,6 +172,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Use an email input. */
     public function email(): static
     {
         $this->inputType = 'email';
@@ -173,6 +180,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Use a telephone input. */
     public function tel(): static
     {
         $this->inputType = 'tel';
@@ -180,6 +188,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Use a URL input. */
     public function url(): static
     {
         $this->inputType = 'url';
@@ -187,6 +196,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Use a password (masked) input. */
     public function password(): static
     {
         $this->inputType = 'password';
@@ -198,6 +208,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
     // Validation & Constraints
     // ==========================================
 
+    /** Set the maximum input length (HTML maxlength). */
     public function maxLength(?int $maxLength): static
     {
         $this->maxLength = $maxLength;
@@ -205,6 +216,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Set the minimum input length (HTML minlength). */
     public function minLength(?int $minLength): static
     {
         $this->minLength = $minLength;
@@ -212,6 +224,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Set the HTML pattern the input value must match. */
     public function pattern(?string $pattern): static
     {
         $this->pattern = $pattern;
@@ -219,6 +232,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Set the numeric step increment (HTML step). */
     public function step(?string $step): static
     {
         $this->step = $step;
@@ -226,6 +240,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Set the minimum numeric value (HTML min). */
     public function min(?string $min): static
     {
         $this->min = $min;
@@ -233,6 +248,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Set the maximum numeric value (HTML max). */
     public function max(?string $max): static
     {
         $this->max = $max;
@@ -241,6 +257,8 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
     }
 
     /**
+     * Set the Laravel validation rules applied before saving an edit.
+     *
      * @param  array<int|string, mixed>|Closure  $rules
      */
     public function rules(array|Closure $rules): static
@@ -250,6 +268,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Add the "required" validation rule. */
     public function required(bool $required = true): static
     {
         if ($required) {
@@ -259,6 +278,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Append a single validation rule to the rule set. */
     public function rule(string $rule): static
     {
         if ($this->rules === null) {
@@ -273,6 +293,8 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
     }
 
     /**
+     * Set custom validation messages for this column's rules.
+     *
      * @param  array<string, string>  $messages
      */
     public function validationMessages(array $messages): static
@@ -282,6 +304,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Set the human-readable attribute name used in validation messages. */
     public function validationAttribute(string $attribute): static
     {
         $this->validationAttributes[$this->getName()] = $attribute;
@@ -339,6 +362,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
     // Permissions & Disabled State
     // ==========================================
 
+    /** Disable inline editing; a Closure receives the record per row. */
     public function disabled(bool|Closure $disabled = true): static
     {
         if ($disabled instanceof Closure) {
@@ -350,6 +374,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Render the input read-only; a Closure receives the record per row. */
     public function readonly(bool|Closure $readonly = true): static
     {
         if ($readonly instanceof Closure) {
@@ -361,6 +386,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Require this ability before an inline edit is allowed to save. */
     public function editPermission(?string $permission): static
     {
         $this->editPermission = $permission;
@@ -368,6 +394,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Save the edit when the input loses focus (default true). */
     public function saveOnBlur(bool $save = true): static
     {
         $this->saveOnBlur = $save;
@@ -375,6 +402,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Save the edit when the user presses Enter (default true). */
     public function saveOnEnter(bool $save = true): static
     {
         $this->saveOnEnter = $save;
@@ -382,6 +410,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Validate as the user types, debounced by the given milliseconds. */
     public function liveValidation(bool $live = true, int $debounce = 500): static
     {
         $this->liveValidation = $live;
@@ -394,6 +423,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
     // Save Behavior
     // ==========================================
 
+    /** Run a callback after the edited value is applied to the record. */
     public function afterStateUpdated(?Closure $callback): static
     {
         $this->afterStateUpdated = $callback;
@@ -406,6 +436,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this->afterStateUpdated;
     }
 
+    /** Persist the edited value with a custom callback instead of the default save. */
     public function saveUsing(?Closure $callback): static
     {
         $this->saveUsing = $callback;
@@ -418,6 +449,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this->saveUsing;
     }
 
+    /** Transform the value for display in the cell (view only). */
     public function displayFormat(Closure $formatter): static
     {
         $this->displayFormatter = $formatter;
@@ -425,6 +457,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Transform the edited value just before it is saved. */
     public function beforeSave(Closure $formatter): static
     {
         $this->beforeSaveFormatter = $formatter;
@@ -441,6 +474,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
     // Formatting
     // ==========================================
 
+    /** Transform the stored value into the editable input value on load. */
     public function afterLoad(Closure $formatter): static
     {
         $this->afterLoadFormatter = $formatter;
@@ -493,6 +527,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $value;
     }
 
+    /** Trim surrounding whitespace from the value before saving. */
     public function trim(bool $trim = true): static
     {
         $this->trim = $trim;
@@ -500,6 +535,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Save an empty value as null instead of an empty string. */
     public function nullable(bool $nullable = true): static
     {
         $this->nullable = $nullable;
@@ -507,6 +543,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Uppercase the value before saving. */
     public function uppercase(bool $uppercase = true): static
     {
         $this->uppercase = $uppercase;
@@ -514,6 +551,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Lowercase the value before saving. */
     public function lowercase(bool $lowercase = true): static
     {
         $this->lowercase = $lowercase;
@@ -521,6 +559,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Set static text shown inside the input before the value. */
     public function inputPrefix(?string $prefix): static
     {
         $this->inputPrefix = $prefix;
@@ -528,6 +567,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Set static text shown inside the input after the value. */
     public function inputSuffix(?string $suffix): static
     {
         $this->inputSuffix = $suffix;
@@ -535,6 +575,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Set helper text shown beneath the input. */
     public function helperText(?string $text): static
     {
         $this->helperText = $text;
@@ -542,6 +583,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Set the input's HTML autocomplete attribute. */
     public function autocomplete(?string $autocomplete): static
     {
         $this->autocomplete = $autocomplete;
@@ -549,6 +591,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Focus the input automatically when the cell enters edit mode. */
     public function autofocus(bool $autofocus = true): static
     {
         $this->autofocus = $autofocus;
@@ -560,6 +603,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
     // Input Appearance
     // ==========================================
 
+    /** Add extra CSS classes to the input element. */
     public function inputClass(?string $class): static
     {
         $this->inputClass = $class;
@@ -683,12 +727,62 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return (string) (EnumResolver::display($value) ?? '');
     }
 
+    // §7 boundary evaluation — inline-edit multi-token skeleton (prototype).
+    // The editable cell's per-record variation is exactly three values: the record
+    // key, the state value, and the row version. `value` appears in TWO encodings
+    // (JSON in the Alpine config, HTML attr in data-server-value) from one variable,
+    // so distinct control-char sentinels tag each position and are spliced with the
+    // matching encoding. Structure is otherwise column-static.
+    private const EDIT_VAL = "\x01\x01__WCVAL__\x01\x01";
+
+    // The record key is int-cast by the model, so it cannot be a string sentinel —
+    // use a distinctive number. e() is context-free (char-by-char), so splicing
+    // e($key) into "tic-<sentinel>-<col>" reproduces e("tic-<key>-<col>") exactly.
+    private const EDIT_KEY = '1717171718';
+
+    private const EDIT_VER = '1717171717';
+
+    private ?string $editableSkeleton = null;
+
+    public function renderEditableCellFast(Model $record): string
+    {
+        $state = $this->getState($record);
+        $key = (string) $record->getKey();
+        $value = (string) ($state ?? '');
+        $updatedAt = $record->getAttribute('updated_at');
+        $version = $updatedAt ? (string) $updatedAt->getTimestamp() : '0';
+
+        return strtr($this->editableSkeleton ??= $this->buildEditableSkeleton(), [
+            e(json_encode(self::EDIT_VAL)) => e(json_encode($value)),  // Alpine config
+            e(self::EDIT_VAL) => e($value),                           // data-server-value
+            self::EDIT_KEY => e($key),                                // wire:key + data-record-key
+            self::EDIT_VER => $version,                               // version (numeric)
+        ]);
+    }
+
+    private function buildEditableSkeleton(): string
+    {
+        $sentinel = new class extends Model
+        {
+            protected $guarded = [];
+        };
+        $sentinel->forceFill([
+            'id' => self::EDIT_KEY,
+            'updated_at' => Carbon::createFromTimestamp((int) self::EDIT_VER),
+        ]);
+
+        return $this->renderEditableCell(self::EDIT_VAL, $sentinel);
+    }
+
     protected function renderEditableCell(mixed $state, Model $record): string
     {
         return $this->renderView('tables.columns.text-input-editable', [
             'column' => $this,
             'record' => $record,
             'state' => $state,
+            // Record-invariant primitives resolved once per request (not @included per row).
+            'spinnerHtml' => app(Primitives::class)->spinner(),
+            'checkHtml' => app(Primitives::class)->successCheck(),
         ]);
     }
 
@@ -731,7 +825,23 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
 
     // ─── Build methods ──────────────────────────────────────────
 
+    /** @var array<string, string> */
+    private array $inputClassesCache = [];
+
+    private ?string $inputAttributesCache = null;
+
+    /**
+     * Tier-2g: the input classes/attributes are a pure function of column config, so
+     * they are memoised per column instead of rebuilt for every editable cell. (The
+     * instance is rebuilt each Livewire render, so no cross-render staleness.)
+     */
     public function buildInputClasses(bool $hasPrefix, bool $hasSuffix): string
+    {
+        return $this->inputClassesCache[((int) $hasPrefix).((int) $hasSuffix)]
+            ??= $this->computeInputClasses($hasPrefix, $hasSuffix);
+    }
+
+    private function computeInputClasses(bool $hasPrefix, bool $hasSuffix): string
     {
         $classes = [
             'block w-full rounded-md border-gray-300 shadow-sm',
@@ -757,6 +867,11 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
     }
 
     public function buildInputAttributes(): string
+    {
+        return $this->inputAttributesCache ??= $this->computeInputAttributes();
+    }
+
+    private function computeInputAttributes(): string
     {
         $attrs = [];
 

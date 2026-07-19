@@ -10,6 +10,7 @@ trait HasPolling
 
     protected bool $pollingOnlyVisible = true;
 
+    /** Refresh the widget on an interval (e.g. "10s", "1m"); null disables polling. */
     public function pollingInterval(?string $interval): static
     {
         $this->pollingInterval = $interval;
@@ -27,6 +28,7 @@ trait HasPolling
         return $this->pollingInterval !== null;
     }
 
+    /** Poll only while the widget is scrolled into view (default true). */
     public function pollingOnlyVisible(bool $onlyVisible = true): static
     {
         $this->pollingOnlyVisible = $onlyVisible;

@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Auth\GenericUser;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Foundation\Schema\Section;
 use NyonCode\WireCore\Infolists\Components\TextEntry;
@@ -240,6 +242,31 @@ it('denies a permissioned entry without an authorised user', function () {
 
     expect($result['success'])->toBeFalse()
         ->and($result['message'])->toBe(__('wire-core::messages.no_permission'));
+});
+
+it('FAILS CLOSED for an authenticated user lacking the ability (Gate/policy auth, no hasPermissionTo)', function () {
+    // Regression: the old hasPermissionTo probe failed OPEN for a user model
+    // without that method — the write proceeded despite the missing ability.
+    $this->actingAs(new GenericUser(['id' => 99])); // no hasPermissionTo, no Gate ability
+    $component = new PnlPermComponent;
+    $component->user = PnlUser::find(1);
+
+    $result = $component->updatePanelEntry('1', 'is_active', true);
+
+    expect($result['success'])->toBeFalse()
+        ->and($result['message'])->toBe(__('wire-core::messages.no_permission'))
+        ->and((bool) PnlUser::find(1)->is_active)->toBeFalse(); // never written
+});
+
+it('allows a permissioned entry when the Gate grants the ability', function () {
+    Gate::define('edit-users', fn () => true);
+    $this->actingAs(new GenericUser(['id' => 99]));
+    $component = new PnlPermComponent;
+    $component->user = PnlUser::find(1);
+
+    $result = $component->updatePanelEntry('1', 'is_active', true);
+
+    expect($result['success'])->toBeTrue();
 });
 
 // ─── Optimistic locking ──────────────────────────────────────────

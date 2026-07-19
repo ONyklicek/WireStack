@@ -304,6 +304,8 @@ class FormPreview extends Component
 
     protected function buildRepeaterForm(Form $form): Form
     {
+        // Collapsible so the morph-safe collapse state (byte-stable x-data) is
+        // exercisable in a browser: collapse a row, add a row, the row stays collapsed.
         return $form
             ->schema([
                 Section::make('Contacts')
@@ -312,6 +314,7 @@ class FormPreview extends Component
                         Repeater::make('contacts')
                             ->schema($this->contactSchema())
                             ->reorderable()
+                            ->collapsible()
                             ->minItems(1)
                             ->addButtonLabel('Add contact'),
                     ]),

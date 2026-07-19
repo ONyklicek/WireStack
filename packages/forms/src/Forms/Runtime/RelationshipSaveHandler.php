@@ -108,9 +108,17 @@ final class RelationshipSaveHandler
             unset($itemData[$primaryKey]);
 
             if ($id && in_array($id, $existingIds)) {
-                // Update existing — use fresh query to avoid accumulating where clauses
-                $record->{$relationName}()->where($primaryKey, $id)->update($itemData);
-                $keptIds[] = $id;
+                // Fetch the model and fill+save so casts, mutators and model events
+                // fire — a query-builder `->update()` bypasses ALL of them, so an
+                // 'array'/'encrypted'/'json'-cast column bound to its PHP value writes
+                // corrupt data (e.g. `Array to string conversion`). This mirrors the
+                // create branch (casts via the model) and the delete branch (loads
+                // models to fire events / respect SoftDeletes).
+                $existing = $record->{$relationName}()->find($id);
+                if ($existing !== null) {
+                    $existing->fill($itemData)->save();
+                    $keptIds[] = $id;
+                }
             } else {
                 // Create new — use fresh query
                 $newRecord = $record->{$relationName}()->create($itemData);

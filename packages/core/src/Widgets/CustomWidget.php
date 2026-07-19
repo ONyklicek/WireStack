@@ -11,6 +11,7 @@ class CustomWidget extends Widget
     /** @var array<string, mixed> */
     protected array $customViewData = [];
 
+    /** Set the Blade view that renders the widget body. */
     public function view(string $view): static
     {
         $this->customView = $view;
@@ -19,6 +20,8 @@ class CustomWidget extends Widget
     }
 
     /**
+     * Set the data passed to the custom view.
+     *
      * @param  array<string, mixed>  $data
      */
     public function viewData(array $data): static

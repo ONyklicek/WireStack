@@ -33,6 +33,8 @@ class Tags extends Field
     protected ?string $titleAttribute = null;
 
     /**
+     * Set predefined tag values offered as autocomplete suggestions.
+     *
      * @param  array<int, string>|Closure  $suggestions  Predefined values shown as autocomplete.
      */
     public function suggestions(array|Closure $suggestions): static
@@ -43,6 +45,8 @@ class Tags extends Field
     }
 
     /**
+     * Set the keys that commit the current input as a tag.
+     *
      * @param  array<int, string>  $keys  Keys that commit the current input as a tag (e.g. ['Enter', ',']).
      */
     public function splitKeys(array $keys): static
@@ -52,6 +56,7 @@ class Tags extends Field
         return $this;
     }
 
+    /** Require at least this many tags. */
     public function minItems(?int $count): static
     {
         $this->minItems = $count;
@@ -59,6 +64,7 @@ class Tags extends Field
         return $this;
     }
 
+    /** Allow at most this many tags. */
     public function maxItems(?int $count): static
     {
         $this->maxItems = $count;
@@ -74,6 +80,7 @@ class Tags extends Field
         return $this;
     }
 
+    /** Allow the same tag value to be added more than once. */
     public function allowDuplicates(bool $condition = true): static
     {
         $this->allowDuplicates = $condition;
@@ -81,6 +88,7 @@ class Tags extends Field
         return $this;
     }
 
+    /** Bind the tags to a relationship, resolving labels from the given title attribute. */
     public function relationship(?string $name, ?string $titleAttribute = null): static
     {
         $this->relationship = $name;

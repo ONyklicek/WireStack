@@ -58,6 +58,8 @@ class BarChartWidget extends Widget
     protected bool $verticalLabels = false;
 
     /**
+     * Set the bar orientation ("vertical" or "horizontal").
+     *
      * @param  'vertical'|'horizontal'|string  $type
      */
     public function type(string $type): static
@@ -77,6 +79,8 @@ class BarChartWidget extends Widget
     }
 
     /**
+     * Set the visual variant ("finance", "system" or "default").
+     *
      * @param  'finance'|'system'|'default'|string  $variant
      */
     public function variant(string $variant): static
@@ -124,6 +128,7 @@ class BarChartWidget extends Widget
         return $this->items;
     }
 
+    /** Show background grid lines behind the bars. */
     public function showGrid(bool $showGrid = true): static
     {
         $this->showGrid = $showGrid;
@@ -136,6 +141,7 @@ class BarChartWidget extends Widget
         return $this->showGrid;
     }
 
+    /** Show the widget's context (overflow) menu. */
     public function showMenu(bool $showMenu = true): static
     {
         $this->showMenu = $showMenu;
@@ -148,6 +154,7 @@ class BarChartWidget extends Widget
         return $this->showMenu;
     }
 
+    /** Fix the scale ceiling; null enables automatic percentage scaling. */
     public function maxValue(int|float|null $maxValue): static
     {
         $this->maxValue = $maxValue === null ? null : (float) $maxValue;
@@ -160,6 +167,7 @@ class BarChartWidget extends Widget
         return $this->maxValue;
     }
 
+    /** Set the plot area height in pixels (default 240). */
     public function height(int $height): static
     {
         $this->height = max(1, $height);
@@ -172,6 +180,7 @@ class BarChartWidget extends Widget
         return $this->height;
     }
 
+    /** Set the corner-radius scale for the card and bars (e.g. "lg", "xl", "2xl"). */
     public function rounded(string $rounded): static
     {
         $this->rounded = $rounded;

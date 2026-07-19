@@ -18,6 +18,8 @@ class RichEditor extends Field
     protected ?int $maxLength = null;
 
     /**
+     * Set the toolbar button layout.
+     *
      * @param  array<int, string>  $buttons
      */
     public function toolbarButtons(array $buttons): static
@@ -28,6 +30,8 @@ class RichEditor extends Field
     }
 
     /**
+     * Remove specific buttons from the default toolbar.
+     *
      * @param  array<int, string>  $buttons
      */
     public function disableToolbarButtons(array $buttons): static
@@ -37,6 +41,7 @@ class RichEditor extends Field
         return $this;
     }
 
+    /** Hide the toolbar entirely. */
     public function disableAllToolbarButtons(): static
     {
         $this->toolbarButtons = [];
@@ -44,6 +49,7 @@ class RichEditor extends Field
         return $this;
     }
 
+    /** Allow at most this many characters. */
     public function maxLength(?int $length): static
     {
         $this->maxLength = $length;

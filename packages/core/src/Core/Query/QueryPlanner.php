@@ -60,13 +60,11 @@ final class QueryPlanner
 
         $graphBuilder = new RelationGraphBuilder;
 
-        $joins = [];
         $eagerLoads = [];
         $aggregates = [];
         $filterClauses = [];
         $searchClauses = [];
         $sortClauses = [];
-        $selectedColumns = [];
 
         // 1. Analyze columns — determine joins, eager loads, aggregates, searchable columns
         foreach ($columns as $component) {
@@ -74,7 +72,7 @@ final class QueryPlanner
 
             if ($path === null) {
                 // Simple column on base table
-                $this->planSimpleColumn($component, $baseTable, $search, $searchClauses, $selectedColumns);
+                $this->planSimpleColumn($component, $baseTable, $search, $searchClauses);
 
                 continue;
             }
@@ -90,19 +88,19 @@ final class QueryPlanner
             if ($path->hasRelation()) {
                 $this->planRelationColumn(
                     $component, $path, $modelClass, $baseTable,
-                    $search, $joins, $eagerLoads, $searchClauses, $selectedColumns,
+                    $search, $eagerLoads, $searchClauses,
                 );
             }
         }
 
         // 2. Analyze filters
         foreach ($filters as $filter) {
-            $this->planFilter($filter, $modelClass, $baseTable, $joins, $eagerLoads, $filterClauses);
+            $this->planFilter($filter, $modelClass, $baseTable, $eagerLoads, $filterClauses);
         }
 
         // 3. Analyze sorting
         foreach ($sorts as $sort) {
-            $this->planSort($sort, $modelClass, $baseTable, $joins, $sortClauses);
+            $this->planSort($sort, $modelClass, $baseTable, $sortClauses);
         }
 
         $relationGraph = $graphBuilder->build();
@@ -118,7 +116,6 @@ final class QueryPlanner
             filters: $filterClauses,
             searchClauses: $searchClauses,
             sortClauses: $sortClauses,
-            selectedColumns: $selectedColumns,
             scopes: $scopes,
             relationGraph: $relationGraph,
             withSoftDeletes: $withSoftDeletes,
@@ -127,19 +124,15 @@ final class QueryPlanner
 
     /**
      * @param  array<int, SearchClause>  $searchClauses
-     * @param  array<int, string>  $selectedColumns
      */
     private function planSimpleColumn(
         DataComponent $component,
         string $baseTable,
         ?string $search,
         array &$searchClauses,
-        array &$selectedColumns,
     ): void {
         $columnName = $component->getColumnName();
         $metadata = $component->getColumnMetadata();
-
-        $selectedColumns[] = "{$baseTable}.{$columnName}";
 
         // Search planning
         if ($search !== null && $component->hasCapability(Capability::Searchable)) {
@@ -186,10 +179,8 @@ final class QueryPlanner
     }
 
     /**
-     * @param  array<int, JoinClause>  $joins
      * @param  array<int, string>  $eagerLoads
      * @param  array<int, SearchClause>  $searchClauses
-     * @param  array<int, string>  $selectedColumns
      */
     private function planRelationColumn(
         DataComponent $component,
@@ -197,24 +188,37 @@ final class QueryPlanner
         string $modelClass,
         string $baseTable,
         ?string $search,
-        array &$joins,
         array &$eagerLoads,
         array &$searchClauses,
-        array &$selectedColumns,
     ): void {
         $relationSegments = $path->getRelationSegments();
         $columnName = $path->getColumnName();
+        $relationPath = $path->getRelationPath();
 
-        // Check if any segment in the path is morph
+        // Morph relations cannot be joined — eager load for display.
         if ($this->morphStrategy->isMorphPath($path, $modelClass)) {
-            // Morph relations cannot be joined — eager load instead
             $morphEagerLoads = $this->morphStrategy->getEagerLoadPaths($path);
             $eagerLoads = [...$eagerLoads, ...$morphEagerLoads];
 
             return;
         }
 
-        // Try to plan joins for the relation chain
+        // Display value is read via data_get($record, 'company.name'), so the
+        // relation is eager-loaded. This replaces relying on a JOIN's selected
+        // column (which was never actually selected — ApplyRelations qualifies the
+        // select to base.*) and avoids an N+1 lazy load at render time.
+        if ($relationPath !== null) {
+            $eagerLoads[] = $relationPath;
+        }
+
+        // A relation column only needs a JOIN when it is *searched*: the search
+        // clause references the joined alias. Sorting registers its own join in
+        // planSort(); plain display (above) and filtering (whereHas) do not join.
+        if ($search === null || ! $component->hasCapability(Capability::Searchable)) {
+            return;
+        }
+
+        // Search requires the singular, joinable relation chain to be joined.
         $currentModel = $modelClass;
         $relationNames = [];
         $canJoin = true;
@@ -233,36 +237,25 @@ final class QueryPlanner
             $currentModel = $relation->relatedModel;
         }
 
-        if ($canJoin && $currentModel !== null) {
-            // Register joins for the relation chain
-            $alias = $this->registerRelationJoins(
-                $modelClass, $baseTable, $relationNames,
+        // A to-many relation cannot be join-searched; its column is already
+        // eager-loaded for display, matching the previous behaviour.
+        if (! $canJoin || $currentModel === null) {
+            return;
+        }
+
+        $alias = $this->registerRelationJoins($modelClass, $baseTable, $relationNames);
+
+        if ($alias !== null) {
+            $searchClauses[] = new SearchClause(
+                column: $columnName,
+                tableAlias: $alias,
+                isRelation: true,
+                relationPath: $relationPath,
             );
-
-            if ($alias !== null) {
-                $selectedColumns[] = "{$alias}.{$columnName}";
-
-                // Search planning for relation column
-                if ($search !== null && $component->hasCapability(Capability::Searchable)) {
-                    $searchClauses[] = new SearchClause(
-                        column: $columnName,
-                        tableAlias: $alias,
-                        isRelation: true,
-                        relationPath: $path->getRelationPath(),
-                    );
-                }
-            }
-        } else {
-            // Cannot join — fall back to eager loading
-            $relationPath = $path->getRelationPath();
-            if ($relationPath !== null) {
-                $eagerLoads[] = $relationPath;
-            }
         }
     }
 
     /**
-     * @param  array<int, JoinClause>  $joins
      * @param  array<int, string>  $eagerLoads
      * @param  array<int, FilterClause>  $filterClauses
      */
@@ -270,7 +263,6 @@ final class QueryPlanner
         FilterDefinition $filter,
         string $modelClass,
         string $baseTable,
-        array &$joins,
         array &$eagerLoads,
         array &$filterClauses,
     ): void {
@@ -289,52 +281,55 @@ final class QueryPlanner
             return;
         }
 
-        // Relation filter
-        if ($this->morphStrategy->isMorphPath($path, $modelClass)) {
-            // Morph filters need eager load + runtime filtering or whereHas
-            $relationPathStr = $path->getRelationPath();
-            if ($relationPathStr !== null) {
-                $eagerLoads[] = $relationPathStr;
+        // Aggregate filter (e.g. "orders->count()" > 5). Applied in ApplyFilters as
+        // a WHERE over the aggregate subquery (whereHas count) — never as HAVING,
+        // which is not cross-engine safe (Postgres rejects it without GROUP BY).
+        if ($path->isAggregate()) {
+            $terminal = $path->getTerminal();
+            if ($terminal instanceof AggregateSegment) {
+                $filterClauses[] = new FilterClause(
+                    column: $terminal->getName(),
+                    operator: $filter->operator,
+                    value: $filter->value,
+                    isAggregate: true,
+                    aggregateRelation: $terminal->relation,
+                    aggregateFunction: $terminal->function,
+                );
             }
-
-            $filterClauses[] = new FilterClause(
-                column: $filter->column,
-                operator: $filter->operator,
-                value: $filter->value,
-                isRelation: true,
-                relationPath: $path->getRelationPath(),
-            );
 
             return;
         }
 
-        // Try join-based filtering
-        $relationSegments = $path->getRelationSegments();
-        $relationNames = array_map(fn ($s) => $s->getName(), $relationSegments);
-
-        $alias = $this->registerRelationJoins($modelClass, $baseTable, $relationNames);
-
-        if ($alias !== null) {
-            $filterClauses[] = new FilterClause(
-                column: $path->getColumnName(),
-                operator: $filter->operator,
-                value: $filter->value,
-                tableAlias: $alias,
-                isRelation: true,
-                relationPath: $path->getRelationPath(),
-            );
+        // Relation filter — applied natively via whereHas() in ApplyFilters, not
+        // through a JOIN. Eloquent supplies the relation keys, global scopes, and
+        // any method constraints, and it handles nested dot paths and to-many
+        // relations (a join could not). No alias is registered here.
+        //
+        // Morph relations still contribute a display eager-load for parity when
+        // a filter references a relation no display column pulled in.
+        if ($this->morphStrategy->isMorphPath($path, $modelClass)) {
+            $relationPathStr = $path->getRelationPath();
+            if ($relationPathStr !== null) {
+                $eagerLoads[] = $relationPathStr;
+            }
         }
+
+        $filterClauses[] = new FilterClause(
+            column: $path->getColumnName(),
+            operator: $filter->operator,
+            value: $filter->value,
+            isRelation: true,
+            relationPath: $path->getRelationPath(),
+        );
     }
 
     /**
-     * @param  array<int, JoinClause>  $joins
      * @param  array<int, SortClause>  $sortClauses
      */
     private function planSort(
         SortDefinition $sort,
         string $modelClass,
         string $baseTable,
-        array &$joins,
         array &$sortClauses,
     ): void {
         if ($sort->relationPath === null) {

@@ -11,7 +11,7 @@
         "docs:highlight": "node node_modules/@torchlight-api/torchlight-cli/dist/bin/torchlight.cjs.js -c torchlight.config.cjs -i docs-site/dist && node docs-site/scripts/strip-copy-source.mjs docs-site/dist && node docs-site/scripts/verify-no-leak.mjs docs-site/dist",
         "docs:check": "node docs-site/scripts/verify-docs.mjs .",
         "docs:changed": "bash scripts/docs-changed.sh",
-        "build:forms-assets": "esbuild packages/forms/resources/js/tiptap-editor.js --bundle --minify --format=iife --legal-comments=none --outfile=packages/forms/dist/wire-forms-tiptap.js && esbuild packages/forms/resources/js/image-processor.js --bundle --minify --format=iife --legal-comments=none --outfile=packages/forms/dist/wire-forms-image.js",
+        "build:forms-assets": "rm -rf packages/forms/dist/tiptap && esbuild packages/forms/resources/js/tiptap-editor.js packages/forms/resources/js/tiptap-editor-addons.js --bundle --minify --format=esm --splitting --outdir=packages/forms/dist/tiptap --entry-names=[name] --chunk-names=chunk-[hash] --legal-comments=none && esbuild packages/forms/resources/js/image-processor.js --bundle --minify --format=iife --legal-comments=none --outfile=packages/forms/dist/wire-forms-image.js",
         "build:core-assets": "esbuild packages/core/resources/js/dropdown.js --bundle --minify --format=iife --legal-comments=none --outfile=packages/core/dist/wire-core-dropdown.js",
         "docs:api": "php docs-site/scripts/verify-api-docs.php ."
     },

@@ -35,6 +35,7 @@ class IconEntry extends Entry
 
     protected string $falseColor = 'danger';
 
+    /** Derive the icon from the state's truthiness (check vs. x). */
     public function boolean(bool $condition = true): static
     {
         $this->boolean = $condition;
@@ -42,6 +43,7 @@ class IconEntry extends Entry
         return $this;
     }
 
+    /** Set the icon shown for a truthy state in boolean() mode. */
     public function trueIcon(string $icon): static
     {
         $this->trueIcon = $icon;
@@ -49,6 +51,7 @@ class IconEntry extends Entry
         return $this;
     }
 
+    /** Set the icon shown for a falsy state in boolean() mode. */
     public function falseIcon(string $icon): static
     {
         $this->falseIcon = $icon;
@@ -56,6 +59,7 @@ class IconEntry extends Entry
         return $this;
     }
 
+    /** Set the color used for a truthy state in boolean() mode (default success). */
     public function trueColor(string $color): static
     {
         $this->trueColor = $color;
@@ -63,6 +67,7 @@ class IconEntry extends Entry
         return $this;
     }
 
+    /** Set the color used for a falsy state in boolean() mode (default danger). */
     public function falseColor(string $color): static
     {
         $this->falseColor = $color;
@@ -140,6 +145,28 @@ class IconEntry extends Entry
     public function getIconColorClass(): string
     {
         return self::getTextColorClasses($this->getResolvedColor() ?? Color::Gray->value);
+    }
+
+    /**
+     * The icon entry's markup is a pure function of its resolved icon + color
+     * (from a low-cardinality state) and its column-static chrome — no per-record
+     * identity. So rows sharing a state render once. With actions the entry
+     * embeds per-entry action wiring, which must not be shared: opt out.
+     */
+    protected function renderCacheSignature(): ?string
+    {
+        if ($this->hasActions()) {
+            return null;
+        }
+
+        return implode("\0", [
+            $this->getColumnSpanClass(),
+            (string) $this->getLabel(),
+            (string) $this->getResolvedIcon(),
+            $this->getIconColorClass(),
+            (string) $this->getTooltip(),
+            (string) $this->getPlaceholder(),
+        ]);
     }
 
     protected function viewName(): string

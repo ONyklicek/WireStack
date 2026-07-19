@@ -59,7 +59,7 @@
         @if($showLoading)
             @php $loadingContent = $loadingText ?: ($iconOnly ? '' : $buttonLabel); @endphp
             <span wire:loading wire:target="{{ $loadingTarget }}" class="inline-flex items-center gap-1.5">
-                @include('wire-table::tables.columns.partials.spinner')
+                {!! $spinnerHtml !!}
                 @if($loadingContent)<span>{{ $loadingContent }}</span>@endif
             </span>
         @endif

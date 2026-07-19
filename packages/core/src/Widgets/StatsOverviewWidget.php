@@ -13,6 +13,8 @@ class StatsOverviewWidget extends Widget
     protected int $columns = 3;
 
     /**
+     * Set the stat cards to display.
+     *
      * @param  array<int, Stat>  $stats
      */
     public function stats(array $stats): static
@@ -30,6 +32,7 @@ class StatsOverviewWidget extends Widget
         return $this->stats;
     }
 
+    /** Set the number of grid columns for the stat cards (1–4, default 3). */
     public function columns(int $columns): static
     {
         $this->columns = max(1, min(4, $columns));

@@ -73,6 +73,14 @@ it('builds solid button render data from canonical size and color resolvers', fu
         ->and($data['classes'])->toContain('bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-600');
 });
 
+it('does not pre-escape the button label (the view escapes it once)', function () {
+    // Regression M3: toButtonRenderArray e()'d the label and the button-content
+    // view echoes it again through {{ }}, double-encoding "&" to "&amp;amp;".
+    $data = Action::make('edit')->label('Save & Close')->toButtonRenderArray();
+
+    expect($data['label'])->toBe('Save & Close');
+});
+
 it('builds outlined button render data from canonical resolvers', function () {
     $record = new class extends Model
     {

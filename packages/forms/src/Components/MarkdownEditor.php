@@ -33,6 +33,7 @@ class MarkdownEditor extends Field
         return $this;
     }
 
+    /** Set the minimum editor height in pixels. */
     public function minHeight(int $pixels): static
     {
         $this->minHeight = $pixels;
@@ -40,6 +41,7 @@ class MarkdownEditor extends Field
         return $this;
     }
 
+    /** Allow at most this many characters. */
     public function maxLength(?int $length): static
     {
         $this->maxLength = $length;

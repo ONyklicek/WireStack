@@ -13,6 +13,7 @@ trait HasDefault
 
     protected bool $defaultOnNull = false;
 
+    /** Seed the value used when none is provided (create-mode default / empty state). */
     public function default(mixed $default): static
     {
         $this->default = $default;

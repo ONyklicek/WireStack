@@ -400,6 +400,9 @@ kombinovat na téže tabulce:
 ```php
 // Naskládat sloupce svisle na mobilu; 2. argument je breakpoint (výchozí 'md')
 ->stackedOnMobile(bool $stacked = true, string $breakpoint = 'md')   // 'sm','md','lg','xl'
+
+// Sbalit akce řádku v mobilní kartě do jednoho rozbalovacího menu (od N akcí)
+->collapseActionsOnMobile(bool $collapse = true, int $threshold = 3)
 ```
 
 ### Prázdný stav

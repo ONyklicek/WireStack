@@ -18,6 +18,7 @@ trait CanBeDisabled
 {
     protected bool|Closure $isDisabled = false;
 
+    /** Disable the component (a bool or a `$get`-aware Closure). On a table cell this is cosmetic; server-side `canEdit()` enforces it. */
     public function disabled(bool|Closure $condition = true): static
     {
         $this->isDisabled = $condition;

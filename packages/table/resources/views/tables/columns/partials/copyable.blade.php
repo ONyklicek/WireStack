@@ -15,10 +15,10 @@
         title="{{ __('wire-table::messages.copy') }}"
     >
         <template x-if="!copied">
-            <x-wire::icon name="clipboard-document" size="w-4 h-4" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
+            {!! icon('clipboard-document', 'w-4 h-4', 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300') !!}
         </template>
         <template x-if="copied">
-            <x-wire::icon name="check" size="w-4 h-4" class="text-emerald-500" />
+            {!! icon('check', 'w-4 h-4', 'text-emerald-500') !!}
         </template>
     </button>
     <span

@@ -29,6 +29,8 @@ class ChartWidget extends Widget
     protected array $options = [];
 
     /**
+     * Set the Chart.js chart type.
+     *
      * @param  string  $type  line|bar|pie|doughnut
      */
     public function type(string $type): static
@@ -44,7 +46,9 @@ class ChartWidget extends Widget
     }
 
     /**
-     * @param  array<int, array<string, mixed>>  $datasets
+     * Set the chart datasets, or a closure resolving them from the active filter.
+     *
+     * @param  array<int, array<string, mixed>>|Closure  $datasets
      */
     public function datasets(array|Closure $datasets): static
     {
@@ -70,6 +74,8 @@ class ChartWidget extends Widget
     }
 
     /**
+     * Set the x-axis labels, or a closure resolving them from the active filter.
+     *
      * @param  array<int, string>|Closure  $labels
      */
     public function labels(array|Closure $labels): static
@@ -96,6 +102,8 @@ class ChartWidget extends Widget
     }
 
     /**
+     * Add a filter dropdown whose selection drives the dataset/label closures.
+     *
      * @param  array<string, string>  $options  key => label pairs
      */
     public function filter(array $options, ?string $default = null): static
@@ -124,6 +132,7 @@ class ChartWidget extends Widget
         return $this->activeFilter;
     }
 
+    /** Set the currently selected filter key. */
     public function activeFilter(?string $filter): static
     {
         $this->activeFilter = $filter;

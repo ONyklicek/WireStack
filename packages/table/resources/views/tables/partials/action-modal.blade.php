@@ -44,178 +44,74 @@
     @endfor
 
     @if(!empty($modalData) && isset($modalData['heading']))
+        {{-- Rule 5: the framework renders modals as Htmlable objects, not <x-*>.
+             The body/footer keep their partials; the current view scope is handed
+             to them as bodyData/footerData so they render exactly as before. --}}
+        @php $actionModalVars = get_defined_vars(); @endphp
         @if($isSlideOver)
             {{-- Slide Over Panel --}}
-            <x-wire-modals::slide-over
-                wire:model="{{ $activeShowModel }}"
-                :heading="$modalData['heading']"
-                :description="$modalData['description'] ?? null"
-                :width="$modalData['width'] ?? 'md'"
-                :close-on-click-away="$modalData['closeOnClickAway'] ?? true"
-                :close-on-escape="$modalData['closeOnEscape'] ?? true"
-                :z-index="$activeZIndex"
-                :bottom-sheet-on-mobile="$isSlideOverOnMobile"
-                :breakpoint="$modalData['mobileBreakpoint'] ?? null"
-                :sticky-header="$modalData['stickyHeader'] ?? false"
-                :sticky-footer="$modalData['stickyFooter'] ?? false"
-                :max-height="$modalData['maxHeight'] ?? null"
-                close-action="closeActionModal"
-            >
-                @if($isWizard)
-                    @include('wire-table::tables.partials.wizard-steps', [
-                        'steps' => $wizardSteps,
-                        'currentStep' => $wizardCurrentStep,
-                    ])
-                @endif
-
-                @if($actionFormInstance)
-                    {{ $actionFormInstance }}
-                @elseif($actionInfolistInstance)
-                    {{ $actionInfolistInstance }}
-                @endif
-
-                <x-slot:footer>
-                    @if($isWizard)
-                        @include('wire-table::tables.partials.wizard-footer', [
-                            'currentStep' => $wizardCurrentStep,
-                            'totalSteps' => $wizardTotalSteps,
-                            'modalData' => $modalData,
-                            'secondaryClasses' => 'rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600',
-                            'primaryClasses' => 'rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm inline-flex items-center gap-2 '.($modalData['submitButtonClasses'] ?? \NyonCode\WireCore\Foundation\Concerns\HasColor::getModalSubmitButtonClasses($modalData['actionColor'] ?? 'primary')),
-                        ])
-                    @else
-                    <div class="flex justify-end gap-3">
-                        @include('wire-table::tables.partials.modal-footer-actions', [
-                            'footerActions' => $modalData['footerActions'] ?? [],
-                            'position' => 'before',
-                        ])
-                        <button
-                            type="button"
-                            wire:click="closeActionModal" data-testid="modal-cancel"
-                            class="rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600"
-                        >
-                            {{ $modalData['cancelLabel'] }}
-                        </button>
-                        @unless($hasInfolist)
-                        <button
-                            type="button"
-                            wire:click="submitActionModal" data-testid="modal-submit"
-                            wire:loading.attr="disabled"
-                            wire:target="submitActionModal"
-                            @class([
-                                'rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm inline-flex items-center gap-2',
-                                $modalData['submitButtonClasses'] ?? \NyonCode\WireCore\Foundation\Concerns\HasColor::getModalSubmitButtonClasses($modalData['actionColor'] ?? 'primary'),
-                            ])
-                        >
-                            @include('wire-core::partials.spinner', ['wireTarget' => 'submitActionModal', 'class' => 'h-4 w-4'])
-                            <span wire:loading.remove wire:target="submitActionModal">{{ $modalData['submitLabel'] }}</span>
-                            <span wire:loading wire:target="submitActionModal">{{ $modalData['savingLabel'] ?? __('Saving...') }}</span>
-                        </button>
-                        @endunless
-                        @include('wire-table::tables.partials.modal-footer-actions', [
-                            'footerActions' => $modalData['footerActions'] ?? [],
-                            'position' => 'after',
-                        ])
-                    </div>
-                    @endif
-                </x-slot:footer>
-            </x-wire-modals::slide-over>
+            {{ new \NyonCode\WireCore\Modals\Html\SlideOver(
+                heading: $modalData['heading'],
+                description: $modalData['description'] ?? null,
+                width: $modalData['width'] ?? 'md',
+                closeOnClickAway: $modalData['closeOnClickAway'] ?? true,
+                closeOnEscape: $modalData['closeOnEscape'] ?? true,
+                zIndex: $activeZIndex,
+                bottomSheetOnMobile: $isSlideOverOnMobile,
+                breakpoint: $modalData['mobileBreakpoint'] ?? null,
+                stickyHeader: $modalData['stickyHeader'] ?? false,
+                stickyFooter: $modalData['stickyFooter'] ?? false,
+                maxHeight: $modalData['maxHeight'] ?? null,
+                closeAction: 'closeActionModal',
+                wireModel: $activeShowModel,
+                bodyView: 'wire-table::tables.partials.action-modal-body',
+                bodyData: $actionModalVars,
+                footerView: 'wire-table::tables.partials.action-modal-slideover-footer',
+                footerData: $actionModalVars,
+            ) }}
         @elseif($modalData['isConfirmation'] ?? false)
             {{-- Confirmation Modal --}}
             @php
                 $iconColor = $modalData['iconColor'] ?? 'warning';
             @endphp
-            <x-wire-modals::confirmation
-                wire:model="{{ $activeShowModel }}"
-                wire:click="submitActionModal" data-testid="modal-submit"
-                :heading="$modalData['heading']"
-                :description="$modalData['description'] ?? null"
-                :width="$modalData['width'] ?? 'md'"
-                icon="exclamation-triangle"
-                :icon-color="$iconColor"
-                :submit-label="$modalData['submitLabel']"
-                :cancel-label="$modalData['cancelLabel']"
-                :color="$modalData['actionColor'] ?? 'primary'"
-                :close-on-click-away="$modalData['closeOnClickAway'] ?? true"
-                :close-on-escape="$modalData['closeOnEscape'] ?? true"
-                :z-index="$activeZIndex"
-                close-action="closeActionModal"
-            />
+            {{-- Rule 5: rendered as a Htmlable object, not the <x-*> component. --}}
+            {{ new \NyonCode\WireCore\Modals\Html\Confirmation(
+                heading: $modalData['heading'],
+                description: $modalData['description'] ?? null,
+                width: $modalData['width'] ?? 'md',
+                icon: 'exclamation-triangle',
+                iconColor: $iconColor,
+                submitLabel: $modalData['submitLabel'],
+                cancelLabel: $modalData['cancelLabel'],
+                color: $modalData['actionColor'] ?? 'primary',
+                closeOnClickAway: $modalData['closeOnClickAway'] ?? true,
+                closeOnEscape: $modalData['closeOnEscape'] ?? true,
+                zIndex: $activeZIndex,
+                closeAction: 'closeActionModal',
+                wireModel: $activeShowModel,
+                wireClick: 'submitActionModal',
+                footerActions: $modalData['footerActions'] ?? [],
+            ) }}
         @else
-            {{-- Form Modal --}}
-            <x-wire-modals::modal
-                wire:model="{{ $activeShowModel }}"
-                :heading="$modalData['heading']"
-                :description="$modalData['description'] ?? null"
-                :width="$modalData['width'] ?? 'md'"
-                :close-on-click-away="$modalData['closeOnClickAway'] ?? true"
-                :close-on-escape="$modalData['closeOnEscape'] ?? true"
-                :z-index="$activeZIndex"
-                :full-screen-on-mobile="$isFullScreenMobile"
-                :slide-over-on-mobile="$isSlideOverOnMobile"
-                :breakpoint="$modalData['mobileBreakpoint'] ?? null"
-                :sticky-footer="true"
-                close-action="closeActionModal"
-            >
-                @if($isWizard)
-                    @include('wire-table::tables.partials.wizard-steps', [
-                        'steps' => $wizardSteps,
-                        'currentStep' => $wizardCurrentStep,
-                    ])
-                @endif
-
-                @if($actionFormInstance)
-                    {{ $actionFormInstance }}
-                @elseif($actionInfolistInstance)
-                    {{ $actionInfolistInstance }}
-                @endif
-
-                <x-slot:footer>
-                    @if($isWizard)
-                        @include('wire-table::tables.partials.wizard-footer', [
-                            'currentStep' => $wizardCurrentStep,
-                            'totalSteps' => $wizardTotalSteps,
-                            'modalData' => $modalData,
-                            'secondaryClasses' => 'inline-flex w-full justify-center rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-3 sm:py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 active:bg-gray-100 dark:active:bg-gray-600 sm:w-auto touch-manipulation',
-                            'primaryClasses' => 'inline-flex w-full justify-center items-center gap-2 rounded-xl px-4 py-3 sm:py-2.5 text-sm font-semibold text-white shadow-sm sm:w-auto touch-manipulation '.($modalData['submitButtonClasses'] ?? \NyonCode\WireCore\Foundation\Concerns\HasColor::getModalSubmitButtonClasses($modalData['actionColor'] ?? 'primary')),
-                        ])
-                    @else
-                    <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
-                        @include('wire-table::tables.partials.modal-footer-actions', [
-                            'footerActions' => $modalData['footerActions'] ?? [],
-                            'position' => 'before',
-                        ])
-                        <button
-                            type="button"
-                            wire:click="closeActionModal" data-testid="modal-cancel"
-                            class="inline-flex w-full justify-center rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-3 sm:py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 active:bg-gray-100 dark:active:bg-gray-600 sm:w-auto touch-manipulation"
-                        >
-                            {{ $modalData['cancelLabel'] }}
-                        </button>
-                        @unless($hasInfolist)
-                        <button
-                            type="button"
-                            wire:click="submitActionModal" data-testid="modal-submit"
-                            wire:loading.attr="disabled"
-                            wire:target="submitActionModal"
-                            @class([
-                                'inline-flex w-full justify-center items-center gap-2 rounded-xl px-4 py-3 sm:py-2.5 text-sm font-semibold text-white shadow-sm sm:w-auto touch-manipulation',
-                                $modalData['submitButtonClasses'] ?? \NyonCode\WireCore\Foundation\Concerns\HasColor::getModalSubmitButtonClasses($modalData['actionColor'] ?? 'primary'),
-                            ])
-                        >
-                            @include('wire-core::partials.spinner', ['wireTarget' => 'submitActionModal', 'class' => 'h-4 w-4'])
-                            <span wire:loading.remove wire:target="submitActionModal">{{ $modalData['submitLabel'] }}</span>
-                            <span wire:loading wire:target="submitActionModal">{{ $modalData['savingLabel'] ?? __('Saving...') }}</span>
-                        </button>
-                        @endunless
-                        @include('wire-table::tables.partials.modal-footer-actions', [
-                            'footerActions' => $modalData['footerActions'] ?? [],
-                            'position' => 'after',
-                        ])
-                    </div>
-                    @endif
-                </x-slot:footer>
-            </x-wire-modals::modal>
+            {{-- Form Modal (Rule 5: Htmlable object, not <x-*>). --}}
+            {{ new \NyonCode\WireCore\Modals\Html\Modal(
+                heading: $modalData['heading'],
+                description: $modalData['description'] ?? null,
+                width: $modalData['width'] ?? 'md',
+                closeOnClickAway: $modalData['closeOnClickAway'] ?? true,
+                closeOnEscape: $modalData['closeOnEscape'] ?? true,
+                zIndex: $activeZIndex,
+                fullScreenOnMobile: $isFullScreenMobile,
+                slideOverOnMobile: $isSlideOverOnMobile,
+                breakpoint: $modalData['mobileBreakpoint'] ?? null,
+                stickyFooter: true,
+                closeAction: 'closeActionModal',
+                wireModel: $activeShowModel,
+                bodyView: 'wire-table::tables.partials.action-modal-body',
+                bodyData: $actionModalVars,
+                footerView: 'wire-table::tables.partials.action-modal-modal-footer',
+                footerData: $actionModalVars,
+            ) }}
         @endif
     @endif
 @endif

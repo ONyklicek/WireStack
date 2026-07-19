@@ -40,6 +40,7 @@ abstract class Widget implements Htmlable
         return new static;
     }
 
+    /** Set the widget heading. */
     public function heading(?string $heading): static
     {
         $this->heading = $heading;
@@ -52,6 +53,7 @@ abstract class Widget implements Htmlable
         return $this->heading;
     }
 
+    /** Set the descriptive subheading shown under the heading. */
     public function description(?string $description): static
     {
         $this->description = $description;
@@ -64,6 +66,7 @@ abstract class Widget implements Htmlable
         return $this->description;
     }
 
+    /** Defer rendering until the widget scrolls into view. */
     public function lazy(bool $lazy = true): static
     {
         $this->lazy = $lazy;

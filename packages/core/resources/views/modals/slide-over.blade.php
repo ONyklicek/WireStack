@@ -2,9 +2,15 @@
 {{-- Teleported to <body> so a transformed/overflow ancestor can never break the
      fixed overlay's viewport positioning. (Floating UI N/A — slide-overs are
      edge-pinned to the viewport, not anchored to a trigger.) --}}
+@php
+    // wire:model comes from the <x-wire-modals::slide-over> tag's attribute bag
+    // (consumer path) or the Htmlable SlideOver object, which passes $wireModel
+    // (Rule 5). isset()/?? keep $attributes untouched off the component path.
+    $modelBinding = $wireModel ?? (isset($attributes) ? $attributes->wire('model') : null);
+@endphp
 <template x-teleport="body" wire:key="wire-modal-slideover">
 <div
-    x-data="{ show: @entangle($attributes->wire('model')) }"
+    x-data="{ show: @entangle($modelBinding) }"
     x-show="show"
     x-cloak
     style="display: none;@if($zIndex !== null) z-index: {{ $zIndex }};@endif"
@@ -28,19 +34,19 @@
         @if($closeOnClickAway) @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}" @endif
     ></div>
 
-    <div class="fixed {{ $positionClasses() }} flex max-w-full">
+    <div class="fixed {{ $style->positionClasses() }} flex max-w-full">
         {{-- Panel --}}
         <div
             x-show="show"
             x-transition:enter="transform transition ease-in-out duration-300"
-            x-transition:enter-start="{{ $translateEnterStart() }}"
-            x-transition:enter-end="{{ $translateEnterEnd() }}"
+            x-transition:enter-start="{{ $style->translateEnterStart() }}"
+            x-transition:enter-end="{{ $style->translateEnterEnd() }}"
             x-transition:leave="transform transition ease-in-out duration-300"
-            x-transition:leave-start="{{ $translateLeaveStart() }}"
-            x-transition:leave-end="{{ $translateLeaveEnd() }}"
-            class="{{ $widthWrapperClasses() }} {{ $widthClass() }}"
+            x-transition:leave-start="{{ $style->translateLeaveStart() }}"
+            x-transition:leave-end="{{ $style->translateLeaveEnd() }}"
+            class="{{ $style->widthWrapperClasses() }} {{ $style->widthClass() }}"
         >
-            <div class="flex flex-col bg-white dark:bg-gray-800 shadow-xl {{ $panelClasses() }}">
+            <div class="flex flex-col bg-white dark:bg-gray-800 shadow-xl {{ $style->panelClasses() }}">
                 {{-- Header --}}
                 <div @class([
                     'px-4 py-6 sm:px-6',
@@ -73,7 +79,7 @@
                                 class="-m-1.5 rounded-md p-1.5 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 touch-manipulation"
                             >
                                 <span class="sr-only">{{ __('Close') }}</span>
-                                <x-wire::icon name="outline:x-mark" size="h-6 w-6" />
+                                {!! icon('outline:x-mark', 'h-6 w-6') !!}
                             </button>
                         </div>
                     </div>
@@ -93,18 +99,31 @@
                 ])
                     @if($maxHeight) style="max-height: {{ $maxHeight }}" @endif
                 >
-                    {{ $slot }}
+                    {{-- Body: a component slot (consumer tag), an @include'd partial
+                         ($bodyView), or a pre-rendered Htmlable ($body) from the
+                         SlideOver object (Rule 5). --}}
+                    @if(isset($bodyView))
+                        @include($bodyView, $bodyData ?? [])
+                    @elseif(! empty($body))
+                        {!! $body !!}
+                    @else
+                        {{ $slot ?? '' }}
+                    @endif
                 </div>
 
                 {{-- Footer --}}
-                @isset($footer)
+                @if(isset($footerView) || isset($footer))
                     <div @class([
                         'px-4 py-4 sm:px-6 border-t border-gray-200 dark:border-gray-700',
                         'sticky bottom-0 z-10 bg-white dark:bg-gray-800' => $stickyFooter,
                     ])>
-                        {{ $footer }}
+                        @isset($footerView)
+                            @include($footerView, $footerData ?? [])
+                        @else
+                            {!! $footer !!}
+                        @endisset
                     </div>
-                @endisset
+                @endif
             </div>
         </div>
     </div>

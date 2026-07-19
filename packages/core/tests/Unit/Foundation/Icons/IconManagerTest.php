@@ -402,3 +402,46 @@ it('ships the complete Heroicons solid collection', function () {
         expect($iconSet->has($icon))->toBeTrue("Expected Heroicon '{$icon}' to exist");
     }
 });
+
+// ─── Render-cache + singleton (render-engine-htmlable-first.md §2) ─────────────
+//
+// Columns and actions call app(IconManager::class)->render(...) once per row from
+// column-static icon/size/color. These two facts are why that is *not* a per-row
+// resolution cost and why no per-column icon cache should be added (doing so would
+// duplicate this canonical owner). If either regresses, the §2 reasoning breaks —
+// so they are pinned here.
+
+it('memoizes rendered markup so a repeat render skips re-resolution', function () {
+    $manager = new IconManager;
+
+    $first = $manager->render('pencil', 'w-4 h-4', 'text-red-500');
+    $second = $manager->render('pencil', 'w-4 h-4', 'text-red-500');
+
+    // Same (name, size, class, label) → byte-identical output from the render cache.
+    expect($second)->toBe($first);
+
+    $cache = (fn () => $this->renderCache)->call($manager);
+    expect($cache)->toHaveKey("pencil\0w-4 h-4\0text-red-500\0")
+        ->and($cache)->toHaveCount(1);
+
+    // A different color is a distinct entry, never a silent collision.
+    $manager->render('pencil', 'w-4 h-4', 'text-blue-500');
+    $cache = (fn () => $this->renderCache)->call($manager);
+    expect($cache)->toHaveCount(2);
+});
+
+it('flushes the render cache when the icon vocabulary changes', function () {
+    $manager = new IconManager;
+
+    $manager->render('pencil', 'w-4 h-4', 'text-red-500');
+    expect((fn () => $this->renderCache)->call($manager))->toHaveCount(1);
+
+    // Registering icons can change what a bare name resolves to, so a stale cached
+    // render must not survive it.
+    $manager->registerIcons(['brand' => '<path d="M0 0h4v4H0z"/>']);
+    expect((fn () => $this->renderCache)->call($manager))->toBeEmpty();
+});
+
+it('binds IconManager as a singleton so the render cache spans the whole request', function () {
+    expect(app(IconManager::class))->toBe(app(IconManager::class));
+});

@@ -58,6 +58,7 @@ class ImageColumn extends Column
         return $this->imageSize;
     }
 
+    /** Render the image as a circle instead of a rounded square. */
     public function circular(bool $circular = true): static
     {
         $this->circular = $circular;
@@ -70,6 +71,7 @@ class ImageColumn extends Column
         return $this->circular;
     }
 
+    /** Set the fallback image URL shown when the value is empty. */
     public function defaultImageUrl(?string $url): static
     {
         $this->defaultImageUrl = $url;
@@ -118,6 +120,7 @@ class ImageColumn extends Column
         return $this->urlExpiryMinutes;
     }
 
+    /** Overlap multiple images into a stacked avatar group. */
     public function stacked(bool $stacked = true): static
     {
         $this->stacked = $stacked;
@@ -130,6 +133,7 @@ class ImageColumn extends Column
         return $this->stacked;
     }
 
+    /** Cap how many stacked images are shown before a "+N" overflow badge. */
     public function stackLimit(int $limit): static
     {
         $this->stackLimit = $limit;
@@ -239,6 +243,7 @@ class ImageColumn extends Column
         );
     }
 
+    /** Set the filesystem disk used to resolve stored image paths. */
     public function disk(?string $disk): static
     {
         $this->disk = $disk;

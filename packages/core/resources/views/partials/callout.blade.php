@@ -25,7 +25,7 @@
     <div class="flex">
         @if($icon)
             <div class="shrink-0 mr-3">
-                <x-wire::icon :name="$icon" class="w-5 h-5" />
+                {!! icon($icon, 'w-4 h-4', 'w-5 h-5') !!}
             </div>
         @endif
         <div class="flex-1 min-w-0">
@@ -45,7 +45,7 @@
                 class="ml-3 shrink-0 -mt-1 -mr-1 p-1 rounded-md hover:opacity-75 focus:outline-none"
             >
                 <span class="sr-only">{{ __('Dismiss') }}</span>
-                <x-wire::icon name="outline:x-mark" class="w-4 h-4" />
+                {!! icon('outline:x-mark', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
         @endif
     </div>

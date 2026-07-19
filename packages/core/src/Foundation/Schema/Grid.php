@@ -18,6 +18,8 @@ class Grid extends LayoutComponent
     protected int|array $columns = 2;
 
     /**
+     * Set the number of columns to arrange children across (default 2).
+     *
      * @param  int|array<string|int, int|string>  $columns
      */
     public function columns(int|array $columns): static

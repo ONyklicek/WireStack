@@ -70,12 +70,16 @@
         remote: @js($remoteSearch),
         loading: false,
         initialOptions: @js((object) $options),
-        options: @js((object) $options),
+        {{-- Seeded from initialOptions in init(); avoids embedding the whole
+             options map twice in the HTML for every select instance. --}}
+        options: {},
         placeholder: @js($placeholder ?? ''),
         selected: $wire.entangle('{{ $statePath }}'){!! $live ? '.live' : '' !!},
         activeIndex: -1,
         _float: null,
         init() {
+            this.options = this.initialOptions;
+
             // Teleport + Floating UI: pin the listbox to the trigger while open,
             // tearing the auto-updater down on close.
             this.$watch('open', (open) => {
@@ -224,7 +228,7 @@
         ])
     >
         <span x-text="selectedLabel || placeholder" :class="{ 'text-gray-400': !selectedLabel }"></span>
-        <x-wire::icon name="chevron-down" class="w-4 h-4 text-gray-400 shrink-0 transition-transform duration-150" ::class="{ 'rotate-180': open }" />
+        {!! icon('chevron-down', 'w-4 h-4', 'w-4 h-4 text-gray-400 shrink-0 transition-transform duration-150', '', [':class' => "{ 'rotate-180': open }"]) !!}
     </button>
 
     {{-- Floating listbox from sm up; bottom sheet on a phone (max-sm: classes,
@@ -317,7 +321,7 @@
                             }"
                         >
                             <span x-text="label"></span>
-                            <x-wire::icon name="check" class="w-4 h-4 shrink-0" x-show="isSelected(value)" x-cloak />
+                            {!! icon('check', 'w-4 h-4', 'w-4 h-4 shrink-0', '', ['x-show' => 'isSelected(value)', 'x-cloak' => '']) !!}
                         </button>
                     </li>
                 </template>

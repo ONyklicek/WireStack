@@ -14,10 +14,17 @@
     $debounceModifier = $field->getDebounceModifier();
     $wireAttr         = 'wire:model'.($wireModifier ? ".{$wireModifier}" : '').$debounceModifier;
 
-    // Pre-bundled, self-registering editor JS served straight from the package.
-    // No npm install, build step, or manual import required on the consumer side.
-    $assetVersion = @filemtime(WireFormsServiceProvider::ASSETS_PATH.'/wire-forms-tiptap.js') ?: null;
-    $assetUrl     = route('wire-forms.asset', ['asset' => 'tiptap']).($assetVersion ? '?id='.$assetVersion : '');
+    // Pre-bundled, self-registering editor JS served straight from the package
+    // (no npm install / build step on the consumer side). ESM code-split: the core
+    // editor entry pulls the shared chunk; the opt-in extension addon (below) is a
+    // sibling entry sharing that same chunk, injected only when this field needs it.
+    $tiptapDir    = WireFormsServiceProvider::ASSETS_PATH.'/tiptap';
+    $assetVersion = @filemtime($tiptapDir.'/tiptap-editor.js') ?: null;
+    $assetUrl     = route('wire-forms.tiptap', ['file' => 'tiptap-editor.js']).($assetVersion ? '?id='.$assetVersion : '');
+
+    $needsAddon   = $field->needsExtensionAddon();
+    $addonVersion = $needsAddon ? (@filemtime($tiptapDir.'/tiptap-editor-addons.js') ?: null) : null;
+    $addonUrl     = $needsAddon ? route('wire-forms.tiptap', ['file' => 'tiptap-editor-addons.js']).($addonVersion ? '?id='.$addonVersion : '') : null;
 
     // Button icon SVGs + Alpine expressions, keyed by button name.
     $btns = [
@@ -88,9 +95,15 @@
 
 {{-- Load the pre-bundled editor JS via Livewire's @assets directive so it runs
      once and also when the field renders inside a Livewire-loaded modal (AJAX),
-     where script tags injected through DOM morphing would never execute. --}}
+     where script tags injected through DOM morphing would never execute.
+     type="module" because the bundle is ESM (code-split with a shared chunk); the
+     addon (when this field enables tables/images/…) publishes the extension
+     registry the editor reads at init, and shares the same core chunk. --}}
 @assets
-<script src="{{ $assetUrl }}"></script>
+@if($needsAddon)
+<script type="module" src="{{ $addonUrl }}"></script>
+@endif
+<script type="module" src="{{ $assetUrl }}"></script>
 @endassets
 
 <div

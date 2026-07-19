@@ -8,25 +8,31 @@ use NyonCode\WireForms\Components\TiptapEditor;
 
 ## Setup
 
-None. The editor's JavaScript (TipTap + all extensions) ships **pre-bundled inside
-the package** and the field's Blade view injects it automatically. There is no npm
-install, no build step, and no `app.js` import to add — just use the field and it
-works out of the box.
+None. The editor's JavaScript ships **pre-bundled inside the package** and the
+field's Blade view injects it automatically. There is no npm install, no build
+step, and no `app.js` import to add — just use the field and it works out of the box.
 
-The bundle is served by the package at `/wire-forms/assets/tiptap.js` and the script
-tag is emitted once per page via `@once`. It registers the Alpine component
-`tiptapEditor` that the view relies on (Alpine ships with Livewire).
+The editor is **code-split**: the core bundle (TipTap core + the always-on
+extensions) is served at `/wire-forms/tiptap/tiptap-editor.js`, and the opt-in
+extensions (`withTables()` / `withImages()` / `withHighlight()` / `withTextAlign()`)
+ship in a separate addon bundle that is only loaded when a field on the page
+enables one of them. Both share one core chunk, so a page without those extensions
+downloads less, and enabling tables never ships a second copy of the editor core.
+The `<script type="module">` tags are injected once per page via Livewire's
+`@assets` directive; they register the Alpine component `tiptapEditor` that the
+view relies on (Alpine ships with Livewire).
 
-> **Publishing the asset (optional).** If you prefer to serve the file through your
-> own asset pipeline/CDN, publish it with:
+> **Publishing the asset (optional).** If you prefer to serve the files through your
+> own asset pipeline/CDN, publish them with:
 > ```bash
 > php artisan vendor:publish --tag=wire-forms::assets
 > ```
-> This copies the bundle to `public/vendor/wire-forms/`.
+> This copies the bundles to `public/vendor/wire-forms/`.
 
-> **Contributors.** The bundle is generated from
-> `packages/forms/resources/js/tiptap-editor.js` and committed to
-> `packages/forms/dist/`. Rebuild it after editing the source with:
+> **Contributors.** The bundles are generated from
+> `packages/forms/resources/js/tiptap-editor.js` and `tiptap-editor-addons.js`, and
+> committed (with the shared chunk) to `packages/forms/dist/tiptap/`. Rebuild them
+> after editing the source with:
 > ```bash
 > npm run build:forms-assets
 > ```

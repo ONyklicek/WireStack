@@ -28,6 +28,7 @@ class Toggle extends Field
 
     protected bool $inline = true;
 
+    /** Set the label shown when the toggle is on. */
     public function onLabel(string|Closure|null $label): static
     {
         $this->onLabel = $label;
@@ -35,6 +36,7 @@ class Toggle extends Field
         return $this;
     }
 
+    /** Set the label shown when the toggle is off. */
     public function offLabel(string|Closure|null $label): static
     {
         $this->offLabel = $label;
@@ -42,6 +44,7 @@ class Toggle extends Field
         return $this;
     }
 
+    /** Set the track color when the toggle is on. */
     public function onColor(string|Color $color): static
     {
         $this->onColor = $color instanceof Color ? $color->value : $color;
@@ -49,6 +52,7 @@ class Toggle extends Field
         return $this;
     }
 
+    /** Set the track color when the toggle is off. */
     public function offColor(string|Color $color): static
     {
         $this->offColor = $color instanceof Color ? $color->value : $color;
@@ -56,6 +60,7 @@ class Toggle extends Field
         return $this;
     }
 
+    /** Set the icon shown on the thumb when the toggle is on. */
     public function onIcon(string|Icon|null $icon): static
     {
         $this->onIcon = $icon instanceof Icon ? $icon->value() : $icon;
@@ -63,6 +68,7 @@ class Toggle extends Field
         return $this;
     }
 
+    /** Set the icon shown on the thumb when the toggle is off. */
     public function offIcon(string|Icon|null $icon): static
     {
         $this->offIcon = $icon instanceof Icon ? $icon->value() : $icon;
@@ -70,6 +76,7 @@ class Toggle extends Field
         return $this;
     }
 
+    /** Render the label inline with the toggle instead of above it (default true). */
     public function inline(bool $condition = true): static
     {
         $this->inline = $condition;

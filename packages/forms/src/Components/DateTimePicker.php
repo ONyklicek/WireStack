@@ -56,6 +56,7 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
 
     // ─── Mode ──────────────────────────────────────────────────────
 
+    /** Set the picker mode directly (date, time, or datetime). */
     public function mode(string $mode): static
     {
         $this->mode = $mode;
@@ -63,6 +64,7 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Pick a date only. */
     public function asDate(): static
     {
         return $this->mode('date');
@@ -77,11 +79,13 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
         return $this->mode('month');
     }
 
+    /** Pick a time only. */
     public function asTime(): static
     {
         return $this->mode('time');
     }
 
+    /** Pick both date and time. */
     public function asDateTime(): static
     {
         return $this->mode('datetime');
@@ -89,6 +93,7 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
 
     // ─── Format ────────────────────────────────────────────────────
 
+    /** Set the display and storage date format. */
     public function format(?string $format): static
     {
         $this->format = $format;
@@ -112,6 +117,7 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
 
     // ─── Constraints ───────────────────────────────────────────────
 
+    /** Set the earliest selectable date. */
     public function minDate(string|Closure|null $date): static
     {
         $this->minDate = $date;
@@ -119,6 +125,7 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Set the latest selectable date. */
     public function maxDate(string|Closure|null $date): static
     {
         $this->maxDate = $date;
@@ -126,6 +133,7 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Set the first day of the week in the calendar (0 = Sunday). */
     public function firstDayOfWeek(?int $day): static
     {
         $this->firstDayOfWeek = $day;
@@ -134,6 +142,8 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
     }
 
     /**
+     * Mark specific dates as non-selectable.
+     *
      * @param  array<int, string>|Closure  $dates
      */
     public function disabledDates(array|Closure $dates): static
@@ -143,6 +153,7 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Close the picker as soon as a date is chosen. */
     public function closeOnDateSelection(bool $condition = true): static
     {
         $this->closeOnDateSelection = $condition;
@@ -152,6 +163,7 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
 
     // ─── Time settings ─────────────────────────────────────────────
 
+    /** Include seconds in the time picker. */
     public function withSeconds(bool $condition = true): static
     {
         $this->withSeconds = $condition;
@@ -159,6 +171,7 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Set the hour increment step. */
     public function hoursStep(?int $step): static
     {
         $this->hoursStep = $step;
@@ -166,6 +179,7 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Set the minute increment step. */
     public function minutesStep(?int $step): static
     {
         $this->minutesStep = $step;
@@ -173,6 +187,7 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Set the second increment step. */
     public function secondsStep(?int $step): static
     {
         $this->secondsStep = $step;
@@ -180,6 +195,7 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
         return $this;
     }
 
+    /** Set the timezone used to interpret and display the value. */
     public function timezone(?string $timezone): static
     {
         $this->timezone = $timezone;

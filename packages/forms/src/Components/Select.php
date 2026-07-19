@@ -81,6 +81,7 @@ class Select extends Field implements ProvidesImplicitValidationRules
 
     protected ?string $titleAttribute = null;
 
+    /** Add a search box to the option list (on by default for the combobox). */
     public function searchable(bool $condition = true): static
     {
         $this->searchable = $condition;
@@ -88,6 +89,7 @@ class Select extends Field implements ProvidesImplicitValidationRules
         return $this;
     }
 
+    /** Allow selecting several options (the state becomes an array). */
     public function multiple(bool $condition = true): static
     {
         $this->multiple = $condition;
@@ -181,6 +183,7 @@ class Select extends Field implements ProvidesImplicitValidationRules
         return $this;
     }
 
+    /** Set the heading of the create-option modal (see `createOptionForm()`/`createOptionUsing()`). */
     public function createOptionModalHeading(?string $heading): static
     {
         $this->createOptionModalHeading = $heading;
@@ -231,6 +234,7 @@ class Select extends Field implements ProvidesImplicitValidationRules
         return $this;
     }
 
+    /** Set the heading of the edit-option modal (see `editOptionForm()`/`editOptionUsing()`). */
     public function editOptionModalHeading(?string $heading): static
     {
         $this->editOptionModalHeading = $heading;
@@ -238,6 +242,7 @@ class Select extends Field implements ProvidesImplicitValidationRules
         return $this;
     }
 
+    /** Cap how many options can be selected in `multiple()` mode. */
     public function maxItems(?int $count): static
     {
         $this->maxItems = $count;
@@ -245,6 +250,7 @@ class Select extends Field implements ProvidesImplicitValidationRules
         return $this;
     }
 
+    /** Require at least this many options in `multiple()` mode. */
     public function minItems(?int $count): static
     {
         $this->minItems = $count;
@@ -252,6 +258,7 @@ class Select extends Field implements ProvidesImplicitValidationRules
         return $this;
     }
 
+    /** Set the message shown when a search matches no options. */
     public function noSearchResultsMessage(?string $message): static
     {
         $this->noSearchResultsMessage = $message;
@@ -259,6 +266,7 @@ class Select extends Field implements ProvidesImplicitValidationRules
         return $this;
     }
 
+    /** Set the message shown while remote/async options load. */
     public function loadingMessage(?string $message): static
     {
         $this->loadingMessage = $message;
@@ -266,6 +274,7 @@ class Select extends Field implements ProvidesImplicitValidationRules
         return $this;
     }
 
+    /** Set the placeholder text of the search box. */
     public function searchPrompt(?string $prompt): static
     {
         $this->searchPrompt = $prompt;
@@ -274,6 +283,8 @@ class Select extends Field implements ProvidesImplicitValidationRules
     }
 
     /**
+     * Render specific options as non-selectable.
+     *
      * @param  array<string|int>|Closure  $values  Option keys that should be rendered as disabled.
      */
     public function disabledOptions(array|Closure $values): static
@@ -283,6 +294,7 @@ class Select extends Field implements ProvidesImplicitValidationRules
         return $this;
     }
 
+    /** Source the options from an Eloquent relationship, labelled by `$titleAttribute`. */
     public function relationship(?string $name, ?string $titleAttribute = null): static
     {
         $this->relationship = $name;
@@ -291,6 +303,7 @@ class Select extends Field implements ProvidesImplicitValidationRules
         return $this;
     }
 
+    /** Preset the options to Yes/No for a boolean value. */
     public function boolean(): static
     {
         $this->options(function () {

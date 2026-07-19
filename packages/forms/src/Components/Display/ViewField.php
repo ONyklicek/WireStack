@@ -20,6 +20,7 @@ class ViewField extends Display
 
     protected bool $isHtmlContent = false;
 
+    /** Set the Blade view that renders the field. */
     public function view(string $view): static
     {
         $this->view = $view;
@@ -28,6 +29,8 @@ class ViewField extends Display
     }
 
     /**
+     * Set the data passed to the view.
+     *
      * @param  array<string, mixed>|Closure  $data
      */
     public function viewData(array|Closure $data): static
@@ -37,6 +40,7 @@ class ViewField extends Display
         return $this;
     }
 
+    /** Set inline content to render instead of a view. */
     public function content(string|Closure|null $content): static
     {
         $this->content = $content;
@@ -44,6 +48,7 @@ class ViewField extends Display
         return $this;
     }
 
+    /** Escape the content as text instead of rendering it as raw HTML. */
     public function escape(bool $condition = true): static
     {
         $this->isHtmlContent = ! $condition;

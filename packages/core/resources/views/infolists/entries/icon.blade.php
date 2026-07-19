@@ -11,18 +11,16 @@
 
 <div class="{{ $spanClass }}">
     @if($field->getLabel())
-        <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
-            {{ $field->getLabel() }}
-        </div>
+        @include('wire-core::partials.entry-label', ['text' => $field->getLabel()])
     @endif
 
     <div class="text-sm">
         @if($icon)
-            <x-wire::icon :name="$icon" :class="$iconClass" :label="$tooltip"/>
+            {!! icon($icon, 'w-4 h-4', $iconClass, $tooltip) !!}
         @else
             <span class="text-gray-400">{{ $field->getPlaceholder() ?? '-' }}</span>
         @endif
     </div>
 
-    @include('wire-core::infolists.entry-actions')
+    @if($field->hasActions())@include('wire-core::infolists.entry-actions')@endif
 </div>

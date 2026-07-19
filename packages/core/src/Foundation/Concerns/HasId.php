@@ -13,6 +13,7 @@ trait HasId
 {
     protected string|Closure|null $id = null;
 
+    /** Set the component's HTML id (a string or Closure). */
     public function id(string|Closure $id): static
     {
         $this->id = $id;

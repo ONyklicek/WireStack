@@ -3,7 +3,7 @@
         {{-- Previous Page Link --}}
         @if ($paginator->onFirstPage())
             <span class="relative inline-flex items-center px-2 py-1.5 text-sm font-medium text-gray-300 dark:text-gray-600 cursor-not-allowed rounded-lg">
-                <x-wire::icon name="outline:chevron-left" size="w-5 h-5" />
+                {!! icon('outline:chevron-left', 'w-5 h-5') !!}
             </span>
         @else
             <button
@@ -13,7 +13,7 @@
                     aria-label="{{ __('wire-table::messages.pagination_previous') }}"
                     class="relative inline-flex items-center px-2 py-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-                <x-wire::icon name="outline:chevron-left" size="w-5 h-5" />
+                {!! icon('outline:chevron-left', 'w-5 h-5') !!}
             </button>
         @endif
 
@@ -63,11 +63,11 @@
                     aria-label="{{ __('wire-table::messages.pagination_next') }}"
                     class="relative inline-flex items-center px-2 py-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-                <x-wire::icon name="outline:chevron-right" size="w-5 h-5" />
+                {!! icon('outline:chevron-right', 'w-5 h-5') !!}
             </button>
         @else
             <span class="relative inline-flex items-center px-2 py-1.5 text-sm font-medium text-gray-300 dark:text-gray-600 cursor-not-allowed rounded-lg">
-                <x-wire::icon name="outline:chevron-right" size="w-5 h-5" />
+                {!! icon('outline:chevron-right', 'w-5 h-5') !!}
             </span>
         @endif
     </nav>

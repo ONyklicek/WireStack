@@ -33,6 +33,7 @@ class TextEntry extends Entry
 
     protected bool $bulleted = false;
 
+    /** Render the value as a colored badge pill. */
     public function badge(bool $condition = true): static
     {
         $this->badge = $condition;
@@ -45,6 +46,7 @@ class TextEntry extends Entry
         return $this->badge;
     }
 
+    /** Truncate the displayed value to at most this many characters. */
     public function limit(?int $limit): static
     {
         $this->limit = $limit;
@@ -52,6 +54,7 @@ class TextEntry extends Entry
         return $this;
     }
 
+    /** Add a click-to-copy button for the value. */
     public function copyable(bool $condition = true): static
     {
         $this->copyable = $condition;
@@ -79,6 +82,7 @@ class TextEntry extends Entry
         return $this->weight;
     }
 
+    /** Render the value as prose (preserving whitespace and paragraphs). */
     public function prose(bool $condition = true): static
     {
         $this->prose = $condition;
@@ -91,6 +95,7 @@ class TextEntry extends Entry
         return $this->prose;
     }
 
+    /** Render an array state as a list with each item on its own line. */
     public function listWithLineBreaks(bool $condition = true): static
     {
         $this->listWithLineBreaks = $condition;
@@ -98,6 +103,7 @@ class TextEntry extends Entry
         return $this;
     }
 
+    /** Render an array state as a bulleted list (implies {@see listWithLineBreaks()}). */
     public function bulleted(bool $condition = true): static
     {
         $this->bulleted = $condition;
@@ -198,6 +204,30 @@ class TextEntry extends Entry
         }
 
         return $formatted;
+    }
+
+    /**
+     * Only the badge surface is state-driven and low-cardinality (a categorical
+     * value → colored pill), so rows sharing a value render once. Plain / list /
+     * copyable text is content-driven — unique per row, exactly like a table
+     * TextColumn — where a render memo is pure overhead; opt those out (null).
+     * Actions embed per-entry wiring and must not be shared either.
+     */
+    protected function renderCacheSignature(): ?string
+    {
+        if (! $this->isBadge() || $this->hasActions()) {
+            return null;
+        }
+
+        return implode("\0", [
+            (string) $this->getColumnSpan(),
+            (string) $this->getLabel(),
+            $this->getWeightClass(),
+            (string) $this->getTooltip(),
+            $this->getBadgeColorClass(),
+            (string) $this->getIcon(),
+            $this->getFormattedState(),
+        ]);
     }
 
     protected function viewName(): string

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Concerns;
 
+use NyonCode\WireCore\Foundation\Concerns\HasViewRenderCache;
+
 /**
  * Trait HasView
  *
@@ -70,5 +72,35 @@ trait HasView
     protected function renderView(string $defaultView, array $data = []): string
     {
         return view($this->resolveView($defaultView), $data)->render();
+    }
+
+    /** @var array<string, string> */
+    private array $viewRenderCache = [];
+
+    /**
+     * Byte-identical to {@see renderView()}, but memoised by its data payload — the
+     * §7 mechanism for **state-driven** cells (Badge/Icon/Boolean/…), whose output is
+     * a function of a low-cardinality state. Rows sharing a state produce the same
+     * data and reuse one render (500 rows × 4 statuses → 4 renders, not 500). Keying
+     * on the actual `$data` needs no "pure function" assumption, so it is always
+     * correct. Do NOT use it for content columns (TextColumn) where the data is unique
+     * per row — the hash is pure overhead there; use the skeleton splice instead.
+     * `$data` values MUST be serialisable (scalars/strings — icon HTML, classes, …).
+     *
+     * This is the **instance-scoped** variant of one shared concept — "memoise a
+     * state-driven component's view render". The core counterpart,
+     * {@see HasViewRenderCache}, is the
+     * **static/request-scoped** variant for the infolist case where the schema is
+     * cloned per row (so an instance cache cannot collapse the clones). They are kept
+     * as two intentionally-scoped variants rather than one owner because the cache
+     * lifetime differs by render topology (one column instance renders every row here;
+     * one clone per row there) and the shared logic is a trivial `$cache[$key] ??= …`.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    protected function renderViewCached(string $defaultView, array $data = []): string
+    {
+        return $this->viewRenderCache[$defaultView."\0".md5(serialize($data))]
+            ??= $this->renderView($defaultView, $data);
     }
 }

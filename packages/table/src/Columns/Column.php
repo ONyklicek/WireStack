@@ -26,6 +26,7 @@ use NyonCode\WireCore\Foundation\Concerns\HasVisibility;
 use NyonCode\WireCore\Foundation\Enums\Alignment;
 use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Foundation\Enums\FontWeight;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireTable\Concerns\CanBeFiltered;
@@ -42,7 +43,6 @@ class Column extends DataComponent implements Htmlable
     // visible one — so it is not listed separately, matching core's Component.
     // A column is never *disabled*, so CanBeDisabled is deliberately not here.
     use CanBeFiltered;
-
     use CanBeSummarized;
     use HasColor;
     use HasDefault;
@@ -208,6 +208,36 @@ class Column extends DataComponent implements Htmlable
     public function getRelation(): ?string
     {
         return $this->getRelationName();
+    }
+
+    /** @var array<int, string> */
+    protected array $eagerLoadRelations = [];
+
+    /**
+     * Eager-load relations this column touches ONLY inside a closure
+     * (`displayUsing`/`url`/`color`), which have no column path for the query planner
+     * to discover — without this hint they lazy-load once per row (an N+1 the
+     * framework cannot introspect out of a closure).
+     *
+     *   TextColumn::make('company')
+     *       ->displayUsing(fn ($state, $record) => $record->company->name)
+     *       ->loadRelations('company');
+     *
+     * @param  string|array<int, string>  $relations
+     */
+    public function loadRelations(string|array $relations): static
+    {
+        $this->eagerLoadRelations = array_values(array_unique(
+            [...$this->eagerLoadRelations, ...(array) $relations]
+        ));
+
+        return $this;
+    }
+
+    /** @return array<int, string> */
+    public function getEagerLoadRelations(): array
+    {
+        return $this->eagerLoadRelations;
     }
 
     /**
@@ -619,15 +649,106 @@ class Column extends DataComponent implements Htmlable
             'content' => $content,
             'textClasses' => $this->getTextClasses(),
             'isHtml' => $this->html,
-            'iconHtml' => $this->icon ? $this->renderIcon($this->icon) : '',
+            'iconHtml' => $this->iconHtmlFor($record),
             'iconPosition' => $this->iconPosition ?? 'before',
             'url' => $this->getUrl($record),
             'openInNewTab' => $this->openUrlInNewTab,
             'copyable' => $this->copyable,
             'copyValue' => EnumResolver::scalar($state),
-            'copyMessage' => $this->copyMessage ?? Trans::get('wire-table::messages.copied'),
+            // Only a copyable cell uses this; resolving the translated default for
+            // every non-copyable cell (every row) was wasted work. When copyable,
+            // copyable() has already resolved $copyMessage, so the fallback is a guard.
+            'copyMessage' => $this->copyable ? ($this->copyMessage ?? Trans::get('wire-table::messages.copied')) : null,
             'tooltip' => $this->tooltip,
             'description' => $description,
+            'descriptionPosition' => $this->descriptionPosition,
+        ]));
+    }
+
+    /**
+     * §7 proof-of-concept: an Htmlable cell skeleton.
+     *
+     * For a plain display column the text partial's per-record variation is *only*
+     * the content string — classes, icon, static tooltip/description are column-static.
+     * So the partial is rendered ONCE into a skeleton with a content placeholder, and
+     * every row splices its escaped state in — a string op, not a `view()->render()`.
+     * Falls back to {@see renderCell()} when a per-record structural bit is present
+     * (url / copy / description-closure), which a single skeleton cannot splice.
+     */
+    private const CELL_TOKEN = 'ᐊWIRE_CELL_a3f9e1ᐊ';
+
+    private ?string $cellSkeleton = null;
+
+    public function renderCellFast(Model $record): string
+    {
+        if (! $this->canView() || ! $this->isVisibleForRecord($record)) {
+            return '';
+        }
+
+        // Subclasses that override renderCell render a different view than the text
+        // skeleton, and non-skeletonable columns vary structurally per row — both
+        // fall back to the full, byte-identical render.
+        if (! $this->supportsCellSkeleton() || ! $this->isCellSkeletonable()) {
+            return $this->renderCell($record);
+        }
+
+        $state = $this->getState($record);
+        $content = $this->displayUsing
+            ? (string) ($this->displayUsing)($state, $record)
+            : $this->formatValue($state, $record);
+
+        return trim(str_replace(
+            self::CELL_TOKEN,
+            $this->html ? $content : e($content),
+            $this->cellSkeleton(),
+        ));
+    }
+
+    /** @var array<class-string, bool> */
+    private static array $skeletonSupport = [];
+
+    /**
+     * The text skeleton is only correct when this column renders through the base
+     * `tables.columns.text` path — i.e. it has NOT overridden renderCell (Badge/Icon/…
+     * render their own view). Resolved once per class via reflection, then cached.
+     */
+    private function supportsCellSkeleton(): bool
+    {
+        return self::$skeletonSupport[static::class] ??=
+            (new \ReflectionMethod($this, 'renderCell'))->getDeclaringClass()->getName() === self::class;
+    }
+
+    /**
+     * Skeletonable = the only per-record value is the content. A per-record url,
+     * copy affordance, or description-closure changes structure row to row.
+     */
+    private function isCellSkeletonable(): bool
+    {
+        return $this->urlCallback === null
+            && ! $this->copyable
+            && ! ($this->description instanceof Closure)
+            // A closure icon is per-record, so the cell is not fully static.
+            && ! ($this->icon instanceof Closure);
+    }
+
+    private function cellSkeleton(): string
+    {
+        return $this->cellSkeleton ??= trim($this->renderView('tables.columns.text', [
+            'content' => self::CELL_TOKEN,
+            'textClasses' => $this->getTextClasses(),
+            // Build raw so the token is not escaped; the per-row splice escapes state.
+            'isHtml' => true,
+            // A closure icon is per-record and excluded from the skeleton
+            // (isCellSkeletonable), so here $this->icon is only ever a literal.
+            'iconHtml' => $this->iconHtmlFor(null),
+            'iconPosition' => $this->iconPosition ?? 'before',
+            'url' => null,
+            'openInNewTab' => $this->openUrlInNewTab,
+            'copyable' => false,
+            'copyValue' => null,
+            'copyMessage' => null,
+            'tooltip' => $this->tooltip,
+            'description' => is_string($this->description) ? $this->description : null,
             'descriptionPosition' => $this->descriptionPosition,
         ]));
     }
@@ -769,6 +890,7 @@ class Column extends DataComponent implements Htmlable
         return $formatted;
     }
 
+    /** Truncate the displayed text to at most N characters (adds an ellipsis); null removes the limit. */
     public function limit(?int $limit): static
     {
         $this->limit = $limit;
@@ -809,6 +931,26 @@ class Column extends DataComponent implements Htmlable
         }
 
         return implode(' ', $classes);
+    }
+
+    /**
+     * Resolve the column icon to its rendered SVG for a given record.
+     *
+     * The icon may be a per-record Closure ({@see HasIcon::icon()}); it is
+     * resolved with the record (evaluated closures may also return an Icon enum),
+     * so a closure icon can never reach renderIcon(string) raw. Passing a null
+     * record (the shared skeleton path) resolves only a literal icon — closure
+     * icons are excluded from the skeleton by isCellSkeletonable().
+     */
+    private function iconHtmlFor(?Model $record): string
+    {
+        $icon = $this->icon instanceof Closure
+            ? ($record !== null ? $this->evaluate($this->icon, ['record' => $record]) : null)
+            : $this->icon;
+
+        $icon = $icon instanceof Icon ? $icon->value() : $icon;
+
+        return is_string($icon) && $icon !== '' ? $this->renderIcon($icon) : '';
     }
 
     /**
@@ -958,6 +1100,7 @@ class Column extends DataComponent implements Htmlable
         return Alignment::resolve($this->alignment ?? 'left')->textClass();
     }
 
+    /** Transform the raw cell value before display; the Closure receives the state and returns the formatted value. */
     public function formatStateUsing(Closure $callback): static
     {
         $this->formatStateUsing = $callback;
@@ -965,6 +1108,7 @@ class Column extends DataComponent implements Htmlable
         return $this;
     }
 
+    /** Replace the rendered cell entirely; the Closure receives `$state, $record` and returns the display value (string or Htmlable). */
     public function displayUsing(Closure $callback): static
     {
         $this->displayUsing = $callback;
@@ -972,6 +1116,7 @@ class Column extends DataComponent implements Htmlable
         return $this;
     }
 
+    /** Make the cell click-to-copy, with an optional confirmation message. */
     public function copyable(bool $copyable = true, ?string $copyMessage = null): static
     {
         $this->copyable = $copyable;
@@ -980,6 +1125,7 @@ class Column extends DataComponent implements Htmlable
         return $this;
     }
 
+    /** Set the click-to-copy confirmation message. */
     public function copyMessage(string $copyMessage): static
     {
         $this->copyMessage = $copyMessage;
@@ -997,6 +1143,7 @@ class Column extends DataComponent implements Htmlable
         return $this->copyMessage;
     }
 
+    /** Add extra HTML attributes to the cell (a raw attribute string). */
     public function extraAttributes(string $attributes): static
     {
         $this->extraAttributes = $attributes;
@@ -1010,6 +1157,8 @@ class Column extends DataComponent implements Htmlable
     }
 
     /**
+     * Set extra HTML attributes merged onto the column's header cell.
+     *
      * @param  array<string, string>  $attributes
      */
     public function extraHeaderAttributes(array $attributes): static
@@ -1027,6 +1176,7 @@ class Column extends DataComponent implements Htmlable
         return $this->extraHeaderAttributes;
     }
 
+    /** Let the cell text wrap onto multiple lines instead of truncating to one. */
     public function wrap(bool $wrap = true): static
     {
         $this->wrap = $wrap;
@@ -1044,6 +1194,7 @@ class Column extends DataComponent implements Htmlable
         return $this->limit;
     }
 
+    /** Prepend static text before the cell value. */
     public function prefix(?string $prefix): static
     {
         $this->prefix = $prefix;
@@ -1056,6 +1207,7 @@ class Column extends DataComponent implements Htmlable
         return $this->prefix;
     }
 
+    /** Append static text after the cell value. */
     public function suffix(?string $suffix): static
     {
         $this->suffix = $suffix;
@@ -1068,6 +1220,7 @@ class Column extends DataComponent implements Htmlable
         return $this->suffix;
     }
 
+    /** Turn the cell into a link; the Closure receives `$record` and returns the URL (optionally opening in a new tab). */
     public function actionUrl(Closure $callback, bool $openInNewTab = false): static
     {
         $this->urlCallback = $callback;
@@ -1081,6 +1234,7 @@ class Column extends DataComponent implements Htmlable
         return $this->openUrlInNewTab;
     }
 
+    /** Set one fixed cell color for every row (a palette name or `Color` enum). For per-row color use a `BadgeColumn` with `colorUsing()`. */
     public function color(string|Color|null $color): static
     {
         $this->color = $color instanceof Color ? $color->value : $color;
@@ -1095,6 +1249,7 @@ class Column extends DataComponent implements Htmlable
 
     // icon(), getIcon() and getIconPosition() come from Foundation\Concerns\HasIcon.
 
+    /** Render the cell value as raw HTML instead of escaped text (trusted content only). */
     public function html(bool $html = true): static
     {
         $this->html = $html;
@@ -1137,6 +1292,8 @@ class Column extends DataComponent implements Htmlable
     }
 
     /**
+     * Make the column inline-editable, choosing the editor type and its options.
+     *
      * @param  array<string, string>|class-string  $options
      */
     public function editable(bool $editable = true, string $type = 'text', array|string $options = []): static
@@ -1171,6 +1328,7 @@ class Column extends DataComponent implements Htmlable
         return $this->editableOptions;
     }
 
+    /** Validation rules for the inline-editable cell; the Closure receives `$record` and returns a rules array. */
     public function editableRules(Closure $callback): static
     {
         $this->editableRules = $callback;
@@ -1190,6 +1348,7 @@ class Column extends DataComponent implements Htmlable
         return [];
     }
 
+    /** Persist an inline edit with a custom callback (`$record, $value`) instead of the default attribute write. */
     public function editableUsing(Closure $callback): static
     {
         $this->editableCallback = $callback;
@@ -1206,6 +1365,7 @@ class Column extends DataComponent implements Htmlable
     // now control the column's structural size. Text font-size moved to the
     // dedicated textSize() setter below (breaking change in v2).
 
+    /** Set the cell text size on the Tailwind text scale (distinct from `size()`, which is the structural size). */
     public function textSize(string $size): static
     {
         $this->textSize = $size;
@@ -1218,6 +1378,7 @@ class Column extends DataComponent implements Htmlable
         return $this->textSize;
     }
 
+    /** Set the cell font weight (a `FontWeight` enum or keyword like `semibold`). */
     public function weight(string|FontWeight $weight): static
     {
         $this->textWeight = $weight instanceof FontWeight ? $weight->value : $weight;
@@ -1232,6 +1393,7 @@ class Column extends DataComponent implements Htmlable
 
     // Column filtering methods
 
+    /** Set the cell text color (a palette name or `Color` enum). */
     public function textColor(string|Color $color): static
     {
         $this->textColor = $color instanceof Color ? $color->value : $color;
@@ -1290,7 +1452,7 @@ class Column extends DataComponent implements Htmlable
             'column' => $this,
             'filter' => $filter,
             'value' => $value,
-            'controlClasses' => FilterControl::classes($filter->isSelectLike()),
+            'controlClasses' => FilterControl::classes(),
         ])->render();
     }
 

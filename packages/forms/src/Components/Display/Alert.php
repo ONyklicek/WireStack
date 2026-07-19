@@ -24,6 +24,7 @@ class Alert extends Display
 
     protected bool $dismissible = false;
 
+    /** Set the alert body text. */
     public function content(string|Closure|null $content): static
     {
         $this->content = $content;
@@ -31,11 +32,13 @@ class Alert extends Display
         return $this;
     }
 
+    /** Alias for {@see content()}. */
     public function message(string|Closure|null $message): static
     {
         return $this->content($message);
     }
 
+    /** Set the alert title shown above the body. */
     public function title(string|Closure|null $title): static
     {
         $this->title = $title;
@@ -43,6 +46,7 @@ class Alert extends Display
         return $this;
     }
 
+    /** Set the alert color hue. */
     public function color(string|Color $color): static
     {
         $this->color = $color instanceof Color ? $color->value : $color;
@@ -50,26 +54,31 @@ class Alert extends Display
         return $this;
     }
 
+    /** Shortcut for the informational (blue) color. */
     public function info(): static
     {
         return $this->color(Color::Info);
     }
 
+    /** Shortcut for the success (green) color. */
     public function success(): static
     {
         return $this->color(Color::Success);
     }
 
+    /** Shortcut for the warning (amber) color. */
     public function warning(): static
     {
         return $this->color(Color::Warning);
     }
 
+    /** Shortcut for the danger (red) color. */
     public function danger(): static
     {
         return $this->color(Color::Danger);
     }
 
+    /** Set the leading icon. */
     public function icon(string|Icon|null $icon): static
     {
         $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
@@ -77,6 +86,7 @@ class Alert extends Display
         return $this;
     }
 
+    /** Allow the user to dismiss the alert. */
     public function dismissible(bool $condition = true): static
     {
         $this->dismissible = $condition;

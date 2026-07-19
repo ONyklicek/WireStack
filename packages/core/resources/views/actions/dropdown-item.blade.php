@@ -2,9 +2,14 @@
 
     use Illuminate\Database\Eloquent\Model;
     use NyonCode\WireCore\Actions\Action;
+    use NyonCode\WireCore\Actions\Contracts\ResolvesActionClick;
+    use NyonCode\WireCore\Actions\Support\MountActionClickResolver;
 
     assert($action instanceof Action);
     assert($record instanceof Model);
+
+    /** @var ResolvesActionClick $click */
+    $click ??= new MountActionClickResolver();
 
     $url = $action->getUrl($record);
     $label = e($action->getLabel($record));
@@ -45,17 +50,14 @@
     </span>
 @else
     @php
-        $recordKey = $record->getKey();
         $actionName = $action->getName();
         $wireModifiers = $action->getWireClickModifiers();
+        // Host-owned click expression: core stays agnostic of table/form methods.
+        $wireClick = $click->clickHandler($action, $record);
     @endphp
     <button
             type="button"
-            @if($action->hasModal())
-                wire:click{{ $wireModifiers }}="openActionModal('{{ $recordKey }}', '{{ $actionName }}')"
-            @else
-                wire:click{{ $wireModifiers }}="executeTableAction('{{ $recordKey }}', '{{ $actionName }}')"
-            @endif
+            wire:click{{ $wireModifiers }}="{{ $wireClick }}"
             @click="close()"
             @if($shortcutAlpine)
                 x-on:keydown.{{ $shortcutAlpine }}.window.prevent="$el.click()"

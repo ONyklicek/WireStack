@@ -20,7 +20,7 @@
 <div class="flex flex-col items-center gap-3 text-center">
     @if($icon)
         <div class="rounded-full bg-gray-100 dark:bg-gray-700 p-3">
-            <x-wire::icon :name="$icon" :size="$iconSize" class="text-gray-400" />
+            {!! icon($icon, $iconSize, 'text-gray-400') !!}
         </div>
     @endif
 

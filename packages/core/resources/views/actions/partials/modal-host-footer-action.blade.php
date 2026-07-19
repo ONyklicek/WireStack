@@ -24,7 +24,7 @@
 >
     @include('wire-core::partials.spinner', ['wireTarget' => 'callModalFooterAction', 'class' => 'h-4 w-4'])
     @if(! empty($footerAction['icon']))
-        <x-wire::icon :name="$footerAction['icon']" class="h-4 w-4" />
+        {!! icon($footerAction['icon'], 'w-4 h-4', 'h-4 w-4') !!}
     @endif
     <span>{{ $footerAction['label'] }}</span>
 </button>

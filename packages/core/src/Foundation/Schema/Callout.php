@@ -33,6 +33,7 @@ class Callout extends LayoutComponent
 
     protected bool $dismissible = false;
 
+    /** Set the callout heading. */
     public function heading(string|Closure|null $heading): static
     {
         $this->heading = $heading;
@@ -40,11 +41,13 @@ class Callout extends LayoutComponent
         return $this;
     }
 
+    /** Alias for {@see heading()}. */
     public function title(string|Closure|null $title): static
     {
         return $this->heading($title);
     }
 
+    /** Set the callout body text (an alternative to child schema content). */
     public function content(string|Closure|null $content): static
     {
         $this->content = $content;
@@ -52,6 +55,7 @@ class Callout extends LayoutComponent
         return $this;
     }
 
+    /** Set the callout color hue (defaults to "info"). */
     public function color(string|Color $color): static
     {
         $this->color = $color instanceof Color ? $color->value : $color;
@@ -59,26 +63,31 @@ class Callout extends LayoutComponent
         return $this;
     }
 
+    /** Shortcut for the informational (blue) color. */
     public function info(): static
     {
         return $this->color(Color::Info);
     }
 
+    /** Shortcut for the success (green) color. */
     public function success(): static
     {
         return $this->color(Color::Success);
     }
 
+    /** Shortcut for the warning (amber) color. */
     public function warning(): static
     {
         return $this->color(Color::Warning);
     }
 
+    /** Shortcut for the danger (red) color. */
     public function danger(): static
     {
         return $this->color(Color::Danger);
     }
 
+    /** Set the leading icon. */
     public function icon(string|Icon|null $icon): static
     {
         $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
@@ -86,6 +95,7 @@ class Callout extends LayoutComponent
         return $this;
     }
 
+    /** Allow the user to dismiss the callout. */
     public function dismissible(bool $condition = true): static
     {
         $this->dismissible = $condition;

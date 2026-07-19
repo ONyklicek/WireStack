@@ -10,10 +10,18 @@
 @endphp
 
 <div
+    {{-- x-data must stay byte-identical across Livewire morphs: baking a
+         per-item collapsed array (length = item count) meant adding/removing a
+         row changed the attribute text, so Alpine re-initialised and reset every
+         row's collapse state. Key collapse state by index in an object instead;
+         the only interpolated value now is the static default. --}}
     x-data="{
-        collapsed: @js(array_fill(0, $itemCount, $field->isCollapsed())),
+        collapsed: {},
+        isCollapsed(index) {
+            return this.collapsed[index] ?? {{ $field->isCollapsed() ? 'true' : 'false' }};
+        },
         toggleCollapse(index) {
-            this.collapsed[index] = !this.collapsed[index];
+            this.collapsed[index] = !this.isCollapsed(index);
         }
     }"
     @if($field->isReorderable())
@@ -46,7 +54,7 @@
                 <div class="flex items-center gap-2">
                     @if($field->isReorderable())
                         <button type="button" x-sortable-handle  data-testid="form-repeater-{{ $statePath }}-reorder-{{ $index }}" aria-label="Reorder" class="cursor-grab text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                            <x-wire::icon name="outline:bars-3" class="w-4 h-4" />
+                            {!! icon('outline:bars-3', 'w-4 h-4', 'w-4 h-4') !!}
                         </button>
                     @endif
 
@@ -66,7 +74,7 @@
                             @click="toggleCollapse({{ $index }})"
                             class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                         >
-                            <x-wire::icon name="chevron-down" class="w-4 h-4 transition-transform" ::class="{ 'rotate-180': !collapsed[{{ $index }}] }" />
+                            {!! icon('chevron-down', 'w-4 h-4', 'w-4 h-4 transition-transform', '', [':class' => "{ 'rotate-180': !isCollapsed({$index}) }"]) !!}
                         </button>
                     @endif
 
@@ -76,14 +84,14 @@
                             wire:click="removeRepeaterItem('{{ $statePath }}', {{ $index }})" data-testid="form-repeater-{{ $statePath }}-remove-{{ $index }}"
                             class="p-1 text-red-400 hover:text-red-600"
                         >
-                            <x-wire::icon name="trash" class="w-4 h-4" />
+                            {!! icon('trash', 'w-4 h-4', 'w-4 h-4') !!}
                         </button>
                     @endif
                 </div>
             </div>
 
             <div
-                x-show="!collapsed[{{ $index }}]"
+                x-show="!isCollapsed({{ $index }})"
                 x-collapse
                 class="p-4 space-y-4"
             >
@@ -102,7 +110,7 @@
             wire:click="addRepeaterItem('{{ $statePath }}')" data-testid="form-repeater-{{ $statePath }}-add"
             class="flex items-center gap-1 px-3 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg w-full justify-center hover:border-primary-300 dark:hover:border-primary-500 transition-colors"
         >
-            <x-wire::icon name="plus" class="w-4 h-4" />
+            {!! icon('plus', 'w-4 h-4', 'w-4 h-4') !!}
             {{ $field->getAddButtonLabel() }}
         </button>
     @endif

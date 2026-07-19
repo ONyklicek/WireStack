@@ -29,6 +29,7 @@ trait HasPrefixAndSuffix
 
     protected ?Action $hintAction = null;
 
+    /** Show static text inside the field, before the input. */
     public function prefix(string|Closure|null $prefix): static
     {
         $this->prefix = $prefix;
@@ -36,6 +37,7 @@ trait HasPrefixAndSuffix
         return $this;
     }
 
+    /** Show static text inside the field, after the input. */
     public function suffix(string|Closure|null $suffix): static
     {
         $this->suffix = $suffix;
@@ -43,6 +45,7 @@ trait HasPrefixAndSuffix
         return $this;
     }
 
+    /** Show an icon inside the field, before the input. */
     public function prefixIcon(string|Icon|Closure|null $icon): static
     {
         $this->prefixIcon = $icon instanceof Icon ? $icon->value() : $icon;
@@ -50,6 +53,7 @@ trait HasPrefixAndSuffix
         return $this;
     }
 
+    /** Show an icon inside the field, after the input. */
     public function suffixIcon(string|Icon|Closure|null $icon): static
     {
         $this->suffixIcon = $icon instanceof Icon ? $icon->value() : $icon;

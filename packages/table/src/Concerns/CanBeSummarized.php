@@ -124,26 +124,31 @@ trait CanBeSummarized
 
     // Shortcuts for the built-in types; see SummaryType for what each one means.
 
+    /** Shortcut: add a column footer summary of the SUM (`scope`: `query` all rows, or `page`). */
     public function summarizeSum(?string $label = null, string $scope = 'query'): static
     {
         return $this->summarize(SummaryType::Sum, $label, $scope);
     }
 
+    /** Shortcut: add a column footer summary of the AVERAGE. */
     public function summarizeAvg(?string $label = null, string $scope = 'query'): static
     {
         return $this->summarize(SummaryType::Avg, $label, $scope);
     }
 
+    /** Shortcut: add a column footer summary of the row COUNT. */
     public function summarizeCount(?string $label = null, string $scope = 'query'): static
     {
         return $this->summarize(SummaryType::Count, $label, $scope);
     }
 
+    /** Shortcut: add a column footer summary of the MINIMUM. */
     public function summarizeMin(?string $label = null, string $scope = 'query'): static
     {
         return $this->summarize(SummaryType::Min, $label, $scope);
     }
 
+    /** Shortcut: add a column footer summary of the MAXIMUM. */
     public function summarizeMax(?string $label = null, string $scope = 'query'): static
     {
         return $this->summarize(SummaryType::Max, $label, $scope);
@@ -165,6 +170,7 @@ trait CanBeSummarized
         return $this->summarize(SummaryType::DistinctCount, $label, $scope);
     }
 
+    /** Shortcut: add a column footer summary of the MEDIAN. */
     public function summarizeMedian(?string $label = null, string $scope = 'query'): static
     {
         return $this->summarize(SummaryType::Median, $label, $scope);

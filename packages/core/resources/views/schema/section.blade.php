@@ -35,7 +35,7 @@
                 @if($layout->getLabel())
                     <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                         @if($layout->getIcon())
-                            <x-wire::icon :name="$layout->getIcon()" class="w-5 h-5 text-gray-400"/>
+                            {!! icon($layout->getIcon(), 'w-4 h-4', 'w-5 h-5 text-gray-400') !!}
                         @endif
                         {{ $layout->getLabel() }}
                     </h3>
@@ -56,8 +56,7 @@
 
                 @if($isCollapsible)
                     <button type="button" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                        <x-wire::icon name="outline:chevron-down" class="w-5 h-5 transition-transform"
-                                      x-bind:class="{ 'rotate-180': open }"/>
+                        {!! icon('outline:chevron-down', 'w-4 h-4', 'w-5 h-5 transition-transform', '', ['x-bind:class' => "{ 'rotate-180': open }"]) !!}
                     </button>
                 @endif
             </div>

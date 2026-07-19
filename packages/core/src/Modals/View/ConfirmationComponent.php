@@ -7,8 +7,7 @@ namespace NyonCode\WireCore\Modals\View;
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 use NyonCode\WireCore\Core\Support\Trans;
-use NyonCode\WireCore\Foundation\Concerns\HasColor;
-use NyonCode\WireCore\Modals\Concerns\HasModalProperties;
+use NyonCode\WireCore\Modals\Support\ConfirmationStyle;
 
 /**
  * Blade component: <x-wire-modals::confirmation>
@@ -29,8 +28,6 @@ use NyonCode\WireCore\Modals\Concerns\HasModalProperties;
  */
 class ConfirmationComponent extends Component
 {
-    use HasColor;
-
     public function __construct(
         public ?string $heading = null,
         public ?string $description = null,
@@ -56,37 +53,17 @@ class ConfirmationComponent extends Component
         }
     }
 
-    public function widthClass(): string
+    public function style(): ConfirmationStyle
     {
-        return HasModalProperties::getMaxWidthClass($this->width);
-    }
-
-    protected function getColor(): string
-    {
-        return $this->color ?? 'primary';
-    }
-
-    public function iconBgClass(): string
-    {
-        return self::getModalIconBgClass($this->iconColor);
-    }
-
-    public function iconColorClass(): string
-    {
-        return self::getModalIconTextClass($this->iconColor);
-    }
-
-    public function submitButtonClasses(): string
-    {
-        $base = 'inline-flex w-full justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm sm:w-auto';
-
-        // Delegate the hue map to the canonical owner so this footer stays in
-        // sync with the table action modal footers instead of re-encoding it.
-        return "{$base} ".self::getModalSubmitButtonClasses($this->color ?? 'primary');
+        return new ConfirmationStyle(
+            width: $this->width,
+            iconColor: $this->iconColor,
+            color: $this->color,
+        );
     }
 
     public function render(): View
     {
-        return view('wire-core::modals.confirmation');
+        return view('wire-core::modals.confirmation', ['style' => $this->style()]);
     }
 }

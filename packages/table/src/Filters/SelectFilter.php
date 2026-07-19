@@ -25,6 +25,8 @@ class SelectFilter extends Filter
     protected bool $searchable = false;
 
     /**
+     * Set the filter options as a value => label map, a closure, or an enum class-string.
+     *
      * @param  array<string, string>|string|Closure  $options
      */
     public function options(array|string|Closure $options): static
@@ -42,6 +44,7 @@ class SelectFilter extends Filter
         return $this->normalizeOptions($this->options);
     }
 
+    /** Render a searchable combobox instead of a native select. */
     public function searchable(bool $searchable = true): static
     {
         $this->searchable = $searchable;

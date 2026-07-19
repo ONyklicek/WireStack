@@ -67,7 +67,7 @@
                 @if($field->isDeletable())
                     <button type="button" @click="removePair(index)" :data-testid="'form-keyvalue-{{ $field->getStatePath() }}-remove-' + index"
                         class="flex items-center justify-center w-9 h-full text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors">
-                        <x-wire::icon name="x-mark" class="w-4 h-4" />
+                        {!! icon('x-mark', 'w-4 h-4', 'w-4 h-4') !!}
                     </button>
                 @else
                     <span class="w-9"></span>
@@ -87,7 +87,7 @@
         <div class="border-t border-gray-200 dark:border-gray-700 px-3 py-2 bg-gray-50 dark:bg-gray-700/30">
             <button type="button" @click="addPair()" data-testid="form-keyvalue-{{ $field->getStatePath() }}-add"
                 class="inline-flex items-center gap-1.5 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors">
-                <x-wire::icon name="plus" class="w-4 h-4" />
+                {!! icon('plus', 'w-4 h-4', 'w-4 h-4') !!}
                 {{ __('Add entry') }}
             </button>
         </div>

@@ -6,7 +6,11 @@ namespace NyonCode\WireCore\Actions;
 
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Actions\Contracts\RendersAsButton;
+use NyonCode\WireCore\Actions\Contracts\ResolvesActionClick;
+use NyonCode\WireCore\Actions\Support\MountActionClickResolver;
 use NyonCode\WireCore\Core\Support\Deprecation;
+use NyonCode\WireCore\Foundation\View\Primitives;
 
 /**
  * Class Action - Row-level action with lifecycle hooks, dynamic properties, and more.
@@ -17,7 +21,7 @@ use NyonCode\WireCore\Core\Support\Deprecation;
  *
  * @phpstan-consistent-constructor
  */
-class Action extends BaseAction
+class Action extends BaseAction implements RendersAsButton
 {
     protected bool $hideLabel = false;
 
@@ -48,6 +52,7 @@ class Action extends BaseAction
 
     // ─── Fluent setters ─────────────────────────────────────────
 
+    /** Render as an icon-only button (no visible label text). */
     public function iconButton(bool $iconButton = true): static
     {
         $this->iconButton = $iconButton;
@@ -89,6 +94,8 @@ class Action extends BaseAction
     }
 
     /**
+     * Misspelled alias of {@see hideLabel()}, kept for backwards compatibility.
+     *
      * @deprecated Use hideLabel() instead. Will be removed in v2.0.
      */
     public function hiddeLabel(bool $hiddeLabel = true): static
@@ -106,6 +113,7 @@ class Action extends BaseAction
         return $this->hideLabel($onlyIcon);
     }
 
+    /** Make the action navigate to a URL instead of running a callback. */
     public function url(Closure|string $url, bool $openInNewTab = false): static
     {
         $this->urlCallback = $url instanceof Closure ? $url : fn () => $url;
@@ -153,7 +161,22 @@ class Action extends BaseAction
 
     // ─── Rendering ──────────────────────────────────────────────
 
-    public function render(Model $record): string
+    /**
+     * Memoised record-invariant render fragments (classes + icon SVG). Built once
+     * per action and reused across every row, unless a visual property is a
+     * per-record closure (then it is recomputed per record).
+     *
+     * @var array<string, string>|null
+     */
+    private ?array $staticRenderCache = null;
+
+    /**
+     * Render this action's button through the canonical core view.
+     *
+     * The host supplies a {@see ResolvesActionClick} so core never hardcodes a
+     * table/form Livewire method; without one a standalone `mountAction()` is used.
+     */
+    public function render(Model $record, ?ResolvesActionClick $click = null): string
     {
         if ($this->isDivider) {
             return $this->renderDivider();
@@ -163,9 +186,10 @@ class Action extends BaseAction
             return '';
         }
 
-        return view('wire-table::tables.actions.action', [
+        return view('wire-core::actions.button', [
             'action' => $this,
             'record' => $record,
+            'click' => $click ?? new MountActionClickResolver,
         ])->render();
     }
 
@@ -175,7 +199,7 @@ class Action extends BaseAction
      * Dividers resolve to the shared separator partial; everything else renders
      * through the canonical dropdown-item partial so menu rows stay consistent.
      */
-    public function renderForDropdown(Model $record): string
+    public function renderForDropdown(Model $record, ?ResolvesActionClick $click = null): string
     {
         if ($this->isDivider) {
             return $this->renderDivider();
@@ -185,9 +209,10 @@ class Action extends BaseAction
             return '';
         }
 
-        return view('wire-table::tables.actions.dropdown-item', [
+        return view('wire-core::actions.dropdown-item', [
             'action' => $this,
             'record' => $record,
+            'click' => $click ?? new MountActionClickResolver,
         ])->render();
     }
 
@@ -200,41 +225,38 @@ class Action extends BaseAction
     }
 
     /**
-     * Get all render data for Blade template. Resolves all dynamic properties per-record.
+     * Resolve all render data for the canonical button view.
+     *
+     * Per-record dynamic properties (label, color, icon, disabled, extra
+     * attributes) and the host-supplied click expression are resolved here so the
+     * Blade view only echoes state.
      *
      * @return array<string, mixed>
      */
-    public function getRenderData(Model $record): array
+    public function toButtonRenderArray(?Model $record = null, ?ResolvesActionClick $click = null): array
     {
-        $url = $this->getUrl($record);
-        $color = $this->getColor($record);
-        $icon = $this->getIcon($record);
-        $size = $this->getSize($record);
+        $click ??= new MountActionClickResolver;
+        $static = $this->staticRender($record);
         $loadingState = $this->getLoadingStateData();
 
-        $colorClasses = $this->isIconButton()
-            ? $this->resolveIconButtonColorClasses($color)
-            : ($this->isOutlined()
-                ? $this->resolveOutlinedColorClasses($color)
-                : ($this->quiet && ! $this->solid
-                    ? $this->resolveQuietColorClasses($color)
-                    : $this->resolveSolidColorClasses($color)));
+        // Same bare expression drives wire:click and the wire:loading target.
+        $clickHandler = $click->clickHandler($this, $record);
 
-        $base = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800';
-        $sizeClasses = $this->resolveButtonSizeClasses($this->isIconButton(), $size);
+        $url = $record ? $this->getUrl($record) : null;
 
         return [
             'url' => $url,
             'isButton' => ! $url,
-            'classes' => "{$base} {$sizeClasses} {$colorClasses}",
-            'iconHtml' => $icon
-                ? $this->renderIconSvg($icon, $this->isIconButton() ? 'w-5 h-5' : 'w-4 h-4')
-                : '',
-            'label' => $this->hideLabel ? '' : e($this->getLabel($record)),
+            'classes' => $static['classes'],
+            'iconHtml' => $static['iconHtml'],
+            // Not escaped here: the button-content view echoes this through {{ }},
+            // which escapes it. Pre-escaping produced double-encoded labels (a
+            // literal `&amp;` for `&`, `&lt;` shown as text).
+            'label' => $this->hideLabel ? '' : $this->getLabel($record),
             'tooltip' => $this->getTooltip($record),
             'target' => $this->openUrlInNewTab ? '_blank' : null,
-            'disabled' => $this->isDisabled($record),
-            'recordKey' => $record->getKey(),
+            'disabled' => $record ? $this->isDisabled($record) : false,
+            'recordKey' => $record?->getKey(),
             'actionName' => $this->name,
             'hasModal' => $this->hasModal,
             'hideLabel' => $this->hideLabel,
@@ -248,6 +270,66 @@ class Action extends BaseAction
             'showLoading' => $loadingState['showLoading'],
             'loadingText' => $loadingState['loadingText'],
             'wireModifiers' => $loadingState['wireModifiers'],
+            // Host-resolved click + the wire:target the loading indicator gates on.
+            'wireClick' => $clickHandler,
+            'loadingTarget' => $clickHandler,
+            // Record-invariant spinner, resolved once per request (a wrapping
+            // wire:loading span carries the per-row target, so this stays cacheable).
+            'spinnerHtml' => app(Primitives::class)->spinner('w-4 h-4'),
+        ];
+    }
+
+    /**
+     * BC alias for {@see toButtonRenderArray()} kept for callers that pass a record.
+     *
+     * @return array<string, mixed>
+     */
+    public function getRenderData(Model $record): array
+    {
+        return $this->toButtonRenderArray($record);
+    }
+
+    /**
+     * Record-invariant render fragments (button classes + icon SVG).
+     *
+     * Memoised across rows unless a visual property (color/size/icon) is a
+     * per-record closure, in which case it is recomputed for the given record.
+     *
+     * @return array<string, string>
+     */
+    private function staticRender(?Model $record): array
+    {
+        if ($this->colorCallback !== null || $this->sizeCallback !== null || $this->iconCallback !== null) {
+            return $this->computeStaticRender($record);
+        }
+
+        return $this->staticRenderCache ??= $this->computeStaticRender($record);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function computeStaticRender(?Model $record): array
+    {
+        $color = $this->getColor($record);
+        $icon = $this->getIcon($record);
+        $size = $this->getSize($record);
+
+        $colorClasses = $this->isIconButton()
+            ? $this->resolveIconButtonColorClasses($color)
+            : ($this->isOutlined()
+                ? $this->resolveOutlinedColorClasses($color)
+                : ($this->quiet && ! $this->solid
+                    ? $this->resolveQuietColorClasses($color)
+                    : $this->resolveSolidColorClasses($color)));
+
+        $sizeClasses = $this->resolveButtonSizeClasses($this->isIconButton(), $size);
+
+        return [
+            'classes' => self::BUTTON_BASE_CLASSES." {$sizeClasses} {$colorClasses}",
+            'iconHtml' => $icon
+                ? $this->renderIconSvg($icon, $this->isIconButton() ? 'w-5 h-5' : 'w-4 h-4')
+                : '',
         ];
     }
 }

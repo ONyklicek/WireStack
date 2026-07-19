@@ -42,6 +42,7 @@ trait FormatsState
 
     protected bool $since = false;
 
+    /** Format the value as a currency amount (defaults to CZK). */
     public function money(?string $currency = 'CZK'): static
     {
         $this->money = true;
@@ -60,6 +61,7 @@ trait FormatsState
         return $this->currency;
     }
 
+    /** Format the value as a number with the given decimals and separators. */
     public function numeric(
         int $decimals = 0,
         ?string $decimalSeparator = ',',
@@ -78,6 +80,7 @@ trait FormatsState
         return $this->numeric;
     }
 
+    /** Format the value as a date using the given PHP date format. */
     public function date(?string $format = 'd.m.Y'): static
     {
         $this->date = true;
@@ -86,6 +89,7 @@ trait FormatsState
         return $this;
     }
 
+    /** Format the value as a date and time using the given PHP date format. */
     public function dateTime(?string $format = 'd.m.Y H:i'): static
     {
         $this->dateTime = true;
@@ -94,6 +98,7 @@ trait FormatsState
         return $this;
     }
 
+    /** Format the value as a relative "time ago" difference from now. */
     public function since(): static
     {
         $this->since = true;
@@ -116,7 +121,7 @@ trait FormatsState
         $value = EnumResolver::display($value);
 
         // Date / datetime
-        if (($this->date || $this->dateTime) && $value) {
+        if (($this->date || $this->dateTime || $this->since) && $value) {
             $value = $this->since
                 ? ($value instanceof Carbon
                     ? $value->diffForHumans()

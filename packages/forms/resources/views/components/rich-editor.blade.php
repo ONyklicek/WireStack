@@ -83,7 +83,7 @@
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ __('Bold') }}"
             >
-                <x-wire::icon name="bold" class="w-4 h-4" />
+                {!! icon('bold', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
         @endif
 
@@ -95,7 +95,7 @@
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ __('Italic') }}"
             >
-                <x-wire::icon name="italic" class="w-4 h-4" />
+                {!! icon('italic', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
         @endif
 
@@ -107,7 +107,7 @@
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ __('Underline') }}"
             >
-                <x-wire::icon name="underline" class="w-4 h-4" />
+                {!! icon('underline', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
         @endif
 
@@ -119,7 +119,7 @@
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ __('Strikethrough') }}"
             >
-                <x-wire::icon name="strikethrough" class="w-4 h-4" />
+                {!! icon('strikethrough', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
         @endif
 
@@ -163,7 +163,7 @@
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ __('Bullet list') }}"
             >
-                <x-wire::icon name="list-bullet" class="w-4 h-4" />
+                {!! icon('list-bullet', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
         @endif
 
@@ -175,7 +175,7 @@
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ __('Numbered list') }}"
             >
-                <x-wire::icon name="numbered-list" class="w-4 h-4" />
+                {!! icon('numbered-list', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
         @endif
 
@@ -199,7 +199,7 @@
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ __('Code block') }}"
             >
-                <x-wire::icon name="code-bracket" class="w-4 h-4" />
+                {!! icon('code-bracket', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
         @endif
 
@@ -214,7 +214,7 @@
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ __('Insert link') }}"
             >
-                <x-wire::icon name="link" class="w-4 h-4" />
+                {!! icon('link', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
         @endif
 
@@ -229,7 +229,7 @@
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ __('Undo') }}"
             >
-                <x-wire::icon name="arrow-uturn-left" class="w-4 h-4" />
+                {!! icon('arrow-uturn-left', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
         @endif
 
@@ -240,7 +240,7 @@
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ __('Redo') }}"
             >
-                <x-wire::icon name="arrow-uturn-right" class="w-4 h-4" />
+                {!! icon('arrow-uturn-right', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
         @endif
     </div>

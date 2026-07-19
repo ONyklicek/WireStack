@@ -95,6 +95,7 @@ trait HasModal
 
     protected ?string $mobileBreakpoint = null;
 
+    /** Show a confirmation dialog before the action runs. */
     public function requiresConfirmation(bool $requires = true): static
     {
         $this->hasModal = $requires;
@@ -107,6 +108,7 @@ trait HasModal
         return $this->hasModal;
     }
 
+    /** Set the modal / confirmation heading. */
     public function modalHeading(string|Closure|null $heading): static
     {
         if ($heading instanceof Closure) {
@@ -119,6 +121,7 @@ trait HasModal
         return $this;
     }
 
+    /** Set the modal / confirmation description text. */
     public function modalDescription(string|Closure|null $description): static
     {
         if ($description instanceof Closure) {
@@ -130,6 +133,7 @@ trait HasModal
         return $this;
     }
 
+    /** Set the confirmation dialog's icon and, optionally, its color. */
     public function modalIcon(string|Icon|null $icon, string|Color|null $color = null): static
     {
         $this->modalIcon = $icon instanceof Icon ? $icon->value() : $icon;
@@ -138,6 +142,7 @@ trait HasModal
         return $this;
     }
 
+    /** Set the modal's submit button label. */
     public function modalSubmitActionLabel(?string $label): static
     {
         $this->modalSubmitLabel = $label;
@@ -145,6 +150,7 @@ trait HasModal
         return $this;
     }
 
+    /** Set the modal's cancel button label. */
     public function modalCancelActionLabel(?string $label): static
     {
         $this->modalCancelLabel = $label;
@@ -182,6 +188,7 @@ trait HasModal
         return $this;
     }
 
+    /** Set the modal width (a `ModalWidth` enum or a keyword like `md`/`lg`/`xl`). */
     public function modalWidth(string|ModalWidth $width): static
     {
         $this->modalWidth = $width instanceof ModalWidth ? $width->value : $width;
@@ -189,6 +196,7 @@ trait HasModal
         return $this;
     }
 
+    /** Whether clicking the backdrop closes the modal (default true). */
     public function closeModalOnClickAway(bool $close = true): static
     {
         $this->modalCloseOnClickAway = $close;
@@ -196,6 +204,7 @@ trait HasModal
         return $this;
     }
 
+    /** Whether pressing Escape closes the modal (default true). */
     public function closeModalOnEscape(bool $close = true): static
     {
         $this->modalCloseOnEscape = $close;
@@ -203,6 +212,7 @@ trait HasModal
         return $this;
     }
 
+    /** Render the modal as a right-hand slide-over panel instead of a centered dialog. */
     public function slideOver(bool $slideOver = true): static
     {
         $this->slideOver = $slideOver;
@@ -211,6 +221,7 @@ trait HasModal
         return $this;
     }
 
+    /** On small screens, render the modal as a bottom sheet. */
     public function slideOverOnMobile(bool $slideOver = true): static
     {
         $this->slideOverOnMobile = $slideOver;
@@ -219,6 +230,7 @@ trait HasModal
         return $this;
     }
 
+    /** On small screens, render the modal full-screen. */
     public function fullScreenOnMobile(bool $fullScreen = true): static
     {
         $this->fullScreenOnMobile = $fullScreen;
@@ -226,6 +238,7 @@ trait HasModal
         return $this;
     }
 
+    /** Set the modal width used on small screens. */
     public function mobileModalWidth(string $width): static
     {
         $this->mobileModalWidth = $width;
@@ -360,6 +373,8 @@ trait HasModal
     }
 
     /**
+     * Set the validation rules applied to the modal form before submission.
+     *
      * @param  array<string, mixed>|Closure  $rules
      */
     public function formValidation(array|Closure $rules): static
@@ -374,6 +389,8 @@ trait HasModal
     }
 
     /**
+     * Set custom validation messages for the modal form rules.
+     *
      * @param  array<string, string>|Closure  $messages
      */
     public function validationMessages(array|Closure $messages): static
@@ -388,6 +405,8 @@ trait HasModal
     }
 
     /**
+     * Set human-readable attribute names used in modal validation messages.
+     *
      * @param  array<string, string>|Closure  $attributes
      */
     public function validationAttributes(array|Closure $attributes): static
@@ -401,6 +420,7 @@ trait HasModal
         return $this;
     }
 
+    /** Seed the action's form before the modal opens; the Closure receives the record and returns the initial state. */
     public function fillFormUsing(Closure $callback): static
     {
         $this->fillFormUsing = $callback;
@@ -876,6 +896,7 @@ trait HasModal
         return $this;
     }
 
+    /** Keep the modal footer pinned while the body scrolls. */
     public function stickyFooter(bool $sticky = true): static
     {
         $this->stickyFooter = $sticky;
@@ -883,6 +904,7 @@ trait HasModal
         return $this;
     }
 
+    /** Keep the modal header pinned while the body scrolls. */
     public function stickyHeader(bool $sticky = true): static
     {
         $this->stickyHeader = $sticky;
@@ -890,6 +912,7 @@ trait HasModal
         return $this;
     }
 
+    /** Cap the modal body height; it scrolls inside when taller. */
     public function modalMaxHeight(string $maxHeight): static
     {
         $this->modalMaxHeight = $maxHeight;
@@ -898,6 +921,8 @@ trait HasModal
     }
 
     /**
+     * Set the actions rendered in the modal footer.
+     *
      * @param  array<int, mixed>  $actions
      */
     public function modalFooterActions(array $actions): static
@@ -931,6 +956,8 @@ trait HasModal
     }
 
     /**
+     * Set the actions rendered in the modal header.
+     *
      * @param  array<int, mixed>  $actions
      */
     public function modalHeaderActions(array $actions): static

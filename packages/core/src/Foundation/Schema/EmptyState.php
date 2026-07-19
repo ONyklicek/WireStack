@@ -28,6 +28,7 @@ class EmptyState extends LayoutComponent
     /** @var array<int, Htmlable|string> */
     protected array $actions = [];
 
+    /** Set the centered icon. */
     public function icon(string|Icon|null $icon): static
     {
         $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
@@ -35,6 +36,7 @@ class EmptyState extends LayoutComponent
         return $this;
     }
 
+    /** Set the heading shown under the icon. */
     public function heading(string|Closure|null $heading): static
     {
         $this->heading = $heading;
@@ -42,6 +44,7 @@ class EmptyState extends LayoutComponent
         return $this;
     }
 
+    /** Set the description shown under the heading. */
     public function description(string|Closure|null $description): static
     {
         $this->description = $description;

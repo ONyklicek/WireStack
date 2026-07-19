@@ -115,6 +115,30 @@ it('handles boolean values', function () {
         ->and($output)->toContain('0');
 });
 
+it('neutralises spreadsheet formula injection but leaves numbers intact', function () {
+    // Regression M12: a value a spreadsheet would evaluate (leading =, +, @, or a
+    // non-numeric leading -) is prefixed with a single quote; a genuine negative
+    // number is left alone so numeric exports stay numeric.
+    $records = [
+        createMockRecord(['formula' => '=HYPERLINK("http://evil","x")', 'amount' => '-42']),
+        createMockRecord(['formula' => '@SUM(A1)', 'amount' => '+dangerous']),
+    ];
+    $query = createMockQuery($records);
+    $columns = [
+        TextColumn::make('formula'),
+        TextColumn::make('amount'),
+    ];
+
+    $output = captureStreamedResponse((new CsvExporter)->export($query, $columns, 'test.csv'));
+
+    expect($output)->toContain("'=HYPERLINK")
+        ->and($output)->toContain("'@SUM(A1)")
+        ->and($output)->toContain("'+dangerous")
+        // A real negative number is not quoted.
+        ->and($output)->toContain('-42')
+        ->and($output)->not->toContain("'-42");
+});
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function createMockRecord(array $attributes): Model

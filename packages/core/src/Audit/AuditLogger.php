@@ -148,8 +148,11 @@ class AuditLogger
 
     /**
      * Resolve the current authenticated user ID.
+     *
+     * Returns int|string: the actor key may be a UUID/ULID, so a ?int return
+     * would drop a string identifier (a caught TypeError under strict_types).
      */
-    protected function resolveUserId(): ?int
+    protected function resolveUserId(): int|string|null
     {
         try {
             /** @var Authenticatable|null $user */

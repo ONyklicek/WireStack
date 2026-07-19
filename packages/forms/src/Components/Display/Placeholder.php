@@ -15,6 +15,7 @@ class Placeholder extends Display
 
     protected bool $isHtmlContent = false;
 
+    /** Set the read-only text content to display. */
     public function content(string|Closure|null $content): static
     {
         $this->content = $content;
@@ -22,6 +23,7 @@ class Placeholder extends Display
         return $this;
     }
 
+    /** Render the content as raw HTML instead of escaped text. */
     public function allowHtml(bool $condition = true): static
     {
         $this->isHtmlContent = $condition;

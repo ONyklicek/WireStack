@@ -27,6 +27,7 @@ trait HasVisibility
 
     protected bool|Closure $isVisible = true;
 
+    /** Show the component only when the condition is true (a bool or a `$get`-aware Closure). */
     public function visible(bool|Closure $condition = true): static
     {
         $this->isVisible = $condition;
@@ -34,6 +35,7 @@ trait HasVisibility
         return $this;
     }
 
+    /** Hide the component when the condition is true — the inverse of `visible()`. */
     public function hidden(bool|Closure $condition = true): static
     {
         $this->isHidden = $condition;

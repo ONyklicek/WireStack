@@ -28,6 +28,7 @@ class HeaderAction extends BaseAction
 
     protected ?string $badgeColor = null;
 
+    /** Make the action navigate to a URL instead of running a callback. */
     public function url(?string $url, bool $openInNewTab = false): static
     {
         $this->url = $url;
@@ -46,6 +47,7 @@ class HeaderAction extends BaseAction
         return $this;
     }
 
+    /** Set the badge color. */
     public function badgeColor(string|Color|null $color): static
     {
         $this->badgeColor = $color instanceof Color ? $color->value : $color;

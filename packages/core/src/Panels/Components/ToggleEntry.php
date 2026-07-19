@@ -23,6 +23,7 @@ class ToggleEntry extends EditableEntry
 
     protected ?string $offColor = 'gray';
 
+    /** Set the track color when the toggle is on (default primary). */
     public function onColor(string|Color|null $color): static
     {
         $this->onColor = $color instanceof Color ? $color->value : $color;
@@ -30,6 +31,7 @@ class ToggleEntry extends EditableEntry
         return $this;
     }
 
+    /** Set the track color when the toggle is off (default gray). */
     public function offColor(string|Color|null $color): static
     {
         $this->offColor = $color instanceof Color ? $color->value : $color;

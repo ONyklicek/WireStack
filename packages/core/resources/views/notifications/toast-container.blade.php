@@ -177,16 +177,16 @@
                         {{-- Icon --}}
                         <div class="flex-shrink-0">
                             <template x-if="toast.type === 'success'">
-                                <x-wire::icon name="outline:check-circle" size="h-5 w-5" class="text-emerald-500" />
+                                {!! icon('outline:check-circle', 'h-5 w-5', 'text-emerald-500') !!}
                             </template>
                             <template x-if="toast.type === 'error'">
-                                <x-wire::icon name="outline:exclamation-circle" size="h-5 w-5" class="text-red-500" />
+                                {!! icon('outline:exclamation-circle', 'h-5 w-5', 'text-red-500') !!}
                             </template>
                             <template x-if="toast.type === 'warning'">
-                                <x-wire::icon name="outline:exclamation-triangle" size="h-5 w-5" class="text-amber-500" />
+                                {!! icon('outline:exclamation-triangle', 'h-5 w-5', 'text-amber-500') !!}
                             </template>
                             <template x-if="toast.type === 'info'">
-                                <x-wire::icon name="outline:information-circle" size="h-5 w-5" class="text-blue-500" />
+                                {!! icon('outline:information-circle', 'h-5 w-5', 'text-blue-500') !!}
                             </template>
                         </div>
 
@@ -220,7 +220,7 @@
                             aria-label="{{ __('Close') }}"
                             class="flex-shrink-0 rounded-lg p-1 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
                         >
-                            <x-wire::icon name="outline:x-mark" size="h-4 w-4" />
+                            {!! icon('outline:x-mark', 'h-4 w-4') !!}
                             <span class="sr-only">{{ __('Close') }}</span>
                         </button>
                     </div>

@@ -31,6 +31,7 @@ class ToggleColumn extends Column
         $this->editableType = 'toggle';
     }
 
+    /** Set the track color when the toggle is on. */
     public function onColor(string|Color|null $color): static
     {
         $this->onColor = $color instanceof Color ? $color->value : $color;
@@ -38,6 +39,7 @@ class ToggleColumn extends Column
         return $this;
     }
 
+    /** Set the track color when the toggle is off. */
     public function offColor(string|Color|null $color): static
     {
         $this->offColor = $color instanceof Color ? $color->value : $color;
@@ -45,6 +47,7 @@ class ToggleColumn extends Column
         return $this;
     }
 
+    /** Set the icon shown on the thumb when the toggle is on. */
     public function onIcon(string|Icon|null $icon): static
     {
         $this->onIcon = $icon instanceof Icon ? $icon->value() : $icon;
@@ -52,6 +55,7 @@ class ToggleColumn extends Column
         return $this;
     }
 
+    /** Set the icon shown on the thumb when the toggle is off. */
     public function offIcon(string|Icon|null $icon): static
     {
         $this->offIcon = $icon instanceof Icon ? $icon->value() : $icon;
@@ -69,6 +73,7 @@ class ToggleColumn extends Column
         return $this->offIcon;
     }
 
+    /** Disable inline toggling; a Closure receives the record per row. */
     public function disabled(bool|\Closure $disabled = true): static
     {
         if ($disabled instanceof \Closure) {

@@ -13,9 +13,7 @@
 
 <div class="{{ $spanClass }}">
     @if($field->getLabel())
-        <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
-            {{ $field->getLabel() }}
-        </div>
+        @include('wire-core::partials.entry-label', ['text' => $field->getLabel()])
     @endif
 
     <div class="text-sm">
@@ -28,7 +26,7 @@
                             $badgeClass,
                         ])>
                             @if($field->getIcon())
-                                <x-wire::icon :name="$field->getIcon()" class="w-3.5 h-3.5"/>
+                                {!! icon($field->getIcon(), 'w-4 h-4', 'w-3.5 h-3.5') !!}
                             @endif
                             {{ $item }}
                         </span>
@@ -54,5 +52,5 @@
         @endif
     </div>
 
-    @include('wire-core::infolists.entry-actions')
+    @if($field->hasActions())@include('wire-core::infolists.entry-actions')@endif
 </div>

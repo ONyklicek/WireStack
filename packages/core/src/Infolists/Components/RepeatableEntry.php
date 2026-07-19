@@ -33,6 +33,8 @@ class RepeatableEntry extends Entry
     protected array $with = [];
 
     /**
+     * Set the entry schema rendered once per item.
+     *
      * @param  array<int, Entry>  $components
      */
     public function schema(array $components): static
@@ -50,6 +52,7 @@ class RepeatableEntry extends Entry
         return $this->schema;
     }
 
+    /** Set the number of columns each item's entries lay out across (default 1). */
     public function columns(int $columns): static
     {
         $this->columns = $columns;
@@ -62,6 +65,7 @@ class RepeatableEntry extends Entry
         return $this->columns;
     }
 
+    /** Wrap each item in a bordered card (default true). */
     public function contained(bool $condition = true): static
     {
         $this->contained = $condition;

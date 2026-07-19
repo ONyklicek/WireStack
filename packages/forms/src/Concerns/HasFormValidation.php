@@ -46,6 +46,7 @@ trait HasFormValidation
         return $this;
     }
 
+    /** Mark the field required (a bool or a `$get`-aware Closure); use `requiredIf()` for the reactive sibling-driven case. */
     public function required(bool|Closure $condition = true): static
     {
         $this->isRequired = $condition;
@@ -86,6 +87,8 @@ trait HasFormValidation
     }
 
     /**
+     * Set custom validation messages for this field's rules.
+     *
      * @param  array<string, string>  $messages
      */
     public function validationMessages(array $messages): static

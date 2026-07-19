@@ -17,23 +17,23 @@
                 @switch($entry->event)
                     @case('created')
                         <div class="h-5 w-5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
-                            <x-wire::icon name="outline:plus" size="h-3 w-3" class="text-emerald-600 dark:text-emerald-400" />
+                            {!! icon('outline:plus', 'h-3 w-3', 'text-emerald-600 dark:text-emerald-400') !!}
                         </div>
                         @break
                     @case('updated')
                     @case('cell_updated')
                         <div class="h-5 w-5 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
-                            <x-wire::icon name="outline:pencil" size="h-3 w-3" class="text-blue-600 dark:text-blue-400" />
+                            {!! icon('outline:pencil', 'h-3 w-3', 'text-blue-600 dark:text-blue-400') !!}
                         </div>
                         @break
                     @case('deleted')
                         <div class="h-5 w-5 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center">
-                            <x-wire::icon name="outline:trash" size="h-3 w-3" class="text-red-600 dark:text-red-400" />
+                            {!! icon('outline:trash', 'h-3 w-3', 'text-red-600 dark:text-red-400') !!}
                         </div>
                         @break
                     @case('bulk_action')
                         <div class="h-5 w-5 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
-                            <x-wire::icon name="outline:queue-list" size="h-3 w-3" class="text-amber-600 dark:text-amber-400" />
+                            {!! icon('outline:queue-list', 'h-3 w-3', 'text-amber-600 dark:text-amber-400') !!}
                         </div>
                         @break
                     @default
@@ -68,7 +68,7 @@
                 </div>
 
                 {{-- Changes diff --}}
-                @php($changes = $entry->getChanges())
+                @php($changes = $entry->getChangeDiff())
                 @if(!empty($changes))
                     <div class="mt-2 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                         <table class="min-w-full text-xs">
@@ -114,7 +114,7 @@
         </div>
     @empty
         <div class="text-center py-8">
-            <x-wire::icon name="outline:clock" size="h-8 w-8" class="mx-auto text-gray-400 dark:text-gray-500" />
+            {!! icon('outline:clock', 'h-8 w-8', 'mx-auto text-gray-400 dark:text-gray-500') !!}
             <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ $emptyMessage }}</p>
         </div>
     @endforelse

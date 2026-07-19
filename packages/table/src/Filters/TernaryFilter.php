@@ -24,6 +24,7 @@ class TernaryFilter extends Filter
 
     protected bool $nullable = false;
 
+    /** Set the label for the "true" option. */
     public function trueLabel(?string $label): static
     {
         $this->trueLabel = $label;
@@ -31,6 +32,7 @@ class TernaryFilter extends Filter
         return $this;
     }
 
+    /** Set the label for the "false" option. */
     public function falseLabel(?string $label): static
     {
         $this->falseLabel = $label;
@@ -38,6 +40,7 @@ class TernaryFilter extends Filter
         return $this;
     }
 
+    /** Set the label for the "all" (no filter) option. */
     public function allLabel(?string $label): static
     {
         $this->allLabel = $label;
@@ -45,6 +48,7 @@ class TernaryFilter extends Filter
         return $this;
     }
 
+    /** Filter by null/not-null instead of true/false. */
     public function nullable(bool $nullable = true): static
     {
         $this->nullable = $nullable;

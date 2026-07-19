@@ -56,7 +56,7 @@
                         $cc['text'],
                     ])>
                     @if(isset($icons[$value]))
-                        <x-wire::icon :name="$icons[$value]" class="{{ $iconSizeClass }}"/>
+                        {!! icon($icons[$value], 'w-4 h-4', $iconSizeClass) !!}
                     @endif
                     {{ $label }}
                 </span>
@@ -95,7 +95,7 @@
                         'dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300',
                     ])>
                     @if(isset($icons[$value]))
-                        <x-wire::icon :name="$icons[$value]" class="{{ $iconSizeClass }}"/>
+                        {!! icon($icons[$value], 'w-4 h-4', $iconSizeClass) !!}
                     @endif
                     {{ $label }}
                 </span>
@@ -135,7 +135,7 @@
                         'dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600',
                     ])>
                     @if(isset($icons[$value]))
-                        <x-wire::icon :name="$icons[$value]" class="wf-card-icon mt-0.5 h-6 w-6 flex-shrink-0 text-gray-400 transition-colors duration-150"/>
+                        {!! icon($icons[$value], 'w-4 h-4', 'wf-card-icon mt-0.5 h-6 w-6 flex-shrink-0 text-gray-400 transition-colors duration-150') !!}
                     @endif
                     <div class="min-w-0 flex-1">
                         <span class="block text-sm font-medium text-gray-900 dark:text-gray-100">{{ $label }}</span>
@@ -173,7 +173,7 @@
                 <div>
                     <label for="{{ $field->getId() }}-{{ $value }}" class="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">
                         @if(isset($icons[$value]))
-                            <x-wire::icon :name="$icons[$value]" class="h-4 w-4"/>
+                            {!! icon($icons[$value], 'w-4 h-4', 'h-4 w-4') !!}
                         @endif
                         {{ $label }}
                     </label>

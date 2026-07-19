@@ -25,6 +25,7 @@ trait HasVisibility
 
     protected ?Closure $disabledCallback = null;
 
+    /** Show the action only when the condition is true (a bool or a `$record`-aware Closure). */
     public function visible(bool|Closure $visible = true): static
     {
         if ($visible instanceof Closure) {
@@ -34,6 +35,7 @@ trait HasVisibility
         return $this->hidden(! $visible);
     }
 
+    /** Hide the action when the condition is true — the inverse of `visible()`. */
     public function hidden(bool|Closure $hidden = true): static
     {
         if ($hidden instanceof Closure) {
@@ -45,6 +47,7 @@ trait HasVisibility
         return $this;
     }
 
+    /** Disable the action — shown but non-interactive (a bool or a `$record`-aware Closure). */
     public function disabled(bool|Closure $disabled = true): static
     {
         if ($disabled instanceof Closure) {

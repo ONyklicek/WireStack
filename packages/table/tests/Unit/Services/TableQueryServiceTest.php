@@ -472,6 +472,28 @@ it('handles relation columns with eager loading', function () {
     expect($hasJoinsOrEagerLoads)->toBeTrue();
 });
 
+it('eager loads a belongsTo display column instead of an N+1 lazy load', function () {
+    // A display-only relation column reads via data_get($record, 'company.name');
+    // the relation must be eager-loaded so rendering does not fire one query per
+    // row. No join is registered for pure display.
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->columns([
+            Column::make('name'),
+            Column::make('company.name'),
+        ]);
+
+    $service = new TableQueryService;
+    $query = $service->buildQuery(baseQuery: TqsUser::query(), table: $table);
+
+    expect($service->getLastPlan()->hasJoins())->toBeFalse()
+        ->and($service->getLastPlan()->eagerLoads)->toContain('company');
+
+    $rows = $query->get();
+    expect($rows)->toHaveCount(3)
+        ->and($rows->first()->relationLoaded('company'))->toBeTrue();
+});
+
 // ─── Aggregate Columns ──────────────────────────────────────────────────────
 
 it('applies aggregate columns to the built query', function () {
@@ -498,6 +520,41 @@ it('applies aggregate columns to the built query', function () {
         ->and((float) $alice->orders_avg_total)->toBe(15.0)
         ->and((float) $alice->orders_min_total)->toBe(10.0)
         ->and((float) $alice->orders_max_total)->toBe(20.0);
+});
+
+it('filters by an aggregate count via whereHas, never HAVING', function () {
+    // "orders->count()" = 2 → only Alice (2 orders); Bob has 1, Charlie 0.
+    // Applied as a WHERE over the count subquery (whereHas), not HAVING, which
+    // Postgres rejects without a GROUP BY.
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->columns([Column::make('name')])
+        ->filters([Filter::make('orders->count()')]);
+
+    $query = (new TableQueryService)->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+        filterValues: ['orders->count()' => 2],
+    );
+
+    expect(strtolower($query->toSql()))->not->toContain('having');
+    expect($query->get()->pluck('name')->all())->toBe(['Alice']);
+});
+
+it('filters to users that have any related orders via an exists aggregate', function () {
+    // "orders->exists()" truthy → users with at least one order (Alice, Bob).
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->columns([Column::make('name')])
+        ->filters([Filter::make('orders->exists()')]);
+
+    $query = (new TableQueryService)->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+        filterValues: ['orders->exists()' => true],
+    );
+
+    expect($query->get()->pluck('name')->sort()->values()->all())->toBe(['Alice', 'Bob']);
 });
 
 // ─── Combined Operations ─────────────────────────────────────────────────────
@@ -547,6 +604,56 @@ it('ignores empty filter values', function () {
 
     $results = $query->get();
     expect($results)->toHaveCount(3); // All users
+});
+
+it('filters by a belongsTo relation column natively via whereHas (no filter join)', function () {
+    // A relation column filter is applied through Eloquent's whereHas() — an
+    // EXISTS subquery — not a JOIN. The relation clause carries no table alias.
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->columns([
+            Column::make('name'),
+            Column::make('company.name')->filterable(),
+        ]);
+
+    $service = new TableQueryService;
+    $query = $service->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+        columnFilterValues: ['company.name' => 'Acme Corp'],
+    );
+
+    // Alice and Charlie are at Acme Corp; Bob (Evil Corp) is excluded.
+    expect($query->get()->pluck('name')->sort()->values()->all())
+        ->toBe(['Alice', 'Charlie']);
+
+    $relFilter = collect($service->getLastPlan()->filters)->firstWhere('isRelation', true);
+    expect($relFilter)->not->toBeNull()
+        ->and($relFilter->relationPath)->toBe('company')
+        ->and($relFilter->tableAlias)->toBeNull()
+        ->and(strtolower($query->toSql()))->toContain('exists');
+});
+
+it('filters by a hasMany relation column, which a join could not express', function () {
+    // Before the native rewrite, a to-many relation filter was silently dropped
+    // (registerRelationJoins returned null for a non-joinable relation). whereHas
+    // keeps it: only users with an order over 40 survive.
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->columns([
+            Column::make('name'),
+            Column::make('orders.total')->filterable()->filterOperator('>'),
+        ]);
+
+    $service = new TableQueryService;
+    $query = $service->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+        columnFilterValues: ['orders.total' => 40],
+    );
+
+    // Only Bob has an order (50) over 40.
+    expect($query->get()->pluck('name')->all())->toBe(['Bob']);
 });
 
 it('ignores sort for non-sortable columns', function () {
@@ -892,9 +999,11 @@ it('sorts by a hasOne relation column via a LEFT JOIN', function () {
     expect($query->get()->pluck('name')->all())->toBe(['Alice', 'Charlie', 'Bob']);
 });
 
-it('filters by a hasOne relation column via the LEFT JOIN', function () {
+it('filters by a hasOne relation column natively via whereHas', function () {
+    // A relation filter is applied through Eloquent's whereHas() — an EXISTS
+    // subquery — with no JOIN and no in-memory pass.
     $table = Table::make()->model(TqsUser::class)
-        ->columns([Column::make('name'), Column::make('profile.bio')])
+        ->columns([Column::make('name')])
         ->filters([
             SelectFilter::make('profile.bio')->options(['Zulu' => 'Zulu', 'Alpha' => 'Alpha']),
         ]);
@@ -905,22 +1014,23 @@ it('filters by a hasOne relation column via the LEFT JOIN', function () {
         filterValues: ['profile' => ['bio' => 'Zulu']],
     );
 
-    expect(tqsUnquoted($query->toSql()))->toContain('left join tqs_profiles');
+    expect(strtolower($query->toSql()))->toContain('exists')
+        ->and(tqsUnquoted($query->toSql()))->not->toContain('left join');
     // Only Bob has the Zulu bio.
     expect($query->get()->pluck('name')->all())->toBe(['Bob']);
 });
 
-// ─── belongsTo relation-column filtering (LEFT JOIN) ──────────
+// ─── belongsTo relation-column filtering (native whereHas) ────
 //
-// The same LEFT JOIN that powers relation sorting also powers relation
-// filtering: planFilter() calls the same registerRelationJoins(), so a filter
-// on a belongsTo column constrains the joined table in SQL — no whereHas
-// subquery, no in-memory pass. The filter takes a flat name (its state key)
-// and carries the relation path on column().
+// Relation filters are applied through Eloquent's whereHas(), not a JOIN:
+// planFilter() emits a relation clause that ApplyFilters turns into an EXISTS
+// subquery. Eloquent owns the keys, global scopes, and relation constraints,
+// and it handles nested paths and to-many relations a join could not. Any LEFT
+// JOIN in these queries comes only from a display/sort column, never the filter.
 
-it('filters by a belongsTo relation column through the LEFT JOIN', function () {
+it('filters by a belongsTo relation column natively via whereHas', function () {
     $table = Table::make()->model(TqsUser::class)
-        ->columns([Column::make('name'), Column::make('company.name')])
+        ->columns([Column::make('name')])
         ->filters([
             SelectFilter::make('company')->column('company.name')
                 ->options(['Acme Corp' => 'Acme', 'Evil Corp' => 'Evil']),
@@ -932,19 +1042,17 @@ it('filters by a belongsTo relation column through the LEFT JOIN', function () {
         filterValues: ['company' => 'Acme Corp'],
     );
 
-    // Constrained in SQL on the joined table, base select still qualified.
-    expect(tqsUnquoted($query->toSql()))
-        ->toContain('left join tqs_companies')
-        ->toContain('tqs_users.*')
-        ->toContain('where');
+    // Constrained via an EXISTS subquery, no join needed.
+    expect(strtolower($query->toSql()))->toContain('exists')
+        ->and(tqsUnquoted($query->toSql()))->not->toContain('left join');
 
     // Only Acme users (Alice, Charlie) survive; Bob (Evil) is filtered out.
     expect($query->get()->pluck('name')->sort()->values()->all())->toBe(['Alice', 'Charlie']);
 });
 
-it('reuses a single join when sorting and filtering the same relation', function () {
-    // registerRelationJoins keys the alias off (baseTable, path), so the sort
-    // and the filter share one join rather than emitting two.
+it('sorts via a join and filters via whereHas on the same relation', function () {
+    // Sorting still needs a LEFT JOIN (the ordered column must be selectable);
+    // filtering is an independent EXISTS subquery. Both target company.
     $table = Table::make()->model(TqsUser::class)
         ->columns([Column::make('name'), Column::make('company.name')->sortable()])
         ->filters([
@@ -952,22 +1060,25 @@ it('reuses a single join when sorting and filtering the same relation', function
                 ->options(['Acme Corp' => 'Acme', 'Evil Corp' => 'Evil']),
         ]);
 
-    $sql = (new TableQueryService)->buildQuery(
+    $query = (new TableQueryService)->buildQuery(
         baseQuery: TqsUser::query(),
         table: $table,
         filterValues: ['company' => 'Acme Corp'],
         sortColumn: 'company.name',
         sortDirection: 'asc',
-    )->toSql();
+    );
+    $sql = $query->toSql();
 
-    // Exactly one join, carrying both the where and the order by.
+    // One join for the sort, an EXISTS for the filter.
     expect(substr_count($sql, 'left join'))->toBe(1);
-    expect($sql)->toContain('where')->toContain('order by');
+    expect(strtolower($sql))->toContain('exists')->toContain('order by');
+    expect($query->get()->pluck('name')->sort()->values()->all())->toBe(['Alice', 'Charlie']);
 });
 
 it('filters by a belongsTo column through the column header filter too', function () {
     // The column-header filter path (Column::filterable()) routes through the
-    // same FilterDefinition::make() -> relation join as the table filter.
+    // same FilterDefinition and is applied via whereHas; the join present here is
+    // only the display column's, not the filter's.
     $table = Table::make()->model(TqsUser::class)
         ->columns([
             Column::make('name'),
@@ -980,16 +1091,17 @@ it('filters by a belongsTo column through the column header filter too', functio
         columnFilterValues: ['company.name' => 'Evil Corp'],
     );
 
-    expect(tqsUnquoted($query->toSql()))->toContain('left join tqs_companies');
+    expect(strtolower($query->toSql()))->toContain('exists');
     expect($query->get()->pluck('name')->all())->toBe(['Bob']);
 });
 
 it('accepts the relation path directly in the filter name (dot notation)', function () {
     // SelectFilter::make('company.name') needs no ->column(): the UI binds
     // wire:model="tableState.filters.company.name", so the value arrives as
-    // nested state and data_get(getName()) reads it back the same way.
+    // nested state and data_get(getName()) reads it back the same way. The filter
+    // is applied via whereHas.
     $table = Table::make()->model(TqsUser::class)
-        ->columns([Column::make('name'), Column::make('company.name')])
+        ->columns([Column::make('name')])
         ->filters([
             SelectFilter::make('company.name')
                 ->options(['Acme Corp' => 'Acme', 'Evil Corp' => 'Evil']),
@@ -1001,7 +1113,8 @@ it('accepts the relation path directly in the filter name (dot notation)', funct
         filterValues: ['company' => ['name' => 'Acme Corp']],
     );
 
-    expect(tqsUnquoted($query->toSql()))->toContain('left join tqs_companies');
+    expect(strtolower($query->toSql()))->toContain('exists')
+        ->and(tqsUnquoted($query->toSql()))->not->toContain('left join');
     expect($query->get()->pluck('name')->sort()->values()->all())->toBe(['Alice', 'Charlie']);
 });
 
@@ -1059,9 +1172,11 @@ it('sorts through a hasOneThrough via two chained joins (base -> intermediate ->
     expect($query->get()->pluck('name')->all())->toBe(['Mo', 'Jack', 'Manny']);
 });
 
-it('filters through a hasOneThrough via the same chained joins', function () {
+it('filters through a hasOneThrough natively via whereHas', function () {
+    // whereHas expresses the through relation as a nested EXISTS subquery — no
+    // chained joins are needed to filter.
     $table = Table::make()->model(TqsMechanic::class)
-        ->columns([Column::make('name'), Column::make('ownerThrough.name')])
+        ->columns([Column::make('name')])
         ->filters([
             SelectFilter::make('ownerThrough.name')->options(['Zara' => 'Zara', 'Anna' => 'Anna']),
         ]);
@@ -1072,30 +1187,35 @@ it('filters through a hasOneThrough via the same chained joins', function () {
         filterValues: ['ownerThrough' => ['name' => 'Zara']],
     );
 
-    expect(substr_count($query->toSql(), 'left join'))->toBe(2);
+    expect(strtolower($query->toSql()))->toContain('exists')
+        ->and(tqsUnquoted($query->toSql()))->not->toContain('left join');
     // Only Manny's owner is Zara.
     expect($query->get()->pluck('name')->all())->toBe(['Manny']);
 });
 
-it('reuses the intermediate + far joins when sorting and filtering one hasOneThrough', function () {
-    // Both the intermediate and far joins are keyed off deterministic aliases, so
-    // sort + filter on the same through relation still emit exactly two joins.
+it('sorts via chained joins and filters via whereHas on one hasOneThrough', function () {
+    // Sorting emits the two through joins (intermediate + far); the filter is an
+    // independent nested EXISTS, so the two mechanisms coexist.
     $table = Table::make()->model(TqsMechanic::class)
         ->columns([Column::make('name'), Column::make('ownerThrough.name')->sortable()])
         ->filters([
             SelectFilter::make('ownerThrough.name')->options(['Zara' => 'Zara', 'Anna' => 'Anna']),
         ]);
 
-    $sql = (new TableQueryService)->buildQuery(
+    $query = (new TableQueryService)->buildQuery(
         baseQuery: TqsMechanic::query(),
         table: $table,
         filterValues: ['ownerThrough' => ['name' => 'Anna']],
         sortColumn: 'ownerThrough.name',
         sortDirection: 'asc',
-    )->toSql();
+    );
+    $sql = $query->toSql();
 
+    // Two joins for the sort; an EXISTS for the filter.
     expect(substr_count($sql, 'left join'))->toBe(2);
-    expect($sql)->toContain('where')->toContain('order by');
+    expect(strtolower($sql))->toContain('exists')->toContain('order by');
+    // Only Mo's owner is Anna.
+    expect($query->get()->pluck('name')->all())->toBe(['Mo']);
 });
 
 it('does not join a HasManyThrough column (to-many stays display-only)', function () {

@@ -20,6 +20,7 @@ use NyonCode\WireForms\Components\Slider;
 use NyonCode\WireForms\Components\Tags;
 use NyonCode\WireForms\Components\Textarea;
 use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireForms\Components\TiptapEditor;
 use NyonCode\WireForms\Components\Toggle;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\WithForms;
@@ -103,6 +104,20 @@ class FieldPreview extends Component
                 ->label('Internal note')
                 ->helperText('Free-form notes shown to teammates.')
                 ->rows(4),
+
+            // Core editor: no opt-in extensions, so only the base ESM entry + the
+            // shared core chunk load (the addon chunk is never injected).
+            'tiptap' => TiptapEditor::make('bio')
+                ->label('Rich text (core only)')
+                ->helperText('Core editor — the tables/images addon chunk is not loaded.'),
+
+            // Enables tables + images, so the field injects the opt-in addon entry
+            // (which shares the same core chunk as the base).
+            'tiptap-tables' => TiptapEditor::make('bio')
+                ->label('Rich text with tables')
+                ->withTables()
+                ->withImages()
+                ->helperText('Enables the opt-in extension addon chunk.'),
 
             'select' => Select::make('role')
                 ->label('Workspace role')

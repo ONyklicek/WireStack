@@ -13,6 +13,7 @@ class ColorEntry extends Entry
 {
     protected bool $copyable = false;
 
+    /** Add a click-to-copy button for the color value. */
     public function copyable(bool $condition = true): static
     {
         $this->copyable = $condition;

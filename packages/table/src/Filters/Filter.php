@@ -81,6 +81,7 @@ class Filter implements Htmlable
         return new static($name);
     }
 
+    /** Set the filter's display label (defaults to a humanised name). */
     public function label(?string $label): static
     {
         $this->label = $label;
@@ -88,6 +89,7 @@ class Filter implements Htmlable
         return $this;
     }
 
+    /** Filter a different DB column than the filter name (defaults to the name). */
     public function column(?string $column): static
     {
         $this->column = $column;
@@ -95,6 +97,7 @@ class Filter implements Htmlable
         return $this;
     }
 
+    /** Set a custom filter query; the Closure receives the Builder + value and must return the Builder. */
     public function query(Closure $callback): static
     {
         $this->queryCallback = $callback;
@@ -115,6 +118,7 @@ class Filter implements Htmlable
         return $this->queryCallback;
     }
 
+    /** Set the filter's initial value (applied until the user changes it). */
     public function default(mixed $default): static
     {
         $this->default = $default;
@@ -122,11 +126,13 @@ class Filter implements Htmlable
         return $this;
     }
 
+    /** Show the filter only when the condition is true (a bool or a Closure). */
     public function visible(bool|Closure $visible = true): static
     {
         return $this->hidden(! $visible);
     }
 
+    /** Hide the filter when the condition is true — the inverse of `visible()`. */
     public function hidden(bool|Closure $hidden = true): static
     {
         if ($hidden instanceof Closure) {
@@ -138,6 +144,7 @@ class Filter implements Htmlable
         return $this;
     }
 
+    /** Set the placeholder / "all" option label for the filter control. */
     public function placeholder(?string $placeholder): static
     {
         $this->placeholder = $placeholder;
@@ -145,6 +152,7 @@ class Filter implements Htmlable
         return $this;
     }
 
+    /** Let the filter accept several values at once (renders a multi-select → `whereIn`). */
     public function multiple(bool $multiple = true): static
     {
         $this->multiple = $multiple;

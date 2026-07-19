@@ -116,6 +116,7 @@ trait CanBeFiltered
         return $this;
     }
 
+    /** Add a single-date column header filter (optional min/max bounds). */
     public function filterAsDate(?string $minDate = null, ?string $maxDate = null): static
     {
         return $this->filter($this->filterFactory()->date($this->name, $minDate, $maxDate));
@@ -180,6 +181,7 @@ trait CanBeFiltered
         return $this->filter !== null && $this->filter->isMultiple();
     }
 
+    /** Set the placeholder for this column's header-filter control. */
     public function filterPlaceholder(?string $placeholder): static
     {
         $this->ensureFilter()->placeholder($placeholder);
@@ -187,6 +189,7 @@ trait CanBeFiltered
         return $this;
     }
 
+    /** Set a custom query callback for the column filter; the Closure receives the Builder + value and must return the Builder. */
     public function filterUsing(Closure $callback): static
     {
         $this->ensureFilter()->query($callback);

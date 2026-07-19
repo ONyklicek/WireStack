@@ -22,9 +22,7 @@
 
 <div class="{{ $spanClass }}">
     @if($field->getLabel())
-        <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
-            {{ $field->getLabel() }}
-        </div>
+        @include('wire-core::partials.entry-label', ['text' => $field->getLabel()])
     @endif
 
     <div

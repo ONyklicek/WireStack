@@ -57,7 +57,7 @@ class CsvExporter implements Exporter
             });
 
             foreach ($summaryRows as $summaryRow) {
-                fputcsv($handle, $summaryRow, $this->delimiter, $this->enclosure);
+                fputcsv($handle, array_map([$this, 'escapeFormula'], $summaryRow), $this->delimiter, $this->enclosure);
             }
 
             fclose($handle);
@@ -84,6 +84,6 @@ class CsvExporter implements Exporter
             return $value->format('Y-m-d H:i:s');
         }
 
-        return (string) $value;
+        return $this->escapeFormula((string) $value);
     }
 }

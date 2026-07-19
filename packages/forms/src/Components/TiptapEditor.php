@@ -49,6 +49,8 @@ class TiptapEditor extends Field
     // ─── Toolbar ───────────────────────────────────────────────────
 
     /**
+     * Set the toolbar button layout.
+     *
      * @param  array<int, string>  $buttons  Button keys + '|' separators.
      */
     public function toolbarButtons(array $buttons): static
@@ -59,6 +61,8 @@ class TiptapEditor extends Field
     }
 
     /**
+     * Remove specific buttons from the default toolbar.
+     *
      * @param  array<int, string>  $buttons  Keys to remove from the toolbar.
      */
     public function disableToolbarButtons(array $buttons): static
@@ -68,6 +72,7 @@ class TiptapEditor extends Field
         return $this;
     }
 
+    /** Hide the toolbar entirely. */
     public function disableAllToolbarButtons(): static
     {
         $this->toolbarButtons = [];
@@ -95,6 +100,7 @@ class TiptapEditor extends Field
 
     // ─── Extensions ────────────────────────────────────────────────
 
+    /** Enable image support and add an image button to the toolbar. */
     public function withImages(bool $condition = true): static
     {
         $this->withImages = $condition;
@@ -106,6 +112,7 @@ class TiptapEditor extends Field
         return $this;
     }
 
+    /** Enable table support and add a table button to the toolbar. */
     public function withTables(bool $condition = true): static
     {
         $this->withTables = $condition;
@@ -117,6 +124,7 @@ class TiptapEditor extends Field
         return $this;
     }
 
+    /** Enable text alignment and add alignment buttons to the toolbar. */
     public function withTextAlign(bool $condition = true): static
     {
         $this->withTextAlign = $condition;
@@ -131,6 +139,7 @@ class TiptapEditor extends Field
         return $this;
     }
 
+    /** Enable text highlighting and add a highlight button to the toolbar. */
     public function withHighlight(bool $condition = true): static
     {
         $this->withHighlight = $condition;
@@ -142,6 +151,7 @@ class TiptapEditor extends Field
         return $this;
     }
 
+    /** Set the minimum editor height in pixels. */
     public function minHeight(int $pixels): static
     {
         $this->minHeight = $pixels;
@@ -149,6 +159,7 @@ class TiptapEditor extends Field
         return $this;
     }
 
+    /** Allow at most this many characters. */
     public function maxLength(?int $length): static
     {
         $this->maxLength = $length;
@@ -204,6 +215,16 @@ class TiptapEditor extends Field
     public function isWithHighlight(): bool
     {
         return $this->withHighlight;
+    }
+
+    /**
+     * Whether this editor needs the opt-in extension addon chunk (tables, images,
+     * highlight, text-align). When false — the default — the page loads only the
+     * core editor entry + shared chunk and never downloads the addon.
+     */
+    public function needsExtensionAddon(): bool
+    {
+        return $this->withImages || $this->withTables || $this->withTextAlign || $this->withHighlight;
     }
 
     /**

@@ -20,6 +20,7 @@ use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasSize;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
+use NyonCode\WireCore\Foundation\View\Primitives;
 
 class ButtonColumn extends Column
 {
@@ -335,6 +336,8 @@ class ButtonColumn extends Column
             'wireClick' => $this->getWireClick($record),
             'loadingTarget' => $this->livewireAction ?? 'executeColumnAction',
             'removeTarget' => (string) $this->livewireAction,
+            // Record-invariant spinner resolved once per request (not @included per row).
+            'spinnerHtml' => app(Primitives::class)->spinner(),
         ]);
     }
 

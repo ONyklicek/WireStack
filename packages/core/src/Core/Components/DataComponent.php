@@ -100,6 +100,7 @@ abstract class DataComponent
 
     // ── Capabilities ─────────────────────────────────────────────────
 
+    /** Replace the component's capability set wholesale. */
     public function capabilities(CapabilitySet $capabilities): static
     {
         $this->capabilities = $capabilities;
@@ -107,6 +108,7 @@ abstract class DataComponent
         return $this;
     }
 
+    /** Add one or more capabilities to the component. */
     public function addCapability(Capability ...$capabilities): static
     {
         $this->capabilities = $this->capabilities->add(...$capabilities);
@@ -114,6 +116,7 @@ abstract class DataComponent
         return $this;
     }
 
+    /** Remove one or more capabilities from the component. */
     public function removeCapability(Capability ...$capabilities): static
     {
         $this->capabilities = $this->capabilities->remove(...$capabilities);
@@ -133,6 +136,7 @@ abstract class DataComponent
 
     // ── Metadata ─────────────────────────────────────────────────────
 
+    /** Attach resolved SQL column metadata for this component. */
     public function columnMetadata(ColumnMetadata $metadata): static
     {
         $this->columnMetadata = $metadata;

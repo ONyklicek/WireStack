@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Support;
 
-use NyonCode\WireTable\Columns\Column;
-
 /**
  * Canonical style owner for the inline column header-filter controls.
  *
@@ -19,26 +17,19 @@ use NyonCode\WireTable\Columns\Column;
 final class FilterControl
 {
     /**
-     * The shared control class string.
+     * The shared control class string, mirroring the wire-forms field look
+     * (TextInput / Select): same border, shadow, background, focus ring and hover,
+     * so a text/date/number filter reads like a (compact) form control.
      *
-     * @param  bool  $withChevron  For select-like controls (select / multi-select
-     *                             / boolean): hides the native arrow and reserves
-     *                             room for the shared `filter-chevron` overlay, so
-     *                             every dropdown shows the identical chevron.
+     * (Select-like filters no longer use this — they delegate to the shared
+     * searchable-select combobox, which draws its own trigger and chevron.)
      */
-    public static function classes(bool $withChevron = false): string
+    public static function classes(): string
     {
-        // Mirrors the wire-forms field look (TextInput / Select): same border,
-        // shadow, background, focus ring and hover, so a filter reads like a
-        // (compact) form control rather than a separate widget.
-        $base = 'block w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 shadow-sm '
+        return 'block w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 shadow-sm '
             .'bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-white '
             .'placeholder-gray-400 dark:placeholder-gray-500 '
             .'hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150 '
             .'focus:border-primary-500 focus:ring-primary-500';
-
-        // `bg-none` strips the @tailwindcss/forms native select chevron so only
-        // the shared `filter-chevron` overlay shows (no double arrow).
-        return $withChevron ? $base.' appearance-none bg-none pr-9 cursor-pointer' : $base;
     }
 }

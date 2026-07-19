@@ -28,6 +28,7 @@ class TextFilter extends Filter
 
     protected ?int $debounce = null;
 
+    /** Set the comparison operator (like, starts_with, ends_with, =, >, >=, <, <=, !=). */
     public function operator(string $operator): static
     {
         $this->operator = $operator;

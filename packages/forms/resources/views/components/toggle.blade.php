@@ -26,10 +26,10 @@
                 class="pointer-events-none inline-flex h-5 w-5 transform items-center justify-center rounded-full bg-white text-gray-700 shadow ring-0 transition duration-200 ease-in-out"
             >
                 @if($field->getOnIcon())
-                    <span x-show="enabled" x-cloak><x-wire::icon :name="$field->getOnIcon()" class="h-3 w-3" /></span>
+                    <span x-show="enabled" x-cloak>{!! icon($field->getOnIcon(), 'w-4 h-4', 'h-3 w-3') !!}</span>
                 @endif
                 @if($field->getOffIcon())
-                    <span x-show="!enabled" x-cloak><x-wire::icon :name="$field->getOffIcon()" class="h-3 w-3" /></span>
+                    <span x-show="!enabled" x-cloak>{!! icon($field->getOffIcon(), 'w-4 h-4', 'h-3 w-3') !!}</span>
                 @endif
             </span>
         </button>

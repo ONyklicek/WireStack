@@ -11,6 +11,7 @@ use NyonCode\WireCore\Foundation\Concerns\InteractsWithStateColor;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireCore\Foundation\View\Primitives;
 
 class PollColumn extends Column
 {
@@ -266,6 +267,8 @@ class PollColumn extends Column
     }
 
     /**
+     * Set the icon shown for each state value as a state => icon map.
+     *
      * @param  array<string, string|Icon>|Closure  $icons
      */
     public function stateIcons(array|Closure $icons): static
@@ -281,6 +284,8 @@ class PollColumn extends Column
     }
 
     /**
+     * Set the color shown for each state value as a state => color map.
+     *
      * @param  array<string, string|Color>|Closure  $colors
      */
     public function stateColors(array|Closure $colors): static
@@ -572,9 +577,7 @@ class PollColumn extends Column
             return (string) $customIndicator;
         }
 
-        return trim($this->renderView('tables.columns.partials.spinner', [
-            'class' => 'w-4 h-4 text-gray-400',
-        ]));
+        return app(Primitives::class)->spinner('w-4 h-4 text-gray-400');
     }
 
     private function isBadge(): bool

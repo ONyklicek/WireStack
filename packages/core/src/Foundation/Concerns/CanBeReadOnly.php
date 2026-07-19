@@ -13,6 +13,7 @@ trait CanBeReadOnly
 {
     protected bool|Closure $isReadOnly = false;
 
+    /** Render the field read-only — the value shows but cannot be edited (a bool or a `$get`-aware Closure). */
     public function readOnly(bool|Closure $condition = true): static
     {
         $this->isReadOnly = $condition;

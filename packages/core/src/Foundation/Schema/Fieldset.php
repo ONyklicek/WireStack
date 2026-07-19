@@ -18,6 +18,8 @@ class Fieldset extends LayoutComponent
     protected int|array $columns = 1;
 
     /**
+     * Set the column grid the fieldset lays its children out in (default 1).
+     *
      * @param  int|array<string|int, int|string>  $columns
      */
     public function columns(int|array $columns): static

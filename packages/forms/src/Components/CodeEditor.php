@@ -25,6 +25,7 @@ class CodeEditor extends Field
         return $this;
     }
 
+    /** Set the minimum editor height in pixels. */
     public function minHeight(int $pixels): static
     {
         $this->minHeight = $pixels;
@@ -32,6 +33,7 @@ class CodeEditor extends Field
         return $this;
     }
 
+    /** Show a line-number gutter. */
     public function withLineNumbers(bool $condition = true): static
     {
         $this->withLineNumbers = $condition;
@@ -39,6 +41,7 @@ class CodeEditor extends Field
         return $this;
     }
 
+    /** Allow at most this many characters. */
     public function maxLength(?int $length): static
     {
         $this->maxLength = $length;

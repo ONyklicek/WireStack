@@ -108,6 +108,19 @@ it('returns the effective wire configuration', function () {
         ->assertSee('per_page');
 });
 
+it('refuses to read application config keys outside the wireStack namespaces', function () {
+    // Regression H6: the free-form key must not leak arbitrary application config
+    // (app secrets, DB credentials) into the model context.
+    config(['app.key' => 'base64:super-secret-app-key']);
+
+    WireBoostServer::tool(WireConfig::class, ['key' => 'app.key'])
+        ->assertHasErrors()
+        ->assertDontSee('super-secret-app-key');
+
+    WireBoostServer::tool(WireConfig::class, ['key' => 'database.connections.mysql.password'])
+        ->assertHasErrors();
+});
+
 it('searches the wire documentation corpus', function () {
     WireBoostServer::tool(SearchDocs::class, ['query' => 'badge column color'])
         ->assertOk()

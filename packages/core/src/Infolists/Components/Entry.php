@@ -69,6 +69,7 @@ abstract class Entry extends ViewComponent implements HasFieldActions
         return $this;
     }
 
+    /** Compute the displayed value from a Closure (receives the record) instead of reading the bound state key. */
     public function state(Closure $callback): static
     {
         return $this->getStateUsing($callback);
@@ -84,6 +85,7 @@ abstract class Entry extends ViewComponent implements HasFieldActions
         return $this;
     }
 
+    /** Set the entry's color (a palette name, a `Color` enum, or a Closure). */
     public function color(string|Color|Closure|null $color): static
     {
         $this->color = $color;

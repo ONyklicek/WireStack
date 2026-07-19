@@ -13,6 +13,7 @@ trait HasHelperText
 {
     protected string|Closure|null $helperText = null;
 
+    /** Set helper text shown beneath the component. */
     public function helperText(string|Closure|null $text): static
     {
         $this->helperText = $text;

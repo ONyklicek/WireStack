@@ -21,6 +21,7 @@ class Slider extends Field
 
     protected ?string $color = null;
 
+    /** Set the minimum selectable value. */
     public function min(int|float $min): static
     {
         $this->min = $min;
@@ -28,6 +29,7 @@ class Slider extends Field
         return $this;
     }
 
+    /** Set the maximum selectable value. */
     public function max(int|float|Closure $max): static
     {
         $this->max = $max;
@@ -35,6 +37,7 @@ class Slider extends Field
         return $this;
     }
 
+    /** Set the increment between selectable values (default 1). */
     public function step(int|float $step): static
     {
         $this->step = $step;

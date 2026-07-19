@@ -11,6 +11,7 @@ trait HasDebounce
 {
     protected ?int $debounce = null;
 
+    /** Debounce the reactive `wire:model` by N milliseconds (pairs with `live()`). */
     public function debounce(?int $milliseconds): static
     {
         $this->debounce = $milliseconds;

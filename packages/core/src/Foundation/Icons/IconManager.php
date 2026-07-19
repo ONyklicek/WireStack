@@ -191,14 +191,21 @@ final class IconManager
      * Render a complete SVG element for the given icon.
      *
      * @param  string  $label  Accessible label. Empty ⇒ decorative (`aria-hidden`).
+     * @param  array<string, string>  $attributes  Extra root attributes forwarded onto the
+     *                                             `<svg>` (Alpine bindings like `x-show`/`::class`,
+     *                                             `data-*`). Lets a dynamic icon still come from
+     *                                             PHP instead of the `<x-wire::icon>` component.
      */
-    public function render(string $name, string $size = 'w-4 h-4', string $class = '', string $label = ''): string
+    public function render(string $name, string $size = 'w-4 h-4', string $class = '', string $label = '', array $attributes = []): string
     {
         $cacheKey = $name."\0".$size."\0".$class."\0".$label;
+        if ($attributes !== []) {
+            $cacheKey .= "\0".serialize($attributes);
+        }
 
         if (! isset($this->renderCache[$cacheKey])) {
             $classes = trim($size.' '.$class);
-            $this->renderCache[$cacheKey] = $this->resolveOrFallback($name)->toSvg($classes, $label);
+            $this->renderCache[$cacheKey] = $this->resolveOrFallback($name)->toSvg($classes, $label, $attributes);
         }
 
         return $this->renderCache[$cacheKey];

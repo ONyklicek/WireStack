@@ -98,8 +98,12 @@ final class ResolvedIcon
      * @param  string  $label  Accessible label. When empty the icon is treated as
      *                         decorative (`aria-hidden`); otherwise it is exposed
      *                         to assistive tech as an image with this label.
+     * @param  array<string, string>  $attributes  Extra root attributes appended to the
+     *                                             opening tag (Alpine bindings, `data-*`).
+     *                                             Lets an Alpine-bound icon be produced in
+     *                                             PHP without the `<x-wire::icon>` component.
      */
-    public function toSvg(string $classes = '', string $label = ''): string
+    public function toSvg(string $classes = '', string $label = '', array $attributes = []): string
     {
         $classes = trim($classes);
         $classAttribute = $classes !== ''
@@ -111,12 +115,17 @@ final class ResolvedIcon
             $styleAttributes .= ' '.$name.'="'.htmlspecialchars($value, ENT_QUOTES).'"';
         }
 
+        $extraAttributes = '';
+        foreach ($attributes as $name => $value) {
+            $extraAttributes .= ' '.$name.'="'.htmlspecialchars($value, ENT_QUOTES).'"';
+        }
+
         $viewBox = htmlspecialchars($this->viewBox, ENT_QUOTES);
 
         $accessibility = $label !== ''
             ? ' role="img" aria-label="'.htmlspecialchars($label, ENT_QUOTES).'"'
             : ' aria-hidden="true"';
 
-        return "<svg{$classAttribute}{$styleAttributes} viewBox=\"{$viewBox}\"{$accessibility}>{$this->body}</svg>";
+        return "<svg{$classAttribute}{$styleAttributes} viewBox=\"{$viewBox}\"{$accessibility}{$extraAttributes}>{$this->body}</svg>";
     }
 }

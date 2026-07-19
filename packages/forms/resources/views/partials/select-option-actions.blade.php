@@ -18,7 +18,7 @@
             @click="open = false"
             class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
         >
-            <x-wire::icon name="pencil" class="w-4 h-4 shrink-0" />
+            {!! icon('pencil', 'w-4 h-4', 'w-4 h-4 shrink-0') !!}
             <span>{{ $editLabel }}</span>
         </button>
     @endif
@@ -30,7 +30,7 @@
             @click="open = false"
             class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
         >
-            <x-wire::icon name="plus" class="w-4 h-4 shrink-0" />
+            {!! icon('plus', 'w-4 h-4', 'w-4 h-4 shrink-0') !!}
             <span>{{ $createLabel }}</span>
         </button>
     @endif

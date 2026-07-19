@@ -51,6 +51,7 @@ abstract class EditableEntry extends Entry
         return $this->editableType;
     }
 
+    /** Disable inline editing; a Closure receives ($state, $record) per row. */
     public function disabled(bool|Closure $disabled = true): static
     {
         $this->disabled = $disabled;
@@ -102,6 +103,7 @@ abstract class EditableEntry extends Entry
         return $this->rules;
     }
 
+    /** Require this ability before the inline edit is allowed to write. */
     public function permission(?string $permission): static
     {
         $this->permission = $permission;

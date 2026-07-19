@@ -7,7 +7,7 @@
         @foreach($items as $item)
             <div class="flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
                 @if($item->getIcon())
-                    <x-wire::icon :name="$item->getIcon()" class="h-5 w-5 {{ $widget->textClassesFor($item) }}" />
+                    {!! icon($item->getIcon(), 'w-4 h-4', 'h-5 w-5 '.$widget->textClassesFor($item)) !!}
                 @endif
                 @unless($verticalLabels)
                     <span class="truncate text-xs font-medium text-slate-600 dark:text-slate-300">{{ $item->getLabel() }}</span>

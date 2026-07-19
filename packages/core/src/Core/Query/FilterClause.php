@@ -18,6 +18,9 @@ final readonly class FilterClause
      * @param  bool  $isRelation  Whether this filter goes through a relation
      * @param  string|null  $relationPath  Dot-notation relation path
      * @param  string  $boolean  Boolean connector (and/or)
+     * @param  bool  $isAggregate  Whether this filter compares a relation aggregate
+     * @param  string|null  $aggregateRelation  Relation name for an aggregate filter
+     * @param  string|null  $aggregateFunction  Aggregate function (count, exists, …)
      */
     public function __construct(
         public string $column,
@@ -28,6 +31,9 @@ final readonly class FilterClause
         public bool $isRelation = false,
         public ?string $relationPath = null,
         public string $boolean = 'and',
+        public bool $isAggregate = false,
+        public ?string $aggregateRelation = null,
+        public ?string $aggregateFunction = null,
     ) {}
 
     /**

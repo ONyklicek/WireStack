@@ -26,6 +26,8 @@ class MorphToSelect extends Field
     protected ?string $idColumnSuffix = '_id';
 
     /**
+     * Set the polymorphic target types the field can point to.
+     *
      * @param  array<int, MorphToSelect\Type>  $types
      */
     public function types(array $types): static
@@ -35,6 +37,7 @@ class MorphToSelect extends Field
         return $this;
     }
 
+    /** Set the suffix of the morph type column (default "_type"). */
     public function typeColumnSuffix(string $suffix): static
     {
         $this->typeColumnSuffix = $suffix;
@@ -42,6 +45,7 @@ class MorphToSelect extends Field
         return $this;
     }
 
+    /** Set the suffix of the morph id column (default "_id"). */
     public function idColumnSuffix(string $suffix): static
     {
         $this->idColumnSuffix = $suffix;

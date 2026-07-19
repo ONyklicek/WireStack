@@ -127,7 +127,7 @@ it('renders a wrapping selection bar so bulk-action buttons stack on mobile (reg
 });
 
 it('left-aligns dropdown action-group items (regression: button UA style centered the label)', function () {
-    $html = view('wire-table::tables.actions.dropdown-item', [
+    $html = view('wire-core::actions.dropdown-item', [
         'action' => Action::make('edit')->label('Edit'),
         'record' => AmvUser::create(['name' => 'A']),
     ])->render();

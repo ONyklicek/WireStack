@@ -132,6 +132,13 @@ Builder methods return `static`.
 $field->label('Name')->required()->disabled();
 ```
 
+Every public fluent setter carries a one-line `/** … */` docblock summary.
+`describe-component-api` (wire-boost) surfaces that summary to agents as the
+method's fluent-API description via reflection, so a bare signature leaves the
+agent guessing the method's purpose and vocabulary. A guard test
+(`tests/Feature/FluentApiDocumentationTest`) fails if any chainable method
+across the `TypeCatalog` is missing a summary.
+
 ## Naming
 
 | Kind | Examples |
@@ -232,6 +239,162 @@ consideration. Internal implementation may change. Contracts stay stable.
 
 Avoid premature optimization. Optimize only when profiling shows a real
 bottleneck. Prefer maintainability over micro-optimizations.
+
+## Rendering
+
+The rendering contract. All renderable components MUST follow these unless a doc
+explicitly documents an exception.
+
+1. **PHP is the source of truth.** Components hold all state, configuration and
+   rendering logic. Blade views MUST NOT contain business logic, branch on domain
+   state, query services, or mutate state.
+2. **Every component owns exactly one view and renders itself.** Each renderable
+   component defines one view/markup and drives its own render; there is no central
+   view registry.
+3. **Components implement `Htmlable`.** `{{ $component }}` must render without helpers.
+4. **Blade is presentation only.** A view outputs HTML/attributes and renders children;
+   it does not query, branch on business rules, or mutate.
+5. **The core renderer MUST NOT depend on `<x-*>` components.** `<x-wire::*>` is the
+   *consumer-facing* API; users may use it in their published views. Core partials emit
+   PHP-resolved strings (see Icons). The framework must render with `<x-*>` disabled.
+6. **Components are isolated.** A component knows only itself, its children, and its
+   configuration — never the Livewire component, parent, routing, or HTTP request
+   (host-specific behaviour is injected via a contract, e.g. `ResolvesActionClick`).
+
+**The render-cost model is binding — it is *how* rule 2 is satisfied, not a tradeoff
+against it.** Every `view()->render()`, every `<x-*>` Blade component, and every
+`@include` is one *view render*; inside a per-row / per-cell / per-item loop that is
+**N×View** — the framework's dominant cost. "A component renders itself" MUST be
+implemented as **resolve the view once into a reusable skeleton and splice only
+per-record state per row** — NOT as `view()->render()` per cell. Per-cell
+`view()->render()` is a correct-but-slow implementation of rule 2 and is the anti-
+pattern to eliminate (per-column Htmlable skeletons; see the plans below). Rule 2 and
+speed are the *same* requirement: self-render, done once. Record-invariant markup MUST
+be resolved once, never re-rendered per row.
+
+**Reference implementation:** `Column::renderCellFast()` — resolve `tables.columns.text`
+once into a skeleton with a content token, splice `e($state)` per row (measured
+byte-identical to `renderCell()` and ~5× cheaper; one view render per column, not V×R).
+It falls back to the full `renderCell()` when the skeleton cannot apply — a per-record
+url/copy/description-closure (`isCellSkeletonable()`), or a subclass that overrides
+`renderCell` with its own view (`supportsCellSkeleton()`). Any new fast path MUST carry
+the same two guards: a **byte-identity test** vs the classic render across escaping /
+edge-whitespace / unicode / html / empty content, and the **render-count fuse** proving
+zero per-row view renders.
+
+Pick the mechanism by *what varies per row*: **content columns** (structure fixed, only
+the value changes) use the **skeleton splice** above; **state-driven columns**
+(Badge/Icon/Boolean/Toggle/Select — markup is a function of a low-cardinality state) use
+`renderViewCached()` — the **view render memoised by its data payload**, so rows sharing
+a state reuse one render (O(distinct states), not O(rows)). Keying on the actual `$data`
+keeps it byte-identical with no "pure function" assumption; its values MUST be
+serialisable. **Interactive and state-branching cells are the boundary**
+where the skeleton does not apply and per-cell render is kept: inline-edit
+(`TextInputColumn` — per-record input value, `wire:key`, per-record Alpine commit
+config) and Responsive / Split / Poll. Evaluate §7 per column-family, never blanket.
+
+- Resolve record-invariant markup (spinner, check, chrome) once in its **canonical
+  PHP owner** — `Foundation\View\Primitives`, `Foundation\Icons\IconManager` — and
+  echo the cached string. NEVER wrap a canonical owner in a second cache: the owner
+  *is* the resolve-once. (`IconManager::render()` already memoises every SVG.)
+- Per-row work that is column/record-static (classes, resolved icons, view-name
+  resolution) MUST be memoised per instance or hoisted into the render-once preamble
+  (the `$columnMeta` pattern), never recomputed per cell.
+- **Prefer cheap eager HTML over lazy deferral.** The default answer to an expensive
+  surface is to make its render *cheap* (build-once skeleton, splice per row) and emit
+  the full HTML eagerly — not to defer it to the client. Eager-cheap keeps the full
+  DOM (accessibility, SEO, no-JS), adds no open latency, and needs no client-side
+  re-render. Lazy/deferred rendering (e.g. `ActionGroup::lazyMenu()`) is an **opt-in**
+  lever for the narrow *payload/DOM-size-bound* case only — many large menus over many
+  rows, rarely opened — and it trades render cost for open latency, a JS dependency,
+  and DOM that is absent until opened. Never reach for lazy to paper over a render that
+  should simply be made cheap.
+
+### Icons
+
+Icons follow one pipeline — PHP produces the markup, Blade only consumes it:
+
+```
+icon()  →  IconManager::render()  →  SVG cache  →  <svg> string  →  Blade {!! … !!}
+```
+
+```blade
+<td>
+    {!! icon('outline:chevron-right', 'w-3 h-3') !!}
+</td>
+```
+
+- **Every framework/core render path emits icons through the `icon()` helper**
+  (`icon($name, $size = 'w-4 h-4', $class = '', $label = '', array $attributes = [])`) —
+  a plain PHP function that returns the memoised `IconManager::render()` string. It is
+  the Rule-1 "PHP source of truth": presentation is resolved in PHP, the template only
+  echoes a string.
+- Core render paths MUST NOT use, in order of wrongness:
+  - a hand-written inline `<svg>` — breaks theming and the icon-set abstraction;
+  - `<x-wire::icon>` — a Blade component = one view render per call;
+  - a Blade **directive** (there is deliberately no `@icon` directive) — a directive is a
+    template-compiler construct that puts size/class presentation in the view, against
+    Rule 1. Call the `icon()` function instead.
+- **Alpine/`data-*`-bound icons still come from PHP.** A binding that must live on the
+  `<svg>` root (`x-show`, `::class`, `wire:*`) is passed as the `$attributes` argument —
+  `{!! icon('clipboard', 'w-4 h-4', 'text-gray-400', '', ['x-show' => '!copied']) !!}` —
+  which `IconManager`/`ResolvedIcon` forward onto the root. No inline `<svg>`, no component.
+- `<x-wire::icon>` remains the **external, consumer-facing API** only (published views,
+  app code). It is registered for consumers; the framework itself never renders through it.
+
+**State-driven components memoise the whole view.** A display component whose markup is a
+pure function of a low-cardinality, serialisable state (icon/boolean/badge entries, the
+table's Badge/Icon/Boolean columns) renders its view **once per distinct state**, not once
+per row, via the canonical `Foundation\Concerns\HasViewRenderCache` (core) /
+`HasView::renderViewCached` (table). The component declares a `renderCacheSignature()` that
+captures all render-affecting state and returns `null` whenever the markup carries
+per-record identity (record key, statePath, action wiring) or is content-driven (unique per
+row — plain text) — those must not be shared.
+
+**Guard it.** Per-row render cost is fuse-tested with a wildcard view composer
+(`View::composer('*')` counts every view render, incl. `@include`/`<x-*>`). A change
+that adds a per-row `@include`, component, or `view()->render()` MUST NOT regress the
+fuse. See `architecture/plans/render-engine-htmlable-first.md` and
+`render-optimization-audit-2026-07-17.md`.
+
+### Modals
+
+A modal is a **Htmlable value object**, not a `<x-*>` dependency. This reconciles the
+two Rule-5s: the modal *implements `Htmlable` and owns exactly one Blade view* (Modal
+Best Practices Rule 5), and the framework renders it by echoing the object — no `<x-*>`
+in a core render path (Rendering Rule 5).
+
+- The framework renders modals with **`{{ new Modals\Html\Modal(...) }}`** /
+  `Confirmation` / `SlideOver`. Each object owns one shell view (`modals.modal`,
+  `modals.confirmation`, `modals.slide-over`), consumes a `Modals\Support\*Style` value
+  object for its layout classes, and carries `wireModel` (→ `@entangle`), `wireClick`,
+  and body/footer as either a pre-rendered `string`/`Htmlable` or a partial to
+  `@include` (`bodyView`/`bodyData`, `footerView`/`footerData`).
+- Three parallel families under `Modals\`: **`Html\*`** = the Htmlable *render* objects
+  (this section); **`Modals\Modal` etc.** = modal *config* (`ModalContract`, fluent,
+  `toArray()`); **`Modals\View\*Component`** = the Blade components. Do not conflate them.
+- **`<x-wire-modals::modal>` / `<x-wire::modal>` stay the consumer-facing API** — users
+  may use them in their own views (Rendering Rule 5). Their view is the *same shell*, so
+  there is one source of truth for markup; the shell reads `wire:model`/slots off the
+  attribute bag on the component path and takes explicit `wireModel`/`body`/`footer` on
+  the object path (`?? $attributes`, short-circuit). The framework itself never uses the
+  component.
+- **Presentation logic lives in the `*Style` value object**, never the component/object
+  (per *Business Logic*). Extract before adding a new modal surface.
+- **Modal Rule 4 (footer actions via the Action API).** *Additional* footer actions use
+  `->modalFooterActions([ModalFooterAction::make(...)])` and render through the Action API
+  (`modal-host-footer-action`) on **every** modal surface — the general modal, slide-over,
+  **and the confirmation**. A modal's *intrinsic* primary submit + secondary cancel are
+  data-driven buttons in the shell (label/color/`wireClick`), the same on all surfaces and
+  the same as the Filament confirm/cancel pattern — not arbitrary hardcoded `<button>`s.
+  Extend a footer with `ModalFooterAction`, never an ad-hoc `<button>`. (Turning the
+  intrinsic primary buttons themselves into first-class `Action` objects is a separate,
+  larger initiative — out of scope for the modal render sweep.)
+
+Verify modal changes with the CDP drivers (`verify-nested-modal`, `verify-modal-layering`,
+`verify-modal-mobile`, `verify-wizard-live`, `verify-confirmation-object`) — the modal
+stack is the most Alpine/Livewire-fragile subsystem; green PHP tests are not enough. See
+`architecture/plans/rule5-framework-wide-modal-sweep.md`.
 
 ## Documentation
 

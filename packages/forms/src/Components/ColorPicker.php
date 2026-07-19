@@ -16,6 +16,7 @@ class ColorPicker extends Field
     /** @var array<int, string>|Closure */
     protected array|Closure $swatches = [];
 
+    /** Store the chosen color in hex format. */
     public function hex(): static
     {
         $this->format = 'hex';
@@ -23,6 +24,7 @@ class ColorPicker extends Field
         return $this;
     }
 
+    /** Store the chosen color in HSL format. */
     public function hsl(): static
     {
         $this->format = 'hsl';
@@ -30,6 +32,7 @@ class ColorPicker extends Field
         return $this;
     }
 
+    /** Store the chosen color in RGB format. */
     public function rgb(): static
     {
         $this->format = 'rgb';
@@ -37,6 +40,7 @@ class ColorPicker extends Field
         return $this;
     }
 
+    /** Store the chosen color in RGBA format. */
     public function rgba(): static
     {
         $this->format = 'rgba';
@@ -44,6 +48,7 @@ class ColorPicker extends Field
         return $this;
     }
 
+    /** Set the stored color format ("hex", "hsl", "rgb" or "rgba"). */
     public function format(string $format): static
     {
         $this->format = $format;
@@ -52,6 +57,8 @@ class ColorPicker extends Field
     }
 
     /**
+     * Set preset color swatches shown as clickable shortcuts.
+     *
      * @param  array<int, string>|Closure  $colors  Hex colour strings shown as clickable swatches.
      */
     public function swatches(array|Closure $colors): static

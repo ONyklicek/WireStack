@@ -28,7 +28,11 @@
 @include('wire-forms::partials.field-wrapper-start')
 
 @unless($field->isNative())
-    @include('wire-core::partials.floating-assets')
+    {{-- Scaffolding is identical for every date picker; emit it once per request
+         (matters when several date fields, or a repeater of them, render). --}}
+    @once
+        @include('wire-core::partials.floating-assets')
+    @endonce
 @endunless
 
 @if($field->isNative())
@@ -384,12 +388,12 @@
                 <div class="flex items-center justify-between mb-3">
                     <button type="button" @click="prevMonth()" data-testid="form-datetime-{{ $field->getStatePath() }}-prev-month" aria-label="Previous month"
                             class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors duration-150">
-                        <x-wire::icon name="chevron-left" class="h-4 w-4"/>
+                        {!! icon('chevron-left', 'w-4 h-4', 'h-4 w-4') !!}
                     </button>
                     <span class="text-sm font-semibold text-gray-900 dark:text-white" x-text="monthYearLabel"></span>
                     <button type="button" @click="nextMonth()" data-testid="form-datetime-{{ $field->getStatePath() }}-next-month" aria-label="Next month"
                             class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors duration-150">
-                        <x-wire::icon name="chevron-right" class="h-4 w-4"/>
+                        {!! icon('chevron-right', 'w-4 h-4', 'h-4 w-4') !!}
                     </button>
                 </div>
 
@@ -431,13 +435,13 @@
                     <div class="flex flex-col items-center">
                         <button type="button" @click="adjustHours(1)" data-testid="form-datetime-{{ $field->getStatePath() }}-hours-up" aria-label="Hours up"
                                 class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
-                            <x-wire::icon name="chevron-up" class="h-4 w-4"/>
+                            {!! icon('chevron-up', 'w-4 h-4', 'h-4 w-4') !!}
                         </button>
                         <span class="w-8 text-center text-sm font-medium text-gray-900 dark:text-white tabular-nums"
                               x-text="String(hours).padStart(2, '0')"></span>
                         <button type="button" @click="adjustHours(-1)" data-testid="form-datetime-{{ $field->getStatePath() }}-hours-down" aria-label="Hours down"
                                 class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
-                            <x-wire::icon name="chevron-down" class="h-4 w-4"/>
+                            {!! icon('chevron-down', 'w-4 h-4', 'h-4 w-4') !!}
                         </button>
                     </div>
 
@@ -447,13 +451,13 @@
                     <div class="flex flex-col items-center">
                         <button type="button" @click="adjustMinutes(1)" data-testid="form-datetime-{{ $field->getStatePath() }}-minutes-up" aria-label="Minutes up"
                                 class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
-                            <x-wire::icon name="chevron-up" class="h-4 w-4"/>
+                            {!! icon('chevron-up', 'w-4 h-4', 'h-4 w-4') !!}
                         </button>
                         <span class="w-8 text-center text-sm font-medium text-gray-900 dark:text-white tabular-nums"
                               x-text="String(minutes).padStart(2, '0')"></span>
                         <button type="button" @click="adjustMinutes(-1)" data-testid="form-datetime-{{ $field->getStatePath() }}-minutes-down" aria-label="Minutes down"
                                 class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
-                            <x-wire::icon name="chevron-down" class="h-4 w-4"/>
+                            {!! icon('chevron-down', 'w-4 h-4', 'h-4 w-4') !!}
                         </button>
                     </div>
 
@@ -464,13 +468,13 @@
                         <div class="flex flex-col items-center">
                             <button type="button" @click="adjustSeconds(1)" data-testid="form-datetime-{{ $field->getStatePath() }}-seconds-up" aria-label="Seconds up"
                                     class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
-                                <x-wire::icon name="chevron-up" class="h-4 w-4"/>
+                                {!! icon('chevron-up', 'w-4 h-4', 'h-4 w-4') !!}
                             </button>
                             <span class="w-8 text-center text-sm font-medium text-gray-900 dark:text-white tabular-nums"
                                   x-text="String(seconds).padStart(2, '0')"></span>
                             <button type="button" @click="adjustSeconds(-1)" data-testid="form-datetime-{{ $field->getStatePath() }}-seconds-down" aria-label="Seconds down"
                                     class="p-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
-                                <x-wire::icon name="chevron-down" class="h-4 w-4"/>
+                                {!! icon('chevron-down', 'w-4 h-4', 'h-4 w-4') !!}
                             </button>
                         </div>
                     @endif

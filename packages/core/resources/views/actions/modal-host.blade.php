@@ -60,63 +60,68 @@
     @if(! empty($modalData) && isset($modalData['heading']))
         {{-- Confirmation --}}
         @if(($modalData['isConfirmation'] ?? false) && ! $isSlideOver && ! $actionFormInstance)
-            <x-wire-modals::confirmation
-                wire:model="{{ $activeShowModel }}"
-                wire:click="{{ $submitAction }}"
-                :heading="$modalData['heading']"
-                :description="$modalData['description'] ?? null"
-                :width="$modalData['width'] ?? 'md'"
-                icon="exclamation-triangle"
-                :icon-color="$modalData['iconColor'] ?? 'warning'"
-                :submit-label="$modalData['submitLabel']"
-                :cancel-label="$modalData['cancelLabel']"
-                :color="$modalData['actionColor'] ?? 'primary'"
-                :close-on-click-away="$modalData['closeOnClickAway'] ?? true"
-                :close-on-escape="$modalData['closeOnEscape'] ?? true"
-                :z-index="$activeZIndex"
-                close-action="{{ $closeAction }}"
-            />
+            {{-- Rule 5: the framework renders the modal as a Htmlable object, not
+                 the <x-wire-modals::confirmation> Blade component. --}}
+            {{ new \NyonCode\WireCore\Modals\Html\Confirmation(
+                heading: $modalData['heading'],
+                description: $modalData['description'] ?? null,
+                width: $modalData['width'] ?? 'md',
+                icon: $modalData['icon'] ?? 'exclamation-triangle',
+                iconColor: $modalData['iconColor'] ?? 'warning',
+                submitLabel: $modalData['submitLabel'],
+                cancelLabel: $modalData['cancelLabel'],
+                color: $modalData['actionColor'] ?? 'primary',
+                closeOnClickAway: $modalData['closeOnClickAway'] ?? true,
+                closeOnEscape: $modalData['closeOnEscape'] ?? true,
+                zIndex: $activeZIndex,
+                closeAction: $closeAction,
+                wireModel: $activeShowModel,
+                wireClick: $submitAction,
+                footerActions: $modalData['footerActions'] ?? [],
+            ) }}
         @else
-            {{-- Modal / Slide-over shell --}}
+            {{-- Modal / Slide-over shell (Rule 5: Htmlable objects, not <x-*>).
+                 The body/footer keep their existing partials — the current view
+                 scope is handed to them as bodyData/footerData so they render
+                 exactly as they did inside the component slot. --}}
+            @php $modalVars = get_defined_vars(); @endphp
             @if($isSlideOver)
-                <x-wire-modals::slide-over
-                    wire:model="{{ $activeShowModel }}"
-                    :heading="$modalData['heading']"
-                    :description="$modalData['description'] ?? null"
-                    :width="$modalData['width'] ?? 'md'"
-                    :close-on-click-away="$modalData['closeOnClickAway'] ?? true"
-                    :close-on-escape="$modalData['closeOnEscape'] ?? true"
-                    :z-index="$activeZIndex"
-                    :bottom-sheet-on-mobile="$isSlideOverOnMobile"
-                    :sticky-header="$modalData['stickyHeader'] ?? false"
-                    :sticky-footer="$modalData['stickyFooter'] ?? false"
-                    :max-height="$modalData['maxHeight'] ?? null"
-                    close-action="{{ $closeAction }}"
-                >
-                    @include('wire-core::actions.partials.modal-host-body')
-                    <x-slot:footer>
-                        @include('wire-core::actions.partials.modal-host-footer')
-                    </x-slot:footer>
-                </x-wire-modals::slide-over>
+                {{ new \NyonCode\WireCore\Modals\Html\SlideOver(
+                    heading: $modalData['heading'],
+                    description: $modalData['description'] ?? null,
+                    width: $modalData['width'] ?? 'md',
+                    closeOnClickAway: $modalData['closeOnClickAway'] ?? true,
+                    closeOnEscape: $modalData['closeOnEscape'] ?? true,
+                    zIndex: $activeZIndex,
+                    bottomSheetOnMobile: $isSlideOverOnMobile,
+                    stickyHeader: $modalData['stickyHeader'] ?? false,
+                    stickyFooter: $modalData['stickyFooter'] ?? false,
+                    maxHeight: $modalData['maxHeight'] ?? null,
+                    closeAction: $closeAction,
+                    wireModel: $activeShowModel,
+                    bodyView: 'wire-core::actions.partials.modal-host-body',
+                    bodyData: $modalVars,
+                    footerView: 'wire-core::actions.partials.modal-host-footer',
+                    footerData: $modalVars,
+                ) }}
             @else
-                <x-wire-modals::modal
-                    wire:model="{{ $activeShowModel }}"
-                    :heading="$modalData['heading']"
-                    :description="$modalData['description'] ?? null"
-                    :width="$modalData['width'] ?? 'md'"
-                    :close-on-click-away="$modalData['closeOnClickAway'] ?? true"
-                    :close-on-escape="$modalData['closeOnEscape'] ?? true"
-                    :z-index="$activeZIndex"
-                    :full-screen-on-mobile="$isFullScreenMobile"
-                    :slide-over-on-mobile="$isSlideOverOnMobile"
-                    :sticky-footer="true"
-                    close-action="{{ $closeAction }}"
-                >
-                    @include('wire-core::actions.partials.modal-host-body')
-                    <x-slot:footer>
-                        @include('wire-core::actions.partials.modal-host-footer')
-                    </x-slot:footer>
-                </x-wire-modals::modal>
+                {{ new \NyonCode\WireCore\Modals\Html\Modal(
+                    heading: $modalData['heading'],
+                    description: $modalData['description'] ?? null,
+                    width: $modalData['width'] ?? 'md',
+                    closeOnClickAway: $modalData['closeOnClickAway'] ?? true,
+                    closeOnEscape: $modalData['closeOnEscape'] ?? true,
+                    zIndex: $activeZIndex,
+                    fullScreenOnMobile: $isFullScreenMobile,
+                    slideOverOnMobile: $isSlideOverOnMobile,
+                    stickyFooter: true,
+                    closeAction: $closeAction,
+                    wireModel: $activeShowModel,
+                    bodyView: 'wire-core::actions.partials.modal-host-body',
+                    bodyData: $modalVars,
+                    footerView: 'wire-core::actions.partials.modal-host-footer',
+                    footerData: $modalVars,
+                ) }}
             @endif
         @endif
     @endif

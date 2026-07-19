@@ -24,6 +24,7 @@ trait HasIcon
 
     protected ?string $iconPosition = 'before';
 
+    /** Set the icon (an `Icon` enum, an icon-set name like `check`/`outline:eye`, or a Closure), with an optional position. */
     public function icon(string|Icon|Closure|null $icon, string|IconPosition|null $position = null): static
     {
         $this->icon = $icon instanceof Icon ? $icon->value() : $icon;

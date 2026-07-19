@@ -29,6 +29,7 @@ uses(FormsTestCase::class)->in(
 uses(TableTestCase::class)->in(
     __DIR__.'/../packages/table/tests/Unit',
     __DIR__.'/../packages/table/tests/Feature',
+    __DIR__.'/../packages/table/tests/Benchmarks',
 );
 
 // wire-boost requires Laravel 11+ (laravel/mcp). When the package is absent

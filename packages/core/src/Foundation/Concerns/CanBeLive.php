@@ -13,6 +13,7 @@ trait CanBeLive
 
     protected bool $isLiveOnBlur = false;
 
+    /** Make the field reactive — push each change to the server on input (opt-in; default fields defer until submit). */
     public function live(bool $condition = true): static
     {
         $this->isLive = $condition;
@@ -20,6 +21,7 @@ trait CanBeLive
         return $this;
     }
 
+    /** Make the field reactive only when focus leaves it (a lighter `live()`). */
     public function liveOnBlur(bool $condition = true): static
     {
         $this->isLiveOnBlur = $condition;
