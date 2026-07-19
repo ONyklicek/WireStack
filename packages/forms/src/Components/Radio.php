@@ -55,6 +55,8 @@ class Radio extends Field implements ProvidesImplicitValidationRules
     protected array|Closure $colors = [];
 
     /**
+     * Set per-option helper descriptions as a value => description map.
+     *
      * @param  array<string, string>|Closure  $descriptions
      */
     public function descriptions(array|Closure $descriptions): static
@@ -132,6 +134,7 @@ class Radio extends Field implements ProvidesImplicitValidationRules
         return $this->indicator(false);
     }
 
+    /** Lay the radio options out horizontally instead of stacked. */
     public function inline(bool $condition = true): static
     {
         $this->inline = $condition;

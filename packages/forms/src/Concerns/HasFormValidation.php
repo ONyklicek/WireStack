@@ -87,6 +87,8 @@ trait HasFormValidation
     }
 
     /**
+     * Set custom validation messages for this field's rules.
+     *
      * @param  array<string, string>  $messages
      */
     public function validationMessages(array $messages): static

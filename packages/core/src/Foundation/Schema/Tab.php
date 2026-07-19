@@ -21,6 +21,7 @@ class Tab extends LayoutComponent
     /** @var int|array<string|int, int|string> */
     protected int|array $columns = 1;
 
+    /** Set the tab icon shown next to the label. */
     public function icon(string|Icon|null $icon): static
     {
         $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
@@ -29,6 +30,8 @@ class Tab extends LayoutComponent
     }
 
     /**
+     * Set the column grid the tab lays its children out in (default 1).
+     *
      * @param  int|array<string|int, int|string>  $columns
      */
     public function columns(int|array $columns): static

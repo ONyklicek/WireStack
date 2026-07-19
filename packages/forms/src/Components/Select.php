@@ -283,6 +283,8 @@ class Select extends Field implements ProvidesImplicitValidationRules
     }
 
     /**
+     * Render specific options as non-selectable.
+     *
      * @param  array<string|int>|Closure  $values  Option keys that should be rendered as disabled.
      */
     public function disabledOptions(array|Closure $values): static

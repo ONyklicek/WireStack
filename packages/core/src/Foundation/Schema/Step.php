@@ -24,6 +24,7 @@ class Step extends LayoutComponent
     /** @var int|array<string|int, int|string> */
     protected int|array $columns = 1;
 
+    /** Set the step description shown under the label. */
     public function description(string|Closure|null $description): static
     {
         $this->description = $description;
@@ -31,6 +32,7 @@ class Step extends LayoutComponent
         return $this;
     }
 
+    /** Set the step icon shown in the wizard progress indicator. */
     public function icon(string|Icon|null $icon): static
     {
         $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
@@ -39,6 +41,8 @@ class Step extends LayoutComponent
     }
 
     /**
+     * Set the column grid the step lays its children out in (default 1).
+     *
      * @param  int|array<string|int, int|string>  $columns
      */
     public function columns(int|array $columns): static

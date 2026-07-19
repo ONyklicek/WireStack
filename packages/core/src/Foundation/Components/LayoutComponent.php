@@ -60,6 +60,8 @@ abstract class LayoutComponent implements HasStateAccessors, Htmlable
     }
 
     /**
+     * Set the child components this layout contains.
+     *
      * @param  array<int, Component|LayoutComponent>  $components
      */
     public function schema(array $components): static
@@ -77,6 +79,7 @@ abstract class LayoutComponent implements HasStateAccessors, Htmlable
         return $this->schema;
     }
 
+    /** Set the state-path prefix this layout propagates to its children. */
     public function statePath(?string $path): static
     {
         $this->statePath = $path;

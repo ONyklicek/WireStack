@@ -49,6 +49,8 @@ class SelectColumn extends Column
     }
 
     /**
+     * Set the dropdown options as a value => label map, a closure, or an enum class-string.
+     *
      * @param  array<string, string>|class-string|Closure  $options
      */
     public function options(array|string|Closure $options): static
@@ -67,6 +69,7 @@ class SelectColumn extends Column
         return $this->options;
     }
 
+    /** Disable inline editing; a Closure receives the record per row. */
     public function disabled(bool|Closure $disabled = true): static
     {
         if ($disabled instanceof Closure) {

@@ -373,6 +373,8 @@ trait HasModal
     }
 
     /**
+     * Set the validation rules applied to the modal form before submission.
+     *
      * @param  array<string, mixed>|Closure  $rules
      */
     public function formValidation(array|Closure $rules): static
@@ -387,6 +389,8 @@ trait HasModal
     }
 
     /**
+     * Set custom validation messages for the modal form rules.
+     *
      * @param  array<string, string>|Closure  $messages
      */
     public function validationMessages(array|Closure $messages): static
@@ -401,6 +405,8 @@ trait HasModal
     }
 
     /**
+     * Set human-readable attribute names used in modal validation messages.
+     *
      * @param  array<string, string>|Closure  $attributes
      */
     public function validationAttributes(array|Closure $attributes): static
@@ -915,6 +921,8 @@ trait HasModal
     }
 
     /**
+     * Set the actions rendered in the modal footer.
+     *
      * @param  array<int, mixed>  $actions
      */
     public function modalFooterActions(array $actions): static
@@ -948,6 +956,8 @@ trait HasModal
     }
 
     /**
+     * Set the actions rendered in the modal header.
+     *
      * @param  array<int, mixed>  $actions
      */
     public function modalHeaderActions(array $actions): static

@@ -132,6 +132,13 @@ Builder methods return `static`.
 $field->label('Name')->required()->disabled();
 ```
 
+Every public fluent setter carries a one-line `/** … */` docblock summary.
+`describe-component-api` (wire-boost) surfaces that summary to agents as the
+method's fluent-API description via reflection, so a bare signature leaves the
+agent guessing the method's purpose and vocabulary. A guard test
+(`tests/Feature/FluentApiDocumentationTest`) fails if any chainable method
+across the `TypeCatalog` is missing a summary.
+
 ## Naming
 
 | Kind | Examples |

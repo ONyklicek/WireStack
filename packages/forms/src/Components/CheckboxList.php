@@ -45,6 +45,7 @@ class CheckboxList extends Field
         return $this;
     }
 
+    /** Add a search box to filter the options. */
     public function searchable(bool $condition = true): static
     {
         $this->searchable = $condition;
@@ -52,6 +53,7 @@ class CheckboxList extends Field
         return $this;
     }
 
+    /** Set the placeholder text shown in the search box. */
     public function searchPrompt(?string $prompt): static
     {
         $this->searchPrompt = $prompt;
@@ -59,6 +61,7 @@ class CheckboxList extends Field
         return $this;
     }
 
+    /** Add "select all / deselect all" toggles above the list. */
     public function bulkToggleable(bool $condition = true): static
     {
         $this->bulkToggleable = $condition;
@@ -66,6 +69,7 @@ class CheckboxList extends Field
         return $this;
     }
 
+    /** Set the label for the "select all" toggle. */
     public function selectAllLabel(?string $label): static
     {
         $this->selectAllLabel = $label;
@@ -73,6 +77,7 @@ class CheckboxList extends Field
         return $this;
     }
 
+    /** Set the label for the "deselect all" toggle. */
     public function deselectAllLabel(?string $label): static
     {
         $this->deselectAllLabel = $label;
@@ -80,6 +85,7 @@ class CheckboxList extends Field
         return $this;
     }
 
+    /** Render the options grouped under headings. */
     public function grouped(bool $condition = true): static
     {
         $this->grouped = $condition;
@@ -88,6 +94,8 @@ class CheckboxList extends Field
     }
 
     /**
+     * Set the grouped options as a heading => [value => label] map (implies {@see grouped()}).
+     *
      * @param  array<string, array<string, string>>|Closure  $groups
      */
     public function groups(array|Closure $groups): static

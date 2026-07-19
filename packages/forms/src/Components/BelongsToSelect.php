@@ -36,6 +36,7 @@ class BelongsToSelect extends Select
     /** @var Model|null Resolved parent model instance (set by form runtime) */
     protected ?Model $record = null;
 
+    /** Eager-load all related options up front instead of searching on demand. */
     public function preload(bool $condition = true): static
     {
         $this->preload = $condition;
@@ -43,6 +44,7 @@ class BelongsToSelect extends Select
         return $this;
     }
 
+    /** Modify the options query with a callback (e.g. to scope or order it). */
     public function modifyOptionsQueryUsing(?Closure $callback): static
     {
         $this->modifyOptionsQueryUsing = $callback;
@@ -50,6 +52,7 @@ class BelongsToSelect extends Select
         return $this;
     }
 
+    /** Handle creation of a new related record from a typed-in option. */
     public function createOptionUsing(?Closure $callback): static
     {
         $this->createOptionUsing = $callback;

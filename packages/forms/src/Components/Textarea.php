@@ -21,6 +21,7 @@ class Textarea extends Field
 
     protected ?bool $spellcheck = null;
 
+    /** Set the visible number of text rows. */
     public function rows(int $rows): static
     {
         $this->rows = $rows;
@@ -28,6 +29,7 @@ class Textarea extends Field
         return $this;
     }
 
+    /** Set the visible width of the textarea in character columns. */
     public function cols(?int $cols): static
     {
         $this->cols = $cols;
@@ -35,6 +37,7 @@ class Textarea extends Field
         return $this;
     }
 
+    /** Require at least this many characters. */
     public function minLength(?int $length): static
     {
         $this->minLength = $length;
@@ -42,6 +45,7 @@ class Textarea extends Field
         return $this;
     }
 
+    /** Allow at most this many characters. */
     public function maxLength(?int $length): static
     {
         $this->maxLength = $length;
@@ -49,6 +53,7 @@ class Textarea extends Field
         return $this;
     }
 
+    /** Grow the textarea height automatically to fit its content. */
     public function autosize(bool $condition = true): static
     {
         $this->autosize = $condition;
@@ -56,6 +61,7 @@ class Textarea extends Field
         return $this;
     }
 
+    /** Toggle native browser spellchecking (null leaves it unset). */
     public function spellcheck(?bool $condition = true): static
     {
         $this->spellcheck = $condition;

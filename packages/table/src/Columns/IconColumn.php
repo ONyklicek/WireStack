@@ -31,6 +31,7 @@ class IconColumn extends Column
 
     protected string $falseColor = 'danger';
 
+    /** Set the icon size (e.g. "sm", "md", "lg"). */
     public function iconSize(string $size): static
     {
         $this->iconSize = $size;
@@ -38,6 +39,7 @@ class IconColumn extends Column
         return $this;
     }
 
+    /** Derive the icon from the value's truthiness (check vs. x). */
     public function boolean(string|Icon $trueIcon = 'check-circle', string|Icon $falseIcon = 'x-circle'): static
     {
         $this->boolean = true;
@@ -47,6 +49,7 @@ class IconColumn extends Column
         return $this;
     }
 
+    /** Set the true/false colors used in boolean() mode. */
     public function booleanColors(string|Color $trueColor = 'success', string|Color $falseColor = 'danger'): static
     {
         $this->trueColor = $trueColor instanceof Color ? $trueColor->value : $trueColor;
@@ -55,6 +58,7 @@ class IconColumn extends Column
         return $this;
     }
 
+    /** Set the icon shown for a truthy value in boolean() mode. */
     public function trueIcon(string|Icon|null $icon): static
     {
         $this->trueIcon = $icon instanceof Icon ? $icon->value() : ($icon ?? 'check-circle');
@@ -62,6 +66,7 @@ class IconColumn extends Column
         return $this;
     }
 
+    /** Set the icon shown for a falsy value in boolean() mode. */
     public function falseIcon(string|Icon $icon): static
     {
         $this->falseIcon = $icon instanceof Icon ? $icon->value() : $icon;
@@ -69,6 +74,7 @@ class IconColumn extends Column
         return $this;
     }
 
+    /** Set the color used for a truthy value in boolean() mode. */
     public function trueColor(string|Color $color): static
     {
         $this->trueColor = $color instanceof Color ? $color->value : $color;
@@ -76,6 +82,7 @@ class IconColumn extends Column
         return $this;
     }
 
+    /** Set the color used for a falsy value in boolean() mode. */
     public function falseColor(string|Color $color): static
     {
         $this->falseColor = $color instanceof Color ? $color->value : $color;

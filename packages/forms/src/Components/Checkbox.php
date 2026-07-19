@@ -15,6 +15,7 @@ class Checkbox extends Field
 
     protected bool $inline = false;
 
+    /** Set the descriptive text shown beside the checkbox. */
     public function description(string|Closure|null $description): static
     {
         $this->description = $description;
@@ -22,6 +23,7 @@ class Checkbox extends Field
         return $this;
     }
 
+    /** Render the label inline with the checkbox instead of above it. */
     public function inline(bool $condition = true): static
     {
         $this->inline = $condition;

@@ -30,6 +30,7 @@ class KeyValue extends Field
 
     protected bool $keyEditable = true;
 
+    /** Set the header label for the key column. */
     public function keyLabel(string|Closure|null $label): static
     {
         $this->keyLabel = $label;
@@ -37,6 +38,7 @@ class KeyValue extends Field
         return $this;
     }
 
+    /** Set the header label for the value column. */
     public function valueLabel(string|Closure|null $label): static
     {
         $this->valueLabel = $label;
@@ -44,6 +46,7 @@ class KeyValue extends Field
         return $this;
     }
 
+    /** Set the placeholder text for key inputs. */
     public function keyPlaceholder(?string $placeholder): static
     {
         $this->keyPlaceholder = $placeholder;
@@ -51,6 +54,7 @@ class KeyValue extends Field
         return $this;
     }
 
+    /** Set the placeholder text for value inputs. */
     public function valuePlaceholder(?string $placeholder): static
     {
         $this->valuePlaceholder = $placeholder;
@@ -58,6 +62,7 @@ class KeyValue extends Field
         return $this;
     }
 
+    /** Allow the user to add new rows (default true). */
     public function addable(bool $condition = true): static
     {
         $this->addable = $condition;
@@ -65,6 +70,7 @@ class KeyValue extends Field
         return $this;
     }
 
+    /** Allow the user to delete rows (default true). */
     public function deletable(bool $condition = true): static
     {
         $this->deletable = $condition;
@@ -72,6 +78,7 @@ class KeyValue extends Field
         return $this;
     }
 
+    /** Allow the user to drag rows into a new order. */
     public function reorderable(bool $condition = true): static
     {
         $this->reorderable = $condition;

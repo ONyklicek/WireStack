@@ -24,6 +24,7 @@ class NumberRangeFilter extends Filter
 
     protected ?string $inputType = 'number';
 
+    /** Set the lowest selectable value (input floor). */
     public function min(?float $value): static
     {
         $this->minValue = $value;
@@ -36,6 +37,7 @@ class NumberRangeFilter extends Filter
         return $this->minValue;
     }
 
+    /** Set the highest selectable value (input ceiling). */
     public function max(?float $value): static
     {
         $this->maxValue = $value;
@@ -48,6 +50,7 @@ class NumberRangeFilter extends Filter
         return $this->maxValue;
     }
 
+    /** Set the increment between selectable values. */
     public function step(?float $step): static
     {
         $this->step = $step;
@@ -60,6 +63,7 @@ class NumberRangeFilter extends Filter
         return $this->step;
     }
 
+    /** Set the label for the range's minimum input. */
     public function minLabel(?string $label): static
     {
         $this->minLabel = $label;
@@ -72,6 +76,7 @@ class NumberRangeFilter extends Filter
         return $this->minLabel ?? Trans::get('wire-table::messages.from');
     }
 
+    /** Set the label for the range's maximum input. */
     public function maxLabel(?string $label): static
     {
         $this->maxLabel = $label;

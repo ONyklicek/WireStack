@@ -20,6 +20,8 @@ class SelectEntry extends EditableEntry
     protected array|string $options = [];
 
     /**
+     * Set the dropdown options.
+     *
      * @param  array<int|string, mixed>|string  $options  value => label map, or a backed-enum class name
      */
     public function options(array|string $options): static

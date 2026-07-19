@@ -38,6 +38,7 @@ class Section extends LayoutComponent implements HasFieldActions
 
     protected bool $aside = false;
 
+    /** Set the section description shown under the heading. */
     public function description(string|Closure|null $description): static
     {
         $this->description = $description;
@@ -45,6 +46,7 @@ class Section extends LayoutComponent implements HasFieldActions
         return $this;
     }
 
+    /** Set the leading icon shown next to the heading. */
     public function icon(string|Icon|null $icon): static
     {
         $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
@@ -53,6 +55,8 @@ class Section extends LayoutComponent implements HasFieldActions
     }
 
     /**
+     * Set the column grid the section lays its children out in (default 1).
+     *
      * @param  int|array<string|int, int|string>  $columns
      */
     public function columns(int|array $columns): static
@@ -62,6 +66,7 @@ class Section extends LayoutComponent implements HasFieldActions
         return $this;
     }
 
+    /** Allow the section to be collapsed and expanded. */
     public function collapsible(bool $condition = true): static
     {
         $this->collapsible = $condition;
@@ -69,6 +74,7 @@ class Section extends LayoutComponent implements HasFieldActions
         return $this;
     }
 
+    /** Start the section collapsed (implies {@see collapsible()}). */
     public function collapsed(bool $condition = true): static
     {
         $this->collapsed = $condition;
@@ -80,6 +86,7 @@ class Section extends LayoutComponent implements HasFieldActions
         return $this;
     }
 
+    /** Render the section with tighter spacing. */
     public function compact(bool $condition = true): static
     {
         $this->compact = $condition;
@@ -87,6 +94,7 @@ class Section extends LayoutComponent implements HasFieldActions
         return $this;
     }
 
+    /** Render the heading and description in a side column beside the content. */
     public function aside(bool $condition = true): static
     {
         $this->aside = $condition;

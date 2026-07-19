@@ -27,6 +27,8 @@ trait HasOptions
     protected array|string|Closure $options = [];
 
     /**
+     * Set the selectable options as a value => label map, a closure, or an enum class-string.
+     *
      * @param  array<string|int, string>|class-string|Closure  $options
      */
     public function options(array|string|Closure $options): static

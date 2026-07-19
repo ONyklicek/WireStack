@@ -26,6 +26,7 @@ class ImageEntry extends Entry
 
     protected ?string $defaultImageUrl = null;
 
+    /** Set the filesystem disk used to resolve stored image paths. */
     public function disk(?string $disk): static
     {
         $this->disk = $disk;
@@ -33,6 +34,7 @@ class ImageEntry extends Entry
         return $this;
     }
 
+    /** Set the rendered image edge length in pixels (default 40). */
     public function imageSize(int $size): static
     {
         $this->imageSize = $size;
@@ -45,6 +47,7 @@ class ImageEntry extends Entry
         return $this->imageSize;
     }
 
+    /** Render images as circles instead of rounded squares. */
     public function circular(bool $condition = true): static
     {
         $this->circular = $condition;
@@ -57,6 +60,7 @@ class ImageEntry extends Entry
         return $this->circular;
     }
 
+    /** Overlap multiple images into a stacked avatar group. */
     public function stacked(bool $condition = true): static
     {
         $this->stacked = $condition;
@@ -69,6 +73,7 @@ class ImageEntry extends Entry
         return $this->stacked;
     }
 
+    /** Set the fallback image URL used when the state resolves to none. */
     public function defaultImageUrl(?string $url): static
     {
         $this->defaultImageUrl = $url;

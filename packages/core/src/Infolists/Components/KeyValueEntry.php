@@ -14,6 +14,7 @@ class KeyValueEntry extends Entry
 
     protected string $valueLabel = 'Value';
 
+    /** Set the header label for the key column (default "Key"). */
     public function keyLabel(string $label): static
     {
         $this->keyLabel = $label;
@@ -26,6 +27,7 @@ class KeyValueEntry extends Entry
         return $this->keyLabel;
     }
 
+    /** Set the header label for the value column (default "Value"). */
     public function valueLabel(string $label): static
     {
         $this->valueLabel = $label;

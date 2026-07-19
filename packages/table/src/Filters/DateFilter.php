@@ -24,6 +24,7 @@ class DateFilter extends Filter
 
     protected ?string $toLabel = null;
 
+    /** Filter by a from/to date range instead of a single date. */
     public function range(bool $range = true): static
     {
         $this->range = $range;
@@ -62,6 +63,7 @@ class DateFilter extends Filter
         return $this->monthMode;
     }
 
+    /** Set the earliest selectable date. */
     public function minDate(?string $date): static
     {
         $this->minDate = $date;
@@ -74,6 +76,7 @@ class DateFilter extends Filter
         return $this->minDate;
     }
 
+    /** Set the latest selectable date. */
     public function maxDate(?string $date): static
     {
         $this->maxDate = $date;
@@ -86,6 +89,7 @@ class DateFilter extends Filter
         return $this->maxDate;
     }
 
+    /** Set the label for the range's "from" input. */
     public function fromLabel(?string $label): static
     {
         $this->fromLabel = $label;
@@ -98,6 +102,7 @@ class DateFilter extends Filter
         return $this->fromLabel ?? Trans::get('wire-table::messages.from');
     }
 
+    /** Set the label for the range's "to" input. */
     public function toLabel(?string $label): static
     {
         $this->toLabel = $label;

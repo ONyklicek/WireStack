@@ -51,6 +51,7 @@ class Button extends Field
         return $this;
     }
 
+    /** Set the button label. */
     public function label(string|Closure|null $label): static
     {
         $this->buttonAction->label($label);
@@ -58,6 +59,7 @@ class Button extends Field
         return parent::label($label);
     }
 
+    /** Set the button icon and its position ("before" or "after" the label). */
     public function icon(string|Icon|Closure|null $icon, string|IconPosition|null $position = 'before'): static
     {
         $this->buttonAction->icon($icon, $position);
@@ -65,6 +67,7 @@ class Button extends Field
         return $this;
     }
 
+    /** Set the button color. */
     public function color(string|Color|Closure|null $color): static
     {
         $this->buttonAction->color($color);
@@ -72,6 +75,7 @@ class Button extends Field
         return $this;
     }
 
+    /** Set the button size. */
     public function size(string|Size|Closure $size): static
     {
         $this->buttonAction->size($size);
@@ -79,6 +83,7 @@ class Button extends Field
         return parent::size($size);
     }
 
+    /** Render the button with an outline style instead of a solid fill. */
     public function outlined(bool $outlined = true): static
     {
         $this->buttonAction->outlined($outlined);

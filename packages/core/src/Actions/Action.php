@@ -52,6 +52,7 @@ class Action extends BaseAction implements RendersAsButton
 
     // ─── Fluent setters ─────────────────────────────────────────
 
+    /** Render as an icon-only button (no visible label text). */
     public function iconButton(bool $iconButton = true): static
     {
         $this->iconButton = $iconButton;
@@ -93,6 +94,8 @@ class Action extends BaseAction implements RendersAsButton
     }
 
     /**
+     * Misspelled alias of {@see hideLabel()}, kept for backwards compatibility.
+     *
      * @deprecated Use hideLabel() instead. Will be removed in v2.0.
      */
     public function hiddeLabel(bool $hiddeLabel = true): static
@@ -110,6 +113,7 @@ class Action extends BaseAction implements RendersAsButton
         return $this->hideLabel($onlyIcon);
     }
 
+    /** Make the action navigate to a URL instead of running a callback. */
     public function url(Closure|string $url, bool $openInNewTab = false): static
     {
         $this->urlCallback = $url instanceof Closure ? $url : fn () => $url;

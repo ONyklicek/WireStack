@@ -29,6 +29,7 @@ class Html extends Display
         return new static($name);
     }
 
+    /** Set the raw HTML content to render. */
     public function content(string|Closure|null $content): static
     {
         $this->content = $content;

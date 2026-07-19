@@ -142,6 +142,8 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
     }
 
     /**
+     * Mark specific dates as non-selectable.
+     *
      * @param  array<int, string>|Closure  $dates
      */
     public function disabledDates(array|Closure $dates): static

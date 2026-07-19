@@ -1157,6 +1157,8 @@ class Column extends DataComponent implements Htmlable
     }
 
     /**
+     * Set extra HTML attributes merged onto the column's header cell.
+     *
      * @param  array<string, string>  $attributes
      */
     public function extraHeaderAttributes(array $attributes): static
@@ -1290,6 +1292,8 @@ class Column extends DataComponent implements Htmlable
     }
 
     /**
+     * Make the column inline-editable, choosing the editor type and its options.
+     *
      * @param  array<string, string>|class-string  $options
      */
     public function editable(bool $editable = true, string $type = 'text', array|string $options = []): static

@@ -70,6 +70,7 @@ class Flex extends LayoutComponent
         return $this;
     }
 
+    /** Allow children to wrap onto multiple lines instead of shrinking to fit. */
     public function wrap(bool $condition = true): static
     {
         $this->wrap = $condition;

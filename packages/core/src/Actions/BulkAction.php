@@ -18,6 +18,7 @@ class BulkAction extends BaseAction
 {
     protected bool $deselectRecordsAfterCompletion = true;
 
+    /** Clear the row selection once the bulk action finishes (default true). */
     public function deselectRecordsAfterCompletion(bool $deselect = true): static
     {
         $this->deselectRecordsAfterCompletion = $deselect;

@@ -18,6 +18,8 @@ trait HasExtraAttributes
     protected array|Closure $extraInputAttributes = [];
 
     /**
+     * Set extra HTML attributes merged onto the component's outer element.
+     *
      * @param  array<string, mixed>|Closure  $attributes
      */
     public function extraAttributes(array|Closure $attributes): static
@@ -28,6 +30,8 @@ trait HasExtraAttributes
     }
 
     /**
+     * Set extra HTML attributes merged onto the component's inner input element.
+     *
      * @param  array<string, mixed>|Closure  $attributes
      */
     public function extraInputAttributes(array|Closure $attributes): static

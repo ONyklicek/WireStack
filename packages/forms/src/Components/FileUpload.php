@@ -71,6 +71,8 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
     protected bool $interactiveCrop = false;
 
     /**
+     * Restrict uploads to the given MIME types.
+     *
      * @param  array<int, string>|Closure  $types
      */
     public function acceptedFileTypes(array|Closure $types): static

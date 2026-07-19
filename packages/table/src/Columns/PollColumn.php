@@ -267,6 +267,8 @@ class PollColumn extends Column
     }
 
     /**
+     * Set the icon shown for each state value as a state => icon map.
+     *
      * @param  array<string, string|Icon>|Closure  $icons
      */
     public function stateIcons(array|Closure $icons): static
@@ -282,6 +284,8 @@ class PollColumn extends Column
     }
 
     /**
+     * Set the color shown for each state value as a state => color map.
+     *
      * @param  array<string, string|Color>|Closure  $colors
      */
     public function stateColors(array|Closure $colors): static

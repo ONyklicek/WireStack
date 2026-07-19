@@ -23,6 +23,7 @@ class BooleanColumn extends Column
 
     protected ?string $falseLabel = null;
 
+    /** Set the icon shown for a truthy value. */
     public function trueIcon(string|Icon $icon): static
     {
         $this->trueIcon = $icon instanceof Icon ? $icon->value() : $icon;
@@ -30,6 +31,7 @@ class BooleanColumn extends Column
         return $this;
     }
 
+    /** Set the icon shown for a falsy value. */
     public function falseIcon(string|Icon $icon): static
     {
         $this->falseIcon = $icon instanceof Icon ? $icon->value() : $icon;
@@ -37,6 +39,7 @@ class BooleanColumn extends Column
         return $this;
     }
 
+    /** Set the color used for a truthy value. */
     public function trueColor(string|Color $color): static
     {
         $this->trueColor = $color instanceof Color ? $color->value : $color;
@@ -44,6 +47,7 @@ class BooleanColumn extends Column
         return $this;
     }
 
+    /** Set the color used for a falsy value. */
     public function falseColor(string|Color $color): static
     {
         $this->falseColor = $color instanceof Color ? $color->value : $color;
@@ -51,6 +55,7 @@ class BooleanColumn extends Column
         return $this;
     }
 
+    /** Set tooltip labels for the true and false states. */
     public function labels(?string $trueLabel, ?string $falseLabel): static
     {
         $this->trueLabel = $trueLabel;
