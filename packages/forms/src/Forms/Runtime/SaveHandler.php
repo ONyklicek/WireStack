@@ -6,6 +6,8 @@ namespace NyonCode\WireForms\Forms\Runtime;
 
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use NyonCode\WireCore\Core\Hydration\CastResolver;
 use NyonCode\WireCore\Core\Hydration\Dehydrator;
 use NyonCode\WireCore\Core\Hydration\ValueTransformer;
@@ -87,6 +89,13 @@ final class SaveHandler
 
         // 6. Save relationships (Repeater cascade)
         if ($record instanceof Model) {
+            // Restore each relationship-repeater item's primary key, dropped by
+            // validate() (the key is not a schema field, so it carries no rule).
+            // Without it RelationshipSaveHandler matches no existing row and
+            // recreates every child on update — losing its identity and any
+            // column not present in the form.
+            $data = $this->restoreRelationshipRepeaterKeys($record, $data);
+
             $relationHandler = new RelationshipSaveHandler;
             $relationHandler->save($record, $this->config->schema, $data);
         }
@@ -301,17 +310,76 @@ final class SaveHandler
      */
     private function collectRelationshipRepeaterNames(array $schema): array
     {
-        $names = [];
+        return array_map(
+            static fn (Repeater $repeater): string => $repeater->getName(),
+            $this->collectRelationshipRepeaterFields($schema),
+        );
+    }
+
+    /**
+     * @param  array<int, mixed>  $schema
+     * @return array<int, Repeater>
+     */
+    private function collectRelationshipRepeaterFields(array $schema): array
+    {
+        $fields = [];
 
         foreach ($schema as $component) {
             if ($component instanceof Repeater && $component->getRelationship() !== null) {
-                $names[] = $component->getName();
+                $fields[] = $component;
             } elseif ($component instanceof LayoutComponent) {
-                $names = array_merge($names, $this->collectRelationshipRepeaterNames($component->getSchema()));
+                $fields = array_merge($fields, $this->collectRelationshipRepeaterFields($component->getSchema()));
             }
         }
 
-        return $names;
+        return $fields;
+    }
+
+    /**
+     * Re-attach each relationship-repeater item's primary key from raw state. The
+     * key is not a schema field, so validate() drops it; RelationshipSaveHandler
+     * needs it to update an existing child in place instead of recreating it.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function restoreRelationshipRepeaterKeys(Model $record, array $data): array
+    {
+        $rawState = $this->runtime->getStateManager()->getState();
+
+        foreach ($this->collectRelationshipRepeaterFields($this->config->schema) as $repeater) {
+            $name = $repeater->getName();
+            $relationName = $repeater->getRelationship();
+
+            if ($relationName === null || ! method_exists($record, $relationName)) {
+                continue;
+            }
+            if (! isset($data[$name]) || ! is_array($data[$name])) {
+                continue;
+            }
+
+            $relation = $record->{$relationName}();
+            if (! $relation instanceof HasOneOrMany && ! $relation instanceof BelongsToMany) {
+                continue;
+            }
+
+            $keyName = $relation->getRelated()->getKeyName();
+            /** @var array<int|string, mixed> $rawItems */
+            $rawItems = is_array($rawState[$name] ?? null) ? $rawState[$name] : [];
+
+            foreach ($data[$name] as $index => $item) {
+                if (! is_array($item) || array_key_exists($keyName, $item)) {
+                    continue;
+                }
+
+                $rawKey = data_get($rawItems, "{$index}.{$keyName}");
+                if ($rawKey !== null && $rawKey !== '') {
+                    $data[$name][$index][$keyName] = $rawKey;
+                }
+            }
+        }
+
+        return $data;
     }
 
     /**
