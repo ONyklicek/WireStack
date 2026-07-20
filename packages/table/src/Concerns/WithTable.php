@@ -1210,12 +1210,14 @@ trait WithTable
             $partitions = [];
 
             foreach ($records as $record) {
-                $value = $table->getGroupValue($record);
+                // Normalised scalar key: the raw value may be a date/object cast
+                // (a fresh Carbon per record), so a strict compare of the raw value
+                // would never match and every row would form its own group. The
+                // caller (computeGroupSummaries) is handed the same key by the view.
+                $value = $table->getGroupComparisonKey($record);
                 $matched = false;
 
-                // Group values may be objects (enums, dates) — match strictly
-                // instead of using them as array keys. No references needed:
-                // 'records' is a Collection object, push() mutates in place.
+                // 'records' is a Collection object, push() mutates it in place.
                 foreach ($partitions as $partition) {
                     if ($partition['value'] === $value) {
                         $partition['records']->push($record);

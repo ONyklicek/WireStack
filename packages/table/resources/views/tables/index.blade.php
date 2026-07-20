@@ -687,11 +687,11 @@
                                         $recordUrl = $table->getRecordUrl($record);
                                         $rowIndex = $loop->index;
 
-                                        $groupValue = $hasGrouping ? $table->getGroupValue($record) : null;
+                                        $groupValue = $hasGrouping ? $table->getGroupComparisonKey($record) : null;
                                         $prevRecord = $hasGrouping && $rowIndex > 0 ? $records[$rowIndex - 1] : null;
                                         $nextRecord = $hasGrouping ? ($records[$rowIndex + 1] ?? null) : null;
-                                        $isGroupStart = $hasGrouping && ($prevRecord === null || $table->getGroupValue($prevRecord) !== $groupValue);
-                                        $isGroupEnd = $hasGrouping && ($nextRecord === null || $table->getGroupValue($nextRecord) !== $groupValue);
+                                        $isGroupStart = $hasGrouping && ($prevRecord === null || $table->getGroupComparisonKey($prevRecord) !== $groupValue);
+                                        $isGroupEnd = $hasGrouping && ($nextRecord === null || $table->getGroupComparisonKey($nextRecord) !== $groupValue);
 
                                         // Right-click context menu: only render one for rows that
                                         // actually have a visible action.
