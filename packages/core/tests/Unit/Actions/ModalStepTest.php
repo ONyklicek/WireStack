@@ -44,6 +44,29 @@ it('supports dynamic schema via closure', function () {
     expect($step->getSchema($record))->toHaveCount(1);
 });
 
+it('builds a closure schema from an empty data bag (recordless wizard first step)', function () {
+    // Regression: a header-action wizard seeds its first step from an empty data
+    // bag; `&& $context` treated [] as falsy, so the closure was skipped and the
+    // first step rendered no fields. An empty array must still evaluate; only a
+    // literal null (wizard chrome) falls back to the base schema.
+    $step = ModalStep::make('details')
+        ->schema(fn (array $data) => [
+            TextInput::make('name'),
+            TextInput::make('email'),
+        ]);
+
+    expect($step->getSchema([]))->toHaveCount(2)
+        ->and($step->getSchema())->toHaveCount(0); // null context → base schema
+});
+
+it('resolves a closure validation from an empty data bag', function () {
+    $step = ModalStep::make('details')
+        ->validation(fn (array $data) => ['name' => 'required']);
+
+    expect($step->getValidation([]))->toHaveKey('name')
+        ->and($step->getValidation())->toBe([]); // null context → base
+});
+
 it('can set validation rules', function () {
     $step = ModalStep::make('details')
         ->validation(['name' => 'required']);

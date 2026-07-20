@@ -157,7 +157,12 @@ class ModalStep
      */
     public function getSchema(mixed $context = null): array
     {
-        if ($this->schemaCallback && $context) {
+        // Evaluate for any provided context, including an empty data bag `[]` — a
+        // recordless wizard (e.g. a header action) seeds its first step from an
+        // empty array, and the old `&& $context` treated that as falsy, so the
+        // first step rendered zero fields. A literal null (no context at all, e.g.
+        // wizard chrome enumerating steps) still falls back to the base schema.
+        if ($this->schemaCallback && $context !== null) {
             return ($this->schemaCallback)($context);
         }
 
@@ -169,7 +174,7 @@ class ModalStep
      */
     public function getValidation(mixed $context = null): array
     {
-        if ($this->validationCallback && $context) {
+        if ($this->validationCallback && $context !== null) {
             return ($this->validationCallback)($context);
         }
 
