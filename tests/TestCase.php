@@ -7,16 +7,23 @@ namespace NyonCode\Wire\Tests;
 use Livewire\LivewireServiceProvider;
 use NyonCode\WireCore\WireCoreServiceProvider;
 use NyonCode\WireForms\WireFormsServiceProvider;
+use NyonCode\WireSortable\WireSortableServiceProvider;
+use NyonCode\WireTable\WireTableServiceProvider;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
     protected function getPackageProviders($app): array
     {
+        // Every package boots together so Integration tests can exercise the whole
+        // stack end to end — a Livewire table (table + forms + core) or a
+        // reorderable table (sortable on top) through the real component lifecycle.
         return [
             LivewireServiceProvider::class,
             WireCoreServiceProvider::class,
             WireFormsServiceProvider::class,
+            WireTableServiceProvider::class,
+            WireSortableServiceProvider::class,
         ];
     }
 
