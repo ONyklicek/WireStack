@@ -85,6 +85,34 @@ it('renders ButtonColumn (link) through its partial', function () {
         ->and($html)->toContain('Open');
 });
 
+it('does not let record-derived confirmation text break out of the wire:click attribute', function () {
+    // Regression (stored XSS): the wire:click attribute is emitted raw, and
+    // addslashes is JS-string escaping, not HTML-attribute escaping — a record
+    // name containing "> would terminate the attribute and inject an element.
+    $payload = '"><img src=x onerror=alert(document.cookie)>';
+
+    $html = ButtonColumn::make('delete')
+        ->buttonLabel('Delete')
+        ->action(fn () => null)
+        ->requiresConfirmation(true, description: fn ($record) => "Delete {$record->name}?")
+        ->renderCell(partialRecord(['id' => 1, 'name' => $payload]));
+
+    // The dangerous sequence is HTML-encoded, so it stays inside the attribute…
+    expect($html)->toContain('&quot;')
+        ->and($html)->not->toContain('"><img')
+        ->and($html)->not->toContain('<img src=x');
+});
+
+it('escapes a string primary key in the wire:click attribute', function () {
+    $html = ButtonColumn::make('go')
+        ->buttonLabel('Go')
+        ->action(fn () => null)
+        ->renderCell(partialRecord(['id' => '"><script>alert(1)</script>']));
+
+    expect($html)->not->toContain('"><script>')
+        ->and($html)->not->toContain('<script>alert(1)');
+});
+
 it('renders PollColumn (non-polling) through its partial', function () {
     $html = PollColumn::make('status')->renderCell(partialRecord(['status' => 'done']));
 

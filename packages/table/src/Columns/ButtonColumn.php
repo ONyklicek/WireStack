@@ -419,59 +419,61 @@ class ButtonColumn extends Column
     {
         $requiresConfirmation = $this->evaluateForRecord($this->requiresConfirmation, $record);
 
+        // The whole wire:click attribute is emitted raw ({!! !!}) by the cell
+        // view, so every interpolated value must be safe in BOTH the JS
+        // single-quoted string it sits in (addslashes) AND the surrounding
+        // double-quoted HTML attribute (e()). Record-derived text — a user's name
+        // in a confirmation message, a string primary key — would otherwise break
+        // out of the attribute into element context: a stored XSS.
+        $recordKey = e((string) $record->getKey());
+
         if ($this->livewireAction) {
-            $action = $this->livewireAction;
-            $recordKey = $record->getKey();
+            $action = e($this->livewireAction);
 
             if ($requiresConfirmation) {
-                return "wire:click=\"\$dispatch('open-confirmation-modal', {
-                    action: '$action',
-                    recordKey: '$recordKey',
-                    title: '".
-                    addslashes($this->evaluateForRecord($this->confirmationTitle, $record)).
-                    "',
-                    description: '".
-                    addslashes($this->evaluateForRecord($this->confirmationDescription, $record)).
-                    "',
-                    confirmText: '".
-                    addslashes($this->evaluateForRecord($this->confirmButtonText, $record)).
-                    "',
-                    cancelText: '".
-                    addslashes($this->evaluateForRecord($this->cancelButtonText, $record)).
-                    "'
-                })\"";
+                return $this->confirmationWireClick("action: '$action', recordKey: '$recordKey'", $record);
             }
 
             return "wire:click=\"$action('$recordKey')\"";
         }
 
         if ($this->action) {
-            $recordKey = $record->getKey();
-            $columnName = $this->name;
+            $columnName = e($this->name);
 
             if ($requiresConfirmation) {
-                return "wire:click=\"\$dispatch('open-confirmation-modal', {
-                    action: 'executeColumnAction',
-                    recordKey: '$recordKey',
-                    column: '$columnName',
-                    title: '".
-                    addslashes($this->evaluateForRecord($this->confirmationTitle, $record)).
-                    "',
-                    description: '".
-                    addslashes($this->evaluateForRecord($this->confirmationDescription, $record)).
-                    "',
-                    confirmText: '".
-                    addslashes($this->evaluateForRecord($this->confirmButtonText, $record)).
-                    "',
-                    cancelText: '".
-                    addslashes($this->evaluateForRecord($this->cancelButtonText, $record)).
-                    "'
-                })\"";
+                return $this->confirmationWireClick(
+                    "action: 'executeColumnAction', recordKey: '$recordKey', column: '$columnName'",
+                    $record,
+                );
             }
 
             return "wire:click=\"executeColumnAction('$columnName', '$recordKey')\"";
         }
 
         return '';
+    }
+
+    /**
+     * Build the confirmation-modal wire:click. Each record-derived label is made
+     * safe for the JS single-quoted string (addslashes) and then for the raw HTML
+     * attribute it is emitted into (e()); the head fragment carries the already
+     * escaped action/recordKey/column identifiers.
+     */
+    private function confirmationWireClick(string $head, Model $record): string
+    {
+        $escape = fn (mixed $value): string => e(addslashes((string) $value));
+
+        $title = $escape($this->evaluateForRecord($this->confirmationTitle, $record));
+        $description = $escape($this->evaluateForRecord($this->confirmationDescription, $record));
+        $confirmText = $escape($this->evaluateForRecord($this->confirmButtonText, $record));
+        $cancelText = $escape($this->evaluateForRecord($this->cancelButtonText, $record));
+
+        return "wire:click=\"\$dispatch('open-confirmation-modal', {
+            $head,
+            title: '$title',
+            description: '$description',
+            confirmText: '$confirmText',
+            cancelText: '$cancelText'
+        })\"";
     }
 }
