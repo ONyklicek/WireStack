@@ -189,7 +189,13 @@ final class TableQueryService
             ...$this->buildPlannerColumnFilters($columns, $columnFilterValues),
         ];
         $plannerSorts = $this->buildPlannerSorts($sortColumn, $sortDirection, $columns, $customSortCallback !== null);
-        $searchTerm = ! empty($search) && ! empty($customSearchCallbacks) ? null : $search;
+
+        // Custom-search columns are excluded from the planner, but their callbacks
+        // are OR-combined into the same search group as the default columns (see
+        // ApplySearch) — so having one custom-search column no longer suppresses
+        // every plain ->searchable() column. Only a non-empty term searches.
+        $searchTerm = ! empty($search) ? $search : null;
+        $searchCallbacks = ! empty($search) ? $customSearchCallbacks : [];
 
         // ── 2.5 Plugin hook: table.querying (pre-plan, can force sort override) ──
         if ($pluginManager !== null) {
@@ -246,13 +252,13 @@ final class TableQueryService
             $pluginPipes = $pluginManager->getQueryPipes();
             if ($pluginPipes !== []) {
                 $executor = $executor->withPipes([
-                    ...$this->getDefaultExecutorPipes($executor, $baseQuery, $searchTerm),
+                    ...$this->getDefaultExecutorPipes($executor, $baseQuery, $searchTerm, $searchCallbacks),
                     ...array_values($pluginPipes),
                 ]);
             }
         }
 
-        $query = $executor->execute($baseQuery, $this->lastPlan, $searchTerm);
+        $query = $executor->execute($baseQuery, $this->lastPlan, $searchTerm, $searchCallbacks);
 
         // ── 4.4 Explicit eager-load hints (Column::loadRelations()) ──
         // For relations a display/url/color closure dereferences per row but which
@@ -277,17 +283,8 @@ final class TableQueryService
         $query = $this->applyAggregates($query, $columns, $subRowRelation, $subRowConstraint);
 
         // ── 5. Apply custom callbacks (these bypass the planner) ──
-
-        // Custom search callbacks
-        if (! empty($search) && ! empty($customSearchCallbacks)) {
-            $query = $query->where(function (Builder $q) use ($customSearchCallbacks, $search) {
-                foreach ($customSearchCallbacks as $callback) {
-                    $q->orWhere(function (Builder $subQ) use ($callback, $search) {
-                        call_user_func($callback, $subQ, $search);
-                    });
-                }
-            });
-        }
+        // Custom search callbacks are applied inside the executor's search group
+        // (see ApplySearch) so they OR-combine with the default-column search.
 
         // Custom sort callback
         if ($customSortCallback !== null) {
@@ -371,11 +368,12 @@ final class TableQueryService
      * Get default executor pipes to merge with plugin pipes.
      *
      * @param  Builder<Model>  $builder
+     * @param  array<int, callable(Builder<Model>, string): mixed>  $searchCallbacks
      * @return array<int, QueryPipe>
      */
-    private function getDefaultExecutorPipes(QueryExecutor $executor, Builder $builder, ?string $searchTerm): array
+    private function getDefaultExecutorPipes(QueryExecutor $executor, Builder $builder, ?string $searchTerm, array $searchCallbacks = []): array
     {
-        return $executor->getDefaultPipes($builder, $searchTerm);
+        return $executor->getDefaultPipes($builder, $searchTerm, $searchCallbacks);
     }
 
     /**
