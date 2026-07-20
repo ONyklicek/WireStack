@@ -34,6 +34,8 @@ class WtwComponent extends Component
 
     public static bool $afterRan = false;
 
+    public static bool $lastAfterRan = false;
+
     public function table(Table $table): Table
     {
         return $table
@@ -54,7 +56,10 @@ class WtwComponent extends Component
                         ModalStep::make('Contact')
                             ->schema([TextInput::make('email')])
                             ->validation(['email' => 'required|email'])
-                            ->before(fn () => ['email' => 'pre@filled.com']),
+                            ->before(fn () => ['email' => 'pre@filled.com'])
+                            ->afterValidation(function () {
+                                WtwComponent::$lastAfterRan = true;
+                            }),
                     ])
                     ->action(function () {
                         WtwComponent::$executed = true;
@@ -119,6 +124,7 @@ beforeEach(function () {
 
     WtwComponent::$executed = false;
     WtwComponent::$afterRan = false;
+    WtwComponent::$lastAfterRan = false;
     WtwCtxComponent::$stepTwoContext = null;
 });
 
@@ -227,6 +233,20 @@ it('executes the action when all steps are valid', function () {
         ->assertHasNoErrors();
 
     expect(WtwComponent::$executed)->toBeTrue();
+});
+
+it('runs the last step afterValidation on submit', function () {
+    // Regression: the final step is never stepped off of, and the submit path
+    // validated every step with runAfterValidation:false — so a final-step
+    // afterValidation (async/uniqueness gate) never ran before the action.
+    Livewire::test(WtwComponent::class)
+        ->call('openHeaderActionModal', 'wizard')
+        ->set('tableState.modal.actions.0.data', ['name' => 'Jane', 'email' => 'jane@example.com'])
+        ->call('submitActionModal')
+        ->assertHasNoErrors();
+
+    expect(WtwComponent::$lastAfterRan)->toBeTrue()
+        ->and(WtwComponent::$executed)->toBeTrue();
 });
 
 // ─── Header action wizard step context (regression) ─────────────
