@@ -67,6 +67,35 @@ class WithTableImportNoActionComponent extends Component
     }
 }
 
+class WithTableImportDeniedComponent extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(WithTableImportUser::class)
+            ->columns([TextColumn::make('name'), TextColumn::make('email')])
+            ->headerActions([
+                ImportAction::makeImport()
+                    ->authorizeUsing(fn () => false)
+                    ->importConfig(
+                        TableImport::make()
+                            ->model(WithTableImportUser::class)
+                            ->columns([
+                                ImportColumn::make('name')->requiredMapping()->rules(['required']),
+                                ImportColumn::make('email')->rules(['required', 'email']),
+                            ])
+                    ),
+            ]);
+    }
+
+    public function render(): string
+    {
+        return '<div></div>';
+    }
+}
+
 function withTableImportTempCsv(string $content): string
 {
     $path = tempnam(sys_get_temp_dir(), 'wire-hostimport-');
@@ -99,6 +128,19 @@ it('imports a file using the ImportAction config declared on the table', functio
     expect($result->getImported())->toBe(1)
         ->and($result->getFailedCount())->toBe(1)
         ->and(WithTableImportUser::where('email', 'john@example.com')->exists())->toBeTrue();
+});
+
+it('refuses to import when the ImportAction denies authorization', function () {
+    // Regression: importTable() is a public Livewire endpoint and ran the import
+    // without checking the ImportAction's authorization, so a client could bypass
+    // an ->authorize() guard and feed an arbitrary path to the importer.
+    $path = withTableImportTempCsv("name,email\nJohn,john@example.com\n");
+
+    $result = (new WithTableImportDeniedComponent)->importTable($path);
+
+    expect($result->getImported())->toBe(0)
+        ->and($result->getTotal())->toBe(0)
+        ->and(WithTableImportUser::count())->toBe(0);
 });
 
 it('imports nothing when no ImportAction is configured and the file has no rows', function () {

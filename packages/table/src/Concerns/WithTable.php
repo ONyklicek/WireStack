@@ -2168,15 +2168,23 @@ trait WithTable
      */
     public function importTable(string $filePath): ImportResult
     {
-        $importConfig = null;
+        $importAction = null;
         foreach ($this->getTable()->getHeaderActions() as $action) {
             if ($action instanceof ImportAction) {
-                $importConfig = $action->getImportConfig();
+                $importAction = $action;
                 break;
             }
         }
 
-        $result = ($importConfig ?? TableImport::make())->import($filePath);
+        // Enforce the ImportAction's authorization server-side. importTable is a
+        // public Livewire endpoint, so a client can invoke it directly — without
+        // this, an ->authorize()/->hidden() guard declared on the action would be
+        // bypassed and an arbitrary server-readable path fed to the importer.
+        if ($importAction !== null && ! $importAction->canExecute()) {
+            return new ImportResult;
+        }
+
+        $result = ($importAction?->getImportConfig() ?? TableImport::make())->import($filePath);
 
         // New rows changed the dataset — drop cached records/partitions so the
         // next render reflects the import.
