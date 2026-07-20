@@ -73,6 +73,18 @@ class MorphToSelect extends Field
         return $this->getStatePath().$this->idColumnSuffix;
     }
 
+    /** The morph *type* column name written on the parent (e.g. `commentable_type`). */
+    public function getTypeColumn(): string
+    {
+        return $this->getName().$this->typeColumnSuffix;
+    }
+
+    /** The morph *id* column name written on the parent (e.g. `commentable_id`). */
+    public function getIdColumn(): string
+    {
+        return $this->getName().$this->idColumnSuffix;
+    }
+
     /**
      * Get type labels for the type dropdown.
      *

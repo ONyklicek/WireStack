@@ -410,9 +410,11 @@ class Repeater extends LayoutComponent implements HasValidation
 
             if ($component instanceof HasValidation) {
                 $childRules = $component->getValidationRules();
-                if ($childRules !== []) {
-                    $rules[$component->getName()] = $childRules;
-                }
+                // Fall back to ['nullable'] like the top-level resolver does: a
+                // child with no rules still needs a wildcard entry, or Livewire's
+                // validate() omits it from the validated data and its value is
+                // silently dropped before it reaches the relationship save.
+                $rules[$component->getName()] = $childRules !== [] ? $childRules : ['nullable'];
             }
         }
 
