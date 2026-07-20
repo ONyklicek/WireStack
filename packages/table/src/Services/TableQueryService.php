@@ -4,30 +4,24 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Services;
 
-use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Support\Str;
-use NyonCode\WireCore\Core\Capabilities\CapabilityResolver;
-use NyonCode\WireCore\Core\Metadata\AccessorMetadata;
-use NyonCode\WireCore\Core\Metadata\ColumnMetadata;
 use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
 use NyonCode\WireCore\Core\Metadata\RelationMetadata;
 use NyonCode\WireCore\Core\Plugin\Hooks\TableConfiguringPayload;
 use NyonCode\WireCore\Core\Plugin\Hooks\TableQueriedPayload;
 use NyonCode\WireCore\Core\Plugin\Hooks\TableQueryingPayload;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
-use NyonCode\WireCore\Core\Query\Contracts\QueryPipe;
 use NyonCode\WireCore\Core\Query\FilterDefinition;
 use NyonCode\WireCore\Core\Query\JoinRegistry;
 use NyonCode\WireCore\Core\Query\QueryExecutor;
 use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireCore\Core\Query\QueryPlanner;
 use NyonCode\WireCore\Core\Query\SortDefinition;
-use NyonCode\WireCore\Core\Relations\RelationPath;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Filters\SelectFilter;
@@ -49,9 +43,6 @@ final class TableQueryService
     private ?MetadataRegistry $registry = null;
 
     private ?string $currentModelClass = null;
-
-    /** @var array<class-string<Model>, true> */
-    private array $lazilyRegistered = [];
 
     /**
      * Build the query for a table using the Core query infrastructure.
@@ -83,7 +74,6 @@ final class TableQueryService
     ): Builder {
         $modelClass = get_class($baseQuery->getModel());
         $this->currentModelClass = $modelClass;
-        $this->lazilyRegistered = [];
         $this->registry = $this->buildMetadataRegistry($baseQuery, $modelClass, $table);
         $pluginManager = $this->resolvePluginManager();
 
@@ -183,7 +173,7 @@ final class TableQueryService
         }
 
         // ── 2. Build QueryPlanner inputs (only for columns/filters WITHOUT custom callbacks) ──
-        $plannerColumns = $this->buildPlannerColumns($columns);
+        $plannerColumns = $columns;
         $plannerFilters = [
             ...$this->buildPlannerFilters($filters, $filterValues, $subRowRelation !== null),
             ...$this->buildPlannerColumnFilters($columns, $columnFilterValues),
@@ -252,7 +242,7 @@ final class TableQueryService
             $pluginPipes = $pluginManager->getQueryPipes();
             if ($pluginPipes !== []) {
                 $executor = $executor->withPipes([
-                    ...$this->getDefaultExecutorPipes($executor, $baseQuery, $searchTerm, $searchCallbacks),
+                    ...$executor->getDefaultPipes($baseQuery, $searchTerm, $searchCallbacks),
                     ...array_values($pluginPipes),
                 ]);
             }
@@ -280,7 +270,7 @@ final class TableQueryService
         // ── 4.5 Apply aggregate subqueries (withCount, withSum, etc.) ──
         // Rollups over the sub-row relation honour active sub-row scoped filters,
         // so rollup cells and footer grand totals reflect the filtered children.
-        $query = $this->applyAggregates($query, $columns, $subRowRelation, $subRowConstraint);
+        $query = app(AggregateSubqueries::class)->apply($query, $columns, $subRowRelation, $subRowConstraint);
 
         // ── 5. Apply custom callbacks (these bypass the planner) ──
         // Custom search callbacks are applied inside the executor's search group
@@ -362,18 +352,6 @@ final class TableQueryService
         }
 
         return app(PluginManager::class);
-    }
-
-    /**
-     * Get default executor pipes to merge with plugin pipes.
-     *
-     * @param  Builder<Model>  $builder
-     * @param  array<int, callable(Builder<Model>, string): mixed>  $searchCallbacks
-     * @return array<int, QueryPipe>
-     */
-    private function getDefaultExecutorPipes(QueryExecutor $executor, Builder $builder, ?string $searchTerm, array $searchCallbacks = []): array
-    {
-        return $executor->getDefaultPipes($builder, $searchTerm, $searchCallbacks);
     }
 
     /**
@@ -478,103 +456,6 @@ final class TableQueryService
                 return;
             }
         }
-    }
-
-    /**
-     * Convert Column objects to DataComponent[] for the planner.
-     *
-     * Auto-resolves capabilities from MetadataRegistry so columns backed by
-     * a real DB column inherit Searchable/Sortable/Filterable without the user
-     * needing to call ->searchable()->sortable() explicitly.
-     *
-     * Supports dot-notation relation chains (e.g., "company.name") by walking
-     * the registry to the terminal model and reading its column/accessor metadata.
-     *
-     * @param  array<int, Column>  $columns
-     * @return array<int, Column>
-     */
-    private function buildPlannerColumns(array $columns): array
-    {
-        if ($this->registry === null || $this->currentModelClass === null) {
-            return $columns;
-        }
-
-        // Registering a model only captures ModelMetadata — column/accessor
-        // metadata comes from explicit registerColumn()/registerAccessor()
-        // calls. Without any, resolveColumnMeta() can never match and the
-        // per-column resolution walk below is pure overhead on every request.
-        if (! $this->registry->hasAttributeMetadata()) {
-            return $columns;
-        }
-
-        $resolver = new CapabilityResolver;
-
-        foreach ($columns as $column) {
-            [$columnMeta, $accessorMeta] = $this->resolveColumnMeta($column->getName());
-
-            if ($columnMeta !== null) {
-                $resolved = $resolver->resolve($columnMeta, null, $column->getCapabilities()->all());
-                $column->capabilities($resolved);
-            } elseif ($accessorMeta !== null) {
-                $resolved = $resolver->resolve(null, $accessorMeta, $column->getCapabilities()->all());
-                $column->capabilities($resolved);
-            }
-        }
-
-        return $columns;
-    }
-
-    /**
-     * Resolve ColumnMetadata or AccessorMetadata for a given column name.
-     *
-     * Handles dot-notation by walking the relation chain through the registry,
-     * lazily registering related models that were not part of the initial scan.
-     *
-     * Aggregate columns (e.g. "orders->count()") have no DB column to inspect,
-     * so auto-detection returns [null, null] and buildPlannerColumns leaves their
-     * capabilities unchanged. Explicit declarations (->sortable(), ->searchable())
-     * set via the fluent API are preserved and honoured by the planner.
-     *
-     * @return array{0: ?ColumnMetadata, 1: ?AccessorMetadata}
-     */
-    private function resolveColumnMeta(string $name): array
-    {
-        $parsed = RelationPath::parse($name);
-
-        if ($parsed->isSimple()) {
-            return [
-                $this->registry->getColumn($this->currentModelClass, $name),
-                $this->registry->getAccessor($this->currentModelClass, $name),
-            ];
-        }
-
-        if ($parsed->isAggregate()) {
-            return [null, null];
-        }
-
-        $currentModel = $this->currentModelClass;
-
-        foreach ($parsed->getRelationSegments() as $segment) {
-            $relation = $this->registry->getRelation($currentModel, $segment->name);
-
-            if ($relation === null || $relation->relatedModel === null) {
-                return [null, null];
-            }
-
-            $currentModel = $relation->relatedModel;
-
-            if (! $this->registry->hasModel($currentModel) && ! isset($this->lazilyRegistered[$currentModel])) {
-                $this->registry->registerModel($currentModel);
-                $this->lazilyRegistered[$currentModel] = true;
-            }
-        }
-
-        $terminalColumn = $parsed->getColumnName();
-
-        return [
-            $this->registry->getColumn($currentModel, $terminalColumn),
-            $this->registry->getAccessor($currentModel, $terminalColumn),
-        ];
     }
 
     /**
@@ -737,22 +618,6 @@ final class TableQueryService
             column: $columnObj->getName(),
             direction: $sortDirection,
         )];
-    }
-
-    /**
-     * Apply withCount / withSum / withAvg / withMin / withMax for aggregate columns.
-     *
-     * @param  Builder<Model>  $query
-     * @param  array<int, Column>  $columns
-     * @return Builder<Model>
-     */
-    private function applyAggregates(
-        Builder $query,
-        array $columns,
-        ?string $subRowRelation = null,
-        ?Closure $subRowConstraint = null,
-    ): Builder {
-        return app(AggregateSubqueries::class)->apply($query, $columns, $subRowRelation, $subRowConstraint);
     }
 
     /**
