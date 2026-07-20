@@ -17,9 +17,26 @@ trait HasVisibility
 {
     use HasAuthorization;
 
+    /**
+     * Provided by {@see HasDynamicProperties}. Returns whether a dynamic callback
+     * should run for the given context: always when a context is supplied, and
+     * for record-less closures (`fn () => …`) even without one. Record-scoped
+     * closures without a context fall back to the static value instead of erroring.
+     */
+    abstract protected function shouldInvokeDynamicCallback(?Closure $callback, mixed $context): bool;
+
     protected bool $hidden = false;
 
     protected ?Closure $hiddenCallback = null;
+
+    /**
+     * True when {@see $hiddenCallback} came from {@see visible()} and its result
+     * must be inverted. Tracked separately instead of wrapping the closure so the
+     * original callback's arity survives — a record-aware `visible(fn ($record))`
+     * can then degrade gracefully when resolved without a record (see
+     * {@see isHidden()}) instead of erroring on a missing argument.
+     */
+    protected bool $hiddenCallbackInverts = false;
 
     protected bool $disabled = false;
 
@@ -29,7 +46,10 @@ trait HasVisibility
     public function visible(bool|Closure $visible = true): static
     {
         if ($visible instanceof Closure) {
-            return $this->hidden(static fn (mixed ...$args): bool => ! $visible(...$args));
+            $this->hiddenCallback = $visible;
+            $this->hiddenCallbackInverts = true;
+
+            return $this;
         }
 
         return $this->hidden(! $visible);
@@ -40,8 +60,13 @@ trait HasVisibility
     {
         if ($hidden instanceof Closure) {
             $this->hiddenCallback = $hidden;
+            $this->hiddenCallbackInverts = false;
         } else {
+            // A literal state supersedes any previously registered closure so the
+            // last call wins predictably (e.g. `->visible($cb)->hidden(false)`).
             $this->hidden = $hidden;
+            $this->hiddenCallback = null;
+            $this->hiddenCallbackInverts = false;
         }
 
         return $this;
@@ -54,6 +79,7 @@ trait HasVisibility
             $this->disabledCallback = $disabled;
         } else {
             $this->disabled = $disabled;
+            $this->disabledCallback = null;
         }
 
         return $this;
@@ -61,11 +87,13 @@ trait HasVisibility
 
     public function isHidden(mixed $context = null): bool
     {
-        if ($this->hiddenCallback && $context) {
-            return ($this->hiddenCallback)($context);
-        }
-        if ($this->hiddenCallback) {
-            return ($this->hiddenCallback)();
+        // Record-required closures resolved without a record fall back to the
+        // static default instead of erroring — mirrors HasDynamicProperties so a
+        // `visible(fn ($record))` action never fatals when a view checks it bare.
+        if ($this->shouldInvokeDynamicCallback($this->hiddenCallback, $context)) {
+            $result = (bool) ($this->hiddenCallback)($context);
+
+            return $this->hiddenCallbackInverts ? ! $result : $result;
         }
 
         return $this->hidden;
@@ -73,11 +101,8 @@ trait HasVisibility
 
     public function isDisabled(mixed $context = null): bool
     {
-        if ($this->disabledCallback && $context) {
-            return ($this->disabledCallback)($context);
-        }
-        if ($this->disabledCallback) {
-            return ($this->disabledCallback)();
+        if ($this->shouldInvokeDynamicCallback($this->disabledCallback, $context)) {
+            return (bool) ($this->disabledCallback)($context);
         }
 
         return $this->disabled;

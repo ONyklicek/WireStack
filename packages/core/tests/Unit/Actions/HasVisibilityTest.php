@@ -81,6 +81,79 @@ it('shows the action when a visible closure returns true without context', funct
     expect($action->isHidden())->toBeFalse();
 });
 
+// ─── Record-aware closures resolved WITHOUT a record ─────────────────────────
+// Regression: a direct row action with a `$record`-aware visible()/hidden()
+// closure fataled with ArgumentCountError whenever isHidden()/canExecute() was
+// called without the record (e.g. button.blade.php checked isHidden() bare).
+// Such closures must now degrade to the static default instead of erroring.
+
+it('does not fatal when a record-aware visible() closure is checked without a record', function () {
+    $action = Action::make('editCabinet')->visible(fn ($record) => $record->status === 'open');
+
+    expect(fn () => $action->isHidden())->not->toThrow(ArgumentCountError::class);
+    // Falls back to the static "not hidden" default; the record-scoped path still works.
+    expect($action->isHidden())->toBeFalse()
+        ->and($action->isHidden((object) ['status' => 'open']))->toBeFalse()
+        ->and($action->isHidden((object) ['status' => 'closed']))->toBeTrue();
+});
+
+it('does not fatal when a record-aware hidden() closure is checked without a record', function () {
+    $action = Action::make('editFree')->hidden(fn ($record) => $record->is_locked);
+
+    expect(fn () => $action->isHidden())->not->toThrow(ArgumentCountError::class);
+    expect($action->isHidden())->toBeFalse()
+        ->and($action->isHidden((object) ['is_locked' => true]))->toBeTrue();
+});
+
+it('does not fatal when a record-aware disabled() closure is checked without a record', function () {
+    $action = Action::make('test')->disabled(fn ($record) => $record->status === 'archived');
+
+    expect(fn () => $action->isDisabled())->not->toThrow(ArgumentCountError::class);
+    expect($action->isDisabled())->toBeFalse()
+        ->and($action->isDisabled((object) ['status' => 'archived']))->toBeTrue();
+});
+
+it('does not fatal when canExecute() runs a record-aware visible() closure without a record', function () {
+    $action = Action::make('test')->visible(fn ($record) => $record->can_edit);
+
+    expect(fn () => $action->canExecute())->not->toThrow(ArgumentCountError::class);
+    // No record → visibility degrades to the static default (shown), so it can execute.
+    expect($action->canExecute())->toBeTrue()
+        ->and($action->canExecute((object) ['can_edit' => false]))->toBeFalse();
+});
+
+it('keeps the visible() closure arity intact so it is not masked by a wrapper', function () {
+    // The inversion is tracked without wrapping the closure, so reflection still
+    // sees the original required-parameter count and skips it when no record is given.
+    $action = Action::make('test')->visible(fn ($record) => true);
+
+    $reflected = (new ReflectionObject($action))->getProperty('hiddenCallback');
+    $callback = $reflected->getValue($action);
+
+    expect((new ReflectionFunction($callback))->getNumberOfRequiredParameters())->toBe(1);
+});
+
+// ─── Last-call-wins between literal state and closures ───────────────────────
+
+it('lets a literal hidden(false) supersede an earlier record-aware visible() closure', function () {
+    $action = Action::make('test')
+        ->visible(fn ($record) => $record->can_edit)
+        ->hidden(false);
+
+    // The literal wins and clears the stale closure — no fallback ambiguity.
+    expect($action->isHidden())->toBeFalse()
+        ->and($action->isHidden((object) ['can_edit' => false]))->toBeFalse();
+});
+
+it('lets a literal disabled(false) supersede an earlier record-aware disabled() closure', function () {
+    $action = Action::make('test')
+        ->disabled(fn ($record) => $record->status === 'archived')
+        ->disabled(false);
+
+    expect($action->isDisabled())->toBeFalse()
+        ->and($action->isDisabled((object) ['status' => 'archived']))->toBeFalse();
+});
+
 // ─── Disabled ──────────────────────────────────────────────────────────────
 
 it('is not disabled by default', function () {

@@ -17,7 +17,7 @@
     $wireModifiers = $wireClickModifiers ?? $data['wireModifiers'] ?? '';
 @endphp
 
-@if($action->isHidden())
+@if($action->isHidden($record ?? null))
     {{-- Hidden actions render nothing. --}}
 @elseif($data['url'])
     <a
@@ -25,7 +25,7 @@
             @if($data['target']) target="{{ $data['target'] }}" @endif
             class="{{ $data['classes'] }}"
             data-testid="action-{{ $action->getName() }}"
-            @if($action->getLabel()) aria-label="{{ $action->getLabel() }}" @endif
+            @if($action->getLabel($record ?? null)) aria-label="{{ $action->getLabel($record ?? null) }}" @endif
             @if($data['tooltip']) title="{{ $data['tooltip'] }}" @endif
             @if($data['shortcutLabel']) data-shortcut="{{ $data['shortcutLabel'] }}"@endif
             @foreach($data['extraAttributes'] as $attr => $val)
@@ -40,7 +40,7 @@
             wire:click{{ $wireModifiers }}="{{ $wireClickAction }}"
             class="{{ $data['classes'] }}"
             data-testid="action-{{ $action->getName() }}"
-            @if($action->getLabel()) aria-label="{{ $action->getLabel() }}" @endif
+            @if($action->getLabel($record ?? null)) aria-label="{{ $action->getLabel($record ?? null) }}" @endif
             @if($data['tooltip']) title="{{ $data['tooltip'] }}" @endif
             @if($data['disabled']) disabled @endif
             @if($data['shortcutAlpine'])
