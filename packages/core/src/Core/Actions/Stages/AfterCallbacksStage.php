@@ -22,6 +22,14 @@ final class AfterCallbacksStage implements ActionStage
     {
         $result = $next($context);
 
+        // A halted action (or before hook) must not fire after callbacks: their
+        // side effects would run before the confirmation/halt is resolved, and
+        // then a second time when the action re-runs after confirm. This mirrors
+        // BeforeCallbacksStage, which short-circuits without reaching this stage.
+        if ($result->shouldHalt()) {
+            return $result;
+        }
+
         /** @var array<int, callable(ActionContext, ActionResult): void> $callbacks */
         $callbacks = $context->get('afterCallbacks', []);
 

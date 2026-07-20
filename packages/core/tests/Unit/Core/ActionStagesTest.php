@@ -32,6 +32,25 @@ it('handles an absence of after callbacks', function () {
     expect($result->success)->toBeTrue();
 });
 
+it('does not run after callbacks when the action halted', function () {
+    // Regression: an action that returns $halt() (e.g. to raise a confirm modal)
+    // must not fire after() side effects — they would run before the user
+    // confirms and again when the action re-runs. Only a non-halted result does.
+    $log = [];
+    $context = new ActionContext(arguments: [
+        'afterCallbacks' => [
+            function (ActionContext $ctx, ActionResult $res) use (&$log) {
+                $log[] = 'ran';
+            },
+        ],
+    ]);
+
+    $result = (new AfterCallbacksStage)->handle($context, fn () => ActionResult::halt());
+
+    expect($result->shouldHalt())->toBeTrue()
+        ->and($log)->toBe([]);
+});
+
 // ─── NotificationStage ─────────────────────────────────────────
 
 it('stores notification data in context when present', function () {
