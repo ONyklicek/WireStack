@@ -83,6 +83,22 @@ test('six summaries across two columns cost one query', function () {
         ->and($results['qty'][1])->toBe(3);      // count
 });
 
+test('qualifies the summarized column so a relation-joined query is not ambiguous', function () {
+    // Regression: a relation sort adds a LEFT JOIN, and `id` (present on both
+    // tables) made SUM/COUNT ambiguous — the aggregate threw and took down the
+    // whole table render. The column must be qualified to the base table.
+    $columns = [Column::make('id')->summarizeCount('Count')];
+
+    $joined = SbInvoice::query()
+        ->leftJoin('sb_items', 'sb_items.invoice_id', '=', 'sb_invoices.id');
+
+    $results = app(SummaryBatch::class)->compute($columns, $joined);
+
+    // 4 joined rows (invoice 1 has two items); the point is it does not throw
+    // "ambiguous column: id".
+    expect($results['id'][0])->toBe(4);
+});
+
 test('a rollup column aggregates over the derived table', function () {
     // The path that wraps the query with fromSub so a withSum alias is
     // addressable — it delegates to SummaryCalculator::wrap().
