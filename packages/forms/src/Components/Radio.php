@@ -188,7 +188,12 @@ class Radio extends Field implements ProvidesImplicitValidationRules
             ? EnumResolver::icons($options)
             : [];
 
-        return array_merge($enumIcons, $this->evaluate($this->icons));
+        // array_replace, not array_merge: the enum maps are keyed by the case's
+        // scalar value, which is an integer for an int-backed enum. array_merge
+        // renumbers integer keys from 0, breaking the lookup against the option
+        // value (which getOptions() keeps as the real int). array_replace keeps
+        // the keys and still lets explicit ->icons() entries win.
+        return array_replace($enumIcons, $this->evaluate($this->icons));
     }
 
     public function getVariant(): string
@@ -280,7 +285,10 @@ class Radio extends Field implements ProvidesImplicitValidationRules
             ? EnumResolver::colors($options)
             : [];
 
-        return array_merge($enumColors, $this->evaluate($this->colors));
+        // array_replace, not array_merge: see getIcons() — array_merge renumbers
+        // the int keys of an int-backed enum map, misaligning them from the
+        // option values the Blade view looks up.
+        return array_replace($enumColors, $this->evaluate($this->colors));
     }
 
     /**
