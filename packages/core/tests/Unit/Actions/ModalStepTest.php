@@ -67,6 +67,32 @@ it('resolves a closure validation from an empty data bag', function () {
         ->and($step->getValidation())->toBe([]); // null context → base
 });
 
+// ─── Context equivalence matrix (record / empty bag / null) × (static / closure)
+
+it('resolves a closure step schema across every context kind', function (mixed $context, int $expected) {
+    $step = ModalStep::make('details')->schema(fn ($data) => [
+        TextInput::make('a'),
+        TextInput::make('b'),
+    ]);
+
+    expect($step->getSchema($context))->toHaveCount($expected);
+})->with([
+    'record object (row action)' => [(object) ['name' => 'X'], 2],
+    'empty data bag (recordless first step)' => [[], 2],
+    'non-empty data bag (later step)' => [['name' => 'X'], 2],
+    'null (wizard chrome)' => [null, 0],
+]);
+
+it('returns the static step schema regardless of context', function (mixed $context) {
+    $step = ModalStep::make('details')->schema([TextInput::make('a')]);
+
+    expect($step->getSchema($context))->toHaveCount(1);
+})->with([
+    'record object' => [(object) ['x' => 1]],
+    'empty data bag' => [[]],
+    'null' => [null],
+]);
+
 it('can set validation rules', function () {
     $step = ModalStep::make('details')
         ->validation(['name' => 'required']);
