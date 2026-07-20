@@ -156,6 +156,13 @@ function createMockRecord(array $attributes): Model
 function createMockQuery(array $records): Builder
 {
     $query = Mockery::mock(Builder::class);
+
+    // Exporters resolve the qualified key from the model for chunkById's cursor.
+    $model = Mockery::mock(Model::class);
+    $model->shouldReceive('getQualifiedKeyName')->andReturn('mock.id');
+    $model->shouldReceive('getKeyName')->andReturn('id');
+    $query->shouldReceive('getModel')->andReturn($model);
+
     $query->shouldReceive('chunkById')->andReturnUsing(function (int $size, Closure $callback) use ($records) {
         if (! empty($records)) {
             $callback(collect($records));

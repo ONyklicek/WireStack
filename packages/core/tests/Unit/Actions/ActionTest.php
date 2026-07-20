@@ -159,6 +159,73 @@ it('leaves outlined and icon buttons unaffected by quiet', function () {
         ->and($icon['classes'])->toContain('text-red-600 hover:bg-red-50');
 });
 
+// ─── Full render() with record-aware visibility ──────────────────────────────
+// Regression: a direct row action (rendered through the button view, not a
+// dropdown) with a `$record`-aware visible()/hidden() closure fataled because
+// button.blade.php called $action->isHidden() without the row record.
+
+it('renders a direct row action with a record-aware visible() closure without fataling', function () {
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 7, 'status' => 'open']);
+
+    $action = Action::make('editCabinet')
+        ->label('Edit cabinet')
+        ->visible(fn ($record) => $record->status === 'open');
+
+    $html = $action->render($record);
+
+    expect($html)->toContain('data-testid="action-editCabinet"')
+        ->and($html)->toContain('Edit cabinet');
+});
+
+it('renders nothing for a direct row action hidden by its record', function () {
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 7, 'status' => 'closed']);
+
+    // render() gates on canExecute($record); a closed record hides it entirely.
+    $action = Action::make('editCabinet')
+        ->visible(fn ($record) => $record->status === 'open');
+
+    expect($action->render($record))->toBe('');
+});
+
+it('renders a direct row action with a record-aware hidden() closure without fataling', function () {
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 7, 'is_locked' => false]);
+
+    $action = Action::make('editFree')
+        ->label('Edit free')
+        ->hidden(fn ($record) => $record->is_locked);
+
+    expect($action->render($record))->toContain('data-testid="action-editFree"');
+});
+
+it('uses the record-resolved label for the aria-label of a URL row action', function () {
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 7, 'name' => 'Cabinet A']);
+
+    $action = Action::make('open')
+        ->label(fn ($record) => "Open {$record->name}")
+        ->url(fn ($record) => '/cabinets/'.$record->getKey());
+
+    $html = $action->render($record);
+
+    expect($html)->toContain('aria-label="Open Cabinet A"')
+        ->and($html)->toContain('href="/cabinets/7"');
+});
+
 // ─── Quiet / Solid presentation ─────────────────────────────────────────────
 
 it('is not quiet or solid by default', function () {

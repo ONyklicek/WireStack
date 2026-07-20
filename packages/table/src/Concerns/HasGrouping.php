@@ -89,7 +89,7 @@ trait HasGrouping
     }
 
     /**
-     * Group value for a record (raw, used for boundary comparison).
+     * Group value for a record (raw, used for the header label).
      */
     public function getGroupValue(mixed $record): mixed
     {
@@ -98,6 +98,38 @@ trait HasGrouping
         }
 
         return data_get($record, $this->groupColumn);
+    }
+
+    /**
+     * Normalised scalar key for grouping a record, used for boundary detection and
+     * subtotal partitioning.
+     *
+     * The raw value must never be compared with `===`: a `date`/`datetime`-cast
+     * column yields a fresh Carbon per record, so two equal dates are distinct
+     * objects and every row would become its own group. Enum cases are singletons
+     * (identity-safe) but are still normalised to their scalar for consistency.
+     */
+    public function getGroupComparisonKey(mixed $record): string|int|float|bool|null
+    {
+        $value = $this->getGroupValue($record);
+
+        if ($value === null || is_scalar($value)) {
+            return $value;
+        }
+
+        if ($value instanceof \BackedEnum) {
+            return $value->value;
+        }
+
+        if ($value instanceof \UnitEnum) {
+            return $value->name;
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d H:i:s.u');
+        }
+
+        return method_exists($value, '__toString') ? (string) $value : spl_object_hash($value);
     }
 
     /**

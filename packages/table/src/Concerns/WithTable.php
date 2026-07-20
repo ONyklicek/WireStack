@@ -1210,12 +1210,14 @@ trait WithTable
             $partitions = [];
 
             foreach ($records as $record) {
-                $value = $table->getGroupValue($record);
+                // Normalised scalar key: the raw value may be a date/object cast
+                // (a fresh Carbon per record), so a strict compare of the raw value
+                // would never match and every row would form its own group. The
+                // caller (computeGroupSummaries) is handed the same key by the view.
+                $value = $table->getGroupComparisonKey($record);
                 $matched = false;
 
-                // Group values may be objects (enums, dates) — match strictly
-                // instead of using them as array keys. No references needed:
-                // 'records' is a Collection object, push() mutates in place.
+                // 'records' is a Collection object, push() mutates it in place.
                 foreach ($partitions as $partition) {
                     if ($partition['value'] === $value) {
                         $partition['records']->push($record);
@@ -2166,15 +2168,23 @@ trait WithTable
      */
     public function importTable(string $filePath): ImportResult
     {
-        $importConfig = null;
+        $importAction = null;
         foreach ($this->getTable()->getHeaderActions() as $action) {
             if ($action instanceof ImportAction) {
-                $importConfig = $action->getImportConfig();
+                $importAction = $action;
                 break;
             }
         }
 
-        $result = ($importConfig ?? TableImport::make())->import($filePath);
+        // Enforce the ImportAction's authorization server-side. importTable is a
+        // public Livewire endpoint, so a client can invoke it directly — without
+        // this, an ->authorize()/->hidden() guard declared on the action would be
+        // bypassed and an arbitrary server-readable path fed to the importer.
+        if ($importAction !== null && ! $importAction->canExecute()) {
+            return new ImportResult;
+        }
+
+        $result = ($importAction?->getImportConfig() ?? TableImport::make())->import($filePath);
 
         // New rows changed the dataset — drop cached records/partitions so the
         // next render reflects the import.

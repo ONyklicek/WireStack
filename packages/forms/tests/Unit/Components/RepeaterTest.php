@@ -234,12 +234,16 @@ test('item validation rules are collected per child field (regression)', functio
     $repeater = Repeater::make('contacts')->schema([
         TextInput::make('name')->required(),
         TextInput::make('email')->rules(['email']),
-        TextInput::make('note'), // no rules → omitted
+        TextInput::make('note'), // no rules → ['nullable'] fallback (see below)
     ]);
 
+    // Every child gets a rule, mirroring the top-level resolver's ['nullable']
+    // fallback: without it Livewire's validate() would omit an unruled child from
+    // the validated data and its value would be dropped before the save.
     expect($repeater->getItemValidationRules())->toBe([
         'name' => ['required'],
         'email' => ['email'],
+        'note' => ['nullable'],
     ]);
 });
 

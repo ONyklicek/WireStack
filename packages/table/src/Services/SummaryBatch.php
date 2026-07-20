@@ -67,7 +67,16 @@ final class SummaryBatch
                 continue;
             }
 
-            $wrapped = $grammar->wrap($columnName);
+            // Qualify a plain column against the base table: when a relation column
+            // is sorted the query carries a LEFT JOIN, and a bare column present on
+            // both tables (e.g. `id`, `amount`) makes the aggregate ambiguous —
+            // which would throw and take down the whole table render, not just the
+            // footer. Rollup columns instead aggregate a subquery alias over a
+            // derived table (see runRollup), where qualifying to the base table
+            // would reference a non-existent column, so they stay unqualified.
+            $wrapped = $grammar->wrap(
+                $isAggregate ? $columnName : $query->qualifyColumn($columnName)
+            );
 
             foreach ($column->getSummaries() as $index => $summary) {
                 if (! in_array($summary['scope'], $scopes, true)) {

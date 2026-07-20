@@ -7,6 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
+use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Actions\ModalStep;
 use NyonCode\WireForms\Components\TextInput;
@@ -34,6 +35,8 @@ class WtwComponent extends Component
 
     public static bool $afterRan = false;
 
+    public static bool $lastAfterRan = false;
+
     public function table(Table $table): Table
     {
         return $table
@@ -54,7 +57,10 @@ class WtwComponent extends Component
                         ModalStep::make('Contact')
                             ->schema([TextInput::make('email')])
                             ->validation(['email' => 'required|email'])
-                            ->before(fn () => ['email' => 'pre@filled.com']),
+                            ->before(fn () => ['email' => 'pre@filled.com'])
+                            ->afterValidation(function () {
+                                WtwComponent::$lastAfterRan = true;
+                            }),
                     ])
                     ->action(function () {
                         WtwComponent::$executed = true;
@@ -109,6 +115,48 @@ class WtwCtxComponent extends Component
     }
 }
 
+class WtwRowComponent extends Component
+{
+    use WithTable;
+
+    public static bool $executed = false;
+
+    public static int|string|null $ranForRecord = null;
+
+    /** @var array<string, mixed>|null */
+    public static ?array $stepTwoContext = null;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(WtwUser::class)
+            ->paginated(false)
+            ->columns([TextColumn::make('name')])
+            ->actions([
+                Action::make('rowWizard')
+                    ->steps([
+                        ModalStep::make('One')
+                            ->schema([TextInput::make('name')])
+                            ->validation(['name' => 'required']),
+                        ModalStep::make('Two')->schema(function ($context) {
+                            WtwRowComponent::$stepTwoContext = is_array($context) ? $context : null;
+
+                            return [TextInput::make('note')];
+                        }),
+                    ])
+                    ->action(function ($record) {
+                        WtwRowComponent::$executed = true;
+                        WtwRowComponent::$ranForRecord = $record?->getKey();
+                    }),
+            ]);
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
 beforeEach(function () {
     config()->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
 
@@ -119,7 +167,11 @@ beforeEach(function () {
 
     WtwComponent::$executed = false;
     WtwComponent::$afterRan = false;
+    WtwComponent::$lastAfterRan = false;
     WtwCtxComponent::$stepTwoContext = null;
+    WtwRowComponent::$executed = false;
+    WtwRowComponent::$ranForRecord = null;
+    WtwRowComponent::$stepTwoContext = null;
 });
 
 afterEach(function () {
@@ -227,6 +279,39 @@ it('executes the action when all steps are valid', function () {
         ->assertHasNoErrors();
 
     expect(WtwComponent::$executed)->toBeTrue();
+});
+
+it('runs a record-bound row-action wizard end to end', function () {
+    // The record variant of the wizard pipeline: a row action opened with a
+    // record key steps through and runs its action bound to that record. A
+    // closure step also builds when advanced to (its context is covered by the
+    // ModalStep context matrix).
+    $user = WtwUser::create(['name' => 'Jane']);
+
+    Livewire::test(WtwRowComponent::class)
+        ->call('openActionModal', (string) $user->id, 'rowWizard')
+        ->set('tableState.modal.actions.0.data', ['name' => 'Jane'])
+        ->call('nextActionModalStep')                 // advances to the closure step
+        ->set('tableState.modal.actions.0.data.note', 'hi')
+        ->call('submitActionModal')
+        ->assertHasNoErrors();
+
+    expect(WtwRowComponent::$executed)->toBeTrue()
+        ->and((string) WtwRowComponent::$ranForRecord)->toBe((string) $user->id);
+});
+
+it('runs the last step afterValidation on submit', function () {
+    // Regression: the final step is never stepped off of, and the submit path
+    // validated every step with runAfterValidation:false — so a final-step
+    // afterValidation (async/uniqueness gate) never ran before the action.
+    Livewire::test(WtwComponent::class)
+        ->call('openHeaderActionModal', 'wizard')
+        ->set('tableState.modal.actions.0.data', ['name' => 'Jane', 'email' => 'jane@example.com'])
+        ->call('submitActionModal')
+        ->assertHasNoErrors();
+
+    expect(WtwComponent::$lastAfterRan)->toBeTrue()
+        ->and(WtwComponent::$executed)->toBeTrue();
 });
 
 // ─── Header action wizard step context (regression) ─────────────

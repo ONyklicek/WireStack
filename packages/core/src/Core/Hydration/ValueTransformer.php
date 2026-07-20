@@ -50,8 +50,13 @@ final class ValueTransformer
             'int', 'integer' => (int) $value,
             'float', 'double', 'real' => (float) $value,
             'bool', 'boolean' => (bool) $value,
-            'array' => is_array($value) ? json_encode($value) : $value,
-            'json' => is_array($value) ? json_encode($value) : $value,
+            // Leave the array intact: the dehydrated value is written back through
+            // Model::setAttribute(), whose 'array'/'json' cast JSON-encodes it
+            // exactly once. Pre-encoding here made the cast encode a second time,
+            // persisting a double-encoded column that read back as a string. This
+            // mirrors the datetime arm, which returns a Carbon and lets the cast
+            // format it rather than pre-formatting a DB string.
+            'array', 'json' => $value,
             'datetime', 'date', 'immutable_datetime', 'immutable_date' => Carbon::parse((string) $value),
             'timestamp' => Carbon::createFromTimestamp((int) $value),
             'collection' => Collection::make(is_array($value) ? $value : []),

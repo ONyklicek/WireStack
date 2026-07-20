@@ -34,6 +34,13 @@ class Filter implements Htmlable
 
     public ?Closure $hiddenCallback = null;
 
+    /**
+     * True when {@see $hiddenCallback} came from {@see visible()} and its result
+     * must be inverted. Tracked separately instead of coercing the closure so a
+     * `visible(Closure)` condition is actually honoured (see {@see visible()}).
+     */
+    protected bool $hiddenCallbackInverts = false;
+
     public ?string $placeholder = null;
 
     public bool $multiple = false;
@@ -129,6 +136,15 @@ class Filter implements Htmlable
     /** Show the filter only when the condition is true (a bool or a Closure). */
     public function visible(bool|Closure $visible = true): static
     {
+        if ($visible instanceof Closure) {
+            // Store and invert on read — `! $visible` would coerce the Closure to
+            // a bool (always false) and silently discard the condition.
+            $this->hiddenCallback = $visible;
+            $this->hiddenCallbackInverts = true;
+
+            return $this;
+        }
+
         return $this->hidden(! $visible);
     }
 
@@ -137,8 +153,13 @@ class Filter implements Htmlable
     {
         if ($hidden instanceof Closure) {
             $this->hiddenCallback = $hidden;
+            $this->hiddenCallbackInverts = false;
         } else {
+            // A literal state supersedes any previously registered closure so the
+            // last call wins predictably.
             $this->hidden = $hidden;
+            $this->hiddenCallback = null;
+            $this->hiddenCallbackInverts = false;
         }
 
         return $this;
@@ -540,8 +561,15 @@ class Filter implements Htmlable
 
     public function isHidden(): bool
     {
-        if ($this->hiddenCallback) {
-            return ($this->hiddenCallback)();
+        // Filters are table-level controls with no per-record context, so their
+        // visibility Closure is `fn (): bool`. A closure that (mistakenly) requires
+        // an argument degrades to the static default instead of fataling — there is
+        // nothing to pass it. Mirrors the guarded resolution in the action layer.
+        if ($this->hiddenCallback !== null
+            && (new \ReflectionFunction($this->hiddenCallback))->getNumberOfRequiredParameters() === 0) {
+            $result = (bool) ($this->hiddenCallback)();
+
+            return $this->hiddenCallbackInverts ? ! $result : $result;
         }
 
         return $this->hidden;

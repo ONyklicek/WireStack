@@ -319,6 +319,51 @@ it('handles custom search callbacks', function () {
         ->and($results->first()->name)->toBe('Bob');
 });
 
+it('keeps default searchable columns active alongside a custom search callback', function () {
+    // Regression: any column with a custom search callback nulled the search term
+    // for the planner, so every plain ->searchable() column was dropped and only
+    // the custom callbacks ran.
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->columns([
+            Column::make('name')->searchable(),
+            // Custom callback that never matches — must not suppress `name`.
+            Column::make('email')->searchable(query: function ($query, $search) {
+                $query->whereRaw('1 = 0');
+            }),
+        ]);
+
+    $results = (new TableQueryService)->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+        search: 'Alice',
+    )->get();
+
+    expect($results)->toHaveCount(1)
+        ->and($results->first()->name)->toBe('Alice');
+});
+
+it('OR-combines a custom search callback with the default columns', function () {
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->columns([
+            Column::make('name')->searchable(),
+            Column::make('email')->searchable(query: function ($query, $search) {
+                $query->where('email', 'like', "%{$search}%");
+            }),
+        ]);
+
+    // Term matches only via the custom email callback, not the default name column.
+    $results = (new TableQueryService)->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+        search: 'charlie@example',
+    )->get();
+
+    expect($results)->toHaveCount(1)
+        ->and($results->first()->name)->toBe('Charlie');
+});
+
 // ─── Column-level filters honour the column operator ─────────────────────────
 
 it('applies column filters through the column operator (default like = partial match)', function () {

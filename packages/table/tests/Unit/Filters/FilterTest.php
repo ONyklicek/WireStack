@@ -108,6 +108,31 @@ it('visible is inverse of hidden', function () {
     expect($filter->isHidden())->toBeTrue();
 });
 
+it('honours a visible() Closure instead of silently discarding it', function () {
+    // Regression: visible(Closure) did `hidden(! $closure)`, coercing the object
+    // to false and dropping the condition — the filter was always shown.
+    expect(Filter::make('status')->visible(fn () => false)->isHidden())->toBeTrue()
+        ->and(Filter::make('status')->visible(fn () => true)->isHidden())->toBeFalse();
+});
+
+it('lets a later literal hidden() supersede an earlier visible() Closure', function () {
+    $filter = Filter::make('status')
+        ->visible(fn () => false)
+        ->hidden(false);
+
+    expect($filter->isHidden())->toBeFalse();
+});
+
+it('degrades a mistakenly record-required visibility Closure to the static default', function () {
+    // Filters have no per-record context, so a closure requiring an argument
+    // cannot be satisfied — it must fall back instead of fataling.
+    $filter = Filter::make('status')->hidden(fn ($record) => true);
+
+    expect(fn () => $filter->isHidden())->not->toThrow(ArgumentCountError::class);
+    expect($filter->isHidden())->toBeFalse()
+        ->and($filter->canView())->toBeTrue();
+});
+
 // ─── Permission ─────────────────────────────────────────────────────────────
 
 it('has no permission by default', function () {

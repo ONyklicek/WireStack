@@ -149,20 +149,22 @@ it('transforms null to null for all cast types', function () {
 // ValueTransformer - reverseTransform()
 // =============================================================================
 
-it('reverse transforms array to json string', function () {
+it('leaves an array value intact for an array cast (Eloquent encodes it once)', function () {
+    // Pre-encoding to a JSON string here caused Model::setAttribute()'s 'array'
+    // cast to encode a second time, persisting a double-encoded column.
     $transformer = new ValueTransformer;
 
     $result = $transformer->reverseTransform(['foo' => 'bar'], 'array');
 
-    expect($result)->toBe('{"foo":"bar"}');
+    expect($result)->toBe(['foo' => 'bar']);
 });
 
-it('reverse transforms array with json cast to json string', function () {
+it('leaves an array value intact for a json cast (Eloquent encodes it once)', function () {
     $transformer = new ValueTransformer;
 
     $result = $transformer->reverseTransform(['x', 'y'], 'json');
 
-    expect($result)->toBe('["x","y"]');
+    expect($result)->toBe(['x', 'y']);
 });
 
 it('reverse transforms datetime string to Carbon instance', function () {

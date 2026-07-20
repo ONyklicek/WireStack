@@ -201,6 +201,11 @@ final class SummaryCalculator
     {
         $column = $target->column;
 
+        // Qualify against the base table: a relation sort adds a LEFT JOIN, and a
+        // bare column shared by both tables (e.g. `id`) makes the aggregate
+        // ambiguous. Relation-path targets keep their dotted form untouched.
+        $column = str_contains($column, '.') ? $column : $query->qualifyColumn($column);
+
         if (! $type->isSqlNative()) {
             return $this->fromCollection($type, $this->pluck($query, $column), $target);
         }

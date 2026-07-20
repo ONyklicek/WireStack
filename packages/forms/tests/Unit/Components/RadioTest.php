@@ -47,6 +47,36 @@ enum RadioTestPlan: string implements HasColor, HasIcon, HasLabel
     }
 }
 
+enum RadioTestPriority: int implements HasColor, HasIcon, HasLabel
+{
+    case Low = 1;
+    case High = 2;
+
+    public function getLabel(): ?string
+    {
+        return match ($this) {
+            self::Low => 'Low',
+            self::High => 'High',
+        };
+    }
+
+    public function getIcon(): string|Icon|null
+    {
+        return match ($this) {
+            self::Low => 'arrow-down',
+            self::High => 'arrow-up',
+        };
+    }
+
+    public function getColor(): string|Color|null
+    {
+        return match ($this) {
+            self::Low => 'gray',
+            self::High => 'red',
+        };
+    }
+}
+
 test('default variant renders native radio inputs', function () {
     $html = renderRadio(
         Radio::make('role')->options(['admin' => 'Admin', 'user' => 'User'])
@@ -235,6 +265,25 @@ test('explicit colors override enum-derived colors', function () {
         'pro' => 'danger',
         'free' => 'gray',
     ]);
+});
+
+test('keeps int-backed enum keys aligned between options, colors and icons', function () {
+    // Regression: getColors()/getIcons() used array_merge, which renumbers the
+    // integer keys of an int-backed enum map from 0, misaligning them from the
+    // option values (kept as the real ints by getOptions()). Every option then
+    // rendered the wrong color/icon.
+    $field = Radio::make('priority')->options(RadioTestPriority::class)->cards();
+
+    expect($field->getOptions())->toBe([1 => 'Low', 2 => 'High'])
+        ->and($field->getColors())->toBe([1 => 'gray', 2 => 'red'])
+        ->and($field->getIcons())->toBe([1 => 'arrow-down', 2 => 'arrow-up']);
+
+    // Explicit entries still win and still key by the real value.
+    $override = Radio::make('priority')
+        ->options(RadioTestPriority::class)
+        ->colors([2 => 'orange']);
+
+    expect($override->getColors())->toBe([1 => 'gray', 2 => 'orange']);
 });
 
 test('per-option color falls back to the group color when unset', function () {

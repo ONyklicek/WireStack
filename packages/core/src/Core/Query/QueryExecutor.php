@@ -41,11 +41,12 @@ final class QueryExecutor
      * Returns the modified builder (not yet executed — caller decides when to ->get()).
      *
      * @param  Builder<Model>  $builder
+     * @param  array<int, callable(Builder<Model>, string): mixed>  $extraSearchCallbacks
      * @return Builder<Model>
      */
-    public function execute(Builder $builder, QueryPlan $plan, ?string $searchTerm = null): Builder
+    public function execute(Builder $builder, QueryPlan $plan, ?string $searchTerm = null, array $extraSearchCallbacks = []): Builder
     {
-        $pipes = $this->pipes !== [] ? $this->pipes : $this->getDefaultPipes($builder, $searchTerm);
+        $pipes = $this->pipes !== [] ? $this->pipes : $this->getDefaultPipes($builder, $searchTerm, $extraSearchCallbacks);
 
         // Build the pipeline from the end — last pipe calls no-op, second-to-last calls last, etc.
         $pipeline = array_reduce(
@@ -95,9 +96,10 @@ final class QueryExecutor
      * 8. EagerLoads — with() for non-joinable relations
      *
      * @param  Builder<Model>  $builder
+     * @param  array<int, callable(Builder<Model>, string): mixed>  $extraSearchCallbacks
      * @return array<int, QueryPipe>
      */
-    public function getDefaultPipes(Builder $builder, ?string $searchTerm): array
+    public function getDefaultPipes(Builder $builder, ?string $searchTerm, array $extraSearchCallbacks = []): array
     {
         $strategy = $this->searchStrategy ?? $this->resolveSearchStrategy($builder);
 
@@ -105,7 +107,7 @@ final class QueryExecutor
             new ApplyScopes,
             new ApplySoftDeletes,
             new ApplyRelations,
-            new ApplySearch($strategy, $searchTerm),
+            new ApplySearch($strategy, $searchTerm, $extraSearchCallbacks),
             new ApplyFilters,
             new ApplySorting,
             new ApplyAggregates,

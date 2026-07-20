@@ -46,6 +46,11 @@ class CsvExporter implements Exporter
                 );
             }
 
+            // Pass the qualified key: the export query carries a relation LEFT JOIN
+            // whenever the table is sorted by a relation column, and chunkById's
+            // default unqualified `id` cursor is ambiguous against the joined table.
+            $model = $query->getModel();
+
             $query->chunkById(1000, function ($records) use ($handle, $columns) {
                 foreach ($records as $record) {
                     $row = [];
@@ -54,7 +59,7 @@ class CsvExporter implements Exporter
                     }
                     fputcsv($handle, $row, $this->delimiter, $this->enclosure);
                 }
-            });
+            }, $model->getQualifiedKeyName(), $model->getKeyName());
 
             foreach ($summaryRows as $summaryRow) {
                 fputcsv($handle, array_map([$this, 'escapeFormula'], $summaryRow), $this->delimiter, $this->enclosure);

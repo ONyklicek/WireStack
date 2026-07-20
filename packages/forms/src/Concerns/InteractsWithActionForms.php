@@ -161,11 +161,14 @@ trait InteractsWithActionForms
         // @codeCoverageIgnoreEnd
 
         if ($action->hasMultipleSteps()) {
-            // Validate every step's schema and rules against the shared form
-            // data. afterValidation hooks already ran while stepping forward, so
-            // they are skipped here to avoid firing twice.
-            for ($step = 0; $step < $action->getStepCount(); $step++) {
-                $this->validateModalStep($action, $context, $step, runAfterValidation: false);
+            // Validate every step's schema and rules against the shared form data.
+            // Intermediate steps' afterValidation hooks already ran while stepping
+            // forward, so they are skipped here to avoid firing twice — but the
+            // last step is never stepped off of, so its hook runs here (once) on
+            // submit; otherwise a final-step async/uniqueness gate never fires.
+            $lastStep = $action->getStepCount() - 1;
+            for ($step = 0; $step <= $lastStep; $step++) {
+                $this->validateModalStep($action, $context, $step, runAfterValidation: $step === $lastStep);
             }
 
             return;

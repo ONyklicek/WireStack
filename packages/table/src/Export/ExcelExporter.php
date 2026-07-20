@@ -61,6 +61,10 @@ class ExcelExporter implements Exporter
                 $writer->addRow(new Row($headerCells));
             }
 
+            // Qualified key cursor: a relation-sorted export query carries a LEFT
+            // JOIN where chunkById's default unqualified `id` would be ambiguous.
+            $model = $query->getModel();
+
             $query->chunkById(1000, function ($records) use ($writer, $columns) {
                 foreach ($records as $record) {
                     $cells = [];
@@ -71,7 +75,7 @@ class ExcelExporter implements Exporter
                     }
                     $writer->addRow(new Row($cells));
                 }
-            });
+            }, $model->getQualifiedKeyName(), $model->getKeyName());
 
             foreach ($summaryRows as $summaryRow) {
                 $writer->addRow(new Row(array_map(
