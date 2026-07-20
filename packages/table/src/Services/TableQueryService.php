@@ -620,19 +620,13 @@ final class TableQueryService
                 continue;
             }
 
-            // Multi-field filters route through apply() — skip in planner
-            if (is_array($value) && ! $filter->isMultiple()) {
-                continue;
+            // Delegate to the filter's own planner mapping — mirroring the column
+            // header path (buildPlannerColumnFilters). A generic `=` here ignored
+            // TextFilter's LIKE (and any subclass operator), so a standalone
+            // ->filters([TextFilter::make(...)]) did an exact match, not a search.
+            foreach ($filter->toPlannerDefinitions($value) as $definition) {
+                $definitions[] = $definition;
             }
-
-            $operator = ($filter->isMultiple() && is_array($value)) ? 'in' : '=';
-            $filterColumn = $filter->getColumn();
-
-            $definitions[] = FilterDefinition::make(
-                column: $filterColumn,
-                operator: $operator,
-                value: $value,
-            );
         }
 
         // Column header filters are added by buildPlannerColumnFilters().
