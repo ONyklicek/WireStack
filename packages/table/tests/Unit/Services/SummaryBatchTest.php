@@ -99,6 +99,29 @@ test('qualifies the summarized column so a relation-joined query is not ambiguou
     expect($results['id'][0])->toBe(4);
 });
 
+test('no SQL-native summary type is ambiguous over a relation-joined query', function (string $method) {
+    // Seam matrix: every batchable aggregate over a column shared by the base and
+    // the joined table (`id`) must qualify to the base table and not throw
+    // "ambiguous column" — the class of bug that took down the whole footer/render
+    // once a relation column was sorted.
+    $column = Column::make('id')->{$method}('Agg');
+
+    $joined = SbInvoice::query()
+        ->leftJoin('sb_items', 'sb_items.invoice_id', '=', 'sb_invoices.id');
+
+    $results = app(SummaryBatch::class)->compute([$column], $joined);
+
+    // The point is it computed a value instead of throwing.
+    expect($results['id'][0])->not->toBeNull();
+})->with([
+    'summarizeSum',
+    'summarizeAvg',
+    'summarizeMin',
+    'summarizeMax',
+    'summarizeCount',
+    'summarizeDistinct',
+]);
+
 test('a rollup column aggregates over the derived table', function () {
     // The path that wraps the query with fromSub so a withSum alias is
     // addressable — it delegates to SummaryCalculator::wrap().

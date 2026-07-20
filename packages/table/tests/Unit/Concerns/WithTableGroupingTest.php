@@ -250,3 +250,59 @@ it('buckets date-cast rows into one subtotal per day, not per row', function () 
 
     expect($component->computeGroupSummaries($key)['total'][0]['value'])->toBe(275);
 });
+
+// Equivalence class: grouping by an enum-cast column. Enum cases are singletons
+// so `===` happened to work, but getGroupComparisonKey() normalises them too, so
+// the boundary logic is uniform across scalar / date / enum group values.
+
+enum WtgPriority: string
+{
+    case Low = 'low';
+    case High = 'high';
+}
+
+class WtgEnumInvoice extends Model
+{
+    protected $table = 'wtg_invoices';
+
+    protected $guarded = [];
+
+    protected $casts = ['priority' => WtgPriority::class];
+}
+
+class WtgEnumComponent extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(WtgEnumInvoice::class)
+            ->paginated(false)
+            ->defaultSort('priority')
+            ->columns([Column::make('priority')->sortable(), Column::make('total')->summarizeSum('Sum')])
+            ->groupBy('priority');
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+it('buckets enum-cast rows by their scalar key into one subtotal per group', function () {
+    Schema::table('wtg_invoices', fn (Blueprint $t) => $t->string('priority')->nullable());
+    WtgEnumInvoice::whereIn('number', ['INV-2', 'INV-4'])->update(['priority' => 'high']); // 250 + 25
+    WtgEnumInvoice::whereIn('number', ['INV-1', 'INV-3'])->update(['priority' => 'low']);
+
+    $component = new WtgEnumComponent;
+    $component->mountWithTable();
+    $records = $component->getTableRecords();
+
+    $table = $component->getTable();
+    $high = $records->firstWhere('number', 'INV-2');
+
+    // Enum case normalises to its scalar value; both high rows share it.
+    expect($table->getGroupComparisonKey($high))->toBe('high')
+        ->and($component->computeGroupSummaries('high')['total'][0]['value'])->toBe(275);
+});
