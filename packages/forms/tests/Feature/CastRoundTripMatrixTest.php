@@ -108,10 +108,12 @@ it('round-trips every cast type through the full save pipeline', function () {
         ->and($fresh->active)->toBeTrue();
 
     // array / json / collection casts read back as their PHP type, not a string.
-    expect($fresh->meta)->toBe(['a' => 'b', 'c' => 'd'])
-        ->and($fresh->config)->toBe(['x' => '1'])
+    // toEqual (not toBe) so JSON object key order stays driver-agnostic — MySQL's
+    // native JSON type may reorder keys on storage.
+    expect($fresh->meta)->toEqual(['a' => 'b', 'c' => 'd'])
+        ->and($fresh->config)->toEqual(['x' => '1'])
         ->and($fresh->labels)->toBeInstanceOf(Collection::class)
-        ->and($fresh->labels->toArray())->toBe(['one' => 'uno']);
+        ->and($fresh->labels->toArray())->toEqual(['one' => 'uno']);
 });
 
 it('stores JSON-cast columns single-encoded (not a double-encoded string)', function () {
@@ -123,11 +125,13 @@ it('stores JSON-cast columns single-encoded (not a double-encoded string)', func
 
     $raw = DB::table('crt_records')->first();
 
-    // A single JSON object literal — a double-encoded value would be the string
-    // "\"{\\\"a\\\":\\\"b\\\"}\"" (wrapped in quotes with escaped inner quotes).
-    expect($raw->meta)->toBe('{"a":"b"}')
-        ->and($raw->config)->toBe('{"x":"1"}')
-        ->and($raw->labels)->toBe('{"k":"v"}');
+    // A single JSON object — decode and compare as an array so the assertion is
+    // driver-agnostic (MySQL's native JSON re-serializes with whitespace and may
+    // reorder keys). The guard still holds: a double-encoded value would decode to
+    // a string, not an array (the buggy shape was "\"{\\\"a\\\":\\\"b\\\"}\"").
+    expect(json_decode($raw->meta, true))->toEqual(['a' => 'b'])
+        ->and(json_decode($raw->config, true))->toEqual(['x' => '1'])
+        ->and(json_decode($raw->labels, true))->toEqual(['k' => 'v']);
 });
 
 it('does not compound the encoding across repeated saves of a cast column', function () {

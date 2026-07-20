@@ -133,7 +133,8 @@ it('round-trips the full form lifecycle across a save and a remount', function (
     // Persisted correctly: array single-encoded, same book row updated in place.
     $fresh = FleAuthor::with('books')->find($author->id);
     expect($fresh->name)->toBe('Janet')
-        ->and($fresh->meta)->toBe(['genre' => 'fantasy', 'era' => 'modern'])
+        // toEqual: JSON object key order is driver-dependent (MySQL may reorder).
+        ->and($fresh->meta)->toEqual(['genre' => 'fantasy', 'era' => 'modern'])
         ->and($fresh->books)->toHaveCount(1)
         ->and($fresh->books->first()->id)->toBe($book->id)      // updated, not recreated
         ->and($fresh->books->first()->title)->toBe('New Title');
@@ -142,7 +143,8 @@ it('round-trips the full form lifecycle across a save and a remount', function (
     //    state — proving the hydrate/dehydrate loop is symmetric end to end.
     $second = Livewire::test(FleHost::class, ['authorId' => $author->id]);
     expect($second->get('data.name'))->toBe('Janet')
-        ->and($second->get('data.meta'))->toBe(['genre' => 'fantasy', 'era' => 'modern'])
+        // toEqual: re-hydrated from the DB, whose JSON key order is driver-dependent.
+        ->and($second->get('data.meta'))->toEqual(['genre' => 'fantasy', 'era' => 'modern'])
         ->and($second->get('data.books.0.title'))->toBe('New Title')
         ->and($second->get('data.books.0.id'))->toBe($book->id);
 });

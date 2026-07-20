@@ -83,12 +83,15 @@ it('round-trips an array-cast column as an array, not a double-encoded string', 
         ->set('data.meta', ['a' => 'b', 'c' => 'd'])
         ->call('save');
 
-    // Raw column: a single JSON object, not a JSON-encoded string literal.
+    // Raw column: a single JSON object, not a JSON-encoded string literal. Decode
+    // and compare as an array so the assertion is driver-agnostic — MySQL's native
+    // JSON type re-serializes with whitespace and may reorder keys. The guard still
+    // holds: a double-encoded value would decode to a string, not an array.
     $raw = DB::table('acrt_events')->where('id', $event->id)->value('meta');
-    expect($raw)->toBe('{"a":"b","c":"d"}');
+    expect(json_decode($raw, true))->toEqual(['a' => 'b', 'c' => 'd']);
 
     // Cast read-back yields the array.
-    expect($event->fresh()->meta)->toBe(['a' => 'b', 'c' => 'd']);
+    expect($event->fresh()->meta)->toEqual(['a' => 'b', 'c' => 'd']);
 });
 
 it('does not compound the encoding across repeated saves', function () {
