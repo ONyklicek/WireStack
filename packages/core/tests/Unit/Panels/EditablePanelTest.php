@@ -6,6 +6,7 @@ use Illuminate\Auth\GenericUser;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Foundation\Schema\Section;
@@ -343,6 +344,27 @@ it('is not editable when bound to a plain array (no model key)', function () {
     expect($entry->isEditable())->toBeFalse()
         ->and($entry->getRecordKey())->toBeNull()
         ->and($entry->getRecordVersion())->toBe('0');
+});
+
+it('stamps the optimistic-lock version from a custom UPDATED_AT column', function () {
+    // Regression: getRecordVersion() read the literal `updated_at` attribute, so
+    // a model naming its timestamp column differently returned '0' — the sentinel
+    // that disables the lock — leaving the record unguarded on the first edit.
+    $model = new class extends Model
+    {
+        protected $guarded = [];
+
+        const UPDATED_AT = 'modified_at';
+    };
+    $model->forceFill([
+        'id' => 5,
+        'modified_at' => Carbon::createFromTimestamp(1_767_261_600),
+    ]);
+    $model->exists = true;
+
+    $entry = ToggleEntry::make('is_active')->record($model);
+
+    expect($entry->getRecordVersion())->toBe('1767261600');
 });
 
 it('renders the base component view', function () {

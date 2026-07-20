@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Panels\Components;
 
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Foundation\Support\RecordVersion;
 use NyonCode\WireCore\Infolists\Components\Entry;
 use NyonCode\WireCore\Panels\Concerns\WithEditablePanel;
 
@@ -182,12 +183,17 @@ abstract class EditableEntry extends Entry
     /**
      * Optimistic-lock version for the bound record (updated_at timestamp, or '0'
      * when the model is not timestamped / not a model).
+     *
+     * Delegates to the canonical {@see RecordVersion} owner so a model that names
+     * its timestamp column something other than `updated_at` (via `const
+     * UPDATED_AT`) is still guarded — reading the literal attribute here returned
+     * '0' for such models, silently bypassing the lock on the load→first-edit
+     * window (the server side already resolves it via getUpdatedAtColumn()).
      */
     public function getRecordVersion(): string
     {
         $model = $this->getRecordModel();
-        $updatedAt = $model?->getAttribute('updated_at');
 
-        return $updatedAt instanceof \DateTimeInterface ? (string) $updatedAt->getTimestamp() : '0';
+        return $model !== null ? (app(RecordVersion::class)->stamp($model) ?? '0') : '0';
     }
 }
