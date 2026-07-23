@@ -51,7 +51,9 @@ constraints automatically.
 ### Filters
 
 `SelectFilter`, `DateFilter`, `NumberRangeFilter`, `TernaryFilter`. A filter query callback must return the
-Builder. Use `->indicator()` for filter chips and `->subRows()` to scope sub-row filtering.
+Builder. It receives the value already normalized for its filter type — a `TernaryFilter` callback gets a real
+`bool`, never the `'true'`/`'false'` option key, so branch with `$value ? … : …` and never compare to a
+string. Use `->indicator()` for filter chips and `->subRows()` to scope sub-row filtering.
 
 Filtering by a relation aggregate uses the `orders->count()` / `orders->exists()` path syntax
 (`Filter::make('orders->count()')`). It is applied as a `WHERE` over the aggregate subquery via Eloquent's

@@ -45,4 +45,19 @@ class WireBoostServiceProvider extends PackageServiceProvider
                 McpCommand::class,
             ]);
     }
+
+    /**
+     * Extra rows for this package's `php artisan about` section (the toolkit
+     * already prepends "Version"). Values are closures so config resolves at
+     * boot, not at declaration time.
+     *
+     * @return array<string, string|\Closure>
+     */
+    public function aboutData(): array
+    {
+        return [
+            'MCP server' => fn (): string => (string) config('wire-boost.server.name', 'WireStack Boost'),
+            'Database query tool' => fn (): string => config('wire-boost.tools.database_query', false) ? 'enabled' : 'disabled',
+        ];
+    }
 }

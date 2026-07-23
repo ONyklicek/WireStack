@@ -592,3 +592,17 @@ it('keeps the default white card background when no row color is set', function 
         ->toContain('bg-white')
         ->toContain('border-b');
 });
+
+// ─── Per-page options ───────────────────────────────────────────────────────
+
+it('offers the configured page size even when it is not in the options list', function () {
+    $table = Table::make()->perPage(3);
+
+    expect($table->getPerPageOptions())->toBe([3, 10, 25, 50, 100]);
+});
+
+it('does not duplicate a configured page size that is already offered', function () {
+    $table = Table::make()->perPage(25)->perPageOptions([10, 25]);
+
+    expect($table->getPerPageOptions())->toBe([10, 25]);
+});

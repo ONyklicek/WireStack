@@ -40,7 +40,9 @@ class WireSortableServiceProvider extends PackageServiceProvider
             ->hasInstallCommand(function (InstallCommand $command) {
                 $command
                     ->publishConfig()
-                    ->publishMigrations();
+                    ->publishMigrations()
+                    ->publishViews()
+                    ->publishTranslations();
             });
     }
 

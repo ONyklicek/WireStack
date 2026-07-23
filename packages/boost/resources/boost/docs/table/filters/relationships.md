@@ -28,7 +28,7 @@ SelectFilter::make('tags')
 // HasMany (existence) — use TernaryFilter
 TernaryFilter::make('has_comments')
     ->label('Has Comments')
-    ->query(fn (Builder $q, $value) => $value === '1'
+    ->query(fn (Builder $q, bool $value) => $value
         ? $q->has('comments')
         : $q->doesntHave('comments'))
 ```

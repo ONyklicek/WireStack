@@ -45,13 +45,14 @@ TernaryFilter::make('verified')
 
 ## Vlastní logika dotazu
 
-Použijte jediný callback `query()`; dostane builder a vybranou hodnotu
-(`'1'` pro option „true", `'0'` pro option „false").
+Použijte jediný callback `query()`; dostane builder a vybraný stav jako
+**skutečný boolean** — `true` pro option „Ano", `false` pro „Ne". Volba „Vše"
+filtr vypne, takže se callback s prázdným stavem nikdy nezavolá.
 
 ```php
 TernaryFilter::make('has_orders')
     ->label('Has Orders')
-    ->query(fn (Builder $query, $value) => $value === '1'
+    ->query(fn (Builder $query, bool $value) => $value
         ? $query->has('orders')
         : $query->doesntHave('orders'))
 ```
@@ -59,10 +60,31 @@ TernaryFilter::make('has_orders')
 ```php
 TernaryFilter::make('overdue')
     ->label('Overdue')
-    ->query(fn (Builder $query, $value) => $value === '1'
+    ->query(fn (Builder $query, bool $value) => $value
         ? $query->where('due_at', '<', now())
         : $query->where('due_at', '>=', now()))
 ```
+
+Nejčastější důvod sáhnout po `query()` je filtrování podle relace, které se
+přes `where(column, bool)` vyjádřit nedá:
+
+```php
+TernaryFilter::make('invoiced')
+    ->label('Fakturováno')
+    ->query(fn (Builder $query, bool $value) => $value
+        ? $query->whereHas('invoice')
+        : $query->whereDoesntHave('invoice'))
+```
+
+`nullable()` rozšiřuje větev „Ne" u **výchozího** dotazu. Callback `query()`
+vlastní svůj dotaz, takže se tam neuplatní — callback se dozví, která strana
+byla vybraná, a rozhodne sám, jak se má `NULL` chovat.
+
+> **Změna v 1.13.0** — callback dřív dostával syrový stav selectu
+> (`'true'` / `'false'`), takže `$value ? … : …` větvil podle truthy stringu a
+> obě volby vracely stejné řádky. Nově dostane skutečný `bool`. Callback, který
+> porovnává se stringem (`$value === '1'`, `$value === 'true'`), je potřeba
+> upravit; syrový stav zůstává dostupný jako volitelný třetí argument.
 
 ## Nativní HTML select
 
@@ -82,13 +104,19 @@ Používej jen tam, kde je cena renderu důležitější než jednotný vzhled.
 ->allLabel(string $label)           // placeholder pro option „bez filtru"
 ->nullable(bool $nullable = true)   // „false" také odpovídá IS NULL
 ->native(bool $native = true)       // opt-in nativní <select> prohlížeče (výchozí: false)
-->query(Closure $fn)                // vlastní dotaz: fn(Builder $q, $value)
+->query(Closure $fn)                // vlastní dotaz: fn(Builder $q, bool $value)
 ```
 
 ## Hodnoty stavu
 
-| Stav UI | Odeslaná hodnota | Výchozí chování |
-|----------|-----------------|-----------------|
-| All | `null` | Žádný filtr |
-| Yes | `'1'` | `WHERE column = 1` |
-| No | `'0'` | `WHERE column = 0` (nebo `= 0 OR IS NULL` pokud nullable) |
+Select odesílá klíč option; callbacky `query()` i výchozí dotaz pracují
+s normalizovaným booleanem, takže se podle transportní podoby nikdy nevětví.
+
+| Stav UI | Odeslaný stav | `$value` v `query()` | Výchozí chování |
+|---------|---------------|----------------------|-----------------|
+| All | `''` / `null` | *(nezavolá se)* | Žádný filtr |
+| Yes | `'true'` | `true` | `WHERE column = 1` |
+| No | `'false'` | `false` | `WHERE column = 0` (nebo `= 0 OR IS NULL` pokud nullable) |
+
+Stav načtený z URL nebo nastavený programově může přijít i jako `'1'`/`'0'`,
+`1`/`0` nebo skutečný bool — všechny se přijímají a normalizují stejně.

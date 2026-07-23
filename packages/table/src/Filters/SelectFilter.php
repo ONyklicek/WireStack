@@ -90,7 +90,7 @@ class SelectFilter extends Filter
         }
 
         if ($this->queryCallback) {
-            return ($this->queryCallback)($query, $value);
+            return $this->applyQueryCallback($query, $this->normalizeValue($value), $value);
         }
 
         if (! is_array($value)) {

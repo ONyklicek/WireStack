@@ -67,7 +67,7 @@ class TextFilter extends Filter
         }
 
         if ($this->queryCallback) {
-            return ($this->queryCallback)($query, $value);
+            return $this->applyQueryCallback($query, $this->normalizeValue($value), $value);
         }
 
         // Crafted/stale state can deliver an array here; guard against

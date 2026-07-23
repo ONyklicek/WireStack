@@ -30,7 +30,7 @@ $table->filters([
         ->label('Availability')
         ->trueLabel('In Stock')
         ->falseLabel('Out of Stock')
-        ->query(fn (Builder $q, $value) => $value === '1'
+        ->query(fn (Builder $q, bool $value) => $value
             ? $q->where('stock_quantity', '>', 0)
             : $q->where('stock_quantity', '<=', 0)),
 
@@ -44,7 +44,7 @@ $table->filters([
 
     TernaryFilter::make('has_discount')
         ->label('Discounted')
-        ->query(fn (Builder $q, $value) => $value === '1'
+        ->query(fn (Builder $q, bool $value) => $value
             ? $q->whereNotNull('discount_percent')
             : $q->whereNull('discount_percent')),
 ]);
@@ -122,7 +122,7 @@ $table->filters([
 
     TernaryFilter::make('has_notes')
         ->label('Has Notes')
-        ->query(fn (Builder $q, $value) => $value === '1'
+        ->query(fn (Builder $q, bool $value) => $value
             ? $q->whereNotNull('notes')->where('notes', '!=', '')
             : $q->where(fn ($q2) => $q2->whereNull('notes')->orWhere('notes', ''))),
 ]);

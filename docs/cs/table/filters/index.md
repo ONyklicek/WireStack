@@ -88,6 +88,35 @@ SelectFilter::make('activity_level')
     })
 ```
 
+#### Co obsahuje `$value`
+
+Tvar závisí na typu filtru — rozsahový filtr předá pole, ternary předá skutečný
+boolean:
+
+| Filtr | `$value` | Příklad |
+|-------|----------|---------|
+| `TextFilter` | `string` — co uživatel napsal | `'faktura'` |
+| `SelectFilter` | klíč option `string\|int` | `'active'` |
+| `SelectFilter` + `->multiple()` | `array` klíčů options | `['active', 'pending']` |
+| `TernaryFilter` | `bool` — `true` pro Ano, `false` pro Ne | `false` |
+| `NumberRangeFilter` | `array{min, max}` — kterákoli strana může být `''` | `['min' => '10', 'max' => '']` |
+| `DateFilter` | datum jako `string` | `'2026-07-23'` |
+| `DateFilter` + `->range()` | `array{from, to}` | `['from' => '2026-01-01', 'to' => '']` |
+| `DateFilter` + `->month()` | `string` `'YYYY-MM'` | `'2026-07'` |
+
+Callback se volá jen když je filtr **aktivní** — prázdný stav (`null`, `''`,
+`[]` nebo „Vše" u ternary) filtr vypne a do closure se vůbec nedostane, takže se
+proti němu nemusíte bránit. Výjimkou jsou v jednom směru vícepolní filtry:
+rozsah zůstává aktivní, dokud je vyplněná *kterákoli* strana, takže si každou
+mez ověřte zvlášť.
+
+Třetí argument nese syrový odeslaný stav před normalizací — pro vzácné případy,
+kdy callback potřebuje transportní podobu:
+
+```php
+->query(function (Builder $query, mixed $value, mixed $raw) { … })
+```
+
 ### Viditelnost a oprávnění
 
 ```php
