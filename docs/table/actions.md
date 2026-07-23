@@ -81,6 +81,69 @@ use NyonCode\WireCore\Actions\DeleteBulkAction;
 
 Use bulk actions for destructive or repetitive operations that should not be repeated row by row.
 
+### Selecting Beyond the Page
+
+A selection has two shapes, and the second is what makes a bulk action over a
+whole filtered set possible at all:
+
+- **keys** — an explicit set of record keys, deliberately unaffected by filters
+  and sort. Selecting a page **adds** to it, so paging never discards work.
+- **all matching** — everything the *current filter* matches, stored as a mode
+  rather than a list. Unticking one row out of 128 000 stores one exclusion, not
+  127 999 keys, and no list of the whole result set ever reaches the browser.
+
+The selection bar always shows which of the two is active and offers the way
+across:
+
+```text
+[3] records selected                                    [Export] [Delete] [×]
+3 selected.  Select all 1 284
+```
+
+Once the whole filtered set is selected, the same line offers **Only this page**
+back.
+
+**A filter or search change drops "all matching" back to an explicit selection.**
+"Everything" is defined by the filter that was on screen; narrowing it while the
+selection stands would silently redefine what the next bulk action touches.
+Sorting and paging leave it alone — neither changes the set.
+
+### Bulk Actions Over Large Selections
+
+An action callback receives a `Collection`, which is a problem when the selection
+is a query over six figures of rows. Two things follow.
+
+`Table::bulkMaxRecords()` caps what one action may load (default 1 000). Over the
+cap the action refuses and says so, rather than dying halfway through:
+
+```php
+$table->bulkMaxRecords(5000)   // raise it
+$table->bulkMaxRecords(null)   // lift it entirely — see below
+```
+
+For an action that must handle any size, walk the selection instead of receiving
+it. `eachSelectedRecord()` chunks through the query and never holds more than one
+chunk in memory:
+
+```php
+BulkAction::make('archive')
+    ->action(fn () => $this->eachSelectedRecord(
+        fn (Invoice $invoice) => $invoice->archive(),
+        chunk: 500,
+    ))
+```
+
+`selectedRecordsQuery()` hands you the same selection as a query builder, for a
+mass update or an export that streams.
+
+### Sorting on a Phone
+
+The stacked card layout hides the header row, and with it every sort button. A
+sort control therefore renders in the toolbar below the stacking breakpoint,
+listing the sortable columns and naming the active one on its trigger. It opens
+as a bottom sheet on small screens. Nothing to configure: it appears whenever
+`stackedOnMobile()` meets at least one sortable column.
+
 ## Header Actions
 
 Header actions live above the table and are not tied to a specific record.

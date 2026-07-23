@@ -70,9 +70,31 @@ own filters and pagination — sub-rows are a detail affordance, not a second gr
 ->subRowsToggleLabel('Show items')     // label for the toggle column
 ```
 
-Expanded rows are tracked in Livewire state, so a user opens only the records they
-care about and the state survives re-renders. The toolbar also exposes
-**Expand all** / **Collapse all** controls.
+Expansion is one state, not two: a **baseline** says whether rows start open, and
+Livewire state lists only the rows that differ from it. `subRowsDefaultExpanded()`
+sets the baseline; the user moves it with the **master chevron in the expander
+column header** — the icon directly above the row chevrons:
+
+```text
+┌───┬────────────┬──────────────┐
+│ » │ INVOICE    │        TOTAL │   » master chevron: open / close everything
+├───┼────────────┼──────────────┤
+│ › │ INV-1001   │   9 350 Kč   │   › per-row chevron
+│ › │ INV-1002   │  18 100 Kč   │
+└───┴────────────┴──────────────┘
+```
+
+Three ways to reach it, one state behind them:
+
+| Control | Where |
+| ------- | ----- |
+| Master chevron | Header of the expander column |
+| ⌥/Alt-click a row chevron | Any row — the spreadsheet shortcut |
+| **Expand on every row** | View menu (the ⊞ button), and the only bulk control on a phone, where the stacked card layout has no header row |
+
+Because the baseline is a mode rather than a list of keys, it also covers rows on
+pages the user has not visited yet. With `rememberColumns()` enabled the choice is
+stored per user alongside the column layout.
 
 ## Sortable Child Rows
 
@@ -290,29 +312,32 @@ default-scoped summary to the same sub-row column —
 See [Grand totals from sub-row columns](summaries.md#grand-totals-from-sub-row-columns)
 and [Grand totals across all children](summaries.md#grand-totals-across-all-children).
 
-## Flatten Mode
+## Start Fully Expanded
 
-Flatten mode opens **every** parent's sub-rows at once, instead of letting the
-user expand them one at a time — handy for review and scanning where you want all
-detail visible together:
+To open every parent's sub-rows from the first render — handy for review and
+scanning where you want all detail visible together:
 
 ```php
-->flattenSubRows()
+->subRowsDefaultExpanded()
 ```
 
 ```text
 ┌───┬────────────┬──────────────┐
-│ ▾ │ INV-1001   │   9 350 Kč   │   every invoice is expanded,
+│ ⌄ │ INV-1001   │   9 350 Kč   │   every invoice is expanded,
 │   └── Monitor … Keyboard … ───┘   not just the one the user clicked
-│ ▾ │ INV-1002   │  18 100 Kč   │
+│ ⌄ │ INV-1002   │  18 100 Kč   │
 │   └── Desk … Chair … ─────────┘
-│ ▾ │ INV-1003   │   8 450 Kč   │
-│   └── License … Support … ────┘
 └───┴────────────┴──────────────┘
 ```
 
-The runtime **Expand all** / **Collapse all** toolbar buttons toggle the same
-state, so users can switch between flattened and per-row drill-down on demand.
+This is only the starting point — the master chevron and the view menu move the
+baseline either way at runtime.
+
+> `flattenSubRows()` is a deprecated alias of `subRowsDefaultExpanded()`. Despite
+> the name it never rendered children as flat rows; it was a second flag with the
+> same visible effect, and having both meant "Collapse all" could not close what
+> flatten mode held open. `toggleFlattenMode()` still works and now calls
+> `toggleAllRowExpansion()`.
 
 ## Detail-Row Mode (No Relation)
 
@@ -351,8 +376,8 @@ The view receives `$table`, `$component`, `$record` (parent), `$subRows`
 Sub-rows are loaded for the whole page in a **single query** rather than one query
 per expanded parent:
 
-- **Flatten mode** — every parent's children load at once.
-- **Normal mode** — only the currently expanded parents are loaded.
+- **Everything expanded** — every parent's children load at once.
+- **Otherwise** — only the currently expanded parents are loaded.
 
 This removes the N+1 that would otherwise grow with the number of open rows.
 Reading a parent's children (and its subtotal count) then costs no extra queries.
@@ -373,7 +398,7 @@ active, since per-parent filtering falls back to a safe per-parent query.
 | `subRowsExpandable(bool)`                       | Allow expand/collapse toggle             |
 | `subRowsDefaultExpanded(bool)`                  | Start expanded                           |
 | `subRowsToggleLabel(?string)`                   | Label for the toggle column              |
-| `flattenSubRows(bool)`                          | Render children as flat rows             |
+| `flattenSubRows(bool)`                          | Deprecated alias of `subRowsDefaultExpanded()` |
 | `subRowView(string)`                            | Custom child renderer                    |
 
 ## Related Docs

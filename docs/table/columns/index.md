@@ -153,6 +153,9 @@ TextColumn::make('notes')
 ->mobileDisplayUsing(Closure $fn)
 ->desktopDisplayUsing(Closure $fn)
 ->hasResponsiveDisplay(): bool
+
+// Where the column lands on a stacked mobile card (see Advanced → Responsive Layout)
+->mobileTitle() ->mobileSubtitle() ->mobileMetric() ->mobileMeta() ->mobileDetail()
 ```
 
 ```php

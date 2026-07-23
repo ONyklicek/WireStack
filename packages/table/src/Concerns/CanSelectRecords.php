@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Concerns;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use NyonCode\WireTable\Services\AggregateSubqueries;
+use NyonCode\WireTable\Table;
 
 /**
  * Selecting records for bulk actions.
@@ -14,19 +17,36 @@ use NyonCode\WireTable\Services\AggregateSubqueries;
  * stay on the Livewire component — this splits the section out of the 3,500-line
  * WithTable rather than moving it away from its host.
  *
- * The selection is an explicit set of keys, deliberately unaffected by the
- * table's filters and sort. It is memoised per request because a selection-scope
- * summary, a grand total and a bulk modal can each ask for the set within one
- * render; the memo is dropped whenever the selection mutates or the table cache
- * is invalidated.
+ * Selection has two shapes, and the difference is what makes "select everything"
+ * possible at all:
+ *
+ *  - **keys** — `selection.records` is the selection, an explicit set deliberately
+ *    unaffected by the table's filters and sort.
+ *  - **all** — everything the *current filter* matches is selected, and the same
+ *    list holds the exclusions instead. Unticking one row out of 128k is one
+ *    entry, not 127 999, and no list of keys ever has to reach the browser.
+ *
+ * Because "all" is defined by the filter, {@see resetSelectionScope()} drops back
+ * to keys the moment the filter or search changes — otherwise "everything" would
+ * silently come to mean a different set of rows than the one the user saw.
+ *
+ * The materialised set is memoised per request because a selection-scope summary,
+ * a grand total and a bulk modal can each ask for it within one render; the memo
+ * is dropped whenever the selection mutates or the table cache is invalidated.
  */
 trait CanSelectRecords
 {
     /** @var Collection|null Memoized selected records — cleared when the selection mutates */
     protected ?Collection $cachedSelectedRecords = null;
 
+    /** Memoized count of the rows the current filter matches ("all" mode). */
+    protected ?int $cachedMatchingCount = null;
+
     /**
-     * Toggle record selection
+     * Toggle record selection.
+     *
+     * In "all" mode the list holds exclusions, so the same toggle reads as
+     * "exclude this row" without any branching here.
      */
     public function toggleRecordSelection(string $key): void
     {
@@ -45,38 +65,130 @@ trait CanSelectRecords
     }
 
     /**
-     * Select all visible records
+     * Select every record on the current page, keeping selections made on other
+     * pages.
+     *
+     * The union is the point: this used to overwrite the set, so selecting page
+     * one and then page two silently discarded page one.
      */
     public function selectAllRecords(): void
     {
-        $records = $this->getTableRecords();
-        $primaryKey = $this->getTable()->getPrimaryKey();
+        $selected = $this->selectsAllMatching()
+            ? []
+            : $this->tableState->get('selection.records', []);
 
-        $selected = [];
-        foreach ($records as $record) {
-            $selected[] = (string) $record->{$primaryKey};
+        foreach ($this->getPageRecordKeys() as $key) {
+            if (! in_array($key, $selected, true)) {
+                $selected[] = $key;
+            }
         }
 
+        $this->tableState->set('selection.mode', 'keys');
         $this->tableState->set('selection.records', $selected);
         $this->cachedSelectedRecords = null;
     }
 
     /**
-     * Check if record is selected
+     * Drop the current page from the selection, leaving other pages alone.
      */
-    public function isRecordSelected(string $key): bool
+    public function deselectPageRecords(): void
     {
-        $selected = $this->tableState->get('selection.records', []);
+        $pageKeys = $this->getPageRecordKeys();
 
-        return in_array($key, $selected, true);
+        $selected = $this->selectsAllMatching()
+            ? []
+            : array_values(array_diff($this->tableState->get('selection.records', []), $pageKeys));
+
+        $this->tableState->set('selection.mode', 'keys');
+        $this->tableState->set('selection.records', $selected);
+        $this->cachedSelectedRecords = null;
     }
 
     /**
-     * Get selected records count
+     * Select every record the current filter matches, including rows on pages
+     * the user has never opened.
+     *
+     * Stored as a mode rather than a list: the point of this control is the case
+     * where the list would be far too long to hold.
+     */
+    public function selectAllMatchingRecords(): void
+    {
+        $this->tableState->set('selection.mode', 'all');
+        $this->tableState->set('selection.records', []);
+        $this->cachedSelectedRecords = null;
+    }
+
+    /**
+     * Whether the selection currently means "everything the filter matches".
+     */
+    public function selectsAllMatching(): bool
+    {
+        return $this->tableState->get('selection.mode') === 'all';
+    }
+
+    /**
+     * Narrow an "all matching" selection back to the rows on this page.
+     */
+    public function selectOnlyPageRecords(): void
+    {
+        $this->tableState->set('selection.mode', 'keys');
+        $this->tableState->set('selection.records', $this->getPageRecordKeys());
+        $this->cachedSelectedRecords = null;
+    }
+
+    /**
+     * Return to an explicit selection when the set "everything" refers to could
+     * have changed underneath it.
+     *
+     * Called from the filter and search paths: a filter change is exactly the
+     * moment "all 128 matching" would quietly start meaning different rows — and
+     * that is how a bulk delete hits records the user never saw.
+     */
+    public function resetSelectionScope(): void
+    {
+        if (! $this->selectsAllMatching()) {
+            return;
+        }
+
+        $this->tableState->set('selection.mode', 'keys');
+        $this->tableState->set('selection.records', []);
+        $this->cachedSelectedRecords = null;
+        $this->cachedMatchingCount = null;
+    }
+
+    /**
+     * Check if record is selected.
+     */
+    public function isRecordSelected(string $key): bool
+    {
+        $listed = in_array($key, $this->tableState->get('selection.records', []), true);
+
+        return $this->selectsAllMatching() ? ! $listed : $listed;
+    }
+
+    /**
+     * Get selected records count.
+     *
+     * In "all" mode this is a COUNT over the filtered query minus the exclusions
+     * — never a materialised set.
      */
     public function getSelectedRecordsCount(): int
     {
-        return count($this->tableState->get('selection.records', []));
+        $listed = count($this->tableState->get('selection.records', []));
+
+        if (! $this->selectsAllMatching()) {
+            return $listed;
+        }
+
+        return max(0, $this->getMatchingRecordsCount() - $listed);
+    }
+
+    /**
+     * How many rows the current filter matches, memoized per request.
+     */
+    public function getMatchingRecordsCount(): int
+    {
+        return $this->cachedMatchingCount ??= $this->buildTableQuery()->toBase()->getCountForPagination();
     }
 
     /**
@@ -84,7 +196,7 @@ trait CanSelectRecords
      */
     public function areSomeVisibleSelected(): bool
     {
-        if (empty($this->tableState->get('selection.records', []))) {
+        if ($this->getSelectedRecordsCount() === 0) {
             return false;
         }
 
@@ -96,18 +208,14 @@ trait CanSelectRecords
      */
     public function areAllVisibleSelected(): bool
     {
-        $records = $this->getTableRecords();
+        $pageKeys = $this->getPageRecordKeys();
 
-        if ($records->isEmpty()) {
+        if ($pageKeys === []) {
             return false;
         }
 
-        $selected = $this->tableState->get('selection.records', []);
-        $primaryKey = $this->getTable()->getPrimaryKey();
-
-        foreach ($records as $record) {
-            $key = (string) $record->{$primaryKey};
-            if (! in_array($key, $selected, true)) {
+        foreach ($pageKeys as $key) {
+            if (! $this->isRecordSelected($key)) {
                 return false;
             }
         }
@@ -116,11 +224,38 @@ trait CanSelectRecords
     }
 
     /**
-     * Get array of selected record keys
+     * Get array of selected record keys.
+     *
+     * Meaningful in "keys" mode only — in "all" mode the selection is a query, so
+     * ask {@see selectedRecordsQuery()} or {@see eachSelectedRecord()} instead of
+     * expanding it into keys.
+     *
+     * @return array<int, string>
      */
     public function getSelectedRecordKeys(): array
     {
-        return $this->tableState->get('selection.records', []);
+        return $this->selectsAllMatching()
+            ? []
+            : $this->tableState->get('selection.records', []);
+    }
+
+    /**
+     * The record keys rendered on the current page.
+     *
+     * @return array<int, string>
+     */
+    public function getPageRecordKeys(): array
+    {
+        $primaryKey = $this->getTable()->getPrimaryKey();
+        $keys = [];
+
+        // Iterated rather than collect()ed: collect() on a paginator wraps its
+        // array *representation* (data, total, links…), not its records.
+        foreach ($this->getTableRecords() as $record) {
+            $keys[] = (string) $record->{$primaryKey};
+        }
+
+        return $keys;
     }
 
     /**
@@ -128,8 +263,71 @@ trait CanSelectRecords
      */
     public function deselectAllRecords(): void
     {
+        $this->tableState->set('selection.mode', 'keys');
         $this->tableState->set('selection.records', []);
         $this->cachedSelectedRecords = null;
+    }
+
+    /**
+     * The selection as a query — the one place that knows how each mode narrows
+     * the rows, so callers never branch on the mode themselves.
+     *
+     * @return Builder<Model>
+     */
+    public function selectedRecordsQuery(): Builder
+    {
+        $table = $this->getTable();
+        $listed = $this->tableState->get('selection.records', []);
+
+        if ($this->selectsAllMatching()) {
+            // "Everything the filter matches" — the filtered query, minus the
+            // rows the user unticked.
+            $query = $this->buildTableQuery();
+
+            if ($listed !== []) {
+                $query->whereNotIn($table->getPrimaryKey(), $listed);
+            }
+
+            return $query;
+        }
+
+        $query = $table->getQuery()->whereIn($table->getPrimaryKey(), $listed);
+
+        // Aggregate columns (e.g. ->sums('items', 'line_total')) need their
+        // subqueries replayed, or the computed attribute is absent and a
+        // selection-scope summary plucks nothing and renders 0. Filters and sort
+        // are intentionally not applied — a keyed selection is an explicit set.
+        //
+        // No sub-row constraint is passed, which is what this path has always
+        // done: with sub-row scoped filters active, a selection-scope rollup
+        // therefore counts *all* children while the query-scope one counts only
+        // the filtered ones. Preserved deliberately rather than "fixed" in
+        // passing — whether selection should follow the sub-row filter is a
+        // product question, not a refactor.
+        return app(AggregateSubqueries::class)->apply($query, $table->getColumns());
+    }
+
+    /**
+     * Walk the selection in chunks, without ever holding it all in memory.
+     *
+     * This is what a bulk action over an "all matching" selection should use:
+     * `getSelectedRecords()` on 128k rows is an out-of-memory error, not a
+     * feature.
+     *
+     * @param  callable(Model): mixed  $callback
+     */
+    public function eachSelectedRecord(callable $callback, int $chunk = 500): void
+    {
+        if ($this->getSelectedRecordsCount() === 0) {
+            return;
+        }
+
+        $this->selectedRecordsQuery()
+            ->chunkById($chunk, function (Collection $records) use ($callback): void {
+                foreach ($records as $record) {
+                    $callback($record);
+                }
+            });
     }
 
     /**
@@ -138,6 +336,12 @@ trait CanSelectRecords
      * Memoized per request — selection-scope summaries, grand totals, and bulk
      * modals may all ask for the set within one render. The memo is cleared
      * whenever the selection mutates or the table cache is invalidated.
+     *
+     * Capped by {@see Table::bulkMaxRecords()}: an "all
+     * matching" selection can be arbitrarily large, and silently materialising it
+     * is how a page dies. Over the cap this returns an empty collection —
+     * {@see hasTooManySelectedRecords()} is what the callers check to say so out
+     * loud instead of acting on a truncated set.
      */
     public function getSelectedRecords(): Collection
     {
@@ -145,29 +349,20 @@ trait CanSelectRecords
             return $this->cachedSelectedRecords;
         }
 
-        $selectedKeys = $this->getSelectedRecordKeys();
-
-        if (empty($selectedKeys)) {
+        if ($this->getSelectedRecordsCount() === 0 || $this->hasTooManySelectedRecords()) {
             return collect();
         }
 
-        $table = $this->getTable();
+        return $this->cachedSelectedRecords = $this->selectedRecordsQuery()->get();
+    }
 
-        $query = $table->getQuery()->whereIn($table->getPrimaryKey(), $selectedKeys);
+    /**
+     * Whether the selection is larger than one request may materialise.
+     */
+    public function hasTooManySelectedRecords(): bool
+    {
+        $cap = $this->getTable()->getBulkMaxRecords();
 
-        // Aggregate columns (e.g. ->sums('items', 'line_total')) need their
-        // subqueries replayed, or the computed attribute is absent and a
-        // selection-scope summary plucks nothing and renders 0. Filters and sort
-        // are intentionally not applied — selection is an explicit set of keys.
-        //
-        // No sub-row constraint is passed, which is what this path has always
-        // done: with sub-row scoped filters active, a selection-scope rollup
-        // therefore counts *all* children while the query-scope one counts only
-        // the filtered ones. Preserved deliberately rather than "fixed" in
-        // passing — whether selection should follow the sub-row filter is a
-        // product question, not a refactor.
-        $query = app(AggregateSubqueries::class)->apply($query, $table->getColumns());
-
-        return $this->cachedSelectedRecords = $query->get();
+        return $cap !== null && $this->getSelectedRecordsCount() > $cap;
     }
 }

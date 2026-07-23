@@ -1,8 +1,12 @@
 {{-- Sub-row expand/collapse toggle button --}}
 {{-- Variables: $recordKey, $isExpanded --}}
+{{-- ⌥/Alt-click promotes the click to the master toggle, the shortcut spreadsheet
+     and grid users already expect. Plain clicks toggle just this row. --}}
 <button
     type="button"
-    wire:click="toggleRowExpansion('{{ $recordKey }}')"
+    x-on:click="$event.altKey
+        ? $wire.toggleAllRowExpansion()
+        : $wire.toggleRowExpansion(@js((string) $recordKey))"
     data-testid="table-row-expand"
     aria-expanded="{{ $isExpanded ? 'true' : 'false' }}"
     aria-label="{{ $isExpanded ? __('wire-table::messages.collapse') : __('wire-table::messages.expand') }}"

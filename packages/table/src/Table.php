@@ -27,12 +27,14 @@ use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireTable\Actions\TableActionClickResolver;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Concerns\CanSelectRecords;
 use NyonCode\WireTable\Concerns\HasSqlDebug;
 use NyonCode\WireTable\Exceptions\TableConfigurationException;
 use NyonCode\WireTable\Exceptions\TableHasNoDataSourceException;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
 use NyonCode\WireTable\Services\TableQueryService;
+use NyonCode\WireTable\Support\MobileCard;
 
 /** @phpstan-consistent-constructor */
 #[\AllowDynamicProperties]
@@ -146,6 +148,13 @@ class Table implements Htmlable
     // Responsive layout
     protected bool $stackedOnMobile = false;
 
+    /** Explicit stacked-card slot assignment; null derives from the columns. */
+    protected ?Closure $mobileCardCallback = null;
+
+    private ?MobileCard $resolvedMobileCard = null;
+
+    private ?string $resolvedMobileCardSignature = null;
+
     protected string $stackedBreakpoint = 'md';
 
     /** Collapse row actions into a single dropdown group in the mobile stacked-card view. */
@@ -212,6 +221,12 @@ class Table implements Htmlable
     // rendered rows, so this normally sits far above any real fill — it is a
     // bound on a forged request, not a UX limit.
     protected int $fillMaxRecords = 500;
+
+    // Ceiling on the rows one bulk action may load at once. "Select all matching"
+    // can mean a hundred thousand records; materialising those into models is an
+    // out-of-memory error, so past this the action refuses out loud instead.
+    // null lifts the cap for a table whose actions are known to stream.
+    protected ?int $bulkMaxRecords = 1000;
 
     public static function make(): static
     {
@@ -709,11 +724,26 @@ class Table implements Htmlable
     }
 
     /**
+     * The page sizes the per-page select offers.
+     *
+     * The configured perPage() is always one of them. Without this a table
+     * declaring perPage(3) against the default [10, 25, 50, 100] renders a
+     * select whose displayed value (10) contradicts the 3 rows on screen, and
+     * whose "10" option cannot be chosen because the control already claims to
+     * be on it.
+     *
      * @return array<int, int>
      */
     public function getPerPageOptions(): array
     {
-        return $this->perPageOptions;
+        if (in_array($this->perPage, $this->perPageOptions, true)) {
+            return $this->perPageOptions;
+        }
+
+        $options = [...$this->perPageOptions, $this->perPage];
+        sort($options);
+
+        return $options;
     }
 
     public function searchable(bool $searchable = true): static
@@ -1185,6 +1215,64 @@ class Table implements Htmlable
     }
 
     /**
+     * Cap the rows a single bulk action may load into memory.
+     *
+     * A "select all matching" selection is a query, not a list, so it can be
+     * arbitrarily large. Past this cap the action refuses and says so, rather
+     * than materialising the set and dying halfway through it. Pass null to lift
+     * the cap for a table whose bulk actions stream via
+     * {@see CanSelectRecords::eachSelectedRecord()}.
+     */
+    public function bulkMaxRecords(?int $max): static
+    {
+        $this->bulkMaxRecords = $max === null ? null : max(1, $max);
+
+        return $this;
+    }
+
+    public function getBulkMaxRecords(): ?int
+    {
+        return $this->bulkMaxRecords;
+    }
+
+    /**
+     * Shape the stacked mobile card: which column is the title, which is the
+     * supporting line, which is the figure set right, and what sits beside them
+     * as status.
+     *
+     *   ->mobileCard(fn (MobileCardConfig $card) => $card
+     *       ->title('number')->subtitle('customer')->metric('total')->meta('status'))
+     *
+     * Slots left unnamed are derived from the columns, so this is an override,
+     * never a requirement.
+     */
+    public function mobileCard(Closure $callback): static
+    {
+        $this->mobileCardCallback = $callback;
+        $this->resolvedMobileCard = null;
+
+        return $this;
+    }
+
+    /**
+     * The card resolved for a set of visible columns, memoized per column set —
+     * the stacked view would otherwise resolve it once per record.
+     *
+     * @param  array<int, Column>  $visibleColumns
+     */
+    public function getMobileCard(array $visibleColumns): MobileCard
+    {
+        $signature = implode('|', array_map(fn (Column $c): string => $c->getName(), $visibleColumns));
+
+        if ($this->resolvedMobileCard === null || $this->resolvedMobileCardSignature !== $signature) {
+            $this->resolvedMobileCard = MobileCard::resolve($visibleColumns, $this->mobileCardCallback);
+            $this->resolvedMobileCardSignature = $signature;
+        }
+
+        return $this->resolvedMobileCard;
+    }
+
+    /**
      * Enable stacked/card layout on mobile devices
      *
      * @param  bool  $stacked  Whether to use stacked layout
@@ -1316,7 +1404,50 @@ class Table implements Htmlable
      */
     public function getMobileActionGroup(): ActionGroup
     {
-        return ActionGroup::make($this->flattenMobileRowActions())
+        return $this->buildMobileActionGroup($this->flattenMobileRowActions());
+    }
+
+    /**
+     * The same collapsed dropdown for a sub-row's actions.
+     *
+     * Child actions collapse on a phone unconditionally, unlike row actions
+     * (which honour {@see collapseActionsOnMobile()}): a child line is narrower
+     * than the card that holds it, and two labelled buttons there crush the
+     * product name to an ellipsis. There is no width at which they fit.
+     */
+    public function getMobileSubRowActionGroup(): ActionGroup
+    {
+        $flat = [];
+
+        foreach ($this->getSubRowActions() as $action) {
+            if ($action instanceof ActionGroup) {
+                foreach ($action->getActions() as $inner) {
+                    if ($inner instanceof Action && $inner->isDivider()) {
+                        continue;
+                    }
+
+                    $flat[] = $inner;
+                }
+
+                continue;
+            }
+
+            if ($action instanceof Action && $action->isDivider()) {
+                continue;
+            }
+
+            $flat[] = $action;
+        }
+
+        return $this->buildMobileActionGroup($flat);
+    }
+
+    /**
+     * @param  array<int, Action|ActionGroup>  $actions
+     */
+    private function buildMobileActionGroup(array $actions): ActionGroup
+    {
+        return ActionGroup::make($actions)
             ->sheetOnMobile($this->usesSheetOnMobile())
             ->mobileBreakpoint($this->getMobileBreakpoint());
     }

@@ -7,6 +7,7 @@ namespace NyonCode\WireTable\Concerns;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Core\Support\Deprecation;
+use NyonCode\WireCore\Notifications\Notification;
 
 /**
  * The table's action-modal endpoints.
@@ -34,17 +35,19 @@ trait InteractsWithTableModals
             return;
         }
 
-        $selectedKeys = $this->getSelectedRecordKeys();
-
-        if (empty($selectedKeys)) {
+        if ($this->getSelectedRecordsCount() === 0) {
             return;
         }
 
-        $table = $this->getTable();
-        $records = $table->getQuery()->whereIn($table->getPrimaryKey(), $selectedKeys)->get();
+        // An "all matching" selection is a query: it may be far larger than one
+        // request can turn into models. Refusing out loud beats dying halfway
+        // through the set, or acting on a silently truncated one.
+        if ($this->refuseOversizedBulkSelection()) {
+            return;
+        }
 
         $this->executeActionPipeline($action, [
-            'records' => $records,
+            'records' => $this->getSelectedRecords(),
             'data' => [],
         ], '__bulk__', 'bulk', $confirmed);
     }
@@ -273,19 +276,36 @@ trait InteractsWithTableModals
             return;
         }
 
-        $selectedKeys = $this->getSelectedRecordKeys();
-
-        if (empty($selectedKeys)) {
+        if ($this->getSelectedRecordsCount() === 0) {
             return;
         }
 
-        $table = $this->getTable();
-        $records = $table->getQuery()->whereIn($table->getPrimaryKey(), $selectedKeys)->get();
+        if ($this->refuseOversizedBulkSelection()) {
+            return;
+        }
 
         $this->executeActionPipeline($action, [
-            'records' => $records,
+            'records' => $this->getSelectedRecords(),
             'data' => $data,
         ], '__bulk__', 'bulk', $confirmed);
+    }
+
+    /**
+     * Stop a bulk action whose selection is larger than one request may load,
+     * telling the user the number and the cap rather than failing silently.
+     */
+    protected function refuseOversizedBulkSelection(): bool
+    {
+        if (! $this->hasTooManySelectedRecords()) {
+            return false;
+        }
+
+        $this->sendNotification(Notification::error(__('wire-table::messages.bulk_too_many', [
+            'count' => $this->getSelectedRecordsCount(),
+            'max' => (string) $this->getTable()->getBulkMaxRecords(),
+        ])));
+
+        return true;
     }
 
     /**

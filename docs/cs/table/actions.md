@@ -81,6 +81,68 @@ use NyonCode\WireCore\Actions\DeleteBulkAction;
 
 Hromadné akce používejte pro destruktivní nebo opakující se operace, které by se neměly opakovat řádek po řádku.
 
+### Výběr přes hranici stránky
+
+Výběr má dvě podoby a ta druhá je to, co vůbec umožní hromadnou akci nad celou
+vyfiltrovanou množinou:
+
+- **klíče** — explicitní sada klíčů záznamů, záměrně nezávislá na filtrech a
+  řazení. Výběr stránky se **přidává**, takže stránkování nikdy nezahodí práci.
+- **vše odpovídající** — všechno, co odpovídá *aktuálnímu filtru*, uložené jako
+  režim, ne jako seznam. Odškrtnutí jednoho řádku ze 128 000 uloží jednu výjimku,
+  ne 127 999 klíčů, a seznam celé množiny se nikdy nedostane do prohlížeče.
+
+Lišta výběru vždy ukazuje, která z podob je aktivní, a nabízí cestu k té druhé:
+
+```text
+[3] vybrané záznamy                                     [Export] [Smazat] [×]
+Vybráno 3.  Vybrat všech 1 284
+```
+
+Když je vybraná celá vyfiltrovaná množina, stejný řádek nabídne **Jen tuto
+stránku** zpět.
+
+**Změna filtru nebo hledání shodí „vše odpovídající“ zpět na explicitní výběr.**
+„Všechno“ je definované filtrem, který byl na obrazovce; zúžit ho a nechat výběr
+stát by tiše předefinovalo, čeho se příští hromadná akce dotkne. Řazení a
+stránkování s ním nehýbou — ani jedno množinu nemění.
+
+### Hromadné akce nad velkými výběry
+
+Callback akce dostává `Collection`, což je problém, když je výběr dotaz nad
+statisíci řádky. Z toho plynou dvě věci.
+
+`Table::bulkMaxRecords()` omezuje, kolik smí jedna akce načíst (výchozí 1 000).
+Nad limit se akce odmítne a řekne to, místo aby umřela v půlce:
+
+```php
+$table->bulkMaxRecords(5000)   // zvýšit
+$table->bulkMaxRecords(null)   // zrušit úplně — viz níž
+```
+
+Akce, která musí zvládnout jakoukoli velikost, ať výběr projde místo aby ho
+přijala. `eachSelectedRecord()` prochází dotaz po dávkách a nikdy nedrží víc než
+jednu dávku v paměti:
+
+```php
+BulkAction::make('archive')
+    ->action(fn () => $this->eachSelectedRecord(
+        fn (Invoice $invoice) => $invoice->archive(),
+        chunk: 500,
+    ))
+```
+
+`selectedRecordsQuery()` vrátí tentýž výběr jako query builder — pro hromadný
+update nebo export, který streamuje.
+
+### Řazení na telefonu
+
+Skládané karty skrývají hlavičkový řádek a s ním všechna tlačítka řazení. Pod
+breakpointem stohování se proto v liště vykreslí ovládání řazení: vypíše
+řaditelné sloupce a aktivní pojmenuje přímo na spouštěči. Na malých obrazovkách
+se otevře jako bottom sheet. Není co nastavovat — objeví se vždy, když se potká
+`stackedOnMobile()` s aspoň jedním řaditelným sloupcem.
+
 ## Hlavičkové akce
 
 Hlavičkové akce žijí nad tabulkou a nejsou vázané na konkrétní záznam.

@@ -402,7 +402,7 @@ it('batches sub-row grand totals into a single query', function () {
 it('eager-loads only the limited sub-rows plus an exact count', function () {
     $component = new WtperfSubRowLimitComponent;
     $component->mountWithTable();
-    $component->tableState->set('rows.flattenMode', true); // every parent renders sub-rows
+    $component->tableState->set('rows.expandAll', true); // every parent renders sub-rows
 
     $records = $component->getTableRecords();
     $a = $records->firstWhere('number', 'A'); // has 2 items, limit is 1
@@ -425,7 +425,7 @@ it('eager-loads only the limited sub-rows plus an exact count', function () {
 it('falls back to in-memory limiting when the framework lacks per-parent limits (Laravel 10)', function () {
     $component = new WtperfSubRowLimitLegacyComponent;
     $component->mountWithTable();
-    $component->tableState->set('rows.flattenMode', true);
+    $component->tableState->set('rows.expandAll', true);
 
     $records = $component->getTableRecords();
     $a = $records->firstWhere('number', 'A'); // has 2 items, limit is 1
@@ -447,7 +447,7 @@ it('falls back to in-memory limiting when the framework lacks per-parent limits 
 it('eager-loads the full set for show-all parents', function () {
     $component = new WtperfSubRowLimitComponent;
     $component->mountWithTable();
-    $component->tableState->set('rows.flattenMode', true);
+    $component->tableState->set('rows.expandAll', true);
 
     $aKey = WtperfOrder::where('number', 'A')->value('id');
     $component->showAllSubRows((string) $aKey);
@@ -462,7 +462,7 @@ it('eager-loads the full set for show-all parents', function () {
 it('falls back to the query when show-all flips after a limited load', function () {
     $component = new WtperfSubRowLimitComponent;
     $component->mountWithTable();
-    $component->tableState->set('rows.flattenMode', true);
+    $component->tableState->set('rows.expandAll', true);
 
     $records = $component->getTableRecords(); // limited load happens here
     $a = $records->firstWhere('number', 'A');
@@ -587,7 +587,7 @@ it('renders Alpine-driven selection without per-click server roundtrips', functi
     expect($html)
         ->toContain('data-page-keys=')                          // page keys for select-all
         ->toContain("entangle('tableState.selection.records')") // deferred client state
-        ->toContain('x-show="selected.length > 0"')             // Alpine selection bar
+        ->toContain('x-show="selectedCount > 0"')               // Alpine selection bar
         ->not->toContain('wire:click="toggleRecordSelection');  // no roundtrip per click
 });
 
@@ -614,6 +614,6 @@ it('still resolves legacy magic properties through the state container', functio
     $component->tableSearch = 'def';
     expect($component->tableState->get('search'))->toBe('def');
 
-    $component->tableState->set('rows.flattenMode', true);
+    $component->tableState->set('rows.expandAll', true);
     expect($component->flattenMode)->toBeTrue();
 });

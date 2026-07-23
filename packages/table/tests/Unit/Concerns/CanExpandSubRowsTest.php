@@ -150,38 +150,103 @@ afterEach(function () {
 
 // ─── Expand / collapse all ────────────────────────────────────
 
-it('expands every row by listing all record keys', function () {
+it('expands every row by moving the baseline, not by listing keys', function () {
     $test = Livewire::test(CeSubRowsComponent::class)->call('expandAllRows');
 
-    expect($test->instance()->tableState->get('rows.expanded'))->toBe(['1', '2']);
+    // A key list would only ever cover the page it was built from; the baseline
+    // covers rows the user has not paged to yet.
+    expect($test->instance()->tableState->get('rows.expandAll'))->toBeTrue()
+        ->and($test->instance()->tableState->get('rows.expanded'))->toBe([])
+        ->and($test->instance()->isRowExpanded('1'))->toBeTrue()
+        ->and($test->instance()->isRowExpanded('999'))->toBeTrue();
 });
 
-it('collapses every row by clearing the expanded list', function () {
+it('collapses every row by moving the baseline back', function () {
     $test = Livewire::test(CeSubRowsComponent::class)
         ->call('expandAllRows')
         ->call('collapseAllRows');
 
-    expect($test->instance()->tableState->get('rows.expanded'))->toBe([]);
+    expect($test->instance()->tableState->get('rows.expandAll'))->toBeFalse()
+        ->and($test->instance()->tableState->get('rows.expanded'))->toBe([])
+        ->and($test->instance()->isRowExpanded('1'))->toBeFalse();
 });
 
-it('inverts the expanded list when rows are expanded by default', function () {
-    // In default-expanded mode the list tracks *collapsed* rows, so "expand all"
-    // clears it and a row not in the list reads as expanded.
-    $test = Livewire::test(CeSubRowsComponent::class, ['defaultExpanded' => true]);
+it('drops per-row exceptions when the baseline moves', function () {
+    $test = Livewire::test(CeSubRowsComponent::class)
+        ->call('toggleRowExpansion', '1')
+        ->call('expandAllRows');
 
-    $test->call('collapseAllRows');
-    expect($test->instance()->tableState->get('rows.expanded'))->toBe(['1', '2'])
-        ->and($test->instance()->isRowExpanded('1'))->toBeFalse();
-
-    $test->call('expandAllRows');
     expect($test->instance()->tableState->get('rows.expanded'))->toBe([])
         ->and($test->instance()->isRowExpanded('1'))->toBeTrue();
+});
+
+it('reads the baseline from the table config until the user overrides it', function () {
+    $test = Livewire::test(CeSubRowsComponent::class, ['defaultExpanded' => true]);
+
+    // Nothing chosen yet → subRowsDefaultExpanded() decides, and the list tracks
+    // *collapsed* rows.
+    expect($test->instance()->tableState->get('rows.expandAll'))->toBeNull()
+        ->and($test->instance()->expandsSubRowsByDefault())->toBeTrue()
+        ->and($test->instance()->isRowExpanded('1'))->toBeTrue();
+
+    $test->call('toggleRowExpansion', '1');
+    expect($test->instance()->isRowExpanded('1'))->toBeFalse()
+        ->and($test->instance()->isRowExpanded('2'))->toBeTrue();
+
+    // The user's own choice wins over the config from here on.
+    $test->call('collapseAllRows');
+    expect($test->instance()->expandsSubRowsByDefault())->toBeFalse()
+        ->and($test->instance()->isRowExpanded('1'))->toBeFalse()
+        ->and($test->instance()->isRowExpanded('2'))->toBeFalse();
+});
+
+it('flips the baseline from the master toggle', function () {
+    $test = Livewire::test(CeSubRowsComponent::class);
+
+    $test->call('toggleAllRowExpansion');
+    expect($test->instance()->expandsSubRowsByDefault())->toBeTrue();
+
+    $test->call('toggleAllRowExpansion');
+    expect($test->instance()->expandsSubRowsByDefault())->toBeFalse();
+});
+
+it('keeps toggleFlattenMode working as an alias of the master toggle', function () {
+    $test = Livewire::test(CeSubRowsComponent::class)->call('toggleFlattenMode');
+
+    expect($test->instance()->expandsSubRowsByDefault())->toBeTrue()
+        ->and($test->instance()->isRowExpanded('1'))->toBeTrue();
+});
+
+// ─── The controls that drive it ───────────────────────────────
+
+it('renders the master toggle in the expander column header, not a toolbar', function () {
+    $test = Livewire::test(CeSubRowsComponent::class);
+
+    $test->assertSee('subrows-master-toggle', escape: false)
+        ->assertSee('aria-expanded="false"', escape: false)
+        // The three-button toolbar it replaced is gone for good.
+        ->assertDontSee('subrows-expand-all"', escape: false)
+        ->assertDontSee('subrows-collapse-all', escape: false)
+        ->assertDontSee('subrows-scope-toggle', escape: false);
+});
+
+it('offers the expansion baseline in the view menu, the only bulk control a phone gets', function () {
+    Livewire::test(CeSubRowsComponent::class)
+        ->assertSee('subrows-expand-all-rows', escape: false)
+        ->assertSee(__('wire-table::messages.expand_all_rows'));
+});
+
+it('promotes an alt-clicked row chevron to the master toggle', function () {
+    Livewire::test(CeSubRowsComponent::class)
+        ->assertSee('$event.altKey', escape: false)
+        ->assertSee('toggleAllRowExpansion()', escape: false);
 });
 
 it('does nothing on expand-all when the table has no sub-rows', function () {
     $test = Livewire::test(CeNoSubRowsComponent::class)->call('expandAllRows');
 
-    expect($test->instance()->tableState->get('rows.expanded', []))->toBe([]);
+    expect($test->instance()->tableState->get('rows.expanded', []))->toBe([])
+        ->and($test->instance()->tableState->get('rows.expandAll'))->toBeNull();
 });
 
 // ─── getSubRows edge cases ────────────────────────────────────

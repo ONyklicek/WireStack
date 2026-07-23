@@ -62,6 +62,14 @@ Route::get('/previews', function () {
             'variant' => 'selection',
         ],
         [
+            'slug' => 'table-stacked-selection',
+            'title' => 'Wire Table',
+            'label' => 'Stacked selection',
+            'copy' => 'Card layout with the select-all strip, the select-all-matching escalation and mobile sorting.',
+            'component' => TablePreview::class,
+            'variant' => 'stacked-selection',
+        ],
+        [
             'slug' => 'table-subrows',
             'title' => 'Wire Table',
             'label' => 'Table sub-rows',
@@ -263,6 +271,7 @@ foreach ([
     'forms-default-on-null' => ['title' => 'Wire Forms defaultOnNull', 'subtitle' => 'Edit mode with an all-null record: only ->defaultOnNull() fields resurrect their default; a plain default keeps the null.', 'component' => FormPreview::class, 'variant' => 'default-on-null'],
     'table-overview' => ['title' => 'Wire Table', 'subtitle' => 'Live table preview with search, filters, and actions.', 'component' => TablePreview::class, 'variant' => 'overview'],
     'table-selection' => ['title' => 'Wire Table Selection', 'subtitle' => 'Selected-record state with bulk toolbar and active filters.', 'component' => TablePreview::class, 'variant' => 'selection'],
+    'table-stacked-selection' => ['title' => 'Wire Table Stacked Selection', 'subtitle' => 'Card layout with the always-visible select-all strip, the select-all-matching escalation, and mobile sorting.', 'component' => TablePreview::class, 'variant' => 'stacked-selection'],
     'table-subrows' => ['title' => 'Wire Table Sub-rows', 'subtitle' => 'Expandable invoice line items with sortable headers, row actions, and a subtotal.', 'component' => TablePreview::class, 'variant' => 'subrows'],
     'table-summary' => ['title' => 'Wire Table Summary', 'subtitle' => 'Rollup totals, a multi-aggregate footer, and the page/all scope toggle.', 'component' => TablePreview::class, 'variant' => 'summary'],
     'table-row-color' => ['title' => 'Wire Table Row Color', 'subtitle' => 'Conditional whole-row tint by record status, plus an emphasised row class.', 'component' => TablePreview::class, 'variant' => 'row-color'],

@@ -35,6 +35,7 @@ use NyonCode\WireTable\Concerns\HasResponsive;
 use NyonCode\WireTable\Concerns\HasView;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Support\FilterControl;
+use NyonCode\WireTable\Support\MobileSlot;
 
 /** @phpstan-consistent-constructor */
 class Column extends DataComponent implements Htmlable
@@ -78,6 +79,9 @@ class Column extends DataComponent implements Htmlable
 
     /** @var string Mobile breakpoint for display switching */
     protected string $mobileBreakpoint = 'md';
+
+    /** Explicit stacked-card slot; null lets MobileCard derive one. */
+    protected ?MobileSlot $mobileSlot = null;
 
     /** @var bool Whether the column can be toggled in the UI */
     protected bool $toggleable = true;
@@ -558,6 +562,63 @@ class Column extends DataComponent implements Htmlable
         $this->visibleFrom = 'md';
 
         return $this;
+    }
+
+    /**
+     * Place this column in a named slot of the stacked mobile card, instead of
+     * letting {@see MobileCard} derive one from column order and alignment.
+     */
+    public function mobileSlot(MobileSlot|string $slot): static
+    {
+        $this->mobileSlot = MobileSlot::resolve($slot);
+
+        return $this;
+    }
+
+    /**
+     * The identifier the card is recognised by.
+     */
+    public function mobileTitle(): static
+    {
+        return $this->mobileSlot(MobileSlot::Title);
+    }
+
+    /**
+     * The supporting line under the title.
+     */
+    public function mobileSubtitle(): static
+    {
+        return $this->mobileSlot(MobileSlot::Subtitle);
+    }
+
+    /**
+     * The figure the list is read for — set right on the title line.
+     */
+    public function mobileMetric(): static
+    {
+        return $this->mobileSlot(MobileSlot::Metric);
+    }
+
+    /**
+     * A status or qualifier, shown beside the title block rather than as a
+     * label/value pair.
+     */
+    public function mobileMeta(): static
+    {
+        return $this->mobileSlot(MobileSlot::Meta);
+    }
+
+    /**
+     * Keep this column in the label/value grid, whatever derivation would pick.
+     */
+    public function mobileDetail(): static
+    {
+        return $this->mobileSlot(MobileSlot::Detail);
+    }
+
+    public function getMobileSlot(): ?MobileSlot
+    {
+        return $this->mobileSlot;
     }
 
     /**

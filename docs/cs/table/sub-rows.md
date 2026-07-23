@@ -69,9 +69,31 @@ s vlastními filtry a stránkováním — podřádky jsou detailní prostředek,
 ->subRowsToggleLabel('Show items')     // popisek sloupce přepínače
 ```
 
-Rozbalené řádky se sledují v Livewire stavu, takže uživatel otevře jen záznamy,
-které ho zajímají, a stav přežije re-render. Toolbar také vystavuje ovládání
-**Rozbalit vše** / **Sbalit vše**.
+Rozbalení je jeden stav, ne dva: **výchozí stav (baseline)** říká, jestli řádky
+začínají otevřené, a Livewire stav drží jen řádky, které se od něj liší.
+`subRowsDefaultExpanded()` nastaví baseline; uživatel s ním pohne **master
+chevronem v hlavičce sloupce s chevrony** — ikonou přímo nad řádkovými chevrony:
+
+```text
+┌───┬────────────┬──────────────┐
+│ » │ FAKTURA    │      CELKEM  │   » master chevron: otevřít / zavřít vše
+├───┼────────────┼──────────────┤
+│ › │ INV-1001   │   9 350 Kč   │   › chevron řádku
+│ › │ INV-1002   │  18 100 Kč   │
+└───┴────────────┴──────────────┘
+```
+
+Tři cesty k němu, jeden stav za nimi:
+
+| Ovládání | Kde |
+| -------- | --- |
+| Master chevron | Hlavička sloupce s chevrony |
+| ⌥/Alt-klik na chevron řádku | Kterýkoli řádek — zkratka ze spreadsheetů |
+| **Rozbalit u všech řádků** | View menu (tlačítko ⊞); na mobilu jediné hromadné ovládání, protože rozložení karet nemá hlavičku |
+
+Protože baseline je režim, ne seznam klíčů, platí i pro řádky na stránkách, které
+uživatel ještě neotevřel. Se zapnutým `rememberColumns()` se volba ukládá per
+uživatel spolu s rozložením sloupců.
 
 ## Řaditelné dětské řádky
 
@@ -288,29 +310,32 @@ dejte rodičovskému rollup sloupci vlastní souhrn.
 Viz [Celkové součty ze sloupců podřádků](summaries.md#celkove-soucty-ze-sloupcu-podradku)
 a [Celkové součty přes všechny děti](summaries.md#celkove-soucty-pres-vsechny-deti).
 
-## Flatten režim
+## Začít plně rozbalené
 
-Flatten režim otevře podřádky **každého** rodiče najednou, místo aby nechal
-uživatele rozbalovat je po jednom — hodí se pro revizi a skenování, kde chcete mít
-všechen detail viditelný pohromadě:
+Otevřít podřádky všech rodičů hned od prvního vykreslení — hodí se na kontrolu a
+procházení, kdy chcete vidět všechen detail pohromadě:
 
 ```php
-->flattenSubRows()
+->subRowsDefaultExpanded()
 ```
 
 ```text
 ┌───┬────────────┬──────────────┐
-│ ▾ │ INV-1001   │   9 350 Kč   │   každá faktura je rozbalená,
-│   └── Monitor … Keyboard … ───┘   ne jen ta, na kterou uživatel klikl
-│ ▾ │ INV-1002   │  18 100 Kč   │
-│   └── Desk … Chair … ─────────┘
-│ ▾ │ INV-1003   │   8 450 Kč   │
-│   └── License … Support … ────┘
+│ ⌄ │ INV-1001   │   9 350 Kč   │   rozbalené jsou všechny faktury,
+│   └── Monitor … Klávesnice ───┘   ne jen ta, na kterou uživatel klikl
+│ ⌄ │ INV-1002   │  18 100 Kč   │
+│   └── Stůl … Židle … ─────────┘
 └───┴────────────┴──────────────┘
 ```
 
-Runtime tlačítka toolbaru **Rozbalit vše** / **Sbalit vše** přepínají stejný stav,
-takže uživatelé mohou na požádání přepínat mezi flatten a per-řádkovým drill-down.
+Je to jen výchozí bod — master chevron a view menu tímto výchozím stavem za běhu
+pohnou na obě strany.
+
+> `flattenSubRows()` je zastaralý alias `subRowsDefaultExpanded()`. Navzdory názvu
+> nikdy nevykreslil děti jako ploché řádky; byl to druhý příznak se stejným
+> viditelným efektem a existence obou znamenala, že „Sbalit vše“ nedokázalo zavřít
+> to, co flatten režim držel otevřené. `toggleFlattenMode()` dál funguje a volá
+> `toggleAllRowExpansion()`.
 
 ## Detail-řádkový režim (bez relace)
 
@@ -348,8 +373,8 @@ Pohled dostane `$table`, `$component`, `$record` (rodič), `$subRows`
 Podřádky se načítají pro celou stránku v **jednom dotazu** místo jednoho dotazu na
 rozbaleného rodiče:
 
-- **Flatten režim** — děti každého rodiče se načtou najednou.
-- **Normální režim** — načtou se jen aktuálně rozbalení rodiče.
+- **Vše rozbalené** — děti každého rodiče se načtou najednou.
+- **Jinak** — načtou se jen aktuálně rozbalení rodiče.
 
 To odstraňuje N+1, které by jinak rostlo s počtem otevřených řádků. Čtení dětí
 rodiče (a jeho počtu pro mezisoučet) pak nestojí žádné extra dotazy. Eager loading
@@ -370,7 +395,7 @@ filtrování per rodič spadne zpět na bezpečný per-parent dotaz.
 | `subRowsExpandable(bool)`                       | Povolit přepínač rozbalit/sbalit         |
 | `subRowsDefaultExpanded(bool)`                  | Začít rozbalené                          |
 | `subRowsToggleLabel(?string)`                   | Popisek sloupce přepínače                |
-| `flattenSubRows(bool)`                          | Vykreslit děti jako ploché řádky         |
+| `flattenSubRows(bool)`                          | Zastaralý alias `subRowsDefaultExpanded()` |
 | `subRowView(string)`                            | Vlastní renderer dětí                    |
 
 ## Související dokumentace

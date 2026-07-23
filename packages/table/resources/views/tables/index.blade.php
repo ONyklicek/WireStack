@@ -32,7 +32,7 @@
     $columnFilterValues = $component->tableState->get('columnFilters', []) ?? [];
     $sortColumn = $component->tableState->get('sort.column');
     $sortDirection = $component->tableState->get('sort.direction', 'asc');
-    $flattenMode = (bool) $component->tableState->get('rows.flattenMode');
+    $perPage = (int) $component->tableState->get('pagination.perPage', $table->getPerPage());
     // Treat a filter as active only when it holds a real value. A range filter
     // that was typed then cleared leaves ['min' => '', 'max' => ''] — a truthy
     // array that plain array_filter would wrongly count as active.
@@ -115,6 +115,7 @@
     $hasColumnFilters = count($filterableColumns) > 0;
     $hasSubRows = $table->hasSubRows();
     $isSubRowsExpandable = $hasSubRows && $table->isSubRowsExpandable();
+    $allRowsExpanded = $hasSubRows && $component->expandsSubRowsByDefault();
     $hasGrouping = $table->hasGrouping();
     $hasGroupSummaries = $hasGrouping && $component->tableHasGroupSummaries();
     $subRowColumns = $hasSubRows ? $table->getSubRowColumns() : [];
@@ -122,6 +123,19 @@
     $colSpan = ($isSelectable ? 1 : 0) + count($visibleColumns) + ($hasActions ? 1 : 0) + ($hasSubRows ? 1 : 0);
     $toggleableColumns = array_filter($table->getColumns(), fn($c) => $c->isToggleable() && $c->canView());
     $visibleToggleableCount = count(array_filter($toggleableColumns, fn($c) => $component->isColumnVisible($c->getName())));
+    // Sorting on a phone: the stacked card view hides the header row that holds
+    // the sort buttons, so the control has to exist somewhere else.
+    $mobileSortableColumns = ($table->isStackedOnMobile() && $table->isSortable())
+        ? array_values(array_filter($visibleColumns, fn($c) => $c->isSortable()))
+        : [];
+    $hasMobileSort = count($mobileSortableColumns) > 0;
+
+    // The view menu earns its place from either section it can hold.
+    $hasColumnToggles = count($toggleableColumns) > 0;
+    $hasViewMenu = $hasColumnToggles || $isSubRowsExpandable;
+    $viewMenuLabel = $hasColumnToggles && ! $isSubRowsExpandable
+        ? __('wire-table::messages.toggle_columns')
+        : __('wire-table::messages.view_options');
 
     // Action configuration
     $actionsPosition = $table->getActionsPosition(); // 'start' or 'end'
@@ -216,22 +230,49 @@
                         data-page-keys="{{ json_encode($pageRecordKeys) }}"
                         x-data="{
                             selected: $wire.entangle('tableState.selection.records'),
+                            /* 'keys' → `selected` is the selection.
+                               'all'  → everything the filter matches is selected and
+                                        `selected` holds the exclusions, so the same
+                                        toggle works for both and no key list of the
+                                        whole result set ever reaches the browser. */
+                            mode: $wire.entangle('tableState.selection.mode'),
+                            matching: {{ $recordCount }},
                             commitTimer: null,
                             get pageKeys() { return JSON.parse(this.$root.dataset.pageKeys || '[]'); },
-                            get allSelected() { return this.pageKeys.length > 0 && this.pageKeys.every(k => this.selected.includes(k)); },
-                            get someSelected() { return this.selected.length > 0 && !this.allSelected; },
-                            isSelected(key) { return this.selected.includes(key); },
+                            get selectsAll() { return this.mode === 'all'; },
+                            get selectedCount() { return this.selectsAll ? Math.max(0, this.matching - this.selected.length) : this.selected.length; },
+                            get allSelected() { return this.pageKeys.length > 0 && this.pageKeys.every(k => this.isSelected(k)); },
+                            get someSelected() { return this.selectedCount > 0 && !this.allSelected; },
+                            isSelected(key) { return this.selectsAll ? !this.selected.includes(key) : this.selected.includes(key); },
                             toggle(key) {
-                                this.selected = this.isSelected(key)
+                                this.selected = this.selected.includes(key)
                                     ? this.selected.filter(k => k !== key)
                                     : [...this.selected, key];
                                 this.queueCommit();
                             },
                             toggleAll() {
-                                this.selected = (this.allSelected || this.someSelected) ? [] : [...this.pageKeys];
+                                /* Selecting a page unions with other pages instead of
+                                   replacing them, which is what silently discarded a
+                                   selection when the user paged. */
+                                const clear = this.selectsAll || this.allSelected;
+                                this.mode = 'keys';
+                                this.selected = clear
+                                    ? this.selected.filter(k => !this.pageKeys.includes(k))
+                                    : [...new Set([...this.selected, ...this.pageKeys])];
                                 this.queueCommit();
                             },
+                            selectAllMatching() {
+                                this.mode = 'all';
+                                this.selected = [];
+                                this.$wire.$commit();
+                            },
+                            selectOnlyPage() {
+                                this.mode = 'keys';
+                                this.selected = [...this.pageKeys];
+                                this.$wire.$commit();
+                            },
                             deselectAll() {
+                                this.mode = 'keys';
                                 this.selected = [];
                                 this.queueCommit();
                             },
@@ -361,9 +402,24 @@
                                 {{-- Polling Indicator --}}
                                 @include('wire-table::tables.partials.polling-indicator')
 
-                                {{-- Sub-rows Toolbar --}}
-                                @if($hasSubRows)
-                                    @include('wire-table::tables.partials.sub-rows-toolbar', ['table' => $table, 'component' => $component])
+                                {{-- Sort, for the stacked card view only: the header row that
+                                     carries the sort buttons is hidden at this width, which
+                                     left a phone with no way to sort at all. --}}
+                                @if($hasMobileSort)
+                                    @include('wire-table::tables.partials.mobile-sort', [
+                                        'table' => $table,
+                                        'component' => $component,
+                                        'sortableColumns' => $mobileSortableColumns,
+                                        'sortColumn' => $sortColumn,
+                                        'sortDirection' => $sortDirection,
+                                        'visibleClass' => $cardsVisibleClass,
+                                        'sheetOnMobile' => $sheetOnMobile,
+                                        'sheetBpPx' => $sheetBpPx,
+                                        'sheetBp' => $sheetBp,
+                                        'sheetBackdrop' => $sheetBackdrop,
+                                        'sheetPanel' => $sheetPanel,
+                                        'sheetMotion' => $sheetMotion,
+                                    ])
                                 @endif
 
                                 {{-- Plugin Toolbar Widgets --}}
@@ -382,8 +438,11 @@
                                     @endforeach
                                 @endif
 
-                                {{-- Column Toggle --}}
-                                @if(count($toggleableColumns) > 0)
+                                {{-- View menu: column visibility + sub-row expansion, the two
+                                     "how I look at this table" settings. Opens as a bottom sheet
+                                     on a phone, which is where the master chevron cannot follow
+                                     (the stacked card layout has no header row). --}}
+                                @if($hasViewMenu)
                                     @include('wire-core::partials.floating-assets')
 
                                     <div
@@ -396,8 +455,8 @@
                                                 @click="toggle()"
                                                 type="button"
                                                 class="inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                                title="{{ __('wire-table::messages.toggle_columns') }}"
-                                                aria-label="{{ __('wire-table::messages.toggle_columns') }}"
+                                                title="{{ $viewMenuLabel }}"
+                                                aria-label="{{ $viewMenuLabel }}"
                                                 data-testid="table-column-toggle"
                                         >
                                             {!! icon('outline:view-columns', 'h-5 w-5') !!}
@@ -445,10 +504,12 @@
                                                     @include('wire-core::partials.sheet-grabber', ['dismiss' => 'close()', 'breakpoint' => $sheetBp])
                                                 @endif
                                                 <div class="p-2">
+                                                @if($hasColumnToggles)
                                                 <div
                                                         class="px-3 py-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 mb-1">
-                                                    Sloupce
+                                                    {{ __('wire-table::messages.columns_section') }}
                                                 </div>
+                                                @endif
                                                 @foreach($toggleableColumns as $column)
                                                     @php
                                                         $isVisible = $component->isColumnVisible($column->getName());
@@ -471,8 +532,32 @@
                                                                 class="text-sm text-gray-700 dark:text-gray-300">{{ $column->getLabel() }}</span>
                                                     </label>
                                                 @endforeach
+                                                {{-- Sub-row expansion: the baseline that survives paging,
+                                                     and the only bulk expand/collapse a phone gets. --}}
+                                                @if($isSubRowsExpandable)
+                                                    <div
+                                                            class="px-3 py-2 mt-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider {{ $hasColumnToggles ? 'border-t border-gray-100 dark:border-gray-700' : 'border-b border-gray-100 dark:border-gray-700 mb-1' }}">
+                                                        {{ __('wire-table::messages.details_section') }}
+                                                    </div>
+                                                    <label
+                                                            class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer select-none">
+                                                        <div class="flex items-center justify-center w-5 h-5 shrink-0">
+                                                            <input
+                                                                    type="checkbox"
+                                                                    wire:click="toggleAllRowExpansion"
+                                                                    @checked($allRowsExpanded)
+                                                                    data-testid="subrows-expand-all-rows"
+                                                                    class="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-700 cursor-pointer"
+                                                            >
+                                                        </div>
+                                                        <span class="text-sm text-gray-700 dark:text-gray-300">
+                                                            {{ __('wire-table::messages.expand_all_rows') }}
+                                                        </span>
+                                                    </label>
+                                                @endif
+
                                                 {{-- Reset to the configured defaults (clears the saved layout). --}}
-                                                @if($table->getRememberColumnsKey() !== null)
+                                                @if($hasColumnToggles && $table->getRememberColumnsKey() !== null)
                                                     <button
                                                             type="button"
                                                             wire:click="resetColumns"
@@ -500,7 +585,7 @@
                     {{-- Selection Bar (Alpine-driven — appears instantly, no roundtrip) --}}
                     @if($isSelectable)
                         <div
-                                x-show="selected.length > 0"
+                                x-show="selectedCount > 0"
                                 x-cloak
                                 data-testid="table-bulk-bar"
                                 class="px-4 lg:px-6 py-3 bg-primary-50 dark:bg-primary-900/20 border-b border-primary-100 dark:border-primary-800/30">
@@ -510,13 +595,13 @@
                                     <div
                                             class="flex items-center justify-center w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-800/50">
                                 <span
-                                        class="text-sm font-semibold text-primary-700 dark:text-primary-300" x-text="selected.length"></span>
+                                        class="text-sm font-semibold text-primary-700 dark:text-primary-300 tabular-nums" x-text="selectedCount"></span>
                                     </div>
                                     <span class="text-sm font-medium text-primary-700 dark:text-primary-300">
                             {{-- Plural forms resolved client-side: representative counts cover {1} / [2,4] / [5,*] --}}
-                            <span x-show="selected.length === 1">{{ trans_choice('{1} record selected|[2,*] records selected', 1) }}</span>
-                            <span x-show="selected.length >= 2 && selected.length <= 4">{{ trans_choice('{1} record selected|[2,*] records selected', 2) }}</span>
-                            <span x-show="selected.length >= 5">{{ trans_choice('{1} record selected|[2,*] records selected', 5) }}</span>
+                            <span x-show="selectedCount === 1">{{ trans_choice('{1} record selected|[2,*] records selected', 1) }}</span>
+                            <span x-show="selectedCount >= 2 && selectedCount <= 4">{{ trans_choice('{1} record selected|[2,*] records selected', 2) }}</span>
+                            <span x-show="selectedCount >= 5">{{ trans_choice('{1} record selected|[2,*] records selected', 5) }}</span>
                         </span>
                                 </div>
 
@@ -543,6 +628,41 @@
                                     </button>
                                 </div>
                             </div>
+
+                            {{-- Scope: this page, or every row the filter matches. Always
+                                 present while something is selected, so the wider reach is
+                                 never a surprise the user has to discover. --}}
+                            @if($recordCount > count($pageRecordKeys))
+                                <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-primary-700 dark:text-primary-300"
+                                     data-testid="table-selection-scope">
+                                    <template x-if="selectsAll">
+                                        <span>{{ __('wire-table::messages.selection_all_matching', ['count' => $recordCount]) }}</span>
+                                    </template>
+                                    <template x-if="!selectsAll">
+                                        <span x-text="@js(__('wire-table::messages.selection_on_page')).replace(':count', selectedCount)"></span>
+                                    </template>
+
+                                    <button
+                                            type="button"
+                                            x-show="!selectsAll"
+                                            x-on:click="selectAllMatching()"
+                                            data-testid="table-select-all-matching"
+                                            class="font-semibold underline underline-offset-2 hover:no-underline"
+                                    >
+                                        {{ __('wire-table::messages.selection_select_all_matching', ['count' => $recordCount]) }}
+                                    </button>
+                                    <button
+                                            type="button"
+                                            x-show="selectsAll"
+                                            x-cloak
+                                            x-on:click="selectOnlyPage()"
+                                            data-testid="table-select-only-page"
+                                            class="font-semibold underline underline-offset-2 hover:no-underline"
+                                    >
+                                        {{ __('wire-table::messages.selection_only_this_page') }}
+                                    </button>
+                                </div>
+                            @endif
                         </div>
                     @endif
 
@@ -588,10 +708,18 @@
                                         </th>
                                     @endif
 
-                                    {{-- Sub-row Toggle Header --}}
+                                    {{-- Sub-row Toggle Header: master expand/collapse, directly
+                                         above the row chevrons it drives. --}}
                                     @if($hasSubRows)
                                         <th scope="col" class="w-10 {{ $headerPadding }}">
-                                            {{ $table->getSubRowsToggleLabel() ?? '' }}
+                                            @if($isSubRowsExpandable)
+                                                @include('wire-table::tables.partials.sub-rows-master-toggle', [
+                                                    'allRowsExpanded' => $allRowsExpanded,
+                                                    'label' => $table->getSubRowsToggleLabel(),
+                                                ])
+                                            @else
+                                                {{ $table->getSubRowsToggleLabel() ?? '' }}
+                                            @endif
                                         </th>
                                     @endif
 
@@ -847,7 +975,7 @@
                                     </tr>
 
                                     {{-- Sub-rows --}}
-                                    @if($hasSubRows && ($component->isRowExpanded($recordKey) || $flattenMode))
+                                    @if($hasSubRows && $component->isRowExpanded($recordKey))
                                         @php
                                             $subRows = $component->getSubRows($record);
                                         @endphp
@@ -952,10 +1080,53 @@
                     {{-- Mobile Cards (Stacked Layout) --}}
                     @if($isStackedOnMobile && $hasVisibleColumns)
                         <div class="{{ $cardsVisibleClass }}">
+                            {{-- The card view's select-all. It has to live here because the
+                                 header row that carries it on desktop is hidden at this
+                                 width — without it, selecting a page on a phone means
+                                 tapping every card. Always rendered, never behind a
+                                 gesture: what is not visible is not found. --}}
+                            @if($isSelectable)
+                                <div class="flex items-center gap-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-4 py-2.5">
+                                    <button
+                                            type="button"
+                                            x-on:click="toggleAll()"
+                                            role="checkbox"
+                                            :aria-checked="allSelected ? 'true' : (someSelected ? 'mixed' : 'false')"
+                                            aria-label="{{ __('wire-table::messages.select_all_on_page') }}"
+                                            data-testid="table-card-select-all"
+                                            class="relative h-5 w-5 shrink-0 rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                                            :class="(allSelected || someSelected) ? 'bg-primary-600 border-primary-600' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600'"
+                                    >
+                                        <span x-show="allSelected" x-cloak>{!! $selectCheckIcon !!}</span>
+                                        <span x-show="someSelected" x-cloak>
+                                            {!! icon('minus', 'h-4 w-4', 'absolute inset-0 text-white') !!}
+                                        </span>
+                                    </button>
+                                    <span class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                        {{ __('wire-table::messages.select_all') }}
+                                    </span>
+                                    <span class="ml-auto text-xs tabular-nums text-gray-500 dark:text-gray-400"
+                                          data-testid="table-card-select-count">
+                                        <span x-show="selectedCount === 0">{{ __('wire-table::messages.selection_page_of_total', ['page' => count($pageRecordKeys), 'total' => $recordCount]) }}</span>
+                                        <span x-show="selectedCount > 0" x-cloak
+                                              x-text="@js(__('wire-table::messages.selection_selected_of_total', ['count' => ':count', 'total' => $recordCount])).replace(':count', selectedCount)"></span>
+                                    </span>
+                                </div>
+                            @endif
+
                             @php
-                                $mobileColumns = array_values($visibleColumns);
-                                $firstColumn = $mobileColumns[0] ?? null;
-                                $restColumns = array_slice($mobileColumns, 1);
+                                // A card is a record, not the column order in disguise: the
+                                // slots below carry the hierarchy (what it is, whose it is,
+                                // how much), and MobileCard derives them when nothing says.
+                                $card = $table->getMobileCard(array_values($visibleColumns));
+                                $cardTitle = $card->title();
+                                $cardSubtitle = $card->subtitle();
+                                $cardMetric = $card->metric();
+                                $cardMeta = $card->meta();
+                                $cardDetails = $card->details();
+                                $mobileCell = fn($column, $record) => $column->hasResponsiveDisplay()
+                                    ? $column->renderMobileCell($record)
+                                    : $column->renderCellFast($record);
                             @endphp
                             @forelse($records as $record)
                                 @php
@@ -968,8 +1139,9 @@
                                         data-row-key="{{ $recordKey }}"
                                         @if($isSelectable) :class="isSelected(@js((string) $recordKey)) ? 'ring-2 ring-primary-500 ring-inset bg-primary-50/50 dark:bg-primary-900/30' : ''" @endif
                                 >
-                                    {{-- Card Header: First column as title + Actions --}}
-                                    <div class="flex items-start gap-3 p-4 {{ count($restColumns) > 0 ? 'pb-4' : '' }}">
+                                    {{-- Header: identifier on the left, the figure the list is
+                                         read for on the right, actions after it. --}}
+                                    <div class="flex items-start gap-3 px-4 pt-4 {{ count($cardDetails) > 0 ? 'pb-3' : 'pb-4' }}">
                                         @if($isSelectable)
                                             <label class="flex items-center pt-0.5 flex-shrink-0">
                                                 <input
@@ -985,111 +1157,95 @@
                                         @endif
 
                                         <div class="flex-1 min-w-0">
-                                            @if($firstColumn)
-                                                @php
-                                                    $firstContent = $firstColumn->hasResponsiveDisplay()
-                                                        ? $firstColumn->renderMobileCell($record)
-                                                        : $firstColumn->renderCellFast($record);
-                                                @endphp
-                                                @if($recordUrl)
-                                                    <a href="{{ $recordUrl }}"
-                                                       class="block hover:text-primary-600 dark:hover:text-primary-400">
-                                                        <div
-                                                                class="font-medium text-gray-900 dark:text-white truncate text-base">
-                                                            {!! $firstContent !!}
-                                                        </div>
-                                                    </a>
-                                                @else
-                                                    <div
-                                                            class="font-medium text-gray-900 dark:text-white truncate text-base">
-                                                        {!! $firstContent !!}
+                                            <div class="flex items-baseline gap-3">
+                                                @if($cardTitle)
+                                                    <div class="min-w-0 font-medium text-gray-900 dark:text-white truncate text-base">
+                                                        @if($recordUrl)
+                                                            <a href="{{ $recordUrl }}" class="hover:text-primary-600 dark:hover:text-primary-400">
+                                                                {!! $mobileCell($cardTitle, $record) !!}
+                                                            </a>
+                                                        @else
+                                                            {!! $mobileCell($cardTitle, $record) !!}
+                                                        @endif
                                                     </div>
                                                 @endif
+
+                                                {{-- Amounts line up on one right edge and use tabular
+                                                     figures, so a column of them can be compared. --}}
+                                                @if($cardMetric)
+                                                    <div class="ml-auto shrink-0 font-semibold text-gray-900 dark:text-white text-base tabular-nums whitespace-nowrap"
+                                                         data-testid="table-card-metric">
+                                                        {!! $mobileCell($cardMetric, $record) !!}
+                                                    </div>
+                                                @endif
+                                            </div>
+
+                                            @if($cardSubtitle)
+                                                <div class="mt-0.5 text-sm text-gray-600 dark:text-gray-300 truncate">
+                                                    {!! $mobileCell($cardSubtitle, $record) !!}
+                                                </div>
+                                            @endif
+
+                                            @if(count($cardMeta) > 0)
+                                                <div class="mt-1.5 flex flex-wrap items-center gap-2">
+                                                    @foreach($cardMeta as $metaColumn)
+                                                        <span>{!! $mobileCell($metaColumn, $record) !!}</span>
+                                                    @endforeach
+                                                </div>
                                             @endif
                                         </div>
 
-                                        @if($hasActions)
-                                            <div class="flex flex-wrap items-center justify-end gap-1 flex-shrink-0 -mr-1">
-                                                @if($collapseMobileActions)
-                                                    {!! $mobileActionGroup->render($record, $actionClick) !!}
-                                                @else
-                                                    @foreach($actions as $action)
-                                                        {!! $action->render($record, $actionClick) !!}
-                                                    @endforeach
-                                                @endif
+                                        {{-- Only a collapsed group belongs beside the title: it is one
+                                             icon wide. Labelled buttons go to their own row below —
+                                             sharing this line, they take the width the identity needs
+                                             and the title collapses to nothing (min-w-0 does the rest). --}}
+                                        @if($hasActions && $collapseMobileActions)
+                                            <div class="flex items-center justify-end flex-shrink-0 -mr-1">
+                                                {!! $mobileActionGroup->render($record, $actionClick) !!}
                                             </div>
                                         @endif
                                     </div>
 
-                                    {{-- Card Body: Rest of the columns in 2-column grid --}}
-                                    @if(count($restColumns) > 0)
-                                        <div class="px-4 pb-4 {{ $isSelectable ? 'pl-12' : '' }}">
-                                            <dl class="grid grid-cols-2 gap-x-4 gap-y-2">
-                                                @php $restCount = count($restColumns); @endphp
-                                                @foreach($restColumns as $index => $column)
-                                                    @php
-                                                        $colContent = $column->hasResponsiveDisplay()
-                                                            ? $column->renderMobileCell($record)
-                                                            : $column->renderCellFast($record);
-                                                        $isLastOdd = ($index === $restCount - 1) && ($restCount % 2 === 1);
-                                                    @endphp
-                                                    <div class="{{ $isLastOdd ? 'col-span-2' : 'col-span-1' }}">
-                                                        <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">
-                                                            {{ $column->getLabel() }}
-                                                        </dt>
-                                                        <dd class="text-sm text-gray-900 dark:text-white">
-                                                            {!! $colContent !!}
-                                                        </dd>
-                                                    </div>
-                                                @endforeach
-                                            </dl>
+                                    {{-- Whatever no slot claimed, as the label/value grid --}}
+                                    @if(count($cardDetails) > 0)
+                                        <dl class="px-4 pb-3 grid grid-cols-2 gap-x-4 gap-y-2 {{ $isSelectable ? 'pl-12' : '' }}">
+                                            @php $detailCount = count($cardDetails); @endphp
+                                            @foreach($cardDetails as $index => $column)
+                                                @php $isLastOdd = ($index === $detailCount - 1) && ($detailCount % 2 === 1); @endphp
+                                                <div class="{{ $isLastOdd ? 'col-span-2' : 'col-span-1' }}">
+                                                    <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">
+                                                        {{ $column->getLabel() }}
+                                                    </dt>
+                                                    <dd class="text-sm text-gray-900 dark:text-white">
+                                                        {!! $mobileCell($column, $record) !!}
+                                                    </dd>
+                                                </div>
+                                            @endforeach
+                                        </dl>
+                                    @endif
+
+                                    @if($hasActions && ! $collapseMobileActions)
+                                        <div class="flex flex-wrap items-center gap-2 px-4 pb-3 {{ $isSelectable ? 'pl-12' : '' }}"
+                                             data-testid="table-card-actions">
+                                            @foreach($actions as $action)
+                                                {!! $action->render($record, $actionClick) !!}
+                                            @endforeach
                                         </div>
                                     @endif
 
-                                    {{-- Sub-rows (Mobile) --}}
-                                    @if($hasSubRows && ($component->isRowExpanded($recordKey) || $flattenMode))
-                                        @php $subRows = $component->getSubRows($record); @endphp
-                                        @if($subRows->isNotEmpty())
-                                            <div class="border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/80 dark:bg-gray-800/50">
-                                                {{-- Toggle header --}}
-                                                @if($isSubRowsExpandable)
-                                                    <button
-                                                        type="button"
-                                                        wire:click="toggleRowExpansion('{{ $recordKey }}')"
-                                                        class="w-full flex items-center gap-2 px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400"
-                                                    >
-                                                        {!! icon('outline:chevron-right', 'w-3 h-3', 'rotate-90') !!}
-                                                        {{ $table->getSubRowsToggleLabel() ?? __('wire-table::messages.details') }}
-                                                    </button>
-                                                @endif
-
-                                                <dl class="px-4 pb-3 grid grid-cols-2 gap-x-4 gap-y-2 {{ $isSelectable ? 'pl-12' : '' }}">
-                                                    @foreach($subRows as $subRow)
-                                                        @foreach($visibleSubRowColumns as $subCol)
-                                                            <div class="col-span-1">
-                                                                <dt class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">
-                                                                    {{ $subCol->getLabel() }}
-                                                                </dt>
-                                                                <dd class="text-sm text-gray-700 dark:text-gray-300">
-                                                                    {!! $subCol->renderCellFast($subRow) !!}
-                                                                </dd>
-                                                            </div>
-                                                        @endforeach
-                                                    @endforeach
-                                                </dl>
-                                            </div>
-                                        @endif
-                                    @elseif($hasSubRows && $isSubRowsExpandable)
-                                        <div class="border-t border-gray-100 dark:border-gray-700/50">
-                                            <button
-                                                type="button"
-                                                wire:click="toggleRowExpansion('{{ $recordKey }}')"
-                                                class="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-                                            >
-                                                {!! icon('outline:chevron-right', 'w-3 h-3') !!}
-                                                {{ $table->getSubRowsToggleLabel() ?? __('wire-table::messages.details') }}
-                                            </button>
-                                        </div>
+                                    {{-- Sub-rows: the same children, subtotal, "show more" and
+                                         per-child actions the desktop panel renders. --}}
+                                    @if($hasSubRows)
+                                        @include('wire-table::tables.partials.sub-rows-mobile', [
+                                            'table' => $table,
+                                            'component' => $component,
+                                            'record' => $record,
+                                            'recordKey' => $recordKey,
+                                            'visibleSubRowColumns' => $visibleSubRowColumns,
+                                            'isExpanded' => $component->isRowExpanded($recordKey),
+                                            'isSubRowsExpandable' => $isSubRowsExpandable,
+                                            'isSelectable' => $isSelectable,
+                                        ])
                                     @endif
                                 </div>
                             @empty
@@ -1104,6 +1260,22 @@
                                     </div>
                                 </div>
                             @endforelse
+
+                            {{-- Totals for the card view. The desktop <tfoot> lives inside
+                                 the table this layout hides, so without this a phone shows
+                                 no totals at all. --}}
+                            @if($hasSummaries)
+                                @php $cardSummaryScope = $component->getSummaryScope(); @endphp
+                                @include('wire-table::tables.partials.summary-footer-mobile', [
+                                    'table' => $table,
+                                    'component' => $component,
+                                    'summaries' => $component->computeTableSummaries($cardSummaryScope),
+                                    'subRowGrandTotals' => $component->computeSubRowGrandTotals($cardSummaryScope),
+                                    'summaryScope' => $cardSummaryScope,
+                                    'summaryScopeOptions' => $component->getSummaryScopeOptions(),
+                                    'visibleColumns' => $visibleColumns,
+                                ])
+                            @endif
                         </div>
                     @endif
 
@@ -1130,7 +1302,10 @@
                                             class="rounded-lg border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 focus:border-primary-500 focus:ring-primary-500 py-1.5"
                                     >
                                         @foreach($table->getPerPageOptions() as $option)
-                                            <option value="{{ $option }}">{{ $option }}</option>
+                                            {{-- Mark the live value server-side: without it the first
+                                                 paint shows the first option regardless of state, and a
+                                                 morph can snap the control back to it. --}}
+                                            <option value="{{ $option }}" @selected((int) $perPage === $option)>{{ $option }}</option>
                                         @endforeach
                                     </select>
                                     <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('wire-table::messages.records') }}</span>

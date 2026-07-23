@@ -147,7 +147,7 @@ Ty se automaticky synchronizují s prohlížečem přes Livewire:
 | `$selectedRecords` | `array` | `[]` | Primární klíče vybraných záznamů |
 | `$hiddenColumns` | `array` | `[]` | Názvy sloupců skrytých uživatelem |
 | `$expandedRows` | `array` | `[]` | Primární klíče rozbalených řádků (podřádky) |
-| `$flattenMode` | `bool` | `false` | Zobrazit všechny podřádky inline |
+| `$flattenMode` | `bool\|null` | `null` | Výchozí stav rozbalení (`null` = dle `subRowsDefaultExpanded()`) |
 
 ### Livewire metody (wire: volatelné)
 
@@ -166,7 +166,7 @@ Ty se volají z Alpine.js nebo Livewire direktiv v Blade pohledech:
 | `selectAll()` | Přepnuto „vybrat vše" |
 | `deselectAll()` | Kliknuto „zrušit výběr" |
 | `expandRow($key)` | Rozbalení/sbalení řádku |
-| `toggleFlattenMode()` | Přepnutí flatten podřádků |
+| `toggleAllRowExpansion()` | Hromadné rozbalení/sbalení (`toggleFlattenMode()` je zastaralý alias) |
 | `executeAction($name, $key)` | Kliknuto tlačítko akce |
 | `executeBulkAction($name)` | Kliknuta hromadná akce |
 | `updateCell($column, $key, $value)` | Potvrzena inline editace |
@@ -313,6 +313,18 @@ Hledání používá strategii závislou na databázi:
 | Jednoduché | 100k–1M záznamů, sekvenční procházení | Bez celkového počtu, bez čísel stránek |
 | Kurzorové | > 1M záznamů, real-time data | Bez náhodného přístupu na stránku, neprůhledné kurzory |
 
+`perPageOptions()` vždy nabídne i nakonfigurovaný `perPage()`, takže
+`->perPage(3)` proti výchozím volbám vykreslí select, který `3` opravdu umí
+zobrazit, místo aby si protiřečil s řádky na obrazovce. Hodnota per-page
+přicházející od klienta, kterou tabulka nenabízí, spadne zpět na `perPage()`.
+
+**Stránky mimo rozsah se samy zakotví zpět.** Standardní stránkování ořízne na
+poslední zaplněnou stránku vždy, když uložené číslo stránky ukazuje za konec
+výsledků — sdílený odkaz `?page=5`, filtr, který množinu zmenšil, řádky smazané
+někým jiným — takže neexistující stránka se nikdy nevykreslí jako prázdná
+tabulka. Jednoduché a kurzorové stránkování nemá celkový počet, ke kterému by
+šlo oříznout, a zůstává beze změny.
+
 ### Výběr (hromadné akce)
 
 ```php
@@ -400,6 +412,8 @@ kombinovat na téže tabulce:
 ```php
 // Naskládat sloupce svisle na mobilu; 2. argument je breakpoint (výchozí 'md')
 ->stackedOnMobile(bool $stacked = true, string $breakpoint = 'md')   // 'sm','md','lg','xl'
+->bulkMaxRecords(?int $max)                                          // kolik řádků smí načíst jedna hromadná akce (výchozí 1000, null = bez limitu)
+->mobileCard(Closure $callback)                                      // pojmenuje titulek/podřádek/metriku/meta karty
 
 // Sbalit akce řádku v mobilní kartě do jednoho rozbalovacího menu (od N akcí)
 ->collapseActionsOnMobile(bool $collapse = true, int $threshold = 3)

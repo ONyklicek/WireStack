@@ -153,6 +153,9 @@ TextColumn::make('notes')
 ->mobileDisplayUsing(Closure $fn)
 ->desktopDisplayUsing(Closure $fn)
 ->hasResponsiveDisplay(): bool
+
+// Kam sloupec padne na skládané mobilní kartě (viz Pokročilé → Responzivní rozvržení)
+->mobileTitle() ->mobileSubtitle() ->mobileMetric() ->mobileMeta() ->mobileDetail()
 ```
 
 ```php
