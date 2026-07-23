@@ -314,10 +314,30 @@ trait CanExpandSubRows
 
     /**
      * Reset sub-row filters.
+     *
+     * Clears each slot back to its empty value rather than dropping the keys —
+     * emptying the array would undo the mount-time seed, and a select control
+     * whose entangled path no longer exists silently stops writing (the same
+     * entangle-no-op the seed exists to avoid).
      */
     public function resetSubRowFilters(): void
     {
-        $this->tableState->set('rows.subRowFilters', []);
+        $table = $this->getTable();
+
+        if (! $table->isSubRowsFilterable()) {
+            $this->tableState->set('rows.subRowFilters', []);
+
+            return;
+        }
+
+        $cleared = [];
+        foreach ($table->getSubRowColumns() as $column) {
+            if ($column->isFilterable()) {
+                $cleared[$column->getName()] = $column->filterExpectsArray() ? [] : null;
+            }
+        }
+
+        $this->tableState->set('rows.subRowFilters', $cleared);
     }
 
     /**

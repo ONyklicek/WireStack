@@ -8,7 +8,7 @@
 
 <input
     type="date"
-    wire:model.live="tableState.columnFilters.{{ $name }}"
+    wire:model.live="{{ $statePath }}"
     @if($minDate) min="{{ $minDate }}" @endif
     @if($maxDate) max="{{ $maxDate }}" @endif
     class="{{ $controlClasses }}"

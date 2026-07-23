@@ -154,7 +154,8 @@ use Illuminate\Database\Eloquent\Builder;
 ```
 
 Enable per-child interactive filters with `subRowsFilterable()`. A filter bar
-renders above the child table for any sortable/filterable sub-row column:
+renders above the child table for any filterable sub-row column and narrows the
+**children** — the parent rows are untouched:
 
 ```php
 ->subRowsFilterable()

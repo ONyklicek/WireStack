@@ -40,4 +40,13 @@ final class TableConfigurationException extends InvalidArgumentException impleme
             "Unknown summary type [{$type}]. Valid types: ".implode(', ', $valid).'.'
         );
     }
+
+    public static function recordActionInRowActions(): self
+    {
+        return new self(
+            'A RecordAction cannot be registered in actions(). '.
+            'Action::make()->onDoubleClick() returns a RecordAction — pass it to '.
+            'recordAction()/recordActions() instead.'
+        );
+    }
 }

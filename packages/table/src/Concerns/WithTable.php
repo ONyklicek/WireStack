@@ -241,6 +241,29 @@ trait WithTable
             }
         }
 
+        // Sub-row filter columns need the same up-front slot, for the same
+        // entangle-no-op reason: an interactive sub-row filter bar binds each
+        // control to rows.subRowFilters.<name>, and a select/multi-select there
+        // entangles that path.
+        if ($table->isSubRowsFilterable()) {
+            foreach ($table->getSubRowColumns() as $column) {
+                if (! $column->isFilterable()) {
+                    continue;
+                }
+
+                $path = 'rows.subRowFilters.'.$column->getName();
+                $current = $this->tableState->get($path);
+
+                if ($column->filterExpectsArray()) {
+                    if (! is_array($current)) {
+                        $this->tableState->set($path, []);
+                    }
+                } elseif ($current === null) {
+                    $this->tableState->set($path, null);
+                }
+            }
+        }
+
         // Per-user view layout (columns, sub-row expansion): a saved preference
         // (if any) overrides the configured defaults above.
         $this->loadViewPreferences($table);

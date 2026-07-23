@@ -1521,7 +1521,17 @@ class Column extends DataComponent implements Htmlable
         return $this->getColumnName();
     }
 
-    public function renderFilter(mixed $value = null): string
+    /**
+     * Render this column's compact inline filter control.
+     *
+     * @param  string|null  $statePath  Where the control binds in the component
+     *                                  state. Defaults to the main-table column
+     *                                  filter slot; the sub-row filter bar passes
+     *                                  `tableState.rows.subRowFilters.<name>` so
+     *                                  its inputs write there instead of silently
+     *                                  filtering the parent table.
+     */
+    public function renderFilter(mixed $value = null, ?string $statePath = null): string
     {
         $filter = $this->resolveFilter();
         if ($filter === null || ! $filter->canView()) {
@@ -1538,6 +1548,7 @@ class Column extends DataComponent implements Htmlable
             'column' => $this,
             'filter' => $filter,
             'value' => $value,
+            'statePath' => $statePath ?? 'tableState.columnFilters.'.$this->getName(),
             'controlClasses' => FilterControl::classes(),
         ])->render();
     }

@@ -153,7 +153,8 @@ use Illuminate\Database\Eloquent\Builder;
 ```
 
 Zapněte per-dítě interaktivní filtry pomocí `subRowsFilterable()`. Lišta filtrů
-se vykreslí nad dětskou tabulkou pro každý řaditelný/filtrovatelný sloupec podřádku:
+se vykreslí nad dětskou tabulkou pro každý filtrovatelný sloupec podřádku a zúží
+**děti** — rodičovské řádky zůstanou nedotčené:
 
 ```php
 ->subRowsFilterable()

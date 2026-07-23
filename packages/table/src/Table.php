@@ -35,6 +35,7 @@ use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
 use NyonCode\WireTable\Services\TableQueryService;
 use NyonCode\WireTable\Support\MobileCard;
+use NyonCode\WireTable\Support\RecordAction;
 
 /** @phpstan-consistent-constructor */
 #[\AllowDynamicProperties]
@@ -206,6 +207,15 @@ class Table implements Htmlable
 
     /** @var array<int, Action|ActionGroup> Dedicated actions for the row right-click menu. */
     protected array $rowContextMenuActions = [];
+
+    /** @var array<int, string|Action|RecordAction> Row-level record-action bindings (click/dblclick/etc.). */
+    protected array $recordActions = [];
+
+    /** Opt-in hover color for rows carrying a record action; null keeps the neutral default. */
+    protected ?string $recordActionHover = null;
+
+    /** Extra class(es) for the keyboard-active row (null keeps the built-in active style). */
+    protected ?string $activeRowClass = null;
 
     // Also send a notification (toast) when an inline edit hits an optimistic-lock
     // conflict. Off by default — the conflict is always shown inline on the cell,
@@ -624,6 +634,15 @@ class Table implements Htmlable
      */
     public function actions(array $actions): static
     {
+        foreach ($actions as $action) {
+            // A RecordAction is a row-interaction binding, not a toolbar action.
+            // `Action::make()->onDoubleClick()` returns one; catch the mistake of
+            // dropping it into the actions column with a clear message.
+            if ($action instanceof RecordAction) {
+                throw TableConfigurationException::recordActionInRowActions();
+            }
+        }
+
         $this->actions = $actions;
 
         return $this;
@@ -1669,6 +1688,85 @@ class Table implements Htmlable
         }
 
         return new HtmlString($html);
+    }
+
+    // Record actions (row-level interaction: click, double-click, right-click, keys)
+
+    /**
+     * Bind an action to a whole-row interaction — a click, double-click,
+     * right-click or key over the empty part of the row runs it, desktop-app
+     * style. Separate from `->actions()` (toolbar buttons), `->bulkActions()`
+     * and `->headerActions()`.
+     *
+     * Accepts an {@see Action} (or a {@see RecordAction} with an explicit
+     * trigger), or the *name* of an action already declared in `->actions()` to
+     * reference it without redefining. Each call appends; call it more than once,
+     * or pass a list to {@see recordActions()}.
+     */
+    public function recordAction(string|Action|RecordAction $action): static
+    {
+        $this->recordActions[] = $action;
+
+        return $this;
+    }
+
+    /**
+     * Replace the record-action bindings with the given list.
+     *
+     * @param  array<int, string|Action|RecordAction>  $actions
+     */
+    public function recordActions(array $actions): static
+    {
+        $this->recordActions = array_values($actions);
+
+        return $this;
+    }
+
+    /**
+     * @return array<int, string|Action|RecordAction>
+     */
+    public function getRecordActions(): array
+    {
+        return $this->recordActions;
+    }
+
+    public function hasRecordActions(): bool
+    {
+        return $this->recordActions !== [];
+    }
+
+    /**
+     * Tint a record-action row on hover with a semantic role or hue instead of
+     * the neutral default (e.g. `->recordActionHover('primary')`). Null keeps the
+     * existing neutral hover, so enabling record actions never silently restyles
+     * an existing table.
+     */
+    public function recordActionHover(?string $color): static
+    {
+        $this->recordActionHover = $color === '' ? null : $color;
+
+        return $this;
+    }
+
+    public function getRecordActionHover(): ?string
+    {
+        return $this->recordActionHover;
+    }
+
+    /**
+     * Override the class(es) applied to the keyboard-active row (null keeps the
+     * built-in active style).
+     */
+    public function activeRowClass(?string $class): static
+    {
+        $this->activeRowClass = $class === '' ? null : $class;
+
+        return $this;
+    }
+
+    public function getActiveRowClass(): ?string
+    {
+        return $this->activeRowClass;
     }
 
     // Lazy loading methods
