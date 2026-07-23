@@ -564,6 +564,13 @@ TextInputColumn::make('name')
     })
 ```
 
+### Fill Handle
+
+`Table::fillHandle()` adds an Excel-style handle to editable cells: drag a value
+down over the rows below and the whole range is written in one request. Opt-in,
+with `Column::fillable(false)` to exclude a column. See
+[Fill Handle](columns/fill-handle.md).
+
 ---
 
 ## Real-World Patterns

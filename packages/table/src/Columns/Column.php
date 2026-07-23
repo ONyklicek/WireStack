@@ -171,6 +171,9 @@ class Column extends DataComponent implements Htmlable
     /** @var Closure|null Callback to handle the edit action */
     protected ?Closure $editableCallback = null;
 
+    /** @var bool Whether a fill handle drag may write this column (editable columns only) */
+    protected bool $fillable = true;
+
     // $filter and the filterable()/filterAs*() API come from CanBeFiltered.
     // Note: the $filterable boolean was removed in v2 — use capabilities.
 
@@ -1311,6 +1314,28 @@ class Column extends DataComponent implements Htmlable
     public function isEditable(): bool
     {
         return $this->hasCapability(Capability::Editable);
+    }
+
+    /**
+     * Whether a fill may write this column, when the table offers a fill handle.
+     *
+     * Editable columns are fillable by default — a cell you can type into is one
+     * you can drag down. Turn it off for a column where repeating one value is
+     * meaningless or dangerous (a unique code, an invoice number).
+     *
+     * Example:
+     *   TextInputColumn::make('invoice_number')->fillable(false);
+     */
+    public function fillable(bool $condition = true): static
+    {
+        $this->fillable = $condition;
+
+        return $this;
+    }
+
+    public function isFillable(): bool
+    {
+        return $this->isEditable() && $this->fillable;
     }
 
     public function getEditableType(): string

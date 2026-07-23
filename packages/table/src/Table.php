@@ -203,6 +203,16 @@ class Table implements Htmlable
     // so this needs no notification setup; opt in for a more prominent toast.
     protected bool $notifyEditConflicts = false;
 
+    // Excel-style fill handle on editable cells. Opt-in: dragging it overwrites
+    // rows, which would be a silent behaviour change for every existing table
+    // with an editable column.
+    protected bool $fillHandle = false;
+
+    // Ceiling on the rows one fill may write. A vertical drag can only reach
+    // rendered rows, so this normally sits far above any real fill — it is a
+    // bound on a forged request, not a UX limit.
+    protected int $fillMaxRecords = 500;
+
     public static function make(): static
     {
         return new static;
@@ -558,6 +568,22 @@ class Table implements Htmlable
     public function getColumns(): array
     {
         return $this->columns;
+    }
+
+    /**
+     * The column with this name, or null. The canonical lookup — the Livewire
+     * host and the fill writer both resolve a client-supplied column name here
+     * rather than scanning getColumns() themselves.
+     */
+    public function findColumn(string $name): ?Column
+    {
+        foreach ($this->columns as $column) {
+            if ($column->getName() === $name) {
+                return $column;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -1884,6 +1910,42 @@ class Table implements Htmlable
     public function shouldNotifyEditConflicts(): bool
     {
         return $this->notifyEditConflicts;
+    }
+
+    /**
+     * Show the Excel-style fill handle on editable cells, so a value can be
+     * dragged down over the rows below it.
+     *
+     * Opt-in, and the server honours it: `fillTableCells()` refuses outright
+     * unless this is on, so the endpoint cannot be driven by a forged request
+     * against a table that never offered the affordance.
+     *
+     * Example:
+     *   $table->fillHandle();
+     */
+    public function fillHandle(bool $condition = true): static
+    {
+        $this->fillHandle = $condition;
+
+        return $this;
+    }
+
+    public function isFillHandleEnabled(): bool
+    {
+        return $this->fillHandle;
+    }
+
+    /** Cap the number of rows a single fill may write (default 500). */
+    public function fillMaxRecords(int $max): static
+    {
+        $this->fillMaxRecords = $max;
+
+        return $this;
+    }
+
+    public function getFillMaxRecords(): int
+    {
+        return $this->fillMaxRecords;
     }
 
     /**

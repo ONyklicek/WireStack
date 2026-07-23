@@ -24,7 +24,6 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\Concerns\InteractsWithActions;
-use NyonCode\WireCore\Core\Events\CellUpdated;
 use NyonCode\WireCore\Core\Events\CellUpdating;
 use NyonCode\WireCore\Core\Events\TableFiltered;
 use NyonCode\WireCore\Core\Events\TableFiltering;
@@ -34,8 +33,6 @@ use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
-use NyonCode\WireCore\Foundation\Contracts\HydratesState;
-use NyonCode\WireCore\Foundation\Support\RecordVersion;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
 use NyonCode\WireForms\Concerns\InteractsWithActionForms;
@@ -55,9 +52,10 @@ use NyonCode\WireTable\Import\ImportResult;
 use NyonCode\WireTable\Import\TableImport;
 use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
 use NyonCode\WireTable\Preferences\TablePreferenceManager;
-use NyonCode\WireTable\Services\CellValueWriter;
+use NyonCode\WireTable\Services\CellEditPipeline;
 use NyonCode\WireTable\Services\SummaryBatch;
 use NyonCode\WireTable\Services\TableQueryService;
+use NyonCode\WireTable\Support\CellEditOutcome;
 use NyonCode\WireTable\Table;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -65,6 +63,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 trait WithTable
 {
     use CanExpandSubRows;
+    use CanFillCells;
     use CanSelectRecords;
     use DispatchesStateUpdates;
     use HasSqlDebug;
@@ -1048,15 +1047,7 @@ trait WithTable
      */
     protected function findColumn(string $name): ?Column
     {
-        $table = $this->getTable();
-
-        foreach ($table->getColumns() as $column) {
-            if ($column->getName() === $name) {
-                return $column;
-            }
-        }
-
-        return null;
+        return $this->getTable()->findColumn($name);
     }
 
     // ─── Summaries ───────────────────────────────────────
@@ -1756,47 +1747,21 @@ trait WithTable
             return ['success' => false, 'message' => __('wire-table::messages.column_not_found')];
         }
 
-        if (! $column->isEditable()) {
-            return ['success' => false, 'message' => __('wire-table::messages.column_not_editable')];
-        }
+        $pipeline = app(CellEditPipeline::class);
 
-        // ── Permission check (before transaction — read-only). Delegate to the
-        // canonical fail-CLOSED authorization owner (HasAuthorization::isAuthorized),
-        // a Gate check that works with Laravel Gate/policies AND Spatie. The previous
-        // hand-rolled `method_exists($user, 'hasPermissionTo')` probe failed OPEN for
-        // any user model without that method (e.g. plain Gate/policy auth), silently
-        // bypassing `->permission()`. `isAuthorized()` returns true when no permission
-        // is set, so unrestricted editable columns are unaffected. ──
-        if (! $column->isAuthorized()) {
-            return ['success' => false, 'message' => __('wire-table::messages.no_permission_view')];
+        // ── Column-level refusals (before any transform — read-only) ──
+        if ($failure = $pipeline->guard($column)) {
+            return $failure->toArray();
         }
 
         // ── Format & validate (before transaction — no DB writes) ──
         // Hold on to the state the client sent. The record-aware pass inside the
         // transaction dehydrates from this, never from the output below.
         $state = $value;
+        $value = $pipeline->dehydrate($column, $state);
 
-        if ($column instanceof DehydratesState) {
-            $value = $column->dehydrateState($state, null);
-        }
-
-        // Pre-validate without record context (basic rules)
-        $rules = $column->getEditableRules(null);
-        if (! empty($rules)) {
-            $validationResult = app(ValidationPipeline::class)->validate(
-                [$columnName => $value],
-                [$columnName => $rules],
-            );
-
-            if ($validationResult->failed()) {
-                $errors = $validationResult->getError($columnName) ?? [];
-
-                return [
-                    'success' => false,
-                    'message' => $errors[0] ?? __('wire-table::messages.validation_failed'),
-                    'errors' => $errors,
-                ];
-            }
+        if ($failure = $pipeline->validateWithoutRecord($column, $columnName, $value)) {
+            return $failure->toArray();
         }
 
         // Dispatch CellUpdating event
@@ -1804,7 +1769,7 @@ trait WithTable
 
         // ── Atomic update with optimistic locking ───────────────
         try {
-            $result = DB::transaction(function () use ($table, $column, $columnName, $recordKey, $state, $recordVersion) {
+            $outcome = DB::transaction(function () use ($table, $pipeline, $column, $columnName, $recordKey, $state, $recordVersion): CellEditOutcome {
                 // Lock the row
                 $record = $table->getQuery()
                     ->where($table->getPrimaryKey(), $recordKey)
@@ -1812,94 +1777,24 @@ trait WithTable
                     ->first();
 
                 if (! $record) {
-                    return ['success' => false, 'message' => __('wire-table::messages.record_not_found')];
+                    return CellEditOutcome::rejected(__('wire-table::messages.record_not_found'));
                 }
 
-                // Capture old value for event
-                $oldValue = $record->{$columnName};
-
-                // ── Edit permission (record-aware) ──
-                if (method_exists($column, 'canEdit') && ! $column->canEdit($record)) {
-                    return ['success' => false, 'message' => __('wire-table::messages.no_permission_edit')];
-                }
-
-                // ── Optimistic locking ──
-                $version = app(RecordVersion::class);
-
-                if ($version->conflicts($record, $recordVersion)) {
-                    $currentValue = $record->{$columnName};
-                    if ($column instanceof HydratesState) {
-                        $currentValue = $column->hydrateState($currentValue, $record);
-                    }
-
-                    return [
-                        'success' => false,
-                        'message' => __('wire-table::messages.record_conflict'),
-                        'conflict' => true,
-                        'currentValue' => (string) ($currentValue ?? ''),
-                        'currentVersion' => $version->stamp($record),
-                    ];
-                }
-
-                // ── Dehydrate with record context ──
-                // From the original state, not from the record-less pass above:
-                // dehydrateState() is a pure function of its arguments, which does
-                // not make it idempotent under self-composition. Feeding its own
-                // output back in would apply a beforeSave() closure twice.
-                $value = $column instanceof DehydratesState
-                    ? $column->dehydrateState($state, $record)
-                    : $state;
-
-                // ── Validate with record context ──
-                if (method_exists($column, 'validate')) {
-                    $validation = $column->validate($value, $record);
-                    if (! $validation['valid']) {
-                        return [
-                            'success' => false,
-                            'message' => $validation['errors'][0] ?? __('wire-table::messages.validation_failed'),
-                            'errors' => $validation['errors'],
-                        ];
-                    }
-                }
-
-                // ── Save ──
-                $record = app(CellValueWriter::class)->write($column, $record, $columnName, $value);
-
-                return [
-                    'success' => true,
-                    'version' => $version->stamp($record),
-                    'record' => $record,
-                    'value' => $value,
-                    'oldValue' => $oldValue,
-                ];
+                return $pipeline->commit($column, $columnName, $record, $state, $recordVersion);
             });
 
             // ── Post-transaction callbacks (outside lock) ──
-            if ($result['success'] ?? false) {
-                $record = $result['record'] ?? null;
-                $savedValue = $result['value'] ?? $value;
-                $oldValue = $result['oldValue'] ?? null;
-
-                if ($record && method_exists($column, 'getAfterStateUpdatedCallback') && $column->getAfterStateUpdatedCallback()) {
-                    call_user_func($column->getAfterStateUpdatedCallback(), $record, $savedValue);
-                }
-
-                // Dispatch CellUpdated event
-                event(new CellUpdated(static::class, $columnName, $recordKey, $oldValue, $savedValue));
-
-                // Clean internal keys before returning to client
-                unset($result['record'], $result['value'], $result['oldValue']);
-            }
+            $pipeline->settle($outcome, $column, static::class, $columnName, $recordKey);
 
             // The conflict is always shown inline on the cell; a table can opt in
             // to *also* raise a (more prominent) notification for it.
-            if (($result['conflict'] ?? false) === true && $table->shouldNotifyEditConflicts()) {
+            if ($outcome->conflict && $table->shouldNotifyEditConflicts()) {
                 $this->sendNotification(Notification::warning(
-                    $result['message'] ?? __('wire-table::messages.record_conflict')
+                    $outcome->message ?? __('wire-table::messages.record_conflict')
                 ));
             }
 
-            return $result;
+            return $outcome->toArray();
 
         } catch (Exception $e) {
             return ['success' => false, 'message' => __('wire-table::messages.save_error', ['error' => $e->getMessage()])];

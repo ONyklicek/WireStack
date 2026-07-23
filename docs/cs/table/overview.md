@@ -564,6 +564,13 @@ TextInputColumn::make('name')
     })
 ```
 
+### Fill handle
+
+`Table::fillHandle()` přidá editovatelným buňkám úchyt jako v Excelu: hodnotu
+přetáhnete na řádky pod ní a celý rozsah se zapíše jedním requestem. Zapíná se
+explicitně, jednotlivý sloupec vyloučíte přes `Column::fillable(false)`. Viz
+[Fill handle](columns/fill-handle.md).
+
 ---
 
 ## Vzory z reálného světa

@@ -31,6 +31,7 @@ any of them.
 - [Relation Paths & Dot Notation](relations.md) — display related-model values, aggregates, pivots
 - [Enum & JSON Casts](casts.md) — enum labels/colors/icons and array/json rendering
 - [Editing & Column-Level Filters](editing.md) — inline editing and per-column filter inputs
+- [Fill Handle](fill-handle.md) — Excel-style drag-to-fill across rows, in one request
 - [Patterns & Recipes](patterns.md) — full example tables
 
 ## Shared Column API

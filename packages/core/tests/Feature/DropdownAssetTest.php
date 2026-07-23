@@ -113,6 +113,25 @@ test('the shipped bundle registers the editable-cell Alpine data', function () {
         ->toContain('wire-editable-committed');
 });
 
+test('the shipped bundle registers the fill-handle Alpine data', function () {
+    $bundle = WireCoreServiceProvider::ASSETS_PATH.'/wire-core-dropdown.js';
+
+    // The Excel-style fill handle lives in resources/js/fill/* and is bundled in
+    // through dropdown.js. Fails if the dist drifts from source.
+    expect(file_get_contents($bundle))
+        ->toContain('wireFillHandle')
+        // One request for the whole range, sent only on pointer release.
+        ->toContain('fillTableCells')
+        // Pointer capture is what keeps the drag alive once it leaves the handle,
+        // and is why mouse, touch and pen need no separate code paths.
+        ->toContain('setPointerCapture')
+        // The preview class the drag paints on covered cells.
+        ->toContain('wire-fill-target')
+        // Auto-scroll runs on rAF, so holding still past the viewport edge keeps
+        // scrolling instead of stalling on the last pointermove.
+        ->toContain('requestAnimationFrame');
+});
+
 test('the shipped bundle lifts a teleported panel above the surface that owns it', function () {
     $bundle = WireCoreServiceProvider::ASSETS_PATH.'/wire-core-dropdown.js';
 

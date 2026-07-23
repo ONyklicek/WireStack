@@ -103,6 +103,14 @@
             'responsiveDisplay' => $col->hasResponsiveDisplay(),
         ];
     }
+    // Columns a fill drag may write. The client additionally requires the cell to
+    // have actually rendered an editable root, so a per-record disabled cell is
+    // skipped without this list having to know about records.
+    $fillColumns = array_values(array_map(
+        fn($c) => $c->getName(),
+        array_filter($visibleColumns, fn($c) => $c->isFillable()),
+    ));
+    $isFillEnabled = $table->isFillHandleEnabled() && $fillColumns !== [];
     $filterableColumns = array_filter($table->getColumns(), fn($c) => $c->canView() && $c->isFilterable() && $component->isColumnVisible($c->getName()));
     $hasColumnFilters = count($filterableColumns) > 0;
     $hasSubRows = $table->hasSubRows();
@@ -539,7 +547,16 @@
                     @endif
 
                     {{-- Table --}}
-                    <div class="overflow-x-auto {{ $tableHiddenClass }}">
+                    {{-- `relative` is the positioning context the fill handle and its
+                         range overlay are placed against, so they scroll with the table. --}}
+                    <div class="relative overflow-x-auto {{ $tableHiddenClass }}"
+                         @if($isFillEnabled)
+                             x-data="wireFillHandle()"
+                             data-fill-root
+                             data-fill-columns="{{ json_encode($fillColumns) }}"
+                             data-fill-max="{{ $table->getFillMaxRecords() }}"
+                         @endif
+                    >
                         @if($hasVisibleColumns)
                             <table
                                     class="w-full {{ $isBordered ? 'border-collapse' : '' }} {{ $table->getTableClass() }}">
@@ -905,6 +922,13 @@
                                     ])
                                 @endif
                             </table>
+
+                            @if($isFillEnabled)
+                                @include('wire-table::tables.partials.fill-handle', [
+                                    'fillColumns' => $fillColumns,
+                                    'fillMax' => $table->getFillMaxRecords(),
+                                ])
+                            @endif
                         @else
                             {{-- No columns visible state --}}
                             <div class="px-6 py-16 text-center">

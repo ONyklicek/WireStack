@@ -1,5 +1,7 @@
 import { computePosition, autoUpdate, flip, shift, offset, size } from '@floating-ui/dom'
 
+import wireFillHandle from './fill/controller'
+
 /**
  * Canonical "Teleport + Floating UI" primitive for every floating surface in the
  * project (action menus, table toolbars, form select/date/tag panels, widgets).
@@ -709,6 +711,7 @@ document.addEventListener('alpine:init', () => {
     window.Alpine.data('wireTabs', wireTabs)
     window.Alpine.data('wireWizard', wireWizard)
     window.Alpine.data('wireEditableCell', wireEditableCell)
+    window.Alpine.data('wireFillHandle', wireFillHandle)
     registerSheetDismiss(window.Alpine)
     registerFocusTrap(window.Alpine)
 })

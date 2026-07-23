@@ -31,6 +31,7 @@ sáhněte na kterýkoli z nich.
 - [Cesty relací a tečková notace](relations.md) — zobrazit hodnoty souvisejících modelů, agregáty, pivoty
 - [Enum a JSON casty](casts.md) — labely/barvy/ikony enumů a rendering array/json
 - [Editace a filtry na úrovni sloupce](editing.md) — inline editace a per-sloupcové inputy filtrů
+- [Fill handle](fill-handle.md) — vyplňování tažením jako v Excelu, jedním requestem
 - [Vzory a recepty](patterns.md) — kompletní příkladové tabulky
 
 ## Sdílené API sloupce

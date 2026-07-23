@@ -2,6 +2,13 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [1.13.0]
+
+### Added
+- **Excel-style fill handle for editable tables.** `Table::fillHandle()` opts a table in; hovering or focusing a fillable cell parks a small handle just inside its bottom-right corner, and dragging it down writes that value over the rows below. Nothing is written and **no request is sent while dragging** — the drag only paints a preview. On release the whole range goes out as **one** request (`fillTableCells`). `Column::fillable(false)` excludes a column that is otherwise editable (a unique code, an invoice number); `Table::fillMaxRecords(int)` caps a single request (default 500). Mouse, touch and pen share one Pointer Events path, dragging past the viewport edge auto-scrolls, and Escape abandons the drag without writing. See `docs/table/columns/fill-handle.md`.
+- **A fill is one request but not one `UPDATE`, and deliberately not all-or-nothing.** Every record still goes through the same path as a single inline edit — its own `canEdit()`, its own rules, its own optimistic-lock version — so one row losing its race (or being disabled for this user) is reported as a per-record failure while the rest land, and the client rolls back only the cells that were refused. A single `UPDATE … WHERE key IN (…)` was rejected as the implementation: it skips Eloquent events, casts and mutators, never touches `updated_at` (which is what the optimistic lock compares), and cannot express a column persisted through `editableUsing()`, a relation or a pivot. Records are resolved through the table's own query, so a key outside it is never written, and the endpoint refuses outright unless `fillHandle()` is on. Per-cell `CellUpdating`/`CellUpdated` fire exactly as for a single edit — there is no separate bulk event.
+- **Known limit — the optimistic lock has one-second resolution.** A version is `updated_at` as a Unix timestamp, so two writes inside the same second are indistinguishable and a stale version is not caught there. It matters for a client that writes the same rows repeatedly: the fill controller therefore serialises its requests and reads each row's version at send time, rather than firing a second fill with the versions the page held before the first one answered. Left as-is rather than moving to sub-second stamps, which would change `RecordVersion` for every surface (including editable panels) and assumes a timestamp precision many schemas do not have. Covered by `FillHandleTest`.
+
 ## [1.12.1]
 
 ### Security

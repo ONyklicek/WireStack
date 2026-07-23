@@ -94,6 +94,14 @@ Route::get('/previews', function () {
             'variant' => 'image-gallery',
         ],
         [
+            'slug' => 'table-editable-fill',
+            'title' => 'Wire Table',
+            'label' => 'Table editable + fill',
+            'copy' => 'Inline-editable text, select and toggle cells with the Excel-style fill handle.',
+            'component' => TablePreview::class,
+            'variant' => 'editable-fill',
+        ],
+        [
             'slug' => 'table-row-color',
             'title' => 'Wire Table',
             'label' => 'Table row color',
@@ -260,6 +268,7 @@ foreach ([
     'table-row-color' => ['title' => 'Wire Table Row Color', 'subtitle' => 'Conditional whole-row tint by record status, plus an emphasised row class.', 'component' => TablePreview::class, 'variant' => 'row-color'],
     'table-column-filters' => ['title' => 'Wire Table Column Filters', 'subtitle' => 'Per-column header filters: text, single-select, multi-select, and boolean.', 'component' => TablePreview::class, 'variant' => 'column-filters'],
     'table-image-gallery' => ['title' => 'Wire Table Image Gallery', 'subtitle' => 'ImageColumn: single image, an array as a gallery, and a stacked one capped with a "+N" chip.', 'component' => TablePreview::class, 'variant' => 'image-gallery'],
+    'table-editable-fill' => ['title' => 'Wire Table Editable + Fill', 'subtitle' => 'Inline-editable text, select and toggle cells with the Excel-style fill handle. Email opts out via ->fillable(false).', 'component' => TablePreview::class, 'variant' => 'editable-fill'],
     'table-subrows-flatten' => ['title' => 'Wire Table Flatten', 'subtitle' => 'Flatten mode rendering every child as a regular row.', 'component' => TablePreview::class, 'variant' => 'subrows-flatten'],
     'table-subrows-limit' => ['title' => 'Wire Table Show More', 'subtitle' => 'Limited child rows with the "show more" affordance.', 'component' => TablePreview::class, 'variant' => 'subrows-limit'],
     'table-subrows-filter' => ['title' => 'Wire Table Sub-row Filters', 'subtitle' => 'Per-child interactive filter bar above the sub-row table.', 'component' => TablePreview::class, 'variant' => 'subrows-filter'],

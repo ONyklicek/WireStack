@@ -20,7 +20,10 @@ use NyonCode\WireForms\Components\Toggle;
 use NyonCode\WireTable\Columns\BadgeColumn;
 use NyonCode\WireTable\Columns\BooleanColumn;
 use NyonCode\WireTable\Columns\ImageColumn;
+use NyonCode\WireTable\Columns\SelectColumn;
 use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\Columns\TextInputColumn;
+use NyonCode\WireTable\Columns\ToggleColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Table;
@@ -111,6 +114,10 @@ class TablePreview extends Component
 
         if ($this->variant === 'image-gallery') {
             return $this->imageGalleryTable($table);
+        }
+
+        if ($this->variant === 'editable-fill') {
+            return $this->editableFillTable($table);
         }
 
         $table = $this->usersTable($table);
@@ -296,6 +303,30 @@ class TablePreview extends Component
                     ->stackLimit(3)
                     // 6 avatars against a limit of 3 => three images plus "+3".
                     ->state(fn ($record) => array_map($avatar, $palette)),
+            ])
+            ->searchable(false)
+            ->paginated(false);
+    }
+
+    /**
+     * Inline editing plus the Excel-style fill handle.
+     *
+     * Every editable column type is present because each dehydrates its state
+     * differently and the drag must survive all three; `email` opts out with
+     * ->fillable(false), so the handle must never appear on it.
+     */
+    private function editableFillTable(Table $table): Table
+    {
+        return $table
+            ->model(User::class)
+            ->fillHandle()
+            ->columns([
+                TextColumn::make('name')->label('Name'),
+                TextInputColumn::make('email')->label('Email (not fillable)')->fillable(false),
+                SelectColumn::make('role')
+                    ->label('Role')
+                    ->options(['admin' => 'Administrator', 'editor' => 'Editor', 'viewer' => 'Viewer']),
+                ToggleColumn::make('is_active')->label('Active'),
             ])
             ->searchable(false)
             ->paginated(false);
