@@ -7,7 +7,19 @@ namespace NyonCode\WireCore\Audit\Events;
 use NyonCode\WireCore\Audit\Contracts\AuditableEvent;
 
 /**
- * Dispatched when an inline cell edit is saved in a table.
+ * Dispatch for an inline cell edit that should be audited.
+ *
+ * Deliberately **not** dispatched by the framework, despite the table having an
+ * obvious seam for it (`Services\CellEditPipeline`): a `HasAuditable` model
+ * already records that same write as `RecordUpdated` through its Eloquent
+ * `updated` event, so firing this from the cell pipeline would log every inline
+ * edit twice — once as `updated`, once as `cell_updated`, with identical
+ * old/new values.
+ *
+ * It exists for the writes that bypass model events and would otherwise go
+ * unrecorded: a raw `Builder::update()`, a pivot column, a value persisted
+ * through `editableUsing()`. Dispatch it yourself there. See
+ * `docs/core/audit.md`.
  */
 final readonly class InlineCellUpdated implements AuditableEvent
 {

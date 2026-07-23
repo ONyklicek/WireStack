@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Audit\AuditEntry;
 
 // ─── Factory ─────────────────────────────────────────────────────────────────
@@ -96,3 +97,45 @@ it('returns empty changes when values are identical', function () {
 
     expect($entry->getChangeDiff())->toBe([]);
 });
+
+// ─── Scopes ─────────────────────────────────────────────────────────────────
+
+it('scopes to a record by morph type and key', function () {
+    $record = new AuditScopeOrder;
+    $record->forceFill(['id' => 7])->syncOriginal();
+
+    $query = AuditEntry::forRecord($record);
+
+    expect($query->toSql())->toContain('"auditable_type" = ?')
+        ->and($query->getBindings())->toBe([AuditScopeOrder::class, 7]);
+});
+
+it('scopes to an event type', function () {
+    expect(AuditEntry::forEvent('deleted')->getBindings())->toBe(['deleted']);
+});
+
+it('scopes to older entries by day count', function () {
+    expect(AuditEntry::olderThan(30)->toSql())->toContain('"created_at" < ?');
+});
+
+it('scopes to an integer user id', function () {
+    expect(AuditEntry::byUser(42)->getBindings())->toBe([42]);
+});
+
+/**
+ * Regression: the actor key may be a UUID/ULID — `resolveUserId()` returns
+ * int|string and the column is a string — but scopeByUser() type-hinted int, so
+ * a UUID actor made the scope fatal under strict_types.
+ */
+it('scopes to a string (UUID/ULID) user id', function () {
+    $uuid = '9c4a0f2e-1b7d-4c3a-9f11-2a5b8c7d6e01';
+
+    expect(AuditEntry::byUser($uuid)->getBindings())->toBe([$uuid]);
+});
+
+class AuditScopeOrder extends Model
+{
+    protected $table = 'audit_scope_orders';
+
+    protected $guarded = [];
+}
