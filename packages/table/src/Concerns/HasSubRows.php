@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Exceptions\TableConfigurationException;
 
 /**
  * Trait HasSubRows
@@ -326,6 +327,19 @@ trait HasSubRows
     public function getSubRowsQuery(mixed $record, ?array $sort = null, bool $applyLimit = true): Builder
     {
         $relation = $this->subRowRelation;
+
+        // A typo'd relation name would otherwise surface as a bare
+        // "Call to undefined method Model::itemz()" that never mentions subRows().
+        // isRelation() also sees relations registered via resolveRelationUsing(),
+        // which a plain method_exists() would miss.
+        $isRelation = $record instanceof Model
+            ? $record->isRelation($relation)
+            : method_exists($record, $relation);
+
+        if (! $isRelation) {
+            throw TableConfigurationException::subRowRelationMissing($relation, $record::class);
+        }
+
         $query = $record->{$relation}();
 
         if ($this->subRowQueryCallback) {

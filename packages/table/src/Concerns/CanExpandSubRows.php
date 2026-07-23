@@ -419,7 +419,12 @@ trait CanExpandSubRows
     {
         $table = $this->getTable();
 
-        if (! $table->isSubRowColumnSortable($column)) {
+        // isSubRowColumnSortable() also allows the configured default column, so
+        // getSubRowsQuery() can apply the default sort on a table whose headers
+        // are not clickable. A user-triggered sort must not ride that leniency:
+        // if the table is not interactively sortable, refuse it outright, or a
+        // crafted request could flip the direction of a "non-sortable" table.
+        if (! $table->isSubRowsSortable() || ! $table->isSubRowColumnSortable($column)) {
             return;
         }
 

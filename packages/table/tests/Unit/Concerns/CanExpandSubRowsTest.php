@@ -56,6 +56,9 @@ class CeSubRowsComponent extends Component
 
     public int $limit = 0;
 
+    /** When false, a default sort is configured but headers are not clickable. */
+    public bool $sortableHeaders = true;
+
     public function table(Table $table): Table
     {
         $table = $table
@@ -64,7 +67,7 @@ class CeSubRowsComponent extends Component
             ->columns([Column::make('number')])
             ->subRows('items')
             ->subRowColumns([Column::make('product'), Column::make('price')])
-            ->subRowsSortable(default: 'price', direction: 'asc')
+            ->subRowsSortable(sortable: $this->sortableHeaders, default: 'price', direction: 'asc')
             ->subRowsFilterable();
 
         if ($this->defaultExpanded) {
@@ -289,6 +292,16 @@ it('starts a newly sorted column ascending', function () {
 
 it('ignores a sort request for a column that is not sortable', function () {
     $test = Livewire::test(CeSubRowsComponent::class)->call('sortSubRows', 'not_a_column');
+
+    expect($test->instance()->getSubRowSort())->toBeNull();
+});
+
+it('refuses a user sort on a table that is not interactively sortable, even for the default column', function () {
+    // The table configures a default sort but not clickable headers. A crafted
+    // sortSubRows() request must not ride the leniency isSubRowColumnSortable()
+    // grants the default column for the query's own default sort.
+    $test = Livewire::test(CeSubRowsComponent::class, ['sortableHeaders' => false])
+        ->call('sortSubRows', 'price');
 
     expect($test->instance()->getSubRowSort())->toBeNull();
 });

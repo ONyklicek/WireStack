@@ -49,4 +49,12 @@ final class TableConfigurationException extends InvalidArgumentException impleme
             'recordAction()/recordActions() instead.'
         );
     }
+
+    public static function subRowRelationMissing(string $relation, string $model): self
+    {
+        return new self(
+            "subRows('{$relation}') expects a relationship method [{$relation}()] on ".
+            "[{$model}], but none exists. Check the spelling, or define the relationship."
+        );
+    }
 }
