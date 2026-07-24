@@ -23,12 +23,16 @@ final class ResolvedRecordAction
      * @param  array<int, string>  $triggerTypes  Resolved trigger types (default applied).
      * @param  Action|null  $action  The wrapped action, or null for a name reference.
      * @param  bool  $rendersInRowActions  Whether it also shows as a toolbar button.
+     * @param  array<int, string>  $keyShortcuts  Keys bound via `onKey()`, carried so a
+     *                                            name-referenced binding keeps its shortcut
+     *                                            even with no action to stamp it on.
      */
     public function __construct(
         public readonly string $name,
         public readonly array $triggerTypes,
         public readonly ?Action $action,
         public readonly bool $rendersInRowActions,
+        public readonly array $keyShortcuts = [],
     ) {}
 
     public function hasTrigger(string $type): bool

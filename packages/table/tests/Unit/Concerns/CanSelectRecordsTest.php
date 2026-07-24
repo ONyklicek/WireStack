@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -434,4 +435,89 @@ it('costs no query at all while the selection is keyed', function () {
     DB::disableQueryLog();
 
     expect($queries)->toBe(0);
+});
+
+// ─── All-matching over a joined query (ambiguous-column regression) ───────────
+
+class SelJoinUser extends Model
+{
+    protected $table = 'sel_join_users';
+
+    protected $guarded = [];
+
+    public $timestamps = false;
+
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(SelJoinTag::class, 'sel_join_tag_user', 'user_id', 'tag_id');
+    }
+}
+
+class SelJoinTag extends Model
+{
+    protected $table = 'sel_join_tags';
+
+    protected $guarded = [];
+
+    public $timestamps = false;
+}
+
+class SelJoinComponent extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        // Base query is itself a join (the pivot table carries its own `id`), so
+        // every all-matching clause must qualify the primary key or the SQL is
+        // ambiguous.
+        return $table
+            ->query(SelJoinUser::first()->tags()->getQuery()->select('sel_join_tags.*'))
+            ->columns([TextColumn::make('name')])
+            ->selectable()
+            ->paginated()
+            ->perPage(2);
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+it('excludes rows from an all-matching selection over a joined query without ambiguity', function () {
+    Schema::create('sel_join_users', function (Blueprint $table) {
+        $table->id();
+    });
+    Schema::create('sel_join_tags', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+    });
+    Schema::create('sel_join_tag_user', function (Blueprint $table) {
+        $table->id();
+        $table->unsignedBigInteger('user_id');
+        $table->unsignedBigInteger('tag_id');
+    });
+
+    $user = SelJoinUser::create([]);
+    $alpha = SelJoinTag::create(['name' => 'Alpha']);
+    $beta = SelJoinTag::create(['name' => 'Beta']);
+    $user->tags()->attach([$alpha->id, $beta->id]);
+
+    $c = new SelJoinComponent;
+    $c->mountWithTable();
+
+    $c->selectAllMatchingRecords();
+    // Exclude Beta; the query gains whereNotIn on the primary key over the join.
+    $c->toggleRecordSelection((string) $beta->id);
+
+    // Before the fix this threw "ambiguous column name: id" (pivot + tags both
+    // have `id`). It must run and return only the still-selected Alpha row.
+    $rows = $c->selectedRecordsQuery()->get();
+
+    expect($rows->pluck('id')->all())->toBe([$alpha->id]);
+
+    Schema::dropIfExists('sel_join_tag_user');
+    Schema::dropIfExists('sel_join_tags');
+    Schema::dropIfExists('sel_join_users');
 });

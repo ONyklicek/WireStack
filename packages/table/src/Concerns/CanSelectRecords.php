@@ -285,7 +285,10 @@ trait CanSelectRecords
             $query = $this->buildTableQuery();
 
             if ($listed !== []) {
-                $query->whereNotIn($table->getPrimaryKey(), $listed);
+                // Qualify the key: buildTableQuery() may carry a belongs-to join
+                // (sorting/filtering by a relation column), and a joined table
+                // commonly has its own `id`, so a bare column would be ambiguous.
+                $query->whereNotIn($query->getModel()->qualifyColumn($table->getPrimaryKey()), $listed);
             }
 
             return $query;

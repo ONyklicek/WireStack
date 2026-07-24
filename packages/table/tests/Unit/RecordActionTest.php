@@ -406,6 +406,17 @@ it('maps record-action keyboard shortcuts and reserves enter/space', function ()
     expect($table->getRecordActionKeyboardConfig()['shortcuts'])->toBe(['Delete' => 'remove']);
 });
 
+it('keeps a name-referenced onKey shortcut even with no action to stamp', function () {
+    // 'remove' is declared without its own keyboardShortcut(); the binding only
+    // references it and adds onKey('Delete'). The key lives on the trigger, so it
+    // must still reach the client shortcut map.
+    $table = Table::make()
+        ->actions([Action::make('remove')])
+        ->recordActions([RecordAction::make('remove')->onKey('Delete')]);
+
+    expect($table->getRecordActionKeyboardConfig()['shortcuts'])->toBe(['Delete' => 'remove']);
+});
+
 it('enables keyboard nav automatically when record actions exist', function () {
     expect(Table::make()->keyboardNavEnabled())->toBeFalse()
         ->and(Table::make()->getTableRole())->toBeNull();

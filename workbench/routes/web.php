@@ -62,6 +62,14 @@ Route::get('/previews', function () {
             'variant' => 'record-actions',
         ],
         [
+            'slug' => 'table-record-actions-dual',
+            'title' => 'Wire Table',
+            'label' => 'Table record actions (click + double-click)',
+            'copy' => 'Both a single-click and a double-click record action are bound: a double-click must run only the double-click action, never the deferred single-click one.',
+            'component' => TablePreview::class,
+            'variant' => 'record-actions-dual',
+        ],
+        [
             'slug' => 'table-selection',
             'title' => 'Wire Table',
             'label' => 'Table selection',
@@ -279,6 +287,7 @@ foreach ([
     'forms-default-on-null' => ['title' => 'Wire Forms defaultOnNull', 'subtitle' => 'Edit mode with an all-null record: only ->defaultOnNull() fields resurrect their default; a plain default keeps the null.', 'component' => FormPreview::class, 'variant' => 'default-on-null'],
     'table-overview' => ['title' => 'Wire Table', 'subtitle' => 'Live table preview with search, filters, and actions.', 'component' => TablePreview::class, 'variant' => 'overview'],
     'table-record-actions' => ['title' => 'Wire Table Record Actions', 'subtitle' => 'Double-click a row to open it, right-click for the context menu — one delegated controller.', 'component' => TablePreview::class, 'variant' => 'record-actions'],
+    'table-record-actions-dual' => ['title' => 'Wire Table Record Actions (click + double-click)', 'subtitle' => 'Both gestures bound: a double-click must run only the double-click action, never the deferred single-click one.', 'component' => TablePreview::class, 'variant' => 'record-actions-dual'],
     'table-selection' => ['title' => 'Wire Table Selection', 'subtitle' => 'Selected-record state with bulk toolbar and active filters.', 'component' => TablePreview::class, 'variant' => 'selection'],
     'table-stacked-selection' => ['title' => 'Wire Table Stacked Selection', 'subtitle' => 'Card layout with the always-visible select-all strip, the select-all-matching escalation, and mobile sorting.', 'component' => TablePreview::class, 'variant' => 'stacked-selection'],
     'table-subrows' => ['title' => 'Wire Table Sub-rows', 'subtitle' => 'Expandable invoice line items with sortable headers, row actions, and a subtotal.', 'component' => TablePreview::class, 'variant' => 'subrows'],

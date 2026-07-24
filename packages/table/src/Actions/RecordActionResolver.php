@@ -148,8 +148,18 @@ final class RecordActionResolver
             $action = $resolved->action ?? $this->table->findRegisteredAction($resolved->name);
             $shortcut = $action?->getKeyboardShortcut();
 
-            if ($shortcut !== null && ! in_array(strtolower($shortcut), $reserved, true)) {
-                $out[$shortcut] = $resolved->name;
+            // The wrapped/registered action's stamped shortcut, plus any keys the
+            // binding declared via onKey() — the latter is the only source for a
+            // name reference whose registered action carries no shortcut of its own.
+            $keys = $resolved->keyShortcuts;
+            if ($shortcut !== null) {
+                array_unshift($keys, $shortcut);
+            }
+
+            foreach ($keys as $key) {
+                if (! in_array(strtolower($key), $reserved, true)) {
+                    $out[$key] = $resolved->name;
+                }
             }
         }
 
@@ -182,16 +192,23 @@ final class RecordActionResolver
     private function normalize(string|Action|RecordAction $entry, string $default): ResolvedRecordAction
     {
         if ($entry instanceof RecordAction) {
-            $types = array_values(array_map(
-                static fn (RecordTrigger $trigger): string => $trigger->type,
-                $entry->getTriggers(),
-            ));
+            $types = [];
+            $keyShortcuts = [];
+
+            foreach ($entry->getTriggers() as $trigger) {
+                $types[] = $trigger->type;
+
+                if ($trigger->type === RecordTrigger::KEY && $trigger->key !== null) {
+                    $keyShortcuts[] = $trigger->key;
+                }
+            }
 
             return new ResolvedRecordAction(
                 $entry->getName(),
                 $types === [] ? [$default] : $types,
                 $entry->getAction(),
                 $entry->rendersInRowActions(),
+                $keyShortcuts,
             );
         }
 
