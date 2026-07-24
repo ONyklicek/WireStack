@@ -454,6 +454,16 @@ Main concerns:
 - `Concerns\HasResponsive`
 - `Concerns\HasSqlDebug`
 - `Concerns\HasSubRows`
+- `Concerns\HasRecordTriggers` — record-action trigger vocabulary (on the `RecordAction` wrapper)
+
+Record actions (whole-row interaction — click/dblclick/right-click/keyboard):
+
+- `Support\RecordAction` — the binding (wraps/refs an `Action`, holds triggers); fluent `Action::make()->onDoubleClick()` promotes to it via macros registered in `WireTableServiceProvider`
+- `Support\RecordTrigger` — trigger value object (open registry: click/dblclick/contextmenu/key/custom)
+- `Support\ResolvedRecordAction` — normalized binding the runtime/view consume
+- `Actions\RecordActionResolver` — trigger→name pointer map, context-menu + row-button contributions, keyboard primary/secondary/shortcuts
+- JS controller: `packages/table/resources/js/record-actions.js` → `wireRecordActions` (one per `<tbody>`); delivered via `packages/table/dist/wire-table-records.js` + `partials/record-actions-assets`
+- Deprecated alias: `Table::rowContextMenu()` → prefer `recordAction()->onContextMenu()`
 
 Services:
 

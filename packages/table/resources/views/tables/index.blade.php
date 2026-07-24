@@ -65,6 +65,15 @@
     // executeTableAction/openActionModal (core action views stay host-agnostic).
     $actionClick = new \NyonCode\WireTable\Actions\TableActionClickResolver();
     $rowContextMenuEnabled = $table->hasRowContextMenu(); // dedicated actions, independent of the actions column
+    // Record actions: whole-row click/dblclick bindings (name map) + whether the
+    // delegated controller must be mounted at all (bindings, a context menu, or
+    // keyboard navigation).
+    $recordActionBindings = $table->getRecordActionBindings();
+    $hasRecordPointer = $recordActionBindings !== [];
+    $keyboardNav = $table->keyboardNavEnabled();
+    $tableRole = $table->getTableRole();
+    $recordKeyboardConfig = $keyboardNav ? $table->getRecordActionKeyboardConfig() : null;
+    $recordActionsRootEnabled = $hasRecordPointer || $rowContextMenuEnabled || $keyboardNav;
     $hasBulkActions = !empty($bulkActions);
     $hasHeaderActions = !empty($headerActions);
     $hasFilters = !empty($filters);
@@ -228,6 +237,7 @@
                     wire:key="table-wrapper"
                     @if($isSelectable)
                         data-page-keys="{{ json_encode($pageRecordKeys) }}"
+                        data-selection-root
                         x-data="{
                             selected: $wire.entangle('tableState.selection.records'),
                             /* 'keys' → `selected` is the selection.
@@ -679,6 +689,7 @@
                     >
                         @if($hasVisibleColumns)
                             <table
+                                    @if($tableRole) role="{{ $tableRole }}" @endif
                                     class="w-full {{ $isBordered ? 'border-collapse' : '' }} {{ $table->getTableClass() }}">
                                 <thead
                                         class="bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-500 dark:text-gray-400 uppercase {{ $table->getHeaderClass() }}">
@@ -825,7 +836,35 @@
                                 @endif
                                 </thead>
 
-                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                <tbody
+                                        class="divide-y divide-gray-100 dark:divide-gray-700"
+                                        @if($recordActionsRootEnabled)
+                                            x-data="wireRecordActions({ bindings: @js($recordActionBindings), contextMenu: {{ $rowContextMenuEnabled ? 'true' : 'false' }}, keyboard: @js($recordKeyboardConfig) })"
+                                            @if($hasRecordPointer)
+                                                @click="onPointer('click', $event)"
+                                                @dblclick="onPointer('dblclick', $event)"
+                                            @endif
+                                            @if($rowContextMenuEnabled)
+                                                @contextmenu="onContextMenu($event)"
+                                            @endif
+                                            @if($keyboardNav)
+                                                @keydown="onKeydown($event)"
+                                                @focusin="onRowFocus($event)"
+                                            @endif
+                                        @endif
+                                >
+                                @if($recordActionsRootEnabled)
+                                    @once
+                                        @include('wire-table::tables.partials.record-actions-assets')
+                                    @endonce
+                                @endif
+                                @if($rowContextMenuEnabled)
+                                    {{-- Core dropdown bundle for any nested action-group dropdown inside a
+                                         context-menu item; emitted once per request, not once per row. --}}
+                                    @once
+                                        @include('wire-core::partials.floating-assets')
+                                    @endonce
+                                @endif
                                 @forelse($records as $record)
                                     @php
                                         $recordKey = $record->{$table->getPrimaryKey()};
@@ -855,37 +894,22 @@
                                         ])
                                     @endif
                                     <tr
-                                            class="{{ $table->getRowClasses($record, $rowIndex) }}"
+                                            class="{{ $table->getRowClasses($record, $rowIndex) }} {{ $keyboardNav ? 'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500' : '' }}"
                                             @if($isSelectable) :class="isSelected(@js((string) $recordKey)) ? 'bg-primary-50 dark:bg-primary-900/20' : ''" @endif
-                                            @if($hasRowContextMenu) x-data="wireContextMenu()" @contextmenu.prevent="openAt($event)" @endif
+                                            @if($keyboardNav) role="row" tabindex="-1" @endif
                                             wire:key="row-{{ $recordKey }}"
                                             data-testid="table-row"
                                             data-row-key="{{ $recordKey }}"
                                     >
                                         @if($hasRowContextMenu)
-                                            {{-- Scaffolding is identical for every row; emit it once per
-                                                 request, not once per row. --}}
-                                            @once
-                                                @include('wire-core::partials.floating-assets')
-                                            @endonce
-                                            {{-- <template> is a script-supporting element, valid as a direct
-                                                 child of <tr>. Teleported to <body>; a fixed panel pinned at
-                                                 the cursor (positioned by wireContextMenu.place()). --}}
+                                            {{-- Teleported context-menu panel for this row. It carries no
+                                                 per-row Alpine state: the single wireRecordActions controller
+                                                 on the <tbody> opens, positions and closes it by record key
+                                                 (data-record-menu). <template> is a script-supporting element,
+                                                 valid as a direct child of <tr>. --}}
                                             <template x-teleport="body">
                                                 <div
-                                                        x-ref="panel"
-                                                        x-show="open"
-                                                        x-cloak
-                                                        @click.outside="$clickedInside($event) || close()"
-                                                        @keydown.escape.window="close()"
-                                                        @wheel.window="close()"
-                                                        @click="close()"
-                                                        x-transition:enter="transition ease-out duration-100"
-                                                        x-transition:enter-start="opacity-0 scale-95"
-                                                        x-transition:enter-end="opacity-100 scale-100"
-                                                        x-transition:leave="transition ease-in duration-75"
-                                                        x-transition:leave-start="opacity-100 scale-100"
-                                                        x-transition:leave-end="opacity-0 scale-95"
+                                                        data-record-menu="{{ $recordKey }}"
                                                         class="fixed z-50 min-w-[12rem] origin-top-left rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black/5 dark:ring-white/10 focus:outline-none"
                                                         style="display: none; left: 0; top: 0;"
                                                         role="menu"
@@ -1128,6 +1152,11 @@
                                     ? $column->renderMobileCell($record)
                                     : $column->renderCellFast($record);
                             @endphp
+                            {{-- Record actions are a desktop pointer affordance: the delegated
+                                 controller lives on the desktop <tbody> only, so click/dblclick/
+                                 right-click record actions do not apply to these touch cards. Touch
+                                 users reach the same actions through the visible row-action buttons
+                                 and their modals. --}}
                             @forelse($records as $record)
                                 @php
                                     $recordKey = $record->{$table->getPrimaryKey()};

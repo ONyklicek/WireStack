@@ -135,11 +135,15 @@ it('returns empty html when no menu actions are configured', function () {
 
 it('wires the context menu into rows when enabled', function () {
     Livewire::test(CtxComponent::class)
-        ->assertSee('wireContextMenu', false)
-        ->assertSee('@contextmenu.prevent', false);
+        // The delegated controller owns the right-click, not a per-row component.
+        ->assertSee('wireRecordActions', false)
+        ->assertSee('onContextMenu($event)', false)
+        ->assertSee('data-record-menu', false)
+        ->assertDontSee('wireContextMenu', false);
 });
 
 it('does not wire the context menu when disabled', function () {
     Livewire::test(CtxNoMenuComponent::class)
-        ->assertDontSee('wireContextMenu', false);
+        ->assertDontSee('wireRecordActions', false)
+        ->assertDontSee('data-record-menu', false);
 });

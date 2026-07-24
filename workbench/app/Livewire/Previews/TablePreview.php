@@ -26,6 +26,7 @@ use NyonCode\WireTable\Columns\TextInputColumn;
 use NyonCode\WireTable\Columns\ToggleColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Filters\SelectFilter;
+use NyonCode\WireTable\Support\RecordAction;
 use NyonCode\WireTable\Table;
 use Workbench\App\Models\Invoice;
 use Workbench\App\Models\User;
@@ -438,6 +439,20 @@ class TablePreview extends Component
             ->defaultSort('created_at', 'desc')
             ->searchable()
             ->selectable()
+            // Double-click a row → open it (a confirmation modal here). Because the
+            // table is selectable, the default trigger is double-click, leaving a
+            // single click for row selection. Behaviour-only: no toolbar button.
+            ->recordActions($this->variant === 'record-actions' ? [
+                RecordAction::make(
+                    Action::make('open')
+                        ->label('Open')
+                        ->icon('outline:eye')
+                        ->requiresConfirmation()
+                        ->modalHeading(fn ($r) => "Opened {$r->name}")
+                        ->modalDescription('Double-clicking the row opened this record.')
+                        ->action(fn () => null)
+                )->onDoubleClick(),
+            ] : [])
             // Right-click a row → a dedicated context menu (declared separately
             // from the ->actions() toolbar above).
             ->rowContextMenu([

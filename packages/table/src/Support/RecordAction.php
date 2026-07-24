@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Support;
 
 use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireTable\Concerns\HasRecordTriggers;
+use NyonCode\WireTable\Exceptions\TableConfigurationException;
 
 /**
  * A row-level action binding: *how* a record is acted on (click, double-click,
@@ -18,14 +20,22 @@ use NyonCode\WireCore\Actions\Action;
  * is what lets the shared `wire-core` {@see Action} stay free of table-row
  * interaction concepts.
  *
- * Phase 0 is the seam only: it wraps an action (or names one) so `Table` can
- * accept, store and reject it in the right places. Triggers, `__call` delegation
- * to the wrapped action, `behaviorOnly()`, and the `Action` macros that promote
- * a fluent `Action::make()->onDoubleClick()` into a `RecordAction` arrive in a
- * later phase and layer onto this skeleton without reshaping it.
+ * Trigger vocabulary (`onClick`/`onDoubleClick`/`onContextMenu`/`onKey`/`on`)
+ * and the behaviour-only vs. also-in-toolbar choice come from
+ * {@see HasRecordTriggers}. Any other fluent call — `->label()`, `->icon()`,
+ * `->action()`, `->visible()`, `->authorize()`, … — is forwarded to the wrapped
+ * action by `__call`, so a record action chains with the full action API while
+ * the wrapper keeps ownership of the row-interaction concepts.
+ *
+ * The same reach the other way — a fluent `Action::make()->onDoubleClick()` — is
+ * provided by macros registered on `Action` in `WireTableServiceProvider`, which
+ * promote the action into a `RecordAction`. No trigger state ever lives on the
+ * shared `Action`; the macro only constructs this wrapper.
  */
 final class RecordAction
 {
+    use HasRecordTriggers;
+
     /** The wrapped action, or null when this binding only references one by name. */
     protected ?Action $action = null;
 
@@ -39,6 +49,24 @@ final class RecordAction
         } else {
             $this->reference = $action;
         }
+    }
+
+    /**
+     * Forward any other fluent call to the wrapped action. Setters on the action
+     * return the action itself; we translate that back into `$this` so the chain
+     * stays on the wrapper. Getters pass their value straight through.
+     *
+     * @param  array<int, mixed>  $arguments
+     */
+    public function __call(string $method, array $arguments): mixed
+    {
+        if ($this->action === null) {
+            throw TableConfigurationException::cannotConfigureReferencedRecordAction($method, $this->getName());
+        }
+
+        $result = $this->action->{$method}(...$arguments);
+
+        return $result === $this->action ? $this : $result;
     }
 
     /**

@@ -54,6 +54,14 @@ Route::get('/previews', function () {
             'variant' => 'actions-quiet',
         ],
         [
+            'slug' => 'table-record-actions',
+            'title' => 'Wire Table',
+            'label' => 'Table record actions',
+            'copy' => 'Whole-row interaction: double-click a row to open it, right-click for the context menu — one delegated controller, no per-row listeners.',
+            'component' => TablePreview::class,
+            'variant' => 'record-actions',
+        ],
+        [
             'slug' => 'table-selection',
             'title' => 'Wire Table',
             'label' => 'Table selection',
@@ -270,6 +278,7 @@ foreach ([
     'forms-enum-defaults' => ['title' => 'Wire Forms Enum Defaults', 'subtitle' => 'Create-mode defaults: an enum-instance default, a clearable enum select, and a numeric default.', 'component' => FormPreview::class, 'variant' => 'enum-defaults'],
     'forms-default-on-null' => ['title' => 'Wire Forms defaultOnNull', 'subtitle' => 'Edit mode with an all-null record: only ->defaultOnNull() fields resurrect their default; a plain default keeps the null.', 'component' => FormPreview::class, 'variant' => 'default-on-null'],
     'table-overview' => ['title' => 'Wire Table', 'subtitle' => 'Live table preview with search, filters, and actions.', 'component' => TablePreview::class, 'variant' => 'overview'],
+    'table-record-actions' => ['title' => 'Wire Table Record Actions', 'subtitle' => 'Double-click a row to open it, right-click for the context menu — one delegated controller.', 'component' => TablePreview::class, 'variant' => 'record-actions'],
     'table-selection' => ['title' => 'Wire Table Selection', 'subtitle' => 'Selected-record state with bulk toolbar and active filters.', 'component' => TablePreview::class, 'variant' => 'selection'],
     'table-stacked-selection' => ['title' => 'Wire Table Stacked Selection', 'subtitle' => 'Card layout with the always-visible select-all strip, the select-all-matching escalation, and mobile sorting.', 'component' => TablePreview::class, 'variant' => 'stacked-selection'],
     'table-subrows' => ['title' => 'Wire Table Sub-rows', 'subtitle' => 'Expandable invoice line items with sortable headers, row actions, and a subtotal.', 'component' => TablePreview::class, 'variant' => 'subrows'],

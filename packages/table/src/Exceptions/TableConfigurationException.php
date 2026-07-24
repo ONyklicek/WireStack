@@ -50,6 +50,15 @@ final class TableConfigurationException extends InvalidArgumentException impleme
         );
     }
 
+    public static function cannotConfigureReferencedRecordAction(string $method, string $name): self
+    {
+        return new self(
+            "Cannot call {$method}() on the record action referencing [{$name}]: a ".
+            'reference by name has no action of its own to configure. Configure it '.
+            'where it is declared in actions(), or wrap an Action instead of naming one.'
+        );
+    }
+
     public static function subRowRelationMissing(string $relation, string $model): self
     {
         return new self(

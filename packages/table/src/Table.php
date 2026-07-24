@@ -25,6 +25,7 @@ use NyonCode\WireCore\Foundation\Enums\Alignment;
 use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
+use NyonCode\WireTable\Actions\RecordActionResolver;
 use NyonCode\WireTable\Actions\TableActionClickResolver;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Concerns\CanSelectRecords;
@@ -216,6 +217,12 @@ class Table implements Htmlable
 
     /** Extra class(es) for the keyboard-active row (null keeps the built-in active style). */
     protected ?string $activeRowClass = null;
+
+    /** Keyboard navigation: null = auto (on when record actions exist), true/false = forced. */
+    protected ?bool $recordActionKeyboard = null;
+
+    /** Memoized resolver over the record-action bindings; cleared when they (or selection) change. */
+    private ?RecordActionResolver $recordActionResolver = null;
 
     // Also send a notification (toast) when an inline edit hits an optimistic-lock
     // conflict. Off by default — the conflict is always shown inline on the cell,
@@ -630,7 +637,11 @@ class Table implements Htmlable
     }
 
     /**
-     * @param  array<int, Action|ActionGroup>  $actions
+     * @param  array<int, Action|ActionGroup|RecordAction>  $actions  A RecordAction
+     *                                                                is rejected — `Action::make()->onDoubleClick()` returns one, and it
+     *                                                                belongs in `recordActions()`, not here; it is accepted in the type
+     *                                                                only so the mistake is caught with a clear message rather than a
+     *                                                                fatal further down.
      */
     public function actions(array $actions): static
     {
@@ -649,11 +660,12 @@ class Table implements Htmlable
     }
 
     /**
-     * Check if table has any actions (including ActionGroups)
+     * Check if table has any actions (including ActionGroups), counting record
+     * actions promoted into the column via `alsoInRowActions()`.
      */
     public function hasActions(): bool
     {
-        return ! empty($this->actions);
+        return ! empty($this->actions) || $this->recordActionResolver()->rowActionButtons() !== [];
     }
 
     /**
@@ -827,6 +839,9 @@ class Table implements Htmlable
     public function selectable(bool $selectable = true): static
     {
         $this->selectable = $selectable;
+        // The default record-action trigger is selection-aware, so the resolver's
+        // memo must be dropped when selection changes.
+        $this->recordActionResolver = null;
 
         return $this;
     }
@@ -1189,6 +1204,23 @@ class Table implements Htmlable
     public function getRowActionsForDisplay(): array
     {
         $actions = array_values($this->actions);
+
+        // Record actions flagged alsoInRowActions() also render as toolbar
+        // buttons. Skip any whose name already appears — a reference to an
+        // existing row action must not double it.
+        $seen = [];
+        foreach ($actions as $action) {
+            if ($action instanceof Action) {
+                $seen[$action->getName()] = true;
+            }
+        }
+
+        foreach ($this->recordActionResolver()->rowActionButtons() as $button) {
+            if (! isset($seen[$button->getName()])) {
+                $actions[] = $button;
+                $seen[$button->getName()] = true;
+            }
+        }
 
         if ($this->actionsStyle === 'quiet') {
             foreach ($actions as $action) {
@@ -1558,7 +1590,8 @@ class Table implements Htmlable
 
     /**
      * Compose the full `<tr>` class string for a record: row tint (if any),
-     * otherwise the neutral hover + zebra striping, plus any custom row class.
+     * otherwise the neutral (or opt-in record-action) hover + zebra striping, a
+     * `cursor-pointer` when the row is clickable, plus any custom row class.
      *
      * Centralizing this keeps the row view free of layered conditionals and lets
      * a colored row correctly suppress the gray hover / striping it would clash
@@ -1567,16 +1600,88 @@ class Table implements Htmlable
     public function getRowClasses(?Model $record, int $rowIndex): string
     {
         $tint = $record === null ? null : $this->getRowColor($record);
+        $clickable = $this->hasRecordActionPointer();
 
         if ($tint !== null) {
+            // A tinted row keeps its own same-hue hover; the record-action hover
+            // override applies only to otherwise-neutral rows.
             $base = HasColor::getRowTintClasses($tint);
         } else {
-            $hover = $this->isHoverable() ? 'hover:bg-gray-50 dark:hover:bg-gray-700/30' : '';
+            $recordHover = $this->getRecordActionHover();
+
+            if ($clickable && $recordHover !== null) {
+                $hover = HasColor::getRowHoverClasses($recordHover);
+            } else {
+                $hover = $this->isHoverable() ? 'hover:bg-gray-50 dark:hover:bg-gray-700/30' : '';
+            }
+
             $stripe = $this->isStriped() && $rowIndex % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/30' : '';
             $base = trim("{$hover} {$stripe}");
         }
 
-        return trim("{$base} ".((string) $this->getRowClass($record)));
+        $cursor = $clickable ? 'cursor-pointer' : '';
+
+        return trim("{$base} {$cursor} ".((string) $this->getRowClass($record)));
+    }
+
+    /**
+     * Whether the table carries a whole-row pointer record action (click or
+     * double-click) — the rows are clickable and should read as such.
+     */
+    public function hasRecordActionPointer(): bool
+    {
+        return $this->getRecordActionBindings() !== [];
+    }
+
+    /**
+     * Force keyboard navigation on or off (null = auto: on when the table has any
+     * record action). Keyboard nav gives the rows a roving tabindex, arrow-key
+     * movement, Enter/Shift+Enter for the primary/secondary action, and the
+     * record actions' own keyboard shortcuts against the active row.
+     */
+    public function recordActionKeyboard(?bool $enabled = true): static
+    {
+        $this->recordActionKeyboard = $enabled;
+
+        return $this;
+    }
+
+    /**
+     * Whether keyboard navigation is active for this table.
+     */
+    public function keyboardNavEnabled(): bool
+    {
+        return $this->recordActionKeyboard ?? $this->hasRecordActions();
+    }
+
+    /**
+     * ARIA role for the table element: `grid` only when keyboard navigation is
+     * on, so a plain data table is never given grid semantics it does not use
+     * (see ADR / plan decision — role is conditional, not always applied).
+     */
+    public function getTableRole(): ?string
+    {
+        return $this->keyboardNavEnabled() ? 'grid' : null;
+    }
+
+    /**
+     * The client config the keyboard layer of `wireRecordActions` consumes:
+     * the Enter/Shift+Enter targets, the shortcut map, whether Space toggles
+     * selection, and the class marking the active row.
+     *
+     * @return array<string, mixed>
+     */
+    public function getRecordActionKeyboardConfig(): array
+    {
+        $resolver = $this->recordActionResolver();
+
+        return [
+            'primary' => $resolver->primaryActionName(),
+            'secondary' => $resolver->secondaryActionName(),
+            'shortcuts' => $resolver->shortcuts(),
+            'selectable' => $this->isSelectable(),
+            'activeClass' => $this->getActiveRowClass() ?? 'bg-primary-100 dark:bg-primary-900/30',
+        ];
     }
 
     /**
@@ -1639,28 +1744,31 @@ class Table implements Htmlable
     }
 
     /**
-     * Define a dedicated right-click context menu for each row — a power-user
-     * shortcut alongside the actions column. These actions are declared
-     * separately from `->actions()` (they are not the row action buttons), so
-     * the menu is explicit rather than an implicit mirror of the toolbar. Pass
-     * the same action objects if you want them to match. A row with no visible
-     * action shows no menu. Desktop pointer feature (touch has no context menu).
+     * Define a dedicated right-click context menu for each row.
+     *
+     * @deprecated Superseded by record actions. Bind an action to the right-click
+     *             trigger instead: `->recordAction(Action::make('edit')->onContextMenu())`.
+     *             Kept as a thin alias — it still populates the same context menu
+     *             (see {@see getContextMenuActions()}) — and will be removed in v2.0.
      *
      * @param  array<int, Action|ActionGroup>  $actions
      */
     public function rowContextMenu(array $actions): static
     {
+        Deprecation::method('rowContextMenu', 'recordAction()->onContextMenu', '2.0');
+
         $this->rowContextMenuActions = $actions;
 
         return $this;
     }
 
     /**
-     * Whether a row context menu has been configured.
+     * Whether a row context menu exists — a dedicated `rowContextMenu()` list, or
+     * a record action bound to the right-click trigger via `onContextMenu()`.
      */
     public function hasRowContextMenu(): bool
     {
-        return $this->rowContextMenuActions !== [];
+        return $this->getContextMenuActions() !== [];
     }
 
     /**
@@ -1669,6 +1777,22 @@ class Table implements Htmlable
     public function getRowContextMenuActions(): array
     {
         return $this->rowContextMenuActions;
+    }
+
+    /**
+     * The full context-menu action list: the dedicated `rowContextMenu()` actions
+     * plus any record action bound with `onContextMenu()`. This is the single
+     * owner of "what the right-click menu shows" — the record-action layer feeds
+     * the existing menu rather than standing up a second one.
+     *
+     * @return array<int, Action|ActionGroup>
+     */
+    public function getContextMenuActions(): array
+    {
+        return array_merge(
+            array_values($this->rowContextMenuActions),
+            $this->recordActionResolver()->contextMenuActions(),
+        );
     }
 
     /**
@@ -1681,7 +1805,7 @@ class Table implements Htmlable
         $html = '';
         $click = new TableActionClickResolver;
 
-        foreach ($this->rowContextMenuActions as $action) {
+        foreach ($this->getContextMenuActions() as $action) {
             $html .= $action instanceof ActionGroup
                 ? $action->getDropdownItemsHtml($record, $click)->toHtml()
                 : $action->renderForDropdown($record, $click);
@@ -1706,6 +1830,7 @@ class Table implements Htmlable
     public function recordAction(string|Action|RecordAction $action): static
     {
         $this->recordActions[] = $action;
+        $this->recordActionResolver = null;
 
         return $this;
     }
@@ -1718,6 +1843,7 @@ class Table implements Htmlable
     public function recordActions(array $actions): static
     {
         $this->recordActions = array_values($actions);
+        $this->recordActionResolver = null;
 
         return $this;
     }
@@ -1733,6 +1859,65 @@ class Table implements Htmlable
     public function hasRecordActions(): bool
     {
         return $this->recordActions !== [];
+    }
+
+    /**
+     * The memoized resolver over the record-action bindings. Cleared by the
+     * record-action and selection setters, since the default trigger is
+     * selection-aware.
+     */
+    protected function recordActionResolver(): RecordActionResolver
+    {
+        return $this->recordActionResolver ??= new RecordActionResolver($this);
+    }
+
+    /**
+     * Pointer-trigger → action-name map for the JS controller / Blade x-data
+     * (click, double-click and custom gestures; not context-menu or key).
+     *
+     * @return array<string, string>
+     */
+    public function getRecordActionBindings(): array
+    {
+        return $this->recordActionResolver()->pointerMap();
+    }
+
+    /**
+     * Find a registered row action by name (flattening action groups). The
+     * canonical name lookup a record-action reference resolves against — a
+     * `recordAction('edit')` reuses the very `Action` declared in `->actions()`.
+     */
+    public function findRegisteredAction(string $name): ?Action
+    {
+        foreach ($this->getAllActions() as $action) {
+            if ($action->getName() === $name) {
+                return $action;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The wrapped action instances a record action carries in its own right
+     * (not name references) — the fallback pool the execution endpoints search so
+     * a behaviour-only record action with its own callback still runs.
+     *
+     * @return array<int, Action>
+     */
+    public function getRecordActionInstances(): array
+    {
+        $out = [];
+
+        foreach ($this->recordActions as $entry) {
+            if ($entry instanceof RecordAction && $entry->getAction() !== null) {
+                $out[] = $entry->getAction();
+            } elseif ($entry instanceof Action) {
+                $out[] = $entry;
+            }
+        }
+
+        return $out;
     }
 
     /**

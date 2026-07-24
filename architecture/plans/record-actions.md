@@ -422,97 +422,169 @@ Testy: `packages/table/tests/Unit/RecordActionTest.php` — 11 zelených (VO wra
 reference, registrace append/replace, guard v `actions()`, hover/active settery
 včetně `''→null` větví). PHPStan max čistý; 179 souvisejících table testů zelených.
 
-### Fáze 1 — `RecordAction` + triggery + makro
+### Fáze 1 — `RecordAction` + triggery + makro — **HOTOVO (2026-07-23)**
 
 Cíl: fluent binding a obě syntaxe (`RecordAction::make()` i `Action::make()->…`).
 
 | Soubor | Změna |
 |---|---|
-| `Support/RecordAction.php` | value object; `make(string\|Action)`; `__call` deleguje na vnitřní `Action`; nese seznam triggerů + `behaviorOnly()`/`alsoInRowActions()` |
-| `Concerns/HasRecordTriggers.php` | `onClick`/`onDoubleClick`/`onContextMenu`/`on(string)`/`onKey(string)`; `getTriggers()`; `onKey` deleguje na `keyboardShortcut()` vnitřní akce |
-| `Support/RecordTrigger.php` | drobný VO (typ + payload); otevřený registr (rozšiřitelnost §3) |
-| `WireTableServiceProvider` | v `bootedPackage`: `BaseAction::macro(...)` pro 4 triggery → povýší na `RecordAction` |
+| `Support/RecordAction.php` | `use HasRecordTriggers`; `__call` deleguje na vnitřní `Action` (setter→wrapper přes `$result === $this->action`, getter passthrough); reference bez akce → `cannotConfigureReferencedRecordAction` |
+| `Concerns/HasRecordTriggers.php` | `onClick`/`onDoubleClick`/`onContextMenu`/`on(string)`/`onKey(string)`; `getTriggers()`/`hasTrigger()`; `behaviorOnly()`/`alsoInRowActions()`/`isBehaviorOnly()`/`rendersInRowActions()`; `onKey` stampuje `keyboardShortcut()` vnitřní akce; `abstract getAction()` seam |
+| `Support/RecordTrigger.php` | VO (`type` + `key`); konstanty `CLICK/DOUBLE_CLICK/CONTEXT_MENU/KEY`; `type` je volný string (otevřený registr §3) |
+| `WireTableServiceProvider` | `registerRecordActionMacros()` v `bootedPackage`: `Action::macro()` pro `onClick`/`onDoubleClick`/`onContextMenu`/`onKey`/`on` → povýší na `RecordAction` |
 
-Testy (Unit):
-- `RecordAction::make('x')->onDoubleClick()` má trigger `dblclick`;
-- `__call` delegace: `->label()/->icon()/->action()/->visible()` prochází na Action;
-- makro `Action::make('x')->onDoubleClick()` vrátí `RecordAction` (instanceof);
-- `onKey('Delete')` nastaví `keyboardShortcut('Delete')` na vnitřní akci;
-- `behaviorOnly()` vs `alsoInRowActions()` flag stav.
+Testy: `RecordActionTest.php` — 24 zelených (13 nových F1). Pokryto: triggery
+včetně custom gesture, více triggerů, key na triggeru, `onKey` stamp i
+name-reference větev, `behaviorOnly`↔`alsoInRowActions`, `__call` delegace +
+guard, makro-povýšení všech 5 vstupů, promoted binding rovnou do
+`recordActions()`. PHPStan level 6 čistý; 200 souvisejících table testů zelených.
 
-### Fáze 2 — Resolver + runtime (bez nové pipeline)
+> **Poznámka:** makra jsou na `Action` sdílená přes `Macroable` static store i s
+> podtřídami (`BulkAction`/`HeaderAction`). `RecordAction::make(string|Action)`
+> je odmítne TypeErrorem — record action je koncept řádkové akce, ne bulk/header.
+
+### Fáze 2 — Resolver + runtime (bez nové pipeline) — **HOTOVO (2026-07-23)**
 
 Cíl: trigger → jméno akce → **existující** exekuce; `onContextMenu` sjednotit s row context menu.
 
 | Soubor | Změna |
 |---|---|
-| `Actions/RecordActionResolver.php` | mapa `trigger → jméno`; primární/sekundární; selection-aware default (dvojklik když `isSelectable()`); reuse `findAction()` |
-| `Table.php` | `getRecordActionBindings(): array` (pro Blade `data-*`/x-data); merge `onContextMenu` bindingů do `getRowContextMenuActions()` |
-| `Concerns/InteractsWithTableActions.php` | (jen pokud nutné) tenký `resolveRecordAction()` → volá `executeTableAction()`/`openActionModal()`; **žádná nová pipeline** |
+| `Actions/RecordActionResolver.php` | normalizuje bindingy (`resolve()`); `pointerMap()` (click/dblclick/custom→jméno, bez contextmenu/key), `contextMenuActions()`, `rowActionButtons()`; selection-aware default (dvojklik když `isSelectable()`, jinak klik); memo `resolve()` |
+| `Support/ResolvedRecordAction.php` | VO — `name`/`triggerTypes`/`action?`/`rendersInRowActions` |
+| `Table.php` | `getRecordActionBindings()` (=pointerMap), `findRegisteredAction()` (kanonický name-lookup přes `getAllActions()`), `getRecordActionInstances()` (fallback pool), `getContextMenuActions()` (merge `rowContextMenu` + `onContextMenu`); `hasRowContextMenu()`/`getRowContextMenuHtml()`/`hasActions()`/`getRowActionsForDisplay()` počítají record akce; resolver memo čištěn v `recordAction`/`recordActions`/`selectable` |
+| `Concerns/InteractsWithTableActions.php` | `findAction()` fallback na `getRecordActionInstances()` → behavior-only akce s vlastním callbackem se spustí přes **existující** `executeTableAction`/`openActionModal` (žádná nová pipeline) |
 
-Testy (Unit + Feature):
-- resolver: `dblclick→'edit'`; primární = dvojklik při `selectable()`, klik jinak;
-- `onContextMenu('menu')` se objeví v `getRowContextMenuHtml()`;
-- `behaviorOnly()` NENÍ v seznamu renderovaných row actions, ale je v `getRecordActions()`;
-- reference `recordAction('edit')` vyřeší tutéž instanci jako `->actions()`;
-- exekuce record cestou projde `canExecute`/authorize (`executeTableAction`).
+Testy: `RecordActionTest.php` 34 (11 nových F2) + `Feature/RecordActionExecutionTest.php` 2.
+Pokryto: pointerMap + selection-aware default (klik↔dvojklik) + „later wins",
+reference→tatáž instance, `getRecordActionInstances`, context-menu merge (wrapped
+i reference), `alsoInRowActions` v renderu / `behaviorOnly` ne / dedup, `hasActions`,
+exekuce behavior-only přes endpoint + `canExecute` guard. PHPStan level 6 čistý;
+**celá table sada 1567 zelených**.
 
-### Fáze 3 — JS controller + bundle + delivery
+> **Pozn. k parametrům callbacku:** action callback resolvuje parametry **podle
+> jména** z payloadu (`$record`, `$records`, `$data`, …), ne podle typu — record
+> akce dědí tuto konvenci beze změny.
 
-Cíl: delegovaný listener (klik/dvojklik/pravé tl.), jeden na tabulku.
+### Fáze 3 — JS controller + bundle + delivery + **přestavba context menu** — **HOTOVO (2026-07-23)**
 
-| Soubor | Změna |
-|---|---|
-| `resources/js/record-actions.js` | `wireRecordActions()`: `resolve(type,event)` → `closest('[data-row-key]')` + `INTERACTIVE_SELECTOR` guard → `$wire.executeTableAction/openActionModal`; otevřený registr triggerů |
-| `package.json` | esbuild entry `build:table-assets` → `packages/table/dist/wire-table-records.js` (vzor `build:core-assets`) |
-| `WireTableServiceProvider` | `->hasAssets('dist')` + asset route (vzor `wire-forms`); nebo partial s `@assets` |
-| `resources/views/tables/partials/record-actions-assets.blade.php` | `@assets <script src=…>` (vzor `floating-assets.blade.php`) |
-
-Testy (Pest browser / CDP):
-- klik/dvojklik/pravé tl. spustí správnou akci;
-- klik na tlačítko, checkbox, `<a>`, editovatelnou buňku, dropdown **nespustí** akci;
-- sub-row / group header (bez `data-row-key`) akci nespustí.
-
-### Fáze 4 — Blade zapojení + styling
-
-Cíl: napojit controller na `<tbody>`, řádkové třídy přes kanonický vlastník.
+Cíl: jeden delegovaný controller (klik/dvojklik/pravé tl.); row context menu
+přestaven z per-`<tr>` `wireContextMenu` x-data na tentýž controller.
 
 | Soubor | Změna |
 |---|---|
-| `index.blade.php` | root `x-data="wireRecordActions(@js($bindings))"` + delegované `@click/@dblclick/@contextmenu`, **podmíněně** `@if($hasRecordActions)`; `<tr>` beze změny (`data-row-key` už je) |
-| `index.blade.php` | render row actions přeskočí `behaviorOnly()` bindingy |
-| `Table::getRowClasses()` + `HasColor` | `cursor-pointer` u řádku s primárním klik/dvojklik; hover třída jen když opt-in `recordActionHover()` |
-| mobilní karty | rozhodnout: klik/dvojklik na kartě je desktop-pointer koncept; touch používá existující akce/menu — **zdokumentovat**, na kartách record action neaktivovat |
+| `resources/js/record-actions.js` | `wireRecordActions({bindings, contextMenu})`: delegované `onPointer(type)`/`onContextMenu()`; `row()` = `closest('[data-row-key]')` scoped na `this.$el` (tbody); `blocked(event,row)` = `closest(INTERACTIVE)` **uvnitř řádku**; pointer → `$wire.openActionModal` (modal-aware entry); context menu open/pozice/close centrálně, jeden otevřený panel |
+| `package.json` | `build:table-assets` → `packages/table/dist/wire-table-records.js` |
+| `WireTableServiceProvider` | `->hasAssets('dist')` + `registerAssetRoutes()` (route `wire-table.asset`, vzor forms) |
+| `partials/record-actions-assets.blade.php` | `@assets <script>` s mtime cache-bustem |
+| `index.blade.php` | `<tbody>` dostane `wireRecordActions` + delegované `@click/@dblclick/@contextmenu` (podmíněně); per-`<tr>` **ztratil** `wireContextMenu` x-data; panel → `data-record-menu="{key}"` bez Alpine stavu; řádek `cursor-pointer` při pointer bindingu; `@once` record-assets + core floating-assets |
 
-Testy:
-- Blade smoke: `data-row-key` + controller root emitován **jednou**, ne per-row;
-- **render výkon**: 0 per-row `x-data`/listenerů (assert jako `TableIconRenderTest`);
-- `cursor-pointer`/hover třídy jen dle konfigurace.
+Klíčový gotcha (chycen jen v browseru, ne v Pestu): `INTERACTIVE` obsahuje
+`[x-data]`, ale controller root (`<tbody x-data>`) je **předek každého řádku** →
+`closest('[x-data]')` vylezl na tbody a blokoval vše. Fix: guard scopovaný přes
+`row.contains(hit)` — předek řádku vypadne, interaktivní prvek uvnitř řádku ne.
 
-### Fáze 5 — Keyboard navigation + a11y
+Testy: `RecordActionRenderTest` (controller jednou, ne per-row; klik/dvojklik
+listenery; cursor-pointer; nic bez konfigurace) + `RowContextMenuTest` přepsán na
+nový markup (`wireRecordActions`/`data-record-menu`, `assertDontSee wireContextMenu`).
+**Browser (Playwright/CDP) ověřeno:** boot (controller na tbody, 4 panely, 0 per-row
+x-data, cursor-pointer); dvojklik → potvrzovací modal „Opened …"; reálné pravé
+tlačítko → context menu pozicované u kurzoru; guard (checkbox+tlačítko blokované,
+prázdná buňka ne). Preview: `/previews/table-record-actions`. Celá table sada 1573 zelených.
+
+### Fáze 4 — Blade zapojení + styling — **HOTOVO (2026-07-23)**
+
+Zapojení `<tbody>` + behaviorOnly render-skip proběhly už v F2/F3; F4 dokončila
+řádkové třídy přes kanonického vlastníka + deprecation `rowContextMenu`.
+
+| Soubor | Změna |
+|---|---|
+| `HasColor::getRowHoverClasses()` | **nový kanonický** hover-only row resolver (plná paleta, `hover:bg-{c}-50 dark:hover:bg-{c}-900/20`, safelist mirror outline-buttonů; neutral default = dnešní gray hover) |
+| `Table::getRowClasses()` | `cursor-pointer` když `hasRecordActionPointer()`; neutral hover default, opt-in `recordActionHover()` přes `getRowHoverClasses` (jen u ne-tintovaného clickable řádku; tint si drží vlastní hover) + `hasRecordActionPointer()` helper |
+| `index.blade.php` | ad-hoc `cursor-pointer` z `<tr>` odstraněn (teď vlastní `getRowClasses`); dokumentační komentář u mobilních karet (record actions = desktop pointer, na kartách neaktivní) |
+| `Table::rowContextMenu()` | **@deprecated → alias** (`Deprecation::method('rowContextMenu', 'recordAction()->onContextMenu', '2.0')`); dál plní tentýž `getContextMenuActions()`, odstranění ve v2.0 |
+| `Table::actions()` | `@param` rozšířen o `RecordAction` (guard-only), aby `instanceof` guard byl PHPStan-poctivý |
+
+Testy: 10 nových F4 v `RecordActionTest` (cursor jen u pointer akce; neutral↔`primary`
+hover; hover se neaplikuje bez pointer bindingu; tintovaný řádek drží tint hover +
+je clickable; rowContextMenu alias). `RecordActionRenderTest` `cursor-pointer` teď z
+`getRowClasses`. Core row-tint + safelist testy zelené; **celá table sada 1579**;
+PHPStan `Table.php` + `HasColor.php` čisté.
+
+> Deprecation je potlačená `@trigger_error(E_USER_DEPRECATED)` (dedup dle názvu),
+> phpunit nemá `failOnDeprecation` → stávající `rowContextMenu` testy nespadnou.
+
+### Fáze 5 — Keyboard navigation + a11y — **HOTOVO (2026-07-23)**
 
 Cíl: grid pattern (roving tabindex), zkratky z akcí, přístupnost.
 
 | Soubor | Změna |
 |---|---|
-| `resources/js/record-actions.js` | `activeRowKey`, ↑/↓ (roving `tabindex`), Enter/Shift+Enter, Space (selection-aware), Context-Menu klávesa; per-akce `keyboardShortcut` proti aktivnímu řádku |
-| `index.blade.php` | podmíněně `role="grid"` + roving `tabindex` **jen** při zapnuté keyboard nav (rozhodnutí #2); aktivní řádek přes `activeRowClass()` |
-| `Table.php` | `getTableRole()` / flag, zda je keyboard nav aktivní |
+| `RecordActionResolver` | `primaryActionName()` (dblclick > click), `secondaryActionName()` (druhý pointer), `shortcuts()` (`keyboardShortcut()`→jméno, Enter/Space rezervované) |
+| `Table.php` | `recordActionKeyboard(?bool)` (null=auto dle `hasRecordActions`), `keyboardNavEnabled()`, `getTableRole()` (grid jen když nav), `getRecordActionKeyboardConfig()` (primary/secondary/shortcuts/selectable/activeClass) |
+| `resources/js/record-actions.js` | `initKeyboard()` roving tabindex; `onKeydown()` ↑/↓ + Enter/Shift+Enter (`run()`), Space (selection-aware → `toggleRecordSelection`), ContextMenu klávesa; `matchShortcut()`/`eventMatchesShortcut()` (mod/mac detekce, exact modifiers); `onRowFocus()` adoptuje fokusovaný řádek; `activate()` toggluje tabindex + active class |
+| `index.blade.php` | `<table>` `role="grid"` (podmíněně, #2); `<tbody>` `@keydown="onKeydown"` + `@focusin="onRowFocus"` + `keyboard: @js($config)`; `<tr>` `role="row" tabindex="-1"` + `focus-visible:ring-2` jen při nav |
 
-Testy (Pest browser + a11y):
-- ↑/↓ mění aktivní řádek; Enter primární, Shift+Enter sekundární; Context-Menu klávesa otevře menu;
-- `Delete`/`mod+d` fungují přes `keyboardShortcut` akce (ne přes jméno);
-- fokus stavy, `role="grid"` jen když nav zapnutá, žádná degradace bez nav;
-- `behaviorOnly()` bez klávesnicové/context cesty → build/test warning (WCAG guard).
+WCAG guard: keyboard nav je auto-on kdykoli existují record actions → **každá**
+pointer akce je vždy dosažitelná Enter/Shift+Enter, takže „behaviorOnly bez
+klávesnicové cesty" nemůže nastat (guard splněn strukturálně, ne warningem).
 
-### Fáze 6 — Docs + boost + katalog
+Testy: 8 nových config testů (primary=dblclick/secondary=click, shortcuts +
+Enter/Space rezervace, auto/force nav, grid role, activeClass/selectable). Render:
+`role="grid"`/`role="row"`/`onKeydown`/`tabindex`/focus-ring přítomné jen při nav.
+**Browser (Playwright/CDP) ověřeno:** boot (grid, roving [0,-1,-1,-1], config);
+↑/↓ posun aktivního řádku (tabindex rove + active class + focus); Enter → primary
+„open" modal na aktivním řádku; Space → výběr aktivního řádku (bulk bar); shortcut
+matcher (exact modifiers). Celá table sada **1587 zelených**; PHPStan čistý.
+
+> **Pozn. k ARIA:** `role="grid"` + `role="row"` na řádcích; buňky zůstávají
+> nativní `<td>` (implicitní gridcell), aby se nemusela sahat každá buňka —
+> běžná, přijatelná implementace; hlubší grid pattern lze doladit později.
+
+#### F5+ — Klávesnicový range-select (2026-07-24)
+
+Doplněno na žádost: desktopový výběr více řádků klávesnicí.
+
+| Klávesa | Chování |
+|---|---|
+| `Space` | Toggle výběru aktivního řádku **+ nastaví kotvu** |
+| `Shift`+`↑`/`↓` | Posun aktivního řádku **a** rozšíření souvislého bloku od kotvy |
+| `mod`+`A` | Vybrat všechny řádky na stránce |
+
+Klíč: výběr má **jeden zdroj pravdy** — client-side selection komponenta (tutéž
+používají checkboxy i bulk bar). Controller ji najde přes nový `data-selection-root`
+na wrapperu (`this.$el.closest`) a volá `toggle`/`selected`/`pageKeys`/`queueCommit`
+— optimisticky, bez roundtripu per klávesa. `record-actions.js`: `anchorKey`,
+`moveActive()` (shift→`selectRange`), `selection()`/`toggleSelection`/`selectRange`/
+`selectPage`. Plain šipka kotvu resetuje. Bulk akce zůstávají přes bar (klávesnice
+řeší jen výběr). Browser (CDP driver) 14/14 — Space+kotva, Shift-range 3 řádky
+(konzistentní s checkboxy + bulk bar „3 records selected"), mod+A celá stránka.
+
+Driver: `workbench/scripts/verify-record-actions.mjs` (11→14 checků).
+
+### Fáze 6 — Docs + boost + katalog — **HOTOVO (2026-07-23)**
 
 | Soubor | Změna |
 |---|---|
-| `docs/table/record-actions.md` (+ CZ mutace) | základní použití, více record actions, kombinace s row/bulk, UX, zkratky, best practices, časté chyby (§11) — bilingválně (memory `docs_bilingual_en_cz`) |
-| `packages/boost/resources/boost/{guidelines,skills}` | aktualizovat pro nové veřejné API (staleness hook) |
-| `AI_COMPONENT_CATALOG.md` | `RecordAction`, `HasRecordTriggers`, `RecordActionResolver`, `wireRecordActions` |
-| previews | pokud přidán preview, `npm run build:table-assets` + `verify-preview` (CDP) |
+| `docs/table/record-actions.md` + `docs/cs/table/record-actions.md` | `order: 45`; základní použití, reference, triggery, behaviorOnly/alsoInRowActions, více akcí, keyboard nav, kombinace se selection/bulk, styling, UX, časté chyby, migrace z `rowContextMenu` — bilingválně |
+| `packages/boost/.../guidelines/wire-table.blade.php` | record-actions bullet (celý model) + `rowContextMenu` deprecation bullet |
+| `packages/boost/.../skills/wire-table-development/SKILL.md` | pravidlo pro record actions + deprecation |
+| boost docs bundle | `composer boost:sync-docs` (EN record-actions zrcadleno; 113→114 docs) |
+| `AI_COMPONENT_CATALOG.md` | `RecordAction`/`RecordTrigger`/`ResolvedRecordAction`, `HasRecordTriggers`, `RecordActionResolver`, `wireRecordActions` JS |
+| preview | `table-record-actions` variant + route (přidáno v F3, browser-ověřeno) |
+
+Ověřeno: `boost:check-docs` clean, `verify-api-docs` OK (104 tříd), `verify-docs`
+OK (226 md, 2 locale), **boost sada 218 zelených**.
+
+---
+
+## Stav: **KOMPLETNÍ** (F0–F6, 2026-07-23)
+
+Celý record-actions systém hotový a ověřený: 5 fází kódu + docs. ~90 nových
+PHP testů (`RecordActionTest`/`RecordActionRenderTest`/`RecordActionExecutionTest`),
+browser (Playwright/CDP) ověření pro dvojklik→modal, pravé tlačítko→menu, guard,
+keyboard nav (↑/↓/Enter/Space/shortcuts). Celá table sada **1587 zelená**, PHPStan
+level 6 čistý, boost/docs sync clean. Rozhodnutí #1–#5 dodržena; `rowContextMenu`
+deprecated jako alias (odstranění v2.0).
 
 ### Závislosti a integrační běhy
 
