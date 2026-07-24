@@ -59,6 +59,7 @@
                 zIndex: $activeZIndex,
                 bottomSheetOnMobile: $isSlideOverOnMobile,
                 breakpoint: $modalData['mobileBreakpoint'] ?? null,
+                position: $modalData['slideOverPosition'] ?? 'right',
                 stickyHeader: $modalData['stickyHeader'] ?? false,
                 stickyFooter: $modalData['stickyFooter'] ?? false,
                 maxHeight: $modalData['maxHeight'] ?? null,

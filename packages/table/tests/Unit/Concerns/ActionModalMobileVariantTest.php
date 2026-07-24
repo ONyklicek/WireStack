@@ -9,6 +9,7 @@ use Livewire\Component;
 use Livewire\Livewire;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\HeaderAction;
+use NyonCode\WireCore\Modals\SlideOver;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Concerns\WithTable;
@@ -53,6 +54,7 @@ class AmvComponent extends Component
             'sticky' => $action->slideOver()->stickyHeader()->stickyFooter(),
             'confirm-sheet' => $action->slideOverOnMobile(),
             'confirm-full' => $action->fullScreenOnMobile(),
+            'slide-left' => $action->modal(SlideOver::make()->position('left')),
             default => $action,
         };
 
@@ -142,6 +144,15 @@ it('renders a confirmation action full screen on mobile when fullScreenOnMobile(
         ->assertSeeHtml('data-testid="confirmation-confirm"')
         ->assertSeeHtml('translate-y-full sm:translate-y-0')
         ->assertSeeHtml('items-stretch justify-center');
+});
+
+it('pins the slide-over to the left edge when the SlideOver config sets position (regression: left was dropped)', function () {
+    Livewire::test(AmvComponent::class, ['mode' => 'slide-left'])
+        ->call('openHeaderActionModal', 'invite')
+        // Left-pinned panel entering from the left, never the right edge.
+        ->assertSeeHtml('inset-y-0 left-0 pr-10')
+        ->assertSeeHtml('-translate-x-full')
+        ->assertDontSeeHtml('inset-y-0 right-0 pl-10');
 });
 
 it('renders a wrapping selection bar so bulk-action buttons stack on mobile (regression: fixed row overflowed)', function () {

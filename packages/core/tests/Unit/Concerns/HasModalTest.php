@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Modals\SlideOver;
 use NyonCode\WireForms\Components\CheckboxList;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Components\Toggle;
@@ -163,6 +164,19 @@ it('can slide over on mobile only', function () {
 
     expect($action->isSlideOverOnMobile())->toBeTrue()
         ->and($action->hasModal())->toBeTrue();
+});
+
+it('defaults the slide-over to the right edge', function () {
+    expect(Action::make('test')->getSlideOverPosition())->toBe('right')
+        ->and(Action::make('test')->getModalConfig()['slideOverPosition'])->toBe('right');
+});
+
+it('carries a SlideOver config position into the action modal (regression: left was dropped)', function () {
+    $action = Action::make('test')->modal(SlideOver::make()->position('left'));
+
+    expect($action->getSlideOverPosition())->toBe('left')
+        ->and($action->isSlideOver())->toBeTrue()
+        ->and($action->getModalConfig()['slideOverPosition'])->toBe('left');
 });
 
 // ─── Full Screen on Mobile ──────────────────────────────────────────────────
