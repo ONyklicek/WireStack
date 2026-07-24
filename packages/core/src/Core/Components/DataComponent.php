@@ -9,13 +9,16 @@ use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Core\Capabilities\CapabilitySet;
 use NyonCode\WireCore\Core\Metadata\ColumnMetadata;
 use NyonCode\WireCore\Core\Relations\RelationPath;
+use NyonCode\WireCore\Foundation\Concerns\HasName;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 
 /**
- * Shared base class for data-aware components (Columns and Fields).
+ * Shared base class for data-aware, relation-path-backed components.
  *
  * Provides: name, relation path, capabilities, metadata, state resolution.
- * Column extends this (display mode), Field extends this (input mode).
+ * The table Column extends this, as do the core capability descriptors
+ * (Text/Date/Boolean/Relation/Select). Form Fields do not — they extend
+ * Foundation\Components\Component, which already composes the same concerns.
  *
  * @phpstan-consistent-constructor
  */
@@ -23,7 +26,10 @@ abstract class DataComponent
 {
     use EvaluatesClosures;
 
-    protected string $name;
+    // name + getName() delegate to the canonical Foundation owner; the label
+    // stays local because its auto-generation is relation-path aware, which
+    // Foundation\Concerns\HasLabel (headline of the full dotted name) is not.
+    use HasName;
 
     protected ?RelationPath $relationPath = null;
 
@@ -46,11 +52,6 @@ abstract class DataComponent
     public static function make(string $name): static
     {
         return new static($name);
-    }
-
-    public function getName(): string
-    {
-        return $this->name;
     }
 
     public function label(string|Closure $label): static
