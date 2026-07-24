@@ -127,6 +127,11 @@ it('applies each filter type to the right rows', function (Closure $makeFilters,
         ['age' => ['min' => '', 'max' => 30]],
         ['Alice', 'Bob'],
     ],
+    'date single' => [
+        fn () => [DateFilter::make('joined_on')],
+        ['joined_on' => ['value' => '2026-03-20']],
+        ['Bob'],
+    ],
     'date range' => [
         fn () => [DateFilter::make('joined_on')->range()],
         ['joined_on' => ['from' => '2026-03-01', 'to' => '2026-07-01']],

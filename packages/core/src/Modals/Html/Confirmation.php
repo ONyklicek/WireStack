@@ -38,6 +38,9 @@ final class Confirmation implements Htmlable
         public bool $isInformative = false,
         public bool $closeOnClickAway = true,
         public bool $closeOnEscape = true,
+        public bool $fullScreenOnMobile = false,
+        public bool $slideOverOnMobile = false,
+        public ?string $breakpoint = null,
         public ?string $id = null,
         public ?string $closeAction = null,
         public ?int $zIndex = null,
@@ -58,7 +61,14 @@ final class Confirmation implements Htmlable
     public function toHtml(): string
     {
         return view('wire-core::modals.confirmation', [
-            'style' => new ConfirmationStyle($this->width, $this->iconColor, $this->color),
+            'style' => new ConfirmationStyle(
+                width: $this->width,
+                iconColor: $this->iconColor,
+                color: $this->color,
+                fullScreenOnMobile: $this->fullScreenOnMobile,
+                slideOverOnMobile: $this->slideOverOnMobile,
+                breakpoint: $this->breakpoint,
+            ),
             'heading' => $this->heading,
             'description' => $this->description,
             'icon' => $this->icon,

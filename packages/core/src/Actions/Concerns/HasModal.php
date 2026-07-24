@@ -87,6 +87,8 @@ trait HasModal
 
     protected bool $slideOver = false;
 
+    protected string $slideOverPosition = 'right';
+
     protected bool $slideOverOnMobile = false;
 
     protected bool $fullScreenOnMobile = false;
@@ -356,9 +358,7 @@ trait HasModal
         // Type-specific translation.
         match (true) {
             $modal instanceof Wizard => $this->modalSteps = $modal->getSteps(),
-            $modal instanceof SlideOver => $modal->isMobileOnly()
-                ? $this->slideOverOnMobile = true
-                : $this->slideOver = true,
+            $modal instanceof SlideOver => $this->applySlideOverOptions($modal),
             $modal instanceof Modal => $this->applyPlainModalOptions($modal),
             default => null,
         };
@@ -370,6 +370,19 @@ trait HasModal
     {
         $this->fullScreenOnMobile = $modal->isFullScreenOnMobile();
         $this->mobileModalWidth = $modal->getMobileWidth();
+    }
+
+    protected function applySlideOverOptions(SlideOver $modal): void
+    {
+        // A mobile-only slide-over config maps to the bottom-sheet-on-mobile
+        // flag; otherwise it is a full desktop slide-over panel.
+        $modal->isMobileOnly()
+            ? $this->slideOverOnMobile = true
+            : $this->slideOver = true;
+
+        // The panel edge ('left' / 'right') is a slide-over-only concern, carried
+        // through so ->modal(SlideOver::make()->position('left')) is honoured.
+        $this->slideOverPosition = $modal->getPosition();
     }
 
     /**
@@ -513,6 +526,11 @@ trait HasModal
     public function isSlideOver(): bool
     {
         return $this->slideOver;
+    }
+
+    public function getSlideOverPosition(): string
+    {
+        return $this->slideOverPosition;
     }
 
     public function isSlideOverOnMobile(): bool
@@ -832,6 +850,7 @@ trait HasModal
             'closeOnClickAway' => $this->shouldCloseModalOnClickAway(),
             'closeOnEscape' => $this->shouldCloseModalOnEscape(),
             'slideOver' => $this->isSlideOver(),
+            'slideOverPosition' => $this->getSlideOverPosition(),
             'slideOverOnMobile' => $this->isSlideOverOnMobile(),
             'fullScreenOnMobile' => $this->isFullScreenOnMobile(),
             'mobileWidth' => $this->getMobileModalWidth(),

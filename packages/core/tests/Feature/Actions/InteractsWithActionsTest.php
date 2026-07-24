@@ -10,6 +10,7 @@ use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireCore\Actions\Concerns\InteractsWithActions;
 use NyonCode\WireCore\Actions\ModalFooterAction;
 use NyonCode\WireCore\Core\Actions\ActionResult;
+use NyonCode\WireCore\Modals\SlideOver;
 
 beforeEach(function () {
     config()->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
@@ -64,6 +65,16 @@ class CoreActionsHost extends Component
                 ->modalFooterActions([
                     ModalFooterAction::make('touch')->submitsForm()->action(fn ($set) => $set('touched', true)),
                 ])
+                ->action(fn () => null),
+            // A left-pinned slide-over that becomes a bottom-sheet below a custom
+            // md breakpoint. Position comes from the SlideOver config object; the
+            // core modal-host must carry BOTH the panel edge and the breakpoint
+            // into the rendered panel (both were dropped before).
+            'slideLeft' => Action::make('slideLeft')
+                ->modalHeading('Details')
+                ->modal(SlideOver::make()->position('left'))
+                ->slideOverOnMobile()
+                ->mobileBreakpoint('md')
                 ->action(fn () => null),
         ];
     }
@@ -185,6 +196,21 @@ class CoreActionsHost extends Component
         $this->actionModalConfigCache = $this->catalog()['footer']->getModalConfig();
     }
 
+    public function openModal(string $name): void
+    {
+        $this->mountedActions = [['name' => $name, 'show' => true, 'data' => []]];
+        $this->actionModalConfigCache = $this->catalog()[$name]->getModalConfig();
+    }
+
+    /**
+     * The modal-host blade reads the form bridge (a wire-forms concern); this
+     * form-free host has no form instance, so it renders as a form-less modal.
+     */
+    public function getActionModalFormInstance(): mixed
+    {
+        return null;
+    }
+
     /** Mounts a name that resolves to no action, then reads the modal config. */
     public function peekGhostConfig(): void
     {
@@ -195,7 +221,18 @@ class CoreActionsHost extends Component
 
     public function render(): string
     {
-        return '<div></div>';
+        // Renders the consumer-facing action modal-host (no internal caller wires
+        // it, so this is where its blade is exercised). With no modal mounted the
+        // @if guard short-circuits, so existing engine tests are unaffected.
+        return <<<'BLADE'
+            <div>
+                @include('wire-core::actions.modal-host', [
+                    'component' => $this,
+                    'closeAction' => 'closeMountedAction',
+                    'submitAction' => 'submitMountedAction',
+                ])
+            </div>
+        BLADE;
     }
 }
 
@@ -301,4 +338,21 @@ it('skips modal config regeneration when the mounted name resolves to no action'
     Livewire::test(CoreActionsHost::class)
         ->call('peekGhostConfig')
         ->assertSet('mountedActions.0.name', 'ghost');
+});
+
+it('carries a custom mobileBreakpoint into the core modal-host slide-over (regression: it was dropped)', function () {
+    Livewire::test(CoreActionsHost::class)
+        ->call('openModal', 'slideLeft')
+        // The sheet→panel switch gates at md, not the default sm.
+        ->assertSeeHtml('md:translate-y-0')
+        ->assertDontSeeHtml('sm:translate-y-0');
+});
+
+it('carries a SlideOver config position into the core modal-host slide-over (regression: left was dropped)', function () {
+    Livewire::test(CoreActionsHost::class)
+        ->call('openModal', 'slideLeft')
+        // Left-pinned panel (md:left-0 / md:-translate-x-full), never the right edge.
+        ->assertSeeHtml('md:left-0')
+        ->assertSeeHtml('md:-translate-x-full')
+        ->assertDontSeeHtml('md:right-0');
 });

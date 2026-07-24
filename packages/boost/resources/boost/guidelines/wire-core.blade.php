@@ -51,11 +51,12 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
 ### Modals
 
 `Modal`, `ConfirmationDialog`, `SlideOver` and `Wizard` (modal **config** objects). Prefer attaching a
-modal to an action over building bespoke modal state. Mobile presentation is per action:
-`->slideOverOnMobile()` renders the form modal as a bottom-sheet that slides up from the bottom edge,
+modal to an action over building bespoke modal state. Mobile presentation is per action and independent
+of the modal type — it applies to a form, an infolist **and** a confirmation modal alike:
+`->slideOverOnMobile()` renders it as a bottom-sheet that slides up from the bottom edge,
 `->fullScreenOnMobile()` fills the viewport; both keep the centered dialog on desktop and scroll the body
-inside the panel. Combine `->slideOver()->slideOverOnMobile()` for a desktop slide-over that becomes a
-mobile bottom-sheet.
+inside the panel. These do **not** imply `->slideOver()` — that is a separate desktop right-hand panel;
+combine `->slideOver()->slideOverOnMobile()` for a desktop slide-over that becomes a mobile bottom-sheet.
 
 For a **standalone** modal in your own view use the component tag —
 @verbatim`<x-wire-modals::modal wire:model="show" heading="…">…<x-slot:footer>…</x-slot:footer></x-wire-modals::modal>`@endverbatim

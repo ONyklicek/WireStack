@@ -9,6 +9,7 @@ use Livewire\Component;
 use Livewire\Livewire;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\HeaderAction;
+use NyonCode\WireCore\Modals\SlideOver;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Concerns\WithTable;
@@ -40,14 +41,20 @@ class AmvComponent extends Component
 
     public function table(Table $table): Table
     {
-        $action = HeaderAction::make('invite')
-            ->form([TextInput::make('name')]);
+        // A confirmation action carries no form/infolist, so it renders through
+        // the confirmation shell — the branch that used to drop the mobile flag.
+        $action = str_starts_with($this->mode, 'confirm')
+            ? HeaderAction::make('invite')->requiresConfirmation()->action(fn () => null)
+            : HeaderAction::make('invite')->form([TextInput::make('name')]);
 
         $action = match ($this->mode) {
             'slide-over' => $action->slideOverOnMobile(),
             'full-screen' => $action->fullScreenOnMobile(),
             'compose' => $action->slideOver()->slideOverOnMobile(),
             'sticky' => $action->slideOver()->stickyHeader()->stickyFooter(),
+            'confirm-sheet' => $action->slideOverOnMobile(),
+            'confirm-full' => $action->fullScreenOnMobile(),
+            'slide-left' => $action->modal(SlideOver::make()->position('left')),
             default => $action,
         };
 
@@ -118,6 +125,34 @@ it('renders the default dialog without a mobile flag', function () {
     Livewire::test(AmvComponent::class, ['mode' => 'default'])
         ->call('openHeaderActionModal', 'invite')
         ->assertDontSeeHtml('translate-x-full');
+});
+
+it('renders a confirmation action as a mobile bottom-sheet when slideOverOnMobile() is set (regression: confirmation shell dropped the flag)', function () {
+    Livewire::test(AmvComponent::class, ['mode' => 'confirm-sheet'])
+        ->call('openHeaderActionModal', 'invite')
+        // The confirmation shell still renders (submit/cancel buttons)...
+        ->assertSeeHtml('data-testid="confirmation-confirm"')
+        // ...but now slides up from the bottom as a sheet instead of a centered dialog.
+        ->assertSeeHtml('translate-y-full sm:translate-y-0')
+        ->assertSeeHtml('rounded-t-2xl')
+        ->assertDontSeeHtml('translate-x-full');
+});
+
+it('renders a confirmation action full screen on mobile when fullScreenOnMobile() is set', function () {
+    Livewire::test(AmvComponent::class, ['mode' => 'confirm-full'])
+        ->call('openHeaderActionModal', 'invite')
+        ->assertSeeHtml('data-testid="confirmation-confirm"')
+        ->assertSeeHtml('translate-y-full sm:translate-y-0')
+        ->assertSeeHtml('items-stretch justify-center');
+});
+
+it('pins the slide-over to the left edge when the SlideOver config sets position (regression: left was dropped)', function () {
+    Livewire::test(AmvComponent::class, ['mode' => 'slide-left'])
+        ->call('openHeaderActionModal', 'invite')
+        // Left-pinned panel entering from the left, never the right edge.
+        ->assertSeeHtml('inset-y-0 left-0 pr-10')
+        ->assertSeeHtml('-translate-x-full')
+        ->assertDontSeeHtml('inset-y-0 right-0 pl-10');
 });
 
 it('renders a wrapping selection bar so bulk-action buttons stack on mobile (regression: fixed row overflowed)', function () {

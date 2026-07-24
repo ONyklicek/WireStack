@@ -23,7 +23,7 @@
     role="dialog"
     aria-modal="true"
 >
-    <div class="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+    <div class="{{ $style->containerClasses() }}">
         {{-- Backdrop --}}
         <div
             x-show="show"
@@ -40,17 +40,19 @@
         <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
 
         {{-- Dialog Panel --}}
+        @php $transitions = $style->transitionClasses(); @endphp
         <div
             x-show="show"
             x-transition:enter="ease-out duration-300"
-            x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-            x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+            x-transition:enter-start="{{ $transitions['enterStart'] }}"
+            x-transition:enter-end="{{ $transitions['enterEnd'] }}"
             x-transition:leave="ease-in duration-200"
-            x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-            x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+            x-transition:leave-start="{{ $transitions['leaveStart'] }}"
+            x-transition:leave-end="{{ $transitions['leaveEnd'] }}"
             @class([
-                'relative inline-block transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:p-6 sm:align-middle',
-                $style->widthClass(),
+                'relative inline-block transform overflow-hidden bg-white dark:bg-gray-800 px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all sm:p-6 sm:align-middle',
+                $style->panelWidthClass(),
+                $style->panelVariantClasses(),
             ])
         >
             <div class="sm:flex sm:items-start">

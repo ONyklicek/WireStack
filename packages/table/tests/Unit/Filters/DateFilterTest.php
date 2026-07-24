@@ -57,18 +57,25 @@ it('can set custom labels', function () {
 
 // ─── Month Mode ─────────────────────────────────────────────────────────────
 
-it('is not month mode by default and does not bypass the planner', function () {
+it('is not month mode by default', function () {
     $filter = DateFilter::make('created_at');
 
-    expect($filter->isMonth())->toBeFalse()
-        ->and($filter->bypassesPlanner())->toBeFalse();
+    expect($filter->isMonth())->toBeFalse();
 });
 
-it('can be set to month mode, which bypasses the planner', function () {
+it('can be set to month mode', function () {
     $filter = DateFilter::make('created_at')->month();
 
-    expect($filter->isMonth())->toBeTrue()
-        ->and($filter->bypassesPlanner())->toBeTrue();
+    expect($filter->isMonth())->toBeTrue();
+});
+
+it('bypasses the planner in every mode so a date-truncated comparison always routes through apply()', function () {
+    // Single-date state is a scalar, so a DateFilter that did not bypass the
+    // planner would be neither routed to apply() nor turned into a planner
+    // definition (toPlannerDefinitions() is always []) — a silent no-op.
+    expect(DateFilter::make('created_at')->bypassesPlanner())->toBeTrue()
+        ->and(DateFilter::make('created_at')->range()->bypassesPlanner())->toBeTrue()
+        ->and(DateFilter::make('created_at')->month()->bypassesPlanner())->toBeTrue();
 });
 
 it('renders a month picker form field in month mode', function () {
