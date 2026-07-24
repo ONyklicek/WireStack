@@ -1,0 +1,71 @@
+version: 2
+
+# Package updates are grouped per ecosystem so a routine week lands one PR of
+# batched minor/patch bumps instead of many. Major bumps are deliberately left
+# ungrouped — each gets its own PR to be reviewed on its own.
+#
+# Composer is configured at the repo root only. The `packages/*` libraries keep
+# intentionally wide constraints (`^10|^11|^12|^13`) for downstream
+# compatibility, which Dependabot version bumps would fight; the root manifest
+# owns the shared runtime deps and the dev toolchain the whole monorepo tests
+# against.
+updates:
+  # PHP / Composer — shared runtime deps + dev toolchain (pest, phpstan, pint, testbench).
+  - package-ecosystem: "composer"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Prague"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "php"
+    commit-message:
+      prefix: "composer"
+    groups:
+      composer-minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+
+  # JavaScript / npm — Vite/Tailwind build tooling and the editor (TipTap) libraries.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Prague"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "javascript"
+    commit-message:
+      prefix: "npm"
+    groups:
+      npm-minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions pinned across the CI workflows in .github/workflows/.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Prague"
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "ci"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
