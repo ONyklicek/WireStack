@@ -274,6 +274,19 @@ trait CanBeSummarized
     }
 
     /**
+     * The attribute this column summarizes: an aggregate column rolls up its
+     * computed attribute (e.g. items_sum_total, falling back to the column name),
+     * a plain column summarizes the column itself. One owner for the rule the
+     * batched ({@see SummaryBatch}) and per-summary query paths must agree on.
+     */
+    public function getSummaryColumnName(): string
+    {
+        return $this->isAggregate()
+            ? ($this->getAggregateAttribute() ?? $this->getName())
+            : $this->getName();
+    }
+
+    /**
      * What the calculator and formatter need to know about this column.
      *
      * A rollup column summarizes its computed attribute (e.g. items_sum_total),
@@ -281,11 +294,9 @@ trait CanBeSummarized
      */
     protected function getSummaryTarget(): SummaryTarget
     {
-        $isAggregate = $this->isAggregate();
-
         return new SummaryTarget(
-            column: $isAggregate ? ($this->getAggregateAttribute() ?? $this->getName()) : $this->getName(),
-            isAggregate: $isAggregate,
+            column: $this->getSummaryColumnName(),
+            isAggregate: $this->isAggregate(),
             format: new SummaryFormat(
                 decimals: $this->summaryDecimals,
                 decimalSeparator: $this->summaryDecimalSeparator,
