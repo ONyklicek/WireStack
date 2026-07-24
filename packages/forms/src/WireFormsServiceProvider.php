@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\Route;
 use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
+use NyonCode\WireCore\Actions\Contracts\ModalFormFactory;
 use NyonCode\WireForms\Forms\Form;
+use NyonCode\WireForms\Forms\Support\FormModalFormFactory;
 use NyonCode\WireForms\Integration\ActionMacros;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -28,6 +30,9 @@ class WireFormsServiceProvider extends PackageServiceProvider
             ->hasShortName('wire-forms')
             ->registeredPackage(function ($packager) {
                 $this->app->bind(Form::class, fn () => new Form);
+                // wire-core resolves this to build action-modal forms without
+                // naming Form (keeps the core → forms dependency inverted-free).
+                $this->app->singleton(ModalFormFactory::class, FormModalFormFactory::class);
             })
             ->bootedPackage(function ($packager) {
                 Blade::componentNamespace('NyonCode\\WireForms\\Components', 'wire-forms');

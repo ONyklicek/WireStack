@@ -49,6 +49,8 @@ trait WithActions
     use InteractsWithActionForms, InteractsWithActions {
         InteractsWithActionForms::validateMountedActionForm insteadof InteractsWithActions;
         InteractsWithActionForms::resolveHaltModalForm insteadof InteractsWithActions;
+        InteractsWithActionForms::getActionModalFormInstance insteadof InteractsWithActions;
+        InteractsWithActionForms::getActionModalFormInstanceForDepth insteadof InteractsWithActions;
     }
     use InteractsWithFieldActions;
     use InteractsWithFileUploads;

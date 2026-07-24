@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Tests;
 
 use Livewire\LivewireServiceProvider;
+use NyonCode\WireCore\Actions\Contracts\ModalFormFactory;
 use NyonCode\WireCore\WireCoreServiceProvider;
+use NyonCode\WireForms\Forms\Support\FormModalFormFactory;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
@@ -23,6 +25,14 @@ abstract class TestCase extends BaseTestCase
         $app['config']->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
         $app['config']->set('database.default', 'testing');
         $app['config']->set('database.connections.testing', static::testing_database_connection());
+
+        // Production wire-core does not depend on wire-forms — the action-modal
+        // form runtime is resolved through the ModalFormFactory seam, bound by
+        // WireFormsServiceProvider in a real app. The core suite's form-behavior
+        // tests exercise that integration against the real Form, so bind the
+        // factory here rather than booting the whole forms provider.
+        // (Graceful degradation when it is *unbound* is covered by ModalFormsTest.)
+        $app->singleton(ModalFormFactory::class, FormModalFormFactory::class);
     }
 
     /**

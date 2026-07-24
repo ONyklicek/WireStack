@@ -10,6 +10,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
+use NyonCode\WireCore\Actions\Contracts\ModalForm;
 use NyonCode\WireCore\Foundation\Schema\Wizard;
 use NyonCode\WireForms\Forms\Config\ConfigBuilder;
 use NyonCode\WireForms\Forms\Config\FormConfig;
@@ -25,7 +26,7 @@ use NyonCode\WireForms\Validation\FormValidationResolver;
  * Internally delegates to ConfigBuilder (fluent accumulation),
  * FormRuntime (validate, save, state), and FormRenderer (Blade output).
  */
-class Form implements Htmlable
+class Form implements Htmlable, ModalForm
 {
     private ConfigBuilder $configBuilder;
 

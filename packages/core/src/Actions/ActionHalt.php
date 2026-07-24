@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Actions;
 
 use NyonCode\WireCore\Actions\Concerns\HasIcons;
+use NyonCode\WireCore\Actions\Contracts\ModalForm;
+use NyonCode\WireCore\Actions\Support\ModalForms;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\InteractsWithColor;
 use NyonCode\WireCore\Foundation\Enums\ModalWidth;
 use NyonCode\WireCore\Foundation\Icons\Icon;
-use NyonCode\WireForms\Forms\Form;
 
 /**
  * ActionHalt – stops execution pipeline and shows a dynamic modal.
@@ -77,7 +78,7 @@ final class ActionHalt
     protected bool $isInformative = false;
 
     // Form
-    protected ?Form $formInstance = null;
+    protected ?ModalForm $formInstance = null;
 
     /** @var array<string, mixed>|null */
     protected ?array $formValidation = null;
@@ -295,14 +296,14 @@ final class ActionHalt
     }
 
     /**
-     * @param  array<int, mixed>|Form  $fields
+     * @param  array<int, mixed>|ModalForm  $fields
      */
-    public function form(array|Form $fields): static
+    public function form(array|ModalForm $fields): static
     {
-        if ($fields instanceof Form) {
+        if ($fields instanceof ModalForm) {
             $this->formInstance = $fields;
         } else {
-            $this->formInstance = Form::make()->schema($fields);
+            $this->formInstance = ModalForms::make($fields);
         }
 
         return $this;
@@ -421,7 +422,7 @@ final class ActionHalt
         return ! $this->isInformative && $this->formInstance !== null;
     }
 
-    public function getFormInstance(): ?Form
+    public function getFormInstance(): ?ModalForm
     {
         return $this->formInstance;
     }

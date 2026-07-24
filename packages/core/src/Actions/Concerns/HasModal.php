@@ -6,7 +6,9 @@ namespace NyonCode\WireCore\Actions\Concerns;
 
 use Closure;
 use Livewire\Component;
+use NyonCode\WireCore\Actions\Contracts\ModalForm;
 use NyonCode\WireCore\Actions\ModalStep;
+use NyonCode\WireCore\Actions\Support\ModalForms;
 use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
@@ -19,7 +21,6 @@ use NyonCode\WireCore\Modals\Contracts\ModalContract;
 use NyonCode\WireCore\Modals\Modal;
 use NyonCode\WireCore\Modals\SlideOver;
 use NyonCode\WireCore\Modals\Wizard;
-use NyonCode\WireForms\Forms\Form;
 
 /**
  * Trait HasModal
@@ -62,8 +63,8 @@ trait HasModal
 
     protected bool $modalCloseOnEscape = true;
 
-    /** @var Form|Closure|null Form instance or closure returning Form */
-    protected Form|Closure|null $formInstance = null;
+    /** @var ModalForm|Closure|null Form instance or closure returning a form */
+    protected ModalForm|Closure|null $formInstance = null;
 
     /** @var Infolist|Closure|null Infolist instance or closure returning Infolist */
     protected Infolist|Closure|null $infolistInstance = null;
@@ -275,16 +276,16 @@ trait HasModal
      * - Closure returning Form: ->form(fn ($record) => Form::make()->schema([...]))
      * - Closure returning array of components: ->form(fn ($record) => [TextInput::make('name')])
      *
-     * @param  array<int, mixed>|Form|Closure  $fields
+     * @param  array<int, mixed>|ModalForm|Closure  $fields
      */
-    public function form(array|Form|Closure $fields): static
+    public function form(array|ModalForm|Closure $fields): static
     {
-        if ($fields instanceof Form) {
+        if ($fields instanceof ModalForm) {
             $this->formInstance = $fields;
         } elseif ($fields instanceof Closure) {
             $this->formInstance = $fields;
         } else {
-            $this->formInstance = Form::make()->schema($fields);
+            $this->formInstance = ModalForms::make($fields);
         }
         $this->hasModal = true;
 
@@ -598,18 +599,18 @@ trait HasModal
      * When a closure was passed to form(), it will be resolved here.
      * The Form is automatically configured with statePath and livewire binding.
      */
-    public function getFormInstance(?Component $livewire = null, mixed $context = null, ?string $statePath = null): ?Form
+    public function getFormInstance(?Component $livewire = null, mixed $context = null, ?string $statePath = null): ?ModalForm
     {
         $form = null;
 
         if ($this->formInstance instanceof Closure) {
             $resolved = ($this->formInstance)($context);
-            if ($resolved instanceof Form) {
+            if ($resolved instanceof ModalForm) {
                 $form = $resolved;
             } elseif (is_array($resolved)) {
-                $form = Form::make()->schema($resolved);
+                $form = ModalForms::make($resolved);
             }
-        } elseif ($this->formInstance instanceof Form) {
+        } elseif ($this->formInstance instanceof ModalForm) {
             $form = $this->formInstance;
         }
 
@@ -812,19 +813,19 @@ trait HasModal
      * component and sets no state path, so calling {@see Form::getInitialState()}
      * on the result never mutates the instance that later renders.
      */
-    protected function resolveFormForSeeding(mixed $context = null): ?Form
+    protected function resolveFormForSeeding(mixed $context = null): ?ModalForm
     {
         if ($this->formInstance instanceof Closure) {
             $resolved = ($this->formInstance)($context);
 
-            if ($resolved instanceof Form) {
+            if ($resolved instanceof ModalForm) {
                 return $resolved;
             }
 
-            return is_array($resolved) ? Form::make()->schema($resolved) : null;
+            return is_array($resolved) ? ModalForms::make($resolved) : null;
         }
 
-        if ($this->formInstance instanceof Form) {
+        if ($this->formInstance instanceof ModalForm) {
             return $this->formInstance;
         }
 
@@ -1041,7 +1042,7 @@ trait HasModal
      * `modal.action.formData` bag and data persists as the user moves between
      * steps. Returns null when this action is not a multi-step wizard.
      */
-    public function getStepFormInstance(?Component $livewire = null, mixed $context = null, int $stepIndex = 0, ?string $statePath = null): ?Form
+    public function getStepFormInstance(?Component $livewire = null, mixed $context = null, int $stepIndex = 0, ?string $statePath = null): ?ModalForm
     {
         $step = $this->getModalStep($stepIndex);
 
@@ -1049,7 +1050,11 @@ trait HasModal
             return null;
         }
 
-        $form = Form::make()->schema($step->getSchema($context));
+        $form = ModalForms::make($step->getSchema($context));
+
+        if ($form === null) {
+            return null;
+        }
 
         $form->statePath($statePath ?? $this->resolveModalFormStatePath($livewire));
 

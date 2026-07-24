@@ -81,6 +81,8 @@ trait WithTable
     use InteractsWithActionForms, InteractsWithActions, InteractsWithTableActions {
         InteractsWithActionForms::validateMountedActionForm insteadof InteractsWithActions;
         InteractsWithActionForms::resolveHaltModalForm insteadof InteractsWithActions;
+        InteractsWithActionForms::getActionModalFormInstance insteadof InteractsWithActions;
+        InteractsWithActionForms::getActionModalFormInstanceForDepth insteadof InteractsWithActions;
         InteractsWithTableActions::haltModalFormStatePath insteadof InteractsWithActionForms;
         InteractsWithTableActions::afterActionExecuted insteadof InteractsWithActions;
         InteractsWithTableActions::resolveActionRecordIds insteadof InteractsWithActions;
