@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithColor;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
@@ -25,13 +26,13 @@ use NyonCode\WireCore\Foundation\Icons\Icon;
  */
 class ModalFooterAction
 {
+    use InteractsWithColor;
+
     protected string $name;
 
     protected ?string $label = null;
 
     protected ?string $icon = null;
-
-    protected ?string $color = Color::Gray->value;
 
     protected bool $outlined = false;
 
@@ -68,13 +69,6 @@ class ModalFooterAction
     public function icon(string|Icon|null $icon): static
     {
         $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
-
-        return $this;
-    }
-
-    public function color(string|Color|null $color): static
-    {
-        $this->color = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
@@ -210,7 +204,7 @@ class ModalFooterAction
             'name' => $this->name,
             'label' => $this->getLabel(),
             'icon' => $this->icon,
-            'color' => $this->color,
+            'color' => $this->getColor(),
             'outlined' => $this->outlined,
             'position' => $this->position,
             'closesModal' => $this->closesModal,

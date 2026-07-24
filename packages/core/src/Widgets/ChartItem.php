@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Widgets;
 
 use NyonCode\WireCore\Exceptions\InvalidChartDataException;
-use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasExtraAttributes;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithColor;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 
@@ -24,12 +24,11 @@ class ChartItem
 {
     use EvaluatesClosures;
     use HasExtraAttributes;
+    use InteractsWithColor;
 
     protected float $value = 0.0;
 
     protected ?string $formattedValue = null;
-
-    protected ?string $color = null;
 
     protected ?float $percentage = null;
 
@@ -69,13 +68,6 @@ class ChartItem
     public function getFormattedValue(): string
     {
         return $this->formattedValue ?? rtrim(rtrim(number_format($this->value, 2, '.', ' '), '0'), '.');
-    }
-
-    public function color(string|Color|null $color): static
-    {
-        $this->color = $color instanceof Color ? $color->value : $color;
-
-        return $this;
     }
 
     /**
