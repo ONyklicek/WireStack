@@ -251,17 +251,31 @@ const wireDropdown = (config = {}, items = null) => ({
     _wire: null,
 
     init() {
-        // Capture $wire while the component is in its live DOM position, before the
-        // panel teleports to <body> where $wire may not resolve. Lazy menu clicks go
-        // through this reference, so they work from the teleported panel.
-        this._wire = this.$wire ?? null
+        // Remember the host Livewire component id while the trigger is still in its
+        // live DOM position — the panel teleports to <body>, where a $wire lookup no
+        // longer finds a [wire:id] ancestor. We store the id (a plain string) and
+        // resolve the component fresh at click time, NOT the $wire proxy itself:
+        // assigning $wire into Alpine reactive state wraps it in a @vue/reactivity
+        // proxy that corrupts its methods — `$wire.call` collapses to the native
+        // Function.prototype.call and `$wire[method]` reads as undefined, so a lazy
+        // menu's actions silently no-op'd (Delete never opened its modal).
+        this._wireId = (this.$root ?? this.$el)?.closest('[wire\\:id]')?.getAttribute('wire:id') ?? null
     },
 
-    // Invoke a lazy menu item's action: $wire[method](...args). The method + args
-    // are pre-split server-side, so nothing is evaluated from a string (CSP-safe).
+    // Invoke a lazy menu item's action as $wire.call(method, ...args). The method +
+    // args are pre-split server-side, so nothing is evaluated from a string
+    // (CSP-safe). Resolving through Livewire.find() gives the raw component whose
+    // call() is the real Livewire method — mirroring what the eager path's
+    // wire:click does server-side.
     runAction(item) {
-        if (item && item.method && this._wire && typeof this._wire[item.method] === 'function') {
-            this._wire[item.method](...(item.args || []))
+        if (! item || ! item.method || ! this._wireId) {
+            return
+        }
+
+        const component = window.Livewire?.find(this._wireId)
+
+        if (component && typeof component.call === 'function') {
+            component.call(item.method, ...(item.args || []))
         }
     },
 
