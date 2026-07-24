@@ -143,3 +143,48 @@ Do the work on a dedicated branch — the `1.13.0` working tree has WIP RecordAc
 
 - Finders: 11 (all completed). Verifiers: 62 across 2 runs. Subagent tokens ~3.16M, ~24 min wall-clock.
 - Run 1: 33 verdicts, 4 refuted. Run 2: 29 verdicts, 0 errored, 16 confirmed, 13 refuted/rescoped.
+
+---
+
+## Implementation status (branch 1.13.1, 2026-07-24)
+
+TIER A implemented across four commits; every group green on its package suite
+plus `composer analyse` and `pint`, and the full suite (`composer test`) passes
+(4485 passed, 2 skipped). Public component/action/modal APIs are unchanged — the
+refactor only relocates duplicated members into shared concerns. New-trait lines
+are 100% covered (dedicated unit tests where existing coverage did not already
+exercise them); the only uncovered lines in touched files pre-date this work and
+lie outside the diff.
+
+**Done — 12 new traits + one render seam:**
+
+- Forms (`packages/forms/src/Concerns/`): `HasItemLimits`, `HasCharacterLimits`,
+  `CanBeSearchable`, `HasRelationship`, `CanBeMultiple`.
+- Filters: base `Filter::render()` + overridable `filterView()` seam (deletes the
+  dead Date/NumberRange overrides; Select/Ternary override only the view string);
+  `TextFilter` delegates debounce to Foundation `HasDebounce`.
+- Table columns (`packages/table/src/Concerns/`): `InteractsWithRecordDisabledState`,
+  `EvaluatesRecordClosures`, `RendersBadgeSurface`, `HasRecordVersion`;
+  Boolean/Icon columns drop their `resolveColorClass` wrapper.
+- Core: `Actions\Concerns\HasBadge` (HeaderAction, ActionGroup),
+  `Foundation\Concerns\HasContent` (Display base + Callout),
+  `Modals\Concerns\HasModalIcon` (Modal, SlideOver, Wizard).
+
+**Deviations — audit over-reach caught while reading the code (NOT implemented):**
+
+- **Filter → HasName/HasLabel/HasDefault** — Filter has no `evaluate()`, which
+  `HasLabel::getLabel()` / `HasDefault::getDefault()` require; signatures also
+  diverge (`getLabel(): string` vs `?string`). Only the safe `HasDebounce` was taken.
+- **HasRangeLabels** — DateFilter (`fromLabel/toLabel`) and NumberRangeFilter
+  (`minLabel/maxLabel`) expose different public method names; a shared trait would
+  add foreign methods.
+- **Avatar-size resolver** — ImageColumn and StackedColumn use genuinely different
+  size scales (`md` = w-10 vs w-9, `2xl` = w-16 vs w-20); centralising would change
+  rendered output.
+- **Delete HasButtonStyles** — it is the canonical target of a maintained BC
+  deprecation shim (`Legacy…`/`DeprecatedAliases` tests), not dead code.
+- **HasModalIcon** — applied to 3 of 4 modals; ConfirmationDialog keeps its own
+  variant (danger default + null-preserving `icon()`).
+- **Icon/Color::coerce()** — deferred: replacing the `instanceof ? ->value()`
+  branch is a codebase-wide sweep, not a localised extraction (run 2 confirmed only
+  the narrow Stat/ChartItem case).
