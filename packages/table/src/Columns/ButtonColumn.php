@@ -21,9 +21,12 @@ use NyonCode\WireCore\Foundation\Concerns\HasSize;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\View\Primitives;
+use NyonCode\WireTable\Concerns\EvaluatesRecordClosures;
 
 class ButtonColumn extends Column
 {
+    use EvaluatesRecordClosures;
+
     /** @var string|Closure|null Button label */
     protected string|Closure|null $buttonLabel = null;
 
@@ -344,15 +347,6 @@ class ButtonColumn extends Column
     /**
      * Resolve a value that may be a Closure with record context.
      */
-    protected function evaluateForRecord(mixed $value, Model $record): mixed
-    {
-        if ($value instanceof Closure) {
-            return $value($record, $this);
-        }
-
-        return $value;
-    }
-
     /**
      * Check if button is disabled for this record.
      */

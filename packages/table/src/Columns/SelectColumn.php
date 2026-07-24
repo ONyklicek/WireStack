@@ -10,6 +10,7 @@ use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireTable\Concerns\HasView;
+use NyonCode\WireTable\Concerns\InteractsWithRecordDisabledState;
 
 /**
  * Inline editable select cell — always a browser-native <select>.
@@ -23,13 +24,10 @@ use NyonCode\WireTable\Concerns\HasView;
 class SelectColumn extends Column
 {
     use HasView;
+    use InteractsWithRecordDisabledState;
 
     /** @var array<string, string> */
     protected array $options = [];
-
-    protected bool $disabled = false;
-
-    protected ?Closure $disabledCallback = null;
 
     /** @var string|null Relationship name for auto-loading options */
     protected ?string $relationship = null;
@@ -67,18 +65,6 @@ class SelectColumn extends Column
     public function getOptions(): array
     {
         return $this->options;
-    }
-
-    /** Disable inline editing; a Closure receives the record per row. */
-    public function disabled(bool|Closure $disabled = true): static
-    {
-        if ($disabled instanceof Closure) {
-            $this->disabledCallback = $disabled;
-        } else {
-            $this->disabled = $disabled;
-        }
-
-        return $this;
     }
 
     public function renderCell(Model $record): string
@@ -180,15 +166,6 @@ class SelectColumn extends Column
         } catch (\Throwable) {
             return $this;
         }
-    }
-
-    public function isDisabled(Model $record): bool
-    {
-        if ($this->disabledCallback) {
-            return ($this->disabledCallback)($record);
-        }
-
-        return $this->disabled;
     }
 
     /**

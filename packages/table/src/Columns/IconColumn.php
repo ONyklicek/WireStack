@@ -107,7 +107,7 @@ class IconColumn extends Column
         // §7: markup is a function of the (low-cardinality) state — memoise the view
         // render by its data so rows sharing a state reuse one render.
         return $this->renderViewCached('tables.columns.icon', [
-            'colorClass' => $this->resolveColorClass($color ?? 'gray'),
+            'colorClass' => self::getTextColorClasses($color ?? 'gray'),
             'iconHtml' => app(IconManager::class)->render($icon, $this->getSizeClass()),
         ]);
     }
@@ -135,10 +135,5 @@ class IconColumn extends Column
     public function getSizeClass(): string
     {
         return HasSize::getIconSizeClasses($this->iconSize);
-    }
-
-    protected function resolveColorClass(string $color): string
-    {
-        return self::getTextColorClasses($color);
     }
 }

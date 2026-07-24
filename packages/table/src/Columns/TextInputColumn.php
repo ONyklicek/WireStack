@@ -14,11 +14,15 @@ use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
 use NyonCode\WireCore\Foundation\Contracts\HydratesState;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireCore\Foundation\View\Primitives;
+use NyonCode\WireTable\Concerns\HasRecordVersion;
 use NyonCode\WireTable\Concerns\HasView;
+use NyonCode\WireTable\Concerns\InteractsWithRecordDisabledState;
 
 class TextInputColumn extends Column implements DehydratesState, HydratesState
 {
+    use HasRecordVersion;
     use HasView;
+    use InteractsWithRecordDisabledState;
 
     protected string $inputType = 'text';
 
@@ -27,10 +31,6 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
     protected ?int $minLength = null;
 
     protected ?string $pattern = null;
-
-    protected bool $disabled = false;
-
-    protected ?Closure $disabledCallback = null;
 
     protected bool $autofocus = false;
 
@@ -362,18 +362,6 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
     // Permissions & Disabled State
     // ==========================================
 
-    /** Disable inline editing; a Closure receives the record per row. */
-    public function disabled(bool|Closure $disabled = true): static
-    {
-        if ($disabled instanceof Closure) {
-            $this->disabledCallback = $disabled;
-        } else {
-            $this->disabled = $disabled;
-        }
-
-        return $this;
-    }
-
     /** Render the input read-only; a Closure receives the record per row. */
     public function readonly(bool|Closure $readonly = true): static
     {
@@ -682,15 +670,6 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this->isEditable();
     }
 
-    public function isDisabled(Model $record): bool
-    {
-        if ($this->disabledCallback) {
-            return ($this->disabledCallback)($record);
-        }
-
-        return $this->disabled;
-    }
-
     public function isReadonly(Model $record): bool
     {
         if ($this->readonlyCallback) {
@@ -749,8 +728,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         $state = $this->getState($record);
         $key = (string) $record->getKey();
         $value = (string) ($state ?? '');
-        $updatedAt = $record->getAttribute('updated_at');
-        $version = $updatedAt ? (string) $updatedAt->getTimestamp() : '0';
+        $version = $this->recordVersion($record);
 
         return strtr($this->editableSkeleton ??= $this->buildEditableSkeleton(), [
             e(json_encode(self::EDIT_VAL)) => e(json_encode($value)),  // Alpine config

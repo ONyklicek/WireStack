@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Columns;
 
 use Illuminate\Database\Eloquent\Model;
-use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\InteractsWithStateColor;
 use NyonCode\WireCore\Foundation\Concerns\InteractsWithStateIcon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
+use NyonCode\WireTable\Concerns\RendersBadgeSurface;
 
 class BadgeColumn extends Column
 {
@@ -16,6 +16,9 @@ class BadgeColumn extends Column
     // icons()/iconUsing()/getIconForState() from InteractsWithStateIcon.
     use InteractsWithStateColor;
     use InteractsWithStateIcon;
+
+    // getColorClasses()/getSizeClasses() come from RendersBadgeSurface.
+    use RendersBadgeSurface;
 
     // size()/getSize() come from Foundation\Concerns\HasSize (via Column).
 
@@ -46,15 +49,5 @@ class BadgeColumn extends Column
             'displayValue' => $this->formatValue($state, $record),
             'isHtml' => $this->html,
         ]);
-    }
-
-    public function getColorClasses(?string $color): string
-    {
-        return self::getBadgeColorClasses($color ?? Color::Gray->value);
-    }
-
-    public function getSizeClasses(): string
-    {
-        return self::getBadgeSizeClasses($this->getSize());
     }
 }
