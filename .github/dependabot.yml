@@ -13,6 +13,7 @@ updates:
   # PHP / Composer — shared runtime deps + dev toolchain (pest, phpstan, pint, testbench).
   - package-ecosystem: "composer"
     directory: "/"
+    target-branch: "1.x"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -34,6 +35,7 @@ updates:
   # JavaScript / npm — Vite/Tailwind build tooling and the editor (TipTap) libraries.
   - package-ecosystem: "npm"
     directory: "/"
+    target-branch: "1.x"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -55,6 +57,7 @@ updates:
   # GitHub Actions pinned across the CI workflows in .github/workflows/.
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "1.x"
     schedule:
       interval: "weekly"
       day: "monday"
