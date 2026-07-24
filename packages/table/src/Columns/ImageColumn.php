@@ -6,18 +6,15 @@ namespace NyonCode\WireTable\Columns;
 
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Foundation\Concerns\HasImageConfig;
 use NyonCode\WireCore\Foundation\Enums\Size;
 use NyonCode\WireCore\Foundation\Support\StoredFileUrlResolver;
 
 class ImageColumn extends Column
 {
+    use HasImageConfig;
+
     protected string $imageSize = 'md';
-
-    protected bool $circular = false;
-
-    protected ?string $defaultImageUrl = null;
-
-    protected ?string $disk = null;
 
     /**
      * 'public' builds a plain Storage URL; anything else asks the disk for a
@@ -28,8 +25,6 @@ class ImageColumn extends Column
     protected ?string $visibility = 'public';
 
     protected int $urlExpiryMinutes = 5;
-
-    protected bool $stacked = false;
 
     protected int $stackLimit = 3;
 
@@ -56,37 +51,6 @@ class ImageColumn extends Column
     public function getImageSize(): string
     {
         return $this->imageSize;
-    }
-
-    /** Render the image as a circle instead of a rounded square. */
-    public function circular(bool $circular = true): static
-    {
-        $this->circular = $circular;
-
-        return $this;
-    }
-
-    public function isCircular(): bool
-    {
-        return $this->circular;
-    }
-
-    /** Set the fallback image URL shown when the value is empty. */
-    public function defaultImageUrl(?string $url): static
-    {
-        $this->defaultImageUrl = $url;
-
-        return $this;
-    }
-
-    public function getDefaultImageUrl(): ?string
-    {
-        return $this->defaultImageUrl;
-    }
-
-    public function getDisk(): ?string
-    {
-        return $this->disk;
     }
 
     /**
@@ -118,19 +82,6 @@ class ImageColumn extends Column
     public function getUrlExpiry(): int
     {
         return $this->urlExpiryMinutes;
-    }
-
-    /** Overlap multiple images into a stacked avatar group. */
-    public function stacked(bool $stacked = true): static
-    {
-        $this->stacked = $stacked;
-
-        return $this;
-    }
-
-    public function isStacked(): bool
-    {
-        return $this->stacked;
     }
 
     /** Cap how many stacked images are shown before a "+N" overflow badge. */
@@ -241,14 +192,6 @@ class ImageColumn extends Column
             $this->urlExpiryMinutes,
             $this->defaultImageUrl,
         );
-    }
-
-    /** Set the filesystem disk used to resolve stored image paths. */
-    public function disk(?string $disk): static
-    {
-        $this->disk = $disk;
-
-        return $this;
     }
 
     public function getSizeClasses(): string

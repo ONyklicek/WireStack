@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Infolists\Components;
 
 use Illuminate\Support\Str;
+use NyonCode\WireCore\Foundation\Concerns\CanBeCopyable;
 use NyonCode\WireCore\Foundation\Concerns\FormatsState;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Concerns\HasFontWeight;
@@ -17,13 +18,12 @@ use NyonCode\WireCore\Foundation\Enums\FontWeight;
  */
 class TextEntry extends Entry
 {
+    use CanBeCopyable;
     use FormatsState;
 
     protected bool $badge = false;
 
     protected ?int $limit = null;
-
-    protected bool $copyable = false;
 
     protected ?string $weight = null;
 
@@ -52,19 +52,6 @@ class TextEntry extends Entry
         $this->limit = $limit;
 
         return $this;
-    }
-
-    /** Add a click-to-copy button for the value. */
-    public function copyable(bool $condition = true): static
-    {
-        $this->copyable = $condition;
-
-        return $this;
-    }
-
-    public function isCopyable(): bool
-    {
-        return $this->copyable;
     }
 
     /**
