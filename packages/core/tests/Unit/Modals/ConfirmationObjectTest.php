@@ -74,3 +74,50 @@ it('renders as a dialog with forwarded wire bindings, body and buttons — no <x
         ->assertSeeHtml("callModalFooterAction('preview')")
         ->assertDontSeeHtml('x-wire-modals::confirmation'); // never falls back to the component
 });
+
+class ConfirmationVariantHost extends Component
+{
+    public bool $show = true;
+
+    public string $variant = 'default';
+
+    public function mount(string $variant = 'default'): void
+    {
+        $this->variant = $variant;
+    }
+
+    public function render(): string
+    {
+        // @entangle needs a live Livewire context, so the Confirmation object is
+        // rendered inside a host component rather than via a bare toHtml() call.
+        return <<<'BLADE'
+            <div>
+                {!! new \NyonCode\WireCore\Modals\Html\Confirmation(
+                    heading: 'Delete?',
+                    wireModel: 'show',
+                    slideOverOnMobile: $variant === 'sheet',
+                    fullScreenOnMobile: $variant === 'full',
+                ) !!}
+            </div>
+        BLADE;
+    }
+}
+
+it('renders a centered dialog by default (no mobile sheet)', function () {
+    Livewire::test(ConfirmationVariantHost::class, ['variant' => 'default'])
+        ->assertDontSeeHtml('translate-y-full')       // no bottom-sheet slide-up
+        ->assertDontSeeHtml('rounded-t-2xl');
+});
+
+it('renders a bottom-sheet on mobile when slideOverOnMobile is set (regression: the confirmation shell ignored the flag)', function () {
+    Livewire::test(ConfirmationVariantHost::class, ['variant' => 'sheet'])
+        ->assertSeeHtml('translate-y-full sm:translate-y-0')  // slides up from the bottom edge
+        ->assertSeeHtml('rounded-t-2xl')                       // sheet rounding
+        ->assertSeeHtml('items-end');                         // pinned to the bottom
+});
+
+it('renders full-screen on mobile when fullScreenOnMobile is set', function () {
+    Livewire::test(ConfirmationVariantHost::class, ['variant' => 'full'])
+        ->assertSeeHtml('translate-y-full sm:translate-y-0')
+        ->assertSeeHtml('items-stretch');
+});
