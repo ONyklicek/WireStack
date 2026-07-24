@@ -7,6 +7,7 @@ namespace NyonCode\WireTable\Columns;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasSize;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithBooleanState;
 use NyonCode\WireCore\Foundation\Concerns\InteractsWithStateColor;
 use NyonCode\WireCore\Foundation\Concerns\InteractsWithStateIcon;
 use NyonCode\WireCore\Foundation\Icons\Icon;
@@ -15,21 +16,13 @@ use NyonCode\WireCore\Foundation\Icons\IconManager;
 class IconColumn extends Column
 {
     // colors()/colorUsing()/getColorForState() come from InteractsWithStateColor;
-    // icons()/iconUsing()/getIconForState() from InteractsWithStateIcon.
+    // icons()/iconUsing()/getIconForState() from InteractsWithStateIcon;
+    // the boolean() mode flag + true/false defaults from InteractsWithBooleanState.
+    use InteractsWithBooleanState;
     use InteractsWithStateColor;
     use InteractsWithStateIcon;
 
     protected string $iconSize = 'md';
-
-    protected bool $boolean = false;
-
-    protected string $trueIcon = 'check-circle';
-
-    protected string $falseIcon = 'x-circle';
-
-    protected string $trueColor = 'success';
-
-    protected string $falseColor = 'danger';
 
     /** Set the icon size (e.g. "sm", "md", "lg"). */
     public function iconSize(string $size): static
@@ -115,21 +108,13 @@ class IconColumn extends Column
     /** boolean() mode answers from the truthiness of the state, before any map. */
     protected function resolveStateIconOverride(mixed $state): ?string
     {
-        if (! $this->boolean) {
-            return null;
-        }
-
-        return $state ? $this->trueIcon : $this->falseIcon;
+        return $this->booleanStateIcon($state);
     }
 
     /** boolean() mode answers from the truthiness of the state, before any map. */
     protected function resolveStateColorOverride(mixed $state): ?string
     {
-        if (! $this->boolean) {
-            return null;
-        }
-
-        return $state ? $this->trueColor : $this->falseColor;
+        return $this->booleanStateColor($state);
     }
 
     public function getSizeClass(): string

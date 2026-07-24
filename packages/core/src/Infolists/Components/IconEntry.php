@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Infolists\Components;
 
 use Closure;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithBooleanState;
 use NyonCode\WireCore\Foundation\Concerns\InteractsWithStateColor;
 use NyonCode\WireCore\Foundation\Concerns\InteractsWithStateIcon;
 use NyonCode\WireCore\Foundation\Icons\Icon;
@@ -21,19 +22,11 @@ use NyonCode\WireCore\Foundation\Icons\Icon;
 class IconEntry extends Entry
 {
     // colors()/colorUsing()/getColorForState() come from InteractsWithStateColor;
-    // icons()/iconUsing()/getIconForState() from InteractsWithStateIcon.
+    // icons()/iconUsing()/getIconForState() from InteractsWithStateIcon;
+    // the boolean() mode flag + true/false defaults from InteractsWithBooleanState.
+    use InteractsWithBooleanState;
     use InteractsWithStateColor;
     use InteractsWithStateIcon;
-
-    protected bool $boolean = false;
-
-    protected string $trueIcon = 'check-circle';
-
-    protected string $falseIcon = 'x-circle';
-
-    protected string $trueColor = 'success';
-
-    protected string $falseColor = 'danger';
 
     /** Derive the icon from the state's truthiness (check vs. x). */
     public function boolean(bool $condition = true): static
@@ -83,11 +76,7 @@ class IconEntry extends Entry
     /** boolean() mode answers from the truthiness of the state, before any map. */
     protected function resolveStateIconOverride(mixed $state): ?string
     {
-        if (! $this->boolean) {
-            return null;
-        }
-
-        return $state ? $this->trueIcon : $this->falseIcon;
+        return $this->booleanStateIcon($state);
     }
 
     /**
@@ -112,11 +101,7 @@ class IconEntry extends Entry
     /** boolean() mode answers from the truthiness of the state, before any map. */
     protected function resolveStateColorOverride(mixed $state): ?string
     {
-        if (! $this->boolean) {
-            return null;
-        }
-
-        return $state ? $this->trueColor : $this->falseColor;
+        return $this->booleanStateColor($state);
     }
 
     /**
