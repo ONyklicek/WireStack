@@ -56,11 +56,19 @@ class DateFilter extends Filter
     }
 
     /**
-     * whereYear/whereMonth cannot be expressed as a planner column definition.
+     * Every DateFilter mode needs a date-truncated comparison (whereDate, or
+     * whereYear+whereMonth in month mode) that the planner's plain
+     * column/operator/value definition cannot express — toPlannerDefinitions()
+     * returns [] for all of them — so every mode must route through apply().
+     *
+     * This must stay true for the single-date mode too: its value is a scalar,
+     * so without bypassing the planner it is neither routed to apply() (that
+     * path only picks up callbacks, month mode, and the array range) nor turned
+     * into a planner definition, and the filter silently does nothing.
      */
     public function bypassesPlanner(): bool
     {
-        return $this->monthMode;
+        return true;
     }
 
     /** Set the earliest selectable date. */
@@ -172,8 +180,8 @@ class DateFilter extends Filter
     /**
      * Date filtering always wants date-truncated comparison (whereDate /
      * whereYear+whereMonth), which the planner's plain column comparison cannot
-     * express, so it is never planned — every mode routes through apply().
-     * (bypassesPlanner() stays mode-specific for the sub-row/legacy path.)
+     * express, so it is never planned — every mode routes through apply()
+     * (see bypassesPlanner()).
      */
     public function toPlannerDefinitions(mixed $value): array
     {

@@ -2,6 +2,11 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [1.13.2]
+
+### Fixed
+- **A standalone single-date `DateFilter` never filtered anything.** `->filters([DateFilter::make('issued_at')])` (no `->range()`, no `->month()`) submits a scalar value, so it fell between the two routes in `TableQueryService`: the apply() route only picks up filters with a `->query()` callback, month mode, or an array (the range shape), while the planner route asks `toPlannerDefinitions()` — which `DateFilter` returns empty for *every* mode, because a date-truncated `whereDate` comparison cannot be expressed as a plain column/operator/value definition. The filter was therefore neither applied nor planned; the panel rendered, the indicator chip appeared, and every row survived. It hid because `bypassesPlanner()` was scoped to month mode only, and `DateFilterTest` asserted that scoping instead of exercising the single-date value through the real query pipeline. `DateFilter::bypassesPlanner()` now returns `true` in every mode — matching its own contract that all modes route through `apply()`, the same pattern `TernaryFilter` already follows — so single-date filters apply their `whereDate` constraint. Range and month were already applied (as an array and via month-mode bypass respectively) and are unchanged. Covered by a new single-date row in `FilterPipelineMatrixTest`, which drives each filter type through `TableQueryService` and asserts the surviving rows.
+
 ## [1.13.0]
 
 ### Added
