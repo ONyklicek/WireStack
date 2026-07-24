@@ -133,16 +133,9 @@ class SelectFilter extends Filter
         ];
     }
 
-    public function render(mixed $value = null): string
+    protected function filterView(): string
     {
-        if (! $this->canView()) {
-            return '';
-        }
-
-        return view($this->resolveFilterView('tables.filters.select'), [
-            'filter' => $this,
-            'value' => $value,
-        ])->render();
+        return 'tables.filters.select';
     }
 
     /**
