@@ -11,17 +11,7 @@ use Closure;
  */
 class Placeholder extends Display
 {
-    protected string|Closure|null $content = null;
-
     protected bool $isHtmlContent = false;
-
-    /** Set the read-only text content to display. */
-    public function content(string|Closure|null $content): static
-    {
-        $this->content = $content;
-
-        return $this;
-    }
 
     /** Render the content as raw HTML instead of escaped text. */
     public function allowHtml(bool $condition = true): static
@@ -42,11 +32,6 @@ class Placeholder extends Display
         $this->isHtmlContent = true;
 
         return $this;
-    }
-
-    public function getContent(): ?string
-    {
-        return $this->evaluate($this->content);
     }
 
     public function isHtmlContent(): bool

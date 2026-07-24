@@ -78,14 +78,9 @@ class BooleanColumn extends Column
         // §7: only two states (true/false) → memoise the view render by its data so
         // the whole column renders at most twice, not once per row.
         return $this->renderViewCached('tables.columns.boolean', [
-            'colorClass' => $this->resolveColorClass($color),
+            'colorClass' => self::getTextColorClasses($color),
             'iconHtml' => app(IconManager::class)->render($icon, 'w-5 h-5'),
             'label' => $label,
         ]);
-    }
-
-    protected function resolveColorClass(string $color): string
-    {
-        return self::getTextColorClasses($color);
     }
 }

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Widgets;
 
-use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Concerns\HasExtraAttributes;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithColor;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 
@@ -18,6 +18,10 @@ class Stat
     use EvaluatesClosures;
     use HasExtraAttributes;
 
+    // $color + color() + getColor() come from the canonical colour-state owner;
+    // HasColor stays for the class-map resolvers (getTextColorClasses, …).
+    use InteractsWithColor;
+
     protected string $label;
 
     protected string $value;
@@ -25,8 +29,6 @@ class Stat
     protected ?string $description = null;
 
     protected ?string $descriptionIcon = null;
-
-    protected ?string $color = null;
 
     /** @var array<int, int|float>|null Sparkline data points */
     protected ?array $chart = null;
@@ -66,18 +68,6 @@ class Stat
     public function getDescriptionIcon(): ?string
     {
         return $this->descriptionIcon;
-    }
-
-    public function color(string|Color|null $color): static
-    {
-        $this->color = $color instanceof Color ? $color->value : $color;
-
-        return $this;
-    }
-
-    public function getColor(): ?string
-    {
-        return $this->color;
     }
 
     /**

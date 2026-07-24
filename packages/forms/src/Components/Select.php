@@ -9,7 +9,11 @@ use Livewire\Component;
 use NyonCode\WireCore\Foundation\Concerns\HasNativeControl;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireForms\Concerns\CanBeMultiple;
+use NyonCode\WireForms\Concerns\CanBeSearchable;
+use NyonCode\WireForms\Concerns\HasItemLimits;
 use NyonCode\WireForms\Concerns\HasOptions;
+use NyonCode\WireForms\Concerns\HasRelationship;
 use NyonCode\WireForms\Concerns\InteractsWithSelectCreation;
 use NyonCode\WireForms\Contracts\ProvidesImplicitValidationRules;
 use NyonCode\WireForms\Forms\Form;
@@ -30,15 +34,15 @@ use NyonCode\WireForms\Forms\Form;
  */
 class Select extends Field implements ProvidesImplicitValidationRules
 {
+    use CanBeMultiple;
+    use CanBeSearchable;
+    use HasItemLimits;
     use HasNativeControl;
     use HasOptions;
+    use HasRelationship;
     use HasSheetOnMobile {
         HasSheetOnMobile::defaultSheetOnMobile as protected sheetConfigDefault;
     }
-
-    protected bool $searchable = false;
-
-    protected bool $multiple = false;
 
     protected bool $preload = false;
 
@@ -64,38 +68,12 @@ class Select extends Field implements ProvidesImplicitValidationRules
 
     protected ?string $editOptionModalHeading = null;
 
-    protected ?int $maxItems = null;
-
-    protected ?int $minItems = null;
-
     protected ?string $noSearchResultsMessage = null;
 
     protected ?string $loadingMessage = null;
 
-    protected ?string $searchPrompt = null;
-
     /** @var array<string|int>|Closure */
     protected array|Closure $disabledOptionValues = [];
-
-    protected ?string $relationship = null;
-
-    protected ?string $titleAttribute = null;
-
-    /** Add a search box to the option list (on by default for the combobox). */
-    public function searchable(bool $condition = true): static
-    {
-        $this->searchable = $condition;
-
-        return $this;
-    }
-
-    /** Allow selecting several options (the state becomes an array). */
-    public function multiple(bool $condition = true): static
-    {
-        $this->multiple = $condition;
-
-        return $this;
-    }
 
     /**
      * Resolve matching options on the server as the user types (remote search).
@@ -242,22 +220,6 @@ class Select extends Field implements ProvidesImplicitValidationRules
         return $this;
     }
 
-    /** Cap how many options can be selected in `multiple()` mode. */
-    public function maxItems(?int $count): static
-    {
-        $this->maxItems = $count;
-
-        return $this;
-    }
-
-    /** Require at least this many options in `multiple()` mode. */
-    public function minItems(?int $count): static
-    {
-        $this->minItems = $count;
-
-        return $this;
-    }
-
     /** Set the message shown when a search matches no options. */
     public function noSearchResultsMessage(?string $message): static
     {
@@ -274,14 +236,6 @@ class Select extends Field implements ProvidesImplicitValidationRules
         return $this;
     }
 
-    /** Set the placeholder text of the search box. */
-    public function searchPrompt(?string $prompt): static
-    {
-        $this->searchPrompt = $prompt;
-
-        return $this;
-    }
-
     /**
      * Render specific options as non-selectable.
      *
@@ -290,15 +244,6 @@ class Select extends Field implements ProvidesImplicitValidationRules
     public function disabledOptions(array|Closure $values): static
     {
         $this->disabledOptionValues = $values;
-
-        return $this;
-    }
-
-    /** Source the options from an Eloquent relationship, labelled by `$titleAttribute`. */
-    public function relationship(?string $name, ?string $titleAttribute = null): static
-    {
-        $this->relationship = $name;
-        $this->titleAttribute = $titleAttribute;
 
         return $this;
     }
@@ -326,26 +271,6 @@ class Select extends Field implements ProvidesImplicitValidationRules
 
     // ─── Getters ───────────────────────────────────────────────────
 
-    public function isSearchable(): bool
-    {
-        return $this->searchable;
-    }
-
-    public function isMultiple(): bool
-    {
-        return $this->multiple;
-    }
-
-    public function getMaxItems(): ?int
-    {
-        return $this->maxItems;
-    }
-
-    public function getMinItems(): ?int
-    {
-        return $this->minItems;
-    }
-
     public function getNoSearchResultsMessage(): string
     {
         return $this->noSearchResultsMessage ?? trans('wire-forms::fields.no_results');
@@ -356,27 +281,12 @@ class Select extends Field implements ProvidesImplicitValidationRules
         return $this->loadingMessage ?? trans('wire-forms::fields.loading');
     }
 
-    public function getSearchPrompt(): string
-    {
-        return $this->searchPrompt ?? trans('wire-forms::fields.search');
-    }
-
     /**
      * @return array<string|int>
      */
     public function getDisabledOptionValues(): array
     {
         return $this->evaluate($this->disabledOptionValues);
-    }
-
-    public function getRelationship(): ?string
-    {
-        return $this->relationship;
-    }
-
-    public function getTitleAttribute(): ?string
-    {
-        return $this->titleAttribute;
     }
 
     public function isPreloaded(): bool

@@ -9,9 +9,14 @@ use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
+use NyonCode\WireTable\Concerns\HasRecordVersion;
+use NyonCode\WireTable\Concerns\InteractsWithRecordDisabledState;
 
 class ToggleColumn extends Column
 {
+    use HasRecordVersion;
+    use InteractsWithRecordDisabledState;
+
     protected ?string $onColor = 'primary';
 
     protected ?string $offColor = 'gray';
@@ -19,10 +24,6 @@ class ToggleColumn extends Column
     protected ?string $onIcon = null;
 
     protected ?string $offIcon = null;
-
-    protected bool $disabled = false;
-
-    protected ?\Closure $disabledCallback = null;
 
     public function __construct(string $name)
     {
@@ -73,27 +74,6 @@ class ToggleColumn extends Column
         return $this->offIcon;
     }
 
-    /** Disable inline toggling; a Closure receives the record per row. */
-    public function disabled(bool|\Closure $disabled = true): static
-    {
-        if ($disabled instanceof \Closure) {
-            $this->disabledCallback = $disabled;
-        } else {
-            $this->disabled = $disabled;
-        }
-
-        return $this;
-    }
-
-    public function isDisabled(Model $record): bool
-    {
-        if ($this->disabledCallback) {
-            return ($this->disabledCallback)($record);
-        }
-
-        return $this->disabled;
-    }
-
     /**
      * Server-side edit guard consulted by WithTable::updateTableCell().
      *
@@ -105,17 +85,6 @@ class ToggleColumn extends Column
     public function canEdit(Model $record): bool
     {
         return ! $this->isDisabled($record);
-    }
-
-    /**
-     * Optimistic-lock version for the cell (updated_at timestamp, or '0' when the
-     * model is not timestamped).
-     */
-    protected function recordVersion(Model $record): string
-    {
-        $updatedAt = $record->getAttribute('updated_at');
-
-        return $updatedAt instanceof \DateTimeInterface ? (string) $updatedAt->getTimestamp() : '0';
     }
 
     public function renderCell(Model $record): string

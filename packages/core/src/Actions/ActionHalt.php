@@ -8,6 +8,7 @@ use NyonCode\WireCore\Actions\Concerns\HasIcons;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithColor;
 use NyonCode\WireCore\Foundation\Enums\ModalWidth;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireForms\Forms\Form;
@@ -55,6 +56,7 @@ use NyonCode\WireForms\Forms\Form;
 final class ActionHalt
 {
     use HasIcons;
+    use InteractsWithColor;
 
     protected ?string $modalHeading = null;
 
@@ -69,8 +71,6 @@ final class ActionHalt
     protected ?string $modalCancelLabel = null;
 
     protected ?string $modalWidth = 'md';
-
-    protected ?string $color = null;
 
     protected bool $isDanger = false;
 
@@ -215,13 +215,6 @@ final class ActionHalt
     public function width(string|ModalWidth|null $width): static
     {
         $this->modalWidth = $width instanceof ModalWidth ? $width->value : $width;
-
-        return $this;
-    }
-
-    public function color(string|Color|null $color): static
-    {
-        $this->color = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
@@ -411,11 +404,6 @@ final class ActionHalt
     public function getModalWidth(): string
     {
         return $this->modalWidth ?? 'md';
-    }
-
-    public function getColor(): ?string
-    {
-        return $this->color;
     }
 
     public function isDanger(): bool

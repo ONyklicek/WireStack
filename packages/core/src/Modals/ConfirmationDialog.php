@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Modals;
 
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithColor;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Modals\Concerns\HasFooterActions;
 use NyonCode\WireCore\Modals\Concerns\HasModalProperties;
@@ -34,12 +35,11 @@ class ConfirmationDialog implements ModalContract
 {
     use HasFooterActions;
     use HasModalProperties;
+    use InteractsWithColor;
 
     protected ?string $icon = null;
 
     protected ?string $iconColor = Color::Warning->value;
-
-    protected ?string $color = null;
 
     protected bool $isDanger = false;
 
@@ -137,13 +137,6 @@ class ConfirmationDialog implements ModalContract
         return $this;
     }
 
-    public function color(string|Color|null $color): static
-    {
-        $this->color = $color instanceof Color ? $color->value : $color;
-
-        return $this;
-    }
-
     public function danger(bool $danger = true): static
     {
         $this->isDanger = $danger;
@@ -174,11 +167,6 @@ class ConfirmationDialog implements ModalContract
     public function getIconColor(): string
     {
         return $this->iconColor ?? Color::Warning->value;
-    }
-
-    public function getColor(): ?string
-    {
-        return $this->color;
     }
 
     public function isDanger(): bool

@@ -14,8 +14,6 @@ use NyonCode\WireCore\Foundation\Icons\Icon;
  */
 class Alert extends Display
 {
-    protected string|Closure|null $content = null;
-
     protected string $color = 'info';
 
     protected ?string $icon = null;
@@ -23,14 +21,6 @@ class Alert extends Display
     protected string|Closure|null $title = null;
 
     protected bool $dismissible = false;
-
-    /** Set the alert body text. */
-    public function content(string|Closure|null $content): static
-    {
-        $this->content = $content;
-
-        return $this;
-    }
 
     /** Alias for {@see content()}. */
     public function message(string|Closure|null $message): static
@@ -92,11 +82,6 @@ class Alert extends Display
         $this->dismissible = $condition;
 
         return $this;
-    }
-
-    public function getContent(): ?string
-    {
-        return $this->evaluate($this->content);
     }
 
     public function getTitle(): ?string

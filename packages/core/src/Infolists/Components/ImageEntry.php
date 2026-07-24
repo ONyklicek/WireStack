@@ -7,6 +7,7 @@ namespace NyonCode\WireCore\Infolists\Components;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use NyonCode\WireCore\Foundation\Concerns\HasImageConfig;
 
 /**
  * Image entry — renders the state as one or more images (avatars, thumbnails).
@@ -16,23 +17,9 @@ use Illuminate\Support\Str;
  */
 class ImageEntry extends Entry
 {
-    protected ?string $disk = null;
+    use HasImageConfig;
 
     protected int $imageSize = 40;
-
-    protected bool $circular = false;
-
-    protected bool $stacked = false;
-
-    protected ?string $defaultImageUrl = null;
-
-    /** Set the filesystem disk used to resolve stored image paths. */
-    public function disk(?string $disk): static
-    {
-        $this->disk = $disk;
-
-        return $this;
-    }
 
     /** Set the rendered image edge length in pixels (default 40). */
     public function imageSize(int $size): static
@@ -45,40 +32,6 @@ class ImageEntry extends Entry
     public function getImageSize(): int
     {
         return $this->imageSize;
-    }
-
-    /** Render images as circles instead of rounded squares. */
-    public function circular(bool $condition = true): static
-    {
-        $this->circular = $condition;
-
-        return $this;
-    }
-
-    public function isCircular(): bool
-    {
-        return $this->circular;
-    }
-
-    /** Overlap multiple images into a stacked avatar group. */
-    public function stacked(bool $condition = true): static
-    {
-        $this->stacked = $condition;
-
-        return $this;
-    }
-
-    public function isStacked(): bool
-    {
-        return $this->stacked;
-    }
-
-    /** Set the fallback image URL used when the state resolves to none. */
-    public function defaultImageUrl(?string $url): static
-    {
-        $this->defaultImageUrl = $url;
-
-        return $this;
     }
 
     /**

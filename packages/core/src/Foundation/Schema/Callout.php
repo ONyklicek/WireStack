@@ -8,6 +8,7 @@ use Closure;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
+use NyonCode\WireCore\Foundation\Concerns\HasContent;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
@@ -23,13 +24,13 @@ use NyonCode\WireCore\Foundation\Icons\Icon;
  */
 class Callout extends LayoutComponent
 {
+    use HasContent;
+
     protected string $color = 'info';
 
     protected ?string $icon = null;
 
     protected string|Closure|null $heading = null;
-
-    protected string|Closure|null $content = null;
 
     protected bool $dismissible = false;
 
@@ -45,14 +46,6 @@ class Callout extends LayoutComponent
     public function title(string|Closure|null $title): static
     {
         return $this->heading($title);
-    }
-
-    /** Set the callout body text (an alternative to child schema content). */
-    public function content(string|Closure|null $content): static
-    {
-        $this->content = $content;
-
-        return $this;
     }
 
     /** Set the callout color hue (defaults to "info"). */
@@ -106,11 +99,6 @@ class Callout extends LayoutComponent
     public function getHeading(): ?string
     {
         return $this->evaluate($this->heading);
-    }
-
-    public function getContent(): ?string
-    {
-        return $this->evaluate($this->content);
     }
 
     public function getColor(): string

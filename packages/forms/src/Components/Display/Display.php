@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components\Display;
 
 use NyonCode\WireCore\Foundation\Components\ViewComponent;
+use NyonCode\WireCore\Foundation\Concerns\HasContent;
 
 /**
  * Base class for non-input display components (Html, Placeholder, Alert,
@@ -17,5 +18,5 @@ use NyonCode\WireCore\Foundation\Components\ViewComponent;
  */
 abstract class Display extends ViewComponent
 {
-    //
+    use HasContent;
 }

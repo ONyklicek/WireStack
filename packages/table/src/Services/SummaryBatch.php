@@ -58,9 +58,7 @@ final class SummaryBatch
             }
 
             $isAggregate = $column->isAggregate();
-            $columnName = $isAggregate
-                ? ($column->getAggregateAttribute() ?? $column->getName())
-                : $column->getName();
+            $columnName = $column->getSummaryColumnName();
 
             // Relation-path columns can't be aggregated on the base table.
             if (str_contains($columnName, '.')) {

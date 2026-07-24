@@ -11,6 +11,7 @@ use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 use NyonCode\WireCore\Foundation\Concerns\HasDefault;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 use NyonCode\WireForms\Concerns\HasFormValidation;
+use NyonCode\WireForms\Concerns\HasItemLimits;
 use NyonCode\WireForms\Contracts\HasValidation;
 
 /**
@@ -31,6 +32,7 @@ class Repeater extends LayoutComponent implements HasValidation
     use EvaluatesClosures;
     use HasDefault;
     use HasFormValidation;
+    use HasItemLimits;
 
     protected ?string $relationship = null;
 
@@ -43,10 +45,6 @@ class Repeater extends LayoutComponent implements HasValidation
     protected bool $collapsible = false;
 
     protected bool $collapsed = false;
-
-    protected ?int $minItems = null;
-
-    protected ?int $maxItems = null;
 
     protected ?string $addButtonLabel = null;
 
@@ -112,22 +110,6 @@ class Repeater extends LayoutComponent implements HasValidation
         if ($condition) {
             $this->collapsible = true;
         }
-
-        return $this;
-    }
-
-    /** Require at least this many rows. */
-    public function minItems(?int $count): static
-    {
-        $this->minItems = $count;
-
-        return $this;
-    }
-
-    /** Cap the number of rows. */
-    public function maxItems(?int $count): static
-    {
-        $this->maxItems = $count;
 
         return $this;
     }
@@ -205,16 +187,6 @@ class Repeater extends LayoutComponent implements HasValidation
     public function isCollapsed(): bool
     {
         return $this->collapsed;
-    }
-
-    public function getMinItems(): ?int
-    {
-        return $this->minItems;
-    }
-
-    public function getMaxItems(): ?int
-    {
-        return $this->maxItems;
     }
 
     public function getAddButtonLabel(): string

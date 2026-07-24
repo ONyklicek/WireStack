@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Infolists\Components;
 
+use NyonCode\WireCore\Foundation\Concerns\CanBeCopyable;
+
 /**
  * Color entry — renders the state as a color swatch plus its value, with an
  * optional copy-to-clipboard affordance. The state is expected to be a CSS
@@ -11,20 +13,7 @@ namespace NyonCode\WireCore\Infolists\Components;
  */
 class ColorEntry extends Entry
 {
-    protected bool $copyable = false;
-
-    /** Add a click-to-copy button for the color value. */
-    public function copyable(bool $condition = true): static
-    {
-        $this->copyable = $condition;
-
-        return $this;
-    }
-
-    public function isCopyable(): bool
-    {
-        return $this->copyable;
-    }
+    use CanBeCopyable;
 
     protected function viewName(): string
     {

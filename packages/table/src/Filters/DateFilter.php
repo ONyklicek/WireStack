@@ -221,18 +221,6 @@ class DateFilter extends Filter
         ];
     }
 
-    public function render(mixed $value = null): string
-    {
-        if (! $this->canView()) {
-            return '';
-        }
-
-        return view($this->resolveFilterView('tables.filters.form-field'), [
-            'filter' => $this,
-            'value' => $value,
-        ])->render();
-    }
-
     public function wrapValue(mixed $value): mixed
     {
         if ($this->range) {

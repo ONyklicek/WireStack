@@ -442,17 +442,26 @@ class TablePreview extends Component
             // Double-click a row → open it (a confirmation modal here). Because the
             // table is selectable, the default trigger is double-click, leaving a
             // single click for row selection. Behaviour-only: no toolbar button.
-            ->recordActions($this->variant === 'record-actions' ? [
-                RecordAction::make(
-                    Action::make('open')
-                        ->label('Open')
-                        ->icon('outline:eye')
-                        ->requiresConfirmation()
-                        ->modalHeading(fn ($r) => "Opened {$r->name}")
-                        ->modalDescription('Double-clicking the row opened this record.')
-                        ->action(fn () => null)
-                )->onDoubleClick(),
-            ] : [])
+            ->recordActions(match ($this->variant) {
+                'record-actions' => [
+                    RecordAction::make(
+                        Action::make('open')
+                            ->label('Open')
+                            ->icon('outline:eye')
+                            ->requiresConfirmation()
+                            ->modalHeading(fn ($r) => "Opened {$r->name}")
+                            ->modalDescription('Double-clicking the row opened this record.')
+                            ->action(fn () => null)
+                    )->onDoubleClick(),
+                ],
+                // Both gestures bound: a single click "views", a double-click
+                // "edits". The double-click must not also fire the deferred view.
+                'record-actions-dual' => [
+                    RecordAction::make(Action::make('view')->label('View')->action(fn () => null))->onClick(),
+                    RecordAction::make(Action::make('edit')->label('Edit')->action(fn () => null))->onDoubleClick(),
+                ],
+                default => [],
+            })
             // Right-click a row → a dedicated context menu (declared separately
             // from the ->actions() toolbar above).
             ->rowContextMenu([

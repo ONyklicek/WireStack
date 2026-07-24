@@ -493,13 +493,23 @@ class Filter implements Htmlable
         return $this->render();
     }
 
+    /**
+     * The Blade view that renders this filter's control(s). Subclasses whose
+     * only difference is the template override this instead of {@see render()}
+     * (parallels how the concrete filters differ only by view name).
+     */
+    protected function filterView(): string
+    {
+        return 'tables.filters.form-field';
+    }
+
     public function render(mixed $value = null): string
     {
         if (! $this->canView()) {
             return '';
         }
 
-        return view($this->resolveFilterView('tables.filters.form-field'), [
+        return view($this->resolveFilterView($this->filterView()), [
             'filter' => $this,
             'value' => $value,
         ])->render();

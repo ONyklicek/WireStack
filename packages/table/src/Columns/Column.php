@@ -915,6 +915,35 @@ class Column extends DataComponent implements Htmlable
     }
 
     /**
+     * The column's underlying value, before any display formatting.
+     *
+     * The raw twin of {@see getState()}: where getState() applies
+     * formatStateUsing + the default and reads through Eloquent accessors, this
+     * reads the stored attribute straight — a rollup column its computed
+     * withCount/withSum attribute (falling back to the column name), a dotted
+     * name walks the relation, everything else is a direct attribute. It is the
+     * value an export writes, so exporters delegate here instead of reaching into
+     * the column's aggregate internals themselves; enum/JSON display-normalisation
+     * stays a format concern of the caller.
+     */
+    public function getRawState(Model $record): mixed
+    {
+        $name = $this->getName();
+
+        if ($this->isAggregate()) {
+            $attribute = $this->getAggregateAttribute() ?? $name;
+
+            return $record->getAttribute($attribute) ?? $record->getAttribute($name);
+        }
+
+        if (Str::contains($name, '.')) {
+            return data_get($record, $name);
+        }
+
+        return $record->getAttribute($name);
+    }
+
+    /**
      * What an empty cell shows.
      *
      * Distinct from `placeholder()`, which is the hint an *input* shows while it

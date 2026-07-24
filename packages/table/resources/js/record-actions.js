@@ -73,6 +73,7 @@ const wireRecordActions = (config = {}) => ({
     },
 
     destroy() {
+        clearTimeout(this._clickTimer)
         document.removeEventListener('click', this._onDocPointer)
         document.removeEventListener('keydown', this._onKey)
         window.removeEventListener('wheel', this._onScroll)
@@ -280,6 +281,25 @@ const wireRecordActions = (config = {}) => ({
 
         const row = this.row(event)
         if (! row || this.blocked(event, row)) return
+
+        // A double-click still emits `click` (twice) first. When both gestures are
+        // bound — the view/edit pattern — defer the single-click action so a
+        // following `dblclick` can cancel it; otherwise double-clicking to edit
+        // would also run (and re-run) the single-click view action.
+        if (type === 'click' && this.bindings.dblclick) {
+            clearTimeout(this._clickTimer)
+            const key = row.dataset.rowKey
+            this._clickTimer = setTimeout(() => {
+                this._clickTimer = null
+                this.$wire.openActionModal(key, name)
+            }, 250)
+            return
+        }
+
+        if (type === 'dblclick') {
+            clearTimeout(this._clickTimer)
+            this._clickTimer = null
+        }
 
         // openActionModal opens the modal when the action has one and runs it
         // directly otherwise — the single modal-aware entry point.

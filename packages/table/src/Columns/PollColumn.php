@@ -12,10 +12,14 @@ use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireCore\Foundation\View\Primitives;
+use NyonCode\WireTable\Concerns\EvaluatesRecordClosures;
+use NyonCode\WireTable\Concerns\RendersBadgeSurface;
 
 class PollColumn extends Column
 {
+    use EvaluatesRecordClosures;
     use InteractsWithStateColor;
+    use RendersBadgeSurface;
 
     /** @var int|Closure Polling interval in milliseconds */
     protected int|Closure $interval = 2000;
@@ -383,18 +387,6 @@ class PollColumn extends Column
     }
 
     /**
-     * Evaluate a value that may be a Closure with record context.
-     */
-    protected function evaluateForRecord(mixed $value, Model $record): mixed
-    {
-        if ($value instanceof Closure) {
-            return $value($record, $this);
-        }
-
-        return $value;
-    }
-
-    /**
      * Render the poll column cell.
      */
     public function renderCell(Model $record): string
@@ -551,16 +543,6 @@ class PollColumn extends Column
             $this->stateColors instanceof Closure ? ($this->stateColors)($record, $state, $this) : $this->stateColors;
 
         return $colors[$state] ?? null;
-    }
-
-    public function getColorClasses(?string $color): string
-    {
-        return self::getBadgeColorClasses($color ?? Color::Gray->value);
-    }
-
-    public function getSizeClasses(): string
-    {
-        return self::getBadgeSizeClasses($this->getSize());
     }
 
     /**

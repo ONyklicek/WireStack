@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
 use NyonCode\WireCore\Foundation\Support\StoredFileUrlResolver;
+use NyonCode\WireForms\Concerns\CanBeMultiple;
 use NyonCode\WireForms\Contracts\ProvidesImplicitValidationRules;
 use NyonCode\WireForms\Contracts\ProvidesItemValidationRules;
 
@@ -19,6 +20,8 @@ use NyonCode\WireForms\Contracts\ProvidesItemValidationRules;
  */
 class FileUpload extends Field implements DehydratesState, ProvidesImplicitValidationRules, ProvidesItemValidationRules
 {
+    use CanBeMultiple;
+
     /** @var array<int, string>|Closure */
     protected array|Closure $acceptedFileTypes = [];
 
@@ -29,8 +32,6 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
     protected ?int $maxFiles = null;
 
     protected ?int $minFiles = null;
-
-    protected bool $multiple = false;
 
     protected bool $image = false;
 
@@ -110,14 +111,6 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
     public function minFiles(?int $count): static
     {
         $this->minFiles = $count;
-
-        return $this;
-    }
-
-    /** Allow uploading several files. */
-    public function multiple(bool $condition = true): static
-    {
-        $this->multiple = $condition;
 
         return $this;
     }
@@ -348,11 +341,6 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
     public function getMinFiles(): ?int
     {
         return $this->minFiles;
-    }
-
-    public function isMultiple(): bool
-    {
-        return $this->multiple;
     }
 
     public function isImage(): bool
