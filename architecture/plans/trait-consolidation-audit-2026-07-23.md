@@ -188,3 +188,60 @@ lie outside the diff.
 - **Icon/Color::coerce()** — deferred: replacing the `instanceof ? ->value()`
   branch is a codebase-wide sweep, not a localised extraction (run 2 confirmed only
   the narrow Stat/ChartItem case).
+
+## TIER B implementation status (branch 1.13.1, 2026-07-24)
+
+TIER B completed on the same terms — every touched group green on its package
+suite plus `composer analyse` and `pint`, public APIs unchanged, new-trait lines
+covered. The colour-resolver half of the "two `HasColor`" item was already done
+before this pass (`Actions\Concerns\HasColor` and the deprecated `Concerns\HasColor`
+are thin BC aliases of the Foundation resolver); what remained was the colour
+**state**.
+
+**Done:**
+
+- **`InteractsWithColor` (colour STATE)** — the `$color` slot + enum-normalising
+  `color()` + nullable `getColor()`, split from the resolver-only `HasColor`.
+  Adopted on ChartItem, ActionHalt, ModalFooterAction, ConfirmationDialog (the
+  latter two override `getColor()` for a non-null default), then on **Stat**
+  (full delegation) and **ActionGroup** (slot + setter, keeps its `getColor(): string`
+  Gray fallback — the trait's documented override case).
+- **`CanBeCopyable`** (ColorEntry/TextEntry; Column keeps its message-aware variant)
+  and **`HasImageConfig`** (disk/circular/stacked/defaultImageUrl on ImageEntry +
+  ImageColumn).
+- **`InteractsWithBooleanState`** (`Foundation\Concerns\`) — the `boolean()` display
+  mode (flag + four true/false defaults + the truthiness rule) shared by IconEntry
+  and IconColumn; BooleanEntry inherits it via IconEntry. The `resolveState*Override`
+  hooks stay one-line delegations per class (the state traits already define them as
+  no-op defaults, so a same-named trait method would collide).
+- **`CanBeSummarized::getSummaryColumnName()`** — one owner for the summarized-column
+  rule (aggregate attribute ↦ name fallback) that `SummaryBatch` and `getSummaryTarget`
+  each encoded inline.
+- **`Column::getRawState()`** — the unformatted twin of `getState()`; `ResolvesExportValue`
+  delegates to it instead of reaching into the column's aggregate internals, and only
+  applies the export display step (`EnumResolver::display`) on top. Behaviour
+  byte-identical to the export's previous raw walk.
+- **`DataComponent` → Foundation `HasName`** — the straggler base class stops
+  hand-rolling `$name`/`getName()`.
+
+**Deviations — over-reach or genuine divergence caught while reading the code:**
+
+- **`InteractsWithColor` on Column** — its `color()` carries surface-specific
+  fluent-API guidance (point per-row colouring at `BadgeColumn::colorUsing()`) that
+  reflection surfaces to agents; delegating the setter would drop it, and delegating
+  only the slot/getter leaves the setter re-encoded anyway for ~4 lines in a hot file.
+- **`InteractsWithColor` on Entry/Button/`HasDynamicProperties`** — colour is
+  closure-evaluated there (`getColor(mixed $context): string`), which the plain
+  state trait cannot model.
+- **`DataComponent`/Column → `HasLabel`** — both auto-generate labels from the
+  relation-path *column* name; Foundation `HasLabel` headlines the full dotted
+  `getName()` and returns `?string`. Delegating would change rendered headers and
+  break relation-column labels. Only `HasName` was taken.
+- **`InteractsWithBooleanState` on BooleanColumn** — it has no `boolean` flag or
+  override hooks and carries its own true/false *labels*; a different shape.
+- **ImageEntry URL → `StoredFileUrlResolver`** — `ImageColumn` already delegates,
+  but ImageEntry has divergent passthrough (root-relative `/…` and protocol-relative
+  `//…` pass through; a diskless path returns raw) and no signed-URL state. Routing
+  it through the resolver would regress those cases and needs new `visibility`/`expiry`
+  state — a feature, not a consolidation. Left local, matching the `HasImageConfig`
+  commit's note that URL resolution "genuinely differs".
