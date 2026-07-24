@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Components;
 
+use NyonCode\WireForms\Concerns\HasCharacterLimits;
+
 /**
  * Textarea field with autosize and row/col configuration.
  */
 class Textarea extends Field
 {
+    use HasCharacterLimits;
+
     protected int $rows = 3;
 
     protected ?int $cols = null;
-
-    protected ?int $minLength = null;
-
-    protected ?int $maxLength = null;
 
     protected bool $autosize = false;
 
@@ -33,22 +33,6 @@ class Textarea extends Field
     public function cols(?int $cols): static
     {
         $this->cols = $cols;
-
-        return $this;
-    }
-
-    /** Require at least this many characters. */
-    public function minLength(?int $length): static
-    {
-        $this->minLength = $length;
-
-        return $this;
-    }
-
-    /** Allow at most this many characters. */
-    public function maxLength(?int $length): static
-    {
-        $this->maxLength = $length;
 
         return $this;
     }
@@ -77,16 +61,6 @@ class Textarea extends Field
     public function getCols(): ?int
     {
         return $this->cols;
-    }
-
-    public function getMinLength(): ?int
-    {
-        return $this->minLength;
-    }
-
-    public function getMaxLength(): ?int
-    {
-        return $this->maxLength;
     }
 
     public function isAutosize(): bool

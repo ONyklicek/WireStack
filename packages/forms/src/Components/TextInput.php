@@ -6,6 +6,7 @@ namespace NyonCode\WireForms\Components;
 
 use Closure;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireForms\Concerns\HasCharacterLimits;
 
 /**
  * Text input field with type variants (email, password, tel, url, numeric, integer).
@@ -14,11 +15,9 @@ use NyonCode\WireCore\Foundation\Support\EnumResolver;
  */
 class TextInput extends Field
 {
+    use HasCharacterLimits;
+
     protected string $inputType = 'text';
-
-    protected ?int $minLength = null;
-
-    protected ?int $maxLength = null;
 
     protected int|float|string|Closure|null $minValue = null;
 
@@ -111,22 +110,6 @@ class TextInput extends Field
 
     // ─── Constraints ───────────────────────────────────────────────
 
-    /** Set the minimum character length (adds the `min` validation rule). */
-    public function minLength(?int $length): static
-    {
-        $this->minLength = $length;
-
-        return $this;
-    }
-
-    /** Set the maximum character length (adds the `max` validation rule). */
-    public function maxLength(?int $length): static
-    {
-        $this->maxLength = $length;
-
-        return $this;
-    }
-
     /** Set the minimum numeric value (a value or a `$get`-aware Closure). */
     public function minValue(int|float|string|Closure|null $value): static
     {
@@ -209,16 +192,6 @@ class TextInput extends Field
     public function getInputType(): string
     {
         return $this->inputType;
-    }
-
-    public function getMinLength(): ?int
-    {
-        return $this->minLength;
-    }
-
-    public function getMaxLength(): ?int
-    {
-        return $this->maxLength;
     }
 
     public function getMinValue(): int|float|string|null

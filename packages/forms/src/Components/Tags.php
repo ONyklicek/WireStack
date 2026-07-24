@@ -6,12 +6,16 @@ namespace NyonCode\WireForms\Components;
 
 use Closure;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
+use NyonCode\WireForms\Concerns\HasItemLimits;
+use NyonCode\WireForms\Concerns\HasRelationship;
 
 /**
  * Free-form tag input with optional suggestions, limits, and relationship support.
  */
 class Tags extends Field
 {
+    use HasItemLimits;
+    use HasRelationship;
     use HasSheetOnMobile;
 
     /** @var array<int, string>|Closure */
@@ -20,17 +24,9 @@ class Tags extends Field
     /** @var array<int, string> */
     protected array $splitKeys = ['Enter', ','];
 
-    protected ?int $minItems = null;
-
-    protected ?int $maxItems = null;
-
     protected bool $allowNew = true;
 
     protected bool $allowDuplicates = false;
-
-    protected ?string $relationship = null;
-
-    protected ?string $titleAttribute = null;
 
     /**
      * Set predefined tag values offered as autocomplete suggestions.
@@ -56,22 +52,6 @@ class Tags extends Field
         return $this;
     }
 
-    /** Require at least this many tags. */
-    public function minItems(?int $count): static
-    {
-        $this->minItems = $count;
-
-        return $this;
-    }
-
-    /** Allow at most this many tags. */
-    public function maxItems(?int $count): static
-    {
-        $this->maxItems = $count;
-
-        return $this;
-    }
-
     /** Allow the user to create tags not in the suggestions list. */
     public function allowNew(bool $condition = true): static
     {
@@ -84,15 +64,6 @@ class Tags extends Field
     public function allowDuplicates(bool $condition = true): static
     {
         $this->allowDuplicates = $condition;
-
-        return $this;
-    }
-
-    /** Bind the tags to a relationship, resolving labels from the given title attribute. */
-    public function relationship(?string $name, ?string $titleAttribute = null): static
-    {
-        $this->relationship = $name;
-        $this->titleAttribute = $titleAttribute;
 
         return $this;
     }
@@ -115,16 +86,6 @@ class Tags extends Field
         return $this->splitKeys;
     }
 
-    public function getMinItems(): ?int
-    {
-        return $this->minItems;
-    }
-
-    public function getMaxItems(): ?int
-    {
-        return $this->maxItems;
-    }
-
     public function isAllowNew(): bool
     {
         return $this->allowNew;
@@ -133,16 +94,6 @@ class Tags extends Field
     public function isAllowDuplicates(): bool
     {
         return $this->allowDuplicates;
-    }
-
-    public function getRelationship(): ?string
-    {
-        return $this->relationship;
-    }
-
-    public function getTitleAttribute(): ?string
-    {
-        return $this->titleAttribute;
     }
 
     public function getStateType(): string

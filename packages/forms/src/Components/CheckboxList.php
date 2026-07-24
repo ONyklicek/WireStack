@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Closure;
+use NyonCode\WireForms\Concerns\CanBeSearchable;
 use NyonCode\WireForms\Concerns\HasOptions;
 
 /**
@@ -12,14 +13,11 @@ use NyonCode\WireForms\Concerns\HasOptions;
  */
 class CheckboxList extends Field
 {
+    use CanBeSearchable;
     use HasOptions;
 
     /** @var int|array<string|int, int|string> */
     protected int|array $columns = 1;
-
-    protected bool $searchable = false;
-
-    protected ?string $searchPrompt = null;
 
     protected bool $bulkToggleable = false;
 
@@ -41,22 +39,6 @@ class CheckboxList extends Field
     public function columns(int|array $columns): static
     {
         $this->columns = $columns;
-
-        return $this;
-    }
-
-    /** Add a search box to filter the options. */
-    public function searchable(bool $condition = true): static
-    {
-        $this->searchable = $condition;
-
-        return $this;
-    }
-
-    /** Set the placeholder text shown in the search box. */
-    public function searchPrompt(?string $prompt): static
-    {
-        $this->searchPrompt = $prompt;
 
         return $this;
     }
@@ -112,16 +94,6 @@ class CheckboxList extends Field
     public function getColumns(): int|array
     {
         return $this->columns;
-    }
-
-    public function isSearchable(): bool
-    {
-        return $this->searchable;
-    }
-
-    public function getSearchPrompt(): string
-    {
-        return $this->searchPrompt ?? trans('wire-forms::fields.search');
     }
 
     public function isBulkToggleable(): bool
