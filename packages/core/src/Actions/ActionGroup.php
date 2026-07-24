@@ -15,6 +15,7 @@ use NyonCode\WireCore\Actions\Support\MountActionClickResolver;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Concerns\HasSize;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithColor;
 use NyonCode\WireCore\Foundation\Enums\Placement;
 use NyonCode\WireCore\Foundation\Enums\Size;
 use NyonCode\WireCore\Foundation\Icons\Icon;
@@ -47,14 +48,17 @@ class ActionGroup implements Htmlable
     use HasIcons;
     use HasSheetOnMobile;
 
+    // $color + color() come from the canonical colour-state owner
+    // InteractsWithColor; getColor() is overridden below to keep the non-null
+    // Gray fallback, and HasColor stays for the class-map resolvers.
+    use InteractsWithColor;
+
     /** @var array<int, Action|ActionGroup> */
     public array $actions = [];
 
     public ?string $label = null;
 
     public ?string $icon = 'dots-vertical';
-
-    protected ?string $color = Color::Gray->value;
 
     protected ?string $size = 'sm';
 
@@ -103,13 +107,6 @@ class ActionGroup implements Htmlable
     public function icon(string|Icon|null $icon): static
     {
         $this->icon = $icon instanceof Icon ? $icon->value() : $icon;
-
-        return $this;
-    }
-
-    public function color(string|Color|null $color): static
-    {
-        $this->color = $color instanceof Color ? $color->value : $color;
 
         return $this;
     }
