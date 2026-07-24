@@ -21,12 +21,12 @@ jobs:
     name: Split ${{ matrix.package.split_repository }}
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Split and push
-        uses: danharrin/monorepo-split-github-action@v2.3.0
+        uses: danharrin/monorepo-split-github-action@v2.4.5
         env:
           GITHUB_TOKEN: ${{ secrets.SPLIT_TOKEN }}
         with:
