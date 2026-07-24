@@ -97,10 +97,14 @@ class AuditEntry extends Model
     /**
      * Scope to a specific user.
      *
+     * Accepts int|string for the same reason AuditLogger::resolveUserId() returns
+     * it and the column is a string: the actor key may be a UUID/ULID, and an
+     * int-only signature made this scope fatal (TypeError) for those apps.
+     *
      * @param  Builder<self>  $query
      * @return Builder<self>
      */
-    public function scopeByUser(Builder $query, int $userId): Builder
+    public function scopeByUser(Builder $query, int|string $userId): Builder
     {
         return $query->where('user_id', $userId);
     }

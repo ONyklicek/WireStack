@@ -106,6 +106,44 @@ function rememberingComponent(?string $key = 'users-index'): RememberingComponen
     return $component;
 }
 
+/** A sub-row table, for the expansion half of the stored view layout. */
+class RememberingSubRowComponent extends Component
+{
+    use WithTable;
+
+    public ?string $rememberKey = 'invoices-index';
+
+    public function table(Table $table): Table
+    {
+        $table = $table
+            ->model(PrefTableRow::class)
+            ->paginated(false)
+            ->columns([TextColumn::make('name')])
+            ->subRows('children')
+            ->subRowColumns([TextColumn::make('name')]);
+
+        if ($this->rememberKey !== null) {
+            $table->rememberColumns($this->rememberKey);
+        }
+
+        return $table;
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+function rememberingSubRowComponent(?string $key = 'invoices-index'): RememberingSubRowComponent
+{
+    $component = new RememberingSubRowComponent;
+    $component->rememberKey = $key;
+    $component->mountWithTable();
+
+    return $component;
+}
+
 /** Same table but never opts into remembering — for the reset-control render test. */
 class PlainColumnsComponent extends Component
 {
@@ -340,6 +378,52 @@ it('does not persist when the table has not opted in', function () {
     $component->toggleColumn('email');
 
     expect($driver->store)->toBe([]);
+});
+
+// ─── Sub-row expansion rides along with the column layout ────────
+
+it('persists the sub-row expansion baseline for the user', function () {
+    $driver = new ArrayPreferenceDriver;
+    TablePreferenceManager::swap($driver);
+
+    $component = rememberingSubRowComponent();
+    $component->toggleAllRowExpansion();
+
+    expect($driver->store['guest|invoices-index']['rows']['expandAll'])->toBeTrue();
+});
+
+it('restores the expansion baseline on a fresh mount', function () {
+    TablePreferenceManager::swap(new ArrayPreferenceDriver);
+
+    $first = rememberingSubRowComponent();
+    $first->toggleAllRowExpansion();
+
+    $second = rememberingSubRowComponent();
+
+    expect($second->expandsSubRowsByDefault())->toBeTrue()
+        ->and($second->isRowExpanded(1))->toBeTrue();
+});
+
+it('ignores a stored baseline for a table without sub-rows', function () {
+    $driver = new ArrayPreferenceDriver;
+    $driver->store['guest|users-index'] = ['rows' => ['expandAll' => true]];
+    TablePreferenceManager::swap($driver);
+
+    $component = rememberingComponent();
+
+    expect($component->tableState->get('rows.expandAll'))->toBeNull();
+});
+
+it('does not persist the baseline when the table has not opted in', function () {
+    $driver = new ArrayPreferenceDriver;
+    TablePreferenceManager::swap($driver);
+
+    $component = rememberingSubRowComponent(key: null);
+    $component->toggleAllRowExpansion();
+
+    expect($driver->store)->toBe([])
+        // The choice still applies for this component's lifetime.
+        ->and($component->expandsSubRowsByDefault())->toBeTrue();
 });
 
 it('renders a reset-columns control only when remembering is enabled', function () {

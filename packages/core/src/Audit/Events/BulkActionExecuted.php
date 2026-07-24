@@ -7,7 +7,20 @@ namespace NyonCode\WireCore\Audit\Events;
 use NyonCode\WireCore\Audit\Contracts\AuditableEvent;
 
 /**
- * Dispatched when a bulk action is executed on multiple records.
+ * Dispatch for a bulk action that should be audited.
+ *
+ * Deliberately **not** dispatched by the framework from the shared action
+ * pipeline (`InteractsWithActions::executeActionPipeline()`, next to
+ * `ActionExecuted`), even though that is the one seam every bulk path funnels
+ * through. `wire-core.audit.enabled` defaults to true while the `audit_logs`
+ * migration is publish-on-demand, so an unconditional dispatch would make every
+ * bulk action fatal with a missing-table `QueryException` on any app that never
+ * published it — a table-wide crash to gain an audit row nobody asked for.
+ *
+ * Worth dispatching from an action's own callback where the app does audit: it
+ * carries the *action name*, which no model event does, so it is additive rather
+ * than a duplicate of the per-record `RecordUpdated`/`RecordDeleted` entries.
+ * See `docs/core/audit.md`.
  */
 final readonly class BulkActionExecuted implements AuditableEvent
 {

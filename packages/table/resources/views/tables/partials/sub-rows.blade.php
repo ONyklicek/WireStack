@@ -30,6 +30,12 @@
     $isSortable = $table->isSubRowsSortable();
     $activeSort = $component->getSubRowSort();
     $subRowFilterValues = $component->tableState->get('rows.subRowFilters', []) ?? [];
+    // The slots are seeded (null / []) so select-type controls can entangle their
+    // path, so "not empty" no longer means "a filter is active" — a real value is
+    // a non-empty scalar or a non-empty array.
+    $hasActiveSubRowFilter = collect($subRowFilterValues)->contains(
+        fn ($v) => is_array($v) ? $v !== [] : ($v !== null && $v !== ''),
+    );
     $subRowSummaries = $component->computeTableSummaries('subRows', $record, $subRows);
     $hasSubSummaries = !empty($subRowSummaries);
 
@@ -53,11 +59,18 @@
                     @foreach($subColumns as $subCol)
                         @if($subCol->isFilterable())
                             <div class="w-40">
-                                {!! $subCol->renderFilter($subRowFilterValues[$subCol->getName()] ?? null) !!}
+                                {{-- Bind to the sub-row filter slot, not the parent
+                                     table's column filters — otherwise the input
+                                     silently filters the parent (or, on a name
+                                     collision, filters nothing at all). --}}
+                                {!! $subCol->renderFilter(
+                                    $subRowFilterValues[$subCol->getName()] ?? null,
+                                    'tableState.rows.subRowFilters.'.$subCol->getName(),
+                                ) !!}
                             </div>
                         @endif
                     @endforeach
-                    @if(!empty($subRowFilterValues))
+                    @if($hasActiveSubRowFilter)
                         <button type="button" wire:click="resetSubRowFilters" data-testid="subrows-reset-filters" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                             ✕ {{ __('wire-table::messages.reset') }}
                         </button>

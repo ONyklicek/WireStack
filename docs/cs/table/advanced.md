@@ -55,23 +55,17 @@ $table
 
 Uživatelé vidí vlevo ikonu šipky. Kliknutím se řádek rozbalí a zobrazí dětské řádky pod ním.
 
-### Rozbalit vše ve výchozím stavu
+### Výchozí stav rozbalení
+
+`subRowsDefaultExpanded()` určuje, kde řádky *začínají*; master chevron v hlavičce
+sloupce s chevrony tento výchozí stav mění za běhu a volba přežije stránkování:
 
 ```php
 $table->subRowsDefaultExpanded()
 ```
 
-Všechny řádky začnou rozbalené.
-
-### Flatten režim
-
-Zobrazit všechny podřádky inline bez rozbalování/sbalování — plochý pohled:
-
-```php
-$table->flattenSubRows()
-```
-
-Uživatelé mohou přepnout flatten režim přes Livewire metodu `toggleFlattenMode()`.
+`flattenSubRows()` je zastaralý alias téhož — nikdy nic nezploštil, jen otevřel
+všechny řádky. `toggleFlattenMode()` dál funguje a volá `toggleAllRowExpansion()`.
 
 ### Relace podřádků s eager loadingem
 
@@ -125,7 +119,7 @@ $table->subRowView('components.order-items-detail')
 | Vlastnost | Typ | Popis |
 |----------|------|-------------|
 | `$expandedRows` | `array` | Klíče rozbalených rodičovských záznamů |
-| `$flattenMode` | `bool` | Přepínač plochého pohledu |
+| `$flattenMode` | `bool\|null` | Výchozí stav rozbalení (zastaralý alias `rows.expandAll`) |
 
 ### API podřádků
 
@@ -138,7 +132,7 @@ $table->subRowView('components.order-items-detail')
 ->subRowsExpandable(bool $expandable = true)
 ->subRowsLimit(?int $limit)             // max podřádků před "zobrazit více"
 ->subRowsToggleLabel(?string $label)
-->flattenSubRows(bool $flatten = true)
+->flattenSubRows(bool $flatten = true)   // zastaralé: subRowsDefaultExpanded()
 ->hasSubRows(): bool
 ->getSubRowColumns(): array
 ```
@@ -426,7 +420,22 @@ $table->cacheQuery(ttl: 60)                    // 60 sekund, auto-generovaný kl
 $table->cacheQuery(ttl: 300, key: 'users')     // 5 minut, vlastní klíč
 ```
 
-Cache klíč zahrnuje hash aktuálního stavu (hledání, filtry, řazení, stránka), takže různé stavy se cachují nezávisle. Aktuální stránka je vždy součástí klíče — i s vlastním `key:` — protože stránkování se aplikuje uvnitř cachovaného callbacku.
+Cache klíč má dvě části: **namespace** říká, o kterou tabulku jde, a **otisk
+stavu** říká, o který její pohled. Namespace je ve výchozím stavu SQL dotazu
+s bindingy, nebo to, co předáte jako `key:`. Otisk pokrývá hledání, filtry,
+sloupcové filtry, řazení, počet na stránku a číslo stránky — a připojuje se ke
+*každému* namespace. Vlastní `key:` tedy entries scopuje, nenahrazuje jejich
+identitu.
+
+Je to podstatné, protože cachovaná tabulka servíruje stránkovaný *výřez*, ne
+dotaz: `perPage` a stránka se aplikují uvnitř cachovaného callbacku, takže se do
+SQL nikdy nedostanou, a vlastní klíč nic neví o řazení ani o aktivních
+filtrech. Kdyby cokoli z toho v klíči chybělo, tabulka by na celý TTL zamrzla —
+změna počtu na stránku by dál servírovala řádky nacachované pod stejným klíčem.
+
+Pro scopování podle tenanta nebo uživatele buď předejte `key:`, nebo na
+komponentě přepište `generateQueryCacheKey()`; otisk stavu se připojí tak jako
+tak.
 
 Používá `Cache::remember()` — funguje s jakýmkoli Laravel cache driverem.
 
@@ -586,6 +595,105 @@ mobilního menu (oddělovače se při sloučení zahodí) a karta s jedinou vidi
 akcí ji stále zobrazí přímo. Menu přebírá nastavení tabulky `sheetOnMobile()` /
 `mobileBreakpoint()` (na malých obrazovkách se ve výchozím stavu chová jako
 spodní sheet).
+
+### Anatomie karty
+
+Karta je záznam, ne přestrojené pořadí sloupců. Hierarchii nesou čtyři pojmenované
+sloty — co to je, čí to je, za kolik — a zbytek spadne do mřížky popisek/hodnota
+pod nimi:
+
+```text
+┌──────────────────────────────────────────────┐
+│ INV-1001                        9 350 Kč  ⋮  │  titulek · metrika · akce
+│ Northwind Traders                            │  podřádek
+│ [ zaplaceno ]                                │  meta
+│ ─────────────────────────────────────────    │
+│ POZNÁMKA        REFERENCE                    │  všechno ostatní
+│ První objednávka 2026/114                    │
+└──────────────────────────────────────────────┘
+```
+
+Deklarovat kvůli tomu nemusíte nic: sloty se odvodí ze sloupců, které už máte.
+
+| Slot | Odvozeno z |
+| ---- | ---------- |
+| `title` | první viditelný sloupec |
+| `metric` | poslední sloupec zarovnaný vpravo — tedy to, co dělá `money()` a `numeric()` |
+| `meta` | badge sloupce |
+| `subtitle` | první sloupec, který si nevzal jiný slot |
+| mřížka detailů | všechno zbylé |
+
+Když odvození hádá špatně, řekněte to — buď u sloupce:
+
+```php
+TextColumn::make('total')->money()->mobileMetric(),
+BadgeColumn::make('status')->mobileMeta(),
+TextColumn::make('reference')->mobileDetail(),   // ať zůstane mimo hlavičku
+```
+
+…nebo pro celou tabulku, což přebije odvození i deklarace u sloupců:
+
+```php
+use NyonCode\WireTable\Support\MobileCardConfig;
+
+$table->mobileCard(fn (MobileCardConfig $card) => $card
+    ->title('number')
+    ->subtitle('customer')
+    ->metric('total')
+    ->meta(['status', 'due_at']));
+```
+
+Metrika sedí vpravo na řádku s titulkem v tabulárních číslicích, takže se sloupec
+částek dá porovnávat po pravé hraně místo čtení karta po kartě.
+
+### Podřádky na kartě
+
+Rozbalené děti se vykreslí jako seznam, ne jako vnořená tabulka z desktopu: název
+vlevo, jeho částka na stejné pravé hraně jako metrika karty, doplňující detail pod
+tím.
+
+```text
+│ 3 položky                                 ⌄  │
+│ ──────────────────────────────────────────── │
+│ 27" monitor                    5 600 Kč   ⋮  │
+│ Jednotka: 5 600 Kč                           │
+│ Mechanická klávesnice          2 400 Kč   ⋮  │
+│ Jednotka: 1 200 Kč                           │
+│ Mezisoučet                     9 350 Kč      │
+```
+
+Mezisoučty za rodiče, tlačítko „Zobrazit dalších N“ i akce dětí tady fungují —
+dřív to uměl jen desktop, zatímco karta slila všechny děti do jedné nerozlišitelné
+mřížky.
+
+Akce dětí se vždy sbalí pod jeden spouštěč `⋮`, ať `collapseActionsOnMobile()`
+říká cokoli: řádek dítěte je užší než karta, která ho drží, a dvě tlačítka s
+popiskem tam rozdrtí název položky na tři tečky.
+
+Sbalený přepínač uvádí počet dětí (`3 položky`), když je číslo už v paměti, a
+jinak se vrátí k `Detail` — sbalený řádek nemá eager-loadované děti, takže spočítat
+je by stálo jeden dotaz na kartu. Přidejte do základního dotazu `->withCount('items')`
+a každá karta svůj počet uvede zadarmo.
+
+### Součty na kartě
+
+Desktopové součty bydlí v `<tfoot>` tabulky, kterou skládané karty skrývají —
+stohovaná tabulka tedy neukazovala žádné součty, což je v účetní tabulce zrovna
+to číslo, kvůli kterému tam uživatel je. Nově se vykreslí pod kartami jako řádky
+popisek/hodnota, na stejné pravé hraně jako metrika každé karty, se stejným
+přepínačem rozsahu *Vše / Tato stránka / Výběr*, jaký má desktopová patička:
+
+```text
+│ INV-1003                          8 450 Kč │
+├────────────────────────────────────────────┤
+│ Zobrazeno:            [ Vše ][Tato stránka]│
+│ Celkem položek · Položky                  7 │
+│ Celkem · Celkem                  35 900 Kč  │
+│ Průměr · Celkem                  11 967 Kč  │
+```
+
+Není co nastavovat — sloupec se `summarize*()` dostane svůj součet sem stejně
+jako do patičky tabulky, a celkové součty podřádků jdou stejnou cestou.
 
 ### Breakpointy sloupců
 
@@ -767,7 +875,7 @@ Sledované parametry:
 | `sort`, `direction` | stav řazení | přijímají se jen názvy řaditelných sloupců |
 | `per_page` | velikost stránky | přijímají se jen hodnoty z `perPageOptions()` |
 | `filter_{name}` | hodnota filtru | jeden parametr na filtr |
-| `page` | aktuální stránka | zpracováno Livewire `WithPagination` |
+| `page` | aktuální stránka | zpracováno Livewire `WithPagination`; stránka za koncem se zakotví na poslední zaplněnou |
 
 Vícepolní filtry se rozšíří na parametry se suffixem: `NumberRangeFilter`
 se stane `filter_price_min` / `filter_price_max`, rozsahový `DateFilter`
@@ -776,7 +884,9 @@ se stane `filter_created_at_from` / `filter_created_at_to`. Filtry používajíc
 
 Příchozí URL hodnoty se validují proti konfiguraci tabulky —
 neznámé sloupce řazení, hodnoty per-page mimo `perPageOptions()` a
-parametry pro neznámé nebo skryté filtry se ignorují.
+parametry pro neznámé nebo skryté filtry se ignorují. Stejná kontrola běží
+i na živé `wire:model` cestě, takže podvržený Livewire payload si nemůže
+vyžádat velikost stránky, kterou tabulka nenabízí.
 
 ### Více tabulek na stránku
 
@@ -830,7 +940,7 @@ uživatelské úrovni bez křehkých CSS selektorů.
 | Kopírovací tlačítko buňky | `data-testid="cell-copy"` |
 | Buňka ButtonColumn | `data-testid="column-button"` |
 | Přepínač pollingu | `data-testid="polling-toggle"` |
-| Ovládače sub-řádků | `data-testid="subrows-expand-all"` / `subrows-collapse-all` / `subrows-reset-filters` / `subrows-scope-toggle` / `subrows-show-more` / `subrows-sort-{column}` |
+| Ovládače sub-řádků | `data-testid="subrows-master-toggle"` / `subrows-expand-all-rows` / `subrows-reset-filters` / `subrows-show-more` / `subrows-sort-{column}` |
 | Přepínač rozsahu souhrnu | `data-testid="summary-scope-{value}"` |
 
 Akce jdou cílit i přes viditelný popisek a volby filtru přes jejich text —
@@ -1019,7 +1129,7 @@ class OrderTable extends Component
 
                 TernaryFilter::make('has_invoice')
                     ->label('Invoice Generated')
-                    ->query(fn (Builder $q, $value) => $value === '1'
+                    ->query(fn (Builder $q, bool $value) => $value
                         ? $q->whereNotNull('invoice_id')
                         : $q->whereNull('invoice_id')),
             ])

@@ -20,9 +20,13 @@ use NyonCode\WireForms\Components\Toggle;
 use NyonCode\WireTable\Columns\BadgeColumn;
 use NyonCode\WireTable\Columns\BooleanColumn;
 use NyonCode\WireTable\Columns\ImageColumn;
+use NyonCode\WireTable\Columns\SelectColumn;
 use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\Columns\TextInputColumn;
+use NyonCode\WireTable\Columns\ToggleColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Filters\SelectFilter;
+use NyonCode\WireTable\Support\RecordAction;
 use NyonCode\WireTable\Table;
 use Workbench\App\Models\Invoice;
 use Workbench\App\Models\User;
@@ -41,6 +45,9 @@ class TablePreview extends Component
 
     /** Variants that expand only the first invoice (a single drill-down). */
     private const EXPAND_FIRST_VARIANTS = ['subrows', 'subrows-limit', 'subrows-filter'];
+
+    /** Whether the one-off expansion seed above has already been applied. */
+    public bool $expansionSeeded = false;
 
     /** Variants that auto-open the header-action form modal for visual QA. */
     private const MODAL_VARIANTS = ['modal-form', 'modal-slideover-mobile', 'modal-slideover-compose', 'modal-fullscreen-mobile', 'modal-wizard', 'modal-nested'];
@@ -63,7 +70,7 @@ class TablePreview extends Component
      */
     public function booted(): void
     {
-        if ($this->variant === 'selection') {
+        if (in_array($this->variant, ['selection', 'stacked-selection'], true)) {
             $this->tableState->set('selection.records', User::query()
                 ->orderBy('id')
                 ->limit(3)
@@ -86,6 +93,15 @@ class TablePreview extends Component
         }
 
         if (in_array($this->variant, self::EXPAND_FIRST_VARIANTS, true)) {
+            // booted() runs on every request; seed once, or the screenshot state
+            // is re-applied on each roundtrip and the preview cannot be clicked
+            // (every expand/collapse would be undone before it renders).
+            if ($this->expansionSeeded) {
+                return;
+            }
+
+            $this->expansionSeeded = true;
+
             $this->tableState->set('rows.expanded', Invoice::query()
                 ->orderBy('id')
                 ->limit(1)
@@ -113,10 +129,22 @@ class TablePreview extends Component
             return $this->imageGalleryTable($table);
         }
 
+        if ($this->variant === 'editable-fill') {
+            return $this->editableFillTable($table);
+        }
+
         $table = $this->usersTable($table);
 
         if ($this->variant === 'paginated') {
             $table->paginated()->perPage(3);
+        }
+
+        // Stacked cards + selection + more rows than one page: what the card
+        // select-all strip, the "select all matching" escalation and the mobile
+        // sort control need in order to be visible at all. Applied after
+        // usersTable(), whose chain ends with ->paginated(false).
+        if ($this->variant === 'stacked-selection') {
+            $table->stackedOnMobile()->paginated()->perPage(2);
         }
 
         return $table;
@@ -140,6 +168,7 @@ class TablePreview extends Component
             ])
             ->defaultSort('number', 'asc')
             ->paginated(false)
+            ->stackedOnMobile()
             ->subRows('items')
             ->subRowColumns($this->invoiceItemColumns($filterable))
             ->subRowsSortable(default: 'line_total', direction: 'desc')
@@ -170,6 +199,7 @@ class TablePreview extends Component
     private function summaryTable(Table $table): Table
     {
         return $table
+            ->stackedOnMobile()
             ->model(Invoice::class)
             ->columns([
                 TextColumn::make('number')->label('Invoice')->sortable(),
@@ -301,6 +331,30 @@ class TablePreview extends Component
             ->paginated(false);
     }
 
+    /**
+     * Inline editing plus the Excel-style fill handle.
+     *
+     * Every editable column type is present because each dehydrates its state
+     * differently and the drag must survive all three; `email` opts out with
+     * ->fillable(false), so the handle must never appear on it.
+     */
+    private function editableFillTable(Table $table): Table
+    {
+        return $table
+            ->model(User::class)
+            ->fillHandle()
+            ->columns([
+                TextColumn::make('name')->label('Name'),
+                TextInputColumn::make('email')->label('Email (not fillable)')->fillable(false),
+                SelectColumn::make('role')
+                    ->label('Role')
+                    ->options(['admin' => 'Administrator', 'editor' => 'Editor', 'viewer' => 'Viewer']),
+                ToggleColumn::make('is_active')->label('Active'),
+            ])
+            ->searchable(false)
+            ->paginated(false);
+    }
+
     private function usersTable(Table $table): Table
     {
         if ($this->variant === 'stacked-actions-collapse') {
@@ -385,6 +439,20 @@ class TablePreview extends Component
             ->defaultSort('created_at', 'desc')
             ->searchable()
             ->selectable()
+            // Double-click a row → open it (a confirmation modal here). Because the
+            // table is selectable, the default trigger is double-click, leaving a
+            // single click for row selection. Behaviour-only: no toolbar button.
+            ->recordActions($this->variant === 'record-actions' ? [
+                RecordAction::make(
+                    Action::make('open')
+                        ->label('Open')
+                        ->icon('outline:eye')
+                        ->requiresConfirmation()
+                        ->modalHeading(fn ($r) => "Opened {$r->name}")
+                        ->modalDescription('Double-clicking the row opened this record.')
+                        ->action(fn () => null)
+                )->onDoubleClick(),
+            ] : [])
             // Right-click a row → a dedicated context menu (declared separately
             // from the ->actions() toolbar above).
             ->rowContextMenu([

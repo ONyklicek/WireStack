@@ -239,21 +239,26 @@ it('reveals all sub-rows after showAllSubRows even with a limit', function () {
     expect($component->getSubRows($first))->toHaveCount(3);
 });
 
-// ─── Flatten config seeds runtime flatten mode ───────────────────────────────
+// ─── flattenSubRows() config feeds the expansion baseline ────────────────────
 
-it('seeds flatten mode from the table config on mount', function () {
+it('opens every row when the deprecated flattenSubRows() config is set', function () {
     $component = new WtSubRowsComponent;
     $component->flatten = true;
     $component->mountWithTable();
 
-    expect($component->flattenMode)->toBeTrue();
+    // No runtime flag is seeded: the config *is* the baseline until the user
+    // chooses otherwise.
+    expect($component->flattenMode)->toBeNull()
+        ->and($component->expandsSubRowsByDefault())->toBeTrue()
+        ->and($component->isRowExpanded(1))->toBeTrue();
 });
 
-it('does not enable flatten mode without the config', function () {
+it('keeps rows closed without the config', function () {
     $component = new WtSubRowsComponent;
     $component->mountWithTable();
 
-    expect($component->flattenMode)->toBeFalse();
+    expect($component->expandsSubRowsByDefault())->toBeFalse()
+        ->and($component->isRowExpanded(1))->toBeFalse();
 });
 
 // ─── Footer render (A5 + C2 end-to-end) ──────────────────────────────────────

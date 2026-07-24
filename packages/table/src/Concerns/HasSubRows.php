@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Exceptions\TableConfigurationException;
 
 /**
  * Trait HasSubRows
@@ -26,10 +27,11 @@ use NyonCode\WireTable\Columns\Column;
  *         ])
  *         ->subRowsDefaultExpanded(false)                // collapsed by default
  *         ->subRowsExpandable(true)                      // user can toggle
- *         ->flattenSubRows(false)                        // show as nested (not flat)
  *         ->subRowsFilterable(true)                      // enable sub-row filtering
  *
- * "Flatten" mode shows all sub-rows as regular table rows (for export/print).
+ * subRowsDefaultExpanded() only sets the starting point: the master chevron in
+ * the expander column header moves that baseline at runtime, and the choice is
+ * remembered per user alongside the column layout (rememberColumns()).
  */
 trait HasSubRows
 {
@@ -51,9 +53,6 @@ trait HasSubRows
 
     /** Whether sub-rows can be expanded/collapsed */
     protected bool $subRowsExpandable = true;
-
-    /** Flatten mode — show all sub-rows as regular rows */
-    protected bool $flattenSubRows = false;
 
     /** Whether sub-rows are independently filterable */
     protected bool $subRowsFilterable = false;
@@ -144,14 +143,15 @@ trait HasSubRows
     }
 
     /**
-     * Flatten sub-rows — display all child rows as regular table rows.
-     * Useful for "show all records" mode or export.
+     * Start with every row's children open.
+     *
+     * @deprecated Flatten mode never flattened anything — it was a second flag
+     *             with the same visible effect as {@see subRowsDefaultExpanded()},
+     *             which it now delegates to.
      */
     public function flattenSubRows(bool $flatten = true): static
     {
-        $this->flattenSubRows = $flatten;
-
-        return $this;
+        return $this->subRowsDefaultExpanded($flatten);
     }
 
     /**
@@ -260,9 +260,12 @@ trait HasSubRows
         return $this->subRowsExpandable;
     }
 
+    /**
+     * @deprecated Use {@see isSubRowsDefaultExpanded()}.
+     */
     public function isFlattenSubRows(): bool
     {
-        return $this->flattenSubRows;
+        return $this->subRowsDefaultExpanded;
     }
 
     public function isSubRowsFilterable(): bool
@@ -324,6 +327,19 @@ trait HasSubRows
     public function getSubRowsQuery(mixed $record, ?array $sort = null, bool $applyLimit = true): Builder
     {
         $relation = $this->subRowRelation;
+
+        // A typo'd relation name would otherwise surface as a bare
+        // "Call to undefined method Model::itemz()" that never mentions subRows().
+        // isRelation() also sees relations registered via resolveRelationUsing(),
+        // which a plain method_exists() would miss.
+        $isRelation = $record instanceof Model
+            ? $record->isRelation($relation)
+            : method_exists($record, $relation);
+
+        if (! $isRelation) {
+            throw TableConfigurationException::subRowRelationMissing($relation, $record::class);
+        }
+
         $query = $record->{$relation}();
 
         if ($this->subRowQueryCallback) {

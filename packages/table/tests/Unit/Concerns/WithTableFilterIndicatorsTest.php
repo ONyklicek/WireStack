@@ -217,3 +217,34 @@ it('shows the reset-all link only with more than one active filter', function ()
         ->call('resetTableFilters')
         ->assertDontSee('Status: Active');
 });
+
+// ─── Mobile chip row (layer E2) ──────────────────────────────────────────────
+
+it('lays the chips out as a horizontal scroller on a phone, wrapping above sm', function () {
+    // Rows of chips would push the table down on a narrow screen; below sm they
+    // scroll sideways instead, and wrap again once there is width to wrap into.
+    $html = Livewire::test(WtfiComponent::class)
+        ->set('tableState.filters.status.value', 'active')
+        ->set('tableState.filters.price.min', '5')
+        ->html();
+
+    expect($html)->toContain('data-testid="filter-indicators"')
+        ->toContain('overflow-x-auto')
+        ->toContain('sm:flex-wrap')
+        ->toContain('sm:overflow-visible');
+});
+
+it('keeps the reset link out of the scroller so it never scrolls away', function () {
+    $html = Livewire::test(WtfiComponent::class)
+        ->set('tableState.filters.status.value', 'active')
+        ->set('tableState.filters.price.min', '5')
+        ->html();
+
+    // The reset button follows the scroller div, pinned with shrink-0, rather
+    // than sitting inside it among the chips.
+    $scroller = strpos($html, 'data-testid="filter-indicators"');
+    $reset = strpos($html, 'data-testid="table-filter-reset"');
+
+    expect($reset)->toBeGreaterThan($scroller)
+        ->and($html)->toContain('shrink-0 whitespace-nowrap');
+});

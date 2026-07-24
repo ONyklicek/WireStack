@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\View;
 use Livewire\Component;
 use Livewire\Livewire;
 use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\Columns\TextInputColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Table;
 
@@ -79,6 +80,33 @@ class RcComponent extends Component
     }
 }
 
+/** Identical tables either side of ->fillHandle(), so the delta is the fill markup. */
+class RcFillComponent extends Component
+{
+    use WithTable;
+
+    public bool $fill = false;
+
+    public function mount(bool $fill = false): void
+    {
+        $this->fill = $fill;
+    }
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(RcRow::class)
+            ->paginated(false)
+            ->fillHandle($this->fill)
+            ->columns([TextInputColumn::make('name')]);
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
@@ -117,6 +145,11 @@ function rcRender(int $cols = 2, bool $copyable = false): Closure
         'cols' => $cols,
         'copyable' => $copyable,
     ])->html();
+}
+
+function rcFillRender(bool $fill): Closure
+{
+    return fn () => Livewire::test(RcFillComponent::class, ['fill' => $fill])->html();
 }
 
 // ─── Setup ───────────────────────────────────────────────────────────────────
@@ -176,4 +209,32 @@ it('still catches per-row renders in non-skeletonable cells (the fuse lives)', f
 
     expect(($plainLarge - $plainSmall) / 8)->toBe(0)              // skeletonised → 0/row
         ->and(($copyLarge - $copySmall) / 8)->toBeGreaterThan(0); // fallback → per-row
+});
+
+// The fill handle is one element per table, positioned over the active cell by
+// JS. Rendering it per cell would be the §7 anti-pattern AND would have to live
+// inside the editable cell partial, which is skeleton-spliced — so this pins the
+// cost at O(1). Measured as the delta between two otherwise identical tables,
+// because the editable cells themselves are not skeletonable and carry their own
+// per-row slope.
+it('adds the fill handle once per table, never once per row', function () {
+    rcSeed(4);
+
+    // Warm-up: @assets and @once emit once per process, so the first render of
+    // each component is inflated by scaffolding that will never render again.
+    // Comparing slopes rather than absolute counts is what makes this robust.
+    rcFillRender(true)();
+    rcFillRender(false)();
+
+    $fillSmall = rcRenderCount(rcFillRender(true));
+    $plainSmall = rcRenderCount(rcFillRender(false));
+
+    rcSeed(8); // 4 → 12 rows
+
+    $fillLarge = rcRenderCount(rcFillRender(true));
+    $plainLarge = rcRenderCount(rcFillRender(false));
+
+    // Eight more rows cost the same with the handle as without it → the fill
+    // markup is O(1). Moving the include inside the row loop breaks this.
+    expect($fillLarge - $fillSmall)->toBe($plainLarge - $plainSmall);
 });

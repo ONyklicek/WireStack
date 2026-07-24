@@ -705,6 +705,46 @@ trait HasColor
     }
 
     /**
+     * Hover-only tint for an interactive (record-action) row: no resting
+     * background, just a same-hue hover so a clickable row hints at itself. The
+     * companion of {@see getRowTintClasses()} for rows that are clickable but not
+     * statically colored. `gray`/neutral returns the table's default neutral
+     * hover so `recordActionHover('gray')` reads the same as no override. Same hue
+     * vocabulary and literal, safelist-friendly classes as the rest of the
+     * palette (they mirror the outline-button hovers).
+     */
+    public static function getRowHoverClasses(string $color): string
+    {
+        return match ($color) {
+            'primary' => 'hover:bg-primary-50 dark:hover:bg-primary-900/20',
+            'blue' => 'hover:bg-blue-50 dark:hover:bg-blue-900/20',
+            'success', 'emerald' => 'hover:bg-emerald-50 dark:hover:bg-emerald-900/20',
+            'green' => 'hover:bg-green-50 dark:hover:bg-green-900/20',
+            'danger', 'red' => 'hover:bg-red-50 dark:hover:bg-red-900/20',
+            'warning', 'amber' => 'hover:bg-amber-50 dark:hover:bg-amber-900/20',
+            'yellow' => 'hover:bg-yellow-50 dark:hover:bg-yellow-900/20',
+            'info', 'cyan' => 'hover:bg-cyan-50 dark:hover:bg-cyan-900/20',
+            'orange' => 'hover:bg-orange-50 dark:hover:bg-orange-900/20',
+            'lime' => 'hover:bg-lime-50 dark:hover:bg-lime-900/20',
+            'teal' => 'hover:bg-teal-50 dark:hover:bg-teal-900/20',
+            'sky' => 'hover:bg-sky-50 dark:hover:bg-sky-900/20',
+            'indigo' => 'hover:bg-indigo-50 dark:hover:bg-indigo-900/20',
+            'violet' => 'hover:bg-violet-50 dark:hover:bg-violet-900/20',
+            'purple' => 'hover:bg-purple-50 dark:hover:bg-purple-900/20',
+            'fuchsia' => 'hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20',
+            'pink' => 'hover:bg-pink-50 dark:hover:bg-pink-900/20',
+            'rose' => 'hover:bg-rose-50 dark:hover:bg-rose-900/20',
+            'slate' => 'hover:bg-slate-50 dark:hover:bg-slate-900/20',
+            'zinc' => 'hover:bg-zinc-50 dark:hover:bg-zinc-900/20',
+            'neutral' => 'hover:bg-neutral-50 dark:hover:bg-neutral-900/20',
+            'stone' => 'hover:bg-stone-50 dark:hover:bg-stone-900/20',
+            'black' => 'hover:bg-gray-100 dark:hover:bg-gray-800/80',
+            'white' => 'hover:bg-gray-50 dark:hover:bg-gray-800',
+            default => 'hover:bg-gray-50 dark:hover:bg-gray-700/30',
+        };
+    }
+
+    /**
      * Get gradient fill classes (`from-* to-*`) for a progress/bar fill.
      *
      * Canonical source for the filled portion of bar/progress surfaces such as

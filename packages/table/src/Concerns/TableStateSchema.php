@@ -34,14 +34,24 @@ final class TableStateSchema
             'filters' => [],
             'columnFilters' => [],
             'selection' => [
+                // 'keys' → the list below *is* the selection.
+                // 'all'  → everything the current filter matches is selected and
+                //          the list holds the exclusions instead, so unticking one
+                //          row out of 128k stays one entry rather than 127 999.
+                'mode' => 'keys',
                 'records' => [],
             ],
             'columns' => [
                 'hidden' => [],
             ],
             'rows' => [
+                // Rows whose expansion *differs* from the baseline below, so a
+                // single list serves both polarities.
                 'expanded' => [],
-                'flattenMode' => false,
+                // The page-wide expansion baseline: null follows the table's
+                // subRowsDefaultExpanded() config, true/false is the user's own
+                // choice (master toggle / view menu) and outlives pagination.
+                'expandAll' => null,
                 'subRowFilters' => [],
                 'subRowSort' => null,
                 'subRowsShowAll' => [],
@@ -95,7 +105,9 @@ final class TableStateSchema
             'selectedRecords' => 'selection.records',
             'hiddenColumns' => 'columns.hidden',
             'expandedRows' => 'rows.expanded',
-            'flattenMode' => 'rows.flattenMode',
+            // Flatten mode was a second, redundant "everything is open" flag; it
+            // now aliases the expansion baseline that replaced it.
+            'flattenMode' => 'rows.expandAll',
             'subRowFilters' => 'rows.subRowFilters',
             // The single-slot `modal.action.*` aliases are intentionally gone:
             // action modals are now a live stack under `modal.actions.{depth}.*`

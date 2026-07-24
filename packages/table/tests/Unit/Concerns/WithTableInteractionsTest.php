@@ -70,6 +70,44 @@ class WtiEditableComponent extends Component
     }
 }
 
+/**
+ * The two branches of updateTableCell() that the concrete editable columns never
+ * reach. TextInputColumn declares no record-less rules — it validates through
+ * its own validate() with the locked record — so only a column configured with
+ * editableRules() is refused before the transaction opens. And nothing else
+ * makes the write itself throw.
+ */
+class WtiHostBranchComponent extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(WtiUser::class)
+            ->paginated(false)
+            ->columns([
+                TextColumn::make('name')->editable()->editableRules(fn () => ['required']),
+                TextColumn::make('status')->editable()->editableUsing(function (): void {
+                    throw new RuntimeException('storage is on fire');
+                }),
+            ]);
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+function wtiHostBranchComponent(): WtiHostBranchComponent
+{
+    $component = new WtiHostBranchComponent;
+    $component->mountWithTable();
+
+    return $component;
+}
+
 class WtiToggleSelectComponent extends Component
 {
     use WithTable;
@@ -519,6 +557,24 @@ it('fails to update when the value is invalid', function () {
 
 it('fails to update a missing record', function () {
     expect(wtiEditableComponent()->updateTableCell('999', 'name', 'X')['success'])->toBeFalse();
+});
+
+it('rejects a value failing the record-less rules before it opens a transaction', function () {
+    $result = wtiHostBranchComponent()->updateTableCell('1', 'name', '');
+
+    expect($result['success'])->toBeFalse()
+        ->and($result['errors'] ?? [])->not->toBeEmpty()
+        ->and(WtiUser::find(1)->name)->toBe('Carol');
+});
+
+// A failing write is answered, not raised: the client is an Alpine cell awaiting
+// a result shape, and an escaped exception would leave it stuck in `saving`.
+it('answers a save that throws instead of letting the exception escape', function () {
+    $result = wtiHostBranchComponent()->updateTableCell('1', 'status', 'closed');
+
+    expect($result['success'])->toBeFalse()
+        ->and($result['message'])->toContain('storage is on fire')
+        ->and(WtiUser::find(1)->status)->toBe('open');
 });
 
 it('validates a cell value without saving', function () {

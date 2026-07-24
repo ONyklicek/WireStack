@@ -100,7 +100,7 @@ class NumberRangeFilter extends Filter
         }
 
         if ($this->queryCallback) {
-            return ($this->queryCallback)($query, $value);
+            return $this->applyQueryCallback($query, $this->normalizeValue($value), $value);
         }
 
         $column = $this->getColumn();

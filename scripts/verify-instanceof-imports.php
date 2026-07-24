@@ -60,6 +60,51 @@ function importMap(string $src): array
     return $imports;
 }
 
+/**
+ * Every class name used as an `instanceof` operand, as [name, isFullyQualified].
+ *
+ * Tokenised rather than pattern-matched. A regex over the raw source also finds
+ * `instanceof` inside comments and strings, and one comment explaining an
+ * "explicit instanceof list" was enough to fail the gate against a name that was
+ * never code — a false positive that makes the gate noise rather than a signal.
+ * PHP's own lexer is the only thing that reliably knows which is which.
+ *
+ * A dynamic operand (`$x instanceof $class`) yields no name and is skipped:
+ * there is nothing to resolve at read time.
+ *
+ * @return array<int, array{string, bool}>
+ */
+function instanceofTargets(string $src): array
+{
+    $tokens = token_get_all($src);
+    $count = count($tokens);
+    $targets = [];
+
+    for ($i = 0; $i < $count; $i++) {
+        if (! is_array($tokens[$i]) || $tokens[$i][0] !== T_INSTANCEOF) {
+            continue;
+        }
+
+        // Step over whitespace and comments to reach the operand itself.
+        for ($j = $i + 1; $j < $count; $j++) {
+            $token = $tokens[$j];
+
+            if (is_array($token) && in_array($token[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
+                continue;
+            }
+
+            if (is_array($token) && in_array($token[0], [T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED], true)) {
+                $targets[] = [ltrim($token[1], '\\'), $token[0] === T_NAME_FULLY_QUALIFIED];
+            }
+
+            // Anything else is a variable, a parenthesis or `static` — not a name.
+            break;
+        }
+    }
+
+    return $targets;
+}
+
 /** Resolve an instanceof operand the way PHP will at runtime. */
 function resolveTarget(string $name, bool $fullyQualified, string $namespace, array $imports): string
 {
@@ -115,15 +160,13 @@ foreach ($rii as $file) {
     $namespace = trim($nsMatch[1] ?? '');
     $imports = importMap($src);
 
-    preg_match_all('/instanceof\s+(\\\\?)([A-Za-z_][A-Za-z0-9_\\\\]*)/', $src, $matches, PREG_SET_ORDER);
-
-    foreach ($matches as [, $leadingSlash, $name]) {
+    foreach (instanceofTargets($src) as [$name, $fullyQualified]) {
         if (in_array($name, ['self', 'static', 'parent'], true)) {
             continue;
         }
 
         $checked++;
-        $resolved = resolveTarget($name, $leadingSlash === '\\', $namespace, $imports);
+        $resolved = resolveTarget($name, $fullyQualified, $namespace, $imports);
 
         if (class_exists($resolved) || interface_exists($resolved) || trait_exists($resolved)) {
             continue;

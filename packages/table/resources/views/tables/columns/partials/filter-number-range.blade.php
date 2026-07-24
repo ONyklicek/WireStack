@@ -13,7 +13,7 @@
 <div class="flex gap-1 items-center">
     <input
         type="number"
-        wire:model.live.debounce.{{ $debounce }}ms="tableState.columnFilters.{{ $name }}.min"
+        wire:model.live.debounce.{{ $debounce }}ms="{{ $statePath }}.min"
         @if($minValue !== null) min="{{ $minValue }}" @endif
         @if($maxValue !== null) max="{{ $maxValue }}" @endif
         @if($step) step="{{ $step }}" @endif
@@ -24,7 +24,7 @@
     <span class="text-gray-400 text-xs flex-shrink-0">–</span>
     <input
         type="number"
-        wire:model.live.debounce.{{ $debounce }}ms="tableState.columnFilters.{{ $name }}.max"
+        wire:model.live.debounce.{{ $debounce }}ms="{{ $statePath }}.max"
         @if($minValue !== null) min="{{ $minValue }}" @endif
         @if($maxValue !== null) max="{{ $maxValue }}" @endif
         @if($step) step="{{ $step }}" @endif

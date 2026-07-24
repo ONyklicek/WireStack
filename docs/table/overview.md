@@ -147,7 +147,7 @@ These are automatically synced with the browser via Livewire:
 | `$selectedRecords` | `array` | `[]` | Primary keys of selected records |
 | `$hiddenColumns` | `array` | `[]` | Column names hidden by user |
 | `$expandedRows` | `array` | `[]` | Primary keys of expanded rows (sub-rows) |
-| `$flattenMode` | `bool` | `false` | Show all sub-rows inline |
+| `$flattenMode` | `bool\|null` | `null` | Expansion baseline (`null` = follow `subRowsDefaultExpanded()`) |
 
 ### Livewire Methods (wire: callable)
 
@@ -166,7 +166,7 @@ These are called from Alpine.js or Livewire directives in the Blade views:
 | `selectAll()` | "Select all" toggled |
 | `deselectAll()` | "Deselect all" clicked |
 | `expandRow($key)` | Row expand/collapse |
-| `toggleFlattenMode()` | Flatten sub-rows toggle |
+| `toggleAllRowExpansion()` | Master expand/collapse (`toggleFlattenMode()` is a deprecated alias) |
 | `executeAction($name, $key)` | Action button clicked |
 | `executeBulkAction($name)` | Bulk action clicked |
 | `updateCell($column, $key, $value)` | Inline edit committed |
@@ -313,6 +313,18 @@ Search uses a database-aware strategy:
 | Simple | 100k-1M records, sequential browsing | No total count, no page numbers |
 | Cursor | > 1M records, real-time data | No random page access, opaque cursors |
 
+`perPageOptions()` always offers the configured `perPage()`, so
+`->perPage(3)` against the default options renders a select that can actually
+show `3` instead of contradicting the rows on screen. A per-page value arriving
+from the client that the table does not offer falls back to `perPage()`.
+
+**Out-of-range pages re-anchor themselves.** Standard pagination clamps to the
+last populated page whenever the stored page points past the end of the result
+set — a shared `?page=5` link, a filter that shrank the set, rows deleted by
+somebody else — so a page that no longer exists never renders as an empty
+table. Simple and cursor pagination have no total to clamp against and are left
+as-is.
+
 ### Selection (Bulk Actions)
 
 ```php
@@ -400,6 +412,8 @@ be combined on the same table:
 ```php
 // Stack columns vertically on mobile; 2nd arg is the breakpoint (default 'md')
 ->stackedOnMobile(bool $stacked = true, string $breakpoint = 'md')   // 'sm','md','lg','xl'
+->bulkMaxRecords(?int $max)                                          // rows one bulk action may load (default 1000, null = no cap)
+->mobileCard(Closure $callback)                                      // name the card's title/subtitle/metric/meta
 
 // Collapse the mobile card's row actions into one dropdown group (from N actions up)
 ->collapseActionsOnMobile(bool $collapse = true, int $threshold = 3)
@@ -563,6 +577,13 @@ TextInputColumn::make('name')
         Cache::forget("user:{$record->id}");
     })
 ```
+
+### Fill Handle
+
+`Table::fillHandle()` adds an Excel-style handle to editable cells: drag a value
+down over the rows below and the whole range is written in one request. Opt-in,
+with `Column::fillable(false)` to exclude a column. See
+[Fill Handle](columns/fill-handle.md).
 
 ---
 

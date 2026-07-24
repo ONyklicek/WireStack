@@ -143,11 +143,16 @@ final class TableQueryService
                 // Sub-row scoped filter — constrains children, applied below as
                 // one combined whereHas + as a constraint on rollup aggregates.
                 $subRowScopedFilters[] = ['filter' => $filter, 'value' => $value];
-            } elseif ($filter->getQueryCallback() !== null) {
-                $customFilterCallbacks[] = ['callback' => $filter->getQueryCallback(), 'value' => $value];
-            } elseif ($filter->bypassesPlanner() || (is_array($value) && ! $filter->isMultiple())) {
-                // Multi-field filter (e.g. NumberRange, DateFilter range) or a
-                // filter whose constraint the planner can't express — route through apply()
+            } elseif ($filter->getQueryCallback() !== null
+                || $filter->bypassesPlanner()
+                || (is_array($value) && ! $filter->isMultiple())) {
+                // A custom ->query() callback, a multi-field filter (NumberRange,
+                // DateFilter range) or a constraint the planner can't express.
+                // All route through the filter's own apply(), the single owner of
+                // value normalization and callback invocation — calling the raw
+                // callback here instead skipped that normalization, so a ternary
+                // callback saw the string 'false' (truthy) and both options
+                // produced the same rows.
                 $customFilterCallbacks[] = [
                     'callback' => fn (Builder $q, mixed $v) => $filter->apply($q, $v),
                     'value' => $value,

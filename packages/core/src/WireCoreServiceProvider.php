@@ -7,6 +7,7 @@ namespace NyonCode\WireCore;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
+use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Actions\View\BulkButtonComponent;
@@ -70,7 +71,32 @@ class WireCoreServiceProvider extends PackageServiceProvider
             ->hasViews()
             ->hasMigrations()
             ->hasTranslations('resources/lang')
-            ->hasAbout();
+            ->hasAssets('dist')
+            ->hasAbout()
+            ->hasInstallCommand(function (InstallCommand $command) {
+                $command
+                    ->publishConfig()
+                    ->publishMigrations()
+                    ->publishViews()
+                    ->publishTranslations()
+                    ->publishAssets();
+            });
+    }
+
+    /**
+     * Extra rows for this package's `php artisan about` section (the toolkit
+     * already prepends "Version"). Values are closures so config resolves at
+     * boot, not at declaration time.
+     *
+     * @return array<string, string|\Closure>
+     */
+    public function aboutData(): array
+    {
+        return [
+            'Notifications' => fn (): string => (string) config('wire-core.notifications.default', 'session'),
+            'Icons' => fn (): string => (string) config('wire-core.icons.default_set', 'default'),
+            'Audit' => fn (): string => config('wire-core.audit.enabled', true) ? 'enabled' : 'disabled',
+        ];
     }
 
     // ─── Foundation ─────────────────────────────────────────────

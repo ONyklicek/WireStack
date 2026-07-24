@@ -12,6 +12,11 @@ return [
     'record_conflict' => 'Záznam byl mezitím změněn jiným uživatelem. Aktuální hodnota byla načtena.',
     'validation_failed' => 'Validace selhala',
     'save_error' => 'Chyba při ukládání: :error',
+    'column_not_fillable' => 'Sloupec nelze vyplnit tažením',
+    'fill_not_enabled' => 'Vyplňování tažením není pro tuto tabulku povoleno',
+    'fill_error' => 'Vyplnění selhalo: :error',
+    'fill_partial' => 'Uloženo :filled z :total řádků',
+    'fill_handle' => 'Tažením vyplníte řádky níže',
     'select_placeholder' => 'Vyberte...',
     'from' => 'Od',
     'to' => 'Do',
@@ -71,14 +76,27 @@ return [
     'actions_label' => 'Akce',
     'toggle_columns' => 'Přepnout sloupce',
     'reset_columns' => 'Obnovit sloupce',
+    'view_options' => 'Zobrazení',
+    'columns_section' => 'Sloupce',
+    'details_section' => 'Detaily',
+    'expand_all_rows' => 'Rozbalit u všech řádků',
     'export_label' => 'Export',
     'import_label' => 'Import',
     'import_result' => 'Naimportováno :imported řádků, :failed selhalo.',
+
+    'bulk_too_many' => 'Výběr :count záznamů překračuje limit :max pro jednu akci. Zužte filtr nebo zvyšte bulkMaxRecords().',
 
     // Selection
     'select_all' => 'Vybrat vše',
     'select_row' => 'Vybrat řádek',
     'deselect' => 'Zrušit výběr',
+    'selection_on_page' => 'Vybráno :count.',
+    'selection_all_matching' => 'Vybráno všech :count záznamů odpovídajících filtru.',
+    'selection_select_all_matching' => 'Vybrat všech :count',
+    'selection_only_this_page' => 'Jen tuto stránku',
+    'select_all_on_page' => 'Vybrat vše na této stránce',
+    'selection_page_of_total' => ':page na této stránce · :total celkem',
+    'selection_selected_of_total' => 'vybráno :count z :total',
 
     // Pagination
     'show' => 'Zobrazit',
@@ -88,6 +106,10 @@ return [
     'pagination_previous' => 'Předchozí stránka',
     'pagination_next' => 'Další stránka',
     'pagination_goto' => 'Přejít na stránku :page',
+
+    'sort_by' => 'Řadit podle',
+    'sort_asc' => 'vzestupně',
+    'sort_desc' => 'sestupně',
 
     // Search
     'search' => 'Hledat',
@@ -105,12 +127,11 @@ return [
     'collapse' => 'Sbalit',
     'expand_all' => 'Rozbalit vše',
     'collapse_all' => 'Sbalit vše',
-    'group_view' => 'Zobrazení skupin',
-    'show_all' => 'Zobrazit vše',
     'reset' => 'Reset',
     'no_sub_rows' => 'Žádné podzáznamy',
     'details' => 'Detail',
     'actions' => 'Akce',
+    'sub_rows_count' => '{1}:count položka|[2,4]:count položky|[5,*]:count položek',
     'show_more_count' => 'Zobrazit dalších :count',
 
     // Inline editable

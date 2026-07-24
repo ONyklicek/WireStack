@@ -22,6 +22,13 @@ use NyonCode\WireTable\Services\SubRowFilters;
  * filter bar and "show all" call, so they stay on the Livewire component. The
  * filter *rules* are {@see SubRowFilters}'.
  *
+ * Expansion is one state, not two. A *baseline* says whether rows start open
+ * (`rows.expandAll`, falling back to the table's subRowsDefaultExpanded()), and
+ * `rows.expanded` lists only the rows that differ from it. The master toggle
+ * flips the baseline, so "expand everything" survives pagination and applies to
+ * rows the user has never seen — the behaviour the old, page-scoped expand-all
+ * and the redundant flatten flag only approximated between them.
+ *
  * The subtlety worth reading before touching getSubRows(): children are
  * eager-loaded for the whole page in one query to avoid N+1, but that fast path
  * is only safe when no sub-row filter is active and the loaded set is complete.
@@ -49,42 +56,63 @@ trait CanExpandSubRows
     }
 
     /**
-     * Expand all rows to show sub-rows.
+     * Whether rows start expanded: the user's own choice when they made one,
+     * the table's subRowsDefaultExpanded() config otherwise.
      */
-    public function expandAllRows(): void
+    public function expandsSubRowsByDefault(): bool
     {
-        $table = $this->getTable();
-        if (! $table->hasSubRows()) {
-            return;
-        }
+        $override = $this->tableState->get('rows.expandAll');
 
-        if ($table->isSubRowsDefaultExpanded()) {
-            // Default expanded: clear the "collapsed" list
-            $this->tableState->set('rows.expanded', []);
-        } else {
-            $records = $this->getTableRecords();
-            $this->tableState->set('rows.expanded', $records->pluck($table->getPrimaryKey())
-                ->map(fn ($k) => (string) $k)
-                ->all());
-        }
+        return $override === null
+            ? $this->getTable()->isSubRowsDefaultExpanded()
+            : (bool) $override;
     }
 
     /**
-     * Collapse all expanded rows.
+     * Move the expansion baseline, dropping the per-row exceptions it makes
+     * meaningless.
+     *
+     * Deliberately reads no records: the old page-scoped version resolved the
+     * page first, which both left rows on other pages behind and consumed the
+     * record cache before eagerLoadSubRows() could see the new expansion (one
+     * query per open parent, and unfiltered children when the caller's own
+     * query had already eager-loaded the relation).
+     */
+    public function setSubRowsExpandAll(bool $expand): void
+    {
+        if (! $this->getTable()->hasSubRows()) {
+            return;
+        }
+
+        $this->tableState->set('rows.expandAll', $expand);
+        $this->tableState->set('rows.expanded', []);
+
+        $this->persistViewPreferences();
+    }
+
+    /**
+     * Master expand/collapse — the chevron above the row chevrons, and what
+     * ⌥/Alt-clicking a row chevron triggers.
+     */
+    public function toggleAllRowExpansion(): void
+    {
+        $this->setSubRowsExpandAll(! $this->expandsSubRowsByDefault());
+    }
+
+    /**
+     * Expand every row, including rows on pages not yet visited.
+     */
+    public function expandAllRows(): void
+    {
+        $this->setSubRowsExpandAll(true);
+    }
+
+    /**
+     * Collapse every row.
      */
     public function collapseAllRows(): void
     {
-        $table = $this->getTable();
-
-        if ($table->hasSubRows() && $table->isSubRowsDefaultExpanded()) {
-            // Default expanded: add all to "collapsed" list
-            $records = $this->getTableRecords();
-            $this->tableState->set('rows.expanded', $records->pluck($table->getPrimaryKey())
-                ->map(fn ($k) => (string) $k)
-                ->all());
-        } else {
-            $this->tableState->set('rows.expanded', []);
-        }
+        $this->setSubRowsExpandAll(false);
     }
 
     /**
@@ -93,22 +121,19 @@ trait CanExpandSubRows
     public function isRowExpanded(mixed $recordKey): bool
     {
         $expanded = $this->tableState->get('rows.expanded', []);
-        $isInList = in_array((string) $recordKey, $expanded, true);
+        $isException = in_array((string) $recordKey, $expanded, true);
 
-        // When default expanded, the expandedRows list tracks *collapsed* rows
-        if ($this->getTable()->isSubRowsDefaultExpanded()) {
-            return ! $isInList;
-        }
-
-        return $isInList;
+        // Against a default-expanded baseline the list tracks *collapsed* rows.
+        return $this->expandsSubRowsByDefault() ? ! $isException : $isException;
     }
 
     /**
-     * Toggle flatten mode (show all sub-rows as regular rows).
+     * @deprecated Flatten mode is now the expansion baseline — use
+     *             {@see toggleAllRowExpansion()}.
      */
     public function toggleFlattenMode(): void
     {
-        $this->tableState->set('rows.flattenMode', ! $this->tableState->get('rows.flattenMode'));
+        $this->toggleAllRowExpansion();
     }
 
     /**
@@ -200,11 +225,10 @@ trait CanExpandSubRows
             return;
         }
 
-        // Only load sub-rows that will be displayed.
-        $flatten = (bool) $this->tableState->get('rows.flattenMode');
-        $target = $flatten
-            ? $collection
-            : $collection->filter(fn ($record) => $this->isRowExpanded($record->getKey()));
+        // Only load sub-rows that will be displayed. isRowExpanded() already
+        // folds in the baseline, so an "everything open" table naturally
+        // targets the whole page.
+        $target = $collection->filter(fn ($record) => $this->isRowExpanded($record->getKey()));
 
         if ($target->isEmpty()) {
             return;
@@ -290,10 +314,30 @@ trait CanExpandSubRows
 
     /**
      * Reset sub-row filters.
+     *
+     * Clears each slot back to its empty value rather than dropping the keys —
+     * emptying the array would undo the mount-time seed, and a select control
+     * whose entangled path no longer exists silently stops writing (the same
+     * entangle-no-op the seed exists to avoid).
      */
     public function resetSubRowFilters(): void
     {
-        $this->tableState->set('rows.subRowFilters', []);
+        $table = $this->getTable();
+
+        if (! $table->isSubRowsFilterable()) {
+            $this->tableState->set('rows.subRowFilters', []);
+
+            return;
+        }
+
+        $cleared = [];
+        foreach ($table->getSubRowColumns() as $column) {
+            if ($column->isFilterable()) {
+                $cleared[$column->getName()] = $column->filterExpectsArray() ? [] : null;
+            }
+        }
+
+        $this->tableState->set('rows.subRowFilters', $cleared);
     }
 
     /**
@@ -375,7 +419,12 @@ trait CanExpandSubRows
     {
         $table = $this->getTable();
 
-        if (! $table->isSubRowColumnSortable($column)) {
+        // isSubRowColumnSortable() also allows the configured default column, so
+        // getSubRowsQuery() can apply the default sort on a table whose headers
+        // are not clickable. A user-triggered sort must not ride that leniency:
+        // if the table is not interactively sortable, refuse it outright, or a
+        // crafted request could flip the direction of a "non-sortable" table.
+        if (! $table->isSubRowsSortable() || ! $table->isSubRowColumnSortable($column)) {
             return;
         }
 

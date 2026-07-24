@@ -10,7 +10,7 @@
 
 @include('wire-core::partials.searchable-select', [
     'selectId' => 'colfilter-'.$name,
-    'statePath' => 'tableState.columnFilters.'.$name,
+    'statePath' => $statePath,
     'options' => $filter->getOptions(),
     'placeholder' => $placeholder,
     'multiple' => true,

@@ -8,7 +8,7 @@
 
 <input
     type="text"
-    wire:model.live.debounce.{{ $debounce }}ms="tableState.columnFilters.{{ $name }}"
+    wire:model.live.debounce.{{ $debounce }}ms="{{ $statePath }}"
     placeholder="{{ $placeholder }}"
     class="{{ $controlClasses }}"
 >

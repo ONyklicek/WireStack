@@ -40,4 +40,30 @@ final class TableConfigurationException extends InvalidArgumentException impleme
             "Unknown summary type [{$type}]. Valid types: ".implode(', ', $valid).'.'
         );
     }
+
+    public static function recordActionInRowActions(): self
+    {
+        return new self(
+            'A RecordAction cannot be registered in actions(). '.
+            'Action::make()->onDoubleClick() returns a RecordAction — pass it to '.
+            'recordAction()/recordActions() instead.'
+        );
+    }
+
+    public static function cannotConfigureReferencedRecordAction(string $method, string $name): self
+    {
+        return new self(
+            "Cannot call {$method}() on the record action referencing [{$name}]: a ".
+            'reference by name has no action of its own to configure. Configure it '.
+            'where it is declared in actions(), or wrap an Action instead of naming one.'
+        );
+    }
+
+    public static function subRowRelationMissing(string $relation, string $model): self
+    {
+        return new self(
+            "subRows('{$relation}') expects a relationship method [{$relation}()] on ".
+            "[{$model}], but none exists. Check the spelling, or define the relationship."
+        );
+    }
 }

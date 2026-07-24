@@ -6,6 +6,7 @@ namespace NyonCode\WireForms;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Route;
+use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireForms\Forms\Form;
@@ -38,7 +39,14 @@ class WireFormsServiceProvider extends PackageServiceProvider
             ->hasViews()
             ->hasAssets('dist')
             ->hasTranslations('resources/lang')
-            ->hasAbout();
+            ->hasAbout()
+            ->hasInstallCommand(function (InstallCommand $command) {
+                $command
+                    ->publishConfig()
+                    ->publishViews()
+                    ->publishTranslations()
+                    ->publishAssets();
+            });
     }
 
     /**

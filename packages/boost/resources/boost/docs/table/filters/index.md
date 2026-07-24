@@ -88,6 +88,35 @@ SelectFilter::make('activity_level')
     })
 ```
 
+#### What `$value` Contains
+
+The shape depends on the filter type — a range filter hands you an array, a
+ternary hands you a real boolean:
+
+| Filter | `$value` | Example |
+|--------|----------|---------|
+| `TextFilter` | `string` — what the user typed | `'invoice'` |
+| `SelectFilter` | `string\|int` option key | `'active'` |
+| `SelectFilter` + `->multiple()` | `array` of option keys | `['active', 'pending']` |
+| `TernaryFilter` | `bool` — `true` for Yes, `false` for No | `false` |
+| `NumberRangeFilter` | `array{min, max}` — either side may be `''` | `['min' => '10', 'max' => '']` |
+| `DateFilter` | `string` date | `'2026-07-23'` |
+| `DateFilter` + `->range()` | `array{from, to}` | `['from' => '2026-01-01', 'to' => '']` |
+| `DateFilter` + `->month()` | `string` `'YYYY-MM'` | `'2026-07'` |
+
+The callback is only called while the filter is **active** — an empty state
+(`null`, `''`, `[]`, or "All" on a ternary) clears the filter and never reaches
+your closure, so you do not need to guard against it. The multi-field filters
+are the exception in one direction: a range stays active while *either* side is
+filled, so check each bound before using it.
+
+A third argument carries the raw submitted state before normalization, for the
+rare callback that needs the transport form:
+
+```php
+->query(function (Builder $query, mixed $value, mixed $raw) { … })
+```
+
 ### Visibility & Permissions
 
 ```php

@@ -440,7 +440,7 @@ class Filter implements Htmlable
         }
 
         if ($this->queryCallback) {
-            return ($this->queryCallback)($query, $value);
+            return $this->applyQueryCallback($query, $this->normalizeValue($value), $value);
         }
 
         // If filter has a relation, it should be handled by WithTable::applyFilters
@@ -520,6 +520,38 @@ class Filter implements Htmlable
         }
 
         return $raw;
+    }
+
+    /**
+     * Coerce an extracted value into the canonical form the query layer — and a
+     * ->query() callback — should receive.
+     *
+     * Identity by default: most filters submit the value they mean. Concrete
+     * filters override when their UI state is a transport stand-in for another
+     * type (TernaryFilter's 'true'/'false' option keys for a boolean), so every
+     * consumer sees one canonical value instead of re-decoding the transport
+     * form — which is how a callback ended up branching on the truthy string
+     * 'false'.
+     */
+    public function normalizeValue(mixed $value): mixed
+    {
+        return $value;
+    }
+
+    /**
+     * Canonical invocation of the ->query() callback.
+     *
+     * The callback receives the normalized value; the raw submitted state is
+     * passed as a third argument for callbacks that need the transport form
+     * (a closure that does not declare it simply ignores it).
+     *
+     * @param  Builder<Model>  $query
+     * @return Builder<Model>
+     */
+    protected function applyQueryCallback(Builder $query, mixed $value, mixed $raw): Builder
+    {
+        /** @var Builder<Model> */
+        return ($this->queryCallback)($query, $value, $raw);
     }
 
     /**

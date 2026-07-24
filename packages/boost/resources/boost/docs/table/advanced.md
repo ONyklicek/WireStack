@@ -54,23 +54,19 @@ $table
 
 Users see a chevron icon on the left. Clicking expands the row to show child rows below.
 
-### Expand All by Default
+### Expansion Baseline
+
+`subRowsDefaultExpanded()` sets where rows *start*; the master chevron in the
+expander column header moves that baseline at runtime, and the choice outlives
+pagination:
 
 ```php
 $table->subRowsDefaultExpanded()
 ```
 
-All rows start expanded.
-
-### Flatten Mode
-
-Show all sub-rows inline without expand/collapse — flat view:
-
-```php
-$table->flattenSubRows()
-```
-
-Users can toggle flatten mode via `toggleFlattenMode()` Livewire method.
+`flattenSubRows()` is a deprecated alias for the same thing — it never flattened
+anything, it only opened every row. `toggleFlattenMode()` still works and now
+calls `toggleAllRowExpansion()`.
 
 ### Sub-Row Relation with Eager Loading
 
@@ -124,7 +120,7 @@ $table->subRowView('components.order-items-detail')
 | Property | Type | Description |
 |----------|------|-------------|
 | `$expandedRows` | `array` | Keys of expanded parent records |
-| `$flattenMode` | `bool` | Flat view toggle |
+| `$flattenMode` | `bool\|null` | Expansion baseline (deprecated alias of `rows.expandAll`) |
 
 ### Sub-Rows API
 
@@ -137,7 +133,7 @@ $table->subRowView('components.order-items-detail')
 ->subRowsExpandable(bool $expandable = true)
 ->subRowsLimit(?int $limit)             // max sub-rows before "show more"
 ->subRowsToggleLabel(?string $label)
-->flattenSubRows(bool $flatten = true)
+->flattenSubRows(bool $flatten = true)   // deprecated: subRowsDefaultExpanded()
 ->hasSubRows(): bool
 ->getSubRowColumns(): array
 ```
@@ -420,7 +416,23 @@ $table->cacheQuery(ttl: 60)                    // 60 seconds, auto-generated key
 $table->cacheQuery(ttl: 300, key: 'users')     // 5 minutes, custom key
 ```
 
-Cache key includes a hash of the current state (search, filters, sort, page), so different states cache independently. The current page is always part of the key — including with a custom `key:` — since pagination is applied inside the cached callback.
+A cache key is two parts: a **namespace** saying which table this is, and a
+**state fingerprint** saying which view of it. The namespace is the query's SQL
+and bindings by default, or whatever you pass as `key:`. The fingerprint covers
+search, filters, column filters, sort, per-page and the page number, and is
+appended to *every* namespace — a custom `key:` scopes entries, it does not
+replace their identity.
+
+That matters because a cached table serves a paginated *slice*, not a query:
+`perPage` and the page are applied inside the cached callback, so they never
+reach the SQL, and a custom key knows nothing about the sort or the active
+filters. If any of those were missing from the key, the table would freeze for
+the whole TTL — changing the page size would keep serving the rows cached under
+the same key.
+
+To scope entries by tenant or user, either pass `key:` or override
+`generateQueryCacheKey()` on the component; the state fingerprint is appended
+either way.
 
 Uses `Cache::remember()` — works with any Laravel cache driver.
 
@@ -577,6 +589,106 @@ dropdown (dividers are dropped in the merge), and a card with only one visible
 action still shows that action inline. The dropdown inherits the table's
 `sheetOnMobile()` / `mobileBreakpoint()` settings (bottom-sheet on small screens
 by default).
+
+### The Card's Anatomy
+
+A card is a record, not the column order in disguise. Five named slots carry the
+hierarchy — what this is, whose it is, how much — and the rest drops into the
+label/value grid below:
+
+```text
+┌──────────────────────────────────────────────┐
+│ INV-1001                        9 350 Kč  ⋮  │  title · metric · actions
+│ Northwind Traders                            │  subtitle
+│ [ paid ]                                     │  meta
+│ ─────────────────────────────────────────    │
+│ NOTE            REFERENCE                    │  everything else
+│ First order     2026/114                     │
+└──────────────────────────────────────────────┘
+```
+
+Nothing has to be declared for this: the slots are derived from the columns you
+already have.
+
+| Slot | Derived from |
+| ---- | ------------ |
+| `title` | the first visible column |
+| `metric` | the last right-aligned column — what `money()` and `numeric()` produce |
+| `meta` | badge columns |
+| `subtitle` | the first column no other slot claimed |
+| detail grid | everything left |
+
+When the derivation guesses wrong, say so — per column:
+
+```php
+TextColumn::make('total')->money()->mobileMetric(),
+BadgeColumn::make('status')->mobileMeta(),
+TextColumn::make('reference')->mobileDetail(),   // keep it out of the header
+```
+
+…or for the whole table, which wins over both derivation and per-column calls:
+
+```php
+use NyonCode\WireTable\Support\MobileCardConfig;
+
+$table->mobileCard(fn (MobileCardConfig $card) => $card
+    ->title('number')
+    ->subtitle('customer')
+    ->metric('total')
+    ->meta(['status', 'due_at']));
+```
+
+The metric is set right on the title line in tabular figures, so a column of
+amounts can be compared down the edge instead of being read one card at a time.
+
+### Sub-Rows on a Card
+
+Expanded children render as a list rather than the desktop's nested table: name
+on the left, its figure on the same right edge as the card's own metric, the
+supporting detail underneath.
+
+```text
+│ 3 items                                   ⌄  │
+│ ──────────────────────────────────────────── │
+│ 27" monitor                    5 600 Kč   ⋮  │
+│ Unit: 5 600 Kč                               │
+│ Mechanical keyboard            2 400 Kč   ⋮  │
+│ Unit: 1 200 Kč                               │
+│ Subtotal                       9 350 Kč      │
+```
+
+Per-parent subtotals, the "Show N more" affordance and per-child actions all
+work here — they used to be desktop-only, while the card flattened every child
+into one indistinguishable grid.
+
+Child actions always collapse into a single `⋮` trigger, whatever
+`collapseActionsOnMobile()` says: a child line is narrower than the card holding
+it, and two labelled buttons there crush the product name to an ellipsis.
+
+The collapsed toggle names the child count (`3 items`) when the number is already
+in memory, and falls back to `Details` when it is not — a collapsed row has no
+eager-loaded children, so counting would cost one query per card. Add
+`->withCount('items')` to the base query and every card names its count for free.
+
+### Totals on a Card
+
+The desktop totals live in a `<tfoot>` of the table the card layout hides, so a
+stacked table used to show no totals at all — in an accounting table, the number
+the user came for. They now render below the cards as label/value rows, on the
+same right edge as each card's metric, with the same *All / This page /
+Selection* scope toggle the desktop footer has:
+
+```text
+│ INV-1003                          8 450 Kč │
+├────────────────────────────────────────────┤
+│ Showing:                  [ All ][This page]│
+│ Total items · Items                       7 │
+│ Grand total · Total              35 900 Kč  │
+│ Average · Total                  11 967 Kč  │
+```
+
+Nothing to configure — a column with `summarize*()` gets its total here as well
+as in the table footer, and sub-row grand totals follow the same way.
 
 ### Column Breakpoints
 
@@ -753,7 +865,7 @@ Tracked parameters:
 | `sort`, `direction` | sort state | only sortable column names are accepted |
 | `per_page` | page size | only values from `perPageOptions()` are accepted |
 | `filter_{name}` | filter value | one parameter per filter |
-| `page` | current page | handled by Livewire's `WithPagination` |
+| `page` | current page | handled by Livewire's `WithPagination`; a page past the end re-anchors to the last populated one |
 
 Multi-field filters expand into suffixed parameters: `NumberRangeFilter`
 becomes `filter_price_min` / `filter_price_max`, a range `DateFilter`
@@ -762,7 +874,9 @@ becomes `filter_created_at_from` / `filter_created_at_to`. Filters using
 
 Incoming URL values are validated against the table configuration —
 unknown sort columns, per-page values outside `perPageOptions()`, and
-parameters for unknown or hidden filters are ignored.
+parameters for unknown or hidden filters are ignored. The same check runs on
+the live `wire:model` path, so a crafted Livewire payload cannot ask for a page
+size the table does not offer.
 
 ### Multiple Tables Per Page
 
@@ -815,7 +929,7 @@ level without brittle CSS.
 | Copyable cell button | `data-testid="cell-copy"` |
 | Button column cell | `data-testid="column-button"` |
 | Polling toggle | `data-testid="polling-toggle"` |
-| Sub-row controls | `data-testid="subrows-expand-all"` / `subrows-collapse-all` / `subrows-reset-filters` / `subrows-scope-toggle` / `subrows-show-more` / `subrows-sort-{column}` |
+| Sub-row controls | `data-testid="subrows-master-toggle"` / `subrows-expand-all-rows` / `subrows-reset-filters` / `subrows-show-more` / `subrows-sort-{column}` |
 | Summary scope toggle | `data-testid="summary-scope-{value}"` |
 
 Actions are also targetable by their visible label, and filter options by their
@@ -1004,7 +1118,7 @@ class OrderTable extends Component
 
                 TernaryFilter::make('has_invoice')
                     ->label('Invoice Generated')
-                    ->query(fn (Builder $q, $value) => $value === '1'
+                    ->query(fn (Builder $q, bool $value) => $value
                         ? $q->whereNotNull('invoice_id')
                         : $q->whereNull('invoice_id')),
             ])

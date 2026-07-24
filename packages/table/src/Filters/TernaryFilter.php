@@ -73,36 +73,56 @@ class TernaryFilter extends Filter
     }
 
     /**
+     * The select submits the option keys 'true'/'false' (and older/URL-seeded
+     * state can arrive as '1'/'0', 1/0 or a real bool). Every one of those is
+     * coerced to a real boolean here, so the whole query layer — including a
+     * ->query() callback — branches on a bool instead of on a string like
+     * 'false', which is truthy in PHP.
+     *
+     * Anything else (including null/'') means "All": the filter is inactive.
+     */
+    public function normalizeValue(mixed $value): mixed
+    {
+        if ($value === 'true' || $value === '1' || $value === 1 || $value === true) {
+            return true;
+        }
+
+        if ($value === 'false' || $value === '0' || $value === 0 || $value === false) {
+            return false;
+        }
+
+        return null;
+    }
+
+    /**
      * @param  Builder<Model>  $query
      * @return Builder<Model>
      */
     public function apply(Builder $query, mixed $value): Builder
     {
-        if ($value === null || $value === '') {
+        $state = $this->normalizeValue($value);
+
+        if ($state === null) {
             return $query;
         }
 
         if ($this->queryCallback) {
-            return ($this->queryCallback)($query, $value);
+            return $this->applyQueryCallback($query, $state, $value);
         }
 
         $column = $this->getColumn();
 
-        if ($value === 'true' || $value === '1' || $value === true) {
+        if ($state === true) {
             return $query->where($column, true);
         }
 
-        if ($value === 'false' || $value === '0' || $value === false) {
-            if ($this->nullable) {
-                return $query->where(function ($q) use ($column) {
-                    $q->where($column, false)->orWhereNull($column);
-                });
-            }
-
-            return $query->where($column, false);
+        if ($this->nullable) {
+            return $query->where(function ($q) use ($column) {
+                $q->where($column, false)->orWhereNull($column);
+            });
         }
 
-        return $query;
+        return $query->where($column, false);
     }
 
     /**
@@ -132,12 +152,12 @@ class TernaryFilter extends Filter
 
     public function getFormFields(): array
     {
+        // Same option keys as getOptions() — a filter rendered through the
+        // generic form-field surface must submit the state the ternary view
+        // submits, or the two surfaces disagree about what "false" looks like.
         return [
             Select::make('value')
-                ->options([
-                    '1' => $this->getTrueLabel(),
-                    '0' => $this->getFalseLabel(),
-                ])
+                ->options($this->getOptions())
                 ->placeholder($this->getAllLabel()),
         ];
     }
@@ -159,15 +179,11 @@ class TernaryFilter extends Filter
      */
     protected function getIndicatorValueLabel(mixed $value): ?string
     {
-        if ($value === 'true' || $value === '1' || $value === true) {
-            return $this->getTrueLabel();
-        }
-
-        if ($value === 'false' || $value === '0' || $value === false) {
-            return $this->getFalseLabel();
-        }
-
-        return null;
+        return match ($this->normalizeValue($value)) {
+            true => $this->getTrueLabel(),
+            false => $this->getFalseLabel(),
+            default => null,
+        };
     }
 
     public function getAllLabel(): string

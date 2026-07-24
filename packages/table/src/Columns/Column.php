@@ -35,6 +35,7 @@ use NyonCode\WireTable\Concerns\HasResponsive;
 use NyonCode\WireTable\Concerns\HasView;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Support\FilterControl;
+use NyonCode\WireTable\Support\MobileSlot;
 
 /** @phpstan-consistent-constructor */
 class Column extends DataComponent implements Htmlable
@@ -78,6 +79,9 @@ class Column extends DataComponent implements Htmlable
 
     /** @var string Mobile breakpoint for display switching */
     protected string $mobileBreakpoint = 'md';
+
+    /** Explicit stacked-card slot; null lets MobileCard derive one. */
+    protected ?MobileSlot $mobileSlot = null;
 
     /** @var bool Whether the column can be toggled in the UI */
     protected bool $toggleable = true;
@@ -170,6 +174,9 @@ class Column extends DataComponent implements Htmlable
 
     /** @var Closure|null Callback to handle the edit action */
     protected ?Closure $editableCallback = null;
+
+    /** @var bool Whether a fill handle drag may write this column (editable columns only) */
+    protected bool $fillable = true;
 
     // $filter and the filterable()/filterAs*() API come from CanBeFiltered.
     // Note: the $filterable boolean was removed in v2 — use capabilities.
@@ -555,6 +562,63 @@ class Column extends DataComponent implements Htmlable
         $this->visibleFrom = 'md';
 
         return $this;
+    }
+
+    /**
+     * Place this column in a named slot of the stacked mobile card, instead of
+     * letting {@see MobileCard} derive one from column order and alignment.
+     */
+    public function mobileSlot(MobileSlot|string $slot): static
+    {
+        $this->mobileSlot = MobileSlot::resolve($slot);
+
+        return $this;
+    }
+
+    /**
+     * The identifier the card is recognised by.
+     */
+    public function mobileTitle(): static
+    {
+        return $this->mobileSlot(MobileSlot::Title);
+    }
+
+    /**
+     * The supporting line under the title.
+     */
+    public function mobileSubtitle(): static
+    {
+        return $this->mobileSlot(MobileSlot::Subtitle);
+    }
+
+    /**
+     * The figure the list is read for — set right on the title line.
+     */
+    public function mobileMetric(): static
+    {
+        return $this->mobileSlot(MobileSlot::Metric);
+    }
+
+    /**
+     * A status or qualifier, shown beside the title block rather than as a
+     * label/value pair.
+     */
+    public function mobileMeta(): static
+    {
+        return $this->mobileSlot(MobileSlot::Meta);
+    }
+
+    /**
+     * Keep this column in the label/value grid, whatever derivation would pick.
+     */
+    public function mobileDetail(): static
+    {
+        return $this->mobileSlot(MobileSlot::Detail);
+    }
+
+    public function getMobileSlot(): ?MobileSlot
+    {
+        return $this->mobileSlot;
     }
 
     /**
@@ -1313,6 +1377,28 @@ class Column extends DataComponent implements Htmlable
         return $this->hasCapability(Capability::Editable);
     }
 
+    /**
+     * Whether a fill may write this column, when the table offers a fill handle.
+     *
+     * Editable columns are fillable by default — a cell you can type into is one
+     * you can drag down. Turn it off for a column where repeating one value is
+     * meaningless or dangerous (a unique code, an invoice number).
+     *
+     * Example:
+     *   TextInputColumn::make('invoice_number')->fillable(false);
+     */
+    public function fillable(bool $condition = true): static
+    {
+        $this->fillable = $condition;
+
+        return $this;
+    }
+
+    public function isFillable(): bool
+    {
+        return $this->isEditable() && $this->fillable;
+    }
+
     public function getEditableType(): string
     {
         return $this->editableType;
@@ -1435,7 +1521,17 @@ class Column extends DataComponent implements Htmlable
         return $this->getColumnName();
     }
 
-    public function renderFilter(mixed $value = null): string
+    /**
+     * Render this column's compact inline filter control.
+     *
+     * @param  string|null  $statePath  Where the control binds in the component
+     *                                  state. Defaults to the main-table column
+     *                                  filter slot; the sub-row filter bar passes
+     *                                  `tableState.rows.subRowFilters.<name>` so
+     *                                  its inputs write there instead of silently
+     *                                  filtering the parent table.
+     */
+    public function renderFilter(mixed $value = null, ?string $statePath = null): string
     {
         $filter = $this->resolveFilter();
         if ($filter === null || ! $filter->canView()) {
@@ -1452,6 +1548,7 @@ class Column extends DataComponent implements Htmlable
             'column' => $this,
             'filter' => $filter,
             'value' => $value,
+            'statePath' => $statePath ?? 'tableState.columnFilters.'.$this->getName(),
             'controlClasses' => FilterControl::classes(),
         ])->render();
     }

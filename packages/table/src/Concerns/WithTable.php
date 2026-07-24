@@ -24,7 +24,6 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\Concerns\InteractsWithActions;
-use NyonCode\WireCore\Core\Events\CellUpdated;
 use NyonCode\WireCore\Core\Events\CellUpdating;
 use NyonCode\WireCore\Core\Events\TableFiltered;
 use NyonCode\WireCore\Core\Events\TableFiltering;
@@ -34,8 +33,6 @@ use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
-use NyonCode\WireCore\Foundation\Contracts\HydratesState;
-use NyonCode\WireCore\Foundation\Support\RecordVersion;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
 use NyonCode\WireForms\Concerns\InteractsWithActionForms;
@@ -55,9 +52,11 @@ use NyonCode\WireTable\Import\ImportResult;
 use NyonCode\WireTable\Import\TableImport;
 use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
 use NyonCode\WireTable\Preferences\TablePreferenceManager;
-use NyonCode\WireTable\Services\CellValueWriter;
+use NyonCode\WireTable\Services\CellEditPipeline;
 use NyonCode\WireTable\Services\SummaryBatch;
+use NyonCode\WireTable\Services\TableQueryCacheKey;
 use NyonCode\WireTable\Services\TableQueryService;
+use NyonCode\WireTable\Support\CellEditOutcome;
 use NyonCode\WireTable\Table;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -65,6 +64,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 trait WithTable
 {
     use CanExpandSubRows;
+    use CanFillCells;
     use CanSelectRecords;
     use DispatchesStateUpdates;
     use HasSqlDebug;
@@ -92,7 +92,12 @@ trait WithTable
     use InteractsWithSelectCreation;
     use InteractsWithTableModals;
     use InteractsWithWizards;
-    use WithPagination;
+
+    // Aliased so setPage() below can drop the record memo and then delegate:
+    // WithPagination is a trait, so there is no parent:: to call through.
+    use WithPagination {
+        setPage as protected paginatorSetPage;
+    }
     use WithTableQueryString;
 
     /**
@@ -121,6 +126,15 @@ trait WithTable
      * @var array<string, mixed>
      */
     protected array $modalStateBeforeUpdate = [];
+
+    /**
+     * Whether a result-shaping state path (per-page, search, filters, sort)
+     * was written in this request. Livewire pools commits fired in the same
+     * tick, so a wire:poll tick can share a request with the user's change —
+     * and the poll's "nothing changed, skip the render" verdict would then
+     * throw away the render that change was made for.
+     */
+    protected bool $tableStateChangedThisRequest = false;
 
     protected string $wireTableClass = Table::class;
 
@@ -163,11 +177,6 @@ trait WithTable
         }
 
         $this->tableState->set('pagination.perPage', $table->getPerPage());
-
-        // Seed flatten mode from the table config (flattenSubRows()).
-        if ($table->hasSubRows() && $table->isFlattenSubRows()) {
-            $this->tableState->set('rows.flattenMode', true);
-        }
 
         // Initialize filters with defaults (wrapped to match form-field state shape).
         // Every *rendered* filter gets a slot, not only the ones with a default:
@@ -232,9 +241,32 @@ trait WithTable
             }
         }
 
-        // Per-user column layout: a saved preference (if any) overrides the
-        // configured defaults above.
-        $this->loadColumnPreferences($table);
+        // Sub-row filter columns need the same up-front slot, for the same
+        // entangle-no-op reason: an interactive sub-row filter bar binds each
+        // control to rows.subRowFilters.<name>, and a select/multi-select there
+        // entangles that path.
+        if ($table->isSubRowsFilterable()) {
+            foreach ($table->getSubRowColumns() as $column) {
+                if (! $column->isFilterable()) {
+                    continue;
+                }
+
+                $path = 'rows.subRowFilters.'.$column->getName();
+                $current = $this->tableState->get($path);
+
+                if ($column->filterExpectsArray()) {
+                    if (! is_array($current)) {
+                        $this->tableState->set($path, []);
+                    }
+                } elseif ($current === null) {
+                    $this->tableState->set($path, null);
+                }
+            }
+        }
+
+        // Per-user view layout (columns, sub-row expansion): a saved preference
+        // (if any) overrides the configured defaults above.
+        $this->loadViewPreferences($table);
 
         // Query-string persistence: seed state from the URL (URL wins over
         // the defaults applied above) and register URL-tracking attributes.
@@ -345,6 +377,21 @@ trait WithTable
 
         foreach ($resetPaths as $resetPath) {
             if ($path === $resetPath || str_starts_with($path, $resetPath.'.')) {
+                if ($path === 'pagination.perPage') {
+                    $this->normalizePerPage();
+                }
+
+                // The view this render must produce is not the one the poll
+                // checksum was taken for — see refreshTable().
+                $this->tableStateChangedThisRequest = true;
+
+                // "Everything the filter matches" is defined by the filter that
+                // was on screen. Narrowing the set while that selection stands
+                // would silently redefine what a bulk action is about to touch.
+                if ($path !== 'sort.column' && $path !== 'sort.direction' && $path !== 'pagination.perPage') {
+                    $this->resetSelectionScope();
+                }
+
                 $this->resetPage();
 
                 return;
@@ -365,6 +412,31 @@ trait WithTable
             $this->dispatchAfterStateUpdated($forms, 'tableState.'.$path, $old);
             $this->dispatchLiveValidation($forms, 'tableState.'.$path);
         }
+    }
+
+    /**
+     * Coerce the page size the client just sent back into something the table
+     * actually offers.
+     *
+     * The select posts its value as a numeric *string*, which would otherwise
+     * travel all the way into the cache key and the query-string "except"
+     * comparison as `"25" !== 25`. And nothing stops a crafted payload from
+     * writing `perPage: 500000` over the wire, which is a page-sized read of
+     * the whole table — so anything outside the offered options falls back to
+     * the configured default.
+     */
+    protected function normalizePerPage(): void
+    {
+        $table = $this->getTable();
+        $value = $this->tableState->get('pagination.perPage');
+
+        $perPage = is_numeric($value) ? (int) $value : 0;
+
+        if (! in_array($perPage, $table->getPerPageOptions(), true)) {
+            $perPage = $table->getPerPage();
+        }
+
+        $this->tableState->set('pagination.perPage', $perPage);
     }
 
     /**
@@ -461,6 +533,14 @@ trait WithTable
         $detector = $this->getTable()->getPollChangeDetection();
 
         if ($detector === false) {
+            return false;
+        }
+
+        // The user changed the view in this same pooled request. The data may
+        // well be unchanged, but the rendering of it is not — skipping here
+        // would swallow their per-page/sort/filter change until the next
+        // roundtrip.
+        if ($this->tableStateChangedThisRequest) {
             return false;
         }
 
@@ -656,16 +736,17 @@ trait WithTable
             return collect();
         }
 
-        $query = $this->buildTableQuery();
+        $records = $this->fetchTableRecords($table);
 
-        // Apply query caching if configured
-        if ($table->isQueryCached()) {
-            $this->cachedRecords = $this->executeWithCache($table, $query);
-        } elseif ($table->isPaginated()) {
-            $this->cachedRecords = $this->paginateQuery($table, $query);
-        } else {
-            $this->cachedRecords = $query->get();
+        // The stored page can point past the end of the result set — a shared
+        // ?page=5 URL, a filter that shrank the set, or rows deleted by someone
+        // else since the page was opened. Re-anchor to the last populated page
+        // and fetch it, so an out-of-range page never renders as "no records".
+        if ($this->rehomeOutOfRangePage($records)) {
+            $records = $this->fetchTableRecords($table);
         }
+
+        $this->cachedRecords = $records;
 
         // Eager-load sub-rows for the page in one query (avoids per-parent N+1).
         $this->eagerLoadSubRows($this->cachedRecords);
@@ -674,47 +755,79 @@ trait WithTable
     }
 
     /**
-     * Re-anchor the paginator when the current page no longer exists.
+     * Livewire's page setter, with the record memo dropped.
      *
-     * After records are mutated — most commonly a delete that removes the last
-     * row on the current page — the stored page number can point past the end
-     * of the result set, stranding the user on an empty page. Clamp it down to
-     * the last populated page so they land on the page below instead.
+     * Paging normally arrives as a fresh request, where the memo is empty anyway.
+     * Called within one request, though — which is what a "select this page"
+     * after a programmatic setPage() does — the memo would still hold the
+     * previous page and the caller would act on the wrong rows.
+     */
+    public function setPage($page, $pageName = 'page'): void
+    {
+        $this->paginatorSetPage($page, $pageName);
+
+        $this->cachedRecords = null;
+    }
+
+    /**
+     * Run the table query for the current page, honouring the cache config.
+     */
+    protected function fetchTableRecords(Table $table): LengthAwarePaginator|Paginator|CursorPaginator|Collection
+    {
+        $query = $this->buildTableQuery();
+
+        if ($table->isQueryCached()) {
+            return $this->executeWithCache($table, $query);
+        }
+
+        if ($table->isPaginated()) {
+            return $this->paginateQuery($table, $query);
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Move the paginator back into range, reporting whether it moved.
      *
      * Only length-aware pagination can compute a last page; simple and cursor
-     * modes have no total to clamp against, so they are left untouched.
+     * modes have no total to clamp against, so the instanceof guard leaves
+     * them alone. Page 1 always exists (even when empty), so an empty first
+     * page is not a clamp.
      */
-    public function clampPageToBounds(): void
+    protected function rehomeOutOfRangePage(mixed $records): bool
     {
-        $table = $this->getTable();
-
-        // Only length-aware pagination knows its last page; simple and cursor
-        // modes have no total to clamp against (confirmed by the instanceof
-        // guard below once the records are fetched).
-        if (! $table->isPaginated() || in_array($table->getPaginationMode(), ['simple', 'cursor'], true)) {
-            return;
-        }
-
-        // Page 1 always exists (even when empty), so nothing to clamp.
-        if ((int) $this->getPage() <= 1) {
-            return;
-        }
-
-        $records = $this->getTableRecords();
-
         if (! $records instanceof LengthAwarePaginator) {
-            return;
+            return false;
+        }
+
+        if ((int) $this->getPage() <= 1) {
+            return false;
         }
 
         $lastPage = max(1, $records->lastPage());
 
-        if ($records->currentPage() > $lastPage) {
-            $this->setPage($lastPage);
-
-            // Drop the empty-page result so the next render re-queries the
-            // clamped page instead of serving the cached empty page.
-            $this->cachedRecords = null;
+        if ($records->currentPage() <= $lastPage) {
+            return false;
         }
+
+        $this->setPage($lastPage);
+
+        return true;
+    }
+
+    /**
+     * Re-anchor the paginator when the current page no longer exists.
+     *
+     * Kept as the explicit post-mutation hook (a delete that empties the
+     * current page re-anchors before the records are re-read), but the rule
+     * itself now lives in getTableRecords(): every fetch clamps, so a page
+     * that went out of range for any other reason — a shared ?page=5 URL, a
+     * filter that shrank the set, a concurrent delete — is caught too.
+     */
+    public function clampPageToBounds(): void
+    {
+        $this->getTableRecords();
     }
 
     /**
@@ -741,15 +854,15 @@ trait WithTable
     protected function executeWithCache(Table $table, Builder $query): LengthAwarePaginator|Paginator|CursorPaginator|Collection
     {
         $ttl = $table->getQueryCacheTtl();
-        $key = $table->getQueryCacheKey() ?? $this->generateQueryCacheKey($query);
 
-        // Pagination is applied inside the cache callback, so the page number is
-        // not part of the SQL/bindings — without this suffix every page would
-        // share one cache entry and serve page 1's results. Applies to custom
-        // queryCacheKey() too, which would otherwise also collide across pages.
-        if ($table->isPaginated()) {
-            $key .= ':page:'.$this->getQueryCachePage();
-        }
+        // The namespace says which table; the state fingerprint says which
+        // view of it. A caller-supplied cacheQuery() key replaces the former
+        // only — it can never opt out of the latter, or the table would freeze
+        // on whichever view happened to warm the entry.
+        $key = app(TableQueryCacheKey::class)->build(
+            $table->getQueryCacheKey() ?? $this->generateQueryCacheKey($query),
+            $this->queryCacheState($table),
+        );
 
         return Cache::remember($key, $ttl, function () use ($table, $query) {
             if ($table->isPaginated()) {
@@ -776,19 +889,48 @@ trait WithTable
     }
 
     /**
-     * Generate a cache key from the query state.
+     * State that shapes the cached slice and therefore belongs in the key.
+     *
+     * Search, filters and sort already reach the generated key through the
+     * SQL and bindings, but a caller-supplied cacheQuery() key knows none of
+     * them — and `perPage`/`page` reach neither key, because pagination is
+     * applied inside the cache callback. Listing them all here keeps one
+     * answer for both key flavours.
+     *
+     * @return array<string, mixed>
+     */
+    protected function queryCacheState(Table $table): array
+    {
+        $state = [
+            'search' => $this->tableState->get('search'),
+            'filters' => $this->tableState->get('filters', []),
+            'columnFilters' => $this->tableState->get('columnFilters', []),
+            'sort' => $this->tableState->get('sort', []),
+        ];
+
+        if (! $table->isPaginated()) {
+            return $state;
+        }
+
+        return $state + [
+            'perPage' => $this->tableState->get('pagination.perPage'),
+            'page' => $this->getQueryCachePage(),
+        ];
+    }
+
+    /**
+     * The cache namespace for this table when cacheQuery() supplied no key.
+     *
+     * Override to scope entries by tenant, user or anything else the SQL does
+     * not carry. The per-view state fingerprint is appended to whatever this
+     * returns, so an override cannot accidentally collapse two views into one
+     * entry.
      *
      * @param  Builder<Model>  $query
      */
     protected function generateQueryCacheKey(Builder $query): string
     {
-        return 'wire_table:'.md5(
-            $query->toSql().
-            serialize($query->getBindings()).
-            $this->tableState->get('pagination.perPage').
-            $this->tableState->get('sort.column').
-            $this->tableState->get('sort.direction')
-        );
+        return app(TableQueryCacheKey::class)->namespaceFor($query);
     }
 
     /**
@@ -1048,15 +1190,7 @@ trait WithTable
      */
     protected function findColumn(string $name): ?Column
     {
-        $table = $this->getTable();
-
-        foreach ($table->getColumns() as $column) {
-            if ($column->getName() === $name) {
-                return $column;
-            }
-        }
-
-        return null;
+        return $this->getTable()->findColumn($name);
     }
 
     // ─── Summaries ───────────────────────────────────────
@@ -1093,8 +1227,14 @@ trait WithTable
         }
 
         // For main table — resolve the in-memory record set per scope.
+        // The page scope is unwrapped: getTableRecords() hands back a paginator
+        // whenever the table is paginated, and computeSummaries() takes a
+        // Collection — so "this page" was a TypeError on every paginated table,
+        // hidden only because summaries are usually exercised unpaginated.
+        $pageRecords = $this->getTableRecords();
+
         $inMemoryRecords = match ($scope) {
-            'page' => $this->getTableRecords(),
+            'page' => $pageRecords instanceof Collection ? $pageRecords : collect($pageRecords->items()),
             'selection' => $this->getSelectedRecords(),
             default => collect(),
         };
@@ -1443,7 +1583,7 @@ trait WithTable
         }
 
         $this->tableState->set('columns.hidden', $hidden);
-        $this->persistColumnPreferences();
+        $this->persistViewPreferences();
     }
 
     /**
@@ -1479,12 +1619,16 @@ trait WithTable
     }
 
     /**
-     * Seed the hidden-column set from the user's saved preference, if the table
+     * Seed the per-user view layout from the saved preference, if the table
      * opted in with rememberColumns() and something has actually been stored.
-     * Stale names (columns that no longer exist or are no longer toggleable) are
-     * dropped so a renamed/removed column can never hide the wrong thing.
+     *
+     * Covers the hidden-column set and the sub-row expansion baseline — both
+     * are "how I like to look at this table", so they share one stored payload
+     * and one opt-in. Stale column names (columns that no longer exist or are no
+     * longer toggleable) are dropped so a renamed/removed column can never hide
+     * the wrong thing.
      */
-    protected function loadColumnPreferences(Table $table): void
+    protected function loadViewPreferences(Table $table): void
     {
         $key = $table->getRememberColumnsKey();
 
@@ -1493,6 +1637,11 @@ trait WithTable
         }
 
         $preferences = $this->resolvePreferenceDriver($table)->load($key, $this->preferenceUser());
+
+        $storedExpandAll = $preferences['rows']['expandAll'] ?? null;
+        if (is_bool($storedExpandAll) && $table->hasSubRows()) {
+            $this->tableState->set('rows.expandAll', $storedExpandAll);
+        }
 
         // Nothing saved yet → keep the configured defaults.
         if (! array_key_exists('columns', $preferences) || ! is_array($preferences['columns'])) {
@@ -1518,9 +1667,9 @@ trait WithTable
     }
 
     /**
-     * Persist the current hidden-column set for the current user, when enabled.
+     * Persist the current view layout for the current user, when enabled.
      */
-    protected function persistColumnPreferences(): void
+    protected function persistViewPreferences(): void
     {
         $table = $this->getTable();
         $key = $table->getRememberColumnsKey();
@@ -1532,6 +1681,9 @@ trait WithTable
         $this->resolvePreferenceDriver($table)->save($key, $this->preferenceUser(), [
             'columns' => [
                 'hidden' => array_values($this->tableState->get('columns.hidden', [])),
+            ],
+            'rows' => [
+                'expandAll' => $this->tableState->get('rows.expandAll'),
             ],
         ]);
     }
@@ -1756,47 +1908,21 @@ trait WithTable
             return ['success' => false, 'message' => __('wire-table::messages.column_not_found')];
         }
 
-        if (! $column->isEditable()) {
-            return ['success' => false, 'message' => __('wire-table::messages.column_not_editable')];
-        }
+        $pipeline = app(CellEditPipeline::class);
 
-        // ── Permission check (before transaction — read-only). Delegate to the
-        // canonical fail-CLOSED authorization owner (HasAuthorization::isAuthorized),
-        // a Gate check that works with Laravel Gate/policies AND Spatie. The previous
-        // hand-rolled `method_exists($user, 'hasPermissionTo')` probe failed OPEN for
-        // any user model without that method (e.g. plain Gate/policy auth), silently
-        // bypassing `->permission()`. `isAuthorized()` returns true when no permission
-        // is set, so unrestricted editable columns are unaffected. ──
-        if (! $column->isAuthorized()) {
-            return ['success' => false, 'message' => __('wire-table::messages.no_permission_view')];
+        // ── Column-level refusals (before any transform — read-only) ──
+        if ($failure = $pipeline->guard($column)) {
+            return $failure->toArray();
         }
 
         // ── Format & validate (before transaction — no DB writes) ──
         // Hold on to the state the client sent. The record-aware pass inside the
         // transaction dehydrates from this, never from the output below.
         $state = $value;
+        $value = $pipeline->dehydrate($column, $state);
 
-        if ($column instanceof DehydratesState) {
-            $value = $column->dehydrateState($state, null);
-        }
-
-        // Pre-validate without record context (basic rules)
-        $rules = $column->getEditableRules(null);
-        if (! empty($rules)) {
-            $validationResult = app(ValidationPipeline::class)->validate(
-                [$columnName => $value],
-                [$columnName => $rules],
-            );
-
-            if ($validationResult->failed()) {
-                $errors = $validationResult->getError($columnName) ?? [];
-
-                return [
-                    'success' => false,
-                    'message' => $errors[0] ?? __('wire-table::messages.validation_failed'),
-                    'errors' => $errors,
-                ];
-            }
+        if ($failure = $pipeline->validateWithoutRecord($column, $columnName, $value)) {
+            return $failure->toArray();
         }
 
         // Dispatch CellUpdating event
@@ -1804,7 +1930,7 @@ trait WithTable
 
         // ── Atomic update with optimistic locking ───────────────
         try {
-            $result = DB::transaction(function () use ($table, $column, $columnName, $recordKey, $state, $recordVersion) {
+            $outcome = DB::transaction(function () use ($table, $pipeline, $column, $columnName, $recordKey, $state, $recordVersion): CellEditOutcome {
                 // Lock the row
                 $record = $table->getQuery()
                     ->where($table->getPrimaryKey(), $recordKey)
@@ -1812,94 +1938,24 @@ trait WithTable
                     ->first();
 
                 if (! $record) {
-                    return ['success' => false, 'message' => __('wire-table::messages.record_not_found')];
+                    return CellEditOutcome::rejected(__('wire-table::messages.record_not_found'));
                 }
 
-                // Capture old value for event
-                $oldValue = $record->{$columnName};
-
-                // ── Edit permission (record-aware) ──
-                if (method_exists($column, 'canEdit') && ! $column->canEdit($record)) {
-                    return ['success' => false, 'message' => __('wire-table::messages.no_permission_edit')];
-                }
-
-                // ── Optimistic locking ──
-                $version = app(RecordVersion::class);
-
-                if ($version->conflicts($record, $recordVersion)) {
-                    $currentValue = $record->{$columnName};
-                    if ($column instanceof HydratesState) {
-                        $currentValue = $column->hydrateState($currentValue, $record);
-                    }
-
-                    return [
-                        'success' => false,
-                        'message' => __('wire-table::messages.record_conflict'),
-                        'conflict' => true,
-                        'currentValue' => (string) ($currentValue ?? ''),
-                        'currentVersion' => $version->stamp($record),
-                    ];
-                }
-
-                // ── Dehydrate with record context ──
-                // From the original state, not from the record-less pass above:
-                // dehydrateState() is a pure function of its arguments, which does
-                // not make it idempotent under self-composition. Feeding its own
-                // output back in would apply a beforeSave() closure twice.
-                $value = $column instanceof DehydratesState
-                    ? $column->dehydrateState($state, $record)
-                    : $state;
-
-                // ── Validate with record context ──
-                if (method_exists($column, 'validate')) {
-                    $validation = $column->validate($value, $record);
-                    if (! $validation['valid']) {
-                        return [
-                            'success' => false,
-                            'message' => $validation['errors'][0] ?? __('wire-table::messages.validation_failed'),
-                            'errors' => $validation['errors'],
-                        ];
-                    }
-                }
-
-                // ── Save ──
-                $record = app(CellValueWriter::class)->write($column, $record, $columnName, $value);
-
-                return [
-                    'success' => true,
-                    'version' => $version->stamp($record),
-                    'record' => $record,
-                    'value' => $value,
-                    'oldValue' => $oldValue,
-                ];
+                return $pipeline->commit($column, $columnName, $record, $state, $recordVersion);
             });
 
             // ── Post-transaction callbacks (outside lock) ──
-            if ($result['success'] ?? false) {
-                $record = $result['record'] ?? null;
-                $savedValue = $result['value'] ?? $value;
-                $oldValue = $result['oldValue'] ?? null;
-
-                if ($record && method_exists($column, 'getAfterStateUpdatedCallback') && $column->getAfterStateUpdatedCallback()) {
-                    call_user_func($column->getAfterStateUpdatedCallback(), $record, $savedValue);
-                }
-
-                // Dispatch CellUpdated event
-                event(new CellUpdated(static::class, $columnName, $recordKey, $oldValue, $savedValue));
-
-                // Clean internal keys before returning to client
-                unset($result['record'], $result['value'], $result['oldValue']);
-            }
+            $pipeline->settle($outcome, $column, static::class, $columnName, $recordKey);
 
             // The conflict is always shown inline on the cell; a table can opt in
             // to *also* raise a (more prominent) notification for it.
-            if (($result['conflict'] ?? false) === true && $table->shouldNotifyEditConflicts()) {
+            if ($outcome->conflict && $table->shouldNotifyEditConflicts()) {
                 $this->sendNotification(Notification::warning(
-                    $result['message'] ?? __('wire-table::messages.record_conflict')
+                    $outcome->message ?? __('wire-table::messages.record_conflict')
                 ));
             }
 
-            return $result;
+            return $outcome->toArray();
 
         } catch (Exception $e) {
             return ['success' => false, 'message' => __('wire-table::messages.save_error', ['error' => $e->getMessage()])];

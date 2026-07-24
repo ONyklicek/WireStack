@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Exceptions\TableConfigurationException;
 use NyonCode\WireTable\Table;
 
 // ─── Test Models ─────────────────────────────────────────────────────────────
@@ -194,4 +195,33 @@ it('is not flattened by default', function () {
 
 it('can flatten sub-rows via config', function () {
     expect(subRowTable()->flattenSubRows()->isFlattenSubRows())->toBeTrue();
+});
+
+// ─── Audit follow-ups ────────────────────────────────────────────────────────
+
+it('throws a clear exception when the sub-row relation is misspelled', function () {
+    // Not a bare "Call to undefined method Invoice::itemz()" that never mentions subRows().
+    $table = Table::make()->model(SrInvoice::class)->subRows('itemz')->subRowColumns([Column::make('product')]);
+
+    expect(fn () => $table->getSubRowsQuery(SrInvoice::first()))
+        ->toThrow(
+            TableConfigurationException::class,
+            "subRows('itemz')",
+        );
+});
+
+it('still allows ordering by the configured default column when headers are not clickable', function () {
+    // isSubRowColumnSortable() must stay lenient toward the default column so the
+    // configured default sort applies even when the table is not interactively
+    // sortable — this is the leniency sortSubRows() must NOT ride (see the
+    // CanExpandSubRows test).
+    $table = subRowTable()->subRowsSortable(sortable: false, default: 'price', direction: 'asc');
+
+    expect($table->isSubRowsSortable())->toBeFalse()
+        ->and($table->isSubRowColumnSortable('price'))->toBeTrue()
+        ->and($table->isSubRowColumnSortable('product'))->toBeFalse();
+
+    // And the query actually orders by it.
+    $prices = $table->getSubRowsQuery(SrInvoice::first())->pluck('price')->all();
+    expect($prices)->toBe([10, 20, 30, 40]);
 });

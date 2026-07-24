@@ -257,6 +257,17 @@ trait InteractsWithTableActions
             }
         }
 
+        // Fall back to actions a record action carries in its own right — a
+        // behaviour-only record action (its own callback, no toolbar button) is
+        // not in getActions(), yet its whole-row trigger must still execute it.
+        foreach ($table->getRecordActionInstances() as $recordAction) {
+            $found = $this->matchRegisteredAction($recordAction, $name);
+
+            if ($found instanceof Action) {
+                return $found;
+            }
+        }
+
         return null;
     }
 
