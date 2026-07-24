@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Components\Display;
 
-use Closure;
-
 /**
  * Raw HTML display component with static helper factories.
  *
@@ -17,8 +15,6 @@ use Closure;
  */
 class Html extends Display
 {
-    protected string|Closure|null $content = null;
-
     public function __construct(?string $name = null)
     {
         parent::__construct($name ?? 'html_'.uniqid());
@@ -27,19 +23,6 @@ class Html extends Display
     public static function make(?string $name = null): static
     {
         return new static($name);
-    }
-
-    /** Set the raw HTML content to render. */
-    public function content(string|Closure|null $content): static
-    {
-        $this->content = $content;
-
-        return $this;
-    }
-
-    public function getContent(): ?string
-    {
-        return $this->evaluate($this->content);
     }
 
     // ─── Static factories ───���──────────────────────────────────────
