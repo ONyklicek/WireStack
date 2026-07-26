@@ -397,13 +397,31 @@ it('has no secondary with a single pointer binding', function () {
         ->and($config['secondary'])->toBeNull();
 });
 
-it('maps record-action keyboard shortcuts and reserves enter/space', function () {
+it('maps record-action keyboard shortcuts', function () {
     $table = Table::make()->recordActions([
         RecordAction::make(Action::make('remove'))->onKey('Delete'),
-        RecordAction::make(Action::make('open'))->onKey('Enter'), // reserved → excluded
     ]);
 
     expect($table->getRecordActionKeyboardConfig()['shortcuts'])->toBe(['Delete' => 'remove']);
+});
+
+it('rejects a reserved onKey() binding out loud', function () {
+    // Silently dropping the key would strip the gesture without a signal — an
+    // app shipping ->onKey('Enter') must hear about it, not lose the action.
+    Table::make()
+        ->recordActions([RecordAction::make(Action::make('open'))->onKey('Enter')])
+        ->getRecordActionKeyboardConfig();
+})->throws(TableConfigurationException::class, "onKey('Enter')");
+
+it('still skips a reserved shortcut stamped on the action itself', function () {
+    // keyboardShortcut() serves the action's other surfaces (a toolbar button,
+    // a palette); reusing such an action as a record action must not fatal the
+    // table — the reserved key just never reaches the record shortcut map.
+    $table = Table::make()->recordActions([
+        RecordAction::make(Action::make('open')->keyboardShortcut('enter'))->onDoubleClick(),
+    ]);
+
+    expect($table->getRecordActionKeyboardConfig()['shortcuts'])->toBe([]);
 });
 
 it('keeps a name-referenced onKey shortcut even with no action to stamp', function () {

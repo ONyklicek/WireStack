@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Actions;
 
 use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireTable\Exceptions\TableConfigurationException;
 use NyonCode\WireTable\Support\RecordAction;
 use NyonCode\WireTable\Support\RecordTrigger;
 use NyonCode\WireTable\Support\ResolvedRecordAction;
@@ -133,34 +134,41 @@ final class RecordActionResolver
     }
 
     /**
+     * Keys the grid navigation owns; a shortcut on any of them could never fire.
+     *
+     * @var array<int, string>
+     */
+    private const RESERVED_KEYS = ['enter', 'return', 'space', ''];
+
+    /**
      * Keyboard shortcut → action-name map, taken from each record action's
      * canonical `keyboardShortcut()` (so `onKey('Delete')` and a referenced
-     * action's own shortcut both flow through here). Enter/Space are reserved for
-     * navigation and never enter the map.
+     * action's own shortcut both flow through here). Keys the grid navigation
+     * owns never enter the map: an explicit `onKey()` on one is a configuration
+     * error and throws, while a shortcut stamped on the action itself is only
+     * skipped — it serves the action's other surfaces and reusing that action
+     * here must not fatal the table.
      *
      * @return array<string, string>
      */
     public function shortcuts(): array
     {
-        $reserved = ['enter', 'return', 'space', ''];
         $out = [];
 
         foreach ($this->resolve() as $resolved) {
+            foreach ($resolved->keyShortcuts as $key) {
+                if (in_array(strtolower($key), self::RESERVED_KEYS, true)) {
+                    throw TableConfigurationException::reservedRecordActionKey($key, self::RESERVED_KEYS);
+                }
+
+                $out[$key] = $resolved->name;
+            }
+
             $action = $resolved->action ?? $this->table->findRegisteredAction($resolved->name);
             $shortcut = $action?->getKeyboardShortcut();
 
-            // The wrapped/registered action's stamped shortcut, plus any keys the
-            // binding declared via onKey() — the latter is the only source for a
-            // name reference whose registered action carries no shortcut of its own.
-            $keys = $resolved->keyShortcuts;
-            if ($shortcut !== null) {
-                array_unshift($keys, $shortcut);
-            }
-
-            foreach ($keys as $key) {
-                if (! in_array(strtolower($key), $reserved, true)) {
-                    $out[$key] = $resolved->name;
-                }
+            if ($shortcut !== null && ! in_array(strtolower($shortcut), self::RESERVED_KEYS, true)) {
+                $out[$shortcut] = $resolved->name;
             }
         }
 

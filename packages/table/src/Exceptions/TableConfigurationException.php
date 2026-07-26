@@ -59,6 +59,18 @@ final class TableConfigurationException extends InvalidArgumentException impleme
         );
     }
 
+    /**
+     * @param  array<int, string>  $reserved
+     */
+    public static function reservedRecordActionKey(string $key, array $reserved): self
+    {
+        return new self(
+            "onKey('{$key}') collides with the table's built-in keyboard navigation — ".
+            'the key is reserved and the shortcut could never fire. Reserved keys: '.
+            implode(', ', array_filter($reserved)).'. Bind a different key instead.'
+        );
+    }
+
     public static function subRowRelationMissing(string $relation, string $model): self
     {
         return new self(
