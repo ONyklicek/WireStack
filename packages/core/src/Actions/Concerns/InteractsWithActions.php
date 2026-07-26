@@ -973,7 +973,7 @@ trait InteractsWithActions
      *
      * Form-agnostic default: wire-core hosts have no form runtime, so the modal
      * renders without a form body. The wire-forms bridge
-     * ({@see \NyonCode\WireForms\Concerns\InteractsWithActionForms}) overrides
+     * (`NyonCode\WireForms\Concerns\InteractsWithActionForms`) overrides
      * this (resolved via `insteadof` in the composing host) to build the real
      * {@see ModalForm}. Declared here so the core action modal-host view can call
      * it on any host — including a standalone wire-core one — without a fatal.
