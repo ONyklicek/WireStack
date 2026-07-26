@@ -260,79 +260,22 @@
                         data-page-keys="{{ json_encode($pageRecordKeys) }}"
                         data-matching="{{ $recordCount }}"
                         data-selection-root
-                        x-data="{
-                            selected: $wire.entangle('tableState.selection.records'),
-                            /* 'keys' → `selected` is the selection.
-                               'all'  → everything the filter matches is selected and
-                                        `selected` holds the exclusions, so the same
-                                        toggle works for both and no key list of the
-                                        whole result set ever reaches the browser. */
-                            mode: $wire.entangle('tableState.selection.mode'),
-                            commitTimer: null,
-                            /* Read from the DOM, not seeded into x-data: the root is keyed
-                               (wire:key table-wrapper), so Livewire morphs it in place and an
-                               x-data literal would keep the count of the first render forever
-                               (filter 128k rows down to 7 and the bar would still say 128k). */
-                            get matching() { return Number(this.$root.dataset.matching || 0); },
-                            get pageKeys() { return JSON.parse(this.$root.dataset.pageKeys || '[]'); },
-                            get selectsAll() { return this.mode === 'all'; },
-                            get selectedCount() { return this.selectsAll ? Math.max(0, this.matching - this.selected.length) : this.selected.length; },
-                            get allSelected() { return this.pageKeys.length > 0 && this.pageKeys.every(k => this.isSelected(k)); },
-                            get someSelected() { return this.selectedCount > 0 && !this.allSelected; },
-                            isSelected(key) { return this.selectsAll ? !this.selected.includes(key) : this.selected.includes(key); },
-                            toggle(key) {
-                                this.selected = this.selected.includes(key)
-                                    ? this.selected.filter(k => k !== key)
-                                    : [...this.selected, key];
-                                this.queueCommit();
-                            },
-                            toggleAll() {
-                                /* In all mode the list holds EXCLUSIONS, so the keys-mode
-                                   arithmetic below must never touch it — it used to, and one
-                                   header click turned the selection into its own complement.
-                                   The page gesture edits the exclusions and never leaves all
-                                   mode (mirrors selectAllRecords / deselectPageRecords):
-                                   leaving it would shrink an all-matching selection to one
-                                   page, and the rest of it cannot be carried into keys mode
-                                   without materialising every matching key here. */
-                                if (this.selectsAll) {
-                                    this.selected = this.allSelected
-                                        ? [...new Set([...this.selected, ...this.pageKeys])]
-                                        : this.selected.filter(k => !this.pageKeys.includes(k));
-                                    this.queueCommit();
-                                    return;
-                                }
-                                /* Selecting a page unions with other pages instead of
-                                   replacing them, which is what silently discarded a
-                                   selection when the user paged. */
-                                this.selected = this.allSelected
-                                    ? this.selected.filter(k => !this.pageKeys.includes(k))
-                                    : [...new Set([...this.selected, ...this.pageKeys])];
-                                this.queueCommit();
-                            },
-                            selectAllMatching() {
-                                this.mode = 'all';
-                                this.selected = [];
-                                this.$wire.$commit();
-                            },
-                            selectOnlyPage() {
-                                this.mode = 'keys';
-                                this.selected = [...this.pageKeys];
-                                this.$wire.$commit();
-                            },
-                            deselectAll() {
-                                this.mode = 'keys';
-                                this.selected = [];
-                                this.queueCommit();
-                            },
-                            queueCommit() {
-                                if (! {{ $selectionSyncLive ? 'true' : 'false' }}) return;
-                                clearTimeout(this.commitTimer);
-                                this.commitTimer = setTimeout(() => this.$wire.$commit(), 350);
-                            },
-                        }"
+                        {{-- One shared selection component (wireRecordSelection, shipped in
+                             the package bundle): the checkboxes, both select-all toggles,
+                             the bulk bar, the mobile cards and the keyboard gestures all
+                             drive this state. PHP hands over the semantics — the state
+                             path and the commit policy — so they stay assertable here. --}}
+                        x-data="wireRecordSelection({ statePath: 'tableState.selection', syncLive: {{ $selectionSyncLive ? 'true' : 'false' }}, commitDelay: 350 })"
                     @endif
             >
+                @if($isSelectable)
+                    {{-- Inside the selectable wrapper, NOT inside <tbody>: the tbody is
+                         not rendered without visible columns, but the selection is live
+                         in the stacked cards too. --}}
+                    @once
+                        @include('wire-table::tables.partials.selection-assets')
+                    @endonce
+                @endif
                 <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
 
                     {{-- Header --}}
