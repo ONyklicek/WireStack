@@ -64,6 +64,9 @@ class SortablePreview extends Component
             ->model(Task::class)
             ->alwaysReorderable('sort_order')
             ->columns($columns)
+            // Selection + reorder on one table: the selection sweep (drag over
+            // the checkbox column) must coexist with the row drag handles.
+            ->selectable()
             ->defaultSort('sort_order')
             ->paginated(false);
     }

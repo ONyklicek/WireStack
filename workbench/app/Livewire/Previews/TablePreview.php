@@ -28,6 +28,7 @@ use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Support\RecordAction;
 use NyonCode\WireTable\Table;
+use Workbench\App\Models\GestureRow;
 use Workbench\App\Models\Invoice;
 use Workbench\App\Models\User;
 
@@ -51,6 +52,9 @@ class TablePreview extends Component
 
     /** Variants that auto-open the header-action form modal for visual QA. */
     private const MODAL_VARIANTS = ['modal-form', 'modal-slideover-mobile', 'modal-slideover-compose', 'modal-fullscreen-mobile', 'modal-wizard', 'modal-nested'];
+
+    /** Variants backed by the GestureRow selection-gesture fixtures. */
+    private const GESTURE_VARIANTS = ['selection-gestures', 'selection-gestures-paged', 'selection-only'];
 
     public function mount(string $variant = 'overview'): void
     {
@@ -131,6 +135,10 @@ class TablePreview extends Component
 
         if ($this->variant === 'editable-fill') {
             return $this->editableFillTable($table);
+        }
+
+        if (in_array($this->variant, self::GESTURE_VARIANTS, true)) {
+            return $this->gestureTable($table);
         }
 
         $table = $this->usersTable($table);
@@ -353,6 +361,82 @@ class TablePreview extends Component
             ])
             ->searchable(false)
             ->paginated(false);
+    }
+
+    /**
+     * Selection-gesture fixtures: 40 deterministic rows, checkboxes, a bulk bar
+     * and mobile cards. `selection-gestures` shows every row on one page (the
+     * document scrolls), `selection-gestures-paged` splits them 20 a page, and
+     * `selection-only` is selectable *without* record actions — the variant
+     * that proves grid semantics attach to `selectable()` itself, not to the
+     * record actions every other selectable preview happens to carry.
+     */
+    private function gestureTable(Table $table): Table
+    {
+        $table
+            ->model(GestureRow::class)
+            ->columns([
+                TextColumn::make('name')->label('Name')->searchable()->sortable(),
+                BadgeColumn::make('status')
+                    ->label('Status')
+                    ->colors([
+                        'new' => 'info',
+                        'active' => 'success',
+                        'paused' => 'warning',
+                        'archived' => 'gray',
+                    ]),
+                TextColumn::make('amount')->label('Amount')->sortable(),
+            ])
+            ->searchable()
+            ->selectable()
+            ->stackedOnMobile()
+            ->bulkActions([
+                BulkAction::make('activate')->label('Activate')->icon('check')->color('success'),
+                BulkAction::make('archive')->label('Archive')->icon('outline:archive-box')->color('warning'),
+                BulkAction::make('export')->label('Export selected')->icon('outline:arrow-down-tray')->color('gray'),
+                DeleteBulkAction::make(),
+            ])
+            ->defaultSort('name');
+
+        if ($this->variant === 'selection-gestures-paged') {
+            $table->paginated()->perPage(20);
+        } else {
+            $table->paginated(false);
+        }
+
+        if ($this->variant === 'selection-only') {
+            return $table;
+        }
+
+        return $table->recordActions([
+            RecordAction::make(
+                Action::make('open')
+                    ->label('Open')
+                    ->icon('outline:eye')
+                    ->requiresConfirmation()
+                    ->modalHeading(fn ($r) => "Opened {$r->name}")
+                    ->modalDescription('Enter (or a double-click) runs the primary record action against the active row.')
+                    ->action(fn () => null)
+            )->onDoubleClick(),
+            RecordAction::make(
+                Action::make('archive-one')
+                    ->label('Archive')
+                    ->icon('outline:archive-box')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading(fn ($r) => "Archive {$r->name}?")
+                    ->modalDescription('Fired by the Delete key against the active row — an onKey() binding.')
+                    ->action(fn () => null)
+            )->onKey('Delete'),
+            RecordAction::make(
+                Action::make('duplicate')
+                    ->label('Duplicate')
+                    ->icon('outline:document-duplicate')
+                    ->requiresConfirmation()
+                    ->modalHeading(fn ($r) => "Duplicate {$r->name}?")
+                    ->action(fn () => null)
+            )->onContextMenu(),
+        ]);
     }
 
     private function usersTable(Table $table): Table
