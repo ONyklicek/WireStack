@@ -54,7 +54,6 @@ const wireRecordActions = (config = {}) => ({
     activeClasses: (config.active?.class || '').split(/\s+/).filter(Boolean),
     hoverClasses: (config.active?.hover || '').split(/\s+/).filter(Boolean),
     activeKey: null,
-    anchorKey: null,
 
     init() {
         if (this.kb) {
@@ -154,7 +153,7 @@ const wireRecordActions = (config = {}) => ({
         // it also pre-empts the browser's own select-all).
         if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a' && this.kb.selectable) {
             event.preventDefault()
-            return this.selectPage()
+            return this.selection()?.selectPage()
         }
 
         const idx = rows.findIndex((row) => row.dataset.rowKey === this.activeKey)
@@ -177,7 +176,7 @@ const wireRecordActions = (config = {}) => ({
                 if (! this.kb.selectable) return this.run(this.kb.primary)
                 // Toggle the active row and drop the anchor here for a later range.
                 this.toggleSelection(this.activeKey)
-                this.anchorKey = this.activeKey
+                this.setAnchor(this.activeKey)
                 return
             case 'ContextMenu':
                 if (idx < 0 || ! this.contextMenu) return
@@ -197,14 +196,16 @@ const wireRecordActions = (config = {}) => ({
     // range from the anchor to the new row — desktop range-select. A plain move
     // drops the anchor so the next Shift-range starts fresh.
     moveActive(rows, fromIdx, toIdx, shift) {
-        if (shift && this.kb.selectable) {
-            if (this.anchorKey === null) {
-                this.anchorKey = this.anchorFor(rows, fromIdx < 0 ? toIdx : fromIdx)
+        const sel = this.selection()
+
+        if (shift && this.kb.selectable && sel) {
+            if (sel.anchorKey === null) {
+                sel.anchorKey = sel.anchorFor(rows, fromIdx < 0 ? toIdx : fromIdx)
             }
             this.activate(rows, toIdx)
-            this.selectRange(rows, toIdx)
+            sel.selectRange(rows, toIdx)
         } else {
-            this.anchorKey = null
+            if (sel) sel.anchorKey = null
             this.activate(rows, toIdx)
         }
     },
@@ -215,7 +216,27 @@ const wireRecordActions = (config = {}) => ({
 
     selection() {
         const root = this.$el.closest('[data-selection-root]')
-        return root ? window.Alpine.$data(root) : null
+        if (! root) return null
+
+        // The anchor and the range gestures live in wireRecordSelection, which
+        // ships with the package — a published table view predating it still
+        // renders a selection root, so without this check the ranges would
+        // just select wrong, silently. Reject the stale markup out loud.
+        if (root.dataset.selectionVersion !== '1') {
+            if (! this._staleSelectionWarned) {
+                this._staleSelectionWarned = true
+                console.error(
+                    '[wire-table] The published tables/index.blade.php predates the '
+                    + 'selection component this wire-table version ships. Republish the '
+                    + 'views (php artisan vendor:publish --tag="wire-table::views" --force) '
+                    + 'or delete the published copy; selection gestures are disabled until then.'
+                )
+            }
+
+            return null
+        }
+
+        return window.Alpine.$data(root)
     },
 
     toggleSelection(key) {
@@ -224,52 +245,9 @@ const wireRecordActions = (config = {}) => ({
         else this.$wire.toggleRecordSelection(key) // fallback: server path
     },
 
-    // Where a Shift+range grows from when the keyboard has not set an anchor
-    // itself: the far edge of the contiguous selected block the active row sits
-    // in. A selection made with mod+A, a checkbox or the select-all strip carries
-    // no anchor, and without this the first Shift+arrow would replace the whole
-    // selection with a two-row range — every other row silently deselected.
-    // Anchoring at the far edge makes that first Shift+arrow shrink or grow the
-    // block the user is looking at instead.
-    anchorFor(rows, idx) {
-        const key = rows[idx]?.dataset.rowKey ?? null
+    setAnchor(key) {
         const sel = this.selection()
-        const selected = (i) => sel?.isSelected(rows[i].dataset.rowKey)
-
-        if (key === null || ! selected(idx)) return key
-
-        let start = idx
-        let end = idx
-        while (start > 0 && selected(start - 1)) start--
-        while (end < rows.length - 1 && selected(end + 1)) end++
-
-        return (idx - start >= end - idx ? rows[start] : rows[end]).dataset.rowKey
-    },
-
-    // Replace the selection with the contiguous [anchor … active] block.
-    selectRange(rows, activeIdx) {
-        const sel = this.selection()
-        if (! sel) return
-
-        const anchorIdx = rows.findIndex((row) => row.dataset.rowKey === this.anchorKey)
-        if (anchorIdx < 0) return
-
-        const from = Math.min(anchorIdx, activeIdx)
-        const to = Math.max(anchorIdx, activeIdx)
-        const keys = rows.slice(from, to + 1).map((row) => row.dataset.rowKey)
-
-        sel.mode = 'keys'
-        sel.selected = keys
-        sel.queueCommit?.()
-    },
-
-    selectPage() {
-        const sel = this.selection()
-        if (! sel) return
-
-        sel.mode = 'keys'
-        sel.selected = [...sel.pageKeys]
-        sel.queueCommit?.()
+        if (sel) sel.anchorKey = key
     },
 
     // A row was focused directly (click / Tab): adopt it as the active row so
@@ -400,7 +378,7 @@ const wireRecordActions = (config = {}) => ({
         // selection gesture: it decides where a following Shift+arrow range grows
         // from, the same way a click does in a file explorer.
         if (type === 'click' && event.target.closest('[role="checkbox"]')) {
-            this.anchorKey = row.dataset.rowKey
+            this.setAnchor(row.dataset.rowKey)
         }
 
         if (this.blocked(event, row)) return

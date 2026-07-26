@@ -260,6 +260,11 @@
                         data-page-keys="{{ json_encode($pageRecordKeys) }}"
                         data-matching="{{ $recordCount }}"
                         data-selection-root
+                        {{-- Contract marker between this (publishable) view and the
+                             packaged JS: the bundled record-actions controller refuses a
+                             stale published view out loud instead of selecting wrong
+                             ranges silently. Bump only with the selection contract. --}}
+                        data-selection-version="1"
                         {{-- One shared selection component (wireRecordSelection, shipped in
                              the package bundle): the checkboxes, both select-all toggles,
                              the bulk bar, the mobile cards and the keyboard gestures all

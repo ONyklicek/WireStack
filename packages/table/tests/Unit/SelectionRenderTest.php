@@ -69,7 +69,10 @@ it('mounts the selection component exactly once, on the wrapper', function () {
     // data-selection-root; a second mount would fork the state.
     expect(substr_count($html, 'wireRecordSelection('))->toBe(1)
         ->and(substr_count($html, 'data-selection-root'))->toBe(1)
-        ->and($html)->toContain("statePath: 'tableState.selection'");
+        ->and($html)->toContain("statePath: 'tableState.selection'")
+        // The markup/JS contract marker: the packaged record-actions bundle
+        // refuses a published view without it instead of mis-selecting ranges.
+        ->and($html)->toContain('data-selection-version="1"');
 });
 
 it('ships neither the component nor the selection hooks without selectable()', function () {

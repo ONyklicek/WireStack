@@ -35,6 +35,12 @@ test('the shipped bundle carries the whole selection surface', function () {
         ->toContain('selectOnlyPage')
         ->toContain('deselectAll')
         ->toContain('queueCommit')
+        // The range vocabulary owned here: the one-shot anchor, the far-edge
+        // fallback, the [anchor…active] block and the mod+A page select.
+        ->toContain('anchorKey')
+        ->toContain('anchorFor')
+        ->toContain('selectRange')
+        ->toContain('selectPage')
         // The morph-refreshed DOM reads (step: matching must not bake in).
         ->toContain('.dataset.matching')
         ->toContain('.dataset.pageKeys');

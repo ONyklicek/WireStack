@@ -49,16 +49,17 @@ test('the shipped bundle carries the keyboard grid layer', function () {
         ->toContain('restoreFocus');
 });
 
-test('the shipped bundle carries the keyboard selection gestures', function () {
+test('the shipped bundle bridges to the selection component and rejects stale views', function () {
     $bundle = WireTableServiceProvider::ASSETS_PATH.'/wire-table-records.js';
 
-    // Space/Shift+arrow/mod+A drive the same selection state the checkboxes use,
-    // reached through the shared selection root; an anchorless selection ranges
-    // from the far edge of the contiguous selected block. Fails if the dist
-    // drifts from source (needs `npm run build:table-assets`).
+    // The anchor and the range gestures live in wireRecordSelection; this
+    // bundle reaches them through the shared selection root and must refuse a
+    // published view that predates that contract out loud instead of selecting
+    // wrong ranges silently. Fails if the dist drifts from source (needs
+    // `npm run build:table-assets`).
     expect(file_get_contents($bundle))
         ->toContain('data-selection-root')
-        ->toContain('anchorFor')
-        ->toContain('selectRange')
-        ->toContain('selectPage');
+        ->toContain('selectionVersion')
+        ->toContain('vendor:publish')
+        ->toContain('setAnchor');
 });

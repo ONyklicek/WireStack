@@ -119,7 +119,7 @@ try {
   // ── C1: a checkbox click toggles the row and anchors the next range ──────
   await realClick(`rows()[2].querySelector('[data-testid="table-row-select"]')`);
   await sleep(500);
-  const c1a = JSON.parse(await eval_(`JSON.stringify({ selected: sel().selected, anchor: ctrl().anchorKey, key: key(2) })`));
+  const c1a = JSON.parse(await eval_(`JSON.stringify({ selected: sel().selected, anchor: sel().anchorKey, key: key(2) })`));
   check('C1: a checkbox click selects the row and sets the anchor',
     c1a.selected.length === 1 && c1a.selected[0] === c1a.key && c1a.anchor === c1a.key,
     JSON.stringify(c1a));

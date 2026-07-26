@@ -242,8 +242,8 @@ try {
   await page('Input.dispatchMouseEvent', { type: 'mousePressed', x: boxOf.x, y: boxOf.y, button: 'left', clickCount: 1 });
   await page('Input.dispatchMouseEvent', { type: 'mouseReleased', x: boxOf.x, y: boxOf.y, button: 'left', clickCount: 1 });
   await sleep(1200);
-  check('a checkbox click anchors the next keyboard range', await eval_('ctrl().anchorKey') === boxOf.key,
-    `anchor=${await eval_('ctrl().anchorKey')} row=${boxOf.key}`);
+  check('a checkbox click anchors the next keyboard range', await eval_(`Alpine.$data($q('[data-selection-root]')).anchorKey`) === boxOf.key,
+    `anchor=${await eval_(`Alpine.$data($q('[data-selection-root]')).anchorKey`)} row=${boxOf.key}`);
 
   // ── J. The roving tabindex survives a table update ───────────────────────
   await eval_(`rows()[1].focus()`);

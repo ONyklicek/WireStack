@@ -33,6 +33,13 @@ document.addEventListener('alpine:init', () => {
             mode: this.$wire.entangle(statePath + '.mode'),
             commitTimer: null,
 
+            /* The range anchor. One-shot and invisible: Space, a checkbox
+               click or a Shift+range sets it, a plain arrow move clears it.
+               Owned here — not by the record-action controller — because the
+               anchor is selection state: what a range means depends on what
+               is selected, and every selection surface shares this component. */
+            anchorKey: null,
+
             /* Read from the DOM, not seeded into the component: the root is
                keyed (wire:key table-wrapper), so Livewire morphs it in place
                and a seeded value would keep the first render's count forever
@@ -97,6 +104,48 @@ document.addEventListener('alpine:init', () => {
             deselectAll() {
                 this.mode = 'keys';
                 this.selected = [];
+                this.queueCommit();
+            },
+
+            /* Where a Shift+range grows from when no gesture has set an anchor
+               itself: the far edge of the contiguous selected block the given
+               row sits in. A selection made with mod+A, a checkbox or the
+               select-all strip carries no anchor, and without this the first
+               Shift+arrow would replace the whole selection with a two-row
+               range — every other row silently deselected. Anchoring at the
+               far edge makes that first Shift+arrow shrink or grow the block
+               the user is looking at instead. */
+            anchorFor(rows, idx) {
+                const key = rows[idx]?.dataset.rowKey ?? null;
+                const selectedAt = (i) => this.isSelected(rows[i].dataset.rowKey);
+
+                if (key === null || ! selectedAt(idx)) return key;
+
+                let start = idx;
+                let end = idx;
+                while (start > 0 && selectedAt(start - 1)) start--;
+                while (end < rows.length - 1 && selectedAt(end + 1)) end++;
+
+                return (idx - start >= end - idx ? rows[start] : rows[end]).dataset.rowKey;
+            },
+
+            // Replace the selection with the contiguous [anchor … active] block.
+            selectRange(rows, activeIdx) {
+                const anchorIdx = rows.findIndex((row) => row.dataset.rowKey === this.anchorKey);
+                if (anchorIdx < 0) return;
+
+                const from = Math.min(anchorIdx, activeIdx);
+                const to = Math.max(anchorIdx, activeIdx);
+
+                this.mode = 'keys';
+                this.selected = rows.slice(from, to + 1).map((row) => row.dataset.rowKey);
+                this.queueCommit();
+            },
+
+            // mod+A: select the whole page.
+            selectPage() {
+                this.mode = 'keys';
+                this.selected = [...this.pageKeys];
                 this.queueCommit();
             },
 
