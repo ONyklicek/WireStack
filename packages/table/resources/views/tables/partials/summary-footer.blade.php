@@ -44,9 +44,10 @@
 
         @for($i = 0; $i < $maxRows; $i++)
             <tr>
-                {{-- Selection spacer --}}
+                {{-- Selection spacer — carries data-select-cell so the selection
+                     column stays one addressable track through the footer rows. --}}
                 @if($isSelectable)
-                    <td class="w-12 {{ $cellPadding }}"></td>
+                    <td class="w-12 {{ $cellPadding }}" data-select-cell></td>
                 @endif
 
                 {{-- Sub-row toggle spacer --}}

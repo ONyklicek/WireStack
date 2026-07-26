@@ -912,9 +912,13 @@
                                                 </div>
                                             </template>
                                         @endif
-                                        {{-- Selection Checkbox --}}
+                                        {{-- Selection Checkbox. data-select-cell marks the selection
+                                             column for the sweep gesture (and the widened click
+                                             target): the cell is found by this hook, never by column
+                                             position — sortable prepends a drag-handle <td> and would
+                                             shift every index. --}}
                                         @if($isSelectable)
-                                            <td class="w-12 {{ $cellPadding }}">
+                                            <td class="w-12 {{ $cellPadding }}" data-select-cell>
                                                 <div class="flex items-center justify-center">
                                                     <button
                                                             type="button"
@@ -1164,7 +1168,7 @@
                                          read for on the right, actions after it. --}}
                                     <div class="flex items-start gap-3 px-4 pt-4 {{ count($cardDetails) > 0 ? 'pb-3' : 'pb-4' }}">
                                         @if($isSelectable)
-                                            <label class="flex items-center pt-0.5 flex-shrink-0">
+                                            <label class="flex items-center pt-0.5 flex-shrink-0" data-select-cell>
                                                 <input
                                                         type="checkbox"
                                                         x-on:change="toggle(@js((string) $recordKey))"

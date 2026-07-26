@@ -79,7 +79,17 @@ it('ships neither the component nor the selection hooks without selectable()', f
     Livewire::test(UnselectableRenderComponent::class)
         ->assertDontSee('wireRecordSelection', false)
         ->assertDontSee('data-selection-root', false)
-        ->assertDontSee('data-page-keys', false);
+        ->assertDontSee('data-page-keys', false)
+        ->assertDontSee('data-select-cell', false);
+});
+
+it('marks every selection cell with the data-select-cell hook', function () {
+    // The sweep gesture and the widened click target find the selection column
+    // by this hook, never by column position — sortable prepends a drag-handle
+    // cell and would shift every index.
+    $html = Livewire::test(SelectionRenderComponent::class)->html();
+
+    expect(substr_count($html, 'data-select-cell'))->toBe(2); // 2 rows
 });
 
 it('keeps the selection assets include on the wrapper, outside the tbody', function () {
