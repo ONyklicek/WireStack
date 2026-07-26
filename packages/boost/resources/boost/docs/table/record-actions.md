@@ -109,6 +109,27 @@ Keyboard selection drives the **same** selection state as the checkboxes and the
 bulk-action bar — arrow to a row, `Space` to select it, `Shift`+arrow to extend a
 block — then run the bulk action from the bar.
 
+`Shift`+`↑`/`↓` builds **one contiguous block from the anchor** and makes that
+block the selection. The anchor is the row you last picked — with `Space`, with a
+checkbox — and when the selection came from `mod`+`A` or the select-all strip
+(no anchor of its own) it falls back to the far edge of the block you are
+standing in, so the first `Shift`+arrow *shrinks or grows* that block instead of
+throwing the rest of the selection away. To drop individual rows out of a
+selection, arrow to each one and press `Space`.
+
+Pointer and keyboard share one active row: **clicking a row marks it** and the
+arrows continue from there, so a table is never navigated from two places at
+once. The marker stays visible while the pointer hovers the row it marks, it
+survives the roundtrip an action triggers, and it follows its record through a
+re-sort (when the record leaves the page entirely, the tabstop falls back to the
+first row).
+
+Keys only reach the grid when a **row itself** has the focus: a keystroke inside
+a row action button, an inline-editable cell or a dropdown belongs to that
+element. While an action modal is open the grid is inert — no arrow moves the
+marker behind the dialog and no shortcut fires a second action — and closing the
+modal hands the focus back to the active row, so the arrows keep working.
+
 Force it off (or on) if you need to:
 
 ```php
@@ -120,9 +141,11 @@ keyboard-accessible — a behaviour-only action is never a mouse-only trap.
 
 ## Combining with selection and bulk actions
 
-When the table is `->selectable()`, a single click still selects the row, so the
-default record-action trigger becomes **double-click** — the two never fight.
-Clicking a checkbox only toggles selection, and bulk actions are untouched:
+When the table is `->selectable()`, the default record-action trigger becomes
+**double-click**, so a single click stays free for working with the selection —
+it only marks the row it lands on (the active row for the keyboard and the anchor
+of the next `Shift`+range). Selection itself is always the checkbox's job: a
+click on the row never ticks it. Bulk actions are untouched:
 
 ```php
 ->selectable()
@@ -139,8 +162,11 @@ tint it for a stronger "this row is clickable" hint:
 
 ```php
 ->recordActionHover('primary')   // colored hover instead of neutral gray
-->activeRowClass('bg-amber-100')  // override the keyboard-active row highlight
+->activeRowClass('bg-amber-100')  // override the active-row marker (click + keyboard)
 ```
+
+The active row drops its hover tint while it is marked, so the marker is never
+painted over by `hover:bg-*` when the pointer rests on it.
 
 ## Recommended UX
 

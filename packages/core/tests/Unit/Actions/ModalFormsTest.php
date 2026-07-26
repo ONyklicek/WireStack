@@ -5,6 +5,7 @@ declare(strict_types=1);
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\Contracts\ModalForm;
 use NyonCode\WireCore\Actions\Contracts\ModalFormFactory;
+use NyonCode\WireCore\Actions\ModalStep;
 use NyonCode\WireCore\Actions\Support\ModalForms;
 
 /**
@@ -37,4 +38,17 @@ it('degrades an action form modal to a form-less modal when the factory is unbou
         ->and($action->hasFormInstance())->toBeFalse()
         ->and($action->getFormInstance())->toBeNull()
         ->and($action->getStepFormInstance())->toBeNull();
+});
+
+it('degrades a wizard step form to null when the factory is unbound', function () {
+    app()->offsetUnset(ModalFormFactory::class);
+
+    $action = Action::make('wizard')->steps([
+        ModalStep::make('One')->schema([]),
+    ]);
+
+    // The step itself resolves; only its form body cannot be built without a
+    // form runtime, so the wizard degrades instead of fataling.
+    expect($action->getModalStep(0))->not->toBeNull()
+        ->and($action->getStepFormInstance(null, null, 0))->toBeNull();
 });

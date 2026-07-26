@@ -74,6 +74,7 @@
     $tableRole = $table->getTableRole();
     $recordKeyboardConfig = $keyboardNav ? $table->getRecordActionKeyboardConfig() : null;
     $recordActionsRootEnabled = $hasRecordPointer || $rowContextMenuEnabled || $keyboardNav;
+    $activeRowConfig = $recordActionsRootEnabled ? $table->getActiveRowConfig() : null;
     $hasBulkActions = !empty($bulkActions);
     $hasHeaderActions = !empty($headerActions);
     $hasFilters = !empty($filters);
@@ -84,6 +85,23 @@
         ? app(\NyonCode\WireCore\Foundation\Icons\IconManager::class)->render('check', 'h-4 w-4', 'absolute inset-0 text-white')
         : '';
     $hasSummaries = $component->tableHasSummaries();
+
+    // One `:class` expression per row, merging every dynamic row state that has
+    // to survive a Livewire morph: the selection tint and the record-action
+    // active marker. Both are Alpine bindings rather than classes toggled from
+    // JS, so the roundtrip a click triggers cannot wash them off. `rowClass()`
+    // returns an object (it also switches the row's hover tint off while it is
+    // the active row); `%key%` is substituted with the record key per row.
+    $rowClassBindingParts = [];
+    if ($isSelectable) {
+        $rowClassBindingParts[] = "'bg-primary-50 dark:bg-primary-900/20': isSelected(%key%)";
+    }
+    if ($activeRowConfig !== null) {
+        $rowClassBindingParts[] = '...rowClass(%key%)';
+    }
+    $rowClassBinding = $rowClassBindingParts === []
+        ? null
+        : '{ '.implode(', ', $rowClassBindingParts).' }';
 
     // Selection is managed client-side (Alpine) and entangled deferred — a
     // checkbox click costs no server roundtrip. When the footer renders
@@ -839,11 +857,12 @@
                                 <tbody
                                         class="divide-y divide-gray-100 dark:divide-gray-700"
                                         @if($recordActionsRootEnabled)
-                                            x-data="wireRecordActions({ bindings: @js($recordActionBindings), contextMenu: {{ $rowContextMenuEnabled ? 'true' : 'false' }}, keyboard: @js($recordKeyboardConfig) })"
-                                            @if($hasRecordPointer)
-                                                @click="onPointer('click', $event)"
-                                                @dblclick="onPointer('dblclick', $event)"
-                                            @endif
+                                            x-data="wireRecordActions({ bindings: @js($recordActionBindings), contextMenu: {{ $rowContextMenuEnabled ? 'true' : 'false' }}, keyboard: @js($recordKeyboardConfig), active: @js($activeRowConfig) })"
+                                            {{-- Bound whenever the controller is mounted, not only for pointer
+                                                 bindings: a click also moves the active row, which is what makes a
+                                                 clicked row visibly the one the arrow keys continue from. --}}
+                                            @click="onPointer('click', $event)"
+                                            @dblclick="onPointer('dblclick', $event)"
                                             @if($rowContextMenuEnabled)
                                                 @contextmenu="onContextMenu($event)"
                                             @endif
@@ -893,10 +912,14 @@
                                             'cellPadding' => $cellPadding,
                                         ])
                                     @endif
+                                    @php $recordKeyJs = \Illuminate\Support\Js::from((string) $recordKey)->toHtml(); @endphp
                                     <tr
                                             class="{{ $table->getRowClasses($record, $rowIndex) }} {{ $keyboardNav ? 'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500' : '' }}"
-                                            @if($isSelectable) :class="isSelected(@js((string) $recordKey)) ? 'bg-primary-50 dark:bg-primary-900/20' : ''" @endif
-                                            @if($keyboardNav) role="row" tabindex="-1" @endif
+                                            @if($rowClassBinding) :class="{!! str_replace('%key%', $recordKeyJs, $rowClassBinding) !!}" @endif
+                                            {{-- The roving tabindex is bound, not printed: Livewire morphs the
+                                                 rows back to this markup on every update, which would wipe an
+                                                 assigned tabstop and drop the grid out of the tab order. --}}
+                                            @if($keyboardNav) role="row" tabindex="{{ $rowIndex === 0 ? '0' : '-1' }}" :tabindex="rowTabindex({!! $recordKeyJs !!}, {{ $rowIndex }})" @endif
                                             wire:key="row-{{ $recordKey }}"
                                             data-testid="table-row"
                                             data-row-key="{{ $recordKey }}"

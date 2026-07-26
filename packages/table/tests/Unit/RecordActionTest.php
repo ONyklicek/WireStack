@@ -437,13 +437,37 @@ it('lets keyboard nav be forced off or on', function () {
     expect(Table::make()->recordActionKeyboard()->keyboardNavEnabled())->toBeTrue();
 });
 
-it('exposes the active-row class and selection flag in the keyboard config', function () {
+it('exposes the selection flag in the keyboard config', function () {
     $config = Table::make()
         ->selectable()
-        ->activeRowClass('bg-amber-100')
         ->recordAction(RecordAction::make('edit')->onDoubleClick())
         ->getRecordActionKeyboardConfig();
 
-    expect($config['selectable'])->toBeTrue()
-        ->and($config['activeClass'])->toBe('bg-amber-100');
+    expect($config['selectable'])->toBeTrue();
+});
+
+// ─── Active-row marker (pointer + keyboard share one) ────────────
+
+it('hands the active-row marker and the row hover to the controller', function () {
+    $default = Table::make()
+        ->recordAction(RecordAction::make('edit')->onDoubleClick())
+        ->getActiveRowConfig();
+
+    expect($default['class'])->toBe('bg-primary-100 dark:bg-primary-900/30')
+        // The hover the controller has to switch off on the active row, or it
+        // would paint over the marker under the pointer.
+        ->and($default['hover'])->toBe('hover:bg-gray-50 dark:hover:bg-gray-700/30');
+
+    $custom = Table::make()
+        ->activeRowClass('bg-amber-100')
+        ->recordActionHover('primary')
+        ->recordAction(RecordAction::make('edit')->onDoubleClick())
+        ->getActiveRowConfig();
+
+    expect($custom['class'])->toBe('bg-amber-100')
+        ->and($custom['hover'])->toBe('hover:bg-primary-50 dark:hover:bg-primary-900/20');
+});
+
+it('reports no row hover to strip when hovering is off', function () {
+    expect(Table::make()->hoverable(false)->getActiveRowConfig()['hover'])->toBe('');
 });

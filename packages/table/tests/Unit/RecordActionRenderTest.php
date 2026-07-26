@@ -124,3 +124,43 @@ it('omits the selection-root hook when the table is not selectable', function ()
     Livewire::test(RecordActionRenderComponent::class)
         ->assertDontSee('data-selection-root', false);
 });
+
+// ─── Active-row marker ───────────────────────────────────────────
+
+it('binds the active-row marker on every row instead of toggling classes', function () {
+    // The marker is an Alpine binding so it survives the Livewire roundtrip the
+    // click itself triggers; the controller gets both the marker class and the
+    // hover it has to switch off while a row is active.
+    $html = Livewire::test(RecordActionRenderComponent::class)->html();
+
+    expect($html)
+        ->toContain('\u0022class\u0022:\u0022bg-primary-100 dark:bg-primary-900')
+        ->toContain('\u0022hover\u0022:\u0022hover:bg-gray-50')
+        ->and(substr_count($html, "...rowClass('"))->toBe(3);
+});
+
+it('merges the selection tint and the active marker into one class binding', function () {
+    // Two `:class` attributes on one <tr> would silently drop the second, so a
+    // selectable table with record actions must emit a single merged object.
+    $html = Livewire::test(SelectableRecordActionComponent::class)->html();
+
+    expect(substr_count($html, ':class="{'))->toBe(3)
+        ->and($html)->toContain('isSelected(')
+        ->and($html)->toContain('...rowClass(');
+});
+
+it('leaves rows unbound when there is no record-action controller', function () {
+    Livewire::test(NoRecordActionComponent::class)
+        ->assertDontSee('rowClass(', false);
+});
+
+it('binds the roving tabindex so a morph cannot drop the grid out of the tab order', function () {
+    // Livewire rewrites every row from this markup on each update, so an
+    // assigned tabstop would be wiped by the first sort/filter/page change.
+    $html = Livewire::test(RecordActionRenderComponent::class)->html();
+
+    expect(substr_count($html, ':tabindex="rowTabindex('))->toBe(3)
+        // The first row is the tabstop before Alpine boots (and before any row
+        // is chosen), the rest stay out of the tab order.
+        ->and(substr_count($html, 'tabindex="0"'))->toBe(1);
+});

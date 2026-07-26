@@ -109,6 +109,25 @@ Klávesnicový výběr řídí **stejný** stav výběru jako checkboxy a bulk b
 na řádek, `Space` pro výběr, `Shift`+šipka pro rozšíření bloku — pak spusť
 hromadnou akci z baru.
 
+`Shift`+`↑`/`↓` staví **jeden souvislý blok od kotvy** a ten blok se stane
+výběrem. Kotva je řádek, který jsi naposledy zvolil — přes `Space` nebo přes
+checkbox — a když výběr vznikl přes `mod`+`A` či pruh „vybrat vše" (vlastní kotvu
+nemá), použije se vzdálenější okraj bloku, ve kterém stojíš. První `Shift`+šipka
+tak blok *zmenší nebo zvětší* místo toho, aby zbytek výběru zahodila. Jednotlivé
+řádky z výběru vyhodíš tak, že na ně dojedeš šipkami a dáš `Space`.
+
+Myš i klávesnice sdílejí jeden aktivní řádek: **klik na řádek ho označí** a šipky
+pokračují odtud, takže se tabulka nikdy neovládá ze dvou míst zároveň. Označení
+zůstane vidět i pod kurzorem, přežije roundtrip vyvolaný akcí a drží se svého
+záznamu i po přeřazení (když záznam ze stránky zmizí, tabstop se vrátí na první
+řádek).
+
+Klávesy dosáhnou na grid jen tehdy, když má fokus **samotný řádek**: stisk uvnitř
+tlačítka akce, inline editovatelné buňky nebo dropdownu patří tomu prvku. Dokud
+je otevřený modal akce, grid je inertní — žádná šipka neposune označení za
+dialogem a žádná zkratka nespustí druhou akci — a po zavření modalu se fokus
+vrátí na aktivní řádek, takže šipky dál fungují.
+
 Vynuť vypnutí (či zapnutí), pokud potřebuješ:
 
 ```php
@@ -120,9 +139,11 @@ dostupná klávesnicí — behavior-only akce nikdy není past jen pro myš.
 
 ## Kombinace s výběrem a hromadnými akcemi
 
-Když je tabulka `->selectable()`, jednoklik dál vybírá řádek, takže výchozí
-trigger record akce se stává **dvojklik** — nekolidují spolu. Klik na checkbox
-jen přepne výběr a hromadné akce zůstávají nedotčené:
+Když je tabulka `->selectable()`, výchozím triggerem record akce se stává
+**dvojklik**, takže jednoklik zůstává volný pro práci s výběrem — jen označí
+řádek, na který dopadne (aktivní řádek pro klávesnici a kotva dalšího
+`Shift`+rozsahu). Samotný výběr je vždy věc checkboxu: klik na řádek ho nikdy
+nezaškrtne. Hromadné akce zůstávají nedotčené:
 
 ```php
 ->selectable()
@@ -139,8 +160,11 @@ obarvi pro silnější náznak „tento řádek je klikatelný":
 
 ```php
 ->recordActionHover('primary')   // obarvený hover místo neutrální šedé
-->activeRowClass('bg-amber-100')  // přepis zvýraznění klávesnicově aktivního řádku
+->activeRowClass('bg-amber-100')  // přepis označení aktivního řádku (klik i klávesnice)
 ```
+
+Aktivní řádek po dobu označení shazuje svůj hover tint, takže označení nikdy
+nepřebije `hover:bg-*`, když na něm spočine kurzor.
 
 ## Doporučené UX
 

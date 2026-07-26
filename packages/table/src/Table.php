@@ -1607,21 +1607,55 @@ class Table implements Htmlable
             // override applies only to otherwise-neutral rows.
             $base = HasColor::getRowTintClasses($tint);
         } else {
-            $recordHover = $this->getRecordActionHover();
-
-            if ($clickable && $recordHover !== null) {
-                $hover = HasColor::getRowHoverClasses($recordHover);
-            } else {
-                $hover = $this->isHoverable() ? 'hover:bg-gray-50 dark:hover:bg-gray-700/30' : '';
-            }
-
             $stripe = $this->isStriped() && $rowIndex % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/30' : '';
-            $base = trim("{$hover} {$stripe}");
+            $base = trim($this->getRowHoverClasses().' '.$stripe);
         }
 
         $cursor = $clickable ? 'cursor-pointer' : '';
 
         return trim("{$base} {$cursor} ".((string) $this->getRowClass($record)));
+    }
+
+    /**
+     * The resting hover tint of a neutral (untinted) row: the record-action
+     * hover override when the rows are clickable, otherwise the table's own
+     * hoverable tint (empty when hovering is off).
+     *
+     * Canonical owner of the row hover vocabulary — {@see getRowClasses()}
+     * paints it and {@see getActiveRowConfig()} hands the same string to the
+     * delegated record-action controller, which switches it off on the active
+     * row so a `hover:bg-*` utility cannot paint over the active marker.
+     */
+    public function getRowHoverClasses(): string
+    {
+        $recordHover = $this->getRecordActionHover();
+
+        if ($this->hasRecordActionPointer() && $recordHover !== null) {
+            return HasColor::getRowHoverClasses($recordHover);
+        }
+
+        return $this->isHoverable() ? 'hover:bg-gray-50 dark:hover:bg-gray-700/30' : '';
+    }
+
+    /**
+     * Active-row marker config for the delegated record-action controller: the
+     * class(es) marking the row the pointer or the keyboard last landed on, plus
+     * the hover class(es) the row carries at rest.
+     *
+     * The controller drops the hover classes from the active row, because a
+     * `hover:bg-*` utility is emitted after the plain `bg-*` one and would
+     * otherwise hide the marker for exactly as long as the pointer rests on the
+     * row the user just clicked. A tinted row (`rowColor()`) keeps its own
+     * same-hue hover instead — the marker reads through it as a shade change.
+     *
+     * @return array{class: string, hover: string}
+     */
+    public function getActiveRowConfig(): array
+    {
+        return [
+            'class' => $this->getActiveRowClass() ?? 'bg-primary-100 dark:bg-primary-900/30',
+            'hover' => $this->getRowHoverClasses(),
+        ];
     }
 
     /**
@@ -1666,8 +1700,9 @@ class Table implements Htmlable
 
     /**
      * The client config the keyboard layer of `wireRecordActions` consumes:
-     * the Enter/Shift+Enter targets, the shortcut map, whether Space toggles
-     * selection, and the class marking the active row.
+     * the Enter/Shift+Enter targets, the shortcut map, and whether Space toggles
+     * selection. The active-row marker is shared with the pointer layer and
+     * lives in {@see getActiveRowConfig()}.
      *
      * @return array<string, mixed>
      */
@@ -1680,7 +1715,6 @@ class Table implements Htmlable
             'secondary' => $resolver->secondaryActionName(),
             'shortcuts' => $resolver->shortcuts(),
             'selectable' => $this->isSelectable(),
-            'activeClass' => $this->getActiveRowClass() ?? 'bg-primary-100 dark:bg-primary-900/30',
         ];
     }
 

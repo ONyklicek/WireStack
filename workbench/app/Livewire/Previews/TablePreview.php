@@ -440,8 +440,9 @@ class TablePreview extends Component
             ->searchable()
             ->selectable()
             // Double-click a row → open it (a confirmation modal here). Because the
-            // table is selectable, the default trigger is double-click, leaving a
-            // single click for row selection. Behaviour-only: no toolbar button.
+            // table is selectable, the default trigger is double-click, leaving the
+            // single click to the selection gestures (it only marks the row).
+            // Behaviour-only: no toolbar button.
             ->recordActions(match ($this->variant) {
                 'record-actions' => [
                     RecordAction::make(
@@ -459,6 +460,43 @@ class TablePreview extends Component
                 'record-actions-dual' => [
                     RecordAction::make(Action::make('view')->label('View')->action(fn () => null))->onClick(),
                     RecordAction::make(Action::make('edit')->label('Edit')->action(fn () => null))->onDoubleClick(),
+                ],
+                // Keyboard navigation showcase (see the legend above the table).
+                // Keyboard nav is automatic once any record action exists: the rows
+                // become a grid with a roving tabindex, ↑/↓ move the active row,
+                // Enter runs the double-click action, Shift+Enter the single-click
+                // one, and each onKey() binding fires against the active row.
+                // Clicking a row adopts it as the active row, so pointer and
+                // keyboard always continue from the same place.
+                'record-actions-keyboard' => [
+                    RecordAction::make(
+                        Action::make('open')
+                            ->label('Open')
+                            ->icon('outline:eye')
+                            ->requiresConfirmation()
+                            ->modalHeading(fn ($r) => "Opened {$r->name}")
+                            ->modalDescription('Enter (or a double-click) runs the primary record action against the active row.')
+                            ->action(fn () => null)
+                    )->onDoubleClick(),
+                    RecordAction::make(
+                        Action::make('preview')
+                            ->label('Preview')
+                            ->icon('outline:document-magnifying-glass')
+                            ->requiresConfirmation()
+                            ->modalHeading(fn ($r) => "Preview of {$r->name}")
+                            ->modalDescription('Shift+Enter (or a single click) runs the secondary record action.')
+                            ->action(fn () => null)
+                    )->onClick(),
+                    RecordAction::make(
+                        Action::make('archive')
+                            ->label('Archive')
+                            ->icon('outline:archive-box')
+                            ->color('danger')
+                            ->requiresConfirmation()
+                            ->modalHeading(fn ($r) => "Archive {$r->name}?")
+                            ->modalDescription('Fired by the Delete key against the active row — an onKey() binding.')
+                            ->action(fn () => null)
+                    )->onKey('Delete'),
                 ],
                 default => [],
             })

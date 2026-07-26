@@ -20,7 +20,8 @@ use NyonCode\WireTable\Table;
  * `openActionModal()` endpoints. This resolver only decides *which* name a given
  * interaction maps to, applying the selection-aware default (a binding with no
  * explicit trigger fires on double-click when the table is selectable — so a
- * single click is left to row selection — and on single click otherwise).
+ * single click is left to the selection gestures — and on single click
+ * otherwise).
  *
  * Name references resolve against the table's registered row actions
  * ({@see Table::findRegisteredAction()}), so a record action can reuse an action
