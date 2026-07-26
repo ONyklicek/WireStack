@@ -267,6 +267,47 @@ try {
     JSON.stringify(c12));
   await shot('03-bulk-bar');
 
+  // ── mouse: Shift+click / mod+click / mod+Shift+click ─────────────────────
+  // Real clicks with real CDP modifiers; on macOS `mod` must be meta — a real
+  // ctrl+click is the secondary click there and Chrome swallows `click`.
+  const modBit = process.platform === 'darwin' ? MOD.meta : MOD.ctrl;
+
+  await eval_(`sel().deselectAll()`);
+  await sleep(300);
+
+  await realClick(`rows()[3]`, modBit);
+  await sleep(400);
+  const modClick = JSON.parse(await eval_(`JSON.stringify({ selected: sel().selected, anchor: sel().anchorKey, k3: key(3), active: ctrl().activeKey })`));
+  check('mod+click toggles the row outside the checkbox and anchors it',
+    modClick.selected.length === 1 && modClick.selected[0] === modClick.k3
+      && modClick.anchor === modClick.k3 && modClick.active === modClick.k3,
+    JSON.stringify(modClick));
+
+  await realClick(`rows()[7]`, MOD.shift);
+  await sleep(400);
+  const shiftClick = JSON.parse(await eval_(`JSON.stringify({ count: sel().selected.length, edge: sel().isSelected(key(3)) && sel().isSelected(key(7)) })`));
+  check('Shift+click selects the [anchor…clicked] block',
+    shiftClick.count === 5 && shiftClick.edge, JSON.stringify(shiftClick));
+
+  await realClick(`rows()[9]`, modBit);
+  await sleep(400);
+  await realClick(`rows()[11]`, modBit | MOD.shift);
+  await sleep(400);
+  const addBlock = JSON.parse(await eval_(`JSON.stringify({ count: sel().selected.length, base: sel().isSelected(key(4)), block: sel().isSelected(key(10)) && sel().isSelected(key(11)) })`));
+  check('mod+Shift+click adds a whole block and keeps the earlier one',
+    addBlock.count === 8 && addBlock.base && addBlock.block, JSON.stringify(addBlock));
+
+  await realClick(`rows()[9]`, modBit);
+  await sleep(400);
+  check('a second mod+click toggles the row back out',
+    await eval_(`sel().selected.length`) === 7 && ! await eval_(`sel().isSelected(key(9))`));
+
+  // A modifier click must never fall through into a bound click action: the
+  // gesture table binds Delete/dblclick/context menu, so no dialog may open.
+  check('modifier clicks never trigger a record action',
+    ! await eval_(`$qa('[role="dialog"]').some(d => vis(d))`));
+  await shot('03a-mouse-gestures');
+
   // ════ Section 1b — selection-only: the grid works without record actions ═
   await page('Page.navigate', { url: `${base}/table-selection-only` });
   await sleep(3000);

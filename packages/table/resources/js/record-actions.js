@@ -260,6 +260,38 @@ const wireRecordActions = (config = {}) => ({
         this.selection()?.setAnchor(key)
     },
 
+    // Shift+click / mod+click / mod+Shift+click — the pointer counterparts of
+    // the keyboard range gestures, sharing the same anchor, base and range
+    // arithmetic in the selection component.
+    onSelectionClick(row, event) {
+        const sel = this.selection()
+        if (! sel) return
+
+        const rows = this.navRows()
+        const idx = rows.indexOf(row)
+        if (idx < 0) return
+
+        if (event.shiftKey) {
+            // Range from the anchor; with no anchor set, fall back the same
+            // way the keyboard does — from the block edge of the row the user
+            // was on BEFORE this click, so resolve it before marking.
+            if (sel.anchorKey === null) {
+                const fromIdx = rows.findIndex((r) => r.dataset.rowKey === this.activeKey)
+                sel.anchorKey = sel.anchorFor(rows, fromIdx < 0 ? idx : fromIdx)
+            }
+
+            this.markActive(row)
+            sel.selectRange(rows, idx, { additive: event.ctrlKey || event.metaKey })
+            return
+        }
+
+        // mod alone: toggle the single row and anchor the next range on it,
+        // exactly like a checkbox click.
+        this.markActive(row)
+        sel.toggle(row.dataset.rowKey)
+        sel.setAnchor(row.dataset.rowKey)
+    },
+
     // A row was focused directly (click / Tab): adopt it as the active row so
     // arrow keys continue from there.
     onRowFocus(event) {
@@ -392,6 +424,14 @@ const wireRecordActions = (config = {}) => ({
         }
 
         if (this.blocked(event, row)) return
+
+        // A modifier click is a selection gesture, never an action gesture:
+        // Shift+click ranges from the anchor, mod+click toggles the row (even
+        // outside the checkbox), mod+Shift+click adds a whole block — and none
+        // of them may fall through into a bound click action.
+        if (type === 'click' && this.kb?.selectable && (event.shiftKey || event.ctrlKey || event.metaKey)) {
+            return this.onSelectionClick(row, event)
+        }
 
         // Marking is unconditional: a click on a row of an interactive table
         // moves the active row even when the gesture itself is bound to

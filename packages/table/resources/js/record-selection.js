@@ -187,12 +187,15 @@ document.addEventListener('alpine:init', () => {
                that very write), and minus the block so the gesture owns the
                block it grows and shrinks while everything selected elsewhere
                survives the range. */
-            selectRange(rows, activeIdx) {
+            selectRange(rows, activeIdx, { additive = false } = {}) {
                 const anchorIdx = rows.findIndex((row) => row.dataset.rowKey === this.anchorKey);
                 if (anchorIdx < 0) return;
 
                 if (this.baseSelection === null) {
-                    const block = this.blockBounds(rows, anchorIdx);
+                    // Additive (mod+Shift): the block is purely added, so the
+                    // base keeps the whole snapshot instead of ceding the
+                    // block around the anchor to the range.
+                    const block = additive ? null : this.blockBounds(rows, anchorIdx);
                     const blockKeys = block === null
                         ? []
                         : rows.slice(block.start, block.end + 1).map((row) => row.dataset.rowKey);
