@@ -1681,11 +1681,39 @@ class Table implements Htmlable
     }
 
     /**
+     * Whether this table is a grid in the ARIA sense — the single owner of
+     * that decision. A grid is any table the keyboard drives row by row: one
+     * with record actions, and equally one whose rows can be selected
+     * (`selectable()`, or bulk actions — {@see isSelectable()}), where
+     * Space/Shift+arrow work the selection. `recordActionKeyboard()` stays the
+     * explicit override in both directions.
+     */
+    public function usesGridSemantics(): bool
+    {
+        return $this->recordActionKeyboard ?? ($this->hasRecordActions() || $this->isSelectable());
+    }
+
+    /**
      * Whether keyboard navigation is active for this table.
      */
     public function keyboardNavEnabled(): bool
     {
-        return $this->recordActionKeyboard ?? $this->hasRecordActions();
+        return $this->usesGridSemantics();
+    }
+
+    /**
+     * Whether the delegated `wireRecordActions` controller mounts on the
+     * `<tbody>`. Still scoped to the record-action surface (pointer bindings,
+     * a context menu, keyboard over record actions): widening it to every
+     * grid is a visible behaviour change for existing selectable tables and
+     * ships as its own step, so a selectable-only table currently renders
+     * grid markup whose keys the next step wires up.
+     */
+    public function mountsRecordActionController(): bool
+    {
+        return $this->hasRecordActionPointer()
+            || $this->hasRowContextMenu()
+            || ($this->recordActionKeyboard ?? $this->hasRecordActions());
     }
 
     /**

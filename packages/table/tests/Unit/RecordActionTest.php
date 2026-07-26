@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireTable\Exceptions\TableConfigurationException;
 use NyonCode\WireTable\Support\RecordAction;
 use NyonCode\WireTable\Support\RecordTrigger;
@@ -465,6 +466,34 @@ it('lets keyboard nav be forced off or on', function () {
         ->and($off->getTableRole())->toBeNull();
 
     expect(Table::make()->recordActionKeyboard()->keyboardNavEnabled())->toBeTrue();
+});
+
+// ─── Grid semantics (single owner) ───────────────────────────────
+
+it('grants grid semantics to selectable tables and tables with bulk actions', function () {
+    // usesGridSemantics() owns "is this a grid": record actions, selectable(),
+    // and bulk actions (isSelectable() covers both) all qualify.
+    expect(Table::make()->usesGridSemantics())->toBeFalse()
+        ->and(Table::make()->selectable()->usesGridSemantics())->toBeTrue()
+        ->and(Table::make()->selectable()->getTableRole())->toBe('grid')
+        ->and(Table::make()->bulkActions([BulkAction::make('x')])->usesGridSemantics())->toBeTrue()
+        ->and(Table::make()->selectable()->keyboardNavEnabled())->toBeTrue();
+});
+
+it('lets recordActionKeyboard(false) ungrid a selectable table', function () {
+    $table = Table::make()->selectable()->recordActionKeyboard(false);
+
+    expect($table->usesGridSemantics())->toBeFalse()
+        ->and($table->getTableRole())->toBeNull();
+});
+
+it('keeps the controller mount scoped to the record-action surface', function () {
+    // Widening the mount to every grid is a visible change shipping as its own
+    // step; a selectable-only grid must not mount wireRecordActions yet.
+    expect(Table::make()->selectable()->mountsRecordActionController())->toBeFalse()
+        ->and(Table::make()->recordAction(RecordAction::make('edit')->onDoubleClick())->mountsRecordActionController())->toBeTrue()
+        ->and(Table::make()->recordActionKeyboard()->mountsRecordActionController())->toBeTrue()
+        ->and(Table::make()->selectable()->recordActionKeyboard(false)->mountsRecordActionController())->toBeFalse();
 });
 
 it('exposes the selection flag in the keyboard config', function () {

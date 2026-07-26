@@ -73,7 +73,10 @@
     $keyboardNav = $table->keyboardNavEnabled();
     $tableRole = $table->getTableRole();
     $recordKeyboardConfig = $keyboardNav ? $table->getRecordActionKeyboardConfig() : null;
-    $recordActionsRootEnabled = $hasRecordPointer || $rowContextMenuEnabled || $keyboardNav;
+    // The controller mount has its own owner: grid semantics (role/tabindex)
+    // now cover selectable tables too, but mounting wireRecordActions there is
+    // a visible change that ships separately — see mountsRecordActionController().
+    $recordActionsRootEnabled = $table->mountsRecordActionController();
     $activeRowConfig = $recordActionsRootEnabled ? $table->getActiveRowConfig() : null;
     $hasBulkActions = !empty($bulkActions);
     $hasHeaderActions = !empty($headerActions);
@@ -918,8 +921,11 @@
                                             @if($rowClassBinding) :class="{!! str_replace('%key%', $recordKeyJs, $rowClassBinding) !!}" @endif
                                             {{-- The roving tabindex is bound, not printed: Livewire morphs the
                                                  rows back to this markup on every update, which would wipe an
-                                                 assigned tabstop and drop the grid out of the tab order. --}}
-                                            @if($keyboardNav) role="row" tabindex="{{ $rowIndex === 0 ? '0' : '-1' }}" :tabindex="rowTabindex({!! $recordKeyJs !!}, {{ $rowIndex }})" @endif
+                                                 assigned tabstop and drop the grid out of the tab order. The
+                                                 binding needs the controller; a grid without one keeps the
+                                                 static first-row tabstop. --}}
+                                            @if($keyboardNav) role="row" tabindex="{{ $rowIndex === 0 ? '0' : '-1' }}" @endif
+                                            @if($keyboardNav && $recordActionsRootEnabled) :tabindex="rowTabindex({!! $recordKeyJs !!}, {{ $rowIndex }})" @endif
                                             wire:key="row-{{ $recordKey }}"
                                             data-testid="table-row"
                                             data-row-key="{{ $recordKey }}"

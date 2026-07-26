@@ -65,6 +65,13 @@ class SelectableRecordActionComponent extends RecordActionRenderComponent
     public bool $selectable = true;
 }
 
+class SelectableOnlyComponent extends RecordActionRenderComponent
+{
+    public bool $withRecordActions = false;
+
+    public bool $selectable = true;
+}
+
 beforeEach(function () {
     Schema::create('rec_render_rows', function (Blueprint $table) {
         $table->id();
@@ -123,6 +130,26 @@ it('exposes the selection-root hook keyboard range-select reaches for', function
 it('omits the selection-root hook when the table is not selectable', function () {
     Livewire::test(RecordActionRenderComponent::class)
         ->assertDontSee('data-selection-root', false);
+});
+
+// ─── Grid semantics without record actions ───────────────────────
+
+it('grids a selectable table even without record actions', function () {
+    // usesGridSemantics() owns the decision: a selectable table is keyboard
+    // territory too — Space and Shift+arrow work the selection there.
+    Livewire::test(SelectableOnlyComponent::class)
+        ->assertSee('role="grid"', false)
+        ->assertSee('role="row"', false)
+        ->assertSee('tabindex="0"', false);
+});
+
+it('does not mount the record-action controller on a selectable-only grid yet', function () {
+    // Mounting wireRecordActions there is a visible change (active marker,
+    // focus on click, hover switch-off) and ships as its own step; until then
+    // the grid markup stands alone with the static first-row tabstop.
+    Livewire::test(SelectableOnlyComponent::class)
+        ->assertDontSee('wireRecordActions', false)
+        ->assertDontSee('rowTabindex(', false);
 });
 
 // ─── Active-row marker ───────────────────────────────────────────
