@@ -258,6 +258,7 @@
                     wire:key="table-wrapper"
                     @if($isSelectable)
                         data-page-keys="{{ json_encode($pageRecordKeys) }}"
+                        data-matching="{{ $recordCount }}"
                         data-selection-root
                         x-data="{
                             selected: $wire.entangle('tableState.selection.records'),
@@ -267,8 +268,12 @@
                                         toggle works for both and no key list of the
                                         whole result set ever reaches the browser. */
                             mode: $wire.entangle('tableState.selection.mode'),
-                            matching: {{ $recordCount }},
                             commitTimer: null,
+                            /* Read from the DOM, not seeded into x-data: the root is keyed
+                               (wire:key table-wrapper), so Livewire morphs it in place and an
+                               x-data literal would keep the count of the first render forever
+                               (filter 128k rows down to 7 and the bar would still say 128k). */
+                            get matching() { return Number(this.$root.dataset.matching || 0); },
                             get pageKeys() { return JSON.parse(this.$root.dataset.pageKeys || '[]'); },
                             get selectsAll() { return this.mode === 'all'; },
                             get selectedCount() { return this.selectsAll ? Math.max(0, this.matching - this.selected.length) : this.selected.length; },

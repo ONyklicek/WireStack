@@ -332,6 +332,22 @@ try {
     JSON.stringify(c10));
   await shot('05-toggleall-collapse');
 
+  // ── matching follows the filter through the morph ────────────────────────
+  // The selection root is morphed in place (wire:key="table-wrapper"), so a
+  // count seeded into x-data would stay at the first render's value forever;
+  // it must be read from the DOM the morph refreshes.
+  await page('Page.navigate', { url: `${base}/table-selection-gestures-paged` });
+  await sleep(3000);
+  await eval_(helpers);
+  await eval_(`(() => { const i = $q('[data-testid="table-search"]'); i.value = 'Record 0'; i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+  await sleep(3000);
+  await eval_(`$q('[data-testid="table-select-all"]').click()`);
+  await sleep(600);
+  const narrowed = JSON.parse(await eval_(`JSON.stringify({ rows: rows().length, matching: sel().matching, shown: sel().selectedCount })`));
+  check('the matching count follows a filter change instead of staying baked in',
+    narrowed.rows === 9 && narrowed.matching === 9 && narrowed.shown === 9,
+    JSON.stringify(narrowed));
+
   // ════ Section 3 — mobile cards (C11) ════════════════════════════════════
   await page('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
   await page('Page.navigate', { url: `${base}/table-selection-gestures` });
