@@ -267,6 +267,69 @@ try {
     JSON.stringify(c12));
   await shot('03-bulk-bar');
 
+  // ── keyboard: Home/End, PageUp/PageDown, mod+Shift+arrows ────────────────
+  await eval_(`sel().deselectAll()`);
+  await sleep(300);
+  await eval_(`rows()[5].focus()`);
+  await sleep(150);
+  await eval_(`fireKey(rows()[5], 'End')`);
+  await sleep(300);
+  check('End moves the marker to the last row without selecting',
+    await eval_(`ctrl().activeKey === key(39) && sel().selected.length === 0`));
+
+  await eval_(`fireKey(rows()[39], 'Home')`);
+  await sleep(300);
+  check('Home moves the marker to the first row',
+    await eval_(`ctrl().activeKey === key(0)`));
+
+  await eval_(`rows()[35].focus()`);
+  await sleep(150);
+  await eval_(`fireKey(rows()[35], ' ')`);
+  await sleep(200);
+  await eval_(`fireKey(rows()[35], 'End', { shiftKey: true })`);
+  await sleep(300);
+  check('Shift+End ranges from the anchor to the last row',
+    await eval_(`sel().selected.length === 5 && ctrl().activeKey === key(39)`));
+
+  await eval_(`fireKey(rows()[39], 'ArrowUp', { shiftKey: true, ctrlKey: true })`);
+  await sleep(300);
+  const modShift = JSON.parse(await eval_(`JSON.stringify({ count: sel().selected.length, active: ctrl().activeKey, k0: key(0) })`));
+  check('mod+Shift+ArrowUp extends the range to the top edge',
+    modShift.count === 36 && modShift.active === modShift.k0, JSON.stringify(modShift));
+
+  // PageUp/PageDown derive the jump from the row pitch and the viewport the
+  // driver pins to 1400×1200 — compute the expectation from the same DOM.
+  await eval_(`sel().deselectAll()`);
+  await sleep(300);
+  const step = await eval_(`(() => {
+    const pitch = rows()[1].getBoundingClientRect().top - rows()[0].getBoundingClientRect().top;
+    return Math.max(1, Math.floor(window.innerHeight / pitch));
+  })()`);
+  await eval_(`rows()[0].focus()`);
+  await sleep(150);
+  await eval_(`fireKey(rows()[0], 'PageDown')`);
+  await sleep(300);
+  check('PageDown jumps one viewport of rows',
+    await eval_(`ctrl().activeKey`) === String(await eval_(`key(${Math.min(step, 39)})`)),
+    `step=${step}`);
+
+  await eval_(`fireKey(rows()[${Math.min(step, 39)}], 'PageUp', { shiftKey: true })`);
+  await sleep(300);
+  check('Shift+PageUp selects the jumped range',
+    await eval_(`sel().selected.length`) === Math.min(step, 39) + 1,
+    `expected ${Math.min(step, 39) + 1}`);
+
+  // mod+Shift+A is not the select-page gesture, and mod+PageDown belongs to
+  // the browser — neither may touch the selection or the marker.
+  const beforeUnbound = JSON.parse(await eval_(`JSON.stringify({ count: sel().selected.length, active: ctrl().activeKey })`));
+  await eval_(`fireKey(rows()[0], 'a', { ctrlKey: true, shiftKey: true })`);
+  await eval_(`fireKey(rows()[0], 'PageDown', { ctrlKey: true })`);
+  await sleep(300);
+  const afterUnbound = JSON.parse(await eval_(`JSON.stringify({ count: sel().selected.length, active: ctrl().activeKey })`));
+  check('mod+Shift+A and mod+PageDown stay unbound',
+    afterUnbound.count === beforeUnbound.count && afterUnbound.active === beforeUnbound.active,
+    JSON.stringify(afterUnbound));
+
   // ── mouse: Shift+click / mod+click / mod+Shift+click ─────────────────────
   // Real clicks with real CDP modifiers; on macOS `mod` must be meta — a real
   // ctrl+click is the secondary click there and Chrome swallows `click`.

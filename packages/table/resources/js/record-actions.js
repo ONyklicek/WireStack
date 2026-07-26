@@ -161,21 +161,52 @@ const wireRecordActions = (config = {}) => ({
         if (! rows.length) return
 
         // Ctrl/⌘+A → select every row on the page (before the shortcut matcher, so
-        // it also pre-empts the browser's own select-all).
-        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a' && this.kb.selectable) {
+        // it also pre-empts the browser's own select-all). mod+Shift+A is not
+        // this gesture — without the check it would select the page too.
+        if ((event.ctrlKey || event.metaKey) && ! event.shiftKey && event.key.toLowerCase() === 'a' && this.kb.selectable) {
             event.preventDefault()
             return this.selection()?.selectPage()
         }
 
         const idx = rows.findIndex((row) => row.dataset.rowKey === this.activeKey)
+        const mod = event.ctrlKey || event.metaKey
 
         switch (event.key) {
             case 'ArrowDown':
+            case 'ArrowUp': {
+                // mod alone + arrow stays unbound: on macOS ctrl+arrows are
+                // Mission Control (the page never even sees them) and ⌘+arrows
+                // belong to the browser. mod+Shift+arrow means "to the edge" —
+                // the same target Home/End reach.
+                if (mod && ! event.shiftKey) return
+
+                const down = event.key === 'ArrowDown'
+                const step = idx < 0 ? 0 : (down ? Math.min(idx + 1, rows.length - 1) : Math.max(idx - 1, 0))
+                const target = mod && event.shiftKey ? (down ? rows.length - 1 : 0) : step
+
                 event.preventDefault()
-                return this.moveActive(rows, idx, idx < 0 ? 0 : Math.min(idx + 1, rows.length - 1), event.shiftKey)
-            case 'ArrowUp':
+                return this.moveActive(rows, idx, target, event.shiftKey)
+            }
+            case 'Home':
+            case 'End':
+                // Shift+Home/End lands on the same indices as mod+Shift+arrow —
+                // deliberately one implementation.
                 event.preventDefault()
-                return this.moveActive(rows, idx, idx < 0 ? 0 : Math.max(idx - 1, 0), event.shiftKey)
+                return this.moveActive(rows, idx, event.key === 'Home' ? 0 : rows.length - 1, event.shiftKey)
+            case 'PageUp':
+            case 'PageDown': {
+                // mod+PageUp/PageDown is browser tab switching — never bind it.
+                if (mod) return
+
+                const step = this.pageStep(rows)
+                const from = idx < 0 ? 0 : idx
+                const target = event.key === 'PageDown'
+                    ? Math.min(from + step, rows.length - 1)
+                    : Math.max(from - step, 0)
+
+                event.preventDefault()
+                return this.moveActive(rows, idx, target, event.shiftKey)
+            }
             case 'Enter':
                 if (idx < 0) return
                 event.preventDefault()
@@ -201,6 +232,39 @@ const wireRecordActions = (config = {}) => ({
             event.preventDefault()
             this.run(name)
         }
+    },
+
+    // Rows per PageUp/PageDown jump: the row PITCH (offset between adjacent row
+    // tops — includes borders and spacing, unlike a bare offsetHeight) against
+    // the height of the nearest scrolling ancestor. The package ships no scroll
+    // container of its own, but tables render inside modals with overflow-y-auto
+    // bodies and consumers wrap tables in their own max-h containers — the
+    // window is only the fallback. A display:none table (the mobile card
+    // breakpoint) reports zero pitch: fall back to a single step instead of
+    // dividing by zero into Infinity and throwing in activate().
+    pageStep(rows) {
+        if (rows.length < 2) return 1
+
+        const pitch = rows[1].getBoundingClientRect().top - rows[0].getBoundingClientRect().top
+        const viewport = this.scrollViewportHeight(rows[0])
+        if (! pitch || ! viewport) return 1
+
+        return Math.max(1, Math.floor(viewport / pitch))
+    },
+
+    scrollViewportHeight(el) {
+        for (let node = el.parentElement; node; node = node.parentElement) {
+            // Computed overflow-y is 'auto' on any overflow-x-auto wrapper (CSS
+            // pairs the axes), and the table's own horizontal scroller is such
+            // a wrapper — only an ancestor that actually overflows vertically
+            // is a viewport; anything else would report the full table height
+            // and PageDown would jump straight to the last row.
+            if (/(auto|scroll)/.test(getComputedStyle(node).overflowY) && node.scrollHeight > node.clientHeight + 1) {
+                return node.clientHeight
+            }
+        }
+
+        return window.innerHeight
     },
 
     // Move the active row. With Shift held (and selection on), extend a contiguous
