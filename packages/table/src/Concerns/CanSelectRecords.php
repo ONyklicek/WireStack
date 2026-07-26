@@ -127,6 +127,29 @@ trait CanSelectRecords
     }
 
     /**
+     * Guard the two-shape invariant behind the entangled client writes.
+     *
+     * `mode` decides what `selection.records` MEANS — the selection in `keys`,
+     * the exclusions in `all` — and nothing else ties the pair together. A
+     * mode outside those two shapes is corruption, not a request: it collapses
+     * to `keys` and the list is dropped with it, because a list whose meaning
+     * cannot be established would invert the selection if kept. The two
+     * legitimate shapes pass through untouched — the client writes mode and
+     * records as a deliberate pair, and wiping the list on a valid flip would
+     * destroy the write it belongs to.
+     */
+    public function normalizeSelectionMode(): void
+    {
+        if (in_array($this->tableState->get('selection.mode'), ['keys', 'all'], true)) {
+            return;
+        }
+
+        $this->tableState->set('selection.mode', 'keys');
+        $this->tableState->set('selection.records', []);
+        $this->cachedSelectedRecords = null;
+    }
+
+    /**
      * Narrow an "all matching" selection back to the rows on this page.
      */
     public function selectOnlyPageRecords(): void

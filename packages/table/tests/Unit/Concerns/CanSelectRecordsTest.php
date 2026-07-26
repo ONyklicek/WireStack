@@ -521,3 +521,26 @@ it('excludes rows from an all-matching selection over a joined query without amb
     Schema::dropIfExists('sel_join_tags');
     Schema::dropIfExists('sel_join_users');
 });
+
+// ─── Selection-mode normalization (entangled writes) ─────────────
+
+it('normalizes an unknown selection mode to keys and drops the list', function () {
+    // `mode` decides what `records` means; a mode outside the two shapes is
+    // corruption, and a list whose meaning cannot be established would invert
+    // the selection if it were kept.
+    Livewire::test(SelComponent::class)
+        ->set('tableState.selection.records', ['1'])
+        ->set('tableState.selection.mode', 'evil')
+        ->assertSet('tableState.selection.mode', 'keys')
+        ->assertSet('tableState.selection.records', []);
+});
+
+it('passes both legitimate selection shapes through untouched', function () {
+    // A valid keys↔all flip arrives paired with the records the client set for
+    // that shape — wiping the list here would destroy the write it belongs to.
+    Livewire::test(SelComponent::class)
+        ->set('tableState.selection.mode', 'all')
+        ->set('tableState.selection.records', ['1'])
+        ->assertSet('tableState.selection.mode', 'all')
+        ->assertSet('tableState.selection.records', ['1']);
+});
