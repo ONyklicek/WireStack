@@ -129,7 +129,12 @@ document.addEventListener('alpine:init', () => {
                 return (idx - start >= end - idx ? rows[start] : rows[end]).dataset.rowKey;
             },
 
-            // Replace the selection with the contiguous [anchor … active] block.
+            /* Make the contiguous [anchor … active] block the written set. A
+               range gesture NEVER rewrites the mode: in all mode `selected`
+               holds the exclusions, so the same write means the block becomes
+               deselected (the contiguous block is then a block of un-excluded
+               rows) — and forcing keys mode here is exactly what used to
+               collapse an all-matching selection down to one page block. */
             selectRange(rows, activeIdx) {
                 const anchorIdx = rows.findIndex((row) => row.dataset.rowKey === this.anchorKey);
                 if (anchorIdx < 0) return;
@@ -137,15 +142,19 @@ document.addEventListener('alpine:init', () => {
                 const from = Math.min(anchorIdx, activeIdx);
                 const to = Math.max(anchorIdx, activeIdx);
 
-                this.mode = 'keys';
                 this.selected = rows.slice(from, to + 1).map((row) => row.dataset.rowKey);
                 this.queueCommit();
             },
 
-            // mod+A: select the whole page.
+            /* mod+A: select the whole page — a union, like the header
+               checkbox, so work on other pages survives. NOT a range gesture:
+               in all mode everything is already selected, and unioning page
+               keys into the EXCLUSIONS would deselect the page instead, so it
+               stands down. */
             selectPage() {
-                this.mode = 'keys';
-                this.selected = [...this.pageKeys];
+                if (this.selectsAll) return;
+
+                this.selected = [...new Set([...this.selected, ...this.pageKeys])];
                 this.queueCommit();
             },
 

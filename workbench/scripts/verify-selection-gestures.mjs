@@ -9,14 +9,12 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
  * rollout plan): what the checkboxes, Space/Shift+arrow/mod+A, the record
  * actions, the context menu, the bulk bar and the mobile cards do TODAY.
  *
- * Three checks describe behaviour that later steps deliberately flip — their
- * assertions are reversed there, consciously, never patched to stay green:
+ * One check still describes behaviour a later step deliberately flips — its
+ * assertion is reversed there, consciously, never patched to stay green:
  *   C3  Shift+arrow after mod+A REPLACES the selection with the shrunk block
  *       (becomes base ∪ range in step 16)
- *   C9  in `all` mode Shift+arrow drops the selection to a page block and
- *       rewrites `mode` (step 15)
- *   C10 the header checkbox in `all` mode collapses the selection to the
- *       exceptions' complement (step 10)
+ * C9 (mode never rewritten by a range) and C10 (header checkbox edits the
+ * exclusions) already assert the fixed behaviour.
  *
  * Environment facts this driver is built around (verified against real Chrome):
  *   - viewport pinned to 1400×1200 — pageStep derives from window.innerHeight
@@ -292,18 +290,33 @@ try {
     allMode.mode === 'all' && allMode.count === 40, JSON.stringify(allMode));
   await shot('04-all-mode');
 
-  // ── C9: in `all` mode Shift+arrow drops the selection to a page block ────
-  // Characterizes the BUG step 15 fixes: selectRange rewrites `mode` to
-  // 'keys', so 40 matching records collapse to the 17-row block between the
-  // fallback far-edge anchor (row 20) and the moved active row (row 4).
+  // ── C9 (fixed): a range gesture never rewrites the mode ──────────────────
+  // In all mode `selected` holds the exclusions, so the same block write means
+  // the range DESELECTS: the 17-row block between the far-edge anchor and the
+  // moved active row becomes the exclusions and the other 23 matching records
+  // stay selected — before the fix this collapsed 40 selected to a 17-row page
+  // block in keys mode.
   await eval_(`clickRow(2)`);
   await sleep(300);
   await eval_(`fireKey(rows()[2], 'ArrowDown', { shiftKey: true })`);
   await sleep(400);
   const c9 = JSON.parse(await eval_(`JSON.stringify({ mode: sel().mode, count: sel().selected.length, shown: sel().selectedCount })`));
-  check('C9: in all mode Shift+ArrowDown rewrites mode and drops 40 → a 17-row page block (bug, flips in step 15)',
-    c9.mode === 'keys' && c9.count === 17 && c9.shown === 17,
+  check('C9: in all mode Shift+ArrowDown deselects the range and keeps the mode',
+    c9.mode === 'all' && c9.count === 17 && c9.shown === 23,
     JSON.stringify(c9));
+
+  // mod+A is not a range gesture: in all mode everything is already selected
+  // and unioning page keys into the exclusions would deselect the page — the
+  // gesture stands down instead.
+  await eval_(`rows()[0].focus()`);
+  await sleep(200);
+  const beforeModA = JSON.parse(await eval_(`JSON.stringify({ count: sel().selected.length, shown: sel().selectedCount })`));
+  await eval_(`fireKey(rows()[0], 'a', { ctrlKey: true })`);
+  await sleep(400);
+  const afterModA = JSON.parse(await eval_(`JSON.stringify({ mode: sel().mode, count: sel().selected.length, shown: sel().selectedCount })`));
+  check('mod+A stands down in all mode instead of deselecting the page',
+    afterModA.mode === 'all' && afterModA.count === beforeModA.count && afterModA.shown === beforeModA.shown,
+    JSON.stringify(afterModA));
 
   // ── C10 (fixed): the header checkbox in `all` mode edits the exclusions ──
   // Before the fix the keys-mode arithmetic ran over the EXCLUSIONS list, so
