@@ -269,9 +269,9 @@
                     @endif
             >
                 @if($isSelectable)
-                    {{-- Inside the selectable wrapper, NOT inside <tbody>: the tbody is
-                         not rendered without visible columns, but the selection is live
-                         in the stacked cards too. --}}
+                    {{-- Inside the selectable wrapper, NOT inside the table body: the
+                         body is not rendered without visible columns, but the selection
+                         is live in the stacked cards too. --}}
                     @once
                         @include('wire-table::tables.partials.selection-assets')
                     @endonce
