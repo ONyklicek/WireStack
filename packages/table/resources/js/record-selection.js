@@ -40,6 +40,12 @@ document.addEventListener('alpine:init', () => {
                is selected, and every selection surface shares this component. */
             anchorKey: null,
 
+            /* Snapshot of the selection OUTSIDE the block around the anchor,
+               taken when the first Shift+range grows from it. Mandatory: the
+               range writes base ∪ range, and a union is monotone — shrinking
+               the range back could not be derived from the current selected. */
+            baseSelection: null,
+
             /* Read from the DOM, not seeded into the component: the root is
                keyed (wire:key table-wrapper), so Livewire morphs it in place
                and a seeded value would keep the first render's count forever
@@ -90,21 +96,65 @@ document.addEventListener('alpine:init', () => {
             },
 
             selectAllMatching() {
+                this.clearAnchor();
                 this.mode = 'all';
                 this.selected = [];
                 this.$wire.$commit();
             },
 
             selectOnlyPage() {
+                this.clearAnchor();
                 this.mode = 'keys';
                 this.selected = [...this.pageKeys];
                 this.$wire.$commit();
             },
 
             deselectAll() {
+                // Explicit, not left to the mode watcher: deselecting from keys
+                // mode changes no mode, and a stale anchor/base would hand the
+                // next Shift+range a resurrected selection.
+                this.clearAnchor();
                 this.mode = 'keys';
                 this.selected = [];
                 this.queueCommit();
+            },
+
+            init() {
+                /* Anything that flips the selection SHAPE — the escalation
+                   controls, deselect-all, the server's scope reset pushed down
+                   on a filter or search change — invalidates the range state:
+                   a base carried across would be unioned back by the next
+                   Shift+range and resurrect rows nobody sees selected. Range
+                   gestures themselves never write the mode, so this watcher
+                   cannot fire mid-gesture. */
+                this.$watch('mode', () => this.clearAnchor());
+            },
+
+            setAnchor(key) {
+                this.anchorKey = key;
+                this.baseSelection = null;
+            },
+
+            clearAnchor() {
+                this.anchorKey = null;
+                this.baseSelection = null;
+            },
+
+            /* Bounds of the contiguous selected block the given row sits in,
+               or null when the row itself is unselected. In all mode
+               isSelected() is inverted, so "contiguous block" means a block
+               of un-excluded rows there — deliberate (ADR 0024). */
+            blockBounds(rows, idx) {
+                const selectedAt = (i) => this.isSelected(rows[i].dataset.rowKey);
+
+                if (! selectedAt(idx)) return null;
+
+                let start = idx;
+                let end = idx;
+                while (start > 0 && selectedAt(start - 1)) start--;
+                while (end < rows.length - 1 && selectedAt(end + 1)) end++;
+
+                return { start, end };
             },
 
             /* Where a Shift+range grows from when no gesture has set an anchor
@@ -117,32 +167,44 @@ document.addEventListener('alpine:init', () => {
                the user is looking at instead. */
             anchorFor(rows, idx) {
                 const key = rows[idx]?.dataset.rowKey ?? null;
-                const selectedAt = (i) => this.isSelected(rows[i].dataset.rowKey);
+                if (key === null) return key;
 
-                if (key === null || ! selectedAt(idx)) return key;
+                const block = this.blockBounds(rows, idx);
+                if (block === null) return key;
 
-                let start = idx;
-                let end = idx;
-                while (start > 0 && selectedAt(start - 1)) start--;
-                while (end < rows.length - 1 && selectedAt(end + 1)) end++;
-
-                return (idx - start >= end - idx ? rows[start] : rows[end]).dataset.rowKey;
+                return (idx - block.start >= block.end - idx ? rows[block.start] : rows[block.end]).dataset.rowKey;
             },
 
-            /* Make the contiguous [anchor … active] block the written set. A
-               range gesture NEVER rewrites the mode: in all mode `selected`
-               holds the exclusions, so the same write means the block becomes
-               deselected (the contiguous block is then a block of un-excluded
-               rows) — and forcing keys mode here is exactly what used to
-               collapse an all-matching selection down to one page block. */
+            /* Write base ∪ [anchor … active] block. A range gesture NEVER
+               rewrites the mode: in all mode `selected` holds the exclusions,
+               so the same write means the range becomes deselected — and
+               forcing keys mode here is exactly what used to collapse an
+               all-matching selection down to one page block.
+
+               The base is the snapshot minus the contiguous block around the
+               anchor, taken on the first write: an explicit COPY of
+               `selected` (the entangle proxy would change under our hands on
+               that very write), and minus the block so the gesture owns the
+               block it grows and shrinks while everything selected elsewhere
+               survives the range. */
             selectRange(rows, activeIdx) {
                 const anchorIdx = rows.findIndex((row) => row.dataset.rowKey === this.anchorKey);
                 if (anchorIdx < 0) return;
 
+                if (this.baseSelection === null) {
+                    const block = this.blockBounds(rows, anchorIdx);
+                    const blockKeys = block === null
+                        ? []
+                        : rows.slice(block.start, block.end + 1).map((row) => row.dataset.rowKey);
+
+                    this.baseSelection = [...this.selected].filter((key) => ! blockKeys.includes(key));
+                }
+
                 const from = Math.min(anchorIdx, activeIdx);
                 const to = Math.max(anchorIdx, activeIdx);
+                const range = rows.slice(from, to + 1).map((row) => row.dataset.rowKey);
 
-                this.selected = rows.slice(from, to + 1).map((row) => row.dataset.rowKey);
+                this.selected = [...new Set([...this.baseSelection, ...range])];
                 this.queueCommit();
             },
 
@@ -150,10 +212,12 @@ document.addEventListener('alpine:init', () => {
                checkbox, so work on other pages survives. NOT a range gesture:
                in all mode everything is already selected, and unioning page
                keys into the EXCLUSIONS would deselect the page instead, so it
-               stands down. */
+               stands down. Drops the range base: after a page select the next
+               range grows from the new reality, not a stale snapshot. */
             selectPage() {
                 if (this.selectsAll) return;
 
+                this.baseSelection = null;
                 this.selected = [...new Set([...this.selected, ...this.pageKeys])];
                 this.queueCommit();
             },

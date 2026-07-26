@@ -61,11 +61,22 @@ const wireRecordActions = (config = {}) => ({
             // page change without re-creating this component. When the active row
             // is no longer on the page, drop the marker so the single tabstop
             // falls back to the first row and the grid stays reachable by Tab.
+            // The range anchor gets the same treatment — but ONLY when its row
+            // left the page: clearing it on every morph would also wipe the
+            // range base, and a base holding keys from a previous page would
+            // otherwise be unioned back by the next Shift+range, resurrecting
+            // rows nobody sees selected.
             this._rowObserver = new MutationObserver(() => {
-                if (this.activeKey === null) return
-                if (this.navRows().some((el) => el.dataset.rowKey === this.activeKey)) return
+                const onPage = (key) => this.navRows().some((el) => el.dataset.rowKey === key)
 
-                this.activeKey = null
+                if (this.activeKey !== null && ! onPage(this.activeKey)) {
+                    this.activeKey = null
+                }
+
+                const sel = this.selection()
+                if (sel && sel.anchorKey !== null && ! onPage(sel.anchorKey)) {
+                    sel.clearAnchor()
+                }
             })
             this._rowObserver.observe(this.$el, { childList: true })
 
@@ -205,7 +216,7 @@ const wireRecordActions = (config = {}) => ({
             this.activate(rows, toIdx)
             sel.selectRange(rows, toIdx)
         } else {
-            if (sel) sel.anchorKey = null
+            sel?.clearAnchor()
             this.activate(rows, toIdx)
         }
     },
@@ -246,8 +257,7 @@ const wireRecordActions = (config = {}) => ({
     },
 
     setAnchor(key) {
-        const sel = this.selection()
-        if (sel) sel.anchorKey = key
+        this.selection()?.setAnchor(key)
     },
 
     // A row was focused directly (click / Tab): adopt it as the active row so

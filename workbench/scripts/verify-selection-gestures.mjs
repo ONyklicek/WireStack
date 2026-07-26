@@ -9,12 +9,10 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
  * rollout plan): what the checkboxes, Space/Shift+arrow/mod+A, the record
  * actions, the context menu, the bulk bar and the mobile cards do TODAY.
  *
- * One check still describes behaviour a later step deliberately flips — its
- * assertion is reversed there, consciously, never patched to stay green:
- *   C3  Shift+arrow after mod+A REPLACES the selection with the shrunk block
- *       (becomes base ∪ range in step 16)
- * C9 (mode never rewritten by a range) and C10 (header checkbox edits the
- * exclusions) already assert the fixed behaviour.
+ * The characterized bugs are all fixed and asserted in their final form:
+ * ranges write base ∪ [anchor…active] and never rewrite the mode (C3, C9,
+ * the base checks), and the header checkbox edits the exclusions in all
+ * mode (C10).
  *
  * Environment facts this driver is built around (verified against real Chrome):
  *   - viewport pinned to 1400×1200 — pageStep derives from window.innerHeight
@@ -164,8 +162,8 @@ try {
     JSON.stringify(c4));
 
   // ── C3: Shift+arrow after mod+A shrinks the block by one ─────────────────
-  // Characterizes REPLACE semantics: the selection becomes exactly the
-  // [far-edge…active] block. Step 16 flips this to base ∪ range.
+  // base ∪ range: the whole page is one block around the far-edge anchor, so
+  // the base is empty and the range owns (and shrinks) the block.
   await eval_(`rows()[0].focus()`);
   await sleep(200);
   await eval_(`fireKey(rows()[0], 'ArrowDown', { shiftKey: true })`);
@@ -174,6 +172,33 @@ try {
   check('C3: Shift+ArrowDown after mod+A shrinks the block to 39 instead of collapsing it',
     c3 === 39, `40 → ${c3}`);
   await shot('01-desktop-range');
+
+  // ── base ∪ range: a range owns only the block around its anchor ──────────
+  // A block selected earlier survives a disjoint range untouched, and the
+  // snapshot makes the range shrinkable — a union alone is monotone.
+  await eval_(`sel().deselectAll()`);
+  await sleep(300);
+  await eval_(`rows()[2].focus()`);
+  await sleep(150);
+  await eval_(`fireKey(rows()[2], ' ')`);
+  await sleep(200);
+  await eval_(`(() => { for (let i = 2; i < 6; i++) fireKey(rows()[i], 'ArrowDown', { shiftKey: true }); })()`);
+  await sleep(300);
+  await eval_(`rows()[8].focus()`);
+  await sleep(150);
+  await eval_(`fireKey(rows()[8], ' ')`);
+  await sleep(200);
+  await eval_(`(() => { for (let i = 8; i < 10; i++) fireKey(rows()[i], 'ArrowDown', { shiftKey: true }); })()`);
+  await sleep(300);
+  const union = JSON.parse(await eval_(`JSON.stringify({ count: sel().selected.length, hasBase: sel().isSelected(key(2)) && sel().isSelected(key(6)) })`));
+  check('a disjoint Shift+range unions with the block selected before it',
+    union.count === 8 && union.hasBase, JSON.stringify(union));
+
+  await eval_(`fireKey(rows()[10], 'ArrowUp', { shiftKey: true })`);
+  await sleep(300);
+  const shrunkBack = JSON.parse(await eval_(`JSON.stringify({ count: sel().selected.length, hasBase: sel().isSelected(key(2)), rangeTip: sel().isSelected(key(10)) })`));
+  check('shrinking the range back keeps the base and drops only the range tip',
+    shrunkBack.count === 7 && shrunkBack.hasBase && ! shrunkBack.rangeTip, JSON.stringify(shrunkBack));
 
   // ── C13: keys inside the row belong to the focused element ───────────────
   // Focusing the checkbox adopts its row as active (onRowFocus) — that part is
