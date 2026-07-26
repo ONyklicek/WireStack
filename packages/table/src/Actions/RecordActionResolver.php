@@ -135,10 +135,17 @@ final class RecordActionResolver
 
     /**
      * Keys the grid navigation owns; a shortcut on any of them could never fire.
+     * Deliberately NOT reserved: `backspace` — it is a platform alias of Delete
+     * resolved in JS (`matchShortcut`), and reserving it here would make an
+     * explicit `->onKey('Backspace')` impossible forever.
      *
      * @var array<int, string>
      */
-    private const RESERVED_KEYS = ['enter', 'return', 'space', ''];
+    private const RESERVED_KEYS = [
+        'enter', 'return', 'space', '',
+        'arrowup', 'arrowdown', 'home', 'end', 'pageup', 'pagedown',
+        'contextmenu', 'f10', '?',
+    ];
 
     /**
      * Keyboard shortcut → action-name map, taken from each record action's

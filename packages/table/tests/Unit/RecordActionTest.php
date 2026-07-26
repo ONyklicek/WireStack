@@ -405,13 +405,25 @@ it('maps record-action keyboard shortcuts', function () {
     expect($table->getRecordActionKeyboardConfig()['shortcuts'])->toBe(['Delete' => 'remove']);
 });
 
-it('rejects a reserved onKey() binding out loud', function () {
+it('rejects a reserved onKey() binding out loud', function (string $key) {
     // Silently dropping the key would strip the gesture without a signal — an
     // app shipping ->onKey('Enter') must hear about it, not lose the action.
     Table::make()
-        ->recordActions([RecordAction::make(Action::make('open'))->onKey('Enter')])
+        ->recordActions([RecordAction::make(Action::make('open'))->onKey($key)])
         ->getRecordActionKeyboardConfig();
-})->throws(TableConfigurationException::class, "onKey('Enter')");
+})->with([
+    'Enter', 'Space',
+    'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown',
+    'ContextMenu', 'F10', '?',
+])->throws(TableConfigurationException::class);
+
+it('leaves Backspace bindable — it is a JS platform alias of Delete, not a reserved key', function () {
+    $table = Table::make()->recordActions([
+        RecordAction::make(Action::make('remove'))->onKey('Backspace'),
+    ]);
+
+    expect($table->getRecordActionKeyboardConfig()['shortcuts'])->toBe(['Backspace' => 'remove']);
+});
 
 it('still skips a reserved shortcut stamped on the action itself', function () {
     // keyboardShortcut() serves the action's other surfaces (a toolbar button,
