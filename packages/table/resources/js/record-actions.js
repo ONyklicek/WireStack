@@ -220,6 +220,13 @@ const wireRecordActions = (config = {}) => ({
                 this.toggleSelection(this.activeKey)
                 this.setAnchor(this.activeKey)
                 return
+            case 'F10':
+                // Shift+F10 is the other standard "context menu" key; it can't
+                // go through the shortcut matcher, because kb.shortcuts maps to
+                // action names and opening the menu is not an action. Plain F10
+                // stays the browser's (menu-bar focus).
+                if (! event.shiftKey) return
+                // fall through
             case 'ContextMenu':
                 if (idx < 0 || ! this.contextMenu) return
                 event.preventDefault()
@@ -426,15 +433,51 @@ const wireRecordActions = (config = {}) => ({
     openMenuForRow(row) {
         const panel = document.querySelector(`[data-record-menu="${CSS.escape(row.dataset.rowKey)}"]`)
         if (! panel) return
+
+        // In a real (headed) browser, Shift+F10 and the ContextMenu key also
+        // emit a native `contextmenu` event right after the keydown; without
+        // this flag onContextMenu would immediately reposition the menu to the
+        // event's stale pointer coordinates. Headless Chrome never emits that
+        // follow-up event, so this guard is deliberately NOT covered by the
+        // CDP driver — keep it when refactoring.
+        this._menuFromKey = true
+        setTimeout(() => { this._menuFromKey = false }, 0)
+
         const rect = row.getBoundingClientRect()
         this.openMenu(panel, rect.left + 16, rect.top + rect.height)
+
+        // Keyboard-opened, so the focus follows into the panel: dialogOpen()
+        // cannot see a role=menu surface, and with the focus left on the row
+        // the arrows would keep moving the marker — and shortcuts firing —
+        // behind the open menu.
+        panel.querySelector('[role="menuitem"], button, a')?.focus()
     },
 
     matchShortcut(event) {
         const shortcuts = this.kb.shortcuts || {}
+
+        // Exact pass first, so an explicit Backspace binding beats the alias.
         for (const raw of Object.keys(shortcuts)) {
             if (this.eventMatchesShortcut(event, raw)) return shortcuts[raw]
         }
+
+        // Alias pass: Delete and Backspace are one equivalence class — the big
+        // key on a Mac keyboard reports Backspace where the gesture means
+        // "delete this record". A JS alias, deliberately not a PHP reservation:
+        // in PHP it would forbid ->onKey('Backspace') forever, and the legend
+        // can render the pair as one row.
+        const alias = { delete: 'Backspace', backspace: 'Delete' }[event.key.toLowerCase()]
+        if (! alias) return null
+
+        const aliased = {
+            ctrlKey: event.ctrlKey, metaKey: event.metaKey,
+            shiftKey: event.shiftKey, altKey: event.altKey, key: alias,
+        }
+
+        for (const raw of Object.keys(shortcuts)) {
+            if (this.eventMatchesShortcut(aliased, raw)) return shortcuts[raw]
+        }
+
         return null
     },
 
@@ -531,6 +574,14 @@ const wireRecordActions = (config = {}) => ({
 
     onContextMenu(event) {
         if (! this.contextMenu) return
+
+        // The native contextmenu a real browser fires right after Shift+F10 /
+        // the ContextMenu key — the menu is already open at the row; eat the
+        // event or it would jump to stale pointer coordinates.
+        if (this._menuFromKey) {
+            event.preventDefault()
+            return
+        }
 
         const row = this.row(event)
         if (! row || this.blocked(event, row)) return

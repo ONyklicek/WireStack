@@ -251,6 +251,39 @@ try {
   await sleep(300);
   check('C8: Escape closes the context menu', ! await eval_(`$qa('[data-record-menu]').some(m => vis(m))`));
 
+  // ── Backspace aliases Delete, Shift+F10 opens the menu with focus in it ──
+  await eval_(`rows()[2].focus()`);
+  await sleep(200);
+  await eval_(`fireKey(rows()[2], 'Backspace')`);
+  await sleep(2500);
+  const backspace = await eval_(`(document.body.innerText.match(/Archive Record \\d+\\?/) || [null])[0]`);
+  check('Backspace fires the Delete-bound action (platform alias, JS-side)', !! backspace, backspace);
+  await eval_('cancelModal()');
+  await sleep(1800);
+
+  await eval_(`rows()[4].focus()`);
+  await sleep(200);
+  await eval_(`fireKey(rows()[4], 'F10')`);
+  await sleep(300);
+  check('plain F10 stays the browser’s — no menu',
+    ! await eval_(`$qa('[data-record-menu]').some(m => vis(m))`));
+
+  await eval_(`fireKey(rows()[4], 'F10', { shiftKey: true })`);
+  await sleep(400);
+  const f10 = JSON.parse(await eval_(`JSON.stringify({
+    open: $qa('[data-record-menu]').some(m => vis(m)),
+    focusInMenu: !! document.activeElement?.closest('[data-record-menu]'),
+  })`));
+  check('Shift+F10 opens the row menu and moves the focus into it',
+    f10.open && f10.focusInMenu, JSON.stringify(f10));
+
+  await eval_(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
+  await eval_(`document.activeElement?.blur()`);
+  await sleep(1800);
+  const escBack = await eval_(`document.activeElement === document.body ? 'body' : (document.activeElement.dataset?.rowKey ?? document.activeElement.tagName)`);
+  check('closing the menu hands the focus back to the active row',
+    escBack === await eval_('key(4)'), `focus=${escBack}`);
+
   // ── C12: the bulk bar shows the count and all four bulk actions ──────────
   await eval_(`sel().toggle(key(10)); sel().toggle(key(11)); sel().toggle(key(12));`);
   await sleep(500);
