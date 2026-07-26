@@ -305,11 +305,12 @@ try {
     c9.mode === 'keys' && c9.count === 17 && c9.shown === 17,
     JSON.stringify(c9));
 
-  // ── C10 (fixed): the header checkbox in `all` mode mirrors the server ────
+  // ── C10 (fixed): the header checkbox in `all` mode edits the exclusions ──
   // Before the fix the keys-mode arithmetic ran over the EXCLUSIONS list, so
-  // one click turned the selection into its own complement. Now a mixed page
-  // selects the page as an explicit set (selectAllRecords), and a fully
-  // selected page clears the selection (deselectPageRecords).
+  // one click turned the selection into its own complement. The canonical page
+  // gesture never leaves all mode: a mixed page re-includes its excluded rows
+  // (selectAllRecords), a fully selected page becomes the exclusions
+  // (deselectPageRecords) — everything off-page stays selected either way.
   await page('Page.navigate', { url: `${base}/table-selection-gestures-paged` });
   await sleep(3000);
   await eval_(helpers);
@@ -327,22 +328,15 @@ try {
   await eval_(`$q('[data-testid="table-select-all"]').click()`);
   await sleep(600);
   const c10 = JSON.parse(await eval_(`JSON.stringify({ mode: sel().mode, count: sel().selected.length, shown: sel().selectedCount })`));
-  check('C10: a mixed page in all mode selects the page as an explicit set',
-    c10.mode === 'keys' && c10.count === 20 && c10.shown === 20,
+  check('C10: a mixed page in all mode re-includes its excluded rows and stays in all mode',
+    c10.mode === 'all' && c10.count === 0 && c10.shown === 40,
     JSON.stringify(c10));
 
-  await page('Page.navigate', { url: `${base}/table-selection-gestures-paged` });
-  await sleep(3000);
-  await eval_(helpers);
-  await eval_(`$q('[data-testid="table-select-all"]').click()`);
-  await sleep(600);
-  await eval_(`$q('[data-testid="table-select-all-matching"]').click()`);
-  await sleep(2000);
   await eval_(`$q('[data-testid="table-select-all"]').click()`);
   await sleep(600);
   const c10b = JSON.parse(await eval_(`JSON.stringify({ mode: sel().mode, count: sel().selected.length, shown: sel().selectedCount })`));
-  check('C10: a fully selected page in all mode clears the whole selection',
-    c10b.mode === 'keys' && c10b.count === 0 && c10b.shown === 0,
+  check('C10: deselecting a fully selected page in all mode keeps everything off-page selected',
+    c10b.mode === 'all' && c10b.count === 20 && c10b.shown === 20,
     JSON.stringify(c10b));
   await shot('05-toggleall-fixed');
 

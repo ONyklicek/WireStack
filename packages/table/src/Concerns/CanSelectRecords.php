@@ -69,38 +69,63 @@ trait CanSelectRecords
      * pages.
      *
      * The union is the point: this used to overwrite the set, so selecting page
-     * one and then page two silently discarded page one.
+     * one and then page two silently discarded page one. The same rule carries
+     * into `all` mode, where the list holds the exclusions: selecting the page
+     * re-includes its excluded rows and the mode stays `all` — leaving it would
+     * shrink "all 128k matching" to one page on a *select* gesture.
      */
     public function selectAllRecords(): void
     {
-        $selected = $this->selectsAllMatching()
-            ? []
-            : $this->tableState->get('selection.records', []);
+        $pageKeys = $this->getPageRecordKeys();
 
-        foreach ($this->getPageRecordKeys() as $key) {
+        if ($this->selectsAllMatching()) {
+            $this->tableState->set('selection.records', array_values(array_diff(
+                $this->tableState->get('selection.records', []),
+                $pageKeys,
+            )));
+            $this->cachedSelectedRecords = null;
+
+            return;
+        }
+
+        $selected = $this->tableState->get('selection.records', []);
+
+        foreach ($pageKeys as $key) {
             if (! in_array($key, $selected, true)) {
                 $selected[] = $key;
             }
         }
 
-        $this->tableState->set('selection.mode', 'keys');
         $this->tableState->set('selection.records', $selected);
         $this->cachedSelectedRecords = null;
     }
 
     /**
      * Drop the current page from the selection, leaving other pages alone.
+     *
+     * In `all` mode "leaving other pages alone" means the page rows become
+     * exclusions and the mode stays `all` — everything the filter matches off
+     * this page remains selected.
      */
     public function deselectPageRecords(): void
     {
         $pageKeys = $this->getPageRecordKeys();
+        $selected = $this->tableState->get('selection.records', []);
 
-        $selected = $this->selectsAllMatching()
-            ? []
-            : array_values(array_diff($this->tableState->get('selection.records', []), $pageKeys));
+        if ($this->selectsAllMatching()) {
+            foreach ($pageKeys as $key) {
+                if (! in_array($key, $selected, true)) {
+                    $selected[] = $key;
+                }
+            }
 
-        $this->tableState->set('selection.mode', 'keys');
-        $this->tableState->set('selection.records', $selected);
+            $this->tableState->set('selection.records', $selected);
+            $this->cachedSelectedRecords = null;
+
+            return;
+        }
+
+        $this->tableState->set('selection.records', array_values(array_diff($selected, $pageKeys)));
         $this->cachedSelectedRecords = null;
     }
 

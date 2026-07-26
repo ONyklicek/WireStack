@@ -290,13 +290,15 @@
                                 /* In all mode the list holds EXCLUSIONS, so the keys-mode
                                    arithmetic below must never touch it — it used to, and one
                                    header click turned the selection into its own complement.
-                                   Mirrors the server (selectAllRecords / deselectPageRecords):
-                                   a page gesture leaves all mode for an explicit set, because
-                                   neither exceptions nor all-minus-page can be carried into
-                                   keys mode without materialising every matching key here. */
+                                   The page gesture edits the exclusions and never leaves all
+                                   mode (mirrors selectAllRecords / deselectPageRecords):
+                                   leaving it would shrink an all-matching selection to one
+                                   page, and the rest of it cannot be carried into keys mode
+                                   without materialising every matching key here. */
                                 if (this.selectsAll) {
-                                    this.selected = this.allSelected ? [] : [...this.pageKeys];
-                                    this.mode = 'keys';
+                                    this.selected = this.allSelected
+                                        ? [...new Set([...this.selected, ...this.pageKeys])]
+                                        : this.selected.filter(k => !this.pageKeys.includes(k));
                                     this.queueCommit();
                                     return;
                                 }

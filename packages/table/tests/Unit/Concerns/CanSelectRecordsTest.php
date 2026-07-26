@@ -260,26 +260,35 @@ it('returns to keys mode when everything is deselected', function () {
         ->and($c->getSelectedRecordsCount())->toBe(0);
 });
 
-it('turns an all-matching selection into just this page when the page is selected', function () {
+it('re-includes excluded page rows when the page is selected in all mode', function () {
+    // The canonical "select the page" never shrinks a larger selection: in all
+    // mode it edits the exclusions and the mode stays all — leaving it would
+    // turn "all 128k matching" into one page on a *select* gesture.
     $c = selComponent();
     $c->selectAllMatchingRecords();
+    $c->toggleRecordSelection('1'); // exclude one row on this page
 
-    // From "everything", selecting the page has to mean *only* the page —
-    // carrying the exclusions across would leave a nonsense set behind.
+    expect($c->getSelectedRecordsCount())->toBe(5);
+
     $c->selectAllRecords();
 
-    expect($c->selectsAllMatching())->toBeFalse()
-        ->and($c->getSelectedRecordKeys())->toBe(['1', '2']);
+    expect($c->selectsAllMatching())->toBeTrue()
+        ->and($c->isRecordSelected('1'))->toBeTrue()
+        ->and($c->getSelectedRecordsCount())->toBe(6);
 });
 
-it('clears the selection when a page is deselected out of all-matching', function () {
+it('keeps everything off-page selected when a page is deselected out of all-matching', function () {
+    // The mirror rule: deselecting the page in all mode records the page rows
+    // as exclusions — the rest of "everything the filter matches" stands.
     $c = selComponent();
     $c->selectAllMatchingRecords();
 
     $c->deselectPageRecords();
 
-    expect($c->selectsAllMatching())->toBeFalse()
-        ->and($c->getSelectedRecordKeys())->toBe([]);
+    expect($c->selectsAllMatching())->toBeTrue()
+        ->and($c->isRecordSelected('1'))->toBeFalse()
+        ->and($c->isRecordSelected('3'))->toBeTrue()
+        ->and($c->getSelectedRecordsCount())->toBe(4);
 });
 
 it('refuses an oversized selection through the form-data path too', function () {
