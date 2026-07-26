@@ -287,12 +287,23 @@
                                 this.queueCommit();
                             },
                             toggleAll() {
+                                /* In all mode the list holds EXCLUSIONS, so the keys-mode
+                                   arithmetic below must never touch it — it used to, and one
+                                   header click turned the selection into its own complement.
+                                   Mirrors the server (selectAllRecords / deselectPageRecords):
+                                   a page gesture leaves all mode for an explicit set, because
+                                   neither exceptions nor all-minus-page can be carried into
+                                   keys mode without materialising every matching key here. */
+                                if (this.selectsAll) {
+                                    this.selected = this.allSelected ? [] : [...this.pageKeys];
+                                    this.mode = 'keys';
+                                    this.queueCommit();
+                                    return;
+                                }
                                 /* Selecting a page unions with other pages instead of
                                    replacing them, which is what silently discarded a
                                    selection when the user paged. */
-                                const clear = this.selectsAll || this.allSelected;
-                                this.mode = 'keys';
-                                this.selected = clear
+                                this.selected = this.allSelected
                                     ? this.selected.filter(k => !this.pageKeys.includes(k))
                                     : [...new Set([...this.selected, ...this.pageKeys])];
                                 this.queueCommit();
