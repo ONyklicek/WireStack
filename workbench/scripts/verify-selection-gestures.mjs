@@ -244,6 +244,36 @@ try {
     JSON.stringify(c12));
   await shot('03-bulk-bar');
 
+  // ════ Section 1b — selection-only: the grid works without record actions ═
+  await page('Page.navigate', { url: `${base}/table-selection-only` });
+  await sleep(3000);
+  await eval_(helpers);
+
+  check('selection-only: the delegated controller mounts without record actions',
+    await eval_('!!tbody() && rows().length === 40'));
+
+  await eval_(`rows()[2].focus()`);
+  await sleep(200);
+  await eval_(`fireKey(rows()[2], ' ')`);
+  await sleep(300);
+  await eval_(`fireKey(rows()[2], 'ArrowDown', { shiftKey: true })`);
+  await sleep(300);
+  const soSel = JSON.parse(await eval_(`JSON.stringify({ selected: sel().selected.length, active: ctrl().activeKey, k3: key(3) })`));
+  check('selection-only: Space and Shift+arrow drive the selection',
+    soSel.selected === 2 && soSel.active === soSel.k3, JSON.stringify(soSel));
+
+  await eval_(`fireKey(rows()[3], 'Enter')`);
+  await sleep(800);
+  check('selection-only: Enter is a quiet no-op with no primary action',
+    ! await eval_(`$qa('[role="dialog"]').some(d => vis(d))`));
+
+  await eval_(`clickRow(7)`);
+  await sleep(300);
+  const soClick = JSON.parse(await eval_(`JSON.stringify({ active: ctrl().activeKey, k7: key(7), selected: sel().selected.length })`));
+  check('selection-only: a row click marks the row and never ticks the checkbox',
+    soClick.active === soClick.k7 && soClick.selected === 2, JSON.stringify(soClick));
+  await shot('03b-selection-only');
+
   // ════ Section 2 — 20 a page, the `all` mode ═════════════════════════════
   await page('Page.navigate', { url: `${base}/table-selection-gestures-paged` });
   await sleep(3000);

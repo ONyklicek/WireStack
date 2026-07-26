@@ -1703,17 +1703,16 @@ class Table implements Htmlable
 
     /**
      * Whether the delegated `wireRecordActions` controller mounts on the
-     * `<tbody>`. Still scoped to the record-action surface (pointer bindings,
-     * a context menu, keyboard over record actions): widening it to every
-     * grid is a visible behaviour change for existing selectable tables and
-     * ships as its own step, so a selectable-only table currently renders
-     * grid markup whose keys the next step wires up.
+     * `<tbody>`: for pointer bindings, a context menu, and every grid —
+     * including a selectable table with no record action, whose keyboard
+     * selection (Space, Shift+arrow, mod+A) and active-row marker live in the
+     * same controller.
      */
     public function mountsRecordActionController(): bool
     {
         return $this->hasRecordActionPointer()
             || $this->hasRowContextMenu()
-            || ($this->recordActionKeyboard ?? $this->hasRecordActions());
+            || $this->usesGridSemantics();
     }
 
     /**

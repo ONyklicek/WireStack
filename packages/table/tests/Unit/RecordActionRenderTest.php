@@ -143,13 +143,14 @@ it('grids a selectable table even without record actions', function () {
         ->assertSee('tabindex="0"', false);
 });
 
-it('does not mount the record-action controller on a selectable-only grid yet', function () {
-    // Mounting wireRecordActions there is a visible change (active marker,
-    // focus on click, hover switch-off) and ships as its own step; until then
-    // the grid markup stands alone with the static first-row tabstop.
+it('mounts the record-action controller on a selectable-only grid', function () {
+    // The keyboard selection (Space, Shift+arrow, mod+A), the roving tabindex
+    // and the active-row marker all live in the delegated controller, so a
+    // grid without record actions needs it just the same.
     Livewire::test(SelectableOnlyComponent::class)
-        ->assertDontSee('wireRecordActions', false)
-        ->assertDontSee('rowTabindex(', false);
+        ->assertSee('wireRecordActions', false)
+        ->assertSee('rowTabindex(', false)
+        ->assertSee('onKeydown($event)', false);
 });
 
 // ─── Active-row marker ───────────────────────────────────────────

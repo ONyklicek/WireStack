@@ -487,13 +487,15 @@ it('lets recordActionKeyboard(false) ungrid a selectable table', function () {
         ->and($table->getTableRole())->toBeNull();
 });
 
-it('keeps the controller mount scoped to the record-action surface', function () {
-    // Widening the mount to every grid is a visible change shipping as its own
-    // step; a selectable-only grid must not mount wireRecordActions yet.
-    expect(Table::make()->selectable()->mountsRecordActionController())->toBeFalse()
+it('mounts the controller on every grid, selectable-only included', function () {
+    // The keyboard selection and the active-row marker live in the delegated
+    // controller, so every grid mounts it; a pointer binding still mounts it
+    // even with the keyboard forced off.
+    expect(Table::make()->selectable()->mountsRecordActionController())->toBeTrue()
         ->and(Table::make()->recordAction(RecordAction::make('edit')->onDoubleClick())->mountsRecordActionController())->toBeTrue()
         ->and(Table::make()->recordActionKeyboard()->mountsRecordActionController())->toBeTrue()
-        ->and(Table::make()->selectable()->recordActionKeyboard(false)->mountsRecordActionController())->toBeFalse();
+        ->and(Table::make()->selectable()->recordActionKeyboard(false)->mountsRecordActionController())->toBeFalse()
+        ->and(Table::make()->mountsRecordActionController())->toBeFalse();
 });
 
 it('exposes the selection flag in the keyboard config', function () {
