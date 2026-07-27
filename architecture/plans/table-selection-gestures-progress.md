@@ -2,7 +2,7 @@
 title: Rollout výběrových gest — stav provedení
 date: 2026-07-27
 plan: architecture/plans/table-selection-gestures-rollout.md
-status: Kroky 0–24 hotové (Fáze I–V + 23, 24), pokračuje se krokem 25
+status: Fáze I–VI hotové (kroky 0–25), pokračuje se krokem 26 (Fáze VII)
 ---
 
 # Stav provedení rolloutu
@@ -39,6 +39,7 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
 | 22 | `351aeff` | sweep v `record-actions.js` (arm→engage, capture click-kill, jen myš, additive, morph guard, reduced-motion) |
 | 23 | `5efaab0` + `4aad86c` | `openOn:` ve 3 shellech + Htmlable objektech + View komponentách; preview `core-open-on`; `verify-modal-open-on.mjs` 14/14; hardening proti injekci do jména atributu |
 | 24 | `fd368fa` | `ShortcutLabelFormatter` + `ShortcutHint` (core Foundation) + `TableShortcutLegend` (table Support) + `Table::shortcutLegend()`; i18n EN+CS |
+| 25 | `c7f8f2a` | `?` otevírá nápovědu (`shortcut-help` + `shortcut-help-modal` partial, `kb.help` v controlleru); driver 62/62 |
 
 ## Rozhodnutí učiněná při provádění (nad rámec plánu)
 
@@ -67,6 +68,15 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
   `ShortcutLabelFormatter` — mění to i label akcí v `dropdown-item.blade.php`
   a `header-action.blade.php` (šipky nově glyfy). `Foundation/ValueObjects/`
   byl nový adresář, ale `AI_CODING_STANDARD.md:165` ho předepisuje.
+- **Krok 25:** jméno `openOn` eventu je `wire-table-shortcut-help-` + prvních
+  12 znaků `md5($component->getId())`. Hash **musí** být lowercase: listener
+  sedí v **jménu atributu** (`x-on:{event}.window`) a DOM jména atributů
+  lowercasuje → syrové Livewire ID s velkými písmeny by se nikdy netrefilo
+  (CDP to odhalilo: modal v DOM, `show` zůstal false). Per-komponentní jméno
+  je nutné, aby `?` na stránce s více tabulkami neotevřel všechny nápovědy.
+  Mac/non-Mac labely: server rendruje Ctrl variantu, `x-text` ji na Macu
+  přepíše (platforma je klientský fakt) — headless Chrome na macOS hlásí Mac,
+  takže driver musí očekávat obě sady.
 
 ## Objevené gotchas (platí i pro další kroky)
 
@@ -84,17 +94,16 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
 
 ## Stav sítě
 
-- `verify-selection-gestures.mjs` — **55/55** (C1–C13 + myš, klávesnice, sweep,
-  selection-only, reduced-motion, sortable koexistence)
+- `verify-selection-gestures.mjs` — **62/62** (C1–C13 + myš, klávesnice, sweep,
+  selection-only, reduced-motion, sortable koexistence, `?` nápověda)
 - `verify-record-active-row.mjs` 18/18, `verify-record-actions.mjs` 14/14,
   `verify-record-actions-dual.mjs` 5/5, `verify-mobile-selection.mjs` 13/13,
   `verify-fill-handle.mjs` 26/26, `verify-modal-open-on.mjs` 14/14
-- PHP: table 1651, core 1751, forms 907, sortable 39, Integration 39;
+- PHP: table 1656, core 1751, forms 907, sortable 39, Integration 39;
   analyse + lint OK; coverage diff 100 %, floors OK
 
-## Zbývá (Fáze VI–VII + docs)
+## Zbývá (Fáze VII + docs)
 
-- **25** nápověda `?` (event.key, guard fokusu na řádku)
 - **26** ARIA + `aria-live` (+ refaktor `$from`/`$to`/`$total`, `$headerRowCount`)
 - **27** nebarevný marker, klikatelná plocha buňky, `INTERACTIVE` (týž commit!)
 - **28** docs EN+CZ, CHANGELOG, upgrade, i18n, boost guidelines, screenshoty
