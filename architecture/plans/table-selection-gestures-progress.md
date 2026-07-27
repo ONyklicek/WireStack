@@ -2,7 +2,7 @@
 title: Rollout výběrových gest — stav provedení
 date: 2026-07-27
 plan: architecture/plans/table-selection-gestures-rollout.md
-status: Kroky 0–26 hotové, pokračuje se krokem 27 (Fáze VII)
+status: Fáze I–VII hotové (kroky 0–27), zbývá krok 28 (docs)
 ---
 
 # Stav provedení rolloutu
@@ -42,6 +42,8 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
 | 25 | `c7f8f2a` | `?` otevírá nápovědu (`shortcut-help` + `shortcut-help-modal` partial, `kb.help` v controlleru); driver 62/62 |
 | 25b | `b217ca8` + `2c05921` | teleport `wire:key` z `$id` (dva Modal shelly v jedné komponentě); + předexistující díra ve forms select-option modalech |
 | 26 | `a20e61e` | ARIA grid (`aria-rowcount`/`aria-rowindex` přes celou sadu, `aria-multiselectable`, bindnuté `aria-selected`) + `aria-live` region; driver 70/70 |
+
+| 27 | `efce0ab` | klikatelná plocha = celá buňka, `[data-select-cell]` v `INTERACTIVE`, marker + pruh (kontrast 4.3/4.79 light, 3.98/7.95 dark); fix Shift+klik na checkbox; driver 77/77 |
 
 ## Rozhodnutí učiněná při provádění (nad rámec plánu)
 
@@ -95,6 +97,17 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
   → `announceReady` se zapíná až prvním `$watch('selected'/'mode')`. Hlášky
   chodí hotové z PHP (překlad je serverová věc), čísla se dosazují v JS.
 
+- **Krok 27:** marker je `::before` overlay na `[&>td:first-of-type]`, NE border.
+  Důvody: (a) border posouvá obsah a rezervace transparentním borderem nejde —
+  `border-transparent` je v CSS ZA `border-primary-600`, takže by vždy vyhrála
+  bez ohledu na pořadí ve `class`; (b) overlay nastavuje vlastnost, kterou
+  klidové řádky vůbec nenastavují → žádný souboj v kaskádě. **`first-of-type`,
+  ne `first-child`** — prvním dítětem `<tr>` je teleport `<template>`
+  kontextového menu (jinak selektor nesedí na nic a vypadá to jako chyba
+  Tailwindu). Klikatelná plocha: handler JEN na `<td>`, button vlastní nemá
+  (klik i Enter/Space z něj bublají) — dva handlery = dvojí toggle, a `.stop`
+  na buttonu by zabil nastavení kotvy v controlleru.
+
 ## Objevené gotchas (platí i pro další kroky)
 
 - Blade `x-data` atribut: dvojité uvozovky v JS komentáři ukousnou atribut
@@ -115,18 +128,19 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
 
 ## Stav sítě
 
-- `verify-selection-gestures.mjs` — **70/70** (C1–C13 + myš, klávesnice, sweep,
-  selection-only, reduced-motion, sortable koexistence, `?` nápověda, ARIA + live region)
+- `verify-selection-gestures.mjs` — **77/77** (C1–C13 + myš, klávesnice, sweep,
+  selection-only, reduced-motion, sortable koexistence, `?` nápověda, ARIA +
+  live region, kontrast markeru, velikost cíle)
 - `verify-record-active-row.mjs` 18/18, `verify-record-actions.mjs` 14/14,
   `verify-record-actions-dual.mjs` 5/5, `verify-mobile-selection.mjs` 13/13,
   `verify-fill-handle.mjs` 26/26, `verify-modal-open-on.mjs` 14/14
-- PHP: table 1665, core 1751, forms 908, sortable 39, Integration 39;
+- PHP: table 1668, core 1751, forms 908, sortable 39, Integration 39;
   analyse + lint OK; coverage diff 100 %, floors OK
 
-## Zbývá (Fáze VII + docs)
+## Zbývá
 
-- **27** nebarevný marker, klikatelná plocha buňky, `INTERACTIVE` (týž commit!)
-- **28** docs EN+CZ, CHANGELOG, upgrade, i18n, boost guidelines, screenshoty
+- **28** docs EN+CZ, upgrade, boost guidelines, screenshoty (CHANGELOG se psal
+  průběžně u každého kroku)
 - Známý předexistující bug: `reorderBodyColumns()` je poziční bez offsetu
   selection buňky (selectable+sortable přeřazování sloupců) — vědomě odloženo,
   vyplave na `SortablePreview`.
