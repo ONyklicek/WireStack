@@ -68,8 +68,8 @@ engine, chipy a query-string persistenci viz [Filtry na úrovni sloupce](../filt
 ->filterAsSelect(array|string $options, ?string $placeholder = null)       // jedna hodnota; searchable combobox
 ->filterAsMultiSelect(array|string $options, ?string $placeholder = null)  // více hodnot (whereIn); searchable combobox
 ->filterSearchable(bool $condition = true)                                 // přepnutí vyhledávání (defaultně zapnuté)
-->filterAsDate(?string $minDate = null, ?string $maxDate = null)
-->filterAsDateRange(?string $minDate = null, ?string $maxDate = null)
+->filterAsDate(string|DateTimeInterface|null $minDate = null, string|DateTimeInterface|null $maxDate = null)
+->filterAsDateRange(string|DateTimeInterface|null $minDate = null, string|DateTimeInterface|null $maxDate = null)
 ->filterAsNumberRange(?float $min = null, ?float $max = null, ?float $step = null)
 ->filterAsBoolean(?string $trueLabel = null, ?string $falseLabel = null)
 ->filterOperator(string $operator)     // '=', '!=', '>', '<', '>=', '<=', 'like' (výchozí, částečná shoda), 'starts_with', 'ends_with'

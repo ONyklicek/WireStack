@@ -40,6 +40,29 @@ DateTimePicker::make('start')
     ->closeOnDateSelection()
 ```
 
+Meze přijmou cokoli, co jde přečíst jako datum — `Carbon`/`DateTimeInterface`,
+nebo řetězec jako `'2026-07-10'`, `'10.07.2026'`, `'today'` či `'+1 week'` — a na
+pozadí se převedou do tvaru, kterému widget rozumí. Mez, kterou přečíst nelze,
+vyhodí výjimku, místo aby ji prohlížeč tiše zahodil.
+
+```php
+DateTimePicker::make('start')
+    ->minDate(now())              // žádná data v minulosti
+    ->maxDate(now()->addYear())
+```
+
+U režimu `datetime` může mez nést i čas — ten pak omezí hodiny jen v ten hraniční
+den:
+
+```php
+DateTimePicker::make('slot')
+    ->minDate('2026-07-10 08:30') // 10. července nejdřív od 08:30
+    ->maxDate('2026-07-20 17:00') // 20. července nejpozději do 17:00
+```
+
+Horní mez zadaná na celý den pokrývá celý den: `->maxDate('2026-07-20')`
+nechá 20. července volitelné až do 23:59.
+
 ## Volby času
 
 ```php
@@ -92,8 +115,8 @@ Jedinou výjimkou je [`asMonth()`](#rezimy), který je vždy nativní.
 | `asDateTime()` | — | Alias pro `mode('datetime')` |
 | `format(string)` | string | Formát uložení (Carbon kompatibilní) |
 | `displayFormat(string)` | string | Formát zobrazení ukázaný uživateli |
-| `minDate(string\|Closure)` | string | Minimální volitelné datum |
-| `maxDate(string\|Closure)` | string | Maximální volitelné datum |
+| `minDate(string\|DateTimeInterface\|Closure)` | string | Nejdřívější volitelné datum; u `datetime` může nést i čas |
+| `maxDate(string\|DateTimeInterface\|Closure)` | string | Nejpozdější volitelné datum; mez na celý den pokrývá celý den |
 | `disabledDates(array\|Closure)` | array | Data, která nelze vybrat |
 | `firstDayOfWeek(int)` | int | 0=neděle, 1=pondělí |
 | `closeOnDateSelection()` | bool | Zavřít picker po výběru data |

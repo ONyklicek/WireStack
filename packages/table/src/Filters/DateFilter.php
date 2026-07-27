@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Filters;
 
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireCore\Foundation\Support\DateBoundary;
 use NyonCode\WireForms\Components\DateTimePicker;
 
 class DateFilter extends Filter
@@ -16,9 +18,9 @@ class DateFilter extends Filter
 
     protected bool $monthMode = false;
 
-    protected ?string $minDate = null;
+    protected string|DateTimeInterface|null $minDate = null;
 
-    protected ?string $maxDate = null;
+    protected string|DateTimeInterface|null $maxDate = null;
 
     protected ?string $fromLabel = null;
 
@@ -71,21 +73,28 @@ class DateFilter extends Filter
         return true;
     }
 
-    /** Set the earliest selectable date. */
-    public function minDate(?string $date): static
+    /**
+     * Set the earliest selectable date — anything readable as one
+     * (a DateTimeInterface, '2026-07-10', '10.07.2026', 'today', '-1 year').
+     */
+    public function minDate(string|DateTimeInterface|null $date): static
     {
         $this->minDate = $date;
 
         return $this;
     }
 
+    /**
+     * In the shape the inline `<input type="date|month">` needs it — any other
+     * shape is dropped by the browser without a word.
+     */
     public function getMinDate(): ?string
     {
-        return $this->minDate;
+        return DateBoundary::min($this->minDate, $this->boundaryFormat());
     }
 
     /** Set the latest selectable date. */
-    public function maxDate(?string $date): static
+    public function maxDate(string|DateTimeInterface|null $date): static
     {
         $this->maxDate = $date;
 
@@ -94,7 +103,12 @@ class DateFilter extends Filter
 
     public function getMaxDate(): ?string
     {
-        return $this->maxDate;
+        return DateBoundary::max($this->maxDate, $this->boundaryFormat());
+    }
+
+    private function boundaryFormat(): string
+    {
+        return $this->monthMode ? 'Y-m' : 'Y-m-d';
     }
 
     /** Set the label for the range's "from" input. */

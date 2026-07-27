@@ -57,6 +57,10 @@ class FieldPreview extends Component
             'code' => '283041',
             'metadata' => ['plan' => 'pro', 'seats' => '12', 'region' => 'eu-central'],
             'event_at' => '2026-06-15 14:30',
+            // Left empty on purpose: the bounds preview has to show where an
+            // unset picker opens. The key still has to exist — entangle() is a
+            // no-op on a state path Livewire has never seen.
+            'slot_at' => null,
         ];
     }
 
@@ -302,6 +306,16 @@ class FieldPreview extends Component
                 ->helperText('Pick a date and time.')
                 ->displayFormat('j. n. Y H:i')
                 ->closeOnDateSelection()
+                ->mode('datetime'),
+
+            // Bounds a driver can assert against: fixed, far enough out that
+            // "today" never falls inside them, and narrow enough on the clock
+            // that the time part has to be enforced too.
+            'date-time-picker-bounds' => DateTimePicker::make('slot_at')
+                ->label('Appointment slot')
+                ->helperText('Between 10 March 08:30 and 20 March 17:00, 2030.')
+                ->minDate('2030-03-10 08:30')
+                ->maxDate('2030-03-20 17:00')
                 ->mode('datetime'),
 
             'file-upload' => FileUpload::make('photo')

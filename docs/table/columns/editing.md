@@ -68,8 +68,8 @@ and query-string persistence.
 ->filterAsSelect(array|string $options, ?string $placeholder = null)       // single value; searchable combobox
 ->filterAsMultiSelect(array|string $options, ?string $placeholder = null)  // several values (whereIn); searchable combobox
 ->filterSearchable(bool $condition = true)                                 // toggle the in-panel search (on by default)
-->filterAsDate(?string $minDate = null, ?string $maxDate = null)
-->filterAsDateRange(?string $minDate = null, ?string $maxDate = null)
+->filterAsDate(string|DateTimeInterface|null $minDate = null, string|DateTimeInterface|null $maxDate = null)
+->filterAsDateRange(string|DateTimeInterface|null $minDate = null, string|DateTimeInterface|null $maxDate = null)
 ->filterAsNumberRange(?float $min = null, ?float $max = null, ?float $step = null)
 ->filterAsBoolean(?string $trueLabel = null, ?string $falseLabel = null)
 ->filterOperator(string $operator)     // '=', '!=', '>', '<', '>=', '<=', 'like' (default, partial match), 'starts_with', 'ends_with'

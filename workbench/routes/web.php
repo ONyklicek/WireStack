@@ -373,6 +373,7 @@ $fieldPreviews = [
     'otp-input' => 'OTP Input',
     'key-value' => 'Key-Value',
     'date-time-picker' => 'Date-Time Picker',
+    'date-time-picker-bounds' => 'Date-Time Picker · min/max bounds',
     'file-upload' => 'File Upload',
     'file-upload-auto' => 'File Upload (centre crop)',
 ];
