@@ -171,6 +171,6 @@ mobile-selection 13/13, fill-handle 26/26, modal-open-on 14/14, nested-modal
   pořadí neuloží (nepřihlášený uživatel, chybějící migrace). Driver proto měří
   i s odpojeným voláním Livewiru, jinak by regresi neodhalil.
 
-### Vědomě odloženo
-
-- Floor pro `table` lze zvednout z 87 % na 88 % (`composer coverage:floors`).
+- Coverage floor pro `table` zvednut 87 → 88 % (`bda75c5`). Rezerva je ~0,3 bodu
+  a floor gate je v CI **blokující**, přičemž CI měří pcov a lokál xdebug — při
+  poklesu pokrytí to spadne dřív než u ostatních balíčků.
