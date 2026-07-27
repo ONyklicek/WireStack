@@ -93,6 +93,10 @@ try {
       ['mode', 'selected-raw', 'selected-count', 'anchor', 'base', 'active', 'announced', 'columns']
         .map((k) => [k, $q('[data-testid="lab-' + k + '"]')?.textContent?.trim() ?? null])
     );
+    window.gestureReadout = () => Object.fromEntries(
+      ['keyboard', 'ranges', 'sweep', 'menu', 'help', 'fill']
+        .map((k) => [k, $q('[data-testid="lab-gesture-' + k + '"]')?.textContent?.trim() ?? null])
+    );
     window.help = () => $q('[data-testid="shortcut-help"]')?.closest('[role="dialog"]');
     window.dialogOpen = () => $qa('[role=dialog]').some((d) => vis(d) && getComputedStyle(d).display !== 'none');
     true;
@@ -163,6 +167,15 @@ try {
   check('the lab boots with grid, selection, record actions, reorderable columns and a live region',
     boot.rows === 40 && boot.grid && boot.selectable && boot.controller && boot.reorderable && boot.liveRegion && boot.panel,
     JSON.stringify(boot));
+
+  // The read-out names the layer this table asked for. It is worth asserting
+  // rather than eyeballing: the gestures are opt-in, so "it works" and "this
+  // fixture happens to have them on" are two different statements.
+  const readout = JSON.parse(await eval_(`JSON.stringify(gestureReadout())`));
+  check('the panel reports the gestures this table offers',
+    readout.keyboard === 'on' && readout.ranges === 'on' && readout.sweep === 'on'
+      && readout.menu === 'on' && readout.help === 'on' && readout.fill === 'off',
+    JSON.stringify(readout));
 
   const idle = JSON.parse(await eval_(`JSON.stringify(lab())`));
   check('the state panel starts idle: keys mode, nothing selected, no anchor, nothing announced',

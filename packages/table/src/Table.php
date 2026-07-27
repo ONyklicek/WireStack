@@ -1765,15 +1765,17 @@ class Table implements Htmlable
 
     /**
      * Whether this table is a grid in the ARIA sense — the single owner of
-     * that decision. A grid is any table the keyboard drives row by row: one
-     * with record actions, and equally one whose rows can be selected
-     * (`selectable()`, or bulk actions — {@see isSelectable()}), where
-     * Space/Shift+arrow work the selection.
+     * that decision, and one the gesture layer answers.
      *
-     * The gesture layer overrides it in both directions:
-     * `gestures(fn ($g) => $g->keyboard(false))` (or `gestures(false)`) leaves
-     * an ordinary table that the keyboard does not drive, and `keyboard(true)`
-     * forces the grid on for a table that would not have qualified.
+     * A table is a grid once it says `gestures()` (or `keyboard()` on its own).
+     * Nothing is a grid by accident: keyboard navigation puts the rows in the
+     * tab order and starts answering arrows, which is an application idiom, not
+     * something a table earns by being selectable.
+     *
+     * `keyboard(null)` hands the decision back here, and here it goes to any
+     * table the keyboard could drive row by row — one with record actions, or
+     * one whose rows can be selected ({@see isSelectable()}, which bulk actions
+     * imply).
      */
     public function usesGridSemantics(): bool
     {

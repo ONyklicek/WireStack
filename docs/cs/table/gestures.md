@@ -12,29 +12,63 @@ hodnotu přes mnoho buněk.
 Pro back office je to přesně ono. Pro veřejný výpis je to obvykle špatně —
 zvýrazněný řádek a zabavený pravý klik tam v lepším případě jen ruší.
 
-Celá vrstva je proto jeden vypínač:
+Je to proto jeden vypínač a tabulka začíná na té tiché straně:
+
+```php
+->gestures()
+```
+
+Tohle je ta desktopová tabulka. Bez toho dostanete obyčejnou webovou — tu, kterou
+většina stránek chce.
+
+## Co tabulka dostane, když si neřekne
+
+**Klávesová navigace a označování tažením jsou vypnuté, dokud si o ně neřeknete.**
+Jsou to ty dvě, které mění chování tabulky vůči návštěvníkovi, který ji ovládat
+nezamýšlel: klávesová navigace dá řádky do pořadí tabulátoru, označí aktivní
+řádek a začne odpovídat na šipky a `mod`+klávesu, a tažení promění stisk
+v checkboxovém sloupci na blokový výběr — gesto, které lidé najdou omylem dřív
+než schválně.
+
+Zbytek stejně potřebuje vlastní pozvánku, takže je povolený od začátku: rozsah
+potřebuje `->selectable()`, kontextové menu potřebuje navázané akce, fill handle
+potřebuje `->fillHandle()` a nápověda `?` potřebuje klávesovou vrstvu, kterou
+tenhle default nechává vypnutou.
+
+```php
+// Obyčejný výpis. Checkboxy fungují, Shift+klik pořád dělá rozsah,
+// nic neodpovídá na šipku, nic se neoznačuje tažením.
+Table::make()->selectable()
+
+// Ta samá tabulka jako aplikace.
+Table::make()->gestures()->selectable()
+```
+
+Když chcete jít opačným směrem — žádné kontextové menu, žádné rozsahy, žádný fill
+handle, vůbec nic — řekněte si o to:
 
 ```php
 ->gestures(false)
 ```
 
-Dostanete obyčejnou webovou tabulku. Nic není navázané, nic se neoznačuje
-a controllery, které by to řídily, se vůbec nevykreslí.
-
 ## Co se počítá jako gesto
 
-Šest schopností, každá zvlášť přepínatelná:
+Šest schopností, každá zvlášť přepínatelná. „Výchozí" je to, co dostane tabulka,
+která `gestures()` nikdy nezavolá:
 
-| Schopnost | Co pokrývá |
-|-----------|------------|
-| `keyboard` | Navigaci v mřížce: putovní `tabindex`, šipky, `Home`/`End`, `PageUp`/`PageDown`, `Enter` / `Shift`+`Enter` pro primární a sekundární record action, `Space` pro přepnutí výběru a každou vlastní `keyboardShortcut()` / `onKey()` proti aktivnímu řádku. Zároveň je to to, co z tabulky dělá ARIA `grid`. |
-| `rangeSelection` | `Shift`+klik, `mod`+klik a `mod`+`Shift`+klik na řádek, plus `Shift`+šipka, `Shift`+`Home` a `Shift`+`End` z klávesnice. |
-| `dragSelect` | Označování tažením: stisknout v checkboxovém sloupci a táhnout přes blok řádků. |
-| `contextMenu` | Kontextové menu řádku pod pravým tlačítkem — jak `rowContextMenu()`, tak libovolnou `onContextMenu()` record action. |
-| `shortcutHelp` | Nápovědu zkratek pod `?`. |
-| `fillHandle` | Fill handle nad editovatelnými buňkami ve stylu Excelu. |
+| Schopnost | Výchozí | Co pokrývá |
+|-----------|---------|------------|
+| `keyboard` | **vyp** | Navigaci v mřížce: putovní `tabindex`, šipky, `Home`/`End`, `PageUp`/`PageDown`, `Enter` / `Shift`+`Enter` pro primární a sekundární record action, `Space` pro přepnutí výběru a každou vlastní `keyboardShortcut()` / `onKey()` proti aktivnímu řádku. Zároveň je to to, co z tabulky dělá ARIA `grid`. |
+| `rangeSelection` | zap | `Shift`+klik, `mod`+klik a `mod`+`Shift`+klik na řádek, plus `Shift`+šipka, `Shift`+`Home` a `Shift`+`End` z klávesnice. |
+| `dragSelect` | **vyp** | Označování tažením: stisknout v checkboxovém sloupci a táhnout přes blok řádků. |
+| `contextMenu` | zap | Kontextové menu řádku pod pravým tlačítkem — jak `rowContextMenu()`, tak libovolnou `onContextMenu()` record action. |
+| `shortcutHelp` | zap¹ | Nápovědu zkratek pod `?`. |
+| `fillHandle` | zap² | Fill handle nad editovatelnými buňkami ve stylu Excelu. |
 
 `mod` je `Ctrl` na Windows a `⌘` na macOS.
+
+¹ Povolená, ale čte klávesovou vrstvu — s výchozím nastavením se tedy neotevře.
+² Povolený, ale tabulka si o něj pořád musí říct přes `->fillHandle()`.
 
 ## Kombinování
 
@@ -43,9 +77,8 @@ hodnota se ignoruje, takže funguje jak fluent řetězec, tak víceřádkové t�
 
 ```php
 ->gestures(fn (TableGestures $g) => $g
-    ->keyboard()          // šipky, Enter, zkratky
-    ->dragSelect(false)   // ale žádné označování tažením
-    ->rangeSelection())   // Shift+klik rozsah pořád dělá
+    ->keyboard()          // šipky, Enter, zkratky …
+    ->dragSelect(false))  // … ale pořád žádné označování tažením
 ```
 
 Každý setter bere `bool`, takže `->contextMenu(false)` se čte stejně dobře jako
@@ -63,7 +96,8 @@ $readOnly = TableGestures::none()->contextMenu();
 ->gestures($readOnly)
 ```
 
-`TableGestures::all()` a `TableGestures::none()` jsou dva výchozí body.
+`TableGestures::defaults()`, `TableGestures::all()` a `TableGestures::none()` jsou
+tři výchozí body: dodávaný default, všechno, nic.
 
 ## Povolení není zapnutí
 
@@ -83,17 +117,22 @@ tabulky rozhoduje, co *má*.
 ## `keyboard()` má tři stavy
 
 Ostatních pět schopností jsou prosté booleany. `keyboard` je třístavová, protože
-musí umět vyjádřit i „zapni to natvrdo pro tabulku, která by se jinak
-nekvalifikovala":
+„zapnuto" tu musí znamenat dvě různé věci:
 
 | Hodnota | Význam |
 |---------|--------|
-| `null` (výchozí) | Rozhoduje tabulka — zapnuto pro tabulku s record actions nebo pro selectable |
-| `true` | Zapnout natvrdo, i pro tabulku, která by se nekvalifikovala |
-| `false` | Vypnout |
+| `false` (výchozí) | Vypnuto |
+| `null` | Rozhoduje tabulka — zapnuto pro tabulku s record actions nebo pro selectable. Tohle nastaví `gestures()` |
+| `true` | Zapnout natvrdo, i pro tabulku, která nemá ani jedno |
+
+`gestures()` nechává klávesnici na `null` místo aby ji zapínalo natvrdo: tabulka
+bez record actions a bez výběru nemá pro šipky co dělat a putovní tabindex nad
+netečnými řádky je horší než žádný:
 
 ```php
-->gestures(fn (TableGestures $g) => $g->keyboard(null))   // vrátit rozhodnutí tabulce
+Table::make()->gestures()                                          // není grid
+Table::make()->gestures()->selectable()                            // je grid
+Table::make()->gestures(fn (TableGestures $g) => $g->keyboard(true))   // grid tak jako tak
 ```
 
 ## Co vrstva neřídí
@@ -132,11 +171,13 @@ Nastavte jednou pro všechny tabulky:
 ```php
 // config/wire-table.php
 'defaults' => [
-    'gestures' => false,
+    'gestures' => true,
 ],
 ```
 
-`true` (nebo chybějící klíč) povolí všechno, `false` nic a mapa kombinuje:
+`null` (nebo chybějící klíč) ponechá dodávaný default popsaný výše, `true` povolí
+všechno všem tabulkám — back office si vrstvu zapne jednou tady místo u každé
+tabulky — `false` nepovolí nic a mapa kombinuje:
 
 ```php
 'gestures' => ['keyboard' => true, 'drag_select' => false],
@@ -206,11 +247,12 @@ Když má karta zůstat čistá, vypněte to:
 
 | Tabulka | Doporučení |
 |---------|------------|
-| Back-office výpis, operátoři na klávesnici | Všechno (výchozí) |
-| Veřejný výpis, marketingová stránka | `->gestures(false)` |
+| Veřejný výpis, marketingová stránka | Nic dělat nemusíte — to je výchozí stav |
+| Back-office výpis, operátoři na klávesnici | `->gestures()`, nebo `'gestures' => true` v configu |
+| Veřejná stránka, kde nesmí ani pravý klik | `->gestures(false)` |
 | Read-only report, pravý klik se pořád hodí | `TableGestures::none()->contextMenu()` |
-| Dlouhý seznam, výběr je důležitý, tažení riskantní | `->gestures(fn ($g) => $g->dragSelect(false))` |
-| Vložená do stránky s vlastní obsluhou klávesnice | `->gestures(fn ($g) => $g->keyboard(false))` |
+| Dlouhý seznam, klávesnice se hodí, tažení je riskantní | `->gestures(fn ($g) => $g->keyboard())` |
+| Vložená do stránky s vlastní obsluhou klávesnice | `->gestures(fn ($g) => $g->dragSelect())` |
 
 ## Viz také
 

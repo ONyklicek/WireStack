@@ -4,29 +4,40 @@ order: 47
 
 # Výběr řádků
 
-Výběr není jen sloupec zaškrtávátek, ale sada gest. Tabulka se `->selectable()` —
-nebo taková, která má jen `->bulkActions()`, což výběr implikuje — se chová jako
-seznam v desktopovém správci souborů: klik, `Shift`+klik pro rozsah, `mod`+klik
-pro přidání jednoho řádku, tažení po sloupci se zaškrtávátky a totéž z
-klávesnice.
+Z výběru může být sada gest, ne jen sloupec zaškrtávátek. Tabulka se
+`->selectable()` — nebo taková, která má jen `->bulkActions()`, což výběr
+implikuje — dává zaškrtávátka, ovladače „vybrat vše", bulk bar a `Shift`/`mod`
+kliky pro rozsahy:
 
 ```php
 ->selectable()
 ->bulkActions([DeleteBulkAction::make()])
 ```
 
-Nic z toho se nekonfiguruje. Je to to, co `selectable()` dává.
+Přidejte `->gestures()` a chová se navíc jako seznam v desktopovém správci
+souborů: šipky procházejí řádky, `Space` přepíná, `Shift`+šipky roztahují,
+`mod`+`A` vezme stránku a tažení po sloupci se zaškrtávátky nabere celý blok.
+
+```php
+->gestures()
+->selectable()
+```
+
+To rozdělení je záměrné: klávesová navigace a označování tažením mění chování
+tabulky vůči někomu, kdo ji ovládat nezamýšlel, takže čekají, až si o ně řeknete
+(viz [Vrstva gest](gestures.md)). U všeho níže je uvedeno, co které gesto
+potřebuje.
 
 ## Co umí myš
 
-| Gesto | Výsledek |
-|-------|----------|
-| Klik do buňky výběru | Přepne řádek a nastaví kotvu rozsahu |
-| `Shift` + klik | Vybere rozsah mezi kotvou a tímto řádkem |
-| `mod` + klik | Přepne tento jeden řádek (kdekoli na něm) a zakotví zde |
-| `mod` + `Shift` + klik | Přidá celý blok k tomu, co už je vybrané |
-| Tažení po sloupci se zaškrtávátky | Přejede a vybere souvislý úsek řádků |
-| Klik na samotný řádek | Označí řádek (viz níže) — zaškrtávátko nezaškrtne |
+| Gesto | Výsledek | Potřebuje |
+|-------|----------|-----------|
+| Klik do buňky výběru | Přepne řádek a nastaví kotvu rozsahu | — |
+| `Shift` + klik | Vybere rozsah mezi kotvou a tímto řádkem | — |
+| `mod` + klik | Přepne tento jeden řádek (kdekoli na něm) a zakotví zde | — |
+| `mod` + `Shift` + klik | Přidá celý blok k tomu, co už je vybrané | — |
+| Tažení po sloupci se zaškrtávátky | Přejede a vybere souvislý úsek řádků | `gestures()` |
+| Klik na samotný řádek | Označí řádek (viz níže) — zaškrtávátko nezaškrtne | — |
 
 Cílem je **celá buňka výběru**, ne jen šestnáctipixelové políčko uvnitř: samotné
 políčko je pod každým doporučením pro velikost dotykového cíle a zbytek buňky
@@ -37,6 +48,9 @@ klávesnici a kotvou pro další rozsah — ale nevybere ho. Výběr zůstává 
 Výjimkou je `mod`+klik, a přesně od toho ten modifikátor je.
 
 ## Co umí klávesnice
+
+Všechno v téhle sekci potřebuje `->gestures()` — viz
+[Vrstva gest](gestures.md).
 
 | Klávesa | Výsledek |
 |---------|----------|
@@ -157,19 +171,19 @@ Enter  Space  ArrowUp  ArrowDown  Home  End  PageUp  PageDown  ContextMenu  F10 
 takže vazba `->onKey('Delete')` reaguje na obojí a explicitní
 `->onKey('Backspace')` zůstává platný.
 
-## Jak to vypnout
+## Jak to zase vypnout
 
-Grid sémantiku zapíná `selectable()` i akce nad záznamem. Vypnout ji lze pro
-konkrétní tabulku:
+Tabulka, která si o vrstvu gest řekla, může vracet schopnosti po jedné — nebo
+všechny najednou:
 
 ```php
-->gestures(fn (TableGestures $g) => $g->keyboard(false))   // jen klávesnice
-->gestures(false)                                          // všechna gesta
+->gestures(fn (TableGestures $g) => $g->dragSelect(false))  // klávesnici nech, tažení pryč
+->gestures(fn (TableGestures $g) => $g->keyboard(false))    // a naopak
+->gestures(false)                                           // všechna gesta včetně rozsahů
 ```
 
-První varianta odebere klávesnicovou vrstvu i nápovědu ke zkratkám, myší gesta
-zůstanou; druhá vezme i rozsahy a označování tažením. Zaškrtávátka fungují v
-obou případech dál — viz [Vrstva gest](gestures.md).
+Zaškrtávátka fungují v každé z těch variant dál — viz
+[Vrstva gest](gestures.md).
 
 ## Související dokumentace
 

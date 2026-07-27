@@ -449,14 +449,21 @@ it('keeps a name-referenced onKey shortcut even with no action to stamp', functi
     expect($table->getRecordActionKeyboardConfig()['shortcuts'])->toBe(['Delete' => 'remove']);
 });
 
-it('enables keyboard nav automatically when record actions exist', function () {
-    expect(Table::make()->keyboardNavEnabled())->toBeFalse()
-        ->and(Table::make()->getTableRole())->toBeNull();
+it('enables keyboard nav for a record-action table that asked for gestures', function () {
+    // Never by accident: the keyboard layer waits for gestures(), and only then
+    // does the table's own shape decide (record actions here).
+    $unasked = Table::make()->recordAction(RecordAction::make('edit')->onDoubleClick());
 
-    $table = Table::make()->recordAction(RecordAction::make('edit')->onDoubleClick());
+    expect($unasked->keyboardNavEnabled())->toBeFalse()
+        ->and($unasked->getTableRole())->toBeNull();
+
+    $table = Table::make()->gestures()->recordAction(RecordAction::make('edit')->onDoubleClick());
 
     expect($table->keyboardNavEnabled())->toBeTrue()
-        ->and($table->getTableRole())->toBe('grid');
+        ->and($table->getTableRole())->toBe('grid')
+        // …and a table with nothing for the arrows to do stays ungridded even
+        // after asking.
+        ->and(Table::make()->gestures()->keyboardNavEnabled())->toBeFalse();
 });
 
 it('lets keyboard nav be forced off or on', function () {
@@ -471,14 +478,18 @@ it('lets keyboard nav be forced off or on', function () {
 
 // ─── Grid semantics (single owner) ───────────────────────────────
 
-it('grants grid semantics to selectable tables and tables with bulk actions', function () {
-    // usesGridSemantics() owns "is this a grid": record actions, selectable(),
-    // and bulk actions (isSelectable() covers both) all qualify.
+it('grants grid semantics to selectable tables and tables with bulk actions that asked', function () {
+    // usesGridSemantics() owns "is this a grid": once the table has asked for
+    // the gesture layer, record actions, selectable() and bulk actions
+    // (isSelectable() covers both) all qualify.
     expect(Table::make()->usesGridSemantics())->toBeFalse()
-        ->and(Table::make()->selectable()->usesGridSemantics())->toBeTrue()
-        ->and(Table::make()->selectable()->getTableRole())->toBe('grid')
-        ->and(Table::make()->bulkActions([BulkAction::make('x')])->usesGridSemantics())->toBeTrue()
-        ->and(Table::make()->selectable()->keyboardNavEnabled())->toBeTrue();
+        // Selectable alone is not enough any more — a checkbox column is not a
+        // reason to put the rows in the tab order.
+        ->and(Table::make()->selectable()->usesGridSemantics())->toBeFalse()
+        ->and(Table::make()->gestures()->selectable()->usesGridSemantics())->toBeTrue()
+        ->and(Table::make()->gestures()->selectable()->getTableRole())->toBe('grid')
+        ->and(Table::make()->gestures()->bulkActions([BulkAction::make('x')])->usesGridSemantics())->toBeTrue()
+        ->and(Table::make()->gestures()->selectable()->keyboardNavEnabled())->toBeTrue();
 });
 
 it('lets the gesture layer ungrid a selectable table', function () {

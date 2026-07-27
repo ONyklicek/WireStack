@@ -139,6 +139,16 @@ try {
 
   check('the fixture renders its rows', await eval_('rows().length') > 4, `${await eval_('rows().length')} rows`);
 
+  // The lab's own read-out, which reports what the table offers rather than what
+  // the controller happens to hold — the two disagreeing is exactly the bug this
+  // driver exists to catch.
+  const readout = JSON.parse(await eval_(`(() => JSON.stringify(Object.fromEntries(
+    ['keyboard', 'ranges', 'sweep', 'menu', 'help', 'fill']
+      .map((k) => [k, $q('[data-testid="lab-gesture-' + k + '"]')?.textContent?.trim() ?? null])
+  )))()`));
+  check('the read-out reports every gesture off',
+    Object.values(readout).every((v) => v === 'off'), JSON.stringify(readout));
+
   const semantics = JSON.parse(await eval_(`(() => JSON.stringify({
     role: $q('table')?.getAttribute('role'),
     rowRole: rows()[0].getAttribute('role'),

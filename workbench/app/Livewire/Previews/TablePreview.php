@@ -355,6 +355,7 @@ class TablePreview extends Component
     {
         return $table
             ->model(User::class)
+            ->gestures()
             ->fillHandle()
             ->columns([
                 TextColumn::make('name')->label('Name'),
@@ -375,10 +376,14 @@ class TablePreview extends Component
      * `selection-only` is selectable *without* record actions — the variant
      * that proves grid semantics attach to `selectable()` itself, not to the
      * record actions every other selectable preview happens to carry.
+     *
+     * All of them call `gestures()`: the layer is opt-in, and these fixtures are
+     * what the drivers point at to prove it works when asked for.
      */
     private function gestureTable(Table $table): Table
     {
         $table
+            ->gestures()
             ->model(GestureRow::class)
             ->columns([
                 TextColumn::make('name')->label('Name')->searchable()->sortable(),
@@ -535,6 +540,9 @@ class TablePreview extends Component
             ->defaultSort('created_at', 'desc')
             ->searchable()
             ->selectable()
+            // The gesture layer is opt-in; these variants are what shows it off
+            // (and what the record-action drivers drive), so they ask for it.
+            ->gestures()
             // Double-click a row → open it (a confirmation modal here). Because the
             // table is selectable, the default trigger is double-click, leaving the
             // single click to the selection gestures (it only marks the row).
@@ -558,8 +566,8 @@ class TablePreview extends Component
                     RecordAction::make(Action::make('edit')->label('Edit')->action(fn () => null))->onDoubleClick(),
                 ],
                 // Keyboard navigation showcase (see the legend above the table).
-                // Keyboard nav is automatic once any record action exists: the rows
-                // become a grid with a roving tabindex, ↑/↓ move the active row,
+                // Keyboard nav follows gestures() plus a table the keyboard can
+                // drive — record actions here: the rows become a grid with a roving tabindex, ↑/↓ move the active row,
                 // Enter runs the double-click action, Shift+Enter the single-click
                 // one, and each onKey() binding fires against the active row.
                 // Clicking a row adopts it as the active row, so pointer and

@@ -35,8 +35,13 @@ trait HasGestures
      * selection, the drag sweep, the right-click menu, the `?` help and the fill
      * handle — on, off, or capability by capability:
      *
-     *   $table->gestures(false);
+     *   $table->gestures();                  // the desktop-app table
+     *   $table->gestures(false);             // not even the quiet ones
      *   $table->gestures(fn (TableGestures $g) => $g->keyboard()->dragSelect(false));
+     *
+     * Keyboard navigation and the drag sweep are off until this says otherwise
+     * ({@see TableGestures::defaults()}), so `gestures()` with no argument is the
+     * call that turns an ordinary table into an application.
      *
      * The closure receives this table's gestures (seeded from the config
      * default) and configures them in place; its return value is ignored, so
@@ -69,7 +74,7 @@ trait HasGestures
     public function getGestures(): TableGestures
     {
         /** @var bool|array<string, bool>|null $default */
-        $default = config('wire-table.defaults.gestures', true);
+        $default = config('wire-table.defaults.gestures');
 
         return $this->gestures ??= TableGestures::fromConfig($default);
     }

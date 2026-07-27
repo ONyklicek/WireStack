@@ -83,23 +83,31 @@ Před upgradem ověřte, že je vaše aplikace splňuje.
 Z výběru v tabulce se stala plnohodnotná sada gest, ne jen sloupec zaškrtávátek
 (viz [Výběr řádků](table/selection.md)). Při upgradu zkontrolujte čtyři věci.
 
-**1. Každá selectable tabulka je nově grid — viditelná změna, která na vaší
-straně nevyžaduje žádnou úpravu kódu.** Grid sémantika dřív šla jen s akcemi nad
-záznamem; nově ji zapíná i `selectable()` a `bulkActions()`. Řádky takové
-tabulky jdou zaostřit, klik řádek označí jako aktivní a šipky, `Space`,
-`Shift`+šipky a `mod`+`A` ovládají výběr. Klik i nadále zaškrtávátko nezaškrtne.
-Vypnout lze pro konkrétní tabulku — buď jen klávesnici, nebo rovnou celou
-desktopovou vrstvu gest (klávesnici, rozsahy, označování tažením, kontextové
-menu, nápovědu `?` i fill handle), na kterou je jeden vypínač a taky výchozí
-hodnota pro celý projekt (viz [Vrstva gest](table/gestures.md)):
+**1. Klávesová navigace a označování tažením jsou opt-in — `->gestures()`.**
+Z výběru se stala plnohodnotná sada gest: šipky procházející řádky, `Space`,
+`Shift`+šipky, `mod`+`A` a tažení po sloupci se zaškrtávátky, které nabere celý
+blok. Nic z toho není zapnuté, dokud si o to tabulka neřekne — obojí totiž mění
+chování tabulky vůči návštěvníkovi, který ji ovládat nezamýšlel: řádky jdou do
+pořadí tabulátoru, označuje se aktivní řádek a tažení začne vybírat.
+
+Tabulkám, které to chtějí, přidejte jedno volání:
 
 ```php
-->gestures(fn (TableGestures $g) => $g->keyboard(false))   // jen klávesnice
-->gestures(false)                                          // celá vrstva
-
-// config/wire-table.php
-'defaults' => ['gestures' => false],                       // všechny tabulky
+->gestures()
+->selectable()
 ```
+
+nebo, pokud je celý projekt back office:
+
+```php
+// config/wire-table.php
+'defaults' => ['gestures' => true],
+```
+
+Co změna *neovlivní*: zaškrtávátka, oba ovladače „vybrat vše", bulk bar
+i `Shift`/`mod`+klik rozsahy fungují beze změny. Stejně tak kontextové menu pod
+pravým tlačítkem a fill handle — o oboje jste si stejně museli říct sami.
+Šest schopností a jak je kombinovat najdete ve [Vrstvě gest](table/gestures.md).
 
 **2. `->onKey()` na navigační klávese nově vyhodí výjimku.** Dřív se tiše
 zahodila, takže akce prostě nikdy nevystřelila. Pokud takovou vazbu máte, byla

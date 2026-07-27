@@ -19,6 +19,9 @@
             <a href="/previews/gesture-lab-paged"
                class="rounded-lg px-3 py-1.5 {{ $variant === 'paged' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200' }}"
                data-testid="lab-variant-paged">20 a page</a>
+            <a href="/previews/gesture-lab-plain"
+               class="rounded-lg px-3 py-1.5 {{ $variant === 'plain' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200' }}"
+               data-testid="lab-variant-plain">gestures off</a>
         </div>
     </div>
 
@@ -101,6 +104,55 @@
                     <dd class="mt-1 font-mono text-xs text-gray-900 dark:text-gray-100" data-testid="lab-columns" x-text="columnOrder"></dd>
                 </div>
             </dl>
+
+            {{-- Which gestures this table actually offers.
+
+                 Read from the table, not from the controller: a capability is a
+                 permission AND a prerequisite (a sweep needs selectable(), the
+                 help needs the keyboard), and only the table knows both. The
+                 controller would also be missing entirely on a table that
+                 mounts none — which is exactly the state worth showing. --}}
+            @php
+                // $this->table is the rendered view; getTable() is the instance.
+                $table = $this->getTable();
+                $permissions = $table->getGestures()->toArray();
+                $gestureRows = [
+                    'keyboard' => ['Keyboard nav', $table->usesGridSemantics(), $permissions['keyboard']],
+                    'ranges' => ['Range selection', $table->usesRangeSelection(), $permissions['rangeSelection']],
+                    'sweep' => ['Drag select', $table->usesDragSelect(), $permissions['dragSelect']],
+                    'menu' => ['Context menu', $table->hasRowContextMenu(), $permissions['contextMenu']],
+                    'help' => ['? help', $table->usesShortcutHelp(), $permissions['shortcutHelp']],
+                    'fill' => ['Fill handle', $table->isFillHandleEnabled(), $permissions['fillHandle']],
+                ];
+            @endphp
+
+            <h2 class="mt-5 mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Gestures</h2>
+            <dl class="space-y-1.5" data-testid="lab-gestures">
+                @foreach($gestureRows as $key => [$label, $active, $allowed])
+                    <div class="flex items-baseline justify-between gap-3">
+                        <dt class="text-gray-500 dark:text-gray-400">{{ $label }}</dt>
+                        <dd class="flex items-center gap-2">
+                            {{-- The permission, when it differs from the outcome:
+                                 "allowed but nothing to do" is the state people
+                                 get wrong, so it is spelled out rather than
+                                 hidden behind one badge. --}}
+                            @if(! $active && $allowed !== false)
+                                <span class="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500"
+                                      data-testid="lab-gesture-{{ $key }}-note">allowed</span>
+                            @endif
+                            <span class="rounded px-1.5 py-0.5 font-mono text-xs {{ $active
+                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+                                    : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400' }}"
+                                  data-testid="lab-gesture-{{ $key }}">{{ $active ? 'on' : 'off' }}</span>
+                        </dd>
+                    </div>
+                @endforeach
+            </dl>
+
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                The layer is opt-in: this table calls
+                <code class="font-mono">gestures({{ $variant === 'plain' ? 'false' : '' }})</code>.
+            </p>
 
             <h2 class="mt-5 mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Try it</h2>
             <ul class="space-y-1 text-xs text-gray-600 dark:text-gray-300">

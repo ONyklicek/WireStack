@@ -51,9 +51,11 @@ help, the fill handle. Every consumer asks here, never a local flag:
 `hasRowContextMenu()`, `isFillHandleEnabled()`, and the client via
 `getGestureConfig()` / `getRecordActionKeyboardConfig()`.
 
-Two rules hold the design together: a capability is a **permission, not a
-trigger** (allowing the sweep does not make a table selectable), and an
-**explicitly declared record action is outside the layer** (`onClick()` survives
+The layer is **opt-in**: `TableGestures::defaults()` leaves keyboard navigation
+and the drag sweep off, and `Table::gestures()` is what turns them on. Two more
+rules hold the design together: a capability is a **permission, not a trigger**
+(allowing the sweep does not make a table selectable), and an **explicitly
+declared record action is outside the layer** (`onClick()` survives
 `gestures(false)`; only `onKey()` needs the keyboard). Project-wide default in
 `config('wire-table.defaults.gestures')`.
 

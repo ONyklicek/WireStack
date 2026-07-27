@@ -50,6 +50,12 @@ class GestureLayerComponent extends Component
                 Action::make('open')->label('Open')->action(fn () => null)
             )->onDoubleClick()->onContextMenu());
 
+        // The default is the quiet table; every mode but 'default-quiet' is
+        // about a table that asked for the layer.
+        if ($this->mode !== 'default-quiet') {
+            $table->gestures();
+        }
+
         if ($this->mode === 'off') {
             $table->gestures(false);
         }
@@ -83,10 +89,26 @@ afterEach(fn () => Schema::dropIfExists('gesture_layer_rows'));
 
 // ─── Configuration ───────────────────────────────────────────────
 
-it('offers every gesture by default', function () {
+it('leaves keyboard navigation and the sweep off until a table asks', function () {
+    // A selectable table that never mentions gestures is an ordinary web table:
+    // checkboxes, no roving focus, nothing answering an arrow key, and no drag
+    // that turns into a block selection.
     $table = Table::make()->selectable();
 
+    expect($table->usesGridSemantics())->toBeFalse()
+        ->and($table->getTableRole())->toBeNull()
+        ->and($table->usesDragSelect())->toBeFalse()
+        ->and($table->usesShortcutHelp())->toBeFalse()
+        ->and($table->getGestureConfig())->toBe(['sweep' => false, 'ranges' => true])
+        // What is left needs an invitation of its own anyway.
+        ->and($table->usesRangeSelection())->toBeTrue();
+});
+
+it('turns the whole layer on with gestures()', function () {
+    $table = Table::make()->gestures()->selectable();
+
     expect($table->usesGridSemantics())->toBeTrue()
+        ->and($table->getTableRole())->toBe('grid')
         ->and($table->usesDragSelect())->toBeTrue()
         ->and($table->usesRangeSelection())->toBeTrue()
         ->and($table->usesShortcutHelp())->toBeTrue()
@@ -94,12 +116,19 @@ it('offers every gesture by default', function () {
         ->and($table->getGestureConfig())->toBe(['sweep' => true, 'ranges' => true]);
 });
 
+it('does not grid a table that has nothing for the arrows to do', function () {
+    // gestures() allows the keyboard; the table still decides whether it means
+    // anything. No record actions and no selection, so it does not.
+    expect(Table::make()->gestures()->usesGridSemantics())->toBeFalse()
+        ->and(Table::make()->gestures(fn (TableGestures $g) => $g->keyboard(true))->usesGridSemantics())->toBeTrue();
+});
+
 it('takes the whole layer away with gestures(false)', function () {
     $table = Table::make()
+        ->gestures(false)
         ->selectable()
         ->fillHandle()
-        ->rowContextMenu([Action::make('archive')])
-        ->gestures(false);
+        ->rowContextMenu([Action::make('archive')]);
 
     expect($table->usesGridSemantics())->toBeFalse()
         ->and($table->getTableRole())->toBeNull()
@@ -116,6 +145,7 @@ it('takes the whole layer away with gestures(false)', function () {
 
 it('configures one capability at a time', function () {
     $table = Table::make()
+        ->gestures()
         ->selectable()
         ->gestures(fn (TableGestures $g) => $g->dragSelect(false));
 
@@ -130,6 +160,7 @@ it('configures one capability at a time', function () {
 
 it('keeps the mouse gestures when only the keyboard is dropped', function () {
     $table = Table::make()
+        ->gestures()
         ->selectable()
         ->gestures(fn (TableGestures $g) => $g->keyboard(false));
 
@@ -145,7 +176,7 @@ it('keeps the mouse gestures when only the keyboard is dropped', function () {
 });
 
 it('needs a selectable table for the selection gestures', function () {
-    $table = Table::make()->recordAction('edit');
+    $table = Table::make()->gestures()->recordAction('edit');
 
     expect($table->usesDragSelect())->toBeFalse()
         ->and($table->usesRangeSelection())->toBeFalse();
@@ -161,33 +192,38 @@ it('accepts a prepared gesture set', function () {
 
 it('turns the layer back on explicitly', function () {
     $table = Table::make()->selectable()->gestures(false)->gestures(true);
+    // gestures(true) is gestures(): every capability allowed, the keyboard left
+    // to the table — which here is selectable, so it takes it.
 
     expect($table->usesDragSelect())->toBeTrue()
         ->and($table->usesGridSemantics())->toBeTrue();
 });
 
 it('takes the project default from config', function () {
-    config()->set('wire-table.defaults.gestures', false);
+    // A back-office project turns the layer on once, for every table.
+    config()->set('wire-table.defaults.gestures', true);
 
-    expect(Table::make()->selectable()->usesGridSemantics())->toBeFalse()
-        ->and(Table::make()->selectable()->usesDragSelect())->toBeFalse();
+    expect(Table::make()->selectable()->usesGridSemantics())->toBeTrue()
+        ->and(Table::make()->selectable()->usesDragSelect())->toBeTrue();
 
     // A table still overrides it in either direction.
-    expect(Table::make()->selectable()->gestures(true)->usesGridSemantics())->toBeTrue();
+    expect(Table::make()->selectable()->gestures(false)->usesGridSemantics())->toBeFalse();
 });
 
 it('takes a mixed project default from config', function () {
-    config()->set('wire-table.defaults.gestures', ['drag_select' => false]);
+    // Keyboard everywhere, but never the sweep.
+    config()->set('wire-table.defaults.gestures', ['keyboard' => true]);
 
     $table = Table::make()->selectable();
 
-    expect($table->usesDragSelect())->toBeFalse()
-        ->and($table->usesRangeSelection())->toBeTrue()
-        ->and($table->usesGridSemantics())->toBeTrue();
+    expect($table->usesGridSemantics())->toBeTrue()
+        ->and($table->usesDragSelect())->toBeFalse()
+        ->and($table->usesRangeSelection())->toBeTrue();
 });
 
 it('drops the range rows from the legend when ranges are off', function () {
     $table = Table::make()
+        ->gestures()
         ->selectable()
         ->gestures(fn (TableGestures $g) => $g->rangeSelection(false));
 
@@ -206,7 +242,7 @@ it('drops the range rows from the legend when ranges are off', function () {
 it('closes the fill endpoint together with the gestures', function () {
     // The server reads the same flag the view does, so a table with the
     // gestures off cannot be driven by a forged fill request either.
-    $table = Table::make()->fillHandle()->gestures(false);
+    $table = Table::make()->gestures(false)->fillHandle();
 
     expect($table->isFillHandleEnabled())->toBeFalse();
 });
@@ -222,7 +258,25 @@ function gestureHtml(string $mode = 'default'): string
     return str_replace('\u0022', '"', Livewire::test(GestureLayerComponent::class, ['mode' => $mode])->html());
 }
 
-it('renders the grid, the gesture config and the menu by default', function () {
+it('renders a quiet table when nobody asked for gestures', function () {
+    // Same table, same record actions, no gestures() call: the double-click
+    // binding still has its controller, but the rows are not in the tab order,
+    // nothing answers a key and the sweep is off.
+    $html = gestureHtml('default-quiet');
+
+    expect($html)->not->toContain('role="grid"')
+        ->not->toContain(':tabindex="rowTabindex(')
+        ->not->toContain('onKeydown($event)')
+        ->not->toContain('data-testid="shortcut-help"')
+        ->toContain('x-data="wireRecordActions(')
+        ->toContain('"sweep":false')
+        ->toContain('"ranges":true')
+        // The right-click menu is one of the quiet capabilities: the table
+        // asked for it by binding an action to it.
+        ->toContain('data-record-menu');
+});
+
+it('renders the grid, the gesture config and the menu once asked', function () {
     $html = gestureHtml();
 
     expect($html)->toContain('role="grid"')

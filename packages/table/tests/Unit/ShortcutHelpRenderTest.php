@@ -44,6 +44,8 @@ class ShortcutHelpComponent extends Component
         $table
             ->model(ShortcutHelpRow::class)
             ->paginated(false)
+            // The help is part of the keyboard layer, which is opt-in.
+            ->gestures()
             ->columns([TextColumn::make('name')]);
 
         match ($this->mode) {

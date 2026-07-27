@@ -83,23 +83,32 @@ Confirm your app meets these before upgrading.
 A table's selection grew from a column of checkboxes into a full gesture surface
 (see [Selecting Rows](table/selection.md)). Four things to check on the way up.
 
-**1. Every selectable table is now a grid — a visible change with no code change
-on your side.** Grid semantics used to follow record actions; they now follow
-`selectable()` and `bulkActions()` as well. Rows of such a table become
-focusable, clicking one marks it as the active row, and the arrow keys, `Space`,
-`Shift`+arrows and `mod`+`A` work the selection. A click still never ticks a
-checkbox. Opt out per table — of the keyboard alone, or of the whole desktop
-gesture layer (keyboard, ranges, the drag sweep, the right-click menu, the `?`
-help and the fill handle), which is one switch and also has a project-wide
-default (see [The Gesture Layer](table/gestures.md)):
+**1. Keyboard navigation and the drag sweep are opt-in — `->gestures()`.** The
+selection grew a full gesture surface: arrow keys walking the rows, `Space`,
+`Shift`+arrows, `mod`+`A`, and a drag down the checkbox column that sweeps a
+block in. None of it is on unless a table asks, because both of those change how
+the table answers a visitor who never meant to operate it — the rows go into the
+tab order, an active row is marked, and a drag starts selecting.
+
+Add one call to the tables that want it:
 
 ```php
-->gestures(fn (TableGestures $g) => $g->keyboard(false))   // the keyboard only
-->gestures(false)                                          // the whole layer
-
-// config/wire-table.php
-'defaults' => ['gestures' => false],                       // every table
+->gestures()
+->selectable()
 ```
+
+or, for a project where every table is a back-office table:
+
+```php
+// config/wire-table.php
+'defaults' => ['gestures' => true],
+```
+
+What is *not* affected: the checkboxes, both select-all controls, the bulk bar,
+and `Shift`/`mod`+click ranges all work with no change on your side. So does the
+right-click row menu and the fill handle, each of which you already had to ask
+for. See [The Gesture Layer](table/gestures.md) for the six capabilities and how
+to mix them.
 
 **2. `->onKey()` on a navigation key now throws.** It used to be dropped
 silently, so the action simply never fired. If a table binds one of these, the

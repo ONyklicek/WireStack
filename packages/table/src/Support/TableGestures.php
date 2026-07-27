@@ -16,15 +16,20 @@ use NyonCode\WireTable\Exceptions\TableConfigurationException;
  * office and wrong for a public page, so every capability is switchable, and
  * the whole layer switches at once:
  *
- *   $table->gestures(false);                       // a plain web table
+ *   $table->gestures();                            // the desktop-app table
  *   $table->gestures(fn (TableGestures $g) => $g
  *       ->keyboard()                               // arrows, Enter, shortcuts
- *       ->dragSelect(false)                        // no mouse sweep
- *       ->rangeSelection());                       // Shift+click still ranges
+ *       ->dragSelect(false));                      // but no mouse sweep
+ *
+ * The two loudest capabilities — keyboard navigation and the drag sweep — are
+ * **off** until asked for ({@see defaults()}). A table that never mentions
+ * gestures behaves the way a table on a web page is expected to: clicks and
+ * checkboxes, no roving focus, no marker, nothing that answers an arrow key.
+ * `gestures()` is what promotes it to an application.
  *
  * The project-wide default lives in `config('wire-table.defaults.gestures')`
- * and is read through {@see fromConfig()}, so a site that wants none of this
- * says so once.
+ * and is read through {@see fromConfig()}, so a back-office project that wants
+ * the whole layer everywhere says so once.
  *
  * What this does NOT govern: an explicitly declared record action. A binding
  * such as `RecordAction::make('view')->onClick()` is a deliberate statement
@@ -64,10 +69,40 @@ final class TableGestures
 
     private bool $fillHandle = true;
 
-    /** Every gesture allowed — the default a table starts from. */
+    /**
+     * Every gesture allowed, keyboard navigation included — what `gestures()`
+     * with no argument hands a table.
+     *
+     * The keyboard is left at "the table decides" rather than forced on: a
+     * table with neither record actions nor a selection has nothing for the
+     * arrows to do, and a roving tabindex over inert rows is worse than none.
+     * `keyboard(true)` is the way to insist.
+     */
     public static function all(): self
     {
         return new self;
+    }
+
+    /**
+     * What a table gets without saying anything: the quiet capabilities, and
+     * neither of the two that change how the table answers to a plain visitor.
+     *
+     * Keyboard navigation takes the rows into the tab order, marks an active
+     * row and starts answering arrows and `mod`+key — an application idiom, and
+     * a surprise on an ordinary page. The drag sweep turns a press in the
+     * checkbox column into a block selection, which is a gesture people find by
+     * accident before they find it on purpose. Both are opt-in.
+     *
+     * What is left needs an explicit invitation of its own anyway: a range
+     * needs `selectable()`, a context menu needs actions bound to it, the fill
+     * handle needs `fillHandle()`, and the `?` help needs the keyboard layer
+     * this default leaves off.
+     */
+    public static function defaults(): self
+    {
+        return (new self)
+            ->keyboard(false)
+            ->dragSelect(false);
     }
 
     /** No gesture layer at all: an ordinary table that clicks and nothing more. */
@@ -83,16 +118,20 @@ final class TableGestures
     }
 
     /**
-     * Build from a config value: `true`/`null` for everything, `false` for
-     * nothing, or a map of capability => bool for a mixed default. An unknown
-     * capability is a typo that would otherwise silently do nothing, so it
-     * throws.
+     * Build from a config value: `null` (or a missing key) for the shipped
+     * {@see defaults()}, `true` for everything, `false` for nothing, or a map of
+     * capability => bool applied on top of the defaults. An unknown capability
+     * is a typo that would otherwise silently do nothing, so it throws.
      *
      * @param  bool|array<string, bool>|null  $config
      */
     public static function fromConfig(bool|array|null $config): self
     {
-        if ($config === null || $config === true) {
+        if ($config === null) {
+            return self::defaults();
+        }
+
+        if ($config === true) {
             return self::all();
         }
 
@@ -100,7 +139,7 @@ final class TableGestures
             return self::none();
         }
 
-        $gestures = self::all();
+        $gestures = self::defaults();
 
         foreach ($config as $capability => $enabled) {
             $setter = self::CAPABILITIES[strtolower(str_replace(['_', '-'], '', $capability))]
@@ -119,9 +158,10 @@ final class TableGestures
      * `keyboardShortcut()` / `onKey()` against the active row. Also what makes
      * the table an ARIA `grid`.
      *
-     * Pass null to hand the decision back to the table (on for a table with
-     * record actions or a selectable one), true to force it on for a table that
-     * would not have qualified, false to switch it off.
+     * Off in the shipped {@see defaults()}. Pass true to switch it on, false to
+     * state the default explicitly, or null to hand the decision to the table —
+     * which then takes it for any table the keyboard could drive row by row
+     * (record actions, or a selectable one).
      */
     public function keyboard(?bool $enabled = true): static
     {
@@ -143,7 +183,11 @@ final class TableGestures
         return $this;
     }
 
-    /** The mouse sweep: press in the checkbox column and drag to select a block of rows. */
+    /**
+     * The mouse sweep: press in the checkbox column and drag to select a block
+     * of rows. Off in the shipped {@see defaults()} — a drag that selects is
+     * found by accident before it is found on purpose.
+     */
     public function dragSelect(bool $enabled = true): static
     {
         $this->dragSelect = $enabled;

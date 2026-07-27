@@ -66,6 +66,9 @@ class GestureLabPreview extends Component
     public function table(Table $table): Table
     {
         $table
+            // The lab is the gesture layer, so it asks for all of it. Everything
+            // below is what a table gets on top of that opt-in.
+            ->gestures()
             ->model(GestureRow::class)
             ->columns([
                 TextColumn::make('name')->label('Name')->searchable()->sortable(),

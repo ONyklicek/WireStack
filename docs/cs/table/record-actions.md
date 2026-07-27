@@ -91,10 +91,15 @@ Action::make('edit')->onDoubleClick()->alsoInRowActions()
 
 ## Ovládání klávesnicí
 
-Klávesová navigace se zapne automaticky u každé tabulky, kterou klávesnice
-ovládá řádek po řádku — u té s akcemi nad záznamem stejně jako u té, která je
-`->selectable()` nebo má hromadné akce — a taková tabulka se ohlásí jako ARIA
-grid:
+Klávesová navigace je opt-in přes `->gestures()`. Jakmile si o ni tabulka řekne,
+platí pro každou tabulku, kterou klávesnice umí ovládat řádek po řádku — pro tu
+s akcemi nad záznamem stejně jako pro tu, která je `->selectable()` nebo má
+hromadné akce — a taková tabulka se ohlásí jako ARIA grid:
+
+```php
+->gestures()
+->recordAction(Action::make('open')->onDoubleClick())
+```
 
 | Klávesa | Akce |
 |---------|------|

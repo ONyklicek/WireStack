@@ -91,9 +91,15 @@ Action::make('edit')->onDoubleClick()->alsoInRowActions()
 
 ## Keyboard navigation
 
-Keyboard navigation turns on automatically for any table the keyboard drives row
-by row — one with record actions, and equally one that is `->selectable()` or has
-bulk actions — and such a table announces itself as an ARIA grid:
+Keyboard navigation is opt-in, with `->gestures()`. Once a table has asked, it
+applies to any table the keyboard can drive row by row — one with record actions,
+and equally one that is `->selectable()` or has bulk actions — and such a table
+announces itself as an ARIA grid:
+
+```php
+->gestures()
+->recordAction(Action::make('open')->onDoubleClick())
+```
 
 | Key | Action |
 |-----|--------|

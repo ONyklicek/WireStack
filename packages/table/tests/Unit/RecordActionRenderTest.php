@@ -35,6 +35,10 @@ class RecordActionRenderComponent extends Component
         $table = $table
             ->model(RecRenderRow::class)
             ->paginated(false)
+            // The gesture layer is opt-in: keyboard navigation and the sweep
+            // are off until a table asks. Everything asserted here is that
+            // layer, so the fixture asks.
+            ->gestures()
             ->columns([TextColumn::make('name')]);
 
         if ($this->selectable) {

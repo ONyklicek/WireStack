@@ -12,29 +12,63 @@ across many cells.
 That is exactly right for a back office. It is usually wrong for a public
 listing, where a highlighted row and a hijacked right click are noise at best.
 
-So the whole layer is one switch:
+So it is one switch, and a table starts on the quiet side of it:
+
+```php
+->gestures()
+```
+
+That is the desktop-application table. Without it you get an ordinary web
+table — the one most pages want.
+
+## What a table gets without asking
+
+**Keyboard navigation and the drag sweep are off until you ask.** They are the
+two that change how the table answers a visitor who never intended to operate
+it: keyboard navigation puts the rows in the tab order, marks an active row and
+starts answering arrows and `mod`+key, and the sweep turns a press in the
+checkbox column into a block selection — a gesture people find by accident
+before they find it on purpose.
+
+What is left needs an invitation of its own anyway, so it is allowed from the
+start: a range needs `->selectable()`, a context menu needs actions bound to it,
+the fill handle needs `->fillHandle()`, and the `?` help needs the keyboard
+layer this default leaves off.
+
+```php
+// An ordinary listing. Checkboxes work, Shift+click still ranges,
+// nothing answers an arrow key, no drag selects.
+Table::make()->selectable()
+
+// The same table as an application.
+Table::make()->gestures()->selectable()
+```
+
+To go further the other way — no right-click menu, no ranges, no fill handle,
+nothing at all — say so:
 
 ```php
 ->gestures(false)
 ```
 
-You get an ordinary web table. Nothing is bound, nothing is marked, and the
-controllers that would have driven it are not rendered at all.
-
 ## What counts as a gesture
 
-Six capabilities, each switchable on its own:
+Six capabilities, each switchable on its own. "Default" is what a table that
+never calls `gestures()` gets:
 
-| Capability | What it covers |
-|------------|----------------|
-| `keyboard` | Grid navigation: roving `tabindex`, arrows, `Home`/`End`, `PageUp`/`PageDown`, `Enter` / `Shift`+`Enter` for the primary and secondary record action, `Space` to toggle the selection, and every action's own `keyboardShortcut()` / `onKey()` against the active row. Also what makes the table an ARIA `grid`. |
-| `rangeSelection` | `Shift`+click, `mod`+click and `mod`+`Shift`+click on a row, plus `Shift`+arrow, `Shift`+`Home` and `Shift`+`End` from the keyboard. |
-| `dragSelect` | The mouse sweep: press in the checkbox column and drag to select a block of rows. |
-| `contextMenu` | The right-click row menu — both `rowContextMenu()` and any `onContextMenu()` record action. |
-| `shortcutHelp` | The `?` shortcut help. |
-| `fillHandle` | The Excel-style fill handle on editable cells. |
+| Capability | Default | What it covers |
+|------------|---------|----------------|
+| `keyboard` | **off** | Grid navigation: roving `tabindex`, arrows, `Home`/`End`, `PageUp`/`PageDown`, `Enter` / `Shift`+`Enter` for the primary and secondary record action, `Space` to toggle the selection, and every action's own `keyboardShortcut()` / `onKey()` against the active row. Also what makes the table an ARIA `grid`. |
+| `rangeSelection` | on | `Shift`+click, `mod`+click and `mod`+`Shift`+click on a row, plus `Shift`+arrow, `Shift`+`Home` and `Shift`+`End` from the keyboard. |
+| `dragSelect` | **off** | The mouse sweep: press in the checkbox column and drag to select a block of rows. |
+| `contextMenu` | on | The right-click row menu — both `rowContextMenu()` and any `onContextMenu()` record action. |
+| `shortcutHelp` | on¹ | The `?` shortcut help. |
+| `fillHandle` | on² | The Excel-style fill handle on editable cells. |
 
 `mod` is `Ctrl` on Windows and `⌘` on macOS.
+
+¹ Allowed, but it reads the keyboard layer, so with the default it never opens.
+² Allowed, but the table still has to call `->fillHandle()`.
 
 ## Mixing them
 
@@ -43,9 +77,8 @@ the return value is ignored, so a fluent chain and a multi-line body both work.
 
 ```php
 ->gestures(fn (TableGestures $g) => $g
-    ->keyboard()          // arrows, Enter, shortcuts
-    ->dragSelect(false)   // but no mouse sweep
-    ->rangeSelection())   // Shift+click still ranges
+    ->keyboard()          // arrows, Enter, shortcuts …
+    ->dragSelect(false))  // … but still no mouse sweep
 ```
 
 Every setter takes a `bool`, so `->contextMenu(false)` reads as well as
@@ -63,7 +96,8 @@ $readOnly = TableGestures::none()->contextMenu();
 ->gestures($readOnly)
 ```
 
-`TableGestures::all()` and `TableGestures::none()` are the two starting points.
+`TableGestures::defaults()`, `TableGestures::all()` and `TableGestures::none()`
+are the three starting points: the shipped default, everything, nothing.
 
 ## A permission is not a switch-on
 
@@ -84,17 +118,22 @@ changes nothing. This is deliberate: the gesture layer decides what a table is
 ## `keyboard()` has three states
 
 The other five capabilities are plain booleans. `keyboard` is three-state,
-because it also has to express "force it on for a table that would not otherwise
-have qualified":
+because "on" has to mean two different things:
 
 | Value | Meaning |
 |-------|---------|
-| `null` (default) | The table decides — on for a table with record actions or a selectable one |
-| `true` | Force it on, even for a table that would not have qualified |
-| `false` | Off |
+| `false` (the default) | Off |
+| `null` | The table decides — on for a table with record actions or a selectable one. This is what `gestures()` sets |
+| `true` | Force it on, even for a table with neither |
+
+`gestures()` leaves the keyboard at `null` rather than forcing it, because a
+table with no record actions and no selection has nothing for the arrows to do,
+and a roving tabindex over inert rows is worse than none:
 
 ```php
-->gestures(fn (TableGestures $g) => $g->keyboard(null))   // hand the decision back
+Table::make()->gestures()                                          // not a grid
+Table::make()->gestures()->selectable()                            // a grid
+Table::make()->gestures(fn (TableGestures $g) => $g->keyboard(true))   // a grid regardless
 ```
 
 ## What the layer does *not* govern
@@ -132,12 +171,13 @@ Set it once for every table:
 ```php
 // config/wire-table.php
 'defaults' => [
-    'gestures' => false,
+    'gestures' => true,
 ],
 ```
 
-`true` (or a missing key) allows everything, `false` allows nothing, and a map
-mixes:
+`null` (or a missing key) keeps the shipped default described above, `true`
+allows everything for every table — a back office turns the layer on once here
+instead of on every table — `false` allows nothing, and a map mixes:
 
 ```php
 'gestures' => ['keyboard' => true, 'drag_select' => false],
@@ -209,11 +249,12 @@ Switch it off when a card is meant to stay clean:
 
 | Table | Suggested |
 |-------|-----------|
-| Back-office list, keyboard-heavy operators | Everything (the default) |
-| Public listing, marketing page | `->gestures(false)` |
+| Public listing, marketing page | Nothing to do — the default |
+| Back-office list, keyboard-heavy operators | `->gestures()`, or `'gestures' => true` in config |
+| Public page that must not even right-click | `->gestures(false)` |
 | Read-only report, right click still useful | `TableGestures::none()->contextMenu()` |
-| Long list, selection matters, sweeping is risky | `->gestures(fn ($g) => $g->dragSelect(false))` |
-| Embedded in a page with its own keyboard handling | `->gestures(fn ($g) => $g->keyboard(false))` |
+| Long list, keyboard useful, sweeping risky | `->gestures(fn ($g) => $g->keyboard())` |
+| Embedded in a page with its own keyboard handling | `->gestures(fn ($g) => $g->dragSelect())` |
 
 ## See Also
 

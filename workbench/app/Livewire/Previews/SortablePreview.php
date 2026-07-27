@@ -74,6 +74,9 @@ class SortablePreview extends Component
             ];
 
         $table
+            // Reordering shares the row with the selection gestures, which is
+            // the point of this fixture — so it asks for the opt-in layer.
+            ->gestures()
             ->model(Task::class)
             ->alwaysReorderable('sort_order')
             ->columns($columns)

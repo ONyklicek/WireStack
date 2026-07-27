@@ -41,6 +41,12 @@ class AriaGridComponent extends Component
     {
         $table->model(AriaGridRow::class);
 
+        // Grid semantics come with the gesture layer, which is opt-in — except
+        // for 'plain', which is here precisely to show a table that never asked.
+        if ($this->mode !== 'plain') {
+            $table->gestures();
+        }
+
         match ($this->mode) {
             // 25 rows over pages of 10, so page 2 starts at row 11.
             'paged' => $table->selectable()->perPage(10)->columns([TextColumn::make('name')]),

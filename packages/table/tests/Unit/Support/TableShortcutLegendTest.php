@@ -49,7 +49,7 @@ it('stays empty when the keyboard is explicitly opted out', function () {
 });
 
 it('lists navigation, selection and help for a selectable-only table', function () {
-    $table = Table::make()->selectable();
+    $table = Table::make()->gestures()->selectable();
 
     expect(legendHeadings($table))->toBe(['Navigation', 'Selection', 'Help']);
 
@@ -67,14 +67,14 @@ it('lists the selection section for a table that is selectable only through bulk
     // isSelectable() is `selectable || bulkActions`, so a table that never
     // called ->selectable() still gets the selection gestures — and must
     // therefore document them.
-    $table = Table::make()->bulkActions([BulkAction::make('archive')->label('Archive')]);
+    $table = Table::make()->gestures()->bulkActions([BulkAction::make('archive')->label('Archive')]);
 
     expect($table->isSelectable())->toBeTrue()
         ->and(legendHeadings($table))->toBe(['Navigation', 'Selection', 'Help']);
 });
 
 it('lists navigation, actions and help for a record-action table — no selection section', function () {
-    $table = Table::make()->recordAction(Action::make('view')->label('Open record'));
+    $table = Table::make()->gestures()->recordAction(Action::make('view')->label('Open record'));
 
     expect(legendHeadings($table))->toBe(['Navigation', 'Actions', 'Help']);
 
@@ -92,7 +92,7 @@ it('lists navigation, actions and help for a record-action table — no selectio
 });
 
 it('adds Shift+Enter only when a secondary pointer binding exists', function () {
-    $table = Table::make()->recordActions([
+    $table = Table::make()->gestures()->recordActions([
         RecordAction::make(Action::make('preview')->label('Preview'))->onClick(),
         RecordAction::make(Action::make('edit')->label('Edit'))->onDoubleClick(),
     ]);
@@ -109,7 +109,7 @@ it('adds Shift+Enter only when a secondary pointer binding exists', function () 
 });
 
 it('projects an onKey() binding and aliases Delete with Backspace', function () {
-    $table = Table::make()->recordAction(
+    $table = Table::make()->gestures()->recordAction(
         RecordAction::make(Action::make('purge')->label('Purge'))->onKey('Delete'),
     );
 
@@ -121,7 +121,7 @@ it('projects an onKey() binding and aliases Delete with Backspace', function () 
 });
 
 it('deduplicates keys inside a row — an explicit Backspace next to Delete stays single', function () {
-    $table = Table::make()->recordAction(
+    $table = Table::make()->gestures()->recordAction(
         RecordAction::make(Action::make('purge')->label('Purge'))->onKey('Delete')->onKey('Backspace'),
     );
 
@@ -133,7 +133,7 @@ it('deduplicates keys inside a row — an explicit Backspace next to Delete stay
 });
 
 it('groups several keys of one action into a single row', function () {
-    $table = Table::make()->recordAction(
+    $table = Table::make()->gestures()->recordAction(
         RecordAction::make(Action::make('flag')->label('Flag'))->onKey('x')->onKey('mod+x'),
     );
 
@@ -147,7 +147,7 @@ it('groups several keys of one action into a single row', function () {
 it('falls back to a headline label for a name-only reference', function () {
     // A reference to an action that is not registered anywhere still reads as
     // a human label, never as the raw name.
-    $table = Table::make()->recordAction('export-csv');
+    $table = Table::make()->gestures()->recordAction('export-csv');
 
     $actions = legendSectionHints($table, 'Actions');
 
@@ -158,7 +158,7 @@ it('localizes headings and descriptions', function () {
     app()->setLocale('cs');
 
     try {
-        $table = Table::make()->selectable();
+        $table = Table::make()->gestures()->selectable();
 
         expect(legendHeadings($table))->toBe(['Navigace', 'Výběr', 'Nápověda']);
 
@@ -172,7 +172,7 @@ it('localizes headings and descriptions', function () {
 });
 
 it('always closes with the ? help row', function () {
-    $help = legendSectionHints(Table::make()->selectable(), 'Help');
+    $help = legendSectionHints(Table::make()->gestures()->selectable(), 'Help');
 
     expect($help)->toHaveCount(1)
         ->and($help[0]->keys)->toBe(['?'])

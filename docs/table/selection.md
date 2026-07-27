@@ -4,29 +4,40 @@ order: 47
 
 # Selecting Rows
 
-Selection is a gesture surface, not just a column of checkboxes. A table that is
-`->selectable()` — or that merely has `->bulkActions()`, which implies it —
-behaves like a list in a desktop file manager: click, `Shift`+click for a range,
-`mod`+click to add one, drag down the checkbox column, and the same moves from
-the keyboard.
+Selection can be a gesture surface, not just a column of checkboxes. A table that
+is `->selectable()` — or that merely has `->bulkActions()`, which implies it —
+gives you the checkboxes, the select-all controls, the bulk bar, and `Shift`/`mod`
+clicks for ranges:
 
 ```php
 ->selectable()
 ->bulkActions([DeleteBulkAction::make()])
 ```
 
-Nothing below needs configuring. It is what `selectable()` gives you.
+Add `->gestures()` and it behaves like a list in a desktop file manager as well:
+the arrow keys walk the rows, `Space` toggles, `Shift`+arrows extend, `mod`+`A`
+takes the page, and a drag down the checkbox column sweeps a block in.
+
+```php
+->gestures()
+->selectable()
+```
+
+That split is deliberate: keyboard navigation and the drag sweep change how the
+table answers someone who never meant to operate it, so they wait to be asked
+(see [The Gesture Layer](gestures.md)). Everything below is marked with which of
+the two it needs.
 
 ## What the mouse does
 
-| Gesture | Result |
-|---------|--------|
-| Click the selection cell | Toggle that row, and set the range anchor |
-| `Shift` + click | Select the range between the anchor and this row |
-| `mod` + click | Toggle this one row, anywhere on it, and anchor here |
-| `mod` + `Shift` + click | Add the whole block to what is already selected |
-| Drag down the checkbox column | Sweep a run of rows into the selection |
-| Click the row itself | Marks the row (see below) — it never ticks the checkbox |
+| Gesture | Result | Needs |
+|---------|--------|-------|
+| Click the selection cell | Toggle that row, and set the range anchor | — |
+| `Shift` + click | Select the range between the anchor and this row | — |
+| `mod` + click | Toggle this one row, anywhere on it, and anchor here | — |
+| `mod` + `Shift` + click | Add the whole block to what is already selected | — |
+| Drag down the checkbox column | Sweep a run of rows into the selection | `gestures()` |
+| Click the row itself | Marks the row (see below) — it never ticks the checkbox | — |
 
 The **whole selection cell** is the target, not just the 16-pixel box inside it:
 the box alone is under every touch-target guideline and leaves most of the cell
@@ -38,6 +49,9 @@ Selection stays deliberate. `mod`+click is the exception, and that is what the
 modifier is for.
 
 ## What the keyboard does
+
+Everything in this section needs `->gestures()` — see
+[The Gesture Layer](gestures.md).
 
 | Key | Result |
 |-----|--------|
@@ -162,19 +176,19 @@ Enter  Space  ArrowUp  ArrowDown  Home  End  PageUp  PageDown  ContextMenu  F10 
 `Delete`, so a `->onKey('Delete')` binding answers to both, and an explicit
 `->onKey('Backspace')` stays valid.
 
-## Turning it off
+## Turning it back off
 
-Grid semantics come with `selectable()` and with record actions. Opt out per
-table:
+A table that asked for the gesture layer can hand back one capability at a time,
+or the lot:
 
 ```php
-->gestures(fn (TableGestures $g) => $g->keyboard(false))   // the keyboard only
-->gestures(false)                                          // every gesture
+->gestures(fn (TableGestures $g) => $g->dragSelect(false))  // keep the keyboard, drop the sweep
+->gestures(fn (TableGestures $g) => $g->keyboard(false))    // the other way round
+->gestures(false)                                           // every gesture, ranges included
 ```
 
-The first removes the keyboard layer and the shortcut help while the mouse
-gestures stay; the second takes the ranges and the drag sweep with them. The
-checkboxes keep working either way — see [The Gesture Layer](gestures.md).
+The checkboxes keep working in every one of those — see
+[The Gesture Layer](gestures.md).
 
 ## Related docs
 
