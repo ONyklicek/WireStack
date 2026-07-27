@@ -2,7 +2,7 @@
 title: Rollout výběrových gest — stav provedení
 date: 2026-07-27
 plan: architecture/plans/table-selection-gestures-rollout.md
-status: Fáze I–V hotové + krok 23 (Fáze VI), pokračuje se krokem 24
+status: Kroky 0–24 hotové (Fáze I–V + 23, 24), pokračuje se krokem 25
 ---
 
 # Stav provedení rolloutu
@@ -37,7 +37,8 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
 | 20 | `eb51ae4` | `data-select-cell` (td, karta, oba poziční spacery) |
 | 21 | `a71ef61` | `createAutoScroller` + `bodyRows`/`rowAtY` → `core/resources/js/support/`; core dist rebuild |
 | 22 | `351aeff` | sweep v `record-actions.js` (arm→engage, capture click-kill, jen myš, additive, morph guard, reduced-motion) |
-| 23 | `5efaab0` | `openOn:` ve 3 shellech + Htmlable objektech + View komponentách; preview `core-open-on`; `verify-modal-open-on.mjs` 14/14 |
+| 23 | `5efaab0` + `4aad86c` | `openOn:` ve 3 shellech + Htmlable objektech + View komponentách; preview `core-open-on`; `verify-modal-open-on.mjs` 14/14; hardening proti injekci do jména atributu |
+| 24 | `fd368fa` | `ShortcutLabelFormatter` + `ShortcutHint` (core Foundation) + `TableShortcutLegend` (table Support) + `Table::shortcutLegend()`; i18n EN+CS |
 
 ## Rozhodnutí učiněná při provádění (nad rámec plánu)
 
@@ -59,7 +60,13 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
 - **Krok 23:** `openOn` se ctí JEN při `wireModel === null` (jediný vlastník
   `show`); detekce „bez bindingu“ na component path musí jít přes
   `WireDirective::value()` — chybějící `wire:model` vrací directive s value
-  `false` a `filled(false)` je `true`.
+  `false` a `filled(false)` je `true`. `x-on:{event}` je pozice **jména
+  atributu**, kde Blade escapuje jen uvozovky → mezera by vložila nový atribut;
+  proto whitelist `[a-zA-Z][a-zA-Z0-9_-]*` (nález background security review).
+- **Krok 24:** `formatShortcutLabel()` v `HasKeyboardShortcut` deleguje na
+  `ShortcutLabelFormatter` — mění to i label akcí v `dropdown-item.blade.php`
+  a `header-action.blade.php` (šipky nově glyfy). `Foundation/ValueObjects/`
+  byl nový adresář, ale `AI_CODING_STANDARD.md:165` ho předepisuje.
 
 ## Objevené gotchas (platí i pro další kroky)
 
@@ -82,12 +89,11 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
 - `verify-record-active-row.mjs` 18/18, `verify-record-actions.mjs` 14/14,
   `verify-record-actions-dual.mjs` 5/5, `verify-mobile-selection.mjs` 13/13,
   `verify-fill-handle.mjs` 26/26, `verify-modal-open-on.mjs` 14/14
-- PHP: table 1639, core 1708, forms 907, sortable 39, Integration 39;
+- PHP: table 1651, core 1751, forms 907, sortable 39, Integration 39;
   analyse + lint OK; coverage diff 100 %, floors OK
 
 ## Zbývá (Fáze VI–VII + docs)
 
-- **24** `ShortcutLabelFormatter` + `ShortcutHint` (core) + `TableShortcutLegend`
 - **25** nápověda `?` (event.key, guard fokusu na řádku)
 - **26** ARIA + `aria-live` (+ refaktor `$from`/`$to`/`$total`, `$headerRowCount`)
 - **27** nebarevný marker, klikatelná plocha buňky, `INTERACTIVE` (týž commit!)
