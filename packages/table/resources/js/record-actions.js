@@ -34,6 +34,10 @@ const INTERACTIVE = [
     '[role="menuitem"]',
     '[contenteditable]',
     '[data-record-key]',
+    // The whole selection cell, not just the checkbox inside it: the cell now
+    // toggles on click, and without this the padding around the box would fall
+    // through and run the row's record action instead.
+    '[data-select-cell]',
     '[x-data]',
 ].join(', ')
 
@@ -686,22 +690,39 @@ const wireRecordActions = (config = {}) => ({
         const row = this.row(event)
         if (! row) return
 
-        // A click on the row's own selection checkbox runs nothing, but it is a
+        // A click in the row's own selection cell runs nothing, but it is a
         // selection gesture: it decides where a following Shift+arrow range grows
-        // from, the same way a click does in a file explorer.
-        if (type === 'click' && event.target.closest('[role="checkbox"]')) {
+        // from, the same way a click does in a file explorer. Anywhere in the
+        // cell counts, since the whole cell toggles.
+        //
+        // Never on a Shift+click, though: that gesture ranges FROM the existing
+        // anchor, and moving the anchor to the row being clicked collapsed the
+        // range to the two rows around it — a Shift+click on the checkbox
+        // selected 2 rows where the same click on the row body selected 5.
+        if (type === 'click' && ! event.shiftKey && event.target.closest('[role="checkbox"], [data-select-cell]')) {
             this.setAnchor(row.dataset.rowKey)
         }
-
-        if (this.blocked(event, row)) return
 
         // A modifier click is a selection gesture, never an action gesture:
         // Shift+click ranges from the anchor, mod+click toggles the row (even
         // outside the checkbox), mod+Shift+click adds a whole block — and none
         // of them may fall through into a bound click action.
-        if (type === 'click' && this.kb?.selectable && (event.shiftKey || event.ctrlKey || event.metaKey)) {
+        //
+        // The selection cell is exempt from blocked() here, and only here: it is
+        // inert for plain clicks (its own handler toggles), but a modified click
+        // on the checkbox means the same thing as one on the row body, and
+        // letting it stop at the cell was why Shift+clicking a checkbox toggled
+        // one row where the row body ranged over five. Every other interactive
+        // element keeps its modified clicks — Shift+clicking an editable cell
+        // belongs to that cell.
+        const modified = event.shiftKey || event.ctrlKey || event.metaKey
+        const inSelectCell = !! event.target.closest('[data-select-cell]')
+
+        if (type === 'click' && this.kb?.selectable && modified && (inSelectCell || ! this.blocked(event, row))) {
             return this.onSelectionClick(row, event)
         }
+
+        if (this.blocked(event, row)) return
 
         // Marking is unconditional: a click on a row of an interactive table
         // moves the active row even when the gesture itself is bound to

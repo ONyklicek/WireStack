@@ -1615,7 +1615,31 @@ class Table implements Htmlable
 
         $cursor = $clickable ? 'cursor-pointer' : '';
 
-        return trim("{$base} {$cursor} ".((string) $this->getRowClass($record)));
+        return trim("{$base} {$cursor} {$this->activeRowMarkerGutter()} ".((string) $this->getRowClass($record)));
+    }
+
+    /**
+     * Positioning every grid row's leading cell needs so the active row can
+     * draw its marker stripe inside it.
+     *
+     * The stripe is the marker's non-color half: a light background tint alone
+     * carries roughly 1.1:1 against white, which is both under the 3:1 non-text
+     * contrast floor and lost on anyone who cannot separate the two hues.
+     *
+     * It is drawn as a `::before` overlay rather than a border, for two
+     * reasons. A border would shift the row's content by its own width, and
+     * reserving that width up front means painting a transparent border the
+     * active class then has to beat — which it cannot do reliably, since both
+     * are plain utilities and the later one in the stylesheet wins regardless
+     * of the order they appear in the class attribute. An overlay sets a
+     * property (`background-color` on the pseudo-element) that resting rows
+     * never set at all, so there is nothing to out-rank. `first-of-type`, not
+     * `first-child`: a row's first child is the teleport `<template>` for its
+     * context menu.
+     */
+    public function activeRowMarkerGutter(): string
+    {
+        return $this->usesGridSemantics() ? '[&>td:first-of-type]:relative' : '';
     }
 
     /**
@@ -1650,12 +1674,20 @@ class Table implements Htmlable
      * row the user just clicked. A tinted row (`rowColor()`) keeps its own
      * same-hue hover instead — the marker reads through it as a shade change.
      *
+     * The default marks the row twice over: a background tint AND a leading
+     * stripe that colors in the gutter {@see activeRowMarkerGutter()} reserves.
+     * The tint alone would be the only signal, and a faint one — color is not
+     * available to every reader, and `primary-100` on white sits under the 3:1
+     * non-text contrast floor. `activeRowClass()` replaces both halves, so an
+     * override owns its own accessibility.
+     *
      * @return array{class: string, hover: string}
      */
     public function getActiveRowConfig(): array
     {
         return [
-            'class' => $this->getActiveRowClass() ?? 'bg-primary-100 dark:bg-primary-900/30',
+            'class' => $this->getActiveRowClass()
+                ?? "bg-primary-100 dark:bg-primary-900/30 [&>td:first-of-type]:before:absolute [&>td:first-of-type]:before:inset-y-0 [&>td:first-of-type]:before:left-0 [&>td:first-of-type]:before:w-1 [&>td:first-of-type]:before:content-[''] [&>td:first-of-type]:before:bg-primary-600 dark:[&>td:first-of-type]:before:bg-primary-400",
             'hover' => $this->getRowHoverClasses(),
         ];
     }

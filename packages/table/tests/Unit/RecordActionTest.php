@@ -514,7 +514,18 @@ it('hands the active-row marker and the row hover to the controller', function (
         ->recordAction(RecordAction::make('edit')->onDoubleClick())
         ->getActiveRowConfig();
 
-    expect($default['class'])->toBe('bg-primary-100 dark:bg-primary-900/30')
+    // The marker is deliberately two signals, not one: the background tint,
+    // and a leading stripe drawn on the row's first cell. The tint alone is
+    // about 1.1:1 against white — under the 3:1 non-text contrast floor, and
+    // no help at all to a reader who cannot separate the two hues.
+    expect($default['class'])->toContain('bg-primary-100')
+        ->toContain('dark:bg-primary-900/30')
+        ->toContain("[&>td:first-of-type]:before:content-['']")
+        ->toContain('[&>td:first-of-type]:before:w-1')
+        ->toContain('[&>td:first-of-type]:before:bg-primary-600')
+        // first-of-type, never first-child: the row's first child is the
+        // teleport <template> carrying its context menu.
+        ->not->toContain('first-child')
         // The hover the controller has to switch off on the active row, or it
         // would paint over the marker under the pointer.
         ->and($default['hover'])->toBe('hover:bg-gray-50 dark:hover:bg-gray-700/30');
@@ -531,4 +542,26 @@ it('hands the active-row marker and the row hover to the controller', function (
 
 it('reports no row hover to strip when hovering is off', function () {
     expect(Table::make()->hoverable(false)->getActiveRowConfig()['hover'])->toBe('');
+});
+
+it('reserves the marker stripe positioning on every grid row, and only there', function () {
+    // The stripe is absolutely positioned inside the leading cell, so that cell
+    // must establish the containing block on EVERY row — not just the active
+    // one, which is morphed in and out.
+    $grid = Table::make()->selectable();
+    $plain = Table::make();
+
+    expect($grid->activeRowMarkerGutter())->toBe('[&>td:first-of-type]:relative')
+        ->and($grid->getRowClasses(null, 0))->toContain('[&>td:first-of-type]:relative')
+        // A table the keyboard does not drive has no active row to mark.
+        ->and($plain->activeRowMarkerGutter())->toBe('')
+        ->and($plain->getRowClasses(null, 0))->not->toContain('first-of-type');
+});
+
+it('leaves an overridden active-row class entirely to the caller', function () {
+    // activeRowClass() replaces both halves of the marker: an override owns its
+    // own contrast and its own non-color signal.
+    $custom = Table::make()->selectable()->activeRowClass('bg-amber-100')->getActiveRowConfig();
+
+    expect($custom['class'])->toBe('bg-amber-100');
 });

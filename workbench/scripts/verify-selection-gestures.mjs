@@ -101,6 +101,20 @@ try {
     await page('Input.dispatchMouseEvent', { type: 'mouseReleased', x: box.x, y: box.y, button: 'left', clickCount: 1, modifiers });
   };
 
+  // Same, but offset from the centre — for hitting an element's padding rather
+  // than whatever sits in the middle of it.
+  const realClickAt = async (expr, dx, dy) => {
+    const box = JSON.parse(await eval_(`(() => {
+      const el = ${expr};
+      el.scrollIntoView({ block: 'center' });
+      const r = el.getBoundingClientRect();
+      return JSON.stringify({ x: r.left + r.width / 2 + ${dx}, y: r.top + r.height / 2 + ${dy} });
+    })()`));
+    await sleep(150);
+    await page('Input.dispatchMouseEvent', { type: 'mousePressed', x: box.x, y: box.y, button: 'left', clickCount: 1 });
+    await page('Input.dispatchMouseEvent', { type: 'mouseReleased', x: box.x, y: box.y, button: 'left', clickCount: 1 });
+  };
+
   await page('Page.enable');
   await page('Runtime.enable');
   await page('Emulation.setDeviceMetricsOverride', { width: 1400, height: 1200, deviceScaleFactor: 1, mobile: false });
@@ -113,7 +127,16 @@ try {
   check('the gesture fixture renders all 40 rows on one page', await eval_('rows().length') === 40);
 
   // ── ARIA: grid semantics and a live region that starts silent ────────────
-  await eval_(`window.live = () => $q('[data-testid="selection-live"]'); true`);
+  // Watch the region the way a screen reader does, from before the first
+  // change: a live region speaks on MUTATION, so a value that merely reads
+  // correctly afterwards proves nothing about anything having been announced.
+  await eval_(`
+    window.live = () => $q('[data-testid="selection-live"]');
+    window.__liveMutations = [];
+    new MutationObserver(() => { window.__liveMutations.push(live().textContent); })
+      .observe(live(), { childList: true, characterData: true, subtree: true });
+    true;
+  `);
   const ariaStatic = JSON.parse(await eval_(`(() => {
     const t = $q('table[role=grid]');
     return JSON.stringify({
@@ -138,6 +161,79 @@ try {
   check('the live region is present and silent before anything is selected',
     ariaStatic.liveMode === 'polite' && ariaStatic.liveText === '',
     `text=${JSON.stringify(ariaStatic.liveText)}`);
+
+  // ── the active-row marker carries a non-color signal at 3:1 ─────────────
+  // Colour alone fails anyone who cannot separate the two hues, and the tint
+  // itself is far under the 3:1 non-text contrast floor — so the marker also
+  // draws a stripe down the row's leading cell. Measured through a canvas,
+  // because Tailwind 4 emits oklch() and no regex parses that.
+  await eval_(`
+    window.rgb = (css) => { const c = document.createElement('canvas').getContext('2d'); c.fillStyle = '#000'; c.fillStyle = css; c.fillRect(0,0,1,1); const d = c.getImageData(0,0,1,1).data; return [d[0],d[1],d[2],d[3]/255]; };
+    window.lum = (css) => { const [r,g,b] = rgb(css).map(v => { v/=255; return v <= .03928 ? v/12.92 : Math.pow((v+.055)/1.055, 2.4); }); return .2126*r+.7152*g+.0722*b; };
+    window.contrast = (a, b) => { const la = lum(a), lb = lum(b); return Math.round(((Math.max(la,lb)+.05)/(Math.min(la,lb)+.05))*100)/100; };
+    true;
+  `);
+  const restingStripe = await eval_(`getComputedStyle(rows()[5].querySelector('td'), '::before').content`);
+  check('a resting row draws no marker stripe', restingStripe === 'none', `content=${restingStripe}`);
+
+  const cellBefore = await eval_(`Math.round(rows()[5].querySelector('td').getBoundingClientRect().width)`);
+  await realClick(`rows()[5].querySelector('[data-testid="table-cell-name"]')`);
+  await sleep(400);
+  const marker = JSON.parse(await eval_(`(() => {
+    const tr = rows()[5], td = tr.querySelector('td');
+    const b = getComputedStyle(td, '::before');
+    const plain = getComputedStyle(rows()[9]).backgroundColor;
+    const behind = rgb(plain)[3] === 0 ? getComputedStyle(document.body).backgroundColor : plain;
+    return JSON.stringify({
+      drawn: b.content !== 'none',
+      width: b.width,
+      stripeVsTint: contrast(b.backgroundColor, getComputedStyle(tr).backgroundColor),
+      stripeVsPlain: contrast(b.backgroundColor, behind),
+      tintVsPlain: contrast(getComputedStyle(tr).backgroundColor, behind),
+      cellWidth: Math.round(td.getBoundingClientRect().width),
+    });
+  })()`));
+  check('the marked row draws a stripe clearing 3:1 against both the tint and a plain row',
+    marker.drawn && marker.stripeVsTint >= 3 && marker.stripeVsPlain >= 3,
+    JSON.stringify(marker));
+  // The tint on its own is the reason the stripe exists — assert it really is
+  // as weak as claimed, so this check keeps meaning something.
+  check('the background tint alone would not have cleared 3:1',
+    marker.tintVsPlain < 3, `tint contrast=${marker.tintVsPlain}`);
+  check('marking a row does not move its content sideways',
+    marker.cellWidth === cellBefore, `${cellBefore} → ${marker.cellWidth}`);
+
+  // ── the selection cell is a real target, and it is not the row's ─────────
+  const target = JSON.parse(await eval_(`(() => {
+    const cell = rows()[7].querySelector('[data-select-cell]');
+    const r = cell.getBoundingClientRect();
+    const corners = [[r.left+3, r.top+3], [r.right-3, r.top+3], [r.left+3, r.bottom-3], [r.right-3, r.bottom-3]];
+    return JSON.stringify({
+      w: Math.round(r.width), h: Math.round(r.height),
+      corners: corners.map(([x,y]) => !! document.elementFromPoint(x,y)?.closest('[data-select-cell]')),
+    });
+  })()`));
+  check('the selection cell clears the 24x24 minimum target size on every corner',
+    target.w >= 24 && target.h >= 24 && target.corners.every(Boolean), JSON.stringify(target));
+
+  // A click in the cell's dead space must select — and must NOT fall through
+  // into the row's record action (this fixture binds dblclick + a context menu).
+  await eval_(`sel().selected = []; sel().clearAnchor()`);
+  await sleep(200);
+  await realClickAt(`rows()[7].querySelector('[data-select-cell]')`, -22, -18);
+  await sleep(500);
+  const cornerClick = JSON.parse(await eval_(`JSON.stringify({
+    selected: sel().selected.length,
+    key: sel().selected[0] ?? null,
+    expected: key(7),
+    dialog: $qa('[role="dialog"]').some(d => vis(d)),
+  })`));
+  check('a click in the cell padding selects the row instead of running its action',
+    cornerClick.selected === 1 && cornerClick.key === cornerClick.expected && ! cornerClick.dialog,
+    JSON.stringify(cornerClick));
+
+  await eval_(`sel().selected = []; sel().clearAnchor()`);
+  await sleep(200);
 
   // ── C1: a checkbox click toggles the row and anchors the next range ──────
   await realClick(`rows()[2].querySelector('[data-testid="table-row-select"]')`);
@@ -172,6 +268,12 @@ try {
 
   check('clearing the selection is announced too, instead of falling silent',
     await eval_(`live().textContent`) === 'Selection cleared');
+
+  const mutations = await eval_(`JSON.stringify(window.__liveMutations)`);
+  const spoken = JSON.parse(mutations);
+  check('the live region actually mutated for each change, which is what makes it speak',
+    spoken.includes('1 of 40 selected') && spoken.includes('Selection cleared'),
+    JSON.stringify(spoken).slice(0, 160));
 
   // ── C2: Shift+arrow ranges from the anchor Space set ─────────────────────
   await eval_(`rows()[4].focus()`);

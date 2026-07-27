@@ -984,11 +984,21 @@
                                              position — sortable prepends a drag-handle <td> and would
                                              shift every index. --}}
                                         @if($isSelectable)
-                                            <td class="w-12 {{ $cellPadding }}" data-select-cell>
+                                            {{-- The whole cell toggles, not just the 16px box, which is
+                                                 under every touch-target guideline while the rest of the
+                                                 cell sits dead. A modified click is left alone: Shift and
+                                                 mod mean range and add-to-selection, and the row
+                                                 controller answers those for the whole row, cell
+                                                 included. --}}
+                                            <td class="w-12 {{ $cellPadding }} cursor-pointer"
+                                                data-select-cell
+                                                x-on:click="$event.shiftKey || $event.ctrlKey || $event.metaKey || toggle(@js((string) $recordKey))">
                                                 <div class="flex items-center justify-center">
+                                                    {{-- No handler of its own: a click (or Enter/Space on
+                                                         the focused box) bubbles to the cell, which owns
+                                                         the toggle. Two handlers would toggle twice. --}}
                                                     <button
                                                             type="button"
-                                                            x-on:click="toggle(@js((string) $recordKey))"
                                                             role="checkbox"
                                                             :aria-checked="isSelected(@js((string) $recordKey))"
                                                             aria-label="{{ __('wire-table::messages.select_row') }}"
