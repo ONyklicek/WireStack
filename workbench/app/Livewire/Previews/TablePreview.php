@@ -152,7 +152,12 @@ class TablePreview extends Component
         // sort control need in order to be visible at all. Applied after
         // usersTable(), whose chain ends with ->paginated(false).
         if ($this->variant === 'stacked-selection') {
-            $table->stackedOnMobile()->paginated()->perPage(2);
+            // Sorted by id so the first page is the same two records the
+            // pre-seeded selection in booted() picks. Without it the page order
+            // comes from timestamps the seeder generates relative to today, and
+            // whether the strip starts fully checked or mixed changes with the
+            // day the database was rebuilt.
+            $table->stackedOnMobile()->paginated()->perPage(2)->defaultSort('id', 'asc');
         }
 
         return $table;
