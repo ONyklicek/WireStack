@@ -37,7 +37,7 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
 | 20 | `eb51ae4` | `data-select-cell` (td, karta, oba poziční spacery) |
 | 21 | `a71ef61` | `createAutoScroller` + `bodyRows`/`rowAtY` → `core/resources/js/support/`; core dist rebuild |
 | 22 | `351aeff` | sweep v `record-actions.js` (arm→engage, capture click-kill, jen myš, additive, morph guard, reduced-motion) |
-| 23 | _(tento commit)_ | `openOn:` ve 3 shellech + Htmlable objektech + View komponentách; preview `core-open-on`; `verify-modal-open-on.mjs` 14/14 |
+| 23 | `5efaab0` | `openOn:` ve 3 shellech + Htmlable objektech + View komponentách; preview `core-open-on`; `verify-modal-open-on.mjs` 14/14 |
 
 ## Rozhodnutí učiněná při provádění (nad rámec plánu)
 
