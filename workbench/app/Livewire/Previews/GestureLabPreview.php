@@ -89,6 +89,24 @@ class GestureLabPreview extends Component
                 BulkAction::make('archive')->label('Archive')->icon('outline:archive-box')->color('warning'),
                 DeleteBulkAction::make(),
             ])
+            ->defaultSort('name');
+
+        // A table whose ONLY record action is a single click opening a modal —
+        // no double-click binding, so nothing defers the open. Reported as the
+        // shape where the keyboard stops working after the modal closes.
+        if ($this->variant === 'click-only') {
+            return $table->recordActions([
+                RecordAction::make(
+                    Action::make('inspect')
+                        ->label('Inspect')
+                        ->requiresConfirmation()
+                        ->modalHeading(fn (GestureRow $r) => "Inspecting {$r->name}")
+                        ->action(fn () => null)
+                )->onClick(),
+            ]);
+        }
+
+        $table
             // One of each trigger, so Enter, Shift+Enter, the context menu and
             // an onKey() binding all have something to run. Delete doubles as
             // Backspace in the client matcher.

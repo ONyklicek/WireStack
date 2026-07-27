@@ -31,6 +31,7 @@
     x-data="{ show: false }"
     @if($openEvent) x-on:{{ $openEvent }}.window="show = true" @endif
     @endif
+    @include('wire-core::modals.partials.focus-trap')
     x-show="show"
     x-cloak
     style="display: none;@if($zIndex !== null) z-index: {{ $zIndex }};@endif"

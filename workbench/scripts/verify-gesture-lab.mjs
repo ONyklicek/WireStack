@@ -207,6 +207,59 @@ try {
   check('closing the action leaves the selection and the active row intact',
     !kept.open && kept['selected-count'] === '6' && kept.active === activeKey, JSON.stringify(kept));
 
+  // ════ 2b. a modal takes the keyboard, and gives it back ═════════════════
+  // Reported bug: a single click opening a modal left the keyboard unusable —
+  // during (the focus stayed on the row behind the dialog, so Tab walked the
+  // page behind it and the dialog's own buttons were unreachable) and after
+  // (the focus was left wherever tabbing had put it, and the grid only answers
+  // when a row itself has the focus).
+  await page('Page.navigate', { url: `${base}/gesture-lab-click` });
+  await sleep(3000);
+  await eval_(helpers);
+  await eval_(`window.where = () => {
+    const a = document.activeElement;
+    return { inDialog: !!a?.closest?.('[role=dialog]'), tag: a?.tagName, testid: a?.getAttribute?.('data-testid') ?? null };
+  }; true`);
+
+  await realClick(`cell(3)`);
+  await sleep(1600);
+  const inModal = JSON.parse(await eval_(`JSON.stringify({ ...where(), open: dialogOpen() })`));
+  check('a modal opened by a single click takes the focus into the dialog',
+    inModal.open && inModal.inDialog, JSON.stringify(inModal));
+
+  // Tab has to stay inside; it used to walk the table behind the dialog.
+  const tabbed = [];
+  for (let i = 0; i < 3; i++) {
+    await page('Input.dispatchKeyEvent', { type: 'rawKeyDown', windowsVirtualKeyCode: 9, key: 'Tab', code: 'Tab' });
+    await page('Input.dispatchKeyEvent', { type: 'keyUp', windowsVirtualKeyCode: 9, key: 'Tab', code: 'Tab' });
+    await sleep(220);
+    tabbed.push(JSON.parse(await eval_(`JSON.stringify(where())`)));
+  }
+  check('Tab cycles inside the dialog instead of walking the table behind it',
+    tabbed.every((t) => t.inDialog), JSON.stringify(tabbed.map((t) => t.testid ?? t.tag)));
+
+  const rowBefore = await eval_(`ctrl().activeKey`);
+  await eval_(`(() => { const b = [...document.querySelectorAll('[data-testid=confirmation-cancel]')].find((x) => x.getClientRects().length); b && b.click(); })()`);
+  await sleep(1500);
+  const returned = JSON.parse(await eval_(`JSON.stringify({ ...where(), open: dialogOpen(), active: ctrl().activeKey })`));
+  check('closing it hands the focus back to the row it was opened from',
+    !returned.open && returned.tag === 'TR' && returned.active === rowBefore, JSON.stringify(returned));
+
+  await eval_(`fireKey(document.activeElement, 'ArrowDown')`);
+  await sleep(400);
+  check('and the arrow keys work again straight away, with no click needed',
+    await eval_(`ctrl().activeKey`) !== rowBefore,
+    `${rowBefore} → ${await eval_(`ctrl().activeKey`)}`);
+  await shot('03b-modal-focus');
+
+  await page('Page.navigate', { url: `${base}/gesture-lab` });
+  await sleep(3000);
+  await eval_(helpers);
+  await eval_(`rows()[6].focus()`);
+  await sleep(200);
+  await eval_(`fireKey(rows()[6], ' ')`);
+  await sleep(300);
+
   // ════ 3. the shortcut help lists what THIS table binds ══════════════════
   await eval_(`rows()[6].focus()`);
   await sleep(150);
