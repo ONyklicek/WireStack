@@ -404,6 +404,107 @@ try {
     ! await eval_(`$qa('[role="dialog"]').some(d => vis(d))`));
   await shot('03a-mouse-gestures');
 
+  // ── sweep: drag down the checkbox column ─────────────────────────────────
+  const measure = async (expr) => JSON.parse(await eval_(`(() => {
+    const r = (${expr}).getBoundingClientRect();
+    return JSON.stringify({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+  })()`));
+  // Drag through a path of elements, re-measuring each waypoint after moving
+  // toward it: the bulk bar appears the moment the first rows get selected and
+  // shifts the whole table down, so coordinates cached before the press point
+  // one row off by the time the pointer arrives.
+  const drag = async (exprs, { release = true, steps = 6 } = {}) => {
+    let cur = await measure(exprs[0]);
+    await page('Input.dispatchMouseEvent', { type: 'mousePressed', x: cur.x, y: cur.y, button: 'left', clickCount: 1 });
+    for (let s = 1; s < exprs.length; s++) {
+      const target = await measure(exprs[s]);
+      for (let i = 1; i <= steps; i++) {
+        await page('Input.dispatchMouseEvent', {
+          type: 'mouseMoved', button: 'left', buttons: 1,
+          x: cur.x + ((target.x - cur.x) * i) / steps,
+          y: cur.y + ((target.y - cur.y) * i) / steps,
+        });
+        await sleep(30);
+      }
+      cur = await measure(exprs[s]);
+      await page('Input.dispatchMouseEvent', { type: 'mouseMoved', button: 'left', buttons: 1, x: cur.x, y: cur.y });
+      await sleep(30);
+    }
+    if (release) await page('Input.dispatchMouseEvent', { type: 'mouseReleased', x: cur.x, y: cur.y, button: 'left', clickCount: 1 });
+    return cur;
+  };
+
+  await eval_(`sel().deselectAll()`);
+  await eval_(`window.scrollTo(0, 0)`);
+  await sleep(400);
+
+  await drag([`rows()[2].querySelector('[data-select-cell]')`, `rows()[6].querySelector('[data-select-cell]')`]);
+  await sleep(500);
+  const swept = JSON.parse(await eval_(`JSON.stringify({ count: sel().selected.length, span: sel().isSelected(key(2)) && sel().isSelected(key(6)) })`));
+  check('a sweep down the checkbox column selects the swept span',
+    swept.count === 5 && swept.span, JSON.stringify(swept));
+
+  await sleep(400);
+  check('the trailing click after a sweep toggles nothing',
+    await eval_(`sel().selected.length`) === 5);
+
+  // Backing up never deselects: sweep 10 → 14, then back to 12.
+  await drag([
+    `rows()[10].querySelector('[data-select-cell]')`,
+    `rows()[14].querySelector('[data-select-cell]')`,
+    `rows()[12].querySelector('[data-select-cell]')`,
+  ]);
+  await sleep(500);
+  check('a sweep is additive — backing up keeps everything swept',
+    await eval_(`sel().selected.length`) === 10 && await eval_(`sel().isSelected(key(14))`));
+
+  // Outside the checkbox column the drag belongs to native text selection.
+  await drag([`cell(2)`, `cell(5)`]);
+  await sleep(400);
+  const textDrag = JSON.parse(await eval_(`JSON.stringify({ count: sel().selected.length, text: window.getSelection().toString().length > 0 })`));
+  check('a drag outside the checkbox column selects text, not rows',
+    textDrag.count === 10 && textDrag.text, JSON.stringify(textDrag));
+  await eval_(`window.getSelection().removeAllRanges()`);
+
+  // Reduced motion: no transition animates while the sweep runs. Scroll the
+  // target rows into view first — a press dispatched past the viewport edge
+  // hits nothing and the gesture never arms.
+  await page('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+  await eval_(`rows()[21].scrollIntoView({ block: 'center' })`);
+  await sleep(300);
+  const rmEnd = await drag([
+    `rows()[20].querySelector('[data-select-cell]')`,
+    `rows()[23].querySelector('[data-select-cell]')`,
+  ], { release: false });
+  await sleep(200);
+  const rmDuration = await eval_(`getComputedStyle(rows()[21].querySelector('[role="checkbox"]')).transitionDuration`);
+  await page('Input.dispatchMouseEvent', { type: 'mouseReleased', x: rmEnd.x, y: rmEnd.y, button: 'left', clickCount: 1 });
+  await page('Emulation.setEmulatedMedia', { features: [] });
+  await sleep(300);
+  check('prefers-reduced-motion switches the swept transitions off',
+    rmDuration === '0s', `transitionDuration=${rmDuration}`);
+  await shot('03c-sweep');
+
+  // ── sweep coexists with sortable's row drag handles ──────────────────────
+  await page('Page.navigate', { url: `${base}/sortable-overview` });
+  await sleep(3000);
+  await eval_(helpers);
+  const sortableState = JSON.parse(await eval_(`JSON.stringify({
+    rows: rows().length,
+    handles: $qa('.wire-sortable-handle').length > 0,
+    selectable: !! $q('[data-selection-root]'),
+  })`));
+  await drag([`rows()[1].querySelector('[data-select-cell]')`, `rows()[4].querySelector('[data-select-cell]')`]);
+  await sleep(500);
+  const sortSwept = await eval_(`Alpine.$data($q('[data-selection-root]')).selected.length`);
+  check('the sweep coexists with sortable: checkbox-column drag selects, handles stay',
+    sortableState.handles && sortableState.selectable && sortSwept === 4,
+    JSON.stringify({ ...sortableState, swept: sortSwept }));
+
+  await page('Page.navigate', { url: `${base}/table-selection-gestures` });
+  await sleep(3000);
+  await eval_(helpers);
+
   // ════ Section 1b — selection-only: the grid works without record actions ═
   await page('Page.navigate', { url: `${base}/table-selection-only` });
   await sleep(3000);

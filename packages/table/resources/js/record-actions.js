@@ -37,9 +37,29 @@ const INTERACTIVE = [
     '[x-data]',
 ].join(', ')
 
+import { createAutoScroller } from '../../../core/resources/js/support/autoscroll'
+import { rowAtY } from '../../../core/resources/js/support/rows'
+
 // Module-level handle to the single open context-menu panel, so opening one (or
 // right-clicking another row) always closes any other first.
 let openRecordMenu = null
+
+// One morph guard for the page rather than one per table: Livewire's hook() has
+// no off switch, so registering inside init() would stack a fresh hook every
+// time a table re-initialises. Same pattern as the fill handle's guard — a poll
+// landing mid-sweep would morph the rows out from under the pointer.
+const sweepingControllers = new Set()
+let sweepMorphGuardInstalled = false
+
+const installSweepMorphGuard = () => {
+    if (sweepMorphGuardInstalled || ! window.Livewire) return
+
+    sweepMorphGuardInstalled = true
+
+    window.Livewire.hook('morph.updating', ({ skip }) => {
+        if (sweepingControllers.size > 0) skip()
+    })
+}
 
 function hideRecordMenu(panel) {
     if (! panel) return
@@ -99,6 +119,8 @@ const wireRecordActions = (config = {}) => ({
             document.addEventListener('focusout', this._onFocusOut)
         }
 
+        this.initSweep()
+
         if (! this.contextMenu) return
 
         // Global close triggers, bound once for the whole table (not per row).
@@ -121,7 +143,138 @@ const wireRecordActions = (config = {}) => ({
         document.removeEventListener('click', this._onDocPointer)
         document.removeEventListener('keydown', this._onKey)
         window.removeEventListener('wheel', this._onScroll)
+        this.stopSweep()
+        this._sweepRoot?.removeEventListener('pointerdown', this._onSweepDown)
+        this._sweepRoot?.removeEventListener('click', this._onSweepClickCapture, true)
+        document.removeEventListener('pointermove', this._onSweepMove)
+        document.removeEventListener('pointerup', this._onSweepUp)
+        document.removeEventListener('pointercancel', this._onSweepUp)
         hideRecordMenu(openRecordMenu)
+    },
+
+    // ── Selection sweep: drag down the checkbox column to select ─────
+
+    initSweep() {
+        if (! this.kb?.selectable) return
+
+        const root = this.$el.closest('[data-selection-root]')
+        if (! root) return
+
+        this._sweepRoot = root
+        this._sweep = null
+
+        this._onSweepDown = (event) => {
+            // Mouse only, primary button, primary pointer: a finger dragging
+            // the checkbox column must keep scrolling the page (touch-action
+            // stays untouched for the same reason).
+            if (event.pointerType !== 'mouse' || event.button !== 0 || ! event.isPrimary) return
+
+            // The cell is found by its hook, never by column position —
+            // sortable prepends a drag-handle <td> and would shift indexes.
+            const cell = event.target.closest('[data-select-cell]')
+            const row = cell?.closest('tr[data-row-key]')
+            if (! cell || ! row || row.parentElement !== this.$el) return
+
+            // ARM only — no preventDefault (it would kill the focus on the
+            // <button role=checkbox> underneath) and no selection yet: the
+            // gesture engages on the first move that changes rows, so a plain
+            // click stays a plain click.
+            this._sweep = { startKey: row.dataset.rowKey, engaged: false, scroller: null }
+        }
+
+        this._onSweepMove = (event) => {
+            const sweep = this._sweep
+            if (! sweep) return
+            if (! (event.buttons & 1)) return this.stopSweep()
+
+            const rows = this.navRows()
+            const startIdx = rows.findIndex((r) => r.dataset.rowKey === sweep.startKey)
+            if (startIdx < 0) return this.stopSweep()
+
+            const current = rowAtY(rows, event.clientY)
+            if (current === null) return
+
+            if (! sweep.engaged) {
+                if (current === startIdx) return
+
+                sweep.engaged = true
+                sweepingControllers.add(this)
+                installSweepMorphGuard()
+                sweep.scroller = createAutoScroller(rows[0])
+                sweep.scroller.start()
+                this.suppressSweepTransitions(rows)
+            }
+
+            event.preventDefault()
+            sweep.scroller.update(event.clientY)
+
+            // Additive only: the swept span is unioned in, backing up never
+            // deselects. toggle() carries both shapes — in all mode a swept
+            // excluded row is simply re-included.
+            const sel = this.selection()
+            if (! sel) return
+
+            rows.slice(Math.min(startIdx, current), Math.max(startIdx, current) + 1)
+                .map((r) => r.dataset.rowKey)
+                .filter((key) => ! sel.isSelected(key))
+                .forEach((key) => sel.toggle(key))
+        }
+
+        this._onSweepUp = () => {
+            if (this._sweep?.engaged) {
+                // The drag's trailing click retargets to the common ancestor of
+                // the press and release rows — the selection root is an
+                // ancestor of both, so a capture listener there kills it before
+                // it reaches a checkbox or a record action. Pointer capture
+                // would not help. The capture handler clears the flag one-shot;
+                // the timeout is only the backstop for a click that never
+                // arrives, and it must outlive the browser's own dispatch — the
+                // click can land in a later task than a 0ms timer.
+                this._suppressSweepClick = true
+                clearTimeout(this._suppressSweepTimer)
+                this._suppressSweepTimer = setTimeout(() => { this._suppressSweepClick = false }, 150)
+            }
+
+            this.stopSweep()
+        }
+
+        this._onSweepClickCapture = (event) => {
+            if (! this._suppressSweepClick) return
+
+            this._suppressSweepClick = false
+            event.stopPropagation()
+            event.preventDefault()
+        }
+
+        root.addEventListener('pointerdown', this._onSweepDown)
+        document.addEventListener('pointermove', this._onSweepMove)
+        document.addEventListener('pointerup', this._onSweepUp)
+        document.addEventListener('pointercancel', this._onSweepUp)
+        root.addEventListener('click', this._onSweepClickCapture, true)
+    },
+
+    stopSweep() {
+        if (! this._sweep) return
+
+        this._sweep.scroller?.stop()
+        sweepingControllers.delete(this)
+        this.restoreSweepTransitions()
+        this._sweep = null
+    },
+
+    // Reduced motion means no animation during the sweep: the checkbox and row
+    // tints carry transition utilities that would otherwise flicker through
+    // every swept row.
+    suppressSweepTransitions(rows) {
+        if (! window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+
+        this._sweepStyled = rows.flatMap((row) => [row, ...row.querySelectorAll('[data-select-cell] [role="checkbox"]')])
+        this._sweepStyled.forEach((el) => { el.style.transitionDuration = '0s' })
+    },
+
+    restoreSweepTransitions() {
+        (this._sweepStyled || []).forEach((el) => { el.style.transitionDuration = '' })
+        this._sweepStyled = null
     },
 
     // ── Keyboard navigation (grid pattern, roving tabindex) ──────────
