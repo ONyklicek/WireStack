@@ -4,12 +4,21 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 /*
- * FileUpload crop + resize, in a real browser (/previews/field-file-upload).
+ * FileUpload crop + resize WITHOUT the interactive frame, in a real browser
+ * (/previews/field-file-upload-auto).
  *
  * imageCropAspectRatio() / imageResizeTargetWidth() were dead setters. The whole
  * point of them is that the browser rewrites the file *before* Livewire uploads
  * it, so nothing server-side can prove they work — only measuring the pixels the
  * picker produced can.
+ *
+ * It points at the *-auto preview deliberately. `imageCropAspectRatio('16:9')`
+ * names a ratio, not a UI: without cropInteractively() the picked file is
+ * cropped from the centre and lands in the wire:model input on its own. The
+ * field this driver used to target later opted into the frame, at which point
+ * the file stops arriving until the user confirms — so this measured nothing
+ * and reported "nothing reached the wire:model input" instead. The interactive
+ * path has its own driver (verify-image-crop.mjs).
  *
  * Usage (see .claude/skills/verify-preview/SKILL.md):
  *   vendor/bin/testbench serve --host=127.0.0.1 --port=8085   # in background
@@ -18,7 +27,7 @@ import { join } from 'node:path';
  * Exit 0 = all checks passed; 1 = a check failed; 2 = driver error.
  */
 
-const url = process.env.PREVIEW_URL ?? 'http://127.0.0.1:8085/previews/field-file-upload';
+const url = process.env.PREVIEW_URL ?? 'http://127.0.0.1:8085/previews/field-file-upload-auto';
 const chromeBin = process.env.CHROME_BIN ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const port = Number(process.env.CHROME_PORT ?? 9461);
 
@@ -56,6 +65,10 @@ try {
   const rootSel = `document.querySelector('[data-testid$="-picker"]').closest('[x-data]')`;
   const cfg = await ev(`(() => { const d = Alpine.$data(${rootSel}); return { hasPick: typeof d.onPick === 'function' }; })()`);
   check('the dropzone uses the image component', cfg.hasPick === true, JSON.stringify(cfg));
+
+  // The point of this preview: no frame to place, so nothing waits for a user.
+  check('this field crops from the centre, with no interactive frame',
+    await ev(`(() => { const d = Alpine.$data(${rootSel}); return d.cropping === false || d.cropping === undefined; })()`) === true);
 
   // Build a real 1000x1000 PNG and push it through the picker exactly as a user would.
   const measured = await ev(`(async () => {

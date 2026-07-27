@@ -312,6 +312,18 @@ class FieldPreview extends Component
                 ->imageResizeTargetWidth(320)
                 ->cropInteractively(),
 
+            // The same processing WITHOUT the interactive frame: the ratio is a
+            // ratio, cropped from the centre, and the file reaches the
+            // wire:model input on its own. Kept as its own preview because that
+            // path stopped being covered in a browser the moment the field
+            // above opted into the frame.
+            'file-upload-auto' => FileUpload::make('photo')
+                ->label('Cover image (centre crop)')
+                ->helperText('Cropped and resized without asking — no frame to place.')
+                ->image()
+                ->imageCropAspectRatio('16:9')
+                ->imageResizeTargetWidth(320),
+
             default => TextInput::make('name')
                 ->label('Full name')
                 ->helperText('Shown on the member profile.')

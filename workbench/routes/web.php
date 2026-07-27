@@ -374,6 +374,7 @@ $fieldPreviews = [
     'key-value' => 'Key-Value',
     'date-time-picker' => 'Date-Time Picker',
     'file-upload' => 'File Upload',
+    'file-upload-auto' => 'File Upload (centre crop)',
 ];
 
 foreach ($fieldPreviews as $field => $label) {
