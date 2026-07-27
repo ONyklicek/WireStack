@@ -2,7 +2,7 @@
 title: Rollout výběrových gest — stav provedení
 date: 2026-07-27
 plan: architecture/plans/table-selection-gestures-rollout.md
-status: Fáze I–VII hotové (kroky 0–27), zbývá krok 28 (docs)
+status: HOTOVO — všech 28 kroků provedeno a zacommitováno
 ---
 
 # Stav provedení rolloutu
@@ -44,6 +44,8 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
 | 26 | `a20e61e` | ARIA grid (`aria-rowcount`/`aria-rowindex` přes celou sadu, `aria-multiselectable`, bindnuté `aria-selected`) + `aria-live` region; driver 70/70 |
 
 | 27 | `efce0ab` | klikatelná plocha = celá buňka, `[data-select-cell]` v `INTERACTIVE`, marker + pruh (kontrast 4.3/4.79 light, 3.98/7.95 dark); fix Shift+klik na checkbox; driver 77/77 |
+
+| 28 | `52d567d` + `340b865` + `e350d15` | docs EN+CZ (nová `selection.md` + revize `record-actions.md`), upgrade guide, boost guidelines + mirror; screenshoty; fixture fix stacked-selection |
 
 ## Rozhodnutí učiněná při provádění (nad rámec plánu)
 
@@ -87,6 +89,12 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
   podle `wire:key` → záměna obsahu. Klíč teď bere `$id`, když je zadané
   (bez `$id` beze změny); nápověda posílá jako `id` jméno svého eventu.
 
+- **Krok 28:** `boost:sync-docs` zrcadlí `docs/`, ale **ne** guidelines — ty se
+  editují ručně a mirror se pak přesyncuje. Screenshoty: workbench seed generuje
+  časy relativně k dnešku, takže každý `docs:refresh` změní datum na většině
+  snímků (šum, ne regrese) — a `workbench:build` reseedem posunul pořadí na
+  první stránce, což shodilo 2 checky `verify-mobile-selection.mjs`; fixture
+  proto dostal `defaultSort('id')`.
 - **Krok 26:** `aria-rowindex` je pozice v CELÉ sadě, ne na stránce → nutné
   vyzvednout `$from`/`$to`/`$total` z patičky do preambule (patička se rendruje
   až po těle) a `$headerRowCount` musí započítat řádek column filtrů.
@@ -131,16 +139,28 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
 - `verify-selection-gestures.mjs` — **77/77** (C1–C13 + myš, klávesnice, sweep,
   selection-only, reduced-motion, sortable koexistence, `?` nápověda, ARIA +
   live region, kontrast markeru, velikost cíle)
+- `verify-nested-modal.mjs` 8/8, `verify-confirmation-object.mjs` 8/8,
+  `verify-modal-layering.mjs` 13/13 (modalové regrese po kroku 23/25)
 - `verify-record-active-row.mjs` 18/18, `verify-record-actions.mjs` 14/14,
   `verify-record-actions-dual.mjs` 5/5, `verify-mobile-selection.mjs` 13/13,
   `verify-fill-handle.mjs` 26/26, `verify-modal-open-on.mjs` 14/14
-- PHP: table 1668, core 1751, forms 908, sortable 39, Integration 39;
+- PHP: celkem 4621 (table 1667, core 1751, forms 908, sortable 39), Integration 39;
   analyse + lint OK; coverage diff 100 %, floors OK
 
-## Zbývá
+## Rollout dokončen
 
-- **28** docs EN+CZ, upgrade, boost guidelines, screenshoty (CHANGELOG se psal
-  průběžně u každého kroku)
-- Známý předexistující bug: `reorderBodyColumns()` je poziční bez offsetu
-  selection buňky (selectable+sortable přeřazování sloupců) — vědomě odloženo,
-  vyplave na `SortablePreview`.
+Všech 28 kroků je hotových. Závěrečná brána (2026-07-27): `composer test`
+4621 prošlo / 2 přeskočeno, Integration 39, analyse + lint OK, coverage diff
+100 % a floors OK, **10 CDP driverů zelených** (selection-gestures 77/77,
+record-active-row 18/18, record-actions 14/14, record-actions-dual 5/5,
+mobile-selection 13/13, fill-handle 26/26, modal-open-on 14/14, nested-modal
+8/8, confirmation-object 8/8, modal-layering 13/13), `npm run docs:check` OK
+(228 souborů, obě lokalizace), `verify-api-docs` OK.
+
+### Vědomě odloženo
+
+- `reorderBodyColumns()` (`sortable/…/scripts.blade.php`) je poziční bez offsetu
+  na selection buňku → přeřazování sloupců u selectable+sortable tabulky je
+  rozbité. Předexistující bug, vyplave na `SortablePreview` (krok 2 tam přidal
+  `->selectable()`).
+- Floor pro `table` lze zvednout z 87 % na 88 % (`composer coverage:floors`).
