@@ -17,6 +17,11 @@
     // Without a wire:model binding, `show` is plain Alpine state and an
     // optional $openOn window event opens the dialog from JS.
     $openEvent = ($openOn ?? null) ?: null;
+    // Attribute-name position: only a safe token may reach the x-on: binding
+    // (a space would inject a new attribute — Blade only escapes quotes).
+    if ($openEvent !== null && ! preg_match('/^[a-zA-Z][a-zA-Z0-9_-]*$/', $openEvent)) {
+        $openEvent = null;
+    }
 @endphp
 <template x-teleport="body" wire:key="wire-modal-confirmation">
 <div

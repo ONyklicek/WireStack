@@ -89,6 +89,30 @@ it('opens on a window event instead of a wire:model binding when openOn is set',
         ->assertDontSeeHtml('entangle');
 });
 
+class ModalOpenOnUnsafeHost extends Component
+{
+    public function render(): string
+    {
+        return <<<'BLADE'
+            <div>
+                {!! new \NyonCode\WireCore\Modals\Html\Modal(
+                    heading: 'Unsafe',
+                    openOn: 'evil onmouseover=alert(1) x',
+                ) !!}
+            </div>
+        BLADE;
+    }
+}
+
+it('drops an openOn event name that is not a safe attribute token', function () {
+    // x-on:{event} sits in attribute-name position, where Blade escaping does
+    // not stop a space from starting a brand-new attribute.
+    Livewire::test(ModalOpenOnUnsafeHost::class)
+        ->assertDontSeeHtml('onmouseover')
+        ->assertDontSeeHtml('x-on:evil')
+        ->assertSeeHtml('x-data="{ show: false }"');
+});
+
 class ModalOpenOnBoundHost extends Component
 {
     public bool $show = false;
