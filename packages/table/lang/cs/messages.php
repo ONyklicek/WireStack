@@ -138,4 +138,20 @@ return [
     'save_failed' => 'Uložení selhalo',
     'invalid' => 'Neplatné',
     'error' => 'Chyba',
+
+    // Legenda klávesových zkratek
+    'shortcuts_navigation' => 'Navigace',
+    'shortcuts_selection' => 'Výběr',
+    'shortcuts_actions' => 'Akce',
+    'shortcuts_help' => 'Nápověda',
+    'shortcut_move_active' => 'Přesunout aktivní řádek',
+    'shortcut_jump_edges' => 'Skočit na první / poslední řádek',
+    'shortcut_page_step' => 'Posun o stránku nahoru / dolů',
+    'shortcut_toggle_selection' => 'Označit nebo odznačit aktivní řádek',
+    'shortcut_extend_selection' => 'Rozšířit výběr',
+    'shortcut_extend_selection_edges' => 'Rozšířit výběr k prvnímu / poslednímu řádku',
+    'shortcut_select_page' => 'Vybrat celou stránku',
+    'shortcut_run_action' => 'Spustit „:action“',
+    'shortcut_context_menu' => 'Otevřít nabídku řádku',
+    'shortcut_show_help' => 'Zobrazit klávesové zkratky',
 ];

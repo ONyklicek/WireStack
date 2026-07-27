@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Actions\Concerns;
 
+use NyonCode\WireCore\Foundation\Support\ShortcutLabelFormatter;
+
 /**
  * Trait HasKeyboardShortcut
  *
@@ -129,29 +131,11 @@ trait HasKeyboardShortcut
 
     /**
      * Format shortcut for display (e.g. 'mod+s' → 'Ctrl+S' or '⌘S').
+     * Delegates to the canonical {@see ShortcutLabelFormatter}, so an action
+     * label and a shortcut legend always read the same.
      */
     protected function formatShortcutLabel(string $shortcut): string
     {
-        $parts = array_map('trim', explode('+', $shortcut));
-        $formatted = [];
-
-        foreach ($parts as $part) {
-            $formatted[] = match (strtolower($part)) {
-                'mod' => 'Ctrl',
-                'ctrl', 'control' => 'Ctrl',
-                'shift' => 'Shift',
-                'alt', 'option' => 'Alt',
-                'meta', 'cmd', 'command' => '⌘',
-                'enter', 'return' => '↵',
-                'escape', 'esc' => 'Esc',
-                'delete' => 'Del',
-                'backspace' => '⌫',
-                'space' => 'Space',
-                'tab' => 'Tab',
-                default => strtoupper($part),
-            };
-        }
-
-        return implode('+', $formatted);
+        return ShortcutLabelFormatter::format($shortcut);
     }
 }

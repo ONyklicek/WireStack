@@ -24,6 +24,7 @@ use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Enums\Alignment;
 use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Foundation\Icons\Icon;
+use NyonCode\WireCore\Foundation\ValueObjects\ShortcutHint;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireTable\Actions\RecordActionResolver;
 use NyonCode\WireTable\Actions\TableActionClickResolver;
@@ -37,6 +38,7 @@ use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
 use NyonCode\WireTable\Services\TableQueryService;
 use NyonCode\WireTable\Support\MobileCard;
 use NyonCode\WireTable\Support\RecordAction;
+use NyonCode\WireTable\Support\TableShortcutLegend;
 
 /** @phpstan-consistent-constructor */
 #[\AllowDynamicProperties]
@@ -1941,6 +1943,17 @@ class Table implements Htmlable
     public function getRecordActionBindings(): array
     {
         return $this->recordActionResolver()->pointerMap();
+    }
+
+    /**
+     * The keyboard-gesture legend assembled from this table's configuration —
+     * localized {@see ShortcutHint}
+     * sections the `?` help modal renders. Empty for tables without grid
+     * semantics.
+     */
+    public function shortcutLegend(): TableShortcutLegend
+    {
+        return TableShortcutLegend::for($this);
     }
 
     /**
