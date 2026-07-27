@@ -140,6 +140,8 @@ return [
     'error' => 'Error',
 
     // Keyboard shortcut legend
+    'shortcuts_heading' => 'Keyboard shortcuts',
+    'shortcuts_description' => 'These work while a row has focus.',
     'shortcuts_navigation' => 'Navigation',
     'shortcuts_selection' => 'Selection',
     'shortcuts_actions' => 'Actions',

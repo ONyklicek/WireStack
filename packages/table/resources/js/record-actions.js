@@ -384,6 +384,16 @@ const wireRecordActions = (config = {}) => ({
                 if (idx < 0 || ! this.contextMenu) return
                 event.preventDefault()
                 return this.openMenuForRow(rows[idx])
+            case '?':
+                // Matched on event.key, never event.code: on a Czech layout ? is
+                // Shift+comma, so the physical code would never line up. The
+                // focus guard above already keeps a ? typed into the search box
+                // out of here. The help modal listens for this window event and
+                // opens client-side; the name carries the component id, so only
+                // this table's help opens.
+                if (! this.kb.help) return
+                event.preventDefault()
+                return window.dispatchEvent(new CustomEvent(this.kb.help))
         }
 
         // Any other key: match the record actions' own shortcuts (Delete, mod+d…).

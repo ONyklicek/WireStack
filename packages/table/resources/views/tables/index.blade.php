@@ -78,6 +78,22 @@
     // a visible change that ships separately — see mountsRecordActionController().
     $recordActionsRootEnabled = $table->mountsRecordActionController();
     $activeRowConfig = $recordActionsRootEnabled ? $table->getActiveRowConfig() : null;
+    // `?` opens the shortcut help. The event name is derived from the component
+    // id, so a page with several tables opens only the one whose row has focus —
+    // a bare window event would open every help modal at once. It goes through
+    // a lowercase hash, because the listener lives in an ATTRIBUTE NAME
+    // (x-on:{event}.window) and the DOM lowercases those: a mixed-case Livewire
+    // id would never match what the controller dispatches. The controller learns
+    // the name through its keyboard config; a table whose legend is empty gets
+    // no event and no modal at all.
+    $shortcutLegend = $keyboardNav ? $table->shortcutLegend() : null;
+    $shortcutHelpEvent = $shortcutLegend !== null && ! $shortcutLegend->isEmpty()
+        ? 'wire-table-shortcut-help-'.substr(md5($component->getId()), 0, 12)
+        : null;
+
+    if ($recordKeyboardConfig !== null) {
+        $recordKeyboardConfig['help'] = $shortcutHelpEvent;
+    }
     $hasBulkActions = !empty($bulkActions);
     $hasHeaderActions = !empty($headerActions);
     $hasFilters = !empty($filters);
@@ -1361,6 +1377,9 @@
 
                 {{-- Halt Modal --}}
                 @include('wire-table::tables.partials.halt-modal')
+
+                {{-- Keyboard shortcut help (`?`) --}}
+                @include('wire-table::tables.partials.shortcut-help-modal')
 
                 </div> {{-- Close table wrapper --}}
 

@@ -505,6 +505,35 @@ try {
   await sleep(3000);
   await eval_(helpers);
 
+  // ── the help documents this table's own record actions ───────────────────
+  // Same key, different legend: this table has record actions, so the actions
+  // section names them and the onKey('Delete') binding shows its Backspace
+  // alias next to it.
+  await eval_(`window.help = () => $q('[data-testid="shortcut-help"]')?.closest('[role="dialog"]'); true`);
+  await eval_(`rows()[1].focus()`);
+  await sleep(200);
+  await eval_(`fireKey(rows()[1], '?')`);
+  await sleep(700);
+  const actionHelp = JSON.parse(await eval_(`(() => {
+    const el = help();
+    if (! el) return 'null';
+    const row = [...el.querySelectorAll('[data-testid=shortcut-help] div.flex')]
+      .find(d => /Archive/.test(d.textContent));
+    return JSON.stringify({
+      open: !! el && getComputedStyle(el).display !== 'none',
+      sections: [...el.querySelectorAll('[data-testid=shortcut-help] section h4')].map(h => h.textContent.trim()),
+      archiveKeys: row ? [...row.querySelectorAll('kbd')].map(k => k.textContent.trim()) : [],
+    });
+  })()`) ?? 'null') ?? {};
+  check('the help names this table\'s record actions and pairs Delete with Backspace',
+    actionHelp.open && actionHelp.sections.includes('Actions')
+      && actionHelp.archiveKeys.includes('Del') && actionHelp.archiveKeys.includes('⌫'),
+    JSON.stringify(actionHelp).slice(0, 240));
+  await shot('03d-shortcut-help-actions');
+
+  await eval_(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`);
+  await sleep(500);
+
   // ════ Section 1b — selection-only: the grid works without record actions ═
   await page('Page.navigate', { url: `${base}/table-selection-only` });
   await sleep(3000);
@@ -534,6 +563,60 @@ try {
   check('selection-only: a row click marks the row and never ticks the checkbox',
     soClick.active === soClick.k7 && soClick.selected === 2, JSON.stringify(soClick));
   await shot('03b-selection-only');
+
+  // ── `?` opens the shortcut help, client-side and row-scoped ──────────────
+  // A grid with no record actions still documents its gestures. The modal is
+  // opened by a window event the controller dispatches — no Livewire roundtrip
+  // — and the focus guard keeps a ? typed inside a row out of it.
+  await eval_(`window.help = () => $q('[data-testid="shortcut-help"]')?.closest('[role="dialog"]'); true`);
+
+  await eval_(`fireKey(rows()[2].querySelector('td'), '?')`);
+  await sleep(600);
+  check('the ? help stays shut when the key comes from inside a row, not the row itself',
+    ! await eval_(`vis(help())`));
+
+  await eval_(`rows()[2].focus()`);
+  await sleep(200);
+  await eval_(`fireKey(rows()[2], '?')`);
+  await sleep(700);
+  check('? on a focused row opens the shortcut help', await eval_(`vis(help())`));
+  await shot('03c-shortcut-help');
+
+  const helpBody = await eval_(`(() => {
+    const el = help();
+    if (! el) return null;
+    return JSON.stringify({
+      mac: Alpine.$data(el.querySelector('[data-testid=shortcut-help]')).mac,
+      sections: [...el.querySelectorAll('[data-testid=shortcut-help] section h4')].map(h => h.textContent.trim()),
+      keys: [...el.querySelectorAll('[data-testid=shortcut-help] kbd')].map(k => k.textContent.trim()),
+    });
+  })()`);
+  const helpText = JSON.parse(helpBody ?? 'null') ?? { sections: [], keys: [] };
+  // The keys render their non-Mac label server-side and swap through x-text, so
+  // the expected glyphs follow the platform this browser reports.
+  const selectPage = helpText.mac ? '⌘A' : 'Ctrl+A';
+  check('the help lists the navigation and selection sections with their keys',
+    helpText.sections.includes('Navigation') && helpText.sections.includes('Selection')
+      && helpText.keys.includes('↑') && helpText.keys.includes(selectPage) && helpText.keys.includes('?'),
+    JSON.stringify(helpText).slice(0, 240));
+
+  // The Mac swap is a client fact: PHP renders the Ctrl labels, Alpine replaces
+  // them where the platform calls for it. Whichever way this browser reports,
+  // the two vocabularies must never mix in the rendered legend.
+  check('the key labels follow one platform vocabulary, not a mixture',
+    helpText.mac
+      ? helpText.keys.includes('⇧↑') && ! helpText.keys.some(k => k.startsWith('Ctrl'))
+      : helpText.keys.includes('Shift+↑') && ! helpText.keys.some(k => k.includes('⌘')),
+    `mac=${helpText.mac}`);
+
+  // No record actions on this table, so the help must not invent an actions
+  // section — the legend describes what this table actually answers to.
+  check('the help omits the actions section on a table without record actions',
+    ! helpText.sections.includes('Actions'));
+
+  await eval_(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`);
+  await sleep(600);
+  check('Escape closes the shortcut help', ! await eval_(`vis(help())`));
 
   // ════ Section 2 — 20 a page, the `all` mode ═════════════════════════════
   await page('Page.navigate', { url: `${base}/table-selection-gestures-paged` });

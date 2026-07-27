@@ -140,6 +140,8 @@ return [
     'error' => 'Chyba',
 
     // Legenda klávesových zkratek
+    'shortcuts_heading' => 'Klávesové zkratky',
+    'shortcuts_description' => 'Fungují, když je vybraný řádek.',
     'shortcuts_navigation' => 'Navigace',
     'shortcuts_selection' => 'Výběr',
     'shortcuts_actions' => 'Akce',
