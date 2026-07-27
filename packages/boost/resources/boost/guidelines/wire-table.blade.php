@@ -113,7 +113,10 @@ already gives you:
 
 - **Defer off-screen tables.** `Table::lazy()` returns no rows and runs no query until the
   table scrolls into view (optional `->lazyPlaceholder(...)`). Use it for tables below the fold
-  or in tabs.
+  or in tabs. It defers the query and the markup, **not** the JS: the table's Alpine bundles
+  ship with the placeholder render, because they register from `alpine:init` and that fires
+  once, at boot — a bundle arriving with the deferred markup would register nothing. So
+  `lazy()` is a lever for query and render cost, not for first-paint script weight.
 - **Defer action-group menus.** `ActionGroup::make([...])->lazyMenu()` ships only the trigger plus
   a serialized item spec per row and builds the menu client-side on first open — zero per-row menu
   Blade renders (an eager group renders one view per item per row). Opt-in; the default is eager.
