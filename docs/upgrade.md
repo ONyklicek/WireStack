@@ -78,6 +78,54 @@ Confirm your app meets these before upgrading.
 
 ---
 
+## Selection and keyboard gestures
+
+A table's selection grew from a column of checkboxes into a full gesture surface
+(see [Selecting Rows](table/selection.md)). Four things to check on the way up.
+
+**1. Every selectable table is now a grid — a visible change with no code change
+on your side.** Grid semantics used to follow record actions; they now follow
+`selectable()` and `bulkActions()` as well. Rows of such a table become
+focusable, clicking one marks it as the active row, and the arrow keys, `Space`,
+`Shift`+arrows and `mod`+`A` work the selection. A click still never ticks a
+checkbox. Opt out per table:
+
+```php
+->recordActionKeyboard(false)
+```
+
+**2. `->onKey()` on a navigation key now throws.** It used to be dropped
+silently, so the action simply never fired. If a table binds one of these, the
+binding was already dead code — rebind it to a free key:
+
+```text
+Enter  Space  ArrowUp  ArrowDown  Home  End  PageUp  PageDown  ContextMenu  F10  ?
+```
+
+`Backspace` stays available, and now doubles as an alias of `Delete`.
+
+**3. Range gestures no longer leave "all matching" mode.** When a selection is
+"everything the filter matches", the stored list is the set of *exclusions* — so
+a `Shift`+arrow range over it now **deselects** that range instead of collapsing
+the whole selection down to one page. If your code reads the selection directly,
+note that `getSelectedRecordKeys()` returns `[]` in that mode by design; use
+`selectedRecordsQuery()` or `eachSelectedRecord()` instead.
+
+**4. Republish the table view if you have overridden it.** The gestures need
+markup the packaged JavaScript looks for, and a published copy of
+`resources/views/vendor/wire-table/tables/index.blade.php` will not have it. The
+view carries a contract marker so a stale copy fails loudly in the browser
+console rather than selecting the wrong rows in silence:
+
+```bash
+php artisan vendor:publish --tag=wire-table::views --force
+```
+
+Re-apply your customisations on top of the new file. If you overrode the view
+only to restyle it, [Theming](theming.md) is usually the smaller path.
+
+---
+
 ## Finding Breaking Changes
 
 `CHANGELOG.md` is the source of truth. Breaking changes are called out under a

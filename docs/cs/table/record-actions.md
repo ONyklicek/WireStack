@@ -91,30 +91,30 @@ Action::make('edit')->onDoubleClick()->alsoInRowActions()
 
 ## Ovládání klávesnicí
 
-Jakmile má tabulka libovolnou record action, klávesová navigace se zapne
-automaticky a tabulka se ohlásí jako grid:
+Klávesová navigace se zapne automaticky u každé tabulky, kterou klávesnice
+ovládá řádek po řádku — u té s akcemi nad záznamem stejně jako u té, která je
+`->selectable()` nebo má hromadné akce — a taková tabulka se ohlásí jako ARIA
+grid:
 
 | Klávesa | Akce |
 |---------|------|
 | `↑` / `↓` | Posun aktivního řádku |
+| `Home` / `End`, `PageUp` / `PageDown` | Skok na okraj, nebo posun o obrazovku |
 | `Enter` | Primární record action (binding dvojkliku, jinak kliku) |
 | `Shift` + `Enter` | Sekundární record action (druhý pointer binding) |
 | `Space` | Přepnout výběr aktivního řádku (a nastavit kotvu) při selectable, jinak primární akce |
-| `Shift` + `↑` / `↓` | Rozšířit souvislý výběr od kotvy (desktopový range-select) |
+| `Shift` + `↑` / `↓` | Rozšířit výběr od kotvy |
 | `mod` + `A` | Vybrat všechny řádky na stránce |
-| Menu klávesa | Otevřít kontextové menu řádku |
+| Menu klávesa, `Shift` + `F10` | Otevřít kontextové menu řádku |
+| `?` | Zobrazit zkratky, na které tabulka reaguje |
 | `Delete`, `mod+d`, … | Vlastní `->onKey()` / `->keyboardShortcut()` akce |
 
-Klávesnicový výběr řídí **stejný** stav výběru jako checkboxy a bulk bar — šipkou
-na řádek, `Space` pro výběr, `Shift`+šipka pro rozšíření bloku — pak spusť
-hromadnou akci z baru.
+Vazba `->onKey('Delete')` reaguje i na `Backspace` — na klávesnici Macu je to
+tatáž klávesa pod jiným jménem.
 
-`Shift`+`↑`/`↓` staví **jeden souvislý blok od kotvy** a ten blok se stane
-výběrem. Kotva je řádek, který jsi naposledy zvolil — přes `Space` nebo přes
-checkbox — a když výběr vznikl přes `mod`+`A` či pruh „vybrat vše" (vlastní kotvu
-nemá), použije se vzdálenější okraj bloku, ve kterém stojíš. První `Shift`+šipka
-tak blok *zmenší nebo zvětší* místo toho, aby zbytek výběru zahodila. Jednotlivé
-řádky z výběru vyhodíš tak, že na ně dojedeš šipkami a dáš `Space`.
+Výběrová gesta — `Space`, rozsahy, `mod`+`A` — popisuje
+[Výběr řádků](selection.md), včetně gest myší a toho, co rozsah znamená, když je
+vybráno „vše odpovídající".
 
 Myš i klávesnice sdílejí jeden aktivní řádek: **klik na řádek ho označí** a šipky
 pokračují odtud, takže se tabulka nikdy neovládá ze dvou míst zároveň. Označení
@@ -137,13 +137,28 @@ Vynuť vypnutí (či zapnutí), pokud potřebuješ:
 Protože Enter vždy dosáhne na primární akci, každá record action zůstává
 dostupná klávesnicí — behavior-only akce nikdy není past jen pro myš.
 
+### Klávesy, které si grid vyhrazuje
+
+Klávesy, kterými grid naviguje, nejde navázat na akci — vazba by nikdy
+nevystřelila. Místo tichého zahození proto `->onKey()` vyhodí výjimku už při
+konfiguraci:
+
+```text
+Enter  Space  ArrowUp  ArrowDown  Home  End  PageUp  PageDown  ContextMenu  F10  ?
+```
+
+`keyboardShortcut()` nastavený přímo na akci se jen přeskočí a nikdy není
+fatální — taková akce může legitimně sloužit i toolbaru nebo paletě.
+
 ## Kombinace s výběrem a hromadnými akcemi
 
 Když je tabulka `->selectable()`, výchozím triggerem record akce se stává
 **dvojklik**, takže jednoklik zůstává volný pro práci s výběrem — jen označí
 řádek, na který dopadne (aktivní řádek pro klávesnici a kotva dalšího
-`Shift`+rozsahu). Samotný výběr je vždy věc checkboxu: klik na řádek ho nikdy
-nezaškrtne. Hromadné akce zůstávají nedotčené:
+`Shift`+rozsahu). Prostý klik zaškrtávátko nikdy nezaškrtne; ty s modifikátorem
+záměrně ano, protože přesně to `Shift` a `mod` znamenají všude jinde (viz
+[Výběr řádků](selection.md)). Klik s modifikátorem je výběrové gesto a nikdy
+nespustí navázanou akci nad záznamem. Hromadné akce zůstávají nedotčené:
 
 ```php
 ->selectable()
@@ -165,6 +180,16 @@ obarvi pro silnější náznak „tento řádek je klikatelný":
 
 Aktivní řádek po dobu označení shazuje svůj hover tint, takže označení nikdy
 nepřebije `hover:bg-*`, když na něm spočine kurzor.
+
+Ve výchozím stavu jsou označením dva signály, ne jeden: podbarvení a pruh u
+náběžné hrany řádku. Samotné podbarvení má vůči prostému řádku kontrast asi
+1,1:1 — pod hranicí 3:1 a neviditelné pro každého, kdo ty dva odstíny nerozliší.
+`activeRowClass()` nahrazuje **obě** poloviny, takže přepis si ručí za vlastní
+kontrast:
+
+```php
+->activeRowClass('bg-amber-100 [&>td:first-of-type]:before:bg-amber-600')
+```
 
 ## Doporučené UX
 
@@ -202,3 +227,9 @@ tlačítka:
     Action::make('delete')->onContextMenu(),
 ])
 ```
+
+## Související dokumentace
+
+- [Výběr řádků](selection.md) — výběrová gesta, se kterými akce nad záznamem
+  sdílejí řádek
+- [Akce](actions.md) — řádkové, hromadné a hlavičkové akce

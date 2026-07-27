@@ -78,6 +78,54 @@ Před upgradem ověřte, že je vaše aplikace splňuje.
 
 ---
 
+## Výběr a klávesová gesta
+
+Z výběru v tabulce se stala plnohodnotná sada gest, ne jen sloupec zaškrtávátek
+(viz [Výběr řádků](table/selection.md)). Při upgradu zkontrolujte čtyři věci.
+
+**1. Každá selectable tabulka je nově grid — viditelná změna, která na vaší
+straně nevyžaduje žádnou úpravu kódu.** Grid sémantika dřív šla jen s akcemi nad
+záznamem; nově ji zapíná i `selectable()` a `bulkActions()`. Řádky takové
+tabulky jdou zaostřit, klik řádek označí jako aktivní a šipky, `Space`,
+`Shift`+šipky a `mod`+`A` ovládají výběr. Klik i nadále zaškrtávátko nezaškrtne.
+Vypnout lze pro konkrétní tabulku:
+
+```php
+->recordActionKeyboard(false)
+```
+
+**2. `->onKey()` na navigační klávese nově vyhodí výjimku.** Dřív se tiše
+zahodila, takže akce prostě nikdy nevystřelila. Pokud takovou vazbu máte, byla
+to už dřív mrtvá větev — přemapujte ji na volnou klávesu:
+
+```text
+Enter  Space  ArrowUp  ArrowDown  Home  End  PageUp  PageDown  ContextMenu  F10  ?
+```
+
+`Backspace` zůstává k dispozici a nově funguje i jako alias klávesy `Delete`.
+
+**3. Rozsahová gesta už neopouštějí režim „vše odpovídající".** Když je vybráno
+„vše, co odpovídá filtru", je uložený seznam seznamem *výjimek* — takže rozsah
+přes `Shift`+šipku ho nově **odznačí**, místo aby celý výběr zúžil na jednu
+stránku. Pokud výběr čtete přímo, počítejte s tím, že `getSelectedRecordKeys()`
+v tomto režimu záměrně vrací `[]`; použijte `selectedRecordsQuery()` nebo
+`eachSelectedRecord()`.
+
+**4. Přepublikujte view tabulky, pokud jste ho přepsali.** Gesta potřebují
+markup, který zkompilovaný JavaScript hledá, a publikovaná kopie
+`resources/views/vendor/wire-table/tables/index.blade.php` ho mít nebude. View
+nese kontraktní značku, takže zastaralá kopie spadne hlasitě v konzoli prohlížeče
+místo toho, aby tiše vybírala špatné řádky:
+
+```bash
+php artisan vendor:publish --tag=wire-table::views --force
+```
+
+Své úpravy pak naneste znovu na nový soubor. Pokud jste view přepsali jen kvůli
+vzhledu, bývá [Theming](theming.md) menší cesta.
+
+---
+
 ## Hledání breaking changes
 
 `CHANGELOG.md` je zdroj pravdy. Breaking changes jsou vyznačeny pod nadpisem
