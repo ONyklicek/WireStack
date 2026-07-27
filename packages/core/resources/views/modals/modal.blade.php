@@ -21,7 +21,7 @@
         $openEvent = null;
     }
 @endphp
-<template x-teleport="body" wire:key="wire-modal-modal">
+<template x-teleport="body" wire:key="wire-modal-modal{{ $id ? '-'.$id : '' }}">
 <div
     @if($hasModelBinding)
     x-data="{ show: @entangle($modelBinding) }"

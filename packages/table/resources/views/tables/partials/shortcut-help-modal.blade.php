@@ -13,6 +13,9 @@
         width: 'lg',
         icon: 'outline:command-line',
         openOn: $shortcutHelpEvent,
+        {{-- The id also keys the teleport: a form action renders the same Modal
+             shell in this very component, and Livewire morphs by wire:key. --}}
+        id: $shortcutHelpEvent,
         bodyView: 'wire-table::tables.partials.shortcut-help',
         bodyData: ['sections' => $shortcutLegend->sections()],
     ) }}

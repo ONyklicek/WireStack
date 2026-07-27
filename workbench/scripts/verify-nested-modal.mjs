@@ -108,9 +108,20 @@ try {
   const suspendedShell = await eval_(`$qa('[aria-hidden="true"][inert]').length > 0 && $qa('[aria-hidden="true"][inert] .opacity-70').length > 0`);
   check('a dimmed, inert suspended parent shell is rendered behind', suspendedShell);
 
-  // Exactly one full scrim is painted — stacking parents must not compound the backdrop.
-  const scrimCount = await eval_(`$qa('.bg-gray-500\\\\/75, [class*="bg-gray-500/75"]').length`);
-  check('only one backdrop scrim is painted (no cumulative darkening)', scrimCount === 1, `scrims=${scrimCount}`);
+  // Exactly one full scrim is PAINTED — stacking parents must not compound the
+  // backdrop. Counted by what the viewer sees, not by what sits in the DOM: a
+  // closed modal on the same page (the table's `?` help teleports one into the
+  // body too) keeps its backdrop in the document with display:none.
+  const scrims = JSON.parse(await eval_(`(() => {
+    const all = $qa('.bg-gray-500\\\\/75, [class*="bg-gray-500/75"]');
+    const painted = all.filter(el => {
+      const s = getComputedStyle(el);
+      return s.display !== 'none' && s.visibility !== 'hidden' && parseFloat(s.opacity) > 0;
+    });
+    return JSON.stringify({ painted: painted.length, inDom: all.length });
+  })()`));
+  check('only one backdrop scrim is painted (no cumulative darkening)',
+    scrims.painted === 1, `painted=${scrims.painted} of ${scrims.inDom} in the DOM`);
 
   // ── 4. Escape pops only the top modal → back to the parent ─────────────
   await eval_(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);

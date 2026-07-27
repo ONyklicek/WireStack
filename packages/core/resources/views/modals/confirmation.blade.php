@@ -23,7 +23,7 @@
         $openEvent = null;
     }
 @endphp
-<template x-teleport="body" wire:key="wire-modal-confirmation">
+<template x-teleport="body" wire:key="wire-modal-confirmation{{ $id ? '-'.$id : '' }}">
 <div
     @if($hasModelBinding)
     x-data="{ show: @entangle($modelBinding) }"

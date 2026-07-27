@@ -7,6 +7,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
+use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Table;
@@ -46,6 +48,12 @@ class ShortcutHelpComponent extends Component
         match ($this->mode) {
             'selectable' => $table->selectable(),
             'opted-out' => $table->selectable()->recordActionKeyboard(false),
+            'with-form-action' => $table->selectable()->actions([
+                Action::make('review')
+                    ->label('Review')
+                    ->form([TextInput::make('note')])
+                    ->action(fn () => null),
+            ]),
             default => $table,
         };
 
@@ -109,6 +117,22 @@ it('drops the help together with the keyboard when the table opts out', function
 
     expect($html)->not->toContain('data-testid="shortcut-help"')
         ->not->toContain('wire-table-shortcut-help-');
+});
+
+it('does not collide with an open form action modal — every teleport key stays unique', function () {
+    // Both the help and a form action render the same Modal shell inside one
+    // Livewire component. Livewire morphs by wire:key, so two templates sharing
+    // one key can have their contents swapped into each other.
+    $html = Livewire::test(ShortcutHelpComponent::class, ['mode' => 'with-form-action'])
+        ->call('openActionModal', '1', 'review')
+        ->html();
+
+    expect(substr_count($html, 'data-testid="shortcut-help"'))->toBe(1)
+        ->and($html)->toContain('Review');
+
+    preg_match_all('/wire:key="(wire-modal-[^"]*)"/', $html, $matches);
+
+    expect($matches[1])->toBe(array_unique($matches[1]));
 });
 
 it('hands the help event to the keyboard controller config', function () {
