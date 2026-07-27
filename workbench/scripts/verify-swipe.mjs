@@ -31,7 +31,10 @@ try {
   await eval_(`document.querySelector('button[aria-haspopup="menu"]')?.click()`);
   await sleep(700);
 
-  const opened = await eval_(`!!document.querySelector('[role="menu"]') && getComputedStyle(document.querySelector('[role="menu"]')).display !== 'none'`);
+  // The VISIBLE menu: every row renders one, so querySelector returns the first
+  // in the DOM — another row's, still hidden — and this read "not opened" even
+  // though the sheet was up.
+  const opened = await eval_(`[...document.querySelectorAll('[role="menu"]')].some((m) => getComputedStyle(m).display !== 'none')`);
 
   // Synthesize a downward drag on the grabber: touchstart @y=760, move to 760+120, end.
   const closed = await eval_(`(async () => {

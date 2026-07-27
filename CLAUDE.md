@@ -167,6 +167,12 @@ vendor/bin/testbench serve --host=127.0.0.1 --port=8085
 npm run dev
 npm run build
 
+# Browser gate. The CDP drivers in workbench/scripts are the only check over
+# Alpine/Livewire behaviour — Pest sees the markup, not what the browser does
+# with it. Starts its own preview server, or reuses one already running.
+npm run verify:drivers                # all of them
+npm run verify:drivers -- selection   # only those matching a name
+
 php docs-site/build.php
 npm run docs:changed -- --dry-run
 npm run docs:refresh

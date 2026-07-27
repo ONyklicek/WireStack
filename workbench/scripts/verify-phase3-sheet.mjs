@@ -55,7 +55,12 @@ try {
     await eval_(`(document.querySelector('button[aria-haspopup="menu"]') || {}).click?.()`);
     await sleep(700);
     return JSON.parse(await eval_(`(() => {
-      const panel = document.querySelector('[role="menu"]');
+      // The VISIBLE one. Every row renders its own menu, so querySelector picks
+      // the first in the DOM — which is some other row's, still hidden, and
+      // measures 0x0. That is what made this driver report a full-width sheet
+      // as left=0 right=0.
+      const panel = [...document.querySelectorAll('[role="menu"]')]
+        .find((el) => getComputedStyle(el).display !== 'none');
       if (!panel) return JSON.stringify({ open: false });
       const cs = getComputedStyle(panel);
       const r = panel.getBoundingClientRect();
