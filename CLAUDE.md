@@ -80,6 +80,9 @@ Before changing shared behavior, ask:
   `architecture/table.md`
 - Sortable behavior and table extension points:
   `architecture/sortable.md`
+- Row interaction — keyboard grid navigation, ranges, the drag sweep, the row
+  context menu, `?` help, the fill handle (all opt-in through `Table::gestures()`):
+  `architecture/table.md` § Gesture layer, then `docs/table/gestures.md`
 - Anything spanning package boundaries:
   `architecture/integrations.md`
 - Shared design-system ownership, canonical UI semantics, color/size/icon surface work:

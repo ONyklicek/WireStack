@@ -261,6 +261,15 @@ composer test:table
 Use for sorting, pagination, search, row actions, selection, modals, grouping,
 sub-rows, polling, summaries, and Livewire state behavior.
 
+Gesture-layer rule (keyboard nav, ranges, drag sweep, context menu, `?` help,
+fill handle): never add a local flag for one. `Support\TableGestures` +
+`Concerns\HasGestures` own the decision, the layer is **opt-in** (keyboard and
+drag sweep are off until a table calls `->gestures()`), and any fixture, preview
+or test that asserts grid semantics has to ask for them first. A new capability
+is a setter plus an `allows*()` reader there, an effective `uses*()` reader that
+folds in the prerequisite, and a line in `getGestureConfig()` if the client
+needs it.
+
 Read first:
 
 - `packages/table/src/Concerns/WithTable.php`
