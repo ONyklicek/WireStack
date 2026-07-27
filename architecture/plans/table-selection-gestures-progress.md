@@ -2,7 +2,7 @@
 title: Rollout výběrových gest — stav provedení
 date: 2026-07-27
 plan: architecture/plans/table-selection-gestures-rollout.md
-status: Fáze I–VI hotové (kroky 0–25), pokračuje se krokem 26 (Fáze VII)
+status: Kroky 0–26 hotové, pokračuje se krokem 27 (Fáze VII)
 ---
 
 # Stav provedení rolloutu
@@ -40,6 +40,8 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
 | 23 | `5efaab0` + `4aad86c` | `openOn:` ve 3 shellech + Htmlable objektech + View komponentách; preview `core-open-on`; `verify-modal-open-on.mjs` 14/14; hardening proti injekci do jména atributu |
 | 24 | `fd368fa` | `ShortcutLabelFormatter` + `ShortcutHint` (core Foundation) + `TableShortcutLegend` (table Support) + `Table::shortcutLegend()`; i18n EN+CS |
 | 25 | `c7f8f2a` | `?` otevírá nápovědu (`shortcut-help` + `shortcut-help-modal` partial, `kb.help` v controlleru); driver 62/62 |
+| 25b | `b217ca8` + `2c05921` | teleport `wire:key` z `$id` (dva Modal shelly v jedné komponentě); + předexistující díra ve forms select-option modalech |
+| 26 | `a20e61e` | ARIA grid (`aria-rowcount`/`aria-rowindex` přes celou sadu, `aria-multiselectable`, bindnuté `aria-selected`) + `aria-live` region; driver 70/70 |
 
 ## Rozhodnutí učiněná při provádění (nad rámec plánu)
 
@@ -83,6 +85,16 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
   podle `wire:key` → záměna obsahu. Klíč teď bere `$id`, když je zadané
   (bez `$id` beze změny); nápověda posílá jako `id` jméno svého eventu.
 
+- **Krok 26:** `aria-rowindex` je pozice v CELÉ sadě, ne na stránce → nutné
+  vyzvednout `$from`/`$to`/`$total` z patičky do preambule (patička se rendruje
+  až po těle) a `$headerRowCount` musí započítat řádek column filtrů.
+  `aria-selected` MUSÍ být binding (`:aria-selected`) — statická hodnota se
+  morphem vrátí na serverovou pravdu. Live region: v DOM od prvního renderu
+  a **prázdný** (region oznamuje jen ZMĚNY obsahu; naplněný při bootu neřekne
+  nic a při bootu s předvybranými řádky by četl výběr, který uživatel neudělal)
+  → `announceReady` se zapíná až prvním `$watch('selected'/'mode')`. Hlášky
+  chodí hotové z PHP (překlad je serverová věc), čísla se dosazují v JS.
+
 ## Objevené gotchas (platí i pro další kroky)
 
 - Blade `x-data` atribut: dvojité uvozovky v JS komentáři ukousnou atribut
@@ -103,17 +115,16 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
 
 ## Stav sítě
 
-- `verify-selection-gestures.mjs` — **62/62** (C1–C13 + myš, klávesnice, sweep,
-  selection-only, reduced-motion, sortable koexistence, `?` nápověda)
+- `verify-selection-gestures.mjs` — **70/70** (C1–C13 + myš, klávesnice, sweep,
+  selection-only, reduced-motion, sortable koexistence, `?` nápověda, ARIA + live region)
 - `verify-record-active-row.mjs` 18/18, `verify-record-actions.mjs` 14/14,
   `verify-record-actions-dual.mjs` 5/5, `verify-mobile-selection.mjs` 13/13,
   `verify-fill-handle.mjs` 26/26, `verify-modal-open-on.mjs` 14/14
-- PHP: table 1656, core 1751, forms 907, sortable 39, Integration 39;
+- PHP: table 1665, core 1751, forms 908, sortable 39, Integration 39;
   analyse + lint OK; coverage diff 100 %, floors OK
 
 ## Zbývá (Fáze VII + docs)
 
-- **26** ARIA + `aria-live` (+ refaktor `$from`/`$to`/`$total`, `$headerRowCount`)
 - **27** nebarevný marker, klikatelná plocha buňky, `INTERACTIVE` (týž commit!)
 - **28** docs EN+CZ, CHANGELOG, upgrade, i18n, boost guidelines, screenshoty
 - Známý předexistující bug: `reorderBodyColumns()` je poziční bez offsetu
