@@ -134,6 +134,28 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
   nechává (`display:none`). `verify-nested-modal.mjs` na tom spadl, jakmile na
   stránku přibyla nápověda (`painted=1 of 2`).
 
+## Gesture lab — ruční i automatické ověření
+
+`/previews/gesture-lab` (+ `-paged`) je jediná tabulka se **vším** zapnutým:
+výběrová gesta, record actions (click/dblclick/onKey/contextmenu), přeřazování
+sloupců, filtr sloupce, `?` nápověda, mobilní karty. Vedle tabulky je živý panel
+(`data-testid="lab-*"`) se stavem, který gesta řídí — mode, výběr, kotva, base,
+aktivní řádek, poslední hlášení live regionu a pořadí sloupců.
+
+Jednotlivé drivery izolují jednu vlastnost; `verify-gesture-lab.mjs` (23/23) jde
+naopak po **švech mezi nimi**: sweep → klávesnicový rozsah nad jedním výběrem,
+akce nad označeným řádkem, přeřazení sloupce s aktivním výběrem (checkbox se
+nesmí hnout, výběr přežít), nápověda vypisující akce této tabulky, `all` mód
+a modifikátorové kliky. Driver na konci volá `resetColumnOrder()` — pořadí
+sloupců se persistuje per user, takže bez úklidu by druhý běh startoval z cizího
+stavu.
+
+**Gotchas z labu:** panel nesmí číst live region/hlavičku getterem (plain DOM
+není reaktivní závislost → getter se přepočítá jen náhodou; nutný
+`MutationObserver`). Lab má filtrovatelný sloupec, takže má **dva** hlavičkové
+řádky → `aria-rowcount` je 42, tělo začíná na indexu 3. Nápověda uvádí kontextové
+menu jako jedno gesto, ne jednotlivé akce v něm.
+
 ## Stav sítě
 
 - `verify-selection-gestures.mjs` — **77/77** (C1–C13 + myš, klávesnice, sweep,
@@ -141,6 +163,8 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
   live region, kontrast markeru, velikost cíle)
 - `verify-nested-modal.mjs` 8/8, `verify-confirmation-object.mjs` 8/8,
   `verify-modal-layering.mjs` 13/13 (modalové regrese po kroku 23/25)
+- `verify-gesture-lab.mjs` — **23/23** (integrace napříč vlastnostmi),
+  `verify-column-reorder.mjs` 12/12
 - `verify-record-active-row.mjs` 18/18, `verify-record-actions.mjs` 14/14,
   `verify-record-actions-dual.mjs` 5/5, `verify-mobile-selection.mjs` 13/13,
   `verify-fill-handle.mjs` 26/26, `verify-modal-open-on.mjs` 14/14

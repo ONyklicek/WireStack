@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 use Workbench\App\Livewire\Previews\CorePreview;
 use Workbench\App\Livewire\Previews\FieldPreview;
 use Workbench\App\Livewire\Previews\FormPreview;
+use Workbench\App\Livewire\Previews\GestureLabPreview;
 use Workbench\App\Livewire\Previews\InfolistPreview;
 use Workbench\App\Livewire\Previews\LayoutPreview;
 use Workbench\App\Livewire\Previews\ModalStackingPreview;
@@ -328,6 +329,8 @@ foreach ([
     'sortable-overview' => ['title' => 'Wire Sortable', 'subtitle' => 'Full reorderable task table preview.', 'component' => SortablePreview::class, 'variant' => 'overview'],
     'sortable-detail' => ['title' => 'Wire Sortable Detail', 'subtitle' => 'Closer reorder-surface preview.', 'component' => SortablePreview::class, 'variant' => 'detail'],
     'sortable-columns' => ['title' => 'Wire Sortable Columns', 'subtitle' => 'Drag a header to reorder columns, on a table that also has a selection column and row handles.', 'component' => SortablePreview::class, 'variant' => 'columns'],
+    'gesture-lab' => ['title' => 'Gesture Lab', 'subtitle' => 'Every selection gesture, record action, the shortcut help and column reordering on one table, with a live state read-out.', 'component' => GestureLabPreview::class, 'variant' => 'lab'],
+    'gesture-lab-paged' => ['title' => 'Gesture Lab (paged)', 'subtitle' => 'The same lab over 20 rows a page — what "select all matching" needs to mean anything.', 'component' => GestureLabPreview::class, 'variant' => 'paged'],
     'actions-modal-stacking' => ['title' => 'Wire Actions · Nested Modal Stacking', 'subtitle' => 'Six live configurations of the nested-modal frame stack — create-and-select ($setParent), deep $setFrame, inline registerActions, slide-over, and a stacked wizard.', 'component' => ModalStackingPreview::class, 'variant' => 'gallery'],
     'core-overview' => ['title' => 'Wire Core', 'subtitle' => 'Stats, actions, and shared primitives.', 'component' => CorePreview::class, 'variant' => 'overview'],
     'core-modal' => ['title' => 'Wire Core Modal', 'subtitle' => 'Real modal surface from the core runtime.', 'component' => CorePreview::class, 'variant' => 'modal'],
