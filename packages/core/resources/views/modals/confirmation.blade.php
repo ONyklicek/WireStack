@@ -9,10 +9,23 @@
     // isset()/?? keep $attributes untouched when it is absent (object path).
     $modelBinding = $wireModel ?? (isset($attributes) ? $attributes->wire('model') : null);
     $confirmClick = ($wireClick ?? (isset($attributes) ? $attributes->wire('click')->value() : null)) ?: null;
+    // The consumer-path wire() macro returns a WireDirective even when the
+    // attribute is absent, so "has a binding" must go through value().
+    $hasModelBinding = $modelBinding instanceof \Livewire\WireDirective
+        ? ! in_array($modelBinding->value(), [null, false, ''], true)
+        : filled($modelBinding);
+    // Without a wire:model binding, `show` is plain Alpine state and an
+    // optional $openOn window event opens the dialog from JS.
+    $openEvent = ($openOn ?? null) ?: null;
 @endphp
 <template x-teleport="body" wire:key="wire-modal-confirmation">
 <div
+    @if($hasModelBinding)
     x-data="{ show: @entangle($modelBinding) }"
+    @else
+    x-data="{ show: false }"
+    @if($openEvent) x-on:{{ $openEvent }}.window="show = true" @endif
+    @endif
     x-show="show"
     x-cloak
     style="display: none;@if($zIndex !== null) z-index: {{ $zIndex }};@endif"

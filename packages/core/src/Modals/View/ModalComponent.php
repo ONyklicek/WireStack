@@ -47,6 +47,7 @@ class ModalComponent extends Component
         public ?string $closeAction = null,
         public ?string $breakpoint = null,
         public ?int $zIndex = null,
+        public ?string $openOn = null,
     ) {}
 
     public function style(): ModalStyle

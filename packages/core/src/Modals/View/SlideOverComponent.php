@@ -45,6 +45,7 @@ class SlideOverComponent extends Component
         public bool $bottomSheetOnMobile = false,
         public ?string $breakpoint = null,
         public ?int $zIndex = null,
+        public ?string $openOn = null,
     ) {}
 
     public function style(): SlideOverStyle

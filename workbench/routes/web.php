@@ -332,6 +332,7 @@ foreach ([
     'core-modal' => ['title' => 'Wire Core Modal', 'subtitle' => 'Real modal surface from the core runtime.', 'component' => CorePreview::class, 'variant' => 'modal'],
     'core-dropdown' => ['title' => 'Wire Core Dropdown', 'subtitle' => 'Generic dropdown that becomes a bottom sheet on mobile.', 'component' => CorePreview::class, 'variant' => 'dropdown'],
     'core-toasts' => ['title' => 'Wire Core Toasts', 'subtitle' => 'Toast countdown bar, actions, collapsible stack, max-visible cap, and a11y support.', 'component' => CorePreview::class, 'variant' => 'toasts'],
+    'core-open-on' => ['title' => 'Wire Core openOn Modals', 'subtitle' => 'Modal, confirmation, and slide-over opened by a window event — no wire:model binding.', 'component' => CorePreview::class, 'variant' => 'open-on'],
     'widgets-overview' => ['title' => 'Wire Core Widgets', 'subtitle' => 'Stats overview and a chart widget composed into a dashboard grid.', 'component' => WidgetPreview::class, 'variant' => 'overview'],
     'widgets-chart' => ['title' => 'Wire Core Chart Widget', 'subtitle' => 'A single interactive Chart.js widget with heading and filter.', 'component' => WidgetPreview::class, 'variant' => 'chart'],
     'widgets-bar-chart' => ['title' => 'Wire Core Bar Chart Widget', 'subtitle' => 'Pure-CSS bar chart with finance, system, and horizontal progress modes.', 'component' => WidgetPreview::class, 'variant' => 'bar-chart'],

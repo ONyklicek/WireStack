@@ -21,6 +21,12 @@ use NyonCode\WireCore\Modals\Support\ModalStyle;
  * `footerView` / `footerData`) — the latter lets a call site keep its existing
  * body/footer partial and pass the scope it needs.
  *
+ * With no `wireModel` binding, an optional `openOn` window event opens the
+ * modal purely client-side (`show` is plain Alpine state) — the seam for
+ * JS-triggered surfaces such as the keyboard-shortcut help. `openOn` is only
+ * honoured when `wireModel` is null; a Livewire-entangled modal keeps a single
+ * owner of `show`.
+ *
  * Lives in `Modals\Html\` — the Htmlable *render* objects — distinct from the
  * `Modals\Modal` *config* object (a `ModalContract`) and the
  * `Modals\View\ModalComponent` Blade component.
@@ -49,6 +55,7 @@ final class Modal implements Htmlable
         public ?string $breakpoint = null,
         public ?int $zIndex = null,
         public ?string $wireModel = null,
+        public ?string $openOn = null,
         public string|Htmlable|null $body = null,
         public ?string $bodyView = null,
         public array $bodyData = [],
@@ -80,6 +87,7 @@ final class Modal implements Htmlable
             'closeAction' => $this->closeAction,
             'zIndex' => $this->zIndex,
             'wireModel' => $this->wireModel,
+            'openOn' => $this->openOn,
             'body' => $this->body instanceof Htmlable ? $this->body->toHtml() : $this->body,
             'bodyView' => $this->bodyView,
             'bodyData' => $this->bodyData,

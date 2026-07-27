@@ -2,7 +2,7 @@
 title: Rollout výběrových gest — stav provedení
 date: 2026-07-27
 plan: architecture/plans/table-selection-gestures-rollout.md
-status: Fáze I–V hotové (kroky 0–22), pokračuje se krokem 23 (Fáze VI)
+status: Fáze I–V hotové + krok 23 (Fáze VI), pokračuje se krokem 24
 ---
 
 # Stav provedení rolloutu
@@ -37,6 +37,7 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
 | 20 | `eb51ae4` | `data-select-cell` (td, karta, oba poziční spacery) |
 | 21 | `a71ef61` | `createAutoScroller` + `bodyRows`/`rowAtY` → `core/resources/js/support/`; core dist rebuild |
 | 22 | `351aeff` | sweep v `record-actions.js` (arm→engage, capture click-kill, jen myš, additive, morph guard, reduced-motion) |
+| 23 | _(tento commit)_ | `openOn:` ve 3 shellech + Htmlable objektech + View komponentách; preview `core-open-on`; `verify-modal-open-on.mjs` 14/14 |
 
 ## Rozhodnutí učiněná při provádění (nad rámec plánu)
 
@@ -55,6 +56,10 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
 - **Trailing click po sweepu:** flag musí přežít déle než `setTimeout(0)` —
   click může přijít v pozdějším tasku; backstop je 150 ms, primárně one-shot
   clear v capture handleru.
+- **Krok 23:** `openOn` se ctí JEN při `wireModel === null` (jediný vlastník
+  `show`); detekce „bez bindingu“ na component path musí jít přes
+  `WireDirective::value()` — chybějící `wire:model` vrací directive s value
+  `false` a `filled(false)` je `true`.
 
 ## Objevené gotchas (platí i pro další kroky)
 
@@ -76,13 +81,12 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
   selection-only, reduced-motion, sortable koexistence)
 - `verify-record-active-row.mjs` 18/18, `verify-record-actions.mjs` 14/14,
   `verify-record-actions-dual.mjs` 5/5, `verify-mobile-selection.mjs` 13/13,
-  `verify-fill-handle.mjs` 26/26
-- PHP: table 1639, core 1704, sortable 39, Integration 39; analyse + lint OK;
-  coverage diff 100 %, floors OK
+  `verify-fill-handle.mjs` 26/26, `verify-modal-open-on.mjs` 14/14
+- PHP: table 1639, core 1708, forms 907, sortable 39, Integration 39;
+  analyse + lint OK; coverage diff 100 %, floors OK
 
 ## Zbývá (Fáze VI–VII + docs)
 
-- **23** core seam `openOn:` v modal shellech (test:core + test:forms!)
 - **24** `ShortcutLabelFormatter` + `ShortcutHint` (core) + `TableShortcutLegend`
 - **25** nápověda `?` (event.key, guard fokusu na řádku)
 - **26** ARIA + `aria-live` (+ refaktor `$from`/`$to`/`$total`, `$headerRowCount`)

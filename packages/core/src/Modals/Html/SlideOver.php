@@ -17,6 +17,10 @@ use NyonCode\WireCore\Modals\Support\SlideOverStyle;
  * `<x-wire-modals::slide-over>` tag stays available and renders the same shell +
  * {@see SlideOverStyle}.
  *
+ * With no `wireModel` binding, an optional `openOn` window event opens the
+ * panel purely client-side (`show` is plain Alpine state). `openOn` is only
+ * honoured when `wireModel` is null.
+ *
  * Body / footer accept a pre-rendered `string`/`Htmlable` or a partial + data to
  * `@include`. Lives in `Modals\Html\` — the Htmlable *render* objects — distinct
  * from the `Modals\SlideOver` *config* object and the
@@ -44,6 +48,7 @@ final class SlideOver implements Htmlable
         public ?string $breakpoint = null,
         public ?int $zIndex = null,
         public ?string $wireModel = null,
+        public ?string $openOn = null,
         public string|Htmlable|null $body = null,
         public ?string $bodyView = null,
         public array $bodyData = [],
@@ -72,6 +77,7 @@ final class SlideOver implements Htmlable
             'closeAction' => $this->closeAction,
             'zIndex' => $this->zIndex,
             'wireModel' => $this->wireModel,
+            'openOn' => $this->openOn,
             'body' => $this->body instanceof Htmlable ? $this->body->toHtml() : $this->body,
             'bodyView' => $this->bodyView,
             'bodyData' => $this->bodyData,

@@ -44,6 +44,31 @@ it('renders close action handlers for modal components', function () {
         ->assertSeeHtml('$wire.closePanel()');
 });
 
+// ─── Event-opened shells (open-on) ────────────────────────────────
+
+class ModalOpenOnTagComponent extends Component
+{
+    public function render(): string
+    {
+        return <<<'BLADE'
+            <div>
+                <x-wire-modals::modal open-on="demo-tag-modal" heading="Help">Body</x-wire-modals::modal>
+                <x-wire-modals::confirmation open-on="demo-tag-confirm" heading="Sure?" is-informative />
+                <x-wire-modals::slide-over open-on="demo-tag-panel" heading="Details">Body</x-wire-modals::slide-over>
+            </div>
+        BLADE;
+    }
+}
+
+it('renders event-opened shells (open-on) without a wire:model binding', function () {
+    Livewire::test(ModalOpenOnTagComponent::class)
+        ->assertSeeHtml('x-on:demo-tag-modal.window="show = true"')
+        ->assertSeeHtml('x-on:demo-tag-confirm.window="show = true"')
+        ->assertSeeHtml('x-on:demo-tag-panel.window="show = true"')
+        ->assertSeeHtml('x-data="{ show: false }"')
+        ->assertDontSeeHtml('entangle');
+});
+
 // ─── Modal stacking z-index ───────────────────────────────────────
 
 class ModalZIndexComponent extends Component

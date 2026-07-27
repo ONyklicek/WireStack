@@ -4,6 +4,9 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Modal shells can now be opened from JavaScript — `openOn:` on every canonical shell.** The modal, confirmation, and slide-over shells (both the Htmlable objects and the `<x-wire-modals::*>` tags via `open-on`) accept an optional window-event name: with no `wire:model` binding, `show` becomes plain Alpine state and dispatching the named event (`window.dispatchEvent(new CustomEvent('my-event'))`) opens the surface purely client-side — no Livewire roundtrip. Escape, the close/cancel buttons, and click-away still close it, and a Livewire update while it is open leaves it open and morphs its teleported body. `openOn` is ignored when `wire:model` is present, so an entangled modal keeps a single owner of `show`. This is the core seam for the upcoming keyboard-shortcut help.
+
 ### Fixed
 - **One click on the header checkbox in "select all matching" mode inverted the selection.** In `all` mode `selection.records` holds the *exclusions*, but the client `toggleAll()` ran its keys-mode arithmetic over that list anyway: it forced `mode` back to `keys` and kept exactly the rows the user had unticked — so "everything except Record 01" became "only Record 01" (or nothing), and bulk actions read that inverted set. The header checkbox now mirrors the server: a mixed page selects the page as an explicit set (`selectAllRecords`), a fully selected page clears the whole selection (`deselectPageRecords`), and exclusions never leak into keys mode.
 
