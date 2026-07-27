@@ -245,6 +245,119 @@ Switch it off when a card is meant to stay clean:
 ->recordActionButtonsOnMobile(false)
 ```
 
+## API reference
+
+Everything the layer exposes, in one place.
+
+### On the table
+
+| Call | What it does |
+|------|--------------|
+| `->gestures()` | Allow every capability. The keyboard is left at "the table decides" |
+| `->gestures(false)` | Allow nothing at all |
+| `->gestures(fn (TableGestures $g) => …)` | Configure this table's capabilities in place |
+| `->gestures(TableGestures $set)` | Adopt a prepared set |
+| `->recordActionButtonsOnMobile(bool)` | Whether behaviour-only record actions render as buttons on a stacked card (default `true`) |
+
+Readers, useful in a custom view or a test:
+
+| Call | Answers |
+|------|---------|
+| `getGestures(): TableGestures` | The raw permissions, before any prerequisite |
+| `usesGridSemantics(): bool` | Is this an ARIA grid? The single owner of that decision |
+| `keyboardNavEnabled(): bool` | Alias of the above, read from the view |
+| `usesRangeSelection(): bool` | Do `Shift`/`mod` clicks and `Shift`+arrows work a range? |
+| `usesDragSelect(): bool` | Does a drag down the checkbox column sweep? |
+| `usesShortcutHelp(): bool` | Does `?` open the legend? |
+| `usesActiveRowMarker(): bool` | Do rows carry the active-row marker? |
+| `mountsRecordActionController(): bool` | Is the delegated Alpine controller rendered at all? |
+| `getGestureConfig(): array` | `['sweep' => bool, 'ranges' => bool]` — what the client controller consumes |
+| `getTableRole(): ?string` | `'grid'` or `null` |
+| `hasRowContextMenu(): bool` | Is there a right-click menu (permission included)? |
+| `isFillHandleEnabled(): bool` | Is the fill handle offered (permission included)? |
+
+### On `TableGestures`
+
+```php
+use NyonCode\WireTable\Support\TableGestures;
+```
+
+| Call | Meaning |
+|------|---------|
+| `TableGestures::defaults()` | The shipped default: keyboard and drag sweep off, the rest allowed |
+| `TableGestures::all()` | Everything allowed; keyboard left at `null` |
+| `TableGestures::none()` | Nothing allowed |
+| `TableGestures::fromConfig($value)` | Build from a config value (`null` / `bool` / map) |
+| `->keyboard(?bool)`, `->rangeSelection(bool)`, `->dragSelect(bool)`, `->contextMenu(bool)`, `->shortcutHelp(bool)`, `->fillHandle(bool)` | The setters; each returns `$this` |
+| `->allowsKeyboard(): ?bool` and `->allows*(): bool` | The permission, *before* the table's own prerequisites |
+| `->toArray(): array` | All six as data |
+
+A permission and an outcome are different questions: `allowsDragSelect()` says
+the table is allowed to sweep, `usesDragSelect()` says it actually does (which
+also needs `selectable()`).
+
+## Recipes
+
+**A public listing.** Nothing to do:
+
+```php
+$table->model(Post::class)->columns([...]);
+```
+
+**A back-office grid.** One call, or `'gestures' => true` in config for the whole
+project:
+
+```php
+$table->gestures()->selectable()->bulkActions([DeleteBulkAction::make()]);
+```
+
+**Click a row to open it, on an otherwise quiet table.** A declared record action
+is outside the layer, so this needs no `gestures()` at all:
+
+```php
+$table->recordAction(RecordAction::make(Action::make('view'))->onClick());
+```
+
+**Keyboard yes, sweeping no.** For long lists where an accidental drag would
+select a hundred rows:
+
+```php
+$table->gestures(fn (TableGestures $g) => $g->keyboard())->selectable();
+```
+
+**A house style across many tables.** Build the set once and hand it over:
+
+```php
+// app/Tables/Gestures.php
+public static function backOffice(): TableGestures
+{
+    return TableGestures::all()->dragSelect(false);
+}
+
+// in each table
+$table->gestures(Gestures::backOffice());
+```
+
+**A table inside a page with its own keyboard handling.** Keep the mouse half:
+
+```php
+$table->gestures(fn (TableGestures $g) => $g->dragSelect())->selectable();
+```
+
+## Troubleshooting
+
+| Symptom | Why | Fix |
+|---------|-----|-----|
+| Arrow keys do nothing, rows are not focusable | The keyboard layer is opt-in | `->gestures()` |
+| `->gestures()` is there and it still is not a grid | Nothing for the arrows to drive — no record actions, no selection | Add `->selectable()`, or force it with `->gestures(fn ($g) => $g->keyboard(true))` |
+| `?` opens nothing | It reads the keyboard layer, and an empty legend renders no modal at all | Turn the keyboard on; check `shortcutLegend()->isEmpty()` |
+| A drag down the checkbox column selects nothing | `dragSelect` is off by default | `->gestures()`, or `->gestures(fn ($g) => $g->dragSelect())` |
+| `Shift`+click toggles one row instead of a range | `rangeSelection` was switched off | `->gestures(fn ($g) => $g->rangeSelection())` |
+| Right-click shows the browser menu | No action is bound to it, or `contextMenu` is off | Bind one with `->onContextMenu()`; check `hasRowContextMenu()` |
+| The fill handle does not appear | It needs `->fillHandle()` **and** the permission **and** a fillable editable column | Check `isFillHandleEnabled()` and `Column::fillable()` |
+| An `->onKey()` binding never fires | Keys are read by the keyboard layer | `->gestures()` |
+| A record action is unreachable on a phone | The fallback was switched off | `->recordActionButtonsOnMobile()` |
+
 ## Choosing
 
 | Table | Suggested |

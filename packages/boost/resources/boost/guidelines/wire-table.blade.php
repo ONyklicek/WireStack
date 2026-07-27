@@ -91,30 +91,51 @@ detaches all). Using one against an unsupported relationship type throws a clear
 ### Gesture layer
 
 The desktop behaviour — keyboard grid navigation, Shift/mod ranges, the drag sweep, the right-click row
-menu, the `?` help and the Excel fill handle — is one switchable layer, owned by `Support\TableGestures`
-and configured with `Table::gestures()`. Right for a back office, usually wrong for a public listing:
+menu, the `?` help and the Excel fill handle — is one layer, owned by `Support\TableGestures` and
+configured with `Table::gestures()`. **It is opt-in.** Keyboard navigation and the drag sweep are OFF for
+a table that never calls `gestures()`, because both change how the table answers a visitor who never meant
+to operate it (rows enter the tab order, an active row is marked, a press in the checkbox column starts
+selecting a block). Right for a back office, wrong for a public listing:
 
-    ->gestures(false)                                            // an ordinary web table
+    ->gestures()                                                 // the desktop-app table
+    ->gestures(false)                                            // not even the quiet capabilities
     ->gestures(fn (TableGestures $g) => $g
-        ->keyboard()                                             // arrows, Enter, shortcuts
-        ->dragSelect(false)                                      // but no mouse sweep
-        ->rangeSelection())                                      // Shift+click still ranges
+        ->keyboard()                                             // arrows, Enter, shortcuts …
+        ->dragSelect(false))                                     // … but still no mouse sweep
     ->gestures(TableGestures::none()->contextMenu())             // a prepared set, shared across tables
 
-Six capabilities, each its own setter and `allows*()` reader: **`keyboard`** (roving tabindex, arrows,
-Home/End, PageUp/PageDown, Enter / Shift+Enter, Space, every `keyboardShortcut()`/`onKey()`, and what makes
-the table an ARIA `grid`), **`rangeSelection`** (Shift/mod/mod+Shift click, Shift+arrow, Shift+Home/End),
-**`dragSelect`** (the checkbox-column sweep), **`contextMenu`** (`rowContextMenu()` and any
-`onContextMenu()`), **`shortcutHelp`** (`?`), **`fillHandle`**. The closure receives this table's gestures
-and configures them **in place** — its return value is ignored, so a fluent chain and a multi-line body
-both work.
+Six capabilities, each its own setter and `allows*()` reader, with the default a table gets without asking:
+
+| Capability | Default | Covers |
+|---|---|---|
+| `keyboard` | **off** | roving tabindex, arrows, Home/End, PageUp/PageDown, Enter / Shift+Enter, Space, every `keyboardShortcut()`/`onKey()` against the active row — and what makes the table an ARIA `grid` |
+| `rangeSelection` | on | Shift / mod / mod+Shift click, Shift+arrow, Shift+Home/End |
+| `dragSelect` | **off** | the checkbox-column sweep |
+| `contextMenu` | on | `rowContextMenu()` and any `onContextMenu()` binding |
+| `shortcutHelp` | on¹ | `?` |
+| `fillHandle` | on² | the Excel-style handle on editable cells |
+
+¹ reads the keyboard layer, so with the default it never opens. ² still needs `Table::fillHandle()`.
+
+The quiet four are allowed from the start because each already needs an invitation of its own —
+`selectable()`, actions bound to the context menu, `fillHandle()`, the keyboard layer. The closure receives
+this table's gestures and configures them **in place**; its return value is ignored, so a fluent chain and
+a multi-line body both work. `TableGestures::defaults()` / `all()` / `none()` are the three starting
+points: shipped default, everything, nothing.
+
+Readers, all on `Table` and all consulted rather than re-derived: `usesGridSemantics()` (the single owner
+of "is this an ARIA grid"), `keyboardNavEnabled()`, `usesRangeSelection()`, `usesDragSelect()`,
+`usesShortcutHelp()`, `usesActiveRowMarker()`, `mountsRecordActionController()`, `getGestureConfig()`
+(the `{sweep, ranges}` the client controller consumes), `getRecordActionKeyboardConfig()`, `getTableRole()`,
+`hasRowContextMenu()`, `isFillHandleEnabled()`, `getGestures()` (the raw permissions).
 
 **A capability is a permission, never a trigger.** Switching one on never conjures the thing it governs:
 a sweep still needs `selectable()`, ranges still need a selection to grow in, `fillHandle` still needs
 `Table::fillHandle()` plus editable columns, and `shortcutHelp` cannot outlive the keyboard layer that
-listens for the key. `keyboard` is the one **three-state** switch (`null` = the table decides — on for
-record actions or a selectable table; `true` = force on for a table that would not have qualified;
-`false` = off); the other five are plain booleans.
+listens for the key. `keyboard` is the one **three-state** switch (`false` = the shipped default; `null` = the table decides,
+which it takes for record actions or a selectable table — this is what `gestures()` sets, deliberately
+NOT `true`, since a table with neither has nothing for the arrows to do; `true` = force it on regardless);
+the other five are plain booleans.
 
 **What the layer does not govern: an explicitly declared record action.** `RecordAction::make('view')->onClick()`
 is a deliberate statement about that table, not an affordance the table turned on for itself, so it keeps
@@ -129,10 +150,13 @@ the `fillTableCells` endpoint **refuses**, and `shortcutLegend()` drops the rows
 with ranges off, Shift+arrow is not listed in the `?` help because it does not work. The legend is
 generated from what the table actually does, so it cannot drift from reality.
 
-The project-wide default is `config('wire-table.defaults.gestures')` — `true`/absent for everything,
-`false` for nothing, or a map (`['keyboard' => true, 'drag_select' => false]`) for a mixed default; keys
-match loosely (`drag_select` = `drag-select` = `dragSelect`), and an **unknown key throws**
-`TableConfigurationException` rather than quietly doing nothing. A per-table `gestures()` always wins.
+The project-wide default is `config('wire-table.defaults.gestures')` — `null`/absent keeps the shipped
+default above, `true` turns the whole layer on for **every** table (what a back-office project sets once),
+`false` allows nothing, and a map (`['keyboard' => true, 'drag_select' => false]`) mixes on top of the
+shipped default; keys match loosely (`drag_select` = `drag-select` = `dragSelect`), and an **unknown key
+throws** `TableConfigurationException` rather than quietly doing nothing. A per-table `gestures()` always
+wins. Consequence for fixtures and tests: anything asserting `role="grid"`, a roving tabindex, arrow
+navigation or the `?` help must call `->gestures()` first.
 
 The active-row marker appears only when something needs an anchor to grow from — grid semantics, range
 selection or the sweep (`usesActiveRowMarker()`). A table left with nothing but a declared click action
@@ -148,6 +172,12 @@ record actions appended after them, a `recordAction('edit')` that only *referenc
 left alone, and the fallback buttons count towards `->collapseActionsOnMobile()`. Turn it off with
 `->recordActionButtonsOnMobile(false)`.
 
+The card renders a **copy** with the keyboard shortcut stripped (`HasKeyboardShortcut::withoutKeyboardShortcut()`,
+new in wire-core). A rendered action button binds its `keyboardShortcut()` as a **window** listener
+(`x-on:keydown.{key}.window` in `wire-core::actions.button`) and the stacked cards are in the document at
+every width — so without this one `Delete` press ran an `onKey('Delete')` action once per card behind the
+desktop table. General rule: **never render the same shortcut-carrying action on two surfaces.**
+
 ### More
 
 - Summaries: per-column `->summarize(...)` with footer scope toggles; grand totals computed in SQL.
@@ -162,7 +192,6 @@ left alone, and the fallback buttons count towards `->collapseActionsOnMobile()`
 - **Selection gestures (mouse + keyboard), one shared Alpine component.** Every selection surface — the checkboxes, both select-all toggles, the bulk bar, the mobile cards, the keyboard — drives one `wireRecordSelection` component reached via `[data-selection-root]` (optimistic; no per-keystroke roundtrip). Mouse: the **whole selection cell** toggles (`[data-select-cell]`, not just the 16px box, and the cell is registered interactive so the click never reaches a record action), Shift+click ranges from the anchor, mod+click toggles one row anywhere on it, mod+Shift+click adds a block, and **dragging down the checkbox column sweeps** rows in (additive only, mouse only, engages on the first row-changing move so a plain click stays a click). Keyboard: Space toggles + anchors, Shift+↑/↓ ranges, Shift+Home/End and mod+Shift+↑/↓ range to the edge, Home/End/PageUp/PageDown navigate, mod+A selects the page. **A range writes `base ∪ range`, not the range alone** — the snapshot minus the contiguous block around the anchor, so rows selected elsewhere survive; a range gesture **never rewrites `mode`**, which means in "all matching" mode (where the stored list is the *exclusions*) a range **deselects** and mod+A stands down. The anchor is one-shot and invisible; with no anchor of its own the range grows from the far edge of the block the active row sits in. Drop single rows with Space or mod+click, not a range. Keys reach the grid only when a **row itself** has the focus. **The grid reserves the keys it navigates with** — `->onKey()` on Enter/Space/arrows/Home/End/PageUp/PageDown/ContextMenu/F10/`?` throws a `TableConfigurationException` at configuration time rather than dropping the binding silently (a `keyboardShortcut()` on the action itself is only skipped); `Backspace` is deliberately not reserved and acts as a JS-side alias of `Delete`. ARIA: `aria-rowcount`, `aria-multiselectable`, `aria-rowindex` counted through the **whole result set** (not the page), bound `aria-selected` per row, and a polite live region that is in the DOM from the first paint and empty until the first change. The active-row marker is a tint **plus** a leading stripe (`activeRowClass()` replaces both halves) — the tint alone is ~1.1:1, under the 3:1 non-text contrast floor. `Table::shortcutLegend()` returns the same gesture list as data (`ShortcutHint` value objects) for rendering elsewhere.
 - `Table::rowContextMenu([...actions])` is **deprecated** (removed in v2.0) — a thin alias that still feeds the same context menu. Prefer `recordAction(Action::make('edit')->onContextMenu())`.
 - **Mobile (`Table::stackedOnMobile()`).** Below the breakpoint each row becomes a card whose hierarchy is five derived slots — title (first column), metric (last right-aligned, e.g. `money()`), meta (badge columns), subtitle, and a label/value grid for the rest — overridable per column (`->mobileMetric()`, `->mobileMeta()`, …) or per table (`->mobileCard(fn (MobileCardConfig $c) => $c->title('number')->metric('total'))`). The header row is hidden, so its controls move into the card view: an always-visible select-all strip, a sort control, sub-row children with their subtotal, and the summary totals. `->collapseActionsOnMobile()` folds row actions into one dropdown. **Record actions fall back to buttons here**: every record trigger is a desktop one, so a behaviour-only record action renders as an ordinary button on the card (and only there) — one declaration, a gesture on the desktop and a button on a phone. It never doubles an action already in `->actions()`, one referenced by name, or one promoted with `->alsoInRowActions()`, and the fallback buttons count towards `collapseActionsOnMobile()`; the card's copy drops the action's `keyboardShortcut()` (`HasKeyboardShortcut::withoutKeyboardShortcut()`), because a rendered button binds its shortcut as a *window* listener and the cards are in the document at every width. Opt out with `Table::recordActionButtonsOnMobile(false)`.
-- **The desktop gesture layer is OPT-IN — `Table::gestures()`, the single owner.** Keyboard grid navigation and the drag sweep down the checkbox column are **off** until a table calls `gestures()`; the quiet capabilities (`Shift`/`mod`+click ranges, the right-click menu, the `?` help, the fill handle) are allowed from the start but each needs its own invitation anyway (`selectable()`, bound context actions, `fillHandle()`, the keyboard layer). `->gestures()` promotes a table to an application, `->gestures(fn (TableGestures $g) => $g->keyboard()->dragSelect(false))` mixes the six capabilities, `->gestures(false)` leaves nothing (no bindings, no marker, no delegated controller rendered). `config('wire-table.defaults.gestures')`: `null`/absent = shipped default, `true` = everything for every table, `false` = nothing, map = mix; an unknown capability throws. `NyonCode\WireTable\Support\TableGestures` owns the vocabulary (`defaults()`/`all()`/`none()`; `keyboard()` three-state — `false` default, `null` = the table decides, `true` = force). A capability is a **permission, not a trigger**, and the switch does **not** govern an explicitly declared record action — a bound `onClick()`/`onDoubleClick()` survives `gestures(false)`; only `onKey()` needs the keyboard layer. Enforced server-side: no `role="grid"`, no roving `tabindex`, no context-menu panels, `fillTableCells()` refused, and the `?` legend lists only what the table actually answers to.
 - `Table::queryString()` persists state to the URL.
 - Browser-testing hooks: every active part carries a stable `data-testid` — `table-search`, `table-filters-trigger`, `table-filter-reset`, `filter-chip-{name}`, `column-filter-chip-{name}`, `table-column-toggle`, `table-per-page`, `table-page-prev|next|{n}`, `table-sort-{col}`, `table-filter-{col}`, `table-cell-{col}`, `table-editable-{col}`, `table-row` (+ `data-row-key`; mobile `table-card`), `table-select-all` / `table-row-select`, `table-row-expand`, `table-bulk-bar` / `table-deselect`, and `action-{name}` / `header-action-{name}` / `bulk-action-{name}` / `menu-action-{name}` (all with `aria-label`) — so Pest v4 Browser Testing targets them at the user level. Actions and filter options are also reachable by visible text. Column-static render metadata is resolved once per column (`$columnMeta`) instead of per cell.
 

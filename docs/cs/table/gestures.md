@@ -243,6 +243,119 @@ Když má karta zůstat čistá, vypněte to:
 ->recordActionButtonsOnMobile(false)
 ```
 
+## Přehled API
+
+Všechno, co vrstva nabízí, na jednom místě.
+
+### Na tabulce
+
+| Volání | Co dělá |
+|--------|---------|
+| `->gestures()` | Povolí všechny schopnosti. Klávesnice zůstane na „rozhodne tabulka" |
+| `->gestures(false)` | Nepovolí vůbec nic |
+| `->gestures(fn (TableGestures $g) => …)` | Nastaví schopnosti téhle tabulky na místě |
+| `->gestures(TableGestures $set)` | Převezme hotovou sadu |
+| `->recordActionButtonsOnMobile(bool)` | Jestli se behavior-only record actions renderují na kartě jako tlačítka (výchozí `true`) |
+
+Čtecí metody, hodí se ve vlastní view nebo v testu:
+
+| Volání | Odpovídá na |
+|--------|-------------|
+| `getGestures(): TableGestures` | Syrová povolení, ještě bez předpokladů |
+| `usesGridSemantics(): bool` | Je tohle ARIA grid? Jediný vlastník toho rozhodnutí |
+| `keyboardNavEnabled(): bool` | Alias předchozího, čte ho view |
+| `usesRangeSelection(): bool` | Fungují `Shift`/`mod` kliky a `Shift`+šipky jako rozsah? |
+| `usesDragSelect(): bool` | Označuje tažení po checkboxovém sloupci? |
+| `usesShortcutHelp(): bool` | Otevře `?` legendu? |
+| `usesActiveRowMarker(): bool` | Nesou řádky marker aktivního řádku? |
+| `mountsRecordActionController(): bool` | Vykresluje se vůbec delegovaný Alpine controller? |
+| `getGestureConfig(): array` | `['sweep' => bool, 'ranges' => bool]` — co konzumuje klientský controller |
+| `getTableRole(): ?string` | `'grid'`, nebo `null` |
+| `hasRowContextMenu(): bool` | Je tu kontextové menu (včetně povolení)? |
+| `isFillHandleEnabled(): bool` | Nabízí se fill handle (včetně povolení)? |
+
+### Na `TableGestures`
+
+```php
+use NyonCode\WireTable\Support\TableGestures;
+```
+
+| Volání | Význam |
+|--------|--------|
+| `TableGestures::defaults()` | Dodávaný default: klávesnice a tažení vypnuté, zbytek povolený |
+| `TableGestures::all()` | Všechno povolené; klávesnice zůstává na `null` |
+| `TableGestures::none()` | Nepovolené nic |
+| `TableGestures::fromConfig($value)` | Sestavení z config hodnoty (`null` / `bool` / mapa) |
+| `->keyboard(?bool)`, `->rangeSelection(bool)`, `->dragSelect(bool)`, `->contextMenu(bool)`, `->shortcutHelp(bool)`, `->fillHandle(bool)` | Settery; každý vrací `$this` |
+| `->allowsKeyboard(): ?bool` a `->allows*(): bool` | Povolení *před* předpoklady konkrétní tabulky |
+| `->toArray(): array` | Všech šest jako data |
+
+Povolení a výsledek jsou dvě různé otázky: `allowsDragSelect()` říká, že tabulka
+označovat tažením smí, `usesDragSelect()` říká, že to opravdu dělá (k tomu
+potřebuje ještě `selectable()`).
+
+## Recepty
+
+**Veřejný výpis.** Nedělejte nic:
+
+```php
+$table->model(Post::class)->columns([...]);
+```
+
+**Back-office grid.** Jedno volání, nebo `'gestures' => true` v configu pro celý
+projekt:
+
+```php
+$table->gestures()->selectable()->bulkActions([DeleteBulkAction::make()]);
+```
+
+**Klik na řádek ho otevře, jinak tichá tabulka.** Deklarovaná record action stojí
+mimo vrstvu, takže tady `gestures()` netřeba:
+
+```php
+$table->recordAction(RecordAction::make(Action::make('view'))->onClick());
+```
+
+**Klávesnici ano, tažení ne.** Pro dlouhé seznamy, kde by nechtěné tažení vybralo
+sto řádků:
+
+```php
+$table->gestures(fn (TableGestures $g) => $g->keyboard())->selectable();
+```
+
+**Domácí styl napříč tabulkami.** Sadu postavte jednou a předávejte ji:
+
+```php
+// app/Tables/Gestures.php
+public static function backOffice(): TableGestures
+{
+    return TableGestures::all()->dragSelect(false);
+}
+
+// v každé tabulce
+$table->gestures(Gestures::backOffice());
+```
+
+**Tabulka ve stránce s vlastní obsluhou klávesnice.** Nechte si myší půlku:
+
+```php
+$table->gestures(fn (TableGestures $g) => $g->dragSelect())->selectable();
+```
+
+## Když něco nefunguje
+
+| Projev | Proč | Náprava |
+|--------|------|---------|
+| Šipky nic nedělají, řádky nejdou zaostřit | Klávesová vrstva je opt-in | `->gestures()` |
+| `->gestures()` je tam a grid pořád ne | Šipky nemají co ovládat — žádné record actions, žádný výběr | Přidat `->selectable()`, nebo vynutit `->gestures(fn ($g) => $g->keyboard(true))` |
+| `?` nic neotevře | Čte klávesovou vrstvu a prázdná legenda nevykreslí modal vůbec | Zapnout klávesnici; zkontrolovat `shortcutLegend()->isEmpty()` |
+| Tažení po checkboxovém sloupci nic nevybere | `dragSelect` je defaultně vypnutý | `->gestures()`, nebo `->gestures(fn ($g) => $g->dragSelect())` |
+| `Shift`+klik přepne jeden řádek místo rozsahu | `rangeSelection` byl vypnutý | `->gestures(fn ($g) => $g->rangeSelection())` |
+| Pravý klik ukáže menu prohlížeče | Není na něj navázaná akce, nebo je `contextMenu` vypnuté | Navázat přes `->onContextMenu()`; zkontrolovat `hasRowContextMenu()` |
+| Fill handle se neobjeví | Potřebuje `->fillHandle()` **a** povolení **a** editovatelný fillable sloupec | Zkontrolovat `isFillHandleEnabled()` a `Column::fillable()` |
+| Vazba `->onKey()` nikdy nevystřelí | Klávesy čte klávesová vrstva | `->gestures()` |
+| Record action je na telefonu nedosažitelná | Fallback byl vypnutý | `->recordActionButtonsOnMobile()` |
+
 ## Jak vybrat
 
 | Tabulka | Doporučení |

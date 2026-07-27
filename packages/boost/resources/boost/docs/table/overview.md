@@ -686,4 +686,7 @@ class UserTable extends Component
 | [Imports](imports.md) | CSV imports — header mapping, casting, per-row validation, updateExisting |
 | [Relation Managers](relation-managers.md) | Relationship-scoped tables as standalone Livewire components |
 | [Advanced](advanced.md) | Sub-rows, summary footer, polling, lazy loading, caching, debug, responsive |
+| [Selecting Rows](selection.md) | Checkboxes, select-all-matching, and the selection gestures |
+| [Record Actions](record-actions.md) | Whole-row click, double-click, right-click and key bindings |
+| [The Gesture Layer](gestures.md) | `gestures()` — the opt-in keyboard/drag layer, and the mobile button fallback |
 | [Actions](../core/actions.md) | Full Action system — modals, forms, wizard steps, lifecycle |

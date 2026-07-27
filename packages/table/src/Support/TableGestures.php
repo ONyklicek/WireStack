@@ -41,8 +41,9 @@ use NyonCode\WireTable\Exceptions\TableConfigurationException;
  * Every capability is a plain permission: switching one on never conjures the
  * thing it governs (a sweep still needs `selectable()`, a fill handle still
  * needs `fillHandle()` and editable columns). `keyboard()` is the one
- * three-state switch, because it also has to express "force it on for a table
- * that would not have qualified" — null means the table decides.
+ * three-state switch, because "on" has to mean two things: `null` leaves the
+ * decision to the table (which takes it for anything the keyboard could drive
+ * row by row) and `true` forces it on a table that would not have qualified.
  */
 final class TableGestures
 {
