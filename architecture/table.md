@@ -41,6 +41,22 @@ That means state shape and hydration changes can have Livewire-wide effects for 
 
 Top-level fluent config object. Start here when the task is about table API shape.
 
+### `Concerns/HasGestures.php` + `Support/TableGestures.php`
+
+Canonical owner of "which desktop gestures does this table offer" — keyboard
+grid navigation, range selection, the drag sweep, the right-click menu, the `?`
+help, the fill handle. Every consumer asks here, never a local flag:
+`usesGridSemantics()`, `mountsRecordActionController()`, `usesDragSelect()`,
+`usesRangeSelection()`, `usesShortcutHelp()`, `usesActiveRowMarker()`,
+`hasRowContextMenu()`, `isFillHandleEnabled()`, and the client via
+`getGestureConfig()` / `getRecordActionKeyboardConfig()`.
+
+Two rules hold the design together: a capability is a **permission, not a
+trigger** (allowing the sweep does not make a table selectable), and an
+**explicitly declared record action is outside the layer** (`onClick()` survives
+`gestures(false)`; only `onKey()` needs the keyboard). Project-wide default in
+`config('wire-table.defaults.gestures')`.
+
 ### `Concerns/WithTable.php`
 
 Primary Livewire trait and one of the highest-risk files in the repo.

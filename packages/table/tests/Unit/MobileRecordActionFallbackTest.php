@@ -120,6 +120,23 @@ it('leaves an action already promoted into the column alone', function () {
         ->and(actionNames($table->getMobileRowActionsForDisplay()))->toBe(['open']);
 });
 
+it('strips the keyboard shortcut from the fallback button', function () {
+    // A rendered button binds its shortcut as a WINDOW listener, and the cards
+    // are in the document at every width: without this, one Delete press ran the
+    // action once per card behind the desktop table — a real bug the CDP driver
+    // caught as a modal that would not close.
+    $table = Table::make()->recordAction(
+        RecordAction::make(Action::make('archive'))->onKey('Delete')
+    );
+
+    $fallback = $table->getMobileRowActionsForDisplay()[0];
+
+    expect($fallback->getKeyboardShortcut())->toBeNull()
+        // A copy: the action itself keeps the shortcut the grid fires it by.
+        ->and($table->findRegisteredAction('archive'))->toBeNull()
+        ->and($table->getRecordActions()[0]->getAction()->getKeyboardShortcut())->toBe('Delete');
+});
+
 it('switches the fallback off', function () {
     $table = Table::make()
         ->recordAction(RecordAction::make(Action::make('open'))->onDoubleClick())

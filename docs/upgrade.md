@@ -88,10 +88,17 @@ on your side.** Grid semantics used to follow record actions; they now follow
 `selectable()` and `bulkActions()` as well. Rows of such a table become
 focusable, clicking one marks it as the active row, and the arrow keys, `Space`,
 `Shift`+arrows and `mod`+`A` work the selection. A click still never ticks a
-checkbox. Opt out per table:
+checkbox. Opt out per table — of the keyboard alone, or of the whole desktop
+gesture layer (keyboard, ranges, the drag sweep, the right-click menu, the `?`
+help and the fill handle), which is one switch and also has a project-wide
+default (see [The Gesture Layer](table/gestures.md)):
 
 ```php
-->recordActionKeyboard(false)
+->gestures(fn (TableGestures $g) => $g->keyboard(false))   // the keyboard only
+->gestures(false)                                          // the whole layer
+
+// config/wire-table.php
+'defaults' => ['gestures' => false],                       // every table
 ```
 
 **2. `->onKey()` on a navigation key now throws.** It used to be dropped
@@ -123,6 +130,19 @@ php artisan vendor:publish --tag=wire-table::views --force
 
 Re-apply your customisations on top of the new file. If you overrode the view
 only to restyle it, [Theming](theming.md) is usually the smaller path.
+
+**5. Behaviour-only record actions now render as buttons on a mobile card.** A
+phone has no double click, no right click and no hover to discover either, so an
+action bound only to a gesture used to be unreachable once the table stacked.
+It is now rendered as an ordinary button on the card — and only there; the
+desktop table is unchanged. Nothing is doubled: an action already in
+`->actions()`, or one promoted with `->alsoInRowActions()`, still yields exactly
+one button, and the fallback buttons count towards
+`->collapseActionsOnMobile()`. Opt out per table:
+
+```php
+->recordActionButtonsOnMobile(false)
+```
 
 ---
 

@@ -128,10 +128,11 @@ element. While an action modal is open the grid is inert — no arrow moves the
 marker behind the dialog and no shortcut fires a second action — and closing the
 modal hands the focus back to the active row, so the arrows keep working.
 
-Force it off (or on) if you need to:
+Force it off (or on) if you need to — the keyboard is one capability of the
+[gesture layer](gestures.md):
 
 ```php
-->recordActionKeyboard(false)
+->gestures(fn (TableGestures $g) => $g->keyboard(false))
 ```
 
 Because Enter always reaches the primary action, every record action stays
@@ -233,3 +234,5 @@ instead:
 - [Selecting Rows](selection.md) — the selection gestures record actions share
   the row with
 - [Actions](actions.md) — row, bulk and header actions
+- [The Gesture Layer](gestures.md) — switching the gestures off, and the mobile
+  button fallback

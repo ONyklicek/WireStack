@@ -98,3 +98,17 @@ it('has no expression for a shortcut that is only modifiers', function () {
 it('reports no mod usage when no shortcut is set at all', function () {
     expect(Action::make('a')->shortcutUsesMod())->toBeFalse();
 });
+
+it('drops the shortcut for a surface that must not own the key', function () {
+    // A rendered button binds its shortcut as a window listener, so an action
+    // rendered on a second (possibly hidden) surface would answer the same key
+    // twice over. That surface renders a copy with the key taken off.
+    $action = Action::make('archive')->keyboardShortcut('Delete', '⌫');
+    $copy = (clone $action)->withoutKeyboardShortcut();
+
+    expect($copy->getKeyboardShortcut())->toBeNull()
+        ->and($copy->getKeyboardShortcutLabel())->toBeNull()
+        ->and($copy->getAlpineKeydownExpression())->toBeNull()
+        // The original is untouched — it is the one the key still fires.
+        ->and($action->getKeyboardShortcut())->toBe('Delete');
+});

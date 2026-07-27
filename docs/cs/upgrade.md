@@ -88,10 +88,17 @@ straně nevyžaduje žádnou úpravu kódu.** Grid sémantika dřív šla jen s 
 záznamem; nově ji zapíná i `selectable()` a `bulkActions()`. Řádky takové
 tabulky jdou zaostřit, klik řádek označí jako aktivní a šipky, `Space`,
 `Shift`+šipky a `mod`+`A` ovládají výběr. Klik i nadále zaškrtávátko nezaškrtne.
-Vypnout lze pro konkrétní tabulku:
+Vypnout lze pro konkrétní tabulku — buď jen klávesnici, nebo rovnou celou
+desktopovou vrstvu gest (klávesnici, rozsahy, označování tažením, kontextové
+menu, nápovědu `?` i fill handle), na kterou je jeden vypínač a taky výchozí
+hodnota pro celý projekt (viz [Vrstva gest](table/gestures.md)):
 
 ```php
-->recordActionKeyboard(false)
+->gestures(fn (TableGestures $g) => $g->keyboard(false))   // jen klávesnice
+->gestures(false)                                          // celá vrstva
+
+// config/wire-table.php
+'defaults' => ['gestures' => false],                       // všechny tabulky
 ```
 
 **2. `->onKey()` na navigační klávese nově vyhodí výjimku.** Dřív se tiše
@@ -123,6 +130,19 @@ php artisan vendor:publish --tag=wire-table::views --force
 
 Své úpravy pak naneste znovu na nový soubor. Pokud jste view přepsali jen kvůli
 vzhledu, bývá [Theming](theming.md) menší cesta.
+
+**5. Akce nad záznamem, které byly jen chováním, se na mobilní kartě nově
+vykreslí jako tlačítko.** Telefon nemá dvojklik, pravý klik ani hover, kterým by
+se jeden nebo druhý dal objevit — akce navázaná jen na gesto tak byla po složení
+tabulky nedosažitelná. Nově se na kartě vykreslí jako obyčejné tlačítko, a jen
+tam; desktopová tabulka se nemění. Nic se nezdvojí: akce už přítomná
+v `->actions()` i akce povýšená přes `->alsoInRowActions()` dá právě jedno
+tlačítko a fallbacková tlačítka se počítají do `->collapseActionsOnMobile()`.
+Vypnout lze pro konkrétní tabulku:
+
+```php
+->recordActionButtonsOnMobile(false)
+```
 
 ---
 

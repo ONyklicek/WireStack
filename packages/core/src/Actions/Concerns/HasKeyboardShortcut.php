@@ -45,6 +45,23 @@ trait HasKeyboardShortcut
         return $this;
     }
 
+    /**
+     * Drop the shortcut for this copy of the action.
+     *
+     * A rendered button binds its shortcut as a *window* listener, so an action
+     * rendered on more than one surface answers the same key once per surface —
+     * and a surface that is merely present but not shown (the stacked mobile
+     * cards on a desktop, say) would answer it invisibly, once per record.
+     * A surface that must not own the key clones the action and calls this.
+     */
+    public function withoutKeyboardShortcut(): static
+    {
+        $this->keyboardShortcut = null;
+        $this->keyboardShortcutLabel = null;
+
+        return $this;
+    }
+
     public function getKeyboardShortcut(): ?string
     {
         return $this->keyboardShortcut;

@@ -154,6 +154,15 @@ class GestureLabPreview extends Component
             ? $table->paginated()->perPage(20)
             : $table->paginated(false);
 
+        // The same table with the gesture layer switched off — what a public
+        // page asks for. The declared record actions stay (a double-click still
+        // opens, right-click is gone with the menu), the selection keeps its
+        // checkboxes, and the keyboard, the ranges, the sweep and `?` are not
+        // there at all. `verify-gestures-off.mjs` drives this one.
+        if ($this->variant === 'plain') {
+            $table->gestures(false);
+        }
+
         return $table;
     }
 

@@ -163,14 +163,17 @@ Grid sémantiku zapíná `selectable()` i akce nad záznamem. Vypnout ji lze pro
 konkrétní tabulku:
 
 ```php
-->recordActionKeyboard(false)
+->gestures(fn (TableGestures $g) => $g->keyboard(false))   // jen klávesnice
+->gestures(false)                                          // všechna gesta
 ```
 
-Zmizí klávesnicová vrstva, marker aktivního řádku i nápověda ke zkratkám.
-Zaškrtávátka fungují dál.
+První varianta odebere klávesnicovou vrstvu i nápovědu ke zkratkám, myší gesta
+zůstanou; druhá vezme i rozsahy a označování tažením. Zaškrtávátka fungují v
+obou případech dál — viz [Vrstva gest](gestures.md).
 
 ## Související dokumentace
 
 - [Akce nad záznamem](record-actions.md) — vazby na klik, dvojklik a kontextové
   menu celého řádku
 - [Hromadné akce](actions.md#hromadne-akce) — práce s výběrem
+- [Vrstva gest](gestures.md) — jak tahle gesta vypnout, celá nebo po částech

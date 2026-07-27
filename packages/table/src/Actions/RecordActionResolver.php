@@ -114,11 +114,21 @@ final class RecordActionResolver
      * ones {@see rowActionButtons()} deliberately leaves out, which is why they
      * are a separate list and not a widened filter.
      *
+     * They are handed out as copies with the keyboard shortcut stripped. A
+     * rendered button binds its `keyboardShortcut()` as a *window* listener, and
+     * the stacked cards are in the document at every width — so the real button
+     * behind an `onKey('Delete')` binding would answer Delete once per card,
+     * invisibly, on top of the grid that already owns the key. On a phone there
+     * is no key to answer with anyway.
+     *
      * @return array<int, Action>
      */
     public function mobileFallbackButtons(): array
     {
-        return $this->instancesFor(fn (ResolvedRecordAction $r): bool => ! $r->rendersInRowActions);
+        return array_map(
+            fn (Action $action): Action => (clone $action)->withoutKeyboardShortcut(),
+            $this->instancesFor(fn (ResolvedRecordAction $r): bool => ! $r->rendersInRowActions),
+        );
     }
 
     /**

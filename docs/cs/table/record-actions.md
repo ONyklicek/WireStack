@@ -128,10 +128,11 @@ je otevřený modal akce, grid je inertní — žádná šipka neposune označen
 dialogem a žádná zkratka nespustí druhou akci — a po zavření modalu se fokus
 vrátí na aktivní řádek, takže šipky dál fungují.
 
-Vynuť vypnutí (či zapnutí), pokud potřebuješ:
+Vynuť vypnutí (či zapnutí), pokud potřebuješ — klávesnice je jedna ze schopností
+[vrstvy gest](gestures.md):
 
 ```php
-->recordActionKeyboard(false)
+->gestures(fn (TableGestures $g) => $g->keyboard(false))
 ```
 
 Protože Enter vždy dosáhne na primární akci, každá record action zůstává
@@ -233,3 +234,4 @@ tlačítka:
 - [Výběr řádků](selection.md) — výběrová gesta, se kterými akce nad záznamem
   sdílejí řádek
 - [Akce](actions.md) — řádkové, hromadné a hlavičkové akce
+- [Vrstva gest](gestures.md) — vypnutí gest a tlačítkový fallback na mobilu

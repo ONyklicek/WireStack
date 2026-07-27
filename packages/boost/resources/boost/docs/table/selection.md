@@ -168,14 +168,17 @@ Grid semantics come with `selectable()` and with record actions. Opt out per
 table:
 
 ```php
-->recordActionKeyboard(false)
+->gestures(fn (TableGestures $g) => $g->keyboard(false))   // the keyboard only
+->gestures(false)                                          // every gesture
 ```
 
-That removes the keyboard layer, the active-row marker and the shortcut help.
-The checkboxes keep working.
+The first removes the keyboard layer and the shortcut help while the mouse
+gestures stay; the second takes the ranges and the drag sweep with them. The
+checkboxes keep working either way — see [The Gesture Layer](gestures.md).
 
 ## Related docs
 
 - [Record Actions](record-actions.md) — whole-row click, double-click and
   context-menu bindings
 - [Bulk Actions](actions.md#bulk-actions) — acting on a selection
+- [The Gesture Layer](gestures.md) — switching these gestures off, whole or in part
