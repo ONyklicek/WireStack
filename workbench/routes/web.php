@@ -327,6 +327,7 @@ foreach ([
     'table-paginated' => ['title' => 'Wire Table Pagination', 'subtitle' => 'Paginated table with per-page selector and page links.', 'component' => TablePreview::class, 'variant' => 'paginated'],
     'sortable-overview' => ['title' => 'Wire Sortable', 'subtitle' => 'Full reorderable task table preview.', 'component' => SortablePreview::class, 'variant' => 'overview'],
     'sortable-detail' => ['title' => 'Wire Sortable Detail', 'subtitle' => 'Closer reorder-surface preview.', 'component' => SortablePreview::class, 'variant' => 'detail'],
+    'sortable-columns' => ['title' => 'Wire Sortable Columns', 'subtitle' => 'Drag a header to reorder columns, on a table that also has a selection column and row handles.', 'component' => SortablePreview::class, 'variant' => 'columns'],
     'actions-modal-stacking' => ['title' => 'Wire Actions · Nested Modal Stacking', 'subtitle' => 'Six live configurations of the nested-modal frame stack — create-and-select ($setParent), deep $setFrame, inline registerActions, slide-over, and a stacked wizard.', 'component' => ModalStackingPreview::class, 'variant' => 'gallery'],
     'core-overview' => ['title' => 'Wire Core', 'subtitle' => 'Stats, actions, and shared primitives.', 'component' => CorePreview::class, 'variant' => 'overview'],
     'core-modal' => ['title' => 'Wire Core Modal', 'subtitle' => 'Real modal surface from the core runtime.', 'component' => CorePreview::class, 'variant' => 'modal'],

@@ -276,14 +276,14 @@
 
                         if (evt.oldIndex === evt.newIndex) return;
 
-                        this.reorderBodyColumns(evt.oldIndex, evt.newIndex);
-
                         const headers = thead.querySelectorAll('th[data-sortable-column]');
                         const columnOrder = [];
                         headers.forEach((th) => {
                             const name = th.getAttribute('data-sortable-column');
                             if (name) columnOrder.push(name);
                         });
+
+                        this.reorderBodyColumns(columnOrder);
 
                         if (columnOrder.length > 0) {
                             this.getLivewireComponent()?.call('reorderColumns', columnOrder);
@@ -316,23 +316,49 @@
                 });
             },
 
-            reorderBodyColumns(oldIndex, newIndex) {
+            /*
+             * Mirror the header's new column order onto the body rows, matched
+             * by column NAME.
+             *
+             * It used to move cells by the index Sortable reported for the
+             * header, which assumes a body row is the header row with different
+             * tags. It is not: a row leads with the teleport <template> that
+             * carries its context menu, and the selection cell, the drag handle
+             * and the actions column each sit on one side or the other. Every
+             * one of those shifts the offset, so the move landed on whichever
+             * cell happened to occupy that position — dragging a column header
+             * would park the checkbox column between two data columns while the
+             * data itself never moved.
+             */
+            reorderBodyColumns(columnOrder) {
                 const tbody = this.$root.querySelector('tbody');
-                if (!tbody) return;
+                if (!tbody || !columnOrder || columnOrder.length === 0) return;
 
-                tbody.querySelectorAll('tr').forEach((tr) => {
-                    const cells = Array.from(tr.children);
-                    if (oldIndex >= cells.length || newIndex >= cells.length) return;
+                // Direct children only: a sub-row lives in a nested table with
+                // its own columns, and a group header is a single colspan cell.
+                Array.from(tbody.children)
+                    .filter((tr) => tr.matches('tr[data-row-key]'))
+                    .forEach((tr) => {
+                        const cells = new Map();
 
-                    const movedCell = cells[oldIndex];
-                    const referenceCell = cells[newIndex];
+                        Array.from(tr.children).forEach((cell) => {
+                            const name = cell.getAttribute && cell.getAttribute('data-column');
+                            if (name) cells.set(name, cell);
+                        });
 
-                    if (oldIndex < newIndex) {
-                        referenceCell.after(movedCell);
-                    } else {
-                        referenceCell.before(movedCell);
-                    }
-                });
+                        if (cells.size === 0) return;
+
+                        // Re-insert the column cells in header order ahead of
+                        // whatever followed the block, so a trailing actions
+                        // cell stays trailing (and a leading one, leading).
+                        const ordered = Array.from(cells.values());
+                        const anchor = ordered[ordered.length - 1].nextSibling;
+
+                        columnOrder.forEach((name) => {
+                            const cell = cells.get(name);
+                            if (cell) tr.insertBefore(cell, anchor);
+                        });
+                    });
             },
 
             // ── Helpers ──────────────────────────────────────────
