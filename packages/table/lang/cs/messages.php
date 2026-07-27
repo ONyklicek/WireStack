@@ -96,6 +96,10 @@ return [
     'selection_only_this_page' => 'Jen tuto stránku',
     'select_all_on_page' => 'Vybrat vše na této stránce',
     'selection_page_of_total' => ':page na této stránce · :total celkem',
+    // Hlášky pro čtečky obrazovky (live region výběru).
+    'selection_announce_some' => 'Vybráno :count z :total',
+    'selection_announce_all' => 'Vybráno vše (:total)',
+    'selection_announce_none' => 'Výběr zrušen',
     'selection_selected_of_total' => 'vybráno :count z :total',
 
     // Pagination

@@ -23,6 +23,9 @@ document.addEventListener('alpine:init', () => {
         const statePath = config.statePath || 'tableState.selection';
         const syncLive = !! config.syncLive;
         const commitDelay = config.commitDelay ?? 350;
+        /* Ready-made strings from PHP: the live region needs whole sentences,
+           which only the server can pluralise and translate. */
+        const announcements = config.announcements || {};
 
         return {
             // The entangles MUST be created here in the returned literal.
@@ -59,6 +62,31 @@ document.addEventListener('alpine:init', () => {
 
             isSelected(key) {
                 return this.selectsAll ? ! this.selected.includes(key) : this.selected.includes(key);
+            },
+
+            /* Stays false until the selection first changes. A live region
+               announces CHANGES to its content, so filling it during boot
+               would have a screen reader read out a selection the user has
+               not made yet — and a table can render with rows already
+               selected from the server. */
+            announceReady: false,
+
+            /* What the live region says. Empty until the first change, so the
+               region is present and silent from the start (it has to be in the
+               DOM all along: a region added or revealed at the moment it gains
+               text announces nothing). */
+            get announcement() {
+                if (! this.announceReady) return '';
+
+                if (this.selectsAll) {
+                    return (announcements.all || '').replace(':total', this.matching);
+                }
+
+                if (this.selectedCount === 0) return announcements.none || '';
+
+                return (announcements.some || '')
+                    .replace(':count', this.selectedCount)
+                    .replace(':total', this.matching);
             },
 
             toggle(key) {
@@ -128,6 +156,13 @@ document.addEventListener('alpine:init', () => {
                    gestures themselves never write the mode, so this watcher
                    cannot fire mid-gesture. */
                 this.$watch('mode', () => this.clearAnchor());
+
+                /* Arm the live region on the first change of either half of the
+                   selection state. Re-announcing an unchanged sentence is
+                   harmless — a live region only speaks when its text actually
+                   differs — so no guard against repeat writes is needed. */
+                this.$watch('selected', () => { this.announceReady = true; });
+                this.$watch('mode', () => { this.announceReady = true; });
             },
 
             setAnchor(key) {

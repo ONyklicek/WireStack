@@ -205,8 +205,30 @@
 
     // Check if search/filter is active but no results
     $hasActiveFilters = !empty($tableSearch) || $activeTableFilters !== [] || $activeColumnFilters !== [];
-    $recordCount = $records instanceof LengthAwarePaginator ? $records->total() : $records->count();
+    $hasPaginator = $records instanceof LengthAwarePaginator;
+    $recordCount = $hasPaginator ? $records->total() : $records->count();
     $isEmptyDueToFilter = $hasActiveFilters && $recordCount === 0;
+
+    // Where this page sits in the whole result set. Read by the footer's
+    // "from - to of total" line and, before it, by aria-rowindex: an ARIA row
+    // index counts through the entire grid, not the page, so row 1 of page 2
+    // is not index 1. Hence the lift out of the footer.
+    $rangeFrom = $hasPaginator ? ($records->firstItem() ?? 0) : ($records->count() > 0 ? 1 : 0);
+    $rangeTo = $hasPaginator ? ($records->lastItem() ?? 0) : $records->count();
+
+    // Header rows come first in the ARIA row numbering, and the column-filter
+    // row is one of them when present — miss it and every body index is off by
+    // one.
+    $headerRowCount = 1 + ($hasColumnFilters ? 1 : 0);
+
+    // Whole sentences for the selection live region: only the server can
+    // translate them, and the counts are substituted client-side because the
+    // selection itself lives in Alpine.
+    $selectionAnnouncements = [
+        'some' => __('wire-table::messages.selection_announce_some', ['count' => ':count', 'total' => ':total']),
+        'all' => __('wire-table::messages.selection_announce_all', ['total' => ':total']),
+        'none' => __('wire-table::messages.selection_announce_none'),
+    ];
 @endphp
 
 {{-- Lazy loading: trigger load when visible --}}
@@ -286,10 +308,23 @@
                              the bulk bar, the mobile cards and the keyboard gestures all
                              drive this state. PHP hands over the semantics — the state
                              path and the commit policy — so they stay assertable here. --}}
-                        x-data="wireRecordSelection({ statePath: 'tableState.selection', syncLive: {{ $selectionSyncLive ? 'true' : 'false' }}, commitDelay: 350 })"
+                        x-data="wireRecordSelection({ statePath: 'tableState.selection', syncLive: {{ $selectionSyncLive ? 'true' : 'false' }}, commitDelay: 350, announcements: @js($selectionAnnouncements) })"
                     @endif
             >
                 @if($isSelectable)
+                    {{-- Selection announcements. Deliberately NOT in the bulk bar: that
+                         is behind x-show, and a hidden live region announces nothing —
+                         worse, it disappears at zero selected, so "selection cleared"
+                         could never be heard. This one is in the DOM from the first
+                         render and empty, which is what a live region needs to work. --}}
+                    <div
+                            class="sr-only"
+                            aria-live="polite"
+                            aria-atomic="true"
+                            data-testid="selection-live"
+                            x-text="announcement"
+                    ></div>
+
                     {{-- Inside the selectable wrapper, NOT inside the table body: the
                          body is not rendered without visible columns, but the selection
                          is live in the stacked cards too. --}}
@@ -692,11 +727,18 @@
                     >
                         @if($hasVisibleColumns)
                             <table
-                                    @if($tableRole) role="{{ $tableRole }}" @endif
+                                    @if($tableRole)
+                                        role="{{ $tableRole }}"
+                                        {{-- Counts the whole result set plus the header rows, not
+                                             the page: a grid tells assistive tech how much there is
+                                             to page through, and the row indices below match it. --}}
+                                        aria-rowcount="{{ $recordCount + $headerRowCount }}"
+                                        @if($isSelectable) aria-multiselectable="true" @endif
+                                    @endif
                                     class="w-full {{ $isBordered ? 'border-collapse' : '' }} {{ $table->getTableClass() }}">
                                 <thead
                                         class="bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-500 dark:text-gray-400 uppercase {{ $table->getHeaderClass() }}">
-                                <tr>
+                                <tr @if($tableRole) aria-rowindex="1" @endif>
                                     {{-- Select All Checkbox --}}
                                     @if($isSelectable)
                                         <th scope="col" class="w-12 {{ $headerPadding }}">
@@ -797,7 +839,8 @@
 
                                 {{-- Row Filters --}}
                                 @if($hasColumnFilters)
-                                    <tr class="bg-gray-50/50 dark:bg-gray-800/30 border-t border-gray-100 dark:border-gray-700/50">
+                                    <tr @if($tableRole) aria-rowindex="2" @endif
+                                        class="bg-gray-50/50 dark:bg-gray-800/30 border-t border-gray-100 dark:border-gray-700/50">
                                         @if($isSelectable)
                                             <th class="{{ $headerPadding }}"></th>
                                         @endif
@@ -905,6 +948,13 @@
                                                  rows back to this markup on every update, which would wipe an
                                                  assigned tabstop and drop the grid out of the tab order. --}}
                                             @if($keyboardNav) role="row" tabindex="{{ $rowIndex === 0 ? '0' : '-1' }}" :tabindex="rowTabindex({!! $recordKeyJs !!}, {{ $rowIndex }})" @endif
+                                            {{-- Position in the whole grid, so it survives paging:
+                                                 the header rows come first, then this page's offset. --}}
+                                            @if($tableRole) aria-rowindex="{{ $headerRowCount + $rangeFrom + $rowIndex }}" @endif
+                                            {{-- Bound, never printed: the selection lives in Alpine and
+                                                 a static value would snap back to the server's truth on
+                                                 the next morph, leaving the row lying about itself. --}}
+                                            @if($isSelectable) :aria-selected="isSelected({!! $recordKeyJs !!}) ? 'true' : 'false'" @endif
                                             wire:key="row-{{ $recordKey }}"
                                             data-testid="table-row"
                                             data-row-key="{{ $recordKey }}"
@@ -1323,11 +1373,12 @@
                     {{-- Footer / Pagination --}}
                     @if($isPaginated && $hasVisibleColumns)
                         @php
-                            $hasPaginator = $records instanceof LengthAwarePaginator;
+                            // $hasPaginator and the range come from the preamble — aria-rowindex
+                            // needs them before the body renders.
                             $hasMultiplePages = $hasPaginator && $records->hasPages();
-                            $total = $hasPaginator ? $records->total() : $records->count();
-                            $from = $hasPaginator ? ($records->firstItem() ?? 0) : ($records->count() > 0 ? 1 : 0);
-                            $to = $hasPaginator ? ($records->lastItem() ?? 0) : $records->count();
+                            $total = $recordCount;
+                            $from = $rangeFrom;
+                            $to = $rangeTo;
                         @endphp
 
                         <div

@@ -96,6 +96,10 @@ return [
     'selection_only_this_page' => 'Only this page',
     'select_all_on_page' => 'Select all on this page',
     'selection_page_of_total' => ':page on this page · :total total',
+    // Screen-reader announcements for the selection live region.
+    'selection_announce_some' => ':count of :total selected',
+    'selection_announce_all' => 'All :total selected',
+    'selection_announce_none' => 'Selection cleared',
     'selection_selected_of_total' => ':count of :total selected',
 
     // Pagination

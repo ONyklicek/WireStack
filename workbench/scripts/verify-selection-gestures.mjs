@@ -112,6 +112,33 @@ try {
 
   check('the gesture fixture renders all 40 rows on one page', await eval_('rows().length') === 40);
 
+  // ── ARIA: grid semantics and a live region that starts silent ────────────
+  await eval_(`window.live = () => $q('[data-testid="selection-live"]'); true`);
+  const ariaStatic = JSON.parse(await eval_(`(() => {
+    const t = $q('table[role=grid]');
+    return JSON.stringify({
+      role: t?.getAttribute('role'),
+      rowcount: t?.getAttribute('aria-rowcount'),
+      multi: t?.getAttribute('aria-multiselectable'),
+      headerIndex: t?.querySelector('thead tr')?.getAttribute('aria-rowindex'),
+      firstBody: rows()[0].getAttribute('aria-rowindex'),
+      lastBody: rows()[39].getAttribute('aria-rowindex'),
+      liveText: live()?.textContent,
+      liveMode: live()?.getAttribute('aria-live'),
+    });
+  })()`));
+  check('the grid announces its shape: role, total row count, multiselectable',
+    ariaStatic.role === 'grid' && ariaStatic.rowcount === '41' && ariaStatic.multi === 'true',
+    JSON.stringify(ariaStatic));
+  check('row indices run through the whole grid, header first',
+    ariaStatic.headerIndex === '1' && ariaStatic.firstBody === '2' && ariaStatic.lastBody === '41',
+    `header=${ariaStatic.headerIndex} first=${ariaStatic.firstBody} last=${ariaStatic.lastBody}`);
+  // A live region has to be in the DOM and empty before it can announce: filled
+  // at boot, a screen reader would read out a selection nobody made.
+  check('the live region is present and silent before anything is selected',
+    ariaStatic.liveMode === 'polite' && ariaStatic.liveText === '',
+    `text=${JSON.stringify(ariaStatic.liveText)}`);
+
   // ── C1: a checkbox click toggles the row and anchors the next range ──────
   await realClick(`rows()[2].querySelector('[data-testid="table-row-select"]')`);
   await sleep(500);
@@ -120,10 +147,31 @@ try {
     c1a.selected.length === 1 && c1a.selected[0] === c1a.key && c1a.anchor === c1a.key,
     JSON.stringify(c1a));
 
+  // aria-selected and the announcement both follow the click, live.
+  const afterSelect = JSON.parse(await eval_(`JSON.stringify({
+    selectedRow: rows()[2].getAttribute('aria-selected'),
+    otherRow: rows()[3].getAttribute('aria-selected'),
+    live: live().textContent,
+  })`));
+  check('the selected row reports aria-selected and the live region announces the count',
+    afterSelect.selectedRow === 'true' && afterSelect.otherRow === 'false'
+      && afterSelect.live === '1 of 40 selected',
+    JSON.stringify(afterSelect));
+
+  // The row state must survive a server round trip: a printed aria-selected
+  // would be morphed back to the server's truth and start lying.
+  await eval_(`window.Livewire.first().$commit()`);
+  await sleep(900);
+  check('aria-selected survives a Livewire morph',
+    await eval_(`rows()[2].getAttribute('aria-selected')`) === 'true');
+
   await realClick(`rows()[2].querySelector('[data-testid="table-row-select"]')`);
   await sleep(500);
   check('C1: a second checkbox click deselects the row',
     await eval_('sel().selected.length') === 0);
+
+  check('clearing the selection is announced too, instead of falling silent',
+    await eval_(`live().textContent`) === 'Selection cleared');
 
   // ── C2: Shift+arrow ranges from the anchor Space set ─────────────────────
   await eval_(`rows()[4].focus()`);
@@ -635,6 +683,21 @@ try {
   check('the escalation enters all mode covering every matching record',
     allMode.mode === 'all' && allMode.count === 40, JSON.stringify(allMode));
   await shot('04-all-mode');
+
+  // The announcement follows the SHAPE of the selection, not just its size:
+  // "all matching" is a different fact from "40 of 40 ticked".
+  await eval_(`window.live = () => $q('[data-testid="selection-live"]'); true`);
+  check('all-matching mode is announced as such, not as a count',
+    await eval_(`live().textContent`) === 'All 40 selected',
+    await eval_(`live().textContent`));
+
+  // Paging must not restart the row numbering.
+  const pagedAria = JSON.parse(await eval_(`(() => {
+    const t = $q('table[role=grid]');
+    return JSON.stringify({ rowcount: t?.getAttribute('aria-rowcount'), first: rows()[0].getAttribute('aria-rowindex') });
+  })()`));
+  check('page 1 of a paged grid still counts the whole result set',
+    pagedAria.rowcount === '41' && pagedAria.first === '2', JSON.stringify(pagedAria));
 
   // ── C9 (fixed): a range gesture never rewrites the mode ──────────────────
   // In all mode `selected` holds the exclusions, so the same block write means
