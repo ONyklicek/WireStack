@@ -377,9 +377,11 @@ dropdowny a s backdropy sheetů zaseknutými přes celou stránku. Proto je pos�
 už render **placeholderu** a markup, který ho nahradí, se inicializuje normálně.
 
 Které bundly se načtou, se řídí konfigurací tabulky: dropdown bundle vždy
-(toolbar je z dropdownů), selection bundle při `selectable()`, record controller
-při record akcích nebo klávesové navigaci. Vlastní `lazyPlaceholder()` mění jen
-viditelný skeleton — na to, co se načte, nemá vliv.
+(toolbar je z dropdownů), selection bundle při `selectable()` a record
+controller vždy, když si ho tabulka vůbec montuje — pointer bindingy record
+akcí, kontextové menu řádku, gridová klávesová sémantika, drag-select nebo
+výběr rozsahu Shiftem. Vlastní `lazyPlaceholder()` mění jen viditelný
+skeleton — na to, co se načte, nemá vliv.
 
 ### Kdy použít
 

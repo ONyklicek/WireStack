@@ -376,9 +376,10 @@ normally.
 
 Which bundles load follows the table's own configuration: the dropdown bundle
 always (the toolbar is built from dropdowns), the selection bundle with
-`selectable()`, the record controller with record actions or keyboard
-navigation. A custom `lazyPlaceholder()` replaces the visible skeleton only — it
-never changes what loads.
+`selectable()`, and the record controller whenever the table mounts it at all —
+record-action pointer bindings, a row context menu, grid keyboard semantics,
+drag-select or Shift-range selection. A custom `lazyPlaceholder()` replaces the
+visible skeleton only — it never changes what loads.
 
 ### When to Use
 
