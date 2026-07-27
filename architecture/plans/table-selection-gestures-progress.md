@@ -157,10 +157,20 @@ mobile-selection 13/13, fill-handle 26/26, modal-open-on 14/14, nested-modal
 8/8, confirmation-object 8/8, modal-layering 13/13), `npm run docs:check` OK
 (228 souborů, obě lokalizace), `verify-api-docs` OK.
 
+### Dořešeno po rolloutu
+
+- `reorderBodyColumns()` — opraveno v `c21531a`. Skutečná příčina NEBYLA
+  selection buňka (ta je v hlavičce i těle symetricky), ale **teleport
+  `<template>`** kontextového menu na začátku `<tr>`: první datový sloupec je
+  v hlavičce na indexu 2, ale v těle na 3, takže se přeřazení trefilo do
+  checkboxu a ten skončil mezi datovými sloupci. Nově se páruje podle
+  `data-column`, ne podle indexu; sub-rows a group headery se nechávají být.
+  Nový driver `verify-column-reorder.mjs` (12/12) + preview `sortable-columns`.
+  **Gotcha:** Livewire re-render po `reorderColumns` poškozený DOM přepíše,
+  takže bug je normálně vidět jen jako poskok — TRVALÝ zůstane tam, kde server
+  pořadí neuloží (nepřihlášený uživatel, chybějící migrace). Driver proto měří
+  i s odpojeným voláním Livewiru, jinak by regresi neodhalil.
+
 ### Vědomě odloženo
 
-- `reorderBodyColumns()` (`sortable/…/scripts.blade.php`) je poziční bez offsetu
-  na selection buňku → přeřazování sloupců u selectable+sortable tabulky je
-  rozbité. Předexistující bug, vyplave na `SortablePreview` (krok 2 tam přidal
-  `->selectable()`).
 - Floor pro `table` lze zvednout z 87 % na 88 % (`composer coverage:floors`).
