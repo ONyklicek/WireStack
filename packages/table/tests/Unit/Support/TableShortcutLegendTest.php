@@ -6,6 +6,7 @@ use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireCore\Foundation\ValueObjects\ShortcutHint;
 use NyonCode\WireTable\Support\RecordAction;
+use NyonCode\WireTable\Support\TableGestures;
 use NyonCode\WireTable\Support\TableShortcutLegend;
 use NyonCode\WireTable\Table;
 
@@ -42,7 +43,7 @@ it('is empty for a plain data table without grid semantics', function () {
 });
 
 it('stays empty when the keyboard is explicitly opted out', function () {
-    $table = Table::make()->selectable()->recordActionKeyboard(false);
+    $table = Table::make()->selectable()->gestures(fn (TableGestures $g) => $g->keyboard(false));
 
     expect($table->shortcutLegend()->isEmpty())->toBeTrue();
 });

@@ -75,6 +75,11 @@ const wireRecordActions = (config = {}) => ({
     bindings: config.bindings || {},
     contextMenu: !! config.contextMenu,
     kb: config.keyboard || null,
+    // The mouse half of the gesture layer, switchable on its own: a table may
+    // keep the checkbox sweep with the keyboard off, or drop the Shift-ranges
+    // and keep everything else. Absent config means the full set, so a published
+    // view predating the switches behaves exactly as it did.
+    gestures: { sweep: true, ranges: true, ...(config.gestures || {}) },
     activeClasses: (config.active?.class || '').split(/\s+/).filter(Boolean),
     hoverClasses: (config.active?.hover || '').split(/\s+/).filter(Boolean),
     activeKey: null,
@@ -159,7 +164,10 @@ const wireRecordActions = (config = {}) => ({
     // ── Selection sweep: drag down the checkbox column to select ─────
 
     initSweep() {
-        if (! this.kb?.selectable) return
+        // Not `kb.selectable`: the sweep is a mouse gesture and survives the
+        // keyboard layer being switched off. The server has already folded the
+        // selectable check into this flag.
+        if (! this.gestures.sweep) return
 
         const root = this.$el.closest('[data-selection-root]')
         if (! root) return
@@ -441,13 +449,15 @@ const wireRecordActions = (config = {}) => ({
         return window.innerHeight
     },
 
-    // Move the active row. With Shift held (and selection on), extend a contiguous
+    // Move the active row. With Shift held (and ranges on), extend a contiguous
     // range from the anchor to the new row — desktop range-select. A plain move
-    // drops the anchor so the next Shift-range starts fresh.
+    // drops the anchor so the next Shift-range starts fresh; so does a Shift move
+    // on a table whose ranges are switched off, where Shift+arrow is just an
+    // arrow.
     moveActive(rows, fromIdx, toIdx, shift) {
         const sel = this.selection()
 
-        if (shift && this.kb.selectable && sel) {
+        if (shift && this.gestures.ranges && this.kb.selectable && sel) {
             if (sel.anchorKey === null) {
                 sel.anchorKey = sel.anchorFor(rows, fromIdx < 0 ? toIdx : fromIdx)
             }
@@ -699,7 +709,7 @@ const wireRecordActions = (config = {}) => ({
         // anchor, and moving the anchor to the row being clicked collapsed the
         // range to the two rows around it — a Shift+click on the checkbox
         // selected 2 rows where the same click on the row body selected 5.
-        if (type === 'click' && ! event.shiftKey && event.target.closest('[role="checkbox"], [data-select-cell]')) {
+        if (type === 'click' && this.gestures.ranges && ! event.shiftKey && event.target.closest('[role="checkbox"], [data-select-cell]')) {
             this.setAnchor(row.dataset.rowKey)
         }
 
@@ -718,7 +728,9 @@ const wireRecordActions = (config = {}) => ({
         const modified = event.shiftKey || event.ctrlKey || event.metaKey
         const inSelectCell = !! event.target.closest('[data-select-cell]')
 
-        if (type === 'click' && this.kb?.selectable && modified && (inSelectCell || ! this.blocked(event, row))) {
+        // Ranges off: a modified click is an ordinary click, and falls through to
+        // whatever the row is bound to — the plain-web reading of Ctrl+click.
+        if (type === 'click' && this.gestures.ranges && modified && (inSelectCell || ! this.blocked(event, row))) {
             return this.onSelectionClick(row, event)
         }
 

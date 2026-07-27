@@ -50,12 +50,19 @@ final class TableShortcutLegend
         ];
 
         if ($this->table->isSelectable()) {
+            // The range rows are listed only when ranges are actually offered:
+            // a legend is a promise, and a table with `rangeSelection` switched
+            // off answers Shift+arrow by moving the active row and nothing more.
+            $ranges = $this->table->usesRangeSelection() ? [
+                ShortcutHint::make(['shift+ArrowUp', 'shift+ArrowDown'], Trans::get('wire-table::messages.shortcut_extend_selection')),
+                ShortcutHint::make(['mod+shift+ArrowUp', 'mod+shift+ArrowDown', 'shift+Home', 'shift+End'], Trans::get('wire-table::messages.shortcut_extend_selection_edges')),
+            ] : [];
+
             $sections[] = [
                 'heading' => Trans::get('wire-table::messages.shortcuts_selection'),
                 'hints' => [
                     ShortcutHint::make('Space', Trans::get('wire-table::messages.shortcut_toggle_selection')),
-                    ShortcutHint::make(['shift+ArrowUp', 'shift+ArrowDown'], Trans::get('wire-table::messages.shortcut_extend_selection')),
-                    ShortcutHint::make(['mod+shift+ArrowUp', 'mod+shift+ArrowDown', 'shift+Home', 'shift+End'], Trans::get('wire-table::messages.shortcut_extend_selection_edges')),
+                    ...$ranges,
                     ShortcutHint::make('mod+A', Trans::get('wire-table::messages.shortcut_select_page')),
                 ],
             ];
@@ -70,12 +77,17 @@ final class TableShortcutLegend
             ];
         }
 
-        $sections[] = [
-            'heading' => Trans::get('wire-table::messages.shortcuts_help'),
-            'hints' => [
-                ShortcutHint::make('?', Trans::get('wire-table::messages.shortcut_show_help')),
-            ],
-        ];
+        // Only when `?` really opens this legend. A table that keeps the keyboard
+        // but drops the help still has a legend — it is data, and another surface
+        // may render it — it just must not advertise a key that answers nothing.
+        if ($this->table->usesShortcutHelp()) {
+            $sections[] = [
+                'heading' => Trans::get('wire-table::messages.shortcuts_help'),
+                'hints' => [
+                    ShortcutHint::make('?', Trans::get('wire-table::messages.shortcut_show_help')),
+                ],
+            ];
+        }
 
         return $sections;
     }

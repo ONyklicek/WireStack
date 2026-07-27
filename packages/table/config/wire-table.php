@@ -19,6 +19,19 @@ return [
         'sortable' => true,
         'hoverable' => true,
         'striped' => false,
+
+        /*
+        | The desktop gesture layer: keyboard grid navigation, Shift-ranges, the
+        | drag sweep down the checkbox column, the right-click row menu, the `?`
+        | shortcut help and the fill handle. Right for a back office, often wrong
+        | for a public page — set false to turn the lot off for every table, or
+        | list capabilities to mix:
+        |
+        |   'gestures' => ['keyboard' => true, 'drag_select' => false],
+        |
+        | Per table: Table::gestures(false) / gestures(fn ($g) => ...).
+        */
+        'gestures' => true,
     ],
 
     /*

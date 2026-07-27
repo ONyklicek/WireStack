@@ -105,6 +105,23 @@ final class RecordActionResolver
     }
 
     /**
+     * The behaviour-only bindings, resolved to instances, for the mobile
+     * stacked-card view to render as ordinary buttons.
+     *
+     * Every record trigger is a desktop one — a finger has no double-click, no
+     * right-click and no Delete key — so on a phone a behaviour-only record
+     * action would otherwise be an action with no way to reach it. These are the
+     * ones {@see rowActionButtons()} deliberately leaves out, which is why they
+     * are a separate list and not a widened filter.
+     *
+     * @return array<int, Action>
+     */
+    public function mobileFallbackButtons(): array
+    {
+        return $this->instancesFor(fn (ResolvedRecordAction $r): bool => ! $r->rendersInRowActions);
+    }
+
+    /**
      * The action Enter fires on the active row: the double-click binding when
      * present (the recommended "open" gesture), else the single-click one.
      */

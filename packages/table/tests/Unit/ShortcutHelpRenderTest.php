@@ -11,6 +11,7 @@ use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Concerns\WithTable;
+use NyonCode\WireTable\Support\TableGestures;
 use NyonCode\WireTable\Table;
 
 /**
@@ -47,7 +48,7 @@ class ShortcutHelpComponent extends Component
 
         match ($this->mode) {
             'selectable' => $table->selectable(),
-            'opted-out' => $table->selectable()->recordActionKeyboard(false),
+            'opted-out' => $table->selectable()->gestures(fn (TableGestures $g) => $g->keyboard(false)),
             'with-form-action' => $table->selectable()->actions([
                 Action::make('review')
                     ->label('Review')

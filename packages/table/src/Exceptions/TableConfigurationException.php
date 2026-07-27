@@ -41,6 +41,16 @@ final class TableConfigurationException extends InvalidArgumentException impleme
         );
     }
 
+    /**
+     * @param  array<int, string>  $valid
+     */
+    public static function unknownGesture(string $capability, array $valid): self
+    {
+        return new self(
+            "Unknown table gesture [{$capability}]. Valid gestures: ".implode(', ', $valid).'.'
+        );
+    }
+
     public static function recordActionInRowActions(): self
     {
         return new self(

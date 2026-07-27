@@ -58,6 +58,11 @@
     $filters = $table->getFilters();
 
     $hasActions = $table->hasActions();
+    // The stacked cards have their own action list: a finger has no double-click,
+    // no right-click and no Delete key, so a behaviour-only record action also
+    // renders here as an ordinary button (recordActionButtonsOnMobile()).
+    $mobileActions = $table->getMobileRowActionsForDisplay();
+    $hasMobileActions = $mobileActions !== [];
     // Mobile stacked cards can collapse the row actions into one dropdown group.
     $collapseMobileActions = $table->shouldCollapseActionsOnMobile();
     $mobileActionGroup = $collapseMobileActions ? $table->getMobileActionGroup() : null;
@@ -77,7 +82,14 @@
     // now cover selectable tables too, but mounting wireRecordActions there is
     // a visible change that ships separately — see mountsRecordActionController().
     $recordActionsRootEnabled = $table->mountsRecordActionController();
-    $activeRowConfig = $recordActionsRootEnabled ? $table->getActiveRowConfig() : null;
+    // The mouse half of the gesture layer (sweep, Shift/mod ranges) — switchable
+    // independently of the keyboard one, so the controller gets its own config.
+    $gestureConfig = $table->getGestureConfig();
+    $usesRangeSelection = $table->usesRangeSelection();
+    // The marker only exists where something continues from the marked row: the
+    // keyboard, a range or a sweep. A table left with a bare click binding runs
+    // the action and highlights nothing.
+    $activeRowConfig = $table->usesActiveRowMarker() ? $table->getActiveRowConfig() : null;
     // `?` opens the shortcut help. The event name is derived from the component
     // id, so a page with several tables opens only the one whose row has focus —
     // a bare window event would open every help modal at once. It goes through
@@ -86,7 +98,7 @@
     // id would never match what the controller dispatches. The controller learns
     // the name through its keyboard config; a table whose legend is empty gets
     // no event and no modal at all.
-    $shortcutLegend = $keyboardNav ? $table->shortcutLegend() : null;
+    $shortcutLegend = $table->usesShortcutHelp() ? $table->shortcutLegend() : null;
     $shortcutHelpEvent = $shortcutLegend !== null && ! $shortcutLegend->isEmpty()
         ? 'wire-table-shortcut-help-'.substr(md5($component->getId()), 0, 12)
         : null;
@@ -910,7 +922,7 @@
                                 <tbody
                                         class="divide-y divide-gray-100 dark:divide-gray-700"
                                         @if($recordActionsRootEnabled)
-                                            x-data="wireRecordActions({ bindings: @js($recordActionBindings), contextMenu: {{ $rowContextMenuEnabled ? 'true' : 'false' }}, keyboard: @js($recordKeyboardConfig), active: @js($activeRowConfig) })"
+                                            x-data="wireRecordActions({ bindings: @js($recordActionBindings), contextMenu: {{ $rowContextMenuEnabled ? 'true' : 'false' }}, keyboard: @js($recordKeyboardConfig), active: @js($activeRowConfig), gestures: @js($gestureConfig) })"
                                             {{-- Bound whenever the controller is mounted, not only for pointer
                                                  bindings: a click also moves the active row, which is what makes a
                                                  clicked row visibly the one the arrow keys continue from. --}}
@@ -1011,13 +1023,14 @@
                                         @if($isSelectable)
                                             {{-- The whole cell toggles, not just the 16px box, which is
                                                  under every touch-target guideline while the rest of the
-                                                 cell sits dead. A modified click is left alone: Shift and
-                                                 mod mean range and add-to-selection, and the row
-                                                 controller answers those for the whole row, cell
-                                                 included. --}}
+                                                 cell sits dead. While ranges are on, a modified click is
+                                                 left alone: Shift and mod mean range and add-to-selection,
+                                                 and the row controller answers those for the whole row,
+                                                 cell included. With ranges off nobody else would answer
+                                                 them, so the cell takes every click and toggles. --}}
                                             <td class="w-12 {{ $cellPadding }} cursor-pointer"
                                                 data-select-cell
-                                                x-on:click="$event.shiftKey || $event.ctrlKey || $event.metaKey || toggle(@js((string) $recordKey))">
+                                                x-on:click="{{ $usesRangeSelection ? '$event.shiftKey || $event.ctrlKey || $event.metaKey || ' : '' }}toggle(@js((string) $recordKey))">
                                                 <div class="flex items-center justify-center">
                                                     {{-- No handler of its own: a click (or Enter/Space on
                                                          the focused box) bubbles to the cell, which owns
@@ -1251,9 +1264,9 @@
                             @endphp
                             {{-- Record actions are a desktop pointer affordance: the delegated
                                  controller lives on the desktop <tbody> only, so click/dblclick/
-                                 right-click record actions do not apply to these touch cards. Touch
-                                 users reach the same actions through the visible row-action buttons
-                                 and their modals. --}}
+                                 right-click record actions do not apply to these touch cards. The
+                                 same actions reach a finger as ordinary buttons instead — see
+                                 $mobileActions, which folds the behaviour-only bindings in. --}}
                             @forelse($records as $record)
                                 @php
                                     $recordKey = $record->{$table->getPrimaryKey()};
@@ -1325,7 +1338,7 @@
                                              icon wide. Labelled buttons go to their own row below —
                                              sharing this line, they take the width the identity needs
                                              and the title collapses to nothing (min-w-0 does the rest). --}}
-                                        @if($hasActions && $collapseMobileActions)
+                                        @if($hasMobileActions && $collapseMobileActions)
                                             <div class="flex items-center justify-end flex-shrink-0 -mr-1">
                                                 {!! $mobileActionGroup->render($record, $actionClick) !!}
                                             </div>
@@ -1350,10 +1363,10 @@
                                         </dl>
                                     @endif
 
-                                    @if($hasActions && ! $collapseMobileActions)
+                                    @if($hasMobileActions && ! $collapseMobileActions)
                                         <div class="flex flex-wrap items-center gap-2 px-4 pb-3 {{ $isSelectable ? 'pl-12' : '' }}"
                                              data-testid="table-card-actions">
-                                            @foreach($actions as $action)
+                                            @foreach($mobileActions as $action)
                                                 {!! $action->render($record, $actionClick) !!}
                                             @endforeach
                                         </div>

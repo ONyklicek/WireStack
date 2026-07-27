@@ -8,6 +8,7 @@ use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireTable\Exceptions\TableConfigurationException;
 use NyonCode\WireTable\Support\RecordAction;
 use NyonCode\WireTable\Support\RecordTrigger;
+use NyonCode\WireTable\Support\TableGestures;
 use NyonCode\WireTable\Table;
 
 // ─── RecordAction value object ───────────────────────────────────
@@ -461,11 +462,11 @@ it('enables keyboard nav automatically when record actions exist', function () {
 it('lets keyboard nav be forced off or on', function () {
     $off = Table::make()
         ->recordAction(RecordAction::make('edit')->onDoubleClick())
-        ->recordActionKeyboard(false);
+        ->gestures(fn (TableGestures $g) => $g->keyboard(false));
     expect($off->keyboardNavEnabled())->toBeFalse()
         ->and($off->getTableRole())->toBeNull();
 
-    expect(Table::make()->recordActionKeyboard()->keyboardNavEnabled())->toBeTrue();
+    expect(Table::make()->gestures(fn (TableGestures $g) => $g->keyboard())->keyboardNavEnabled())->toBeTrue();
 });
 
 // ─── Grid semantics (single owner) ───────────────────────────────
@@ -480,8 +481,8 @@ it('grants grid semantics to selectable tables and tables with bulk actions', fu
         ->and(Table::make()->selectable()->keyboardNavEnabled())->toBeTrue();
 });
 
-it('lets recordActionKeyboard(false) ungrid a selectable table', function () {
-    $table = Table::make()->selectable()->recordActionKeyboard(false);
+it('lets the gesture layer ungrid a selectable table', function () {
+    $table = Table::make()->selectable()->gestures(fn (TableGestures $g) => $g->keyboard(false));
 
     expect($table->usesGridSemantics())->toBeFalse()
         ->and($table->getTableRole())->toBeNull();
@@ -490,11 +491,14 @@ it('lets recordActionKeyboard(false) ungrid a selectable table', function () {
 it('mounts the controller on every grid, selectable-only included', function () {
     // The keyboard selection and the active-row marker live in the delegated
     // controller, so every grid mounts it; a pointer binding still mounts it
-    // even with the keyboard forced off.
+    // even with the keyboard forced off. So do the mouse gestures — dropping
+    // the keyboard from a selectable table leaves the sweep and the ranges,
+    // and only gestures(false) empties the controller out of existence.
     expect(Table::make()->selectable()->mountsRecordActionController())->toBeTrue()
         ->and(Table::make()->recordAction(RecordAction::make('edit')->onDoubleClick())->mountsRecordActionController())->toBeTrue()
-        ->and(Table::make()->recordActionKeyboard()->mountsRecordActionController())->toBeTrue()
-        ->and(Table::make()->selectable()->recordActionKeyboard(false)->mountsRecordActionController())->toBeFalse()
+        ->and(Table::make()->gestures(fn (TableGestures $g) => $g->keyboard())->mountsRecordActionController())->toBeTrue()
+        ->and(Table::make()->selectable()->gestures(fn (TableGestures $g) => $g->keyboard(false))->mountsRecordActionController())->toBeTrue()
+        ->and(Table::make()->selectable()->gestures(false)->mountsRecordActionController())->toBeFalse()
         ->and(Table::make()->mountsRecordActionController())->toBeFalse();
 });
 
