@@ -195,6 +195,14 @@ mobile-selection 13/13, fill-handle 26/26, modal-open-on 14/14, nested-modal
   pořadí neuloží (nepřihlášený uživatel, chybějící migrace). Driver proto měří
   i s odpojeným voláním Livewiru, jinak by regresi neodhalil.
 
+- **Fokus kolem modalu** — opraveno v `8c28d2d`. Modal shelly fokus vůbec
+  neřešily: zůstal na řádku ZA dialogem, takže Tab procházel stránku za modalem
+  (dialog nešel ovládat klávesnicí) a po zavření zůstal fokus na checkboxu →
+  šipky mrtvé (naměřeno ArrowDown 6 → 6), dokud uživatel neklikl na řádek. Nový
+  sdílený partial `modals/partials/focus-trap.blade.php` — expression-only (bez
+  závislosti na JS bundlu) a **bez dvojitých uvozovek**, které by Alpine atribut
+  usekly. 4 regresní checky v gesture labu, ověřeno že bez opravy padají.
+
 - Coverage floor pro `table` zvednut 87 → 88 % (`bda75c5`). Rezerva je ~0,3 bodu
   a floor gate je v CI **blokující**, přičemž CI měří pcov a lokál xdebug — při
   poklesu pokrytí to spadne dřív než u ostatních balíčků.
