@@ -450,6 +450,13 @@ class TablePreview extends Component
             $table->stackedOnMobile()->collapseActionsOnMobile();
         }
 
+        // The two-action case at threshold 1: the default action arm below gives
+        // exactly Edit + Delete, so this reproduces "only two actions, collapse
+        // forced" without a dedicated action list.
+        if ($this->variant === 'stacked-actions-collapse-two') {
+            $table->stackedOnMobile()->collapseActionsOnMobile(threshold: 1)->lazy();
+        }
+
         return $table
             ->model(User::class)
             ->columns([
