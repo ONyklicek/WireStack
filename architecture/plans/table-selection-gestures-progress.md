@@ -77,6 +77,11 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
   Mac/non-Mac labely: server rendruje Ctrl variantu, `x-text` ji na Macu
   přepíše (platforma je klientský fakt) — headless Chrome na macOS hlásí Mac,
   takže driver musí očekávat obě sady.
+- **Krok 25 → oprava `b217ca8`:** shelly měly `wire:key` teleportu natvrdo
+  (`wire-modal-modal`). Nápověda to porušila: tabulka s formulářovou akcí
+  rendruje **dva Modal shelly v jedné Livewire komponentě** a morph klíčuje
+  podle `wire:key` → záměna obsahu. Klíč teď bere `$id`, když je zadané
+  (bez `$id` beze změny); nápověda posílá jako `id` jméno svého eventu.
 
 ## Objevené gotchas (platí i pro další kroky)
 
@@ -91,6 +96,10 @@ Integration, analyse, lint, CDP drivery; coverage při zásahu do `src/*.php`).
   `vendor/bin/pest --configuration packages/core/phpunit.xml` přímo.
 - `verify-mobile-selection.mjs`: stacked-selection preview má předseedovaný
   výběr → první tap na strip odznačuje (spravené očekávání, 13/13).
+- CDP checky počítající prvky (backdropy, markery) musí filtrovat na
+  **vykreslené**, ne na přítomné v DOM: zavřený modal si backdrop v dokumentu
+  nechává (`display:none`). `verify-nested-modal.mjs` na tom spadl, jakmile na
+  stránku přibyla nápověda (`painted=1 of 2`).
 
 ## Stav sítě
 
