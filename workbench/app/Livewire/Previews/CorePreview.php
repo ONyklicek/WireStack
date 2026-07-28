@@ -33,6 +33,15 @@ class CorePreview extends Component
         $this->showPreviewModal = false;
     }
 
+    // ─── open-on preview: JS-opened modal shells + a server roundtrip ───────
+
+    public int $serverTicks = 0;
+
+    public function tick(): void
+    {
+        $this->serverTicks++;
+    }
+
     // ─── Toasts preview: server-side notification API ──────────────────────
 
     /**
@@ -68,6 +77,10 @@ class CorePreview extends Component
     {
         if ($this->variant === 'toasts') {
             return view('livewire.previews.core-toasts');
+        }
+
+        if ($this->variant === 'open-on') {
+            return view('livewire.previews.core-open-on');
         }
 
         $record = User::query()->firstOrFail();

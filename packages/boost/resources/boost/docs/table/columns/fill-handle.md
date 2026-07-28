@@ -134,3 +134,5 @@ the versions the previous call returned; do not reuse the ones you started with.
 
 - [Editing & Column-Level Filters](editing.md) — how a single inline save works
 - [TextInputColumn](text-input.md) · [SelectColumn](select.md) · [ToggleColumn](toggle.md)
+- [The Gesture Layer](../gestures.md) — the handle is one of its capabilities;
+  `gestures(false)` closes it, endpoint included

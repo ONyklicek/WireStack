@@ -107,7 +107,16 @@ try {
   check('page holds fewer rows than the filter matches', s.cards === 2, `${s.cards} cards`);
   check('the scope line is present, not hidden until discovered', s.scopeText !== null, s.scopeText ?? 'absent');
 
-  // ── strip selects the page ──
+  // ── strip toggles the page ──
+  // The preview boots with three records pre-selected and both of the page's
+  // cards are among them, so the strip reads fully checked and the first tap
+  // CLEARS the page (toggleAll's clear branch) — that is the toggle contract,
+  // not a failure. Tap once to clear, then once more to select the page.
+  await evaluate(`document.querySelector('[data-testid=table-card-select-all]').click()`);
+  await sleep(1200);
+  s = await state();
+  check('strip on a fully selected page clears it first', s.checked.every((c) => !c), JSON.stringify(s.checked));
+
   await evaluate(`document.querySelector('[data-testid=table-card-select-all]').click()`);
   await sleep(1200);
   s = await state();

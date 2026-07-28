@@ -455,6 +455,15 @@ Main concerns:
 - `Concerns\HasSqlDebug`
 - `Concerns\HasSubRows`
 - `Concerns\HasRecordTriggers` — record-action trigger vocabulary (on the `RecordAction` wrapper)
+- `Concerns\HasGestures` — the table's side of the gesture layer
+
+Gesture layer (which desktop pointer/keyboard gestures a table offers — OPT-IN):
+
+- `Support\TableGestures` — the canonical vocabulary: `keyboard` (3-state), `rangeSelection`, `dragSelect`, `contextMenu`, `shortcutHelp`, `fillHandle`; `defaults()` (shipped: keyboard + dragSelect OFF) / `all()` / `none()` / `fromConfig()`
+- `Concerns\HasGestures` — `Table::gestures(bool|Closure|TableGestures)`, `getGestures()`, and the effective readers `usesDragSelect()` / `usesRangeSelection()` / `usesShortcutHelp()` / `usesActiveRowMarker()` / `getGestureConfig()`
+- Consumers to keep honest: `Table::usesGridSemantics()`, `mountsRecordActionController()`, `hasRowContextMenu()`, `isFillHandleEnabled()`, `Support\TableShortcutLegend`
+- Project default: `config('wire-table.defaults.gestures')` — `null` shipped default / `true` all / `false` none / map
+- Rule: a capability is a **permission, not a trigger**, and an explicitly declared record action is outside the layer (only `onKey()` needs the keyboard)
 
 Record actions (whole-row interaction — click/dblclick/right-click/keyboard):
 
@@ -464,6 +473,7 @@ Record actions (whole-row interaction — click/dblclick/right-click/keyboard):
 - `Actions\RecordActionResolver` — trigger→name pointer map, context-menu + row-button contributions, keyboard primary/secondary/shortcuts
 - JS controller: `packages/table/resources/js/record-actions.js` → `wireRecordActions` (one per `<tbody>`); delivered via `packages/table/dist/wire-table-records.js` + `partials/record-actions-assets`
 - Deprecated alias: `Table::rowContextMenu()` → prefer `recordAction()->onContextMenu()`
+- Mobile fallback: `Table::getMobileRowActionsForDisplay()` / `hasMobileActions()` / `recordActionButtonsOnMobile(bool)` — behaviour-only bindings render as ordinary buttons on a stacked card (copies with `HasKeyboardShortcut::withoutKeyboardShortcut()`, since a rendered button binds its shortcut as a *window* listener)
 
 Services:
 

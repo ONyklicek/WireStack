@@ -59,12 +59,15 @@ try {
     await writeFile(join(shotDir, `${name}.png`), Buffer.from(data, 'base64'));
   };
 
+  const consoleWarnings = [];
   await page('Page.enable');
   await page('Runtime.enable');
   await page('Console.enable');
   cdp.on('Console.messageAdded', (p) => {
     const m = p.params?.message;
-    if (m && m.level === 'error') consoleErrors.push(m.text);
+    if (!m) return;
+    if (m.level === 'error') consoleErrors.push(m.text);
+    if (m.level === 'warning') consoleWarnings.push(m.text);
   });
   await page('Emulation.setDeviceMetricsOverride', { width: 1200, height: 1000, deviceScaleFactor: 1, mobile: false });
 
@@ -75,6 +78,34 @@ try {
   check('core editor boots (.ProseMirror contenteditable) via ESM module script', coreBooted);
   const noAddonOnCore = await eval_(`typeof window.WireTiptapAddons === 'undefined'`);
   check('addon chunk NOT loaded on the core editor', noAddonOnCore);
+
+  // TipTap v3 folded Link + Underline into StarterKit. Drive the fluent command
+  // surface to prove both still register (no standalone import needed) — this is
+  // the regression the v2→v3 migration turns on.
+  // Seed text, then let ProseMirror ingest the input event before selecting —
+  // marks are only reported active over a real selection in its own state.
+  await eval_(`(() => {
+    const pm = document.querySelector('.ProseMirror');
+    pm.focus();
+    document.execCommand('insertText', false, 'sample text');
+    return true;
+  })()`);
+  await sleep(500);
+  // Read isActive immediately after each toggle — a later command (setHeading
+  // re-focuses and moves the selection) would clear the earlier stored marks.
+  const v3Marks = await eval_(`(() => {
+    const root = document.querySelector('[x-data^="tiptapEditor"]');
+    const d = window.Alpine.$data(root);
+    const pm = document.querySelector('.ProseMirror');
+    const selectAll = () => { pm.focus(); document.execCommand('selectAll'); };
+    selectAll(); d.toggleBold();      const bold = d.isActive('bold');
+    selectAll(); d.toggleUnderline(); const underline = d.isActive('underline');
+    selectAll(); d.setHeading(2);     const heading = d.isActive('heading', { level: 2 });
+    return { bold, underline, heading };
+  })()`);
+  check('StarterKit v3: toggleBold marks bold active', v3Marks.bold);
+  check('StarterKit v3 folds Underline in (toggleUnderline active)', v3Marks.underline);
+  check('StarterKit v3: setHeading(2) active', v3Marks.heading);
   await shot('01-core-editor');
 
   // ─────────────── editor WITH tables (addon) ───────────────
@@ -101,6 +132,12 @@ try {
 
   check('no console errors during the run', consoleErrors.length === 0,
     consoleErrors.slice(0, 3).join(' | '));
+
+  // v3 emits a console warning if the same extension is registered twice. Guards
+  // against re-adding standalone Link/Underline now that StarterKit owns them.
+  const dupWarnings = consoleWarnings.filter((t) => /duplicate extension/i.test(t));
+  check('no duplicate-extension warning (Link/Underline not double-registered)',
+    dupWarnings.length === 0, dupWarnings[0] ?? '');
 
   console.log(`\nScreenshots: ${shotDir}`);
   const failed = results.filter((r) => !r.ok);

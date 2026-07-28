@@ -132,3 +132,5 @@ volání; nepoužívejte znovu ty, se kterými jste začali.
 
 - [Editace a filtry na úrovni sloupce](editing.md) — jak funguje jedno inline uložení
 - [TextInputColumn](text-input.md) · [SelectColumn](select.md) · [ToggleColumn](toggle.md)
+- [Vrstva gest](../gestures.md) — handle je jedna z jejích schopností;
+  `gestures(false)` ho zavře i s endpointem

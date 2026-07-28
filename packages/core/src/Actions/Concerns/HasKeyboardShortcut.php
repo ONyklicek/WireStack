@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Actions\Concerns;
 
+use NyonCode\WireCore\Foundation\Support\ShortcutLabelFormatter;
+
 /**
  * Trait HasKeyboardShortcut
  *
@@ -39,6 +41,23 @@ trait HasKeyboardShortcut
     {
         $this->keyboardShortcut = $shortcut;
         $this->keyboardShortcutLabel = $label;
+
+        return $this;
+    }
+
+    /**
+     * Drop the shortcut for this copy of the action.
+     *
+     * A rendered button binds its shortcut as a *window* listener, so an action
+     * rendered on more than one surface answers the same key once per surface —
+     * and a surface that is merely present but not shown (the stacked mobile
+     * cards on a desktop, say) would answer it invisibly, once per record.
+     * A surface that must not own the key clones the action and calls this.
+     */
+    public function withoutKeyboardShortcut(): static
+    {
+        $this->keyboardShortcut = null;
+        $this->keyboardShortcutLabel = null;
 
         return $this;
     }
@@ -129,29 +148,11 @@ trait HasKeyboardShortcut
 
     /**
      * Format shortcut for display (e.g. 'mod+s' → 'Ctrl+S' or '⌘S').
+     * Delegates to the canonical {@see ShortcutLabelFormatter}, so an action
+     * label and a shortcut legend always read the same.
      */
     protected function formatShortcutLabel(string $shortcut): string
     {
-        $parts = array_map('trim', explode('+', $shortcut));
-        $formatted = [];
-
-        foreach ($parts as $part) {
-            $formatted[] = match (strtolower($part)) {
-                'mod' => 'Ctrl',
-                'ctrl', 'control' => 'Ctrl',
-                'shift' => 'Shift',
-                'alt', 'option' => 'Alt',
-                'meta', 'cmd', 'command' => '⌘',
-                'enter', 'return' => '↵',
-                'escape', 'esc' => 'Esc',
-                'delete' => 'Del',
-                'backspace' => '⌫',
-                'space' => 'Space',
-                'tab' => 'Tab',
-                default => strtoupper($part),
-            };
-        }
-
-        return implode('+', $formatted);
+        return ShortcutLabelFormatter::format($shortcut);
     }
 }

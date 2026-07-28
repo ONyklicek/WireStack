@@ -44,6 +44,31 @@ it('renders close action handlers for modal components', function () {
         ->assertSeeHtml('$wire.closePanel()');
 });
 
+// ─── Event-opened shells (open-on) ────────────────────────────────
+
+class ModalOpenOnTagComponent extends Component
+{
+    public function render(): string
+    {
+        return <<<'BLADE'
+            <div>
+                <x-wire-modals::modal open-on="demo-tag-modal" heading="Help">Body</x-wire-modals::modal>
+                <x-wire-modals::confirmation open-on="demo-tag-confirm" heading="Sure?" is-informative />
+                <x-wire-modals::slide-over open-on="demo-tag-panel" heading="Details">Body</x-wire-modals::slide-over>
+            </div>
+        BLADE;
+    }
+}
+
+it('renders event-opened shells (open-on) without a wire:model binding', function () {
+    Livewire::test(ModalOpenOnTagComponent::class)
+        ->assertSeeHtml('x-on:demo-tag-modal.window="show = true"')
+        ->assertSeeHtml('x-on:demo-tag-confirm.window="show = true"')
+        ->assertSeeHtml('x-on:demo-tag-panel.window="show = true"')
+        ->assertSeeHtml('x-data="{ show: false }"')
+        ->assertDontSeeHtml('entangle');
+});
+
 // ─── Modal stacking z-index ───────────────────────────────────────
 
 class ModalZIndexComponent extends Component
@@ -260,4 +285,34 @@ it('gates the compose slide-over sheet switch on the configured breakpoint', fun
         ->and($so->style()->widthClass())->toBe('md:max-w-md');
 
     config(['wire-core.mobile.breakpoint' => 'sm']);
+});
+
+// ─── Focus management (regression: the keyboard died around a modal) ───
+
+it('gives every modal shell the focus trap', function () {
+    // Without it the focus stays wherever it was when the modal opened — on a
+    // grid table, the row behind the dialog. Tab then walks the page behind the
+    // modal, the dialog's own buttons are unreachable, and once it closes the
+    // focus is left on whatever tabbing landed on, which kills the grid's arrow
+    // keys (they only answer when a row itself has the focus).
+    $html = Livewire::test(ModalComponentRenderComponent::class)->html();
+
+    // Three shells, one shared implementation.
+    expect(substr_count($html, 'x-on:keydown.tab'))->toBe(3)
+        ->and(substr_count($html, '_wireFocusFrom'))->toBe(15)
+        ->and(substr_count($html, '_wireFocusable'))->toBe(9)
+        // The root has to be focusable itself, for a dialog with no controls.
+        ->and(substr_count($html, 'tabindex="-1"'))->toBeGreaterThanOrEqual(3);
+});
+
+it('renders the trap expressions whole, not truncated at a quote', function () {
+    // The trap lives in Alpine attributes, where a double quote ends the
+    // attribute early and takes the rest of the expression with it. Assert the
+    // LAST thing in each expression survived, which is what a truncation would
+    // remove first.
+    $html = Livewire::test(ModalComponentRenderComponent::class)->html();
+
+    expect($html)->toContain('preventScroll: true')   // tail of x-effect
+        ->toContain('first.focus()')                   // tail of keydown.tab
+        ->toContain('el.tabIndex');                    // tail of x-init
 });

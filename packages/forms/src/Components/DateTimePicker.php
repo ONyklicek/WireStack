@@ -6,11 +6,13 @@ namespace NyonCode\WireForms\Components;
 
 use Carbon\Carbon;
 use Closure;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Concerns\HasNativeControl;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
 use NyonCode\WireCore\Foundation\Contracts\HydratesState;
+use NyonCode\WireCore\Foundation\Support\DateBoundary;
 
 /**
  * Unified date/time picker field.
@@ -33,9 +35,9 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
 
     protected ?string $displayFormat = null;
 
-    protected string|Closure|null $minDate = null;
+    protected string|DateTimeInterface|Closure|null $minDate = null;
 
-    protected string|Closure|null $maxDate = null;
+    protected string|DateTimeInterface|Closure|null $maxDate = null;
 
     protected ?int $firstDayOfWeek = null;
 
@@ -117,16 +119,28 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
 
     // ─── Constraints ───────────────────────────────────────────────
 
-    /** Set the earliest selectable date. */
-    public function minDate(string|Closure|null $date): static
+    /**
+     * Set the earliest selectable date.
+     *
+     * Takes anything readable as a date — a Carbon/DateTimeInterface, or a
+     * string such as '2026-07-10', '10.07.2026', 'today' or '+1 week'. On a
+     * datetime picker a bound may carry a time ('2026-07-10 08:30'), which then
+     * limits the clock on that day too.
+     */
+    public function minDate(string|DateTimeInterface|Closure|null $date): static
     {
         $this->minDate = $date;
 
         return $this;
     }
 
-    /** Set the latest selectable date. */
-    public function maxDate(string|Closure|null $date): static
+    /**
+     * Set the latest selectable date.
+     *
+     * A day-granular bound covers the whole day: on a datetime picker
+     * `maxDate('2026-07-20')` leaves 20 July selectable up to 23:59.
+     */
+    public function maxDate(string|DateTimeInterface|Closure|null $date): static
     {
         $this->maxDate = $date;
 
@@ -240,14 +254,18 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
         return $this->displayFormat;
     }
 
+    /**
+     * The lower bound in the widget's own format — the only shape a native
+     * input honours and the custom picker can compare against.
+     */
     public function getMinDate(): ?string
     {
-        return $this->evaluate($this->minDate);
+        return DateBoundary::min($this->evaluate($this->minDate), $this->getStateFormat());
     }
 
     public function getMaxDate(): ?string
     {
-        return $this->evaluate($this->maxDate);
+        return DateBoundary::max($this->evaluate($this->maxDate), $this->getStateFormat());
     }
 
     /**
@@ -273,11 +291,17 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
     }
 
     /**
+     * The calendar matches these against its own `Y-m-d` cells, so they go
+     * through the same normalization as the bounds.
+     *
      * @return array<int, string>
      */
     public function getDisabledDates(): array
     {
-        return $this->evaluate($this->disabledDates);
+        return array_values(array_filter(array_map(
+            fn (mixed $date): ?string => DateBoundary::min($date, 'Y-m-d'),
+            $this->evaluate($this->disabledDates),
+        )));
     }
 
     public function shouldCloseOnDateSelection(): bool

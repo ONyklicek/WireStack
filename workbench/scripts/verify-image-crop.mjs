@@ -96,6 +96,49 @@ try {
   })()`);
   chk('cropping at the bottom yields the blue half', bottom[2] > 200 && bottom[0] < 50, `rgb=${bottom}`);
 
+  // ── The cropper is a dialog, so it has to behave like one ──────────────
+  // It covers the page; before it carried the focus trap, opening it left the
+  // focus on <body> and Tab reached the file picker BEHIND the overlay.
+  await ev(`(async () => {
+    const c = document.createElement('canvas'); c.width=200; c.height=400;
+    const x = c.getContext('2d'); x.fillStyle='red'; x.fillRect(0,0,200,400);
+    const blob = await new Promise(r=>c.toBlob(r,'image/png'));
+    const p = document.querySelector('[data-testid$="-picker"]');
+    const dt = new DataTransfer(); dt.items.add(new File([blob],'tall.png',{type:'image/png'})); p.files = dt.files;
+    p.dispatchEvent(new Event('change',{bubbles:true}));
+    const d = Alpine.$data(${root});
+    for (let i=0;i<40 && !d.cropping;i++) await new Promise(r=>setTimeout(r,100));
+  })()`);
+  await sleep(600);
+
+  const box = '[data-testid$="-cropper"]';
+  chk('the cropper announces itself as a modal dialog',
+    await ev(`(() => { const b = document.querySelector('${box}'); return b?.getAttribute('role') === 'dialog' && b?.getAttribute('aria-modal') === 'true'; })()`));
+
+  chk('opening it moves the focus inside',
+    await ev(`(() => { const b = document.querySelector('${box}'); return !!b && b.contains(document.activeElement); })()`),
+    await ev(`document.activeElement?.getAttribute?.('data-testid') ?? document.activeElement?.tagName`));
+
+  const tabbed = [];
+  for (let i = 0; i < 3; i++) {
+    await cdp.send('Input.dispatchKeyEvent',{type:'rawKeyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9},sessionId);
+    await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Tab',code:'Tab',windowsVirtualKeyCode:9},sessionId);
+    await sleep(220);
+    tabbed.push(await ev(`(() => { const b = document.querySelector('${box}'); return !!b && b.contains(document.activeElement); })()`));
+  }
+  chk('Tab stays inside it instead of reaching the picker behind it',
+    tabbed.every(Boolean), JSON.stringify(tabbed));
+
+  const returned = await ev(`(async () => {
+    const before = document.activeElement;
+    Alpine.$data(${root}).cancelCrop();
+    await new Promise(r => setTimeout(r, 600));
+    const b = document.querySelector('${box}');
+    return { closed: !b || b.getClientRects().length === 0, focus: document.activeElement?.tagName, stillInside: !!b && b.contains(document.activeElement) };
+  })()`);
+  chk('cancelling closes it and takes the focus back out',
+    returned.closed && ! returned.stillInside, JSON.stringify(returned));
+
   const f=R.filter(x=>!x).length; console.log(`\n${R.length-f}/${R.length} checks passed`); process.exitCode=f?1:0;
 } catch(e){console.error('DRIVER ERROR:',e);process.exitCode=2} finally { try{cdp?.close()}catch{} chrome.kill(); }
 async function waitForDevtools(port){for(let i=0;i<60;i++){try{const r=await fetch(`http://127.0.0.1:${port}/json/version`);const j=await r.json();if(j.webSocketDebuggerUrl)return j.webSocketDebuggerUrl}catch{}await sleep(250)}throw new Error('no devtools')}

@@ -57,6 +57,10 @@ class FieldPreview extends Component
             'code' => '283041',
             'metadata' => ['plan' => 'pro', 'seats' => '12', 'region' => 'eu-central'],
             'event_at' => '2026-06-15 14:30',
+            // Left empty on purpose: the bounds preview has to show where an
+            // unset picker opens. The key still has to exist — entangle() is a
+            // no-op on a state path Livewire has never seen.
+            'slot_at' => null,
         ];
     }
 
@@ -304,6 +308,16 @@ class FieldPreview extends Component
                 ->closeOnDateSelection()
                 ->mode('datetime'),
 
+            // Bounds a driver can assert against: fixed, far enough out that
+            // "today" never falls inside them, and narrow enough on the clock
+            // that the time part has to be enforced too.
+            'date-time-picker-bounds' => DateTimePicker::make('slot_at')
+                ->label('Appointment slot')
+                ->helperText('Between 10 March 08:30 and 20 March 17:00, 2030.')
+                ->minDate('2030-03-10 08:30')
+                ->maxDate('2030-03-20 17:00')
+                ->mode('datetime'),
+
             'file-upload' => FileUpload::make('photo')
                 ->label('Cover image')
                 ->helperText('PNG or JPG up to 5 MB.')
@@ -311,6 +325,18 @@ class FieldPreview extends Component
                 ->imageCropAspectRatio('16:9')
                 ->imageResizeTargetWidth(320)
                 ->cropInteractively(),
+
+            // The same processing WITHOUT the interactive frame: the ratio is a
+            // ratio, cropped from the centre, and the file reaches the
+            // wire:model input on its own. Kept as its own preview because that
+            // path stopped being covered in a browser the moment the field
+            // above opted into the frame.
+            'file-upload-auto' => FileUpload::make('photo')
+                ->label('Cover image (centre crop)')
+                ->helperText('Cropped and resized without asking — no frame to place.')
+                ->image()
+                ->imageCropAspectRatio('16:9')
+                ->imageResizeTargetWidth(320),
 
             default => TextInput::make('name')
                 ->label('Full name')

@@ -8,6 +8,7 @@ use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionHalt;
 use NyonCode\WireCore\Actions\BaseAction;
 use NyonCode\WireCore\Actions\BulkAction;
+use NyonCode\WireCore\Actions\Contracts\ModalForm;
 use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Actions\ModalFooterAction;
 use NyonCode\WireCore\Core\Actions\ActionContext;
@@ -965,6 +966,27 @@ trait InteractsWithActions
         }
 
         return $this->actionModalInfolistInstance;
+    }
+
+    /**
+     * The resolved form instance for the current action modal, or null.
+     *
+     * Form-agnostic default: wire-core hosts have no form runtime, so the modal
+     * renders without a form body. The wire-forms bridge
+     * (`NyonCode\WireForms\Concerns\InteractsWithActionForms`) overrides
+     * this (resolved via `insteadof` in the composing host) to build the real
+     * {@see ModalForm}. Declared here so the core action modal-host view can call
+     * it on any host — including a standalone wire-core one — without a fatal.
+     */
+    public function getActionModalFormInstance(): ?ModalForm
+    {
+        return null;
+    }
+
+    /** Form-agnostic default for a stacked modal frame; see {@see getActionModalFormInstance()}. */
+    public function getActionModalFormInstanceForDepth(int $depth): ?ModalForm
+    {
+        return null;
     }
 
     // ==========================================

@@ -75,6 +75,31 @@ it('renders as a dialog with forwarded wire bindings, body and buttons — no <x
         ->assertDontSeeHtml('x-wire-modals::confirmation'); // never falls back to the component
 });
 
+class ConfirmationOpenOnHost extends Component
+{
+    public function render(): string
+    {
+        return <<<'BLADE'
+            <div>
+                {!! new \NyonCode\WireCore\Modals\Html\Confirmation(
+                    heading: 'Event-opened?',
+                    openOn: 'demo-open-confirm',
+                    isInformative: true,
+                ) !!}
+            </div>
+        BLADE;
+    }
+}
+
+it('opens on a window event instead of a wire:model binding when openOn is set', function () {
+    Livewire::test(ConfirmationOpenOnHost::class)
+        ->assertSeeHtml('x-on:demo-open-confirm.window="show = true"')
+        ->assertSeeHtml('x-data="{ show: false }"')
+        ->assertDontSeeHtml('entangle')
+        // the cancel button still closes the client-side state
+        ->assertSeeHtml('data-testid="confirmation-cancel"');
+});
+
 class ConfirmationVariantHost extends Component
 {
     public bool $show = true;

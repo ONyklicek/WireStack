@@ -1,4 +1,4 @@
-import { createAutoScroller } from './autoscroll'
+import { createAutoScroller } from '../support/autoscroll'
 import { createGrid } from './grid'
 import { bounds, clampToColumn, isEmpty, makeRange, targets } from './range'
 

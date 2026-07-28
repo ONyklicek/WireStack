@@ -41,6 +41,16 @@ final class TableConfigurationException extends InvalidArgumentException impleme
         );
     }
 
+    /**
+     * @param  array<int, string>  $valid
+     */
+    public static function unknownGesture(string $capability, array $valid): self
+    {
+        return new self(
+            "Unknown table gesture [{$capability}]. Valid gestures: ".implode(', ', $valid).'.'
+        );
+    }
+
     public static function recordActionInRowActions(): self
     {
         return new self(
@@ -56,6 +66,18 @@ final class TableConfigurationException extends InvalidArgumentException impleme
             "Cannot call {$method}() on the record action referencing [{$name}]: a ".
             'reference by name has no action of its own to configure. Configure it '.
             'where it is declared in actions(), or wrap an Action instead of naming one.'
+        );
+    }
+
+    /**
+     * @param  array<int, string>  $reserved
+     */
+    public static function reservedRecordActionKey(string $key, array $reserved): self
+    {
+        return new self(
+            "onKey('{$key}') collides with the table's built-in keyboard navigation — ".
+            'the key is reserved and the shortcut could never fire. Reserved keys: '.
+            implode(', ', array_filter($reserved)).'. Bind a different key instead.'
         );
     }
 

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Carbon;
 use NyonCode\WireForms\Components\DateTimePicker;
 use NyonCode\WireTable\Filters\DateFilter;
 
@@ -35,6 +36,14 @@ it('can set min and max date', function () {
 
     expect($filter->getMinDate())->toBe('2024-01-01')
         ->and($filter->getMaxDate())->toBe('2024-12-31');
+});
+
+// The inline header filter is a native <input type="date|month">, which drops a
+// min/max it cannot read without saying so.
+it('hands the inline input bounds in the shape it accepts', function () {
+    expect(DateFilter::make('created_at')->minDate('01.01.2024')->getMinDate())->toBe('2024-01-01')
+        ->and(DateFilter::make('created_at')->minDate(Carbon::parse('2024-01-01 08:30'))->getMinDate())->toBe('2024-01-01')
+        ->and(DateFilter::make('created_at')->month()->maxDate('2024-12-31')->getMaxDate())->toBe('2024-12');
 });
 
 // ─── Labels ─────────────────────────────────────────────────────────────────

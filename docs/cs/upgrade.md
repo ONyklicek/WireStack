@@ -78,6 +78,84 @@ Před upgradem ověřte, že je vaše aplikace splňuje.
 
 ---
 
+## Výběr a klávesová gesta
+
+Z výběru v tabulce se stala plnohodnotná sada gest, ne jen sloupec zaškrtávátek
+(viz [Výběr řádků](table/selection.md)). Při upgradu zkontrolujte čtyři věci.
+
+**1. Všechna gesta nad řádkem jsou opt-in — `->gestures()`.** Z výběru se stala
+plnohodnotná sada gest: `Shift`/`mod` kliky pro rozsahy, tažení po sloupci se
+zaškrtávátky, které nabere celý blok, a z klávesnice šipky, `Space`, `Shift`+šipky
+a `mod`+`A`. Nic z toho není zapnuté, dokud si o to tabulka neřekne — každé z nich
+totiž mění chování tabulky vůči návštěvníkovi, který ji ovládat nezamýšlel: řádky
+jdou do pořadí tabulátoru, označuje se aktivní řádek, tažení začne vybírat
+a modifikovaný klik přestane být klikem.
+
+Tabulkám, které to chtějí, přidejte jedno volání:
+
+```php
+->gestures()
+->selectable()
+```
+
+nebo, pokud je celý projekt back office:
+
+```php
+// config/wire-table.php
+'defaults' => ['gestures' => true],
+```
+
+Co změna *neovlivní*: zaškrtávátka, oba ovladače „vybrat vše" i bulk bar fungují
+beze změny a tabulka, která si o gesta neřekla, nemontuje delegovaný controller
+vůbec. Stejně tak kontextové menu pod pravým tlačítkem a fill handle — o oboje
+jste si stejně museli říct sami.
+Šest schopností a jak je kombinovat najdete ve [Vrstvě gest](table/gestures.md).
+
+**2. `->onKey()` na navigační klávese nově vyhodí výjimku.** Dřív se tiše
+zahodila, takže akce prostě nikdy nevystřelila. Pokud takovou vazbu máte, byla
+to už dřív mrtvá větev — přemapujte ji na volnou klávesu:
+
+```text
+Enter  Space  ArrowUp  ArrowDown  Home  End  PageUp  PageDown  ContextMenu  F10  ?
+```
+
+`Backspace` zůstává k dispozici a nově funguje i jako alias klávesy `Delete`.
+
+**3. Rozsahová gesta už neopouštějí režim „vše odpovídající".** Když je vybráno
+„vše, co odpovídá filtru", je uložený seznam seznamem *výjimek* — takže rozsah
+přes `Shift`+šipku ho nově **odznačí**, místo aby celý výběr zúžil na jednu
+stránku. Pokud výběr čtete přímo, počítejte s tím, že `getSelectedRecordKeys()`
+v tomto režimu záměrně vrací `[]`; použijte `selectedRecordsQuery()` nebo
+`eachSelectedRecord()`.
+
+**4. Přepublikujte view tabulky, pokud jste ho přepsali.** Gesta potřebují
+markup, který zkompilovaný JavaScript hledá, a publikovaná kopie
+`resources/views/vendor/wire-table/tables/index.blade.php` ho mít nebude. View
+nese kontraktní značku, takže zastaralá kopie spadne hlasitě v konzoli prohlížeče
+místo toho, aby tiše vybírala špatné řádky:
+
+```bash
+php artisan vendor:publish --tag=wire-table::views --force
+```
+
+Své úpravy pak naneste znovu na nový soubor. Pokud jste view přepsali jen kvůli
+vzhledu, bývá [Theming](theming.md) menší cesta.
+
+**5. Akce nad záznamem, které byly jen chováním, se na mobilní kartě nově
+vykreslí jako tlačítko.** Telefon nemá dvojklik, pravý klik ani hover, kterým by
+se jeden nebo druhý dal objevit — akce navázaná jen na gesto tak byla po složení
+tabulky nedosažitelná. Nově se na kartě vykreslí jako obyčejné tlačítko, a jen
+tam; desktopová tabulka se nemění. Nic se nezdvojí: akce už přítomná
+v `->actions()` i akce povýšená přes `->alsoInRowActions()` dá právě jedno
+tlačítko a fallbacková tlačítka se počítají do `->collapseActionsOnMobile()`.
+Vypnout lze pro konkrétní tabulku:
+
+```php
+->recordActionButtonsOnMobile(false)
+```
+
+---
+
 ## Hledání breaking changes
 
 `CHANGELOG.md` je zdroj pravdy. Breaking changes jsou vyznačeny pod nadpisem

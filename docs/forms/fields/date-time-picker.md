@@ -40,6 +40,29 @@ DateTimePicker::make('start')
     ->closeOnDateSelection()
 ```
 
+Bounds take anything readable as a date — a `Carbon`/`DateTimeInterface`, or a
+string such as `'2026-07-10'`, `'10.07.2026'`, `'today'` or `'+1 week'` — and are
+reshaped for the widget behind the scenes. A bound that cannot be read at all
+throws, rather than being silently dropped by the browser.
+
+```php
+DateTimePicker::make('start')
+    ->minDate(now())              // no past dates
+    ->maxDate(now()->addYear())
+```
+
+On a `datetime` picker a bound may also carry a time, which then limits the
+clock on that boundary day only:
+
+```php
+DateTimePicker::make('slot')
+    ->minDate('2026-07-10 08:30') // 10 July cannot start before 08:30
+    ->maxDate('2026-07-20 17:00') // 20 July cannot run past 17:00
+```
+
+A day-granular upper bound covers the whole day: `->maxDate('2026-07-20')`
+leaves 20 July selectable up to 23:59.
+
 ## Time Options
 
 ```php
@@ -92,8 +115,8 @@ The only exception is [`asMonth()`](#modes), which is always native.
 | `asDateTime()` | — | Alias for `mode('datetime')` |
 | `format(string)` | string | Storage format (Carbon compatible) |
 | `displayFormat(string)` | string | Display format shown to the user |
-| `minDate(string\|Closure)` | string | Minimum selectable date |
-| `maxDate(string\|Closure)` | string | Maximum selectable date |
+| `minDate(string\|DateTimeInterface\|Closure)` | string | Earliest selectable date; may carry a time on a `datetime` picker |
+| `maxDate(string\|DateTimeInterface\|Closure)` | string | Latest selectable date; a day-granular bound covers the whole day |
 | `disabledDates(array\|Closure)` | array | Dates that cannot be selected |
 | `firstDayOfWeek(int)` | int | 0=Sunday, 1=Monday |
 | `closeOnDateSelection()` | bool | Close picker after a date is selected |

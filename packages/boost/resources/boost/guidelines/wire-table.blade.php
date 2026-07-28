@@ -88,6 +88,99 @@ cannot overwrite related attributes or the row key. Create/attach/detach actions
 `$this->attachRelated($id, [...pivot])` and `$this->detachRelated($id)` (belongs-to-many only, `null`
 detaches all). Using one against an unsupported relationship type throws a clear `RuntimeException`.
 
+### Gesture layer
+
+The desktop behaviour — keyboard grid navigation, Shift/mod ranges, the drag sweep, the right-click row
+menu, the `?` help and the Excel fill handle — is one layer, owned by `Support\TableGestures` and
+configured with `Table::gestures()`. **It is opt-in.** Keyboard navigation, range selection and the drag
+sweep are OFF for a table that never calls `gestures()`, because each changes how the table answers a
+visitor who never meant to operate it (rows enter the tab order, an active row is marked, a press in the
+checkbox column starts selecting a block, a Shift+click stops meaning a click). A selectable table starts
+as checkboxes and nothing more and mounts no delegated controller at all. Right for a back office, wrong
+for a public listing:
+
+    ->gestures()                                                 // the desktop-app table
+    ->gestures(false)                                            // not even the quiet capabilities
+    ->gestures(fn (TableGestures $g) => $g
+        ->keyboard()                                             // arrows, Enter, shortcuts …
+        ->dragSelect(false))                                     // … but still no mouse sweep
+    ->gestures(TableGestures::none()->contextMenu())             // a prepared set, shared across tables
+
+Six capabilities, each its own setter and `allows*()` reader, with the default a table gets without asking:
+
+| Capability | Default | Covers |
+|---|---|---|
+| `keyboard` | **off** | roving tabindex, arrows, Home/End, PageUp/PageDown, Enter / Shift+Enter, Space, every `keyboardShortcut()`/`onKey()` against the active row — and what makes the table an ARIA `grid` |
+| `rangeSelection` | **off** | Shift / mod / mod+Shift click, Shift+arrow, Shift+Home/End |
+| `dragSelect` | **off** | the checkbox-column sweep |
+| `contextMenu` | on | `rowContextMenu()` and any `onContextMenu()` binding |
+| `shortcutHelp` | on¹ | `?` |
+| `fillHandle` | on² | the Excel-style handle on editable cells |
+
+¹ reads the keyboard layer, so with the default it never opens. ² still needs `Table::fillHandle()`.
+
+The three that stay allowed already need an invitation of their own — actions bound to the context menu,
+`fillHandle()`, and (for the `?` help) the keyboard layer this default leaves off — so with the shipped
+default a table offers only what it declared itself. The closure receives
+this table's gestures and configures them **in place**; its return value is ignored, so a fluent chain and
+a multi-line body both work. `TableGestures::defaults()` / `all()` / `none()` are the three starting
+points: shipped default, everything, nothing.
+
+Readers, all on `Table` and all consulted rather than re-derived: `usesGridSemantics()` (the single owner
+of "is this an ARIA grid"), `keyboardNavEnabled()`, `usesRangeSelection()`, `usesDragSelect()`,
+`usesShortcutHelp()`, `usesActiveRowMarker()`, `mountsRecordActionController()`, `getGestureConfig()`
+(the `{sweep, ranges}` the client controller consumes), `getRecordActionKeyboardConfig()`, `getTableRole()`,
+`hasRowContextMenu()`, `isFillHandleEnabled()`, `getGestures()` (the raw permissions).
+
+**A capability is a permission, never a trigger.** Switching one on never conjures the thing it governs:
+a sweep still needs `selectable()`, ranges still need a selection to grow in, `fillHandle` still needs
+`Table::fillHandle()` plus editable columns, and `shortcutHelp` cannot outlive the keyboard layer that
+listens for the key. `keyboard` is the one **three-state** switch (`false` = the shipped default; `null` = the table decides,
+which it takes for record actions or a selectable table — this is what `gestures()` sets, deliberately
+NOT `true`, since a table with neither has nothing for the arrows to do; `true` = force it on regardless);
+the other five are plain booleans.
+
+**What the layer does not govern: an explicitly declared record action.** `RecordAction::make('view')->onClick()`
+is a deliberate statement about that table, not an affordance the table turned on for itself, so it keeps
+firing with `gestures(false)`. The exception is `->onKey()`, which needs the keyboard layer to listen with.
+Selection is likewise untouched — checkboxes, both select-all controls and the bulk bar work with every
+gesture off; you lose the shortcuts to them, not the feature.
+
+**It is off on the server, not just ignored on the client.** The delegated Alpine controllers are not
+rendered (a table with nothing but the gestures off renders no controller at all and requests no bundle),
+`role="grid"`/`role="row"`/roving tabindex go away, rows stop being focusable so a click steals no focus,
+the `fillTableCells` endpoint **refuses**, and `shortcutLegend()` drops the rows that no longer apply —
+with ranges off, Shift+arrow is not listed in the `?` help because it does not work. The legend is
+generated from what the table actually does, so it cannot drift from reality.
+
+The project-wide default is `config('wire-table.defaults.gestures')` — `null`/absent keeps the shipped
+default above, `true` turns the whole layer on for **every** table (what a back-office project sets once),
+`false` allows nothing, and a map (`['keyboard' => true, 'drag_select' => false]`) mixes on top of the
+shipped default; keys match loosely (`drag_select` = `drag-select` = `dragSelect`), and an **unknown key
+throws** `TableConfigurationException` rather than quietly doing nothing. A per-table `gestures()` always
+wins. Consequence for fixtures and tests: anything asserting `role="grid"`, a roving tabindex, arrow
+navigation, a Shift+click range, a sweep or the `?` help must call `->gestures()` first.
+
+The active-row marker appears only when something needs an anchor to grow from — grid semantics, range
+selection or the sweep (`usesActiveRowMarker()`). A table left with nothing but a declared click action
+marks nothing: the click opens the record and moves on, and a highlight left behind would be an
+application affordance on a page that asked for none.
+
+**Phones get buttons instead of gestures.** There is no double click, no right click and no hover to
+discover either, so a behaviour-only record action would be *unreachable* on a stacked mobile card — it is
+therefore rendered as an ordinary button there, and only there (`getMobileRowActionsForDisplay()` vs
+`getRowActionsForDisplay()`). The fallback never doubles anything: row actions keep their order with the
+record actions appended after them, a `recordAction('edit')` that only *references* an action already in
+`->actions()` yields one button, an action promoted with `->alsoInRowActions()` is already a button and is
+left alone, and the fallback buttons count towards `->collapseActionsOnMobile()`. Turn it off with
+`->recordActionButtonsOnMobile(false)`.
+
+The card renders a **copy** with the keyboard shortcut stripped (`HasKeyboardShortcut::withoutKeyboardShortcut()`,
+new in wire-core). A rendered action button binds its `keyboardShortcut()` as a **window** listener
+(`x-on:keydown.{key}.window` in `wire-core::actions.button`) and the stacked cards are in the document at
+every width — so without this one `Delete` press ran an `onKey('Delete')` action once per card behind the
+desktop table. General rule: **never render the same shortcut-carrying action on two surfaces.**
+
 ### More
 
 - Summaries: per-column `->summarize(...)` with footer scope toggles; grand totals computed in SQL.
@@ -98,9 +191,10 @@ detaches all). Using one against an unsupported relationship type throws a clear
 - **Fill (Excel-style), server side.** `Table::fillHandle()` opts a table in to writing one value across many rows in **one** request (`fillTableCells`); `Column::fillable(false)` excludes a column that is otherwise editable (a unique code, an invoice number), and `Table::fillMaxRecords(int)` caps a single request (default 500). Each record still goes through the full per-record path — `canEdit()`, its own rules, its own optimistic-lock version — so a fill is deliberately **not** all-or-nothing: one row losing its race is reported as a per-record failure while the rest land. Records are resolved through the table's own query, so a key outside it is never written. The endpoint refuses outright unless `fillHandle()` is on. Per-cell `CellUpdating`/`CellUpdated` fire exactly as for a single edit — there is no separate bulk event. The payload is a **list** of `{column, value, records}` entries where `records` maps record key to the optimistic-lock version the client holds (a map, not a bare list of keys — PHP casts a numeric string array key to an int, so `{"15": "…"}` and `["…"]` would be indistinguishable). Driving `fillTableCells` repeatedly means sending the versions the previous call **returned**, never the ones you started with; the version is `updated_at` to the second, so two writes inside one second are indistinguishable and a stale version is not caught there.
 - Conditional row styling: `Table::rowColor(string|Closure|null)` tints a whole row with a semantic/hue color resolved by the canonical `HasColor` owner (return `null` from the Closure for no tint; a tinted row gets a same-hue hover and drops the neutral hover/striping). `Table::rowClass(string|Closure|null)` adds arbitrary classes (the Closure receives the record). Prefer `rowColor()` over hand-written `bg-*` classes; combine both for e.g. a danger tint + `font-semibold`.
 - Per-user column memory: `Table::rememberColumns('key')` loads each user's saved hidden-column set on mount and persists it on every toggle, scoped to `auth()->user()` (one key serves all users; stale column names are ignored). Storage is a driver chosen in `config('wire-table.preferences')` — `null` (default, no persistence), `session`, or `database` (publish `wire-table::migrations` → `table_preferences` table). `Table::preferenceDriver($driver)` overrides per table; a "Reset columns" control clears the saved layout. Implement `TablePreferenceDriver` for a custom store.
-- **Record actions (whole-row interaction), a distinct group from `->actions()`/`->bulkActions()`/`->headerActions()`.** `Table::recordActions([...])` / `recordAction(string|Action|RecordAction)` bind an action to a row gesture: `Action::make('edit')->onDoubleClick()` (also `->onClick()`, `->onContextMenu()`, `->onKey('Delete')`, `->on('custom')`). Those fluent triggers are `Action` macros that **return a `RecordAction`** (a table-owned wrapper — the shared `Action` class stays clean); it belongs in `recordActions()`, and `->actions()` rejects it out loud. A bare name (`recordAction('edit')`) references an action already in `->actions()`. Execution reuses `openActionModal`/`executeTableAction` (auth, confirmation, forms unchanged) — no second pipeline. **Behaviour-only by default** (no button — this is what makes a table feel like an app); `->alsoInRowActions()` also renders it in the column, `->behaviorOnly()` states the default. **One delegated Alpine controller (`wireRecordActions`) on the `<tbody>`** — never per-row — resolves the row from `data-row-key` and ignores clicks on any interactive element inside the row (buttons/checkboxes/links/editable cells/dropdowns) with no `stopPropagation()` needed. `onContextMenu()` feeds the row context menu (a single delegated menu, positioned at the cursor; closes on outside-click/Escape/scroll). When selectable, the default trigger is **double-click** so a single click still selects. Keyboard nav auto-on when any record action exists: `role="grid"`, roving `tabindex`, ↑/↓ move the active row, Enter/Shift+Enter run the primary/secondary, the Menu key opens the context menu, and each action's `keyboardShortcut()` fires against the active row (`recordActionKeyboard(false)` forces off). Keyboard **selection** shares the one selection component the checkboxes/bulk bar use (reached via `data-selection-root`, optimistic — no per-keystroke roundtrip): Space toggles the active row + sets an anchor, Shift+↑/↓ extends a contiguous range from the anchor, mod+A selects the page. Style with `recordActionHover('primary')` (else neutral) and `activeRowClass(...)`. Desktop pointer + keyboard feature; touch cards and sub-rows are excluded by design.
+- **Record actions (whole-row interaction), a distinct group from `->actions()`/`->bulkActions()`/`->headerActions()`.** `Table::recordActions([...])` / `recordAction(string|Action|RecordAction)` bind an action to a row gesture: `Action::make('edit')->onDoubleClick()` (also `->onClick()`, `->onContextMenu()`, `->onKey('Delete')`, `->on('custom')`). Those fluent triggers are `Action` macros that **return a `RecordAction`** (a table-owned wrapper — the shared `Action` class stays clean); it belongs in `recordActions()`, and `->actions()` rejects it out loud. A bare name (`recordAction('edit')`) references an action already in `->actions()`. Execution reuses `openActionModal`/`executeTableAction` (auth, confirmation, forms unchanged) — no second pipeline. **Behaviour-only by default** (no button — this is what makes a table feel like an app); `->alsoInRowActions()` also renders it in the column, `->behaviorOnly()` states the default. **One delegated Alpine controller (`wireRecordActions`) on the `<tbody>`** — never per-row — resolves the row from `data-row-key` and ignores clicks on any interactive element inside the row (buttons/checkboxes/links/editable cells/dropdowns) with no `stopPropagation()` needed. `onContextMenu()` feeds the row context menu (a single delegated menu, positioned at the cursor; closes on outside-click/Escape/scroll). When selectable, the default trigger is **double-click**, leaving the single click free for selection work — a *plain* click only marks the row (active row + range anchor) and never ticks the checkbox, while a **modified** click is a selection gesture and never runs a bound action (see the selection-gestures bullet). Keyboard nav needs `gestures()` **and** a table the keyboard can drive row by row — record actions **or** `selectable()`/`bulkActions()` (`Table::usesGridSemantics()` is the single owner of that decision; see the gesture-layer bullet): `role="grid"`, roving `tabindex`, ↑/↓ move the active row, Enter/Shift+Enter run the primary/secondary, Menu key **and Shift+F10** open the context menu, `?` opens the shortcut help, and each action's `keyboardShortcut()` fires against the active row. **Pointer and keyboard share one active row**: a click marks the row (an Alpine `:class`/`:tabindex` binding, so the marker and the tabstop survive the Livewire morph every update triggers, follow the record through a re-sort, and fall back to the first row when it leaves the page), the active row drops its hover tint so `hover:bg-*` cannot paint over the marker, keys reach the grid only when a **row itself** has the focus (a keystroke inside a row button/editable cell/dropdown is that element's), the grid is inert while a dialog is open, and closing a modal hands the focus back to the active row. Style with `recordActionHover('primary')` (else neutral) and `activeRowClass(...)`. Desktop pointer + keyboard feature; touch cards and sub-rows are excluded by design.
+- **Selection gestures (mouse + keyboard), one shared Alpine component.** Every selection surface — the checkboxes, both select-all toggles, the bulk bar, the mobile cards, the keyboard — drives one `wireRecordSelection` component reached via `[data-selection-root]` (optimistic; no per-keystroke roundtrip). Mouse: the **whole selection cell** toggles (`[data-select-cell]`, not just the 16px box, and the cell is registered interactive so the click never reaches a record action), Shift+click ranges from the anchor, mod+click toggles one row anywhere on it, mod+Shift+click adds a block, and **dragging down the checkbox column sweeps** rows in (additive only, mouse only, engages on the first row-changing move so a plain click stays a click). Keyboard: Space toggles + anchors, Shift+↑/↓ ranges, Shift+Home/End and mod+Shift+↑/↓ range to the edge, Home/End/PageUp/PageDown navigate, mod+A selects the page. **A range writes `base ∪ range`, not the range alone** — the snapshot minus the contiguous block around the anchor, so rows selected elsewhere survive; a range gesture **never rewrites `mode`**, which means in "all matching" mode (where the stored list is the *exclusions*) a range **deselects** and mod+A stands down. The anchor is one-shot and invisible; with no anchor of its own the range grows from the far edge of the block the active row sits in. Drop single rows with Space or mod+click, not a range. Keys reach the grid only when a **row itself** has the focus. **The grid reserves the keys it navigates with** — `->onKey()` on Enter/Space/arrows/Home/End/PageUp/PageDown/ContextMenu/F10/`?` throws a `TableConfigurationException` at configuration time rather than dropping the binding silently (a `keyboardShortcut()` on the action itself is only skipped); `Backspace` is deliberately not reserved and acts as a JS-side alias of `Delete`. ARIA: `aria-rowcount`, `aria-multiselectable`, `aria-rowindex` counted through the **whole result set** (not the page), bound `aria-selected` per row, and a polite live region that is in the DOM from the first paint and empty until the first change. The active-row marker is a tint **plus** a leading stripe (`activeRowClass()` replaces both halves) — the tint alone is ~1.1:1, under the 3:1 non-text contrast floor. `Table::shortcutLegend()` returns the same gesture list as data (`ShortcutHint` value objects) for rendering elsewhere.
 - `Table::rowContextMenu([...actions])` is **deprecated** (removed in v2.0) — a thin alias that still feeds the same context menu. Prefer `recordAction(Action::make('edit')->onContextMenu())`.
-- **Mobile (`Table::stackedOnMobile()`).** Below the breakpoint each row becomes a card whose hierarchy is five derived slots — title (first column), metric (last right-aligned, e.g. `money()`), meta (badge columns), subtitle, and a label/value grid for the rest — overridable per column (`->mobileMetric()`, `->mobileMeta()`, …) or per table (`->mobileCard(fn (MobileCardConfig $c) => $c->title('number')->metric('total'))`). The header row is hidden, so its controls move into the card view: an always-visible select-all strip, a sort control, sub-row children with their subtotal, and the summary totals. `->collapseActionsOnMobile()` folds row actions into one dropdown.
+- **Mobile (`Table::stackedOnMobile()`).** Below the breakpoint each row becomes a card whose hierarchy is five derived slots — title (first column), metric (last right-aligned, e.g. `money()`), meta (badge columns), subtitle, and a label/value grid for the rest — overridable per column (`->mobileMetric()`, `->mobileMeta()`, …) or per table (`->mobileCard(fn (MobileCardConfig $c) => $c->title('number')->metric('total'))`). The header row is hidden, so its controls move into the card view: an always-visible select-all strip, a sort control, sub-row children with their subtotal, and the summary totals. `->collapseActionsOnMobile()` folds row actions into one dropdown. **Record actions fall back to buttons here**: every record trigger is a desktop one, so a behaviour-only record action renders as an ordinary button on the card (and only there) — one declaration, a gesture on the desktop and a button on a phone. It never doubles an action already in `->actions()`, one referenced by name, or one promoted with `->alsoInRowActions()`, and the fallback buttons count towards `collapseActionsOnMobile()`; the card's copy drops the action's `keyboardShortcut()` (`HasKeyboardShortcut::withoutKeyboardShortcut()`), because a rendered button binds its shortcut as a *window* listener and the cards are in the document at every width. Opt out with `Table::recordActionButtonsOnMobile(false)`.
 - `Table::queryString()` persists state to the URL.
 - Browser-testing hooks: every active part carries a stable `data-testid` — `table-search`, `table-filters-trigger`, `table-filter-reset`, `filter-chip-{name}`, `column-filter-chip-{name}`, `table-column-toggle`, `table-per-page`, `table-page-prev|next|{n}`, `table-sort-{col}`, `table-filter-{col}`, `table-cell-{col}`, `table-editable-{col}`, `table-row` (+ `data-row-key`; mobile `table-card`), `table-select-all` / `table-row-select`, `table-row-expand`, `table-bulk-bar` / `table-deselect`, and `action-{name}` / `header-action-{name}` / `bulk-action-{name}` / `menu-action-{name}` (all with `aria-label`) — so Pest v4 Browser Testing targets them at the user level. Actions and filter options are also reachable by visible text. Column-static render metadata is resolved once per column (`$columnMeta`) instead of per cell.
 
@@ -112,7 +206,10 @@ already gives you:
 
 - **Defer off-screen tables.** `Table::lazy()` returns no rows and runs no query until the
   table scrolls into view (optional `->lazyPlaceholder(...)`). Use it for tables below the fold
-  or in tabs.
+  or in tabs. It defers the query and the markup, **not** the JS: the table's Alpine bundles
+  ship with the placeholder render, because they register from `alpine:init` and that fires
+  once, at boot — a bundle arriving with the deferred markup would register nothing. So
+  `lazy()` is a lever for query and render cost, not for first-paint script weight.
 - **Defer action-group menus.** `ActionGroup::make([...])->lazyMenu()` ships only the trigger plus
   a serialized item spec per row and builds the menu client-side on first open — zero per-row menu
   Blade renders (an eager group renders one view per item per row). Opt-in; the default is eager.

@@ -154,7 +154,7 @@ try {
   await eval_(`rows()[0].focus(); ctrl().activeKey = rows()[0].dataset.rowKey;`);
   await eval_(`fireKey(rows()[0], ' ')`);
   await sleep(1200);
-  const spaceSel = JSON.parse(await eval_(`(() => { const s = Alpine.$data($q('[data-selection-root]')); return JSON.stringify({ selected: [...s.selected], anchor: ctrl().anchorKey }); })()`));
+  const spaceSel = JSON.parse(await eval_(`(() => { const s = Alpine.$data($q('[data-selection-root]')); return JSON.stringify({ selected: [...s.selected], anchor: s.anchorKey }); })()`));
   check('Space selects the active row and sets the anchor', spaceSel.selected.length === 1 && spaceSel.anchor === spaceSel.selected[0], JSON.stringify(spaceSel));
 
   // ── 6. Shift+ArrowDown extends a contiguous selection range from the anchor ─

@@ -418,3 +418,33 @@ it('keeps the alert surface deliberately semantic-only', function () {
         ->and(TestColorClass::getAlertColorClasses('success'))->not->toBe($blue)
         ->and(TestColorClass::getAlertColorClasses('warning'))->not->toBe($blue);
 });
+
+// ─── Row hover (the clickable-row tint) ──────────────────────────────
+
+it('resolves a same-hue row hover across the palette', function () {
+    // The canonical owner of the row hover vocabulary: a record-action table
+    // uses it for rows that are clickable but carry no tint of their own.
+    $hues = ['blue', 'green', 'yellow', 'orange', 'lime', 'teal', 'sky', 'indigo',
+        'violet', 'purple', 'fuchsia', 'pink', 'rose', 'slate', 'zinc', 'neutral', 'stone'];
+
+    foreach ($hues as $hue) {
+        expect(TestColorClass::getRowHoverClasses($hue))->toBe("hover:bg-$hue-50 dark:hover:bg-$hue-900/20");
+    }
+});
+
+it('maps the semantic names onto their hue for the row hover', function () {
+    expect(TestColorClass::getRowHoverClasses('primary'))->toBe('hover:bg-primary-50 dark:hover:bg-primary-900/20')
+        ->and(TestColorClass::getRowHoverClasses('success'))->toBe(TestColorClass::getRowHoverClasses('emerald'))
+        ->and(TestColorClass::getRowHoverClasses('danger'))->toBe(TestColorClass::getRowHoverClasses('red'))
+        ->and(TestColorClass::getRowHoverClasses('warning'))->toBe(TestColorClass::getRowHoverClasses('amber'))
+        ->and(TestColorClass::getRowHoverClasses('info'))->toBe(TestColorClass::getRowHoverClasses('cyan'));
+});
+
+it('gives black and white a neutral row hover, and falls back to gray', function () {
+    // There is no bg-black-50: the adaptive pair borrows the gray ramp, and an
+    // unknown name lands on the same neutral hover as no override at all.
+    expect(TestColorClass::getRowHoverClasses('black'))->toBe('hover:bg-gray-100 dark:hover:bg-gray-800/80')
+        ->and(TestColorClass::getRowHoverClasses('white'))->toBe('hover:bg-gray-50 dark:hover:bg-gray-800')
+        ->and(TestColorClass::getRowHoverClasses('gray'))->toBe('hover:bg-gray-50 dark:hover:bg-gray-700/30')
+        ->and(TestColorClass::getRowHoverClasses('not-a-colour'))->toBe('hover:bg-gray-50 dark:hover:bg-gray-700/30');
+});

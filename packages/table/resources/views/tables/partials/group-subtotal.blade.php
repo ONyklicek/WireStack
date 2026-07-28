@@ -10,9 +10,10 @@
 
 @for($i = 0; $i < $groupMaxRows; $i++)
     <tr class="bg-gray-50 dark:bg-gray-800/40">
-        {{-- Selection spacer --}}
+        {{-- Selection spacer — carries data-select-cell so the selection column
+             stays one addressable track through the subtotal rows. --}}
         @if($isSelectable)
-            <td class="w-12 {{ $cellPadding }}"></td>
+            <td class="w-12 {{ $cellPadding }}" data-select-cell></td>
         @endif
 
         {{-- Sub-row toggle spacer --}}

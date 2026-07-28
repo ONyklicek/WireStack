@@ -310,3 +310,27 @@ test('an ordinary input gets no reveal toggle', function () {
     expect($html)->not->toContain('revealed')
         ->and($html)->toContain('type="text"');
 });
+
+test('the type presets and input attributes reach the rendered input', function () {
+    // These are thin setters, but each one lands on a different attribute of the
+    // element — a typo would only ever show up in the markup.
+    $field = TextInput::make('amount')
+        ->type('number')
+        ->step('0.01')
+        ->mask('999-999')
+        ->inputMode('decimal')
+        ->autocomplete('off');
+
+    $html = view($field->render()->name(), ['field' => $field])
+        ->withErrors(new MessageBag)->render();
+
+    expect($html)->toContain('type="number"')
+        ->toContain('step="0.01"')
+        ->toContain('x-mask="999-999"')
+        ->toContain('inputmode="decimal"')
+        ->toContain('autocomplete="off"');
+});
+
+test('the search preset sets the search input type', function () {
+    expect(TextInput::make('q')->search()->getInputType())->toBe('search');
+});

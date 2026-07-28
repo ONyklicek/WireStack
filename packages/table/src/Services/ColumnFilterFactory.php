@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Services;
 
+use DateTimeInterface;
 use NyonCode\WireTable\Filters\DateFilter;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Filters\NumberRangeFilter;
@@ -54,7 +55,7 @@ final class ColumnFilterFactory
         return $filter;
     }
 
-    public function date(string $column, ?string $minDate = null, ?string $maxDate = null, bool $range = false): Filter
+    public function date(string $column, string|DateTimeInterface|null $minDate = null, string|DateTimeInterface|null $maxDate = null, bool $range = false): Filter
     {
         $filter = DateFilter::make($column);
 

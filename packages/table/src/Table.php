@@ -24,6 +24,7 @@ use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Enums\Alignment;
 use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Foundation\Icons\Icon;
+use NyonCode\WireCore\Foundation\ValueObjects\ShortcutHint;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireTable\Actions\RecordActionResolver;
 use NyonCode\WireTable\Actions\TableActionClickResolver;
@@ -37,11 +38,13 @@ use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
 use NyonCode\WireTable\Services\TableQueryService;
 use NyonCode\WireTable\Support\MobileCard;
 use NyonCode\WireTable\Support\RecordAction;
+use NyonCode\WireTable\Support\TableShortcutLegend;
 
 /** @phpstan-consistent-constructor */
 #[\AllowDynamicProperties]
 class Table implements Htmlable
 {
+    use Concerns\HasGestures;
     use Concerns\HasGrouping;
     use Concerns\HasSubRows;
     use HasSheetOnMobile;
@@ -218,8 +221,8 @@ class Table implements Htmlable
     /** Extra class(es) for the keyboard-active row (null keeps the built-in active style). */
     protected ?string $activeRowClass = null;
 
-    /** Keyboard navigation: null = auto (on when record actions exist), true/false = forced. */
-    protected ?bool $recordActionKeyboard = null;
+    /** Behaviour-only record actions also render as buttons in the mobile stacked cards. */
+    protected bool $recordActionButtonsOnMobile = true;
 
     /** Memoized resolver over the record-action bindings; cleared when they (or selection) change. */
     private ?RecordActionResolver $recordActionResolver = null;
@@ -1203,11 +1206,72 @@ class Table implements Htmlable
      */
     public function getRowActionsForDisplay(): array
     {
+        return $this->composeRowActions($this->recordActionResolver()->rowActionButtons());
+    }
+
+    /**
+     * The same list for the mobile stacked-card view, plus — unless
+     * {@see recordActionButtonsOnMobile(false)} says otherwise — a button for
+     * every behaviour-only record action.
+     *
+     * This is what lets one table be an application on a desktop and an ordinary
+     * list on a phone: the row keeps its double-click, right-click and keys
+     * there, and the card offers the very same actions as buttons here. Nothing
+     * is declared twice — it is one action, reached two ways.
+     *
+     * @return array<int, Action|ActionGroup>
+     */
+    public function getMobileRowActionsForDisplay(): array
+    {
+        $resolver = $this->recordActionResolver();
+
+        return $this->composeRowActions(array_merge(
+            $resolver->rowActionButtons(),
+            $this->recordActionButtonsOnMobile ? $resolver->mobileFallbackButtons() : [],
+        ));
+    }
+
+    /**
+     * Whether the mobile card has any action to show — the row actions, plus the
+     * record-action fallback. Its desktop counterpart is {@see hasActions()},
+     * which governs the actions *column* and knows nothing of the fallback: a
+     * table whose only actions are row gestures still has no column.
+     */
+    public function hasMobileActions(): bool
+    {
+        return $this->getMobileRowActionsForDisplay() !== [];
+    }
+
+    /**
+     * Turn the mobile fallback off: behaviour-only record actions then stay
+     * behaviour-only everywhere, and a phone reaches them only through whatever
+     * else the table offers (`alsoInRowActions()`, a `recordUrl()`, …).
+     */
+    public function recordActionButtonsOnMobile(bool $enabled = true): static
+    {
+        $this->recordActionButtonsOnMobile = $enabled;
+
+        return $this;
+    }
+
+    public function showsRecordActionButtonsOnMobile(): bool
+    {
+        return $this->recordActionButtonsOnMobile;
+    }
+
+    /**
+     * Merge the configured row actions with the record-action buttons a surface
+     * asks for, dropping any whose name is already there (a record action
+     * referencing an existing row action must not double it), and apply the
+     * table's action style.
+     *
+     * @param  array<int, Action>  $recordActionButtons
+     * @return array<int, Action|ActionGroup>
+     */
+    private function composeRowActions(array $recordActionButtons): array
+    {
         $actions = array_values($this->actions);
 
-        // Record actions flagged alsoInRowActions() also render as toolbar
-        // buttons. Skip any whose name already appears — a reference to an
-        // existing row action must not double it.
         $seen = [];
         foreach ($actions as $action) {
             if ($action instanceof Action) {
@@ -1215,7 +1279,7 @@ class Table implements Htmlable
             }
         }
 
-        foreach ($this->recordActionResolver()->rowActionButtons() as $button) {
+        foreach ($recordActionButtons as $button) {
             if (! isset($seen[$button->getName()])) {
                 $actions[] = $button;
                 $seen[$button->getName()] = true;
@@ -1423,7 +1487,7 @@ class Table implements Htmlable
     {
         $flat = [];
 
-        foreach ($this->getRowActionsForDisplay() as $action) {
+        foreach ($this->getMobileRowActionsForDisplay() as $action) {
             if ($action instanceof ActionGroup) {
                 foreach ($action->getActions() as $inner) {
                     if ($inner instanceof Action && $inner->isDivider()) {
@@ -1607,21 +1671,87 @@ class Table implements Htmlable
             // override applies only to otherwise-neutral rows.
             $base = HasColor::getRowTintClasses($tint);
         } else {
-            $recordHover = $this->getRecordActionHover();
-
-            if ($clickable && $recordHover !== null) {
-                $hover = HasColor::getRowHoverClasses($recordHover);
-            } else {
-                $hover = $this->isHoverable() ? 'hover:bg-gray-50 dark:hover:bg-gray-700/30' : '';
-            }
-
             $stripe = $this->isStriped() && $rowIndex % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/30' : '';
-            $base = trim("{$hover} {$stripe}");
+            $base = trim($this->getRowHoverClasses().' '.$stripe);
         }
 
         $cursor = $clickable ? 'cursor-pointer' : '';
 
-        return trim("{$base} {$cursor} ".((string) $this->getRowClass($record)));
+        return trim("{$base} {$cursor} {$this->activeRowMarkerGutter()} ".((string) $this->getRowClass($record)));
+    }
+
+    /**
+     * Positioning every grid row's leading cell needs so the active row can
+     * draw its marker stripe inside it.
+     *
+     * The stripe is the marker's non-color half: a light background tint alone
+     * carries roughly 1.1:1 against white, which is both under the 3:1 non-text
+     * contrast floor and lost on anyone who cannot separate the two hues.
+     *
+     * It is drawn as a `::before` overlay rather than a border, for two
+     * reasons. A border would shift the row's content by its own width, and
+     * reserving that width up front means painting a transparent border the
+     * active class then has to beat — which it cannot do reliably, since both
+     * are plain utilities and the later one in the stylesheet wins regardless
+     * of the order they appear in the class attribute. An overlay sets a
+     * property (`background-color` on the pseudo-element) that resting rows
+     * never set at all, so there is nothing to out-rank. `first-of-type`, not
+     * `first-child`: a row's first child is the teleport `<template>` for its
+     * context menu.
+     */
+    public function activeRowMarkerGutter(): string
+    {
+        return $this->usesActiveRowMarker() ? '[&>td:first-of-type]:relative' : '';
+    }
+
+    /**
+     * The resting hover tint of a neutral (untinted) row: the record-action
+     * hover override when the rows are clickable, otherwise the table's own
+     * hoverable tint (empty when hovering is off).
+     *
+     * Canonical owner of the row hover vocabulary — {@see getRowClasses()}
+     * paints it and {@see getActiveRowConfig()} hands the same string to the
+     * delegated record-action controller, which switches it off on the active
+     * row so a `hover:bg-*` utility cannot paint over the active marker.
+     */
+    public function getRowHoverClasses(): string
+    {
+        $recordHover = $this->getRecordActionHover();
+
+        if ($this->hasRecordActionPointer() && $recordHover !== null) {
+            return HasColor::getRowHoverClasses($recordHover);
+        }
+
+        return $this->isHoverable() ? 'hover:bg-gray-50 dark:hover:bg-gray-700/30' : '';
+    }
+
+    /**
+     * Active-row marker config for the delegated record-action controller: the
+     * class(es) marking the row the pointer or the keyboard last landed on, plus
+     * the hover class(es) the row carries at rest.
+     *
+     * The controller drops the hover classes from the active row, because a
+     * `hover:bg-*` utility is emitted after the plain `bg-*` one and would
+     * otherwise hide the marker for exactly as long as the pointer rests on the
+     * row the user just clicked. A tinted row (`rowColor()`) keeps its own
+     * same-hue hover instead — the marker reads through it as a shade change.
+     *
+     * The default marks the row twice over: a background tint AND a leading
+     * stripe that colors in the gutter {@see activeRowMarkerGutter()} reserves.
+     * The tint alone would be the only signal, and a faint one — color is not
+     * available to every reader, and `primary-100` on white sits under the 3:1
+     * non-text contrast floor. `activeRowClass()` replaces both halves, so an
+     * override owns its own accessibility.
+     *
+     * @return array{class: string, hover: string}
+     */
+    public function getActiveRowConfig(): array
+    {
+        return [
+            'class' => $this->getActiveRowClass()
+                ?? "bg-primary-100 dark:bg-primary-900/30 [&>td:first-of-type]:before:absolute [&>td:first-of-type]:before:inset-y-0 [&>td:first-of-type]:before:left-0 [&>td:first-of-type]:before:w-1 [&>td:first-of-type]:before:content-[''] [&>td:first-of-type]:before:bg-primary-600 dark:[&>td:first-of-type]:before:bg-primary-400",
+            'hover' => $this->getRowHoverClasses(),
+        ];
     }
 
     /**
@@ -1634,16 +1764,23 @@ class Table implements Htmlable
     }
 
     /**
-     * Force keyboard navigation on or off (null = auto: on when the table has any
-     * record action). Keyboard nav gives the rows a roving tabindex, arrow-key
-     * movement, Enter/Shift+Enter for the primary/secondary action, and the
-     * record actions' own keyboard shortcuts against the active row.
+     * Whether this table is a grid in the ARIA sense — the single owner of
+     * that decision, and one the gesture layer answers.
+     *
+     * A table is a grid once it says `gestures()` (or `keyboard()` on its own).
+     * Nothing is a grid by accident: keyboard navigation puts the rows in the
+     * tab order and starts answering arrows, which is an application idiom, not
+     * something a table earns by being selectable.
+     *
+     * `keyboard(null)` hands the decision back here, and here it goes to any
+     * table the keyboard could drive row by row — one with record actions, or
+     * one whose rows can be selected ({@see isSelectable()}, which bulk actions
+     * imply).
      */
-    public function recordActionKeyboard(?bool $enabled = true): static
+    public function usesGridSemantics(): bool
     {
-        $this->recordActionKeyboard = $enabled;
-
-        return $this;
+        return $this->getGestures()->allowsKeyboard()
+            ?? ($this->hasRecordActions() || $this->isSelectable());
     }
 
     /**
@@ -1651,7 +1788,27 @@ class Table implements Htmlable
      */
     public function keyboardNavEnabled(): bool
     {
-        return $this->recordActionKeyboard ?? $this->hasRecordActions();
+        return $this->usesGridSemantics();
+    }
+
+    /**
+     * Whether the delegated `wireRecordActions` controller mounts on the
+     * `<tbody>`: for pointer bindings, a context menu, and every grid —
+     * including a selectable table with no record action, whose keyboard
+     * selection (Space, Shift+arrow, mod+A) and active-row marker live in the
+     * same controller.
+     *
+     * The mouse gestures are listed in their own right, not folded into the
+     * grid: a table may keep the sweep or the Shift-ranges with the keyboard
+     * layer switched off, and both of them live in this controller too.
+     */
+    public function mountsRecordActionController(): bool
+    {
+        return $this->hasRecordActionPointer()
+            || $this->hasRowContextMenu()
+            || $this->usesGridSemantics()
+            || $this->usesDragSelect()
+            || $this->usesRangeSelection();
     }
 
     /**
@@ -1667,7 +1824,9 @@ class Table implements Htmlable
     /**
      * The client config the keyboard layer of `wireRecordActions` consumes:
      * the Enter/Shift+Enter targets, the shortcut map, whether Space toggles
-     * selection, and the class marking the active row.
+     * selection and whether Shift+arrows extend it. The active-row marker is
+     * shared with the pointer layer and lives in {@see getActiveRowConfig()};
+     * the mouse gestures in {@see getGestureConfig()}.
      *
      * @return array<string, mixed>
      */
@@ -1680,7 +1839,7 @@ class Table implements Htmlable
             'secondary' => $resolver->secondaryActionName(),
             'shortcuts' => $resolver->shortcuts(),
             'selectable' => $this->isSelectable(),
-            'activeClass' => $this->getActiveRowClass() ?? 'bg-primary-100 dark:bg-primary-900/30',
+            'ranges' => $this->usesRangeSelection(),
         ];
     }
 
@@ -1765,10 +1924,14 @@ class Table implements Htmlable
     /**
      * Whether a row context menu exists — a dedicated `rowContextMenu()` list, or
      * a record action bound to the right-click trigger via `onContextMenu()`.
+     *
+     * Subject to the gesture layer: with `contextMenu` off the browser's own
+     * menu is left alone, and the per-row panels are never rendered at all.
      */
     public function hasRowContextMenu(): bool
     {
-        return $this->getContextMenuActions() !== [];
+        return $this->getGestures()->allowsContextMenu()
+            && $this->getContextMenuActions() !== [];
     }
 
     /**
@@ -1880,6 +2043,17 @@ class Table implements Htmlable
     public function getRecordActionBindings(): array
     {
         return $this->recordActionResolver()->pointerMap();
+    }
+
+    /**
+     * The keyboard-gesture legend assembled from this table's configuration —
+     * localized {@see ShortcutHint}
+     * sections the `?` help modal renders. Empty for tables without grid
+     * semantics.
+     */
+    public function shortcutLegend(): TableShortcutLegend
+    {
+        return TableShortcutLegend::for($this);
     }
 
     /**
@@ -2344,9 +2518,15 @@ class Table implements Htmlable
         return $this;
     }
 
+    /**
+     * Whether the fill handle is offered: asked for on this table, and allowed
+     * by the gesture layer (`gestures(false)` takes it with the rest of the
+     * desktop affordances). The server endpoint reads this too, so switching the
+     * gestures off also closes `fillTableCells()`.
+     */
     public function isFillHandleEnabled(): bool
     {
-        return $this->fillHandle;
+        return $this->fillHandle && $this->getGestures()->allowsFillHandle();
     }
 
     /** Cap the number of rows a single fill may write (default 500). */

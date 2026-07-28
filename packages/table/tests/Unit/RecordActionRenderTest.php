@@ -35,6 +35,10 @@ class RecordActionRenderComponent extends Component
         $table = $table
             ->model(RecRenderRow::class)
             ->paginated(false)
+            // The gesture layer is opt-in: keyboard navigation and the sweep
+            // are off until a table asks. Everything asserted here is that
+            // layer, so the fixture asks.
+            ->gestures()
             ->columns([TextColumn::make('name')]);
 
         if ($this->selectable) {
@@ -62,6 +66,13 @@ class NoRecordActionComponent extends RecordActionRenderComponent
 
 class SelectableRecordActionComponent extends RecordActionRenderComponent
 {
+    public bool $selectable = true;
+}
+
+class SelectableOnlyComponent extends RecordActionRenderComponent
+{
+    public bool $withRecordActions = false;
+
     public bool $selectable = true;
 }
 
@@ -123,4 +134,65 @@ it('exposes the selection-root hook keyboard range-select reaches for', function
 it('omits the selection-root hook when the table is not selectable', function () {
     Livewire::test(RecordActionRenderComponent::class)
         ->assertDontSee('data-selection-root', false);
+});
+
+// ─── Grid semantics without record actions ───────────────────────
+
+it('grids a selectable table even without record actions', function () {
+    // usesGridSemantics() owns the decision: a selectable table is keyboard
+    // territory too — Space and Shift+arrow work the selection there.
+    Livewire::test(SelectableOnlyComponent::class)
+        ->assertSee('role="grid"', false)
+        ->assertSee('role="row"', false)
+        ->assertSee('tabindex="0"', false);
+});
+
+it('mounts the record-action controller on a selectable-only grid', function () {
+    // The keyboard selection (Space, Shift+arrow, mod+A), the roving tabindex
+    // and the active-row marker all live in the delegated controller, so a
+    // grid without record actions needs it just the same.
+    Livewire::test(SelectableOnlyComponent::class)
+        ->assertSee('wireRecordActions', false)
+        ->assertSee('rowTabindex(', false)
+        ->assertSee('onKeydown($event)', false);
+});
+
+// ─── Active-row marker ───────────────────────────────────────────
+
+it('binds the active-row marker on every row instead of toggling classes', function () {
+    // The marker is an Alpine binding so it survives the Livewire roundtrip the
+    // click itself triggers; the controller gets both the marker class and the
+    // hover it has to switch off while a row is active.
+    $html = Livewire::test(RecordActionRenderComponent::class)->html();
+
+    expect($html)
+        ->toContain('\u0022class\u0022:\u0022bg-primary-100 dark:bg-primary-900')
+        ->toContain('\u0022hover\u0022:\u0022hover:bg-gray-50')
+        ->and(substr_count($html, "...rowClass('"))->toBe(3);
+});
+
+it('merges the selection tint and the active marker into one class binding', function () {
+    // Two `:class` attributes on one <tr> would silently drop the second, so a
+    // selectable table with record actions must emit a single merged object.
+    $html = Livewire::test(SelectableRecordActionComponent::class)->html();
+
+    expect(substr_count($html, ':class="{'))->toBe(3)
+        ->and($html)->toContain('isSelected(')
+        ->and($html)->toContain('...rowClass(');
+});
+
+it('leaves rows unbound when there is no record-action controller', function () {
+    Livewire::test(NoRecordActionComponent::class)
+        ->assertDontSee('rowClass(', false);
+});
+
+it('binds the roving tabindex so a morph cannot drop the grid out of the tab order', function () {
+    // Livewire rewrites every row from this markup on each update, so an
+    // assigned tabstop would be wiped by the first sort/filter/page change.
+    $html = Livewire::test(RecordActionRenderComponent::class)->html();
+
+    expect(substr_count($html, ':tabindex="rowTabindex('))->toBe(3)
+        // The first row is the tabstop before Alpine boots (and before any row
+        // is chosen), the rest stay out of the tab order.
+        ->and(substr_count($html, 'tabindex="0"'))->toBe(1);
 });

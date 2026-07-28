@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Concerns;
 
 use Closure;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
 use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireTable\Filters\Filter;
@@ -117,13 +118,13 @@ trait CanBeFiltered
     }
 
     /** Add a single-date column header filter (optional min/max bounds). */
-    public function filterAsDate(?string $minDate = null, ?string $maxDate = null): static
+    public function filterAsDate(string|DateTimeInterface|null $minDate = null, string|DateTimeInterface|null $maxDate = null): static
     {
         return $this->filter($this->filterFactory()->date($this->name, $minDate, $maxDate));
     }
 
     /** Configure as a date range column filter (from/to). */
-    public function filterAsDateRange(?string $minDate = null, ?string $maxDate = null): static
+    public function filterAsDateRange(string|DateTimeInterface|null $minDate = null, string|DateTimeInterface|null $maxDate = null): static
     {
         return $this->filter($this->filterFactory()->date($this->name, $minDate, $maxDate, range: true));
     }

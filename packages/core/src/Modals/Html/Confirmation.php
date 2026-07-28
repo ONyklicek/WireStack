@@ -19,6 +19,10 @@ use NyonCode\WireCore\Modals\Support\ConfirmationStyle;
  * consumer-facing `<x-wire-modals::confirmation>` tag stays available and renders
  * the same shell + {@see ConfirmationStyle}.
  *
+ * With no `wireModel` binding, an optional `openOn` window event opens the
+ * dialog purely client-side (`show` is plain Alpine state). `openOn` is only
+ * honoured when `wireModel` is null.
+ *
  * Lives in `Modals\Html\` — the Htmlable *render* objects — distinct from the
  * `Modals\*` modal *config* objects (`Modals\Modal`, a `ModalContract`) and the
  * `Modals\View\*Component` Blade components.
@@ -45,6 +49,7 @@ final class Confirmation implements Htmlable
         public ?string $closeAction = null,
         public ?int $zIndex = null,
         public ?string $wireModel = null,
+        public ?string $openOn = null,
         public ?string $wireClick = null,
         public string|Htmlable|null $body = null,
         /** @var array<int, array<string, mixed>> Additional footer actions (Action API). */
@@ -81,6 +86,7 @@ final class Confirmation implements Htmlable
             'closeAction' => $this->closeAction,
             'zIndex' => $this->zIndex,
             'wireModel' => $this->wireModel,
+            'openOn' => $this->openOn,
             'wireClick' => $this->wireClick,
             'body' => $this->body instanceof Htmlable ? $this->body->toHtml() : $this->body,
             'footerActions' => $this->footerActions,

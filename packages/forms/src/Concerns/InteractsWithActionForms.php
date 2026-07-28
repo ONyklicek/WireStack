@@ -106,13 +106,12 @@ trait InteractsWithActionForms
         $statePath = $this->actionFrameStatePath($depth);
         $context = $this->actionFormContext($depth, $context);
 
-        if ($action->hasMultipleSteps()) {
-            $step = (int) $this->getActionFrameState($depth, 'currentStep', 0);
+        $form = $action->hasMultipleSteps()
+            ? $action->getStepFormInstance($this, $context, (int) $this->getActionFrameState($depth, 'currentStep', 0), $statePath)
+            : $action->getFormInstance($this, $context, $statePath);
 
-            return $action->getStepFormInstance($this, $context, $step, $statePath);
-        }
-
-        return $action->getFormInstance($this, $context, $statePath);
+        // Core hands back the ModalForm seam; this bridge owns the concrete Form.
+        return $form instanceof Form ? $form : null;
     }
 
     /**
@@ -178,7 +177,8 @@ trait InteractsWithActionForms
         // bound to the active frame's depth-scoped state path so error keys and
         // field bindings line up with the top modal.
         if ($this->actionModalFormInstance === null) {
-            $this->actionModalFormInstance = $action->getFormInstance($this, $context, $this->actionFrameStatePath($this->topActionFrameIndex()));
+            $form = $action->getFormInstance($this, $context, $this->actionFrameStatePath($this->topActionFrameIndex()));
+            $this->actionModalFormInstance = $form instanceof Form ? $form : null;
         }
 
         $this->actionModalFormInstance?->validate();
@@ -295,7 +295,8 @@ trait InteractsWithActionForms
     {
         $formInstance = $halt->getFormInstance();
 
-        if ($formInstance === null) {
+        // Core hands back the ModalForm seam; this bridge owns the concrete Form.
+        if (! $formInstance instanceof Form) {
             return;
         }
 

@@ -80,6 +80,9 @@ Before changing shared behavior, ask:
   `architecture/table.md`
 - Sortable behavior and table extension points:
   `architecture/sortable.md`
+- Row interaction — keyboard grid navigation, ranges, the drag sweep, the row
+  context menu, `?` help, the fill handle (all opt-in through `Table::gestures()`):
+  `architecture/table.md` § Gesture layer, then `docs/table/gestures.md`
 - Anything spanning package boundaries:
   `architecture/integrations.md`
 - Shared design-system ownership, canonical UI semantics, color/size/icon surface work:
@@ -166,6 +169,12 @@ composer coverage:floors                                            # raise a fl
 vendor/bin/testbench serve --host=127.0.0.1 --port=8085
 npm run dev
 npm run build
+
+# Browser gate. The CDP drivers in workbench/scripts are the only check over
+# Alpine/Livewire behaviour — Pest sees the markup, not what the browser does
+# with it. Starts its own preview server, or reuses one already running.
+npm run verify:drivers                # all of them
+npm run verify:drivers -- selection   # only those matching a name
 
 php docs-site/build.php
 npm run docs:changed -- --dry-run

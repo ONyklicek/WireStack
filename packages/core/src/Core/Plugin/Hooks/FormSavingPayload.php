@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Core\Plugin\Hooks;
 
-use NyonCode\WireForms\Forms\Config\FormConfig;
+use NyonCode\WireCore\Core\Plugin\Contracts\FormConfigContract;
 
 /**
  * Typed payload for the 'form.saving' hook.
@@ -15,11 +15,11 @@ use NyonCode\WireForms\Forms\Config\FormConfig;
 final class FormSavingPayload
 {
     /**
-     * @param  FormConfig  $config  The immutable form configuration
+     * @param  FormConfigContract  $config  The immutable form configuration
      * @param  array<string, mixed>  $data  The validated form data (modifiable)
      */
     public function __construct(
-        public readonly FormConfig $config,
+        public readonly FormConfigContract $config,
         public array $data,
     ) {}
 

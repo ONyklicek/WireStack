@@ -66,7 +66,7 @@ the month of their child records.
 ```php
 DateFilter::make('birth_date')
     ->minDate('1900-01-01')
-    ->maxDate(now()->format('Y-m-d'))
+    ->maxDate(now())
 ```
 
 ## DateFilter API
@@ -76,8 +76,8 @@ DateFilter::make('birth_date')
 ->month(bool $month = true)         // month picker, matches whole month
 ->fromLabel(string $label)          // "from" placeholder (default: 'From')
 ->toLabel(string $label)            // "to" placeholder (default: 'To')
-->minDate(string $date)             // min selectable date
-->maxDate(string $date)             // max selectable date
+->minDate(string|DateTimeInterface|null $date)   // min selectable date
+->maxDate(string|DateTimeInterface|null $date)   // max selectable date
 ```
 
 ## Range Behavior

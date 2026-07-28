@@ -96,6 +96,10 @@ return [
     'selection_only_this_page' => 'Jen tuto stránku',
     'select_all_on_page' => 'Vybrat vše na této stránce',
     'selection_page_of_total' => ':page na této stránce · :total celkem',
+    // Hlášky pro čtečky obrazovky (live region výběru).
+    'selection_announce_some' => 'Vybráno :count z :total',
+    'selection_announce_all' => 'Vybráno vše (:total)',
+    'selection_announce_none' => 'Výběr zrušen',
     'selection_selected_of_total' => 'vybráno :count z :total',
 
     // Pagination
@@ -138,4 +142,22 @@ return [
     'save_failed' => 'Uložení selhalo',
     'invalid' => 'Neplatné',
     'error' => 'Chyba',
+
+    // Legenda klávesových zkratek
+    'shortcuts_heading' => 'Klávesové zkratky',
+    'shortcuts_description' => 'Fungují, když je vybraný řádek.',
+    'shortcuts_navigation' => 'Navigace',
+    'shortcuts_selection' => 'Výběr',
+    'shortcuts_actions' => 'Akce',
+    'shortcuts_help' => 'Nápověda',
+    'shortcut_move_active' => 'Přesunout aktivní řádek',
+    'shortcut_jump_edges' => 'Skočit na první / poslední řádek',
+    'shortcut_page_step' => 'Posun o stránku nahoru / dolů',
+    'shortcut_toggle_selection' => 'Označit nebo odznačit aktivní řádek',
+    'shortcut_extend_selection' => 'Rozšířit výběr',
+    'shortcut_extend_selection_edges' => 'Rozšířit výběr k prvnímu / poslednímu řádku',
+    'shortcut_select_page' => 'Vybrat celou stránku',
+    'shortcut_run_action' => 'Spustit „:action“',
+    'shortcut_context_menu' => 'Otevřít nabídku řádku',
+    'shortcut_show_help' => 'Zobrazit klávesové zkratky',
 ];

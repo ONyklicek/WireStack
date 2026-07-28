@@ -190,3 +190,48 @@ test('the create modal renders only once the select is mounted', function () {
         ->call('mountCreateOption', 'data.category')
         ->assertSeeHtml('wire:click="createSelectOption"');
 });
+
+class CreateAndEditOptionSelectComponent extends Component
+{
+    use WithForms;
+
+    /** @var array<string, mixed> */
+    public array $data = ['category' => 'c1'];
+
+    public function form(Form $form): Form
+    {
+        return $form
+            ->statePath('data')
+            ->schema([
+                Select::make('category')
+                    ->options(fn () => OptionStore::all())
+                    ->getOptionLabelUsing(fn ($value) => OptionStore::label($value))
+                    ->createOptionForm([TextInput::make('name')->required()])
+                    ->createOptionUsing(fn (array $data) => OptionStore::create((string) $data['name']))
+                    ->editOptionForm([TextInput::make('name')->required()])
+                    ->fillEditOptionUsing(fn ($value) => ['name' => OptionStore::label($value)])
+                    ->updateOptionUsing(fn () => null),
+            ]);
+    }
+
+    public function render(): string
+    {
+        return '<div>{{ $this->form }}</div>';
+    }
+}
+
+test('the create and edit option modals keep distinct teleport keys when both are mounted', function () {
+    // Nothing makes the two mounted-* properties mutually exclusive, so both
+    // option modals can be up at once — and they are the same Modal shell.
+    // Livewire morphs by wire:key, so sharing one would let the two contents be
+    // swapped into each other.
+    $html = Livewire::test(CreateAndEditOptionSelectComponent::class)
+        ->call('mountCreateOption', 'data.category')
+        ->call('mountEditOption', 'data.category')
+        ->html();
+
+    preg_match_all('/wire:key="(wire-modal-[^"]*)"/', $html, $matches);
+
+    expect($matches[1])->toHaveCount(2)
+        ->and($matches[1])->toBe(array_unique($matches[1]));
+});

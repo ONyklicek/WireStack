@@ -10,6 +10,15 @@
     $hasTime = in_array($mode, ['time', 'datetime']);
     $firstDayOfWeek = $field->getFirstDayOfWeek();
     $disabledDates = $field->getDisabledDates();
+    // Bounds arrive already in the widget's own format. The calendar compares
+    // days and the clock compares times, so each half is split out once here
+    // rather than re-parsed on every cell.
+    $minBound = $field->getMinDate();
+    $maxBound = $field->getMaxDate();
+    $minDay = \NyonCode\WireCore\Foundation\Support\DateBoundary::datePart($minBound);
+    $maxDay = \NyonCode\WireCore\Foundation\Support\DateBoundary::datePart($maxBound);
+    $minTime = $hasTime ? \NyonCode\WireCore\Foundation\Support\DateBoundary::timePart($minBound) : null;
+    $maxTime = $hasTime ? \NyonCode\WireCore\Foundation\Support\DateBoundary::timePart($maxBound) : null;
     $hoursStep = $field->getHoursStep() ?? 1;
     $minutesStep = $field->getMinutesStep() ?? 1;
     $hasSeconds = $field->hasSeconds();
@@ -43,11 +52,11 @@
     @if($field->getPlaceholder())
         placeholder="{{ $field->getPlaceholder() }}"
     @endif
-    @if($field->getMinDate())
-        min="{{ $field->getMinDate() }}"
+    @if($minBound)
+        min="{{ $minBound }}"
     @endif
-    @if($field->getMaxDate())
-        max="{{ $field->getMaxDate() }}"
+    @if($maxBound)
+        max="{{ $maxBound }}"
     @endif
     @if($field->isDisabled())
         disabled
@@ -80,8 +89,10 @@
             hasSeconds: @js($hasSeconds),
             firstDayOfWeek: @js($firstDayOfWeek),
             disabledDates: @js($disabledDates),
-            minDate: @js($field->getMinDate()),
-            maxDate: @js($field->getMaxDate()),
+            minDay: @js($minDay),
+            maxDay: @js($maxDay),
+            minTime: @js($minTime),
+            maxTime: @js($maxTime),
             hoursStep: @js($hoursStep),
             minutesStep: @js($minutesStep),
             secondsStep: @js($secondsStep),
@@ -112,7 +123,6 @@
                     }
                 });
 
-                const today = new Date();
                 if (this.value) {
                     const parsed = this.parseValue(this.value);
                     this.currentMonth = parsed.getMonth();
@@ -121,8 +131,16 @@
                     this.minutes = parsed.getMinutes();
                     this.seconds = parsed.getSeconds();
                 } else {
-                    this.currentMonth = today.getMonth();
-                    this.currentYear = today.getFullYear();
+                    // Open on today, or on the nearest month the bounds allow —
+                    // landing on a month where every day is greyed out reads as
+                    // a broken calendar.
+                    const today = new Date();
+                    let anchor = this.formatDateStr(today.getFullYear(), today.getMonth() + 1, today.getDate());
+                    if (this.minDay && anchor < this.minDay) anchor = this.minDay;
+                    if (this.maxDay && anchor > this.maxDay) anchor = this.maxDay;
+                    const [y, m] = anchor.split('-');
+                    this.currentYear = parseInt(y, 10);
+                    this.currentMonth = parseInt(m, 10) - 1;
                 }
                 this.buildDayNames();
                 this.buildCalendar();
@@ -186,7 +204,21 @@
                 return y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
             },
 
+            {{-- Nothing selectable lies before the bounds, so the arrows stop there. --}}
+            get canGoPrev() {
+                if (!this.minDay) return true;
+                const last = new Date(this.currentYear, this.currentMonth, 0);
+                return this.formatDateStr(last.getFullYear(), last.getMonth() + 1, last.getDate()) >= this.minDay;
+            },
+
+            get canGoNext() {
+                if (!this.maxDay) return true;
+                const first = new Date(this.currentYear, this.currentMonth + 1, 1);
+                return this.formatDateStr(first.getFullYear(), first.getMonth() + 1, first.getDate()) <= this.maxDay;
+            },
+
             prevMonth() {
+                if (!this.canGoPrev) return;
                 if (this.currentMonth === 0) {
                     this.currentMonth = 11;
                     this.currentYear--;
@@ -197,6 +229,7 @@
             },
 
             nextMonth() {
+                if (!this.canGoNext) return;
                 if (this.currentMonth === 11) {
                     this.currentMonth = 0;
                     this.currentYear++;
@@ -209,8 +242,8 @@
             isDisabled(dateStr) {
                 if (!dateStr) return true;
                 if (this.disabledDates.includes(dateStr)) return true;
-                if (this.minDate && dateStr < this.minDate) return true;
-                if (this.maxDate && dateStr > this.maxDate) return true;
+                if (this.minDay && dateStr < this.minDay) return true;
+                if (this.maxDay && dateStr > this.maxDay) return true;
                 return false;
             },
 
@@ -236,15 +269,45 @@
                 }
             },
 
+            {{-- The value's own time, in the shape the state is written in. --}}
+            timeValue() {
+                return String(this.hours).padStart(2, '0') + ':' + String(this.minutes).padStart(2, '0')
+                    + (this.hasSeconds ? ':' + String(this.seconds).padStart(2, '0') : '');
+            },
+
+            {{-- Pull the clock back inside the bounds before it reaches the value.
+                 A bound's time only binds on its own day — 08:30 as a minimum
+                 says nothing about the days after it — so a datetime picker
+                 checks the day first, while a time-only one is always on its
+                 own day. --}}
+            clampTime(day) {
+                if (!this.hasTime) return;
+
+                const lower = (!this.hasDate || (this.minDay && day === this.minDay)) ? this.minTime : null;
+                const upper = (!this.hasDate || (this.maxDay && day === this.maxDay)) ? this.maxTime : null;
+                const current = String(this.hours).padStart(2, '0') + ':' + String(this.minutes).padStart(2, '0') + ':' + String(this.seconds).padStart(2, '0');
+
+                let target = null;
+                if (lower && current < lower) target = lower;
+                else if (upper && current > upper) target = upper;
+                if (!target) return;
+
+                const [h, m, s] = target.split(':');
+                this.hours = parseInt(h, 10);
+                this.minutes = parseInt(m, 10);
+                this.seconds = this.hasSeconds ? parseInt(s, 10) : 0;
+            },
+
             commitValue(dateStr = null) {
                 if (this.hasDate && this.hasTime) {
                     const d = dateStr || (this.value ? this.value.split(/[T ]/)[0] : this.formatDateStr(this.currentYear, this.currentMonth + 1, 1));
-                    const timePart = String(this.hours).padStart(2, '0') + ':' + String(this.minutes).padStart(2, '0') + (this.hasSeconds ? ':' + String(this.seconds).padStart(2, '0') : '');
-                    this.value = d + ' ' + timePart;
+                    this.clampTime(d);
+                    this.value = d + ' ' + this.timeValue();
                 } else if (this.hasDate) {
                     this.value = dateStr;
                 } else {
-                    this.value = String(this.hours).padStart(2, '0') + ':' + String(this.minutes).padStart(2, '0') + (this.hasSeconds ? ':' + String(this.seconds).padStart(2, '0') : '');
+                    this.clampTime(null);
+                    this.value = this.timeValue();
                 }
             },
 
@@ -386,13 +449,17 @@
             @if($hasDate)
                 {{-- Month/year navigation --}}
                 <div class="flex items-center justify-between mb-3">
-                    <button type="button" @click="prevMonth()" data-testid="form-datetime-{{ $field->getStatePath() }}-prev-month" aria-label="Previous month"
-                            class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors duration-150">
+                    <button type="button" @click="prevMonth()" :disabled="!canGoPrev"
+                            :class="canGoPrev ? 'hover:bg-gray-100 dark:hover:bg-gray-700' : 'opacity-40 cursor-not-allowed'"
+                            data-testid="form-datetime-{{ $field->getStatePath() }}-prev-month" aria-label="Previous month"
+                            class="p-1 rounded text-gray-600 dark:text-gray-300 transition-colors duration-150">
                         {!! icon('chevron-left', 'w-4 h-4', 'h-4 w-4') !!}
                     </button>
                     <span class="text-sm font-semibold text-gray-900 dark:text-white" x-text="monthYearLabel"></span>
-                    <button type="button" @click="nextMonth()" data-testid="form-datetime-{{ $field->getStatePath() }}-next-month" aria-label="Next month"
-                            class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors duration-150">
+                    <button type="button" @click="nextMonth()" :disabled="!canGoNext"
+                            :class="canGoNext ? 'hover:bg-gray-100 dark:hover:bg-gray-700' : 'opacity-40 cursor-not-allowed'"
+                            data-testid="form-datetime-{{ $field->getStatePath() }}-next-month" aria-label="Next month"
+                            class="p-1 rounded text-gray-600 dark:text-gray-300 transition-colors duration-150">
                         {!! icon('chevron-right', 'w-4 h-4', 'h-4 w-4') !!}
                     </button>
                 </div>

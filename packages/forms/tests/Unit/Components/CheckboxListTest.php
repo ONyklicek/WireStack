@@ -67,3 +67,33 @@ it('keeps the mobile-first int reflow for a plain integer', function () {
 
     expect(renderCheckboxList($field))->toContain('grid-cols-2 sm:grid-cols-4');
 });
+
+it('labels the bulk toggles from the translations by default', function () {
+    $html = renderCheckboxList(
+        CheckboxList::make('perms')->options(['a' => 'A', 'b' => 'B'])->bulkToggleable()
+    );
+
+    expect($html)->toContain('Select all')->toContain('Deselect all');
+});
+
+it('lets the owner name the bulk toggles', function () {
+    // The toggles are the only affordance for a long list, so their wording is
+    // part of the public API rather than a fixed string.
+    $field = CheckboxList::make('perms')
+        ->options(['a' => 'A', 'b' => 'B'])
+        ->bulkToggleable()
+        ->selectAllLabel('Grant everything')
+        ->deselectAllLabel('Revoke everything');
+
+    expect($field->getSelectAllLabel())->toBe('Grant everything')
+        ->and($field->getDeselectAllLabel())->toBe('Revoke everything')
+        ->and(renderCheckboxList($field))
+        ->toContain('Grant everything')
+        ->toContain('Revoke everything')
+        ->not->toContain('Select all');
+});
+
+it('renders no bulk toggles unless they are asked for', function () {
+    expect(renderCheckboxList(CheckboxList::make('perms')->options(['a' => 'A'])))
+        ->not->toContain('Select all');
+});

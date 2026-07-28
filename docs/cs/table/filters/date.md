@@ -66,7 +66,7 @@ měsíce jejich dětských záznamů.
 ```php
 DateFilter::make('birth_date')
     ->minDate('1900-01-01')
-    ->maxDate(now()->format('Y-m-d'))
+    ->maxDate(now())
 ```
 
 ## API DateFilter
@@ -76,8 +76,8 @@ DateFilter::make('birth_date')
 ->month(bool $month = true)         // výběr měsíce, shoduje se s celým měsícem
 ->fromLabel(string $label)          // placeholder "from" (výchozí: 'From')
 ->toLabel(string $label)            // placeholder "to" (výchozí: 'To')
-->minDate(string $date)             // min volitelné datum
-->maxDate(string $date)             // max volitelné datum
+->minDate(string|DateTimeInterface|null $date)   // min volitelné datum
+->maxDate(string|DateTimeInterface|null $date)   // max volitelné datum
 ```
 
 ## Chování rozsahu

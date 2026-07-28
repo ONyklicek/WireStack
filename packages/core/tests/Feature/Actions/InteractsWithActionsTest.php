@@ -202,15 +202,6 @@ class CoreActionsHost extends Component
         $this->actionModalConfigCache = $this->catalog()[$name]->getModalConfig();
     }
 
-    /**
-     * The modal-host blade reads the form bridge (a wire-forms concern); this
-     * form-free host has no form instance, so it renders as a form-less modal.
-     */
-    public function getActionModalFormInstance(): mixed
-    {
-        return null;
-    }
-
     /** Mounts a name that resolves to no action, then reads the modal config. */
     public function peekGhostConfig(): void
     {
@@ -338,6 +329,16 @@ it('skips modal config regeneration when the mounted name resolves to no action'
     Livewire::test(CoreActionsHost::class)
         ->call('peekGhostConfig')
         ->assertSet('mountedActions.0.name', 'ghost');
+});
+
+it('exposes null form-instance seams on a form-free host (the wire-forms bridge overrides them)', function () {
+    // A standalone wire-core host has no form runtime; the core seams return null
+    // so the action modal-host renders form-less instead of calling a bridge that
+    // does not exist. The wire-forms bridge overrides these via `insteadof`.
+    $host = new CoreActionsHost;
+
+    expect($host->getActionModalFormInstance())->toBeNull()
+        ->and($host->getActionModalFormInstanceForDepth(0))->toBeNull();
 });
 
 it('carries a custom mobileBreakpoint into the core modal-host slide-over (regression: it was dropped)', function () {

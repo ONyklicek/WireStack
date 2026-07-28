@@ -91,38 +91,80 @@ Action::make('edit')->onDoubleClick()->alsoInRowActions()
 
 ## Ovládání klávesnicí
 
-Jakmile má tabulka libovolnou record action, klávesová navigace se zapne
-automaticky a tabulka se ohlásí jako grid:
+Klávesová navigace je opt-in přes `->gestures()`. Jakmile si o ni tabulka řekne,
+platí pro každou tabulku, kterou klávesnice umí ovládat řádek po řádku — pro tu
+s akcemi nad záznamem stejně jako pro tu, která je `->selectable()` nebo má
+hromadné akce — a taková tabulka se ohlásí jako ARIA grid:
+
+```php
+->gestures()
+->recordAction(Action::make('open')->onDoubleClick())
+```
 
 | Klávesa | Akce |
 |---------|------|
 | `↑` / `↓` | Posun aktivního řádku |
+| `Home` / `End`, `PageUp` / `PageDown` | Skok na okraj, nebo posun o obrazovku |
 | `Enter` | Primární record action (binding dvojkliku, jinak kliku) |
 | `Shift` + `Enter` | Sekundární record action (druhý pointer binding) |
 | `Space` | Přepnout výběr aktivního řádku (a nastavit kotvu) při selectable, jinak primární akce |
-| `Shift` + `↑` / `↓` | Rozšířit souvislý výběr od kotvy (desktopový range-select) |
+| `Shift` + `↑` / `↓` | Rozšířit výběr od kotvy |
 | `mod` + `A` | Vybrat všechny řádky na stránce |
-| Menu klávesa | Otevřít kontextové menu řádku |
+| Menu klávesa, `Shift` + `F10` | Otevřít kontextové menu řádku |
+| `?` | Zobrazit zkratky, na které tabulka reaguje |
 | `Delete`, `mod+d`, … | Vlastní `->onKey()` / `->keyboardShortcut()` akce |
 
-Klávesnicový výběr řídí **stejný** stav výběru jako checkboxy a bulk bar — šipkou
-na řádek, `Space` pro výběr, `Shift`+šipka pro rozšíření bloku — pak spusť
-hromadnou akci z baru.
+Vazba `->onKey('Delete')` reaguje i na `Backspace` — na klávesnici Macu je to
+tatáž klávesa pod jiným jménem.
 
-Vynuť vypnutí (či zapnutí), pokud potřebuješ:
+Výběrová gesta — `Space`, rozsahy, `mod`+`A` — popisuje
+[Výběr řádků](selection.md), včetně gest myší a toho, co rozsah znamená, když je
+vybráno „vše odpovídající".
+
+Myš i klávesnice sdílejí jeden aktivní řádek: **klik na řádek ho označí** a šipky
+pokračují odtud, takže se tabulka nikdy neovládá ze dvou míst zároveň. Označení
+zůstane vidět i pod kurzorem, přežije roundtrip vyvolaný akcí a drží se svého
+záznamu i po přeřazení (když záznam ze stránky zmizí, tabstop se vrátí na první
+řádek).
+
+Klávesy dosáhnou na grid jen tehdy, když má fokus **samotný řádek**: stisk uvnitř
+tlačítka akce, inline editovatelné buňky nebo dropdownu patří tomu prvku. Dokud
+je otevřený modal akce, grid je inertní — žádná šipka neposune označení za
+dialogem a žádná zkratka nespustí druhou akci — a po zavření modalu se fokus
+vrátí na aktivní řádek, takže šipky dál fungují.
+
+Vynuť vypnutí (či zapnutí), pokud potřebuješ — klávesnice je jedna ze schopností
+[vrstvy gest](gestures.md):
 
 ```php
-->recordActionKeyboard(false)
+->gestures(fn (TableGestures $g) => $g->keyboard(false))
 ```
 
 Protože Enter vždy dosáhne na primární akci, každá record action zůstává
 dostupná klávesnicí — behavior-only akce nikdy není past jen pro myš.
 
+### Klávesy, které si grid vyhrazuje
+
+Klávesy, kterými grid naviguje, nejde navázat na akci — vazba by nikdy
+nevystřelila. Místo tichého zahození proto `->onKey()` vyhodí výjimku už při
+konfiguraci:
+
+```text
+Enter  Space  ArrowUp  ArrowDown  Home  End  PageUp  PageDown  ContextMenu  F10  ?
+```
+
+`keyboardShortcut()` nastavený přímo na akci se jen přeskočí a nikdy není
+fatální — taková akce může legitimně sloužit i toolbaru nebo paletě.
+
 ## Kombinace s výběrem a hromadnými akcemi
 
-Když je tabulka `->selectable()`, jednoklik dál vybírá řádek, takže výchozí
-trigger record akce se stává **dvojklik** — nekolidují spolu. Klik na checkbox
-jen přepne výběr a hromadné akce zůstávají nedotčené:
+Když je tabulka `->selectable()`, výchozím triggerem record akce se stává
+**dvojklik**, takže jednoklik zůstává volný pro práci s výběrem — jen označí
+řádek, na který dopadne (aktivní řádek pro klávesnici a kotva dalšího
+`Shift`+rozsahu). Prostý klik zaškrtávátko nikdy nezaškrtne; ty s modifikátorem
+záměrně ano, protože přesně to `Shift` a `mod` znamenají všude jinde (viz
+[Výběr řádků](selection.md)). Klik s modifikátorem je výběrové gesto a nikdy
+nespustí navázanou akci nad záznamem. Hromadné akce zůstávají nedotčené:
 
 ```php
 ->selectable()
@@ -139,7 +181,20 @@ obarvi pro silnější náznak „tento řádek je klikatelný":
 
 ```php
 ->recordActionHover('primary')   // obarvený hover místo neutrální šedé
-->activeRowClass('bg-amber-100')  // přepis zvýraznění klávesnicově aktivního řádku
+->activeRowClass('bg-amber-100')  // přepis označení aktivního řádku (klik i klávesnice)
+```
+
+Aktivní řádek po dobu označení shazuje svůj hover tint, takže označení nikdy
+nepřebije `hover:bg-*`, když na něm spočine kurzor.
+
+Ve výchozím stavu jsou označením dva signály, ne jeden: podbarvení a pruh u
+náběžné hrany řádku. Samotné podbarvení má vůči prostému řádku kontrast asi
+1,1:1 — pod hranicí 3:1 a neviditelné pro každého, kdo ty dva odstíny nerozliší.
+`activeRowClass()` nahrazuje **obě** poloviny, takže přepis si ručí za vlastní
+kontrast:
+
+```php
+->activeRowClass('bg-amber-100 [&>td:first-of-type]:before:bg-amber-600')
 ```
 
 ## Doporučené UX
@@ -178,3 +233,10 @@ tlačítka:
     Action::make('delete')->onContextMenu(),
 ])
 ```
+
+## Související dokumentace
+
+- [Výběr řádků](selection.md) — výběrová gesta, se kterými akce nad záznamem
+  sdílejí řádek
+- [Akce](actions.md) — řádkové, hromadné a hlavičkové akce
+- [Vrstva gest](gestures.md) — vypnutí gest a tlačítkový fallback na mobilu

@@ -96,6 +96,10 @@ return [
     'selection_only_this_page' => 'Only this page',
     'select_all_on_page' => 'Select all on this page',
     'selection_page_of_total' => ':page on this page · :total total',
+    // Screen-reader announcements for the selection live region.
+    'selection_announce_some' => ':count of :total selected',
+    'selection_announce_all' => 'All :total selected',
+    'selection_announce_none' => 'Selection cleared',
     'selection_selected_of_total' => ':count of :total selected',
 
     // Pagination
@@ -138,4 +142,22 @@ return [
     'save_failed' => 'Save failed',
     'invalid' => 'Invalid',
     'error' => 'Error',
+
+    // Keyboard shortcut legend
+    'shortcuts_heading' => 'Keyboard shortcuts',
+    'shortcuts_description' => 'These work while a row has focus.',
+    'shortcuts_navigation' => 'Navigation',
+    'shortcuts_selection' => 'Selection',
+    'shortcuts_actions' => 'Actions',
+    'shortcuts_help' => 'Help',
+    'shortcut_move_active' => 'Move the active row',
+    'shortcut_jump_edges' => 'Jump to the first / last row',
+    'shortcut_page_step' => 'Move one page up / down',
+    'shortcut_toggle_selection' => 'Select or deselect the active row',
+    'shortcut_extend_selection' => 'Extend the selection',
+    'shortcut_extend_selection_edges' => 'Extend the selection to the first / last row',
+    'shortcut_select_page' => 'Select the whole page',
+    'shortcut_run_action' => 'Run “:action”',
+    'shortcut_context_menu' => 'Open the row menu',
+    'shortcut_show_help' => 'Show keyboard shortcuts',
 ];

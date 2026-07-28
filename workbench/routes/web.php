@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 use Workbench\App\Livewire\Previews\CorePreview;
 use Workbench\App\Livewire\Previews\FieldPreview;
 use Workbench\App\Livewire\Previews\FormPreview;
+use Workbench\App\Livewire\Previews\GestureLabPreview;
 use Workbench\App\Livewire\Previews\InfolistPreview;
 use Workbench\App\Livewire\Previews\LayoutPreview;
 use Workbench\App\Livewire\Previews\ModalStackingPreview;
@@ -68,6 +69,14 @@ Route::get('/previews', function () {
             'copy' => 'Both a single-click and a double-click record action are bound: a double-click must run only the double-click action, never the deferred single-click one.',
             'component' => TablePreview::class,
             'variant' => 'record-actions-dual',
+        ],
+        [
+            'slug' => 'table-record-actions-keyboard',
+            'title' => 'Wire Table',
+            'label' => 'Table record actions (keyboard)',
+            'copy' => 'Arrow-key navigation over the rows: ↑/↓ move the active row, Enter / Shift+Enter run the primary and secondary record action, Space and Shift+↑/↓ select, Delete fires an onKey() binding.',
+            'component' => TablePreview::class,
+            'variant' => 'record-actions-keyboard',
         ],
         [
             'slug' => 'table-selection',
@@ -288,7 +297,11 @@ foreach ([
     'table-overview' => ['title' => 'Wire Table', 'subtitle' => 'Live table preview with search, filters, and actions.', 'component' => TablePreview::class, 'variant' => 'overview'],
     'table-record-actions' => ['title' => 'Wire Table Record Actions', 'subtitle' => 'Double-click a row to open it, right-click for the context menu — one delegated controller.', 'component' => TablePreview::class, 'variant' => 'record-actions'],
     'table-record-actions-dual' => ['title' => 'Wire Table Record Actions (click + double-click)', 'subtitle' => 'Both gestures bound: a double-click must run only the double-click action, never the deferred single-click one.', 'component' => TablePreview::class, 'variant' => 'record-actions-dual'],
+    'table-record-actions-keyboard' => ['title' => 'Wire Table Record Actions (keyboard)', 'subtitle' => 'Arrow-key navigation: ↑/↓ move the active row, Enter / Shift+Enter run the primary and secondary action, Space and Shift+↑/↓ select, Delete fires an onKey() binding.', 'component' => TablePreview::class, 'variant' => 'record-actions-keyboard'],
     'table-selection' => ['title' => 'Wire Table Selection', 'subtitle' => 'Selected-record state with bulk toolbar and active filters.', 'component' => TablePreview::class, 'variant' => 'selection'],
+    'table-selection-gestures' => ['title' => 'Wire Table Selection Gestures', 'subtitle' => '40 rows on one page: checkbox anchors, Shift+arrow ranges, mod+A, keyboard-driven record actions.', 'component' => TablePreview::class, 'variant' => 'selection-gestures'],
+    'table-selection-gestures-paged' => ['title' => 'Wire Table Selection Gestures (paged)', 'subtitle' => 'The same 40 rows split 20 a page: page-scoped gestures and the select-all-matching escalation.', 'component' => TablePreview::class, 'variant' => 'selection-gestures-paged'],
+    'table-selection-only' => ['title' => 'Wire Table Selection Only', 'subtitle' => 'Selectable without any record action: the variant that proves grid semantics attach to selectable() itself.', 'component' => TablePreview::class, 'variant' => 'selection-only'],
     'table-stacked-selection' => ['title' => 'Wire Table Stacked Selection', 'subtitle' => 'Card layout with the always-visible select-all strip, the select-all-matching escalation, and mobile sorting.', 'component' => TablePreview::class, 'variant' => 'stacked-selection'],
     'table-subrows' => ['title' => 'Wire Table Sub-rows', 'subtitle' => 'Expandable invoice line items with sortable headers, row actions, and a subtotal.', 'component' => TablePreview::class, 'variant' => 'subrows'],
     'table-summary' => ['title' => 'Wire Table Summary', 'subtitle' => 'Rollup totals, a multi-aggregate footer, and the page/all scope toggle.', 'component' => TablePreview::class, 'variant' => 'summary'],
@@ -312,14 +325,22 @@ foreach ([
     'table-actions-group-lazy' => ['title' => 'Wire Table Action Group · lazy', 'subtitle' => 'Action group whose menu is built client-side on first open (lazyMenu()).', 'component' => TablePreview::class, 'variant' => 'actions-group-lazy'],
     'table-actions-group-tablet' => ['title' => 'Wire Table Action Group · tablet', 'subtitle' => 'Action group as a sheet up to md (tablet breakpoint).', 'component' => TablePreview::class, 'variant' => 'actions-group-tablet'],
     'table-stacked-actions-collapse' => ['title' => 'Wire Table Stacked · collapse actions', 'subtitle' => 'Mobile stacked cards that collapse three row actions into one dropdown (collapseActionsOnMobile).', 'component' => TablePreview::class, 'variant' => 'stacked-actions-collapse'],
+    'table-stacked-actions-collapse-two' => ['title' => 'Wire Table Stacked · collapse two actions (lazy)', 'subtitle' => 'Lazy-loaded stacked cards with only two row actions, collapsed at threshold 1 — guards the Alpine bundles reaching a lazy() table.', 'component' => TablePreview::class, 'variant' => 'stacked-actions-collapse-two'],
     'table-paginated' => ['title' => 'Wire Table Pagination', 'subtitle' => 'Paginated table with per-page selector and page links.', 'component' => TablePreview::class, 'variant' => 'paginated'],
     'sortable-overview' => ['title' => 'Wire Sortable', 'subtitle' => 'Full reorderable task table preview.', 'component' => SortablePreview::class, 'variant' => 'overview'],
     'sortable-detail' => ['title' => 'Wire Sortable Detail', 'subtitle' => 'Closer reorder-surface preview.', 'component' => SortablePreview::class, 'variant' => 'detail'],
+    'sortable-columns' => ['title' => 'Wire Sortable Columns', 'subtitle' => 'Drag a header to reorder columns, on a table that also has a selection column and row handles.', 'component' => SortablePreview::class, 'variant' => 'columns'],
+    'gesture-lab' => ['title' => 'Gesture Lab', 'subtitle' => 'Every selection gesture, record action, the shortcut help and column reordering on one table, with a live state read-out.', 'component' => GestureLabPreview::class, 'variant' => 'lab'],
+    'gesture-lab-paged' => ['title' => 'Gesture Lab (paged)', 'subtitle' => 'The same lab over 20 rows a page — what "select all matching" needs to mean anything.', 'component' => GestureLabPreview::class, 'variant' => 'paged'],
+    'gesture-lab-click' => ['title' => 'Gesture Lab (single click)', 'subtitle' => 'A table whose only record action is a single click opening a modal.', 'component' => GestureLabPreview::class, 'variant' => 'click-only'],
+    'gesture-lab-default' => ['title' => 'Gesture Lab (shipped default)', 'subtitle' => 'The same table with no gestures() call at all — what a consumer gets out of the box: checkboxes, the declared record actions and the right-click menu, but no keyboard grid, no ranges and no sweep.', 'component' => GestureLabPreview::class, 'variant' => 'default'],
+    'gesture-lab-plain' => ['title' => 'Gesture Lab (gestures off)', 'subtitle' => 'The same table with gestures(false): no keyboard grid, no ranges, no sweep, no right-click menu, no ? help — the declared record actions and the checkboxes stay.', 'component' => GestureLabPreview::class, 'variant' => 'plain'],
     'actions-modal-stacking' => ['title' => 'Wire Actions · Nested Modal Stacking', 'subtitle' => 'Six live configurations of the nested-modal frame stack — create-and-select ($setParent), deep $setFrame, inline registerActions, slide-over, and a stacked wizard.', 'component' => ModalStackingPreview::class, 'variant' => 'gallery'],
     'core-overview' => ['title' => 'Wire Core', 'subtitle' => 'Stats, actions, and shared primitives.', 'component' => CorePreview::class, 'variant' => 'overview'],
     'core-modal' => ['title' => 'Wire Core Modal', 'subtitle' => 'Real modal surface from the core runtime.', 'component' => CorePreview::class, 'variant' => 'modal'],
     'core-dropdown' => ['title' => 'Wire Core Dropdown', 'subtitle' => 'Generic dropdown that becomes a bottom sheet on mobile.', 'component' => CorePreview::class, 'variant' => 'dropdown'],
     'core-toasts' => ['title' => 'Wire Core Toasts', 'subtitle' => 'Toast countdown bar, actions, collapsible stack, max-visible cap, and a11y support.', 'component' => CorePreview::class, 'variant' => 'toasts'],
+    'core-open-on' => ['title' => 'Wire Core openOn Modals', 'subtitle' => 'Modal, confirmation, and slide-over opened by a window event — no wire:model binding.', 'component' => CorePreview::class, 'variant' => 'open-on'],
     'widgets-overview' => ['title' => 'Wire Core Widgets', 'subtitle' => 'Stats overview and a chart widget composed into a dashboard grid.', 'component' => WidgetPreview::class, 'variant' => 'overview'],
     'widgets-chart' => ['title' => 'Wire Core Chart Widget', 'subtitle' => 'A single interactive Chart.js widget with heading and filter.', 'component' => WidgetPreview::class, 'variant' => 'chart'],
     'widgets-bar-chart' => ['title' => 'Wire Core Bar Chart Widget', 'subtitle' => 'Pure-CSS bar chart with finance, system, and horizontal progress modes.', 'component' => WidgetPreview::class, 'variant' => 'bar-chart'],
@@ -355,7 +376,9 @@ $fieldPreviews = [
     'otp-input' => 'OTP Input',
     'key-value' => 'Key-Value',
     'date-time-picker' => 'Date-Time Picker',
+    'date-time-picker-bounds' => 'Date-Time Picker · min/max bounds',
     'file-upload' => 'File Upload',
+    'file-upload-auto' => 'File Upload (centre crop)',
 ];
 
 foreach ($fieldPreviews as $field => $label) {

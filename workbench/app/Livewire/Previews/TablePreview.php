@@ -28,6 +28,7 @@ use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Support\RecordAction;
 use NyonCode\WireTable\Table;
+use Workbench\App\Models\GestureRow;
 use Workbench\App\Models\Invoice;
 use Workbench\App\Models\User;
 
@@ -51,6 +52,17 @@ class TablePreview extends Component
 
     /** Variants that auto-open the header-action form modal for visual QA. */
     private const MODAL_VARIANTS = ['modal-form', 'modal-slideover-mobile', 'modal-slideover-compose', 'modal-fullscreen-mobile', 'modal-wizard', 'modal-nested'];
+
+    /** Variants backed by the GestureRow selection-gesture fixtures. */
+    private const GESTURE_VARIANTS = ['selection-gestures', 'selection-gestures-paged', 'selection-only'];
+
+    /**
+     * Variants of the users table that exist to show whole-row interaction, and
+     * therefore ask for the (opt-in) gesture layer. Every other users-table
+     * variant stays on the shipped default on purpose — a preview of an
+     * ordinary table should look like one.
+     */
+    private const RECORD_ACTION_VARIANTS = ['record-actions', 'record-actions-dual', 'record-actions-keyboard'];
 
     public function mount(string $variant = 'overview'): void
     {
@@ -133,6 +145,10 @@ class TablePreview extends Component
             return $this->editableFillTable($table);
         }
 
+        if (in_array($this->variant, self::GESTURE_VARIANTS, true)) {
+            return $this->gestureTable($table);
+        }
+
         $table = $this->usersTable($table);
 
         if ($this->variant === 'paginated') {
@@ -144,7 +160,12 @@ class TablePreview extends Component
         // sort control need in order to be visible at all. Applied after
         // usersTable(), whose chain ends with ->paginated(false).
         if ($this->variant === 'stacked-selection') {
-            $table->stackedOnMobile()->paginated()->perPage(2);
+            // Sorted by id so the first page is the same two records the
+            // pre-seeded selection in booted() picks. Without it the page order
+            // comes from timestamps the seeder generates relative to today, and
+            // whether the strip starts fully checked or mixed changes with the
+            // day the database was rebuilt.
+            $table->stackedOnMobile()->paginated()->perPage(2)->defaultSort('id', 'asc');
         }
 
         return $table;
@@ -342,6 +363,7 @@ class TablePreview extends Component
     {
         return $table
             ->model(User::class)
+            ->gestures()
             ->fillHandle()
             ->columns([
                 TextColumn::make('name')->label('Name'),
@@ -355,13 +377,100 @@ class TablePreview extends Component
             ->paginated(false);
     }
 
+    /**
+     * Selection-gesture fixtures: 40 deterministic rows, checkboxes, a bulk bar
+     * and mobile cards. `selection-gestures` shows every row on one page (the
+     * document scrolls), `selection-gestures-paged` splits them 20 a page, and
+     * `selection-only` is selectable *without* record actions — the variant
+     * that proves grid semantics attach to `selectable()` itself, not to the
+     * record actions every other selectable preview happens to carry.
+     *
+     * All of them call `gestures()`: the layer is opt-in, and these fixtures are
+     * what the drivers point at to prove it works when asked for.
+     */
+    private function gestureTable(Table $table): Table
+    {
+        $table
+            ->gestures()
+            ->model(GestureRow::class)
+            ->columns([
+                TextColumn::make('name')->label('Name')->searchable()->sortable(),
+                BadgeColumn::make('status')
+                    ->label('Status')
+                    ->colors([
+                        'new' => 'info',
+                        'active' => 'success',
+                        'paused' => 'warning',
+                        'archived' => 'gray',
+                    ]),
+                TextColumn::make('amount')->label('Amount')->sortable(),
+            ])
+            ->searchable()
+            ->selectable()
+            ->stackedOnMobile()
+            ->bulkActions([
+                BulkAction::make('activate')->label('Activate')->icon('check')->color('success'),
+                BulkAction::make('archive')->label('Archive')->icon('outline:archive-box')->color('warning'),
+                BulkAction::make('export')->label('Export selected')->icon('outline:arrow-down-tray')->color('gray'),
+                DeleteBulkAction::make(),
+            ])
+            ->defaultSort('name');
+
+        if ($this->variant === 'selection-gestures-paged') {
+            $table->paginated()->perPage(20);
+        } else {
+            $table->paginated(false);
+        }
+
+        if ($this->variant === 'selection-only') {
+            return $table;
+        }
+
+        return $table->recordActions([
+            RecordAction::make(
+                Action::make('open')
+                    ->label('Open')
+                    ->icon('outline:eye')
+                    ->requiresConfirmation()
+                    ->modalHeading(fn ($r) => "Opened {$r->name}")
+                    ->modalDescription('Enter (or a double-click) runs the primary record action against the active row.')
+                    ->action(fn () => null)
+            )->onDoubleClick(),
+            RecordAction::make(
+                Action::make('archive-one')
+                    ->label('Archive')
+                    ->icon('outline:archive-box')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading(fn ($r) => "Archive {$r->name}?")
+                    ->modalDescription('Fired by the Delete key against the active row — an onKey() binding.')
+                    ->action(fn () => null)
+            )->onKey('Delete'),
+            RecordAction::make(
+                Action::make('duplicate')
+                    ->label('Duplicate')
+                    ->icon('outline:document-duplicate')
+                    ->requiresConfirmation()
+                    ->modalHeading(fn ($r) => "Duplicate {$r->name}?")
+                    ->action(fn () => null)
+            )->onContextMenu(),
+        ]);
+    }
+
     private function usersTable(Table $table): Table
     {
         if ($this->variant === 'stacked-actions-collapse') {
             $table->stackedOnMobile()->collapseActionsOnMobile();
         }
 
-        return $table
+        // The two-action case at threshold 1: the default action arm below gives
+        // exactly Edit + Delete, so this reproduces "only two actions, collapse
+        // forced" without a dedicated action list.
+        if ($this->variant === 'stacked-actions-collapse-two') {
+            $table->stackedOnMobile()->collapseActionsOnMobile(threshold: 1)->lazy();
+        }
+
+        $table
             ->model(User::class)
             ->columns([
                 TextColumn::make('name')->label('Name')->searchable()->sortable(),
@@ -440,8 +549,9 @@ class TablePreview extends Component
             ->searchable()
             ->selectable()
             // Double-click a row → open it (a confirmation modal here). Because the
-            // table is selectable, the default trigger is double-click, leaving a
-            // single click for row selection. Behaviour-only: no toolbar button.
+            // table is selectable, the default trigger is double-click, leaving the
+            // single click to the selection gestures (it only marks the row).
+            // Behaviour-only: no toolbar button.
             ->recordActions(match ($this->variant) {
                 'record-actions' => [
                     RecordAction::make(
@@ -460,10 +570,50 @@ class TablePreview extends Component
                     RecordAction::make(Action::make('view')->label('View')->action(fn () => null))->onClick(),
                     RecordAction::make(Action::make('edit')->label('Edit')->action(fn () => null))->onDoubleClick(),
                 ],
+                // Keyboard navigation showcase (see the legend above the table).
+                // Keyboard nav follows gestures() plus a table the keyboard can
+                // drive — record actions here: the rows become a grid with a roving tabindex, ↑/↓ move the active row,
+                // Enter runs the double-click action, Shift+Enter the single-click
+                // one, and each onKey() binding fires against the active row.
+                // Clicking a row adopts it as the active row, so pointer and
+                // keyboard always continue from the same place.
+                'record-actions-keyboard' => [
+                    RecordAction::make(
+                        Action::make('open')
+                            ->label('Open')
+                            ->icon('outline:eye')
+                            ->requiresConfirmation()
+                            ->modalHeading(fn ($r) => "Opened {$r->name}")
+                            ->modalDescription('Enter (or a double-click) runs the primary record action against the active row.')
+                            ->action(fn () => null)
+                    )->onDoubleClick(),
+                    RecordAction::make(
+                        Action::make('preview')
+                            ->label('Preview')
+                            ->icon('outline:document-magnifying-glass')
+                            ->requiresConfirmation()
+                            ->modalHeading(fn ($r) => "Preview of {$r->name}")
+                            ->modalDescription('Shift+Enter (or a single click) runs the secondary record action.')
+                            ->action(fn () => null)
+                    )->onClick(),
+                    RecordAction::make(
+                        Action::make('archive')
+                            ->label('Archive')
+                            ->icon('outline:archive-box')
+                            ->color('danger')
+                            ->requiresConfirmation()
+                            ->modalHeading(fn ($r) => "Archive {$r->name}?")
+                            ->modalDescription('Fired by the Delete key against the active row — an onKey() binding.')
+                            ->action(fn () => null)
+                    )->onKey('Delete'),
+                ],
                 default => [],
             })
             // Right-click a row → a dedicated context menu (declared separately
-            // from the ->actions() toolbar above).
+            // from the ->actions() toolbar above). The menu is one of the
+            // capabilities the shipped default leaves allowed, so it works on
+            // every variant — unlike the keyboard, the ranges and the sweep,
+            // which only the record-action variants below ask for.
             ->rowContextMenu([
                 Action::make('view')->label('View')->icon('outline:eye'),
                 Action::make('edit')->label('Edit')->icon('pencil')->color('primary'),
@@ -471,6 +621,16 @@ class TablePreview extends Component
                 DeleteAction::make(),
             ])
             ->paginated(false);
+
+        // Only the variants whose whole point is whole-row interaction ask for
+        // the opt-in layer. The rest — `table-overview` included, the preview
+        // people look at to see what a table *is* — stay on the shipped
+        // default, which is what a consumer gets out of the box.
+        if (in_array($this->variant, self::RECORD_ACTION_VARIANTS, true)) {
+            $table->gestures();
+        }
+
+        return $table;
     }
 
     /**

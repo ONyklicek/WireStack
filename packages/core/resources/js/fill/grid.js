@@ -12,15 +12,7 @@
  * (later) horizontally.
  */
 
-/** Direct-child rows only: group headers and sub-row rows carry no data-row-key,
- *  and a sub-row's own <table> has its own tbody, so it is never reached here. */
-const bodyRows = (table) => {
-    const tbody = table?.tBodies?.[0]
-
-    if (! tbody) return []
-
-    return Array.from(tbody.children).filter((el) => el.matches('tr[data-row-key]'))
-}
+import { bodyRows, rowAtY } from '../support/rows'
 
 export const createGrid = (root) => {
     let columns = []
@@ -98,20 +90,7 @@ export const createGrid = (root) => {
 
         /** The row nearest a viewport y — used while dragging past the last row. */
         rowAtY(clientY) {
-            const rows = this.rows()
-
-            if (rows.length === 0) return null
-
-            let nearest = 0
-
-            for (let i = 0; i < rows.length; i++) {
-                const rect = rows[i].getBoundingClientRect()
-
-                if (clientY >= rect.top && clientY <= rect.bottom) return i
-                if (clientY > rect.bottom) nearest = i
-            }
-
-            return clientY < rows[0].getBoundingClientRect().top ? 0 : nearest
+            return rowAtY(this.rows(), clientY)
         },
     }
 

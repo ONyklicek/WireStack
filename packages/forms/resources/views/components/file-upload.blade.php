@@ -200,11 +200,19 @@
                 x-show="cropping"
                 x-cloak
                 @keydown.escape.window="cancelCrop()"
+                {{-- It covers the page, so it is a dialog and has to behave like
+                     one: announced as such, and holding the focus. Without the
+                     trap the focus stayed on <body> when it opened and Tab
+                     reached the file picker *behind* the overlay. --}}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="crop-title-{{ $field->getStatePath() }}"
+                @include('wire-core::modals.partials.focus-trap', ['openExpression' => 'cropping'])
                 class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/70 p-4"
                 data-testid="form-file-{{ $field->getStatePath() }}-cropper"
         >
             <div class="w-full max-w-lg rounded-lg bg-white p-4 shadow-xl dark:bg-gray-800" @click.stop>
-                <p class="mb-3 text-sm font-medium text-gray-900 dark:text-white">{{ __('Choose the visible area') }}</p>
+                <p id="crop-title-{{ $field->getStatePath() }}" class="mb-3 text-sm font-medium text-gray-900 dark:text-white">{{ __('Choose the visible area') }}</p>
 
                 <div
                         class="relative select-none overflow-hidden rounded"

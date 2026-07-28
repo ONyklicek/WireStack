@@ -58,6 +58,11 @@
     $filters = $table->getFilters();
 
     $hasActions = $table->hasActions();
+    // The stacked cards have their own action list: a finger has no double-click,
+    // no right-click and no Delete key, so a behaviour-only record action also
+    // renders here as an ordinary button (recordActionButtonsOnMobile()).
+    $mobileActions = $table->getMobileRowActionsForDisplay();
+    $hasMobileActions = $mobileActions !== [];
     // Mobile stacked cards can collapse the row actions into one dropdown group.
     $collapseMobileActions = $table->shouldCollapseActionsOnMobile();
     $mobileActionGroup = $collapseMobileActions ? $table->getMobileActionGroup() : null;
@@ -73,7 +78,34 @@
     $keyboardNav = $table->keyboardNavEnabled();
     $tableRole = $table->getTableRole();
     $recordKeyboardConfig = $keyboardNav ? $table->getRecordActionKeyboardConfig() : null;
-    $recordActionsRootEnabled = $hasRecordPointer || $rowContextMenuEnabled || $keyboardNav;
+    // The controller mount has its own owner: grid semantics (role/tabindex)
+    // now cover selectable tables too, but mounting wireRecordActions there is
+    // a visible change that ships separately — see mountsRecordActionController().
+    $recordActionsRootEnabled = $table->mountsRecordActionController();
+    // The mouse half of the gesture layer (sweep, Shift/mod ranges) — switchable
+    // independently of the keyboard one, so the controller gets its own config.
+    $gestureConfig = $table->getGestureConfig();
+    $usesRangeSelection = $table->usesRangeSelection();
+    // The marker only exists where something continues from the marked row: the
+    // keyboard, a range or a sweep. A table left with a bare click binding runs
+    // the action and highlights nothing.
+    $activeRowConfig = $table->usesActiveRowMarker() ? $table->getActiveRowConfig() : null;
+    // `?` opens the shortcut help. The event name is derived from the component
+    // id, so a page with several tables opens only the one whose row has focus —
+    // a bare window event would open every help modal at once. It goes through
+    // a lowercase hash, because the listener lives in an ATTRIBUTE NAME
+    // (x-on:{event}.window) and the DOM lowercases those: a mixed-case Livewire
+    // id would never match what the controller dispatches. The controller learns
+    // the name through its keyboard config; a table whose legend is empty gets
+    // no event and no modal at all.
+    $shortcutLegend = $table->usesShortcutHelp() ? $table->shortcutLegend() : null;
+    $shortcutHelpEvent = $shortcutLegend !== null && ! $shortcutLegend->isEmpty()
+        ? 'wire-table-shortcut-help-'.substr(md5($component->getId()), 0, 12)
+        : null;
+
+    if ($recordKeyboardConfig !== null) {
+        $recordKeyboardConfig['help'] = $shortcutHelpEvent;
+    }
     $hasBulkActions = !empty($bulkActions);
     $hasHeaderActions = !empty($headerActions);
     $hasFilters = !empty($filters);
@@ -84,6 +116,23 @@
         ? app(\NyonCode\WireCore\Foundation\Icons\IconManager::class)->render('check', 'h-4 w-4', 'absolute inset-0 text-white')
         : '';
     $hasSummaries = $component->tableHasSummaries();
+
+    // One `:class` expression per row, merging every dynamic row state that has
+    // to survive a Livewire morph: the selection tint and the record-action
+    // active marker. Both are Alpine bindings rather than classes toggled from
+    // JS, so the roundtrip a click triggers cannot wash them off. `rowClass()`
+    // returns an object (it also switches the row's hover tint off while it is
+    // the active row); `%key%` is substituted with the record key per row.
+    $rowClassBindingParts = [];
+    if ($isSelectable) {
+        $rowClassBindingParts[] = "'bg-primary-50 dark:bg-primary-900/20': isSelected(%key%)";
+    }
+    if ($activeRowConfig !== null) {
+        $rowClassBindingParts[] = '...rowClass(%key%)';
+    }
+    $rowClassBinding = $rowClassBindingParts === []
+        ? null
+        : '{ '.implode(', ', $rowClassBindingParts).' }';
 
     // Selection is managed client-side (Alpine) and entangled deferred — a
     // checkbox click costs no server roundtrip. When the footer renders
@@ -168,12 +217,59 @@
 
     // Check if search/filter is active but no results
     $hasActiveFilters = !empty($tableSearch) || $activeTableFilters !== [] || $activeColumnFilters !== [];
-    $recordCount = $records instanceof LengthAwarePaginator ? $records->total() : $records->count();
+    $hasPaginator = $records instanceof LengthAwarePaginator;
+    $recordCount = $hasPaginator ? $records->total() : $records->count();
     $isEmptyDueToFilter = $hasActiveFilters && $recordCount === 0;
+
+    // Where this page sits in the whole result set. Read by the footer's
+    // "from - to of total" line and, before it, by aria-rowindex: an ARIA row
+    // index counts through the entire grid, not the page, so row 1 of page 2
+    // is not index 1. Hence the lift out of the footer.
+    $rangeFrom = $hasPaginator ? ($records->firstItem() ?? 0) : ($records->count() > 0 ? 1 : 0);
+    $rangeTo = $hasPaginator ? ($records->lastItem() ?? 0) : $records->count();
+
+    // Header rows come first in the ARIA row numbering, and the column-filter
+    // row is one of them when present — miss it and every body index is off by
+    // one.
+    $headerRowCount = 1 + ($hasColumnFilters ? 1 : 0);
+
+    // Whole sentences for the selection live region: only the server can
+    // translate them, and the counts are substituted client-side because the
+    // selection itself lives in Alpine.
+    $selectionAnnouncements = [
+        'some' => __('wire-table::messages.selection_announce_some', ['count' => ':count', 'total' => ':total']),
+        'all' => __('wire-table::messages.selection_announce_all', ['total' => ':total']),
+        'none' => __('wire-table::messages.selection_announce_none'),
+    ];
 @endphp
 
 {{-- Lazy loading: trigger load when visible --}}
 @if($isLazy && !$isTableReady)
+    {{-- The bundles must reach the page on THIS render, not on the one that
+         swaps the table in. Every one of them registers its Alpine components
+         from an `alpine:init` listener, and that event fires exactly once, when
+         Alpine boots. A bundle first emitted by the deferred render arrives
+         after that — Livewire injects the script tag, it runs, it subscribes to
+         an event that will never fire again, and nothing is ever registered. The
+         morphed-in markup then evaluates x-data="wireDropdown(...)" against an
+         undefined factory: every dropdown, the selection root and the record
+         controller die, and each sheet backdrop — an x-show="open" over a state
+         that no longer exists — is left covering the page.
+
+         Emitted here they land before Alpine boots, so `alpine:init` registers
+         everything and the deferred markup initialises normally. The gates match
+         the loaded table's; the dropdown bundle is unconditional because the
+         toolbar alone (filters, the column toggle) is built from dropdowns. --}}
+    @once
+        @include('wire-core::partials.floating-assets')
+        @if($isSelectable)
+            @include('wire-table::tables.partials.selection-assets')
+        @endif
+        @if($recordActionsRootEnabled)
+            @include('wire-table::tables.partials.record-actions-assets')
+        @endif
+    @endonce
+
     <div
             x-data="{ loaded: false }"
             x-intersect.once="if (!loaded) { loaded = true; $wire.loadTable(); }"
@@ -237,63 +333,42 @@
                     wire:key="table-wrapper"
                     @if($isSelectable)
                         data-page-keys="{{ json_encode($pageRecordKeys) }}"
+                        data-matching="{{ $recordCount }}"
                         data-selection-root
-                        x-data="{
-                            selected: $wire.entangle('tableState.selection.records'),
-                            /* 'keys' → `selected` is the selection.
-                               'all'  → everything the filter matches is selected and
-                                        `selected` holds the exclusions, so the same
-                                        toggle works for both and no key list of the
-                                        whole result set ever reaches the browser. */
-                            mode: $wire.entangle('tableState.selection.mode'),
-                            matching: {{ $recordCount }},
-                            commitTimer: null,
-                            get pageKeys() { return JSON.parse(this.$root.dataset.pageKeys || '[]'); },
-                            get selectsAll() { return this.mode === 'all'; },
-                            get selectedCount() { return this.selectsAll ? Math.max(0, this.matching - this.selected.length) : this.selected.length; },
-                            get allSelected() { return this.pageKeys.length > 0 && this.pageKeys.every(k => this.isSelected(k)); },
-                            get someSelected() { return this.selectedCount > 0 && !this.allSelected; },
-                            isSelected(key) { return this.selectsAll ? !this.selected.includes(key) : this.selected.includes(key); },
-                            toggle(key) {
-                                this.selected = this.selected.includes(key)
-                                    ? this.selected.filter(k => k !== key)
-                                    : [...this.selected, key];
-                                this.queueCommit();
-                            },
-                            toggleAll() {
-                                /* Selecting a page unions with other pages instead of
-                                   replacing them, which is what silently discarded a
-                                   selection when the user paged. */
-                                const clear = this.selectsAll || this.allSelected;
-                                this.mode = 'keys';
-                                this.selected = clear
-                                    ? this.selected.filter(k => !this.pageKeys.includes(k))
-                                    : [...new Set([...this.selected, ...this.pageKeys])];
-                                this.queueCommit();
-                            },
-                            selectAllMatching() {
-                                this.mode = 'all';
-                                this.selected = [];
-                                this.$wire.$commit();
-                            },
-                            selectOnlyPage() {
-                                this.mode = 'keys';
-                                this.selected = [...this.pageKeys];
-                                this.$wire.$commit();
-                            },
-                            deselectAll() {
-                                this.mode = 'keys';
-                                this.selected = [];
-                                this.queueCommit();
-                            },
-                            queueCommit() {
-                                if (! {{ $selectionSyncLive ? 'true' : 'false' }}) return;
-                                clearTimeout(this.commitTimer);
-                                this.commitTimer = setTimeout(() => this.$wire.$commit(), 350);
-                            },
-                        }"
+                        {{-- Contract marker between this (publishable) view and the
+                             packaged JS: the bundled record-actions controller refuses a
+                             stale published view out loud instead of selecting wrong
+                             ranges silently. Bump only with the selection contract. --}}
+                        data-selection-version="1"
+                        {{-- One shared selection component (wireRecordSelection, shipped in
+                             the package bundle): the checkboxes, both select-all toggles,
+                             the bulk bar, the mobile cards and the keyboard gestures all
+                             drive this state. PHP hands over the semantics — the state
+                             path and the commit policy — so they stay assertable here. --}}
+                        x-data="wireRecordSelection({ statePath: 'tableState.selection', syncLive: {{ $selectionSyncLive ? 'true' : 'false' }}, commitDelay: 350, announcements: @js($selectionAnnouncements) })"
                     @endif
             >
+                @if($isSelectable)
+                    {{-- Selection announcements. Deliberately NOT in the bulk bar: that
+                         is behind x-show, and a hidden live region announces nothing —
+                         worse, it disappears at zero selected, so "selection cleared"
+                         could never be heard. This one is in the DOM from the first
+                         render and empty, which is what a live region needs to work. --}}
+                    <div
+                            class="sr-only"
+                            aria-live="polite"
+                            aria-atomic="true"
+                            data-testid="selection-live"
+                            x-text="announcement"
+                    ></div>
+
+                    {{-- Inside the selectable wrapper, NOT inside the table body: the
+                         body is not rendered without visible columns, but the selection
+                         is live in the stacked cards too. --}}
+                    @once
+                        @include('wire-table::tables.partials.selection-assets')
+                    @endonce
+                @endif
                 <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
 
                     {{-- Header --}}
@@ -689,11 +764,18 @@
                     >
                         @if($hasVisibleColumns)
                             <table
-                                    @if($tableRole) role="{{ $tableRole }}" @endif
+                                    @if($tableRole)
+                                        role="{{ $tableRole }}"
+                                        {{-- Counts the whole result set plus the header rows, not
+                                             the page: a grid tells assistive tech how much there is
+                                             to page through, and the row indices below match it. --}}
+                                        aria-rowcount="{{ $recordCount + $headerRowCount }}"
+                                        @if($isSelectable) aria-multiselectable="true" @endif
+                                    @endif
                                     class="w-full {{ $isBordered ? 'border-collapse' : '' }} {{ $table->getTableClass() }}">
                                 <thead
                                         class="bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-500 dark:text-gray-400 uppercase {{ $table->getHeaderClass() }}">
-                                <tr>
+                                <tr @if($tableRole) aria-rowindex="1" @endif>
                                     {{-- Select All Checkbox --}}
                                     @if($isSelectable)
                                         <th scope="col" class="w-12 {{ $headerPadding }}">
@@ -794,7 +876,8 @@
 
                                 {{-- Row Filters --}}
                                 @if($hasColumnFilters)
-                                    <tr class="bg-gray-50/50 dark:bg-gray-800/30 border-t border-gray-100 dark:border-gray-700/50">
+                                    <tr @if($tableRole) aria-rowindex="2" @endif
+                                        class="bg-gray-50/50 dark:bg-gray-800/30 border-t border-gray-100 dark:border-gray-700/50">
                                         @if($isSelectable)
                                             <th class="{{ $headerPadding }}"></th>
                                         @endif
@@ -839,11 +922,12 @@
                                 <tbody
                                         class="divide-y divide-gray-100 dark:divide-gray-700"
                                         @if($recordActionsRootEnabled)
-                                            x-data="wireRecordActions({ bindings: @js($recordActionBindings), contextMenu: {{ $rowContextMenuEnabled ? 'true' : 'false' }}, keyboard: @js($recordKeyboardConfig) })"
-                                            @if($hasRecordPointer)
-                                                @click="onPointer('click', $event)"
-                                                @dblclick="onPointer('dblclick', $event)"
-                                            @endif
+                                            x-data="wireRecordActions({ bindings: @js($recordActionBindings), contextMenu: {{ $rowContextMenuEnabled ? 'true' : 'false' }}, keyboard: @js($recordKeyboardConfig), active: @js($activeRowConfig), gestures: @js($gestureConfig) })"
+                                            {{-- Bound whenever the controller is mounted, not only for pointer
+                                                 bindings: a click also moves the active row, which is what makes a
+                                                 clicked row visibly the one the arrow keys continue from. --}}
+                                            @click="onPointer('click', $event)"
+                                            @dblclick="onPointer('dblclick', $event)"
                                             @if($rowContextMenuEnabled)
                                                 @contextmenu="onContextMenu($event)"
                                             @endif
@@ -893,10 +977,21 @@
                                             'cellPadding' => $cellPadding,
                                         ])
                                     @endif
+                                    @php $recordKeyJs = \Illuminate\Support\Js::from((string) $recordKey)->toHtml(); @endphp
                                     <tr
                                             class="{{ $table->getRowClasses($record, $rowIndex) }} {{ $keyboardNav ? 'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500' : '' }}"
-                                            @if($isSelectable) :class="isSelected(@js((string) $recordKey)) ? 'bg-primary-50 dark:bg-primary-900/20' : ''" @endif
-                                            @if($keyboardNav) role="row" tabindex="-1" @endif
+                                            @if($rowClassBinding) :class="{!! str_replace('%key%', $recordKeyJs, $rowClassBinding) !!}" @endif
+                                            {{-- The roving tabindex is bound, not printed: Livewire morphs the
+                                                 rows back to this markup on every update, which would wipe an
+                                                 assigned tabstop and drop the grid out of the tab order. --}}
+                                            @if($keyboardNav) role="row" tabindex="{{ $rowIndex === 0 ? '0' : '-1' }}" :tabindex="rowTabindex({!! $recordKeyJs !!}, {{ $rowIndex }})" @endif
+                                            {{-- Position in the whole grid, so it survives paging:
+                                                 the header rows come first, then this page's offset. --}}
+                                            @if($tableRole) aria-rowindex="{{ $headerRowCount + $rangeFrom + $rowIndex }}" @endif
+                                            {{-- Bound, never printed: the selection lives in Alpine and
+                                                 a static value would snap back to the server's truth on
+                                                 the next morph, leaving the row lying about itself. --}}
+                                            @if($isSelectable) :aria-selected="isSelected({!! $recordKeyJs !!}) ? 'true' : 'false'" @endif
                                             wire:key="row-{{ $recordKey }}"
                                             data-testid="table-row"
                                             data-row-key="{{ $recordKey }}"
@@ -920,13 +1015,28 @@
                                                 </div>
                                             </template>
                                         @endif
-                                        {{-- Selection Checkbox --}}
+                                        {{-- Selection Checkbox. data-select-cell marks the selection
+                                             column for the sweep gesture (and the widened click
+                                             target): the cell is found by this hook, never by column
+                                             position — sortable prepends a drag-handle <td> and would
+                                             shift every index. --}}
                                         @if($isSelectable)
-                                            <td class="w-12 {{ $cellPadding }}">
+                                            {{-- The whole cell toggles, not just the 16px box, which is
+                                                 under every touch-target guideline while the rest of the
+                                                 cell sits dead. While ranges are on, a modified click is
+                                                 left alone: Shift and mod mean range and add-to-selection,
+                                                 and the row controller answers those for the whole row,
+                                                 cell included. With ranges off nobody else would answer
+                                                 them, so the cell takes every click and toggles. --}}
+                                            <td class="w-12 {{ $cellPadding }} cursor-pointer"
+                                                data-select-cell
+                                                x-on:click="{{ $usesRangeSelection ? '$event.shiftKey || $event.ctrlKey || $event.metaKey || ' : '' }}toggle(@js((string) $recordKey))">
                                                 <div class="flex items-center justify-center">
+                                                    {{-- No handler of its own: a click (or Enter/Space on
+                                                         the focused box) bubbles to the cell, which owns
+                                                         the toggle. Two handlers would toggle twice. --}}
                                                     <button
                                                             type="button"
-                                                            x-on:click="toggle(@js((string) $recordKey))"
                                                             role="checkbox"
                                                             :aria-checked="isSelected(@js((string) $recordKey))"
                                                             aria-label="{{ __('wire-table::messages.select_row') }}"
@@ -1154,9 +1264,9 @@
                             @endphp
                             {{-- Record actions are a desktop pointer affordance: the delegated
                                  controller lives on the desktop <tbody> only, so click/dblclick/
-                                 right-click record actions do not apply to these touch cards. Touch
-                                 users reach the same actions through the visible row-action buttons
-                                 and their modals. --}}
+                                 right-click record actions do not apply to these touch cards. The
+                                 same actions reach a finger as ordinary buttons instead — see
+                                 $mobileActions, which folds the behaviour-only bindings in. --}}
                             @forelse($records as $record)
                                 @php
                                     $recordKey = $record->{$table->getPrimaryKey()};
@@ -1172,7 +1282,7 @@
                                          read for on the right, actions after it. --}}
                                     <div class="flex items-start gap-3 px-4 pt-4 {{ count($cardDetails) > 0 ? 'pb-3' : 'pb-4' }}">
                                         @if($isSelectable)
-                                            <label class="flex items-center pt-0.5 flex-shrink-0">
+                                            <label class="flex items-center pt-0.5 flex-shrink-0" data-select-cell>
                                                 <input
                                                         type="checkbox"
                                                         x-on:change="toggle(@js((string) $recordKey))"
@@ -1228,7 +1338,7 @@
                                              icon wide. Labelled buttons go to their own row below —
                                              sharing this line, they take the width the identity needs
                                              and the title collapses to nothing (min-w-0 does the rest). --}}
-                                        @if($hasActions && $collapseMobileActions)
+                                        @if($hasMobileActions && $collapseMobileActions)
                                             <div class="flex items-center justify-end flex-shrink-0 -mr-1">
                                                 {!! $mobileActionGroup->render($record, $actionClick) !!}
                                             </div>
@@ -1253,10 +1363,10 @@
                                         </dl>
                                     @endif
 
-                                    @if($hasActions && ! $collapseMobileActions)
+                                    @if($hasMobileActions && ! $collapseMobileActions)
                                         <div class="flex flex-wrap items-center gap-2 px-4 pb-3 {{ $isSelectable ? 'pl-12' : '' }}"
                                              data-testid="table-card-actions">
-                                            @foreach($actions as $action)
+                                            @foreach($mobileActions as $action)
                                                 {!! $action->render($record, $actionClick) !!}
                                             @endforeach
                                         </div>
@@ -1311,11 +1421,12 @@
                     {{-- Footer / Pagination --}}
                     @if($isPaginated && $hasVisibleColumns)
                         @php
-                            $hasPaginator = $records instanceof LengthAwarePaginator;
+                            // $hasPaginator and the range come from the preamble — aria-rowindex
+                            // needs them before the body renders.
                             $hasMultiplePages = $hasPaginator && $records->hasPages();
-                            $total = $hasPaginator ? $records->total() : $records->count();
-                            $from = $hasPaginator ? ($records->firstItem() ?? 0) : ($records->count() > 0 ? 1 : 0);
-                            $to = $hasPaginator ? ($records->lastItem() ?? 0) : $records->count();
+                            $total = $recordCount;
+                            $from = $rangeFrom;
+                            $to = $rangeTo;
                         @endphp
 
                         <div
@@ -1365,6 +1476,9 @@
 
                 {{-- Halt Modal --}}
                 @include('wire-table::tables.partials.halt-modal')
+
+                {{-- Keyboard shortcut help (`?`) --}}
+                @include('wire-table::tables.partials.shortcut-help-modal')
 
                 </div> {{-- Close table wrapper --}}
 

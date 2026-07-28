@@ -7,6 +7,7 @@ namespace Workbench\Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Workbench\App\Models\GestureRow;
 use Workbench\App\Models\Invoice;
 use Workbench\App\Models\Task;
 use Workbench\App\Models\User;
@@ -115,6 +116,19 @@ class DatabaseSeeder extends Seeder
                     'line_total' => $item['quantity'] * $item['unit_price'],
                 ]);
             }
+        }
+
+        // Selection-gesture previews: enough rows that the document scrolls and
+        // a 20-per-page variant spans two pages. Deterministic on purpose — the
+        // CDP drivers address rows by name and key.
+        $statuses = ['new', 'active', 'paused', 'archived'];
+
+        foreach (range(1, 40) as $i) {
+            GestureRow::query()->create([
+                'name' => sprintf('Record %02d', $i),
+                'status' => $statuses[($i - 1) % count($statuses)],
+                'amount' => $i * 25,
+            ]);
         }
     }
 }

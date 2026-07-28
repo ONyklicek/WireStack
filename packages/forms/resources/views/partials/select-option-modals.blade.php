@@ -27,6 +27,10 @@
         heading: $field->getCreateOptionModalHeading(),
         width: 'md',
         zIndex: $optionModalZ,
+        {{-- Keys the teleport: nothing stops both option modals from being
+             mounted at once (the two properties are independent), and two
+             unkeyed Modal shells in one component share a wire:key. --}}
+        id: 'select-create-option-'.md5($field->getStatePath()),
         closeAction: 'unmountCreateOption',
         wireModel: 'mountedCreateOptionSelect',
         bodyView: 'wire-forms::partials.select-option-modal-body',
@@ -42,6 +46,7 @@
         heading: $field->getEditOptionModalHeading(),
         width: 'md',
         zIndex: $optionModalZ,
+        id: 'select-edit-option-'.md5($field->getStatePath()),
         closeAction: 'unmountEditOption',
         wireModel: 'mountedEditOptionSelect',
         bodyView: 'wire-forms::partials.select-option-modal-body',

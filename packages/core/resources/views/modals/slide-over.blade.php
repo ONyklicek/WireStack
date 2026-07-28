@@ -7,10 +7,29 @@
     // (consumer path) or the Htmlable SlideOver object, which passes $wireModel
     // (Rule 5). isset()/?? keep $attributes untouched off the component path.
     $modelBinding = $wireModel ?? (isset($attributes) ? $attributes->wire('model') : null);
+    // The consumer-path wire() macro returns a WireDirective even when the
+    // attribute is absent, so "has a binding" must go through value().
+    $hasModelBinding = $modelBinding instanceof \Livewire\WireDirective
+        ? ! in_array($modelBinding->value(), [null, false, ''], true)
+        : filled($modelBinding);
+    // Without a wire:model binding, `show` is plain Alpine state and an
+    // optional $openOn window event opens the panel from JS.
+    $openEvent = ($openOn ?? null) ?: null;
+    // Attribute-name position: only a safe token may reach the x-on: binding
+    // (a space would inject a new attribute — Blade only escapes quotes).
+    if ($openEvent !== null && ! preg_match('/^[a-zA-Z][a-zA-Z0-9_-]*$/', $openEvent)) {
+        $openEvent = null;
+    }
 @endphp
-<template x-teleport="body" wire:key="wire-modal-slideover">
+<template x-teleport="body" wire:key="wire-modal-slideover{{ $id ? '-'.$id : '' }}">
 <div
+    @if($hasModelBinding)
     x-data="{ show: @entangle($modelBinding) }"
+    @else
+    x-data="{ show: false }"
+    @if($openEvent) x-on:{{ $openEvent }}.window="show = true" @endif
+    @endif
+    @include('wire-core::modals.partials.focus-trap')
     x-show="show"
     x-cloak
     style="display: none;@if($zIndex !== null) z-index: {{ $zIndex }};@endif"

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Actions;
 
 use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireTable\Exceptions\TableConfigurationException;
 use NyonCode\WireTable\Support\RecordAction;
 use NyonCode\WireTable\Support\RecordTrigger;
 use NyonCode\WireTable\Support\ResolvedRecordAction;
@@ -20,7 +21,8 @@ use NyonCode\WireTable\Table;
  * `openActionModal()` endpoints. This resolver only decides *which* name a given
  * interaction maps to, applying the selection-aware default (a binding with no
  * explicit trigger fires on double-click when the table is selectable — so a
- * single click is left to row selection — and on single click otherwise).
+ * single click is left to the selection gestures — and on single click
+ * otherwise).
  *
  * Name references resolve against the table's registered row actions
  * ({@see Table::findRegisteredAction()}), so a record action can reuse an action
@@ -103,6 +105,33 @@ final class RecordActionResolver
     }
 
     /**
+     * The behaviour-only bindings, resolved to instances, for the mobile
+     * stacked-card view to render as ordinary buttons.
+     *
+     * Every record trigger is a desktop one — a finger has no double-click, no
+     * right-click and no Delete key — so on a phone a behaviour-only record
+     * action would otherwise be an action with no way to reach it. These are the
+     * ones {@see rowActionButtons()} deliberately leaves out, which is why they
+     * are a separate list and not a widened filter.
+     *
+     * They are handed out as copies with the keyboard shortcut stripped. A
+     * rendered button binds its `keyboardShortcut()` as a *window* listener, and
+     * the stacked cards are in the document at every width — so the real button
+     * behind an `onKey('Delete')` binding would answer Delete once per card,
+     * invisibly, on top of the grid that already owns the key. On a phone there
+     * is no key to answer with anyway.
+     *
+     * @return array<int, Action>
+     */
+    public function mobileFallbackButtons(): array
+    {
+        return array_map(
+            fn (Action $action): Action => (clone $action)->withoutKeyboardShortcut(),
+            $this->instancesFor(fn (ResolvedRecordAction $r): bool => ! $r->rendersInRowActions),
+        );
+    }
+
+    /**
      * The action Enter fires on the active row: the double-click binding when
      * present (the recommended "open" gesture), else the single-click one.
      */
@@ -132,34 +161,48 @@ final class RecordActionResolver
     }
 
     /**
+     * Keys the grid navigation owns; a shortcut on any of them could never fire.
+     * Deliberately NOT reserved: `backspace` — it is a platform alias of Delete
+     * resolved in JS (`matchShortcut`), and reserving it here would make an
+     * explicit `->onKey('Backspace')` impossible forever.
+     *
+     * @var array<int, string>
+     */
+    private const RESERVED_KEYS = [
+        'enter', 'return', 'space', '',
+        'arrowup', 'arrowdown', 'home', 'end', 'pageup', 'pagedown',
+        'contextmenu', 'f10', '?',
+    ];
+
+    /**
      * Keyboard shortcut → action-name map, taken from each record action's
      * canonical `keyboardShortcut()` (so `onKey('Delete')` and a referenced
-     * action's own shortcut both flow through here). Enter/Space are reserved for
-     * navigation and never enter the map.
+     * action's own shortcut both flow through here). Keys the grid navigation
+     * owns never enter the map: an explicit `onKey()` on one is a configuration
+     * error and throws, while a shortcut stamped on the action itself is only
+     * skipped — it serves the action's other surfaces and reusing that action
+     * here must not fatal the table.
      *
      * @return array<string, string>
      */
     public function shortcuts(): array
     {
-        $reserved = ['enter', 'return', 'space', ''];
         $out = [];
 
         foreach ($this->resolve() as $resolved) {
+            foreach ($resolved->keyShortcuts as $key) {
+                if (in_array(strtolower($key), self::RESERVED_KEYS, true)) {
+                    throw TableConfigurationException::reservedRecordActionKey($key, self::RESERVED_KEYS);
+                }
+
+                $out[$key] = $resolved->name;
+            }
+
             $action = $resolved->action ?? $this->table->findRegisteredAction($resolved->name);
             $shortcut = $action?->getKeyboardShortcut();
 
-            // The wrapped/registered action's stamped shortcut, plus any keys the
-            // binding declared via onKey() — the latter is the only source for a
-            // name reference whose registered action carries no shortcut of its own.
-            $keys = $resolved->keyShortcuts;
-            if ($shortcut !== null) {
-                array_unshift($keys, $shortcut);
-            }
-
-            foreach ($keys as $key) {
-                if (! in_array(strtolower($key), $reserved, true)) {
-                    $out[$key] = $resolved->name;
-                }
+            if ($shortcut !== null && ! in_array(strtolower($shortcut), self::RESERVED_KEYS, true)) {
+                $out[$shortcut] = $resolved->name;
             }
         }
 

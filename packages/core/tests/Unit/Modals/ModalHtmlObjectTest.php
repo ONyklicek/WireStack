@@ -58,6 +58,86 @@ class ModalHtmlHost extends Component
     }
 }
 
+class ModalOpenOnHost extends Component
+{
+    public function render(): string
+    {
+        return <<<'BLADE'
+            <div>
+                {!! new \NyonCode\WireCore\Modals\Html\Modal(
+                    heading: 'Keyboard shortcuts',
+                    openOn: 'demo-open-help',
+                    body: '<div id="open-on-modal-body">help</div>',
+                ) !!}
+                {!! new \NyonCode\WireCore\Modals\Html\SlideOver(
+                    heading: 'Event panel',
+                    openOn: 'demo-open-panel',
+                    body: '<div id="open-on-panel-body">panel</div>',
+                ) !!}
+            </div>
+        BLADE;
+    }
+}
+
+it('opens on a window event instead of a wire:model binding when openOn is set', function () {
+    Livewire::test(ModalOpenOnHost::class)
+        // `show` is plain Alpine state, opened by the window event…
+        ->assertSeeHtml('x-on:demo-open-help.window="show = true"')
+        ->assertSeeHtml('x-on:demo-open-panel.window="show = true"')
+        ->assertSeeHtml('x-data="{ show: false }"')
+        // …and never a Livewire-entangled binding.
+        ->assertDontSeeHtml('entangle');
+});
+
+class ModalOpenOnUnsafeHost extends Component
+{
+    public function render(): string
+    {
+        return <<<'BLADE'
+            <div>
+                {!! new \NyonCode\WireCore\Modals\Html\Modal(
+                    heading: 'Unsafe',
+                    openOn: 'evil onmouseover=alert(1) x',
+                ) !!}
+            </div>
+        BLADE;
+    }
+}
+
+it('drops an openOn event name that is not a safe attribute token', function () {
+    // x-on:{event} sits in attribute-name position, where Blade escaping does
+    // not stop a space from starting a brand-new attribute.
+    Livewire::test(ModalOpenOnUnsafeHost::class)
+        ->assertDontSeeHtml('onmouseover')
+        ->assertDontSeeHtml('x-on:evil')
+        ->assertSeeHtml('x-data="{ show: false }"');
+});
+
+class ModalOpenOnBoundHost extends Component
+{
+    public bool $show = false;
+
+    public function render(): string
+    {
+        return <<<'BLADE'
+            <div>
+                {!! new \NyonCode\WireCore\Modals\Html\Modal(
+                    heading: 'Bound',
+                    wireModel: 'show',
+                    openOn: 'demo-open-bound',
+                ) !!}
+            </div>
+        BLADE;
+    }
+}
+
+it('ignores openOn when a wire:model binding owns the show state', function () {
+    Livewire::test(ModalOpenOnBoundHost::class)
+        ->assertSeeHtml('entangle')
+        ->assertDontSeeHtml('x-on:demo-open-bound.window')
+        ->assertDontSeeHtml('x-data="{ show: false }"');
+});
+
 it('renders both as dialogs with body/footer and wire bindings — no <x-*>', function () {
     Livewire::test(ModalHtmlHost::class)
         // Modal

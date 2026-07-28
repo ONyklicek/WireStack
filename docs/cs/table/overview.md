@@ -686,4 +686,7 @@ class UserTable extends Component
 | [Importy](imports.md) | Importy CSV — mapování hlaviček, přetypování, validace po řádcích, updateExisting |
 | [Správci relací](relation-managers.md) | Tabulky zúžené na relaci jako samostatné Livewire komponenty |
 | [Pokročilé](advanced.md) | Podřádky, souhrnná patička, polling, lazy loading, cachování, debug, responzivita |
+| [Výběr řádků](selection.md) | Zaškrtávátka, „vybrat vše odpovídající" a výběrová gesta |
+| [Akce nad záznamem](record-actions.md) | Vazby na klik, dvojklik, pravý klik a klávesy celého řádku |
+| [Vrstva gest](gestures.md) | `gestures()` — opt-in klávesová/tažecí vrstva a fallback na tlačítka na mobilu |
 | [Akce](../core/actions.md) | Kompletní systém akcí — modály, formuláře, wizard kroky, životní cyklus |

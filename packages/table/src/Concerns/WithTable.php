@@ -81,6 +81,8 @@ trait WithTable
     use InteractsWithActionForms, InteractsWithActions, InteractsWithTableActions {
         InteractsWithActionForms::validateMountedActionForm insteadof InteractsWithActions;
         InteractsWithActionForms::resolveHaltModalForm insteadof InteractsWithActions;
+        InteractsWithActionForms::getActionModalFormInstance insteadof InteractsWithActions;
+        InteractsWithActionForms::getActionModalFormInstanceForDepth insteadof InteractsWithActions;
         InteractsWithTableActions::haltModalFormStatePath insteadof InteractsWithActionForms;
         InteractsWithTableActions::afterActionExecuted insteadof InteractsWithActions;
         InteractsWithTableActions::resolveActionRecordIds insteadof InteractsWithActions;
@@ -366,6 +368,12 @@ trait WithTable
 
     public function updatedTableState(mixed $value, string $path): void
     {
+        // `mode` decides what `selection.records` means — an entangled write
+        // outside the two known shapes is corruption ({@see normalizeSelectionMode}).
+        if ($path === 'selection.mode') {
+            $this->normalizeSelectionMode();
+        }
+
         $resetPaths = [
             'pagination.perPage',
             'search',

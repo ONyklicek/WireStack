@@ -586,7 +586,10 @@ it('renders Alpine-driven selection without per-click server roundtrips', functi
 
     expect($html)
         ->toContain('data-page-keys=')                          // page keys for select-all
-        ->toContain("entangle('tableState.selection.records')") // deferred client state
+        // The deferred client state moved into the packaged factory; the blade
+        // hands over the state path so the entangle target stays assertable.
+        ->toContain('wireRecordSelection(')
+        ->toContain("statePath: 'tableState.selection'")
         ->toContain('x-show="selectedCount > 0"')               // Alpine selection bar
         ->not->toContain('wire:click="toggleRecordSelection');  // no roundtrip per click
 });

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireTable\Exceptions\TableConfigurationException;
 use NyonCode\WireTable\Support\RecordAction;
 use NyonCode\WireTable\Support\RecordTrigger;
+use NyonCode\WireTable\Support\TableGestures;
 use NyonCode\WireTable\Table;
 
 // ─── RecordAction value object ───────────────────────────────────
@@ -397,13 +399,43 @@ it('has no secondary with a single pointer binding', function () {
         ->and($config['secondary'])->toBeNull();
 });
 
-it('maps record-action keyboard shortcuts and reserves enter/space', function () {
+it('maps record-action keyboard shortcuts', function () {
     $table = Table::make()->recordActions([
         RecordAction::make(Action::make('remove'))->onKey('Delete'),
-        RecordAction::make(Action::make('open'))->onKey('Enter'), // reserved → excluded
     ]);
 
     expect($table->getRecordActionKeyboardConfig()['shortcuts'])->toBe(['Delete' => 'remove']);
+});
+
+it('rejects a reserved onKey() binding out loud', function (string $key) {
+    // Silently dropping the key would strip the gesture without a signal — an
+    // app shipping ->onKey('Enter') must hear about it, not lose the action.
+    Table::make()
+        ->recordActions([RecordAction::make(Action::make('open'))->onKey($key)])
+        ->getRecordActionKeyboardConfig();
+})->with([
+    'Enter', 'Space',
+    'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown',
+    'ContextMenu', 'F10', '?',
+])->throws(TableConfigurationException::class);
+
+it('leaves Backspace bindable — it is a JS platform alias of Delete, not a reserved key', function () {
+    $table = Table::make()->recordActions([
+        RecordAction::make(Action::make('remove'))->onKey('Backspace'),
+    ]);
+
+    expect($table->getRecordActionKeyboardConfig()['shortcuts'])->toBe(['Backspace' => 'remove']);
+});
+
+it('still skips a reserved shortcut stamped on the action itself', function () {
+    // keyboardShortcut() serves the action's other surfaces (a toolbar button,
+    // a palette); reusing such an action as a record action must not fatal the
+    // table — the reserved key just never reaches the record shortcut map.
+    $table = Table::make()->recordActions([
+        RecordAction::make(Action::make('open')->keyboardShortcut('enter'))->onDoubleClick(),
+    ]);
+
+    expect($table->getRecordActionKeyboardConfig()['shortcuts'])->toBe([]);
 });
 
 it('keeps a name-referenced onKey shortcut even with no action to stamp', function () {
@@ -417,33 +449,138 @@ it('keeps a name-referenced onKey shortcut even with no action to stamp', functi
     expect($table->getRecordActionKeyboardConfig()['shortcuts'])->toBe(['Delete' => 'remove']);
 });
 
-it('enables keyboard nav automatically when record actions exist', function () {
-    expect(Table::make()->keyboardNavEnabled())->toBeFalse()
-        ->and(Table::make()->getTableRole())->toBeNull();
+it('enables keyboard nav for a record-action table that asked for gestures', function () {
+    // Never by accident: the keyboard layer waits for gestures(), and only then
+    // does the table's own shape decide (record actions here).
+    $unasked = Table::make()->recordAction(RecordAction::make('edit')->onDoubleClick());
 
-    $table = Table::make()->recordAction(RecordAction::make('edit')->onDoubleClick());
+    expect($unasked->keyboardNavEnabled())->toBeFalse()
+        ->and($unasked->getTableRole())->toBeNull();
+
+    $table = Table::make()->gestures()->recordAction(RecordAction::make('edit')->onDoubleClick());
 
     expect($table->keyboardNavEnabled())->toBeTrue()
-        ->and($table->getTableRole())->toBe('grid');
+        ->and($table->getTableRole())->toBe('grid')
+        // …and a table with nothing for the arrows to do stays ungridded even
+        // after asking.
+        ->and(Table::make()->gestures()->keyboardNavEnabled())->toBeFalse();
 });
 
 it('lets keyboard nav be forced off or on', function () {
     $off = Table::make()
         ->recordAction(RecordAction::make('edit')->onDoubleClick())
-        ->recordActionKeyboard(false);
+        ->gestures(fn (TableGestures $g) => $g->keyboard(false));
     expect($off->keyboardNavEnabled())->toBeFalse()
         ->and($off->getTableRole())->toBeNull();
 
-    expect(Table::make()->recordActionKeyboard()->keyboardNavEnabled())->toBeTrue();
+    expect(Table::make()->gestures(fn (TableGestures $g) => $g->keyboard())->keyboardNavEnabled())->toBeTrue();
 });
 
-it('exposes the active-row class and selection flag in the keyboard config', function () {
+// ─── Grid semantics (single owner) ───────────────────────────────
+
+it('grants grid semantics to selectable tables and tables with bulk actions that asked', function () {
+    // usesGridSemantics() owns "is this a grid": once the table has asked for
+    // the gesture layer, record actions, selectable() and bulk actions
+    // (isSelectable() covers both) all qualify.
+    expect(Table::make()->usesGridSemantics())->toBeFalse()
+        // Selectable alone is not enough any more — a checkbox column is not a
+        // reason to put the rows in the tab order.
+        ->and(Table::make()->selectable()->usesGridSemantics())->toBeFalse()
+        ->and(Table::make()->gestures()->selectable()->usesGridSemantics())->toBeTrue()
+        ->and(Table::make()->gestures()->selectable()->getTableRole())->toBe('grid')
+        ->and(Table::make()->gestures()->bulkActions([BulkAction::make('x')])->usesGridSemantics())->toBeTrue()
+        ->and(Table::make()->gestures()->selectable()->keyboardNavEnabled())->toBeTrue();
+});
+
+it('lets the gesture layer ungrid a selectable table', function () {
+    $table = Table::make()->selectable()->gestures(fn (TableGestures $g) => $g->keyboard(false));
+
+    expect($table->usesGridSemantics())->toBeFalse()
+        ->and($table->getTableRole())->toBeNull();
+});
+
+it('mounts the controller on every grid, selectable-only included', function () {
+    // The keyboard selection and the active-row marker live in the delegated
+    // controller, so every grid mounts it; a pointer binding still mounts it
+    // even with the keyboard forced off. So do the mouse gestures — dropping
+    // the keyboard from a selectable table leaves the sweep and the ranges,
+    // and only gestures(false) empties the controller out of existence.
+    expect(Table::make()->gestures()->selectable()->mountsRecordActionController())->toBeTrue()
+        ->and(Table::make()->recordAction(RecordAction::make('edit')->onDoubleClick())->mountsRecordActionController())->toBeTrue()
+        ->and(Table::make()->gestures(fn (TableGestures $g) => $g->keyboard())->mountsRecordActionController())->toBeTrue()
+        ->and(Table::make()->gestures()->selectable()->gestures(fn (TableGestures $g) => $g->keyboard(false))->mountsRecordActionController())->toBeTrue()
+        ->and(Table::make()->selectable()->gestures(false)->mountsRecordActionController())->toBeFalse()
+        // A selectable table that never asked has nothing for the controller to
+        // do either — no ranges, no sweep, no keyboard.
+        ->and(Table::make()->selectable()->mountsRecordActionController())->toBeFalse()
+        ->and(Table::make()->mountsRecordActionController())->toBeFalse();
+});
+
+it('exposes the selection flag in the keyboard config', function () {
     $config = Table::make()
         ->selectable()
-        ->activeRowClass('bg-amber-100')
         ->recordAction(RecordAction::make('edit')->onDoubleClick())
         ->getRecordActionKeyboardConfig();
 
-    expect($config['selectable'])->toBeTrue()
-        ->and($config['activeClass'])->toBe('bg-amber-100');
+    expect($config['selectable'])->toBeTrue();
+});
+
+// ─── Active-row marker (pointer + keyboard share one) ────────────
+
+it('hands the active-row marker and the row hover to the controller', function () {
+    $default = Table::make()
+        ->recordAction(RecordAction::make('edit')->onDoubleClick())
+        ->getActiveRowConfig();
+
+    // The marker is deliberately two signals, not one: the background tint,
+    // and a leading stripe drawn on the row's first cell. The tint alone is
+    // about 1.1:1 against white — under the 3:1 non-text contrast floor, and
+    // no help at all to a reader who cannot separate the two hues.
+    expect($default['class'])->toContain('bg-primary-100')
+        ->toContain('dark:bg-primary-900/30')
+        ->toContain("[&>td:first-of-type]:before:content-['']")
+        ->toContain('[&>td:first-of-type]:before:w-1')
+        ->toContain('[&>td:first-of-type]:before:bg-primary-600')
+        // first-of-type, never first-child: the row's first child is the
+        // teleport <template> carrying its context menu.
+        ->not->toContain('first-child')
+        // The hover the controller has to switch off on the active row, or it
+        // would paint over the marker under the pointer.
+        ->and($default['hover'])->toBe('hover:bg-gray-50 dark:hover:bg-gray-700/30');
+
+    $custom = Table::make()
+        ->activeRowClass('bg-amber-100')
+        ->recordActionHover('primary')
+        ->recordAction(RecordAction::make('edit')->onDoubleClick())
+        ->getActiveRowConfig();
+
+    expect($custom['class'])->toBe('bg-amber-100')
+        ->and($custom['hover'])->toBe('hover:bg-primary-50 dark:hover:bg-primary-900/20');
+});
+
+it('reports no row hover to strip when hovering is off', function () {
+    expect(Table::make()->hoverable(false)->getActiveRowConfig()['hover'])->toBe('');
+});
+
+it('reserves the marker stripe positioning on every grid row, and only there', function () {
+    // The stripe is absolutely positioned inside the leading cell, so that cell
+    // must establish the containing block on EVERY row — not just the active
+    // one, which is morphed in and out.
+    $grid = Table::make()->gestures()->selectable();
+    $plain = Table::make()->selectable();
+
+    expect($grid->activeRowMarkerGutter())->toBe('[&>td:first-of-type]:relative')
+        ->and($grid->getRowClasses(null, 0))->toContain('[&>td:first-of-type]:relative')
+        // A selectable table that never asked for gestures has no active row to
+        // mark: nothing continues from a marked row there.
+        ->and($plain->activeRowMarkerGutter())->toBe('')
+        ->and($plain->getRowClasses(null, 0))->not->toContain('first-of-type');
+});
+
+it('leaves an overridden active-row class entirely to the caller', function () {
+    // activeRowClass() replaces both halves of the marker: an override owns its
+    // own contrast and its own non-color signal.
+    $custom = Table::make()->selectable()->activeRowClass('bg-amber-100')->getActiveRowConfig();
+
+    expect($custom['class'])->toBe('bg-amber-100');
 });

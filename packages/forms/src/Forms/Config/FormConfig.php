@@ -6,6 +6,7 @@ namespace NyonCode\WireForms\Forms\Config;
 
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Plugin\Contracts\FormConfigContract;
 
 /**
  * Immutable form configuration.
@@ -13,9 +14,10 @@ use Illuminate\Database\Eloquent\Model;
  * Holds all configuration set via the fluent Form API.
  * Once constructed, values cannot be changed.
  *
- * @internal This class is not part of the public API.
+ * @internal This class is not part of the public API; the form-save plugin
+ *           hooks expose it through the {@see FormConfigContract} seam.
  */
-final class FormConfig
+final class FormConfig implements FormConfigContract
 {
     /**
      * @param  array<int, mixed>  $schema  Schema components
@@ -49,5 +51,10 @@ final class FormConfig
     public function hasModel(): bool
     {
         return $this->model !== null;
+    }
+
+    public function getModel(): string|Model|null
+    {
+        return $this->model;
     }
 }

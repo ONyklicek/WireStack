@@ -1,9 +1,11 @@
 import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
-import Link from '@tiptap/extension-link'
-import Underline from '@tiptap/extension-underline'
 import Placeholder from '@tiptap/extension-placeholder'
 import CharacterCount from '@tiptap/extension-character-count'
+
+// TipTap v3 folded Link and Underline into StarterKit, so they are configured
+// through StarterKit.configure() below rather than registered as standalone
+// extensions — adding them again would trip the duplicate-extension guard.
 
 // The opt-in extensions (tables/images/highlight/text-align) default OFF yet were
 // bundled into every editor page. They now ship in a separate ESM chunk
@@ -83,9 +85,13 @@ const tiptapEditor = (config = {}) => {
                 if (val === lastEmitted) return
                 if (val === read()) return
 
+                // emitUpdate:false — never re-fire onUpdate for a server-driven
+                // fill, or we'd echo the value straight back into Livewire. In
+                // TipTap v3 the second arg is an options object (a bare `false`
+                // would be ignored and emitUpdate would default back to true).
                 editor.commands.setContent(
                     config.outputFormat === 'json' ? safeParse(val) : (val || ''),
-                    false,
+                    { emitUpdate: false },
                 )
             })
         },
@@ -156,12 +162,13 @@ const tiptapEditor = (config = {}) => {
 
 function buildTiptapExtensions(config) {
     const extensions = [
-        StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
-        Link.configure({
-            openOnClick: false,
-            HTMLAttributes: { class: 'text-primary-600 underline cursor-pointer' },
+        StarterKit.configure({
+            heading: { levels: [1, 2, 3] },
+            link: {
+                openOnClick: false,
+                HTMLAttributes: { class: 'text-primary-600 underline cursor-pointer' },
+            },
         }),
-        Underline,
         Placeholder.configure({ placeholder: config.placeholder ?? '' }),
     ]
 

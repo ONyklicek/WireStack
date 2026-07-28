@@ -43,3 +43,11 @@ test('hasModel returns false when null', function () {
 
     expect($config->hasModel())->toBeFalse();
 });
+
+test('getModel returns the bound model for the FormConfigContract seam', function () {
+    $model = Mockery::mock(Model::class);
+
+    expect((new FormConfig(model: 'App\\Models\\User'))->getModel())->toBe('App\\Models\\User')
+        ->and((new FormConfig(model: $model))->getModel())->toBe($model)
+        ->and((new FormConfig(model: null))->getModel())->toBeNull();
+});

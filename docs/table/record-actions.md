@@ -91,38 +91,81 @@ Action::make('edit')->onDoubleClick()->alsoInRowActions()
 
 ## Keyboard navigation
 
-When a table has any record action, keyboard navigation turns on automatically
-and the table announces itself as a grid:
+Keyboard navigation is opt-in, with `->gestures()`. Once a table has asked, it
+applies to any table the keyboard can drive row by row — one with record actions,
+and equally one that is `->selectable()` or has bulk actions — and such a table
+announces itself as an ARIA grid:
+
+```php
+->gestures()
+->recordAction(Action::make('open')->onDoubleClick())
+```
 
 | Key | Action |
 |-----|--------|
 | `↑` / `↓` | Move the active row |
+| `Home` / `End`, `PageUp` / `PageDown` | Jump to an edge, or move by a screenful |
 | `Enter` | Primary record action (double-click binding, else click) |
 | `Shift` + `Enter` | Secondary record action (the other pointer binding) |
 | `Space` | Toggle selection of the active row (and set the range anchor) when selectable, else the primary action |
-| `Shift` + `↑` / `↓` | Extend a contiguous selection range from the anchor (desktop range-select) |
+| `Shift` + `↑` / `↓` | Extend a selection range from the anchor |
 | `mod` + `A` | Select every row on the page |
-| Menu key | Open the row context menu |
+| Menu key, `Shift` + `F10` | Open the row context menu |
+| `?` | Show the shortcuts this table answers to |
 | `Delete`, `mod+d`, … | Any record action's own `->onKey()` / `->keyboardShortcut()` |
 
-Keyboard selection drives the **same** selection state as the checkboxes and the
-bulk-action bar — arrow to a row, `Space` to select it, `Shift`+arrow to extend a
-block — then run the bulk action from the bar.
+A `->onKey('Delete')` binding also answers to `Backspace`, which is the same key
+under a different name on a Mac keyboard.
 
-Force it off (or on) if you need to:
+The selection gestures — `Space`, the ranges, `mod`+`A` — are covered in
+[Selecting Rows](selection.md), along with the mouse ones and what a range means
+when "all matching" is selected.
+
+Pointer and keyboard share one active row: **clicking a row marks it** and the
+arrows continue from there, so a table is never navigated from two places at
+once. The marker stays visible while the pointer hovers the row it marks, it
+survives the roundtrip an action triggers, and it follows its record through a
+re-sort (when the record leaves the page entirely, the tabstop falls back to the
+first row).
+
+Keys only reach the grid when a **row itself** has the focus: a keystroke inside
+a row action button, an inline-editable cell or a dropdown belongs to that
+element. While an action modal is open the grid is inert — no arrow moves the
+marker behind the dialog and no shortcut fires a second action — and closing the
+modal hands the focus back to the active row, so the arrows keep working.
+
+Force it off (or on) if you need to — the keyboard is one capability of the
+[gesture layer](gestures.md):
 
 ```php
-->recordActionKeyboard(false)
+->gestures(fn (TableGestures $g) => $g->keyboard(false))
 ```
 
 Because Enter always reaches the primary action, every record action stays
 keyboard-accessible — a behaviour-only action is never a mouse-only trap.
 
+### Keys the grid reserves
+
+The keys the grid navigates with cannot be bound to an action — the binding
+would never fire. Rather than dropping it silently, `->onKey()` throws at
+configuration time:
+
+```text
+Enter  Space  ArrowUp  ArrowDown  Home  End  PageUp  PageDown  ContextMenu  F10  ?
+```
+
+A `keyboardShortcut()` stamped on the action itself is only skipped, never fatal,
+since that action may legitimately serve a toolbar or a palette as well.
+
 ## Combining with selection and bulk actions
 
-When the table is `->selectable()`, a single click still selects the row, so the
-default record-action trigger becomes **double-click** — the two never fight.
-Clicking a checkbox only toggles selection, and bulk actions are untouched:
+When the table is `->selectable()`, the default record-action trigger becomes
+**double-click**, so a single click stays free for working with the selection —
+it only marks the row it lands on (the active row for the keyboard and the anchor
+of the next `Shift`+range). A plain click never ticks the checkbox; the modified
+ones deliberately do, because that is what `Shift` and `mod` mean everywhere else
+(see [Selecting Rows](selection.md)). A modified click is a selection gesture and
+never runs a bound record action. Bulk actions are untouched:
 
 ```php
 ->selectable()
@@ -139,7 +182,20 @@ tint it for a stronger "this row is clickable" hint:
 
 ```php
 ->recordActionHover('primary')   // colored hover instead of neutral gray
-->activeRowClass('bg-amber-100')  // override the keyboard-active row highlight
+->activeRowClass('bg-amber-100')  // override the active-row marker (click + keyboard)
+```
+
+The active row drops its hover tint while it is marked, so the marker is never
+painted over by `hover:bg-*` when the pointer rests on it.
+
+By default the marker is two signals, not one: a background tint and a stripe
+down the row's leading edge. The tint on its own measures about 1.1:1 against a
+plain row — below the 3:1 contrast floor, and invisible to a reader who cannot
+separate the two hues. `activeRowClass()` replaces **both** halves, so an
+override owns its own contrast:
+
+```php
+->activeRowClass('bg-amber-100 [&>td:first-of-type]:before:bg-amber-600')
 ```
 
 ## Recommended UX
@@ -178,3 +234,11 @@ instead:
     Action::make('delete')->onContextMenu(),
 ])
 ```
+
+## Related docs
+
+- [Selecting Rows](selection.md) — the selection gestures record actions share
+  the row with
+- [Actions](actions.md) — row, bulk and header actions
+- [The Gesture Layer](gestures.md) — switching the gestures off, and the mobile
+  button fallback
