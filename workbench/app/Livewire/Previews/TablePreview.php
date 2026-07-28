@@ -56,6 +56,14 @@ class TablePreview extends Component
     /** Variants backed by the GestureRow selection-gesture fixtures. */
     private const GESTURE_VARIANTS = ['selection-gestures', 'selection-gestures-paged', 'selection-only'];
 
+    /**
+     * Variants of the users table that exist to show whole-row interaction, and
+     * therefore ask for the (opt-in) gesture layer. Every other users-table
+     * variant stays on the shipped default on purpose — a preview of an
+     * ordinary table should look like one.
+     */
+    private const RECORD_ACTION_VARIANTS = ['record-actions', 'record-actions-dual', 'record-actions-keyboard'];
+
     public function mount(string $variant = 'overview'): void
     {
         $this->variant = $variant;
@@ -462,7 +470,7 @@ class TablePreview extends Component
             $table->stackedOnMobile()->collapseActionsOnMobile(threshold: 1)->lazy();
         }
 
-        return $table
+        $table
             ->model(User::class)
             ->columns([
                 TextColumn::make('name')->label('Name')->searchable()->sortable(),
@@ -540,9 +548,6 @@ class TablePreview extends Component
             ->defaultSort('created_at', 'desc')
             ->searchable()
             ->selectable()
-            // The gesture layer is opt-in; these variants are what shows it off
-            // (and what the record-action drivers drive), so they ask for it.
-            ->gestures()
             // Double-click a row → open it (a confirmation modal here). Because the
             // table is selectable, the default trigger is double-click, leaving the
             // single click to the selection gestures (it only marks the row).
@@ -605,7 +610,10 @@ class TablePreview extends Component
                 default => [],
             })
             // Right-click a row → a dedicated context menu (declared separately
-            // from the ->actions() toolbar above).
+            // from the ->actions() toolbar above). The menu is one of the
+            // capabilities the shipped default leaves allowed, so it works on
+            // every variant — unlike the keyboard, the ranges and the sweep,
+            // which only the record-action variants below ask for.
             ->rowContextMenu([
                 Action::make('view')->label('View')->icon('outline:eye'),
                 Action::make('edit')->label('Edit')->icon('pencil')->color('primary'),
@@ -613,6 +621,16 @@ class TablePreview extends Component
                 DeleteAction::make(),
             ])
             ->paginated(false);
+
+        // Only the variants whose whole point is whole-row interaction ask for
+        // the opt-in layer. The rest — `table-overview` included, the preview
+        // people look at to see what a table *is* — stay on the shipped
+        // default, which is what a consumer gets out of the box.
+        if (in_array($this->variant, self::RECORD_ACTION_VARIANTS, true)) {
+            $table->gestures();
+        }
+
+        return $table;
     }
 
     /**

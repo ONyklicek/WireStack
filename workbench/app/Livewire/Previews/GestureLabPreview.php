@@ -35,11 +35,17 @@ use Workbench\App\Models\User;
  * actually does — and so `verify-gesture-lab.mjs` can assert on the same
  * values without reaching into Alpine internals.
  *
- * Variants:
- *   lab   — 40 rows on one page (the document scrolls; PageUp/PageDown, sweep
- *           with autoscroll, ranges across a long list)
- *   paged — 20 a page, which is what "select all matching" needs to mean
- *           anything: a page that is smaller than the filtered set
+ * Variants — the three states of the gesture layer, on the same table, plus two
+ * shapes of the "on" one:
+ *   lab     — everything on, 40 rows on one page (the document scrolls;
+ *             PageUp/PageDown, sweep with autoscroll, ranges across a long list)
+ *   paged   — the same, 20 a page, which is what "select all matching" needs to
+ *             mean anything: a page smaller than the filtered set
+ *   default — the shipped default: nobody called gestures(). This is what a
+ *             consumer's table looks like out of the box, and it is NOT the same
+ *             as `plain` — the right-click menu still works, because the table
+ *             declared it
+ *   plain   — gestures(false): nothing at all, not even the menu
  */
 class GestureLabPreview extends Component
 {
@@ -66,9 +72,6 @@ class GestureLabPreview extends Component
     public function table(Table $table): Table
     {
         $table
-            // The lab is the gesture layer, so it asks for all of it. Everything
-            // below is what a table gets on top of that opt-in.
-            ->gestures()
             ->model(GestureRow::class)
             ->columns([
                 TextColumn::make('name')->label('Name')->searchable()->sortable(),
@@ -93,6 +96,12 @@ class GestureLabPreview extends Component
                 DeleteBulkAction::make(),
             ])
             ->defaultSort('name');
+
+        // The layer is opt-in, so the lab asks for it — except in `default`,
+        // which exists precisely to show a table that never did.
+        if ($this->variant !== 'default') {
+            $table->gestures();
+        }
 
         // A table whose ONLY record action is a single click opening a modal —
         // no double-click binding, so nothing defers the open. Reported as the
@@ -157,11 +166,12 @@ class GestureLabPreview extends Component
             ? $table->paginated()->perPage(20)
             : $table->paginated(false);
 
-        // The same table with the gesture layer switched off — what a public
-        // page asks for. The declared record actions stay (a double-click still
-        // opens, right-click is gone with the menu), the selection keeps its
-        // checkboxes, and the keyboard, the ranges, the sweep and `?` are not
-        // there at all. `verify-gestures-off.mjs` drives this one.
+        // The same table with the gesture layer switched off — further than the
+        // default goes. The declared record actions stay (a double-click still
+        // opens; right-click goes with the menu, which the `default` variant
+        // keeps), the selection keeps its checkboxes, and the keyboard, the
+        // ranges, the sweep and `?` are not there at all.
+        // `verify-gestures-off.mjs` drives this one.
         if ($this->variant === 'plain') {
             $table->gestures(false);
         }

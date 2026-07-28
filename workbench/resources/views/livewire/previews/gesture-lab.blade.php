@@ -19,6 +19,9 @@
             <a href="/previews/gesture-lab-paged"
                class="rounded-lg px-3 py-1.5 {{ $variant === 'paged' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200' }}"
                data-testid="lab-variant-paged">20 a page</a>
+            <a href="/previews/gesture-lab-default"
+               class="rounded-lg px-3 py-1.5 {{ $variant === 'default' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200' }}"
+               data-testid="lab-variant-default">shipped default</a>
             <a href="/previews/gesture-lab-plain"
                class="rounded-lg px-3 py-1.5 {{ $variant === 'plain' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200' }}"
                data-testid="lab-variant-plain">gestures off</a>
@@ -149,9 +152,17 @@
                 @endforeach
             </dl>
 
-            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                The layer is opt-in: this table calls
-                <code class="font-mono">gestures({{ $variant === 'plain' ? 'false' : '' }})</code>.
+            {{-- Three states, and they are genuinely different: never asked
+                 (the shipped default) still answers a right click, gestures(false)
+                 does not. --}}
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400" data-testid="lab-gesture-call">
+                @if($variant === 'default')
+                    The layer is opt-in and this table never asked — no
+                    <code class="font-mono">gestures()</code> call at all.
+                @else
+                    This table calls
+                    <code class="font-mono">gestures({{ $variant === 'plain' ? 'false' : '' }})</code>.
+                @endif
             </p>
 
             <h2 class="mt-5 mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Try it</h2>

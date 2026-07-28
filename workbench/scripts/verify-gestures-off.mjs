@@ -26,6 +26,11 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
  * purpose: `gestures(false)` governs the implicit layer, not a double-click
  * that was asked for by name.
  *
+ * `gesture-lab-default` is checked too, and it is deliberately a different
+ * state: a table that never called gestures() at all. That is what a consumer
+ * gets out of the box, and it still answers a right click — the difference
+ * between "did not ask" and "said no" is one people get wrong.
+ *
  * Usage (see .claude/skills/verify-preview/SKILL.md):
  *   vendor/bin/testbench serve --host=127.0.0.1 --port=8085   # in background
  *   node workbench/scripts/verify-gestures-off.mjs
@@ -248,6 +253,38 @@ try {
   await shot('04-record-action-modal');
   await eval_(`cancelModal()`);
   await sleep(500);
+
+  // ════ Desktop: the shipped default (never asked) ═══════════════════════
+  // Not the same page as above: gestures(false) refuses everything, while a
+  // table that simply never asked keeps the capabilities it declared itself.
+  await page('Page.navigate', { url: `${base}/gesture-lab-default` });
+  await sleep(3000);
+  await eval_(helpers);
+
+  const shipped = JSON.parse(await eval_(`(() => JSON.stringify({
+    readout: Object.fromEntries(
+      ['keyboard', 'ranges', 'sweep', 'menu', 'help', 'fill']
+        .map((k) => [k, $q('[data-testid="lab-gesture-' + k + '"]')?.textContent?.trim() ?? null])
+    ),
+    role: $q('table')?.getAttribute('role'),
+    menus: $qa('[data-record-menu]').length,
+    help: !!$q('[data-testid="shortcut-help"]'),
+  }))()`));
+
+  check('the shipped default leaves the three row gestures off',
+    shipped.readout.keyboard === 'off' && shipped.readout.ranges === 'off' && shipped.readout.sweep === 'off'
+      && shipped.role !== 'grid' && shipped.help === false,
+    JSON.stringify(shipped.readout));
+  check('…but keeps what the table declared for itself — the right-click menu',
+    shipped.readout.menu === 'on' && shipped.menus > 0, `${shipped.menus} panels`);
+
+  await realClick(`cell(2)`, 0, { button: 'right' });
+  await sleep(600);
+  check('and that menu really opens on a right click',
+    await eval_(`$qa('[data-record-menu]').filter(vis).length`) === 1);
+  await eval_(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
+  await sleep(300);
+  await shot('04b-shipped-default');
 
   // ════ Desktop: the layer is on (the control) ════════════════════════════
   // Same table, gestures left alone: if these fail, the checks above prove
