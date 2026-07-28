@@ -6,8 +6,7 @@ order: 47
 
 Selection can be a gesture surface, not just a column of checkboxes. A table that
 is `->selectable()` — or that merely has `->bulkActions()`, which implies it —
-gives you the checkboxes, the select-all controls, the bulk bar, and `Shift`/`mod`
-clicks for ranges:
+gives you the checkboxes, the select-all controls and the bulk bar:
 
 ```php
 ->selectable()
@@ -15,27 +14,28 @@ clicks for ranges:
 ```
 
 Add `->gestures()` and it behaves like a list in a desktop file manager as well:
-the arrow keys walk the rows, `Space` toggles, `Shift`+arrows extend, `mod`+`A`
-takes the page, and a drag down the checkbox column sweeps a block in.
+`Shift`+click takes a range, `mod`+click adds one row, a drag down the checkbox
+column sweeps a block in, and from the keyboard the arrows walk the rows,
+`Space` toggles, `Shift`+arrows extend and `mod`+`A` takes the page.
 
 ```php
 ->gestures()
 ->selectable()
 ```
 
-That split is deliberate: keyboard navigation and the drag sweep change how the
-table answers someone who never meant to operate it, so they wait to be asked
-(see [The Gesture Layer](gestures.md)). Everything below is marked with which of
-the two it needs.
+That split is deliberate: keyboard navigation, range selection and the drag
+sweep all change how the table answers someone who never meant to operate it, so
+they wait to be asked (see [The Gesture Layer](gestures.md)). Everything below is
+marked with what it needs.
 
 ## What the mouse does
 
 | Gesture | Result | Needs |
 |---------|--------|-------|
 | Click the selection cell | Toggle that row, and set the range anchor | — |
-| `Shift` + click | Select the range between the anchor and this row | — |
-| `mod` + click | Toggle this one row, anywhere on it, and anchor here | — |
-| `mod` + `Shift` + click | Add the whole block to what is already selected | — |
+| `Shift` + click | Select the range between the anchor and this row | `gestures()` |
+| `mod` + click | Toggle this one row, anywhere on it, and anchor here | `gestures()` |
+| `mod` + `Shift` + click | Add the whole block to what is already selected | `gestures()` |
 | Drag down the checkbox column | Sweep a run of rows into the selection | `gestures()` |
 | Click the row itself | Marks the row (see below) — it never ticks the checkbox | — |
 

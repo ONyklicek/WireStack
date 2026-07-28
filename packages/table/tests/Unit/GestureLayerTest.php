@@ -89,19 +89,21 @@ afterEach(fn () => Schema::dropIfExists('gesture_layer_rows'));
 
 // ─── Configuration ───────────────────────────────────────────────
 
-it('leaves keyboard navigation and the sweep off until a table asks', function () {
+it('leaves every way of operating a row off until a table asks', function () {
     // A selectable table that never mentions gestures is an ordinary web table:
-    // checkboxes, no roving focus, nothing answering an arrow key, and no drag
-    // that turns into a block selection.
+    // checkboxes, no roving focus, nothing answering an arrow key, no drag that
+    // turns into a block selection, and a modified click that stays a click.
     $table = Table::make()->selectable();
 
     expect($table->usesGridSemantics())->toBeFalse()
         ->and($table->getTableRole())->toBeNull()
         ->and($table->usesDragSelect())->toBeFalse()
+        ->and($table->usesRangeSelection())->toBeFalse()
         ->and($table->usesShortcutHelp())->toBeFalse()
-        ->and($table->getGestureConfig())->toBe(['sweep' => false, 'ranges' => true])
-        // What is left needs an invitation of its own anyway.
-        ->and($table->usesRangeSelection())->toBeTrue();
+        ->and($table->usesActiveRowMarker())->toBeFalse()
+        ->and($table->getGestureConfig())->toBe(['sweep' => false, 'ranges' => false])
+        // With nothing to drive, the delegated controller is not mounted at all.
+        ->and($table->mountsRecordActionController())->toBeFalse();
 });
 
 it('turns the whole layer on with gestures()', function () {
@@ -211,14 +213,14 @@ it('takes the project default from config', function () {
 });
 
 it('takes a mixed project default from config', function () {
-    // Keyboard everywhere, but never the sweep.
-    config()->set('wire-table.defaults.gestures', ['keyboard' => true]);
+    // Keyboard and ranges everywhere, but never the sweep.
+    config()->set('wire-table.defaults.gestures', ['keyboard' => true, 'range_selection' => true]);
 
     $table = Table::make()->selectable();
 
     expect($table->usesGridSemantics())->toBeTrue()
-        ->and($table->usesDragSelect())->toBeFalse()
-        ->and($table->usesRangeSelection())->toBeTrue();
+        ->and($table->usesRangeSelection())->toBeTrue()
+        ->and($table->usesDragSelect())->toBeFalse();
 });
 
 it('drops the range rows from the legend when ranges are off', function () {
@@ -270,7 +272,9 @@ it('renders a quiet table when nobody asked for gestures', function () {
         ->not->toContain('data-testid="shortcut-help"')
         ->toContain('x-data="wireRecordActions(')
         ->toContain('"sweep":false')
-        ->toContain('"ranges":true')
+        ->toContain('"ranges":false')
+        // With ranges off the cell takes every click, modified or not.
+        ->toContain('x-on:click="toggle(')
         // The right-click menu is one of the quiet capabilities: the table
         // asked for it by binding an action to it.
         ->toContain('data-record-menu');

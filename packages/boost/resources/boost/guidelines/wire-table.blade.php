@@ -92,10 +92,12 @@ detaches all). Using one against an unsupported relationship type throws a clear
 
 The desktop behaviour — keyboard grid navigation, Shift/mod ranges, the drag sweep, the right-click row
 menu, the `?` help and the Excel fill handle — is one layer, owned by `Support\TableGestures` and
-configured with `Table::gestures()`. **It is opt-in.** Keyboard navigation and the drag sweep are OFF for
-a table that never calls `gestures()`, because both change how the table answers a visitor who never meant
-to operate it (rows enter the tab order, an active row is marked, a press in the checkbox column starts
-selecting a block). Right for a back office, wrong for a public listing:
+configured with `Table::gestures()`. **It is opt-in.** Keyboard navigation, range selection and the drag
+sweep are OFF for a table that never calls `gestures()`, because each changes how the table answers a
+visitor who never meant to operate it (rows enter the tab order, an active row is marked, a press in the
+checkbox column starts selecting a block, a Shift+click stops meaning a click). A selectable table starts
+as checkboxes and nothing more and mounts no delegated controller at all. Right for a back office, wrong
+for a public listing:
 
     ->gestures()                                                 // the desktop-app table
     ->gestures(false)                                            // not even the quiet capabilities
@@ -109,7 +111,7 @@ Six capabilities, each its own setter and `allows*()` reader, with the default a
 | Capability | Default | Covers |
 |---|---|---|
 | `keyboard` | **off** | roving tabindex, arrows, Home/End, PageUp/PageDown, Enter / Shift+Enter, Space, every `keyboardShortcut()`/`onKey()` against the active row — and what makes the table an ARIA `grid` |
-| `rangeSelection` | on | Shift / mod / mod+Shift click, Shift+arrow, Shift+Home/End |
+| `rangeSelection` | **off** | Shift / mod / mod+Shift click, Shift+arrow, Shift+Home/End |
 | `dragSelect` | **off** | the checkbox-column sweep |
 | `contextMenu` | on | `rowContextMenu()` and any `onContextMenu()` binding |
 | `shortcutHelp` | on¹ | `?` |
@@ -117,8 +119,9 @@ Six capabilities, each its own setter and `allows*()` reader, with the default a
 
 ¹ reads the keyboard layer, so with the default it never opens. ² still needs `Table::fillHandle()`.
 
-The quiet four are allowed from the start because each already needs an invitation of its own —
-`selectable()`, actions bound to the context menu, `fillHandle()`, the keyboard layer. The closure receives
+The three that stay allowed already need an invitation of their own — actions bound to the context menu,
+`fillHandle()`, and (for the `?` help) the keyboard layer this default leaves off — so with the shipped
+default a table offers only what it declared itself. The closure receives
 this table's gestures and configures them **in place**; its return value is ignored, so a fluent chain and
 a multi-line body both work. `TableGestures::defaults()` / `all()` / `none()` are the three starting
 points: shipped default, everything, nothing.
@@ -156,7 +159,7 @@ default above, `true` turns the whole layer on for **every** table (what a back-
 shipped default; keys match loosely (`drag_select` = `drag-select` = `dragSelect`), and an **unknown key
 throws** `TableConfigurationException` rather than quietly doing nothing. A per-table `gestures()` always
 wins. Consequence for fixtures and tests: anything asserting `role="grid"`, a roving tabindex, arrow
-navigation or the `?` help must call `->gestures()` first.
+navigation, a Shift+click range, a sweep or the `?` help must call `->gestures()` first.
 
 The active-row marker appears only when something needs an anchor to grow from — grid semantics, range
 selection or the sweep (`usesActiveRowMarker()`). A table left with nothing but a declared click action

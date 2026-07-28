@@ -21,11 +21,12 @@ use NyonCode\WireTable\Exceptions\TableConfigurationException;
  *       ->keyboard()                               // arrows, Enter, shortcuts
  *       ->dragSelect(false));                      // but no mouse sweep
  *
- * The two loudest capabilities — keyboard navigation and the drag sweep — are
- * **off** until asked for ({@see defaults()}). A table that never mentions
- * gestures behaves the way a table on a web page is expected to: clicks and
- * checkboxes, no roving focus, no marker, nothing that answers an arrow key.
- * `gestures()` is what promotes it to an application.
+ * The three that change how a row is operated — keyboard navigation, range
+ * selection and the drag sweep — are **off** until asked for
+ * ({@see defaults()}). A table that never mentions gestures behaves the way a
+ * table on a web page is expected to: clicks and checkboxes, no roving focus,
+ * no marker, no modified click that means something else, nothing that answers
+ * an arrow key. `gestures()` is what promotes it to an application.
  *
  * The project-wide default lives in `config('wire-table.defaults.gestures')`
  * and is read through {@see fromConfig()}, so a back-office project that wants
@@ -85,24 +86,30 @@ final class TableGestures
     }
 
     /**
-     * What a table gets without saying anything: the quiet capabilities, and
-     * neither of the two that change how the table answers to a plain visitor.
+     * What a table gets without saying anything: none of the three ways of
+     * operating a row that a plain visitor never asked for.
      *
      * Keyboard navigation takes the rows into the tab order, marks an active
      * row and starts answering arrows and `mod`+key — an application idiom, and
      * a surprise on an ordinary page. The drag sweep turns a press in the
-     * checkbox column into a block selection, which is a gesture people find by
-     * accident before they find it on purpose. Both are opt-in.
+     * checkbox column into a block selection, a gesture people find by accident
+     * before they find it on purpose. Range selection quietly re-reads a
+     * modified click: `Shift`+click stops being a click and becomes "everything
+     * between here and the last one", which is right in a file manager and
+     * startling in a list of blog posts. All three wait to be asked.
      *
-     * What is left needs an explicit invitation of its own anyway: a range
-     * needs `selectable()`, a context menu needs actions bound to it, the fill
-     * handle needs `fillHandle()`, and the `?` help needs the keyboard layer
-     * this default leaves off.
+     * A selectable table therefore starts as checkboxes and nothing more, and
+     * the delegated controller is not mounted at all unless something else
+     * needs it. What stays allowed needs an explicit invitation of its own
+     * anyway: a context menu needs actions bound to it, the fill handle needs
+     * `fillHandle()`, and the `?` help needs the keyboard layer this default
+     * leaves off.
      */
     public static function defaults(): self
     {
         return (new self)
             ->keyboard(false)
+            ->rangeSelection(false)
             ->dragSelect(false);
     }
 
@@ -173,9 +180,14 @@ final class TableGestures
 
     /**
      * Range selection: Shift+click, mod+click and mod+Shift+click on a row, and
-     * Shift+arrow / Shift+Home / Shift+End from the keyboard. With this off a
-     * modified click is an ordinary click and the arrows only move the active
-     * row; the checkboxes keep working as they always did.
+     * Shift+arrow / Shift+Home / Shift+End from the keyboard. Off in the shipped
+     * {@see defaults()} — a modified click meaning something other than a click
+     * is a file-manager idiom, not a web-page one.
+     *
+     * With it off a modified click is an ordinary click and the arrows only move
+     * the active row; the checkboxes keep working as they always did, and the
+     * selection cell answers a modified click by toggling, since nothing else
+     * would.
      */
     public function rangeSelection(bool $enabled = true): static
     {

@@ -505,11 +505,14 @@ it('mounts the controller on every grid, selectable-only included', function () 
     // even with the keyboard forced off. So do the mouse gestures — dropping
     // the keyboard from a selectable table leaves the sweep and the ranges,
     // and only gestures(false) empties the controller out of existence.
-    expect(Table::make()->selectable()->mountsRecordActionController())->toBeTrue()
+    expect(Table::make()->gestures()->selectable()->mountsRecordActionController())->toBeTrue()
         ->and(Table::make()->recordAction(RecordAction::make('edit')->onDoubleClick())->mountsRecordActionController())->toBeTrue()
         ->and(Table::make()->gestures(fn (TableGestures $g) => $g->keyboard())->mountsRecordActionController())->toBeTrue()
-        ->and(Table::make()->selectable()->gestures(fn (TableGestures $g) => $g->keyboard(false))->mountsRecordActionController())->toBeTrue()
+        ->and(Table::make()->gestures()->selectable()->gestures(fn (TableGestures $g) => $g->keyboard(false))->mountsRecordActionController())->toBeTrue()
         ->and(Table::make()->selectable()->gestures(false)->mountsRecordActionController())->toBeFalse()
+        // A selectable table that never asked has nothing for the controller to
+        // do either — no ranges, no sweep, no keyboard.
+        ->and(Table::make()->selectable()->mountsRecordActionController())->toBeFalse()
         ->and(Table::make()->mountsRecordActionController())->toBeFalse();
 });
 
@@ -563,12 +566,13 @@ it('reserves the marker stripe positioning on every grid row, and only there', f
     // The stripe is absolutely positioned inside the leading cell, so that cell
     // must establish the containing block on EVERY row — not just the active
     // one, which is morphed in and out.
-    $grid = Table::make()->selectable();
-    $plain = Table::make();
+    $grid = Table::make()->gestures()->selectable();
+    $plain = Table::make()->selectable();
 
     expect($grid->activeRowMarkerGutter())->toBe('[&>td:first-of-type]:relative')
         ->and($grid->getRowClasses(null, 0))->toContain('[&>td:first-of-type]:relative')
-        // A table the keyboard does not drive has no active row to mark.
+        // A selectable table that never asked for gestures has no active row to
+        // mark: nothing continues from a marked row there.
         ->and($plain->activeRowMarkerGutter())->toBe('')
         ->and($plain->getRowClasses(null, 0))->not->toContain('first-of-type');
 });

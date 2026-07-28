@@ -83,12 +83,13 @@ Confirm your app meets these before upgrading.
 A table's selection grew from a column of checkboxes into a full gesture surface
 (see [Selecting Rows](table/selection.md)). Four things to check on the way up.
 
-**1. Keyboard navigation and the drag sweep are opt-in — `->gestures()`.** The
-selection grew a full gesture surface: arrow keys walking the rows, `Space`,
-`Shift`+arrows, `mod`+`A`, and a drag down the checkbox column that sweeps a
-block in. None of it is on unless a table asks, because both of those change how
-the table answers a visitor who never meant to operate it — the rows go into the
-tab order, an active row is marked, and a drag starts selecting.
+**1. Every row gesture is opt-in — `->gestures()`.** The selection grew a full
+gesture surface: `Shift`/`mod` clicks for ranges, a drag down the checkbox column
+that sweeps a block in, and from the keyboard the arrows, `Space`,
+`Shift`+arrows and `mod`+`A`. None of it is on unless a table asks, because each
+changes how the table answers a visitor who never meant to operate it — the rows
+go into the tab order, an active row is marked, a drag starts selecting, and a
+modified click stops meaning a click.
 
 Add one call to the tables that want it:
 
@@ -104,10 +105,10 @@ or, for a project where every table is a back-office table:
 'defaults' => ['gestures' => true],
 ```
 
-What is *not* affected: the checkboxes, both select-all controls, the bulk bar,
-and `Shift`/`mod`+click ranges all work with no change on your side. So does the
-right-click row menu and the fill handle, each of which you already had to ask
-for. See [The Gesture Layer](table/gestures.md) for the six capabilities and how
+What is *not* affected: the checkboxes, both select-all controls and the bulk bar
+work with no change on your side, and a table that never asked mounts no
+delegated controller at all. So do the right-click row menu and the fill handle,
+each of which you already had to ask for. See [The Gesture Layer](table/gestures.md) for the six capabilities and how
 to mix them.
 
 **2. `->onKey()` on a navigation key now throws.** It used to be dropped

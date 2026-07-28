@@ -23,21 +23,27 @@ table — the one most pages want.
 
 ## What a table gets without asking
 
-**Keyboard navigation and the drag sweep are off until you ask.** They are the
-two that change how the table answers a visitor who never intended to operate
-it: keyboard navigation puts the rows in the tab order, marks an active row and
-starts answering arrows and `mod`+key, and the sweep turns a press in the
-checkbox column into a block selection — a gesture people find by accident
-before they find it on purpose.
+**Every way of operating a row is off until you ask.** Three capabilities change
+how the table answers a visitor who never intended to operate it, and all three
+wait:
 
-What is left needs an invitation of its own anyway, so it is allowed from the
-start: a range needs `->selectable()`, a context menu needs actions bound to it,
-the fill handle needs `->fillHandle()`, and the `?` help needs the keyboard
-layer this default leaves off.
+- **Keyboard navigation** puts the rows in the tab order, marks an active row
+  and starts answering arrows and `mod`+key.
+- **The drag sweep** turns a press in the checkbox column into a block
+  selection — a gesture people find by accident before they find it on purpose.
+- **Range selection** re-reads a modified click: `Shift`+click stops being a
+  click and becomes "everything between here and the last one". Right in a file
+  manager, startling in a list of blog posts.
+
+A selectable table therefore starts as checkboxes and nothing more, and the
+delegated Alpine controller is not even rendered. What stays allowed needs an
+invitation of its own anyway: a context menu needs actions bound to it, the fill
+handle needs `->fillHandle()`, and the `?` help needs the keyboard layer this
+default leaves off.
 
 ```php
-// An ordinary listing. Checkboxes work, Shift+click still ranges,
-// nothing answers an arrow key, no drag selects.
+// An ordinary listing. Checkboxes work and nothing else does:
+// no arrow keys, no drag selecting, no modified click meaning something else.
 Table::make()->selectable()
 
 // The same table as an application.
@@ -59,7 +65,7 @@ never calls `gestures()` gets:
 | Capability | Default | What it covers |
 |------------|---------|----------------|
 | `keyboard` | **off** | Grid navigation: roving `tabindex`, arrows, `Home`/`End`, `PageUp`/`PageDown`, `Enter` / `Shift`+`Enter` for the primary and secondary record action, `Space` to toggle the selection, and every action's own `keyboardShortcut()` / `onKey()` against the active row. Also what makes the table an ARIA `grid`. |
-| `rangeSelection` | on | `Shift`+click, `mod`+click and `mod`+`Shift`+click on a row, plus `Shift`+arrow, `Shift`+`Home` and `Shift`+`End` from the keyboard. |
+| `rangeSelection` | **off** | `Shift`+click, `mod`+click and `mod`+`Shift`+click on a row, plus `Shift`+arrow, `Shift`+`Home` and `Shift`+`End` from the keyboard. |
 | `dragSelect` | **off** | The mouse sweep: press in the checkbox column and drag to select a block of rows. |
 | `contextMenu` | on | The right-click row menu — both `rowContextMenu()` and any `onContextMenu()` record action. |
 | `shortcutHelp` | on¹ | The `?` shortcut help. |
@@ -69,6 +75,10 @@ never calls `gestures()` gets:
 
 ¹ Allowed, but it reads the keyboard layer, so with the default it never opens.
 ² Allowed, but the table still has to call `->fillHandle()`.
+
+With the default, then, the only gestures a table really offers are the ones it
+declared itself: a right-click menu if an action is bound to one, and the fill
+handle if it asked for one.
 
 ## Mixing them
 
@@ -106,7 +116,8 @@ conjure the thing it governs:
 
 - `dragSelect` and `rangeSelection` still need `->selectable()` (or
   `->bulkActions()`, which implies it) — there has to be a selection for a range
-  to grow in.
+  to grow in. Both are also off in the default, so they need the permission
+  *and* the selection.
 - `fillHandle` still needs `->fillHandle()` on the table and editable columns.
 - `shortcutHelp` still needs the keyboard layer, because the keyboard layer is
   what listens for the key.
@@ -153,7 +164,8 @@ With `keyboard` off, an `onKey()` binding has nowhere to fire from.
 
 Selection itself is likewise untouched. With every gesture off, the checkboxes,
 both select-all controls and the bulk bar work exactly as they always did — you
-lose the shortcuts to them, not the feature.
+lose the shortcuts to them, not the feature. The selection cell then answers a
+modified click by toggling, since with ranges off nothing else would.
 
 ## The active-row marker
 
@@ -341,7 +353,14 @@ $table->gestures(Gestures::backOffice());
 **A table inside a page with its own keyboard handling.** Keep the mouse half:
 
 ```php
-$table->gestures(fn (TableGestures $g) => $g->dragSelect())->selectable();
+$table->gestures(fn (TableGestures $g) => $g->rangeSelection()->dragSelect())->selectable();
+```
+
+**Ranges but no sweep.** `Shift`+click for a block, without a drag that selects
+by accident:
+
+```php
+$table->gestures(fn (TableGestures $g) => $g->rangeSelection())->selectable();
 ```
 
 ## Troubleshooting
@@ -352,7 +371,7 @@ $table->gestures(fn (TableGestures $g) => $g->dragSelect())->selectable();
 | `->gestures()` is there and it still is not a grid | Nothing for the arrows to drive — no record actions, no selection | Add `->selectable()`, or force it with `->gestures(fn ($g) => $g->keyboard(true))` |
 | `?` opens nothing | It reads the keyboard layer, and an empty legend renders no modal at all | Turn the keyboard on; check `shortcutLegend()->isEmpty()` |
 | A drag down the checkbox column selects nothing | `dragSelect` is off by default | `->gestures()`, or `->gestures(fn ($g) => $g->dragSelect())` |
-| `Shift`+click toggles one row instead of a range | `rangeSelection` was switched off | `->gestures(fn ($g) => $g->rangeSelection())` |
+| `Shift`+click toggles one row instead of a range | `rangeSelection` is off by default | `->gestures()`, or `->gestures(fn ($g) => $g->rangeSelection())` |
 | Right-click shows the browser menu | No action is bound to it, or `contextMenu` is off | Bind one with `->onContextMenu()`; check `hasRowContextMenu()` |
 | The fill handle does not appear | It needs `->fillHandle()` **and** the permission **and** a fillable editable column | Check `isFillHandleEnabled()` and `Column::fillable()` |
 | An `->onKey()` binding never fires | Keys are read by the keyboard layer | `->gestures()` |
@@ -367,7 +386,8 @@ $table->gestures(fn (TableGestures $g) => $g->dragSelect())->selectable();
 | Public page that must not even right-click | `->gestures(false)` |
 | Read-only report, right click still useful | `TableGestures::none()->contextMenu()` |
 | Long list, keyboard useful, sweeping risky | `->gestures(fn ($g) => $g->keyboard())` |
-| Embedded in a page with its own keyboard handling | `->gestures(fn ($g) => $g->dragSelect())` |
+| Embedded in a page with its own keyboard handling | `->gestures(fn ($g) => $g->rangeSelection()->dragSelect())` |
+| Selection matters, a stray drag does not | `->gestures(fn ($g) => $g->rangeSelection())` |
 
 ## See Also
 

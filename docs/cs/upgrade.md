@@ -83,12 +83,13 @@ Před upgradem ověřte, že je vaše aplikace splňuje.
 Z výběru v tabulce se stala plnohodnotná sada gest, ne jen sloupec zaškrtávátek
 (viz [Výběr řádků](table/selection.md)). Při upgradu zkontrolujte čtyři věci.
 
-**1. Klávesová navigace a označování tažením jsou opt-in — `->gestures()`.**
-Z výběru se stala plnohodnotná sada gest: šipky procházející řádky, `Space`,
-`Shift`+šipky, `mod`+`A` a tažení po sloupci se zaškrtávátky, které nabere celý
-blok. Nic z toho není zapnuté, dokud si o to tabulka neřekne — obojí totiž mění
-chování tabulky vůči návštěvníkovi, který ji ovládat nezamýšlel: řádky jdou do
-pořadí tabulátoru, označuje se aktivní řádek a tažení začne vybírat.
+**1. Všechna gesta nad řádkem jsou opt-in — `->gestures()`.** Z výběru se stala
+plnohodnotná sada gest: `Shift`/`mod` kliky pro rozsahy, tažení po sloupci se
+zaškrtávátky, které nabere celý blok, a z klávesnice šipky, `Space`, `Shift`+šipky
+a `mod`+`A`. Nic z toho není zapnuté, dokud si o to tabulka neřekne — každé z nich
+totiž mění chování tabulky vůči návštěvníkovi, který ji ovládat nezamýšlel: řádky
+jdou do pořadí tabulátoru, označuje se aktivní řádek, tažení začne vybírat
+a modifikovaný klik přestane být klikem.
 
 Tabulkám, které to chtějí, přidejte jedno volání:
 
@@ -104,9 +105,10 @@ nebo, pokud je celý projekt back office:
 'defaults' => ['gestures' => true],
 ```
 
-Co změna *neovlivní*: zaškrtávátka, oba ovladače „vybrat vše", bulk bar
-i `Shift`/`mod`+klik rozsahy fungují beze změny. Stejně tak kontextové menu pod
-pravým tlačítkem a fill handle — o oboje jste si stejně museli říct sami.
+Co změna *neovlivní*: zaškrtávátka, oba ovladače „vybrat vše" i bulk bar fungují
+beze změny a tabulka, která si o gesta neřekla, nemontuje delegovaný controller
+vůbec. Stejně tak kontextové menu pod pravým tlačítkem a fill handle — o oboje
+jste si stejně museli říct sami.
 Šest schopností a jak je kombinovat najdete ve [Vrstvě gest](table/gestures.md).
 
 **2. `->onKey()` na navigační klávese nově vyhodí výjimku.** Dřív se tiše

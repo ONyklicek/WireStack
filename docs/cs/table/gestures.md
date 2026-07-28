@@ -23,21 +23,27 @@ většina stránek chce.
 
 ## Co tabulka dostane, když si neřekne
 
-**Klávesová navigace a označování tažením jsou vypnuté, dokud si o ně neřeknete.**
-Jsou to ty dvě, které mění chování tabulky vůči návštěvníkovi, který ji ovládat
-nezamýšlel: klávesová navigace dá řádky do pořadí tabulátoru, označí aktivní
-řádek a začne odpovídat na šipky a `mod`+klávesu, a tažení promění stisk
-v checkboxovém sloupci na blokový výběr — gesto, které lidé najdou omylem dřív
-než schválně.
+**Každý způsob ovládání řádku je vypnutý, dokud si o něj neřeknete.** Tři
+schopnosti mění chování tabulky vůči návštěvníkovi, který ji ovládat nezamýšlel,
+a všechny tři čekají:
 
-Zbytek stejně potřebuje vlastní pozvánku, takže je povolený od začátku: rozsah
-potřebuje `->selectable()`, kontextové menu potřebuje navázané akce, fill handle
-potřebuje `->fillHandle()` a nápověda `?` potřebuje klávesovou vrstvu, kterou
-tenhle default nechává vypnutou.
+- **Klávesová navigace** dá řádky do pořadí tabulátoru, označí aktivní řádek
+  a začne odpovídat na šipky a `mod`+klávesu.
+- **Označování tažením** promění stisk v checkboxovém sloupci na blokový výběr —
+  gesto, které lidé najdou omylem dřív než schválně.
+- **Rozsahový výběr** přepisuje význam modifikovaného kliku: `Shift`+klik přestane
+  být klikem a stane se z něj „všechno mezi tímhle a posledním". Ve správci
+  souborů správně, v seznamu článků překvapivě.
+
+Tabulka se `selectable()` proto začíná jako zaškrtávátka a nic víc a delegovaný
+Alpine controller se ani nevykreslí. Co zůstává povolené, stejně potřebuje
+vlastní pozvánku: kontextové menu potřebuje navázané akce, fill handle potřebuje
+`->fillHandle()` a nápověda `?` potřebuje klávesovou vrstvu, kterou tenhle default
+nechává vypnutou.
 
 ```php
-// Obyčejný výpis. Checkboxy fungují, Shift+klik pořád dělá rozsah,
-// nic neodpovídá na šipku, nic se neoznačuje tažením.
+// Obyčejný výpis. Checkboxy fungují a nic jiného:
+// žádné šipky, žádné označování tažením, žádný modifikovaný klik s jiným významem.
 Table::make()->selectable()
 
 // Ta samá tabulka jako aplikace.
@@ -59,7 +65,7 @@ která `gestures()` nikdy nezavolá:
 | Schopnost | Výchozí | Co pokrývá |
 |-----------|---------|------------|
 | `keyboard` | **vyp** | Navigaci v mřížce: putovní `tabindex`, šipky, `Home`/`End`, `PageUp`/`PageDown`, `Enter` / `Shift`+`Enter` pro primární a sekundární record action, `Space` pro přepnutí výběru a každou vlastní `keyboardShortcut()` / `onKey()` proti aktivnímu řádku. Zároveň je to to, co z tabulky dělá ARIA `grid`. |
-| `rangeSelection` | zap | `Shift`+klik, `mod`+klik a `mod`+`Shift`+klik na řádek, plus `Shift`+šipka, `Shift`+`Home` a `Shift`+`End` z klávesnice. |
+| `rangeSelection` | **vyp** | `Shift`+klik, `mod`+klik a `mod`+`Shift`+klik na řádek, plus `Shift`+šipka, `Shift`+`Home` a `Shift`+`End` z klávesnice. |
 | `dragSelect` | **vyp** | Označování tažením: stisknout v checkboxovém sloupci a táhnout přes blok řádků. |
 | `contextMenu` | zap | Kontextové menu řádku pod pravým tlačítkem — jak `rowContextMenu()`, tak libovolnou `onContextMenu()` record action. |
 | `shortcutHelp` | zap¹ | Nápovědu zkratek pod `?`. |
@@ -69,6 +75,10 @@ která `gestures()` nikdy nezavolá:
 
 ¹ Povolená, ale čte klávesovou vrstvu — s výchozím nastavením se tedy neotevře.
 ² Povolený, ale tabulka si o něj pořád musí říct přes `->fillHandle()`.
+
+S výchozím nastavením tedy tabulka nabízí jen gesta, která sama deklarovala:
+kontextové menu, pokud je na něj navázaná akce, a fill handle, pokud si o něj
+řekla.
 
 ## Kombinování
 
@@ -152,7 +162,8 @@ poslouchat. S vypnutou `keyboard` nemá vazba `onKey()` odkud vystřelit.
 
 Samotný výběr zůstává taky nedotčený. I s vypnutými gesty fungují checkboxy, oba
 ovladače „vybrat vše" i bulk bar přesně jako dřív — přijdete o zkratky k nim, ne
-o funkci.
+o funkci. Buňka výběru pak na modifikovaný klik reaguje přepnutím, protože
+s vypnutými rozsahy by na něj nereagoval nikdo jiný.
 
 ## Označení aktivního řádku
 
@@ -339,7 +350,14 @@ $table->gestures(Gestures::backOffice());
 **Tabulka ve stránce s vlastní obsluhou klávesnice.** Nechte si myší půlku:
 
 ```php
-$table->gestures(fn (TableGestures $g) => $g->dragSelect())->selectable();
+$table->gestures(fn (TableGestures $g) => $g->rangeSelection()->dragSelect())->selectable();
+```
+
+**Rozsahy ano, tažení ne.** `Shift`+klik pro blok, bez tažení, které vybere
+omylem:
+
+```php
+$table->gestures(fn (TableGestures $g) => $g->rangeSelection())->selectable();
 ```
 
 ## Když něco nefunguje
@@ -350,7 +368,7 @@ $table->gestures(fn (TableGestures $g) => $g->dragSelect())->selectable();
 | `->gestures()` je tam a grid pořád ne | Šipky nemají co ovládat — žádné record actions, žádný výběr | Přidat `->selectable()`, nebo vynutit `->gestures(fn ($g) => $g->keyboard(true))` |
 | `?` nic neotevře | Čte klávesovou vrstvu a prázdná legenda nevykreslí modal vůbec | Zapnout klávesnici; zkontrolovat `shortcutLegend()->isEmpty()` |
 | Tažení po checkboxovém sloupci nic nevybere | `dragSelect` je defaultně vypnutý | `->gestures()`, nebo `->gestures(fn ($g) => $g->dragSelect())` |
-| `Shift`+klik přepne jeden řádek místo rozsahu | `rangeSelection` byl vypnutý | `->gestures(fn ($g) => $g->rangeSelection())` |
+| `Shift`+klik přepne jeden řádek místo rozsahu | `rangeSelection` je defaultně vypnutý | `->gestures()`, nebo `->gestures(fn ($g) => $g->rangeSelection())` |
 | Pravý klik ukáže menu prohlížeče | Není na něj navázaná akce, nebo je `contextMenu` vypnuté | Navázat přes `->onContextMenu()`; zkontrolovat `hasRowContextMenu()` |
 | Fill handle se neobjeví | Potřebuje `->fillHandle()` **a** povolení **a** editovatelný fillable sloupec | Zkontrolovat `isFillHandleEnabled()` a `Column::fillable()` |
 | Vazba `->onKey()` nikdy nevystřelí | Klávesy čte klávesová vrstva | `->gestures()` |
@@ -365,7 +383,8 @@ $table->gestures(fn (TableGestures $g) => $g->dragSelect())->selectable();
 | Veřejná stránka, kde nesmí ani pravý klik | `->gestures(false)` |
 | Read-only report, pravý klik se pořád hodí | `TableGestures::none()->contextMenu()` |
 | Dlouhý seznam, klávesnice se hodí, tažení je riskantní | `->gestures(fn ($g) => $g->keyboard())` |
-| Vložená do stránky s vlastní obsluhou klávesnice | `->gestures(fn ($g) => $g->dragSelect())` |
+| Vložená do stránky s vlastní obsluhou klávesnice | `->gestures(fn ($g) => $g->rangeSelection()->dragSelect())` |
+| Výběr je důležitý, náhodné tažení ne | `->gestures(fn ($g) => $g->rangeSelection())` |
 
 ## Viz také
 

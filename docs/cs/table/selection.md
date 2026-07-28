@@ -6,8 +6,7 @@ order: 47
 
 Z výběru může být sada gest, ne jen sloupec zaškrtávátek. Tabulka se
 `->selectable()` — nebo taková, která má jen `->bulkActions()`, což výběr
-implikuje — dává zaškrtávátka, ovladače „vybrat vše", bulk bar a `Shift`/`mod`
-kliky pro rozsahy:
+implikuje — dává zaškrtávátka, ovladače „vybrat vše" a bulk bar:
 
 ```php
 ->selectable()
@@ -15,17 +14,18 @@ kliky pro rozsahy:
 ```
 
 Přidejte `->gestures()` a chová se navíc jako seznam v desktopovém správci
-souborů: šipky procházejí řádky, `Space` přepíná, `Shift`+šipky roztahují,
-`mod`+`A` vezme stránku a tažení po sloupci se zaškrtávátky nabere celý blok.
+souborů: `Shift`+klik vezme rozsah, `mod`+klik přidá jeden řádek, tažení po
+sloupci se zaškrtávátky nabere celý blok a z klávesnice šipky procházejí řádky,
+`Space` přepíná, `Shift`+šipky roztahují a `mod`+`A` vezme stránku.
 
 ```php
 ->gestures()
 ->selectable()
 ```
 
-To rozdělení je záměrné: klávesová navigace a označování tažením mění chování
-tabulky vůči někomu, kdo ji ovládat nezamýšlel, takže čekají, až si o ně řeknete
-(viz [Vrstva gest](gestures.md)). U všeho níže je uvedeno, co které gesto
+To rozdělení je záměrné: klávesová navigace, rozsahový výběr i označování tažením
+mění chování tabulky vůči někomu, kdo ji ovládat nezamýšlel, takže čekají, až si
+o ně řeknete (viz [Vrstva gest](gestures.md)). U všeho níže je uvedeno, co
 potřebuje.
 
 ## Co umí myš
@@ -33,9 +33,9 @@ potřebuje.
 | Gesto | Výsledek | Potřebuje |
 |-------|----------|-----------|
 | Klik do buňky výběru | Přepne řádek a nastaví kotvu rozsahu | — |
-| `Shift` + klik | Vybere rozsah mezi kotvou a tímto řádkem | — |
-| `mod` + klik | Přepne tento jeden řádek (kdekoli na něm) a zakotví zde | — |
-| `mod` + `Shift` + klik | Přidá celý blok k tomu, co už je vybrané | — |
+| `Shift` + klik | Vybere rozsah mezi kotvou a tímto řádkem | `gestures()` |
+| `mod` + klik | Přepne tento jeden řádek (kdekoli na něm) a zakotví zde | `gestures()` |
+| `mod` + `Shift` + klik | Přidá celý blok k tomu, co už je vybrané | `gestures()` |
 | Tažení po sloupci se zaškrtávátky | Přejede a vybere souvislý úsek řádků | `gestures()` |
 | Klik na samotný řádek | Označí řádek (viz níže) — zaškrtávátko nezaškrtne | — |
 
