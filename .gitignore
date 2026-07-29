@@ -12,4 +12,9 @@ composer.lock
 docs-site/.torchlight-cache/
 /docs-site/dist/
 
+# Runtime log written by the testbench app
+/storage/
+# Page/console dumps from the Playwright MCP server
+/.playwright-mcp/
+
 .DS_Store
