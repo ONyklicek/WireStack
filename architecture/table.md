@@ -41,6 +41,24 @@ That means state shape and hydration changes can have Livewire-wide effects for 
 
 Top-level fluent config object. Start here when the task is about table API shape.
 
+### Record-less action surfaces
+
+Two surfaces declare actions that run without a record: the toolbar's
+`headerActions()` and the empty state's `emptyStateActions()`. Both execute
+through the same host methods (`executeHeaderAction` / `openHeaderActionModal`),
+so `InteractsWithTableModals::findHeaderAction()` searches **both** — an action
+found only on one of them renders a button whose click resolves to nothing.
+
+The empty state accepts a row `Action` as well as a `HeaderAction`;
+`Table::getEmptyStateActionsHtml()` resolves the markup in PHP (the view only
+echoes strings) and hands a row `Action` the
+`Actions\EmptyStateActionClickResolver` instead of the row one, which would emit
+an empty record key. Consequences of having no record: only a static `->url()`
+resolves (`Action::getUrl()` leaves a per-record closure unresolved), and the
+two surfaces must not share an action name — both render when the table is
+empty, duplicating the `data-testid` and any `keyboardShortcut()` window
+listener. A table emptied by a *filter* shows the reset button instead.
+
 ### `Concerns/HasGestures.php` + `Support/TableGestures.php`
 
 Canonical owner of "which desktop gestures does this table offer" — keyboard

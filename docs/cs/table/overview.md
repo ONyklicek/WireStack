@@ -433,6 +433,56 @@ $table->emptyState(
 )
 ```
 
+#### Akce prázdného stavu
+
+Nabídněte z prázdného stavu cestu ven — obvykle „vytvořit první záznam":
+
+```php
+->emptyStateActions(array $actions)
+```
+
+```php
+$table
+    ->emptyState(
+        heading: 'No posts yet',
+        description: 'Write the first one.',
+        icon: 'document-text',
+    )
+    ->emptyStateActions([
+        Action::make('create')
+            ->label('Create post')
+            ->url(route('posts.create')),
+    ]);
+```
+
+Přijímá se `Action` i `HeaderAction`. Prázdný stav nemá žádné řádky, takže jeho
+akce běží bez záznamu — stejně jako akce v hlavičce, včetně modalu, formuláře
+i potvrzení:
+
+```php
+->emptyStateActions([
+    Action::make('create')
+        ->label('Create post')
+        ->form(fn () => Form::make()->schema([
+            TextInput::make('title')->required(),
+        ]))
+        ->action(fn (array $data) => Post::create($data)),
+])
+```
+
+Z absence záznamu plynou dvě věci:
+
+- Vyhodnotí se jen **statická** `->url('/posts/create')`. Closure závislá na
+  záznamu (`->url(fn ($record) => …)`) tu žádný záznam nedostane a zůstane
+  nevyplněná, takže se akce vykreslí jako obyčejné tlačítko.
+- Dejte akci prázdného stavu **vlastní jméno**. Když použijete jméno (nebo přímo
+  objekt) akce z hlavičky, v prázdné tabulce se vykreslí obě — duplicitní
+  `data-testid`, a pokud má akce `->keyboardShortcut()`, zaregistruje se window
+  listener dvakrát a jeden stisk klávesy ji spustí dvakrát.
+
+Tyto akce se nezobrazují, když tabulku vyprázdnil **filtr**: tam záznamy za
+filtrem existují, takže prázdný stav místo toho nabízí filtr zrušit.
+
 ### Polling (auto-obnovení)
 
 ```php

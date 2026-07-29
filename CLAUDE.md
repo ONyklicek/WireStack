@@ -87,6 +87,9 @@ Before changing shared behavior, ask:
   `architecture/integrations.md`
 - Shared design-system ownership, canonical UI semantics, color/size/icon surface work:
   `architecture/plans/canonical-ownership-consolidation.md`
+- Rendering an action on a new surface, or touching how a row/header/bulk action
+  becomes a button (`RendersAsButton`, `ResolvesActionClick`, the button views):
+  `architecture/plans/action-render-unification.md`
 - Full analysis, inconsistency review, bug-hunting, or audit:
   `architecture/audit.md`
 - Docs, previews, workbench, screenshot refresh:

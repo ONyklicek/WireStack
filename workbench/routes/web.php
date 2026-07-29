@@ -119,6 +119,14 @@ Route::get('/previews', function () {
             'variant' => 'column-filters',
         ],
         [
+            'slug' => 'table-empty-state',
+            'title' => 'Wire Table',
+            'label' => 'Table empty state',
+            'copy' => 'The empty state with a way out of it: a link, an inline action, and one that opens a modal form.',
+            'component' => TablePreview::class,
+            'variant' => 'empty-state',
+        ],
+        [
             'slug' => 'table-image-gallery',
             'title' => 'Wire Table',
             'label' => 'Table image gallery',
@@ -307,6 +315,7 @@ foreach ([
     'table-summary' => ['title' => 'Wire Table Summary', 'subtitle' => 'Rollup totals, a multi-aggregate footer, and the page/all scope toggle.', 'component' => TablePreview::class, 'variant' => 'summary'],
     'table-row-color' => ['title' => 'Wire Table Row Color', 'subtitle' => 'Conditional whole-row tint by record status, plus an emphasised row class.', 'component' => TablePreview::class, 'variant' => 'row-color'],
     'table-column-filters' => ['title' => 'Wire Table Column Filters', 'subtitle' => 'Per-column header filters: text, single-select, multi-select, and boolean.', 'component' => TablePreview::class, 'variant' => 'column-filters'],
+    'table-empty-state' => ['title' => 'Wire Table Empty State', 'subtitle' => 'The empty state with a way out of it: a link action, and one that opens a modal form — record-less, and repeated in the stacked card layout.', 'component' => TablePreview::class, 'variant' => 'empty-state'],
     'table-image-gallery' => ['title' => 'Wire Table Image Gallery', 'subtitle' => 'ImageColumn: single image, an array as a gallery, and a stacked one capped with a "+N" chip.', 'component' => TablePreview::class, 'variant' => 'image-gallery'],
     'table-editable-fill' => ['title' => 'Wire Table Editable + Fill', 'subtitle' => 'Inline-editable text, select and toggle cells with the Excel-style fill handle. Email opts out via ->fillable(false).', 'component' => TablePreview::class, 'variant' => 'editable-fill'],
     'table-subrows-flatten' => ['title' => 'Wire Table Flatten', 'subtitle' => 'Flatten mode rendering every child as a regular row.', 'component' => TablePreview::class, 'variant' => 'subrows-flatten'],

@@ -949,6 +949,7 @@ uživatelské úrovni bez křehkých CSS selektorů.
 | Rozbalení podřádku | `data-testid="table-row-expand"` (`aria-expanded`) |
 | Akce řádku | `data-testid="action-{název}"` (+ `aria-label`) |
 | Hlavička / bulk / menu akce | `data-testid="header-action-{název}"` / `bulk-action-{název}` / `menu-action-{název}` |
+| Akce prázdného stavu | stejné testid jako její druh (`action-{název}` / `header-action-{název}`) — při `stackedOnMobile()` sedí **dvakrát**, jednou za každý layout, takže vybírejte ten viditelný |
 | Bulk lišta / zrušit výběr | `data-testid="table-bulk-bar"` / `table-deselect"` |
 | Ovládač filtru v panelu | `data-testid="filter-{name}"` (vstup uvnitř Select / Ternary / vlastního panelového filtru — odlišné od buňky hlavičky `table-filter-{column}`) |
 | Trigger action group | `data-testid="action-group-trigger"` |
@@ -1203,7 +1204,13 @@ class OrderTable extends Component
                 heading: 'No orders found',
                 description: 'Create your first order to get started.',
                 icon: 'shopping-cart',
-            );
+            )
+            ->emptyStateActions([
+                Action::make('createFirstOrder')
+                    ->label('New Order')
+                    ->icon('plus')
+                    ->url(route('orders.create')),
+            ]);
     }
 }
 ```

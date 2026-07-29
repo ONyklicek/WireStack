@@ -433,6 +433,56 @@ $table->emptyState(
 )
 ```
 
+#### Empty State Actions
+
+Offer a way out of the empty state — usually "create the first record":
+
+```php
+->emptyStateActions(array $actions)
+```
+
+```php
+$table
+    ->emptyState(
+        heading: 'No posts yet',
+        description: 'Write the first one.',
+        icon: 'document-text',
+    )
+    ->emptyStateActions([
+        Action::make('create')
+            ->label('Create post')
+            ->url(route('posts.create')),
+    ]);
+```
+
+Both `Action` and `HeaderAction` are accepted. The empty state has no rows, so
+its actions run record-less — the same way header actions do, modal, form and
+confirmation included:
+
+```php
+->emptyStateActions([
+    Action::make('create')
+        ->label('Create post')
+        ->form(fn () => Form::make()->schema([
+            TextInput::make('title')->required(),
+        ]))
+        ->action(fn (array $data) => Post::create($data)),
+])
+```
+
+Two things follow from being record-less:
+
+- Only a **static** `->url('/posts/create')` resolves. A per-record closure
+  (`->url(fn ($record) => …)`) has no record here and is left unset, so the
+  action renders as a plain button.
+- Give an empty-state action a **name of its own**. Reusing the name (or the
+  object) of a header action renders both when the table is empty — a duplicate
+  `data-testid`, and if the action carries a `->keyboardShortcut()`, a window
+  listener registered twice, so one keypress fires it twice.
+
+These actions are not shown when a **filter** emptied the table: there the
+records exist behind the filter, so the empty state offers to clear it instead.
+
 ### Polling (Auto-Refresh)
 
 ```php

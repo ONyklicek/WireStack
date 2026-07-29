@@ -1157,7 +1157,7 @@
                                                     : $table->getEmptyStateDescription(),
                                                 'actions' => $isEmptyDueToFilter
                                                     ? [view('wire-table::tables.partials.reset-filters-button')->render()]
-                                                    : [],
+                                                    : $table->getEmptyStateActionsHtml(),
                                             ])
                                         </td>
                                     </tr>
@@ -1389,14 +1389,27 @@
                                 </div>
                             @empty
                                 <div class="px-4 py-12 text-center bg-white dark:bg-gray-800">
-                                    <div class="flex flex-col items-center gap-3">
-                                        <div class="rounded-full bg-gray-100 dark:bg-gray-700 p-3">
-                                            {!! icon('outline:inbox', 'h-6 w-6', 'text-gray-400') !!}
-                                        </div>
-                                        <p class="text-sm text-gray-500 dark:text-gray-400">
-                                            {{ $table->getEmptyStateHeading() ?? __('wire-table::messages.empty_heading') }}
-                                        </p>
-                                    </div>
+                                    {{-- The same canonical surface the desktop table's empty state
+                                         uses, so a custom icon/description, the filter-empty reset
+                                         and the empty-state actions reach a phone too. The action
+                                         copies drop their keyboard shortcut: both layouts are in
+                                         the document at every width, and a rendered button binds
+                                         its shortcut as a window listener. --}}
+                                    @include('wire-core::partials.empty-state', [
+                                        'icon' => $isEmptyDueToFilter
+                                            ? 'outline:magnifying-glass'
+                                            : ($table->getEmptyStateIcon() ?? 'outline:inbox'),
+                                        'iconSize' => 'h-6 w-6',
+                                        'heading' => $isEmptyDueToFilter
+                                            ? __('wire-table::messages.empty_filter_heading')
+                                            : $table->getEmptyStateHeading(),
+                                        'description' => $isEmptyDueToFilter
+                                            ? __('wire-table::messages.empty_no_records_match')
+                                            : $table->getEmptyStateDescription(),
+                                        'actions' => $isEmptyDueToFilter
+                                            ? [view('wire-table::tables.partials.reset-filters-button')->render()]
+                                            : $table->getMobileEmptyStateActionsHtml(),
+                                    ])
                                 </div>
                             @endforelse
 

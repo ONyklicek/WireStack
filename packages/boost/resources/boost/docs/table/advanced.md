@@ -939,6 +939,7 @@ level without brittle CSS.
 | Sub-row expand | `data-testid="table-row-expand"` (`aria-expanded`) |
 | Row action | `data-testid="action-{name}"` (+ `aria-label`) |
 | Header / bulk / menu action | `data-testid="header-action-{name}"` / `bulk-action-{name}` / `menu-action-{name}` |
+| Empty-state action | the same testid as its kind (`action-{name}` / `header-action-{name}`) — under `stackedOnMobile()` it matches **twice**, once per layout, so select the visible one |
 | Bulk bar / deselect | `data-testid="table-bulk-bar"` / `table-deselect"` |
 | Panel filter control | `data-testid="filter-{name}"` (the input inside a Select / Ternary / custom panel filter — distinct from the header `table-filter-{column}` cell) |
 | Action group trigger | `data-testid="action-group-trigger"` |
@@ -1193,7 +1194,13 @@ class OrderTable extends Component
                 heading: 'No orders found',
                 description: 'Create your first order to get started.',
                 icon: 'shopping-cart',
-            );
+            )
+            ->emptyStateActions([
+                Action::make('createFirstOrder')
+                    ->label('New Order')
+                    ->icon('plus')
+                    ->url(route('orders.create')),
+            ]);
     }
 }
 ```

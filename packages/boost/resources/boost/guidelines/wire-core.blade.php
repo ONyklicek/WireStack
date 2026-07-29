@@ -14,6 +14,10 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
         ->action(fn ($record) => $record->approve());
 
 - Presets: `DeleteAction`, `EditAction`, `ViewAction`, plus bulk presets (`DeleteBulkAction`, …).
+- `->url()` takes a **static string or a per-record Closure**, and the two are not interchangeable on a
+  record-less surface (a header action, the table's empty state): a string resolves with or without a
+  record, a Closure needs one and stays unresolved — the action then renders as a plain button, not a
+  link. `Action::render()` / `getUrl()` therefore take an optional record, matching `RendersAsButton`.
 - Actions can open modals via `->modal(...)` and multi-step wizards via `->steps([...])`.
 - A wizard step's `->schema(fn (array $data) => [...])` Closure builds its fields from data entered in
   earlier steps; the bag is live even for header actions (no record), so later steps can branch on it.

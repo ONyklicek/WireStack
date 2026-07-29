@@ -137,6 +137,10 @@ class TablePreview extends Component
             return $this->columnFiltersTable($table);
         }
 
+        if ($this->variant === 'empty-state') {
+            return $this->emptyStateTable($table);
+        }
+
         if ($this->variant === 'image-gallery') {
             return $this->imageGalleryTable($table);
         }
@@ -275,6 +279,48 @@ class TablePreview extends Component
             ->striped()
             ->stackedOnMobile()
             ->paginated(false);
+    }
+
+    /**
+     * The empty state with a way out of it. Three surfaces in one preview: a
+     * link action (static url), an inline one, and one that opens a modal form
+     * — all record-less, and all repeated in the stacked card layout, which is
+     * what the phone width shows.
+     */
+    private function emptyStateTable(Table $table): Table
+    {
+        return $table
+            // No user has this role, so the table is genuinely empty rather
+            // than emptied by a filter — the state the actions belong to.
+            ->query(User::query()->whereRaw('1 = 0'))
+            ->columns([
+                TextColumn::make('name')->label('Name'),
+                TextColumn::make('email')->label('Email'),
+            ])
+            ->searchable(false)
+            ->paginated(false)
+            ->stackedOnMobile()
+            ->emptyState(
+                heading: 'No users yet',
+                description: 'Invite the first one to get started.',
+                icon: 'outline:users',
+            )
+            ->emptyStateActions([
+                Action::make('docs')
+                    ->label('Read the guide')
+                    ->icon('outline:book-open')
+                    ->outlined()
+                    ->url('/docs'),
+                Action::make('inviteFirst')
+                    ->label('Invite a user')
+                    ->icon('outline:plus')
+                    ->form(fn () => [
+                        TextInput::make('name')->label('Name')->required(),
+                        TextInput::make('email')->label('Email')->email()->required(),
+                    ])
+                    ->modalHeading('Invite a user')
+                    ->action(fn () => null),
+            ]);
     }
 
     /**
