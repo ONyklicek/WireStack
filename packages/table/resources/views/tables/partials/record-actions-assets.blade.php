@@ -1,9 +1,8 @@
 @php
-    // Cache-bust by the bundle's mtime so a rebuild is picked up without a manual
-    // version bump; falls back to no query string if the file is not present yet.
-    $assetFile = \NyonCode\WireTable\WireTableServiceProvider::ASSETS_PATH.'/wire-table-records.js';
-    $assetVersion = is_file($assetFile) ? (string) filemtime($assetFile) : null;
-    $assetUrl = route('wire-table.asset', ['asset' => 'records']).($assetVersion ? '?id='.$assetVersion : '');
+    // The URL (route + cache-busting mtime) is owned and memoised by the canonical
+    // AssetManager, which this package's provider registers the bundle with.
+    // Recomputing it here would be a second resolver for the same concern.
+    $assetUrl = app(\NyonCode\WireCore\Foundation\Assets\AssetManager::class)->url('wire-table', 'records');
 @endphp
 
 {{-- Pre-bundled record-action controller (wireRecordActions). Loaded through

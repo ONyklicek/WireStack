@@ -709,7 +709,22 @@ const wireContextMenu = () => ({
     },
 })
 
-document.addEventListener('alpine:init', () => {
+// ─── Self-registration ──────────────────────────────────────────
+// `alpine:init` fires exactly once per document, so a bundle that only listens
+// for it registers nothing when it arrives after a `wire:navigate` — the event
+// has already fired and never fires again. Register straight away when Alpine
+// is already running; keep the listener for the first, cold load. Data, magics
+// and directives all share the one-shot problem, so all of them live in here.
+//
+// The `registered` guard is load-bearing: the same src can be emitted twice
+// (a per-surface partial plus the layout tag), and the browser will run it
+// twice.
+let registered = false
+
+const registerWireCoreDropdown = () => {
+    if (registered || ! window.Alpine) return
+    registered = true
+
     // $float(reference, panel, config) → cleanup. For components that own their
     // open-state and want Floating UI positioning on a teleported panel.
     window.Alpine.magic('float', () => floatingAnchor)
@@ -728,4 +743,11 @@ document.addEventListener('alpine:init', () => {
     window.Alpine.data('wireFillHandle', wireFillHandle)
     registerSheetDismiss(window.Alpine)
     registerFocusTrap(window.Alpine)
-})
+}
+
+if (window.Alpine) {
+    // Alpine already started (e.g. the script loaded after a Livewire navigation).
+    registerWireCoreDropdown()
+} else {
+    document.addEventListener('alpine:init', registerWireCoreDropdown)
+}

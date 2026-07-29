@@ -238,7 +238,7 @@ Delete the column order record for a user + model + table combination.
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `order_column` | `string` | `'sort_order'` | Default order column name |
-| `sortablejs_cdn` | `?string` | CDN URL | SortableJS source URL, `null` to disable |
+| `sortablejs_cdn` | `?string` | `null` | Optional extra SortableJS `<script>`. SortableJS is compiled into the package bundle, so this never affects reordering — set it only if your own code needs a global `window.Sortable` |
 | `animation` | `int` | `150` | Drag animation duration in milliseconds |
 | `user_model` | `string` | `'App\\Models\\User'` | User model class for column order relationships |
 | `user_key_type` | `string` | `'id'` | Primary key type of the user model, used by the migration to type the `user_id` column. Use `'uuid'` or `'ulid'` for non-integer auth keys |
@@ -247,7 +247,10 @@ Delete the column order record for a user + model + table combination.
 
 ## Alpine.js component
 
-`wireSortable(config)` is registered globally via `Alpine.data()`.
+`wireSortable(config)` is registered globally via `Alpine.data()` by the package
+bundle (`dist/wire-sortable.js`, SortableJS compiled in). It registers as soon as the
+bundle runs, not only from `alpine:init`, so it works when the bundle arrives after
+Alpine has already started — a `wire:navigate` visit, a lazily rendered table, a modal.
 
 ### Config options
 

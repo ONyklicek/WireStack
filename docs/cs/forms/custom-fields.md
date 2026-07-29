@@ -713,6 +713,46 @@ Pokud stavíte těžší JS-based pole ve vlastním balíčku, následujte stejn
 vzor: zabundlujte skript, vystavte ho na routě a injektujte ho přes `@assets`
 z pohledu pole, aby byl přítomný kdykoli se pole vykresluje.
 
+**Alpine komponentu registrujte bezpodmínečně.** `alpine:init` proběhne přesně
+jednou za dokument, takže bundle, který dorazí později — po `wire:navigate`,
+s lazy vykresleným povrchem, uvnitř AJAXem načteného modalu — by se přihlásil
+k eventu, jenž už nikdy nenastane, a nezaregistroval by nic; `x-data="myField(…)"`
+pak spadne na `myField is not defined`. Každý bundle ve Wire používá tenhle idiom:
+
+```js
+let registered = false
+const register = () => {
+    if (registered || ! window.Alpine) return
+    registered = true
+    window.Alpine.data('myField', myField)
+}
+if (window.Alpine) register()
+else document.addEventListener('alpine:init', register)
+```
+
+Guard `registered` není obranný detail: bundle se legitimně může na jedné stránce
+vypsat dvakrát (per-surface include plus
+[`@wireStackScripts`](../getting-started.md#javascriptove-assety)) a prohlížeč ho
+oba dva krát spustí.
+
+Pokud váš balíček dodává víc než občasné těžké pole, deklarujte bundle sdílenému
+`AssetManageru` z bootu vlastního service provideru místo pouhého per-surface
+includu — `@wireStackScripts` ho pak vypíše vedle vlastních bundlů Wire:
+
+```php
+use NyonCode\WireCore\Foundation\Assets\AssetManager;
+use NyonCode\WireCore\Foundation\Assets\Js;
+
+app(AssetManager::class)->register([
+    Js::make('my-field', __DIR__.'/../dist/my-field.js')->navigateTrack(),
+], 'my-package');
+```
+
+`Js::make()` bere id bundlu a **filesystemovou** cestu (odtud pochází cache-buster
+`?id=<mtime>`) a URL si vyřeší z pojmenované routy `{package}.asset` vašeho
+balíčku. Těžká těla držte mimo stránky, které je nepotřebují, pomocí
+`->loadedOnRequest()` — ale nikdy ne malý controller, který komponentu registruje.
+
 ---
 
 ## Testování vlastních polí

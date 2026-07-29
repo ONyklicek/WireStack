@@ -151,7 +151,13 @@ Publikované soubory:
 | Soubor | Popis |
 |---|---|
 | `tables/index.blade.php` | Alpine wrapper, zahrnuje wire-table pohled, toolbar widgety |
-| `partials/scripts.blade.php` | Alpine `wireSortable` komponenta, SortableJS init, CSS styly |
+| `partials/scripts.blade.php` | Tenký `@assets` wrapper: vypíše `<script>` tag bundlu balíčku (plus volitelný tag `sortablejs_cdn`) a drag CSS `.wire-sortable-*` |
+
+Alpine komponenta `wireSortable` už v partialu nebydlí — je zkompilovaná, spolu se
+SortableJS, do `dist/wire-sortable.js`. Publikování pohledů vám tedy umožní přestylovat
+drag třídy a markup wrapperu, ale **ne** přepsat chování dragu; publikovaná kopie
+pořád načítá bundle balíčku. Chování změníte tak, že zaregistrujete vlastní Alpine
+komponentu a nasměrujete na ni `x-data` wrapperu.
 
 Po publikování upravte soubory v `resources/views/vendor/wire-sortable/`.
 

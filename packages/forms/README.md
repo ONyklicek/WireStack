@@ -55,7 +55,7 @@ npm run build
 
 ### Layout Template
 
-Your layout must include Vite assets and Livewire (which provides Alpine.js):
+Your layout must include Vite assets, Livewire (which provides Alpine.js), and `@wireStackScripts`:
 
 ```blade
 <!DOCTYPE html>
@@ -63,6 +63,7 @@ Your layout must include Vite assets and Livewire (which provides Alpine.js):
 <head>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
+    @wireStackScripts
 </head>
 <body>
     {{ $slot }}
@@ -70,6 +71,11 @@ Your layout must include Vite assets and Livewire (which provides Alpine.js):
 </body>
 </html>
 ```
+
+`@wireStackScripts` emits every installed Wire package's Alpine controllers into the initial
+document — the placement that survives a `wire:navigate` visit and the cached Back/Forward
+path. It is additive: each field still loads its own bundle as a fallback. See
+[JavaScript Assets](../../docs/getting-started.md#javascript-assets).
 
 ### Publish Config (optional)
 

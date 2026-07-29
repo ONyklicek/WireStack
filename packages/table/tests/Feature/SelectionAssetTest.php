@@ -57,3 +57,36 @@ test('the raw selection source stays import-free for the inline fallback', funct
     expect($source)->not->toMatch('/^\s*import\s/m')
         ->and($source)->not->toMatch('/^\s*export\s/m');
 });
+
+test('the selection source registers unconditionally so it survives a wire:navigate', function () {
+    $source = file_get_contents(
+        dirname(WireTableServiceProvider::ASSETS_PATH).'/resources/js/record-selection.js'
+    );
+
+    // `alpine:init` fires exactly once per document. Navigating to the first
+    // page that has a table loads this bundle after that event, so a listener is
+    // only ever the cold-load fallback: the factory has to be registered
+    // straight away when Alpine is already running, or the table wrapper's
+    // x-data blows up and takes search, filters, the bulk bar and the modal
+    // hosts down with it.
+    expect($source)
+        ->not->toMatch("/addEventListener\('alpine:init',\s*\(\s*\)\s*=>/")
+        ->toMatch("/if \(window\.Alpine\) \{\s*(?:\/\/[^\n]*\n\s*)*registerWireRecordSelection\(\);/")
+        ->toMatch("/document\.addEventListener\('alpine:init', registerWireRecordSelection\);/")
+        ->toContain('if (registered || ! window.Alpine) return;')
+        // A function, NOT an arrow: Alpine binds a data factory's `this` to the
+        // magic context that carries $wire, and the entangles need it.
+        ->toContain('function wireRecordSelection(config = {}) {');
+});
+
+test('the shipped selection bundle carries the SPA-proof registration', function () {
+    $bundle = WireTableServiceProvider::ASSETS_PATH.'/wire-table-selection.js';
+
+    // Minified shape of the idiom above:
+    //   window.Alpine?d():document.addEventListener("alpine:init",d)
+    //   function d(){u||!window.Alpine||(u=!0, …)}
+    // Fails if the dist drifts from source (needs `npm run build:table-assets`).
+    expect(file_get_contents($bundle))
+        ->toMatch('/window\.Alpine\?\w+\(\):document\.addEventListener\("alpine:init",\w+\)/')
+        ->toMatch('/\w+\|\|!window\.Alpine\|\|\(\w+=!0,/');
+});

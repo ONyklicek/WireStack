@@ -151,7 +151,13 @@ Published files:
 | File | Description |
 |---|---|
 | `tables/index.blade.php` | Alpine wrapper, includes wire-table view, toolbar widgets |
-| `partials/scripts.blade.php` | Alpine `wireSortable` component, SortableJS init, CSS styles |
+| `partials/scripts.blade.php` | Thin `@assets` wrapper: emits the `<script>` tag for the package bundle (plus the optional `sortablejs_cdn` tag) and the `.wire-sortable-*` drag CSS |
+
+The `wireSortable` Alpine component no longer lives in the partial — it is compiled,
+with SortableJS, into `dist/wire-sortable.js`. Publishing the views therefore lets you
+restyle the drag classes and the wrapper markup, but **not** rewrite the drag
+behaviour; a published copy still loads the packaged bundle. To change behaviour,
+register your own Alpine component and point the wrapper's `x-data` at it.
 
 After publishing, edit the files in `resources/views/vendor/wire-sortable/`.
 

@@ -814,6 +814,24 @@ const wireRecordActions = (config = {}) => ({
     },
 })
 
-document.addEventListener('alpine:init', () => {
+// ─── Self-registration ──────────────────────────────────────────
+// `alpine:init` fires exactly once per document, so a bundle that only listens
+// for it registers nothing when it arrives after a `wire:navigate`. Register
+// straight away when Alpine is already running; keep the listener for the
+// first, cold load. The `registered` guard is load-bearing: the same src can be
+// emitted twice (a per-surface partial plus the layout tag).
+let registered = false
+
+const registerWireRecordActions = () => {
+    if (registered || ! window.Alpine) return
+    registered = true
+
     window.Alpine.data('wireRecordActions', wireRecordActions)
-})
+}
+
+if (window.Alpine) {
+    // Alpine already started (e.g. the script loaded after a Livewire navigation).
+    registerWireRecordActions()
+} else {
+    document.addEventListener('alpine:init', registerWireRecordActions)
+}

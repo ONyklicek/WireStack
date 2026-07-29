@@ -245,31 +245,20 @@
 
 {{-- Lazy loading: trigger load when visible --}}
 @if($isLazy && !$isTableReady)
-    {{-- The bundles must reach the page on THIS render, not on the one that
-         swaps the table in. Every one of them registers its Alpine components
-         from an `alpine:init` listener, and that event fires exactly once, when
-         Alpine boots. A bundle first emitted by the deferred render arrives
-         after that — Livewire injects the script tag, it runs, it subscribes to
-         an event that will never fire again, and nothing is ever registered. The
-         morphed-in markup then evaluates x-data="wireDropdown(...)" against an
-         undefined factory: every dropdown, the selection root and the record
-         controller die, and each sheet backdrop — an x-show="open" over a state
-         that no longer exists — is left covering the page.
+    {{-- This used to force all three bundles out with the PLACEHOLDER render,
+         because each registered its Alpine components from an `alpine:init`
+         listener and that event fires exactly once, when Alpine boots: a bundle
+         first emitted by the deferred render subscribed to an event that would
+         never fire again and registered nothing.
 
-         Emitted here they land before Alpine boots, so `alpine:init` registers
-         everything and the deferred markup initialises normally. The gates match
-         the loaded table's; the dropdown bundle is unconditional because the
-         toolbar alone (filters, the column toggle) is built from dropdowns. --}}
-    @once
-        @include('wire-core::partials.floating-assets')
-        @if($isSelectable)
-            @include('wire-table::tables.partials.selection-assets')
-        @endif
-        @if($recordActionsRootEnabled)
-            @include('wire-table::tables.partials.record-actions-assets')
-        @endif
-    @endonce
-
+         The bundles now register unconditionally (see AI_CODING_STANDARD.md
+         § Rendering and js-asset-registration.md §3.A), so arriving late is safe,
+         and Livewire already guarantees they are not late in the way that would
+         matter here: on an AJAX round trip it awaits `payload.intercept` — which
+         loads and runs the new @assets to completion — before `handleSuccess`
+         morphs the markup in. The factory therefore exists before the deferred
+         table is ever initialised, and pre-emitting would only pull bundles onto
+         a page whose whole point is to defer them. --}}
     <div
             x-data="{ loaded: false }"
             x-intersect.once="if (!loaded) { loaded = true; $wire.loadTable(); }"

@@ -74,7 +74,7 @@ npm run build
 
 ### Layout Template
 
-Your layout needs Vite assets, Livewire, and the toast notification container:
+Your layout needs Vite assets, Livewire, `@wireStackScripts`, and the toast notification container:
 
 ```blade
 <!DOCTYPE html>
@@ -82,6 +82,7 @@ Your layout needs Vite assets, Livewire, and the toast notification container:
 <head>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
+    @wireStackScripts
 </head>
 <body>
     {{ $slot }}
@@ -92,6 +93,13 @@ Your layout needs Vite assets, Livewire, and the toast notification container:
 ```
 
 > **Note:** Livewire 3 includes Alpine.js automatically. Do not add Alpine.js separately.
+
+> **`@wireStackScripts`** puts every installed Wire package's Alpine controllers in the
+> document. It is additive — the table still emits its own bundles when it renders — but
+> without it a table first reached through `wire:navigate` can come up dead
+> (`wireRecordSelection is not defined`), because Livewire's cached Back/Forward path does
+> not wait for newly injected `<head>` scripts. See
+> [JavaScript Assets](../../docs/getting-started.md#javascript-assets).
 
 ### Publish Config (optional)
 

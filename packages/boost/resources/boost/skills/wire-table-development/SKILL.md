@@ -39,6 +39,24 @@ public function table(Table $table): Table
 }
 ```
 
+## Layout requirement
+
+The app's layout `<head>` needs one directive so every wireStack Alpine controller is in the
+initial document. Add it if it is missing — it is what keeps tables alive across `wire:navigate`
+(without it, a table first reached by SPA navigation can die with `wireRecordSelection is not
+defined`, dead dropdowns and a grey scrim over the table):
+
+```blade
+<head>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @livewireStyles
+    @wireStackScripts
+</head>
+```
+
+Narrow it with `@wireStackScripts('wire-table')` if only one package should be emitted. It is
+additive: each surface still includes its own asset partial as a fallback, and the two dedupe.
+
 ## Rules
 
 - A filter's query callback must return the query Builder.

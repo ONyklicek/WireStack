@@ -108,6 +108,49 @@ Livewire provide it.
 
 ---
 
+## `wireX is not defined` after a `wire:navigate` visit
+
+**Symptom:** A page works when loaded directly, but reaching it through
+`wire:navigate` — or with the browser's Back/Forward buttons — leaves the table
+or form inert. The console shows a `ReferenceError` naming a Wire component
+(`wireRecordSelection`, `wireDropdown`, `wireSortable`, …). The loudest version
+is a full-page grey scrim over a dead table: every mobile sheet backdrop is bound
+to state that was never created.
+
+**Cause:** The bundle that defines the component arrived *with* the new page, and
+Livewire's cached Back/Forward path does not wait for newly injected `<head>`
+scripts before it initialises Alpine on the swapped-in markup.
+
+**Fix:** Put the directive in your layout `<head>` so the controllers are in the
+document from the first page load, where nothing can outrun them:
+
+```blade
+<head>
+    @wireStackScripts
+</head>
+```
+
+See [Getting Started → JavaScript Assets](getting-started.md#javascript-assets).
+
+---
+
+## Reordering stops working, or my own code loses `window.Sortable`
+
+**Symptom:** After upgrading, your application's own JavaScript throws
+`Sortable is not defined`.
+
+**Cause:** SortableJS is now compiled into the `wire-sortable` bundle, and
+`config('wire-sortable.sortablejs_cdn')` defaults to `null` — so the CDN script
+that used to leave a global behind is no longer loaded. Wire's own reordering is
+unaffected; the drag controller uses the bundled copy.
+
+**Fix:** If your code needs the global, ask for it — either set the config key
+back to a CDN URL, or `npm install sortablejs` and assign `window.Sortable`
+yourself. See
+[Sortable Installation → SortableJS](sortable/installation.md#sortablejs).
+
+---
+
 ## A field's JavaScript does not run inside a modal
 
 **Symptom:** A JS-backed field works on a normal page but is dead when opened in

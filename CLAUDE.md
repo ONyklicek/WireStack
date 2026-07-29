@@ -90,6 +90,10 @@ Before changing shared behavior, ask:
 - Rendering an action on a new surface, or touching how a row/header/bulk action
   becomes a button (`RendersAsButton`, `ResolvesActionClick`, the button views):
   `architecture/plans/action-render-unification.md`
+- Shipping or changing a JS bundle, an Alpine controller's registration, the
+  `@wireStackScripts` directive or `Foundation/Assets/` (`AssetManager`, `Js`):
+  `architecture/plans/js-asset-registration.md`, then ADR
+  `architecture/decisions/0024-js-asset-delivery-and-registration.md`
 - Full analysis, inconsistency review, bug-hunting, or audit:
   `architecture/audit.md`
 - Docs, previews, workbench, screenshot refresh:

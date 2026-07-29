@@ -324,9 +324,12 @@ try {
     const d = Alpine.$data(root);
     const ths = [...document.querySelectorAll('thead th')];
     const moved = ths.find((t) => t.getAttribute('data-sortable-column') === 'name');
-    const oldIndex = Sortable.utils.index(moved);
+    // Sibling index from the DOM rather than Sortable.utils.index: SortableJS is
+    // bundled inside wire-sortable.js and is no longer exposed as a global.
+    const thIndex = (el) => [...el.parentElement.children].indexOf(el);
+    const oldIndex = thIndex(moved);
     ths[ths.length - 1].after(moved);
-    d.columnSortableInstance.options.onEnd({ oldIndex, newIndex: Sortable.utils.index(moved) });
+    d.columnSortableInstance.options.onEnd({ oldIndex, newIndex: thIndex(moved) });
   })()`);
   await sleep(1500);
 

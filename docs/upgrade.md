@@ -156,6 +156,59 @@ one button, and the fallback buttons count towards
 
 ---
 
+## JavaScript assets
+
+Wire's Alpine controllers are now declared by each package and can be emitted from
+one place in your layout. Two things to do on the way up.
+
+**1. Add `@wireStackScripts` to the layout `<head>`.**
+
+```blade
+<head>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @livewireStyles
+    @wireStackScripts {{-- [tl! focus] --}}
+</head>
+```
+
+It is additive — every surface still loads its own bundle, so an app without the
+directive keeps working. But it is what fixes components dying after a
+`wire:navigate` visit (`wireRecordSelection is not defined`, dead dropdowns, a grey
+scrim over the table): Livewire's cached Back/Forward path does not wait for newly
+injected `<head>` scripts, and only a bundle that was already in the document is
+immune. See
+[Getting Started → JavaScript Assets](getting-started.md#javascript-assets).
+
+If your app previously worked around this by `@include`-ing package partials in its
+layout, delete those includes and use the directive instead — the partial paths are
+internal and the directive dedupes with them anyway.
+
+**2. `window.Sortable` is no longer provided.** SortableJS is compiled into the
+`wire-sortable` bundle, so `config('wire-sortable.sortablejs_cdn')` now defaults to
+`null` and no CDN script is loaded. Reordering is unaffected — the drag controller
+uses the bundled copy and never reads the global.
+
+Only **your own** code is affected, if it relied on that global existing. Either ask
+for the script back:
+
+```php
+// config/wire-sortable.php
+'sortablejs_cdn' => 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js',
+```
+
+or bundle SortableJS yourself:
+
+```js
+// resources/js/app.js
+import Sortable from 'sortablejs';
+window.Sortable = Sortable;
+```
+
+Nothing else changes: the config key still works when set, and applications that
+already set it are unaffected.
+
+---
+
 ## Finding Breaking Changes
 
 `CHANGELOG.md` is the source of truth. Breaking changes are called out under a

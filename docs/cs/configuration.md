@@ -29,6 +29,24 @@ Potřebujete jen tagy balíčků, které jste nainstalovali.
 | `WIRE_MOBILE_SHEET` | `true` | Core mobilní bottom-sheety |
 | `WIRE_MOBILE_BREAKPOINT` | `sm` | Breakpoint mobilního sheetu |
 
+<a id="javascript-assets"></a>
+## JavaScriptové assety
+
+Assety se nekonfigurují a není co publikovat: každý balíček servíruje své
+předsestavené bundly z vlastní routy, s cache-bustingem podle času poslední změny
+souboru. Jediné, o čem rozhoduje vaše aplikace, je *kde* se vypíšou — dejte
+
+```blade
+@wireStackScripts
+```
+
+jednou do `<head>` layoutu a Alpine controllery všech nainstalovaných balíčků jsou
+v úvodním dokumentu, což je přesně to, co je udrží funkční napříč `wire:navigate`
+(včetně cesty cachovaného Zpět/Vpřed). Předáním jména balíčku —
+`@wireStackScripts('wire-table')` — vypíšete jen bundly jednoho balíčku.
+
+Podrobné vysvětlení v [Začínáme → JavaScriptové assety](getting-started.md#javascriptove-assety).
+
 ## Core
 
 Konfigurace `wire-core` řídí sdílené chování UI.
@@ -261,19 +279,25 @@ Viz [Přehled tabulek](table/overview.md), [Sloupce](table/columns/index.md) a [
 
 ## Sortable
 
-Konfigurace `wire-sortable` řídí řazení řádků a načítání SortableJS.
+Konfigurace `wire-sortable` řídí řazení řádků.
 
 ```php
 return [
     'order_column' => 'sort_order',
-    'sortablejs_cdn' => 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js',
+    'sortablejs_cdn' => null,
     'animation' => 150,
     'user_model' => 'App\\Models\\User',
     'user_key_type' => 'id', // 'uuid' / 'ulid' pro neceločíselné klíče uživatele
 ];
 ```
 
-Nastavte `sortablejs_cdn` na `null`, když si SortableJS bundluje vaše aplikace sama. Nastavte `user_key_type` na `uuid` nebo `ulid` (před spuštěním migrace pořadí sloupců), když váš model uživatele používá neceločíselný primární klíč.
+`sortablejs_cdn` je ve výchozím stavu `null`, protože SortableJS je zkompilovaný přímo
+do bundlu balíčku — řazení nepotřebuje žádný CDN request, takže funguje offline i pod
+přísnou CSP. Nastavte ho jen tehdy, když **váš vlastní** kód potřebuje globální
+`window.Sortable`: tag se pak načte *navíc* k bundlu, nikdy místo něj, a drag
+controller používá zabundlovanou kopii tak jako tak.
+
+Nastavte `user_key_type` na `uuid` nebo `ulid` (před spuštěním migrace pořadí sloupců), když váš model uživatele používá neceločíselný primární klíč.
 
 Viz [Instalace Sortable](sortable/installation.md).
 

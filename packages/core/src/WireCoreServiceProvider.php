@@ -22,6 +22,8 @@ use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
 use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
+use NyonCode\WireCore\Foundation\Assets\AssetManager;
+use NyonCode\WireCore\Foundation\Assets\Js;
 use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Icons\IconSet;
@@ -65,6 +67,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
                 $this->bootModals();
                 $this->bootPlugins();
                 $this->registerAssetRoutes();
+                $this->registerAssets();
             })
             ->hasConfig()
             ->hasCommand(PruneAuditEntriesCommand::class)
@@ -155,8 +158,12 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // check). Singleton so its per-request string memo spans the whole request.
         $this->app->singleton(Primitives::class);
 
-        // Canonical owner of the floating-dropdown asset URL. Singleton so the route
-        // + mtime resolve once per request, not per @include of the partial.
+        // Canonical owner of every package's browser assets. Singleton so the
+        // registry — and each asset's route + mtime memo — spans the whole request.
+        $this->app->singleton(AssetManager::class);
+
+        // Thin facade over the manager for the floating-dropdown bundle URL, kept
+        // because a dozen partials already resolve it by that name.
         $this->app->singleton(FloatingAssets::class);
     }
 
@@ -169,6 +176,17 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // returns the memoised IconManager <svg> string (zero view renders) and can
         // forward Alpine/data-* attributes via its $attributes argument.
         Blade::componentNamespace('NyonCode\\WireCore\\Foundation\\View', 'wire');
+
+        // `@wireStackScripts` — the one tag an app puts in its layout <head> to get
+        // every wireStack Alpine controller into the initial document (which is what
+        // survives Livewire's cached Back/Forward navigation). A thin passthrough:
+        // the whole expression is forwarded to the canonical owner, which resolves
+        // and memoises the markup; no presentation logic lives in the compiler.
+        Blade::directive('wireStackScripts', static fn (string $expression): string => sprintf(
+            '<?php echo app(%s::class)->renderScripts(%s); ?>',
+            '\\'.AssetManager::class,
+            $expression,
+        ));
 
         // Octane: the state-driven view-render memo is a class static that would
         // otherwise accumulate across requests in a long-lived worker (unbounded
@@ -308,5 +326,32 @@ class WireCoreServiceProvider extends PackageServiceProvider
         })
             ->where('asset', '[A-Za-z0-9_-]+')
             ->name('wire-core.asset');
+    }
+
+    /**
+     * Declare the package's browser bundles with the canonical {@see AssetManager},
+     * so `@wireStackScripts` emits them into the app's layout.
+     *
+     * `wire-core-dropdown.js` carries every shared Alpine controller (wireDropdown,
+     * wireContextMenu, wireTabs, wireWizard, wireEditableCell, wireFillHandle) — the
+     * interaction layer, which is exactly what must never arrive late.
+     *
+     * `wire-core-chart.js` is declared `loadedOnRequest()`: charts are the optional,
+     * heavy class, so the directive leaves the body out of every page and the widget's
+     * own partial fetches it. Registering it anyway keeps one owner of its URL —
+     * the partial asks {@see AssetManager::url()} instead of recomputing route+mtime.
+     * The registrar inside the bundle is unconditional, so arriving late is safe.
+     */
+    protected function registerAssets(): void
+    {
+        $this->app->make(AssetManager::class)->register([
+            Js::make('dropdown', self::ASSETS_PATH.'/wire-core-dropdown.js')
+                ->navigateTrack()
+                ->navigateOnce(),
+            Js::make('chart', self::ASSETS_PATH.'/wire-core-chart.js')
+                ->navigateTrack()
+                ->navigateOnce()
+                ->loadedOnRequest(),
+        ], 'wire-core');
     }
 }

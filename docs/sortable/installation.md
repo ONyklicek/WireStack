@@ -59,39 +59,53 @@ A unique constraint on `(user_id, model_type, table_identifier)` ensures one col
 
 ## SortableJS
 
-The package uses [SortableJS](https://sortablejs.github.io/Sortable/) for drag & drop. By default, it loads from a CDN. You have two options:
+Nothing to do. [SortableJS](https://sortablejs.github.io/Sortable/) is compiled into
+the package's own bundle (`dist/wire-sortable.js`), served from the package's asset
+route. There is no npm install, no `vendor:publish` and no CDN request, so reordering
+works offline and under a strict Content Security Policy.
 
-### Option A: CDN (default)
+### JavaScript delivery
 
-No action required. SortableJS is loaded automatically from jsDelivr:
+Like every wireStack package, the sortable bundle is delivered two ways and either is
+enough:
 
-```
-https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js
-```
+- the sortable table view emits it itself when it renders, and
+- `@wireStackScripts` in your layout `<head>` emits it on every page.
 
-### Option B: Bundle it yourself
+Add the directive if your app navigates with `wire:navigate` — see
+[Getting Started → JavaScript Assets](../getting-started.md#javascript-assets) for why
+the layout placement is the one that survives the cached Back/Forward path.
 
-Install SortableJS via your preferred package manager:
+### `sortablejs_cdn`
 
-```bash
-npm install sortablejs
-# or: yarn add sortablejs
-# or: pnpm add sortablejs
-# or: bun add sortablejs
-```
+`config('wire-sortable.sortablejs_cdn')` defaults to `null` and no longer affects
+reordering: the drag controller closes over the bundled import and never reads
+`window.Sortable`.
 
-Add it to your `app.js`:
-
-```js
-import Sortable from 'sortablejs';
-window.Sortable = Sortable;
-```
-
-Then disable the CDN in `config/wire-sortable.php`:
+Set it only when your **own** code needs a global `window.Sortable`, in which case the
+CDN script is loaded *in addition to* the bundle:
 
 ```php
-'sortablejs_cdn' => null,
+// config/wire-sortable.php
+'sortablejs_cdn' => 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js',
 ```
+
+> **Upgrading:** earlier versions loaded that CDN script by default, so an application
+> could reach for the `window.Sortable` it left behind. With the default now `null`,
+> that global is gone unless you ask for it. If your app's own JavaScript uses
+> `window.Sortable`, either set the key above or bundle SortableJS yourself:
+>
+> ```bash
+> npm install sortablejs
+> ```
+>
+> ```js
+> // resources/js/app.js
+> import Sortable from 'sortablejs';
+> window.Sortable = Sortable;
+> ```
+>
+> Wire's own reordering is unaffected either way.
 
 ## Manual publishing
 

@@ -208,7 +208,9 @@ Vypnutí schopnosti není věc toho, že klient ignoruje eventy. Jde s tím i ma
 a endpointy:
 
 - Delegované Alpine controllery se nevykreslí. Tabulka, které zbylo jen vypnutí
-  gest, nevykreslí controller vůbec a její asset bundly se nepožadují.
+  gest, nemontuje controller vůbec a jejich bundly nepřikládá. (S `@wireStackScripts`
+  v layoutu jsou bundly v dokumentu tak jako tak — ale nic je nemontuje, takže
+  stojí jeden cachovaný request a žádné chování.)
 - Tabulka přestane být ARIA `grid`: žádné `role="grid"`, `role="row"`, žádný
   putovní `tabindex`.
 - Řádky nejsou fokusovatelné, takže klik nikomu nesebere fokus.

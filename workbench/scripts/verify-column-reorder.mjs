@@ -99,13 +99,16 @@ try {
     // masks a wrong optimistic update — and does NOT mask it when the server
     // declines to save (no authenticated user, say), where the mangled DOM is
     // simply what the user is left with.
+    // Sibling index, computed from the DOM rather than Sortable.utils.index:
+    // SortableJS is bundled inside wire-sortable.js and is no longer a global.
+    window.thIndex = (el) => [...el.parentElement.children].indexOf(el);
     window.dragHeader = (name, toEnd = true, detach = false) => {
       const ths = [...document.querySelectorAll('thead th')];
       const moved = ths.find((t) => t.getAttribute('data-sortable-column') === name);
       const target = toEnd ? ths[ths.length - 1] : ths.find((t) => t.hasAttribute('data-sortable-column'));
-      const oldIndex = Sortable.utils.index(moved);
+      const oldIndex = thIndex(moved);
       toEnd ? target.after(moved) : target.before(moved);
-      const newIndex = Sortable.utils.index(moved);
+      const newIndex = thIndex(moved);
 
       const original = d.getLivewireComponent;
       if (detach) d.getLivewireComponent = () => null;

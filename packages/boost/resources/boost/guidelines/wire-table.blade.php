@@ -181,6 +181,23 @@ new in wire-core). A rendered action button binds its `keyboardShortcut()` as a 
 every width — so without this one `Delete` press ran an `onKey('Delete')` action once per card behind the
 desktop table. General rule: **never render the same shortcut-carrying action on two surfaces.**
 
+### JavaScript assets
+
+The table's Alpine controllers (`wireRecordSelection`, `wireRecordActions`, plus core's
+`wireDropdown`/`wireContextMenu`/`wireEditableCell`/`wireFillHandle`) ship as pre-built bundles
+served from each package's own asset route — nothing to publish, nothing to build.
+
+**The primary delivery path is `@@wireStackScripts` in the app's layout `<head>`.** The
+per-surface `@@include`s of `partials/selection-assets.blade.php` & co. are now a **fallback**:
+they still work, and they dedupe against the directive, but tell an app to add the directive.
+Only a bundle already in the initial document survives Livewire's cached Back/Forward path,
+which does not await newly injected head scripts — that is what `wireRecordSelection is not
+defined` after a `wire:navigate` (dead dropdowns, a grey sheet-backdrop scrim over the table)
+comes from. `@@wireStackScripts('wire-table')` narrows it to one package.
+
+Registration rules live in the wire-core guidelines: register unconditionally, never only from
+`alpine:init`; lazy the heavy bodies, never the registrators.
+
 ### More
 
 - Summaries: per-column `->summarize(...)` with footer scope toggles; grand totals computed in SQL.
@@ -207,10 +224,10 @@ already gives you:
 
 - **Defer off-screen tables.** `Table::lazy()` returns no rows and runs no query until the
   table scrolls into view (optional `->lazyPlaceholder(...)`). Use it for tables below the fold
-  or in tabs. It defers the query and the markup, **not** the JS: the table's Alpine bundles
-  ship with the placeholder render, because they register from `alpine:init` and that fires
-  once, at boot — a bundle arriving with the deferred markup would register nothing. So
-  `lazy()` is a lever for query and render cost, not for first-paint script weight.
+  or in tabs. It defers the JS too: the table's Alpine bundles ship with the *deferred* render,
+  which is safe because every bundle registers unconditionally (not only from `alpine:init`)
+  and Livewire runs a response's new `@@assets` to completion before morphing it in. So
+  `lazy()` is a lever for query cost, render cost **and** first-paint script weight.
 - **Defer action-group menus.** `ActionGroup::make([...])->lazyMenu()` ships only the trigger plus
   a serialized item spec per row and builds the menu client-side on first open — zero per-row menu
   Blade renders (an eager group renders one view per item per row). Opt-in; the default is eager.

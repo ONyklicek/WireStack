@@ -52,6 +52,8 @@ Before you render the first component, make sure all of these are true:
 - Tailwind scans the Wire vendor views
 - your app defines a `primary` color
 - the main layout includes `@vite`, `@livewireStyles`, and `@livewireScripts`
+- the layout has `@wireStackScripts` in its `<head>` — required in practice for any
+  app that navigates with `wire:navigate` (see [JavaScript Assets](#javascript-assets))
 - the layout renders `<x-wire-notifications::toast-container />` if you want built-in toasts
 
 ## Tailwind CSS Configuration
@@ -133,7 +135,8 @@ module.exports = {
 
 ## Layout Template
 
-Your main layout must include Vite assets and Livewire. Add the notifications container if you use action feedback or toasts.
+Your main layout must include Vite assets and Livewire, plus one `@wireStackScripts`
+in the `<head>`. Add the notifications container if you use action feedback or toasts.
 
 ```blade
 <!DOCTYPE html>
@@ -143,6 +146,7 @@ Your main layout must include Vite assets and Livewire. Add the notifications co
     <meta name="viewport" content="width=device-width, initial-scale=1">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
+    @wireStackScripts {{-- [tl! focus] --}}
 </head>
 <body>
     {{ $slot }}
@@ -155,6 +159,59 @@ Your main layout must include Vite assets and Livewire. Add the notifications co
 ```
 
 Do not install Alpine separately. Livewire 3 already ships it.
+
+## JavaScript Assets
+
+Wire's interactive parts — dropdowns, the row context menu, tabs, wizards,
+inline-edit cells, the fill handle, row selection, record actions, drag & drop
+reordering — are small Alpine components delivered as pre-built bundles from
+inside the packages. There is nothing to install, nothing to publish and no build
+step on your side: each package serves its bundles from its own route, cache-busted
+by the file's modification time.
+
+**`@wireStackScripts` puts every installed package's bundles in the document.**
+One line in the layout `<head>`, and every controller is present on every page:
+
+```blade
+<head>
+    @wireStackScripts
+</head>
+```
+
+Narrow it to a single package if you want to:
+
+```blade
+@wireStackScripts('wire-table')
+```
+
+### Why an SPA app wants it
+
+Without the directive, each surface still loads its own bundle when it renders —
+so a table page loads the table bundles, a form page the form ones. That works,
+and an app that never adds the directive keeps working.
+
+It stops being enough as soon as you navigate with `wire:navigate`. Livewire's
+**cached Back/Forward** path does not wait for newly injected `<head>` scripts
+before it initialises Alpine on the swapped-in page. A bundle that arrives *with*
+the new page can therefore lose the race, and the markup is initialised against a
+registry that does not have the component yet:
+
+```text
+Uncaught ReferenceError: wireRecordSelection is not defined
+```
+
+which shows up as dead dropdowns, checkboxes that do nothing and — the loudest
+symptom — a full-page grey scrim over the table, because every mobile sheet
+backdrop is bound to state that no longer exists.
+
+A bundle that was already in the document when the visitor first arrived cannot
+lose that race. That is the whole job of `@wireStackScripts`: it is not a
+convenience, it is the only placement the cached back/forward path cannot beat.
+
+> Heavy, optional assets — the TipTap rich editor, the Chart.js chart controller —
+> are deliberately *not* in the always-loaded set. The surface that needs one fetches
+> it when it renders. Charts additionally need Chart.js, which stays your app's own
+> dependency.
 
 ## Config Publishing (optional)
 
@@ -314,6 +371,8 @@ Next: [Field Reference](forms/fields/index.md), [Validation](forms/validation.md
 ### Components render without JavaScript behavior
 
 - confirm the layout includes `@livewireScripts`
+- confirm the layout `<head>` includes `@wireStackScripts` — especially if the
+  breakage only appears after a `wire:navigate` visit or on Back/Forward
 - remove any standalone Alpine bootstrap from `resources/js/app.js`
 
 ### Notifications do not appear

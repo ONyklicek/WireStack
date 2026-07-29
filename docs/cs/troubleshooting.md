@@ -107,6 +107,51 @@ Alpine dodává a startuje.
 
 ---
 
+<a id="wirex-is-not-defined-after-a-wire-navigate-visit"></a>
+## `wireX is not defined` po návštěvě přes `wire:navigate`
+
+**Příznak:** Stránka funguje, když se načte přímo, ale při příchodu přes
+`wire:navigate` — nebo tlačítky Zpět/Vpřed v prohlížeči — je tabulka či formulář
+mrtvý. V konzoli je `ReferenceError` se jménem Wire komponenty
+(`wireRecordSelection`, `wireDropdown`, `wireSortable`, …). Nejhlasitější varianta
+je šedý scrim přes celou stránku nad mrtvou tabulkou: každý backdrop mobilního
+sheetu je navázaný na stav, který nikdy nevznikl.
+
+**Příčina:** Bundle definující komponentu dorazil *spolu* s novou stránkou a cesta
+cachovaného Zpět/Vpřed v Livewire nečeká na nově injektované `<head>` skripty, než
+na prohozeném markupu inicializuje Alpine.
+
+**Náprava:** Dejte direktivu do `<head>` layoutu, ať jsou controllery v dokumentu
+už od prvního načtení stránky, kde je nemá co předběhnout:
+
+```blade
+<head>
+    @wireStackScripts
+</head>
+```
+
+Viz [Začínáme → JavaScriptové assety](getting-started.md#javascriptove-assety).
+
+---
+
+<a id="reordering-stops-working-or-my-own-code-loses-window-sortable"></a>
+## Řazení přestalo fungovat, nebo můj kód přišel o `window.Sortable`
+
+**Příznak:** Po upgradu vyhazuje vlastní JavaScript vaší aplikace
+`Sortable is not defined`.
+
+**Příčina:** SortableJS je nově zkompilovaný do bundlu `wire-sortable` a
+`config('wire-sortable.sortablejs_cdn')` je ve výchozím stavu `null` — CDN skript,
+který po sobě nechával globál, se tedy už nenačítá. Vlastního řazení Wire se to
+netýká; drag controller používá zabundlovanou kopii.
+
+**Náprava:** Pokud váš kód globál potřebuje, řekněte si o něj — buď nastavte
+konfigurační klíč zpět na CDN URL, nebo si dejte `npm install sortablejs` a
+`window.Sortable` přiřaďte sami. Viz
+[Instalace Sortable → SortableJS](sortable/installation.md#sortablejs).
+
+---
+
 ## JavaScript pole neběží uvnitř modalu
 
 **Příznak:** JS-based pole funguje na normální stránce, ale je mrtvé při otevření

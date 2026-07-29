@@ -363,25 +363,25 @@ $table->lazy()
 
 ### Jak to funguje
 
-1. Stránka se vykreslí okamžitě s placeholder HTML — a s Alpine bundly, které bude tabulka potřebovat
+1. Stránka se vykreslí okamžitě s placeholder HTML
 2. Livewire odešle async volání pro načtení obsahu tabulky
 3. Placeholder je nahrazen plně vykreslenou tabulkou
 4. Následné interakce (řazení, filtrování, stránkování) jsou normální Livewire volání
 
-Bod 1 není detail, který by se dal přejít. Bundly za dropdowny, výběrem řádků
-a record controllerem registrují své Alpine komponenty z listeneru na
-`alpine:init` — a ten proběhne přesně jednou, když Alpine nabootuje. Bundle,
-který by dorazil až s odloženým markupem, přijde po něm, přihlásí se k eventu,
-jenž už nikdy nenastane, a nezaregistruje nic; tabulka by pak naběhla s mrtvými
-dropdowny a s backdropy sheetů zaseknutými přes celou stránku. Proto je posílá
-už render **placeholderu** a markup, který ho nahradí, se inicializuje normálně.
+`lazy()` odkládá i JavaScript, nejen dotaz a markup. Alpine bundly tabulky jdou
+až s odloženým renderem a je to bezpečné ze dvou důvodů: Livewire nové `@assets`
+z odpovědi načte a spustí **do konce**, teprve pak markup zamorfuje dovnitř — a
+každý wireStack bundle registruje své Alpine komponenty bezpodmínečně, ne až
+z listeneru na `alpine:init`. Ten proběhne přesně jednou, když Alpine nabootuje,
+takže bundle, který dorazí později, by se jinak přihlásil k eventu, jenž už
+nikdy nenastane, a nezaregistroval by nic. Factory tedy existuje dřív, než se
+odložená tabulka inicializuje.
 
-Které bundly se načtou, se řídí konfigurací tabulky: dropdown bundle vždy
-(toolbar je z dropdownů), selection bundle při `selectable()` a record
-controller vždy, když si ho tabulka vůbec montuje — pointer bindingy record
-akcí, kontextové menu řádku, gridová klávesová sémantika, drag-select nebo
-výběr rozsahu Shiftem. Vlastní `lazyPlaceholder()` mění jen viditelný
-skeleton — na to, co se načte, nemá vliv.
+Vlastní `lazyPlaceholder()` mění jen viditelný skeleton — na to, co se načte,
+nemá vliv. A pokud váš layout nese
+[`@wireStackScripts`](../getting-started.md#javascriptove-assety), jsou sdílené
+controllery v dokumentu už od prvního vykreslení, což je přesně to, co chcete
+v aplikaci navigující přes `wire:navigate`.
 
 ### Kdy použít
 

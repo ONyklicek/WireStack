@@ -59,39 +59,54 @@ Unikátní omezení na `(user_id, model_type, table_identifier)` zajišťuje jed
 
 ## SortableJS
 
-Balíček používá [SortableJS](https://sortablejs.github.io/Sortable/) pro drag & drop. Ve výchozím stavu se načítá z CDN. Máte dvě možnosti:
+Nic není potřeba. [SortableJS](https://sortablejs.github.io/Sortable/) je zkompilovaný
+přímo do bundlu balíčku (`dist/wire-sortable.js`), který se servíruje z asset routy
+balíčku. Žádný npm install, žádný `vendor:publish`, žádný CDN request — řazení tedy
+funguje offline i pod přísnou Content Security Policy.
 
-### Možnost A: CDN (výchozí)
+### Doručení JavaScriptu
 
-Žádná akce není potřeba. SortableJS se načte automaticky z jsDelivr:
+Jako u každého wireStack balíčku se sortable bundle doručuje dvěma cestami a stačí
+kterákoli z nich:
 
-```
-https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js
-```
+- pohled sortable tabulky ho vypíše sám, když se vykreslí, a
+- `@wireStackScripts` v `<head>` vašeho layoutu ho vypíše na každé stránce.
 
-### Možnost B: Zabundlovat sami
+Direktivu přidejte, pokud vaše aplikace naviguje přes `wire:navigate` — proč je právě
+umístění v layoutu to, které přežije cestu cachovaného Zpět/Vpřed, vysvětluje
+[Začínáme → JavaScriptové assety](../getting-started.md#javascriptove-assety).
 
-Nainstalujte SortableJS přes svého preferovaného package managera:
+### `sortablejs_cdn`
 
-```bash
-npm install sortablejs
-# nebo: yarn add sortablejs
-# nebo: pnpm add sortablejs
-# nebo: bun add sortablejs
-```
+`config('wire-sortable.sortablejs_cdn')` je ve výchozím stavu `null` a na řazení už
+nemá vliv: drag controller pracuje se zabundlovaným importem a `window.Sortable`
+nikdy nečte.
 
-Přidejte ho do svého `app.js`:
-
-```js
-import Sortable from 'sortablejs';
-window.Sortable = Sortable;
-```
-
-Pak vypněte CDN v `config/wire-sortable.php`:
+Nastavte ho jen tehdy, když **váš vlastní** kód potřebuje globální `window.Sortable`;
+CDN skript se pak načte *navíc* k bundlu:
 
 ```php
-'sortablejs_cdn' => null,
+// config/wire-sortable.php
+'sortablejs_cdn' => 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js',
 ```
+
+> **Upgrade:** dřívější verze ten CDN skript načítaly ve výchozím stavu, takže aplikace
+> mohla sáhnout po globálu `window.Sortable`, který po sobě nechal. S výchozí hodnotou
+> `null` tenhle globál zmizí, pokud si o něj neřeknete. Pokud vlastní JavaScript vaší
+> aplikace `window.Sortable` používá, buď nastavte klíč výše, nebo si SortableJS
+> zabundlujte sami:
+>
+> ```bash
+> npm install sortablejs
+> ```
+>
+> ```js
+> // resources/js/app.js
+> import Sortable from 'sortablejs';
+> window.Sortable = Sortable;
+> ```
+>
+> Vlastní řazení Wire to neovlivní ani v jednom případě.
 
 ## Manuální publikování
 

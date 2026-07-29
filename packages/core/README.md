@@ -39,7 +39,28 @@ export default {
 
 ### Alpine.js
 
-Wire Core uses inline Alpine.js directives (included via Livewire 3). No separate Alpine installation needed.
+Wire Core uses Alpine.js (included via Livewire 3). No separate Alpine installation needed.
+
+Its interactive controllers — `wireDropdown`, `wireContextMenu`, `wireTabs`, `wireWizard`,
+`wireEditableCell`, `wireFillHandle` — ship as a pre-built bundle served from the package's
+own route: nothing to publish, no npm, no build step. Add one directive to your layout
+`<head>` so every installed Wire package's controllers are in the initial document:
+
+```blade
+<head>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @livewireStyles
+    @wireStackScripts
+</head>
+```
+
+It is additive — each surface still emits its own bundle as a fallback — but an app that
+navigates with `wire:navigate` wants it: Livewire's cached Back/Forward path does not wait
+for newly injected `<head>` scripts, so only a bundle that was already in the document is
+safe from that race. `@wireStackScripts('wire-core')` narrows the output to one package.
+
+Packages declare their bundles with the canonical `Foundation\Assets\AssetManager`; see
+[JavaScript Assets](../../docs/getting-started.md#javascript-assets).
 
 ## What's Included
 

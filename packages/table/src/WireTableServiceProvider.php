@@ -10,6 +10,8 @@ use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Foundation\Assets\AssetManager;
+use NyonCode\WireCore\Foundation\Assets\Js;
 use NyonCode\WireTable\Livewire\TableStateSynthesizer;
 use NyonCode\WireTable\Support\RecordAction;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -35,6 +37,7 @@ class WireTableServiceProvider extends PackageServiceProvider
 
                 $this->registerRecordActionMacros();
                 $this->registerAssetRoutes();
+                $this->registerAssets();
             })
             ->hasConfig()
             ->hasViews()
@@ -99,6 +102,24 @@ class WireTableServiceProvider extends PackageServiceProvider
         })
             ->where('asset', '[A-Za-z0-9_-]+')
             ->name('wire-table.asset');
+    }
+
+    /**
+     * Declare the table's browser bundles with the canonical AssetManager, so an app
+     * that renders `@wireStackScripts` in its layout carries `wireRecordActions` and
+     * `wireRecordSelection` on every page — including one with no table, which is
+     * the page a `wire:navigate` visit to a table is made *from*.
+     */
+    protected function registerAssets(): void
+    {
+        app(AssetManager::class)->register([
+            Js::make('records', self::ASSETS_PATH.'/wire-table-records.js')
+                ->navigateTrack()
+                ->navigateOnce(),
+            Js::make('selection', self::ASSETS_PATH.'/wire-table-selection.js')
+                ->navigateTrack()
+                ->navigateOnce(),
+        ], 'wire-table');
     }
 
     /**

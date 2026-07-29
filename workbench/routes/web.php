@@ -13,6 +13,8 @@ use Workbench\App\Livewire\Previews\LayoutPreview;
 use Workbench\App\Livewire\Previews\ModalStackingPreview;
 use Workbench\App\Livewire\Previews\PanelPreview;
 use Workbench\App\Livewire\Previews\SortablePreview;
+use Workbench\App\Livewire\Previews\SpaPlainPreview;
+use Workbench\App\Livewire\Previews\SpaTablePreview;
 use Workbench\App\Livewire\Previews\TablePreview;
 use Workbench\App\Livewire\Previews\WidgetPreview;
 
@@ -344,6 +346,8 @@ foreach ([
     'gesture-lab-click' => ['title' => 'Gesture Lab (single click)', 'subtitle' => 'A table whose only record action is a single click opening a modal.', 'component' => GestureLabPreview::class, 'variant' => 'click-only'],
     'gesture-lab-default' => ['title' => 'Gesture Lab (shipped default)', 'subtitle' => 'The same table with no gestures() call at all — what a consumer gets out of the box: checkboxes, the declared record actions and the right-click menu, but no keyboard grid, no ranges and no sweep.', 'component' => GestureLabPreview::class, 'variant' => 'default'],
     'gesture-lab-plain' => ['title' => 'Gesture Lab (gestures off)', 'subtitle' => 'The same table with gestures(false): no keyboard grid, no ranges, no sweep, no right-click menu, no ? help — the declared record actions and the checkboxes stay.', 'component' => GestureLabPreview::class, 'variant' => 'plain'],
+    'spa-navigate' => ['title' => 'SPA Navigation · page A', 'subtitle' => 'A page with no table, no dropdown and no sortable surface — none of the package bundles are in this document. It links to page B with wire:navigate.', 'component' => SpaPlainPreview::class, 'variant' => 'plain'],
+    'spa-navigate-table' => ['title' => 'SPA Navigation · page B', 'subtitle' => 'Selection, record actions, the fill handle, the context menu and column reordering on one table — every client-side controller at once, first arriving on a wire:navigate.', 'component' => SpaTablePreview::class, 'variant' => 'table'],
     'actions-modal-stacking' => ['title' => 'Wire Actions · Nested Modal Stacking', 'subtitle' => 'Six live configurations of the nested-modal frame stack — create-and-select ($setParent), deep $setFrame, inline registerActions, slide-over, and a stacked wizard.', 'component' => ModalStackingPreview::class, 'variant' => 'gallery'],
     'core-overview' => ['title' => 'Wire Core', 'subtitle' => 'Stats, actions, and shared primitives.', 'component' => CorePreview::class, 'variant' => 'overview'],
     'core-modal' => ['title' => 'Wire Core Modal', 'subtitle' => 'Real modal surface from the core runtime.', 'component' => CorePreview::class, 'variant' => 'modal'],

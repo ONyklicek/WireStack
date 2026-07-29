@@ -147,6 +147,52 @@ test('the shipped bundle lifts a teleported panel above the surface that owns it
         ->toContain('getComputedStyle');
 });
 
+test('the source registers unconditionally so the bundle survives a wire:navigate', function () {
+    $source = file_get_contents(
+        dirname(WireCoreServiceProvider::ASSETS_PATH).'/resources/js/dropdown.js'
+    );
+
+    // `alpine:init` fires exactly once per document. A bundle that arrives after
+    // a `wire:navigate` — the first page with a dropdown on it — would subscribe
+    // to an event that already fired and register nothing, leaving every
+    // `x-data="wireDropdown(...)"` on the new page evaluating against an empty
+    // registry. So the listener may only be the cold-load fallback for a named,
+    // idempotent registrar that also runs straight away when Alpine is up.
+    expect($source)
+        ->not->toMatch("/addEventListener\('alpine:init',\s*\(\s*\)\s*=>/")
+        ->toMatch("/if \(window\.Alpine\) \{\s*(?:\/\/[^\n]*\n\s*)*registerWireCoreDropdown\(\)/")
+        ->toMatch("/document\.addEventListener\('alpine:init', registerWireCoreDropdown\)/");
+
+    // Data, magics AND directives share the one-shot problem, so all of them
+    // must sit inside the registrar — not one of them may be left in a listener.
+    preg_match('/const registerWireCoreDropdown = \(\) => \{(.*?)\n\}/s', $source, $matches);
+
+    expect($matches[1] ?? '')
+        ->toContain('if (registered || ! window.Alpine) return')
+        ->toContain("magic('float'")
+        ->toContain("magic('clickedInside'")
+        ->toContain("data('wireDropdown'")
+        ->toContain("data('wireContextMenu'")
+        ->toContain("data('wireTabs'")
+        ->toContain("data('wireWizard'")
+        ->toContain("data('wireEditableCell'")
+        ->toContain("data('wireFillHandle'")
+        ->toContain('registerSheetDismiss(window.Alpine)')
+        ->toContain('registerFocusTrap(window.Alpine)');
+});
+
+test('the shipped bundle carries the SPA-proof registration', function () {
+    $bundle = WireCoreServiceProvider::ASSETS_PATH.'/wire-core-dropdown.js';
+
+    // Minified shape of the idiom above:
+    //   window.Alpine?r():document.addEventListener("alpine:init",r)
+    //   r=()=>{g||!window.Alpine||(g=!0, …)}
+    // Fails if the dist drifts from source (needs `npm run build:core-assets`).
+    expect(file_get_contents($bundle))
+        ->toMatch('/window\.Alpine\?\w+\(\):document\.addEventListener\("alpine:init",\w+\)/')
+        ->toMatch('/\w+\|\|!window\.Alpine\|\|\(\w+=!0,/');
+});
+
 test('the shipped bundle registers the row context-menu Alpine data', function () {
     $bundle = WireCoreServiceProvider::ASSETS_PATH.'/wire-core-dropdown.js';
 
