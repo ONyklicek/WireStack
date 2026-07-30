@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Str;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Exceptions\TableConfigurationException;
 
@@ -35,6 +36,17 @@ use NyonCode\WireTable\Exceptions\TableConfigurationException;
  */
 trait HasSubRows
 {
+    /**
+     * Alias of the presence count the query planner adds for
+     * {@see subRowsHideWhenEmpty()}.
+     *
+     * Deliberately not the default `{relation}_count`: a rollup column may
+     * already own that alias with a different constraint (rollups honour the
+     * scoped filters but not subRowQuery()), and two selects under one name
+     * would make which one wins a matter of ordering.
+     */
+    public const SUB_ROWS_PRESENCE_COUNT = 'wire_sub_rows_count';
+
     /** Eloquent relationship name for sub-rows */
     protected ?string $subRowRelation = null;
 
@@ -50,6 +62,9 @@ trait HasSubRows
 
     /** Whether a given record may have sub-rows at all (bool or Closure(record)) */
     protected Closure|bool $subRowsVisible = true;
+
+    /** Whether records with no children lose their expander */
+    protected bool $subRowsHideWhenEmpty = false;
 
     /**
      * Memoized per-record results of {@see hasSubRowsFor()}, keyed by
@@ -169,6 +184,32 @@ trait HasSubRows
     }
 
     /**
+     * Drop the expander from records that have no children right now.
+     *
+     * The common case {@see subRowsVisible()} would otherwise cost a query per
+     * row: with this on, the table's own query carries a constrained count of
+     * the sub-row relation, so the check is an attribute read. Records the
+     * table did not fetch (an off-page record handed straight to
+     * hasSubRowsFor()) fall back to one EXISTS.
+     *
+     *   ->subRows('items')->subRowsHideWhenEmpty()
+     *
+     * The count is constrained exactly as the panel is — subRowQuery() and any
+     * Filter::subRows() — so a parent whose children are all filtered out
+     * loses its expander rather than opening onto the empty-state message.
+     * Interactive per-parent filters (subRowsFilterable()) are not folded in:
+     * they change per parent and would make the expander flicker as the user
+     * types.
+     */
+    public function subRowsHideWhenEmpty(bool $hide = true): static
+    {
+        $this->subRowsHideWhenEmpty = $hide;
+        $this->subRowsVisibleCache = [];
+
+        return $this;
+    }
+
+    /**
      * Enable/disable expand/collapse toggle for sub-rows.
      */
     public function subRowsExpandable(bool $expandable = true): static
@@ -270,7 +311,8 @@ trait HasSubRows
 
     /**
      * Whether this specific record gets sub-rows: the table has them at all,
-     * and the record passes {@see subRowsVisible()}.
+     * the record passes {@see subRowsVisible()}, and — with
+     * {@see subRowsHideWhenEmpty()} — it actually has children.
      *
      * The structural counterpart is {@see hasSubRows()} — that one decides
      * whether the expander column exists, and is evaluated once without a
@@ -284,7 +326,10 @@ trait HasSubRows
             return false;
         }
 
-        if (! $this->subRowsVisible instanceof Closure) {
+        $needsRecord = $this->subRowsVisible instanceof Closure
+            || ($this->subRowsHideWhenEmpty && $this->subRowRelation !== null);
+
+        if (! $needsRecord) {
             return $this->subRowsVisible;
         }
 
@@ -292,7 +337,69 @@ trait HasSubRows
             ? $record::class.':'.$record->getKey()
             : 'obj:'.spl_object_id($record);
 
-        return $this->subRowsVisibleCache[$cacheKey] ??= (bool) ($this->subRowsVisible)($record);
+        return $this->subRowsVisibleCache[$cacheKey] ??= $this->resolveSubRowsFor($record);
+    }
+
+    public function hidesSubRowsWhenEmpty(): bool
+    {
+        return $this->subRowsHideWhenEmpty;
+    }
+
+    /**
+     * The uncached answer behind {@see hasSubRowsFor()}. The condition runs
+     * first: a record it already rejected never needs counting.
+     */
+    protected function resolveSubRowsFor(mixed $record): bool
+    {
+        $allowed = $this->subRowsVisible instanceof Closure
+            ? (bool) ($this->subRowsVisible)($record)
+            : $this->subRowsVisible;
+
+        if (! $allowed) {
+            return false;
+        }
+
+        if (! $this->subRowsHideWhenEmpty || $this->subRowRelation === null) {
+            return true;
+        }
+
+        return $this->recordHasChildren($record);
+    }
+
+    /**
+     * Whether a record has at least one child, preferring anything already in
+     * memory over a query.
+     *
+     * In a rendered table the first branch always hits: the planner adds the
+     * presence count for exactly this reason (see SUB_ROWS_PRESENCE_COUNT). The
+     * query is the fallback for a record that never came through it.
+     */
+    protected function recordHasChildren(mixed $record): bool
+    {
+        $relation = $this->subRowRelation;
+
+        if ($record instanceof Model) {
+            $planned = $record->getAttribute(self::SUB_ROWS_PRESENCE_COUNT);
+
+            if ($planned !== null) {
+                return (int) $planned > 0;
+            }
+
+            // A caller's own withCount(), or the count a limited eager load
+            // (subRowsLimit) ships alongside the children.
+            $loaded = $record->getAttribute(Str::snake($relation).'_count');
+
+            if ($loaded !== null) {
+                return (int) $loaded > 0;
+            }
+
+            if ($record->relationLoaded($relation)) {
+                return $record->getRelation($relation)->isNotEmpty();
+            }
+        }
+
+        // EXISTS, not COUNT: nothing here needs the number.
+        return $this->getSubRowsQuery($record, applyLimit: false)->exists();
     }
 
     public function getSubRowRelation(): ?string

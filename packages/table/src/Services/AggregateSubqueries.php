@@ -62,4 +62,38 @@ final class AggregateSubqueries
 
         return $query;
     }
+
+    /**
+     * Count a record's sub-rows under a dedicated alias, so
+     * `Table::subRowsHideWhenEmpty()` can ask whether a row has children
+     * without a query per row.
+     *
+     * Aliased rather than reusing the default `{relation}_count`: a rollup
+     * column may already hold that name with a different constraint, and one
+     * alias selected twice makes which subquery wins a matter of ordering.
+     *
+     * @param  Builder<Model>  $query
+     * @param  Closure|null  $constraint  Applied to the counted relation, so the count
+     *                                    matches the children the panel would show
+     * @return Builder<Model>
+     */
+    public function applySubRowPresence(
+        Builder $query,
+        string $relation,
+        string $alias,
+        ?Closure $constraint = null,
+    ): Builder {
+        $query->withCount([
+            $relation.' as '.$alias => static function ($related) use ($constraint): void {
+                // The result is discarded on purpose: a sub-row constraint
+                // mutates the builder it is handed (it may also return it,
+                // which withCount has no use for).
+                if ($constraint !== null) {
+                    $constraint($related);
+                }
+            },
+        ]);
+
+        return $query;
+    }
 }
