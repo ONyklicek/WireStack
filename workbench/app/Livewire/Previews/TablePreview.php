@@ -145,7 +145,7 @@ class TablePreview extends Component
             return $this->imageGalleryTable($table);
         }
 
-        if ($this->variant === 'editable-fill' || $this->variant === 'editable-fill-selectable') {
+        if (in_array($this->variant, ['editable-fill', 'editable-fill-selectable', 'editable-fill-paged'], true)) {
             return $this->editableFillTable($table);
         }
 
@@ -412,6 +412,12 @@ class TablePreview extends Component
      * innermost component is the fill handle — and both gestures drag over the
      * same rows with the same pointer. Nothing but a browser can tell whether
      * the two stay out of each other's way.
+     *
+     * The `editable-fill-paged` variant adds pagination, which no other editable
+     * fixture had. Inline editing and a page-size select are what makes one
+     * Livewire commit carry both a state change and a call that answers with no
+     * HTML: `updateTableCell()` skips the render on purpose, and a per-page
+     * change riding along in that same commit used to be swallowed with it.
      */
     private function editableFillTable(Table $table): Table
     {
@@ -429,6 +435,17 @@ class TablePreview extends Component
             ])
             ->searchable(false)
             ->paginated(false);
+
+        if ($this->variant === 'editable-fill-paged') {
+            // Two page sizes over the four seeded users, so switching visibly
+            // doubles the rows on screen — a driver can tell the change landed
+            // apart from anything else that might re-render the table.
+            $table
+                ->paginated()
+                ->perPage(2)
+                ->perPageOptions([2, 4])
+                ->defaultSort('id', 'asc');
+        }
 
         if ($this->variant === 'editable-fill-selectable') {
             $table

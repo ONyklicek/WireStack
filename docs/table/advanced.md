@@ -311,6 +311,14 @@ $table->poll('5s')
 The closure receives the filtered query (without ordering) and must return a
 string that changes whenever a re-render is needed.
 
+A skipped render is always conditional on the request having changed nothing the
+table displays. Livewire merges everything queued for one component into a single
+request, so a poll tick — or an inline-cell save, which skips the render for its
+own reason — can travel together with the user changing the page size, the
+search, a filter or the sort. In that request the change wins and the table
+renders; a skip there would leave the browser showing the previous view until the
+user did something else.
+
 ### Row/Column Polling
 
 Use `PollColumn` for per-cell live updates without refreshing the entire table:

@@ -313,6 +313,14 @@ $table->poll('5s')
 Closura dostane filtrovaný dotaz (bez řazení) a musí vrátit řetězec, který se
 změní vždy, když je potřeba re-render.
 
+Přeskočení renderu je vždy podmíněné tím, že požadavek nezměnil nic, co tabulka
+zobrazuje. Livewire slučuje vše, co je pro jednu komponentu ve frontě, do jednoho
+požadavku — takže poll tick (nebo uložení inline buňky, které render přeskakuje z
+vlastního důvodu) může dorazit společně s tím, jak uživatel mění velikost stránky,
+hledání, filtr nebo řazení. V takovém požadavku vyhrává změna a tabulka se
+vyrenderuje; přeskočení by nechalo v prohlížeči starý pohled až do další akce
+uživatele.
+
 ### Polling řádku/sloupce
 
 Použijte `PollColumn` pro živé aktualizace per buňka bez obnovování celé tabulky:
