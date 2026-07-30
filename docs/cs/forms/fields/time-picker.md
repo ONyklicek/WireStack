@@ -104,5 +104,5 @@ měnit, je to `DateTimePicker`.
 | `mode(string)` | string | Zamčeno na `time`; jakýkoli jiný režim vyhodí `FormConfigurationException` |
 
 Všechny ostatní metody pocházejí z [DateTimePicker](date-time-picker.md#metody) a
-ze [společného API pole](index.md#společné-api-pole) pro label, hint, tooltip a
+ze [společného API pole](index.md#spolecne-api-pole) pro label, hint, tooltip a
 další sdílené metody.
