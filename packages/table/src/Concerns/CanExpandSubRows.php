@@ -144,7 +144,10 @@ trait CanExpandSubRows
     public function getSubRows(mixed $record): Collection
     {
         $table = $this->getTable();
-        if (! $table->hasSubRows()) {
+
+        // hasSubRowsFor() folds in hasSubRows(); it also stops detail-row mode
+        // from handing back the record itself for a rejected parent.
+        if (! $table->hasSubRowsFor($record)) {
             return collect();
         }
 
@@ -227,8 +230,11 @@ trait CanExpandSubRows
 
         // Only load sub-rows that will be displayed. isRowExpanded() already
         // folds in the baseline, so an "everything open" table naturally
-        // targets the whole page.
-        $target = $collection->filter(fn ($record) => $this->isRowExpanded($record->getKey()));
+        // targets the whole page — hasSubRowsFor() then drops the parents whose
+        // panel that baseline would open but subRowsVisible() never renders.
+        $target = $collection->filter(
+            fn ($record) => $this->isRowExpanded($record->getKey()) && $table->hasSubRowsFor($record),
+        );
 
         if ($target->isEmpty()) {
             return;
@@ -465,7 +471,7 @@ trait CanExpandSubRows
     {
         $table = $this->getTable();
 
-        if (! $table->hasSubRows() || $table->getSubRowRelation() === null) {
+        if (! $table->hasSubRowsFor($record) || $table->getSubRowRelation() === null) {
             return 0;
         }
 

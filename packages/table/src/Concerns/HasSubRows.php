@@ -48,6 +48,19 @@ trait HasSubRows
     /** Custom query modifier for sub-rows */
     protected ?Closure $subRowQueryCallback = null;
 
+    /** Whether a given record may have sub-rows at all (bool or Closure(record)) */
+    protected Closure|bool $subRowsVisible = true;
+
+    /**
+     * Memoized per-record results of {@see hasSubRowsFor()}, keyed by
+     * class:key. Both layouts are in the document at every width, so the
+     * condition is asked 2-3 times per record per render — a callback doing
+     * `$record->items()->exists()` would otherwise be that many queries.
+     *
+     * @var array<string, bool>
+     */
+    protected array $subRowsVisibleCache = [];
+
     /** Whether sub-rows are expanded by default */
     protected bool $subRowsDefaultExpanded = false;
 
@@ -128,6 +141,29 @@ trait HasSubRows
     public function subRowsDefaultExpanded(bool $expanded = true): static
     {
         $this->subRowsDefaultExpanded = $expanded;
+
+        return $this;
+    }
+
+    /**
+     * Restrict sub-rows to the records that can actually have children.
+     *
+     * Without it, a table mixing record kinds gives an expand chevron to every
+     * row, including ones whose panel can only ever say "no sub-rows". The
+     * callback receives the record; the chevron, the child panel and the
+     * eager load all disappear for records it rejects.
+     *
+     *   ->subRows('items')
+     *   ->subRowsVisible(fn (Model $record) => $record->isPiecework())
+     *
+     * The result is memoized per record for the duration of the request, so a
+     * callback may touch the database — but prefer a value already on the
+     * record (a `withCount` attribute, a column) over a query per row.
+     */
+    public function subRowsVisible(Closure|bool $condition = true): static
+    {
+        $this->subRowsVisible = $condition;
+        $this->subRowsVisibleCache = [];
 
         return $this;
     }
@@ -230,6 +266,33 @@ trait HasSubRows
         return $this->subRowRelation !== null
             || ! empty($this->subRowColumns)
             || $this->subRowView !== null;
+    }
+
+    /**
+     * Whether this specific record gets sub-rows: the table has them at all,
+     * and the record passes {@see subRowsVisible()}.
+     *
+     * The structural counterpart is {@see hasSubRows()} — that one decides
+     * whether the expander column exists, and is evaluated once without a
+     * record. This one runs per row and only decides that row's chevron and
+     * panel, so the cell itself must still render (empty) to keep the columns
+     * aligned.
+     */
+    public function hasSubRowsFor(mixed $record): bool
+    {
+        if (! $this->hasSubRows()) {
+            return false;
+        }
+
+        if (! $this->subRowsVisible instanceof Closure) {
+            return $this->subRowsVisible;
+        }
+
+        $cacheKey = $record instanceof Model && $record->getKey() !== null
+            ? $record::class.':'.$record->getKey()
+            : 'obj:'.spl_object_id($record);
+
+        return $this->subRowsVisibleCache[$cacheKey] ??= (bool) ($this->subRowsVisible)($record);
     }
 
     public function getSubRowRelation(): ?string

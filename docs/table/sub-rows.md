@@ -61,6 +61,33 @@ Use sub-rows when:
 Avoid them when the child set is large enough to deserve its own table with its
 own filters and pagination — sub-rows are a detail affordance, not a second grid.
 
+## Only Some Records Have Children
+
+`subRows()` is a table-level switch, so by default every row gets an expand
+chevron. In a table mixing record kinds that promises children a row can never
+have. `subRowsVisible()` decides it per record:
+
+```php
+->subRows('items')
+->subRowsVisible(fn (Order $record) => $record->isPiecework());
+```
+
+Records the condition rejects lose their chevron, their child panel and their
+share of the eager load. The expander **cell** still renders — empty — because
+dropping it would shift every other column on that row.
+
+This is not the same as "has no children right now": a record that may have
+children but currently has none still expands, to the `no_sub_rows` message. Use
+the condition for records that structurally cannot have any.
+
+The result is memoized per record for the request, so the callback may query —
+but prefer something already on the record. A base query with
+`->withCount('items')` makes the cheap version possible:
+
+```php
+->subRowsVisible(fn (Order $record) => $record->items_count > 0)
+```
+
 ## Expand and Collapse
 
 ```php
@@ -390,6 +417,7 @@ active, since per-parent filtering falls back to a safe per-parent query.
 | Method                                          | Purpose                                  |
 | ----------------------------------------------- | ---------------------------------------- |
 | `subRows(string $relation)`                     | Enable sub-rows from a relationship (omit it + set `subRowView`/`subRowColumns` for detail-row mode) |
+| `subRowsVisible(Closure\|bool)`                  | Restrict sub-rows to the records that can have children |
 | `subRowColumns(array $columns)`                 | Columns for the child table              |
 | `subRowQuery(Closure $cb)`                      | Shape the child relationship query       |
 | `subRowsSortable(bool, ?string $default, string $direction)` | Click-to-sort headers + default sort |

@@ -60,6 +60,34 @@ Podřádky použijte, když:
 Vyhněte se jim, když je dětská sada dost velká, aby si zasloužila vlastní tabulku
 s vlastními filtry a stránkováním — podřádky jsou detailní prostředek, ne druhý grid.
 
+## Když děti může mít jen část záznamů
+
+`subRows()` je přepínač na úrovni tabulky, takže ve výchozím stavu dostane
+rozbalovací chevron každý řádek. V tabulce míchající různé druhy záznamů tak
+slibuje děti i řádku, který je mít nikdy nemůže. `subRowsVisible()` to rozhodne
+per záznam:
+
+```php
+->subRows('items')
+->subRowsVisible(fn (Order $record) => $record->isPiecework());
+```
+
+Záznamy, které podmínka odmítne, přijdou o chevron, o dětský panel i o svůj podíl
+na eager loadu. **Buňka** s chevronem se pořád vykreslí — prázdná — protože její
+vypuštění by posunulo všechny ostatní sloupce toho řádku.
+
+Není to totéž jako „zrovna nemá děti": záznam, který děti mít může, ale právě
+žádné nemá, se dál rozbalí na hlášku `no_sub_rows`. Podmínku použijte pro
+záznamy, které je mít strukturálně nemohou.
+
+Výsledek se memoizuje per záznam na dobu requestu, takže callback smí sáhnout do
+databáze — lepší je ale číst něco, co už na záznamu je. Základní dotaz
+s `->withCount('items')` umožní levnou variantu:
+
+```php
+->subRowsVisible(fn (Order $record) => $record->items_count > 0)
+```
+
 ## Rozbalení a sbalení
 
 ```php
@@ -387,6 +415,7 @@ filtrování per rodič spadne zpět na bezpečný per-parent dotaz.
 | Metoda                                          | Účel                                     |
 | ----------------------------------------------- | ---------------------------------------- |
 | `subRows(string $relation)`                     | Zapnout podřádky z relace (vynechejte + nastavte `subRowView`/`subRowColumns` pro detail-řádkový režim) |
+| `subRowsVisible(Closure\|bool)`                  | Omezit podřádky na záznamy, které děti mít mohou |
 | `subRowColumns(array $columns)`                 | Sloupce pro dětskou tabulku              |
 | `subRowQuery(Closure $cb)`                      | Tvarovat dotaz dětské relace             |
 | `subRowsSortable(bool, ?string $default, string $direction)` | Řazení klikem na hlavičky + výchozí řazení |

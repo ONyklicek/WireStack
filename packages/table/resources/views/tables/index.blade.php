@@ -956,6 +956,11 @@
                                             ? trim($table->getRowContextMenuHtml($record)->toHtml())
                                             : '';
                                         $hasRowContextMenu = $rowContextMenuHtml !== '';
+
+                                        // Per-record sub-rows (subRowsVisible): decides this row's
+                                        // chevron and panel only — the expander cell itself still
+                                        // renders, empty, or the columns stop lining up.
+                                        $recordHasSubRows = $hasSubRows && $table->hasSubRowsFor($record);
                                     @endphp
 
                                     {{-- Group header --}}
@@ -1044,7 +1049,7 @@
                                         {{-- Sub-row Toggle Cell --}}
                                         @if($hasSubRows)
                                             <td class="w-10 {{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }}">
-                                                @if($isSubRowsExpandable)
+                                                @if($isSubRowsExpandable && $recordHasSubRows)
                                                     @include('wire-table::tables.partials.sub-row-toggle', [
                                                         'recordKey' => $recordKey,
                                                         'isExpanded' => $component->isRowExpanded($recordKey),
@@ -1098,7 +1103,7 @@
                                     </tr>
 
                                     {{-- Sub-rows --}}
-                                    @if($hasSubRows && $component->isRowExpanded($recordKey))
+                                    @if($recordHasSubRows && $component->isRowExpanded($recordKey))
                                         @php
                                             $subRows = $component->getSubRows($record);
                                         @endphp
@@ -1362,8 +1367,10 @@
                                     @endif
 
                                     {{-- Sub-rows: the same children, subtotal, "show more" and
-                                         per-child actions the desktop panel renders. --}}
-                                    @if($hasSubRows)
+                                         per-child actions the desktop panel renders. Guarded here
+                                         rather than inside the partial — the card's own toggle
+                                         button lives there, in two branches. --}}
+                                    @if($hasSubRows && $table->hasSubRowsFor($record))
                                         @include('wire-table::tables.partials.sub-rows-mobile', [
                                             'table' => $table,
                                             'component' => $component,
