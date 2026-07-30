@@ -318,6 +318,7 @@ class MyComponent extends Component
 - [Radio](fields/radio.md) — skupina radio tlačítek
 - [Toggle](fields/toggle.md) — přepínač on/off
 - [DateTimePicker](fields/date-time-picker.md) — jednotné date/time/datetime
+- [TimePicker](fields/time-picker.md) — jen čas, výběr ze seznamu slotů
 - [ColorPicker](fields/color-picker.md) — výběr barvy
 - [FileUpload](fields/file-upload.md) — upload souboru/obrázku
 - [RichEditor](fields/rich-editor.md) — WYSIWYG editor

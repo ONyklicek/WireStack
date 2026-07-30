@@ -20,6 +20,7 @@ use NyonCode\WireForms\Components\Slider;
 use NyonCode\WireForms\Components\Tags;
 use NyonCode\WireForms\Components\Textarea;
 use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireForms\Components\TimePicker;
 use NyonCode\WireForms\Components\TiptapEditor;
 use NyonCode\WireForms\Components\Toggle;
 use NyonCode\WireForms\Forms\Form;
@@ -61,6 +62,9 @@ class FieldPreview extends Component
             // unset picker opens. The key still has to exist — entangle() is a
             // no-op on a state path Livewire has never seen.
             'slot_at' => null,
+            // Same rule as slot_at: the key has to exist for entangle() to bind.
+            // Left empty so the clock starts where an unset time picker opens.
+            'opens_at' => null,
         ];
     }
 
@@ -317,6 +321,15 @@ class FieldPreview extends Component
                 ->minDate('2030-03-10 08:30')
                 ->maxDate('2030-03-20 17:00')
                 ->mode('datetime'),
+
+            // The facade over ->asTime(): a clock with no calendar above it, and
+            // bounds that read as times rather than days.
+            'time-picker' => TimePicker::make('opens_at')
+                ->label('Opening time')
+                ->helperText('Between 08:00 and 17:00, in 15-minute steps.')
+                ->minDate('08:00')
+                ->maxDate('17:00')
+                ->minutesStep(15),
 
             'file-upload' => FileUpload::make('photo')
                 ->label('Cover image')

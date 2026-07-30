@@ -29,6 +29,10 @@ DateTimePicker::make('x')->mode('date')      // 'date', 'month', 'time', 'dateti
 > `asMonth()` always renders the browser-native `<input type="month">` — the custom
 > calendar has no month-only grid — so it stays native even if you pass `->native(false)`.
 
+> `asTime()` picks the time with hour/minute steppers. For a field whose times are
+> **slots** — opening hours, appointments — [`TimePicker`](time-picker.md) stores
+> the same value but picks it from a list at a fixed interval instead.
+
 ## Date Constraints
 
 ```php

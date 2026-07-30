@@ -21,6 +21,7 @@ Reference for the built-in Wire Forms field and layout components.
 | Key-value pair editor | [KeyValue](key-value.md) |
 | Star rating | [Rating](rating.md) |
 | Choose date or date/time | [DateTimePicker](date-time-picker.md) |
+| Choose a time from slots | [TimePicker](time-picker.md) |
 | Pick a color | [ColorPicker](color-picker.md) |
 | Upload files | [FileUpload](file-upload.md) |
 | Rich text editing | [RichEditor](rich-editor.md) or [TiptapEditor](tiptap-editor.md) |

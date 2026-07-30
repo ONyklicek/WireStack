@@ -272,6 +272,7 @@ Fields:
 - `Tags`
 - `TextInput`
 - `Textarea`
+- `TimePicker` (mode-locked `DateTimePicker`; slot-list panel, own view)
 - `TiptapEditor`
 - `Toggle`
 

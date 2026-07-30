@@ -400,6 +400,7 @@ $fieldPreviews = [
     'key-value' => 'Key-Value',
     'date-time-picker' => 'Date-Time Picker',
     'date-time-picker-bounds' => 'Date-Time Picker · min/max bounds',
+    'time-picker' => 'Time Picker',
     'file-upload' => 'File Upload',
     'file-upload-auto' => 'File Upload (centre crop)',
 ];
