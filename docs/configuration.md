@@ -29,6 +29,23 @@ You only need the tags for packages you installed.
 | `WIRE_MOBILE_SHEET` | `true` | Core mobile bottom-sheets |
 | `WIRE_MOBILE_BREAKPOINT` | `sm` | Core mobile sheet breakpoint |
 
+## JavaScript Assets
+
+There is no asset configuration and nothing to publish: every package serves its
+own pre-built bundles from its own route, cache-busted by file modification time.
+The one thing your app decides is *where* they are emitted — put
+
+```blade
+@wireStackScripts
+```
+
+once in the layout `<head>` and every installed package's Alpine controllers are in
+the initial document, which is what keeps them working across `wire:navigate`
+(including the cached Back/Forward path). Pass a package name —
+`@wireStackScripts('wire-table')` — to emit only one package's bundles.
+
+Full explanation in [Getting Started → JavaScript Assets](getting-started.md#javascript-assets).
+
 ## Core
 
 The `wire-core` config controls shared UI behavior.
@@ -264,19 +281,25 @@ See [Table Overview](table/overview.md), [Columns](table/columns/index.md), and 
 
 ## Sortable
 
-The `wire-sortable` config controls row ordering and SortableJS loading.
+The `wire-sortable` config controls row ordering.
 
 ```php
 return [
     'order_column' => 'sort_order',
-    'sortablejs_cdn' => 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js',
+    'sortablejs_cdn' => null,
     'animation' => 150,
     'user_model' => 'App\\Models\\User',
     'user_key_type' => 'id', // 'uuid' / 'ulid' for non-integer user keys
 ];
 ```
 
-Set `sortablejs_cdn` to `null` when your application bundles SortableJS itself. Set `user_key_type` to `uuid` or `ulid` (before running the column-order migration) when your user model uses a non-integer primary key.
+`sortablejs_cdn` defaults to `null` because SortableJS is compiled into the package's
+own bundle — reordering needs no CDN request, so it works offline and under a strict
+CSP. Set it only if your **own** code needs a global `window.Sortable`: the tag is then
+loaded *in addition to* the bundle, never instead of it, and the drag controller uses
+the bundled copy either way.
+
+Set `user_key_type` to `uuid` or `ulid` (before running the column-order migration) when your user model uses a non-integer primary key.
 
 See [Sortable Installation](sortable/installation.md).
 

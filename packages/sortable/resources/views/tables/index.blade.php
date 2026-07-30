@@ -27,6 +27,14 @@
         }
     @endphp
 
+    {{-- The drag controller, ahead of the markup that references it. Livewire's
+         @assets hoists the tag into the document head either way, so the
+         position no longer decides whether wireSortable exists in time — but
+         the emit order used to be exactly backwards (the factory was defined
+         after its consumer), and source order should read the way the
+         dependency runs. --}}
+    @include('wire-sortable::partials.scripts')
+
     <div
             x-data="wireSortable({
                 rowReorderable: {{ $isReorderable ? 'true' : 'false' }},
@@ -43,8 +51,6 @@
             'records' => $records,
             'component' => $component,
         ])
-
-        @include('wire-sortable::partials.scripts')
     </div>
 @else
     @include('wire-table::tables.index', [

@@ -710,6 +710,48 @@ If you build a heavier JS-backed field in your own package, follow the same
 pattern: bundle the script, expose it on a route, and inject it with `@assets`
 from the field view so it is present whenever the field renders.
 
+**Register your Alpine component unconditionally.** `alpine:init` fires exactly
+once per document, so a bundle that arrives later — after a `wire:navigate`, with
+a lazily rendered surface, inside an AJAX-loaded modal — would subscribe to an
+event that never fires again and register nothing, leaving `x-data="myField(…)"`
+to throw `myField is not defined`. Every bundle in Wire uses this idiom:
+
+```js
+let registered = false
+const register = () => {
+    if (registered || ! window.Alpine) return
+    registered = true
+    window.Alpine.data('myField', myField)
+}
+if (window.Alpine) register()
+else document.addEventListener('alpine:init', register)
+```
+
+The `registered` guard is not defensive detail: a bundle can legitimately be
+emitted twice on one page (a per-surface include plus
+[`@wireStackScripts`](../getting-started.md#javascript-assets)), and the browser
+will execute it both times.
+
+If your package ships more than an occasional heavy field, declare the bundle
+with the shared `AssetManager` from your own service provider's boot instead of
+only including it per surface, and `@wireStackScripts` will emit it alongside
+Wire's own:
+
+```php
+use NyonCode\WireCore\Foundation\Assets\AssetManager;
+use NyonCode\WireCore\Foundation\Assets\Js;
+
+app(AssetManager::class)->register([
+    Js::make('my-field', __DIR__.'/../dist/my-field.js')->navigateTrack(),
+], 'my-package');
+```
+
+`Js::make()` takes the bundle id and a **filesystem** path (that is where the
+`?id=<mtime>` cache-buster comes from) and resolves its URL from your package's
+`{package}.asset` named route. Keep heavy bodies off pages that do not need them
+with `->loadedOnRequest()` — but never the small controller that registers the
+component.
+
 ---
 
 ## Testing Custom Fields

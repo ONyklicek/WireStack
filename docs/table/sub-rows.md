@@ -61,6 +61,58 @@ Use sub-rows when:
 Avoid them when the child set is large enough to deserve its own table with its
 own filters and pagination — sub-rows are a detail affordance, not a second grid.
 
+## Only Some Records Have Children
+
+`subRows()` is a table-level switch, so by default every row gets an expand
+chevron. In a table mixing record kinds that promises children a row can never
+have. `subRowsVisible()` decides it per record:
+
+```php
+->subRows('items')
+->subRowsVisible(fn (Order $record) => $record->isPiecework());
+```
+
+Records the condition rejects lose their chevron, their child panel and their
+share of the eager load. The expander **cell** still renders — empty — because
+dropping it would shift every other column on that row.
+
+This is not the same as "has no children right now": a record that may have
+children but currently has none still expands, to the `no_sub_rows` message. Use
+the condition for records that structurally cannot have any.
+
+The result is memoized per record for the request, so the callback may query —
+but prefer something already on the record.
+
+### Hiding Rows That Simply Have None
+
+For the most common condition — "this record has no children right now" — use
+`subRowsHideWhenEmpty()` instead of writing the closure yourself:
+
+```php
+->subRows('items')
+->subRowsHideWhenEmpty();
+```
+
+Written by hand this costs one `COUNT` per row. The flag instead has the table's
+own query carry a constrained count of the sub-row relation, so the per-row check
+is an attribute read — no extra query for a rendered page. A record handed
+straight to the table (not fetched through its query) falls back to one `EXISTS`.
+
+The count is constrained exactly as the panel is — `subRowQuery()` and any
+[`Filter::subRows()`](filters/relationships.md) — so a parent whose children are
+all filtered out loses its expander rather than opening onto the empty-state
+message. The interactive per-child filter bar (`subRowsFilterable()`) is
+deliberately **not** folded in: those values change per parent as the user types,
+and the expander would appear and disappear under the cursor.
+
+Both conditions compose, and the cheap one runs first — a record
+`subRowsVisible()` has already rejected is never counted:
+
+```php
+->subRowsVisible(fn (Order $record) => $record->isPiecework())
+->subRowsHideWhenEmpty();
+```
+
 ## Expand and Collapse
 
 ```php
@@ -390,6 +442,8 @@ active, since per-parent filtering falls back to a safe per-parent query.
 | Method                                          | Purpose                                  |
 | ----------------------------------------------- | ---------------------------------------- |
 | `subRows(string $relation)`                     | Enable sub-rows from a relationship (omit it + set `subRowView`/`subRowColumns` for detail-row mode) |
+| `subRowsVisible(Closure\|bool)`                  | Restrict sub-rows to the records that can have children |
+| `subRowsHideWhenEmpty(bool)`                    | Drop the expander from records with no children (counted in the table query) |
 | `subRowColumns(array $columns)`                 | Columns for the child table              |
 | `subRowQuery(Closure $cb)`                      | Shape the child relationship query       |
 | `subRowsSortable(bool, ?string $default, string $direction)` | Click-to-sort headers + default sort |

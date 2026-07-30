@@ -156,6 +156,60 @@ Vypnout lze pro konkrétní tabulku:
 
 ---
 
+<a id="javascript-assets"></a>
+## JavaScriptové assety
+
+Alpine controllery Wire si nově deklaruje každý balíček sám a dají se vypsat
+z jednoho místa ve vašem layoutu. Při upgradu udělejte dvě věci.
+
+**1. Přidejte `@wireStackScripts` do `<head>` layoutu.**
+
+```blade
+<head>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @livewireStyles
+    @wireStackScripts {{-- [tl! focus] --}}
+</head>
+```
+
+Je to aditivní — každý povrch si svůj bundle stále načte sám, takže aplikace bez
+direktivy funguje dál. Ale je to právě ono, co opraví komponenty umírající po
+návštěvě přes `wire:navigate` (`wireRecordSelection is not defined`, mrtvé
+dropdowny, šedý scrim přes tabulku): cesta cachovaného Zpět/Vpřed v Livewire
+nečeká na nově injektované `<head>` skripty a imunní je jen bundle, který už
+v dokumentu byl. Viz
+[Začínáme → JavaScriptové assety](getting-started.md#javascriptove-assety).
+
+Pokud si vaše aplikace tohle dřív obcházela `@include`-ováním partialů balíčků
+v layoutu, tyhle includy smažte a použijte direktivu — cesty k partialům jsou
+interní a direktiva se s nimi stejně deduplikuje.
+
+**2. `window.Sortable` už se neposkytuje.** SortableJS je zkompilovaný do bundlu
+`wire-sortable`, takže `config('wire-sortable.sortablejs_cdn')` je nově ve výchozím
+stavu `null` a žádný CDN skript se nenačítá. Řazení to neovlivní — drag controller
+používá zabundlovanou kopii a globál nikdy nečte.
+
+Týká se to jen **vašeho vlastního** kódu, pokud na existenci toho globálu spoléhal.
+Buď si o skript řekněte zpět:
+
+```php
+// config/wire-sortable.php
+'sortablejs_cdn' => 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js',
+```
+
+nebo si SortableJS zabundlujte sami:
+
+```js
+// resources/js/app.js
+import Sortable from 'sortablejs';
+window.Sortable = Sortable;
+```
+
+Nic dalšího se nemění: konfigurační klíč po nastavení pořád funguje a aplikací,
+které ho už nastavené mají, se změna nedotkne.
+
+---
+
 ## Hledání breaking changes
 
 `CHANGELOG.md` je zdroj pravdy. Breaking changes jsou vyznačeny pod nadpisem

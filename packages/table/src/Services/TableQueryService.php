@@ -277,6 +277,29 @@ final class TableQueryService
         // so rollup cells and footer grand totals reflect the filtered children.
         $query = app(AggregateSubqueries::class)->apply($query, $columns, $subRowRelation, $subRowConstraint);
 
+        // ── 4.6 Sub-row presence count (Table::subRowsHideWhenEmpty()) ──
+        // Hiding the expander on childless rows is a per-row question; asked
+        // per row it is a query per row. Answered here it is one subquery for
+        // the page, constrained exactly as the displayed children are.
+        if ($subRowRelation !== null && $table->hidesSubRowsWhenEmpty()) {
+            $subRowQueryCallback = $table->getSubRowQueryCallback();
+
+            $query = app(AggregateSubqueries::class)->applySubRowPresence(
+                $query,
+                $subRowRelation,
+                Table::SUB_ROWS_PRESENCE_COUNT,
+                static function ($related) use ($subRowQueryCallback, $subRowConstraint): void {
+                    if ($subRowQueryCallback !== null) {
+                        $subRowQueryCallback($related);
+                    }
+
+                    if ($subRowConstraint !== null) {
+                        $subRowConstraint($related);
+                    }
+                },
+            );
+        }
+
         // ── 5. Apply custom callbacks (these bypass the planner) ──
         // Custom search callbacks are applied inside the executor's search group
         // (see ApplySearch) so they OR-combine with the default-column search.

@@ -103,6 +103,33 @@ final class MobileSheet
     }
 
     /**
+     * A scrolling region *inside* a sheet: full width, and a cap sized for a
+     * phone rather than for a dropdown.
+     *
+     * An inner list that keeps its desktop cap strands a short, narrow column
+     * inside a full-width sheet. The fix is a **bigger** cap, not `max-h-none`:
+     * removing it entirely hands scrolling to the panel (which carries its own
+     * `max-h-[85vh]` + `overflow-y-auto`, see {@see panel()}), and any component
+     * that scrolls its list programmatically — setting `scrollTop` to reveal the
+     * current value on open — silently stops working, because the element it
+     * scrolls is no longer the one that scrolls.
+     *
+     * 60vh leaves room for the grabber, the panel padding and a footer inside the
+     * sheet's own 85vh.
+     *
+     * Pair with the panel utilities on the panel itself; this goes on the
+     * scrollable child.
+     */
+    public static function scrollArea(?string $breakpoint = null): string
+    {
+        return match (self::breakpoint($breakpoint)) {
+            'md' => 'max-md:w-full max-md:max-h-[60vh]',
+            'lg' => 'max-lg:w-full max-lg:max-h-[60vh]',
+            default => 'max-sm:w-full max-sm:max-h-[60vh]',
+        };
+    }
+
+    /**
      * Hide-from-breakpoint utility for the dimming backdrop (mobile-only).
      */
     public static function backdropHide(?string $breakpoint = null): string

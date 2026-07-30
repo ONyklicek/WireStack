@@ -396,6 +396,58 @@ Verify modal changes with the CDP drivers (`verify-nested-modal`, `verify-modal-
 stack is the most Alpine/Livewire-fragile subsystem; green PHP tests are not enough. See
 `architecture/plans/rule5-framework-wide-modal-sweep.md`.
 
+### JavaScript & Alpine registration
+
+**Register Alpine components unconditionally and idempotently. Never only inside an
+`alpine:init` listener.** That event fires exactly once per document
+(`livewire.esm.js` — `start2()` is guarded by a `started` flag), so a bundle that
+arrives later — after a `wire:navigate`, with a lazily loaded table, inside an
+AJAX-loaded modal — subscribes to an event that will never fire again and registers
+nothing. The markup then evaluates `x-data="wireX(...)"` against an undefined factory
+and the whole subtree dies: dropdowns stop opening, and a sheet backdrop (`x-show="open"`
+over state that no longer exists) is left covering the page. This is a *silent* failure
+in PHP tests — only the CDP drivers see it.
+
+The canonical idiom, in every bundle:
+
+```js
+let registered = false
+const register = () => {
+    if (registered || ! window.Alpine) return
+    registered = true
+    window.Alpine.data('wireX', wireX)
+}
+if (window.Alpine) register()
+else document.addEventListener('alpine:init', register)
+```
+
+- `Alpine.data()` is a plain assignment with no timing guard, so late registration is
+  legal — but Alpine never re-evaluates `x-data` on an element it has already marked,
+  so it only affects trees initialised afterwards. Registering at script top level
+  lands in time: Livewire awaits new head scripts before `initTree` on forward
+  navigation, and awaits `payload.intercept` before morphing an AJAX response in.
+- **Magics and directives share the one-shot problem.** `Alpine.magic()` and
+  `Alpine.directive()` go inside the same guarded function, not outside it.
+- The `registered` guard is **load-bearing, not defensive**: the layout directive and a
+  per-surface partial can emit the same `src`, and the browser will execute it twice.
+- **Never register from `livewire:navigated`** — `initTree` runs *before* that event, so
+  it is already too late for the page it fires on.
+
+**Delivery is the other half.** Core interaction controllers must be in the initial
+document — a package declares them to `Foundation\Assets\AssetManager` from its own
+provider, and the app adds one `@wireStackScripts` to its layout. Downstream packages
+push their own registration; core never learns they exist. Only the always-present case
+is safe on the cached Back/Forward path, where Livewire does **not** wait for newly
+injected head scripts before initialising Alpine.
+
+**Lazy-load bodies, never registrators.** Lazy is for heavy, optional assets (rich text,
+charts) via `loadedOnRequest()`; the registrar inside such a bundle is still
+unconditional. A lazily delivered *registration mechanism* is precisely the bug above.
+
+Verify with `verify-spa-navigate` plus the drivers for whatever the bundle touches. See
+`architecture/plans/js-asset-registration.md` and ADR
+`architecture/decisions/0024-js-asset-delivery-and-registration.md`.
+
 ## Documentation
 
 Public classes should be self-explanatory. Document public APIs, extension

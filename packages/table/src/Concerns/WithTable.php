@@ -131,10 +131,11 @@ trait WithTable
 
     /**
      * Whether a result-shaping state path (per-page, search, filters, sort)
-     * was written in this request. Livewire pools commits fired in the same
-     * tick, so a wire:poll tick can share a request with the user's change —
-     * and the poll's "nothing changed, skip the render" verdict would then
-     * throw away the render that change was made for.
+     * was written in this request. Livewire merges everything queued for one
+     * component into a single commit, so a wire:poll tick or an inline-edit
+     * call can share a request with the user's change — and their "leave the
+     * DOM alone" verdict would then throw away the render that change was
+     * made for. Every skip goes through {@see skipTableRender()}.
      */
     protected bool $tableStateChangedThisRequest = false;
 
@@ -518,9 +519,7 @@ trait WithTable
         // Opt-in change detection: skip the full render (query + summaries +
         // DOM morph) when a cheap checksum of the filtered data is unchanged.
         if ($this->shouldSkipPollRender()) {
-            if (method_exists($this, 'skipRender')) {
-                $this->skipRender();
-            }
+            $this->skipTableRender();
 
             return;
         }
@@ -528,6 +527,34 @@ trait WithTable
         // Simply re-render - Livewire will fetch new data
         // The table instance is recreated on each request
         $this->tableInstance = null;
+    }
+
+    /**
+     * Suppress this request's re-render — unless the request also changed what
+     * the table renders.
+     *
+     * Several endpoints want the DOM left exactly as it is: a poll that found
+     * nothing new, and every inline-edit call, whose optimistic cell state a
+     * morph would reset. None of them may skip *unconditionally*, because
+     * Livewire merges everything queued for one component into one commit: the
+     * per-page select's update and an in-flight `updateTableCell()` arrive
+     * together, updates applied first. Skipping there answers with no HTML at
+     * all — the new page size is in the snapshot, so the server looks correct,
+     * while the browser keeps the old rows until whatever the user does next
+     * forces a render.
+     *
+     * The cell state a skip protects is moot in that case anyway: the rows it
+     * belongs to are being replaced.
+     */
+    protected function skipTableRender(): void
+    {
+        if ($this->tableStateChangedThisRequest) {
+            return;
+        }
+
+        if (method_exists($this, 'skipRender')) {
+            $this->skipRender();
+        }
     }
 
     /**
@@ -1904,10 +1931,9 @@ trait WithTable
         // Re-rendering causes DOM morphing that destroys Alpine component state
         // (success indicator, saving flag, etc.). The Alpine MutationObserver
         // on each cell handles syncing new values, and polling refreshes the
-        // table on the next cycle.
-        if (method_exists($this, 'skipRender')) {
-            $this->skipRender();
-        }
+        // table on the next cycle. A request that also changed the page size,
+        // search, filters or sort still renders — see skipTableRender().
+        $this->skipTableRender();
 
         $table = $this->getTable();
         $column = $this->findColumn($columnName);
@@ -1980,9 +2006,7 @@ trait WithTable
      */
     public function validateTableCell(mixed $recordKey, string $columnName, mixed $value): array
     {
-        if (method_exists($this, 'skipRender')) {
-            $this->skipRender();
-        }
+        $this->skipTableRender();
 
         $table = $this->getTable();
         $column = $this->findColumn($columnName);

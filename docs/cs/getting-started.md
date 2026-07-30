@@ -52,6 +52,8 @@ Než vykreslíte první komponentu, ujistěte se, že platí všechno níže:
 - Tailwind skenuje vendor pohledy Wire
 - vaše aplikace definuje barvu `primary`
 - hlavní layout obsahuje `@vite`, `@livewireStyles` a `@livewireScripts`
+- layout má v `<head>` `@wireStackScripts` — v praxi nutné pro každou aplikaci, která
+  naviguje přes `wire:navigate` (viz [JavaScriptové assety](#javascriptove-assety))
 - layout vykresluje `<x-wire-notifications::toast-container />`, pokud chcete vestavěné toasty
 
 ## Konfigurace Tailwind CSS
@@ -135,7 +137,8 @@ module.exports = {
 <a id="layout-template"></a>
 ## Šablona layoutu
 
-Váš hlavní layout musí obsahovat Vite assety a Livewire. Přidejte kontejner notifikací, pokud používáte zpětnou vazbu akcí nebo toasty.
+Váš hlavní layout musí obsahovat Vite assety a Livewire a jedno `@wireStackScripts`
+v `<head>`. Přidejte kontejner notifikací, pokud používáte zpětnou vazbu akcí nebo toasty.
 
 ```blade
 <!DOCTYPE html>
@@ -145,6 +148,7 @@ Váš hlavní layout musí obsahovat Vite assety a Livewire. Přidejte kontejner
     <meta name="viewport" content="width=device-width, initial-scale=1">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
+    @wireStackScripts {{-- [tl! focus] --}}
 </head>
 <body>
     {{ $slot }}
@@ -157,6 +161,60 @@ Váš hlavní layout musí obsahovat Vite assety a Livewire. Přidejte kontejner
 ```
 
 Neinstalujte Alpine samostatně. Livewire 3 ho už obsahuje.
+
+<a id="javascript-assets"></a>
+## JavaScriptové assety
+
+Interaktivní části Wire — dropdowny, kontextové menu řádku, taby, wizardy,
+buňky inline editace, fill handle, výběr řádků, record akce, drag & drop
+řazení — jsou malé Alpine komponenty dodávané jako předsestavené bundly přímo
+z balíčků. Není co instalovat, není co publikovat a na vaší straně není žádný
+build krok: každý balíček servíruje své bundly z vlastní routy, s cache-bustingem
+podle času poslední změny souboru.
+
+**`@wireStackScripts` dostane bundly všech nainstalovaných balíčků do dokumentu.**
+Jeden řádek v `<head>` layoutu a každý controller je přítomný na každé stránce:
+
+```blade
+<head>
+    @wireStackScripts
+</head>
+```
+
+Když chcete, zúžíte ho na jediný balíček:
+
+```blade
+@wireStackScripts('wire-table')
+```
+
+### Proč ho SPA aplikace chce
+
+Bez direktivy si každý povrch svůj bundle stejně načte, když se vykreslí — stránka
+s tabulkou tedy načte bundly tabulky, stránka s formulářem ty formulářové. Funguje
+to a aplikace, která direktivu nikdy nepřidá, funguje dál.
+
+Přestane to stačit ve chvíli, kdy navigujete přes `wire:navigate`. Cesta
+**cachovaného Zpět/Vpřed** v Livewire nečeká na nově injektované `<head>` skripty,
+než na prohozené stránce inicializuje Alpine. Bundle, který dorazí *spolu* s novou
+stránkou, tak může závod prohrát a markup se inicializuje proti registru, který
+komponentu ještě nemá:
+
+```text
+Uncaught ReferenceError: wireRecordSelection is not defined
+```
+
+což se projeví mrtvými dropdowny, checkboxy, které nic nedělají, a — nejhlasitěji —
+šedým scrimem přes celou stránku, protože každý backdrop mobilního sheetu je
+navázaný na stav, který už neexistuje.
+
+Bundle, který byl v dokumentu už při prvním příchodu návštěvníka, tenhle závod
+prohrát nemůže. Přesně to je úkol `@wireStackScripts`: není to pohodlí, je to
+jediné umístění, které cesta cachovaného zpět/vpřed nepředběhne.
+
+> Těžké, volitelné assety — TipTap rich editor, controller grafů nad Chart.js —
+> záměrně **nejsou** v sadě načítané vždy. Povrch, který je potřebuje, si je
+> vyzvedne, až se vykreslí. Grafy navíc potřebují Chart.js, který zůstává vlastní
+> závislostí vaší aplikace.
 
 ## Publikování konfigurace (volitelné)
 
@@ -316,6 +374,8 @@ Dále: [Reference polí](forms/fields/index.md), [Validace](forms/validation.md)
 ### Komponenty se vykreslují bez JavaScriptového chování
 
 - ověřte, že layout obsahuje `@livewireScripts`
+- ověřte, že `<head>` layoutu obsahuje `@wireStackScripts` — zvlášť když se rozbití
+  projeví až po návštěvě přes `wire:navigate` nebo na Zpět/Vpřed
 - odstraňte samostatný bootstrap Alpine z `resources/js/app.js`
 
 ### Notifikace se nezobrazují

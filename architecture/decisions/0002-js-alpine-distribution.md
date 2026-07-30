@@ -1,7 +1,13 @@
 # ADR 0002: JS/Alpine Distribution
 
 ## Status
-Accepted
+Superseded by [ADR 0024](0024-js-asset-delivery-and-registration.md) (2026-07-29).
+
+Every clause below is now false: eight JavaScript bundles ship across four `dist/`
+directories, four esbuild scripts build them, `@floating-ui/dom`, `@tiptap/*`
+and `sortablejs` are npm dependencies, and each package serves its bundles from
+an asset route. Kept for the record; read ADR 0024 for the delivery and
+registration rules in force.
 
 ## Context
 The Wire ecosystem uses Livewire 3 for reactivity and Tailwind CSS for styling. Some interactive UI elements (dropdowns, modals, keyboard shortcuts) use inline Alpine.js directives in Blade templates.

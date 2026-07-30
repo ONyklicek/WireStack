@@ -185,6 +185,8 @@ use NyonCode\WireCore\Widgets\ChartWidget;
 ```
 
 > **Requires Chart.js.** The widget renders a `<canvas>` and initializes it through Alpine. Include [Chart.js](https://www.chartjs.org/) on the page — via CDN or your bundle — or the canvas stays empty and a console warning is logged. Dataset styling (`borderColor`, `fill`, `tension`, …) is passed straight through to Chart.js.
+>
+> The widget's own Alpine controller needs nothing from you: it ships as a package bundle and the widget fetches it when it renders. Charts are a heavy, optional asset, so it is deliberately *not* in the always-loaded [`@wireStackScripts`](../getting-started.md#javascript-assets) set.
 
 ### Basic Usage
 

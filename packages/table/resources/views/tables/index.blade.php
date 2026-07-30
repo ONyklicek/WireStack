@@ -245,31 +245,20 @@
 
 {{-- Lazy loading: trigger load when visible --}}
 @if($isLazy && !$isTableReady)
-    {{-- The bundles must reach the page on THIS render, not on the one that
-         swaps the table in. Every one of them registers its Alpine components
-         from an `alpine:init` listener, and that event fires exactly once, when
-         Alpine boots. A bundle first emitted by the deferred render arrives
-         after that — Livewire injects the script tag, it runs, it subscribes to
-         an event that will never fire again, and nothing is ever registered. The
-         morphed-in markup then evaluates x-data="wireDropdown(...)" against an
-         undefined factory: every dropdown, the selection root and the record
-         controller die, and each sheet backdrop — an x-show="open" over a state
-         that no longer exists — is left covering the page.
+    {{-- This used to force all three bundles out with the PLACEHOLDER render,
+         because each registered its Alpine components from an `alpine:init`
+         listener and that event fires exactly once, when Alpine boots: a bundle
+         first emitted by the deferred render subscribed to an event that would
+         never fire again and registered nothing.
 
-         Emitted here they land before Alpine boots, so `alpine:init` registers
-         everything and the deferred markup initialises normally. The gates match
-         the loaded table's; the dropdown bundle is unconditional because the
-         toolbar alone (filters, the column toggle) is built from dropdowns. --}}
-    @once
-        @include('wire-core::partials.floating-assets')
-        @if($isSelectable)
-            @include('wire-table::tables.partials.selection-assets')
-        @endif
-        @if($recordActionsRootEnabled)
-            @include('wire-table::tables.partials.record-actions-assets')
-        @endif
-    @endonce
-
+         The bundles now register unconditionally (see AI_CODING_STANDARD.md
+         § Rendering and js-asset-registration.md §3.A), so arriving late is safe,
+         and Livewire already guarantees they are not late in the way that would
+         matter here: on an AJAX round trip it awaits `payload.intercept` — which
+         loads and runs the new @assets to completion — before `handleSuccess`
+         morphs the markup in. The factory therefore exists before the deferred
+         table is ever initialised, and pre-emitting would only pull bundles onto
+         a page whose whole point is to defer them. --}}
     <div
             x-data="{ loaded: false }"
             x-intersect.once="if (!loaded) { loaded = true; $wire.loadTable(); }"
@@ -967,6 +956,11 @@
                                             ? trim($table->getRowContextMenuHtml($record)->toHtml())
                                             : '';
                                         $hasRowContextMenu = $rowContextMenuHtml !== '';
+
+                                        // Per-record sub-rows (subRowsVisible): decides this row's
+                                        // chevron and panel only — the expander cell itself still
+                                        // renders, empty, or the columns stop lining up.
+                                        $recordHasSubRows = $hasSubRows && $table->hasSubRowsFor($record);
                                     @endphp
 
                                     {{-- Group header --}}
@@ -1055,7 +1049,7 @@
                                         {{-- Sub-row Toggle Cell --}}
                                         @if($hasSubRows)
                                             <td class="w-10 {{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }}">
-                                                @if($isSubRowsExpandable)
+                                                @if($isSubRowsExpandable && $recordHasSubRows)
                                                     @include('wire-table::tables.partials.sub-row-toggle', [
                                                         'recordKey' => $recordKey,
                                                         'isExpanded' => $component->isRowExpanded($recordKey),
@@ -1109,7 +1103,7 @@
                                     </tr>
 
                                     {{-- Sub-rows --}}
-                                    @if($hasSubRows && $component->isRowExpanded($recordKey))
+                                    @if($recordHasSubRows && $component->isRowExpanded($recordKey))
                                         @php
                                             $subRows = $component->getSubRows($record);
                                         @endphp
@@ -1157,7 +1151,7 @@
                                                     : $table->getEmptyStateDescription(),
                                                 'actions' => $isEmptyDueToFilter
                                                     ? [view('wire-table::tables.partials.reset-filters-button')->render()]
-                                                    : [],
+                                                    : $table->getEmptyStateActionsHtml(),
                                             ])
                                         </td>
                                     </tr>
@@ -1373,8 +1367,10 @@
                                     @endif
 
                                     {{-- Sub-rows: the same children, subtotal, "show more" and
-                                         per-child actions the desktop panel renders. --}}
-                                    @if($hasSubRows)
+                                         per-child actions the desktop panel renders. Guarded here
+                                         rather than inside the partial — the card's own toggle
+                                         button lives there, in two branches. --}}
+                                    @if($hasSubRows && $table->hasSubRowsFor($record))
                                         @include('wire-table::tables.partials.sub-rows-mobile', [
                                             'table' => $table,
                                             'component' => $component,
@@ -1389,14 +1385,27 @@
                                 </div>
                             @empty
                                 <div class="px-4 py-12 text-center bg-white dark:bg-gray-800">
-                                    <div class="flex flex-col items-center gap-3">
-                                        <div class="rounded-full bg-gray-100 dark:bg-gray-700 p-3">
-                                            {!! icon('outline:inbox', 'h-6 w-6', 'text-gray-400') !!}
-                                        </div>
-                                        <p class="text-sm text-gray-500 dark:text-gray-400">
-                                            {{ $table->getEmptyStateHeading() ?? __('wire-table::messages.empty_heading') }}
-                                        </p>
-                                    </div>
+                                    {{-- The same canonical surface the desktop table's empty state
+                                         uses, so a custom icon/description, the filter-empty reset
+                                         and the empty-state actions reach a phone too. The action
+                                         copies drop their keyboard shortcut: both layouts are in
+                                         the document at every width, and a rendered button binds
+                                         its shortcut as a window listener. --}}
+                                    @include('wire-core::partials.empty-state', [
+                                        'icon' => $isEmptyDueToFilter
+                                            ? 'outline:magnifying-glass'
+                                            : ($table->getEmptyStateIcon() ?? 'outline:inbox'),
+                                        'iconSize' => 'h-6 w-6',
+                                        'heading' => $isEmptyDueToFilter
+                                            ? __('wire-table::messages.empty_filter_heading')
+                                            : $table->getEmptyStateHeading(),
+                                        'description' => $isEmptyDueToFilter
+                                            ? __('wire-table::messages.empty_no_records_match')
+                                            : $table->getEmptyStateDescription(),
+                                        'actions' => $isEmptyDueToFilter
+                                            ? [view('wire-table::tables.partials.reset-filters-button')->render()]
+                                            : $table->getMobileEmptyStateActionsHtml(),
+                                    ])
                                 </div>
                             @endforelse
 

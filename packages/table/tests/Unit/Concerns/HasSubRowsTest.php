@@ -225,3 +225,73 @@ it('still allows ordering by the configured default column when headers are not 
     $prices = $table->getSubRowsQuery(SrInvoice::first())->pluck('price')->all();
     expect($prices)->toBe([10, 20, 30, 40]);
 });
+
+// ─── Per-record visibility ───────────────────────────────────────────────────
+
+it('gives every record sub-rows by default', function () {
+    expect(subRowTable()->hasSubRowsFor(SrInvoice::first()))->toBeTrue();
+});
+
+it('denies sub-rows to a record the condition rejects', function () {
+    $table = subRowTable()->subRowsVisible(fn (SrInvoice $record) => $record->number === 'INV-2');
+
+    expect($table->hasSubRowsFor(SrInvoice::first()))->toBeFalse();
+});
+
+it('accepts a plain bool as the per-record condition', function () {
+    expect(subRowTable()->subRowsVisible(false)->hasSubRowsFor(SrInvoice::first()))->toBeFalse()
+        ->and(subRowTable()->subRowsVisible()->hasSubRowsFor(SrInvoice::first()))->toBeTrue();
+});
+
+it('reports no sub-rows for a record when the table has none at all', function () {
+    // The structural check comes first: a condition returning true cannot
+    // conjure an expander column the table never configured.
+    $table = Table::make()->model(SrInvoice::class)->subRowsVisible(true);
+
+    expect($table->hasSubRowsFor(SrInvoice::first()))->toBeFalse();
+});
+
+it('evaluates the condition once per record, not once per caller', function () {
+    // Both layouts are in the document at every width, so the chevron, the panel
+    // and the eager load all ask the same question — a condition touching the
+    // database would otherwise be N queries several times over.
+    $calls = 0;
+    $table = subRowTable()->subRowsVisible(function () use (&$calls) {
+        $calls++;
+
+        return true;
+    });
+
+    $table->hasSubRowsFor(SrInvoice::first());
+    $table->hasSubRowsFor(SrInvoice::first());   // a re-fetched record, same key
+    $table->hasSubRowsFor(SrInvoice::find(1));
+
+    expect($calls)->toBe(1);
+});
+
+it('drops the memoized results when the condition is replaced', function () {
+    $table = subRowTable()->subRowsVisible(fn () => true);
+    expect($table->hasSubRowsFor(SrInvoice::first()))->toBeTrue();
+
+    $table->subRowsVisible(fn () => false);
+    expect($table->hasSubRowsFor(SrInvoice::first()))->toBeFalse();
+});
+
+it('memoizes an unsaved record by identity, not by a null key', function () {
+    // Two unsaved records share a null key; keying the cache on it would make
+    // the first answer stand in for every other new record.
+    $calls = 0;
+    $table = subRowTable()->subRowsVisible(function (SrInvoice $record) use (&$calls) {
+        $calls++;
+
+        return $record->number === 'kept';
+    });
+
+    $kept = new SrInvoice(['number' => 'kept']);
+    $dropped = new SrInvoice(['number' => 'other']);
+
+    expect($table->hasSubRowsFor($kept))->toBeTrue()
+        ->and($table->hasSubRowsFor($dropped))->toBeFalse()
+        ->and($table->hasSubRowsFor($kept))->toBeTrue()
+        ->and($calls)->toBe(2);
+});

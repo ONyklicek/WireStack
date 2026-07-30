@@ -209,8 +209,10 @@ Switching a capability off is not a matter of the client ignoring events. The
 markup and the endpoints go with it:
 
 - The delegated Alpine controllers are not rendered. A table with nothing but the
-  gestures off renders no controller at all, and its asset bundles are not
-  requested.
+  gestures off mounts no controller at all, and does not include their bundles.
+  (With `@wireStackScripts` in your layout the bundles are in the document
+  anyway — but nothing mounts them, so they cost one cached request and no
+  behaviour.)
 - The table stops being an ARIA `grid`: no `role="grid"`, no `role="row"`, no
   roving `tabindex`.
 - The rows are not focusable, so nothing steals focus on click.

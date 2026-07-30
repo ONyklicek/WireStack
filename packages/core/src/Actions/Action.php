@@ -25,6 +25,10 @@ class Action extends BaseAction implements RendersAsButton
 {
     protected bool $hideLabel = false;
 
+    /** Static URL — record-independent, so it resolves on record-less surfaces too. */
+    protected ?string $url = null;
+
+    /** Per-record URL — needs a record, so it stays null without one. */
     protected ?Closure $urlCallback = null;
 
     protected bool $openUrlInNewTab = false;
@@ -113,10 +117,23 @@ class Action extends BaseAction implements RendersAsButton
         return $this->hideLabel($onlyIcon);
     }
 
-    /** Make the action navigate to a URL instead of running a callback. */
+    /**
+     * Make the action navigate to a URL instead of running a callback.
+     *
+     * A string URL is record-independent and therefore also resolves where the
+     * action renders without one (the table's empty state); a Closure receives
+     * the record and stays unresolved — null — when there is none.
+     */
     public function url(Closure|string $url, bool $openInNewTab = false): static
     {
-        $this->urlCallback = $url instanceof Closure ? $url : fn () => $url;
+        if ($url instanceof Closure) {
+            $this->urlCallback = $url;
+            $this->url = null;
+        } else {
+            $this->url = $url;
+            $this->urlCallback = null;
+        }
+
         $this->openUrlInNewTab = $openInNewTab;
 
         return $this;
@@ -154,9 +171,20 @@ class Action extends BaseAction implements RendersAsButton
         return $this->openUrlInNewTab;
     }
 
-    public function getUrl(Model $record): ?string
+    /**
+     * Resolve the navigation URL, with or without a record.
+     *
+     * A per-record Closure needs a record and yields null without one; a static
+     * string URL resolves either way, which is what lets the same action render
+     * on a record-less surface such as the table's empty state.
+     */
+    public function getUrl(?Model $record = null): ?string
     {
-        return $this->urlCallback ? ($this->urlCallback)($record) : null;
+        if ($this->urlCallback !== null) {
+            return $record !== null ? ($this->urlCallback)($record) : null;
+        }
+
+        return $this->url;
     }
 
     // ─── Rendering ──────────────────────────────────────────────
@@ -175,8 +203,12 @@ class Action extends BaseAction implements RendersAsButton
      *
      * The host supplies a {@see ResolvesActionClick} so core never hardcodes a
      * table/form Livewire method; without one a standalone `mountAction()` is used.
+     *
+     * The record is optional — matching {@see RendersAsButton::toButtonRenderArray()},
+     * which this delegates to — so an action can render on a record-less surface
+     * such as the table's empty state.
      */
-    public function render(Model $record, ?ResolvesActionClick $click = null): string
+    public function render(?Model $record = null, ?ResolvesActionClick $click = null): string
     {
         if ($this->isDivider) {
             return $this->renderDivider();
@@ -242,7 +274,7 @@ class Action extends BaseAction implements RendersAsButton
         // Same bare expression drives wire:click and the wire:loading target.
         $clickHandler = $click->clickHandler($this, $record);
 
-        $url = $record ? $this->getUrl($record) : null;
+        $url = $this->getUrl($record);
 
         return [
             'url' => $url,

@@ -137,11 +137,15 @@ class TablePreview extends Component
             return $this->columnFiltersTable($table);
         }
 
+        if ($this->variant === 'empty-state') {
+            return $this->emptyStateTable($table);
+        }
+
         if ($this->variant === 'image-gallery') {
             return $this->imageGalleryTable($table);
         }
 
-        if ($this->variant === 'editable-fill') {
+        if (in_array($this->variant, ['editable-fill', 'editable-fill-selectable', 'editable-fill-paged'], true)) {
             return $this->editableFillTable($table);
         }
 
@@ -278,6 +282,48 @@ class TablePreview extends Component
     }
 
     /**
+     * The empty state with a way out of it. Three surfaces in one preview: a
+     * link action (static url), an inline one, and one that opens a modal form
+     * — all record-less, and all repeated in the stacked card layout, which is
+     * what the phone width shows.
+     */
+    private function emptyStateTable(Table $table): Table
+    {
+        return $table
+            // No user has this role, so the table is genuinely empty rather
+            // than emptied by a filter — the state the actions belong to.
+            ->query(User::query()->whereRaw('1 = 0'))
+            ->columns([
+                TextColumn::make('name')->label('Name'),
+                TextColumn::make('email')->label('Email'),
+            ])
+            ->searchable(false)
+            ->paginated(false)
+            ->stackedOnMobile()
+            ->emptyState(
+                heading: 'No users yet',
+                description: 'Invite the first one to get started.',
+                icon: 'outline:users',
+            )
+            ->emptyStateActions([
+                Action::make('docs')
+                    ->label('Read the guide')
+                    ->icon('outline:book-open')
+                    ->outlined()
+                    ->url('/docs'),
+                Action::make('inviteFirst')
+                    ->label('Invite a user')
+                    ->icon('outline:plus')
+                    ->form(fn () => [
+                        TextInput::make('name')->label('Name')->required(),
+                        TextInput::make('email')->label('Email')->email()->required(),
+                    ])
+                    ->modalHeading('Invite a user')
+                    ->action(fn () => null),
+            ]);
+    }
+
+    /**
      * Per-column header filters showcase: a text filter, a single-select, the
      * new multi-select (checkbox dropdown), and a boolean filter — each rendered
      * inline in the header row.
@@ -358,10 +404,24 @@ class TablePreview extends Component
      * Every editable column type is present because each dehydrates its state
      * differently and the drag must survive all three; `email` opts out with
      * ->fillable(false), so the handle must never appear on it.
+     *
+     * The `editable-fill-selectable` variant adds `selectable()` on top. It is a
+     * fixture in its own right, not a nicer version of the other one: the fill
+     * handle wraps the table in an x-data INSIDE the selection root, so every
+     * selection expression on this table evaluates in a scope stack whose
+     * innermost component is the fill handle — and both gestures drag over the
+     * same rows with the same pointer. Nothing but a browser can tell whether
+     * the two stay out of each other's way.
+     *
+     * The `editable-fill-paged` variant adds pagination, which no other editable
+     * fixture had. Inline editing and a page-size select are what makes one
+     * Livewire commit carry both a state change and a call that answers with no
+     * HTML: `updateTableCell()` skips the render on purpose, and a per-page
+     * change riding along in that same commit used to be swallowed with it.
      */
     private function editableFillTable(Table $table): Table
     {
-        return $table
+        $table
             ->model(User::class)
             ->gestures()
             ->fillHandle()
@@ -375,6 +435,28 @@ class TablePreview extends Component
             ])
             ->searchable(false)
             ->paginated(false);
+
+        if ($this->variant === 'editable-fill-paged') {
+            // Two page sizes over the four seeded users, so switching visibly
+            // doubles the rows on screen — a driver can tell the change landed
+            // apart from anything else that might re-render the table.
+            $table
+                ->paginated()
+                ->perPage(2)
+                ->perPageOptions([2, 4])
+                ->defaultSort('id', 'asc');
+        }
+
+        if ($this->variant === 'editable-fill-selectable') {
+            $table
+                ->selectable()
+                ->bulkActions([
+                    BulkAction::make('activate')->label('Activate')->icon('check')->color('success'),
+                    BulkAction::make('archive')->label('Archive')->icon('outline:archive-box')->color('warning'),
+                ]);
+        }
+
+        return $table;
     }
 
     /**

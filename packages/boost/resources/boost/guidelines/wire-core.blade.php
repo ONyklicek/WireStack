@@ -14,6 +14,10 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
         ->action(fn ($record) => $record->approve());
 
 - Presets: `DeleteAction`, `EditAction`, `ViewAction`, plus bulk presets (`DeleteBulkAction`, …).
+- `->url()` takes a **static string or a per-record Closure**, and the two are not interchangeable on a
+  record-less surface (a header action, the table's empty state): a string resolves with or without a
+  record, a Closure needs one and stays unresolved — the action then renders as a plain button, not a
+  link. `Action::render()` / `getUrl()` therefore take an optional record, matching `RendersAsButton`.
 - Actions can open modals via `->modal(...)` and multi-step wizards via `->steps([...])`.
 - A wizard step's `->schema(fn (array $data) => [...])` Closure builds its fields from data entered in
   earlier steps; the bag is live even for header actions (no record), so later steps can branch on it.
@@ -158,6 +162,56 @@ rows automatically — the package registers the event subscriber itself, gated 
 `wire-core.audit.enabled`. No manual `Event::subscribe()` needed. Retention: configure
 `wire-core.audit.retention_days` and schedule `wire-core:audit-prune` (or run with `--days=N`).
 Suppress logging in seeders/imports with `AuditLogger::withoutAuditing(fn () => …)`.
+
+### JavaScript assets
+
+Put `@@wireStackScripts` once in the layout `<head>`. It emits every registered wireStack Alpine
+controller (dropdown/tabs/wizard/editable-cell/fill-handle from core, plus whatever `table`,
+`forms` and `sortable` registered), so they survive `wire:navigate`. Narrow it with
+`@@wireStackScripts('wire-table')` if you only want one package. Apps that do not add it still
+work — each surface `@@include`s its own asset partial as a fallback — but a SPA app **should**
+add it: without it a bundle first reaching the page via `wire:navigate` may lose the race on the
+cached Back/Forward path, where Livewire does not wait for newly injected head scripts before
+initialising Alpine.
+
+A package registers its own bundles from its own service provider's `bootedPackage()`; core never
+learns about downstream packages:
+
+```php
+app(AssetManager::class)->register([
+    Js::make('records', self::ASSETS_PATH.'/wire-table-records.js')->navigateTrack(),
+], 'wire-table');
+```
+
+`Js::make($id, $path)` takes a *filesystem* path (used for the `?id=<mtime>` cache-buster) and
+resolves its URL from the `{package}.asset` named route each package already registers — assets are
+served straight out of `dist/`, so there is no `vendor:publish` and no build step for consumers. A
+path starting `http://`/`https://`/`//` is treated as remote and used verbatim. Fluent modifiers:
+`module()`, `defer()`, `navigateTrack()`, `navigateOnce()`, `loadedOnRequest()`.
+
+**Register Alpine components unconditionally, never only inside `alpine:init`.** That event fires
+exactly once per document, so a bundle arriving later (SPA navigation, a lazily rendered table, an
+AJAX-loaded modal) would subscribe to an event that never fires again and register nothing —
+`x-data="wireX(...)"` then dies with `wireX is not defined`. The canonical idiom, used by every
+bundle in the repo:
+
+```js
+let registered = false
+const register = () => {
+    if (registered || ! window.Alpine) return
+    registered = true
+    window.Alpine.data('wireX', wireX)
+}
+if (window.Alpine) register()
+else document.addEventListener('alpine:init', register)
+```
+
+The `registered` guard is load-bearing, not defensive: the directive and a per-surface partial can
+both emit the same `src`, so the bundle may execute twice.
+
+Core interaction controllers are **never** lazy per-component — that is what causes the bug above.
+Lazy is for heavy, optional bodies only (TipTap is registered `loadedOnRequest()` and excluded from
+the always-loaded set). Lazy-load bodies, never registrators.
 
 ### Browser-testing hooks
 

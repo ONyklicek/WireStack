@@ -13,6 +13,8 @@ use Workbench\App\Livewire\Previews\LayoutPreview;
 use Workbench\App\Livewire\Previews\ModalStackingPreview;
 use Workbench\App\Livewire\Previews\PanelPreview;
 use Workbench\App\Livewire\Previews\SortablePreview;
+use Workbench\App\Livewire\Previews\SpaPlainPreview;
+use Workbench\App\Livewire\Previews\SpaTablePreview;
 use Workbench\App\Livewire\Previews\TablePreview;
 use Workbench\App\Livewire\Previews\WidgetPreview;
 
@@ -119,6 +121,14 @@ Route::get('/previews', function () {
             'variant' => 'column-filters',
         ],
         [
+            'slug' => 'table-empty-state',
+            'title' => 'Wire Table',
+            'label' => 'Table empty state',
+            'copy' => 'The empty state with a way out of it: a link, an inline action, and one that opens a modal form.',
+            'component' => TablePreview::class,
+            'variant' => 'empty-state',
+        ],
+        [
             'slug' => 'table-image-gallery',
             'title' => 'Wire Table',
             'label' => 'Table image gallery',
@@ -133,6 +143,14 @@ Route::get('/previews', function () {
             'copy' => 'Inline-editable text, select and toggle cells with the Excel-style fill handle.',
             'component' => TablePreview::class,
             'variant' => 'editable-fill',
+        ],
+        [
+            'slug' => 'table-editable-fill-selectable',
+            'title' => 'Wire Table',
+            'label' => 'Table editable + fill + selection',
+            'copy' => 'The same editable table with selectable() on: checkboxes, the sweep and the range gestures share the rows the fill handle drags over.',
+            'component' => TablePreview::class,
+            'variant' => 'editable-fill-selectable',
         ],
         [
             'slug' => 'table-row-color',
@@ -307,8 +325,11 @@ foreach ([
     'table-summary' => ['title' => 'Wire Table Summary', 'subtitle' => 'Rollup totals, a multi-aggregate footer, and the page/all scope toggle.', 'component' => TablePreview::class, 'variant' => 'summary'],
     'table-row-color' => ['title' => 'Wire Table Row Color', 'subtitle' => 'Conditional whole-row tint by record status, plus an emphasised row class.', 'component' => TablePreview::class, 'variant' => 'row-color'],
     'table-column-filters' => ['title' => 'Wire Table Column Filters', 'subtitle' => 'Per-column header filters: text, single-select, multi-select, and boolean.', 'component' => TablePreview::class, 'variant' => 'column-filters'],
+    'table-empty-state' => ['title' => 'Wire Table Empty State', 'subtitle' => 'The empty state with a way out of it: a link action, and one that opens a modal form — record-less, and repeated in the stacked card layout.', 'component' => TablePreview::class, 'variant' => 'empty-state'],
     'table-image-gallery' => ['title' => 'Wire Table Image Gallery', 'subtitle' => 'ImageColumn: single image, an array as a gallery, and a stacked one capped with a "+N" chip.', 'component' => TablePreview::class, 'variant' => 'image-gallery'],
     'table-editable-fill' => ['title' => 'Wire Table Editable + Fill', 'subtitle' => 'Inline-editable text, select and toggle cells with the Excel-style fill handle. Email opts out via ->fillable(false).', 'component' => TablePreview::class, 'variant' => 'editable-fill'],
+    'table-editable-fill-selectable' => ['title' => 'Wire Table Editable + Fill + Selection', 'subtitle' => 'The editable/fill table with selectable() on: the fill root nests inside the selection root and both gestures drag over the same rows.', 'component' => TablePreview::class, 'variant' => 'editable-fill-selectable'],
+    'table-editable-fill-paged' => ['title' => 'Wire Table Editable + Fill + Pagination', 'subtitle' => 'Inline editing next to a page-size select: one Livewire commit carries both a cell edit (which skips the render) and the per-page change (which needs one).', 'component' => TablePreview::class, 'variant' => 'editable-fill-paged'],
     'table-subrows-flatten' => ['title' => 'Wire Table Flatten', 'subtitle' => 'Flatten mode rendering every child as a regular row.', 'component' => TablePreview::class, 'variant' => 'subrows-flatten'],
     'table-subrows-limit' => ['title' => 'Wire Table Show More', 'subtitle' => 'Limited child rows with the "show more" affordance.', 'component' => TablePreview::class, 'variant' => 'subrows-limit'],
     'table-subrows-filter' => ['title' => 'Wire Table Sub-row Filters', 'subtitle' => 'Per-child interactive filter bar above the sub-row table.', 'component' => TablePreview::class, 'variant' => 'subrows-filter'],
@@ -335,6 +356,8 @@ foreach ([
     'gesture-lab-click' => ['title' => 'Gesture Lab (single click)', 'subtitle' => 'A table whose only record action is a single click opening a modal.', 'component' => GestureLabPreview::class, 'variant' => 'click-only'],
     'gesture-lab-default' => ['title' => 'Gesture Lab (shipped default)', 'subtitle' => 'The same table with no gestures() call at all — what a consumer gets out of the box: checkboxes, the declared record actions and the right-click menu, but no keyboard grid, no ranges and no sweep.', 'component' => GestureLabPreview::class, 'variant' => 'default'],
     'gesture-lab-plain' => ['title' => 'Gesture Lab (gestures off)', 'subtitle' => 'The same table with gestures(false): no keyboard grid, no ranges, no sweep, no right-click menu, no ? help — the declared record actions and the checkboxes stay.', 'component' => GestureLabPreview::class, 'variant' => 'plain'],
+    'spa-navigate' => ['title' => 'SPA Navigation · page A', 'subtitle' => 'A page with no table, no dropdown and no sortable surface — none of the package bundles are in this document. It links to page B with wire:navigate.', 'component' => SpaPlainPreview::class, 'variant' => 'plain'],
+    'spa-navigate-table' => ['title' => 'SPA Navigation · page B', 'subtitle' => 'Selection, record actions, the fill handle, the context menu and column reordering on one table — every client-side controller at once, first arriving on a wire:navigate.', 'component' => SpaTablePreview::class, 'variant' => 'table'],
     'actions-modal-stacking' => ['title' => 'Wire Actions · Nested Modal Stacking', 'subtitle' => 'Six live configurations of the nested-modal frame stack — create-and-select ($setParent), deep $setFrame, inline registerActions, slide-over, and a stacked wizard.', 'component' => ModalStackingPreview::class, 'variant' => 'gallery'],
     'core-overview' => ['title' => 'Wire Core', 'subtitle' => 'Stats, actions, and shared primitives.', 'component' => CorePreview::class, 'variant' => 'overview'],
     'core-modal' => ['title' => 'Wire Core Modal', 'subtitle' => 'Real modal surface from the core runtime.', 'component' => CorePreview::class, 'variant' => 'modal'],
@@ -377,6 +400,7 @@ $fieldPreviews = [
     'key-value' => 'Key-Value',
     'date-time-picker' => 'Date-Time Picker',
     'date-time-picker-bounds' => 'Date-Time Picker · min/max bounds',
+    'time-picker' => 'Time Picker',
     'file-upload' => 'File Upload',
     'file-upload-auto' => 'File Upload (centre crop)',
 ];

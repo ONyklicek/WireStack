@@ -59,6 +59,12 @@ class CeSubRowsComponent extends Component
     /** When false, a default sort is configured but headers are not clickable. */
     public bool $sortableHeaders = true;
 
+    /** Only invoice A may have children (per-record subRowsVisible). */
+    public bool $onlyA = false;
+
+    /** Render the stacked mobile cards alongside the desktop table. */
+    public bool $stacked = false;
+
     public function table(Table $table): Table
     {
         $table = $table
@@ -82,6 +88,14 @@ class CeSubRowsComponent extends Component
             $table->subRowsLimit($this->limit);
         }
 
+        if ($this->onlyA) {
+            $table->subRowsVisible(fn (CeInvoice $record) => $record->number === 'A');
+        }
+
+        if ($this->stacked) {
+            $table->stackedOnMobile();
+        }
+
         return $table;
     }
 
@@ -103,6 +117,27 @@ class CeDetailComponent extends Component
             ->paginated(false)
             ->columns([Column::make('number')])
             ->subRowColumns([Column::make('number')]);
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+/** Detail mode, restricted per record: only invoice A is its own sub-row. */
+class CeDetailOnlyAComponent extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(CeInvoice::class)
+            ->paginated(false)
+            ->columns([Column::make('number')])
+            ->subRowColumns([Column::make('number')])
+            ->subRowsVisible(fn (CeInvoice $record) => $record->number === 'A');
     }
 
     public function render()
@@ -407,3 +442,60 @@ it('limits eager-loaded children per parent and still counts the full set', func
     ! method_exists(Builder::class, 'groupLimit'),
     'Per-parent eager-load limit needs Laravel 11 groupLimit().',
 );
+
+// ─── Per-record sub-rows (subRowsVisible) ─────────────────────
+
+it('returns no children for a parent the condition rejects', function () {
+    $test = Livewire::test(CeSubRowsComponent::class, ['onlyA' => true]);
+
+    expect($test->instance()->getSubRows(CeInvoice::find(1))->pluck('product')->all())
+        ->toBe(['Ink', 'Pen'])
+        ->and($test->instance()->getSubRows(CeInvoice::find(2)))->toHaveCount(0);
+});
+
+it('counts no children for a parent the condition rejects', function () {
+    $test = Livewire::test(CeSubRowsComponent::class, ['onlyA' => true]);
+
+    expect($test->instance()->getSubRowsTotalCount(CeInvoice::find(2)))->toBe(0)
+        ->and($test->instance()->getSubRowsTotalCount(CeInvoice::find(1)))->toBe(2);
+});
+
+it('keeps detail-row mode from handing back a rejected record as its own child', function () {
+    // Detail mode has no relation, so the "no children" short-circuit has to sit
+    // ahead of it — otherwise a hidden panel still resolves to [$record].
+    $test = Livewire::test(CeDetailOnlyAComponent::class);
+
+    expect($test->instance()->getSubRows(CeInvoice::find(1)))->toHaveCount(1)
+        ->and($test->instance()->getSubRows(CeInvoice::find(2)))->toHaveCount(0);
+});
+
+it('does not eager-load children for parents whose panel never renders', function () {
+    // The default-expanded baseline opens every row, so without the per-record
+    // check the eager load would fetch children for parents that show none.
+    $records = Livewire::test(CeSubRowsComponent::class, ['onlyA' => true, 'defaultExpanded' => true])
+        ->instance()
+        ->getTableRecords();
+
+    expect($records->firstWhere('id', 1)->relationLoaded('items'))->toBeTrue()
+        ->and($records->firstWhere('id', 2)->relationLoaded('items'))->toBeFalse();
+});
+
+it('renders the expander cell for every row but the chevron only where children can exist', function () {
+    // Both layouts are in the document at once, so both are asserted here: the
+    // card carries its own toggle button, not the desktop partial's.
+    $html = Livewire::test(CeSubRowsComponent::class, ['onlyA' => true, 'stacked' => true])->html();
+
+    expect(substr_count($html, 'data-testid="table-row-expand"'))->toBe(1)
+        ->and(substr_count($html, 'data-testid="table-card-subrows-toggle"'))->toBe(1)
+        // Both rows keep their expander cell — dropping the <td> would shift
+        // every column on that row by one.
+        ->and(substr_count($html, 'class="w-10 px-6 py-4 "'))->toBe(2);
+});
+
+it('renders no child panel for a rejected parent even when everything starts expanded', function () {
+    $html = Livewire::test(CeSubRowsComponent::class, ['onlyA' => true, 'defaultExpanded' => true])->html();
+
+    expect(substr_count($html, 'wire:key="sub-rows-1"'))->toBe(1)
+        ->and($html)->not->toContain('wire:key="sub-rows-2"')
+        ->and($html)->toContain('Pen');
+});

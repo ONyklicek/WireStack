@@ -186,6 +186,8 @@ use NyonCode\WireCore\Widgets\ChartWidget;
 ```
 
 > **Vyžaduje Chart.js.** Widget vykreslí `<canvas>` a inicializuje ho přes Alpine. Zahrňte [Chart.js](https://www.chartjs.org/) na stránku — přes CDN nebo váš bundle — nebo canvas zůstane prázdný a zaloguje se varování v konzoli. Stylování datasetů (`borderColor`, `fill`, `tension`, …) se předává rovnou do Chart.js.
+>
+> Vlastní Alpine controller widgetu od vás nepotřebuje nic: dodává se jako bundle balíčku a widget si ho vyzvedne, když se vykresluje. Grafy jsou těžký, volitelný asset, takže záměrně *není* v sadě [`@wireStackScripts`](../getting-started.md#javascriptove-assety) načítané vždy.
 
 ### Základní použití
 

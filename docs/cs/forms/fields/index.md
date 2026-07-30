@@ -21,6 +21,7 @@ Reference pro vestavěné Wire Forms field a layoutové komponenty.
 | Editor párů klíč-hodnota | [KeyValue](key-value.md) |
 | Hvězdičkové hodnocení | [Rating](rating.md) |
 | Vybrat datum nebo datum/čas | [DateTimePicker](date-time-picker.md) |
+| Vybrat čas ze slotů | [TimePicker](time-picker.md) |
 | Vybrat barvu | [ColorPicker](color-picker.md) |
 | Nahrát soubory | [FileUpload](file-upload.md) |
 | Rich text editace | [RichEditor](rich-editor.md) nebo [TiptapEditor](tiptap-editor.md) |

@@ -19,11 +19,17 @@ return [
     | SortableJS CDN
     |--------------------------------------------------------------------------
     |
-    | URL for the SortableJS library. Set to null to disable CDN loading
-    | (useful when you bundle it yourself via npm/yarn/bun).
+    | SortableJS is now bundled into the package's own asset
+    | (dist/wire-sortable.js), so the default is null: reordering works offline
+    | and under a strict CSP with no external request.
+    |
+    | Set a URL here only if your application needs a global `window.Sortable`
+    | of its own — the drag controller uses the bundled copy either way, so a
+    | CDN script is loaded in addition to it, never instead of it. Apps that
+    | already set this key keep working unchanged.
     |
     */
-    'sortablejs_cdn' => 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js',
+    'sortablejs_cdn' => null,
 
     /*
     |--------------------------------------------------------------------------

@@ -29,6 +29,10 @@ DateTimePicker::make('x')->mode('date')      // 'date', 'month', 'time', 'dateti
 > `asMonth()` vždy renderuje nativní `<input type="month">` prohlížeče — vlastní kalendář
 > nemá month-only mřížku — takže zůstane nativní i když předáš `->native(false)`.
 
+> `asTime()` vybírá čas steppery hodin a minut. Pro pole, jehož časy jsou **sloty**
+> — otevírací doba, termíny — ukládá [`TimePicker`](time-picker.md) tutéž hodnotu,
+> ale vybírá ji ze seznamu v pevném intervalu.
+
 ## Omezení data
 
 ```php

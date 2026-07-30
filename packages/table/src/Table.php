@@ -16,6 +16,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
+use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Support\Trans;
@@ -26,6 +27,7 @@ use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\ValueObjects\ShortcutHint;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
+use NyonCode\WireTable\Actions\EmptyStateActionClickResolver;
 use NyonCode\WireTable\Actions\RecordActionResolver;
 use NyonCode\WireTable\Actions\TableActionClickResolver;
 use NyonCode\WireTable\Columns\Column;
@@ -110,6 +112,9 @@ class Table implements Htmlable
     protected ?string $emptyStateDescription = null;
 
     protected ?string $emptyStateIcon = null;
+
+    /** @var array<int, Action|HeaderAction> */
+    protected array $emptyStateActions = [];
 
     protected bool $striped = false;
 
@@ -1024,6 +1029,89 @@ class Table implements Htmlable
     public function getEmptyStateIcon(): ?string
     {
         return $this->emptyStateIcon;
+    }
+
+    /**
+     * Actions offered when the table has no records — typically "create the first one".
+     *
+     * The empty state is a record-less surface, so these run through the same
+     * host methods as header actions (modal, form and confirmation included) and
+     * only a static `->url()` resolves. They are not shown when the table is
+     * empty because of a filter: there the offer is to clear the filter, not to
+     * create a record that already exists behind it.
+     *
+     * @param  array<int, Action|HeaderAction>  $actions
+     */
+    public function emptyStateActions(array $actions): static
+    {
+        $this->emptyStateActions = $actions;
+
+        return $this;
+    }
+
+    /**
+     * @return array<int, Action|HeaderAction>
+     */
+    public function getEmptyStateActions(): array
+    {
+        return $this->emptyStateActions;
+    }
+
+    /**
+     * Render the empty-state actions to HTML for the canonical empty-state partial.
+     *
+     * Resolved here rather than in Blade so the view only echoes strings, and so
+     * both action kinds converge on the record-less host methods: a HeaderAction
+     * already renders that way, a row Action is given
+     * {@see EmptyStateActionClickResolver} instead of the row resolver. An action
+     * the viewer may not run renders as an empty string and is dropped.
+     *
+     * @return array<int, string>
+     */
+    public function getEmptyStateActionsHtml(): array
+    {
+        return $this->renderEmptyStateActions($this->emptyStateActions);
+    }
+
+    /**
+     * The same actions for the stacked-card layout's empty state.
+     *
+     * Both layouts sit in the document at every width — CSS decides which is
+     * shown — so the card copy drops the action's `keyboardShortcut()`: a
+     * rendered button binds it as a *window* listener, and two of them would
+     * answer one keypress twice. Same reason the mobile row actions clone.
+     *
+     * @return array<int, string>
+     */
+    public function getMobileEmptyStateActionsHtml(): array
+    {
+        return $this->renderEmptyStateActions(array_map(
+            fn (Action|HeaderAction $action): Action|HeaderAction => (clone $action)->withoutKeyboardShortcut(),
+            $this->emptyStateActions,
+        ));
+    }
+
+    /**
+     * @param  array<int, Action|HeaderAction>  $actions
+     * @return array<int, string>
+     */
+    private function renderEmptyStateActions(array $actions): array
+    {
+        $click = new EmptyStateActionClickResolver;
+
+        $html = [];
+
+        foreach ($actions as $action) {
+            $rendered = $action instanceof HeaderAction
+                ? $action->render()
+                : $action->render(null, $click);
+
+            if ($rendered !== '') {
+                $html[] = $rendered;
+            }
+        }
+
+        return $html;
     }
 
     public function striped(bool $striped = true): static

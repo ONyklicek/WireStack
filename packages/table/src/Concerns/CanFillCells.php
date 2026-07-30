@@ -35,9 +35,7 @@ trait CanFillCells
      */
     public function fillTableCells(array $fills): array
     {
-        if (method_exists($this, 'skipRender')) {
-            $this->skipRender();
-        }
+        $this->skipTableRender();
 
         $table = $this->getTable();
 

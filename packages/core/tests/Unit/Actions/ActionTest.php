@@ -55,6 +55,36 @@ it('does not open url in new tab by default', function () {
     expect($action->shouldOpenUrlInNewTab())->toBeFalse();
 });
 
+// A record-less surface (the table's empty state) renders the same action
+// object with no row to hand it. A static URL is record-independent and must
+// still resolve; a per-record closure has nothing to receive and stays null
+// rather than being called with null.
+it('resolves a static url without a record', function () {
+    expect(Action::make('create')->url('/posts/create')->getUrl())->toBe('/posts/create');
+});
+
+it('leaves a per-record url closure unresolved without a record', function () {
+    $action = Action::make('view')->url(fn ($record) => '/users/'.$record->getKey());
+
+    expect($action->getUrl())->toBeNull();
+});
+
+it('drops a previously set closure url when a static url replaces it', function () {
+    $action = Action::make('view')
+        ->url(fn ($record) => '/users/'.$record->getKey())
+        ->url('/users');
+
+    expect($action->getUrl())->toBe('/users');
+});
+
+it('drops a previously set static url when a closure url replaces it', function () {
+    $action = Action::make('view')
+        ->url('/users')
+        ->url(fn ($record) => '/users/'.$record->getKey());
+
+    expect($action->getUrl())->toBeNull();
+});
+
 // ─── Render Data ─────────────────────────────────────────────────────────────
 
 it('builds solid button render data from canonical size and color resolvers', function () {
@@ -224,6 +254,26 @@ it('uses the record-resolved label for the aria-label of a URL row action', func
 
     expect($html)->toContain('aria-label="Open Cabinet A"')
         ->and($html)->toContain('href="/cabinets/7"');
+});
+
+it('renders without a record, as a link when the url is static', function () {
+    $html = Action::make('create')
+        ->label('Create post')
+        ->url('/posts/create')
+        ->render();
+
+    expect($html)->toContain('href="/posts/create"')
+        ->and($html)->toContain('Create post');
+});
+
+it('renders without a record as a button when the url needs one', function () {
+    $html = Action::make('create')
+        ->label('Create post')
+        ->url(fn ($record) => '/posts/'.$record->getKey())
+        ->render();
+
+    expect($html)->not->toContain('href=')
+        ->and($html)->toContain('Create post');
 });
 
 // ─── Quiet / Solid presentation ─────────────────────────────────────────────

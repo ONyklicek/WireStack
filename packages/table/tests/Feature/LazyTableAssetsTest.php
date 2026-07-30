@@ -14,16 +14,20 @@ use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Table;
 
 /*
- * A lazy() table must ship its Alpine bundles with the PLACEHOLDER render, not
- * with the deferred one that swaps the table in.
+ * A lazy() table ships its Alpine bundles with the DEFERRED render, not with the
+ * placeholder.
  *
- * Each bundle registers its components from an `alpine:init` listener, and that
- * event fires once, when Alpine boots. A bundle first emitted by the deferred
- * render arrives after it: the script runs, subscribes to an event that never
- * fires again, and registers nothing. The morphed-in markup then evaluates
- * x-data="wireDropdown(...)" against an undefined factory, so every dropdown,
- * the selection root and the record controller die — and each sheet backdrop,
- * an x-show="open" over state that no longer exists, is left covering the page.
+ * This is the inverse of what it used to assert. Each bundle registered its
+ * components from an `alpine:init` listener, and that event fires once, when
+ * Alpine boots — so a bundle first emitted by the deferred render subscribed to
+ * an event that would never fire again and registered nothing. The placeholder
+ * render was therefore forced to pre-emit all three.
+ *
+ * The bundles now register unconditionally, and Livewire awaits
+ * `payload.intercept` — which loads and runs the new @assets to completion —
+ * before `handleSuccess` morphs the markup in, so the factory exists before the
+ * deferred table is initialised. Pre-emitting is not just unnecessary, it is
+ * wrong: it pulls bundles onto a page whose whole point is to defer them.
  *
  * Asserted by counting renders of the asset partials rather than by scanning the
  * HTML: @assets is hoisted out of the component markup, so assertSee() cannot
@@ -99,7 +103,7 @@ beforeEach(function () {
 
 afterEach(fn () => Schema::dropIfExists('lazy_assets_users'));
 
-it('ships the dropdown and selection bundles with the lazy placeholder', function () {
+it('keeps the bundles off the lazy placeholder', function () {
     $counts = lazyAssetRenders(function () {
         Livewire::test(LazyAssetsHost::class)
             // Still the placeholder: the table body has not been loaded yet.
@@ -107,18 +111,34 @@ it('ships the dropdown and selection bundles with the lazy placeholder', functio
             ->assertDontSee('table-card', escape: false);
     });
 
-    // …yet the bundles the deferred markup will need already rendered.
-    expect($counts['dropdown'])->toBe(1)
-        ->and($counts['selection'])->toBe(1);
+    // A deferred table defers its bundles too. This is the assertion that used to
+    // read `toBe(1)` — see the note at the top of the file for why it flipped.
+    expect($counts['dropdown'])->toBe(0)
+        ->and($counts['selection'])->toBe(0);
 });
 
-it('omits the selection bundle when the lazy table is not selectable', function () {
+it('ships the bundles with the deferred render that swaps the table in', function () {
     $counts = lazyAssetRenders(function () {
-        Livewire::test(LazyAssetsHost::class, ['selectable' => false])
-            ->assertSee('table-lazy-wrapper', escape: false);
+        Livewire::test(LazyAssetsHost::class)
+            ->call('loadTable')
+            ->assertSee('table-card', escape: false);
     });
 
-    expect($counts['dropdown'])->toBe(1)
+    // Livewire loads and runs these to completion during `payload.intercept`,
+    // before `handleSuccess` morphs this markup in, so the factories exist by the
+    // time Alpine initialises the table.
+    expect($counts['dropdown'])->toBeGreaterThan(0)
+        ->and($counts['selection'])->toBeGreaterThan(0);
+});
+
+it('omits the selection bundle when the loaded table is not selectable', function () {
+    $counts = lazyAssetRenders(function () {
+        Livewire::test(LazyAssetsHost::class, ['selectable' => false])
+            ->call('loadTable')
+            ->assertSee('table-card', escape: false);
+    });
+
+    expect($counts['dropdown'])->toBeGreaterThan(0)
         ->and($counts['selection'])->toBe(0);
 });
 

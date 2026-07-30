@@ -21,6 +21,34 @@ test('the package serves the record-actions bundle without publishing or a build
         ->and(file_get_contents($response->baseResponse->getFile()->getPathname()))->toContain('wireRecordActions');
 });
 
+test('the record-actions source registers unconditionally so it survives a wire:navigate', function () {
+    $source = file_get_contents(
+        dirname(WireTableServiceProvider::ASSETS_PATH).'/resources/js/record-actions.js'
+    );
+
+    // `alpine:init` fires exactly once per document, so a bundle that arrives
+    // with the first table after a `wire:navigate` must not depend on it: the
+    // listener is the cold-load fallback for an idempotent registrar that runs
+    // immediately when Alpine is already up.
+    expect($source)
+        ->not->toMatch("/addEventListener\('alpine:init',\s*\(\s*\)\s*=>/")
+        ->toMatch("/if \(window\.Alpine\) \{\s*(?:\/\/[^\n]*\n\s*)*registerWireRecordActions\(\)/")
+        ->toMatch("/document\.addEventListener\('alpine:init', registerWireRecordActions\)/")
+        ->toContain('if (registered || ! window.Alpine) return');
+});
+
+test('the shipped record-actions bundle carries the SPA-proof registration', function () {
+    $bundle = WireTableServiceProvider::ASSETS_PATH.'/wire-table-records.js';
+
+    // Minified shape of the idiom above:
+    //   window.Alpine?g():document.addEventListener("alpine:init",g)
+    //   g=()=>{y||!window.Alpine||(y=!0, …)}
+    // Fails if the dist drifts from source (needs `npm run build:table-assets`).
+    expect(file_get_contents($bundle))
+        ->toMatch('/window\.Alpine\?\w+\(\):document\.addEventListener\("alpine:init",\w+\)/')
+        ->toMatch('/\w+\|\|!window\.Alpine\|\|\(\w+=!0,/');
+});
+
 test('the shipped bundle carries the delegated pointer and context-menu layer', function () {
     $bundle = WireTableServiceProvider::ASSETS_PATH.'/wire-table-records.js';
 

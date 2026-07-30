@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Concerns;
 
 use Illuminate\Database\Eloquent\Model;
-use NyonCode\WireCore\Actions\HeaderAction;
+use NyonCode\WireCore\Actions\BaseAction;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Notifications\Notification;
 
@@ -161,7 +161,7 @@ trait InteractsWithTableModals
      * stack depth (bottom-first). Backs the top-frame convenience accessors and
      * the per-frame render config.
      *
-     * @return array{0: Action|BulkAction|HeaderAction|null, 1: mixed}
+     * @return array{0: BaseAction|null, 1: mixed}
      */
     protected function resolveActionForFrame(int $depth): array
     {
@@ -207,23 +207,34 @@ trait InteractsWithTableModals
      * standalone host's equivalent). Cleared on push/pop and whenever the table
      * cache is invalidated, since a frame's record is re-hydrated from the query.
      *
-     * @var array<int, array{0: Action|BulkAction|HeaderAction|null, 1: mixed}>
+     * @var array<int, array{0: BaseAction|null, 1: mixed}>
      */
     protected array $resolvedActionFrameCache = [];
 
     /**
-     * Find header action by name
+     * Find a record-less action by name.
+     *
+     * Two surfaces declare actions that run without a record: the toolbar's
+     * header actions and the empty state's. Both execute through the same host
+     * methods, so both are searched here — without this, an empty-state action
+     * would render a button whose click resolves to nothing.
+     *
+     * The return type spans BaseAction rather than HeaderAction because the
+     * empty state also accepts a row Action (that is the declared API); every
+     * caller only uses the shared modal/execute surface.
      */
-    protected function findHeaderAction(string $actionName): ?HeaderAction
+    protected function findHeaderAction(string $actionName): ?BaseAction
     {
         $table = $this->getTable();
 
-        foreach ($table->getHeaderActions() as $action) {
+        $candidates = [...$table->getHeaderActions(), ...$table->getEmptyStateActions()];
+
+        foreach ($candidates as $action) {
             // Recurse into inline registerActions() so a nested header action
             // declared on another opens by name (parity with findAction).
             $found = $this->matchRegisteredAction($action, $actionName);
 
-            if ($found instanceof HeaderAction) {
+            if ($found !== null) {
                 return $found;
             }
         }

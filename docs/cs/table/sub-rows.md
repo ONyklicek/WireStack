@@ -60,6 +60,59 @@ Podřádky použijte, když:
 Vyhněte se jim, když je dětská sada dost velká, aby si zasloužila vlastní tabulku
 s vlastními filtry a stránkováním — podřádky jsou detailní prostředek, ne druhý grid.
 
+## Když děti může mít jen část záznamů
+
+`subRows()` je přepínač na úrovni tabulky, takže ve výchozím stavu dostane
+rozbalovací chevron každý řádek. V tabulce míchající různé druhy záznamů tak
+slibuje děti i řádku, který je mít nikdy nemůže. `subRowsVisible()` to rozhodne
+per záznam:
+
+```php
+->subRows('items')
+->subRowsVisible(fn (Order $record) => $record->isPiecework());
+```
+
+Záznamy, které podmínka odmítne, přijdou o chevron, o dětský panel i o svůj podíl
+na eager loadu. **Buňka** s chevronem se pořád vykreslí — prázdná — protože její
+vypuštění by posunulo všechny ostatní sloupce toho řádku.
+
+Není to totéž jako „zrovna nemá děti": záznam, který děti mít může, ale právě
+žádné nemá, se dál rozbalí na hlášku `no_sub_rows`. Podmínku použijte pro
+záznamy, které je mít strukturálně nemohou.
+
+Výsledek se memoizuje per záznam na dobu requestu, takže callback smí sáhnout do
+databáze — lepší je ale číst něco, co už na záznamu je.
+
+### Skrytí řádků, které prostě žádné nemají
+
+Na nejčastější podmínku — „tenhle záznam právě teď nemá děti" — použijte
+`subRowsHideWhenEmpty()` místo vlastní closure:
+
+```php
+->subRows('items')
+->subRowsHideWhenEmpty();
+```
+
+Ručně napsané to stojí jeden `COUNT` na řádek. Přepínač místo toho nechá dotaz
+tabulky nést omezený count relace podřádků, takže kontrola per řádek je čtení
+atributu — u vykreslené stránky žádný dotaz navíc. Záznam předaný tabulce přímo
+(ne načtený jejím dotazem) spadne zpět na jeden `EXISTS`.
+
+Count je omezený přesně tak jako panel — `subRowQuery()` a případný
+[`Filter::subRows()`](filters/relationships.md) — takže rodič, jehož děti filtr
+celé odstraní, přijde o rozbalovátko místo aby se otevřel na hlášku o prázdném
+stavu. Interaktivní lišta filtrů podřádků (`subRowsFilterable()`) se do něj
+záměrně **nepromítá**: její hodnoty se mění per rodič, jak uživatel píše, a
+rozbalovátko by mizelo a objevovalo se pod kurzorem.
+
+Obě podmínky se skládají a ta levnější běží první — záznam, který už
+`subRowsVisible()` odmítl, se nikdy nepočítá:
+
+```php
+->subRowsVisible(fn (Order $record) => $record->isPiecework())
+->subRowsHideWhenEmpty();
+```
+
 ## Rozbalení a sbalení
 
 ```php
@@ -387,6 +440,8 @@ filtrování per rodič spadne zpět na bezpečný per-parent dotaz.
 | Metoda                                          | Účel                                     |
 | ----------------------------------------------- | ---------------------------------------- |
 | `subRows(string $relation)`                     | Zapnout podřádky z relace (vynechejte + nastavte `subRowView`/`subRowColumns` pro detail-řádkový režim) |
+| `subRowsVisible(Closure\|bool)`                  | Omezit podřádky na záznamy, které děti mít mohou |
+| `subRowsHideWhenEmpty(bool)`                    | Sebrat rozbalovátko záznamům bez dětí (count je v dotazu tabulky) |
 | `subRowColumns(array $columns)`                 | Sloupce pro dětskou tabulku              |
 | `subRowQuery(Closure $cb)`                      | Tvarovat dotaz dětské relace             |
 | `subRowsSortable(bool, ?string $default, string $direction)` | Řazení klikem na hlavičky + výchozí řazení |

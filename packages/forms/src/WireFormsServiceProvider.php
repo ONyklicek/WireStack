@@ -10,6 +10,8 @@ use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Actions\Contracts\ModalFormFactory;
+use NyonCode\WireCore\Foundation\Assets\AssetManager;
+use NyonCode\WireCore\Foundation\Assets\Js;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\Support\FormModalFormFactory;
 use NyonCode\WireForms\Integration\ActionMacros;
@@ -39,6 +41,7 @@ class WireFormsServiceProvider extends PackageServiceProvider
                 ActionMacros::register();
 
                 $this->registerAssetRoutes();
+                $this->registerAssets();
             })
             ->hasConfig()
             ->hasViews()
@@ -89,5 +92,22 @@ class WireFormsServiceProvider extends PackageServiceProvider
         })
             ->where('file', '[A-Za-z0-9_.-]+')
             ->name('wire-forms.tiptap');
+    }
+
+    /**
+     * Declare the package's browser bundles with the canonical AssetManager, so
+     * `@wireStackScripts` carries `wireImageUpload` on every page.
+     *
+     * The TipTap editor is deliberately absent: it is a heavy, code-split ESM bundle
+     * that only the editor field needs, and it stays on-request. The rule is to lazy
+     * the heavy *bodies*, never the small controllers that register them.
+     */
+    protected function registerAssets(): void
+    {
+        app(AssetManager::class)->register([
+            Js::make('image', self::ASSETS_PATH.'/wire-forms-image.js')
+                ->navigateTrack()
+                ->navigateOnce(),
+        ], 'wire-forms');
     }
 }

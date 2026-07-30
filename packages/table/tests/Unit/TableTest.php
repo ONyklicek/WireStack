@@ -374,6 +374,86 @@ it('can set custom empty state', function () {
         ->and($table->getEmptyStateIcon())->toBe('search');
 });
 
+// ─── Empty State Actions ────────────────────────────────────────────────────
+
+it('has no empty state actions by default', function () {
+    expect(Table::make()->getEmptyStateActions())->toBe([])
+        ->and(Table::make()->getEmptyStateActionsHtml())->toBe([]);
+});
+
+it('can set empty state actions', function () {
+    $action = Action::make('create');
+
+    $table = Table::make()->emptyStateActions([$action]);
+
+    expect($table->getEmptyStateActions())->toBe([$action]);
+});
+
+it('renders an empty state row action as a link when its url is static', function () {
+    $html = Table::make()
+        ->emptyStateActions([
+            Action::make('create')->label('Create post')->url('/posts/create'),
+        ])
+        ->getEmptyStateActionsHtml();
+
+    expect($html)->toHaveCount(1)
+        ->and($html[0])->toContain('href="/posts/create"')
+        ->and($html[0])->toContain('Create post');
+});
+
+// The empty state has no rows, so its actions must run through the record-less
+// host methods — the row resolver would emit an empty record key.
+it('wires an empty state row action to the record-less host methods', function () {
+    $html = Table::make()
+        ->emptyStateActions([
+            Action::make('create')->label('Create post'),
+            Action::make('import')->label('Import')->requiresConfirmation(),
+        ])
+        ->getEmptyStateActionsHtml();
+
+    // The click lands in an HTML attribute, so the quotes arrive escaped.
+    expect($html[0])->toContain(e("executeHeaderAction('create')"))
+        ->and($html[0])->not->toContain('executeTableAction')
+        ->and($html[1])->toContain(e("openHeaderActionModal('import')"))
+        ->and($html[1])->not->toContain('openActionModal(');
+});
+
+it('renders a header action in the empty state through its own view', function () {
+    $html = Table::make()
+        ->emptyStateActions([
+            HeaderAction::make('create')->label('Create post'),
+        ])
+        ->getEmptyStateActionsHtml();
+
+    expect($html)->toHaveCount(1)
+        ->and($html[0])->toContain('data-testid="header-action-create"')
+        ->and($html[0])->toContain(e("executeHeaderAction('create')"));
+});
+
+// Both layouts are in the document at every width, so the card copy must not
+// bind the same window listener a second time.
+it('strips the keyboard shortcut from the stacked-card copy of an empty state action', function () {
+    $action = Action::make('create')->label('Create post')->keyboardShortcut('mod+n');
+
+    $table = Table::make()->emptyStateActions([$action]);
+
+    expect($table->getEmptyStateActionsHtml()[0])->toContain('keydown')
+        ->and($table->getMobileEmptyStateActionsHtml()[0])->not->toContain('keydown')
+        // The declared action itself is untouched — only the rendered copy.
+        ->and($action->getKeyboardShortcut())->toBe('mod+n');
+});
+
+it('drops an empty state action the viewer may not run', function () {
+    $html = Table::make()
+        ->emptyStateActions([
+            Action::make('create')->label('Create post')->hidden(),
+            HeaderAction::make('import')->label('Import')->hidden(),
+        ])
+        ->getEmptyStateActionsHtml();
+
+    expect($html)->toBe([]);
+});
+
 // ─── Polling ────────────────────────────────────────────────────────────────
 
 it('can enable polling with interval', function () {

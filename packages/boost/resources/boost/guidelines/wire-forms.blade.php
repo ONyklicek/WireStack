@@ -26,8 +26,11 @@ Build forms inside a Livewire component using the `WithForms` trait and a `form(
 ### Fields
 
 Inputs: `TextInput`, `Textarea`, `Select`, `Checkbox`, `CheckboxList`, `Radio`, `Toggle`, `DateTimePicker`,
-`ColorPicker`, `FileUpload`, `KeyValue`, `MarkdownEditor`, `RichEditor`, `TiptapEditor`, `CodeEditor`,
-`OtpInput`, `Rating`, `Slider`, `Tags`, `Repeater`, `BelongsToSelect`, `MorphToSelect`, `Hidden`.
+`TimePicker`, `ColorPicker`, `FileUpload`, `KeyValue`, `MarkdownEditor`, `RichEditor`, `TiptapEditor`,
+`CodeEditor`, `OtpInput`, `Rating`, `Slider`, `Tags`, `Repeater`, `BelongsToSelect`, `MorphToSelect`,
+`Hidden`. `TimePicker` picks a time from a slot list at `minutesStep()` (default 30); `asTime()` picks it
+with steppers — same stored value, different panel. `TimePicker`'s mode is locked, so
+`asDate()`/`asMonth()`/`asDateTime()`/`mode()` on it throw rather than return a calendar.
 Display: `Alert`, `Html`, `Placeholder`, `ViewField`. Layout: `Section`, `Grid`, `Fieldset`,
 `Tabs`/`Tab`, `Wizard`/`Step`. All tab/step panels stay in the DOM, so nested fields flatten and
 validate together on submit; the tab bar scrolls horizontally on mobile and the wizard names the

@@ -82,13 +82,24 @@ class TaskTable extends Component
 ```php
 return [
     'order_column' => 'sort_order',
-    'sortablejs_cdn' => 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js',
+    'sortablejs_cdn' => null,
     'animation' => 150,
     'user_model' => 'App\\Models\\User',
 ];
 ```
 
-Set `sortablejs_cdn` to `null` when your application bundles SortableJS itself.
+SortableJS is compiled into the package's own asset (`dist/wire-sortable.js`,
+served from `/wire-sortable/assets/sortable.js`), so reordering needs no build
+step, no `vendor:publish` and no CDN request — it works offline and under a
+strict CSP. `sortablejs_cdn` defaults to `null` for that reason; set it only if
+your application needs a global `window.Sortable` of its own, in which case that
+script is loaded *in addition to* the bundle. Applications that already set the
+key keep working unchanged.
+
+As with every Wire package, `@wireStackScripts` in the layout `<head>` puts the
+bundle in the initial document — the placement that survives a `wire:navigate`
+visit; the sortable view's own include remains a fallback. See
+[JavaScript Assets](../../docs/getting-started.md#javascript-assets).
 
 ## Documentation
 

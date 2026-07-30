@@ -66,6 +66,16 @@ Colors/icons:
 - `Foundation\Icons\DefaultIconSet`
 - `Foundation\Icons\HeroiconsOutlineSet`
 
+Browser assets (canonical owner of every package's JS bundle):
+
+- `Foundation\Assets\AssetManager` — container singleton; `register()` per package,
+  `getScripts()` / `renderScripts()` behind the `@wireStackScripts` directive,
+  `get()` / `url()` for a surface emitting its own tag
+- `Foundation\Assets\Js` — one bundle: `make($id, $filesystemPath)` plus `module()`,
+  `defer()`, `navigateTrack()`, `navigateOnce()`, `loadedOnRequest()`
+- `Foundation\Assets\Contracts\Asset`
+- `Exceptions\AssetRegistrationException`
+
 Foundation Blade components:
 
 - `packages/core/resources/views/foundation/badge.blade.php`
@@ -262,6 +272,7 @@ Fields:
 - `Tags`
 - `TextInput`
 - `Textarea`
+- `TimePicker` (mode-locked `DateTimePicker`; slot-list panel, own view)
 - `TiptapEditor`
 - `Toggle`
 
@@ -523,7 +534,17 @@ Classes:
 Views:
 
 - `packages/sortable/resources/views/tables/index.blade.php`
-- `packages/sortable/resources/views/partials/scripts.blade.php`
+- `packages/sortable/resources/views/partials/scripts.blade.php` — a thin `@assets`
+  wrapper: the bundle's `<script>` tag (plus the optional `sortablejs_cdn` tag) and
+  the `.wire-sortable-*` drag CSS. The `wireSortable` Alpine component itself lives
+  in the bundle, not here.
+
+Assets:
+
+- `packages/sortable/resources/js/sortable.js` → `packages/sortable/dist/wire-sortable.js`
+  (`npm run build:sortable-assets`; SortableJS compiled in), registered with the core
+  `AssetManager` as `wire-sortable`/`sortable` and served by the `wire-sortable.asset`
+  route
 
 ## Test Locations
 

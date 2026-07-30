@@ -15,6 +15,8 @@ use Workbench\App\Livewire\Previews\InfolistPreview;
 use Workbench\App\Livewire\Previews\ModalStackingPreview;
 use Workbench\App\Livewire\Previews\PanelPreview;
 use Workbench\App\Livewire\Previews\SortablePreview;
+use Workbench\App\Livewire\Previews\SpaPlainPreview;
+use Workbench\App\Livewire\Previews\SpaTablePreview;
 use Workbench\App\Livewire\Previews\TablePreview;
 use Workbench\App\Livewire\Previews\WidgetPreview;
 
@@ -47,6 +49,8 @@ class WorkbenchServiceProvider extends ServiceProvider
             ModalStackingPreview::class,
             PanelPreview::class,
             SortablePreview::class,
+            SpaPlainPreview::class,
+            SpaTablePreview::class,
             TablePreview::class,
             WidgetPreview::class,
         ] as $component) {

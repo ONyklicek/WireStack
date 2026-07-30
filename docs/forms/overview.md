@@ -317,6 +317,7 @@ class MyComponent extends Component
 - [Radio](fields/radio.md) — radio button group
 - [Toggle](fields/toggle.md) — on/off switch
 - [DateTimePicker](fields/date-time-picker.md) — unified date/time/datetime
+- [TimePicker](fields/time-picker.md) — time only, picked from a slot list
 - [ColorPicker](fields/color-picker.md) — color selector
 - [FileUpload](fields/file-upload.md) — file/image upload
 - [RichEditor](fields/rich-editor.md) — WYSIWYG editor

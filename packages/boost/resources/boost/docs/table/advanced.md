@@ -311,6 +311,14 @@ $table->poll('5s')
 The closure receives the filtered query (without ordering) and must return a
 string that changes whenever a re-render is needed.
 
+A skipped render is always conditional on the request having changed nothing the
+table displays. Livewire merges everything queued for one component into a single
+request, so a poll tick — or an inline-cell save, which skips the render for its
+own reason — can travel together with the user changing the page size, the
+search, a filter or the sort. In that request the change wins and the table
+renders; a skip there would leave the browser showing the previous view until the
+user did something else.
+
 ### Row/Column Polling
 
 Use `PollColumn` for per-cell live updates without refreshing the entire table:
@@ -360,26 +368,25 @@ $table->lazy()
 
 ### How It Works
 
-1. Page renders immediately with the placeholder HTML — and with the Alpine bundles the table will need
+1. Page renders immediately with the placeholder HTML
 2. Livewire dispatches an async call to load table content
 3. Placeholder is replaced with the fully rendered table
 4. Subsequent interactions (sort, filter, paginate) are normal Livewire calls
 
-Step 1 is not a detail you can skip past. The bundles behind dropdowns, row
-selection and the record controller register their Alpine components from an
-`alpine:init` listener, and that event fires exactly once — when Alpine boots.
-A bundle arriving with the deferred markup would land after it, subscribe to an
-event that never fires again, and register nothing; the table would then come
-up with every dropdown dead and each sheet backdrop stuck over the page. So the
-**placeholder** render ships them, and the markup that replaces it initialises
-normally.
+`lazy()` defers the JavaScript too, not just the query and the markup. The
+table's Alpine bundles ship with the deferred render, and that is safe for two
+reasons: Livewire loads and runs a response's new `@assets` **to completion**
+before it morphs the markup in, and every wireStack bundle registers its Alpine
+components unconditionally rather than only from an `alpine:init` listener —
+that event fires exactly once, when Alpine boots, so a bundle arriving later
+would otherwise subscribe to an event that never fires again and register
+nothing. The factory therefore exists before the deferred table is initialised.
 
-Which bundles load follows the table's own configuration: the dropdown bundle
-always (the toolbar is built from dropdowns), the selection bundle with
-`selectable()`, and the record controller whenever the table mounts it at all —
-record-action pointer bindings, a row context menu, grid keyboard semantics,
-drag-select or Shift-range selection. A custom `lazyPlaceholder()` replaces the
-visible skeleton only — it never changes what loads.
+A custom `lazyPlaceholder()` replaces the visible skeleton only — it never
+changes what loads. And if your layout carries
+[`@wireStackScripts`](../getting-started.md#javascript-assets), the shared
+controllers are in the document from the first paint anyway, which is what you
+want in an app that navigates with `wire:navigate`.
 
 ### When to Use
 
@@ -939,6 +946,7 @@ level without brittle CSS.
 | Sub-row expand | `data-testid="table-row-expand"` (`aria-expanded`) |
 | Row action | `data-testid="action-{name}"` (+ `aria-label`) |
 | Header / bulk / menu action | `data-testid="header-action-{name}"` / `bulk-action-{name}` / `menu-action-{name}` |
+| Empty-state action | the same testid as its kind (`action-{name}` / `header-action-{name}`) — under `stackedOnMobile()` it matches **twice**, once per layout, so select the visible one |
 | Bulk bar / deselect | `data-testid="table-bulk-bar"` / `table-deselect"` |
 | Panel filter control | `data-testid="filter-{name}"` (the input inside a Select / Ternary / custom panel filter — distinct from the header `table-filter-{column}` cell) |
 | Action group trigger | `data-testid="action-group-trigger"` |
@@ -1193,7 +1201,13 @@ class OrderTable extends Component
                 heading: 'No orders found',
                 description: 'Create your first order to get started.',
                 icon: 'shopping-cart',
-            );
+            )
+            ->emptyStateActions([
+                Action::make('createFirstOrder')
+                    ->label('New Order')
+                    ->icon('plus')
+                    ->url(route('orders.create')),
+            ]);
     }
 }
 ```

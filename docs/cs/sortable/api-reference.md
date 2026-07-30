@@ -238,7 +238,7 @@ Smazat záznam pořadí sloupců pro kombinaci uživatel + model + tabulka.
 | Klíč | Typ | Výchozí | Popis |
 |---|---|---|---|
 | `order_column` | `string` | `'sort_order'` | Výchozí název sloupce pořadí |
-| `sortablejs_cdn` | `?string` | CDN URL | Zdrojová URL SortableJS, `null` pro vypnutí |
+| `sortablejs_cdn` | `?string` | `null` | Volitelný `<script>` SortableJS navíc. SortableJS je zkompilovaný v bundlu balíčku, takže tohle na řazení nikdy nemá vliv — nastavte jen tehdy, když váš vlastní kód potřebuje globální `window.Sortable` |
 | `animation` | `int` | `150` | Doba drag animace v milisekundách |
 | `user_model` | `string` | `'App\\Models\\User'` | Třída modelu uživatele pro relace pořadí sloupců |
 | `user_key_type` | `string` | `'id'` | Typ primárního klíče modelu uživatele, použitý migrací k otypování sloupce `user_id`. Použijte `'uuid'` nebo `'ulid'` pro neceločíselné auth klíče |
@@ -247,7 +247,10 @@ Smazat záznam pořadí sloupců pro kombinaci uživatel + model + tabulka.
 
 ## Alpine.js komponenta
 
-`wireSortable(config)` je registrována globálně přes `Alpine.data()`.
+`wireSortable(config)` je registrována globálně přes `Alpine.data()` z bundlu balíčku
+(`dist/wire-sortable.js`, se zkompilovaným SortableJS). Registruje se hned, jak bundle
+proběhne, ne až z `alpine:init` — funguje tedy i tehdy, když bundle dorazí až po startu
+Alpine: při návštěvě přes `wire:navigate`, u lazy vykreslené tabulky, v modalu.
 
 ### Config volby
 
