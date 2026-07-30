@@ -565,7 +565,7 @@ const wireEditableCell = (config = {}) => ({
             if (d.column === this.columnName) return   // that was us
             if (this.saving) return                    // don't disturb an in-flight save
             if (this.focused && this.dirty) return     // nor a field being edited
-            if (d.version) this.recordVersion = d.version
+            this.setRecordVersion(d.version)
         }
         window.addEventListener('wire-editable-committed', this._onSiblingCommit)
     },
@@ -575,12 +575,38 @@ const wireEditableCell = (config = {}) => ({
         window.removeEventListener('wire-editable-committed', this._onSiblingCommit)
     },
 
+    /**
+     * The one place a new optimistic-lock version is adopted: this cell's own
+     * commit, the conflict branch of it, a sibling cell's broadcast, and the
+     * server→client attribute channel all come through here.
+     *
+     * State ONLY — it deliberately does not write `data-record-version` back.
+     * The root carries `wire:ignore.self`, so both data attributes are what the
+     * FIRST render wrote and nothing keeps them current; whoever needs the live
+     * version reads the component (see `versionOf()` in fill/grid.js).
+     *
+     * Writing the attribute here looks like the tidier fix and is a trap: this
+     * element is the one the MutationObserver above watches. Touching
+     * `data-record-version` wakes it, it re-reads the equally frozen
+     * `data-server-value`, finds it different from the value just committed, and
+     * "syncs" the cell back to what the page loaded with. The edit reaches the
+     * database and vanishes from the screen a second later. Keeping the pair
+     * honest would mean serialising the value back into the attribute too — which
+     * is what the fill handle's own applyValue() has to do for exactly this
+     * reason, and why it writes BOTH or neither.
+     */
+    setRecordVersion(version) {
+        if (! version) return
+
+        this.recordVersion = version
+    },
+
     syncFromServer(next, version) {
         if (this.saving) return                 // never stomp an in-flight save
         if (this.focused && this.dirty) return  // nor a field the user is editing
         this.value = next
         this.serverValue = next
-        if (version) this.recordVersion = version
+        this.setRecordVersion(version)
         this.error = null
     },
 
@@ -622,11 +648,11 @@ const wireEditableCell = (config = {}) => ({
                 if (r?.conflict) {              // someone else won the race
                     this.value = this.parse(r.currentValue)
                     this.serverValue = this.value
-                    this.recordVersion = r.currentVersion ?? this.recordVersion
+                    this.setRecordVersion(r.currentVersion)
                 }
             } else {
                 this.serverValue = next
-                if (r?.version) this.recordVersion = r.version
+                this.setRecordVersion(r.version)
                 this.success = true
                 setTimeout(() => { this.success = false }, 1500)
                 // Tell sibling cells of the same record their optimistic-lock

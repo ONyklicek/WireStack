@@ -145,7 +145,7 @@ class TablePreview extends Component
             return $this->imageGalleryTable($table);
         }
 
-        if ($this->variant === 'editable-fill') {
+        if ($this->variant === 'editable-fill' || $this->variant === 'editable-fill-selectable') {
             return $this->editableFillTable($table);
         }
 
@@ -404,10 +404,18 @@ class TablePreview extends Component
      * Every editable column type is present because each dehydrates its state
      * differently and the drag must survive all three; `email` opts out with
      * ->fillable(false), so the handle must never appear on it.
+     *
+     * The `editable-fill-selectable` variant adds `selectable()` on top. It is a
+     * fixture in its own right, not a nicer version of the other one: the fill
+     * handle wraps the table in an x-data INSIDE the selection root, so every
+     * selection expression on this table evaluates in a scope stack whose
+     * innermost component is the fill handle — and both gestures drag over the
+     * same rows with the same pointer. Nothing but a browser can tell whether
+     * the two stay out of each other's way.
      */
     private function editableFillTable(Table $table): Table
     {
-        return $table
+        $table
             ->model(User::class)
             ->gestures()
             ->fillHandle()
@@ -421,6 +429,17 @@ class TablePreview extends Component
             ])
             ->searchable(false)
             ->paginated(false);
+
+        if ($this->variant === 'editable-fill-selectable') {
+            $table
+                ->selectable()
+                ->bulkActions([
+                    BulkAction::make('activate')->label('Activate')->icon('check')->color('success'),
+                    BulkAction::make('archive')->label('Archive')->icon('outline:archive-box')->color('warning'),
+                ]);
+        }
+
+        return $table;
     }
 
     /**

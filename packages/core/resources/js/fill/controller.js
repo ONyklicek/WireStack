@@ -1,5 +1,5 @@
 import { createAutoScroller } from '../support/autoscroll'
-import { createGrid } from './grid'
+import { createGrid, versionOf } from './grid'
 import { bounds, clampToColumn, isEmpty, makeRange, targets } from './range'
 
 /**
@@ -9,10 +9,17 @@ import { bounds, clampToColumn, isEmpty, makeRange, targets } from './range'
  * the drag only paints. On release it sends exactly ONE request for the whole
  * range and then reconciles each cell from the per-record results.
  *
- * It talks to the cells only through `data-server-value` / `data-record-version`,
- * the same attributes `wireEditableCell` already watches with a MutationObserver
- * for polling and external re-renders. So the fill adds no code to the cell
- * component and cannot drift from how a single edit reconciles.
+ * It talks to the cells through `data-server-value` / `data-record-version`, the
+ * same attributes `wireEditableCell` already watches with a MutationObserver for
+ * polling and external re-renders. So the fill adds no code to the cell component
+ * and cannot drift from how a single edit reconciles.
+ *
+ * With one exception, and it is the important one: a cell's live value and lock
+ * version come from its component state when it has one (`liveValue`,
+ * `versionOf`), because that root carries `wire:ignore.self` and its attributes
+ * stop being refreshed after the first render. Reading the version from the DOM
+ * meant a cell edited inline sent the version the page loaded with, and the
+ * server refused the whole range as a conflict — silently.
  */
 
 const TARGET_CLASS = 'wire-fill-target'
@@ -353,7 +360,7 @@ const wireFillHandle = () => ({
         const previous = new Map()
 
         for (const cell of cells) {
-            previous.set(cell.recordKey, { value: this.liveValue(cell), version: cell.version })
+            previous.set(cell.recordKey, { value: this.liveValue(cell), version: versionOf(cell.el) })
             // Optimistic: the cells show the value immediately, before the request.
             this.applyValue(cell.el, value)
         }
@@ -381,7 +388,7 @@ const wireFillHandle = () => ({
         // queued fill runs, the one before it has written the versions it was
         // given back onto these very cells.
         for (const cell of cells) {
-            records[cell.recordKey] = cell.el.dataset.recordVersion || null
+            records[cell.recordKey] = versionOf(cell.el)
         }
 
         let response = null

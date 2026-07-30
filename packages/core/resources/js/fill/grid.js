@@ -14,6 +14,30 @@
 
 import { bodyRows, rowAtY } from '../support/rows'
 
+/**
+ * The live optimistic-lock version of a cell root.
+ *
+ * The one thing above that the document does NOT keep current. `wireEditableCell`
+ * mounts with `wire:ignore.self` on purpose, so a morph cannot overwrite the
+ * optimistic state it is holding — and the cost is that Livewire never refreshes
+ * that element's attributes either. The server does return a fresh version and
+ * `commit()` moves the component's own `recordVersion`, but `data-record-version`
+ * keeps whatever the first render wrote.
+ *
+ * So a cell edited inline still advertises the version the page loaded with, and
+ * sending that makes the server reject the write as someone else's edit — which
+ * the fill then rolls back with no error shown, because the refusal looked
+ * legitimate. The component's state is the only current copy; the attribute is
+ * the fallback for a cell that has no component (a plain, non-editable cell).
+ */
+export const versionOf = (el) => {
+    try {
+        return (window.Alpine.$data(el)?.recordVersion ?? el.dataset.recordVersion) || null
+    } catch (e) {
+        return el.dataset.recordVersion || null
+    }
+}
+
 export const createGrid = (root) => {
     let columns = []
 
@@ -70,7 +94,7 @@ export const createGrid = (root) => {
                 cell,
                 el,
                 recordKey: el.dataset.recordKey,
-                version: el.dataset.recordVersion || null,
+                version: versionOf(el),
                 serialized: el.dataset.serverValue ?? '',
             }
         },

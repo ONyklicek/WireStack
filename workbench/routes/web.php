@@ -145,6 +145,14 @@ Route::get('/previews', function () {
             'variant' => 'editable-fill',
         ],
         [
+            'slug' => 'table-editable-fill-selectable',
+            'title' => 'Wire Table',
+            'label' => 'Table editable + fill + selection',
+            'copy' => 'The same editable table with selectable() on: checkboxes, the sweep and the range gestures share the rows the fill handle drags over.',
+            'component' => TablePreview::class,
+            'variant' => 'editable-fill-selectable',
+        ],
+        [
             'slug' => 'table-row-color',
             'title' => 'Wire Table',
             'label' => 'Table row color',
@@ -320,6 +328,7 @@ foreach ([
     'table-empty-state' => ['title' => 'Wire Table Empty State', 'subtitle' => 'The empty state with a way out of it: a link action, and one that opens a modal form — record-less, and repeated in the stacked card layout.', 'component' => TablePreview::class, 'variant' => 'empty-state'],
     'table-image-gallery' => ['title' => 'Wire Table Image Gallery', 'subtitle' => 'ImageColumn: single image, an array as a gallery, and a stacked one capped with a "+N" chip.', 'component' => TablePreview::class, 'variant' => 'image-gallery'],
     'table-editable-fill' => ['title' => 'Wire Table Editable + Fill', 'subtitle' => 'Inline-editable text, select and toggle cells with the Excel-style fill handle. Email opts out via ->fillable(false).', 'component' => TablePreview::class, 'variant' => 'editable-fill'],
+    'table-editable-fill-selectable' => ['title' => 'Wire Table Editable + Fill + Selection', 'subtitle' => 'The editable/fill table with selectable() on: the fill root nests inside the selection root and both gestures drag over the same rows.', 'component' => TablePreview::class, 'variant' => 'editable-fill-selectable'],
     'table-subrows-flatten' => ['title' => 'Wire Table Flatten', 'subtitle' => 'Flatten mode rendering every child as a regular row.', 'component' => TablePreview::class, 'variant' => 'subrows-flatten'],
     'table-subrows-limit' => ['title' => 'Wire Table Show More', 'subtitle' => 'Limited child rows with the "show more" affordance.', 'component' => TablePreview::class, 'variant' => 'subrows-limit'],
     'table-subrows-filter' => ['title' => 'Wire Table Sub-row Filters', 'subtitle' => 'Per-child interactive filter bar above the sub-row table.', 'component' => TablePreview::class, 'variant' => 'subrows-filter'],
