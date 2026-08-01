@@ -91,6 +91,11 @@ class SelectColumn extends Column
             return e((string) $displayValue);
         }
 
+        // Once per cell, not once per use: this reaches for the container and
+        // reads a cast attribute, and the two consumers below asked for it
+        // separately.
+        $version = $this->recordVersion($record);
+
         return $this->renderView('tables.columns.select', [
             'column' => $this,
             'record' => $record,
@@ -100,8 +105,8 @@ class SelectColumn extends Column
             // has one owner (RecordVersion), and a hand-rolled `$record->updated_at`
             // in the partial silently disabled the lock for a model that names its
             // timestamp column something else.
-            'recordVersion' => $this->recordVersion($record),
-            'syncHtml' => app(CellSync::class)->node((string) ($state ?? ''), $this->recordVersion($record)),
+            'recordVersion' => $version,
+            'syncHtml' => $this->cellSync()->node((string) ($state ?? ''), $version),
         ]);
     }
 
@@ -188,5 +193,13 @@ class SelectColumn extends Column
     public function canEdit(Model $record): bool
     {
         return ! $this->isDisabled($record);
+    }
+
+    /** Held for the render, not resolved per row — see HasRecordVersion. */
+    private ?CellSync $cellSyncResolver = null;
+
+    private function cellSync(): CellSync
+    {
+        return $this->cellSyncResolver ??= app(CellSync::class);
     }
 }

@@ -23,8 +23,19 @@ use NyonCode\WireCore\Foundation\Support\RecordVersion;
  */
 trait HasRecordVersion
 {
+    /**
+     * Held for the life of the column, which renders every row of the table.
+     *
+     * `app()` is not free even for a bound singleton — it still walks the
+     * container's resolve path — and this sits in the per-cell hot loop, so a
+     * 500-row table with three editable columns paid it 1,500 times for one
+     * stateless object. Memoised on the instance, the same way the column already
+     * memoises its input attributes and its skeleton.
+     */
+    private ?RecordVersion $recordVersionResolver = null;
+
     protected function recordVersion(Model $record): string
     {
-        return app(RecordVersion::class)->stamp($record) ?? '0';
+        return ($this->recordVersionResolver ??= app(RecordVersion::class))->stamp($record) ?? '0';
     }
 }

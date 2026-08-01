@@ -96,6 +96,9 @@ class ToggleColumn extends Column
 
         $state = (bool) $this->getState($record);
 
+        // Once per cell, not once per use — see SelectColumn.
+        $version = $this->recordVersion($record);
+
         return $this->renderView('tables.columns.toggle', [
             'state' => $state,
             'recordKey' => (string) $record->getKey(),
@@ -103,8 +106,8 @@ class ToggleColumn extends Column
             'disabled' => $this->isDisabled($record),
             'onColorClass' => $this->getOnColorClass(),
             'offColorClass' => $this->getOffColorClass(),
-            'recordVersion' => $this->recordVersion($record),
-            'syncHtml' => app(CellSync::class)->node($state ? '1' : '0', $this->recordVersion($record)),
+            'recordVersion' => $version,
+            'syncHtml' => $this->cellSync()->node($state ? '1' : '0', $version),
             // Resolved here, not in Blade: the column owns icon semantics.
             'onIcon' => $this->onIcon ? app(IconManager::class)->render($this->onIcon, 'w-3 h-3') : '',
             'offIcon' => $this->offIcon ? app(IconManager::class)->render($this->offIcon, 'w-3 h-3') : '',
@@ -123,5 +126,13 @@ class ToggleColumn extends Column
         // Soft (muted) background fill for the "off" track is owned by the same
         // Foundation HasColor palette; gray default matches the neutral track.
         return self::getSoftBgClass($this->offColor ?? 'gray');
+    }
+
+    /** Held for the render, not resolved per row — see HasRecordVersion. */
+    private ?CellSync $cellSyncResolver = null;
+
+    private function cellSync(): CellSync
+    {
+        return $this->cellSyncResolver ??= app(CellSync::class);
     }
 }

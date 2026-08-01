@@ -755,6 +755,9 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
 
     protected function renderEditableCell(mixed $state, Model $record): string
     {
+        // Once per cell, not once per use — see SelectColumn.
+        $version = $this->recordVersion($record);
+
         return $this->renderView('tables.columns.text-input-editable', [
             'column' => $this,
             'record' => $record,
@@ -763,8 +766,8 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
             // has one owner (RecordVersion), and a hand-rolled `$record->updated_at`
             // in the partial silently disabled the lock for a model that names its
             // timestamp column something else.
-            'recordVersion' => $this->recordVersion($record),
-            'syncHtml' => app(CellSync::class)->node((string) ($state ?? ''), $this->recordVersion($record)),
+            'recordVersion' => $version,
+            'syncHtml' => $this->cellSync()->node((string) ($state ?? ''), $version),
             // Record-invariant primitives resolved once per request (not @included per row).
             'spinnerHtml' => app(Primitives::class)->spinner(),
             'checkHtml' => app(Primitives::class)->successCheck(),
@@ -939,5 +942,13 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
             'decimalSeparator' => $this->decimalSeparator,
             'thousandsSeparator' => $this->thousandsSeparator,
         ];
+    }
+
+    /** Held for the render, not resolved per row — see HasRecordVersion. */
+    private ?CellSync $cellSyncResolver = null;
+
+    private function cellSync(): CellSync
+    {
+        return $this->cellSyncResolver ??= app(CellSync::class);
     }
 }
