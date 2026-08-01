@@ -36,8 +36,7 @@ use Throwable;
 final class WriteGeneration
 {
     /**
-     * The current generation of $scope. Missing means 0, so a table nothing has
-     * written to yet behaves exactly as it would without this at all.
+     * The current generation of $scope, seeding one when the store has none.
      *
      * An unreachable cache store means 0 too. This is read on the render path of
      * every cached table and on every poll tick, and it is an *optimisation* in
@@ -50,7 +49,36 @@ final class WriteGeneration
     public function current(string $scope): int
     {
         try {
-            return (int) Cache::get($this->key($scope), 0);
+            $key = $this->key($scope);
+            $value = Cache::get($key);
+
+            if ($value === null) {
+                // Missing means one of two things, and only one of them is
+                // "nothing has been written yet": the counter is stored forever,
+                // but forever is not a promise a store under memory pressure
+                // keeps — `allkeys-lru` will evict a key with no TTL like any
+                // other. Falling back to a FIXED number (0, as this did) then
+                // hands every key back to a namespace that may still hold slices
+                // cached before the first write, whose own TTL has not run out:
+                // the counter is lost and pre-write rows come back.
+                //
+                // Seeding a fresh value instead makes eviction cost a cache miss
+                // rather than a wrong answer — everyone moves to a namespace
+                // nothing has ever been cached under.
+                //
+                // Random, not `time()`, and a test insisted on the difference:
+                // bump() is seed+1, so re-seeding from the clock inside the same
+                // second lands straight back on the namespace the FIRST seed
+                // used, where the pre-write slices still are. A random start
+                // cannot walk back into a range that has already been served.
+                // Two processes seeding at once disagree and each pay a miss,
+                // which is the cheap half of this trade.
+                $value = random_int(1, PHP_INT_MAX >> 8);
+
+                Cache::forever($key, $value);
+            }
+
+            return (int) $value;
         } catch (Throwable) {
             return 0;
         }

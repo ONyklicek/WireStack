@@ -318,7 +318,18 @@
     </div>
 @else
     {{-- Polling wrapper. Also the live listener's root, so `busy()` sees exactly
-         the cells this table owns and a nested table cannot be mistaken for it. --}}
+         the cells this table owns and a nested table cannot be mistaken for it.
+
+         Which couples the two halves of live(): this wrapper only renders while
+         shouldPoll() is true, so pausing the poll (the Stop control, or a
+         pollWhen() condition turning false) takes the broadcast listener with it
+         — and refreshTable() would refuse the nudge anyway. Intended for the
+         Stop control, where "stop the table changing under me" should mean both.
+         Not obviously right for pollWhen(), which is a cost condition rather than
+         a statement of intent; a table combining it with broadcast: true loses
+         the push exactly while the condition is false. Documented in
+         docs/table/advanced.md rather than worked around here, because splitting
+         them needs a second wrapper and a push-only host method. --}}
     @if($liveChannel)
         @include('wire-table::tables.partials.live-assets')
     @endif

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
@@ -257,13 +258,35 @@ it('retires every cached view of the table, not only the one that was on screen'
         ->instance()->getTableRecords()->first()->title)->toBe('Renamed');
 });
 
+it('does not resurrect pre-write rows when the counter is evicted', function () {
+    // The counter is stored forever, but forever is not a promise a store under
+    // memory pressure keeps — allkeys-lru evicts a key with no TTL like any
+    // other. Falling back to a fixed number would hand every key back to a
+    // namespace that may still hold slices cached before the first write, whose
+    // own TTL has not run out: the counter is lost and stale rows come back.
+    $c = Livewire::test(PpComponent::class, ['cached' => true, 'editable' => true]);
+    expect($c->instance()->getTableRecords()->first()->title)->toBe('T1');
+
+    $c->call('updateTableCell', 1, 'title', 'Renamed');
+
+    // The store loses the counter, the cached slices survive.
+    Cache::forget((fn () => $this->key(PpPost::class))->call(app(WriteGeneration::class)));
+
+    expect(Livewire::test(PpComponent::class, ['cached' => true, 'editable' => true])
+        ->instance()->getTableRecords()->first()->title)->toBe('Renamed');
+});
+
 it('records nothing for a table that neither caches nor polls', function () {
     // The write generation has exactly two readers — the cache key and poll
     // change detection — and moving it is a write to the shared cache store. A
     // table with neither has nobody to tell.
     $c = Livewire::test(PpComponent::class);
 
+    // Compared against itself, not against 0: reading the counter seeds one when
+    // the store has none, so "did not move" is the property, not "is zero".
+    $before = app(WriteGeneration::class)->current(PpPost::class);
+
     $c->call('invalidateTable');
 
-    expect(app(WriteGeneration::class)->current(PpPost::class))->toBe(0);
+    expect(app(WriteGeneration::class)->current(PpPost::class))->toBe($before);
 });

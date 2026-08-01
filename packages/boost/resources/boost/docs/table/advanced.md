@@ -409,6 +409,14 @@ is dead and the table looks fine.
 
 `LiveChannel::for(Invoice::class)` gives the name if you need it directly.
 
+**Pausing the poll pauses the push.** The listener rides the polling wrapper, so
+the Stop control — and a `pollWhen()` condition turning false — take the
+broadcast with them. For Stop that is the point: "stop the table changing under
+me" should mean all of it. For `pollWhen()` it is worth knowing, because that
+condition is about the cost of polling rather than about wanting updates: a table
+combining it with `broadcast: true` is not pushed to while the condition is
+false. Leave `pollWhen()` off if you want the push to survive it.
+
 **The package never authorizes for you.** It registers no channel and calls no
 policy of its own — who may listen is the application's decision, stated where
 Laravel expects it. What it does instead is refuse to be quiet about the

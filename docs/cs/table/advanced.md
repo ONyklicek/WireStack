@@ -408,6 +408,14 @@ broadcastová půlka je mrtvá, zatímco tabulka vypadá v pořádku.
 
 `LiveChannel::for(Invoice::class)` vrátí jméno, když ho potřebuješ přímo.
 
+**Pauza pollingu pauzuje i push.** Listener sedí na pollovacím wrapperu, takže
+tlačítko Stop — i podmínka `pollWhen()`, která zrovna neplatí — vezmou broadcast
+s sebou. U Stopu je to záměr: „přestaň mi tou tabulkou hýbat" má znamenat obojí.
+U `pollWhen()` je dobré o tom vědět, protože ta podmínka je o ceně pollingu, ne
+o tom, že updaty nechceš: tabulka, která ji kombinuje s `broadcast: true`,
+dokud podmínka neplatí, push nedostane. Když má push přežít, `pollWhen()`
+nepoužívej.
+
 **Balíček za tebe neautorizuje.** Neregistruje žádný kanál a nevolá žádnou
 policy sám — kdo smí poslouchat, je rozhodnutí aplikace, řečené tam, kde to
 Laravel čeká. Co dělá místo toho: odmítá o vynechání mlčet. Subscribe, který
