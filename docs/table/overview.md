@@ -368,6 +368,14 @@ persisted in the URL when [`queryString()`](advanced.md#url-state-persistence) i
 ->defaultSort(string $column, string $direction = 'asc')
 ```
 
+Every table query ends with the primary key as a tiebreaker, in whichever
+direction is already in force. A page is a slice of an ordering, so without one
+the slice is undefined: two rows the sort calls equal can come back in either
+order, and on PostgreSQL — where an `UPDATE` rewrites the row at the end of the
+heap — editing a row on page one pushes an unseen record past the start of page
+two. The tiebreaker is skipped where a key is not a legal ordering term:
+`GROUP BY`, `DISTINCT` and unions.
+
 ### Pagination
 
 ```php

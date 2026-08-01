@@ -366,6 +366,14 @@ stranu a při zapnutém [`queryString()`](advanced.md#perzistence-stavu-v-url) s
 ->defaultSort(string $column, string $direction = 'asc')
 ```
 
+Každý dotaz tabulky končí primárním klíčem jako rozhodčím kritériem, ve směru,
+který už platí. Stránka je výřez z nějakého uspořádání — bez něj je ten výřez
+nedefinovaný: dva řádky, které řazení považuje za shodné, se můžou vrátit
+v libovolném pořadí, a na PostgreSQL, kde `UPDATE` zapíše řádek nově na konec
+haldy, editace řádku na první stránce protlačí dosud nezobrazený záznam před
+začátek druhé stránky. Rozhodčí kritérium se vynechá tam, kde klíč není
+přípustný člen řazení: `GROUP BY`, `DISTINCT` a sjednocení.
+
 ### Stránkování
 
 ```php

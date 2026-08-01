@@ -23,6 +23,7 @@ use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireCore\Core\Query\QueryPlanner;
 use NyonCode\WireCore\Core\Query\Search\SearchTermParser;
 use NyonCode\WireCore\Core\Query\SortDefinition;
+use NyonCode\WireCore\Core\Query\StableOrder;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Filters\SelectFilter;
@@ -343,6 +344,13 @@ final class TableQueryService
 
             $query = $column->applyFilter($query, $value);
         }
+
+        // ── 5.9 Give the ordering a tiebreaker ──
+        // Last, deliberately: everything above may order, including a column's
+        // own sort callback, and a tiebreaker applied before them would become
+        // the primary sort instead. Without it a page is a slice of an undefined
+        // order — see StableOrder for what that costs on PostgreSQL.
+        app(StableOrder::class)->apply($query);
 
         // ── 6. Plugin hook: table.queried (post-execution observation) ──
         if ($pluginManager !== null) {
