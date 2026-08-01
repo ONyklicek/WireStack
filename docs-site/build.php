@@ -33,7 +33,7 @@ $distRoot = rtrim((string) (getenv('DOCS_DIST_DIR') ?: $siteRoot.'/dist'), '/');
 //
 // so the deploy job iterates the matrix, assembling every cell into a single
 // dist/ tree without any cell clobbering another (see recreate/preserve below).
-[$siteVersions, $locales] = loadSiteConfig($siteRoot);
+[$siteVersions, $locales, $siteBaseUrl] = loadSiteConfig($siteRoot);
 
 // - `path`:      output sub-directory ('' = the version/dist root). Also the URL
 //                segment the switcher links to.
@@ -135,6 +135,51 @@ $localeState = (string) json_encode([
 // returns it unchanged (default locale, or no translation yet). See lang.php.
 $localeStrings = (array) ((require $siteRoot.'/lang.php')[$activeLocaleCode] ?? []);
 $t = static fn (string $string): string => $localeStrings[$string] ?? $string;
+
+// Absolute URL of a built page in any locale of the version being built. Search
+// engines and social cards need the published address, which the relative links
+// the site navigates by cannot express. Empty base URL (an unconfigured local
+// build) means the templates simply omit those tags.
+$absoluteUrl = static function (string $pageOutput, string $localePath) use ($siteBaseUrl, $outputSubdir): string {
+    if ($siteBaseUrl === '') {
+        return '';
+    }
+
+    $pagePath = preg_replace('#(^|/)index\.html$#', '$1', trim($pageOutput, '/')) ?? '';
+    $segments = array_values(array_filter(
+        [$outputSubdir, $localePath, trim($pagePath, '/')],
+        static fn (string $segment): bool => $segment !== '',
+    ));
+
+    return $siteBaseUrl.'/'.($segments === [] ? '' : implode('/', $segments).'/');
+};
+
+// hreflang set for one page: the same page in every locale, plus x-default
+// pointing at the locale that owns the version root.
+$alternatesFor = static function (string $pageOutput) use ($locales, $localePaths, $defaultLocaleCode, $absoluteUrl): array {
+    if (count($locales) < 2) {
+        return [];
+    }
+
+    $alternates = [];
+
+    foreach ($locales as $locale) {
+        $code = (string) ($locale['code'] ?? '');
+        $href = $absoluteUrl($pageOutput, $localePaths[$code] ?? '');
+
+        if ($code === '' || $href === '') {
+            continue;
+        }
+
+        $alternates[] = ['hreflang' => $code, 'href' => $href];
+    }
+
+    if ($alternates !== []) {
+        $alternates[] = ['hreflang' => 'x-default', 'href' => $absoluteUrl($pageOutput, $localePaths[$defaultLocaleCode] ?? '')];
+    }
+
+    return $alternates;
+};
 
 $pages = pageManifest($root, $overlayLocaleCodes, $localeIsDefault ? '' : $activeLocaleCode);
 $pageMap = [];
@@ -304,6 +349,13 @@ foreach ($pages as $page) {
         'htmlLang' => $activeLocaleCode,
         'localeState' => $localeState,
         'isVersionHome' => false,
+        'canonicalUrl' => $absoluteUrl($page['output'], $localeSubdir),
+        'alternateUrls' => $alternatesFor($page['output']),
+        'ogTitle' => $content['title'].' | '.'Wire Docs',
+        'ogDescription' => $content['excerpt'],
+        'ogImage' => $previewUrl !== null && $siteBaseUrl !== ''
+            ? $absoluteUrl('index.html', $localeSubdir).ltrim(preg_replace('#^(\.\./)+#', '', $previewUrl) ?? '', '/')
+            : '',
         'searchIndexUrl' => relativeAssetPath($currentFile, $versionRoot.'/search-index.json'),
         'cssUrl' => relativeAssetPath($currentFile, $versionRoot.'/assets/site.css'),
         'jsUrl' => relativeAssetPath($currentFile, $versionRoot.'/assets/site.js'),
@@ -315,9 +367,15 @@ foreach ($pages as $page) {
 
     $searchIndex[] = [
         'title' => $content['title'],
-        'section' => $page['section'],
+        'section' => $t($page['section']),
         'url' => relativePageUrl($versionRoot.'/index.html', $currentFile),
         'excerpt' => $content['excerpt'],
+        // Headings carry their anchor so a match inside a page can link straight
+        // at the section instead of dropping the reader at the top of it.
+        'headings' => array_values(array_map(
+            static fn (array $heading): array => [$heading['id'], $heading['text']],
+            $content['headings'],
+        )),
         'text' => $content['plainText'],
     ];
 }
@@ -331,6 +389,11 @@ $homeHtml = renderTemplate($siteRoot.'/templates/home.php', [
     'htmlLang' => $activeLocaleCode,
     'localeState' => $localeState,
     'isVersionHome' => true,
+    'canonicalUrl' => $absoluteUrl('index.html', $localeSubdir),
+    'alternateUrls' => $alternatesFor('index.html'),
+    'ogTitle' => 'Wire Docs — '.$t('Forms, Tables & Sorting for Livewire'),
+    'ogDescription' => $t('Complete static documentation for the Wire ecosystem: forms, tables, sortable, and core runtime, with real runtime preview screenshots.'),
+    'ogImage' => $siteBaseUrl !== '' ? $absoluteUrl('index.html', $localeSubdir).'assets/previews/table-overview.png' : '',
     'searchIndexUrl' => 'search-index.json',
     'cssUrl' => 'assets/site.css',
     'jsUrl' => 'assets/site.js',
@@ -424,10 +487,65 @@ $homeHtml = renderTemplate($siteRoot.'/templates/home.php', [
 ]);
 
 file_put_contents($versionRoot.'/index.html', $homeHtml);
+// Every page fetches this, so it ships compact — pretty-printing an index no
+// human reads cost a fifth of its weight on every phone that opened the docs.
 file_put_contents(
     $versionRoot.'/search-index.json',
-    json_encode($searchIndex, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+    json_encode($searchIndex, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
 );
+
+// The not-found page is served for any unknown path at any depth, so it links
+// by absolute path rather than relatively to a directory it will never sit in.
+file_put_contents($versionRoot.'/404.html', renderTemplate($siteRoot.'/templates/not-found.php', [
+    't' => $t,
+    'htmlLang' => $activeLocaleCode,
+    'assetPrefix' => rtrim('/'.implode('/', array_values(array_filter([$outputSubdir, $localeSubdir]))), '/').'/',
+]));
+
+// One sitemap per (version, locale) cell: a build only ever knows the cell it
+// owns, and the deploy assembles the cells into one tree. robots.txt — written
+// once, by the cell that owns the site root — points at all of them, which it
+// can do from the canonical matrix even for cells this run never builds.
+if ($siteBaseUrl !== '') {
+    $sitemapEntries = [['output' => 'index.html']];
+    foreach ($pages as $page) {
+        $sitemapEntries[] = ['output' => $page['output']];
+    }
+
+    $urls = '';
+    foreach ($sitemapEntries as $entry) {
+        $loc = $absoluteUrl($entry['output'], $localeSubdir);
+        $urls .= "    <url>\n        <loc>".htmlspecialchars($loc, ENT_XML1)."</loc>\n";
+        foreach ($alternatesFor($entry['output']) as $alternate) {
+            $urls .= '        <xhtml:link rel="alternate" hreflang="'.htmlspecialchars((string) $alternate['hreflang'], ENT_XML1).'"'
+                .' href="'.htmlspecialchars((string) $alternate['href'], ENT_XML1)."\"/>\n";
+        }
+        $urls .= "    </url>\n";
+    }
+
+    file_put_contents($versionRoot.'/sitemap.xml', <<<XML
+        <?xml version="1.0" encoding="UTF-8"?>
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+        {$urls}</urlset>
+
+        XML);
+
+    if ($outputSubdir === '' && $localeIsDefault) {
+        $sitemaps = '';
+        foreach ($siteVersions as $version) {
+            if (empty($version['available'])) {
+                continue;
+            }
+
+            foreach ($localePaths as $localePath) {
+                $prefix = implode('/', array_values(array_filter([trim((string) ($version['path'] ?? ''), '/'), $localePath])));
+                $sitemaps .= 'Sitemap: '.$siteBaseUrl.'/'.($prefix === '' ? '' : $prefix.'/')."sitemap.xml\n";
+            }
+        }
+
+        file_put_contents($distRoot.'/robots.txt', "User-agent: *\nAllow: /\n\n".$sitemaps);
+    }
+}
 
 echo "Built docs site ({$activeVersionLabel} · {$activeLocaleLabel}) in {$versionRoot}\n";
 
@@ -436,7 +554,11 @@ echo "Built docs site ({$activeVersionLabel} · {$activeLocaleLabel}) in {$versi
  * deploy job) wins so every branch build shares one source of truth; otherwise
  * docs-site/config.json is used. Both fall back to sane defaults if unreadable.
  *
- * @return array{0:array<int, array<string, mixed>>, 1:array<int, array<string, mixed>>}
+ * The base URL is part of the same contract: canonical links, hreflang
+ * alternates, social cards and the sitemap all need the address the site is
+ * actually published at, which no relative path can express.
+ *
+ * @return array{0:array<int, array<string, mixed>>, 1:array<int, array<string, mixed>>, 2:string}
  */
 function loadSiteConfig(string $siteRoot): array
 {
@@ -467,7 +589,9 @@ function loadSiteConfig(string $siteRoot): array
         ? array_values($config['locales'])
         : $defaults['locales'];
 
-    return [$versions, $locales];
+    $baseUrl = rtrim((string) (getenv('DOCS_BASE_URL') ?: ($config['baseUrl'] ?? '')), '/');
+
+    return [$versions, $locales, $baseUrl];
 }
 
 /**
@@ -899,6 +1023,13 @@ function buildLocaleMenu(array $locales, string $pageOutput, string $activeLocal
     $depthToVersionRoot = substr_count($pageOutput, '/') + ($activeLocaleSubdir === '' ? 0 : 1);
     $up = str_repeat('../', $depthToVersionRoot);
 
+    // The landing page — and only the landing page — auto-redirects to the
+    // language the visitor last read (see templates/home.php). That would bounce
+    // an explicit switch straight back to the language being switched away from,
+    // so home links carry the chosen code: it tells the target page the visit is
+    // a deliberate choice, to be stored rather than overridden.
+    $isHome = $pageOutput === 'index.html';
+
     $currentLabel = '';
     $items = [];
 
@@ -913,12 +1044,13 @@ function buildLocaleMenu(array $locales, string $pageOutput, string $activeLocal
         }
 
         $target = $up.($path === '' ? '' : $path.'/').$pageUrlRel;
+        $href = $target === '' ? './' : $target;
 
         $items[] = [
             'label' => $label,
             'code' => $code,
             'current' => $isCurrent,
-            'href' => $target === '' ? './' : $target,
+            'href' => $isHome ? $href.'?lang='.$code : $href,
             'disabled' => false,
         ];
     }
@@ -1051,8 +1183,8 @@ function relativeAssetPath(string $fromFile, string $toFile): string
 
 function relativePath(string $from, string $to): string
 {
-    $from = str_replace('\\', '/', realpath($from) ?: $from);
-    $to = str_replace('\\', '/', realpath($to) ?: $to);
+    $from = canonicalPath($from);
+    $to = canonicalPath($to);
 
     $fromParts = explode('/', trim($from, '/'));
     $toParts = explode('/', trim($to, '/'));
@@ -1063,6 +1195,46 @@ function relativePath(string $from, string $to): string
     }
 
     return implode('/', array_merge(array_fill(0, count($fromParts), '..'), $toParts)) ?: '.';
+}
+
+/**
+ * Resolve a path the same way whether or not it exists yet.
+ *
+ * realpath() alone cannot do this: a page directory is only created after its
+ * HTML is rendered, so the *from* side of a link resolved to nothing while the
+ * *to* side (assets, already copied) resolved through the symlink — on macOS
+ * /var -> /private/var, i.e. any mkdtemp build dir, which is exactly what the
+ * docs checks build into. The two halves then shared no common prefix and every
+ * asset URL came out as "../../../../private/var/...", a site that builds clean
+ * and loads nothing. Resolve the deepest existing ancestor, then re-append the
+ * part that is not on disk yet, so both halves speak the same path.
+ */
+function canonicalPath(string $path): string
+{
+    $path = rtrim(str_replace('\\', '/', $path), '/');
+    $missing = [];
+    $probe = $path;
+
+    while ($probe !== '' && $probe !== '/' && ! file_exists($probe)) {
+        $missing[] = basename($probe);
+        $parent = dirname($probe);
+
+        if ($parent === $probe) {
+            break;
+        }
+
+        $probe = $parent;
+    }
+
+    $resolved = realpath($probe);
+
+    if ($resolved === false) {
+        return $path;
+    }
+
+    $resolved = rtrim(str_replace('\\', '/', $resolved), '/');
+
+    return $missing === [] ? $resolved : $resolved.'/'.implode('/', array_reverse($missing));
 }
 
 /**

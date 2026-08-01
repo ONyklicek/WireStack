@@ -82,3 +82,10 @@ jobs:
 
       - name: Verify docs build
         run: node docs-site/scripts/verify-docs.mjs "$GITHUB_WORKSPACE"
+
+      # The static check reads the markup; this one drives it in a browser at
+      # phone metrics. Both defects it was written for (a search sheet buried
+      # under its own backdrop, a landing page that bounced every language
+      # switch back) were invisible to every static check we had.
+      - name: Verify docs site behaviour in a browser
+        run: node docs-site/scripts/verify-site-ui.mjs "$GITHUB_WORKSPACE"

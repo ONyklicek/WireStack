@@ -24,6 +24,7 @@ $nextPage = ($activeIndex !== null && isset($flatNav[$activeIndex + 1])) ? $flat
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= htmlspecialchars($page['title'].' | '.$siteTitle, ENT_QUOTES) ?></title>
     <meta name="description" content="<?= htmlspecialchars($page['excerpt'], ENT_QUOTES) ?>">
+<?php include __DIR__.'/partials/head-meta.php'; ?>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
@@ -63,7 +64,13 @@ $nextPage = ($activeIndex !== null && isset($flatNav[$activeIndex + 1])) ? $flat
     <script defer src="<?= htmlspecialchars(str_replace('site.js', 'scrolltrigger.min.js', $jsUrl), ENT_QUOTES) ?>"></script>
     <script defer src="<?= htmlspecialchars($jsUrl, ENT_QUOTES) ?>"></script>
 </head>
-<body class="docs-body">
+<?php // Chrome strings the scripts render at runtime (copy buttons, search states). ?>
+<body
+    class="docs-body"
+    data-copy-label="<?= htmlspecialchars($t('Copy'), ENT_QUOTES) ?>"
+    data-copied-label="<?= htmlspecialchars($t('Copied'), ENT_QUOTES) ?>"
+    data-copy-aria-label="<?= htmlspecialchars($t('Copy code'), ENT_QUOTES) ?>"
+>
     <div class="site-shell">
         <aside class="site-sidebar" data-sidebar>
             <div class="sidebar-header">
@@ -119,7 +126,13 @@ $nextPage = ($activeIndex !== null && isset($flatNav[$activeIndex + 1])) ? $flat
                     >
                     <span class="search-kbd"><kbd>⌘</kbd><kbd>K</kbd></span>
                     <button class="search-cancel" type="button" data-search-close><?= htmlspecialchars($t('Cancel'), ENT_QUOTES) ?></button>
-                    <div class="search-results" data-search-results hidden></div>
+                    <div
+                        class="search-results"
+                        data-search-results
+                        data-empty-title="<?= htmlspecialchars($t('No matches'), ENT_QUOTES) ?>"
+                        data-empty-hint="<?= htmlspecialchars($t('Try a package name, field type, or API term.'), ENT_QUOTES) ?>"
+                        hidden
+                    ></div>
                 </div>
 
                 <div class="topbar-actions">

@@ -161,6 +161,11 @@
      ---------------------------------------------------------- */
   const copyIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 
+  // Chrome the scripts render themselves still has to speak the page's language.
+  const copyLabel = body.dataset.copyLabel || 'Copy';
+  const copiedLabel = body.dataset.copiedLabel || 'Copied';
+  const copyAriaLabel = body.dataset.copyAriaLabel || 'Copy code';
+
   document.querySelectorAll('.docs-article pre').forEach((pre) => {
     const wrapper = document.createElement('div');
     wrapper.className = 'code-block';
@@ -170,8 +175,9 @@
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'copy-button';
-    button.innerHTML = `${copyIcon}<span>Copy</span>`;
-    button.setAttribute('aria-label', 'Copy code');
+    button.innerHTML = `${copyIcon}<span></span>`;
+    button.querySelector('span').textContent = copyLabel;
+    button.setAttribute('aria-label', copyAriaLabel);
     wrapper.appendChild(button);
 
     button.addEventListener('click', async () => {
@@ -188,10 +194,10 @@
         sel.removeAllRanges();
       }
       button.classList.add('is-copied');
-      button.querySelector('span').textContent = 'Copied';
+      button.querySelector('span').textContent = copiedLabel;
       setTimeout(() => {
         button.classList.remove('is-copied');
-        button.querySelector('span').textContent = 'Copy';
+        button.querySelector('span').textContent = copyLabel;
       }, 1600);
     });
   });
@@ -288,10 +294,20 @@
   let matches = [];
   let activeIndex = -1;
 
-  fetch(searchIndexUrl)
-    .then((r) => r.json())
-    .then((payload) => { index = Array.isArray(payload) ? payload : []; })
-    .catch(() => { index = []; });
+  /*
+   * The index is a few hundred KB and most visits never search, so it is
+   * fetched on the first sign of intent (opening, focusing or typing into the
+   * field) rather than on every page load. Whoever asks first triggers it; the
+   * promise is shared, and a pending fetch re-runs the search when it lands.
+   */
+  let indexRequest = null;
+  const loadIndex = () => {
+    indexRequest ??= fetch(searchIndexUrl)
+      .then((r) => r.json())
+      .then((payload) => { index = Array.isArray(payload) ? payload : []; })
+      .catch(() => { index = []; });
+    return indexRequest;
+  };
 
   const resolveUrl = (value) => {
     if (!baseUrl) return value;
@@ -302,42 +318,194 @@
     .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;').replaceAll("'", '&#39;');
 
-  const render = () => {
+  /*
+   * Fold case and diacritics so the Czech docs are searchable from a plain
+   * keyboard: "prehled" has to find "Přehled", and "rozsireni" "rozšíření".
+   */
+  const fold = (value) => String(value)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  const foldedOf = (item) => {
+    if (!item._f) {
+      item._f = {
+        title: fold(item.title),
+        section: fold(item.section),
+        excerpt: fold(item.excerpt),
+        text: fold(item.text ?? ''),
+        headings: (item.headings ?? []).map(([id, text]) => [id, text, fold(text)]),
+      };
+    }
+    return item._f;
+  };
+
+  /*
+   * Where a term matched matters far more than that it matched: a query for
+   * "column" belongs on the Columns page, not on every page that mentions one
+   * in passing. Field weights, plus a bonus for matching a whole word or the
+   * start of one, are what turn the substring filter into a ranking.
+   */
+  const scoreField = (haystack, term, weight) => {
+    const at = haystack.indexOf(term);
+    if (at < 0) return 0;
+    const before = at === 0 ? '' : haystack[at - 1];
+    const after = haystack[at + term.length] ?? '';
+    const startsWord = at === 0 || /[^a-z0-9]/.test(before);
+    // A trailing plural still counts as the whole word, so searching "column"
+    // ranks the Columns page as highly as a page titled "Column Reordering".
+    const endsWord = after === '' || /[^a-z0-9]/.test(after)
+      || /^e?s([^a-z0-9]|$)/.test(haystack.slice(at + term.length));
+    let score = weight;
+    if (startsWord) score += weight * 0.5;
+    if (startsWord && endsWord) score += weight * 0.5;
+    return score;
+  };
+
+  const scoreItem = (item, terms) => {
+    const f = foldedOf(item);
+    let total = 0;
+    let anchor = null;
+    let anchorScore = 0;
+
+    for (const term of terms) {
+      let best = 0;
+
+      if (f.title === term) best = 220;
+      best = Math.max(best, scoreField(f.title, term, 60));
+      best = Math.max(best, scoreField(f.section, term, 14));
+      best = Math.max(best, scoreField(f.excerpt, term, 12));
+
+      for (const [id, text, folded] of f.headings) {
+        const headingScore = scoreField(folded, term, 26);
+        if (headingScore > 0) {
+          best = Math.max(best, headingScore);
+          if (headingScore > anchorScore) {
+            anchorScore = headingScore;
+            anchor = { id, text };
+          }
+        }
+      }
+
+      const bodyScore = scoreField(f.text, term, 6);
+      best = Math.max(best, bodyScore);
+
+      // Every term has to appear somewhere — the AND semantics people expect
+      // from a multi-word query.
+      if (best === 0) return null;
+      total += best;
+    }
+
+    return { item, score: total, anchor };
+  };
+
+  // A snippet from around the first body hit says more than the page excerpt
+  // repeated eight times, so results show where the term actually lives.
+  const snippetFor = (item, terms) => {
+    const f = foldedOf(item);
+    const text = item.text ?? '';
+    let at = -1;
+    let hit = '';
+    for (const term of terms) {
+      const found = f.text.indexOf(term);
+      if (found >= 0 && (at < 0 || found < at)) { at = found; hit = term; }
+    }
+    if (at < 0) return item.excerpt ?? '';
+    const start = Math.max(0, at - 40);
+    const end = Math.min(text.length, at + hit.length + 90);
+    return (start > 0 ? '…' : '') + text.slice(start, end).trim() + (end < text.length ? '…' : '');
+  };
+
+  const highlight = (value, terms) => {
+    const folded = fold(value);
+    // Folding is character-for-character for everything these docs contain, so
+    // an offset found in the folded string addresses the same character in the
+    // original. If some exotic character ever breaks that, show it unmarked
+    // rather than slicing the string in the wrong place.
+    if (folded.length !== value.length) return escapeHtml(value);
+    const spans = [];
+    for (const term of terms) {
+      let from = 0;
+      for (;;) {
+        const at = folded.indexOf(term, from);
+        if (at < 0) break;
+        spans.push([at, at + term.length]);
+        from = at + term.length;
+      }
+    }
+    if (!spans.length) return escapeHtml(value);
+
+    // Fold() is 1:1 on characters (NFD marks are dropped, never letters), so an
+    // offset in the folded string still addresses the same character here.
+    spans.sort((a, b) => a[0] - b[0]);
+    let out = '';
+    let cursor = 0;
+    for (const [start, end] of spans) {
+      if (start < cursor) continue;
+      out += escapeHtml(value.slice(cursor, start));
+      out += `<mark>${escapeHtml(value.slice(start, end))}</mark>`;
+      cursor = end;
+    }
+    return out + escapeHtml(value.slice(cursor));
+  };
+
+  const emptyTitle = searchResults.dataset.emptyTitle || 'No matches';
+  const emptyHint = searchResults.dataset.emptyHint || 'Try a package name, field type, or API term.';
+
+  const render = (terms = []) => {
     if (!matches.length) {
-      searchResults.innerHTML = '<div class="search-result"><strong>No matches</strong><small>Try a package name, field type, or API term.</small></div>';
+      searchResults.innerHTML = `<div class="search-result"><strong>${escapeHtml(emptyTitle)}</strong><small>${escapeHtml(emptyHint)}</small></div>`;
       searchResults.hidden = false;
       return;
     }
-    searchResults.innerHTML = matches.map((item, i) => `
-      <a class="search-result${i === activeIndex ? ' is-active' : ''}" href="${resolveUrl(item.url)}">
-        <strong>${escapeHtml(item.title)}</strong>
-        <small>${escapeHtml(item.section)}${item.excerpt ? ' · ' + escapeHtml(item.excerpt) : ''}</small>
-      </a>`).join('');
+    searchResults.innerHTML = matches.map((match, i) => {
+      const item = match.item;
+      const href = resolveUrl(item.url) + (match.anchor ? `#${match.anchor.id}` : '');
+      const context = match.anchor ? `${item.section} · ${match.anchor.text}` : item.section;
+      return `
+      <a class="search-result${i === activeIndex ? ' is-active' : ''}" href="${href}">
+        <strong>${highlight(item.title, terms)}</strong>
+        <small>${escapeHtml(context)}${item.text ? ' · ' + highlight(snippetFor(item, terms), terms) : ''}</small>
+      </a>`;
+    }).join('');
     searchResults.hidden = false;
   };
 
   const runSearch = () => {
-    const query = searchInput.value.trim().toLowerCase();
+    const query = fold(searchInput.value.trim());
     activeIndex = -1;
     if (query.length < 2) {
       searchResults.hidden = true;
       searchResults.innerHTML = '';
       return;
     }
+
+    // Nothing to search yet: pull the index and come back with the answer.
+    if (!index.length) {
+      loadIndex().then(() => {
+        if (index.length && fold(searchInput.value.trim()) === query) runSearch();
+      });
+    }
+
     const terms = query.split(/\s+/);
     matches = index
-      .filter((item) => {
-        const haystack = `${item.title} ${item.section} ${item.excerpt} ${item.text}`.toLowerCase();
-        return terms.every((t) => haystack.includes(t));
-      })
+      .map((item) => scoreItem(item, terms))
+      .filter(Boolean)
+      // Equal scores: the shorter title is the more direct answer ("Columns"
+      // before "Editing & Column-Level Filters").
+      .sort((a, b) => b.score - a.score
+        || a.item.title.length - b.item.title.length
+        || a.item.title.localeCompare(b.item.title))
       .slice(0, 8);
-    render();
+    render(terms);
   };
 
   searchInput.addEventListener('input', runSearch);
   searchInput.addEventListener('focus', () => {
+    loadIndex();
     if (searchInput.value.trim().length >= 2) runSearch();
   });
+  document.querySelector('[data-search-open]')?.addEventListener('click', loadIndex);
 
   searchInput.addEventListener('keydown', (event) => {
     if (searchResults.hidden || !matches.length) return;
