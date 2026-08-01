@@ -101,8 +101,7 @@ Každý přepis přijímá boolean nebo closuru.
 Editovatelné sloupce mohou pro inline editaci vyžadovat Gate ability.
 
 ```php
-TextColumn::make('price')
-    ->editable()
+TextInputColumn::make('price')
     ->authorizeInline('orders.update-price');
 ```
 

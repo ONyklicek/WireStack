@@ -33,6 +33,7 @@ Reference for the built-in Wire Forms field and layout components.
 | Select a related record | [BelongsToSelect](belongs-to-select.md) |
 | Select a polymorphic target | [MorphToSelect](morph-to-select.md) |
 | Manage repeated groups or child rows | [Repeater](repeater.md) |
+| Compose content from mixed block types | [Builder](builder.md) |
 
 ## Layout Components
 

@@ -7,6 +7,7 @@ namespace Workbench\Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Workbench\App\Models\Document;
 use Workbench\App\Models\GestureRow;
 use Workbench\App\Models\Invoice;
 use Workbench\App\Models\Task;
@@ -129,6 +130,32 @@ class DatabaseSeeder extends Seeder
                 'status' => $statuses[($i - 1) % count($statuses)],
                 'amount' => $i * 25,
             ]);
+        }
+
+        // Display/edit column surfaces: a stored CSS color, a score, a tag list,
+        // an inline-editable boolean — plus two soft-deleted rows, which is what
+        // gives TrashedFilter something to switch between. Deterministic: the
+        // CDP drivers address these rows by title.
+        $documents = [
+            ['title' => 'Brand guidelines', 'brand_color' => '#6366f1', 'score' => 4.0, 'tags' => ['design', 'brand'], 'is_published' => true],
+            ['title' => 'Release checklist', 'brand_color' => 'rebeccapurple', 'score' => 2.5, 'tags' => ['ops', 'release', 'internal', 'draft'], 'is_published' => false],
+            ['title' => 'Pricing sheet', 'brand_color' => 'rgb(16 185 129)', 'score' => 5.0, 'tags' => ['sales'], 'is_published' => true],
+            // A value that is not a CSS color: the swatch must refuse to draw it
+            // rather than let it into a style attribute.
+            ['title' => 'Support macros', 'brand_color' => 'red; background-image: url(https://evil.test/x)', 'score' => 3.0, 'tags' => [], 'is_published' => false],
+        ];
+
+        foreach ($documents as $document) {
+            Document::query()->create($document);
+        }
+
+        $archived = [
+            ['title' => 'Legacy onboarding', 'brand_color' => '#f59e0b', 'score' => 1.0, 'tags' => ['archive'], 'is_published' => false],
+            ['title' => 'Old pricing sheet', 'brand_color' => '#ef4444', 'score' => 2.0, 'tags' => ['archive', 'sales'], 'is_published' => false],
+        ];
+
+        foreach ($archived as $document) {
+            Document::query()->create($document)->delete();
         }
     }
 }

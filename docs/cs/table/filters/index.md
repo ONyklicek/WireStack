@@ -4,7 +4,7 @@ order: 30
 
 # Filtry
 
-Wire Table poskytuje **5 vestavěných typů filtrů** plus možnost postavit vlastní
+Wire Table poskytuje **6 vestavěných typů filtrů** plus možnost postavit vlastní
 filtry. Filtry žijí v liště filtrů nad tabulkou a přetrvávají ve stavu Livewire
 přes `$tableFilters`. Tato stránka pokrývá tok a sdílené API; každý typ má svou
 vlastní stránku.
@@ -18,6 +18,7 @@ vlastní stránku.
 | [DateFilter](date.md) | Jedno datum, rozsah dat nebo měsíc + rok |
 | [NumberRangeFilter](number-range.md) | Min/max číselný rozsah |
 | [TernaryFilter](ternary.md) | Trojstavový boolean (vše / true / false) |
+| [TrashedFilter](trashed.md) | Měkké mazání: živé / smazané / všechny záznamy |
 
 ## Více
 

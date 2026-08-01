@@ -105,7 +105,6 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
     {
         parent::__construct($name);
         $this->capabilities = $this->capabilities->add(Capability::Editable);
-        $this->editableType = 'text';
     }
 
     // ==========================================

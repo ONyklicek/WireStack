@@ -45,7 +45,6 @@ class SelectColumn extends Column
     {
         parent::__construct($name);
         $this->capabilities = $this->capabilities->add(Capability::Editable);
-        $this->editableType = 'select';
         $this->placeholder = Trans::get('wire-table::messages.select_placeholder');
     }
 

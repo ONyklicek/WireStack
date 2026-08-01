@@ -60,6 +60,15 @@ final class CellEditPipeline
             return CellEditOutcome::rejected(__('wire-table::messages.no_permission_view'));
         }
 
+        // A second, narrower ability: permission() guards seeing the column at
+        // all, authorizeInline() guards *writing* it inline — an author may well
+        // show a price to everyone and let only a manager edit it. It was never
+        // consulted here, which made ->authorizeInline() a silent no-op: the cell
+        // looked protected and every edit went through.
+        if (! $column->canInlineEdit()) {
+            return CellEditOutcome::rejected(__('wire-table::messages.no_permission_view'));
+        }
+
         return null;
     }
 

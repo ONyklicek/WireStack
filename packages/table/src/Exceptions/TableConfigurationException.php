@@ -91,6 +91,35 @@ final class TableConfigurationException extends InvalidArgumentException impleme
         );
     }
 
+    public static function genericEditorNotRendered(string $column): self
+    {
+        return new self(
+            "Column [{$column}]: editable() cannot choose an editor — an ordinary ".
+            'column renders no editor at all, whatever type is named. Use the column '.
+            'that renders the one you want: TextInputColumn, SelectColumn, '.
+            'ToggleColumn or CheckboxColumn. editable(bool) still switches editing '.
+            'on and off for those.'
+        );
+    }
+
+    public static function fixedFilterOptions(string $filter): self
+    {
+        return new self(
+            "TrashedFilter::make('{$filter}')->options() cannot be set: the filter ".
+            'switches the soft-delete scope rather than matching values, so its two '.
+            'options are fixed. Rename them with withTrashedLabel() / onlyTrashedLabel().'
+        );
+    }
+
+    public static function modelIsNotSoftDeletable(string $filter, string $model): self
+    {
+        return new self(
+            "TrashedFilter::make('{$filter}') needs soft deletes, but [{$model}] does not ".
+            'use the SoftDeletes trait. Add the trait (and a deleted_at column), or drop '.
+            'the filter from the table.'
+        );
+    }
+
     public static function subRowRelationMissing(string $relation, string $model): self
     {
         return new self(

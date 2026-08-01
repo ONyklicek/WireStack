@@ -249,13 +249,12 @@ it('covers inline-edit authorization and editable configuration', function () {
     expect(TextColumn::make('a')->authorizeInline('edit-col')->canInlineEdit())->toBeFalse()
         ->and(TextColumn::make('a')->authorizeInline('edit-col-ok')->canInlineEdit())->toBeTrue();
 
-    $editable = TextColumn::make('a')->editable(true, 'select', ['x' => 'X'])
+    $editable = TextColumn::make('a')
+        ->editable()
         ->editableRules(fn () => ['required'])
         ->editableUsing(fn () => true);
 
     expect($editable->isEditable())->toBeTrue()
-        ->and($editable->getEditableType())->toBe('select')
-        ->and($editable->getEditableOptions())->toBe(['x' => 'X'])
         ->and($editable->getEditableRules(ccRecord()))->toBe(['required'])
         ->and($editable->getEditableCallback())->toBeInstanceOf(Closure::class);
 });

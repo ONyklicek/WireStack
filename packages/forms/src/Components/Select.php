@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Closure;
+use Illuminate\Database\Eloquent\Model;
 use Livewire\Component;
+use NyonCode\WireCore\Foundation\Concerns\HasExtraInputAttributes;
 use NyonCode\WireCore\Foundation\Concerns\HasNativeControl;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
+use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireForms\Concerns\CanBeMultiple;
 use NyonCode\WireForms\Concerns\CanBeSearchable;
@@ -32,10 +35,11 @@ use NyonCode\WireForms\Forms\Form;
  *  - {@see createOptionForm()} / {@see createOptionUsing()} let the user create a
  *    new option from a modal form and have it selected immediately.
  */
-class Select extends Field implements ProvidesImplicitValidationRules
+class Select extends Field implements DehydratesState, ProvidesImplicitValidationRules
 {
     use CanBeMultiple;
     use CanBeSearchable;
+    use HasExtraInputAttributes;
     use HasItemLimits;
     use HasNativeControl;
     use HasOptions;
@@ -578,6 +582,27 @@ class Select extends Field implements ProvidesImplicitValidationRules
         }
 
         $this->evaluate($this->updateOptionCallback, ['value' => $value, 'data' => $data]);
+    }
+
+    /**
+     * An unselected select stores null, not an empty string.
+     *
+     * The empty choice is what a native `<select>` submits for the placeholder,
+     * and it arrives as `''`. That is not a valid backing value for any enum, so
+     * a model casting the column to one threw `"" is not a valid backing value`
+     * the moment a user cleared the field — and on a plain nullable column it
+     * wrote an empty string where the author meant "nothing".
+     *
+     * Multi-selects are left alone: their empty state is already `[]`, which the
+     * array cast stores correctly.
+     */
+    public function dehydrateState(mixed $state, ?Model $record = null): mixed
+    {
+        if ($this->isMultiple()) {
+            return $state;
+        }
+
+        return ($state === '' || $state === null) ? null : $state;
     }
 
     public function getStateType(): string

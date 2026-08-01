@@ -14,6 +14,9 @@
 
 @include('wire-forms::partials.field-wrapper-start')
 
+@if($field->isSegmented() || $field->isButtons())
+    @include('wire-forms::partials.checkbox-list-choices', ['field' => $field, 'wireAttr' => $wireAttr, 'options' => $options])
+@else
     <div
         x-data="{
             search: '',
@@ -82,5 +85,6 @@
             @endif
         </div>
     </div>
+@endif
 
 @include('wire-forms::partials.field-wrapper-end')

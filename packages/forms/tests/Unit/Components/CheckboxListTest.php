@@ -97,3 +97,65 @@ it('renders no bulk toggles unless they are asked for', function () {
     expect(renderCheckboxList(CheckboxList::make('perms')->options(['a' => 'A'])))
         ->not->toContain('Select all');
 });
+
+// ─── Choice variants (shared with Radio) ────────────────────────────────────
+
+test('a checkbox list is a plain list until a variant is chosen', function () {
+    $field = CheckboxList::make('roles')->options(['a' => 'A']);
+
+    expect($field->getVariant())->toBe('default')
+        ->and($field->isSegmented())->toBeFalse()
+        ->and($field->isButtons())->toBeFalse()
+        ->and(renderCheckboxList($field))->toContain('max-h-60');
+});
+
+test('segmented renders the shared track and drops the list chrome', function () {
+    $html = renderCheckboxList(
+        CheckboxList::make('roles')->options(['a' => 'A', 'b' => 'B'])->segmented()->searchable()->bulkToggleable()
+    );
+
+    expect($html)->toContain('role="group"')
+        ->and($html)->toContain('peer-checked:bg-white')
+        // Still checkboxes: several options can be picked at once.
+        ->and(substr_count($html, 'type="checkbox"'))->toBe(2)
+        // Search / bulk toggle are list chrome and do not apply here.
+        ->and($html)->not->toContain('max-h-60')
+        ->and($html)->not->toContain('-select-all');
+});
+
+test('buttons stack until made inline', function () {
+    $stacked = renderCheckboxList(CheckboxList::make('roles')->options(['a' => 'A'])->buttons());
+    $inline = renderCheckboxList(CheckboxList::make('roles')->options(['a' => 'A'])->buttons()->inline());
+
+    expect($stacked)->toContain('flex-col')
+        ->and($inline)->toContain('flex-row')
+        ->and($inline)->not->toContain('flex-col');
+});
+
+test('a variant carries per-option icons and colors', function () {
+    $html = renderCheckboxList(
+        CheckboxList::make('roles')
+            ->options(['a' => 'A', 'b' => 'B'])
+            ->buttons()
+            ->icons(['a' => 'check'])
+            ->colors(['a' => 'danger'])
+    );
+
+    expect($html)->toContain('<svg')
+        ->and($html)->toContain('peer-checked:bg-red-600');
+});
+
+test('variants keep the field disabled state', function () {
+    $html = renderCheckboxList(CheckboxList::make('roles')->options(['a' => 'A'])->segmented()->disabled());
+
+    expect($html)->toContain('disabled')->toContain('cursor-not-allowed');
+});
+
+test('choosing a variant is reversible', function () {
+    $field = CheckboxList::make('roles')->segmented();
+
+    expect($field->isSegmented())->toBeTrue()
+        ->and($field->segmented(false)->getVariant())->toBe('default')
+        ->and($field->buttons()->isButtons())->toBeTrue()
+        ->and($field->buttons(false)->getVariant())->toBe('default');
+});

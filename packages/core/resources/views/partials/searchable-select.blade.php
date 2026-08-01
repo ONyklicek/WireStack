@@ -208,6 +208,7 @@
         type="button"
         id="{{ $selectId }}"
         data-testid="select-trigger"
+        {!! $extraInputAttributes ?? '' !!}
         x-ref="trigger"
         @click="open = !open"
         @keydown.arrow-down.prevent="onArrowDown()"

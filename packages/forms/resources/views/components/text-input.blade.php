@@ -45,6 +45,7 @@
                 @endif
                 id="{{ $field->getId() }}"
         {{ $wireAttr }}="{{ $field->getWireModelAttribute() }}"
+        {!! $field->getExtraInputAttributesHtml() !!}
         @if($field->getPlaceholder())
             placeholder="{{ $field->getPlaceholder() }}"
         @endif

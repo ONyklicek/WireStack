@@ -5,18 +5,16 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Columns;
 
 use Illuminate\Database\Eloquent\Model;
-use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\View\CellSync;
-use NyonCode\WireTable\Concerns\HasRecordVersion;
-use NyonCode\WireTable\Concerns\InteractsWithRecordDisabledState;
+use NyonCode\WireTable\Concerns\CanEditBooleanCell;
 
 class ToggleColumn extends Column
 {
-    use HasRecordVersion;
-    use InteractsWithRecordDisabledState;
+    // canEdit() + the record-version/disabled wiring are shared with CheckboxColumn.
+    use CanEditBooleanCell;
 
     protected ?string $onColor = 'primary';
 
@@ -29,8 +27,7 @@ class ToggleColumn extends Column
     public function __construct(string $name)
     {
         parent::__construct($name);
-        $this->capabilities = $this->capabilities->add(Capability::Editable);
-        $this->editableType = 'toggle';
+        $this->markEditable();
     }
 
     /** Set the track color when the toggle is on. */
@@ -73,19 +70,6 @@ class ToggleColumn extends Column
     public function getOffIcon(): ?string
     {
         return $this->offIcon;
-    }
-
-    /**
-     * Server-side edit guard consulted by WithTable::updateTableCell().
-     *
-     * The client-side `disabled` state is only cosmetic (a forged request could
-     * still hit updateTableCell), so a per-record disabled cell must also be
-     * rejected here. Column-level permissions are enforced separately by
-     * updateTableCell before the write.
-     */
-    public function canEdit(Model $record): bool
-    {
-        return ! $this->isDisabled($record);
     }
 
     public function renderCell(Model $record): string

@@ -78,6 +78,30 @@ CheckboxList::make('permissions')
 
 Volání `groups()` automaticky zapne seskupený layout. Můžete také zavolat `grouped()` explicitně.
 
+## Varianty s přepínacími tlačítky
+
+Když je seznam krátký, čtou se tytéž volby lépe jako řada přepínacích tlačítek
+než jako sloupec zaškrtávátek. `segmented()` a `buttons()` vykreslí přesně ten
+vzhled jako odpovídající varianty [Radio](radio.md) — jde o vícehodnotovou
+polovinu téhož sdíleného slovníku, takže jednovýběrový a vícevýběrový ovládací
+prvek vypadají stejně:
+
+```php
+CheckboxList::make('days')
+    ->options(['mon' => 'Po', 'tue' => 'Út', 'wed' => 'St'])
+    ->segmented()
+
+CheckboxList::make('roles')
+    ->options(['admin' => 'Admin', 'editor' => 'Editor'])
+    ->buttons()
+    ->inline()
+    ->icons(['admin' => 'shield-check'])
+    ->colors(['admin' => 'danger'])
+```
+
+Tyto varianty zobrazují jen volby: hledání, hromadné přepnutí, seskupení a
+sloupce jsou výbava seznamu a neuplatní se.
+
 ## Metody
 
 | Metoda | Typ | Popis |

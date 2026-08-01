@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Components;
 
-use NyonCode\WireForms\Concerns\HasCharacterLimits;
-
+use NyonCode\WireCore\Foundation\Concerns\HasExtraInputAttributes;
 /**
  * Textarea field with autosize and row/col configuration.
  */
+use NyonCode\WireForms\Concerns\HasCharacterLimits;
+
 class Textarea extends Field
 {
     use HasCharacterLimits;
+    use HasExtraInputAttributes;
 
     protected int $rows = 3;
 

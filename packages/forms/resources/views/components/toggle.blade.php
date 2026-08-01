@@ -11,6 +11,7 @@
         class="flex items-center gap-3"
     >
         <button
+            {!! $field->getExtraInputAttributesHtml() !!}
             type="button"
             role="switch"
             :aria-checked="enabled ? 'true' : 'false'"

@@ -82,25 +82,29 @@ and query-string persistence.
 
 ## Inline Editing
 
-Columns can also use the generic `editable()` API (in addition to dedicated TextInputColumn/SelectColumn/ToggleColumn):
+**The editor comes from the column type**, not from a setting: use
+[TextInputColumn](text-input.md), [SelectColumn](select.md),
+[ToggleColumn](toggle.md) or [CheckboxColumn](checkbox.md). An ordinary column
+renders no editor.
+
+`editable()` is the switch that turns a dedicated column's editor on and off,
+and the server-side gate for writing that column:
 
 ```php
-TextColumn::make('name')
-    ->editable()                              // type defaults to 'text'
+TextInputColumn::make('name')
+    ->editable(fn () => auth()->user()->isAdmin())   // false renders the plain value
     ->editableRules(fn ($record) => ['required', 'max:255'])
     ->editableUsing(function ($record, $column, $value) {
         $record->update([$column => $value]);
     })
-
-TextColumn::make('category')
-    // editable(enabled, type, options) — 'text' | 'select' | 'toggle'
-    ->editable(true, 'select', ['a' => 'Category A', 'b' => 'Category B'])
-    ->editableRules(fn ($record) => ['required', 'in:a,b'])
 ```
 
-The `options` argument of both `editable(type: 'select', …)` and `filterable()` /
-`filterAsSelect()` accepts a PHP enum class as well — it expands to `value => label` exactly
-like the dedicated `SelectColumn`/`SelectFilter`. See [Enum Options](select.md#enum-options).
+Naming an editor type — `editable(true, 'select', […])` — throws: no view has
+ever read one, so it would silently do nothing. Use `SelectColumn` instead.
+
+The `options` argument of `filterable()` / `filterAsSelect()` accepts a PHP enum
+class — it expands to `value => label` exactly like the dedicated
+`SelectColumn`/`SelectFilter`. See [Enum Options](select.md#enum-options).
 
 ### How inline saves work
 

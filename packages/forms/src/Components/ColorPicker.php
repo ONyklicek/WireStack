@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Concerns\HasExtraInputAttributes;
 
 /**
  * Color picker field supporting hex, hsl, rgb, rgba formats.
  */
 class ColorPicker extends Field
 {
+    use HasExtraInputAttributes;
+
     protected string $format = 'hex';
 
     /** @var array<int, string>|Closure */

@@ -10,6 +10,7 @@ use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 use NyonCode\WireCore\Foundation\Concerns\HasDefault;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
+use NyonCode\WireForms\Concerns\ClonesItemSchema;
 use NyonCode\WireForms\Concerns\HasFormValidation;
 use NyonCode\WireForms\Concerns\HasItemLimits;
 use NyonCode\WireForms\Contracts\HasValidation;
@@ -29,6 +30,7 @@ use NyonCode\WireForms\Contracts\HasValidation;
  */
 class Repeater extends LayoutComponent implements HasValidation
 {
+    use ClonesItemSchema;
     use EvaluatesClosures;
     use HasDefault;
     use HasFormValidation;
@@ -45,6 +47,8 @@ class Repeater extends LayoutComponent implements HasValidation
     protected bool $collapsible = false;
 
     protected bool $collapsed = false;
+
+    protected bool $table = false;
 
     protected ?string $addButtonLabel = null;
 
@@ -189,6 +193,45 @@ class Repeater extends LayoutComponent implements HasValidation
         return $this->collapsed;
     }
 
+    /**
+     * Lay the items out as table rows: one column per schema field, headed once,
+     * instead of a stacked card per item.
+     *
+     * Suited to short, uniform rows (an invoice line, a key/value pair) where a
+     * card per item wastes vertical space. Per-item collapsing does not apply to
+     * a row, so {@see collapsible()} is ignored in this layout.
+     */
+    public function table(bool $condition = true): static
+    {
+        $this->table = $condition;
+
+        return $this;
+    }
+
+    public function isTable(): bool
+    {
+        return $this->table;
+    }
+
+    /**
+     * Column headings for the table layout, taken from the schema's own labels.
+     *
+     * Reads the template schema (not a per-item clone): the heading is the same
+     * for every row, so it must not depend on one item's state.
+     *
+     * @return array<int, string>
+     */
+    public function getTableHeadings(): array
+    {
+        $headings = [];
+
+        foreach ($this->schema as $component) {
+            $headings[] = (string) $component->getLabel();
+        }
+
+        return $headings;
+    }
+
     public function getAddButtonLabel(): string
     {
         return $this->addButtonLabel ?? __('Add item');
@@ -254,34 +297,7 @@ class Repeater extends LayoutComponent implements HasValidation
      */
     public function getItemSchema(int $index): array
     {
-        $itemPath = $this->getItemStatePath($index);
-        $livewire = $this->getLivewire();
-        $components = [];
-
-        foreach ($this->schema as $component) {
-            $clone = clone $component;
-            if ($clone instanceof Component) {
-                $clone->statePath($itemPath);
-                // Re-bind the owning Livewire instance so per-item reactive
-                // closures (visibleWhen, afterStateUpdated $get/$set) resolve
-                // against live state even when the template child was never
-                // bound (e.g. the repeater is rendered outside a full
-                // form-level prepare, as in action modal hosts).
-                if ($livewire !== null) {
-                    $clone->livewire($livewire);
-                }
-            } elseif ($clone instanceof LayoutComponent) {
-                // Re-prepare the (deep-)cloned layout under the item prefix: this
-                // recomputes its resolved path (the clone carries a stale one from
-                // the form-level prepare) and cascades the prefix — and the
-                // Livewire binding — into descendant fields, which a bare
-                // statePath() on the layout never reaches.
-                $clone->prepareChildren($itemPath, livewire: $livewire);
-            }
-            $components[] = $clone;
-        }
-
-        return $components;
+        return $this->cloneSchemaForItem($this->schema, $this->getItemStatePath($index));
     }
 
     /**
@@ -397,7 +413,9 @@ class Repeater extends LayoutComponent implements HasValidation
 
     protected function viewName(): string
     {
-        return 'wire-forms::components.repeater';
+        return $this->table
+            ? 'wire-forms::components.repeater-table'
+            : 'wire-forms::components.repeater';
     }
 
     public function render(): View

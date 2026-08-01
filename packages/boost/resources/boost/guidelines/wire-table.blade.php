@@ -30,7 +30,8 @@ Build a data table inside a Livewire component using the `WithTable` trait and a
 ### Columns
 
 `TextColumn`, `BadgeColumn`, `BooleanColumn`, `IconColumn`, `ImageColumn`, `ButtonColumn`, `ToggleColumn`,
-`PollColumn`, `SelectColumn`, `TextInputColumn`, `SplitColumn`, `StackedColumn`.
+`CheckboxColumn`, `PollColumn`, `SelectColumn`, `TextInputColumn`, `SplitColumn`, `StackedColumn`,
+`ColorColumn`, `RatingColumn`, `TagsColumn`.
 
 `BadgeColumn` (and `IconColumn`) color/icon resolution — pick by intent:
 - one fixed color for every row: `->color('success')` (takes `string|Color|null`, never a Closure);
@@ -50,10 +51,12 @@ constraints automatically.
 
 ### Filters
 
-`SelectFilter`, `DateFilter`, `NumberRangeFilter`, `TernaryFilter`. A filter query callback must return the
+`SelectFilter`, `DateFilter`, `NumberRangeFilter`, `TernaryFilter`, `TrashedFilter`. A filter query callback must return the
 Builder. It receives the value already normalized for its filter type — a `TernaryFilter` callback gets a real
 `bool`, never the `'true'`/`'false'` option key, so branch with `$value ? … : …` and never compare to a
-string. Use `->indicator()` for filter chips and `->subRows()` to scope sub-row filtering.
+string. Use `->indicator()` for filter chips and `->subRows()` to scope sub-row filtering. `TrashedFilter` constrains no
+column — it switches the soft-delete scope (`'with'` → `withTrashed()`, `'only'` → `onlyTrashed()`, cleared → live
+records) and requires the model to use `SoftDeletes`.
 
 Filtering by a relation aggregate uses the `orders->count()` / `orders->exists()` path syntax
 (`Filter::make('orders->count()')`). It is applied as a `WHERE` over the aggregate subquery via Eloquent's

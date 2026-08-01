@@ -66,6 +66,7 @@
         </span>
 
         <input
+            {!! $field->getExtraInputAttributesHtml() !!}
             type="range"
             x-model.number="value"
             data-testid="form-slider-{{ $field->getStatePath() }}"

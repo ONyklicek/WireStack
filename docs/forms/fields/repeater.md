@@ -76,6 +76,26 @@ Repeater::make('contacts')
 | `disabled(bool\|Closure)` | Disable add/delete/reorder controls |
 | `mutateRelationshipDataBeforeSaveUsing(Closure)` | Transform item data before persistence |
 
+## Table Layout
+
+Short, uniform rows (invoice lines, key/value pairs) read better as a table than
+as a card per item. `table()` lays the items out as rows under one header — same
+state paths, same add/remove/reorder wiring, only the arrangement differs:
+
+```php
+Repeater::make('lines')
+    ->table()
+    ->reorderable()
+    ->schema([
+        TextInput::make('description')->label('What'),
+        TextInput::make('amount')->label('How much'),
+    ])
+```
+
+Each schema field becomes a column headed by its own label, and the per-cell
+label is hidden so it is not repeated on every row. Per-item collapsing does not
+apply to a row, so `collapsible()` is ignored in this layout.
+
 ## Per-Item Reactivity
 
 Reactive behavior inside a repeater resolves **per item**: `afterStateUpdated()`, live
@@ -103,3 +123,4 @@ If the child records need independent filtering, pagination, or heavy workflows,
 
 - [Forms Overview](../overview.md)
 - [Validation](../validation.md)
+- [Builder](builder.md) — items that each pick their own block type

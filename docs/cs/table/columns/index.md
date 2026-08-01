@@ -4,7 +4,7 @@ order: 20
 
 # Sloupce
 
-Wire Table poskytuje **12 typů sloupců**. Všechny sdílejí stejné základní API
+Wire Table poskytuje **16 typů sloupců**. Všechny sdílejí stejné základní API
 sloupce pro popisky, viditelnost, autorizaci, řazení, formátování a inline
 editaci — dokumentované níže. Typ vyberte podle vykreslení buňky; sdílené API
 sáhněte na kterýkoli z nich.
@@ -20,11 +20,15 @@ sáhněte na kterýkoli z nich.
 | [ImageColumn](image.md) | Avatary a náhledy |
 | [ButtonColumn](button.md) | Tlačítko s odkazem nebo Livewire akcí v buňce |
 | [ToggleColumn](toggle.md) | Inline editovatelný přepínač on/off |
+| [CheckboxColumn](checkbox.md) | Inline editovatelné zaškrtávátko (hustší ToggleColumn) |
 | [SelectColumn](select.md) | Inline editovatelný dropdown (options, relace, enumy) |
 | [TextInputColumn](text-input.md) | Inline editovatelný text/číslo/email input |
 | [StackedColumn](stacked.md) | Layouty avatar + jméno + email na sobě |
 | [SplitColumn](split.md) | Poskládat několik sloupců vedle sebe |
 | [PollColumn](poll.md) | Buňky se živě pollovaným stavem/postupem |
+| [ColorColumn](color.md) | Uložená CSS barva jako vzorník |
+| [RatingColumn](rating.md) | Číselné hodnocení jako hvězdičky |
+| [TagsColumn](tags.md) | Vícehodnotový stav jako chipsy |
 
 ## Koncepty
 

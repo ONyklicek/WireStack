@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Closure;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Foundation\Concerns\HasExtraInputAttributes;
 use NyonCode\WireCore\Foundation\Concerns\HasNativeControl;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
@@ -24,6 +25,7 @@ use NyonCode\WireCore\Foundation\Support\DateBoundary;
  */
 class DateTimePicker extends Field implements DehydratesState, HydratesState
 {
+    use HasExtraInputAttributes;
     use HasNativeControl {
         HasNativeControl::isNative as protected nativeChoice;
     }

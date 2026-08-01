@@ -82,25 +82,29 @@ engine, chipy a query-string persistenci viz [Filtry na úrovni sloupce](../filt
 
 ## Inline editace
 
-Sloupce mohou také použít generické API `editable()` (kromě dedikovaných TextInputColumn/SelectColumn/ToggleColumn):
+**Editor určuje typ sloupce**, ne přepínač: použijte
+[TextInputColumn](text-input.md), [SelectColumn](select.md),
+[ToggleColumn](toggle.md) nebo [CheckboxColumn](checkbox.md). Obyčejný sloupec
+žádný editor nevykreslí.
+
+`editable()` je vypínač editoru u dedikovaného sloupce a zároveň serverová brána
+pro zápis do toho sloupce:
 
 ```php
-TextColumn::make('name')
-    ->editable()                              // typ výchozí 'text'
+TextInputColumn::make('name')
+    ->editable(fn () => auth()->user()->isAdmin())   // false vykreslí prostou hodnotu
     ->editableRules(fn ($record) => ['required', 'max:255'])
     ->editableUsing(function ($record, $column, $value) {
         $record->update([$column => $value]);
     })
-
-TextColumn::make('category')
-    // editable(enabled, type, options) — 'text' | 'select' | 'toggle'
-    ->editable(true, 'select', ['a' => 'Category A', 'b' => 'Category B'])
-    ->editableRules(fn ($record) => ['required', 'in:a,b'])
 ```
 
-Argument `options` u `editable(type: 'select', …)` i `filterable()` /
-`filterAsSelect()` přijímá i třídu PHP enumu — rozvine se na `value => label` přesně
-jako dedikovaný `SelectColumn`/`SelectFilter`. Viz [Enum Options](select.md#options-z-enumu).
+Pojmenování typu editoru — `editable(true, 'select', […])` — vyhodí výjimku:
+žádná view ho nikdy nečetla, takže by tiše nedělalo nic. Použijte `SelectColumn`.
+
+Argument `options` u `filterable()` / `filterAsSelect()` přijímá i PHP enum —
+rozbalí se na `value => label` stejně jako u `SelectColumn`/`SelectFilter`.
+Viz [Options z enumu](select.md#options-z-enumu).
 
 ### Jak fungují inline uložení
 

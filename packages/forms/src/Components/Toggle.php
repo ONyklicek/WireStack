@@ -7,6 +7,7 @@ namespace NyonCode\WireForms\Components;
 use Closure;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
+use NyonCode\WireCore\Foundation\Concerns\HasExtraInputAttributes;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
@@ -14,6 +15,8 @@ use NyonCode\WireCore\Foundation\Icons\Icon;
  */
 class Toggle extends Field
 {
+    use HasExtraInputAttributes;
+
     protected string|Closure|null $onLabel = null;
 
     protected string|Closure|null $offLabel = null;

@@ -26,6 +26,31 @@ final class FormConfigurationException extends InvalidArgumentException implemen
         return new self("Form method [{$method}()] does not exist on ".$component);
     }
 
+    public static function builderHasNoTableLayout(string $name): self
+    {
+        return new self(
+            "Builder [{$name}] cannot use table(): the table layout gives one schema ".
+            'one column per field, and every builder item carries a different block\'s '.
+            'schema, so there are no shared columns to head.'
+        );
+    }
+
+    public static function blockIsNotRenderable(string $name): self
+    {
+        return new self(
+            "Block [{$name}] is a Builder block definition and cannot be placed in a ".
+            'schema directly. Pass it to Builder::make(…)->blocks([…]) instead.'
+        );
+    }
+
+    public static function unknownBlock(string $name, string $builder): self
+    {
+        return new self(
+            "Builder [{$builder}] has no block named [{$name}]. Check the stored ".
+            'item type against the blocks the builder declares.'
+        );
+    }
+
     /**
      * A field that exists to be one mode was asked to become another.
      *

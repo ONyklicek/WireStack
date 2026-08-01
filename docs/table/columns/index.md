@@ -4,7 +4,7 @@ order: 20
 
 # Columns
 
-Wire Table provides **12 column types**. They all share the same base column API
+Wire Table provides **16 column types**. They all share the same base column API
 for labels, visibility, authorization, sorting, formatting, and inline editing —
 documented below. Pick a type for its cell rendering; reach for the shared API on
 any of them.
@@ -20,11 +20,15 @@ any of them.
 | [ImageColumn](image.md) | Avatars and thumbnails |
 | [ButtonColumn](button.md) | Link or Livewire-action button in a cell |
 | [ToggleColumn](toggle.md) | Inline editable on/off switch |
+| [CheckboxColumn](checkbox.md) | Inline editable checkbox (a denser ToggleColumn) |
 | [SelectColumn](select.md) | Inline editable dropdown (options, relations, enums) |
 | [TextInputColumn](text-input.md) | Inline editable text/number/email input |
 | [StackedColumn](stacked.md) | Avatar + name + email stacked layouts |
 | [SplitColumn](split.md) | Compose several columns side by side |
 | [PollColumn](poll.md) | Live-polling status/progress cells |
+| [ColorColumn](color.md) | A stored CSS color as a swatch |
+| [RatingColumn](rating.md) | A numeric score as stars |
+| [TagsColumn](tags.md) | A multi-value state as chips |
 
 ## Concepts
 

@@ -164,6 +164,13 @@
             'responsive' => $col->getResponsiveClasses(),
             'editable' => $col->isEditable(),
             'responsiveDisplay' => $col->hasResponsiveDisplay(),
+            // Author-supplied cell/header attributes. Resolved here with the rest
+            // of the column-static metadata rather than per cell; both setters
+            // stored their value and nothing read it until now.
+            'extraCell' => $col->getExtraAttributes(),
+            'extraHeader' => collect($col->getExtraHeaderAttributes())
+                ->map(fn ($v, $k) => e($k).'="'.e($v).'"')
+                ->implode(' '),
         ];
     }
     // Columns a fill drag may write. The client additionally requires the cell to
@@ -846,6 +853,7 @@
                                                 data-column="{{ $column->getName() }}"
                                                 class="{{ $headerPadding }} {{ $hm['alignment'] }} font-semibold {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $hm['responsive'] }}"
                                                 @if($column->getWidth()) style="width: {{ $column->getWidth() }}" @endif
+                                                @if($hm['extraHeader']) {!! $hm['extraHeader'] !!} @endif
                                         >
                                             @if($column->isSortable() && $table->isSortable())
                                                 <button
@@ -1099,6 +1107,7 @@
                                                 class="{{ $cellPadding }} {{ $cm['wrapClass'] }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $cm['alignment'] }} dark:text-white {{ $cm['responsive'] }}"
                                                 data-testid="table-cell-{{ $column->getName() }}"
                                                 data-column="{{ $column->getName() }}"
+                                                @if($cm['extraCell']) {!! $cm['extraCell'] !!} @endif
                                             >
                                                 @if($recordUrl && !$cm['editable'])
                                                     <a href="{{ $recordUrl }}"

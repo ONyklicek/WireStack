@@ -19,15 +19,21 @@ use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Components\Toggle;
 use NyonCode\WireTable\Columns\BadgeColumn;
 use NyonCode\WireTable\Columns\BooleanColumn;
+use NyonCode\WireTable\Columns\CheckboxColumn;
+use NyonCode\WireTable\Columns\ColorColumn;
 use NyonCode\WireTable\Columns\ImageColumn;
+use NyonCode\WireTable\Columns\RatingColumn;
 use NyonCode\WireTable\Columns\SelectColumn;
+use NyonCode\WireTable\Columns\TagsColumn;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Columns\TextInputColumn;
 use NyonCode\WireTable\Columns\ToggleColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Filters\SelectFilter;
+use NyonCode\WireTable\Filters\TrashedFilter;
 use NyonCode\WireTable\Support\RecordAction;
 use NyonCode\WireTable\Table;
+use Workbench\App\Models\Document;
 use Workbench\App\Models\GestureRow;
 use Workbench\App\Models\Invoice;
 use Workbench\App\Models\User;
@@ -147,6 +153,10 @@ class TablePreview extends Component
 
         if (in_array($this->variant, ['editable-fill', 'editable-fill-selectable', 'editable-fill-paged', 'editable-live'], true)) {
             return $this->editableFillTable($table);
+        }
+
+        if (in_array($this->variant, ['column-surfaces', 'trashed-filter'], true)) {
+            return $this->documentsTable($table);
         }
 
         if (in_array($this->variant, self::GESTURE_VARIANTS, true)) {
@@ -419,6 +429,39 @@ class TablePreview extends Component
      * HTML: `updateTableCell()` skips the render on purpose, and a per-page
      * change riding along in that same commit used to be swallowed with it.
      */
+    /**
+     * The display/edit column surfaces that need their own fixture: a stored CSS
+     * color, a numeric score, a tag list, an inline-editable checkbox — and, in
+     * the trashed-filter variant, the soft-delete scope switch.
+     */
+    private function documentsTable(Table $table): Table
+    {
+        $table
+            ->model(Document::class)
+            ->columns([
+                TextColumn::make('title')->label('Document')->sortable(),
+                ColorColumn::make('brand_color')->label('Brand')->copyable(),
+                RatingColumn::make('score')->label('Score')->allowHalf()->showValue(),
+                TagsColumn::make('tags')->label('Tags')->limitList(3)->colors([
+                    'design' => 'primary',
+                    'sales' => 'success',
+                    'archive' => 'gray',
+                ]),
+                CheckboxColumn::make('is_published')->label('Published'),
+            ])
+            ->searchable(false)
+            ->paginated(false)
+            ->defaultSort('id', 'asc');
+
+        if ($this->variant === 'trashed-filter') {
+            $table->filters([
+                TrashedFilter::make('trashed')->label('Records'),
+            ]);
+        }
+
+        return $table;
+    }
+
     private function editableFillTable(Table $table): Table
     {
         $table

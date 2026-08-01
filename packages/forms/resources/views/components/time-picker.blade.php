@@ -152,6 +152,7 @@
         <div class="relative" x-ref="trigger">
             <input
                     type="text"
+                    {!! $field->getExtraInputAttributesHtml() !!}
                     id="{{ $fieldId }}"
                     :value="displayValue"
                     @click="open = !open" data-testid="form-time-{{ $field->getStatePath() }}-trigger"

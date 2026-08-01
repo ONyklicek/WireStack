@@ -70,6 +70,21 @@ outside the enum is rejected without you restating it. It is skipped for `multip
 > [`CheckboxList`](checkbox-list.md), table `SelectColumn`, and the table
 > [`SelectFilter`](../../table/filters/index.md).
 
+## Clearing a Selection
+
+Picking the empty (placeholder) choice stores **null**, not an empty string —
+which matters most against an enum-cast column, where `''` is not a valid backing
+value and the cast would throw on save:
+
+```php
+Select::make('status')
+    ->options(Status::class)      // enum-cast column
+    ->placeholder('No status')    // choosing this stores null
+```
+
+Multi-selects are unaffected: their empty state is `[]`, which an array cast
+stores as it is.
+
 ## Searchable
 
 ```php

@@ -170,12 +170,6 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
     // Inline editing properties
     // Note: $editable boolean removed in v2. Use capabilities.
 
-    /** @var string|null Type of input for inline editing (e.g., 'text', 'select', 'date') */
-    protected ?string $editableType = 'text';
-
-    /** @var array<string, string> Options for editable fields (e.g., select options) */
-    protected array $editableOptions = [];
-
     /** @var Closure|null Validation rules for inline editing */
     protected ?Closure $editableRules = null;
 
@@ -1416,18 +1410,33 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
     }
 
     /**
-     * Make the column inline-editable, choosing the editor type and its options.
+     * Allow this column's cells to be written.
      *
-     * @param  array<string, string>|class-string  $options
+     * On a dedicated editable column (TextInputColumn, SelectColumn,
+     * ToggleColumn, CheckboxColumn) this is the switch that turns its editor on
+     * and off: `->editable(false)` renders the plain value and makes the server
+     * refuse a write for that column.
+     *
+     * It does **not** render an editor on an ordinary column — no view has read
+     * an editor type in any revision since the first commit — so the old
+     * `$type` / `$options` arguments are gone.
+     *
+     * They are swallowed by a variadic and refused rather than simply dropped
+     * from the signature: PHP ignores surplus *positional* arguments without a
+     * word, so `editable(true, 'select', [...])` — the form the docs taught —
+     * would otherwise keep doing exactly the silent nothing this removed.
+     * A named `type:` argument lands in that same variadic, so both call styles
+     * get the same message.
      */
-    public function editable(bool $editable = true, string $type = 'text', array|string $options = []): static
+    public function editable(bool $editable = true, mixed ...$removedEditorArguments): static
     {
+        if ($removedEditorArguments !== []) {
+            throw TableConfigurationException::genericEditorNotRendered($this->getName());
+        }
+
         $this->capabilities = $editable
             ? $this->capabilities->add(Capability::Editable)
             : $this->capabilities->remove(Capability::Editable);
-
-        $this->editableType = $type;
-        $this->editableOptions = EnumResolver::normalizeOptions($options);
 
         return $this;
     }
@@ -1459,20 +1468,7 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
         return $this->isEditable() && $this->fillable;
     }
 
-    public function getEditableType(): string
-    {
-        return $this->editableType;
-    }
-
     // Text styling methods
-
-    /**
-     * @return array<string, string>
-     */
-    public function getEditableOptions(): array
-    {
-        return $this->editableOptions;
-    }
 
     /** Validation rules for the inline-editable cell; the Closure receives `$record` and returns a rules array. */
     public function editableRules(Closure $callback): static
