@@ -408,6 +408,14 @@ broadcastová půlka je mrtvá, zatímco tabulka vypadá v pořádku.
 
 `LiveChannel::for(Invoice::class)` vrátí jméno, když ho potřebuješ přímo.
 
+**Balíček za tebe neautorizuje.** Neregistruje žádný kanál a nevolá žádnou
+policy sám — kdo smí poslouchat, je rozhodnutí aplikace, řečené tam, kde to
+Laravel čeká. Co dělá místo toho: odmítá o vynechání mlčet. Subscribe, který
+server odmítne, se ohlásí do konzole i s voláním, které to spraví. Je to jediné
+selhání, o kterém stojí za to křičet, protože vypadá přesně jako úspěch —
+tabulka se dál obnovuje na intervalu, takže nic nevypadá rozbitě, zatímco
+broadcastová půlka je mrtvá.
+
 Dávka zápisů — fill přes padesát řádků, hromadná akce — je jeden broadcast na
 záznam; klient je slije do jednoho přečtení. Přečtení se také odloží, dokud má
 některá vlastní buňka rozepsaný zápis, protože odpověď by dorazila ve stavu před

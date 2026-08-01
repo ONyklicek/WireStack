@@ -59,22 +59,29 @@ const check = (name, ok, detail = '') => {
 
 // A minimal Echo: records what was subscribed to and hands back a way to fire.
 const echoStub = `
-  window.__echoLog = { channels: [], listeners: [], left: [] };
+  window.__echoLog = { channels: [], listeners: [], left: [], errorHandlers: [] };
   window.Echo = {
     private(name) {
       window.__echoLog.channels.push(name);
-      return {
+      const channel = {
         listen(event, cb) {
           window.__echoLog.listeners.push({ channel: name, event, cb });
           return this;
         },
+        // Echo hands a refused subscription to whatever error() registered.
+        error(cb) { window.__echoLog.errorHandlers.push(cb); return this; },
       };
+      return channel;
     },
     leave(name) { window.__echoLog.left.push(name); },
     // Livewire reads this on every request to stamp X-Socket-Id, so a stub
     // without it breaks every round trip on the page — including the one this
     // driver is here to observe.
     socketId() { return 'driver-stub-socket'; },
+  };
+  window.__refuseSubscription = () => {
+    window.__echoLog.errorHandlers.forEach((cb) => cb({ status: 403 }));
+    return window.__echoLog.errorHandlers.length;
   };
   window.__fireBroadcast = () => {
     window.__echoLog.listeners.forEach((l) => l.cb({}));
@@ -147,6 +154,24 @@ try {
     Array.isArray(channels) && channels.length === 1, JSON.stringify(channels));
   check('the channel is named after the model it lists',
     (channels ?? [])[0] === 'wire-table.Workbench-App-Models-User', (channels ?? [])[0]);
+
+  // A refused subscription is the one failure that looks like success — the
+  // table keeps refreshing on its interval — so it has to say something.
+  const warned = await us.eval_(`(() => {
+    const seen = [];
+    const orig = console.warn;
+    console.warn = (...a) => { seen.push(a.join(' ')); orig.apply(console, a); };
+    const n = window.__refuseSubscription();
+    console.warn = orig;
+    return JSON.stringify({ handlers: n, warning: seen.find(s => s.includes('wire-table')) ?? null });
+  })()`);
+  const refusal = JSON.parse(warned);
+  check('a refused subscription is reported, with the fix in the message',
+    refusal.handlers === 1
+      && refusal.warning
+      && refusal.warning.includes('LiveChannel::authorize')
+      && refusal.warning.includes('fell back to polling'),
+    warned);
 
   const listeners = await us.eval_(`window.__echoLog.listeners.map(l => l.event)`);
   check('it listens for the broadcast event name the server sends',

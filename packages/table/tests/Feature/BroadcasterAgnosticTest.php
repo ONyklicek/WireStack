@@ -37,14 +37,26 @@ it('names no broadcaster anywhere in the shipped client bridge', function () use
     $bridge = $src('resources/js/record-live.js');
 
     // The Echo facade is the entire client contract. Reaching past it — at
-    // `connector`, at a `pusher`/`ably` object, at `window.Pusher` — is what ties
-    // the bridge to one vendor.
+    // `.connector`, at a `pusher`/`ably` object — is what ties the bridge to one
+    // vendor.
     expect($bridge)->toContain('window.Echo.private(')
         ->and($bridge)->toContain('window.Echo.leave(');
 
-    foreach (['connector', 'window.Pusher', 'Ably', 'io(', 'socket.io'] as $forbidden) {
-        expect(str_contains($bridge, $forbidden))
-            ->toBeFalse("record-live.js reaches past window.Echo via [{$forbidden}]");
+    // Matched as CODE, not as prose. The first version of this looked for the
+    // bare word "connector" and failed on a comment that used it correctly to
+    // explain what hands back a refused subscription — a guard that punishes
+    // writing about the thing it guards gets weakened rather than obeyed.
+    $forbidden = [
+        '/\.connector\b/' => 'reaches through Echo.connector',
+        '/\bwindow\.Pusher\b/' => 'touches the Pusher global',
+        '/\bnew\s+(Pusher|Ably)\b/' => 'constructs a broadcaster client',
+        '/\bAbly\.\w/' => 'uses the Ably SDK',
+        '/\bfrom\s+[\'"](pusher|ably|socket\.io)/' => 'imports a broadcaster client',
+    ];
+
+    foreach ($forbidden as $pattern => $what) {
+        expect(preg_match($pattern, $bridge))
+            ->toBe(0, "record-live.js {$what} instead of speaking only to window.Echo");
     }
 });
 

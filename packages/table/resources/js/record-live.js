@@ -41,11 +41,41 @@ function wireTableLive(config = {}) {
             try {
                 this._subscription = window.Echo.private(this.channel)
                 this._subscription.listen(this.eventName, () => this.schedule())
+
+                // Say so when the subscription is refused.
+                //
+                // This is the one failure worth being loud about, because it is
+                // the only one that looks like success: the table keeps
+                // refreshing on its interval, so nothing appears broken, and the
+                // push half is simply dead. An app that never authorized the
+                // channel — or authorized a different name — would otherwise have
+                // no way to find that out short of timing the refreshes.
+                //
+                // A warning, not an error: the fallback is working as designed,
+                // and this must not read as a page fault. And a report only —
+                // authorizing is the application's decision, so nothing here
+                // retries, downgrades the channel, or works around a policy.
+                if (typeof this._subscription.error === 'function') {
+                    this._subscription.error((e) => this.reportRefused(e))
+                }
             } catch (e) {
-                // Echo present but unusable (no connection configured, channel
-                // authorization refused). The interval is still running.
+                // Echo present but unusable (no connection configured at all).
+                // The interval is still running.
                 this._subscription = null
             }
+        },
+
+        /** @param {*} e whatever Echo hands back for a refused subscription */
+        reportRefused(e) {
+            const status = e?.status ?? e?.error?.status ?? '?'
+
+            console.warn(
+                '[wire-table] Live updates fell back to polling: the broadcast channel '
+                + `"${this.channel}" refused this subscription (status ${status}).\n`
+                + 'Authorize it once for every live table, in routes/channels.php:\n'
+                + '    use NyonCode\\WireTable\\Support\\LiveChannel;\n'
+                + "    LiveChannel::authorize(fn ($user, string $model) => $user->can('viewAny', $model));",
+            )
         },
 
         destroy() {

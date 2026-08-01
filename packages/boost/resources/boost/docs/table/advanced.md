@@ -409,6 +409,14 @@ is dead and the table looks fine.
 
 `LiveChannel::for(Invoice::class)` gives the name if you need it directly.
 
+**The package never authorizes for you.** It registers no channel and calls no
+policy of its own — who may listen is the application's decision, stated where
+Laravel expects it. What it does instead is refuse to be quiet about the
+omission: a subscription the server turns down is reported in the console,
+naming the call that fixes it. That is the one failure worth being loud about,
+because it looks exactly like success — the table keeps refreshing on its
+interval, so nothing appears broken while the push half is dead.
+
 A burst of writes — a fill over fifty rows, a bulk action — is one broadcast per
 record; the client coalesces them into a single re-read. A re-read is also held
 off while one of your own cells has a save in flight, since the answer would
