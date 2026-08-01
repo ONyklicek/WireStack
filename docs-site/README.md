@@ -186,9 +186,18 @@ build never emits links pointing at a site it is not.
 ## Checks
 
 ```bash
-npm run docs:check       # static: markdown integrity, a clean build per locale, structure
+npm run docs:check       # static: markdown integrity, links, anchors, a clean build per locale
+npm run docs:standard    # AI_DOCS_STANDARD.md: focus spotlights, marker syntax, EN/CS parity
+npm run docs:api         # docs vs the real public API, in both directions
 npm run docs:verify-ui   # browser: mobile search, language switching, ranking, head tags
 ```
+
+Page content itself is governed by [`AI_DOCS_STANDARD.md`](../AI_DOCS_STANDARD.md):
+mechanism before signatures, a complete typed fluent API section, extended
+in-context examples, Torchlight `[tl! focus]` on long examples, and a Czech
+mirror that matches structurally. `docs-site/docs-standard-baseline.txt` is the
+ledger of pages written before the standard; a block loses its exemption as soon
+as it is edited.
 
 `docs:verify-ui` builds every locale into a throwaway dir, serves it, and drives
 it in headless Chrome at phone and desktop metrics. It exists because the two

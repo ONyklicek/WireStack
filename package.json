@@ -12,6 +12,7 @@
         "verify:drivers": "bash scripts/verify-drivers.sh",
         "docs:check": "node docs-site/scripts/verify-docs.mjs .",
         "docs:verify-ui": "node docs-site/scripts/verify-site-ui.mjs .",
+        "docs:standard": "node docs-site/scripts/verify-docs-standard.mjs .",
         "docs:changed": "bash scripts/docs-changed.sh",
         "build:forms-assets": "rm -rf packages/forms/dist/tiptap && esbuild packages/forms/resources/js/tiptap-editor.js packages/forms/resources/js/tiptap-editor-addons.js --bundle --minify --format=esm --splitting --outdir=packages/forms/dist/tiptap --entry-names=[name] --chunk-names=chunk-[hash] --legal-comments=none && esbuild packages/forms/resources/js/image-processor.js --bundle --minify --format=iife --legal-comments=none --outfile=packages/forms/dist/wire-forms-image.js",
         "build:core-assets": "esbuild packages/core/resources/js/dropdown.js --bundle --minify --format=iife --legal-comments=none --outfile=packages/core/dist/wire-core-dropdown.js && esbuild packages/core/resources/js/chart.js --bundle --minify --format=iife --legal-comments=none --outfile=packages/core/dist/wire-core-chart.js",

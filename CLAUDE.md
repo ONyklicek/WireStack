@@ -11,16 +11,21 @@ Use the smallest useful context first.
    binding: composition over inheritance, interfaces before implementations,
    no business logic in traits, `InteractsWith*` / `CanBe*` trait naming, and
    the `Contracts/ Concerns/ Actions/ Services/ Managers/ Support/` layout.
-3. Read `AI_BLUEPRINT.md` for the repo contract and package ownership rules.
-4. Read one package doc only if the task is local:
+3. Read `AI_DOCS_STANDARD.md` before writing or changing anything under
+   `docs/`. It is binding: mechanism before signatures, a complete and typed
+   fluent API section, extended in-context examples, Torchlight `[tl! focus]`
+   spotlights on long examples, and an EN/CS pair that stays structurally
+   identical.
+4. Read `AI_BLUEPRINT.md` for the repo contract and package ownership rules.
+5. Read one package doc only if the task is local:
    - `architecture/core.md`
    - `architecture/forms.md`
    - `architecture/table.md`
    - `architecture/sortable.md`
-5. Read `architecture/integrations.md` only for cross-package behavior.
-6. Read `architecture/audit.md` only for full analysis, inconsistency hunting, or code review.
-7. Read `architecture/decisions/` only when the current behavior is unclear or a design tradeoff matters.
-8. Read generated output only if the task explicitly targets generated assets.
+6. Read `architecture/integrations.md` only for cross-package behavior.
+7. Read `architecture/audit.md` only for full analysis, inconsistency hunting, or code review.
+8. Read `architecture/decisions/` only when the current behavior is unclear or a design tradeoff matters.
+9. Read generated output only if the task explicitly targets generated assets.
 
 ## Repo Graph
 
@@ -96,6 +101,8 @@ Before changing shared behavior, ask:
   `architecture/decisions/0024-js-asset-delivery-and-registration.md`
 - Full analysis, inconsistency review, bug-hunting, or audit:
   `architecture/audit.md`
+- Writing or changing any page under `docs/`:
+  `AI_DOCS_STANDARD.md` (binding), then `docs-site/README.md`
 - Docs, previews, workbench, screenshot refresh:
   `architecture/integrations.md`
 - Implementation recipe for adding/changing fields, columns, filters, actions, plugins:
@@ -186,11 +193,20 @@ npm run verify:drivers -- selection   # only those matching a name
 php docs-site/build.php
 npm run docs:changed -- --dry-run
 npm run docs:refresh
+
+# Docs gates. docs:check is markdown/link/build integrity; docs:standard is
+# AI_DOCS_STANDARD.md (focus spotlights, EN/CS parity); docs:api is docs vs the
+# real public API; docs:verify-ui drives the built site in a browser.
+npm run docs:check
+npm run docs:standard
+npm run docs:api
+npm run docs:verify-ui
 ```
 
 ## Deep Docs
 
 - `AI_CODING_STANDARD.md`
+- `AI_DOCS_STANDARD.md`
 - `AI_BLUEPRINT.md`
 - `AI_CHANGE_PROTOCOL.md`
 - `AI_RECIPES.md`
