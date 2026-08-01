@@ -32,8 +32,16 @@ function wireTableLive(config = {}) {
         /* A burst of writes (a fill over fifty rows, a bulk action) is one
            broadcast per record. Coalesce them into a single re-read. */
         settle: config.settle ?? 250,
+        /* ~2s of waiting for an in-flight save before leaving it to the poll. */
+        maxDeferrals: config.maxDeferrals ?? 8,
         _timer: null,
         _subscription: null,
+        /* Echo retries a refused subscription, and the comment above promises ONE
+           warning. A console filling with the same paragraph is a console people
+           stop reading. */
+        _reportedRefusal: false,
+        /* Deferrals spent waiting for one of our own cells to finish saving. */
+        _deferrals: 0,
 
         init() {
             if (! this.channel || ! window.Echo) return
@@ -67,6 +75,10 @@ function wireTableLive(config = {}) {
 
         /** @param {*} e whatever Echo hands back for a refused subscription */
         reportRefused(e) {
+            if (this._reportedRefusal) return
+
+            this._reportedRefusal = true
+
             const status = e?.status ?? e?.error?.status ?? '?'
 
             console.warn(
@@ -107,11 +119,20 @@ function wireTableLive(config = {}) {
          */
         refresh() {
             if (this.busy()) {
-                this.schedule()
+                // Bounded, because `saving` is only cleared when a commit settles
+                // and a request that never settles would leave this rescheduling
+                // every settle window for as long as the page is open — a timer
+                // that never stops, over a table that never refreshes. Giving up
+                // costs nothing: the interval is still running underneath, which
+                // is the whole reason a dropped nudge is survivable.
+                if (++this._deferrals <= this.maxDeferrals) {
+                    this.schedule()
+                }
 
                 return
             }
 
+            this._deferrals = 0
             this.$wire.refreshTable()
         },
 

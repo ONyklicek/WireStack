@@ -61,6 +61,7 @@ use NyonCode\WireTable\Services\WriteGeneration;
 use NyonCode\WireTable\Support\CellEditOutcome;
 use NyonCode\WireTable\Table;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 use function Livewire\store;
 
@@ -1090,8 +1091,27 @@ trait WithTable
 
         $table = $this->getTable();
 
-        if ($table->shouldBroadcastChanges()) {
+        if (! $table->shouldBroadcastChanges()) {
+            return;
+        }
+
+        try {
             event(new TableRecordsChanged($this->queryCacheScope($table)));
+        } catch (Throwable $e) {
+            // The write has already committed. Every caller of this runs inside a
+            // try/catch that turns a throw into "the save failed" — so a
+            // broadcaster having a bad day would report a landed write as failed,
+            // and the cell would roll itself back to a value the database no
+            // longer holds. The user retypes an edit that was never lost.
+            //
+            // Made likelier by ShouldBroadcastNow, which puts the broadcaster's
+            // HTTP call inline in that same try. The push is an optimisation with
+            // a working fallback — polling — so it is never worth a wrong answer
+            // about whether the write landed.
+            //
+            // Reported rather than swallowed: this belongs in the log, it just
+            // does not belong in the response.
+            report($e);
         }
     }
 
@@ -1917,7 +1937,7 @@ trait WithTable
                     $restored->livewire($this);
                     $this->haltModalFormInstance = $restored;
                 }
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 // Corrupt or non-restorable session data — close the modal cleanly
                 $this->tableState->set('modal.halt.show', false);
                 session()->forget('wire.halt_form_instance');

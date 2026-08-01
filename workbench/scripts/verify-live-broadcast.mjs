@@ -165,6 +165,18 @@ try {
     console.warn = orig;
     return JSON.stringify({ handlers: n, warning: seen.find(s => s.includes('wire-table')) ?? null });
   })()`);
+  // Echo retries a refused subscription; the warning must not retry with it.
+  const repeated = await us.eval_(`(() => {
+    const seen = [];
+    const orig = console.warn;
+    console.warn = (...a) => { seen.push(a.join(' ')); orig.apply(console, a); };
+    window.__refuseSubscription();
+    window.__refuseSubscription();
+    console.warn = orig;
+    return seen.filter(s => s.includes('wire-table')).length;
+  })()`);
+  check('and only once, however often the connector retries', repeated === 0, `extra warnings=${repeated}`);
+
   const refusal = JSON.parse(warned);
   check('a refused subscription is reported, with the fix in the message',
     refusal.handlers === 1

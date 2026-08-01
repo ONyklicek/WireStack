@@ -67,10 +67,17 @@ final class LiveChannel
      */
     public static function authorize(Closure $callback): void
     {
-        Broadcast::channel(
-            self::PATTERN,
-            fn ($user, string $scope) => $callback($user, self::scopeFrom($scope)),
-        );
+        Broadcast::channel(self::PATTERN, function ($user, string $scope) use ($callback) {
+            $model = self::scopeFrom($scope);
+
+            // The segment arrives from the client, so what comes out of the
+            // decode is a class-SHAPED string, not a class. An app callback is
+            // entitled to treat its argument as real — the documented one hands
+            // it to `Gate`, and a plausible one does `$model::query()` — so
+            // anything that does not name a loadable class is refused here rather
+            // than passed on for the app to be careless with.
+            return class_exists($model) ? $callback($user, $model) : false;
+        });
     }
 
     /**

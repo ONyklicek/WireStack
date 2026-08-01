@@ -226,6 +226,43 @@ it('turns a channel segment back into the class it names', function () {
         ->and(LiveChannel::scopeFrom($segment))->toBe($class);
 });
 
+it('reports a committed write as committed even when the broadcaster is down', function () {
+    // The write has already landed when the announcement runs, and every caller
+    // of it sits inside a try/catch that turns a throw into "the save failed".
+    // A broadcaster having a bad day would therefore report a landed write as
+    // failed — and the cell rolls itself back to a value the database no longer
+    // holds, so the user retypes an edit that was never lost.
+    Event::listen(TableRecordsChanged::class, function (): void {
+        throw new RuntimeException('broadcaster unreachable');
+    });
+
+    $c = Livewire::test(LiveHost::class, ['broadcast' => true]);
+    $c->call('updateTableCell', 1, 'title', 'Landed anyway');
+
+    $result = $c->effects['returns'][0] ?? null;
+
+    expect($result['success'])->toBeTrue()
+        ->and(LivePost::find(1)->title)->toBe('Landed anyway');
+});
+
+it('reports a fill as landed even when the broadcaster is down', function () {
+    Event::listen(TableRecordsChanged::class, function (): void {
+        throw new RuntimeException('broadcaster unreachable');
+    });
+
+    $c = Livewire::test(LiveHost::class, ['broadcast' => true]);
+    $c->call('fillTableCells', [[
+        'column' => 'title',
+        'value' => 'Filled anyway',
+        'records' => ['1' => null],
+    ]]);
+
+    $result = $c->effects['returns'][0] ?? null;
+
+    expect($result['success'])->toBeTrue()
+        ->and(LivePost::find(1)->title)->toBe('Filled anyway');
+});
+
 it('broadcasts without going through a queue', function () {
     // `ShouldBroadcast` would hand this to the app's queue, and the very common
     // setup of a configured queue with no worker running for it would swallow the
