@@ -266,12 +266,95 @@ Kompletní API akcí viz [Akce](../core/actions.md).
 ```php
 // Zapnout globální hledání napříč všemi searchable sloupci
 ->searchable(bool $searchable = true)
+
+// Nastavit, jak se zadaný výraz čte (viz níže)
+->search(Closure|SearchConfig $config)
 ```
 
-Hledání používá strategii závislou na databázi:
-- **MySQL**: `MATCH ... AGAINST` fulltext (pokud existuje index) nebo `LIKE`
-- **PostgreSQL**: `to_tsvector / ts_query`
-- **SQLite**: fallback `LIKE '%term%'`
+Ve výchozím stavu se celý výraz hledá jako jeden podřetězec napříč všemi
+searchable sloupci, spojený přes OR: `LIKE '%výraz%'` na MySQL/MariaDB a SQLite,
+`ILIKE` na PostgreSQL. Znaky `%` a `_`, které uživatel napíše, se escapují —
+hledá se tedy po nich, místo aby fungovaly jako zástupné znaky.
+
+### Syntaxe hledání
+
+Každou schopnost zapínáte pro danou tabulku zvlášť — bez toho se nic
+neinterpretuje, takže se stávajícímu hledání pod rukama nezmění chování.
+
+```php
+use NyonCode\WireCore\Core\Query\Search\SearchConfig;
+
+$table->search(fn (SearchConfig $s) => $s
+    ->tokenize()    // mezery znamenají AND, uvozovky drží frázi pohromadě
+    ->ranges()      // >100, <=20, 10..20, 2026-01-01..2026-03-31
+    ->wildcards()   // nov* najde novak
+);
+```
+
+| Schopnost | Co uživatel napíše | Co to udělá |
+| --- | --- | --- |
+| `tokenize()` | `Ada Lovelace` | Každé slovo musí sedět, každé napříč všemi sloupci — takže se trefí i křestní jméno v jednom sloupci a příjmení v druhém. |
+| `tokenize()` | `"Ada Lovelace"` | Fráze v uvozovkách zůstane jedním slovem a nikdy se nečte jako operátor. |
+| `ranges()` | `>100`, `>=100`, `<10`, `<=10`, `=42` | Porovnává proti sloupcům, které drží číslo nebo datum. |
+| `ranges()` | `10..20`, `10..`, `..20` | Uzavřený nebo jednostranně otevřený rozsah. |
+| `ranges()` | `2026-01-01..2026-03-31`, `31.01.2026` | Totéž nad daty. |
+| `ranges()` | `8866 01..08` | Rozsah uvnitř jedné řady strukturovaného kódu — viz níže. |
+| `wildcards()` | `nov*`, `a?b` | `*` zastoupí libovolný počet znaků, `?` právě jeden. |
+| `literal()` | — | Vypne všechno zpět (výchozí stav). |
+
+Zadané datum se čte v té podrobnosti, v jaké bylo napsáno: `2026-01-31` znamená
+celý ten den, `2026-01` celý měsíc a `2026` celý rok — takže `<=2026-01-31`
+zahrne i záznam pořízený 31. v 23:30.
+
+Porovnání se ptá jen sloupce, který na ně umí odpovědět. Typ hodnoty se odvodí
+z castů modelu (`decimal:2`, `datetime`, …); tam, kde casty za sloupec mluvit
+nemohou, ho deklarujte přes
+[`Column::searchAs()`](columns/index.md#hledani). Porovnání, na které nemůže
+odpovědět žádný sloupec — `>100` v tabulce jmen — se hledá jako doslovný text,
+který uživatel napsal, místo aby tiše sedělo na všechno.
+
+```php
+// Na ">1000" umí odpovědět jen `amount`; slova výběr dál zúží.
+$table->search(fn (SearchConfig $s) => $s->tokenize()->ranges());
+
+// Uživatel napíše:  praha >1000
+// Zůstanou řádky:   něco obsahuje "praha"  A ZÁROVEŇ  amount > 1000
+```
+
+### Rozsahy uvnitř strukturovaného kódu
+
+Kód jako `8866 01`, `8866 02`, … má společnou řadu a končí číslem doplněným
+nulami. Označte sloupec přes
+[`searchAs('code')`](columns/index.md#hledani) a přes pořadové číslo lze rovnou
+zadávat rozsah:
+
+```php
+TextColumn::make('reference')->searchable()->searchAs('code');
+
+// Uživatel napíše:  8866 01..08
+// SQL:              reference BETWEEN '8866 01' AND '8866 08'
+```
+
+Mezera uvnitř kódu je zároveň tím, co výraz dělí — `8866 01..08` tedy přijde
+jako slovo `8866` a rozsah `01..08`. Rozsah si nese slovo, které mu přímo
+předchází, a sloupec typu kód jím doplní obě meze — řadu tedy píšete jednou, ne
+na obou stranách. Každý jiný sloupec to slovo ignoruje a `01..08` čte jako
+obyčejný rozsah, takže `praha 10..20` na téže tabulce dál znamená „obsahuje praha
+a částka mezi 10 a 20“. Jednostranná porovnání fungují stejně: `8866 >=09`.
+
+Dvě pravidla, která to drží poctivé:
+
+- **Číslo musí být uložené doplněné nulami a psát se tak, jak je uložené.**
+  Porovnání textem je správně jen dokud je šířka konstantní (`01 … 08` se
+  abecedně řadí stejně jako číselně, `9 … 10` už ne). Napsat `1..8` proti
+  uloženým `01 … 08` nenajde nic. Rozsah přes hranici šířky se doplní za vás —
+  `8866 50..100` se čte jako `050..100`, protože stý člen může existovat jen
+  v třímístné řadě.
+- **Řada je jedno slovo před rozsahem.** `faktura 8866 01..08` hledá rozsah uvnitř
+  `8866` a `faktura` musí sedet zvlášť; kód se dvěma mezerami je mimo dosah.
+
+Hledání se s filtry kombinuje přes AND, při změně vrací stránkování na první
+stranu a při zapnutém [`queryString()`](advanced.md#perzistence-stavu-v-url) se ukládá do URL.
 
 ### Řazení
 

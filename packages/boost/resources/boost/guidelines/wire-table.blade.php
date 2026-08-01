@@ -74,6 +74,40 @@ searchable combobox** (the same `searchable-select` used by wire-forms `Select` 
 fall back to `Filter::apply()`), and inherit authorization, **indicator chips** (removable, alongside panel
 chips), and **query-string persistence** (`Table::queryString()`, under a `col_<column>` URL parameter).
 
+### Search syntax
+
+`Table::searchable()` matches the whole term as one substring across every searchable column
+(`LIKE`/`ILIKE`), and a `%` or `_` the user types is escaped rather than acting as a wildcard.
+Richer syntax is **opt-in per table** through `Table::search()` — nothing is interpreted unless
+asked for, so an unconfigured table behaves exactly as before:
+
+```php
+use NyonCode\WireCore\Core\Query\Search\SearchConfig;
+
+$table->search(fn (SearchConfig $s) => $s
+    ->tokenize()    // spaces = AND; each word ORs across all columns; "quoted phrase" stays whole
+    ->ranges()      // >100, >=100, <10, <=10, =42, 10..20, 10.., ..20, 2026-01-01..2026-03-31
+    ->wildcards()   // nov* / a?b
+);
+```
+
+Structured codes (`8866 01`, `8866 02` — shared series, zero-padded tail) get `Column::searchAs('code')`:
+typing `8866 01..08` becomes one `BETWEEN '8866 01' AND '8866 08'`. The space inside the code also
+splits the term, so the range carries the word typed before it and a code column completes both
+bounds with it (write the series once); any other column ignores that word and reads `01..08` as the
+plain range, so `praha 10..20` still works on the same table. The number must be stored padded and typed as stored
+(`1..8` against stored `01 … 08` finds nothing); a range crossing a width boundary is completed —
+`8866 50..100` reads as `050..100`.
+
+`tokenize()` is what makes a first name in one column and a surname in another match together.
+`ranges()` only asks a column that can answer — the value type comes from the model's casts, or
+from `Column::searchAs('numeric'|'date')` where a cast cannot speak for the column; a comparison
+no column can answer is searched as the literal text typed, never as an empty group that matches
+everything. A typed date means its whole span (`2026-01-31` the day, `2026-01` the month, `2026`
+the year). `Column::searchable(['first_name', 'last_name'])` searches exactly the columns listed;
+`Column::searchUsing(fn (Builder $q, string $term) => ...)` OR-combines with the planned columns
+and receives one token at a time when tokenizing.
+
 ### Relation managers
 
 A relationship-scoped table as a standalone Livewire component. Extend `RelationManagers\RelationManager`,

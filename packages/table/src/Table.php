@@ -18,6 +18,7 @@ use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Core\Query\Search\SearchConfig;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
@@ -81,6 +82,8 @@ class Table implements Htmlable
     protected array $perPageOptions = [10, 25, 50, 100];
 
     protected bool $searchable = true;
+
+    protected ?SearchConfig $searchConfig = null;
 
     protected bool $queryString = false;
 
@@ -813,6 +816,42 @@ class Table implements Htmlable
         $this->searchable = $searchable;
 
         return $this;
+    }
+
+    /**
+     * Configure how the search box interprets what is typed into it.
+     *
+     * Everything is off by default — the whole term is one substring match —
+     * so each capability is opted into explicitly:
+     *
+     *     $table->search(fn (SearchConfig $s) => $s
+     *         ->tokenize()   // spaces mean AND: "Ada Lovelace" spans two columns
+     *         ->ranges()     // >100, <=20, 10..20, 2026-01-01..2026-03-31
+     *         ->wildcards()  // nov* matches novak
+     *     );
+     *
+     * @param  Closure(SearchConfig): (SearchConfig|null)|SearchConfig  $config
+     */
+    public function search(Closure|SearchConfig $config): static
+    {
+        if ($config instanceof SearchConfig) {
+            $this->searchConfig = $config;
+
+            return $this;
+        }
+
+        $resolved = SearchConfig::make();
+        $this->searchConfig = $config($resolved) ?? $resolved;
+
+        return $this;
+    }
+
+    /**
+     * How this table's search term is parsed (literal when never configured).
+     */
+    public function getSearchConfig(): SearchConfig
+    {
+        return $this->searchConfig ??= SearchConfig::make();
     }
 
     /**

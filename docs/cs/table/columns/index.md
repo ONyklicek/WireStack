@@ -78,6 +78,9 @@ TextColumn::make('full_name')
 // Vlastní logika hledání
 ->searchUsing(Closure $fn)
 
+// Deklarovat, co sloupec drží, aby šlo do hledání psát >100 a 10..20
+->searchAs(SearchValueType|string $type)      // 'text' | 'numeric' | 'date' | 'code'
+
 // Získat resolvované sloupce hledání
 ->getSearchColumns(): array
 ```
@@ -96,6 +99,28 @@ TextColumn::make('full_name')
         $query->where(DB::raw("CONCAT(first_name, ' ', last_name)"), 'like', "%{$search}%");
     })
 ```
+
+`searchAs()` má smysl teprve tehdy, když tabulka zapne
+[hledání rozsahů](../overview.md#syntaxe-hledani). Typ hodnoty se obvykle odvodí
+z castů modelu — cast `decimal:2` nebo `datetime` stačí — deklarujte ho tedy jen
+tam, kde za sloupec casty mluvit nemohou:
+
+```php
+// Model nemá pro `amount` žádný cast, takže se z něj nedá nic odvodit.
+TextColumn::make('amount')
+    ->searchable()
+    ->searchAs('numeric')      // ">1000" a "10..20" se teď dostanou i na tento sloupec
+```
+
+Sloupec ponechaný jako text porovnání přeskočí, místo aby porovnával
+lexikograficky — chybná nebo chybějící deklarace tak jen zúží, čemu hledání
+rozumí, nikdy nevrátí špatné řádky.
+
+`'code'` je jediný typ, který se **nikdy** neodvozuje: říká, že hodnota je řada
+plus číslo **doplněné nulami** (`8866 01`, `8866 02`), což je právě to, co dělá
+porovnání textem správným — a ví to jen vlastník. Odemyká
+[rozsahy uvnitř řady](../overview.md#rozsahy-uvnitr-strukturovaneho-kodu) —
+`8866 01..08`.
 
 ### Viditelnost a přepínatelnost
 

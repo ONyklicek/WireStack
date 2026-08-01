@@ -34,6 +34,16 @@ final class TableConfigurationException extends InvalidArgumentException impleme
     /**
      * @param  array<int, string>  $valid
      */
+    public static function unknownSearchValueType(string $type, array $valid): self
+    {
+        return new self(
+            "Unknown search value type [{$type}]. Valid types: ".implode(', ', $valid).'.'
+        );
+    }
+
+    /**
+     * @param  array<int, string>  $valid
+     */
     public static function unknownSummaryType(string $type, array $valid): self
     {
         return new self(

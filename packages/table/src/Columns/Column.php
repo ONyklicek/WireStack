@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Core\Components\DataComponent;
+use NyonCode\WireCore\Core\Query\Contracts\HasSearchColumns;
+use NyonCode\WireCore\Core\Query\Contracts\HasSearchValueType;
+use NyonCode\WireCore\Core\Query\Search\SearchValueType;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
@@ -33,12 +36,13 @@ use NyonCode\WireTable\Concerns\CanBeFiltered;
 use NyonCode\WireTable\Concerns\CanBeSummarized;
 use NyonCode\WireTable\Concerns\HasResponsive;
 use NyonCode\WireTable\Concerns\HasView;
+use NyonCode\WireTable\Exceptions\TableConfigurationException;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Support\FilterControl;
 use NyonCode\WireTable\Support\MobileSlot;
 
 /** @phpstan-consistent-constructor */
-class Column extends DataComponent implements Htmlable
+class Column extends DataComponent implements HasSearchColumns, HasSearchValueType, Htmlable
 {
     // HasVisibility composes HasAuthorization — an unauthorized column is not a
     // visible one — so it is not listed separately, matching core's Component.
@@ -61,6 +65,9 @@ class Column extends DataComponent implements Htmlable
 
     /** @var array<int, string> Explicit DB columns to search (Filament-style: searchable(['first_name', 'last_name'])) */
     protected array $searchColumns = [];
+
+    /** What the column holds for search purposes (null = infer from the model's casts). */
+    protected ?SearchValueType $searchValueType = null;
 
     /** @var Closure|null Custom search query callback: fn(Builder, string) => */
     protected ?Closure $searchCallback = null;
@@ -438,6 +445,30 @@ class Column extends DataComponent implements Htmlable
     public function getSearchColumns(): array
     {
         return $this->searchColumns;
+    }
+
+    /**
+     * Declare what this column holds for search purposes.
+     *
+     * Only needed when nothing can be inferred — no cast on the model and no
+     * usable database type — and only matters once the table opts into
+     * comparison syntax.
+     */
+    public function searchAs(SearchValueType|string $type): static
+    {
+        $this->searchValueType = $type instanceof SearchValueType
+            ? $type
+            : SearchValueType::tryFrom($type) ?? throw TableConfigurationException::unknownSearchValueType(
+                $type,
+                array_map(static fn (SearchValueType $c): string => $c->value, SearchValueType::cases()),
+            );
+
+        return $this;
+    }
+
+    public function getSearchValueType(): ?SearchValueType
+    {
+        return $this->searchValueType;
     }
 
     /**
