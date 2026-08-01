@@ -321,6 +321,90 @@ hledání, filtr nebo řazení. V takovém požadavku vyhrává změna a tabulka
 vyrenderuje; přeskočení by nechalo v prohlížeči starý pohled až do další akce
 uživatele.
 
+---
+
+## Živé tabulky (více uživatelů)
+
+`live()` je polling a detekce změn zapnuté společně, pro případ, kvůli kterému
+existují: nad stejnými záznamy sedí víc lidí a každý čeká, že uvidí, co dělají
+ostatní.
+
+```php
+$table->live()                  // každých 5 s, render jen když se něco pohnulo
+$table->live('2s')
+$table->live(broadcast: true)   // …a okamžitě, kde je nastavené Echo
+```
+
+`live()` je přesně `->poll($interval)->pollChangeDetection()`, takže platí vše ze
+sekce výše. Navíc přidává **write generation**: čítač sdílený napříč procesy a
+scopovaný podle modelu, který posune každý zápis přes tabulku. Bez něj je detekce
+změn slepá vůči zápisu, který dopadne do stejné sekundy jako předchozí checksum —
+`updated_at` se ukládá po sekundách, takže takový edit je nerozeznatelný od
+žádného, a další tick porovnává proti téže sekundě. Nezobrazil by se pozdě;
+nezobrazil by se vůbec. Čítač zároveň naráz zneplatní každý cachovaný řez
+tabulky, díky čemuž jde [cachování dotazů](#cachovani-dotazu) a živá tabulka
+kombinovat.
+
+### Push místo čekání — `broadcast: true`
+
+`live(broadcast: true)` navíc při každém zápisu přes tabulku vypustí
+`TableRecordsChanged` a stránka se na něj přihlásí. Zápis se pak k ostatním
+relacím dostane hned po commitu, ne až na jejich dalším ticku.
+
+Událost **nenese žádná data** — je to pobídka „přečti si to znovu", ne payload
+k aplikaci. Každý klient se obnoví přes vlastní komponentu, takže se serverově
+znovu vyhodnotí jeho autorizace, filtry, řazení i stránka, přesně jako u pollingu.
+Na kanálu tím pádem není nic, co by stálo za odposlech: jméno scopu a nic víc.
+
+**Žádný broadcaster není závislost tohohle balíčku a žádný není zvýhodněný.**
+`TableRecordsChanged` je obyčejná laravelí broadcast událost se jmény kanálů jako
+stringy a klientská půlka nevolá nic než `window.Echo.private()` a
+`window.Echo.leave()`. Takže broadcaster, který Echo v tvé aplikaci řídí — Pusher,
+Ably, Reverb — by to měl přenést bez jakékoli změny tady, nastavený přesně tak,
+jak už broadcasting v aplikaci nastavený máš.
+
+Stojí za to oddělit, co je *ověřené*, od toho, co z toho *plyne*: jediný
+broadcaster, proti kterému tahle cesta opravdu běžela, je Reverb — driverem
+`workbench/scripts/verify-live-broadcast-real.mjs`, který si to potřebné doinstaluje
+na vyžádání a **není** součástí CI ani sweepu driverů: žádný broadcaster není
+závislost tohohle repozitáře, v žádné sekci žádného manifestu, takže se driver
+přeskočí, dokud si to někdo vědomě nepostaví. Že bude fungovat Pusher nebo Ably se
+čeká proto, že se balíček dotýká jen těch dvou Echo metod výše — což hlídá
+`BroadcasterAgnosticTest` — ne proto, že by to někdo viděl na vlastní oči.
+
+Událost je `ShouldBroadcastNow`, takže **nejde přes frontu**. Zařazený broadcast
+by v běžné situaci „fronta nastavená, worker neběží" zmizel úplně — a *tiše*,
+protože polling to zakryje a tabulka se stejně o chvíli později obnoví. Cena za
+odeslání inline řečeno na rovinu: zápis čeká na HTTP volání broadcasteru, než
+odpoví. Proti lokálnímu Reverbu je to pod milisekundu; proti vzdálenému
+broadcasteru, který má špatný den, se to připočte ke každému zápisu — a tabulka,
+která si to nemůže dovolit, ať `broadcast` nechá vypnutý a spolehne se na interval.
+
+Vyžaduje to Echo-kompatibilního klienta a broadcast připojení v aplikaci. Obojí
+patří aplikaci, ne tomuhle balíčku, a **každé selhání je neškodné**: žádné Echo na
+stránce, nenastavené připojení, odmítnutá autorizace kanálu, spadlý socket —
+tabulka spadne zpátky na svůj interval. Uživatel dostane pomalejší tabulku, nikdy
+ne zastaralou.
+
+Kanál autorizujte jako každý jiný. `TableRecordsChanged::channelFor()` ho
+pojmenuje podle modelu, záměrně čitelně:
+
+```php
+// routes/channels.php
+Broadcast::channel('wire-table.App.Models.Invoice', function ($user) {
+    return $user->can('viewAny', Invoice::class);
+});
+```
+
+Dávka zápisů — fill přes padesát řádků, hromadná akce — je jeden broadcast na
+záznam; klient je slije do jednoho přečtení. Přečtení se také odloží, dokud má
+některá vlastní buňka rozepsaný zápis, protože odpověď by dorazila ve stavu před
+ním a buňka by ji stejně právem ignorovala.
+
+```php
+->live(string $interval = '5s', bool $broadcast = false)
+```
+
 ### Polling řádku/sloupce
 
 Použijte `PollColumn` pro živé aktualizace per buňka bez obnovování celé tabulky:

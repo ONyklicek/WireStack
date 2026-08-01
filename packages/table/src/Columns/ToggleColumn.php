@@ -9,6 +9,7 @@ use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
+use NyonCode\WireCore\Foundation\View\CellSync;
 use NyonCode\WireTable\Concerns\HasRecordVersion;
 use NyonCode\WireTable\Concerns\InteractsWithRecordDisabledState;
 
@@ -103,6 +104,7 @@ class ToggleColumn extends Column
             'onColorClass' => $this->getOnColorClass(),
             'offColorClass' => $this->getOffColorClass(),
             'recordVersion' => $this->recordVersion($record),
+            'syncHtml' => app(CellSync::class)->node($state ? '1' : '0', $this->recordVersion($record)),
             // Resolved here, not in Blade: the column owns icon semantics.
             'onIcon' => $this->onIcon ? app(IconManager::class)->render($this->onIcon, 'w-3 h-3') : '',
             'offIcon' => $this->offIcon ? app(IconManager::class)->render($this->offIcon, 'w-3 h-3') : '',

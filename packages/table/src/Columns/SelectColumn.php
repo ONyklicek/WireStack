@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireCore\Foundation\View\CellSync;
+use NyonCode\WireTable\Concerns\HasRecordVersion;
 use NyonCode\WireTable\Concerns\HasView;
 use NyonCode\WireTable\Concerns\InteractsWithRecordDisabledState;
 
@@ -23,6 +25,7 @@ use NyonCode\WireTable\Concerns\InteractsWithRecordDisabledState;
  */
 class SelectColumn extends Column
 {
+    use HasRecordVersion;
     use HasView;
     use InteractsWithRecordDisabledState;
 
@@ -93,6 +96,12 @@ class SelectColumn extends Column
             'record' => $record,
             // Pass a scalar so the <option> selected comparison never stringifies an enum.
             'state' => EnumResolver::scalar($state),
+            // Resolved here rather than in Blade: the optimistic-lock convention
+            // has one owner (RecordVersion), and a hand-rolled `$record->updated_at`
+            // in the partial silently disabled the lock for a model that names its
+            // timestamp column something else.
+            'recordVersion' => $this->recordVersion($record),
+            'syncHtml' => app(CellSync::class)->node((string) ($state ?? ''), $this->recordVersion($record)),
         ]);
     }
 

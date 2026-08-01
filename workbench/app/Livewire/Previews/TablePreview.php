@@ -145,7 +145,7 @@ class TablePreview extends Component
             return $this->imageGalleryTable($table);
         }
 
-        if (in_array($this->variant, ['editable-fill', 'editable-fill-selectable', 'editable-fill-paged'], true)) {
+        if (in_array($this->variant, ['editable-fill', 'editable-fill-selectable', 'editable-fill-paged', 'editable-live'], true)) {
             return $this->editableFillTable($table);
         }
 
@@ -445,6 +445,15 @@ class TablePreview extends Component
                 ->perPage(2)
                 ->perPageOptions([2, 4])
                 ->defaultSort('id', 'asc');
+        }
+
+        if ($this->variant === 'editable-live') {
+            // live(broadcast: true) on top of the editable fixture: the poll keeps
+            // other sessions current on its own, and the broadcast bridge only
+            // decides how soon. A driver stubs window.Echo to fire the event, which
+            // is the only half of the push that belongs to this repo — the socket
+            // itself is the app's.
+            $table->live('2s', broadcast: true);
         }
 
         if ($this->variant === 'editable-fill-selectable') {

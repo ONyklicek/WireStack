@@ -44,5 +44,10 @@ it('cache-busts every bundle by its own mtime', function () {
 it('emits each bundle exactly once', function () {
     // The per-surface @assets partials still exist for apps without the directive;
     // the directive must not turn into a second copy of them for apps with it.
-    expect(substr_count(Blade::render('@wireStackScripts'), '<script'))->toBe(4);
+    //
+    // Five, since the live-broadcast bridge joined them. It ships on every page
+    // for the same reason the other two do: the factory the table's x-data
+    // references has to exist before a wire:navigate visit renders the table, and
+    // the page that visit is made *from* may have no table on it at all.
+    expect(substr_count(Blade::render('@wireStackScripts'), '<script'))->toBe(5);
 });

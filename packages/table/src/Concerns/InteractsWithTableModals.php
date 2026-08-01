@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Concerns;
 
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\BaseAction;
 use NyonCode\WireCore\Core\Support\Deprecation;
+use NyonCode\WireCore\Foundation\Support\RecordVersion;
 use NyonCode\WireCore\Notifications\Notification;
 
 /**
@@ -341,10 +343,74 @@ trait InteractsWithTableModals
             return;
         }
 
+        if ($this->refuseStaleActionRecord($action, $record)) {
+            return;
+        }
+
         $this->executeActionPipeline($action, [
             'record' => $record,
             'data' => $data,
         ], $recordKey, 'row', $confirmed);
+    }
+
+    /**
+     * Refuse a locked action whose record moved while its modal was open.
+     *
+     * The baseline is the version captured when the frame was pushed, so the
+     * window this closes is exactly the one the modal opened: read, type, submit.
+     * The frame is popped either way — leaving it up would put the user back in
+     * front of a form built from values that are no longer there, with no way to
+     * tell that is what they were looking at.
+     *
+     * Nothing to compare against (an action opened before this shipped, a model
+     * without timestamps, or a submit that reached here with no frame mounted)
+     * means no refusal: {@see RecordVersion::conflicts()} treats an absent
+     * baseline as "the client never had one", the same as it does for a cell.
+     * Erring towards letting the write through is the right way round — the
+     * alternative is refusing an action nothing is actually wrong with, and a
+     * lock that cries wolf gets turned off.
+     *
+     * Which is also why the baseline is only trusted when the mounted frame is
+     * for THIS record. Reading the top of the stack unconditionally would compare
+     * one record's version against another's the moment the two disagree, and
+     * every such comparison fails — a conflict reported where none happened.
+     */
+    protected function refuseStaleActionRecord(Action $action, Model $record): bool
+    {
+        if (! $action->usesOptimisticLock()) {
+            return false;
+        }
+
+        $baseline = $this->mountedActionBaselineFor($record);
+
+        if (! app(RecordVersion::class)->conflicts($record, $baseline)) {
+            return false;
+        }
+
+        $this->popActionFrame();
+
+        $this->sendNotification(Notification::warning(
+            __('wire-table::messages.record_conflict')
+        ));
+
+        return true;
+    }
+
+    /**
+     * The version captured when the modal for $record opened, or null when the
+     * mounted frame is not about that record (or there is no frame at all).
+     */
+    private function mountedActionBaselineFor(Model $record): ?string
+    {
+        $mountedKey = $this->getMountedActionState('recordKey');
+
+        if ($mountedKey === null || (string) $mountedKey !== (string) $record->getKey()) {
+            return null;
+        }
+
+        $baseline = $this->getMountedActionState('recordVersion');
+
+        return is_string($baseline) ? $baseline : null;
     }
 
     /**

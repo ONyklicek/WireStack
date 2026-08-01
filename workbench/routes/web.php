@@ -330,6 +330,7 @@ foreach ([
     'table-editable-fill' => ['title' => 'Wire Table Editable + Fill', 'subtitle' => 'Inline-editable text, select and toggle cells with the Excel-style fill handle. Email opts out via ->fillable(false).', 'component' => TablePreview::class, 'variant' => 'editable-fill'],
     'table-editable-fill-selectable' => ['title' => 'Wire Table Editable + Fill + Selection', 'subtitle' => 'The editable/fill table with selectable() on: the fill root nests inside the selection root and both gestures drag over the same rows.', 'component' => TablePreview::class, 'variant' => 'editable-fill-selectable'],
     'table-editable-fill-paged' => ['title' => 'Wire Table Editable + Fill + Pagination', 'subtitle' => 'Inline editing next to a page-size select: one Livewire commit carries both a cell edit (which skips the render) and the per-page change (which needs one).', 'component' => TablePreview::class, 'variant' => 'editable-fill-paged'],
+    'table-editable-live' => ['title' => 'Wire Table Live (multi-user)', 'subtitle' => 'live(broadcast: true): the poll keeps other sessions current, the broadcast bridge decides how soon. A stubbed window.Echo is what a driver can hold on to.', 'component' => TablePreview::class, 'variant' => 'editable-live'],
     'table-subrows-flatten' => ['title' => 'Wire Table Flatten', 'subtitle' => 'Flatten mode rendering every child as a regular row.', 'component' => TablePreview::class, 'variant' => 'subrows-flatten'],
     'table-subrows-limit' => ['title' => 'Wire Table Show More', 'subtitle' => 'Limited child rows with the "show more" affordance.', 'component' => TablePreview::class, 'variant' => 'subrows-limit'],
     'table-subrows-filter' => ['title' => 'Wire Table Sub-row Filters', 'subtitle' => 'Per-child interactive filter bar above the sub-row table.', 'component' => TablePreview::class, 'variant' => 'subrows-filter'],
@@ -420,3 +421,14 @@ Route::redirect('/previews/sortable', '/previews/sortable-overview');
 Route::redirect('/previews/core', '/previews/core-overview');
 Route::redirect('/previews/widgets', '/previews/widgets-overview');
 Route::redirect('/previews/infolists', '/previews/infolists-overview');
+
+// The bundled Laravel Echo client, served only when the workbench is running
+// with a Reverb behind it. Workbench-only: Echo is an application's dependency,
+// never the package's, so no wire-* asset route carries it.
+Route::get('/workbench/echo-bootstrap.js', function () {
+    $file = dirname(__DIR__).'/resources/dist/echo-bootstrap.js';
+
+    abort_unless(is_file($file), 404);
+
+    return response()->file($file, ['Content-Type' => 'application/javascript']);
+})->name('workbench.echo-bootstrap');

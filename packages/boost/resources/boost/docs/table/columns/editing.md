@@ -104,22 +104,34 @@ like the dedicated `SelectColumn`/`SelectFilter`. See [Enum Options](select.md#e
 
 ### How inline saves work
 
-Saving a cell (`updateTableCell`) deliberately **does not re-render the table** — a DOM morph
-would reset the Alpine state of every editable cell. Instead each cell updates its own appearance
-**optimistically** and reconciles with the server, via one shared Alpine component
-(`wireEditableCell`): text inputs, selects and toggles all use it, so they behave consistently.
+Saving a cell (`updateTableCell`) **re-renders the table**, and the cell protects its own state
+while that happens. Everything derived from the written value — a summary, a rollup, a badge
+computed from the same column, the row's position under the current sort — is stale the moment the
+edit lands, and only a render can put it right.
+
+The cell survives the morph because its root carries `wire:ignore.self`, so Livewire leaves its
+attributes and its Alpine state alone. That is also why the value the server just rendered cannot
+reach the cell through that root: it is delivered on a **sync node**, a small child element the
+morph *does* update, which the cell watches. One shared Alpine component (`wireEditableCell`) does
+all of this — text inputs, selects and toggles use it, so they behave consistently.
 
 - **Optimistic + rollback.** The cell shows the new value immediately, then calls the server; if
   the save fails (validation, permission, error) it rolls back to the last server-confirmed value
   and surfaces the message.
-- **Optimistic locking.** Each edit carries the row's version (`updated_at`). If the row changed
-  since the page loaded, the save is rejected as a conflict: the cell loads the current value and
-  shows the conflict message **inline on the cell itself** (a red state on the text/select/toggle,
-  no toast or `NotificationManager` setup required) — so two people (or two quick edits that bump
-  the row) can't silently clobber each other. Polling refreshes each cell's version on the next
-  cycle. Opt in to *also* raise a (more prominent) toast for conflicts with
-  `Table::notifyEditConflicts()` — this one needs the notification system wired up (a toast
-  container); the inline message works without it.
+- **Optimistic locking.** Each edit carries the row's version (`updated_at`, resolved through the
+  model's own timestamp column, so `const UPDATED_AT` is honoured). If the row changed since the
+  page loaded, the save is rejected as a conflict: the cell loads the current value and shows the
+  conflict message **inline on the cell itself** (a red state on the text/select/toggle, no toast
+  or `NotificationManager` setup required) — so two people (or two quick edits that bump the row)
+  can't silently clobber each other. Any re-render — a poll tick, a modal write, another session's
+  change arriving — refreshes each cell's value *and* its version through the sync node, so the
+  next edit is compared against what is actually in the database. Opt in to *also* raise a (more
+  prominent) toast for conflicts with `Table::notifyEditConflicts()` — this one needs the
+  notification system wired up (a toast container); the inline message works without it.
+- **Opting out of the render.** `Table::refreshAfterEdit(false)` goes back to answering an edit
+  with no HTML at all. Worth it only for a table where the query behind a render is expensive and
+  nothing on screen depends on the edited value: the cell still reconciles itself from the
+  response, nothing around it does.
 - **Server-side authorization.** The client `disabled()` state is only cosmetic — a per-record
   `disabled()` cell (and any column permission) is enforced again on the server in
   `updateTableCell`, so a forged request can't write to a locked cell.

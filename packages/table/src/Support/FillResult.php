@@ -46,6 +46,18 @@ final readonly class FillResult
     }
 
     /**
+     * Whether anything at all was written.
+     *
+     * Not the same question as {@see allSucceeded()}: a fill where one row lost
+     * its lock race still moved the data, and the caller has cached slices to
+     * retire either way.
+     */
+    public function wroteAnything(): bool
+    {
+        return $this->filled() > 0;
+    }
+
+    /**
      * The wire shape. `results` is keyed the way the client indexed its cells —
      * by column, then by record key — so a cell finds its own outcome without
      * scanning.

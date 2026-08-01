@@ -104,20 +104,31 @@ jako dedikovaný `SelectColumn`/`SelectFilter`. Viz [Enum Options](select.md#opt
 
 ### Jak fungují inline uložení
 
-Uložení buňky (`updateTableCell`) záměrně **nepřekresluje tabulku** — DOM morph by resetoval
-Alpine stav všech editovatelných buněk. Místo toho každá buňka přepne svůj vzhled **optimisticky**
-a sesynchronizuje se serverem přes jednu sdílenou Alpine komponentu (`wireEditableCell`): text
-inputy, selecty i toggly ji používají, takže se chovají konzistentně.
+Uložení buňky (`updateTableCell`) **překreslí tabulku** a buňka si přitom ochrání vlastní stav.
+Všechno odvozené od zapsané hodnoty — summary, rollup, badge počítaný ze stejného sloupce, pozice
+řádku pod aktuálním řazením — je v okamžiku zápisu zastaralé a spravit to umí jen render.
+
+Buňka morph přežije proto, že její root nese `wire:ignore.self`, takže jí Livewire nesahá na
+atributy ani na Alpine stav. Právě proto se k ní ale nová hodnota nemůže dostat přes tento root:
+doručuje se na **sync uzlu**, malém potomkovi, který morph aktualizuje a který si buňka hlídá.
+Všechno tohle dělá jedna sdílená Alpine komponenta (`wireEditableCell`): text inputy, selecty
+i toggly ji používají, takže se chovají konzistentně.
 
 - **Optimistic + rollback.** Buňka hned ukáže novou hodnotu, pak zavolá server; když uložení selže
   (validace, oprávnění, chyba), vrátí se na poslední serverem potvrzenou hodnotu a zobrazí zprávu.
-- **Optimistic locking.** Každý edit nese verzi řádku (`updated_at`). Když se řádek od načtení
+- **Optimistic locking.** Každý edit nese verzi řádku (`updated_at`, resolvovaný přes vlastní
+  timestamp sloupec modelu, takže `const UPDATED_AT` je respektován). Když se řádek od načtení
   stránky změnil, uložení se odmítne jako konflikt: buňka načte aktuální hodnotu a zobrazí zprávu o
   konfliktu **přímo na buňce** (červený stav na text/select/toggle, bez toastu nebo nastavení
   `NotificationManager`) — dva lidé (nebo dva rychlé edity, které řádek bumpnou) se tak tiše
-  nepřepíšou. Polling verzi buněk obnoví v dalším cyklu. Volitelně lze pro konflikty vyvolat i
-  (nápadnější) toast přes `Table::notifyEditConflicts()` — ten už vyžaduje zapojený notifikační
-  systém (toast container); inline hláška funguje i bez něj.
+  nepřepíšou. Jakýkoli re-render — tick pollingu, zápis z modalu, příchozí změna z jiné relace —
+  obnoví přes sync uzel hodnotu buňky *i* její verzi, takže další edit se porovnává proti tomu, co
+  je opravdu v databázi. Volitelně lze pro konflikty vyvolat i (nápadnější) toast přes
+  `Table::notifyEditConflicts()` — ten už vyžaduje zapojený notifikační systém (toast container);
+  inline hláška funguje i bez něj.
+- **Vypnutí renderu.** `Table::refreshAfterEdit(false)` se vrací k odpovědi bez HTML. Vyplatí se
+  jen u tabulky, kde je dotaz za renderem drahý a na editované hodnotě nic na obrazovce nezávisí:
+  buňka se z odpovědi sesynchronizuje pořád, okolí ne.
 - **Serverová autorizace.** Klientský `disabled()` stav je jen kosmetika — per-record `disabled()`
   buňka (i oprávnění sloupce) se znovu vynutí na serveru v `updateTableCell`, takže forged request
   nemůže zapsat do zamčené buňky.

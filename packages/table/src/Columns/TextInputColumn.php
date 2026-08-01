@@ -13,6 +13,7 @@ use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
 use NyonCode\WireCore\Foundation\Contracts\HydratesState;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireCore\Foundation\View\CellSync;
 use NyonCode\WireCore\Foundation\View\Primitives;
 use NyonCode\WireTable\Concerns\HasRecordVersion;
 use NyonCode\WireTable\Concerns\HasView;
@@ -758,6 +759,12 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
             'column' => $this,
             'record' => $record,
             'state' => $state,
+            // Resolved here rather than in Blade: the optimistic-lock convention
+            // has one owner (RecordVersion), and a hand-rolled `$record->updated_at`
+            // in the partial silently disabled the lock for a model that names its
+            // timestamp column something else.
+            'recordVersion' => $this->recordVersion($record),
+            'syncHtml' => app(CellSync::class)->node((string) ($state ?? ''), $this->recordVersion($record)),
             // Record-invariant primitives resolved once per request (not @included per row).
             'spinnerHtml' => app(Primitives::class)->spinner(),
             'checkHtml' => app(Primitives::class)->successCheck(),

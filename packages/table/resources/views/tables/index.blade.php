@@ -16,6 +16,11 @@
     $pollingConfig = $component->getTablePollingConfig();
     $pollingAttribute = $component->getTablePollingAttribute();
 
+    // live(broadcast: true): re-read as soon as somebody else commits, instead
+    // of on the next tick. Null without the opt-in, so a table that did not ask
+    // for it ships no listener and needs no channel authorization.
+    $liveChannel = $component->getTableLiveChannel();
+
     // Table state — read once via the state container; the legacy magic
     // properties ($component->tableFilters, …) build the deprecation map on
     // every access and must not be used in per-row/per-column loops.
@@ -312,9 +317,15 @@
         </div>
     </div>
 @else
-    {{-- Polling wrapper --}}
+    {{-- Polling wrapper. Also the live listener's root, so `busy()` sees exactly
+         the cells this table owns and a nested table cannot be mistaken for it. --}}
+    @if($liveChannel)
+        @include('wire-table::tables.partials.live-assets')
+    @endif
     @if($pollingAttribute)
-        <div {!! $pollingAttribute !!}>
+        <div {!! $pollingAttribute !!}
+             @if($liveChannel) x-data="wireTableLive(@js(['channel' => $liveChannel]))" @endif
+        >
             @endif
 
             <div

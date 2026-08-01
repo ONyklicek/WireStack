@@ -36,11 +36,10 @@
         data-record-key="{{ $field->getRecordKey() }}"
         data-column-name="{{ $name }}"
         data-testid="panel-editable-{{ $name }}"
-        data-server-value="{{ $stateString }}"
-        data-record-version="{{ $field->getRecordVersion() }}"
         data-msg-error="{{ __('wire-core::messages.error') }}"
         data-msg-save-failed="{{ __('wire-core::messages.save_failed') }}"
     >
+        {!! $field->getSyncHtml($stateString) !!}
         <select
             x-model="value"
             @change="commit($event.target.value)"

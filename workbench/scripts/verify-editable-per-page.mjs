@@ -98,22 +98,39 @@ try {
   const initialRows = await eval_(`$rows()`);
   check('first page shows the configured 2 rows', initialRows === 2, `rows=${initialRows}`);
 
-  // ── A cell edit ALONE must still leave the DOM alone ──────────────
-  // The skip is what keeps a morph from resetting every cell's Alpine state
-  // mid-edit; the fix must not have traded that away.
+  // ── A cell edit ALONE renders, and the cell survives its own morph ──
+  // The edit used to skip the render to protect the cell's Alpine state, which
+  // left everything derived from the written value stale. It renders now, and
+  // what has to hold instead is the harder property: the morph runs and the cell
+  // keeps its value, its confirmed value and its not-saving state — that is
+  // `wire:ignore.self` plus the sync node doing their job. Asserting the morph
+  // happened AND the state survived is strictly stronger than asserting no morph.
+  const soloValue = 'solo-' + Date.now() + '@example.test';
   const editOnly = await eval_(`(async () => {
     const cell = $cell();
     const key = cell.dataset.recordKey, col = cell.dataset.columnName;
     let rendered = false;
     const stop = window.Livewire.hook('morph', () => { rendered = true });
-    await $wireHost().call('updateTableCell', key, col, 'solo-' + col + '@example.test', null);
+    await $wireHost().call('updateTableCell', key, col, ${JSON.stringify(soloValue)}, null);
     await new Promise(r => setTimeout(r, 600));
     stop && stop();
-    return JSON.stringify({ rendered, rows: $rows() });
+    const after = Alpine.$data($cell());
+    return JSON.stringify({
+      rendered,
+      rows: $rows(),
+      value: after.value,
+      serverValue: after.serverValue,
+      saving: after.saving,
+      error: after.error,
+    });
   })()`);
   const solo = JSON.parse(editOnly);
-  check('a cell edit on its own still skips the table render',
-    solo.rendered === false && solo.rows === 2, editOnly);
+  check('a cell edit on its own re-renders the table', solo.rendered === true, editOnly);
+  check('…without disturbing the page', solo.rows === 2, `rows=${solo.rows}`);
+  check('…and the edited cell keeps its state through that morph',
+    solo.value === soloValue && solo.serverValue === soloValue
+      && solo.saving === false && !solo.error,
+    editOnly);
 
   // ── The merged commit: a cell edit AND the per-page change ────────
   // Queued in the same tick, which is exactly what blurring an edited cell by

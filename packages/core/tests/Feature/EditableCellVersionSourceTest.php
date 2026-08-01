@@ -40,16 +40,36 @@ $bundle = fn (): string => file_get_contents(
     WireCoreServiceProvider::ASSETS_PATH.'/wire-core-dropdown.js'
 );
 
-test('the fill grid owns the rule for reading a cell version', function () use ($source) {
+test('one module owns where a cell version lives and how it is read', function () use ($source) {
     // One canonical reader, exported so nothing has to re-encode the precedence:
-    // component state first, attribute only as the fallback.
-    expect($source('fill/grid.js'))
+    // component state first, the sync node only as the fallback.
+    expect($source('editable/sync.js'))
+        ->toContain('export const syncNodeOf')
         ->toContain('export const versionOf')
-        ->toContain('window.Alpine.$data(el)?.recordVersion ?? el.dataset.recordVersion')
-        // describe() must hand out the live version, or the next caller picks up
-        // the stale one from a field that looks authoritative.
+        ->toContain('window.Alpine.$data(el)?.recordVersion ?? syncNodeOf(el)?.dataset?.recordVersion');
+
+    // The grid keeps handing out the live version — re-exported rather than
+    // re-derived, so there is exactly one definition to get wrong.
+    expect($source('fill/grid.js'))
+        ->toContain('export { versionOf }')
         ->toContain('version: versionOf(el)')
         ->not->toContain('version: el.dataset.recordVersion');
+});
+
+test('the value and the version are read off the sync node, never off the cell root', function () use ($source) {
+    // The cell root carries `wire:ignore.self`, so Livewire stops refreshing ITS
+    // attributes after the first render. Reading either of the pair from the root
+    // is reading what the page loaded with — the bug this whole channel exists to
+    // fix, and the one shape a reviewer will not notice returning.
+    foreach (['editable/sync.js', 'fill/grid.js', 'fill/controller.js', 'dropdown.js'] as $file) {
+        expect(preg_match('/\bel\.dataset\.(serverValue|recordVersion)\b/', $source($file)))
+            ->toBe(0, "{$file} reads the sync pair off the cell root");
+    }
+
+    // And the cell observes the node, not itself.
+    expect($source('dropdown.js'))
+        ->toContain('this._sync = syncNodeOf(this.$el)')
+        ->toContain('observer.observe(this._sync,');
 });
 
 test('the fill controller never reads the version off the attribute', function () use ($source) {

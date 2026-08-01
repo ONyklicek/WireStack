@@ -1,3 +1,4 @@
+import { syncNodeOf } from '../editable/sync'
 import { createAutoScroller } from '../support/autoscroll'
 import { createGrid, versionOf } from './grid'
 import { bounds, clampToColumn, isEmpty, makeRange, targets } from './range'
@@ -469,7 +470,9 @@ const wireFillHandle = () => ({
         // means the next attribute change — applyVersion touching
         // data-record-version — wakes the observer, which re-reads the stale
         // value and quietly undoes the fill a moment after it landed.
-        el.dataset.serverValue = this.serialize(value)
+        const sync = syncNodeOf(el)
+
+        if (sync) sync.dataset.serverValue = this.serialize(value)
 
         const state = this.stateOf(el)
 
@@ -495,7 +498,9 @@ const wireFillHandle = () => ({
     applyVersion(el, version) {
         if (! version) return
 
-        el.dataset.recordVersion = version
+        const sync = syncNodeOf(el)
+
+        if (sync) sync.dataset.recordVersion = version
 
         const state = this.stateOf(el)
 

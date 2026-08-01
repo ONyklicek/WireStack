@@ -9,6 +9,7 @@ use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireCore\Actions\Concerns\InteractsWithActions;
 use NyonCode\WireCore\Core\Events\TableRefreshed;
+use NyonCode\WireCore\Foundation\Support\RecordVersion;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationManager;
 
@@ -223,6 +224,13 @@ trait InteractsWithTableActions
             'currentStep' => 0,
             'arguments' => $arguments,
             'data' => $action->getFormDefaults($record),
+            // The version as of the moment the user started reading. Captured for
+            // every frame, not only a locked action's, because it costs an
+            // attribute already in memory and the alternative is a frame whose
+            // shape depends on a flag. Only optimisticLock() consults it.
+            'recordVersion' => $action->usesOptimisticLock()
+                ? app(RecordVersion::class)->stamp($record)
+                : null,
         ]);
 
         $this->actionModalConfigCache = $action->getModalConfig($record);
@@ -300,6 +308,12 @@ trait InteractsWithTableActions
      */
     public function invalidateTable(): void
     {
+        // Before the memos are dropped: the cached slices belong to the shared
+        // cache store, not to this request, and nothing else would ever retire
+        // them — an action that wrote would keep serving pre-write rows to every
+        // user until the cacheQuery() TTL ran out.
+        $this->announceTableWrite();
+
         $this->tableInstance = null;
         $this->cachedRecords = null;
         $this->cachedQuery = null;

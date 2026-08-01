@@ -16,9 +16,11 @@ use NyonCode\WireTable\Support\CellFill;
  * affordance, and hands the work to {@see CellFillWriter} — the writing itself
  * is not in here, and neither is any decision about a record.
  *
- * Like `updateTableCell()` it `skipRender()`s: the table must not re-render, or
- * the DOM morph resets the Alpine state of every editable cell on the page. The
- * client reconciles each filled cell from the per-record results instead.
+ * Like `updateTableCell()` it renders the table afterwards by default: a fill
+ * moves many rows at once, so summaries and rollups are the first thing to go
+ * stale. Each filled cell still reconciles from the per-record results — the
+ * render is what everything *around* the range needs. `refreshAfterEdit(false)`
+ * on the table restores the old skip-the-render behaviour for both endpoints.
  */
 trait CanFillCells
 {
@@ -35,7 +37,7 @@ trait CanFillCells
      */
     public function fillTableCells(array $fills): array
     {
-        $this->skipTableRender();
+        $this->skipTableRenderAfterWrite();
 
         $table = $this->getTable();
 
@@ -47,9 +49,17 @@ trait CanFillCells
         }
 
         try {
-            return app(CellFillWriter::class)
-                ->write($table, CellFill::listFromPayload($fills), static::class)
-                ->toArray();
+            $result = app(CellFillWriter::class)
+                ->write($table, CellFill::listFromPayload($fills), static::class);
+
+            // A fill is deliberately not all-or-nothing — one row can lose its
+            // race while the rest land — so anything written at all retires the
+            // cached slices.
+            if ($result->wroteAnything()) {
+                $this->announceTableWrite();
+            }
+
+            return $result->toArray();
         } catch (Exception $e) {
             // A malformed payload, a request over the cap, and a failed write all
             // reach the client the same way: as an answer, never as a raised

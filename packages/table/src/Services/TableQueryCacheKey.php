@@ -23,6 +23,23 @@ use Illuminate\Database\Eloquent\Model;
  * default, or whatever `cacheQuery($ttl, $key)` / an overridden
  * generateQueryCacheKey() supplies. The state fingerprint says which view of
  * it, and is appended to every namespace without exception.
+ *
+ * And a *generation*, which is what makes a cached table safe to write to. A
+ * cache entry cannot be found and deleted after a write: the namespace is
+ * derived from the SQL, so every filter combination, search term and sort a
+ * user ever opened has its own entry, and the writer knows none of them. The
+ * generation sidesteps that — the counter is carried in every key, so moving it
+ * retires the lot at once. The old entries are not deleted, they simply stop
+ * being addressed and expire on their own TTL.
+ *
+ * Without it `cacheQuery()` and inline editing were mutually exclusive in a way
+ * nothing announced: the edit committed, the notification said so, and the table
+ * kept serving the pre-write rows to everyone until the TTL ran out.
+ *
+ * The counter itself belongs to {@see WriteGeneration}, not here: poll change
+ * detection reads the same number for a reason of its own, and a cache-key
+ * builder owning a shared write log would be the wrong place to look for it.
+ * This only builds keys.
  */
 final class TableQueryCacheKey
 {
@@ -41,10 +58,15 @@ final class TableQueryCacheKey
      * Build the cache key for one view of one table.
      *
      * @param  array<string, mixed>  $state  Result-shaping state (see WithTable::queryCacheState()).
+     * @param  int|null  $generation  The scope's write generation ({@see WriteGeneration}).
+     *                                Null keeps the pre-generation key shape for a caller
+     *                                with no data source to track.
      */
-    public function build(string $namespace, array $state): string
+    public function build(string $namespace, array $state, ?int $generation = null): string
     {
-        return $namespace.':'.md5(serialize($this->normalize($state)));
+        $key = $namespace.':'.md5(serialize($this->normalize($state)));
+
+        return $generation === null ? $key : $key.':g'.$generation;
     }
 
     /**

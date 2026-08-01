@@ -198,6 +198,11 @@ class Table implements Htmlable
      */
     protected bool|Closure $pollingChangeDetection = false;
 
+    // Announce a write to other sessions so they re-read at once instead of on
+    // their next poll tick. Opt-in through live(broadcast: true) — it needs a
+    // broadcast connection and channel authorization in the app.
+    protected bool $broadcastChanges = false;
+
     // Pagination mode: 'standard' | 'simple' | 'cursor'
     protected string $paginationMode = 'standard';
 
@@ -237,6 +242,10 @@ class Table implements Htmlable
     // so this needs no notification setup; opt in for a more prominent toast.
     protected bool $notifyEditConflicts = false;
 
+    // Re-render the table in the response that writes an inline edit, so summaries,
+    // rollups and anything derived from the edited value move with it.
+    protected bool $refreshAfterEdit = true;
+
     // Excel-style fill handle on editable cells. Opt-in: dragging it overwrites
     // rows, which would be a silent behaviour change for every existing table
     // with an editable column.
@@ -263,6 +272,20 @@ class Table implements Htmlable
         $this->model = $model;
 
         return $this;
+    }
+
+    /**
+     * The model class backing this table, when it has one.
+     *
+     * Null for a table built from a bare `query()`. Used as the invalidation
+     * scope of the query cache, which is why it is a class name and not an
+     * instance: it has to be nameable without touching the database.
+     *
+     * @return class-string<Model>|null
+     */
+    public function getModelClass(): ?string
+    {
+        return $this->model;
     }
 
     /**
@@ -2280,6 +2303,49 @@ class Table implements Htmlable
     }
 
     /**
+     * Keep this table showing what the database currently holds, for everyone
+     * looking at it.
+     *
+     * One call, because "live" is a policy rather than a setting: a short poll
+     * interval on its own is a query per client per tick, and change detection
+     * on its own does nothing without one. Together they are cheap — each tick
+     * is a COUNT + MAX(updated_at) over the filtered set, and the render (query,
+     * summaries, morph) only happens when that answer moved.
+     *
+     *   $table->live();               // every 5s
+     *   $table->live('2s');
+     *   $table->live(broadcast: true) // …and immediately, where Echo is set up
+     *
+     * `broadcast: true` adds a push on top, it does not replace the interval:
+     * {@see TableRecordsChanged} is a nudge to re-read, so a client with no Echo,
+     * a dropped socket or an app with no broadcast connection quietly falls back
+     * to the tick instead of going stale. It needs `Broadcast::channel()`
+     * authorization for {@see TableRecordsChanged::channelFor()} in the app.
+     *
+     * A tick never disturbs an edit in progress: a re-render leaves an editable
+     * cell's own state alone (`wire:ignore.self`), and the cell refuses to
+     * reconcile a value the user is typing or a write still in flight.
+     *
+     * Change detection reads the parent rows, so a table whose visible data
+     * lives in child rows (a rollup, a sum over a relation) should pass its own
+     * detector to {@see pollChangeDetection()} after this.
+     */
+    public function live(string $interval = '5s', bool $broadcast = false): static
+    {
+        $this->poll($interval)->pollChangeDetection();
+
+        $this->broadcastChanges = $broadcast;
+
+        return $this;
+    }
+
+    /** Whether writes to this table's records are announced to other sessions. */
+    public function shouldBroadcastChanges(): bool
+    {
+        return $this->broadcastChanges;
+    }
+
+    /**
      * Set polling to keep connection alive (no timeout).
      */
     public function pollKeepAlive(bool $keepAlive = true): static
@@ -2586,6 +2652,38 @@ class Table implements Htmlable
     public function shouldNotifyEditConflicts(): bool
     {
         return $this->notifyEditConflicts;
+    }
+
+    /**
+     * Re-render the table in the same response that writes an inline edit.
+     *
+     * On by default, because a cell edit is rarely only about that cell: a
+     * summary row, a footer total, a group rollup, a badge coloured from the
+     * column next to it and any derived state all read the value that just
+     * changed, and without a render they keep showing the previous one until
+     * something else happens to re-render the page.
+     *
+     * It used to be unconditional the other way — every inline-edit response
+     * skipped the render, to protect the optimistic state the cell was holding
+     * from the morph. That protection now lives where it belongs: the cell keeps
+     * its own state behind `wire:ignore.self` and reconciles through its sync
+     * node, which refuses to touch a value being typed or a write in flight.
+     *
+     * Turn it off for a wide table where a per-edit query is not worth it and
+     * nothing on screen derives from the edited value:
+     *
+     *   $table->refreshAfterEdit(false);
+     */
+    public function refreshAfterEdit(bool $condition = true): static
+    {
+        $this->refreshAfterEdit = $condition;
+
+        return $this;
+    }
+
+    public function shouldRefreshAfterEdit(): bool
+    {
+        return $this->refreshAfterEdit;
     }
 
     /**

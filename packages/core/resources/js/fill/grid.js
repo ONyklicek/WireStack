@@ -12,31 +12,15 @@
  * (later) horizontally.
  */
 
+import { serverValueOf, versionOf } from '../editable/sync'
 import { bodyRows, rowAtY } from '../support/rows'
 
-/**
- * The live optimistic-lock version of a cell root.
- *
- * The one thing above that the document does NOT keep current. `wireEditableCell`
- * mounts with `wire:ignore.self` on purpose, so a morph cannot overwrite the
- * optimistic state it is holding — and the cost is that Livewire never refreshes
- * that element's attributes either. The server does return a fresh version and
- * `commit()` moves the component's own `recordVersion`, but `data-record-version`
- * keeps whatever the first render wrote.
- *
- * So a cell edited inline still advertises the version the page loaded with, and
- * sending that makes the server reject the write as someone else's edit — which
- * the fill then rolls back with no error shown, because the refusal looked
- * legitimate. The component's state is the only current copy; the attribute is
- * the fallback for a cell that has no component (a plain, non-editable cell).
- */
-export const versionOf = (el) => {
-    try {
-        return (window.Alpine.$data(el)?.recordVersion ?? el.dataset.recordVersion) || null
-    } catch (e) {
-        return el.dataset.recordVersion || null
-    }
-}
+// The value and the lock version are NOT on the cell root — `wire:ignore.self`
+// there means Livewire stops refreshing that element's attributes after the
+// first render, so both live on a child sync node and are read through the one
+// canonical owner. Re-exported because the fill controller reads versions too,
+// and a second import path is a second chance to reach for the attribute again.
+export { versionOf }
 
 export const createGrid = (root) => {
     let columns = []
@@ -95,7 +79,7 @@ export const createGrid = (root) => {
                 el,
                 recordKey: el.dataset.recordKey,
                 version: versionOf(el),
-                serialized: el.dataset.serverValue ?? '',
+                serialized: serverValueOf(el),
             }
         },
 

@@ -6,6 +6,18 @@
     <title>{{ $title ?? 'Wire Preview' }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
+    {{-- A real Echo, only when the workbench was started with a Reverb behind it
+         (WIRE_BROADCAST=1). Before Livewire's own scripts, because Livewire reads
+         window.Echo.socketId() on every request it makes. --}}
+    @if(\Workbench\App\Providers\WorkbenchBroadcastServiceProvider::enabled())
+        @php($wireEchoConfig = [
+            'key' => \Workbench\App\Providers\WorkbenchBroadcastServiceProvider::APP_KEY,
+            'host' => '127.0.0.1',
+            'port' => \Workbench\App\Providers\WorkbenchBroadcastServiceProvider::PORT,
+        ])
+        <script>window.__wireEchoConfig = {!! json_encode($wireEchoConfig) !!};</script>
+        <script src="{{ route('workbench.echo-bootstrap') }}"></script>
+    @endif
 </head>
 <body class="min-h-screen bg-slate-100 text-slate-950 antialiased">
     <div class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),_transparent_42%),linear-gradient(180deg,_#f8fbff_0%,_#eef4fb_100%)]">
