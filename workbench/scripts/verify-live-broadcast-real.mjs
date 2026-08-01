@@ -153,7 +153,7 @@ try {
   // pusher-js only fires this after /broadcasting/auth signed the subscription,
   // so it is the single check that the private channel was actually authorized.
   const subscribed = await us.eval_(`(async () => {
-    const name = 'wire-table.Workbench.App.Models.User';
+    const name = 'wire-table.Workbench-App-Models-User';
     const ch = window.Echo.connector.channels['private-' + name];
     if (! ch) return 'NO CHANNEL';
     if (ch.subscribed) return 'ok';

@@ -12,6 +12,7 @@ use Livewire\Livewire;
 use NyonCode\WireTable\Columns\TextInputColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Events\TableRecordsChanged;
+use NyonCode\WireTable\Support\LiveChannel;
 use NyonCode\WireTable\Table;
 
 /*
@@ -196,6 +197,33 @@ it('names a channel an app can read and authorize', function () {
         ->toBe(['private-wire-table.LivePost'])
         ->and((new TableRecordsChanged(LivePost::class))->broadcastAs())
         ->toBe('wire-table.changed');
+});
+
+it('keeps the scope to one channel segment, so a wildcard can match it', function () {
+    // Laravel compiles `{scope}` to `([^\.]+)`. A dotted class in the name would
+    // make LiveChannel::PATTERN match nothing, and every model would need its own
+    // hand-written Broadcast::channel() line — spelled right, forever, with a
+    // typo costing a silently dead push that polling covers for.
+    $name = LiveChannel::for('App\\Models\\Invoice');
+
+    expect($name)->toBe('wire-table.App-Models-Invoice')
+        ->and(substr_count($name, '.'))->toBe(1);
+
+    $pattern = '/^'.preg_replace('/\{(.*?)\}/', '([^\.]+)', LiveChannel::PATTERN).'$/';
+    expect(preg_match($pattern, $name))->toBe(1);
+});
+
+it('turns a channel segment back into the class it names', function () {
+    // The app's callback is handed a class name, never the wire format — so the
+    // encoding stays an implementation detail of this one class.
+    $class = 'App\\Models\\Invoice';
+    $segment = substr(LiveChannel::for($class), strlen('wire-table.'));
+
+    expect(LiveChannel::scopeFrom('App-Models-Invoice'))->toBe($class)
+        // Round-trips, which is the property that matters: `-` cannot occur in a
+        // PHP class name and `\` cannot occur in a channel name, so neither
+        // direction is ambiguous.
+        ->and(LiveChannel::scopeFrom($segment))->toBe($class);
 });
 
 it('broadcasts without going through a queue', function () {

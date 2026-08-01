@@ -146,7 +146,7 @@ try {
   check('the live table subscribed to exactly one channel',
     Array.isArray(channels) && channels.length === 1, JSON.stringify(channels));
   check('the channel is named after the model it lists',
-    (channels ?? [])[0] === 'wire-table.Workbench.App.Models.User', (channels ?? [])[0]);
+    (channels ?? [])[0] === 'wire-table.Workbench-App-Models-User', (channels ?? [])[0]);
 
   const listeners = await us.eval_(`window.__echoLog.listeners.map(l => l.event)`);
   check('it listens for the broadcast event name the server sends',

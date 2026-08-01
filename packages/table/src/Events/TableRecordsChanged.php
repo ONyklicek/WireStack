@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Events;
 
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use NyonCode\WireTable\Support\LiveChannel;
 use NyonCode\WireTable\Table;
 
 /**
@@ -87,13 +88,13 @@ final class TableRecordsChanged implements ShouldBroadcastNow
     /**
      * The channel a scope broadcasts on, without the `private-` prefix Echo adds.
      *
-     * Readable on purpose — a hash would be shorter and would leave the app
-     * writing `Broadcast::channel('wire-table.9f2c…')` with no way to tell what
-     * it just authorized. `App\Models\Invoice` becomes
-     * `wire-table.App.Models.Invoice`.
+     * Delegated to {@see LiveChannel}, which owns the naming so that authorizing
+     * a channel and broadcasting on it cannot disagree — and so an app can
+     * authorize all of them with one wildcard rather than a hand-written line
+     * per model.
      */
     public static function channelFor(string $scope): string
     {
-        return 'wire-table.'.str_replace('\\', '.', $scope);
+        return LiveChannel::for($scope);
     }
 }

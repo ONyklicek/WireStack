@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Reverb\ApplicationManagerServiceProvider;
 use Laravel\Reverb\ReverbServiceProvider;
-use NyonCode\WireTable\Events\TableRecordsChanged;
+use NyonCode\WireTable\Support\LiveChannel;
 use Workbench\App\Models\User;
 
 /**
@@ -159,9 +159,8 @@ class WorkbenchBroadcastServiceProvider extends ServiceProvider
         // application's job — this is the workbench being that application, and
         // it is deliberately a real callback rather than a blanket allow, so the
         // driver exercises the same `/broadcasting/auth` round trip a real app does.
-        Broadcast::channel(
-            TableRecordsChanged::channelFor(User::class),
-            fn (User $user): bool => true,
+        LiveChannel::authorize(
+            fn (User $user, string $model): bool => $model === User::class,
         );
 
         // A private channel needs somebody to authorize. Previews have no login

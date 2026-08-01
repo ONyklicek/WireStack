@@ -386,15 +386,27 @@ stránce, nenastavené připojení, odmítnutá autorizace kanálu, spadlý sock
 tabulka spadne zpátky na svůj interval. Uživatel dostane pomalejší tabulku, nikdy
 ne zastaralou.
 
-Kanál autorizujte jako každý jiný. `TableRecordsChanged::channelFor()` ho
-pojmenuje podle modelu, záměrně čitelně:
+**Všechny živé tabulky autorizuješ jedním callbackem**, ne řádkem na model:
 
 ```php
 // routes/channels.php
-Broadcast::channel('wire-table.App.Models.Invoice', function ($user) {
-    return $user->can('viewAny', Invoice::class);
-});
+use NyonCode\WireTable\Support\LiveChannel;
+
+LiveChannel::authorize(fn ($user, string $model) => $user->can('viewAny', $model));
 ```
+
+Callback dostane **jméno třídy**, ke které kanál patří, už dekódované — drátový
+tvar se z balíčku nikdy nedostane ven. Když mají různé tabulky různá pravidla,
+větvi podle `$model`; `false` odmítne, jako u každého channel callbacku.
+
+Právě proto drží kanál třídu v jediném segmentu (`wire-table.App-Models-Invoice`,
+`-` místo `\`): Laravel kompiluje `{placeholder}` na `([^.]+)`, takže tečkované
+jméno třídy by wildcard nechytil vůbec a každý model by potřeboval vlastní ručně
+psaný `Broadcast::channel()`. Stojí za to na tom trvat, protože překlep v něm nic
+nevyhodí — subscribe se odmítne, push přestane chodit, polling to zakryje, a
+broadcastová půlka je mrtvá, zatímco tabulka vypadá v pořádku.
+
+`LiveChannel::for(Invoice::class)` vrátí jméno, když ho potřebuješ přímo.
 
 Dávka zápisů — fill přes padesát řádků, hromadná akce — je jeden broadcast na
 záznam; klient je slije do jednoho přečtení. Přečtení se také odloží, dokud má

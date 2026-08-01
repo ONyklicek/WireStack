@@ -386,15 +386,28 @@ no Echo on the page, no connection configured, channel authorization refused, a
 socket that drops in the afternoon — the table falls back to its interval. The
 user gets a slower table, never a stale one.
 
-Authorize the channel as you would any other. `TableRecordsChanged::channelFor()`
-names it after the model, readably on purpose:
+**Authorize every live table with one callback**, not a line per model:
 
 ```php
 // routes/channels.php
-Broadcast::channel('wire-table.App.Models.Invoice', function ($user) {
-    return $user->can('viewAny', Invoice::class);
-});
+use NyonCode\WireTable\Support\LiveChannel;
+
+LiveChannel::authorize(fn ($user, string $model) => $user->can('viewAny', $model));
 ```
+
+The callback is handed the **class name** the channel belongs to, already decoded,
+so the wire format never leaves the package. Branch on `$model` when different
+tables need different rules; return false to refuse, as in any channel callback.
+
+That is why the channel keeps the class to a single segment
+(`wire-table.App-Models-Invoice`, `-` for `\`): Laravel compiles a `{placeholder}`
+to `([^.]+)`, so a dotted class name could not be matched by a wildcard at all and
+every model would have needed its own hand-written `Broadcast::channel()` line.
+Worth insisting on, because a mistyped one raises nothing — the subscription is
+refused, the push stops arriving, and polling covers for it, so the broadcast half
+is dead and the table looks fine.
+
+`LiveChannel::for(Invoice::class)` gives the name if you need it directly.
 
 A burst of writes — a fill over fifty rows, a bulk action — is one broadcast per
 record; the client coalesces them into a single re-read. A re-read is also held
