@@ -111,6 +111,9 @@ ksort($classes);
 
 $checked = 0;
 
+/** @var array<string, true> Setters already checked, keyed by declaring class::method. */
+$seenSetters = [];
+
 foreach (array_keys($classes) as $fqcn) {
     $class = new ReflectionClass($fqcn);
     if ($class->isAbstract()) {
@@ -118,17 +121,37 @@ foreach (array_keys($classes) as $fqcn) {
     }
 
     // Every method that could read a property: the class and its parents.
+    //
+    // Keyed by declaring class AND name, so an override does not hide the version
+    // it overrides. A child that narrows a reader typically still calls
+    // `parent::…()` — BelongsToSelect does exactly that — and the parent's body is
+    // where the property is actually read. Keying by name alone kept only the
+    // child's body and reported a live setter as dead.
     $allMethods = [];
     for ($c = $class; $c !== false; $c = $c->getParentClass()) {
         foreach ($c->getMethods() as $m) {
-            $allMethods[$m->getName()] ??= $m;
+            $allMethods[$m->getDeclaringClass()->getName().'::'.$m->getName()] ??= $m;
         }
     }
 
     foreach ($class->getMethods(ReflectionMethod::IS_PUBLIC) as $setter) {
-        if ($setter->getDeclaringClass()->getName() !== $class->getName()) {
+        // Check each setter once, against the first documented class that offers
+        // it — not once per class, which would report an inherited setter 40×.
+        //
+        // Keyed by where it is DECLARED rather than skipping anything not
+        // declared on this class: a setter living in a shared concern (HasHint,
+        // HasExtraAttributes) reports its declaring class as the base component
+        // the trait is mixed into, and that base is abstract, so it is never
+        // scanned on its own. Skipping those left every concern-provided setter
+        // unchecked — which is how hintIcon(), hintColor() and
+        // extraInputAttributes() stayed inert across 40-odd types without this
+        // gate noticing.
+        $origin = $setter->getDeclaringClass()->getName().'::'.$setter->getName();
+        if (isset($seenSetters[$origin])) {
             continue;
         }
+        $seenSetters[$origin] = true;
+
         if ($setter->isStatic() || $setter->isConstructor()) {
             continue;
         }
@@ -155,7 +178,8 @@ foreach (array_keys($classes) as $fqcn) {
         foreach ($props as $prop) {
             // Who reads it? Any method other than this setter.
             $readers = [];
-            foreach ($allMethods as $mName => $m) {
+            foreach ($allMethods as $m) {
+                $mName = $m->getName();
                 if ($mName === $setter->getName()) {
                     continue;
                 }

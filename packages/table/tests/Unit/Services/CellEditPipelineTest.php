@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Event;
@@ -72,6 +73,32 @@ it('refuses a column whose permission the user does not hold', function () {
     $outcome = cepPipeline()->guard(TextInputColumn::make('name')->permission('edit-names'));
 
     expect($outcome?->message)->toBe(__('wire-table::messages.no_permission_view'));
+});
+
+// authorizeInline() is a *separate* ability from permission(): the latter guards
+// seeing the column at all, the former guards writing it inline. The pipeline
+// checked only the first, so `->authorizeInline('x')` was a silent no-op — the
+// author believed the cell was protected and every edit went through.
+it('refuses a column whose inline-edit ability the user does not hold', function () {
+    Gate::define('edit-prices', fn () => false);
+
+    $outcome = cepPipeline()->guard(TextInputColumn::make('price')->authorizeInline('edit-prices'));
+
+    expect($outcome)->toBeInstanceOf(CellEditOutcome::class)
+        ->and($outcome->success)->toBeFalse()
+        ->and($outcome->message)->toBe(__('wire-table::messages.no_permission_view'));
+});
+
+it('allows a column whose inline-edit ability the user does hold', function () {
+    // Nullable user: Gate::allows() closes on a guest unless the ability accepts
+    // one, which is also why an unauthenticated visitor cannot edit inline.
+    Gate::define('edit-prices', fn (?Authenticatable $user) => true);
+
+    expect(cepPipeline()->guard(TextInputColumn::make('price')->authorizeInline('edit-prices')))->toBeNull();
+});
+
+it('leaves a column with no inline-edit ability configured alone', function () {
+    expect(cepPipeline()->guard(TextInputColumn::make('price')))->toBeNull();
 });
 
 // The stage boundary that lets the host run guard() first: refusing a column is

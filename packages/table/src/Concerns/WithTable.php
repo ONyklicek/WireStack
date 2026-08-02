@@ -43,6 +43,7 @@ use NyonCode\WireForms\Concerns\InteractsWithSelectCreation;
 use NyonCode\WireForms\Concerns\InteractsWithWizards;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Events\TableRecordsChanged;
 use NyonCode\WireTable\Export\ExportAction;
 use NyonCode\WireTable\Export\ExportFormat;
 use NyonCode\WireTable\Export\TableExport;
@@ -56,9 +57,13 @@ use NyonCode\WireTable\Services\CellEditPipeline;
 use NyonCode\WireTable\Services\SummaryBatch;
 use NyonCode\WireTable\Services\TableQueryCacheKey;
 use NyonCode\WireTable\Services\TableQueryService;
+use NyonCode\WireTable\Services\WriteGeneration;
 use NyonCode\WireTable\Support\CellEditOutcome;
 use NyonCode\WireTable\Table;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
+
+use function Livewire\store;
 
 /** @phpstan-require-extends Component */
 trait WithTable
@@ -130,12 +135,13 @@ trait WithTable
     protected array $modalStateBeforeUpdate = [];
 
     /**
-     * Whether a result-shaping state path (per-page, search, filters, sort)
-     * was written in this request. Livewire merges everything queued for one
-     * component into a single commit, so a wire:poll tick or an inline-edit
-     * call can share a request with the user's change — and their "leave the
-     * DOM alone" verdict would then throw away the render that change was
-     * made for. Every skip goes through {@see skipTableRender()}.
+     * Whether something that shapes what the table renders (per-page, search,
+     * filters, sort, the page, which columns are visible) changed in this
+     * request. Livewire merges everything queued for one component into a single
+     * commit, so a wire:poll tick or an inline-edit call can share a request with
+     * the user's change — and their "leave the DOM alone" verdict would then
+     * throw away the render that change was made for. Every skip goes through
+     * {@see skipTableRender()}, every change through {@see markTableViewChanged()}.
      */
     protected bool $tableStateChangedThisRequest = false;
 
@@ -392,7 +398,7 @@ trait WithTable
 
                 // The view this render must produce is not the one the poll
                 // checksum was taken for — see refreshTable().
-                $this->tableStateChangedThisRequest = true;
+                $this->markTableViewChanged();
 
                 // "Everything the filter matches" is defined by the filter that
                 // was on screen. Narrowing the set while that selection stands
@@ -433,6 +439,10 @@ trait WithTable
      * writing `perPage: 500000` over the wire, which is a page-sized read of
      * the whole table — so anything outside the offered options falls back to
      * the configured default.
+     *
+     * That clamp is also the whole gate on {@see Table::PER_PAGE_ALL}: the
+     * sentinel is a legal page size only on a table that listed `'all'` among
+     * its options, and a forged one falls back like any other.
      */
     protected function normalizePerPage(): void
     {
@@ -558,6 +568,59 @@ trait WithTable
     }
 
     /**
+     * Record that this request changed what the table renders, and take back any
+     * skip already granted for it.
+     *
+     * The taking-back is the point, and it is why this cannot be a bare flag.
+     * A property update always reaches the component before any method call, so
+     * the per-page select could be handled by having `skipTableRender()` consult
+     * a flag. A *page* change cannot: `setPage()` is a method call like
+     * `updateTableCell()`, they are ordered by when the browser queued them, and
+     * the browser queues the edit FIRST — the input's blur fires on the way to
+     * the pagination link that is about to be clicked. The skip was therefore
+     * already applied by the time the page changed, and a flag consulted earlier
+     * had nothing left to prevent.
+     *
+     * Same store `skipRender()` itself writes to, so this un-does exactly what
+     * that did and nothing else — Livewire reads the value once, at render.
+     */
+    protected function markTableViewChanged(): void
+    {
+        $this->tableStateChangedThisRequest = true;
+
+        // Guarded like skipTableRender(): WithTable is exercised on plain hosts
+        // that are not Livewire components at all.
+        if (method_exists($this, 'skipRender') && function_exists('Livewire\store')) {
+            store($this)->set('skipRender', false);
+        }
+    }
+
+    /**
+     * The same verdict for a request that WRITES a cell — one the table usually
+     * wants to render.
+     *
+     * An inline edit is rarely only about the cell it touched: summaries, group
+     * rollups, footer totals and any column derived from the edited value all go
+     * stale the moment the write lands, and skipping the render leaves them
+     * showing the previous value until something else re-renders the page.
+     *
+     * The render used to be skipped to protect the cell's own optimistic state
+     * from the morph. That protection is now the cell's: `wire:ignore.self` keeps
+     * its root out of the morph, and it reconciles through its sync node, which
+     * will not touch a value being typed or a write still in flight. So the
+     * default flipped, and {@see Table::refreshAfterEdit()} is the way back for a
+     * table where the extra query per edit is not worth it.
+     */
+    protected function skipTableRenderAfterWrite(): void
+    {
+        if ($this->getTable()->shouldRefreshAfterEdit()) {
+            return;
+        }
+
+        $this->skipTableRender();
+    }
+
+    /**
      * Compare the poll checksum with the previous one; true = data unchanged.
      *
      * The new checksum is stored in state either way, so the next poll
@@ -622,7 +685,16 @@ trait WithTable
         $base->selectRaw("COUNT(*) as wt_count, MAX({$updatedAt}) as wt_max");
         $row = $base->first();
 
-        return ($row->wt_count ?? 0).'|'.($row->wt_max ?? '');
+        // The write generation is the third term, and it is what makes this
+        // usable. `updated_at` is stored to the second, so an edit landing in the
+        // same second as the tick that took the last checksum is indistinguishable
+        // from no edit at all — and the change is then missed for good, not merely
+        // shown late, because the next tick compares against that same second. The
+        // counter moves on every write through a table whatever the clock says,
+        // while COUNT and MAX still catch a write that never went through one.
+        $generation = app(WriteGeneration::class)->current($this->queryCacheScope($this->getTable()));
+
+        return ($row->wt_count ?? 0).'|'.($row->wt_max ?? '').'|'.$generation;
     }
 
     /**
@@ -801,6 +873,11 @@ trait WithTable
     {
         $this->paginatorSetPage($page, $pageName);
 
+        // Every way to change page funnels through here — gotoPage(), nextPage(),
+        // previousPage() and resetPage() all call it — so this is the one place
+        // that has to say the rows on screen are no longer the right ones.
+        $this->markTableViewChanged();
+
         $this->cachedRecords = null;
     }
 
@@ -874,6 +951,16 @@ trait WithTable
     {
         $perPage = (int) $this->tableState->get('pagination.perPage', 10);
 
+        if ($perPage === Table::PER_PAGE_ALL) {
+            // The sentinel cannot be handed to the paginator: a negative limit
+            // is silently dropped by the query builder (so the rows would be
+            // right) while the paginator still divides the total by it (so the
+            // page count would be negative). Counting first is what makes "all"
+            // one honest page — and max(1) keeps an empty table from dividing
+            // by zero.
+            $perPage = max(1, $query->toBase()->getCountForPagination());
+        }
+
         return match ($table->getPaginationMode()) {
             'simple' => $query->simplePaginate($perPage),
             'cursor' => $query->cursorPaginate($perPage),
@@ -897,6 +984,7 @@ trait WithTable
         $key = app(TableQueryCacheKey::class)->build(
             $table->getQueryCacheKey() ?? $this->generateQueryCacheKey($query),
             $this->queryCacheState($table),
+            app(WriteGeneration::class)->current($this->queryCacheScope($table)),
         );
 
         return Cache::remember($key, $ttl, function () use ($table, $query) {
@@ -966,6 +1054,95 @@ trait WithTable
     protected function generateQueryCacheKey(Builder $query): string
     {
         return app(TableQueryCacheKey::class)->namespaceFor($query);
+    }
+
+    /**
+     * What a write invalidates: every cached slice sharing this scope.
+     *
+     * The model class, so two components listing the same records retire each
+     * other's entries — a row edited in one table is stale in the other. A table
+     * built from a bare `query()` has no model to name and falls back to its own
+     * component, which is narrower but still correct for its own writes.
+     *
+     * Override to widen or narrow it (a tenant id, a parent record).
+     */
+    protected function queryCacheScope(Table $table): string
+    {
+        return $table->getModelClass() ?? static::class;
+    }
+
+    /**
+     * Move this table's write generation on, because something wrote.
+     *
+     * Two readers, one counter (see {@see WriteGeneration}): it retires every
+     * cached slice of the table at once, and it is the term that lets poll
+     * change detection see a write that landed inside the same second as the
+     * last checksum.
+     */
+    protected function recordTableWrite(): void
+    {
+        $table = $this->getTable();
+
+        // Only the two readers care, and a bump is a write to the shared cache
+        // store: a table that neither caches nor polls has nobody to tell.
+        if (! $table->isQueryCached() && ! $table->isPolling()) {
+            return;
+        }
+
+        app(WriteGeneration::class)->bump($this->queryCacheScope($table));
+    }
+
+    /**
+     * Everything that has to happen elsewhere because this request wrote.
+     *
+     * The two are one decision, not two: the cached slices this table serves are
+     * stale, and so is every other session's screen. Splitting them is how they
+     * would come apart — a caller remembering one and not the other.
+     */
+    protected function announceTableWrite(): void
+    {
+        $this->recordTableWrite();
+
+        $table = $this->getTable();
+
+        if (! $table->shouldBroadcastChanges()) {
+            return;
+        }
+
+        try {
+            event(new TableRecordsChanged($this->queryCacheScope($table)));
+        } catch (Throwable $e) {
+            // The write has already committed. Every caller of this runs inside a
+            // try/catch that turns a throw into "the save failed" — so a
+            // broadcaster having a bad day would report a landed write as failed,
+            // and the cell would roll itself back to a value the database no
+            // longer holds. The user retypes an edit that was never lost.
+            //
+            // Made likelier by ShouldBroadcastNow, which puts the broadcaster's
+            // HTTP call inline in that same try. The push is an optimisation with
+            // a working fallback — polling — so it is never worth a wrong answer
+            // about whether the write landed.
+            //
+            // Reported rather than swallowed: this belongs in the log, it just
+            // does not belong in the response.
+            report($e);
+        }
+    }
+
+    /**
+     * The channel other sessions are told about this table's writes on.
+     *
+     * Null unless `live(broadcast: true)` is on — the view uses it to decide
+     * whether to subscribe at all, so a table without the opt-in ships no
+     * listener and needs no channel authorization.
+     */
+    public function getTableLiveChannel(): ?string
+    {
+        $table = $this->getTable();
+
+        return $table->shouldBroadcastChanges()
+            ? TableRecordsChanged::channelFor($this->queryCacheScope($table))
+            : null;
     }
 
     /**
@@ -1618,6 +1795,7 @@ trait WithTable
         }
 
         $this->tableState->set('columns.hidden', $hidden);
+        $this->markTableViewChanged();
         $this->persistViewPreferences();
     }
 
@@ -1647,6 +1825,7 @@ trait WithTable
         }
 
         $this->tableState->set('columns.hidden', $hidden);
+        $this->markTableViewChanged();
 
         if (($key = $table->getRememberColumnsKey()) !== null) {
             $this->resolvePreferenceDriver($table)->forget($key, $this->preferenceUser());
@@ -1772,7 +1951,7 @@ trait WithTable
                     $restored->livewire($this);
                     $this->haltModalFormInstance = $restored;
                 }
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 // Corrupt or non-restorable session data — close the modal cleanly
                 $this->tableState->set('modal.halt.show', false);
                 session()->forget('wire.halt_form_instance');
@@ -1927,13 +2106,11 @@ trait WithTable
      */
     public function updateTableCell(mixed $recordKey, string $columnName, mixed $value, ?string $recordVersion = null): array
     {
-        // Prevent Livewire from re-rendering the table in this response.
-        // Re-rendering causes DOM morphing that destroys Alpine component state
-        // (success indicator, saving flag, etc.). The Alpine MutationObserver
-        // on each cell handles syncing new values, and polling refreshes the
-        // table on the next cycle. A request that also changed the page size,
-        // search, filters or sort still renders — see skipTableRender().
-        $this->skipTableRender();
+        // Render unless the table opted out: everything derived from this value
+        // — summaries, rollups, a badge two columns over — is stale the instant
+        // the write lands. The cell's own optimistic state survives the morph on
+        // its own (see skipTableRenderAfterWrite).
+        $this->skipTableRenderAfterWrite();
 
         $table = $this->getTable();
         $column = $this->findColumn($columnName);
@@ -1980,6 +2157,10 @@ trait WithTable
 
             // ── Post-transaction callbacks (outside lock) ──
             $pipeline->settle($outcome, $column, static::class, $columnName, $recordKey);
+
+            if ($outcome->success) {
+                $this->announceTableWrite();
+            }
 
             // The conflict is always shown inline on the cell; a table can opt in
             // to *also* raise a (more prominent) notification for it.

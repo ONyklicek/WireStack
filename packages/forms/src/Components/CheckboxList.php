@@ -5,16 +5,29 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Concerns\HasSize;
 use NyonCode\WireForms\Concerns\CanBeSearchable;
+use NyonCode\WireForms\Concerns\HasChoiceVariants;
 use NyonCode\WireForms\Concerns\HasOptions;
 
 /**
  * Multiple checkbox list with search, bulk toggle, grouped options, and column layout.
+ *
+ * {@see segmented()} and {@see buttons()} render the same chrome as the matching
+ * Radio variants — the multiple-choice half of that shared vocabulary — where the
+ * list is short enough to read as a row of toggle buttons. Those variants show the
+ * options alone: search, bulk toggle, grouping and columns are list chrome and do
+ * not apply.
  */
 class CheckboxList extends Field
 {
     use CanBeSearchable;
+
+    // segmented()/buttons()/inline()/icons()/color()/colors() are the choice
+    // vocabulary shared with Radio.
+    use HasChoiceVariants;
     use HasOptions;
+    use HasSize;
 
     /** @var int|array<string|int, int|string> */
     protected int|array $columns = 1;

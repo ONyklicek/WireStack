@@ -265,7 +265,8 @@ Fields:
 - `OtpInput`
 - `Radio`
 - `Rating`
-- `Repeater`
+- `Repeater` (card layout, or `table()` for row layout)
+- `Builder` (extends `Repeater`; per-item `Block` type) + `Block`
 - `RichEditor`
 - `Select`
 - `Slider`
@@ -380,11 +381,15 @@ Columns:
 - `ImageColumn`
 - `ButtonColumn`
 - `ToggleColumn`
+- `CheckboxColumn`
 - `PollColumn`
 - `SelectColumn`
 - `TextInputColumn`
 - `SplitColumn`
 - `StackedColumn`
+- `ColorColumn`
+- `RatingColumn`
+- `TagsColumn`
 
 Summaries:
 
@@ -440,6 +445,7 @@ Filters:
 - `DateFilter`
 - `NumberRangeFilter`
 - `TernaryFilter`
+- `TrashedFilter` (soft-delete scope, not a column constraint)
 
 Filter views:
 

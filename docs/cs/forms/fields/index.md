@@ -33,6 +33,7 @@ Reference pro vestavěné Wire Forms field a layoutové komponenty.
 | Vybrat související záznam | [BelongsToSelect](belongs-to-select.md) |
 | Vybrat polymorfní cíl | [MorphToSelect](morph-to-select.md) |
 | Spravovat opakované skupiny nebo dětské řádky | [Repeater](repeater.md) |
+| Skládat obsah z různých typů bloků | [Builder](builder.md) |
 
 ## Layoutové komponenty
 

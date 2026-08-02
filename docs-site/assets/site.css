@@ -1712,12 +1712,23 @@ a.locale-item:hover { background: var(--surface-2); color: var(--text); }
     body.search-open .search-input { flex: 1; height: 42px; }
     body.search-open .search-cancel { display: inline-block; }
 
+    /* The sheet lives inside the topbar, so it can never paint above the
+       backdrop on its own: the topbar opens a stacking context at z-index 20
+       and the backdrop sits at 75 in the same context — every tap on the field
+       landed on the backdrop and closed the sheet again. Lift the whole bar
+       while search is open instead. (The topbar's backdrop-filter also makes it
+       the containing block for the fixed sheet, so the sheet's offsets are
+       resolved against the bar, not the viewport — the bar is pinned to the top
+       of the viewport, which is exactly where the sheet belongs.) */
+    body.search-open .topbar { z-index: 90; }
+
+    /* Anchored to the sheet itself rather than a hard-coded viewport offset, so
+       the panel stays glued to the field whatever the bar measures. */
     body.search-open .search-results {
-        position: fixed;
-        top: 64px;
+        top: 100%;
         left: 0;
         right: 0;
-        max-height: calc(100dvh - 64px);
+        max-height: calc(100dvh - var(--header-h));
         border-radius: 0;
         border-left: 0;
         border-right: 0;
@@ -1953,4 +1964,57 @@ a.locale-item:hover { background: var(--surface-2); color: var(--text); }
 
 [data-theme="dark"] .wire-swatch__chip {
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+/* ============================================================
+   404 — served for any unknown path, at any depth
+   ============================================================ */
+
+.not-found {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    text-align: center;
+    padding: 48px max(20px, env(safe-area-inset-left, 0px)) 64px;
+}
+
+.not-found > * { margin: 0; }
+
+.not-found .brand-link { margin-bottom: 4px; }
+
+.not-found-code {
+    font-size: clamp(64px, 18vw, 128px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    background: var(--brand-grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.not-found h1 { font-size: clamp(24px, 6vw, 34px); }
+
+.not-found .lead {
+    max-width: 46ch;
+    color: var(--text-muted);
+}
+
+.not-found .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+/* Search hit highlighting */
+.search-result mark {
+    background: var(--primary-soft);
+    color: inherit;
+    border-radius: 3px;
+    padding: 0 1px;
 }

@@ -37,6 +37,9 @@ return [
     // Filters
     'filters' => 'Filters',
     'filter_all' => 'All',
+    'filter_without_trashed' => 'Without deleted',
+    'filter_with_trashed' => 'With deleted',
+    'filter_only_trashed' => 'Only deleted',
     'filter_search' => 'Search...',
     'filter_no_results' => 'No results found',
     'filter_selected_count' => '{1}:count selected|[2,*]:count selected',
@@ -104,6 +107,7 @@ return [
 
     // Pagination
     'show' => 'Show',
+    'per_page_all' => 'All',
     'showing' => 'Showing',
     'of' => 'of',
     'records' => 'records',
@@ -141,6 +145,7 @@ return [
     // Inline editable
     'save_failed' => 'Save failed',
     'invalid' => 'Invalid',
+    'rating_of_max' => ':rating out of :max',
     'error' => 'Error',
 
     // Keyboard shortcut legend

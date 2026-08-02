@@ -30,11 +30,10 @@
         data-record-key="{{ $field->getRecordKey() }}"
         data-column-name="{{ $name }}"
         data-testid="panel-editable-{{ $name }}"
-        data-server-value="{{ $state ? '1' : '0' }}"
-        data-record-version="{{ $field->getRecordVersion() }}"
         data-msg-error="{{ __('wire-core::messages.error') }}"
         data-msg-save-failed="{{ __('wire-core::messages.save_failed') }}"
     >
+        {!! $field->getSyncHtml($state ? '1' : '0') !!}
         <label @class(['inline-flex items-center gap-2', 'cursor-not-allowed opacity-50' => $disabled, 'cursor-pointer' => ! $disabled])>
             <input
                 type="checkbox"

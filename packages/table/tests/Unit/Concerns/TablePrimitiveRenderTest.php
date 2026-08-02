@@ -205,3 +205,57 @@ it('routes the row-action spinner through the cached primitive, gated per record
     expect($html)->toContain('animate-spin')
         ->and($html)->toContain('wire:target="executeTableAction(');
 });
+
+/*
+ * The same fuse, one level down: work that is constant per CELL must not be
+ * repeated per use of it.
+ *
+ * The optimistic-lock stamp is asked for twice by every editable cell — once as
+ * view data, once to build the sync node — and each ask reached the container and
+ * re-read a cast attribute. Measured on 500 rows × 3 editable columns, computing
+ * it once instead of twice (with both resolvers held for the render rather than
+ * resolved per row) took the render from 453ms to 303ms.
+ *
+ * Asserted by counting rather than by timing: a threshold in milliseconds fails
+ * on a loaded CI box and gets deleted, while "how many times was it computed" is
+ * the property that actually regressed.
+ */
+final class CountingVersionColumn extends TextInputColumn
+{
+    public int $versionCalls = 0;
+
+    protected function recordVersion(Model $record): string
+    {
+        $this->versionCalls++;
+
+        return parent::recordVersion($record);
+    }
+}
+
+it('computes the record version once per cell, not once per use', function () {
+    primSeed(1);
+
+    $column = CountingVersionColumn::make('title');
+    $column->renderCell(PrimRow::first());
+
+    expect($column->versionCalls)->toBe(1);
+});
+
+it('holds its resolvers for the render instead of reaching for them per row', function () {
+    primSeed(20);
+
+    $column = TextInputColumn::make('title');
+
+    foreach (PrimRow::all() as $record) {
+        $column->renderCell($record);
+    }
+
+    // Both are stateless singletons, so the container answering 20× instead of
+    // once is invisible in behaviour and only shows up in a profile — which is
+    // why it is pinned here rather than left to be noticed.
+    $held = (new ReflectionClass($column))->getProperties(ReflectionProperty::IS_PRIVATE);
+    $names = array_map(fn (ReflectionProperty $p) => $p->getName(), $held);
+
+    expect($names)->toContain('recordVersionResolver')
+        ->and($names)->toContain('cellSyncResolver');
+});

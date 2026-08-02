@@ -39,6 +39,22 @@ trait InteractsWithRepeaters
         $this->writeRepeaterItems($statePath, $items);
     }
 
+    /**
+     * Append one Builder block: the same array append, carrying the chosen block
+     * type so the item knows which schema edits it.
+     */
+    public function addBuilderItem(string $statePath, string $block): void
+    {
+        $items = data_get($this, $statePath, []);
+        if (! is_array($items)) {
+            $items = [];
+        }
+
+        $items[] = ['type' => $block, 'data' => []];
+
+        $this->writeRepeaterItems($statePath, $items);
+    }
+
     public function removeRepeaterItem(string $statePath, int $index): void
     {
         $items = data_get($this, $statePath, []);

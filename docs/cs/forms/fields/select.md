@@ -72,6 +72,21 @@ mimo enum je odmítnuto, aniž byste ho museli znovu uvádět. Přeskočí se pr
 > [`SelectFilter`](../../table/filters/index.md).
 
 <a id="searchable"></a>
+## Zrušení výběru
+
+Zvolení prázdné (placeholder) položky uloží **null**, ne prázdný řetězec — což
+je podstatné hlavně u sloupce castovaného na enum, kde `''` není platná hodnota
+a cast by při ukládání vyhodil chybu:
+
+```php
+Select::make('status')
+    ->options(Status::class)      // sloupec castovaný na enum
+    ->placeholder('Bez stavu')    // zvolením se uloží null
+```
+
+Vícenásobný výběr to nemění: jeho prázdný stav je `[]`, což cast na pole uloží
+tak, jak je.
+
 ## Vyhledávatelné
 
 ```php

@@ -101,8 +101,7 @@ Each override accepts a boolean or a closure.
 Editable columns can require a Gate ability for inline editing.
 
 ```php
-TextColumn::make('price')
-    ->editable()
+TextInputColumn::make('price')
     ->authorizeInline('orders.update-price');
 ```
 

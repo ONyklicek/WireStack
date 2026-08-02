@@ -1,5 +1,5 @@
 {{-- SelectColumn editable cell --}}
-{{-- Variables: $column, $record, $state --}}
+{{-- Variables: $column, $record, $state, $recordVersion --}}
 @php
     $recordKey = $record->getKey();
     $columnName = $column->getName();
@@ -7,7 +7,6 @@
     $options = $column->getOptions();
     $disabled = $column->isDisabled($record);
 
-    $recordVersion = $record->updated_at ? (string) $record->updated_at->getTimestamp() : '0';
     $valueJson = json_encode((string) ($state ?? ''));
     $wireKey = "sel-{$recordKey}-{$columnName}";
 @endphp
@@ -22,11 +21,11 @@
     data-record-key="{{ $recordKey }}"
     data-column-name="{{ $columnName }}"
     data-testid="table-editable-{{ $columnName }}"
-    data-server-value="{{ $state }}"
-    data-record-version="{{ $recordVersion }}"
     data-msg-error="{{ __('wire-table::messages.error') }}"
     data-msg-save-failed="{{ __('wire-table::messages.save_failed') }}"
 >
+    {!! $syncHtml !!}
+
     <select
         x-model="value"
         @change="commit($event.target.value)"

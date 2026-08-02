@@ -7,8 +7,12 @@ namespace NyonCode\WireForms\Components;
 /**
  * Hidden form field.
  */
+use NyonCode\WireCore\Foundation\Concerns\HasExtraInputAttributes;
+
 class Hidden extends Field
 {
+    use HasExtraInputAttributes;
+
     public function __construct(string $name)
     {
         parent::__construct($name);

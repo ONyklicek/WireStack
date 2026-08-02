@@ -13,6 +13,7 @@
 <textarea
         id="{{ $field->getId() }}"
         {{ $wireAttr }}="{{ $field->getWireModelAttribute() }}"
+        {!! $field->getExtraInputAttributesHtml() !!}
         rows="{{ $field->getRows() }}"
 
         @if($field->getCols())

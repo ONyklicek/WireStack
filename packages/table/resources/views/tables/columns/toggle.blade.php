@@ -23,11 +23,11 @@
     data-record-key="{{ $recordKey }}"
     data-column-name="{{ $columnName }}"
     data-testid="table-editable-{{ $columnName }}"
-    data-server-value="{{ $state ? '1' : '0' }}"
-    data-record-version="{{ $recordVersion }}"
     data-msg-error="{{ __('wire-table::messages.error') }}"
     data-msg-save-failed="{{ __('wire-table::messages.save_failed') }}"
 >
+    {!! $syncHtml !!}
+
     <button
         type="button"
         role="switch"

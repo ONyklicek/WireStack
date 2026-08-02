@@ -30,7 +30,8 @@ Build a data table inside a Livewire component using the `WithTable` trait and a
 ### Columns
 
 `TextColumn`, `BadgeColumn`, `BooleanColumn`, `IconColumn`, `ImageColumn`, `ButtonColumn`, `ToggleColumn`,
-`PollColumn`, `SelectColumn`, `TextInputColumn`, `SplitColumn`, `StackedColumn`.
+`CheckboxColumn`, `PollColumn`, `SelectColumn`, `TextInputColumn`, `SplitColumn`, `StackedColumn`,
+`ColorColumn`, `RatingColumn`, `TagsColumn`.
 
 `BadgeColumn` (and `IconColumn`) color/icon resolution — pick by intent:
 - one fixed color for every row: `->color('success')` (takes `string|Color|null`, never a Closure);
@@ -50,10 +51,12 @@ constraints automatically.
 
 ### Filters
 
-`SelectFilter`, `DateFilter`, `NumberRangeFilter`, `TernaryFilter`. A filter query callback must return the
+`SelectFilter`, `DateFilter`, `NumberRangeFilter`, `TernaryFilter`, `TrashedFilter`. A filter query callback must return the
 Builder. It receives the value already normalized for its filter type — a `TernaryFilter` callback gets a real
 `bool`, never the `'true'`/`'false'` option key, so branch with `$value ? … : …` and never compare to a
-string. Use `->indicator()` for filter chips and `->subRows()` to scope sub-row filtering.
+string. Use `->indicator()` for filter chips and `->subRows()` to scope sub-row filtering. `TrashedFilter` constrains no
+column — it switches the soft-delete scope (`'with'` → `withTrashed()`, `'only'` → `onlyTrashed()`, cleared → live
+records) and requires the model to use `SoftDeletes`.
 
 Filtering by a relation aggregate uses the `orders->count()` / `orders->exists()` path syntax
 (`Filter::make('orders->count()')`). It is applied as a `WHERE` over the aggregate subquery via Eloquent's
@@ -73,6 +76,40 @@ searchable combobox** (the same `searchable-select` used by wire-forms `Select` 
 (separate from table `filters`), are planned through the same `QueryPlanner` as panel filters (date/boolean
 fall back to `Filter::apply()`), and inherit authorization, **indicator chips** (removable, alongside panel
 chips), and **query-string persistence** (`Table::queryString()`, under a `col_<column>` URL parameter).
+
+### Search syntax
+
+`Table::searchable()` matches the whole term as one substring across every searchable column
+(`LIKE`/`ILIKE`), and a `%` or `_` the user types is escaped rather than acting as a wildcard.
+Richer syntax is **opt-in per table** through `Table::search()` — nothing is interpreted unless
+asked for, so an unconfigured table behaves exactly as before:
+
+```php
+use NyonCode\WireCore\Core\Query\Search\SearchConfig;
+
+$table->search(fn (SearchConfig $s) => $s
+    ->tokenize()    // spaces = AND; each word ORs across all columns; "quoted phrase" stays whole
+    ->ranges()      // >100, >=100, <10, <=10, =42, 10..20, 10.., ..20, 2026-01-01..2026-03-31
+    ->wildcards()   // nov* / a?b
+);
+```
+
+Structured codes (`8866 01`, `8866 02` — shared series, zero-padded tail) get `Column::searchAs('code')`:
+typing `8866 01..08` becomes one `BETWEEN '8866 01' AND '8866 08'`. The space inside the code also
+splits the term, so the range carries the word typed before it and a code column completes both
+bounds with it (write the series once); any other column ignores that word and reads `01..08` as the
+plain range, so `praha 10..20` still works on the same table. The number must be stored padded and typed as stored
+(`1..8` against stored `01 … 08` finds nothing); a range crossing a width boundary is completed —
+`8866 50..100` reads as `050..100`.
+
+`tokenize()` is what makes a first name in one column and a surname in another match together.
+`ranges()` only asks a column that can answer — the value type comes from the model's casts, or
+from `Column::searchAs('numeric'|'date')` where a cast cannot speak for the column; a comparison
+no column can answer is searched as the literal text typed, never as an empty group that matches
+everything. A typed date means its whole span (`2026-01-31` the day, `2026-01` the month, `2026`
+the year). `Column::searchable(['first_name', 'last_name'])` searches exactly the columns listed;
+`Column::searchUsing(fn (Builder $q, string $term) => ...)` OR-combines with the planned columns
+and receives one token at a time when tokenizing.
 
 ### Relation managers
 
@@ -204,7 +241,7 @@ Registration rules live in the wire-core guidelines: register unconditionally, n
 - Sub-rows: expandable child records via `->subRows('relation')` + `->subRowColumns([...])`, with per-parent subtotals, `->subRowsLimit()` ("show more"), and an interactive filter bar (`->subRowsFilterable()`, filters the **children**). Expansion is one baseline, not a per-row list: `->subRowsDefaultExpanded()` sets where rows start, the master chevron in the expander column header (or `toggleAllRowExpansion()`) moves it, and it survives pagination + is stored per user with `rememberColumns()`. `flattenSubRows()`/`toggleFlattenMode()` are **deprecated** aliases of the default-expanded baseline — they never flattened anything. `subRows()` is table-wide, so **every** row gets a chevron unless `->subRowsVisible(fn ($record) => ...)` says which records can have children at all — rejected records lose the chevron, the panel and their share of the eager load, but keep an empty expander cell so the columns stay aligned (the result is memoized per record, so the callback may query — prefer a `withCount` attribute). It is not "has none right now" — that case is `->subRowsHideWhenEmpty()`, which is **not** the same closure written by hand: it makes the table's own query carry a constrained presence count (its own alias, so a rollup count column keeps `{relation}_count`), so the per-row check is an attribute read rather than a `COUNT` per row. That count honours `subRowQuery()` and `Filter::subRows()` but deliberately **not** the interactive `subRowsFilterable()` bar, whose values change per parent. Both conditions compose, cheap one first.
 - **A large selection is a query, not a `Collection`.** Besides the keyed selection, the user can "select all matching the filter" (`selectAllMatchingRecords()` / the bulk-bar escalation), stored as a mode whose list holds the *exclusions* — a filter/search change drops it back to explicit keys. A bulk-action callback still receives a `Collection`, but `Table::bulkMaxRecords()` (default 1000) caps what one action loads and the action **refuses out loud** past it. For an action that must handle any size, walk it: `->eachSelectedRecord(fn (Model $r) => ..., chunk: 500)` or `selectedRecordsQuery()` — never expand it into keys.
 - Grouping with subtotals, and exports (`withSummaries`).
-- Inline editing via `TextInputColumn` / `ToggleColumn` / `SelectColumn`. All three share one canonical Alpine component (`wireEditableCell`): the save (`updateTableCell`) skips the table render, so the cell updates **optimistically**, rolls back on failure, and carries the row version for **optimistic-lock** conflict detection (conflict shown inline on the cell; opt-in toast via `Table::notifyEditConflicts()`). Server-side `canEdit(Model $record)` enforces per-record `disabled()`/permission — client `disabled()` is cosmetic only.
+- Inline editing via `TextInputColumn` / `ToggleColumn` / `SelectColumn`. All three share one canonical Alpine component (`wireEditableCell`): the cell updates **optimistically**, rolls back on failure, and carries the row version for **optimistic-lock** conflict detection (conflict shown inline on the cell; opt-in toast via `Table::notifyEditConflicts()`). The version is `RecordVersion` — the model's own `updated_at` column, so `const UPDATED_AT` is honoured; do not hand-roll the stamp, a literal `->updated_at` read renders the `'0'` sentinel for such a model and `conflicts()` reads `'0'` as "the client never had a version", leaving every edit on it unguarded. The save (`updateTableCell`) **renders**, and the cell reconciles from a sync node rather than being reset by the morph (see gotchas). Server-side `canEdit(Model $record)` enforces per-record `disabled()`/permission — client `disabled()` is cosmetic only.
 - **Fill (Excel-style), server side.** `Table::fillHandle()` opts a table in to writing one value across many rows in **one** request (`fillTableCells`); `Column::fillable(false)` excludes a column that is otherwise editable (a unique code, an invoice number), and `Table::fillMaxRecords(int)` caps a single request (default 500). Each record still goes through the full per-record path — `canEdit()`, its own rules, its own optimistic-lock version — so a fill is deliberately **not** all-or-nothing: one row losing its race is reported as a per-record failure while the rest land. Records are resolved through the table's own query, so a key outside it is never written. The endpoint refuses outright unless `fillHandle()` is on. Per-cell `CellUpdating`/`CellUpdated` fire exactly as for a single edit — there is no separate bulk event. The payload is a **list** of `{column, value, records}` entries where `records` maps record key to the optimistic-lock version the client holds (a map, not a bare list of keys — PHP casts a numeric string array key to an int, so `{"15": "…"}` and `["…"]` would be indistinguishable). Driving `fillTableCells` repeatedly means sending the versions the previous call **returned**, never the ones you started with; the version is `updated_at` to the second, so two writes inside one second are indistinguishable and a stale version is not caught there.
 - Conditional row styling: `Table::rowColor(string|Closure|null)` tints a whole row with a semantic/hue color resolved by the canonical `HasColor` owner (return `null` from the Closure for no tint; a tinted row gets a same-hue hover and drops the neutral hover/striping). `Table::rowClass(string|Closure|null)` adds arbitrary classes (the Closure receives the record). Prefer `rowColor()` over hand-written `bg-*` classes; combine both for e.g. a danger tint + `font-semibold`.
 - Per-user column memory: `Table::rememberColumns('key')` loads each user's saved hidden-column set on mount and persists it on every toggle, scoped to `auth()->user()` (one key serves all users; stale column names are ignored). Storage is a driver chosen in `config('wire-table.preferences')` — `null` (default, no persistence), `session`, or `database` (publish `wire-table::migrations` → `table_preferences` table). `Table::preferenceDriver($driver)` overrides per table; a "Reset columns" control clears the saved layout. Implement `TablePreferenceDriver` for a custom store.
@@ -222,6 +259,7 @@ The table renders each cell and each action **once per row**, so per-row cost sc
 rows × columns (× actions). Keep the per-row work cheap and lean on the levers the package
 already gives you:
 
+- **A page size is what bounds a table's memory, and `'all'` removes it.** `Table::perPageOptions([10, 25, 50, 'all'])` adds a "show everything on one page" option (`Table::perPage('all')` makes it the default). It is stored as the integer `Table::PER_PAGE_ALL` (`-1`) — the word never survives configuration, because the select, the `per_page` query-string parameter and the query cache key all compare page sizes strictly as integers — and it is paginated by counting first, since a negative limit would give the paginator a negative page count. Deliberately **not** among the shipped `[10, 25, 50, 100]`: the host clamps any page size the table does not offer back to `perPage()`, which is the same guard that stops a forged `perPage: 500000`, so a table only reads its whole source into memory when it said `'all'` itself. There is **no** ceiling behind it (unlike `bulkMaxRecords()`), so it belongs on a table whose row count is known, not on one over an unbounded source.
 - **Defer off-screen tables.** `Table::lazy()` returns no rows and runs no query until the
   table scrolls into view (optional `->lazyPlaceholder(...)`). Use it for tables below the fold
   or in tabs. It defers the JS too: the table's Alpine bundles ship with the *deferred* render,
@@ -233,16 +271,28 @@ already gives you:
   Blade renders (an eager group renders one view per item per row). Opt-in; the default is eager.
   Trade-offs: keyboard shortcuts and `wire:click` modifiers on menu items are not wired in lazy
   mode. Reach for it on large tables whose every row carries a multi-item action dropdown.
-- **Inline edits skip the table render.** `TextInputColumn` / `ToggleColumn` / `SelectColumn`
-  commit through `updateTableCell` — the edited cell updates optimistically without re-rendering
-  every other row. Do not wrap the whole table in your own `wire:model` polling that would defeat
-  this. The skip is **conditional**, and every table endpoint that wants one must go through
-  `WithTable::skipTableRender()` rather than calling `skipRender()` directly: Livewire merges
-  everything queued for one component into a single request, so a cell save (or a poll tick) can
-  arrive together with the user changing the page size, search, a filter or the sort. Skipping
-  there answers with no HTML at all — the new state lands in the snapshot while the browser keeps
-  the old rows until the user does something else. A request that changed what the table displays
-  always renders.
+- **An inline edit re-renders the table, and the cell survives it.** `TextInputColumn` /
+  `ToggleColumn` / `SelectColumn` commit through `updateTableCell`, which renders — everything
+  derived from the written value (summaries, rollups, a badge computed from the same column, the
+  row's position under the current sort) is stale otherwise. The cell keeps its own Alpine state
+  because its root carries `wire:ignore.self`, which is also why the fresh value cannot reach it
+  through that root: Livewire stops updating an ignored element's own attributes after the first
+  render. It arrives on a **sync node**, a child element the morph does update and the cell
+  watches. Never move `data-server-value` / `data-record-version` back onto the ignored root, and
+  never write one without the other — that wakes the observer against a frozen partner and the
+  edit vanishes from the screen a second after it reached the database.
+  `Table::refreshAfterEdit(false)` opts back out for a table where the render is expensive and
+  nothing on screen depends on the edited value.
+- **Every skip goes through `WithTable::skipTableRender()`, every view change through
+  `markTableViewChanged()`.** Never call `skipRender()` directly. Livewire merges everything queued
+  for one component into a single request, so a cell save, a fill or a poll tick can arrive
+  together with the user changing the page size, search, a filter, the sort, the page or which
+  columns are visible. Skipping there answers with no HTML at all — the new state lands in the
+  snapshot while the browser keeps the old rows until the user does something else. Note the
+  asymmetry that makes `markTableViewChanged()` more than a flag: property updates (the per-page
+  select) always reach the component before any call, but `setPage()` is itself a *call*, and the
+  browser queues the cell edit **first** — the pagination click blurs the input on its way — so the
+  skip is already granted by then and has to be taken back.
 - **Relation display never N+1s.** Dot-notation columns (`TextColumn::make('company.name')`)
   eager-load via `with()` for display — never add a manual per-row query in `displayUsing`.
 - **Eager-load closure relations.** A relation dereferenced ONLY inside a closure —

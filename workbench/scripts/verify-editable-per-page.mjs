@@ -98,22 +98,39 @@ try {
   const initialRows = await eval_(`$rows()`);
   check('first page shows the configured 2 rows', initialRows === 2, `rows=${initialRows}`);
 
-  // ── A cell edit ALONE must still leave the DOM alone ──────────────
-  // The skip is what keeps a morph from resetting every cell's Alpine state
-  // mid-edit; the fix must not have traded that away.
+  // ── A cell edit ALONE renders, and the cell survives its own morph ──
+  // The edit used to skip the render to protect the cell's Alpine state, which
+  // left everything derived from the written value stale. It renders now, and
+  // what has to hold instead is the harder property: the morph runs and the cell
+  // keeps its value, its confirmed value and its not-saving state — that is
+  // `wire:ignore.self` plus the sync node doing their job. Asserting the morph
+  // happened AND the state survived is strictly stronger than asserting no morph.
+  const soloValue = 'solo-' + Date.now() + '@example.test';
   const editOnly = await eval_(`(async () => {
     const cell = $cell();
     const key = cell.dataset.recordKey, col = cell.dataset.columnName;
     let rendered = false;
     const stop = window.Livewire.hook('morph', () => { rendered = true });
-    await $wireHost().call('updateTableCell', key, col, 'solo-' + col + '@example.test', null);
+    await $wireHost().call('updateTableCell', key, col, ${JSON.stringify(soloValue)}, null);
     await new Promise(r => setTimeout(r, 600));
     stop && stop();
-    return JSON.stringify({ rendered, rows: $rows() });
+    const after = Alpine.$data($cell());
+    return JSON.stringify({
+      rendered,
+      rows: $rows(),
+      value: after.value,
+      serverValue: after.serverValue,
+      saving: after.saving,
+      error: after.error,
+    });
   })()`);
   const solo = JSON.parse(editOnly);
-  check('a cell edit on its own still skips the table render',
-    solo.rendered === false && solo.rows === 2, editOnly);
+  check('a cell edit on its own re-renders the table', solo.rendered === true, editOnly);
+  check('…without disturbing the page', solo.rows === 2, `rows=${solo.rows}`);
+  check('…and the edited cell keeps its state through that morph',
+    solo.value === soloValue && solo.serverValue === soloValue
+      && solo.saving === false && !solo.error,
+    editOnly);
 
   // ── The merged commit: a cell edit AND the per-page change ────────
   // Queued in the same tick, which is exactly what blurring an edited cell by
@@ -158,6 +175,35 @@ try {
   check('a per-page change with no cell edit still applies at once',
     p.rows === 2 && String(p.perPage) === '2', plain);
   await shot('03-after-plain-change');
+
+  // ── "All": a word in the select, an integer on the wire ───────────
+  // The one page size whose option label and value disagree. What has to hold
+  // is that the browser posts the sentinel, the server keeps it (rather than
+  // clamping it back the way it clamps a size the table never offered), and the
+  // rows follow.
+  const all = await eval_(`(async () => {
+    const sel = $sel();
+    const option = [...sel.options].find(o => o.value === '-1');
+    const label = option ? option.textContent.trim() : null;
+
+    sel.value = '-1';
+    sel.dispatchEvent(new Event('input', { bubbles: true }));
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 1200));
+
+    return JSON.stringify({ label, rows: $rows(), perPage: $perPage(), selValue: $sel().value });
+  })()`);
+  const a = JSON.parse(all);
+  console.log('all →', a);
+
+  check('the "all" option reads as a word, not as its sentinel',
+    a.label !== null && a.label !== '-1' && a.label.length > 0, all);
+  check('the server keeps the sentinel instead of clamping it away',
+    String(a.perPage) === '-1', all);
+  check('every record is on the one page', a.rows === 4, all);
+  check('the select still shows what the table is rendering',
+    a.selValue === '-1', all);
+  await shot('04-after-all');
 
   check('no console errors during the run', consoleErrors.length === 0,
     consoleErrors.slice(0, 3).join(' | '));

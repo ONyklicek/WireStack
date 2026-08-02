@@ -13,6 +13,14 @@ class RecordConcernsModel extends Model
     protected $guarded = [];
 }
 
+/** A model that names its timestamp column something other than `updated_at`. */
+class RenamedTimestampModel extends Model
+{
+    public const UPDATED_AT = 'modified_at';
+
+    protected $guarded = [];
+}
+
 class RecordDisabledStateHost
 {
     use InteractsWithRecordDisabledState;
@@ -79,4 +87,21 @@ test('record version is the updated_at timestamp, or 0 when not timestamped', fu
     expect($host->version($stamped))->toBe('1717171717');
 
     expect($host->version(new RecordConcernsModel))->toBe('0');
+});
+
+test('record version follows a model that renames its timestamp column', function () {
+    // The '0' this used to return is the client's "I never had a version"
+    // sentinel, and RecordVersion::conflicts() reads it as "nothing to compare"
+    // — so a renamed timestamp column did not merely leave the cell unstamped,
+    // it turned the optimistic lock OFF for every inline edit on that model,
+    // silently. The server has always resolved the column properly; the render
+    // side read the literal attribute and disagreed.
+    $host = new RecordVersionHost;
+
+    $record = (new RenamedTimestampModel)->forceFill([
+        'modified_at' => Carbon::createFromTimestamp(1717171717),
+    ]);
+
+    expect($host->version($record))->toBe('1717171717')
+        ->and($host->version($record))->not->toBe('0');
 });

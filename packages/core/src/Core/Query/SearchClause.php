@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Core\Query;
 
+use NyonCode\WireCore\Core\Query\Search\SearchValueType;
+
 /**
  * Immutable representation of a search clause in a query plan.
  *
@@ -17,6 +19,8 @@ final readonly class SearchClause
      * @param  string|null  $sqlExpression  Raw SQL expression (if accessor with SQL mapping)
      * @param  bool  $isRelation  Whether this search goes through a relation
      * @param  string|null  $relationPath  Dot-notation relation path (for eager-loaded relations)
+     * @param  SearchValueType  $valueType  What the column holds, deciding whether a
+     *                                      comparison token (`>100`) may be asked of it
      */
     public function __construct(
         public string $column,
@@ -24,6 +28,7 @@ final readonly class SearchClause
         public ?string $sqlExpression = null,
         public bool $isRelation = false,
         public ?string $relationPath = null,
+        public SearchValueType $valueType = SearchValueType::Text,
     ) {}
 
     /**

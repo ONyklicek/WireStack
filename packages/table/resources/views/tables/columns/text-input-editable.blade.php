@@ -1,5 +1,5 @@
 {{-- TextInputColumn editable cell --}}
-{{-- Variables: $column, $record, $state --}}
+{{-- Variables: $column, $record, $state, $recordVersion --}}
 @php
     $recordKey = $record->getKey();
     $columnName = $column->getName();
@@ -18,7 +18,6 @@
     $debounce = $column->getLiveDebounce();
 
     $wireKey = "tic-{$recordKey}-{$columnName}";
-    $recordVersion = $record->updated_at ? (string) $record->updated_at->getTimestamp() : '0';
 @endphp
 
 {{-- Optimistic value + rollback + optimistic-lock conflict handling + poll sync
@@ -37,13 +36,13 @@
      data-record-key="{{ $recordKey }}"
      data-column-name="{{ $columnName }}"
     data-testid="table-editable-{{ $columnName }}"
-     data-server-value="{{ $value }}"
-     data-record-version="{{ $recordVersion }}"
      data-msg-error="{{ __('wire-table::messages.error') }}"
      data-msg-save-failed="{{ __('wire-table::messages.save_failed') }}"
      data-msg-invalid="{{ __('wire-table::messages.invalid') }}"
      class="relative"
 >
+    {!! $syncHtml !!}
+
     {{-- Prefix --}}
     @if($hasPrefix)
         <span class="absolute inset-y-0 left-0 flex items-center pl-2 text-gray-500 dark:text-gray-400 text-sm pointer-events-none">

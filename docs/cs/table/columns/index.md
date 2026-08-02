@@ -4,7 +4,7 @@ order: 20
 
 # Sloupce
 
-Wire Table poskytuje **12 typů sloupců**. Všechny sdílejí stejné základní API
+Wire Table poskytuje **16 typů sloupců**. Všechny sdílejí stejné základní API
 sloupce pro popisky, viditelnost, autorizaci, řazení, formátování a inline
 editaci — dokumentované níže. Typ vyberte podle vykreslení buňky; sdílené API
 sáhněte na kterýkoli z nich.
@@ -20,11 +20,15 @@ sáhněte na kterýkoli z nich.
 | [ImageColumn](image.md) | Avatary a náhledy |
 | [ButtonColumn](button.md) | Tlačítko s odkazem nebo Livewire akcí v buňce |
 | [ToggleColumn](toggle.md) | Inline editovatelný přepínač on/off |
+| [CheckboxColumn](checkbox.md) | Inline editovatelné zaškrtávátko (hustší ToggleColumn) |
 | [SelectColumn](select.md) | Inline editovatelný dropdown (options, relace, enumy) |
 | [TextInputColumn](text-input.md) | Inline editovatelný text/číslo/email input |
 | [StackedColumn](stacked.md) | Layouty avatar + jméno + email na sobě |
 | [SplitColumn](split.md) | Poskládat několik sloupců vedle sebe |
 | [PollColumn](poll.md) | Buňky se živě pollovaným stavem/postupem |
+| [ColorColumn](color.md) | Uložená CSS barva jako vzorník |
+| [RatingColumn](rating.md) | Číselné hodnocení jako hvězdičky |
+| [TagsColumn](tags.md) | Vícehodnotový stav jako chipsy |
 
 ## Koncepty
 
@@ -78,6 +82,9 @@ TextColumn::make('full_name')
 // Vlastní logika hledání
 ->searchUsing(Closure $fn)
 
+// Deklarovat, co sloupec drží, aby šlo do hledání psát >100 a 10..20
+->searchAs(SearchValueType|string $type)      // 'text' | 'numeric' | 'date' | 'code'
+
 // Získat resolvované sloupce hledání
 ->getSearchColumns(): array
 ```
@@ -96,6 +103,28 @@ TextColumn::make('full_name')
         $query->where(DB::raw("CONCAT(first_name, ' ', last_name)"), 'like', "%{$search}%");
     })
 ```
+
+`searchAs()` má smysl teprve tehdy, když tabulka zapne
+[hledání rozsahů](../overview.md#syntaxe-hledani). Typ hodnoty se obvykle odvodí
+z castů modelu — cast `decimal:2` nebo `datetime` stačí — deklarujte ho tedy jen
+tam, kde za sloupec casty mluvit nemohou:
+
+```php
+// Model nemá pro `amount` žádný cast, takže se z něj nedá nic odvodit.
+TextColumn::make('amount')
+    ->searchable()
+    ->searchAs('numeric')      // ">1000" a "10..20" se teď dostanou i na tento sloupec
+```
+
+Sloupec ponechaný jako text porovnání přeskočí, místo aby porovnával
+lexikograficky — chybná nebo chybějící deklarace tak jen zúží, čemu hledání
+rozumí, nikdy nevrátí špatné řádky.
+
+`'code'` je jediný typ, který se **nikdy** neodvozuje: říká, že hodnota je řada
+plus číslo **doplněné nulami** (`8866 01`, `8866 02`), což je právě to, co dělá
+porovnání textem správným — a ví to jen vlastník. Odemyká
+[rozsahy uvnitř řady](../overview.md#rozsahy-uvnitr-strukturovaneho-kodu) —
+`8866 01..08`.
 
 ### Viditelnost a přepínatelnost
 

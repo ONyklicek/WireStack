@@ -61,6 +61,7 @@ Always read:
 
 Read as needed:
 
+- `AI_DOCS_STANDARD.md` whenever the change touches `docs/` — binding
 - `AI_RECIPES.md` for implementation recipes
 - `AI_COMPONENT_CATALOG.md` to find reusable building blocks
 - `architecture/integrations.md` for cross-package behavior
@@ -163,6 +164,23 @@ composer analyse
 Use quality checks when touching shared PHP APIs, broad refactors, or before a
 release-style change.
 
+Documentation:
+
+A public API change is not done when the code passes. The class's reference page
+documents the new surface, its `## How It Works` still describes reality, an
+example uses it (with a `[tl! focus]` spotlight if the block is long), and the
+Czech mirror moves in the same commit. `AI_DOCS_STANDARD.md` is binding; these
+gates enforce the checkable half:
+
+```bash
+npm run docs:check
+npm run docs:standard
+npm run docs:api
+```
+
+Never widen a baseline to make a docs gate pass — a baseline records what
+predates the rule, not what you just wrote.
+
 Coverage:
 
 ```bash
@@ -200,6 +218,7 @@ Stop and reassess before editing if any of these appear:
 - a state serialization bug is being fixed only in a component class
 - a plugin behavior is hard-coded instead of using `PluginManager`
 - a public API method must be renamed or removed
+- a docs gate is about to be silenced by updating a baseline instead of the page
 - a generated directory appears in the diff without explicit request
 
 ## Review Protocol

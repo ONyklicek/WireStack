@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Closure;
-
 /**
  * Single checkbox field with optional description.
  */
+use NyonCode\WireCore\Foundation\Concerns\HasExtraInputAttributes;
+
 class Checkbox extends Field
 {
+    use HasExtraInputAttributes;
+
     protected string|Closure|null $description = null;
 
     protected bool $inline = false;

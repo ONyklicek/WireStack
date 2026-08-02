@@ -16,6 +16,11 @@
     $pollingConfig = $component->getTablePollingConfig();
     $pollingAttribute = $component->getTablePollingAttribute();
 
+    // live(broadcast: true): re-read as soon as somebody else commits, instead
+    // of on the next tick. Null without the opt-in, so a table that did not ask
+    // for it ships no listener and needs no channel authorization.
+    $liveChannel = $component->getTableLiveChannel();
+
     // Table state — read once via the state container; the legacy magic
     // properties ($component->tableFilters, …) build the deprecation map on
     // every access and must not be used in per-row/per-column loops.
@@ -159,6 +164,13 @@
             'responsive' => $col->getResponsiveClasses(),
             'editable' => $col->isEditable(),
             'responsiveDisplay' => $col->hasResponsiveDisplay(),
+            // Author-supplied cell/header attributes. Resolved here with the rest
+            // of the column-static metadata rather than per cell; both setters
+            // stored their value and nothing read it until now.
+            'extraCell' => $col->getExtraAttributes(),
+            'extraHeader' => collect($col->getExtraHeaderAttributes())
+                ->map(fn ($v, $k) => e($k).'="'.e($v).'"')
+                ->implode(' '),
         ];
     }
     // Columns a fill drag may write. The client additionally requires the cell to
@@ -312,9 +324,26 @@
         </div>
     </div>
 @else
-    {{-- Polling wrapper --}}
+    {{-- Polling wrapper. Also the live listener's root, so `busy()` sees exactly
+         the cells this table owns and a nested table cannot be mistaken for it.
+
+         Which couples the two halves of live(): this wrapper only renders while
+         shouldPoll() is true, so pausing the poll (the Stop control, or a
+         pollWhen() condition turning false) takes the broadcast listener with it
+         — and refreshTable() would refuse the nudge anyway. Intended for the
+         Stop control, where "stop the table changing under me" should mean both.
+         Not obviously right for pollWhen(), which is a cost condition rather than
+         a statement of intent; a table combining it with broadcast: true loses
+         the push exactly while the condition is false. Documented in
+         docs/table/advanced.md rather than worked around here, because splitting
+         them needs a second wrapper and a push-only host method. --}}
+    @if($liveChannel)
+        @include('wire-table::tables.partials.live-assets')
+    @endif
     @if($pollingAttribute)
-        <div {!! $pollingAttribute !!}>
+        <div {!! $pollingAttribute !!}
+             @if($liveChannel) x-data="wireTableLive(@js(['channel' => $liveChannel]))" @endif
+        >
             @endif
 
             <div
@@ -824,6 +853,7 @@
                                                 data-column="{{ $column->getName() }}"
                                                 class="{{ $headerPadding }} {{ $hm['alignment'] }} font-semibold {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $hm['responsive'] }}"
                                                 @if($column->getWidth()) style="width: {{ $column->getWidth() }}" @endif
+                                                @if($hm['extraHeader']) {!! $hm['extraHeader'] !!} @endif
                                         >
                                             @if($column->isSortable() && $table->isSortable())
                                                 <button
@@ -1077,6 +1107,7 @@
                                                 class="{{ $cellPadding }} {{ $cm['wrapClass'] }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $cm['alignment'] }} dark:text-white {{ $cm['responsive'] }}"
                                                 data-testid="table-cell-{{ $column->getName() }}"
                                                 data-column="{{ $column->getName() }}"
+                                                @if($cm['extraCell']) {!! $cm['extraCell'] !!} @endif
                                             >
                                                 @if($recordUrl && !$cm['editable'])
                                                     <a href="{{ $recordUrl }}"
@@ -1454,7 +1485,7 @@
                                             {{-- Mark the live value server-side: without it the first
                                                  paint shows the first option regardless of state, and a
                                                  morph can snap the control back to it. --}}
-                                            <option value="{{ $option }}" @selected((int) $perPage === $option)>{{ $option }}</option>
+                                            <option value="{{ $option }}" @selected((int) $perPage === $option)>{{ $option === \NyonCode\WireTable\Table::PER_PAGE_ALL ? __('wire-table::messages.per_page_all') : $option }}</option>
                                         @endforeach
                                     </select>
                                     <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('wire-table::messages.records') }}</span>

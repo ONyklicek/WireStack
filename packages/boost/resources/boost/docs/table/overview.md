@@ -266,12 +266,97 @@ See [Actions](../core/actions.md) for the full Actions API.
 ```php
 // Enable global search across all searchable columns
 ->searchable(bool $searchable = true)
+
+// Configure how the typed term is interpreted (see below)
+->search(Closure|SearchConfig $config)
 ```
 
-Search uses a database-aware strategy:
-- **MySQL**: `MATCH ... AGAINST` fulltext (if index exists) or `LIKE`
-- **PostgreSQL**: `to_tsvector / ts_query`
-- **SQLite**: `LIKE '%term%'` fallback
+By default the whole term is matched as one substring against every searchable
+column, OR-ed together: `LIKE '%term%'` on MySQL/MariaDB and SQLite, `ILIKE` on
+PostgreSQL. The `%` and `_` a user types are escaped, so they are searched for
+rather than acting as wildcards.
+
+### Search syntax
+
+Each capability is opted into per table — nothing is interpreted unless you ask
+for it, so an existing search never changes shape underneath you.
+
+```php
+use NyonCode\WireCore\Core\Query\Search\SearchConfig;
+
+$table->search(fn (SearchConfig $s) => $s
+    ->tokenize()    // spaces mean AND, quotes keep a phrase together
+    ->ranges()      // >100, <=20, 10..20, 2026-01-01..2026-03-31
+    ->wildcards()   // nov* matches novak
+);
+```
+
+| Capability | What the user can type | What it does |
+| --- | --- | --- |
+| `tokenize()` | `Ada Lovelace` | Every word must match, each across all columns — so a first name in one column and a surname in another match together. |
+| `tokenize()` | `"Ada Lovelace"` | A quoted phrase stays one word and is never read as an operator. |
+| `ranges()` | `>100`, `>=100`, `<10`, `<=10`, `=42` | Compares against columns that hold a number or a date. |
+| `ranges()` | `10..20`, `10..`, `..20` | A closed or open-ended range. |
+| `ranges()` | `2026-01-01..2026-03-31`, `31.01.2026` | The same over dates. |
+| `ranges()` | `8866 01..08` | A range inside one series of a structured code — see below. |
+| `wildcards()` | `nov*`, `a?b` | `*` stands for any run of characters, `?` for exactly one. |
+| `literal()` | — | Switches everything back off (the default). |
+
+A typed date is read at the granularity it was written: `2026-01-31` means that
+whole day, `2026-01` that month and `2026` that year — so `<=2026-01-31` still
+includes a row placed at 23:30 on the 31st.
+
+Comparisons are only ever asked of a column that can answer them. The value type
+is inferred from the model's casts (`decimal:2`, `datetime`, …); where the casts
+cannot speak for a column, declare it with
+[`Column::searchAs()`](columns/index.md#searching). A comparison no column can
+answer — `>100` on a table of names — is searched as the literal text that was
+typed rather than silently matching everything.
+
+```php
+// Only `amount` can answer ">1000"; the words narrow it further.
+$table->search(fn (SearchConfig $s) => $s->tokenize()->ranges());
+
+// User types:  praha >1000
+// Rows kept:   something contains "praha"  AND  amount > 1000
+```
+
+### Ranges inside a structured code
+
+A code such as `8866 01`, `8866 02`, … shares a series and ends in a padded
+number. Declare the column with
+[`searchAs('code')`](columns/index.md#searching) and the sequence can be ranged
+over directly:
+
+```php
+TextColumn::make('reference')->searchable()->searchAs('code');
+
+// User types:  8866 01..08
+// SQL:         reference BETWEEN '8866 01' AND '8866 08'
+```
+
+The space inside the code is also what splits the term, so `8866 01..08`
+arrives as the word `8866` and the range `01..08`. The range carries the word
+directly before it, and a code column completes both bounds with it — write the
+series once, not on both sides. Every other column ignores the word and reads
+`01..08` as the plain range it is, so `praha 10..20` still means "contains praha,
+amount between 10 and 20" on the same table. One-sided comparisons work the same
+way: `8866 >=09`.
+
+Two rules keep it honest:
+
+- **The number must be stored padded, and typed the way it is stored.**
+  Comparing as text is only correct while the width is constant (`01 … 08`
+  sorts alphabetically in the same order it sorts numerically; `9 … 10` does
+  not). Typing `1..8` against stored `01 … 08` finds nothing. A range typed
+  across a width boundary is completed for you — `8866 50..100` is read as
+  `050..100`, since a hundredth member can only exist in a three-digit series.
+- **The series is the one word before the range.** `faktura 8866 01..08` ranges
+  inside `8866` and requires `faktura` separately; a code containing two spaces
+  is out of reach.
+
+Search combines with filters (AND), is reset to page one when it changes, and is
+persisted in the URL when [`queryString()`](advanced.md#url-state-persistence) is on.
 
 ### Sorting
 
@@ -283,17 +368,25 @@ Search uses a database-aware strategy:
 ->defaultSort(string $column, string $direction = 'asc')
 ```
 
+Every table query ends with the primary key as a tiebreaker, in whichever
+direction is already in force. A page is a slice of an ordering, so without one
+the slice is undefined: two rows the sort calls equal can come back in either
+order, and on PostgreSQL — where an `UPDATE` rewrites the row at the end of the
+heap — editing a row on page one pushes an unseen record past the start of page
+two. The tiebreaker is skipped where a key is not a legal ordering term:
+`GROUP BY`, `DISTINCT` and unions.
+
 ### Pagination
 
 ```php
 // Enable pagination
 ->paginated(bool $paginated = true)
 
-// Default per-page count
-->perPage(int $perPage = 10)
+// Default per-page count — an int, or 'all' for one page holding everything
+->perPage(int|string $perPage = 10) // [tl! focus:start]
 
-// Per-page dropdown options
-->perPageOptions(array $options = [10, 25, 50, 100])
+// Per-page dropdown options; a size may be the word 'all'
+->perPageOptions(array $options = [10, 25, 50, 100]) // [tl! focus:end]
 
 // Simple pagination — no COUNT(*) query, just Previous/Next
 ->simplePagination()
@@ -317,6 +410,26 @@ Search uses a database-aware strategy:
 `->perPage(3)` against the default options renders a select that can actually
 show `3` instead of contradicting the rows on screen. A per-page value arriving
 from the client that the table does not offer falls back to `perPage()`.
+
+**Showing everything on one page.** A page size may be the word `'all'`, which
+adds a final option that drops the limit entirely:
+
+```php
+->perPageOptions([10, 25, 50, 'all'])
+```
+
+It always sorts last, whatever position it was declared in, and it is stored as
+the integer `Table::PER_PAGE_ALL` — the value the select posts back, the query
+string carries and the cache key compares, since every one of those handles page
+sizes as integers. `->perPage('all')` makes it the table's own default.
+
+`'all'` is deliberately **not** among the shipped options. A page size is the
+one thing standing between a table and reading its whole source into memory, and
+the fallback described above exists precisely so a crafted request cannot ask
+for that — a forged `perPage: -1` still falls back on a table that never offered
+`'all'`. Writing it is how a table says the trade is acceptable for *its* data.
+There is no ceiling behind it: put it on a table whose row count you know, not
+on one backed by a table that grows without limit.
 
 **Out-of-range pages re-anchor themselves.** Standard pagination clamps to the
 last populated page whenever the stored page points past the end of the result

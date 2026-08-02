@@ -78,6 +78,30 @@ CheckboxList::make('permissions')
 
 Calling `groups()` automatically enables the grouped layout. You can also call `grouped()` explicitly.
 
+## Toggle-Button Variants
+
+Where the list is short, the same options read better as a row of toggle buttons
+than as a column of checkboxes. `segmented()` and `buttons()` render the exact
+chrome of the matching [Radio](radio.md) variants — this is the multiple-choice
+half of that shared vocabulary, so a single-choice and a multi-choice control
+look alike:
+
+```php
+CheckboxList::make('days')
+    ->options(['mon' => 'Mon', 'tue' => 'Tue', 'wed' => 'Wed'])
+    ->segmented()
+
+CheckboxList::make('roles')
+    ->options(['admin' => 'Admin', 'editor' => 'Editor'])
+    ->buttons()
+    ->inline()
+    ->icons(['admin' => 'shield-check'])
+    ->colors(['admin' => 'danger'])
+```
+
+These variants show the options alone: search, bulk toggle, grouping and columns
+are list chrome and do not apply.
+
 ## Methods
 
 | Method | Type | Description |

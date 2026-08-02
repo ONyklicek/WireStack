@@ -5,17 +5,16 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Columns;
 
 use Illuminate\Database\Eloquent\Model;
-use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
-use NyonCode\WireTable\Concerns\HasRecordVersion;
-use NyonCode\WireTable\Concerns\InteractsWithRecordDisabledState;
+use NyonCode\WireCore\Foundation\View\CellSync;
+use NyonCode\WireTable\Concerns\CanEditBooleanCell;
 
 class ToggleColumn extends Column
 {
-    use HasRecordVersion;
-    use InteractsWithRecordDisabledState;
+    // canEdit() + the record-version/disabled wiring are shared with CheckboxColumn.
+    use CanEditBooleanCell;
 
     protected ?string $onColor = 'primary';
 
@@ -28,8 +27,7 @@ class ToggleColumn extends Column
     public function __construct(string $name)
     {
         parent::__construct($name);
-        $this->capabilities = $this->capabilities->add(Capability::Editable);
-        $this->editableType = 'toggle';
+        $this->markEditable();
     }
 
     /** Set the track color when the toggle is on. */
@@ -74,19 +72,6 @@ class ToggleColumn extends Column
         return $this->offIcon;
     }
 
-    /**
-     * Server-side edit guard consulted by WithTable::updateTableCell().
-     *
-     * The client-side `disabled` state is only cosmetic (a forged request could
-     * still hit updateTableCell), so a per-record disabled cell must also be
-     * rejected here. Column-level permissions are enforced separately by
-     * updateTableCell before the write.
-     */
-    public function canEdit(Model $record): bool
-    {
-        return ! $this->isDisabled($record);
-    }
-
     public function renderCell(Model $record): string
     {
         if (! $this->canView() || ! $this->isVisibleForRecord($record)) {
@@ -95,6 +80,9 @@ class ToggleColumn extends Column
 
         $state = (bool) $this->getState($record);
 
+        // Once per cell, not once per use — see SelectColumn.
+        $version = $this->recordVersion($record);
+
         return $this->renderView('tables.columns.toggle', [
             'state' => $state,
             'recordKey' => (string) $record->getKey(),
@@ -102,7 +90,8 @@ class ToggleColumn extends Column
             'disabled' => $this->isDisabled($record),
             'onColorClass' => $this->getOnColorClass(),
             'offColorClass' => $this->getOffColorClass(),
-            'recordVersion' => $this->recordVersion($record),
+            'recordVersion' => $version,
+            'syncHtml' => $this->cellSync()->node($state ? '1' : '0', $version),
             // Resolved here, not in Blade: the column owns icon semantics.
             'onIcon' => $this->onIcon ? app(IconManager::class)->render($this->onIcon, 'w-3 h-3') : '',
             'offIcon' => $this->offIcon ? app(IconManager::class)->render($this->offIcon, 'w-3 h-3') : '',
@@ -121,5 +110,13 @@ class ToggleColumn extends Column
         // Soft (muted) background fill for the "off" track is owned by the same
         // Foundation HasColor palette; gray default matches the neutral track.
         return self::getSoftBgClass($this->offColor ?? 'gray');
+    }
+
+    /** Held for the render, not resolved per row — see HasRecordVersion. */
+    private ?CellSync $cellSyncResolver = null;
+
+    private function cellSync(): CellSync
+    {
+        return $this->cellSyncResolver ??= app(CellSync::class);
     }
 }

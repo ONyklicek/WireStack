@@ -6,8 +6,6 @@ namespace NyonCode\WireTable;
 
 use Closure;
 use Illuminate\Contracts\Support\Htmlable;
-use Illuminate\Database\Connection;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Support\Facades\Gate;
@@ -18,6 +16,7 @@ use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Core\Query\Search\SearchConfig;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
@@ -34,10 +33,10 @@ use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Concerns\CanSelectRecords;
 use NyonCode\WireTable\Concerns\HasSqlDebug;
 use NyonCode\WireTable\Exceptions\TableConfigurationException;
-use NyonCode\WireTable\Exceptions\TableHasNoDataSourceException;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
-use NyonCode\WireTable\Services\TableQueryService;
+use NyonCode\WireTable\Services\TableIntrospector;
+use NyonCode\WireTable\Support\ColumnSet;
 use NyonCode\WireTable\Support\MobileCard;
 use NyonCode\WireTable\Support\RecordAction;
 use NyonCode\WireTable\Support\TableShortcutLegend;
@@ -46,22 +45,24 @@ use NyonCode\WireTable\Support\TableShortcutLegend;
 #[\AllowDynamicProperties]
 class Table implements Htmlable
 {
+    use Concerns\HasDataSource;
     use Concerns\HasGestures;
     use Concerns\HasGrouping;
+    use Concerns\HasPolling;
     use Concerns\HasSubRows;
     use HasSheetOnMobile;
     use HasSqlDebug;
     use Macroable;
 
-    protected ?string $model = null;
+    /**
+     * The page size that means "no page size" — every matching record on one
+     * page. Negative so it can never collide with a real count, and an int so
+     * it survives the round trip through the select, the query string and the
+     * cache key unchanged.
+     */
+    public const PER_PAGE_ALL = -1;
 
-    /** @var Builder<Model>|null */
-    protected ?Builder $query = null;
-
-    protected ?Closure $modifyQueryCallback = null;
-
-    /** @var array<int, Column> */
-    protected array $columns = [];
+    protected ?ColumnSet $columns = null;
 
     /** @var array<int, Filter> */
     protected array $filters = [];
@@ -81,6 +82,8 @@ class Table implements Htmlable
     protected array $perPageOptions = [10, 25, 50, 100];
 
     protected bool $searchable = true;
+
+    protected ?SearchConfig $searchConfig = null;
 
     protected bool $queryString = false;
 
@@ -178,26 +181,6 @@ class Table implements Htmlable
 
     protected ?string $lazyPlaceholder = null;
 
-    // Polling
-    protected bool $polling = false;
-
-    protected ?string $pollingInterval = null;
-
-    protected bool $pollingKeepAlive = false;
-
-    protected ?Closure $pollingCondition = null;
-
-    protected string $pollingMethod = 'refresh'; // 'refresh' | 'reload'
-
-    protected bool $pollingVisible = true; // Only poll when tab is visible
-
-    /**
-     * Poll change detection: false = always re-render (default), true = skip
-     * the render when COUNT(*) + MAX(updated_at) of the filtered query are
-     * unchanged, Closure = custom checksum fn (Builder $query): string.
-     */
-    protected bool|Closure $pollingChangeDetection = false;
-
     // Pagination mode: 'standard' | 'simple' | 'cursor'
     protected string $paginationMode = 'standard';
 
@@ -237,6 +220,10 @@ class Table implements Htmlable
     // so this needs no notification setup; opt in for a more prominent toast.
     protected bool $notifyEditConflicts = false;
 
+    // Re-render the table in the response that writes an inline edit, so summaries,
+    // rollups and anything derived from the edited value move with it.
+    protected bool $refreshAfterEdit = true;
+
     // Excel-style fill handle on editable cells. Opt-in: dragging it overwrites
     // rows, which would be a silent behaviour change for every existing table
     // with an editable column.
@@ -258,41 +245,6 @@ class Table implements Htmlable
         return new static;
     }
 
-    public function model(string $model): static
-    {
-        $this->model = $model;
-
-        return $this;
-    }
-
-    /**
-     * Modify the base query using a callback.
-     *
-     * This allows you to add custom conditions, joins, eager loading, etc.
-     * The callback receives the query builder and should return it.
-     *
-     * Example:
-     * ->modifyQueryUsing(fn (Builder $query) => $query->where('active', true))
-     * ->modifyQueryUsing(fn (Builder $query) => $query->with(['roles', 'permissions']))
-     * ->modifyQueryUsing(fn (Builder $query) => $query->whereHas('orders'))
-     *
-     * @param  Closure  $callback  Receives Builder, should return Builder
-     */
-    public function modifyQueryUsing(Closure $callback): static
-    {
-        $this->modifyQueryCallback = $callback;
-
-        return $this;
-    }
-
-    /**
-     * Get the callback for modifying the query.
-     */
-    public function getModifyQueryCallback(): ?Closure
-    {
-        return $this->modifyQueryCallback;
-    }
-
     /**
      * Get raw SQL and bindings separately.
      *
@@ -306,39 +258,6 @@ class Table implements Htmlable
             'sql' => $query->toSql(),
             'bindings' => $query->getBindings(),
         ];
-    }
-
-    /**
-     * @return Builder<Model>
-     */
-    public function getQuery(): Builder
-    {
-        $query = null;
-
-        if ($this->query) {
-            $query = clone $this->query;
-        } elseif ($this->model) {
-            $query = $this->model::query();
-        } else {
-            throw TableHasNoDataSourceException::make();
-        }
-
-        // Apply query modification callback if set
-        if ($this->modifyQueryCallback) {
-            $query = ($this->modifyQueryCallback)($query) ?? $query;
-        }
-
-        return $query;
-    }
-
-    /**
-     * @param  Builder<Model>  $query
-     */
-    public function query(Builder $query): static
-    {
-        $this->query = $query;
-
-        return $this;
     }
 
     /**
@@ -385,7 +304,7 @@ class Table implements Htmlable
      */
     public function getColumnNames(): array
     {
-        return array_map(fn ($c) => $c->getName(), $this->columns);
+        return $this->columnSet()->names();
     }
 
     /**
@@ -408,21 +327,7 @@ class Table implements Htmlable
      */
     public function getColumnsInfo(): array
     {
-        $info = [];
-        foreach ($this->columns as $column) {
-            $info[$column->getName()] = [
-                'name' => $column->getName(),
-                'label' => $column->getLabel(),
-                'sortable' => $column->isSortable(),
-                'searchable' => $column->isSearchable(),
-                'toggleable' => $column->isToggleable(),
-                'visible' => $column->canView(),
-                'editable' => $column->isEditable(),
-                'type' => class_basename($column),
-            ];
-        }
-
-        return $info;
+        return app(TableIntrospector::class)->columns($this);
     }
 
     public function isSortable(): bool
@@ -443,12 +348,7 @@ class Table implements Htmlable
      */
     public function getDatabaseColumns(): array
     {
-        $query = $this->getQuery();
-        $table = $query->getModel()->getTable();
-        /** @var Connection $connection */
-        $connection = $query->getConnection();
-
-        return $connection->getSchemaBuilder()->getColumnListing($table);
+        return app(TableIntrospector::class)->databaseColumns($this);
     }
 
     /**
@@ -471,21 +371,7 @@ class Table implements Htmlable
      */
     public function getDatabaseColumnsInfo(): array
     {
-        $query = $this->getQuery();
-        $model = $query->getModel();
-        $table = $model->getTable();
-        /** @var Connection $connection */
-        $connection = $query->getConnection();
-
-        $columns = [];
-        foreach ($connection->getSchemaBuilder()->getColumnListing($table) as $columnName) {
-            $columns[$columnName] = [
-                'name' => $columnName,
-                'type' => $connection->getSchemaBuilder()->getColumnType($table, $columnName),
-            ];
-        }
-
-        return $columns;
+        return app(TableIntrospector::class)->databaseColumnTypes($this);
     }
 
     /**
@@ -495,28 +381,14 @@ class Table implements Htmlable
      */
     public function debug(): array
     {
-        return [
-            'model' => $this->model,
-            'sql' => $this->toSql(),
-            'raw_sql' => $this->getQuery()->toSql(),
-            'bindings' => $this->getQuery()->getBindings(),
-            'columns' => $this->getColumnsInfo(),
-            'database_columns' => $this->getDatabaseColumns(),
-            'filters' => array_map(fn ($f) => $f->getName(), $this->filters),
-            'searchable' => $this->searchable,
-            'sortable' => $this->sortable,
-            'paginated' => $this->paginated,
-            'per_page' => $this->perPage,
-            'default_sort' => $this->defaultSort,
-            'default_sort_direction' => $this->defaultSortDirection,
-        ];
+        return app(TableIntrospector::class)->configuration($this);
     }
 
     /**
      * Debug the QueryPlan for the current table configuration.
      *
      * Shows the planned joins, filters, search, sorting, eager loads, and aggregates
-     * that the QueryPlanner would produce. Dev-only, disabled in production.
+     * that the QueryPlanner would produce, for a simulated request.
      *
      * @param  string|null  $search  Simulated search term
      * @param  array<string, mixed>  $filterValues  Simulated filter values
@@ -530,74 +402,23 @@ class Table implements Htmlable
         ?string $sortColumn = null,
         string $sortDirection = 'asc',
     ): array {
-        $service = app(TableQueryService::class);
-        $baseQuery = $this->getQuery();
-
-        // Build query to populate the plan
-        $modifiedQuery = $service->buildQuery(
-            baseQuery: $baseQuery,
-            table: $this,
-            search: $search,
-            filterValues: $filterValues,
-            sortColumn: $sortColumn ?? $this->defaultSort,
-            sortDirection: $sortDirection,
+        return app(TableIntrospector::class)->queryPlan(
+            $this,
+            $search,
+            $filterValues,
+            $sortColumn,
+            $sortDirection,
         );
-
-        $plan = $service->getLastPlan();
-
-        if ($plan === null) {
-            return ['error' => 'No QueryPlan generated'];
-        }
-
-        return [
-            'query_plan' => [
-                'joins' => array_map(fn ($j) => [
-                    'table' => $j->table,
-                    'alias' => $j->alias,
-                    'type' => $j->type,
-                    'first' => $j->firstColumn,
-                    'operator' => $j->operator,
-                    'second' => $j->secondColumn,
-                ], $plan->joins),
-                'eager_loads' => $plan->eagerLoads,
-                'aggregates' => array_map(fn ($a) => [
-                    'relation' => $a->relation,
-                    'function' => $a->function,
-                    'column' => $a->column,
-                ], $plan->aggregates),
-                'filters' => array_map(fn ($f) => [
-                    'column' => $f->column,
-                    'operator' => $f->operator,
-                    'value' => $f->value,
-                    'table_alias' => $f->tableAlias ?? null,
-                    'is_relation' => $f->isRelation,
-                ], $plan->filters),
-                'search_clauses' => array_map(fn ($s) => [
-                    'column' => $s->column,
-                    'table_alias' => $s->tableAlias,
-                    'is_relation' => $s->isRelation,
-                ], $plan->searchClauses),
-                'sort_clauses' => array_map(fn ($s) => [
-                    'column' => $s->column,
-                    'direction' => $s->direction,
-                    'table_alias' => $s->tableAlias ?? null,
-                    'is_relation' => $s->isRelation,
-                ], $plan->sortClauses),
-                'scopes' => $plan->scopes,
-                'with_soft_deletes' => $plan->withSoftDeletes,
-            ],
-            'final_sql' => static::builderToSql($modifiedQuery),
-            'raw_sql' => $modifiedQuery->toSql(),
-            'bindings' => $modifiedQuery->getBindings(),
-        ];
     }
 
     /**
+     * Declare the table's columns.
+     *
      * @param  array<int, Column>  $columns
      */
     public function columns(array $columns): static
     {
-        $this->columns = $columns;
+        $this->columns = new ColumnSet($columns);
 
         return $this;
     }
@@ -607,7 +428,7 @@ class Table implements Htmlable
      */
     public function getColumns(): array
     {
-        return $this->columns;
+        return $this->columnSet()->all();
     }
 
     /**
@@ -617,13 +438,13 @@ class Table implements Htmlable
      */
     public function findColumn(string $name): ?Column
     {
-        foreach ($this->columns as $column) {
-            if ($column->getName() === $name) {
-                return $column;
-            }
-        }
+        return $this->columnSet()->find($name);
+    }
 
-        return null;
+    /** This table's columns as a set, empty until {@see columns()} says otherwise. */
+    protected function columnSet(): ColumnSet
+    {
+        return $this->columns ??= new ColumnSet;
     }
 
     /**
@@ -740,9 +561,14 @@ class Table implements Htmlable
         return $this->headerActions;
     }
 
-    public function perPage(int $perPage): static
+    /**
+     * How many rows a page holds. `'all'` (or {@see Table::PER_PAGE_ALL}) puts
+     * every matching record on one page — see {@see perPageOptions()} for what
+     * that costs.
+     */
+    public function perPage(int|string $perPage): static
     {
-        $this->perPage = $perPage;
+        $this->perPage = $this->normalizePerPageOption($perPage);
 
         return $this;
     }
@@ -753,11 +579,28 @@ class Table implements Htmlable
     }
 
     /**
-     * @param  array<int, int>  $options
+     * The page sizes the per-page select offers.
+     *
+     * A size may be the word `'all'`, which offers "show everything on one
+     * page". It is deliberately not among the defaults: a page size is the one
+     * thing standing between a table and reading its whole source into memory,
+     * and `normalizePerPage()` on the host exists precisely to stop a crafted
+     * request asking for that. Writing `'all'` is how a table says the trade is
+     * acceptable for its data — so put it on a table whose row count you know,
+     * not on one backed by a table that grows without limit.
+     *
+     *   ->perPageOptions([10, 25, 50, 'all'])
+     *
+     * @param  array<int, int|string>  $options
+     *
+     * @throws TableConfigurationException on a size that is neither a number nor 'all'
      */
     public function perPageOptions(array $options): static
     {
-        $this->perPageOptions = $options;
+        $this->perPageOptions = array_map(
+            fn (int|string $option) => $this->normalizePerPageOption($option),
+            array_values($options),
+        );
 
         return $this;
     }
@@ -771,18 +614,50 @@ class Table implements Htmlable
      * whose "10" option cannot be chosen because the control already claims to
      * be on it.
      *
+     * "All" sorts last however it was declared — it is not a size that belongs
+     * in the middle of an ascending list, and its sentinel is negative, so
+     * leaving it to sort() would put it first.
+     *
      * @return array<int, int>
      */
     public function getPerPageOptions(): array
     {
-        if (in_array($this->perPage, $this->perPageOptions, true)) {
-            return $this->perPageOptions;
+        $options = $this->perPageOptions;
+
+        if (! in_array($this->perPage, $options, true)) {
+            $options[] = $this->perPage;
         }
 
-        $options = [...$this->perPageOptions, $this->perPage];
-        sort($options);
+        $sizes = array_values(array_filter($options, fn (int $option) => $option !== self::PER_PAGE_ALL));
+        sort($sizes);
 
-        return $options;
+        return in_array(self::PER_PAGE_ALL, $options, true)
+            ? [...$sizes, self::PER_PAGE_ALL]
+            : $sizes;
+    }
+
+    /**
+     * A page size as it is stored: a positive count, or the "all" sentinel.
+     *
+     * The value travels to the client and back through a `wire:model` select, a
+     * query-string parameter and the query cache key, all of which compare it
+     * strictly as an integer — so the word never survives past this point.
+     */
+    protected function normalizePerPageOption(int|string $option): int
+    {
+        if (is_int($option)) {
+            return $option;
+        }
+
+        if (strtolower(trim($option)) === 'all') {
+            return self::PER_PAGE_ALL;
+        }
+
+        if (is_numeric($option)) {
+            return (int) $option;
+        }
+
+        throw TableConfigurationException::invalidPerPageOption($option);
     }
 
     public function searchable(bool $searchable = true): static
@@ -790,6 +665,42 @@ class Table implements Htmlable
         $this->searchable = $searchable;
 
         return $this;
+    }
+
+    /**
+     * Configure how the search box interprets what is typed into it.
+     *
+     * Everything is off by default — the whole term is one substring match —
+     * so each capability is opted into explicitly:
+     *
+     *     $table->search(fn (SearchConfig $s) => $s
+     *         ->tokenize()   // spaces mean AND: "Ada Lovelace" spans two columns
+     *         ->ranges()     // >100, <=20, 10..20, 2026-01-01..2026-03-31
+     *         ->wildcards()  // nov* matches novak
+     *     );
+     *
+     * @param  Closure(SearchConfig): (SearchConfig|null)|SearchConfig  $config
+     */
+    public function search(Closure|SearchConfig $config): static
+    {
+        if ($config instanceof SearchConfig) {
+            $this->searchConfig = $config;
+
+            return $this;
+        }
+
+        $resolved = SearchConfig::make();
+        $this->searchConfig = $config($resolved) ?? $resolved;
+
+        return $this;
+    }
+
+    /**
+     * How this table's search term is parsed (literal when never configured).
+     */
+    public function getSearchConfig(): SearchConfig
+    {
+        return $this->searchConfig ??= SearchConfig::make();
     }
 
     /**
@@ -2249,200 +2160,6 @@ class Table implements Htmlable
     }
 
     // ==========================================
-    // Polling Methods
-    // ==========================================
-
-    /**
-     * @deprecated Use poll() instead. Will be removed in v2.0.
-     */
-    public function polling(string $interval = '5s'): static
-    {
-        Deprecation::method('polling', 'poll');
-
-        return $this->poll($interval);
-    }
-
-    /**
-     * Enable polling with specified interval.
-     *
-     * @param  string  $interval  Interval in Livewire format (e.g., '5s', '10s', '30s', '1m')
-     */
-    public function poll(string $interval = '5s'): static
-    {
-        if (! preg_match('/^\d+(ms|s|m|h)$/', $interval)) {
-            throw TableConfigurationException::invalidPollInterval();
-        }
-
-        $this->polling = true;
-        $this->pollingInterval = $interval;
-
-        return $this;
-    }
-
-    /**
-     * Set polling to keep connection alive (no timeout).
-     */
-    public function pollKeepAlive(bool $keepAlive = true): static
-    {
-        $this->pollingKeepAlive = $keepAlive;
-
-        return $this;
-    }
-
-    /**
-     * Set condition for when polling should be active.
-     *
-     * @param  Closure  $condition  Receives $livewire component, returns bool
-     */
-    public function pollWhen(Closure $condition): static
-    {
-        $this->pollingCondition = $condition;
-
-        return $this;
-    }
-
-    /**
-     * Set polling method.
-     *
-     * @param  string  $method  'refresh' (soft refresh) or 'reload' (full page reload)
-     */
-    public function pollMethod(string $method): static
-    {
-        $this->pollingMethod = $method;
-
-        return $this;
-    }
-
-    /**
-     * Poll only when browser tab is visible.
-     */
-    public function pollOnlyVisible(bool $onlyVisible = true): static
-    {
-        $this->pollingVisible = $onlyVisible;
-
-        return $this;
-    }
-
-    /**
-     * Skip the poll re-render when the underlying data has not changed.
-     *
-     * With `true`, a cheap checksum (COUNT(*) + MAX(updated_at) of the
-     * filtered query) is compared between polls; an unchanged checksum
-     * skips the full query + render cycle. Models without timestamps fall
-     * back to always rendering.
-     *
-     * Pass a closure for a custom checksum when parent timestamps don't
-     * capture relevant changes (e.g. rollup sums over child rows):
-     *
-     *   ->pollChangeDetection(fn ($query) => (string) $query->max('synced_at'))
-     */
-    public function pollChangeDetection(bool|Closure $detector = true): static
-    {
-        $this->pollingChangeDetection = $detector;
-
-        return $this;
-    }
-
-    /**
-     * Get the poll change detection setting (false = disabled).
-     */
-    public function getPollChangeDetection(): bool|Closure
-    {
-        return $this->pollingChangeDetection;
-    }
-
-    /**
-     * Check if polling is enabled.
-     */
-    public function isPolling(): bool
-    {
-        return $this->polling;
-    }
-
-    /**
-     * Get polling interval.
-     */
-    public function getPollingInterval(): ?string
-    {
-        return $this->pollingInterval;
-    }
-
-    /**
-     * Check if polling should keep connection alive.
-     */
-    public function isPollingKeepAlive(): bool
-    {
-        return $this->pollingKeepAlive;
-    }
-
-    /**
-     * Get polling condition callback.
-     */
-    public function getPollingCondition(): ?Closure
-    {
-        return $this->pollingCondition;
-    }
-
-    /**
-     * Get polling method.
-     */
-    public function getPollingMethod(): string
-    {
-        return $this->pollingMethod;
-    }
-
-    /**
-     * Check if polling should only work when tab is visible.
-     */
-    public function isPollingOnlyVisible(): bool
-    {
-        return $this->pollingVisible;
-    }
-
-    /**
-     * Get full polling config for view.
-     *
-     * @return array<string, mixed>
-     */
-    public function getPollingConfig(): array
-    {
-        return [
-            'enabled' => $this->polling,
-            'interval' => $this->pollingInterval,
-            'keepAlive' => $this->pollingKeepAlive,
-            'method' => $this->pollingMethod,
-            'onlyVisible' => $this->pollingVisible,
-            'directive' => $this->getPollingDirective(),
-        ];
-    }
-
-    /**
-     * Get wire:poll directive string.
-     */
-    public function getPollingDirective(): ?string
-    {
-        if (! $this->polling) {
-            return null;
-        }
-
-        $directive = 'wire:poll';
-
-        if ($this->pollingInterval) {
-            $directive .= '.'.$this->pollingInterval;
-        }
-
-        if ($this->pollingKeepAlive) {
-            $directive .= '.keep-alive';
-        }
-
-        if ($this->pollingVisible) {
-            $directive .= '.visible';
-        }
-
-        return $directive;
-    }
-
-    // ==========================================
     // Pagination Mode
     // ==========================================
 
@@ -2589,6 +2306,38 @@ class Table implements Htmlable
     }
 
     /**
+     * Re-render the table in the same response that writes an inline edit.
+     *
+     * On by default, because a cell edit is rarely only about that cell: a
+     * summary row, a footer total, a group rollup, a badge coloured from the
+     * column next to it and any derived state all read the value that just
+     * changed, and without a render they keep showing the previous one until
+     * something else happens to re-render the page.
+     *
+     * It used to be unconditional the other way — every inline-edit response
+     * skipped the render, to protect the optimistic state the cell was holding
+     * from the morph. That protection now lives where it belongs: the cell keeps
+     * its own state behind `wire:ignore.self` and reconciles through its sync
+     * node, which refuses to touch a value being typed or a write in flight.
+     *
+     * Turn it off for a wide table where a per-edit query is not worth it and
+     * nothing on screen derives from the edited value:
+     *
+     *   $table->refreshAfterEdit(false);
+     */
+    public function refreshAfterEdit(bool $condition = true): static
+    {
+        $this->refreshAfterEdit = $condition;
+
+        return $this;
+    }
+
+    public function shouldRefreshAfterEdit(): bool
+    {
+        return $this->refreshAfterEdit;
+    }
+
+    /**
      * Show the Excel-style fill handle on editable cells, so a value can be
      * dragged down over the rows below it.
      *
@@ -2635,7 +2384,7 @@ class Table implements Htmlable
      */
     public function getSearchableColumns(): array
     {
-        return array_values(array_filter($this->columns, fn (Column $column) => $column->isSearchable()));
+        return $this->columnSet()->searchable();
     }
 
     /**
@@ -2643,7 +2392,7 @@ class Table implements Htmlable
      */
     public function getSortableColumns(): array
     {
-        return array_values(array_filter($this->columns, fn (Column $column) => $column->isSortable()));
+        return $this->columnSet()->sortable();
     }
 
     // ==========================================

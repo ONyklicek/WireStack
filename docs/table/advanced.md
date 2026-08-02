@@ -319,6 +319,121 @@ search, a filter or the sort. In that request the change wins and the table
 renders; a skip there would leave the browser showing the previous view until the
 user did something else.
 
+---
+
+## Live Tables (Multi-User)
+
+`live()` is polling and change detection turned on together, for the case they
+exist to serve: several people looking at the same records, each expecting to see
+what the others do.
+
+```php
+$table->live()                  // every 5s, only rendering when something moved
+$table->live('2s')
+$table->live(broadcast: true)   // …and immediately, where Echo is set up
+```
+
+`live()` is exactly `->poll($interval)->pollChangeDetection()`, so everything in
+the section above applies. What it adds is a **write generation**: a counter,
+shared across processes and scoped by model, that every write through a table
+moves on. Without it, change detection is blind to a write that lands in the same
+second as the previous checksum — `updated_at` is stored to the second, so that
+edit is indistinguishable from nothing at all, and the next tick compares against
+the same second again. It would not be shown late; it would not be shown. The
+counter also retires every cached slice of the table at once, which is how
+[query caching](#query-caching) and a live table can be used together.
+
+### Pushing instead of waiting — `broadcast: true`
+
+`live(broadcast: true)` also fires `TableRecordsChanged` whenever a write happens
+through the table, and the page subscribes to it. A write then reaches the other
+sessions as soon as it commits rather than on their next tick.
+
+The event carries **no data** — it is a nudge to re-read, not a payload to apply.
+Each client refreshes through its own component, so its own authorization,
+filters, sort and page are re-evaluated server-side, exactly as for a poll. That
+also means the channel has nothing on it worth intercepting: the scope name and
+nothing else.
+
+**No broadcaster is a dependency of this package, and none is privileged.**
+`TableRecordsChanged` is a plain Laravel broadcast event with string channel
+names, and the client half calls nothing but `window.Echo.private()` and
+`window.Echo.leave()`. So whichever broadcaster Echo drives in your app — Pusher,
+Ably, Reverb — should carry it with no change here, configured exactly as your
+app already configures broadcasting.
+
+Worth separating what is *verified* from what *follows from that*: the only
+broadcaster this path has actually been run against is Reverb, by
+`workbench/scripts/verify-live-broadcast-real.mjs`, which installs what it needs
+on demand and is **not** part of CI or of the driver sweep — no broadcaster is a
+dependency of this repository, in any section of any manifest, so the driver
+skips unless somebody deliberately sets it up. Pusher and Ably are expected to
+work because the package touches only the two Echo methods above — a surface
+pinned by `BroadcasterAgnosticTest` — not because anyone has watched them do it.
+
+The event is `ShouldBroadcastNow`, so it does **not** go through your queue. A
+queued broadcast would be swallowed entirely by the common setup of a configured
+queue with no worker running for it — and swallowed *silently*, because polling
+covers for it and the table still refreshes a moment later. The cost of sending
+it inline is stated plainly: the write waits on the broadcaster's HTTP call
+before it answers. Against a local Reverb that is sub-millisecond; against a
+distant broadcaster having a bad day it is added to every write, and a table that
+cannot afford that should leave `broadcast` off and keep the interval.
+
+It needs an Echo-compatible client and a broadcast connection in your app. Both
+are the app's, not this package's, and **every way this can fail is harmless**:
+no Echo on the page, no connection configured, channel authorization refused, a
+socket that drops in the afternoon — the table falls back to its interval. The
+user gets a slower table, never a stale one.
+
+**Authorize every live table with one callback**, not a line per model:
+
+```php
+// routes/channels.php
+use NyonCode\WireTable\Support\LiveChannel;
+
+LiveChannel::authorize(fn ($user, string $model) => $user->can('viewAny', $model));
+```
+
+The callback is handed the **class name** the channel belongs to, already decoded,
+so the wire format never leaves the package. Branch on `$model` when different
+tables need different rules; return false to refuse, as in any channel callback.
+
+That is why the channel keeps the class to a single segment
+(`wire-table.App-Models-Invoice`, `-` for `\`): Laravel compiles a `{placeholder}`
+to `([^.]+)`, so a dotted class name could not be matched by a wildcard at all and
+every model would have needed its own hand-written `Broadcast::channel()` line.
+Worth insisting on, because a mistyped one raises nothing — the subscription is
+refused, the push stops arriving, and polling covers for it, so the broadcast half
+is dead and the table looks fine.
+
+`LiveChannel::for(Invoice::class)` gives the name if you need it directly.
+
+**Pausing the poll pauses the push.** The listener rides the polling wrapper, so
+the Stop control — and a `pollWhen()` condition turning false — take the
+broadcast with them. For Stop that is the point: "stop the table changing under
+me" should mean all of it. For `pollWhen()` it is worth knowing, because that
+condition is about the cost of polling rather than about wanting updates: a table
+combining it with `broadcast: true` is not pushed to while the condition is
+false. Leave `pollWhen()` off if you want the push to survive it.
+
+**The package never authorizes for you.** It registers no channel and calls no
+policy of its own — who may listen is the application's decision, stated where
+Laravel expects it. What it does instead is refuse to be quiet about the
+omission: a subscription the server turns down is reported in the console,
+naming the call that fixes it. That is the one failure worth being loud about,
+because it looks exactly like success — the table keeps refreshing on its
+interval, so nothing appears broken while the push half is dead.
+
+A burst of writes — a fill over fifty rows, a bulk action — is one broadcast per
+record; the client coalesces them into a single re-read. A re-read is also held
+off while one of your own cells has a save in flight, since the answer would
+arrive as of before that write and the cell would rightly ignore it.
+
+```php
+->live(string $interval = '5s', bool $broadcast = false)
+```
+
 ### Row/Column Polling
 
 Use `PollColumn` for per-cell live updates without refreshing the entire table:
@@ -886,7 +1001,7 @@ Tracked parameters:
 |---|---|---|
 | `search` | global search | only when the table is searchable |
 | `sort`, `direction` | sort state | only sortable column names are accepted |
-| `per_page` | page size | only values from `perPageOptions()` are accepted |
+| `per_page` | page size | only values from `perPageOptions()` are accepted; `-1` is the `'all'` option, on a table that offers it |
 | `filter_{name}` | filter value | one parameter per filter |
 | `page` | current page | handled by Livewire's `WithPagination`; a page past the end re-anchors to the last populated one |
 

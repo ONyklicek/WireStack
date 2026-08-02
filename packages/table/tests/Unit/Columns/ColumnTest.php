@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Foundation\Contracts\Enum\HasLabel;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Columns\TextInputColumn;
+use NyonCode\WireTable\Exceptions\TableConfigurationException;
 
 enum ColTestStatus: string implements HasLabel
 {
@@ -319,9 +320,28 @@ it('can be set to editable', function () {
     expect(Column::make('name')->editable()->isEditable())->toBeTrue();
 });
 
-it('expands an enum class into editable select options', function () {
-    expect(Column::make('status')->editable(type: 'select', options: ColTestStatus::class)->getEditableOptions())
-        ->toBe(['draft' => 'Draft', 'published' => 'Published']);
+// An ordinary column renders no editor whatever type is named — no view has read
+// one in any revision — so naming one is refused instead of silently ignored.
+//
+// Positionally, because PHP drops surplus positional arguments without a word:
+// removing the parameters outright would have let the exact call the docs taught
+// keep doing nothing, quietly.
+it('refuses to be told which editor to render', function () {
+    expect(fn () => Column::make('status')->editable(true, 'select'))
+        ->toThrow(TableConfigurationException::class)
+        ->and(fn () => Column::make('status')->editable(true, 'select', ColTestStatus::class))
+        ->toThrow(TableConfigurationException::class);
+});
+
+// A named argument lands in the variadic too (PHP collects it under its name),
+// so the same guard answers both call styles with the same message.
+it('refuses the named form as well', function () {
+    expect(fn () => Column::make('status')->editable(type: 'select'))
+        ->toThrow(TableConfigurationException::class);
+});
+
+it('still switches editing off, which is what the flag is for', function () {
+    expect(Column::make('name')->editable()->editable(false)->isEditable())->toBeFalse();
 });
 
 // ─── Toggleable ─────────────────────────────────────────────────────────────

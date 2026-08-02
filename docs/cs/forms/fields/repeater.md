@@ -76,6 +76,27 @@ Repeater::make('contacts')
 | `disabled(bool\|Closure)` | Znepřístupnit ovládání add/delete/reorder |
 | `mutateRelationshipDataBeforeSaveUsing(Closure)` | Transformovat data položek před perzistencí |
 
+## Tabulkový layout
+
+Krátké a jednotné řádky (položky faktury, dvojice klíč/hodnota) se čtou lépe jako
+tabulka než jako karta na položku. `table()` rozloží položky do řádků pod jednu
+hlavičku — stejné state paths, stejné napojení přidat/odebrat/přeuspořádat, liší
+se jen uspořádání:
+
+```php
+Repeater::make('lines')
+    ->table()
+    ->reorderable()
+    ->schema([
+        TextInput::make('description')->label('Co'),
+        TextInput::make('amount')->label('Kolik'),
+    ])
+```
+
+Z každého pole schématu se stane sloupec s vlastním popiskem v hlavičce a popisek
+u buňky se skryje, aby se neopakoval na každém řádku. Sbalování po položkách na
+řádek nedává smysl, takže `collapsible()` se v tomto layoutu ignoruje.
+
 ## Reaktivita per položka
 
 Reaktivní chování uvnitř repeateru se resolvuje **per položka**: `afterStateUpdated()`, live
@@ -103,3 +124,4 @@ Pokud dětské záznamy potřebují nezávislé filtrování, stránkování neb
 
 - [Přehled formulářů](../overview.md)
 - [Validace](../validation.md)
+- [Builder](builder.md) — položky, které si samy volí typ bloku

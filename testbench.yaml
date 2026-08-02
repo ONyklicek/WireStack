@@ -2,6 +2,12 @@ laravel: '@testbench'
 
 providers:
   - Workbench\App\Providers\WorkbenchServiceProvider
+  # Private-channel authorization for verifying live(broadcast: true) over a real
+  # socket. Entirely inert unless a broadcast server is installed and switched on
+  # — see the class. Deliberately the only entry: a broadcaster's own providers
+  # are registered from inside it, when present, because naming them here would
+  # make the whole workbench refuse to boot without the package installed.
+  - Workbench\App\Providers\WorkbenchBroadcastServiceProvider
 
 migrations:
   - workbench/database/migrations

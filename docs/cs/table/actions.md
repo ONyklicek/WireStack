@@ -206,6 +206,31 @@ Action::make('edit')
 
 Kompletní API formuláře viz [Přehled formulářů](../forms/overview.md) a [Pole formulářů](../forms/fields/index.md).
 
+### Odmítnutí zastaralého záznamu — `optimisticLock()`
+
+Okno modalu je dlouhé: otevře se, uživatel si záznam přečte, píše, případně
+odejde a odešle to až za chvíli. `optimisticLock()` akci odmítne, pokud se záznam
+mezitím změnil.
+
+```php
+Action::make('approve')
+    ->optimisticLock()
+    ->form(fn () => [/* … */])
+    ->action(fn (Invoice $record, array $data) => $record->approve($data))
+```
+
+Baseline se zachytí při otevření modalu a porovná při odeslání, přes stejnou
+konvenci verzí (`RecordVersion`, `updated_at` modelu), jakou vždycky používá
+[inline edit buňky](columns/editing.md#jak-funguji-inline-ulozeni) — jedna
+odpověď na „pohnul se ten řádek?", ne dvě, které se můžou rozejít. Když akci
+odmítne, modal se zavře a vyskočí varování; nechat formulář otevřený by uživatele
+vrátilo před hodnoty, které už neplatí, a nijak by to nepoznal.
+
+Ve výchozím stavu je **vypnutý**, protože posunutý záznam znehodnotí jen akci,
+která se podle přečteného rozhodovala. Schválení faktury, které se pod rukama
+změnila částka, je ztracený zápis; smazání záznamu, který někdo přejmenoval,
+není. Zapnout to všude by koupilo nový způsob, jak selhat, a nic víc.
+
 ## Viditelnost, stav a oprávnění
 
 Všechny typy akcí podporují podmíněnou viditelnost a autorizaci.

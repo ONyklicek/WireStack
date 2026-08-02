@@ -3,8 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= htmlspecialchars($siteTitle, ENT_QUOTES) ?> — Forms, Tables & Sorting for Livewire</title>
-    <meta name="description" content="Complete static documentation for the Wire ecosystem: forms, tables, sortable, and core runtime, with real runtime preview screenshots.">
+    <title><?= htmlspecialchars($siteTitle.' — '.$t('Forms, Tables & Sorting for Livewire'), ENT_QUOTES) ?></title>
+    <meta name="description" content="<?= htmlspecialchars($t('Complete static documentation for the Wire ecosystem: forms, tables, sortable, and core runtime, with real runtime preview screenshots.'), ENT_QUOTES) ?>">
+<?php include __DIR__.'/partials/head-meta.php'; ?>
     <script>
         // Landing page only: if the visitor previously chose a non-default
         // language (and the choice is still fresh), send them to it. Explicit
@@ -13,6 +14,27 @@
             try {
                 var s = <?= $localeState ?? '{}' ?>;
                 if (!s.storageKey) return;
+
+                // A ?lang= marker means the visitor just picked this language in
+                // the switcher (the language links on this page carry it). Store
+                // the choice and stand down — without this the redirect below
+                // would bounce the switch straight back to the old language, and
+                // the home page could never be switched at all.
+                var explicit = new URLSearchParams(location.search).get('lang');
+                if (explicit && s.paths && Object.prototype.hasOwnProperty.call(s.paths, explicit)) {
+                    localStorage.setItem(s.storageKey, JSON.stringify({ code: explicit, ts: Date.now() }));
+                    if (explicit === s.current) {
+                        // Drop the marker again so the address bar stays clean;
+                        // the preference is remembered, not carried in the URL.
+                        if (history.replaceState) {
+                            history.replaceState(null, '', location.pathname + location.hash);
+                        }
+                        return;
+                    }
+                    // A marker for another language (a shared link, say) falls
+                    // through: the redirect below carries the visitor over.
+                }
+
                 var raw = localStorage.getItem(s.storageKey);
                 var pref = raw ? JSON.parse(raw) : null;
                 if (s.current === s.default && pref && pref.code && pref.code !== s.default) {
@@ -54,7 +76,13 @@
     <script defer src="<?= htmlspecialchars(str_replace('site.js', 'scrolltrigger.min.js', $jsUrl), ENT_QUOTES) ?>"></script>
     <script defer src="<?= htmlspecialchars($jsUrl, ENT_QUOTES) ?>"></script>
 </head>
-<body class="docs-body">
+<?php // Chrome strings the scripts render at runtime (copy buttons, search states). ?>
+<body
+    class="docs-body"
+    data-copy-label="<?= htmlspecialchars($t('Copy'), ENT_QUOTES) ?>"
+    data-copied-label="<?= htmlspecialchars($t('Copied'), ENT_QUOTES) ?>"
+    data-copy-aria-label="<?= htmlspecialchars($t('Copy code'), ENT_QUOTES) ?>"
+>
     <div class="site-shell">
         <aside class="site-sidebar" data-sidebar>
             <div class="sidebar-header">
@@ -110,7 +138,13 @@
                     >
                     <span class="search-kbd"><kbd>⌘</kbd><kbd>K</kbd></span>
                     <button class="search-cancel" type="button" data-search-close><?= htmlspecialchars($t('Cancel'), ENT_QUOTES) ?></button>
-                    <div class="search-results" data-search-results hidden></div>
+                    <div
+                        class="search-results"
+                        data-search-results
+                        data-empty-title="<?= htmlspecialchars($t('No matches'), ENT_QUOTES) ?>"
+                        data-empty-hint="<?= htmlspecialchars($t('Try a package name, field type, or API term.'), ENT_QUOTES) ?>"
+                        hidden
+                    ></div>
                 </div>
 
                 <div class="topbar-actions">

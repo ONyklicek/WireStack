@@ -35,11 +35,10 @@
         data-record-key="{{ $field->getRecordKey() }}"
         data-column-name="{{ $name }}"
         data-testid="panel-editable-{{ $name }}"
-        data-server-value="{{ $state ? '1' : '0' }}"
-        data-record-version="{{ $field->getRecordVersion() }}"
         data-msg-error="{{ __('wire-core::messages.error') }}"
         data-msg-save-failed="{{ __('wire-core::messages.save_failed') }}"
     >
+        {!! $field->getSyncHtml($state ? '1' : '0') !!}
         <button
             type="button"
             role="switch"

@@ -9,6 +9,8 @@ use NyonCode\WireCore\Foundation\Schema\Step;
 use NyonCode\WireCore\Foundation\Schema\Tab;
 use NyonCode\WireCore\Foundation\Schema\Tabs;
 use NyonCode\WireCore\Foundation\Schema\Wizard;
+use NyonCode\WireForms\Components\Block;
+use NyonCode\WireForms\Components\Builder;
 use NyonCode\WireForms\Components\Layout\Grid;
 use NyonCode\WireForms\Components\Layout\Section;
 use NyonCode\WireForms\Components\Repeater;
@@ -29,6 +31,10 @@ class FormPreview extends Component
     public array $data = [];
 
     public array $contacts = [];
+
+    public array $lines = [];
+
+    public array $content = [];
 
     public function mount(string $variant = 'overview'): void
     {
@@ -65,6 +71,20 @@ class FormPreview extends Component
 
         $this->contacts = $contacts;
 
+        if ($variant === 'repeater-table') {
+            $this->lines = [
+                ['description' => 'Consulting', 'quantity' => '4', 'amount' => '1200'],
+                ['description' => 'Hosting', 'quantity' => '1', 'amount' => '300'],
+            ];
+        }
+
+        if ($variant === 'builder') {
+            $this->content = [
+                ['type' => 'heading', 'data' => ['text' => 'Release notes']],
+                ['type' => 'paragraph', 'data' => ['body' => 'Everything that shipped this week.']],
+            ];
+        }
+
         $this->data = [
             'name' => 'Amelia Stone',
             'email' => 'amelia@example.com',
@@ -94,6 +114,8 @@ class FormPreview extends Component
             'enum-defaults' => $this->buildEnumDefaultsForm($form),
             'default-on-null' => $this->buildDefaultOnNullForm($form),
             'repeater' => $this->buildRepeaterForm($form),
+            'repeater-table' => $this->buildRepeaterTableForm($form),
+            'builder' => $this->buildBuilderForm($form),
             'tabs' => $this->buildTabsForm($form),
             'wizard' => $this->buildWizardForm($form),
             'wizard-live' => $this->buildWizardLiveForm($form),
@@ -298,6 +320,66 @@ class FormPreview extends Component
                             ->reorderable()
                             ->minItems(1)
                             ->addButtonLabel('Add contact'),
+                    ]),
+            ]);
+    }
+
+    /**
+     * The repeater's table layout: one column per schema field, headed once.
+     * Add/remove/reorder run through the same endpoints as the card layout.
+     */
+    protected function buildRepeaterTableForm(Form $form): Form
+    {
+        return $form
+            ->schema([
+                Section::make('Invoice lines')
+                    ->description('Short uniform rows, laid out as a table instead of a card per item.')
+                    ->schema([
+                        Repeater::make('lines')
+                            ->table()
+                            ->reorderable()
+                            ->addButtonLabel('Add line')
+                            ->schema([
+                                TextInput::make('description')->label('Description'),
+                                TextInput::make('quantity')->label('Qty'),
+                                TextInput::make('amount')->label('Amount'),
+                            ]),
+                    ]),
+            ]);
+    }
+
+    /**
+     * A builder: every item picks its own block type from the add picker and is
+     * edited with that block's schema.
+     */
+    protected function buildBuilderForm(Form $form): Form
+    {
+        return $form
+            ->schema([
+                Section::make('Page content')
+                    ->description('Heterogeneous items — each one carries its own block type.')
+                    ->schema([
+                        Builder::make('content')
+                            ->reorderable()
+                            ->collapsible()
+                            ->addButtonLabel('Add block')
+                            ->blocks([
+                                Block::make('heading')
+                                    ->label('Heading')
+                                    ->icon('bars-3-bottom-left')
+                                    ->schema([TextInput::make('text')->label('Text')]),
+                                Block::make('paragraph')
+                                    ->label('Paragraph')
+                                    ->icon('bars-3')
+                                    ->schema([Textarea::make('body')->label('Body')->rows(3)]),
+                                Block::make('callout')
+                                    ->label('Callout')
+                                    ->icon('information-circle')
+                                    ->schema([
+                                        TextInput::make('title')->label('Title'),
+                                        Textarea::make('body')->label('Body')->rows(2),
+                                    ]),
+                            ]),
                     ]),
             ]);
     }

@@ -95,6 +95,7 @@
 >
     <input
             type="color"
+            {!! $field->getExtraInputAttributesHtml() !!}
             id="{{ $field->getId() }}"
             data-testid="form-color-{{ $field->getStatePath() }}"
             x-model="hex"

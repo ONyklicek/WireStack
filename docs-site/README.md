@@ -26,13 +26,22 @@ written to its own folder under `dist/`:
 
 ### 1. Configure the versions
 
-Edit `$siteVersions` near the top of `build.php`:
+Edit `config.json` — the canonical version x locale matrix. The deploy job feeds
+one copy of it to every per-branch build (`DOCS_VERSIONS_FILE`), so the switchers
+can never drift between branches:
 
-```php
-$siteVersions = [
-    ['label' => 'v1.x', 'badge' => 'Latest', 'path' => '',   'available' => true],
-    ['label' => 'v2.x', 'badge' => 'Soon',   'path' => 'v2', 'available' => false],
-];
+```json
+{
+    "baseUrl": "https://wirestack.nyoncode.cz",
+    "locales": [
+        { "code": "en", "label": "English", "path": "", "default": true },
+        { "code": "cs", "label": "Čeština", "path": "cs" }
+    ],
+    "versions": [
+        { "label": "v1.x", "badge": "Latest", "path": "", "branch": "1.x", "available": true },
+        { "label": "v2.x", "badge": "Soon", "path": "v2", "branch": "2.x", "available": false }
+    ]
+}
 ```
 
 - `label`     — text shown in the switcher.
@@ -156,6 +165,45 @@ Then run:
 ```bash
 node docs-site/scripts/capture-previews.mjs
 ```
+
+## SEO & Sharing
+
+`baseUrl` in `config.json` (override: `DOCS_BASE_URL`) is the address the site is
+published at, and everything that cannot be expressed relatively is derived from
+it:
+
+- `<link rel="canonical">` plus `hreflang` alternates for every locale and
+  `x-default`, on every page,
+- Open Graph / Twitter card tags, using the page's own preview screenshot,
+- `sitemap.xml` per (version, locale) cell — a build only ever knows the cell it
+  owns — and one `robots.txt` at the site root listing all of them,
+- `404.html` per cell (GitHub Pages serves the closest one), linking by absolute
+  path because it is served for any unknown path at any depth.
+
+Leave `baseUrl` empty and the absolute-only tags are simply omitted, so a local
+build never emits links pointing at a site it is not.
+
+## Checks
+
+```bash
+npm run docs:check       # static: markdown integrity, links, anchors, a clean build per locale
+npm run docs:standard    # AI_DOCS_STANDARD.md: focus spotlights, marker syntax, EN/CS parity
+npm run docs:api         # docs vs the real public API, in both directions
+npm run docs:verify-ui   # browser: mobile search, language switching, ranking, head tags
+```
+
+Page content itself is governed by [`AI_DOCS_STANDARD.md`](../AI_DOCS_STANDARD.md):
+mechanism before signatures, a complete typed fluent API section, extended
+in-context examples, Torchlight `[tl! focus]` on long examples, and a Czech
+mirror that matches structurally. `docs-site/docs-standard-baseline.txt` is the
+ledger of pages written before the standard; a block loses its exemption as soon
+as it is edited.
+
+`docs:verify-ui` builds every locale into a throwaway dir, serves it, and drives
+it in headless Chrome at phone and desktop metrics. It exists because the two
+defects it was written for — a mobile search sheet buried under its own backdrop,
+and a landing page that bounced every language switch back — produced perfectly
+valid markup and were invisible to the static check.
 
 ## Publish
 

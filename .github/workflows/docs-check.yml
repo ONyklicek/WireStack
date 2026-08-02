@@ -82,3 +82,17 @@ jobs:
 
       - name: Verify docs build
         run: node docs-site/scripts/verify-docs.mjs "$GITHUB_WORKSPACE"
+
+      # AI_DOCS_STANDARD.md, the checkable half: focus spotlights on long
+      # examples, well-formed markers, and an EN/CS pair that stays structurally
+      # identical. Pages that predate the standard live in
+      # docs-site/docs-standard-baseline.txt and lose the exemption when edited.
+      - name: Verify docs standard
+        run: node docs-site/scripts/verify-docs-standard.mjs "$GITHUB_WORKSPACE"
+
+      # The static check reads the markup; this one drives it in a browser at
+      # phone metrics. Both defects it was written for (a search sheet buried
+      # under its own backdrop, a landing page that bounced every language
+      # switch back) were invisible to every static check we had.
+      - name: Verify docs site behaviour in a browser
+        run: node docs-site/scripts/verify-site-ui.mjs "$GITHUB_WORKSPACE"

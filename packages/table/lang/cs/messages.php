@@ -37,6 +37,9 @@ return [
     // Filters
     'filters' => 'Filtry',
     'filter_all' => 'Vše',
+    'filter_without_trashed' => 'Bez smazaných',
+    'filter_with_trashed' => 'Včetně smazaných',
+    'filter_only_trashed' => 'Jen smazané',
     'filter_search' => 'Hledat...',
     'filter_no_results' => 'Nic nenalezeno',
     'filter_selected_count' => '{1}:count vybrán|[2,4]:count vybrány|[5,*]:count vybráno',
@@ -104,6 +107,7 @@ return [
 
     // Pagination
     'show' => 'Zobrazit',
+    'per_page_all' => 'Vše',
     'showing' => 'Zobrazuje se',
     'of' => 'z',
     'records' => 'záznamů',
@@ -141,6 +145,7 @@ return [
     // Inline editable
     'save_failed' => 'Uložení selhalo',
     'invalid' => 'Neplatné',
+    'rating_of_max' => ':rating z :max',
     'error' => 'Chyba',
 
     // Legenda klávesových zkratek

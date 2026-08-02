@@ -7,9 +7,12 @@ namespace NyonCode\WireCore\Core\Query;
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Core\Components\DataComponent;
+use NyonCode\WireCore\Core\Metadata\ColumnMetadata;
 use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
 use NyonCode\WireCore\Core\Metadata\RelationMetadata;
 use NyonCode\WireCore\Core\Query\Contracts\HasSearchColumns;
+use NyonCode\WireCore\Core\Query\Contracts\HasSearchValueType;
+use NyonCode\WireCore\Core\Query\Search\SearchValueType;
 use NyonCode\WireCore\Core\Query\Strategies\MorphRelationStrategy;
 use NyonCode\WireCore\Core\Relations\AggregateSegment;
 use NyonCode\WireCore\Core\Relations\RelationGraphBuilder;
@@ -72,7 +75,7 @@ final class QueryPlanner
 
             if ($path === null) {
                 // Simple column on base table
-                $this->planSimpleColumn($component, $baseTable, $search, $searchClauses);
+                $this->planSimpleColumn($component, $modelClass, $baseTable, $search, $searchClauses);
 
                 continue;
             }
@@ -127,6 +130,7 @@ final class QueryPlanner
      */
     private function planSimpleColumn(
         DataComponent $component,
+        string $modelClass,
         string $baseTable,
         ?string $search,
         array &$searchClauses,
@@ -153,9 +157,53 @@ final class QueryPlanner
                     // cannot speak for a different one.
                     tableAlias: $baseTable,
                     sqlExpression: $searchColumn === $columnName ? $sqlExpression : null,
+                    valueType: $this->resolveValueType(
+                        $component,
+                        $modelClass,
+                        $searchColumn,
+                        $searchColumn === $columnName ? $metadata : null,
+                    ),
                 );
             }
         }
+    }
+
+    /**
+     * What kind of value a searchable column holds, deciding whether a
+     * comparison token (`>100`, `2026-01-01..`) may be asked of it.
+     *
+     * The owner's own declaration wins, then the model's cast, then the
+     * registered database type. Anything unrecognised stays text, where a
+     * comparison is skipped rather than guessed at.
+     */
+    private function resolveValueType(
+        DataComponent $component,
+        string $modelClass,
+        string $column,
+        ?ColumnMetadata $metadata,
+    ): SearchValueType {
+        if ($component instanceof HasSearchValueType) {
+            $declared = $component->getSearchValueType();
+
+            if ($declared !== null) {
+                return $declared;
+            }
+        }
+
+        if ($this->metadataRegistry->hasModel($modelClass)) {
+            $fromCast = SearchValueType::fromCast(
+                $this->metadataRegistry->getModelMetadata($modelClass)->getCast($column),
+            );
+
+            if ($fromCast !== null) {
+                return $fromCast;
+            }
+        }
+
+        $registered = $this->metadataRegistry->getColumn($modelClass, $column);
+
+        return SearchValueType::fromDatabaseType($registered->dbType ?? $metadata?->dbType)
+            ?? SearchValueType::Text;
     }
 
     /**
@@ -251,6 +299,9 @@ final class QueryPlanner
                 tableAlias: $alias,
                 isRelation: true,
                 relationPath: $relationPath,
+                // The column lives on the related model, so that is whose casts
+                // decide whether a comparison can be asked of it.
+                valueType: $this->resolveValueType($component, $currentModel, $columnName, null),
             );
         }
     }

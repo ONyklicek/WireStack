@@ -1281,3 +1281,74 @@ it('does not join a HasManyThrough column (to-many stays display-only)', functio
     expect(tqsUnquoted($sql))->not->toContain('left join')
         ->and(tqsUnquoted($sql))->not->toContain('tqs_mechanics.*');
 });
+
+// ─── Stable ordering ─────────────────────────────────────────────────────────
+//
+// A page is a slice of an ordering, so an unordered query makes a page mean
+// nothing: on PostgreSQL an UPDATE moves the row to the end of the heap, and
+// editing a row on page one silently pushes an unseen record past the boundary
+// of page two. The key is appended as a tiebreaker to close that.
+
+it('orders an unsorted table by its key', function () {
+    $table = Table::make()->model(TqsUser::class)->columns([Column::make('name')]);
+
+    $query = (new TableQueryService)->buildQuery(baseQuery: TqsUser::query(), table: $table);
+
+    // Asserted on the builder rather than the SQL string: this file also runs
+    // against MySQL and PostgreSQL, which quote identifiers differently.
+    expect($query->getQuery()->orders)->toBe([
+        ['column' => 'tqs_users.id', 'direction' => 'asc'],
+    ]);
+});
+
+it('appends the key after the active sort, not before it', function () {
+    $table = Table::make()->model(TqsUser::class)->columns([Column::make('name')->sortable()]);
+
+    $query = (new TableQueryService)->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+        sortColumn: 'name',
+        sortDirection: 'desc',
+    );
+
+    expect($query->getQuery()->orders)->toBe([
+        ['column' => 'tqs_users.name', 'direction' => 'desc'],
+        ['column' => 'tqs_users.id', 'direction' => 'desc'],
+    ]);
+});
+
+it('appends the key after a custom sort callback, which runs outside the pipeline', function () {
+    // The subtle one. A column's own sort callback is applied after the query
+    // pipeline has finished, so a tiebreaker added any earlier would sit in
+    // front of it and become the primary sort — silently replacing the very
+    // ordering it exists to stabilise.
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->columns([
+            Column::make('name')->sortable(query: fn (Builder $q, string $direction) => $q->orderBy('email', $direction)),
+        ]);
+
+    $query = (new TableQueryService)->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+        sortColumn: 'name',
+        sortDirection: 'asc',
+    );
+
+    expect($query->getQuery()->orders)->toBe([
+        ['column' => 'email', 'direction' => 'asc'],
+        ['column' => 'tqs_users.id', 'direction' => 'asc'],
+    ]);
+});
+
+it('does not order a grouped table by a key it cannot group on', function () {
+    // PostgreSQL rejects an ordering term that is neither grouped nor aggregated.
+    $table = Table::make()->model(TqsUser::class)->columns([Column::make('name')]);
+
+    $query = (new TableQueryService)->buildQuery(
+        baseQuery: TqsUser::query()->groupBy('company_id'),
+        table: $table,
+    );
+
+    expect($query->getQuery()->orders)->toBeNull();
+});

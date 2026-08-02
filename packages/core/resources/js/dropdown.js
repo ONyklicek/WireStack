@@ -1,5 +1,6 @@
 import { computePosition, autoUpdate, flip, shift, offset, size } from '@floating-ui/dom'
 
+import { syncNodeOf } from './editable/sync'
 import wireFillHandle from './fill/controller'
 
 /**
@@ -479,8 +480,9 @@ const wireWizard = (initial = 0) => ({
  *  - commit(next): optimistic value → $wire.updateTableCell(key, col, next, ver);
  *    on failure it rolls back to the last server-confirmed value, and on an
  *    optimistic-lock conflict it adopts the server's current value + version.
- *  - a MutationObserver on data-server-value / data-record-version reconciles
- *    the cell when polling (or any external re-render) changes the row.
+ *  - a MutationObserver on the cell's sync node (data-server-value /
+ *    data-record-version — see editable/sync.js) reconciles the cell when a
+ *    poll, a modal write or any other re-render changes the row underneath it.
  *
  * recordKey / columnName are read from data-* attributes (never interpolated
  * into this JS), so a primary key containing a quote can't break out. Text-style
@@ -507,6 +509,19 @@ const wireEditableCell = (config = {}) => ({
     success: false,
     focused: false,
 
+    // Declared, not just assigned in init(). Alpine resolves `this` inside a
+    // component method to the MERGED scope stack, and its setter writes a name no
+    // scope owns yet to the OUTERMOST one — here the table root that wraps every
+    // cell. So `this._x = …` in init() did not give each cell its own `_x`; it
+    // gave all of them one shared slot on the table, and the last cell to
+    // initialise won. Every other cell then held the last cell's sync node,
+    // observer and listener: a cell reconciled itself from a different column's
+    // value, and destroy() disconnected an observer that was never its own while
+    // its real one leaked. Naming them here puts the write back on the component.
+    _sync: null,
+    _observer: null,
+    _onSiblingCommit: null,
+
     get dirty() {
         return this.value !== this.serverValue
     },
@@ -523,10 +538,14 @@ const wireEditableCell = (config = {}) => ({
         // the event target instead).
         this.recordKey = this.$el.dataset.recordKey
         this.columnName = this.$el.dataset.columnName
+        // Off the DOM, not off `this.messages` — reading the property back into
+        // itself left all three undefined, so a save that failed without a server
+        // reply (offline, a 500) set `error` to undefined and the cell reported
+        // nothing at all: the value rolled back with no explanation.
         this.messages = {
-            error: this.messages.error,
-            saveFailed: this.messages.saveFailed,
-            invalid: this.messages.invalid,
+            error: this.$el.dataset.msgError,
+            saveFailed: this.$el.dataset.msgSaveFailed,
+            invalid: this.$el.dataset.msgInvalid,
         }
 
         if (config.liveValidation) {
@@ -535,17 +554,36 @@ const wireEditableCell = (config = {}) => ({
             }, config.debounce ?? 500))
         }
 
+        // The channel the server keeps current: a child node, because this root
+        // carries `wire:ignore.self` and Livewire therefore stops refreshing its
+        // own attributes after the first render. See editable/sync.js.
+        this._sync = syncNodeOf(this.$el)
+
         const observer = new MutationObserver((mutations) => {
             for (const m of mutations) {
                 if (m.attributeName === 'data-server-value' || m.attributeName === 'data-record-version') {
-                    const next = this.parse(this.$el.dataset.serverValue)
+                    const next = this.parse(this._sync.dataset.serverValue)
                     if (next !== this.serverValue) {
-                        this.syncFromServer(next, this.$el.dataset.recordVersion)
+                        this.syncFromServer(next, this._sync.dataset.recordVersion)
+
+                        continue
+                    }
+
+                    // The value is what we already hold, but the record moved —
+                    // somebody wrote another column of this row, or we did from a
+                    // modal. Adopt the version anyway, or our next write goes out
+                    // with a stale one and is refused as somebody else's edit.
+                    //
+                    // Not while a write of ours is in flight: that response is
+                    // about to hand back the authoritative version, and this
+                    // render was generated before our write landed.
+                    if (! this.saving) {
+                        this.setRecordVersion(this._sync.dataset.recordVersion)
                     }
                 }
             }
         })
-        observer.observe(this.$el, { attributes: true, attributeFilter: ['data-server-value', 'data-record-version'] })
+        observer.observe(this._sync, { attributes: true, attributeFilter: ['data-server-value', 'data-record-version'] })
         this._observer = observer
 
         // Sibling version sync. Every editable cell captures the record's
@@ -581,19 +619,17 @@ const wireEditableCell = (config = {}) => ({
      * server→client attribute channel all come through here.
      *
      * State ONLY — it deliberately does not write `data-record-version` back.
-     * The root carries `wire:ignore.self`, so both data attributes are what the
-     * FIRST render wrote and nothing keeps them current; whoever needs the live
-     * version reads the component (see `versionOf()` in fill/grid.js).
+     * The sync node belongs to the server: it says what the last render knew,
+     * and the component says what has happened since. Whoever needs the live
+     * version asks the component first (see `versionOf()` in editable/sync.js).
      *
-     * Writing the attribute here looks like the tidier fix and is a trap: this
-     * element is the one the MutationObserver above watches. Touching
-     * `data-record-version` wakes it, it re-reads the equally frozen
-     * `data-server-value`, finds it different from the value just committed, and
-     * "syncs" the cell back to what the page loaded with. The edit reaches the
-     * database and vanishes from the screen a second later. Keeping the pair
-     * honest would mean serialising the value back into the attribute too — which
-     * is what the fill handle's own applyValue() has to do for exactly this
-     * reason, and why it writes BOTH or neither.
+     * Writing the attribute here looks like the tidier fix and is a trap: that
+     * node is the one the MutationObserver above watches. Touching
+     * `data-record-version` alone wakes it with `data-server-value` still on the
+     * previous render's value, and the cell "syncs" itself back to it — the edit
+     * reaches the database and vanishes off the screen a moment later. Keeping
+     * the pair honest means writing BOTH or neither, which is exactly what the
+     * fill handle's applyValue()/applyVersion() do.
      */
     setRecordVersion(version) {
         if (! version) return

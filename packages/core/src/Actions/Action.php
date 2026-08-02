@@ -23,6 +23,11 @@ use NyonCode\WireCore\Foundation\View\Primitives;
  */
 class Action extends BaseAction implements RendersAsButton
 {
+    // Only a row action has one record to lock against; a header action has none
+    // and a bulk action has a set, which is why this sits here and not on
+    // BaseAction alongside its siblings.
+    use Concerns\HasOptimisticLock;
+
     protected bool $hideLabel = false;
 
     /** Static URL — record-independent, so it resolves on record-less surfaces too. */

@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Concerns\HasExtraInputAttributes;
 
 /**
  * Range slider field for numeric values.
  */
 class Slider extends Field
 {
+    use HasExtraInputAttributes;
+
     protected int|float $min = 0;
 
     protected int|float|Closure $max = 100;

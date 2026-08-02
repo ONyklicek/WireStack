@@ -4,7 +4,7 @@ order: 30
 
 # Filters
 
-Wire Table provides **5 built-in filter types** plus the ability to build custom
+Wire Table provides **6 built-in filter types** plus the ability to build custom
 filters. Filters live in the filter bar above the table and persist in Livewire
 state via `$tableFilters`. This page covers the flow and the shared API; each
 type has its own page.
@@ -18,6 +18,7 @@ type has its own page.
 | [DateFilter](date.md) | Single date, date range, or month + year |
 | [NumberRangeFilter](number-range.md) | Min/max numeric range |
 | [TernaryFilter](ternary.md) | Three-state boolean (all / true / false) |
+| [TrashedFilter](trashed.md) | Soft deletes: live / deleted / all records |
 
 ## More
 

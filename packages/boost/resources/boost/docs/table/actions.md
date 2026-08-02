@@ -207,6 +207,31 @@ Action::make('edit')
 
 For the full form API, see [Forms Overview](../forms/overview.md) and [Form Fields](../forms/fields/index.md).
 
+### Refusing a stale record — `optimisticLock()`
+
+A modal's window is a long one: it opens, the user reads the record, types, maybe
+walks away, and submits some time later. `optimisticLock()` refuses the action if
+the record changed in the meantime.
+
+```php
+Action::make('approve')
+    ->optimisticLock()
+    ->form(fn () => [/* … */])
+    ->action(fn (Invoice $record, array $data) => $record->approve($data))
+```
+
+The baseline is captured when the modal opens and compared on submit, using the
+same version convention (`RecordVersion`, the model's `updated_at`) an
+[inline cell edit](columns/editing.md#how-inline-saves-work) always uses — one
+answer to "has this row moved", not two that can drift. When it refuses, the
+modal closes and a warning is raised; leaving the form up would put the user back
+in front of values that are no longer there, with no way to tell.
+
+It is **off by default**, because a moved record only invalidates an action that
+decided something from what it read. Approving an invoice whose total changed
+underneath is a lost update; deleting a record someone else renamed is not.
+Turning it on everywhere would buy a new way to fail and nothing else.
+
 ## Visibility, State, and Permissions
 
 All action types support conditional visibility and authorization.

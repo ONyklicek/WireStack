@@ -5,6 +5,7 @@
 
     $spanClass = $field->getColumnSpanClass();
     $value = $field->getFormattedState();
+    $swatch = $field->getSwatch();
 @endphp
 
 <div class="{{ $spanClass }}">
@@ -23,8 +24,10 @@
                     title="{{ __('Copy') }}"
                 @endif
             >
-                <span class="w-5 h-5 rounded ring-1 ring-gray-200 dark:ring-gray-700"
-                      style="background-color: {{ $value }};"></span>
+                @if($swatch !== null)
+                    <span class="w-5 h-5 rounded ring-1 ring-gray-200 dark:ring-gray-700"
+                          @style(['background-color: '.$swatch])></span>
+                @endif
                 <span class="font-mono text-gray-700 dark:text-gray-300">{{ $value }}</span>
             </span>
         @else

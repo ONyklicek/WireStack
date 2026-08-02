@@ -16,6 +16,7 @@ use NyonCode\WireCore\Core\Query\Pipes\ApplyScopes;
 use NyonCode\WireCore\Core\Query\Pipes\ApplySearch;
 use NyonCode\WireCore\Core\Query\Pipes\ApplySoftDeletes;
 use NyonCode\WireCore\Core\Query\Pipes\ApplySorting;
+use NyonCode\WireCore\Core\Query\Search\SearchTerm;
 use NyonCode\WireCore\Core\Query\Strategies\MySqlSearchStrategy;
 use NyonCode\WireCore\Core\Query\Strategies\PostgresSearchStrategy;
 use NyonCode\WireCore\Core\Query\Strategies\SqliteSearchStrategy;
@@ -41,10 +42,11 @@ final class QueryExecutor
      * Returns the modified builder (not yet executed — caller decides when to ->get()).
      *
      * @param  Builder<Model>  $builder
+     * @param  SearchTerm|string|null  $searchTerm  A parsed term, or a raw string matched literally
      * @param  array<int, callable(Builder<Model>, string): mixed>  $extraSearchCallbacks
      * @return Builder<Model>
      */
-    public function execute(Builder $builder, QueryPlan $plan, ?string $searchTerm = null, array $extraSearchCallbacks = []): Builder
+    public function execute(Builder $builder, QueryPlan $plan, SearchTerm|string|null $searchTerm = null, array $extraSearchCallbacks = []): Builder
     {
         $pipes = $this->pipes !== [] ? $this->pipes : $this->getDefaultPipes($builder, $searchTerm, $extraSearchCallbacks);
 
@@ -96,10 +98,11 @@ final class QueryExecutor
      * 8. EagerLoads — with() for non-joinable relations
      *
      * @param  Builder<Model>  $builder
+     * @param  SearchTerm|string|null  $searchTerm  A parsed term, or a raw string matched literally
      * @param  array<int, callable(Builder<Model>, string): mixed>  $extraSearchCallbacks
      * @return array<int, QueryPipe>
      */
-    public function getDefaultPipes(Builder $builder, ?string $searchTerm, array $extraSearchCallbacks = []): array
+    public function getDefaultPipes(Builder $builder, SearchTerm|string|null $searchTerm, array $extraSearchCallbacks = []): array
     {
         $strategy = $this->searchStrategy ?? $this->resolveSearchStrategy($builder);
 

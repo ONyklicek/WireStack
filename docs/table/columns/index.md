@@ -4,7 +4,7 @@ order: 20
 
 # Columns
 
-Wire Table provides **12 column types**. They all share the same base column API
+Wire Table provides **16 column types**. They all share the same base column API
 for labels, visibility, authorization, sorting, formatting, and inline editing —
 documented below. Pick a type for its cell rendering; reach for the shared API on
 any of them.
@@ -20,11 +20,15 @@ any of them.
 | [ImageColumn](image.md) | Avatars and thumbnails |
 | [ButtonColumn](button.md) | Link or Livewire-action button in a cell |
 | [ToggleColumn](toggle.md) | Inline editable on/off switch |
+| [CheckboxColumn](checkbox.md) | Inline editable checkbox (a denser ToggleColumn) |
 | [SelectColumn](select.md) | Inline editable dropdown (options, relations, enums) |
 | [TextInputColumn](text-input.md) | Inline editable text/number/email input |
 | [StackedColumn](stacked.md) | Avatar + name + email stacked layouts |
 | [SplitColumn](split.md) | Compose several columns side by side |
 | [PollColumn](poll.md) | Live-polling status/progress cells |
+| [ColorColumn](color.md) | A stored CSS color as a swatch |
+| [RatingColumn](rating.md) | A numeric score as stars |
+| [TagsColumn](tags.md) | A multi-value state as chips |
 
 ## Concepts
 
@@ -78,6 +82,9 @@ TextColumn::make('full_name')
 // Custom search logic
 ->searchUsing(Closure $fn)
 
+// Declare what the column holds, so >100 and 10..20 can be typed into search
+->searchAs(SearchValueType|string $type)      // 'text' | 'numeric' | 'date' | 'code'
+
 // Get resolved search columns
 ->getSearchColumns(): array
 ```
@@ -96,6 +103,28 @@ TextColumn::make('full_name')
         $query->where(DB::raw("CONCAT(first_name, ' ', last_name)"), 'like', "%{$search}%");
     })
 ```
+
+`searchAs()` matters only once the table opts into
+[range search](../overview.md#search-syntax). The value type is normally
+inferred from the model's casts — a `decimal:2` or `datetime` cast is enough —
+so declare it only where the casts cannot speak for the column:
+
+```php
+// The model has no cast for `amount`, so nothing can be inferred from it.
+TextColumn::make('amount')
+    ->searchable()
+    ->searchAs('numeric')      // now ">1000" and "10..20" reach this column
+```
+
+A column left as text is skipped by a comparison rather than compared
+lexically, so a wrong or missing declaration narrows what search understands —
+it never returns wrong rows.
+
+`'code'` is the one type that is *never* inferred: it says the value is a series
+plus a **zero-padded** number (`8866 01`, `8866 02`), which is what makes
+comparing it as text correct, and only the owner knows that. It unlocks
+[ranges inside a series](../overview.md#ranges-inside-a-structured-code) —
+`8866 01..08`.
 
 ### Visibility & Toggleability
 

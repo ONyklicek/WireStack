@@ -7,6 +7,7 @@ namespace NyonCode\WireCore\Panels\Components;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Support\RecordVersion;
+use NyonCode\WireCore\Foundation\View\CellSync;
 use NyonCode\WireCore\Infolists\Components\Entry;
 use NyonCode\WireCore\Panels\Concerns\WithEditablePanel;
 
@@ -195,5 +196,19 @@ abstract class EditableEntry extends Entry
         $model = $this->getRecordModel();
 
         return $model !== null ? (app(RecordVersion::class)->stamp($model) ?? '0') : '0';
+    }
+
+    /**
+     * The entry's server→client sync node, ready to echo inside its control.
+     *
+     * `$serverValue` is the serialised form the partial renders — '1'/'0' for a
+     * toggle, the string for everything else — because that is what the cell's
+     * `parse()` reads back. Built through the canonical {@see CellSync} owner, so
+     * every editable surface agrees on where that channel lives and what it
+     * carries; see that class for why it is not on the control's root element.
+     */
+    public function getSyncHtml(string $serverValue): string
+    {
+        return app(CellSync::class)->node($serverValue, $this->getRecordVersion());
     }
 }

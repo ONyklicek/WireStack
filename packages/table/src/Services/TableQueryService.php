@@ -21,7 +21,9 @@ use NyonCode\WireCore\Core\Query\JoinRegistry;
 use NyonCode\WireCore\Core\Query\QueryExecutor;
 use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireCore\Core\Query\QueryPlanner;
+use NyonCode\WireCore\Core\Query\Search\SearchTermParser;
 use NyonCode\WireCore\Core\Query\SortDefinition;
+use NyonCode\WireCore\Core\Query\StableOrder;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Filters\SelectFilter;
@@ -189,8 +191,15 @@ final class TableQueryService
         // are OR-combined into the same search group as the default columns (see
         // ApplySearch) — so having one custom-search column no longer suppresses
         // every plain ->searchable() column. Only a non-empty term searches.
-        $searchTerm = ! empty($search) ? $search : null;
-        $searchCallbacks = ! empty($search) ? $customSearchCallbacks : [];
+        // Not `! empty()`: that discards the perfectly good search term "0".
+        $searchTerm = $search !== null && trim($search) !== '' ? $search : null;
+        $searchCallbacks = $searchTerm !== null ? $customSearchCallbacks : [];
+
+        // How the term is read — split on spaces, ranges, wildcards — is the
+        // table's configuration, and the parser is the only thing that knows it.
+        $parsedSearch = $searchTerm !== null
+            ? app(SearchTermParser::class)->parse($searchTerm, $table->getSearchConfig())
+            : null;
 
         // ── 2.5 Plugin hook: table.querying (pre-plan, can force sort override) ──
         if ($pluginManager !== null) {
@@ -222,7 +231,7 @@ final class TableQueryService
             columns: $plannerColumns,
             filters: $plannerFilters,
             sorts: $plannerSorts,
-            search: ! empty($search) ? $searchTerm : null,
+            search: $searchTerm,
         );
 
         // ── 3.5 Typed plugin hook: table.querying (post-plan, pre-execute) ──
@@ -247,13 +256,13 @@ final class TableQueryService
             $pluginPipes = $pluginManager->getQueryPipes();
             if ($pluginPipes !== []) {
                 $executor = $executor->withPipes([
-                    ...$executor->getDefaultPipes($baseQuery, $searchTerm, $searchCallbacks),
+                    ...$executor->getDefaultPipes($baseQuery, $parsedSearch, $searchCallbacks),
                     ...array_values($pluginPipes),
                 ]);
             }
         }
 
-        $query = $executor->execute($baseQuery, $this->lastPlan, $searchTerm, $searchCallbacks);
+        $query = $executor->execute($baseQuery, $this->lastPlan, $parsedSearch, $searchCallbacks);
 
         // ── 4.4 Explicit eager-load hints (Column::loadRelations()) ──
         // For relations a display/url/color closure dereferences per row but which
@@ -335,6 +344,13 @@ final class TableQueryService
 
             $query = $column->applyFilter($query, $value);
         }
+
+        // ── 5.9 Give the ordering a tiebreaker ──
+        // Last, deliberately: everything above may order, including a column's
+        // own sort callback, and a tiebreaker applied before them would become
+        // the primary sort instead. Without it a page is a slice of an undefined
+        // order — see StableOrder for what that costs on PostgreSQL.
+        app(StableOrder::class)->apply($query);
 
         // ── 6. Plugin hook: table.queried (post-execution observation) ──
         if ($pluginManager !== null) {

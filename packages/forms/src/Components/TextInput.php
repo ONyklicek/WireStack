@@ -5,17 +5,19 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Concerns\HasExtraInputAttributes;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
-use NyonCode\WireForms\Concerns\HasCharacterLimits;
-
 /**
  * Text input field with type variants (email, password, tel, url, numeric, integer).
  *
  * Supports prefix/suffix, mask, datalist, input mode, autocomplete.
  */
+use NyonCode\WireForms\Concerns\HasCharacterLimits;
+
 class TextInput extends Field
 {
     use HasCharacterLimits;
+    use HasExtraInputAttributes;
 
     protected string $inputType = 'text';
 

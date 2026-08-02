@@ -366,6 +366,7 @@ Use when public docs, previews, screenshots, or static docs site output changes.
 
 Read first:
 
+- `AI_DOCS_STANDARD.md` — binding for every page under `docs/`
 - `docs/`
 - `docs-site/README.md`
 - `docs-site/build.php`
@@ -376,12 +377,20 @@ Read first:
 Implementation shape:
 
 1. Update source docs, not generated `docs-site/dist/`, unless explicitly asked.
-2. Update workbench preview only when behavior or visual output changed.
-3. Run a dry-run changed-docs check before refreshing screenshots.
+2. Follow `AI_DOCS_STANDARD.md`: mechanism (`## How It Works`) before signatures,
+   the complete typed fluent API, an extended in-context example, and a
+   `[tl! focus]` spotlight on every PHP/Blade block of 12 lines or more.
+3. Mirror the page in `docs/cs/` in the same change — prose translated, code and
+   focus markers identical.
+4. Update workbench preview only when behavior or visual output changed.
+5. Run a dry-run changed-docs check before refreshing screenshots.
 
 Verification:
 
 ```bash
+npm run docs:check
+npm run docs:standard
+npm run docs:api
 php docs-site/build.php
 npm run docs:changed -- --dry-run
 ```

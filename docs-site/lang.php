@@ -17,6 +17,11 @@ return [
         'Close navigation' => 'Zavřít navigaci',
         'Search documentation' => 'Prohledat dokumentaci',
         'Search documentation…' => 'Prohledat dokumentaci…',
+        'No matches' => 'Nic nenalezeno',
+        'Try a package name, field type, or API term.' => 'Zkuste název balíčku, typ pole nebo termín z API.',
+        'Copy' => 'Kopírovat',
+        'Copied' => 'Zkopírováno',
+        'Copy code' => 'Kopírovat kód',
         'Cancel' => 'Zrušit',
         'Toggle theme' => 'Přepnout motiv',
         'Back to top' => 'Zpět nahoru',
@@ -91,6 +96,8 @@ return [
         'The segmented and buttons variants scale with ->sm() / ->md() / ->lg().' => 'Segmentovaná a tlačítková varianta se škálují přes ->sm() / ->md() / ->lg().',
 
         // --- Home page ------------------------------------------------------
+        'Forms, Tables & Sorting for Livewire' => 'Formuláře, tabulky a řazení pro Livewire',
+        'Complete static documentation for the Wire ecosystem: forms, tables, sortable, and core runtime, with real runtime preview screenshots.' => 'Kompletní statická dokumentace ekosystému Wire: formuláře, tabulky, sortable a core runtime, s reálnými náhledovými screenshoty z runtime.',
         'The WireStack ecosystem for Livewire' => 'Ekosystém WireStack pro Livewire',
         'Build <span class="grad">forms, tables &amp; sortable</span> UIs at lightning speed.' => 'Stavějte <span class="grad">formuláře, tabulky &amp; sortable</span> UI bleskovou rychlostí.',
         'Production-ready forms, searchable tables, drag-and-drop sorting, and a shared core runtime — documented with real screenshots captured straight from the package previews.' => 'Produkčně připravené formuláře, vyhledávatelné tabulky, drag-and-drop řazení a sdílený core runtime — dokumentované reálnými screenshoty pořízenými přímo z náhledů balíčků.',
@@ -133,5 +140,9 @@ return [
         'Upload the contents of' => 'Nahrajte obsah',
         'to any static host — no PHP runtime is required for the published site. Just build, deploy, done.' => 'na jakýkoli statický hosting — publikovaný web nepotřebuje PHP runtime. Stačí build, deploy, hotovo.',
         'Wire ecosystem · MIT licensed.' => 'Ekosystém Wire · licence MIT.',
+
+        // --- 404 ------------------------------------------------------------
+        'Page not found' => 'Stránka nenalezena',
+        'That page has moved, been renamed, or never existed. The documentation index lists everything the site holds.' => 'Tato stránka se přesunula, byla přejmenována, nebo nikdy neexistovala. Rozcestník dokumentace obsahuje vše, co web nabízí.',
     ],
 ];

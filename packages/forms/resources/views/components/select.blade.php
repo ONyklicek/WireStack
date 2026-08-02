@@ -61,11 +61,13 @@
         // click (afterStateUpdated, visibleWhen siblings), not on the next
         // unrelated roundtrip.
         'live' => $field->isLive() || $field->isLiveOnBlur(),
+        'extraInputAttributes' => $field->getExtraInputAttributesHtml(),
     ])
 @else
 <select
         id="{{ $field->getId() }}"
         {{ $wireAttr }}="{{ $field->getWireModelAttribute() }}"
+        {!! $field->getExtraInputAttributesHtml() !!}
         @if($field->isMultiple())
             multiple
         @endif

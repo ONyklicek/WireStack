@@ -265,6 +265,29 @@ it('color entry is copyable opt-in and uses the color view', function () {
         ->and($entry->render()->name())->toBe('wire-core::infolists.entries.color');
 });
 
+// The swatch interpolates the state into a `style` attribute, where escaping
+// alone still lets `;` open a second declaration.
+it('color entry exposes a swatch only for a real css color', function () {
+    expect(ColorEntry::make('brand')->record(['brand' => '#ff0000'])->getSwatch())->toBe('#ff0000')
+        ->and(ColorEntry::make('brand')->record(['brand' => 'rgb(255 0 0 / 50%)'])->getSwatch())->toBe('rgb(255 0 0 / 50%)')
+        ->and(ColorEntry::make('brand')->record(['brand' => 'red; background-image: url(https://evil.test/x)'])->getSwatch())->toBeNull()
+        ->and(ColorEntry::make('brand')->record(['brand' => null])->getSwatch())->toBeNull();
+});
+
+it('color entry renders the swatch it vouched for and drops the one it did not', function () {
+    $safe = ColorEntry::make('brand')->record(['brand' => '#00ff00'])->render()->render();
+    $unsafe = ColorEntry::make('brand')
+        ->record(['brand' => 'red; background-image: url(https://evil.test/x)'])
+        ->render()
+        ->render();
+
+    // The rejected value is still shown as (escaped) text — it just never
+    // reaches a `style` attribute, which is the only place it could execute.
+    expect($safe)->toContain('background-color: #00ff00')
+        ->and($unsafe)->not->toContain('background-color')
+        ->and($unsafe)->not->toContain('style=');
+});
+
 // ─── Entry actions ───────────────────────────────────────────────────────────
 
 it('has no actions by default', function () {

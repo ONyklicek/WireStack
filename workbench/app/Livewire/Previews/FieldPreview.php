@@ -43,6 +43,7 @@ class FieldPreview extends Component
             'role' => 'admin',
             'agree' => true,
             'permissions' => ['view', 'edit'],
+            'skills_choice' => ['php'],
             'plan' => 'pro',
             'alignment' => 'center',
             'range' => 'week',
@@ -99,6 +100,25 @@ class FieldPreview extends Component
                 Radio::make('size_lg')->label('Large')->options(['a' => 'Left', 'b' => 'Center', 'c' => 'Right'])
                     ->icons(['a' => 'bars-3-bottom-left', 'b' => 'bars-3', 'c' => 'bars-3-bottom-right'])
                     ->buttons()->inline()->lg(),
+            ];
+        }
+
+        // The multiple-choice half of the toggle-button vocabulary: same chrome
+        // as the Radio variants above, several options selectable at once.
+        if ($field === 'checkbox-list-choices') {
+            return [
+                CheckboxList::make('permissions')
+                    ->label('Segmented')
+                    ->helperText('Several options can be active at once.')
+                    ->options(['view' => 'View', 'create' => 'Create', 'edit' => 'Edit', 'delete' => 'Delete'])
+                    ->segmented(),
+                CheckboxList::make('skills_choice')
+                    ->label('Buttons')
+                    ->options(['php' => 'PHP', 'js' => 'JavaScript', 'css' => 'CSS'])
+                    ->icons(['php' => 'code-bracket'])
+                    ->colors(['php' => 'danger'])
+                    ->buttons()
+                    ->inline(),
             ];
         }
 
