@@ -176,6 +176,35 @@ try {
     p.rows === 2 && String(p.perPage) === '2', plain);
   await shot('03-after-plain-change');
 
+  // ── "All": a word in the select, an integer on the wire ───────────
+  // The one page size whose option label and value disagree. What has to hold
+  // is that the browser posts the sentinel, the server keeps it (rather than
+  // clamping it back the way it clamps a size the table never offered), and the
+  // rows follow.
+  const all = await eval_(`(async () => {
+    const sel = $sel();
+    const option = [...sel.options].find(o => o.value === '-1');
+    const label = option ? option.textContent.trim() : null;
+
+    sel.value = '-1';
+    sel.dispatchEvent(new Event('input', { bubbles: true }));
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 1200));
+
+    return JSON.stringify({ label, rows: $rows(), perPage: $perPage(), selValue: $sel().value });
+  })()`);
+  const a = JSON.parse(all);
+  console.log('all →', a);
+
+  check('the "all" option reads as a word, not as its sentinel',
+    a.label !== null && a.label !== '-1' && a.label.length > 0, all);
+  check('the server keeps the sentinel instead of clamping it away',
+    String(a.perPage) === '-1', all);
+  check('every record is on the one page', a.rows === 4, all);
+  check('the select still shows what the table is rendering',
+    a.selValue === '-1', all);
+  await shot('04-after-all');
+
   check('no console errors during the run', consoleErrors.length === 0,
     consoleErrors.slice(0, 3).join(' | '));
 

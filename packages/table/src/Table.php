@@ -54,6 +54,14 @@ class Table implements Htmlable
     use HasSqlDebug;
     use Macroable;
 
+    /**
+     * The page size that means "no page size" — every matching record on one
+     * page. Negative so it can never collide with a real count, and an int so
+     * it survives the round trip through the select, the query string and the
+     * cache key unchanged.
+     */
+    public const PER_PAGE_ALL = -1;
+
     protected ?ColumnSet $columns = null;
 
     /** @var array<int, Filter> */
@@ -553,9 +561,14 @@ class Table implements Htmlable
         return $this->headerActions;
     }
 
-    public function perPage(int $perPage): static
+    /**
+     * How many rows a page holds. `'all'` (or {@see Table::PER_PAGE_ALL}) puts
+     * every matching record on one page — see {@see perPageOptions()} for what
+     * that costs.
+     */
+    public function perPage(int|string $perPage): static
     {
-        $this->perPage = $perPage;
+        $this->perPage = $this->normalizePerPageOption($perPage);
 
         return $this;
     }
@@ -566,11 +579,28 @@ class Table implements Htmlable
     }
 
     /**
-     * @param  array<int, int>  $options
+     * The page sizes the per-page select offers.
+     *
+     * A size may be the word `'all'`, which offers "show everything on one
+     * page". It is deliberately not among the defaults: a page size is the one
+     * thing standing between a table and reading its whole source into memory,
+     * and `normalizePerPage()` on the host exists precisely to stop a crafted
+     * request asking for that. Writing `'all'` is how a table says the trade is
+     * acceptable for its data — so put it on a table whose row count you know,
+     * not on one backed by a table that grows without limit.
+     *
+     *   ->perPageOptions([10, 25, 50, 'all'])
+     *
+     * @param  array<int, int|string>  $options
+     *
+     * @throws TableConfigurationException on a size that is neither a number nor 'all'
      */
     public function perPageOptions(array $options): static
     {
-        $this->perPageOptions = $options;
+        $this->perPageOptions = array_map(
+            fn (int|string $option) => $this->normalizePerPageOption($option),
+            array_values($options),
+        );
 
         return $this;
     }
@@ -584,18 +614,50 @@ class Table implements Htmlable
      * whose "10" option cannot be chosen because the control already claims to
      * be on it.
      *
+     * "All" sorts last however it was declared — it is not a size that belongs
+     * in the middle of an ascending list, and its sentinel is negative, so
+     * leaving it to sort() would put it first.
+     *
      * @return array<int, int>
      */
     public function getPerPageOptions(): array
     {
-        if (in_array($this->perPage, $this->perPageOptions, true)) {
-            return $this->perPageOptions;
+        $options = $this->perPageOptions;
+
+        if (! in_array($this->perPage, $options, true)) {
+            $options[] = $this->perPage;
         }
 
-        $options = [...$this->perPageOptions, $this->perPage];
-        sort($options);
+        $sizes = array_values(array_filter($options, fn (int $option) => $option !== self::PER_PAGE_ALL));
+        sort($sizes);
 
-        return $options;
+        return in_array(self::PER_PAGE_ALL, $options, true)
+            ? [...$sizes, self::PER_PAGE_ALL]
+            : $sizes;
+    }
+
+    /**
+     * A page size as it is stored: a positive count, or the "all" sentinel.
+     *
+     * The value travels to the client and back through a `wire:model` select, a
+     * query-string parameter and the query cache key, all of which compare it
+     * strictly as an integer — so the word never survives past this point.
+     */
+    protected function normalizePerPageOption(int|string $option): int
+    {
+        if (is_int($option)) {
+            return $option;
+        }
+
+        if (strtolower(trim($option)) === 'all') {
+            return self::PER_PAGE_ALL;
+        }
+
+        if (is_numeric($option)) {
+            return (int) $option;
+        }
+
+        throw TableConfigurationException::invalidPerPageOption($option);
     }
 
     public function searchable(bool $searchable = true): static

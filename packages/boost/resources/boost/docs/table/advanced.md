@@ -1001,7 +1001,7 @@ Tracked parameters:
 |---|---|---|
 | `search` | global search | only when the table is searchable |
 | `sort`, `direction` | sort state | only sortable column names are accepted |
-| `per_page` | page size | only values from `perPageOptions()` are accepted |
+| `per_page` | page size | only values from `perPageOptions()` are accepted; `-1` is the `'all'` option, on a table that offers it |
 | `filter_{name}` | filter value | one parameter per filter |
 | `page` | current page | handled by Livewire's `WithPagination`; a page past the end re-anchors to the last populated one |
 

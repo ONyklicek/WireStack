@@ -107,6 +107,7 @@ return [
 
     // Pagination
     'show' => 'Zobrazit',
+    'per_page_all' => 'Vše',
     'showing' => 'Zobrazuje se',
     'of' => 'z',
     'records' => 'záznamů',

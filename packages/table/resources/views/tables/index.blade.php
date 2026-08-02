@@ -1485,7 +1485,7 @@
                                             {{-- Mark the live value server-side: without it the first
                                                  paint shows the first option regardless of state, and a
                                                  morph can snap the control back to it. --}}
-                                            <option value="{{ $option }}" @selected((int) $perPage === $option)>{{ $option }}</option>
+                                            <option value="{{ $option }}" @selected((int) $perPage === $option)>{{ $option === \NyonCode\WireTable\Table::PER_PAGE_ALL ? __('wire-table::messages.per_page_all') : $option }}</option>
                                         @endforeach
                                     </select>
                                     <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('wire-table::messages.records') }}</span>

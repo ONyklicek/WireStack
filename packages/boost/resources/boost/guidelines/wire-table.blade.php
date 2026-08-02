@@ -259,6 +259,7 @@ The table renders each cell and each action **once per row**, so per-row cost sc
 rows × columns (× actions). Keep the per-row work cheap and lean on the levers the package
 already gives you:
 
+- **A page size is what bounds a table's memory, and `'all'` removes it.** `Table::perPageOptions([10, 25, 50, 'all'])` adds a "show everything on one page" option (`Table::perPage('all')` makes it the default). It is stored as the integer `Table::PER_PAGE_ALL` (`-1`) — the word never survives configuration, because the select, the `per_page` query-string parameter and the query cache key all compare page sizes strictly as integers — and it is paginated by counting first, since a negative limit would give the paginator a negative page count. Deliberately **not** among the shipped `[10, 25, 50, 100]`: the host clamps any page size the table does not offer back to `perPage()`, which is the same guard that stops a forged `perPage: 500000`, so a table only reads its whole source into memory when it said `'all'` itself. There is **no** ceiling behind it (unlike `bulkMaxRecords()`), so it belongs on a table whose row count is known, not on one over an unbounded source.
 - **Defer off-screen tables.** `Table::lazy()` returns no rows and runs no query until the
   table scrolls into view (optional `->lazyPlaceholder(...)`). Use it for tables below the fold
   or in tabs. It defers the JS too: the table's Alpine bundles ship with the *deferred* render,

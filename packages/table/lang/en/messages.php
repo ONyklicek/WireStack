@@ -107,6 +107,7 @@ return [
 
     // Pagination
     'show' => 'Show',
+    'per_page_all' => 'All',
     'showing' => 'Showing',
     'of' => 'of',
     'records' => 'records',

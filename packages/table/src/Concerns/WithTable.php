@@ -439,6 +439,10 @@ trait WithTable
      * writing `perPage: 500000` over the wire, which is a page-sized read of
      * the whole table — so anything outside the offered options falls back to
      * the configured default.
+     *
+     * That clamp is also the whole gate on {@see Table::PER_PAGE_ALL}: the
+     * sentinel is a legal page size only on a table that listed `'all'` among
+     * its options, and a forged one falls back like any other.
      */
     protected function normalizePerPage(): void
     {
@@ -946,6 +950,16 @@ trait WithTable
     protected function paginateQuery(Table $table, Builder $query): LengthAwarePaginator|Paginator|CursorPaginator
     {
         $perPage = (int) $this->tableState->get('pagination.perPage', 10);
+
+        if ($perPage === Table::PER_PAGE_ALL) {
+            // The sentinel cannot be handed to the paginator: a negative limit
+            // is silently dropped by the query builder (so the rows would be
+            // right) while the paginator still divides the total by it (so the
+            // page count would be negative). Counting first is what makes "all"
+            // one honest page — and max(1) keeps an empty table from dividing
+            // by zero.
+            $perPage = max(1, $query->toBase()->getCountForPagination());
+        }
 
         return match ($table->getPaginationMode()) {
             'simple' => $query->simplePaginate($perPage),

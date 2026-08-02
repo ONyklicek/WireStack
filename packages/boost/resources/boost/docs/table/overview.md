@@ -382,11 +382,11 @@ two. The tiebreaker is skipped where a key is not a legal ordering term:
 // Enable pagination
 ->paginated(bool $paginated = true)
 
-// Default per-page count
-->perPage(int $perPage = 10)
+// Default per-page count — an int, or 'all' for one page holding everything
+->perPage(int|string $perPage = 10) // [tl! focus:start]
 
-// Per-page dropdown options
-->perPageOptions(array $options = [10, 25, 50, 100])
+// Per-page dropdown options; a size may be the word 'all'
+->perPageOptions(array $options = [10, 25, 50, 100]) // [tl! focus:end]
 
 // Simple pagination — no COUNT(*) query, just Previous/Next
 ->simplePagination()
@@ -410,6 +410,26 @@ two. The tiebreaker is skipped where a key is not a legal ordering term:
 `->perPage(3)` against the default options renders a select that can actually
 show `3` instead of contradicting the rows on screen. A per-page value arriving
 from the client that the table does not offer falls back to `perPage()`.
+
+**Showing everything on one page.** A page size may be the word `'all'`, which
+adds a final option that drops the limit entirely:
+
+```php
+->perPageOptions([10, 25, 50, 'all'])
+```
+
+It always sorts last, whatever position it was declared in, and it is stored as
+the integer `Table::PER_PAGE_ALL` — the value the select posts back, the query
+string carries and the cache key compares, since every one of those handles page
+sizes as integers. `->perPage('all')` makes it the table's own default.
+
+`'all'` is deliberately **not** among the shipped options. A page size is the
+one thing standing between a table and reading its whole source into memory, and
+the fallback described above exists precisely so a crafted request cannot ask
+for that — a forged `perPage: -1` still falls back on a table that never offered
+`'all'`. Writing it is how a table says the trade is acceptable for *its* data.
+There is no ceiling behind it: put it on a table whose row count you know, not
+on one backed by a table that grows without limit.
 
 **Out-of-range pages re-anchor themselves.** Standard pagination clamps to the
 last populated page whenever the stored page points past the end of the result

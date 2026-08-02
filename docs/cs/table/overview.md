@@ -380,11 +380,11 @@ přípustný člen řazení: `GROUP BY`, `DISTINCT` a sjednocení.
 // Zapnout stránkování
 ->paginated(bool $paginated = true)
 
-// Výchozí počet na stránku
-->perPage(int $perPage = 10)
+// Výchozí počet na stránku — int, nebo 'all' pro jednu stránku se vším
+->perPage(int|string $perPage = 10) // [tl! focus:start]
 
-// Volby dropdownu počtu na stránku
-->perPageOptions(array $options = [10, 25, 50, 100])
+// Volby dropdownu počtu na stránku; velikostí smí být slovo 'all'
+->perPageOptions(array $options = [10, 25, 50, 100]) // [tl! focus:end]
 
 // Jednoduché stránkování — bez COUNT(*) dotazu, jen Předchozí/Další
 ->simplePagination()
@@ -408,6 +408,26 @@ přípustný člen řazení: `GROUP BY`, `DISTINCT` a sjednocení.
 `->perPage(3)` proti výchozím volbám vykreslí select, který `3` opravdu umí
 zobrazit, místo aby si protiřečil s řádky na obrazovce. Hodnota per-page
 přicházející od klienta, kterou tabulka nenabízí, spadne zpět na `perPage()`.
+
+**Zobrazit vše na jedné stránce.** Velikostí stránky smí být slovo `'all'`,
+které přidá poslední volbu bez jakéhokoli limitu:
+
+```php
+->perPageOptions([10, 25, 50, 'all'])
+```
+
+Řadí se vždy nakonec, ať byla deklarovaná kdekoli, a ukládá se jako celé číslo
+`Table::PER_PAGE_ALL` — hodnota, kterou select posílá zpět, kterou nese query
+string a kterou porovnává cache key, protože všechny tři pracují s velikostmi
+stránky jako s inty. `->perPage('all')` z ní udělá výchozí nastavení tabulky.
+
+`'all'` záměrně **není** mezi dodávanými volbami. Velikost stránky je jediná
+věc, která stojí mezi tabulkou a načtením celého jejího zdroje do paměti, a
+výše popsané spadnutí zpět existuje právě proto, aby si o to podvržený požadavek
+nemohl říct — podstrčené `perPage: -1` spadne zpět na tabulce, která `'all'`
+nikdy nenabídla. Napsat ho je způsob, jak tabulka řekne, že u *jejích* dat je
+ten kompromis přijatelný. Žádný strop za tím není: dávej ho na tabulku, jejíž
+počet řádků znáš, ne na tu nad zdrojem, který roste bez omezení.
 
 **Stránky mimo rozsah se samy zakotví zpět.** Standardní stránkování ořízne na
 poslední zaplněnou stránku vždy, když uložené číslo stránky ukazuje za konec

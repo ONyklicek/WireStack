@@ -1008,7 +1008,7 @@ Sledované parametry:
 |---|---|---|
 | `search` | globální hledání | jen když je tabulka searchable |
 | `sort`, `direction` | stav řazení | přijímají se jen názvy řaditelných sloupců |
-| `per_page` | velikost stránky | přijímají se jen hodnoty z `perPageOptions()` |
+| `per_page` | velikost stránky | přijímají se jen hodnoty z `perPageOptions()`; `-1` je volba `'all'`, na tabulce, která ji nabízí |
 | `filter_{name}` | hodnota filtru | jeden parametr na filtr |
 | `page` | aktuální stránka | zpracováno Livewire `WithPagination`; stránka za koncem se zakotví na poslední zaplněnou |
 

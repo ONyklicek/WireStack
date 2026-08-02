@@ -483,10 +483,16 @@ class TablePreview extends Component
             // Two page sizes over the four seeded users, so switching visibly
             // doubles the rows on screen — a driver can tell the change landed
             // apart from anything else that might re-render the table.
+            //
+            // Plus 'all', whose rendered option is the one page size that is a
+            // word on screen and an integer on the wire. It shows the same four
+            // rows as the "4" option here, so what tells them apart — and what
+            // the driver asserts — is the state landing as PER_PAGE_ALL rather
+            // than being clamped back.
             $table
                 ->paginated()
                 ->perPage(2)
-                ->perPageOptions([2, 4])
+                ->perPageOptions([2, 4, 'all'])
                 ->defaultSort('id', 'asc');
         }
 

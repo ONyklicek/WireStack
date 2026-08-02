@@ -23,6 +23,13 @@ final class TableConfigurationException extends InvalidArgumentException impleme
         return new self('Interval must be like "5s", "500ms", "10m" or "1h".');
     }
 
+    public static function invalidPerPageOption(string $option): self
+    {
+        return new self(
+            "Page size [{$option}] is not a number, and the only word a page size may be is \"all\"."
+        );
+    }
+
     public static function relationPathNotGroupable(string $column): self
     {
         return new self(
