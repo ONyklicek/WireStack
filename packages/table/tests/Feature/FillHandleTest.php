@@ -170,7 +170,16 @@ beforeEach(function () {
     FhTask::create(['id' => 9, 'title' => 'Other team', 'status' => 'open', 'code' => 'C9', 'team_id' => 2]);
 });
 
-afterEach(fn () => Schema::dropIfExists('fh_tasks'));
+afterEach(function () {
+    // Two tests below drive the clock, and each resets it as its LAST statement
+    // — which never runs when an assertion above it fails, leaving the freeze
+    // in place for everything after it in the process. That turns one failure
+    // into an unrelated second one somewhere later, where nothing names the
+    // cause. Reset here, where a failing assertion cannot skip it.
+    Carbon::setTestNow();
+
+    Schema::dropIfExists('fh_tasks');
+});
 
 /**
  * @param  class-string<Component>  $class
@@ -427,9 +436,18 @@ it('refuses a fill still carrying the versions from before an earlier one', func
 // timestamps anyway.
 it('cannot tell two writes apart inside the same second', function () {
     $component = fhComponent();
-    $held = fhVersions([1, 2, 3]);
 
-    Carbon::setTestNow(Carbon::now());   // freeze: both writes share a second
+    // Freeze BEFORE the versions are read, and restamp the rows onto the frozen
+    // second. Reading them first was the bug: a version is the row's stored
+    // `updated_at`, written when beforeEach seeded it, so the test's premise —
+    // held version and write stamp inside one second — held only while seeding
+    // and the freeze happened to land in the same second. A real second
+    // boundary between them made the second fill genuinely stale, the refusal
+    // fired, and this test failed for the very reason it exists to document.
+    Carbon::setTestNow(Carbon::now());
+    FhTask::whereIn('id', [1, 2, 3])->update(['updated_at' => now()]);
+
+    $held = fhVersions([1, 2, 3]);
 
     $component->fillTableCells(fhFillVersioned('status', 'doing', $held));
 
