@@ -4,6 +4,15 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Widgets\Concerns;
 
+use NyonCode\WireCore\Foundation\ValueObjects\PollDirective;
+
+/**
+ * A widget refreshes itself on an interval.
+ *
+ * A widget polls exactly when it has an interval — that rule is this trait's,
+ * and it is not the table's. The attribute itself comes from the canonical
+ * {@see PollDirective}.
+ */
 trait HasPolling
 {
     protected ?string $pollingInterval = null;
@@ -47,12 +56,9 @@ trait HasPolling
             return null;
         }
 
-        $directive = 'wire:poll.'.$this->pollingInterval;
-
-        if ($this->pollingOnlyVisible) {
-            $directive .= '.visible';
-        }
-
-        return $directive;
+        return (string) new PollDirective(
+            interval: $this->pollingInterval,
+            onlyVisible: $this->pollingOnlyVisible,
+        );
     }
 }
