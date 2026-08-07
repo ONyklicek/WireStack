@@ -272,15 +272,32 @@ pattern to eliminate (per-column Htmlable skeletons; see the plans below). Rule 
 speed are the *same* requirement: self-render, done once. Record-invariant markup MUST
 be resolved once, never re-rendered per row.
 
-**Reference implementation:** `Column::renderCellFast()` — resolve `tables.columns.text`
-once into a skeleton with a content token, splice `e($state)` per row (measured
-byte-identical to `renderCell()` and ~5× cheaper; one view render per column, not V×R).
-It falls back to the full `renderCell()` when the skeleton cannot apply — a per-record
-url/copy/description-closure (`isCellSkeletonable()`), or a subclass that overrides
-`renderCell` with its own view (`supportsCellSkeleton()`). Any new fast path MUST carry
-the same two guards: a **byte-identity test** vs the classic render across escaping /
-edge-whitespace / unicode / html / empty content, and the **render-count fuse** proving
-zero per-row view renders.
+**Canonical owner:** `Foundation\View\Skeleton` (core, `Htmlable`) — compile a
+rendered template once, `fill()` per row in one `strtr()` pass. Use it rather than a
+local token-and-`str_replace`; `strtr` is also the correct primitive, because it does
+not re-examine what it just substituted.
+
+**Reference implementation:** `Column::renderCellFast()` — resolves
+`tables.columns.text` once into a `Skeleton` and splices per-record values per row
+(byte-identical to `renderCell()`, one view render per cell *shape*, not V×R). The
+rule that makes it safe is **one slot, one position, one encoding**: the caller hands
+each value in already encoded exactly as the template would have encoded it there
+(`e()` inside an attribute, raw for markup). A value appearing twice under two
+encodings is the boundary where this stops being cheap — see the inline-edit
+evaluation in the plan.
+
+A slot substitutes a **value, never a shape**. When a record changes the structure (a
+url on one row, none on the next), that is a second skeleton, cached per shape —
+O(shapes), not O(rows). The only remaining fallback is a subclass that overrides
+`renderCell` with its own view (`supportsCellSkeleton()`).
+
+Any new fast path MUST carry the same two guards: a **byte-identity test** vs the
+classic render across escaping / edge-whitespace / unicode / html / empty content
+*and* hostile per-record values, and the **render-count fuse** proving zero per-row
+view renders. Client-side there is a third: the **payload fuse**
+(`TablePayloadFuseTest`) budgets bytes, whitespace text nodes and morph markers per
+row — the morph walks every node, and a run of whitespace between tags is one node
+however short you make it.
 
 Pick the mechanism by *what varies per row*: **content columns** (structure fixed, only
 the value changes) use the **skeleton splice** above; **state-driven columns**

@@ -32,6 +32,7 @@ use NyonCode\WireCore\Foundation\Enums\FontWeight;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireCore\Foundation\View\Skeleton;
 use NyonCode\WireTable\Concerns\CanBeFiltered;
 use NyonCode\WireTable\Concerns\CanBeSummarized;
 use NyonCode\WireTable\Concerns\HasResponsive;
@@ -755,18 +756,25 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
     }
 
     /**
-     * §7 proof-of-concept: an Htmlable cell skeleton.
+     * §7: the Htmlable cell skeleton.
      *
-     * For a plain display column the text partial's per-record variation is *only*
-     * the content string — classes, icon, static tooltip/description are column-static.
-     * So the partial is rendered ONCE into a skeleton with a content placeholder, and
-     * every row splices its escaped state in — a string op, not a `view()->render()`.
-     * Falls back to {@see renderCell()} when a per-record structural bit is present
-     * (url / copy / description-closure), which a single skeleton cannot splice.
+     * The text partial is rendered ONCE into a {@see Skeleton} and every row splices
+     * its own values in — a string op, not a `view()->render()`. What varies per
+     * record is only ever a *value*: the content, and — since the multi-slot move —
+     * a per-record url, copy value, description-closure or icon-closure too. Those
+     * four used to drop the column back onto the per-cell render, measured at 18–33×
+     * the cost of a splice (and 3.3× on whole-table mount when every column carried
+     * one), which is the entire reason this now has more than one hole in it.
+     *
+     * Structure, as opposed to value, is what a skeleton cannot splice: a url present
+     * on one row and absent on the next are two shapes. So skeletons are cached per
+     * shape rather than one per column — O(shapes) renders, and in practice one.
+     *
+     * @var array<string, Skeleton>
      */
-    private const CELL_TOKEN = 'ᐊWIRE_CELL_a3f9e1ᐊ';
+    private array $cellSkeletons = [];
 
-    private ?string $cellSkeleton = null;
+    private ?string $staticIconHtml = null;
 
     public function renderCellFast(Model $record): string
     {
@@ -774,10 +782,9 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
             return '';
         }
 
-        // Subclasses that override renderCell render a different view than the text
-        // skeleton, and non-skeletonable columns vary structurally per row — both
-        // fall back to the full, byte-identical render.
-        if (! $this->supportsCellSkeleton() || ! $this->isCellSkeletonable()) {
+        // A subclass that overrides renderCell renders a different view than the text
+        // skeleton, so it falls back to its own full, byte-identical render.
+        if (! $this->supportsCellSkeleton()) {
             return $this->renderCell($record);
         }
 
@@ -786,11 +793,55 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
             ? (string) ($this->displayUsing)($state, $record)
             : $this->formatValue($state, $record);
 
-        return trim(str_replace(
-            self::CELL_TOKEN,
-            $this->html ? $content : e($content),
-            $this->cellSkeleton(),
-        ));
+        // Resolved per record ONLY where the column's own config is per-record. A
+        // plain text column pays three null checks here, not three resolutions —
+        // which is what keeps the common path exactly as cheap as it was.
+        $url = $this->urlCallback !== null ? $this->getUrl($record) : null;
+        $description = $this->description instanceof Closure
+            ? ($this->description)($record)
+            : (is_string($this->description) ? $this->description : null);
+        $iconHtml = $this->icon instanceof Closure
+            ? $this->iconHtmlFor($record)
+            : ($this->staticIconHtml ??= $this->iconHtmlFor(null));
+
+        $shape = ($url !== null && $url !== '' ? 'u' : '')
+            .($description !== null && $description !== '' ? 'd' : '')
+            .($iconHtml !== '' ? 'i' : '');
+
+        $skeleton = $this->cellSkeletons[$shape]
+            ??= $this->buildCellSkeleton($url, $description, $iconHtml);
+
+        // Each value arrives encoded exactly as the partial would have encoded it in
+        // that position: content raw or escaped per ->html(), url/description/copy
+        // value through e() because the partial escapes them, icon markup raw.
+        //
+        // Built branch by branch to match the shape above rather than as one literal:
+        // a value for a slot this shape does not have is work every row pays for
+        // nothing — which is how the §5 copyMessage regression happened, and
+        // EnumResolver::scalar() on every cell of every non-copyable column would be
+        // the same mistake again.
+        $values = ['content' => $this->html ? $content : e($content)];
+
+        if ($url !== null && $url !== '') {
+            $values['url'] = e($url);
+        }
+
+        if ($this->copyable) {
+            $values['copyValue'] = e((string) EnumResolver::scalar($state));
+        }
+
+        if ($description !== null && $description !== '') {
+            $values['description'] = e($description);
+        }
+
+        if ($iconHtml !== '') {
+            $values['icon'] = $iconHtml;
+        }
+
+        // The trim is the partial's own — a class-less, non-html cell is bare text,
+        // so surrounding whitespace in the state would otherwise survive here and
+        // not in renderCell().
+        return trim($skeleton->fill($values));
     }
 
     /** @var array<class-string, bool> */
@@ -808,38 +859,35 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
     }
 
     /**
-     * Skeletonable = the only per-record value is the content. A per-record url,
-     * copy affordance, or description-closure changes structure row to row.
+     * Render the partial once for one cell *shape*, with a sentinel wherever a value
+     * varies by record.
+     *
+     * The three arguments are the resolved values for THIS shape, and only their
+     * presence is read: they decide whether the partial builds the `<a>`, the
+     * description block and the icon at all. Their content arrives later, through
+     * {@see Skeleton::fill()}.
      */
-    private function isCellSkeletonable(): bool
+    private function buildCellSkeleton(?string $url, ?string $description, string $iconHtml): Skeleton
     {
-        return $this->urlCallback === null
-            && ! $this->copyable
-            && ! ($this->description instanceof Closure)
-            // A closure icon is per-record, so the cell is not fully static.
-            && ! ($this->icon instanceof Closure);
-    }
-
-    private function cellSkeleton(): string
-    {
-        return $this->cellSkeleton ??= trim($this->renderView('tables.columns.text', [
-            'content' => self::CELL_TOKEN,
+        return Skeleton::compile($this->renderView('tables.columns.text', [
+            'content' => Skeleton::slot('content'),
             'textClasses' => $this->getTextClasses(),
-            // Build raw so the token is not escaped; the per-row splice escapes state.
+            // Built raw so no sentinel is escaped here; each value is encoded for its
+            // own position when a row splices it in.
             'isHtml' => true,
-            // A closure icon is per-record and excluded from the skeleton
-            // (isCellSkeletonable), so here $this->icon is only ever a literal.
-            'iconHtml' => $this->iconHtmlFor(null),
+            'iconHtml' => $iconHtml === '' ? '' : Skeleton::slot('icon'),
             'iconPosition' => $this->iconPosition ?? 'before',
-            'url' => null,
+            'url' => ($url === null || $url === '') ? null : Skeleton::slot('url'),
             'openInNewTab' => $this->openUrlInNewTab,
-            'copyable' => false,
-            'copyValue' => null,
-            'copyMessage' => null,
+            'copyable' => $this->copyable,
+            'copyValue' => $this->copyable ? Skeleton::slot('copyValue') : null,
+            // Column-static, so it stays baked in rather than becoming a slot. Same
+            // §5 guard as renderCell(): resolved only when the column is copyable.
+            'copyMessage' => $this->copyable ? ($this->copyMessage ?? Trans::get('wire-table::messages.copied')) : null,
             'tooltip' => $this->tooltip,
-            'description' => is_string($this->description) ? $this->description : null,
+            'description' => ($description === null || $description === '') ? null : Skeleton::slot('description'),
             'descriptionPosition' => $this->descriptionPosition,
-        ]));
+        ]), 'content', 'icon', 'url', 'copyValue', 'description');
     }
 
     public function canView(): bool
@@ -1057,8 +1105,8 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
      * The icon may be a per-record Closure ({@see HasIcon::icon()}); it is
      * resolved with the record (evaluated closures may also return an Icon enum),
      * so a closure icon can never reach renderIcon(string) raw. Passing a null
-     * record (the shared skeleton path) resolves only a literal icon — closure
-     * icons are excluded from the skeleton by isCellSkeletonable().
+     * record resolves only a literal icon — that is the column-static case the
+     * skeleton bakes in, where a closure icon is spliced per row through its slot.
      */
     private function iconHtmlFor(?Model $record): string
     {

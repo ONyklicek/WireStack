@@ -1,34 +1,30 @@
-{{-- Copyable button partial --}}
+{{-- Copy affordance around an already-rendered cell. --}}
 {{-- Variables: $content, $copyValue, $copyMessage --}}
-<span class="inline-flex items-center gap-1.5 group" x-data="{ copied: false }">
-    {!! $content !!}
-    <button
-        type="button"
-        x-on:click="
-            navigator.clipboard.writeText(@js((string) $copyValue));
-            copied = true;
-            setTimeout(() => copied = false, 2000);
-        "
-        data-testid="cell-copy"
-        aria-label="{{ $copyMessage ?? __('wire-table::messages.copy') }}"
-        class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-        title="{{ __('wire-table::messages.copy') }}"
-    >
-        <template x-if="!copied">
-            {!! icon('clipboard-document', 'w-4 h-4', 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300') !!}
-        </template>
-        <template x-if="copied">
-            {!! icon('check', 'w-4 h-4', 'text-emerald-500') !!}
-        </template>
-    </button>
-    <span
-        x-show="copied"
-        x-transition:enter="transition ease-out duration-200"
-        x-transition:enter-start="opacity-0 translate-x-1"
-        x-transition:enter-end="opacity-100 translate-x-0"
-        x-transition:leave="transition ease-in duration-150"
-        x-transition:leave-start="opacity-100"
-        x-transition:leave-end="opacity-0"
-        class="text-xs text-emerald-600 dark:text-emerald-400 font-medium"
-    >{{ $copyMessage }}</span>
-</span>
+@php
+    /** @var string $content already-rendered cell markup, spliced in verbatim */
+    /** @var mixed $copyValue the value the button puts on the clipboard */
+    /** @var string|null $copyMessage what to announce afterwards */
+
+    // Built as a string rather than as markup, for the same reason the text and
+    // color partials next door are: it is the only way to emit a cell with no
+    // whitespace between its tags. Every such run is one text node the Livewire
+    // morph walks on every commit, and this partial can render 500 times on a page.
+    //
+    // The behaviour lives in the `record-copy` bundle, bound once for the document
+    // and reached through `data-copy`. It used to be an inline Alpine component per
+    // cell — 2042 bytes and 11 whitespace nodes each; the button below is ~180.
+    $label = $copyMessage ?? __('wire-table::messages.copy');
+
+    $out = '<span class="inline-flex items-center gap-1.5 group">'
+        .$content
+        .'<button type="button"'
+        .' data-copy="'.e((string) $copyValue).'"'
+        .' data-copy-message="'.e((string) $copyMessage).'"'
+        .' data-testid="cell-copy"'
+        .' aria-label="'.e($label).'"'
+        .' title="'.e(__('wire-table::messages.copy')).'"'
+        .' class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700">'
+        .icon('clipboard-document', 'w-4 h-4', 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300')
+        .'</button></span>';
+@endphp
+{!! $out !!}

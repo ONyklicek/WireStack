@@ -491,6 +491,180 @@ cells do not without the escaping gymnastics.
 
 ---
 
+---
+
+## §8. The client half — DOM nodes, not view renders (2026-08-07)
+
+Everything above counts `view()->render()`, which is the **server** cost. Measuring
+the same tables in a browser found the other half, and it is not smaller:
+
+| preview | DOM nodes | morph | round-trip |
+| --- | --- | --- | --- |
+| `table-overview` (5 rows) | 1 073 | 20 ms | 42 ms |
+| `table-selection-gestures-paged` (20) | 5 130 | 65 ms | 73 ms |
+| `table-selection-gestures` (40) | 9 555 | **102 ms** | 87 ms |
+
+Morph time is linear in node count (~10 µs/node) and at 40 rows it already **exceeds
+the round-trip that carried the HTML**. Of those 9 555 nodes, 4 374 were
+whitespace-only text nodes and 3 146 were Livewire's morph markers — **79 % holding
+no content**. Server-side the same picture: for 50×10, cell content was 4.8 KB of a
+521.7 KB payload (0.9 %) and 7.9 ms of a 51.8 ms mount; the rest is scaffolding.
+
+Two mechanics matter when acting on this, and both are counter-intuitive:
+
+1. **A run of whitespace between tags is ONE text node**, however long. So shortening
+   indentation saves bytes but *not* nodes — only removing the run removes the node.
+2. **Every `@if`/`@foreach` costs two comment nodes.** A conditional in the row loop
+   is 2×rows nodes the morph walks.
+
+### §8a. Payload fuse — **Done (2026-08-07)**
+
+`TablePayloadFuseTest` — the client-side counterpart to §1. Counts bytes, whitespace
+runs and comments as a **slope per row**, so fixed chrome drops out. Baseline for
+three plain text cells: **4 214 B, 21 whitespace nodes, 24 marker nodes per row**.
+
+### §8b. Copyable delegated — **Done (2026-08-07)**
+
+The copy affordance was an Alpine component per cell: `x-data`, an inline multi-line
+`x-on:click`, two `<template x-if>` icons and a feedback span with six transition
+attributes. Measured **2 042 B and 11 whitespace nodes per cell** — a 500-cell table
+shipped ~1 MB of it.
+
+Now a plain `<button data-copy>` plus one document listener (`record-copy.js`) and
+one feedback pill per page. **2 042 → 943 B (−54 %), 11 → 2 nodes (−82 %)**, pinned
+by the fuse and verified in a browser by `verify-copy-cell.mjs` (16/16, including
+that the clipboard really receives the value and that delegation survives a morph).
+
+What is left is mostly the inline clipboard SVG — **~690 B of the 943**. An icon
+sprite (`<symbol>` once + `<use>` per cell) would take the cell to ~250 B, and it
+would apply to every icon in the table, not just this one. Deliberately **not** taken
+here: it is a change to icon delivery with a much wider blast radius than one
+partial, and it belongs with §2's `IconManager` ownership rather than smuggled into
+a copy-button change.
+
+### §8c. The skeleton made canonical, and multi-slot — **Done (2026-08-08)**
+
+The skeleton was a `private const CELL_TOKEN` and a `str_replace` inside `Column`.
+It is now `Foundation\View\Skeleton` (core, `Htmlable`), compiled once and filled per
+row through **one `strtr()` pass** — which is also the correctness half: `strtr`
+does not re-examine what it just substituted, so a value that happens to contain
+another slot's sentinel is left alone where sequential `str_replace` calls would
+substitute it twice.
+
+One hole became several, and that is the whole point: `actionUrl()`, `copyable()`,
+`description(Closure)` and `icon(Closure)` no longer drop the column onto the
+per-cell render. Measured A/B in one session, 50 rows × 10 columns:
+
+| per cell | before | after | |
+| --- | --- | --- | --- |
+| bare `TextColumn` | 0.006 ms | 0.007 ms | +1 µs — the shape checks |
+| `->actionUrl(fn)` | 0.146 ms | 0.010 ms | **14.6×** |
+| `->copyable()` | 0.218 ms | 0.010 ms | **21.8×** |
+| `->description(fn)` | 0.113 ms | 0.010 ms | **11.3×** |
+
+| whole-table mount | before | after |
+| --- | --- | --- |
+| 0/10 columns with `actionUrl()` | 22.8 ms | 24.3 ms |
+| 2/10 | 38.4 ms | 26.4 ms |
+| 5/10 | 58.9 ms | 24.8 ms |
+| 10/10 | 78.8 ms | 28.2 ms |
+
+So the **3.5× cliff a single everyday feature used to cause is gone** (78.8/22.8 →
+28.2/24.3), paid for with ~1 µs per cell on the plain path — about 0.5 ms on a
+500-cell table. That trade is deliberate and is not worth a second code path.
+
+**Why this subset is safe where the inline-edit skeleton was not.** The fragility
+found there was *one variable under two encodings* (`e(json_encode($v))` and
+`e($v)`) plus a key the model int-cast. Here each slot is **one position with one
+encoding** — url inside `href="…"`, copy value inside `data-copy="…"`, description
+inside a `<p>`, icon as raw markup. Delegating the copy button (§8b) is what removed
+the last `@js()` and made copy a clean slot; doing §8c first would have needed the
+same escaping gymnastics.
+
+**Structure vs value.** A slot substitutes a value, never a shape. A url present on
+one row and absent on the next is two shapes, so skeletons are cached per shape —
+O(shapes) renders, proven by `TextColumnSkeletonTest` ("one skeleton per shape when
+a record turns a part off" → exactly 2 renders for 100 rows).
+
+Guards: byte-identity across 7 configs × 7 contents × 7 hostile ids (quotes,
+ampersands, `<x>`, unicode), a shared-column pass proving one column serving many
+records never leaks the previous row's values, a no-sentinel-leak assertion, and
+`SkeletonTest` in core for the primitive's own contract. `TableRenderCountTest` also
+gained back a real negative control — the fuse now trips on `TextInputColumn`,
+because copyable stopped being a fallback and could no longer prove it.
+
+### §8d. The row — cells and the `<tr>` assembled, not laid out — **Done (2026-08-08)**
+
+Two changes in `index.blade.php`, both moving record-invariant markup out of the row
+loop and into a resolve-once:
+
+1. **The `<td>` opening tag is built once per column** into `$columnMeta[…]['open']`.
+   Every attribute on it (padding, wrap, border, alignment, responsive classes,
+   `data-testid`, `data-column`, author attributes) is column-static — only what sits
+   *between* the tags varies by record — so a 50×10 page was re-emitting the same ten
+   strings five hundred times through Blade interpolation. The cells are now
+   concatenated in PHP, which also removes the per-cell `@foreach`/`@if` and the
+   whitespace they laid out between the tags.
+2. **The `<tr>` opening tag is compiled once per table** into a `Skeleton`. Its four
+   conditionals — keyboard nav, ARIA role, selection, the row-class binding — are
+   properties of the *table*, not of a record, so the row has exactly one shape and
+   those `@if`s were re-deciding a settled question once per row. The record key
+   arrives through **two slots**, because it appears under two encodings: `e()` in
+   `data-row-key` / `wire:key`, and `Js::from()` inside the Alpine expressions. One
+   slot, one position, one encoding — the same rule as §8c.
+
+Measured on a 6-row × 4-column fixture (a Badge column, an `actionUrl` column, a
+`copyable`+`description(Closure)` column) across five table configurations:
+
+| variant | bytes | whitespace runs | markers |
+| --- | --- | --- | --- |
+| plain | 67 081 → **49 854** (−26 %) | 348 → 243 | 256 → 198 |
+| selectable | 86 832 → **69 593** (−20 %) | 444 → 339 | 260 → 202 |
+| actions | 86 054 → **68 827** (−20 %) | 500 → 395 | 364 → 306 |
+| recordUrl | 72 917 → **51 730** (−29 %) | 396 → 243 | 256 → 198 |
+| full | 111 731 → **90 532** (−19 %) | 644 → 491 | 368 → 310 |
+
+Those totals carry the table's fixed chrome, which did not change. The honest per-row
+number is the fuse's slope: **4 214 → 1 823 B/row (−57 %), 21 → 11 whitespace nodes,
+24 → 16 markers** for three plain text cells.
+
+**How it was proven.** There is no slow path to compare a row against, so the guard
+was a golden master: the full rendered HTML of all five configurations captured
+before the change and compared after, masking only Livewire's per-render component id
+and insignificant whitespace. All five came back **identical in structure and in
+every attribute value** — the diff is exactly the whitespace that was the point. The
+2 009-test table suite (much of which asserts markup) is green, and the interaction
+drivers were re-run over the rebuilt rows: `copy-cell` 16/16, `column-surfaces`
+20/20, `fill-handle` 26/26, `record-actions-dual` 5/5, `selection-gestures` 75/77 and
+`gesture-lab` 22/28 — the last two at exactly their pre-change scores (verified by
+stashing the view and re-running; their failures are older and unrelated).
+
+**Marker count barely moved, and that is expected**: Livewire does not inject morph
+markers into `@if`s that sit *inside* an HTML tag, so the four conditionals on the
+`<tr>` never had any. The 24 → 16 drop is the per-cell `@foreach`/`@if` alone.
+
+### Still open
+
+- **The rest of the row loop.** §8d took the `<td>` and the `<tr>`; what still runs
+  Blade per row is the genuinely per-record structure — the teleported context-menu
+  panel, the selection cell, the sub-row toggle, the two action cells, and the group
+  header / subtotal / sub-rows siblings. Those are real branches (a record has a
+  context menu or it does not), so they need shape-keyed skeletons rather than one
+  compile, and they are where the remaining 11 whitespace nodes and 16 markers per
+  row live.
+- **Stripping morph markers from a compiled skeleton.** Within one shape the block
+  boundaries are fixed, so the marker pairs inside a skeleton carry no information the
+  morph can use. Removing them would take a further ~16 nodes/row. Not attempted: a
+  row that *changes* shape between renders is exactly the case the markers exist for,
+  and `wire:key` alone may not be enough for morphdom to pair the children correctly.
+  Wants its own experiment and its own CDP driver.
+- **Two copy implementations.** `Infolists/entries/{text,color}.blade.php` carry their
+  own copy affordance, unrelated to the table partial. A canonical owner (core
+  `Foundation/View`) would let both shrink the same way — see the ownership rule in
+  CLAUDE.md.
+
+---
+
 ## Suggested order
 
 1. **§1 render-count fuse** — the pin every later step is measured against, with a
@@ -506,7 +680,16 @@ cells do not without the escaping gymnastics.
    (2026-07-17)** — lazy dropdown ships 0 `dropdown-item` renders/row; CDP-verified.
 6. **§5 lazy `copyMessage`** — mechanical. **Done (2026-07-17)** — non-copyable
    column resolves the default 0×/row (was 1×/row).
-7. **§7 per-column skeleton** — last, one column family per PR, each proven by §1.
+7. **§8a payload fuse** — the client-side pin, the same role §1 plays for renders.
+   **Done (2026-08-07).**
+8. **§8b copyable delegated** — the worst per-cell offender, and the one that made
+   copy a clean single-slot value for §7. **Done (2026-08-07).**
+9. **§8c canonical multi-slot skeleton** — the display-column subset
+   (`actionUrl`, `copyable`, `description(Closure)`, `icon(Closure)`), each one
+   position with one encoding, unlike the inline-edit case declined above.
+   **Done (2026-08-08)** — 11–22× per cell, and the 3.5× whole-table cliff gone.
+10. **§8d row: `<td>` chrome per column + `<tr>` skeleton per table** — last, behind
+    both fuses and a golden master. **Done (2026-08-08)** — 4 214 → 1 823 B/row.
 
 Steps 1–4 are internal and BC-safe. §6 adds one opt-in method. §7 is internal but
 high-blast-radius — do not attempt it before the fuse exists.

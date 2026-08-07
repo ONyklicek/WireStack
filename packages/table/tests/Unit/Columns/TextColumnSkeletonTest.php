@@ -19,13 +19,13 @@ use NyonCode\WireTable\Columns\TextInputColumn;
  * proves both for TextColumn, and measures the interactive TextInputColumn (the Rule 2
  * boundary, where per-record structure is not spliceable).
  */
-function skelRecord(mixed $value): Model
+function skelRecord(mixed $value, mixed $id = 1): Model
 {
     $record = new class extends Model
     {
         protected $guarded = [];
     };
-    $record->forceFill(['val' => $value, 'id' => 1]);
+    $record->forceFill(['val' => $value, 'id' => $id]);
 
     return $record;
 }
@@ -69,20 +69,115 @@ it('skeleton splice is byte-identical to renderCell across configs and content',
     }
 });
 
-it('falls back to renderCell (still identical) for non-skeletonable columns', function () use ($contents) {
-    $configs = [
-        'copyable' => fn () => TextColumn::make('val')->copyable(),
-        'url' => fn () => TextColumn::make('val')->actionUrl(fn ($r) => 'https://x.test/'.$r->id),
-        'description-closure' => fn () => TextColumn::make('val')->description(fn ($r) => 'desc-'.$r->id),
-    ];
+/**
+ * The per-record configs — the ones that used to drop the column back onto a
+ * per-cell render, at a measured 18–33× the cost of a splice.
+ *
+ * Each is now its own slot, and each slot is one position with one encoding: the
+ * url inside `href="…"`, the copy value inside `data-copy="…"`, the description
+ * inside a `<p>`, the icon as raw markup. That is the property the whole multi-slot
+ * move rests on, so the ids below are hostile on purpose — a quote or an ampersand
+ * reaching a slot under the wrong encoding is exactly what byte-identity catches.
+ */
+$skelPerRecordConfigs = [
+    'copyable' => fn () => TextColumn::make('val')->copyable(),
+    'url' => fn () => TextColumn::make('val')->actionUrl(fn ($r) => 'https://x.test/'.$r->id),
+    'url+newtab' => fn () => TextColumn::make('val')->actionUrl(fn ($r) => '/p?a=1&b="2"&c='.$r->id, true),
+    'description-closure' => fn () => TextColumn::make('val')->description(fn ($r) => 'desc & <b>'.$r->id.'</b>'),
+    'icon-closure' => fn () => TextColumn::make('val')->icon(fn ($record) => $record->id % 2 ? 'pencil' : 'trash'),
+    'copyable+url' => fn () => TextColumn::make('val')->copyable()->actionUrl(fn ($r) => 'https://x.test/'.$r->id),
+    'all-at-once' => fn () => TextColumn::make('val')
+        ->copyable()
+        ->actionUrl(fn ($r) => 'https://x.test/?q='.$r->id)
+        ->description(fn ($r) => 'd'.$r->id)
+        ->icon(fn ($record) => 'pencil')
+        ->tooltip('t'),
+];
 
-    foreach ($configs as $label => $make) {
+$skelIds = [1, 7, 'a&b', 'q"uote', "ap'os", '<x>', 'ünï'];
+
+it('splices per-record url / copy / description / icon byte-identically', function () use ($contents, $skelPerRecordConfigs, $skelIds) {
+    foreach ($skelPerRecordConfigs as $label => $make) {
         foreach ($contents as $content) {
-            $slow = ($make)();
-            $fast = ($make)();
-            $record = skelRecord($content);
-            expect($fast->renderCellFast($record))->toBe($slow->renderCell($record), $label);
+            foreach ($skelIds as $id) {
+                // One fresh column per case so the shape cache starts cold, and one
+                // shared column below to prove the cache does not leak between rows.
+                $slow = ($make)();
+                $fast = ($make)();
+                $record = skelRecord($content, $id);
+
+                expect($fast->renderCellFast($record))->toBe(
+                    $slow->renderCell($record),
+                    "config=$label id=".var_export($id, true).' content='.var_export($content, true)
+                );
+            }
         }
+    }
+});
+
+it('keeps rows apart when one column serves many records', function () use ($skelPerRecordConfigs, $skelIds) {
+    // The real loop: ONE column instance, many records. A skeleton cached from the
+    // first row must not carry that row's url, copy value, description or icon into
+    // the next — the failure mode a per-column cache invites.
+    foreach ($skelPerRecordConfigs as $label => $make) {
+        $shared = ($make)();
+
+        foreach ($skelIds as $id) {
+            $record = skelRecord('v', $id);
+
+            expect($shared->renderCellFast($record))->toBe(
+                ($make)()->renderCell($record),
+                "config=$label id=".var_export($id, true)
+            );
+        }
+    }
+});
+
+it('renders one view per cell SHAPE, not one per row', function () {
+    // A url-bearing column is now spliced, so 100 rows cost the one skeleton render
+    // their shape needs — where before every row paid a full view render.
+    $records = array_map(fn ($i) => skelRecord("row $i", $i), range(1, 100));
+
+    $column = TextColumn::make('val')->actionUrl(fn ($r) => 'https://x.test/'.$r->id)->copyable();
+    $renders = skelViewRenders(function () use ($column, $records) {
+        foreach ($records as $r) {
+            $column->renderCellFast($r);
+        }
+    });
+
+    // 2: the text partial plus the copyable partial it includes, once between them.
+    expect($renders)->toBeLessThanOrEqual(2);
+});
+
+it('renders one skeleton per shape when a record turns a part off', function () {
+    // A closure that answers for some records and not others is two shapes, and each
+    // is compiled once however many rows share it — never once per row.
+    $records = array_map(fn ($i) => skelRecord("row $i", $i), range(1, 100));
+
+    $column = TextColumn::make('val')->actionUrl(fn ($r) => $r->id % 2 ? 'https://x.test/'.$r->id : null);
+    $renders = skelViewRenders(function () use ($column, $records) {
+        foreach ($records as $r) {
+            $column->renderCellFast($r);
+        }
+    });
+
+    expect($renders)->toBe(2);
+
+    // …and both shapes are still right.
+    $withUrl = TextColumn::make('val')->actionUrl(fn ($r) => $r->id % 2 ? 'https://x.test/'.$r->id : null);
+    foreach ([1, 2] as $id) {
+        $record = skelRecord('v', $id);
+        expect($column->renderCellFast($record))->toBe($withUrl->renderCell($record), "id=$id");
+    }
+});
+
+it('leaks no sentinel into a rendered cell', function () use ($skelPerRecordConfigs) {
+    // The one failure a skeleton can produce that no other assertion would notice:
+    // an unfilled hole shipping its placeholder to the browser.
+    foreach ($skelPerRecordConfigs as $label => $make) {
+        $html = ($make)()->renderCellFast(skelRecord('v', 3));
+
+        expect($html)->not->toContain('ᐊWIRE_SLOT_', $label);
     }
 });
 

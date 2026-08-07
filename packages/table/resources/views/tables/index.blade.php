@@ -190,6 +190,12 @@
     $hasGroupSummaries = $hasGrouping && $component->tableHasGroupSummaries();
     $subRowColumns = $hasSubRows ? $table->getSubRowColumns() : [];
     $visibleSubRowColumns = $hasSubRows ? array_filter($subRowColumns, fn($c) => $c->canView()) : [];
+    // Whether any cell on this table renders a copy button, and so whether the
+    // delegated clipboard controller is worth shipping. Sub-rows are included: they
+    // render through the same column partials, and the controller is one listener
+    // for the document either way.
+    $hasCopyableColumn = array_filter($visibleColumns, fn($c) => $c->isCopyable()) !== []
+        || array_filter($visibleSubRowColumns, fn($c) => $c->isCopyable()) !== [];
     $colSpan = ($isSelectable ? 1 : 0) + count($visibleColumns) + ($hasActions ? 1 : 0) + ($hasSubRows ? 1 : 0);
     $toggleableColumns = array_filter($table->getColumns(), fn($c) => $c->isToggleable() && $c->canView());
     $visibleToggleableCount = count(array_filter($toggleableColumns, fn($c) => $component->isColumnVisible($c->getName())));
@@ -222,6 +228,30 @@
     $cellPadding = $isCompact ? 'px-4 py-2' : 'px-6 py-4';
     $headerPadding = $isCompact ? 'px-4 py-2' : 'px-6 py-3';
 
+    // The body cell's opening tag, built once per column instead of once per cell.
+    //
+    // Every attribute on it is column-static — only what goes BETWEEN the tags
+    // varies by record — so a 50×10 page was re-emitting the same ten strings five
+    // hundred times, and paying Blade's interpolation for each. Assembling it here
+    // also lets the row loop emit a cell with no whitespace between its tags: each
+    // run of whitespace is one DOM text node, and the morph walks every one of them
+    // on every commit (see TablePayloadFuseTest).
+    //
+    // The single spaces inside class="" are deliberate and match the Blade that was
+    // here: an empty $wrapClass or $alignment collapses to a double space exactly as
+    // it did before, so the attribute stays byte-identical rather than merely
+    // equivalent.
+    $cellBorderClass = $isBordered ? 'border border-gray-200 dark:border-gray-700' : '';
+    foreach ($columnMeta as $name => $meta) {
+        $columnMeta[$name]['open'] = '<td class="'
+            .$cellPadding.' '.$meta['wrapClass'].' '.$cellBorderClass.' '.$meta['alignment']
+            .' dark:text-white '.$meta['responsive'].'"'
+            .' data-testid="table-cell-'.e($name).'"'
+            .' data-column="'.e($name).'"'
+            .($meta['extraCell'] ? ' '.$meta['extraCell'] : '')
+            .'>';
+    }
+
     // Responsive layout — class maps owned by the Table (literal Tailwind names).
     $isStackedOnMobile = $table->isStackedOnMobile();
     $tableHiddenClass = $table->getStackedTableHiddenClass();
@@ -244,6 +274,49 @@
     // row is one of them when present — miss it and every body index is off by
     // one.
     $headerRowCount = 1 + ($hasColumnFilters ? 1 : 0);
+
+    // The body row's opening tag, compiled once for the whole table.
+    //
+    // Every condition below is a property of the TABLE, not of a record — keyboard
+    // nav, the ARIA role, selection, the row-class binding are either on for the
+    // page or off for it — so the <tr> has exactly one shape and the four `@if`s
+    // that used to decide it per row were re-deciding a settled question 50 times.
+    // Each `@if` also cost a pair of Livewire morph markers per row, and the Blade
+    // between the attributes cost a text node.
+    //
+    // What is left is per-record and arrives through slots. The record key appears
+    // under TWO encodings — `e()` inside an HTML attribute, and Js::from() inside
+    // an Alpine expression — so it takes two slots: one slot, one position, one
+    // encoding (see Foundation\View\Skeleton).
+    $rowSkeleton = \NyonCode\WireCore\Foundation\View\Skeleton::compile(
+        '<tr class="'.\NyonCode\WireCore\Foundation\View\Skeleton::slot('rowClass').' '
+        .($keyboardNav ? 'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500' : '').'"'
+        .($rowClassBinding
+            ? ' :class="'.str_replace('%key%', \NyonCode\WireCore\Foundation\View\Skeleton::slot('keyJs'), $rowClassBinding).'"'
+            : '')
+        // The roving tabindex is bound, not printed: Livewire morphs the rows back
+        // to this markup on every update, which would wipe an assigned tabstop and
+        // drop the grid out of the tab order.
+        .($keyboardNav
+            ? ' role="row" tabindex="'.\NyonCode\WireCore\Foundation\View\Skeleton::slot('tabindex').'"'
+              .' :tabindex="rowTabindex('.\NyonCode\WireCore\Foundation\View\Skeleton::slot('keyJs').', '
+              .\NyonCode\WireCore\Foundation\View\Skeleton::slot('rowIndex').')"'
+            : '')
+        // Position in the whole grid, so it survives paging: the header rows come
+        // first, then this page's offset.
+        .($tableRole ? ' aria-rowindex="'.\NyonCode\WireCore\Foundation\View\Skeleton::slot('ariaRowIndex').'"' : '')
+        // Bound, never printed: the selection lives in Alpine and a static value
+        // would snap back to the server's truth on the next morph, leaving the row
+        // lying about itself.
+        .($isSelectable
+            ? ' :aria-selected="isSelected('.\NyonCode\WireCore\Foundation\View\Skeleton::slot('keyJs').") ? 'true' : 'false'\""
+            : '')
+        .' wire:key="row-'.\NyonCode\WireCore\Foundation\View\Skeleton::slot('key').'"'
+        .' data-testid="table-row"'
+        .' data-row-key="'.\NyonCode\WireCore\Foundation\View\Skeleton::slot('key').'"'
+        .'>',
+        'rowClass', 'keyJs', 'tabindex', 'rowIndex', 'ariaRowIndex', 'key',
+    );
 
     // Whole sentences for the selection live region: only the server can
     // translate them, and the counts are substituted client-side because the
@@ -1001,25 +1074,19 @@
                                             'cellPadding' => $cellPadding,
                                         ])
                                     @endif
-                                    @php $recordKeyJs = \Illuminate\Support\Js::from((string) $recordKey)->toHtml(); @endphp
-                                    <tr
-                                            class="{{ $table->getRowClasses($record, $rowIndex) }} {{ $keyboardNav ? 'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500' : '' }}"
-                                            @if($rowClassBinding) :class="{!! str_replace('%key%', $recordKeyJs, $rowClassBinding) !!}" @endif
-                                            {{-- The roving tabindex is bound, not printed: Livewire morphs the
-                                                 rows back to this markup on every update, which would wipe an
-                                                 assigned tabstop and drop the grid out of the tab order. --}}
-                                            @if($keyboardNav) role="row" tabindex="{{ $rowIndex === 0 ? '0' : '-1' }}" :tabindex="rowTabindex({!! $recordKeyJs !!}, {{ $rowIndex }})" @endif
-                                            {{-- Position in the whole grid, so it survives paging:
-                                                 the header rows come first, then this page's offset. --}}
-                                            @if($tableRole) aria-rowindex="{{ $headerRowCount + $rangeFrom + $rowIndex }}" @endif
-                                            {{-- Bound, never printed: the selection lives in Alpine and
-                                                 a static value would snap back to the server's truth on
-                                                 the next morph, leaving the row lying about itself. --}}
-                                            @if($isSelectable) :aria-selected="isSelected({!! $recordKeyJs !!}) ? 'true' : 'false'" @endif
-                                            wire:key="row-{{ $recordKey }}"
-                                            data-testid="table-row"
-                                            data-row-key="{{ $recordKey }}"
-                                    >
+                                    @php
+                                        $recordKeyJs = \Illuminate\Support\Js::from((string) $recordKey)->toHtml();
+                                        // Values only — the shape was settled once, above.
+                                        $rowOpen = $rowSkeleton->fill([
+                                            'rowClass' => e($table->getRowClasses($record, $rowIndex)),
+                                            'keyJs' => $recordKeyJs,
+                                            'tabindex' => $rowIndex === 0 ? '0' : '-1',
+                                            'rowIndex' => (string) $rowIndex,
+                                            'ariaRowIndex' => (string) ($headerRowCount + $rangeFrom + $rowIndex),
+                                            'key' => e((string) $recordKey),
+                                        ]);
+                                    @endphp
+                                    {!! $rowOpen !!}
                                         @if($hasRowContextMenu)
                                             {{-- Teleported context-menu panel for this row. It carries no
                                                  per-row Alpine state: the single wireRecordActions controller
@@ -1100,25 +1167,33 @@
                                             </td>
                                         @endif
 
-                                        {{-- Column Cells --}}
-                                        @foreach($visibleColumns as $column)
-                                            @php $cm = $columnMeta[$column->getName()]; @endphp
-                                            <td
-                                                class="{{ $cellPadding }} {{ $cm['wrapClass'] }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $cm['alignment'] }} dark:text-white {{ $cm['responsive'] }}"
-                                                data-testid="table-cell-{{ $column->getName() }}"
-                                                data-column="{{ $column->getName() }}"
-                                                @if($cm['extraCell']) {!! $cm['extraCell'] !!} @endif
-                                            >
-                                                @if($recordUrl && !$cm['editable'])
-                                                    <a href="{{ $recordUrl }}"
-                                                       class="hover:text-primary-600 dark:hover:text-primary-400">
-                                                        {!! $cm['responsiveDisplay'] ? $column->renderResponsiveCell($record) : $column->renderCellFast($record) !!}
-                                                    </a>
-                                                @else
-                                                    {!! $cm['responsiveDisplay'] ? $column->renderResponsiveCell($record) : $column->renderCellFast($record) !!}
-                                                @endif
-                                            </td>
-                                        @endforeach
+                                        {{-- Column Cells. Assembled in PHP rather than by a @foreach, so
+                                             the row emits no whitespace between the cells and Blade runs
+                                             no per-cell conditional — the two things that made a <td>
+                                             cost ~900 bytes and a fistful of DOM nodes to say `v`. The
+                                             opening tag is $cm['open'], resolved once per column above. --}}
+                                        @php
+                                            $cellsHtml = '';
+                                            $linkOpen = $recordUrl
+                                                ? '<a href="'.e($recordUrl).'" class="hover:text-primary-600 dark:hover:text-primary-400">'
+                                                : '';
+
+                                            foreach ($visibleColumns as $column) {
+                                                $cm = $columnMeta[$column->getName()];
+                                                $cell = $cm['responsiveDisplay']
+                                                    ? $column->renderResponsiveCell($record)
+                                                    : $column->renderCellFast($record);
+
+                                                // A record url turns every non-editable cell into a link to
+                                                // the record; an editable one keeps its own interaction.
+                                                if ($linkOpen !== '' && ! $cm['editable']) {
+                                                    $cell = $linkOpen.$cell.'</a>';
+                                                }
+
+                                                $cellsHtml .= $cm['open'].$cell.'</td>';
+                                            }
+                                        @endphp
+                                        {!! $cellsHtml !!}
 
                                         {{-- Actions Cell (End Position - Default) --}}
                                         @if($hasActions && $actionsPosition === 'end')
@@ -1519,6 +1594,17 @@
 
                 {{-- Keyboard shortcut help (`?`) --}}
                 @include('wire-table::tables.partials.shortcut-help-modal')
+
+                {{-- One clipboard controller and one feedback pill for the page, not
+                     one per cell — see record-copy.js. Inside the wrapper because the
+                     pill is a real element and a Livewire component may have only one
+                     root; `@once` because a page may hold several tables and the
+                     controller binds to the document, not to this table. --}}
+                @if($hasCopyableColumn)
+                    @once
+                        @include('wire-table::tables.partials.copy-assets')
+                    @endonce
+                @endif
 
                 </div> {{-- Close table wrapper --}}
 

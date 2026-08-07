@@ -46,10 +46,13 @@ class RcComponent extends Component
 
     public bool $copyable = false;
 
-    public function mount(int $cols = 2, bool $copyable = false): void
+    public bool $editable = false;
+
+    public function mount(int $cols = 2, bool $copyable = false, bool $editable = false): void
     {
         $this->cols = $cols;
         $this->copyable = $copyable;
+        $this->editable = $editable;
     }
 
     public function table(Table $table): Table
@@ -57,6 +60,15 @@ class RcComponent extends Component
         $columns = [];
 
         for ($i = 0; $i < $this->cols; $i++) {
+            // An inline-edit column is the Rule 2 boundary: its per-record variation
+            // is structural (input value, wire:key, per-record Alpine commit config),
+            // so it renders a view per cell and is the fuse's negative control.
+            if ($this->editable) {
+                $columns[] = TextInputColumn::make('name');
+
+                continue;
+            }
+
             // displayUsing keeps the cell off any DB attribute, so a plain cell is
             // exactly one view render (tables.columns.text) with no icon/url/copy.
             $column = TextColumn::make('c'.$i)->displayUsing(fn () => 'v');
@@ -139,11 +151,12 @@ function rcSeed(int $rows): void
     ], range(1, $rows)));
 }
 
-function rcRender(int $cols = 2, bool $copyable = false): Closure
+function rcRender(int $cols = 2, bool $copyable = false, bool $editable = false): Closure
 {
     return fn () => Livewire::test(RcComponent::class, [
         'cols' => $cols,
         'copyable' => $copyable,
+        'editable' => $editable,
     ])->html();
 }
 
@@ -196,19 +209,37 @@ it('makes column count a one-time skeleton cost, not O(rows × cols) (§7)', fun
 });
 
 it('still catches per-row renders in non-skeletonable cells (the fuse lives)', function () {
-    // A copyable cell is NOT skeletonable (per-record copy value) → it falls back to
-    // the full per-cell render. So its per-row slope is > 0 while the plain cell's is
-    // 0 — the fuse still trips on any per-row view render, which is its whole job.
+    // The fuse is only worth anything if it can still trip, so it needs a cell that
+    // genuinely renders per row. That is the inline-edit column, and deliberately so:
+    // its per-record variation is STRUCTURAL (input value, wire:key, the per-record
+    // Alpine commit config), which a value-splice cannot express — the Rule 2
+    // boundary documented in render-engine-htmlable-first.md §7.
+    //
+    // It used to be the copyable column. That stopped working as a control when the
+    // copy value became a slot, which is the point of the assertion below it.
     rcSeed(4);
-    $plainSmall = rcRenderCount(rcRender(2, copyable: false));
-    $copySmall = rcRenderCount(rcRender(2, copyable: true));
+    $plainSmall = rcRenderCount(rcRender(2, editable: false));
+    $editSmall = rcRenderCount(rcRender(2, editable: true));
 
     rcSeed(8); // 4 → 12 rows
-    $plainLarge = rcRenderCount(rcRender(2, copyable: false));
-    $copyLarge = rcRenderCount(rcRender(2, copyable: true));
+    $plainLarge = rcRenderCount(rcRender(2, editable: false));
+    $editLarge = rcRenderCount(rcRender(2, editable: true));
 
     expect(($plainLarge - $plainSmall) / 8)->toBe(0)              // skeletonised → 0/row
-        ->and(($copyLarge - $copySmall) / 8)->toBeGreaterThan(0); // fallback → per-row
+        ->and(($editLarge - $editSmall) / 8)->toBeGreaterThan(0); // per-cell render
+});
+
+it('adds zero view renders per row for a copyable cell too (§7 multi-slot)', function () {
+    // A copyable cell carried a per-record copy value, so it fell back to the full
+    // per-cell render and cost a measured 33× a splice. The copy value is a slot now,
+    // so its per-row slope is the plain cell's: zero.
+    rcSeed(4);
+    $small = rcRenderCount(rcRender(2, copyable: true));
+
+    rcSeed(8); // 4 → 12 rows
+    $large = rcRenderCount(rcRender(2, copyable: true));
+
+    expect($large - $small)->toBe(0);
 });
 
 // The fill handle is one element per table, positioned over the active cell by
