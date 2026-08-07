@@ -15,6 +15,48 @@
 
 import Sortable from 'sortablejs';
 
+// One pair of morph hooks for the page rather than one pair per table:
+// Livewire's hook() has no off switch, so registering inside init() stacks a
+// fresh pair every time a controller initialises — a second reorderable table,
+// a wire:navigate, a table inside a lazily loaded modal — and every stacked
+// copy keeps running against a component that no longer exists. Same pattern as
+// wire-table's record-actions guard and the fill handle's.
+//
+// Keyed by the wrapper element rather than held in a Set, because a controller
+// cannot reliably remove *itself*: Alpine calls destroy() with a merge proxy of
+// the scope, not the instance init() saw, so `delete(this)` deletes nothing.
+// The element is the same object in both, and keying by it also means a
+// controller replacing another on the same wrapper takes over its entry instead
+// of joining it.
+const controllers = new Map();
+let morphGuardsInstalled = false;
+
+/** Drop controllers whose wrapper has left the document, then run the rest. */
+const eachController = (run) => {
+    controllers.forEach((controller, root) => {
+        if (!root.isConnected) {
+            controllers.delete(root);
+            return;
+        }
+
+        run(controller);
+    });
+};
+
+const installMorphGuards = () => {
+    if (morphGuardsInstalled || !window.Livewire) return;
+
+    morphGuardsInstalled = true;
+
+    window.Livewire.hook('morph.updating', ({ el, skip }) => {
+        eachController((controller) => controller.onMorphUpdating(el, skip));
+    });
+
+    window.Livewire.hook('morph.updated', ({ el }) => {
+        eachController((controller) => controller.onMorphUpdated(el));
+    });
+};
+
 export function wireSortable(config = {}) {
     return {
         rowSortableInstance: null,
@@ -30,45 +72,87 @@ export function wireSortable(config = {}) {
         isReordering: config.isReordering ?? false,
 
         init() {
-            this.$nextTick(() => this.setup());
+            this.scheduleSetup();
 
             this.$watch('isReordering', () => {
-                this.$nextTick(() => this.setup());
+                this.scheduleSetup();
             });
 
-            // Block Livewire morph during drag or inline editing to prevent DOM disruption.
-            // setup() re-creates drag-handle <td> cells which collapses the table
-            // layout and kills focus, and morphing itself can replace the focused
-            // input element.
-            Livewire.hook('morph.updating', ({ el, skip }) => {
-                if (!this.$root.contains(el)) return;
+            // The morph guards below run from the page-wide hooks, for as long
+            // as this controller owns the wrapper.
+            controllers.set(this.$root, this);
+            installMorphGuards();
+        },
 
-                if (this.isDragging) {
-                    skip();
-                    return;
-                }
+        /**
+         * Block the morph during a drag, and over the one cell being edited —
+         * dragging moves rows the server render knows nothing about, and
+         * morphing an editable cell can replace the input being typed into.
+         *
+         * Both guards have to name what they protect. `skip()` takes the whole
+         * subtree of `el` with it and `contains()` is inclusive, so the old
+         * "is any input inside the table focused?" test — answered for every
+         * node from the wrapper down — skipped the wrapper itself, and with it
+         * the entire table. The search box is an input inside the table: typing
+         * in it silenced every render it asked for, and the table simply
+         * stopped responding to search.
+         */
+        onMorphUpdating(el, skip) {
+            if (!this.$root.contains(el)) return;
 
-                const active = document.activeElement;
-                if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')
-                    && this.$root.contains(active)) {
-                    skip();
-                }
-            });
+            if (this.isDragging) {
+                skip();
+                return;
+            }
 
-            // Re-initialize after Livewire morphs (pagination, filters, etc.)
-            Livewire.hook('morph.updated', ({ el }) => {
-                if (this.isDragging || !this.$root.contains(el)) return;
+            const cell = this.editingCell();
+            if (cell && el === cell) skip();
+        },
 
-                // Skip re-init when a table input is focused — setup() destroys
-                // and re-creates drag-handle <td> cells which collapses the table
-                // layout and kills focus on editable columns.
-                const active = document.activeElement;
-                if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')
-                    && this.$root.contains(active)) {
-                    return;
-                }
+        /** Re-initialize after Livewire morphs (pagination, filters, etc.). */
+        onMorphUpdated(el) {
+            if (this.isDragging || !this.$root.contains(el)) return;
 
-                this.$nextTick(() => this.setup());
+            // Not while a cell is being edited: setup() destroys and re-creates
+            // the drag-handle <td> cells, which collapses the table layout and
+            // kills focus. Focus anywhere else in the table — the search box, a
+            // filter, the per-page select — is outside <tbody> and survives it.
+            if (this.editingCell()) return;
+
+            this.scheduleSetup();
+        },
+
+        /**
+         * The editable cell the user is currently typing in, if any.
+         *
+         * Identified by the `[data-record-key][data-column-name]` pair the
+         * editable columns render, which is the selector wireTableLive already
+         * reads in busy() — no new convention, and one place to change if the
+         * cell markup ever does.
+         */
+        editingCell() {
+            const active = document.activeElement;
+
+            if (!active || !this.$root.contains(active) || !active.closest) return null;
+
+            return active.closest('[data-record-key][data-column-name]');
+        },
+
+        /**
+         * One setup() per morph, not one per morphed node.
+         *
+         * `morph.updated` fires for every element Livewire patches, which over
+         * a table is hundreds of nodes — each of them used to tear down and
+         * rebuild both Sortable instances.
+         */
+        scheduleSetup() {
+            if (this._setupQueued) return;
+
+            this._setupQueued = true;
+
+            this.$nextTick(() => {
+                this._setupQueued = false;
+                this.setup();
             });
         },
 
@@ -409,6 +493,14 @@ export function wireSortable(config = {}) {
         },
 
         destroy() {
+            // Alpine calls this when the tree carrying the wrapper is torn
+            // down. Leaving the entry behind would keep a destroyed component
+            // answering for the table: its $root is often the very same element
+            // the next controller drives, so a stale `isDragging` would go on
+            // blocking morphs for the whole page. Removed by element, since
+            // `this` here is not the instance that registered (see above).
+            controllers.delete(this.$root);
+
             this.destroyRowSortable();
             if (this.columnSortableInstance) {
                 this.columnSortableInstance.destroy();

@@ -9,6 +9,7 @@ use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireSortable\Concerns\WithSortable;
 use NyonCode\WireTable\Columns\BadgeColumn;
 use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\Columns\TextInputColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Table;
 use Workbench\App\Models\Task;
@@ -28,7 +29,7 @@ class SortablePreview extends Component
         // Column order is persisted per user, so the reorder preview needs
         // someone logged in — without an id, reorderColumns() returns early and
         // the next render puts the columns straight back.
-        if ($variant === 'columns' && ! auth()->check()) {
+        if (in_array($variant, ['columns', 'morph'], true) && ! auth()->check()) {
             $user = User::query()->first();
 
             if ($user !== null) {
@@ -39,6 +40,10 @@ class SortablePreview extends Component
 
     public function table(Table $table): Table
     {
+        if ($this->variant === 'morph') {
+            return $this->morphTable($table);
+        }
+
         $status = BadgeColumn::make('status')
             ->label('Status')
             ->colors([
@@ -99,6 +104,34 @@ class SortablePreview extends Component
         }
 
         return $table;
+    }
+
+    /**
+     * A reorderable table that still has to answer the ordinary controls.
+     *
+     * `columnReorderable()` alone, deliberately: it renders the sortable
+     * wrapper — and with it the drag controller's morph guards — without
+     * putting the table in row-reorder mode, which bypasses search by design
+     * (see WithSortable::interceptTableRecords). So what the search box does
+     * here is exactly what it does on any other table, and any difference is
+     * the wrapper's doing.
+     *
+     * The editable column is the other half: the guards exist to protect a
+     * cell mid-write from a morph, and narrowing them must not stop them
+     * doing that.
+     */
+    private function morphTable(Table $table): Table
+    {
+        return $table
+            ->model(Task::class)
+            ->columnReorderable()
+            ->columns([
+                TextColumn::make('title')->label('Task')->searchable(),
+                TextInputColumn::make('owner_name')->label('Owner'),
+                TextColumn::make('status')->label('Status'),
+            ])
+            ->defaultSort('sort_order')
+            ->paginated(false);
     }
 
     public function render()

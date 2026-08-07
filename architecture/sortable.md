@@ -62,6 +62,48 @@ Persistence for saved column order preferences.
 
 Sortable UI fragments and scripts.
 
+### `resources/js/sortable.js` — the drag controller and its morph guards
+
+One Alpine component wraps the whole table whenever `reorderable()` **or**
+`columnReorderable()` is on, and it registers two global Livewire morph hooks.
+They are the highest-blast-radius code in the package: a morph hook that says
+"skip" decides whether a Livewire response is applied at all, for the entire
+table, whatever the render was about.
+
+Two rules when touching them:
+
+1. **`skip()` takes the whole subtree of `el` with it, and `contains()` is
+   inclusive.** A guard evaluated at the wrapper therefore skips the table. Any
+   condition must name the exact node it protects (`el === cell`), never "the
+   focused element is somewhere below this one".
+2. **"An input inside the table" is not the same as "a cell being edited".** The
+   search box, the filter inputs and the per-page select are inputs inside the
+   table, and each of them exists to *cause* the morph. The cell being edited is
+   identified by `[data-record-key][data-column-name]` — the same pair
+   `wireTableLive.busy()` reads, and a cross-package contract asserted by
+   `packages/sortable/tests/Feature/MorphGuardTest.php`.
+
+3. **The hooks are installed once per document, not once per controller.**
+   `Livewire.hook()` has no off switch, so registering from `init()` stacks a
+   fresh pair on every re-init — a second reorderable table, a `wire:navigate`,
+   a table in a lazily loaded modal. Live controllers live in a module-level
+   `Map` keyed by their wrapper element, added in `init()` and removed in
+   `destroy()`. Keyed by the element deliberately: Alpine calls `destroy()` with
+   a merge proxy of the scope, **not** the instance `init()` saw, so
+   `delete(this)` silently deletes nothing — and an element key also lets a
+   replacement take over the entry rather than join it. Same shape as
+   `packages/table/resources/js/record-actions.js` and
+   `packages/core/resources/js/fill/controller.js`.
+
+The drag guard is the one case that legitimately skips everything: mid-drag the
+DOM holds rows the server render knows nothing about.
+
+`morph.updated` fires once per patched element, so the re-init it schedules is
+coalesced (`scheduleSetup()`) — one `setup()` per morph, not one per node.
+
+The bundle is committed: any change here needs `npm run build:sortable-assets`,
+which `SortableAssetTest` and `MorphGuardTest` will fail without.
+
 ## Typical Changes
 
 - sortable feature wiring:
@@ -88,6 +130,13 @@ Usually also run:
 Add integration tests if plugin boot or state flow changed:
 
 - `vendor/bin/pest --configuration phpunit.xml --testsuite "Integration"`
+
+Anything in `resources/js/sortable.js` is browser-only and Pest cannot see it —
+rebuild the bundle and run the drivers:
+
+- `npm run build:sortable-assets`
+- `npm run verify:drivers -- sortable-morph` — the morph guards
+- `npm run verify:drivers -- column-reorder` — the header drag and the body mirror
 
 Useful authored docs:
 
