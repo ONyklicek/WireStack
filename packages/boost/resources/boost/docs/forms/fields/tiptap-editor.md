@@ -22,12 +22,16 @@ The `<script type="module">` tags are injected once per page via Livewire's
 `@assets` directive; they register the Alpine component `tiptapEditor` that the
 view relies on (Alpine ships with Livewire).
 
-> **Publishing the asset (optional).** If you prefer to serve the files through your
-> own asset pipeline/CDN, publish them with:
+> **Publishing the asset (optional).** To have your web server serve the files
+> instead of the package route, publish them with:
 > ```bash
-> php artisan vendor:publish --tag=wire-forms::assets
+> php artisan vendor:publish --tag=laravel-assets --force
 > ```
-> This copies the bundles to `public/vendor/wire-forms/`.
+> This copies the bundles to `public/vendor/wire-forms/` — the whole stack's, not
+> just this package's — and the editor emits those paths from then on, cache-buster
+> included. The publish mirrors `dist/` verbatim, so the entries keep resolving their
+> shared chunk relative to `vendor/wire-forms/tiptap/`. See
+> [Getting Started → JavaScript Assets](../../getting-started.md#javascript-assets).
 
 > **Contributors.** The bundles are generated from
 > `packages/forms/resources/js/tiptap-editor.js` and `tiptap-editor-addons.js`, and
@@ -44,6 +48,34 @@ view relies on (Alpine ships with Livewire).
 ```php
 TiptapEditor::make('content')
 ```
+
+## Default Content
+
+The editor opens on the field's `->default()` — the canonical default every
+component has, no editor-specific method. It is **markup, not plain text**, so a
+template arrives pre-formatted:
+
+```php
+TiptapEditor::make('minutes')
+    ->default('<h2>Meeting notes</h2><p>Some <strong>text</strong>.</p><ul><li>First point</li></ul>')
+```
+
+How it resolves, in order:
+
+1. **The form runtime seeds it.** `fill()` (and a modal action's initial state)
+   writes `->default()` into the state bag for any key the caller did not
+   provide, so the editor simply opens on a value that is already there.
+2. **The editor seeds it when the host did not** — a `null` column, a property
+   bound by hand — applying the default whenever the bound value is empty and
+   pushing the parsed document back into Livewire, so saving a form the user
+   never touched stores the template rather than nothing.
+3. **A cleared editor is not empty.** Emptying the content stores `<p></p>`, so
+   re-opening a document the user deliberately cleared does *not* bring the
+   default back. On an edit form where the column is genuinely `null`, add
+   `->defaultOnNull()` to let the default fill it server-side too.
+
+Under `->outputJson()` the default may be a TipTap JSON document string, or the
+same HTML — HTML is parsed into a document and stored as JSON either way.
 
 ## Custom Toolbar
 
@@ -122,6 +154,31 @@ TiptapEditor::make('content')
     ->disabled(fn () => ! $this->canEdit)
 ```
 
+## Localization
+
+The editor carries no English of its own. Toolbar tooltips, the heading titles
+and the browser prompts opened by the link and image buttons all resolve from
+`wire-forms::fields.editor.*`, so the field follows `app()->getLocale()`. English
+(`en`) and Czech (`cs`) ship with the package — a Czech app shows *Tučné*,
+*Odrážkový seznam*, *Nadpis 2*, and prompts *URL odkazu*.
+
+The prompt titles are resolved in PHP and handed to the editor's Alpine config,
+which is why a locale change reaches strings that live inside the JS bundle.
+
+[RichEditor](rich-editor.md#localization) and
+[MarkdownEditor](markdown-editor.md#localization) title their toolbars from the
+very same keys, so the three editors read alike in every locale.
+
+Reword a string, or add a locale, by publishing the translations and editing
+`lang/vendor/wire-forms/{locale}/fields.php`:
+
+```bash
+php artisan vendor:publish --tag=wire-forms::translations
+```
+
+The button glyphs stay `H1` / `H2` / `H3` in every locale — those are symbols,
+not words; the tooltip is what gets translated.
+
 ## Available Toolbar Buttons
 
 | Key | Description |
@@ -167,6 +224,8 @@ TiptapEditor::make('content')
 | `toolbarButtons(array)` | array | Override the toolbar button list |
 | `disableToolbarButtons(array)` | array | Remove specific buttons |
 | `disableAllToolbarButtons()` | — | Hide the toolbar entirely |
+| `default(string\|Closure)` | string | Pre-formatted document the editor opens on when empty |
+| `defaultOnNull()` | — | Let `default()` also fill an existing `null` on fill |
 | `outputHtml()` | — | Store content as HTML (default) |
 | `outputJson()` | — | Store content as TipTap JSON string |
 | `withImages(bool)` | bool | Enable image extension + button |

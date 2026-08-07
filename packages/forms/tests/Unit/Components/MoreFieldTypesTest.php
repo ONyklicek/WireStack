@@ -328,8 +328,8 @@ test('tiptap editor alpine config exposes editor settings', function () {
 
     expect($config)->toHaveKeys([
         'wireAttribute', 'outputFormat', 'disabled', 'readOnly',
-        'placeholder', 'maxLength', 'withImages', 'withTables',
-        'withTextAlign', 'withHighlight',
+        'placeholder', 'default', 'prompts', 'maxLength', 'withImages',
+        'withTables', 'withTextAlign', 'withHighlight',
     ])
         ->and($config['outputFormat'])->toBe('json')
         ->and($config['withImages'])->toBeTrue();
