@@ -96,6 +96,49 @@ DateTimePicker::make('date')
 > uložená hodnota zůstává beze změny. Ctí ho vlastní picker; formát zobrazení
 > nativního inputu patří prohlížeči a locale uživatele.
 
+## Psaní z klávesnice
+
+Trigger je textové pole, ne tlačítko: hodnotu lze napsat, nejen vybrat. Napsaný
+text se čte zpět stejným formátem, jakým se zobrazuje — `displayFormat()`, když
+je nastavený, jinak tvar uložené hodnoty — takže pole ukazující
+`9. 3. 2026 14:30` přesně tohle zpátky přijme.
+
+Parser je benevolentní ke všemu kromě *pořadí* částí, které určuje formát. Při
+`->displayFormat('j. n. Y H:i')` skončí všechny tyhle zápisy na stejné hodnotě:
+
+```text
+9. 3. 2026 14:30
+9.3.2026 14:30
+9/3/2026 14:30
+9. 3. 26 14:30        dvojciferný rok patří do tohoto století
+9. 3. 2026            čas se nenapsal, zůstává ten, který je právě nastavený
+```
+
+Zápis se potvrdí při opuštění pole a klávesou <kbd>Enter</kbd>; <kbd>Escape</kbd>
+ho zahodí. Cokoli, co parser nepřečte — `31. 2. 2026`, hodina nad 23, den, který
+vylučuje `minDate()`/`maxDate()`/`disabledDates()` — je odmítnuto celé a vrátí se
+předchozí hodnota, takže se do stavu nikdy nedostane rozečtené datum. Vyprázdnění
+pole hodnotu smaže.
+
+Napsaná hodnota projde stejným ořezem jako vybraná: v hraniční den, který nese
+čas, se hodiny stáhnou do meze místo odmítnutí — napsat `10. 3. 2026 07:00` při
+`->minDate('2026-03-10 08:30')` uloží 08:30.
+
+Cestu přes klávesnici zavřete tam, kde hodnota opravdu musí přijít z widgetu:
+
+```php
+DateTimePicker::make('slot')->typeable(false)
+```
+
+> `readOnly()` má přednost před `typeable()`: zavírá klávesnici *i* panel,
+> protože hodnota není uživatelova, aby ji měnil jakoukoli cestou.
+> `typeable(false)` zavírá jen klávesnici a kalendář nechává funkční.
+
+> Psaní je vlastnost vlastního pickeru. Klávesnice nativního inputu patří
+> prohlížeči a jediný způsob, jak ji vzít, je `readonly` — což by s ní vyplo i
+> vlastní picker prohlížeče — takže `typeable(false)` pod `->native()` nemá
+> žádný efekt.
+
 ## Nativní picker
 
 Výchozí je vlastní Alpine picker. Přepnutí na ovládání prohlížeče:
@@ -130,8 +173,9 @@ Jedinou výjimkou je [`asMonth()`](#rezimy), který je vždy nativní.
 | `secondsStep(int)` | int | Krok inkrementu sekund |
 | `timezone(string)` | string | Zobrazí hodnotu v této timezone a při uložení ji převede zpět do timezone aplikace; jen pro `datetime` |
 | `native(bool $native = true)` | bool | Použít nativní ovládání prohlížeče místo vlastního pickeru (výchozí: `false`) |
+| `typeable(bool\|Closure)` | bool | Umožnit hodnotu napsat, nejen vybrat (výchozí: `true`); jen vlastní picker |
 | `disabled(bool\|Closure)` | bool | Znepřístupnit picker |
-| `readOnly(bool\|Closure)` | bool | Read-only režim |
+| `readOnly(bool\|Closure)` | bool | Read-only režim — bez psaní i bez panelu |
 | `required()` | — | Označit jako povinné |
 | `live()` | — | Spustit Livewire update při změně |
 

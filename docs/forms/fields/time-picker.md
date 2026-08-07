@@ -40,6 +40,10 @@ There is no separate `interval()` setter — it is the same concept under the na
 it already had. `hoursStep()` and `secondsStep()` are inherited but do nothing
 here: a slot list has one stride, not three.
 
+The interval bounds the **list**, not the value. A time can be typed straight
+into the trigger, so `08:07` stays reachable at a 30-minute stride — only the
+bounds refuse a typed time. See [Typing](date-time-picker.md#typing).
+
 ## Bounds
 
 `minDate()` / `maxDate()` read as times and **disable** the slots outside them,
@@ -64,6 +68,7 @@ The value side is entirely inherited, so these behave exactly as documented for
 TimePicker::make('opens_at')
     ->withSeconds()               // stored H:i:s; slots still land on :00
     ->displayFormat('H:i')
+    ->typeable(false)             // the list only — no typing into the trigger
     ->native()                    // browser's <input type="time">
     ->placeholder('Pick a time')
 ```

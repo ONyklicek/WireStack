@@ -15,6 +15,7 @@ function makeFoundationField(string $name = 'test_field'): object
         use Concerns\CanBeDisabled;
         use Concerns\CanBeLive;
         use Concerns\CanBeReadOnly;
+        use Concerns\CanBeTyped;
         use Concerns\HasColumnSpan;
         use Concerns\HasDebounce;
         use Concerns\HasDefault;
@@ -404,6 +405,29 @@ it('can be set to read-only', function () {
     $field = makeFoundationField('name');
     $field->readOnly();
     expect($field->isReadOnly())->toBeTrue();
+});
+
+// ─── CanBeTyped ─────────────────────────────────────────────
+
+// The default is the whole point of the trait: a widget-backed input that
+// nobody can type into is the behavior this exists to end, so "on unless asked"
+// is the contract, not an implementation detail.
+it('accepts typing by default', function () {
+    expect(makeFoundationField('name')->isTypeable())->toBeTrue();
+});
+
+it('can be made picker-only', function () {
+    expect(makeFoundationField('name')->typeable(false)->isTypeable())->toBeFalse();
+});
+
+it('evaluates a closure, so the choice can depend on the form', function () {
+    expect(makeFoundationField('name')->typeable(fn (): bool => false)->isTypeable())->toBeFalse();
+});
+
+it('is fluent', function () {
+    $field = makeFoundationField('name');
+
+    expect($field->typeable(false))->toBe($field);
 });
 
 // ─── CanBeLive ──────────────────────────────────────────────

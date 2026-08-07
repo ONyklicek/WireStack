@@ -25,6 +25,7 @@ Use these before creating local field/column/action helpers:
 - `BelongsToComponent`
 - `CanBeLive`
 - `CanBeReadOnly`
+- `CanBeTyped`
 - `HasAuthorization`
 - `HasColor`
 - `HasColumnSpan`

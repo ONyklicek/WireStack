@@ -32,6 +32,10 @@
     $sheetPanel = \NyonCode\WireCore\Foundation\Support\MobileSheet::panelPadded($sheetBp);
     $sheetMotion = \NyonCode\WireCore\Foundation\Support\MobileSheet::motion($sheetBp);
     $sheetBackdrop = \NyonCode\WireCore\Foundation\Support\MobileSheet::backdropHide($sheetBp);
+    // Whether the trigger takes a typed value as well as a picked one. readOnly()
+    // and disabled() outrank typeable(), which is why this is one resolved answer
+    // rather than three conditions repeated down the markup.
+    $typeable = $field->acceptsTypedInput();
 @endphp
 
 @include('wire-forms::partials.field-wrapper-start')
@@ -319,12 +323,66 @@
                 let out = '';
                 for (let i = 0; i < this.displayFormat.length; i++) {
                     const c = this.displayFormat[i];
-                    if (c === '\\\\') { out += this.displayFormat[++i] ?? ''; continue; }
+                    if (c === '\\') { out += this.displayFormat[++i] ?? ''; continue; }
                     out += (c in tokens) ? tokens[c] : c;
                 }
 
                 return out;
             },
+
+@if($typeable)
+            @include('wire-forms::partials.date-time-typing')
+
+            {{-- What a parsed set of numbers means to a calendar-and-clock picker.
+                 Everything is checked before anything is written, so a refused
+                 entry leaves the picker exactly as the user found it. --}}
+            applyTyped(parts) {
+                let hours = this.hours, minutes = this.minutes, seconds = this.seconds;
+
+                if (this.hasTime) {
+                    {{-- A format with no clock in it, or a date typed without
+                         one, keeps the time already showing. --}}
+                    hours = parts.hours ?? hours;
+                    minutes = parts.minutes ?? minutes;
+                    seconds = this.hasSeconds ? (parts.seconds ?? seconds) : 0;
+                    if (hours > 23 || minutes > 59 || seconds > 59) return false;
+                }
+
+                let dateStr = null;
+
+                if (this.hasDate) {
+                    const { year, month, day } = parts;
+                    if (! year || ! month || ! day || month > 12 || day < 1) return false;
+                    {{-- 31 February is a typo, and new Date() would quietly roll
+                         it forward into March rather than say so. --}}
+                    if (day > new Date(year, month, 0).getDate()) return false;
+
+                    dateStr = this.formatDateStr(year, month, day);
+                    {{-- The same gate the calendar cells go through: a day the
+                         bounds or disabledDates exclude cannot be typed in
+                         either. --}}
+                    if (this.isDisabled(dateStr)) return false;
+                }
+
+                this.hours = hours;
+                this.minutes = minutes;
+                this.seconds = seconds;
+
+                if (dateStr) {
+                    {{-- Walk the calendar to what was typed, so opening the panel
+                         after typing shows the month the value is in. --}}
+                    this.currentYear = parts.year;
+                    this.currentMonth = parts.month - 1;
+                    this.buildCalendar();
+                }
+
+                {{-- commitValue() clamps the clock into the bounds of the day it
+                     lands on, exactly as it does for a picked date. --}}
+                this.commitValue(dateStr);
+
+                return true;
+            },
+@endif
 
             get monthYearLabel() {
                 const d = new Date(this.currentYear, this.currentMonth);
@@ -343,24 +401,58 @@
                     type="text"
                     {!! $field->getExtraInputAttributesHtml() !!}
                     id="{{ $fieldId }}"
-                    :value="displayValue"
-                    @click="open = !open" data-testid="form-datetime-{{ $field->getStatePath() }}-trigger"
-                    @keydown.escape="open = false"
-                    readonly
+                    {{-- Mid-edit the box shows what is being typed; otherwise the
+                         formatted value. Swapping on `typing` rather than on a
+                         non-empty buffer lets the box be emptied to clear. --}}
+                    :value="{{ $typeable ? 'typing ? typed : displayValue' : 'displayValue' }}"
+                    data-testid="form-datetime-{{ $field->getStatePath() }}-trigger"
+                    aria-haspopup="dialog"
+                    :aria-expanded="open ? 'true' : 'false'"
+                    @if($typeable)
+                        @input="onTyped($event.target.value)"
+                        @blur="commitTyped()"
+                        @keydown.enter.prevent="commitTyped(); open = false"
+                    @elseif(! $field->isReadOnly())
+                        @keydown.enter.prevent="open = ! open"
+                    @endif
+                    @unless($field->isReadOnly())
+                        {{-- Opens, never toggles: with a caret in the box, clicking
+                             to place it would otherwise close the panel. The
+                             chevron is the toggle. --}}
+                        @click="open = true"
+                        @keydown.down.prevent="open = true"
+                    @endunless
+                    @keydown.escape="cancelTyped(); open = false"
+                    @unless($typeable) readonly @endunless
                     @if($field->getPlaceholder()) placeholder="{{ $field->getPlaceholder() }}" @endif
                     @if($field->isDisabled()) disabled @endif
                     @if($field->hasAutofocus()) autofocus @endif
                     @if($field->isRequired()) required @endif
                     @class([
-                        'block w-full rounded-md border-gray-300 shadow-sm cursor-pointer',
+                        'block w-full rounded-md border-gray-300 shadow-sm',
+                        // Only a box that cannot be typed into is a button.
+                        'cursor-pointer' => ! $typeable,
                         'focus:border-primary-500 focus:ring-primary-500',
                         'hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150',
                         'dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm',
                         'border-red-500 focus:border-red-500 focus:ring-red-500' => $errors->has($field->getStatePath()),
                     ])
             />
-            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <svg class="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+            {{-- A real button, not decoration: with the input now accepting text,
+                 the icon is the only thing left that unambiguously means "open the
+                 calendar". Out of the tab order on purpose — the input already
+                 opens with ArrowDown, and a second stop on every date field buys
+                 a keyboard user nothing. --}}
+            <button
+                    type="button"
+                    tabindex="-1"
+                    data-testid="form-datetime-{{ $field->getStatePath() }}-toggle"
+                    aria-label="{{ $hasDate ? __('Open calendar') : __('Open clock') }}"
+                    @click="open = ! open"
+                    @if($field->isDisabled() || $field->isReadOnly()) disabled @endif
+                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 disabled:pointer-events-none transition-colors duration-150"
+            >
+                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                      stroke-width="1.5" stroke="currentColor">
                     @if($hasDate)
                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -370,7 +462,7 @@
                               d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     @endif
                 </svg>
-            </div>
+            </button>
         </div>
 
         {{-- Calendar panel: floating from sm up, bottom sheet on a phone (max-sm:
@@ -396,7 +488,11 @@
             <div
                 x-ref="panel"
                 x-show="open"
-                @click.outside="$clickedInside($event) || (open = false)"
+                {{-- The trigger is excluded explicitly. Alpine runs .outside in
+                     the capture phase, so without this it closes the panel a
+                     beat before the chevron's own handler toggles it — and the
+                     toggle can then only ever open. --}}
+                @click.outside="$clickedInside($event) || $refs.trigger.contains($event.target) || (open = false)"
                 x-transition:enter="transition ease-out duration-150"
                 x-transition:enter-start="opacity-0 -translate-y-1 {{ $sheetOnMobile ? $sheetMotion : '' }}"
                 x-transition:enter-end="opacity-100 translate-y-0"

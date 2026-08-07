@@ -22,6 +22,9 @@
     $sheetScroll = MobileSheet::scrollArea($sheetBp);
     $sheetMotion = MobileSheet::motion($sheetBp);
     $sheetBackdrop = MobileSheet::backdropHide($sheetBp);
+    // readOnly() and disabled() outrank typeable(); resolved once rather than
+    // re-spelled down the markup.
+    $typeable = $field->acceptsTypedInput();
 @endphp
 
 @include('wire-forms::partials.field-wrapper-start')
@@ -131,12 +134,36 @@
                 let out = '';
                 for (let i = 0; i < this.displayFormat.length; i++) {
                     const c = this.displayFormat[i];
-                    if (c === '\\\\') { out += this.displayFormat[++i] ?? ''; continue; }
+                    if (c === '\\') { out += this.displayFormat[++i] ?? ''; continue; }
                     out += (c in tokens) ? tokens[c] : c;
                 }
 
                 return out;
             },
+
+@if($typeable)
+            @include('wire-forms::partials.date-time-typing')
+
+            {{-- A typed time need not land on a slot. The interval is how the list
+                 *offers* times, not a rule about which ones exist — isSelected()
+                 already tolerates a stored value between two slots — and typing is
+                 the one way to say 08:07 when the list steps by fifteen. Only the
+                 bounds may refuse it. --}}
+            applyTyped(parts) {
+                const hours = parts.hours ?? 0;
+                const minutes = parts.minutes ?? 0;
+                const seconds = this.hasSeconds ? (parts.seconds ?? 0) : 0;
+                if (hours > 23 || minutes > 59 || seconds > 59) return false;
+
+                const time = this.pad(hours) + ':' + this.pad(minutes)
+                    + (this.hasSeconds ? ':' + this.pad(seconds) : '');
+                if (this.isDisabled(time)) return false;
+
+                this.value = time;
+
+                return true;
+            },
+@endif
 
             get displayValue() {
                 return this.value ? this.format(this.value) : '';
@@ -154,29 +181,57 @@
                     type="text"
                     {!! $field->getExtraInputAttributesHtml() !!}
                     id="{{ $fieldId }}"
-                    :value="displayValue"
-                    @click="open = !open" data-testid="form-time-{{ $field->getStatePath() }}-trigger"
-                    @keydown.escape="open = false"
-                    readonly
+                    {{-- Mid-edit the box shows what is being typed; otherwise the
+                         formatted value. --}}
+                    :value="{{ $typeable ? 'typing ? typed : displayValue' : 'displayValue' }}"
+                    data-testid="form-time-{{ $field->getStatePath() }}-trigger"
+                    aria-haspopup="dialog"
+                    :aria-expanded="open ? 'true' : 'false'"
+                    @if($typeable)
+                        @input="onTyped($event.target.value)"
+                        @blur="commitTyped()"
+                        @keydown.enter.prevent="commitTyped(); open = false"
+                    @elseif(! $field->isReadOnly())
+                        @keydown.enter.prevent="open = ! open"
+                    @endif
+                    @unless($field->isReadOnly())
+                        {{-- Opens, never toggles: clicking to place the caret must
+                             not close the list. The chevron is the toggle. --}}
+                        @click="open = true"
+                        @keydown.down.prevent="open = true"
+                    @endunless
+                    @keydown.escape="cancelTyped(); open = false"
+                    @unless($typeable) readonly @endunless
                     @if($field->getPlaceholder()) placeholder="{{ $field->getPlaceholder() }}" @endif
                     @if($field->isDisabled()) disabled @endif
                     @if($field->hasAutofocus()) autofocus @endif
                     @if($field->isRequired()) required @endif
                     @class([
-                        'block w-full rounded-md border-gray-300 shadow-sm cursor-pointer',
+                        'block w-full rounded-md border-gray-300 shadow-sm',
+                        'cursor-pointer' => ! $typeable,
                         'focus:border-primary-500 focus:ring-primary-500',
                         'hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150',
                         'dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm',
                         'border-red-500 focus:border-red-500 focus:ring-red-500' => $errors->has($field->getStatePath()),
                     ])
             />
-            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <svg class="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+            {{-- A real button rather than decoration, and out of the tab order:
+                 see the DateTimePicker view for why. --}}
+            <button
+                    type="button"
+                    tabindex="-1"
+                    data-testid="form-time-{{ $field->getStatePath() }}-toggle"
+                    aria-label="{{ __('Open clock') }}"
+                    @click="open = ! open"
+                    @if($field->isDisabled() || $field->isReadOnly()) disabled @endif
+                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 disabled:pointer-events-none transition-colors duration-150"
+            >
+                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                      stroke-width="1.5" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round"
                           d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
-            </div>
+            </button>
         </div>
 
         {{-- Slot panel: floating from sm up, bottom sheet on a phone. --}}
@@ -200,7 +255,10 @@
             <div
                 x-ref="panel"
                 x-show="open"
-                @click.outside="$clickedInside($event) || (open = false)"
+                {{-- The trigger is excluded explicitly: Alpine runs .outside in the
+                     capture phase, so it would close the list a beat before the
+                     chevron's own handler toggles it. --}}
+                @click.outside="$clickedInside($event) || $refs.trigger.contains($event.target) || (open = false)"
                 x-transition:enter="transition ease-out duration-150"
                 x-transition:enter-start="opacity-0 -translate-y-1 {{ $sheetOnMobile ? $sheetMotion : '' }}"
                 x-transition:enter-end="opacity-100 translate-y-0"
