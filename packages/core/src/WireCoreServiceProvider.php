@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
+use NyonCode\LaravelPackageToolkit\Support\PublishedAssets;
 use NyonCode\WireCore\Actions\View\BulkButtonComponent;
 use NyonCode\WireCore\Actions\View\ButtonComponent;
 use NyonCode\WireCore\Actions\View\GroupComponent;
@@ -79,12 +80,16 @@ class WireCoreServiceProvider extends PackageServiceProvider
             ->hasAssets('dist')
             ->hasAbout()
             ->hasInstallCommand(function (InstallCommand $command) {
+                // Assets are deliberately not published here. Publishing is what
+                // switches this package's bundles from route delivery to static
+                // files, and that is a decision about the whole stack — one
+                // `vendor:publish --tag=laravel-assets` covers every installed
+                // package, where the installer would flip only this one.
                 $command
                     ->publishConfig()
                     ->publishMigrations()
                     ->publishViews()
-                    ->publishTranslations()
-                    ->publishAssets();
+                    ->publishTranslations();
             });
     }
 
@@ -201,15 +206,34 @@ class WireCoreServiceProvider extends PackageServiceProvider
             $expression,
         ));
 
-        // Octane: the state-driven view-render memo is a class static that would
-        // otherwise accumulate across requests in a long-lived worker (unbounded
-        // growth; potential cross-tenant bleed). Flush it as each request ends.
+        // Octane: two memos that are per-request everywhere else become
+        // per-worker-lifetime here, so flush them as each request ends.
+        //
+        // The view-render memo is a class static that would otherwise accumulate
+        // (unbounded growth; potential cross-tenant bleed). The asset URLs are the
+        // subtler one: each carries the `?id=<mtime>` of its mirrored copy, so a
+        // worker still alive across a deploy would keep emitting last release's query
+        // string — and `data-navigate-track`, which exists to catch exactly that,
+        // would never fire. `PublishedAssets` holds the same memo one layer down;
+        // flushing only ours would re-ask it and get the same answer back.
+        //
         // Referenced by string, not ::class import: laravel/octane is an optional
         // dependency the package does not require, so the symbol may not exist.
         $octaneRequestTerminated = 'Laravel\\Octane\\Events\\RequestTerminated';
         if (class_exists($octaneRequestTerminated)) {
-            Event::listen($octaneRequestTerminated, static function (): void {
+            Event::listen($octaneRequestTerminated, function (): void {
                 Component::flushViewRenderCache();
+                $this->app->make(AssetManager::class)->flushUrls();
+
+                // Transitional: `flush()` is on the toolkit's roadmap and not in the
+                // version this constraint allows yet, so the call is a no-op until it
+                // ships. Drop the guard, and this comment, once the constraint
+                // requires the release that carries it.
+                $published = $this->app->make(PublishedAssets::class);
+
+                if (method_exists($published, 'flush')) {
+                    $published->flush();
+                }
             });
         }
     }

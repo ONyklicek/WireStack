@@ -122,6 +122,9 @@ class WireTableServiceProvider extends PackageServiceProvider
             Js::make('live', self::ASSETS_PATH.'/wire-table-live.js')
                 ->navigateTrack()
                 ->navigateOnce(),
+            Js::make('copy', self::ASSETS_PATH.'/wire-table-copy.js')
+                ->navigateTrack()
+                ->navigateOnce(),
         ], 'wire-table');
     }
 

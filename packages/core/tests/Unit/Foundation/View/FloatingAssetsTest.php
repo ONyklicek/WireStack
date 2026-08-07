@@ -15,7 +15,7 @@ it('builds the cache-busted dropdown asset URL', function () {
     $url = app(FloatingAssets::class)->url();
 
     expect($url)
-        ->toContain('wire-core/assets/dropdown.js')
+        ->toContain('vendor/wire-core/wire-core-dropdown.js')
         ->toContain('?id='); // mtime cache-buster (the bundled asset exists)
 });
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Foundation\Assets\Contracts;
 
 use Illuminate\Contracts\Support\Htmlable;
+use NyonCode\LaravelPackageToolkit\Support\PublishedAssets;
 use NyonCode\WireCore\Foundation\Assets\AssetManager;
 
 /**
@@ -34,6 +35,14 @@ interface Asset extends Htmlable
      * most once per request.
      */
     public function getUrl(): string;
+
+    /**
+     * Whether a copy of this asset was published into `public/vendor` and is now
+     * older than the one the package ships — the app upgraded without re-publishing.
+     * That copy is still what {@see PublishedAssets} serves, so this is what lets the
+     * manager warn about it.
+     */
+    public function isStale(): bool;
 
     /**
      * Whether the asset is fetched on demand by the surface that needs it, rather

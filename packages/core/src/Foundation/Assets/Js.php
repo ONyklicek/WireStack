@@ -4,27 +4,33 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Foundation\Assets;
 
+use NyonCode\LaravelPackageToolkit\Support\PublishedAssets;
 use NyonCode\WireCore\Exceptions\AssetRegistrationException;
 use NyonCode\WireCore\Foundation\Assets\Contracts\Asset;
 
 /**
  * A JavaScript bundle shipped inside a package's `dist/`.
  *
- * Delivery is deliberately publish-free: every package already exposes a named
- * asset route (`wire-core.asset`, `wire-table.asset`, `wire-forms.asset`) that
- * streams the file straight out of the package, so a consumer needs neither npm nor
- * `vendor:publish`. This value object is the declaration of one such bundle — the
- * route name follows from the registering package (`{package}.asset`) and the
+ * Delivery needs neither npm nor `vendor:publish` from a consumer. The toolkit
+ * mirrors each package's `dist/` into `public/vendor/{package}` and this object
+ * emits that path — a real file, which is what makes it survive a web server that
+ * answers `.js` from `try_files $uri =404` and never forwards it to PHP. See
+ * {@see PublishedAssets} for the mirror, which is lazy, incremental and atomic.
+ *
+ * Where `public/` cannot be written the mirror returns nothing and the package's own
+ * asset route (`wire-core.asset`, `wire-table.asset`, …) streams the file straight
+ * out of the package instead. This value object is the declaration of one bundle —
+ * the route name follows from the registering package (`{package}.asset`) and the
  * `{asset}` parameter is the bundle's id, which keeps registration to one line.
  *
  * A path that already looks like a URL (`https://…`, `//…`) is used verbatim, the
  * same way Filament detects remoteness; there is no `remote()` builder to get wrong.
  *
- * Local bundles are cache-busted by the file's mtime (`?id=<mtime>`), the convention
- * the per-surface partials already used. That query string is also what makes
- * `data-navigate-track` meaningful: Livewire full-page-reloads a `wire:navigate`
- * visit when a tracked asset's query string changed, so a deploy is picked up
- * instead of running new markup against a stale bundle.
+ * Local bundles are cache-busted by an mtime (`?id=<mtime>`) — the mirrored copy's
+ * where there is one, the shipped file's otherwise. That query string is also what
+ * makes `data-navigate-track` meaningful: Livewire full-page-reloads a
+ * `wire:navigate` visit when a tracked asset's query string changed, so an upgrade
+ * is picked up instead of running new markup against a bundle the browser cached.
  */
 final class Js implements Asset
 {
@@ -141,10 +147,27 @@ final class Js implements Asset
             throw AssetRegistrationException::notRegistered($this->id);
         }
 
+        // The toolkit mirrors each package's dist/ into public/vendor and hands back
+        // that path — a real file, which is what a web server answering `.js` from a
+        // `try_files $uri =404` block will serve. The route below is the fallback for
+        // a deployment whose public/ cannot be written.
+        $published = app(PublishedAssets::class)->url($this->package, $this->path);
+
+        if ($published !== null) {
+            return $this->url = $published;
+        }
+
         $version = @filemtime($this->path) ?: null;
 
         return $this->url = route($this->package.'.asset', ['asset' => $this->id])
             .($version ? '?id='.$version : '');
+    }
+
+    public function isStale(): bool
+    {
+        return ! $this->isRemote()
+            && $this->package !== null
+            && app(PublishedAssets::class)->isStale($this->package, $this->path);
     }
 
     public function toHtml(): string

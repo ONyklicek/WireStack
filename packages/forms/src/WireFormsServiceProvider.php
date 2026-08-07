@@ -49,11 +49,12 @@ class WireFormsServiceProvider extends PackageServiceProvider
             ->hasTranslations('resources/lang')
             ->hasAbout()
             ->hasInstallCommand(function (InstallCommand $command) {
+                // See WireCoreServiceProvider — publishing assets is a stack-wide
+                // delivery choice, not a per-package installer step.
                 $command
                     ->publishConfig()
                     ->publishViews()
-                    ->publishTranslations()
-                    ->publishAssets();
+                    ->publishTranslations();
             });
     }
 

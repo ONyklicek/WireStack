@@ -11,7 +11,7 @@ Tento průvodce popisuje produkční nastavení Wire v Laravel aplikaci.
 | Závislost | Verze |
 |------------|---------|
 | PHP | ^8.2 |
-| Laravel | 10, 11 nebo 12 |
+| Laravel | 12 nebo 13 |
 | Livewire | 3.x |
 | Tailwind CSS | 3.x+ |
 | Alpine.js | 3.x+ (součástí Livewire) |
@@ -169,8 +169,8 @@ Interaktivní části Wire — dropdowny, kontextové menu řádku, taby, wizard
 buňky inline editace, fill handle, výběr řádků, record akce, drag & drop
 řazení — jsou malé Alpine komponenty dodávané jako předsestavené bundly přímo
 z balíčků. Není co instalovat, není co publikovat a na vaší straně není žádný
-build krok: každý balíček servíruje své bundly z vlastní routy, s cache-bustingem
-podle času poslední změny souboru.
+build krok: balíčky si své bundly samy zkopírují do `public/vendor/` a servírují je
+jako statické soubory, s cache-bustingem podle času poslední změny souboru.
 
 **`@wireStackScripts` dostane bundly všech nainstalovaných balíčků do dokumentu.**
 Jeden řádek v `<head>` layoutu a každý controller je přítomný na každé stránce:
@@ -215,6 +215,59 @@ jediné umístění, které cesta cachovaného zpět/vpřed nepředběhne.
 > záměrně **nejsou** v sadě načítané vždy. Povrch, který je potřebuje, si je
 > vyzvedne, až se vykreslí. Grafy navíc potřebují Chart.js, který zůstává vlastní
 > závislostí vaší aplikace.
+
+### Odkud se ty soubory vlastně berou
+
+Jsou to **reálné soubory pod `public/vendor/<balíček>`** a dostanou se tam samy.
+První vykreslení stránky po nasazení zkopíruje bundly každého balíčku z instalace
+do `public/` a emituje tyhle cesty:
+
+```html
+<script src="/vendor/wire-core/wire-core-dropdown.js?id=1786118403" ...></script>
+```
+
+Nic se nespouští, nic nenastavuje. Kopírování je inkrementální — soubor, který už
+je na místě a je aktuální, se nechá být — takže v ustáleném stavu request udělá
+hrst `stat` volání a nula zápisů. Po upgradu je to jedna kopie na změněný bundle,
+na jednom requestu. Kopie přistávají přes dočasný soubor a atomický přesun, takže
+prohlížeč stahující bundle uprostřed kopírování nikdy nedostane půlku.
+
+Záleží na tom víc, než to zní. Servírování bundlů z **routy** balíčku funguje jen
+tehdy, když se request dostane do PHP — a hodně rozšířené nastavení webserveru
+odpovídá na `.js` samo:
+
+```nginx
+location ~* \.(js|css)$ {
+    try_files $uri =404;      # routa není soubor na disku → 404
+}
+```
+
+Na sdíleném hostingu tenhle blok často není váš, abyste ho měnili — a úplně stejně
+rozbíjí i Livewire vlastní `/livewire/livewire.js`. Soubor, který existuje,
+naservíruje každá konfigurace webserveru, jaká je, a proto vám ho balíčky připraví.
+
+**Publikování je pořád podporované** a dělá tutéž kopii dopředu, čímž ji sundá
+z prvního requestu po nasazení:
+
+```bash
+php artisan vendor:publish --tag=laravel-assets --force
+```
+
+`laravel-assets` je tag, který skeleton Laravelu už spouští ze svého composer
+`post-update-cmd`, takže `composer update` udržuje kopie aktuální sám od sebe. Ani
+příkaz, ani ten hook nejsou povinné.
+
+### Když `public/` není zapisovatelné
+
+Read-only kontejner, Vapor, zpevněné nasazení: nic nespadne. Bundly servíruje routa
+přesně jako předtím, a chcete buď publikovací příkaz výše (spuštěný při buildu, kdy
+je filesystém ještě zapisovatelný), nebo `try_files … /index.php?$query_string`, aby
+byla routa dosažitelná.
+
+Pokud tam už **starší** kopie je, servíruje se dál, místo aby se spadlo na routu,
+která nemusí být dosažitelná — a konzole to řekne, na každé stránce a bez ohledu na
+`APP_DEBUG`, včetně názvů bundlů a příkazu, který to spraví. Viz
+[Řešení potíží](troubleshooting.md#javascriptove-404-a-wirex-is-not-defined).
 
 ## Publikování konfigurace (volitelné)
 

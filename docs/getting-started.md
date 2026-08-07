@@ -11,7 +11,7 @@ This guide covers the production setup for Wire in a Laravel application.
 | Dependency | Version |
 |------------|---------|
 | PHP | ^8.2 |
-| Laravel | 10, 11, or 12 |
+| Laravel | 12 or 13 |
 | Livewire | 3.x |
 | Tailwind CSS | 3.x+ |
 | Alpine.js | 3.x+ (included with Livewire) |
@@ -166,8 +166,8 @@ Wire's interactive parts — dropdowns, the row context menu, tabs, wizards,
 inline-edit cells, the fill handle, row selection, record actions, drag & drop
 reordering — are small Alpine components delivered as pre-built bundles from
 inside the packages. There is nothing to install, nothing to publish and no build
-step on your side: each package serves its bundles from its own route, cache-busted
-by the file's modification time.
+step on your side: the packages copy their bundles into `public/vendor/` themselves
+and serve them as static files, cache-busted by the file's modification time.
 
 **`@wireStackScripts` puts every installed package's bundles in the document.**
 One line in the layout `<head>`, and every controller is present on every page:
@@ -212,6 +212,60 @@ convenience, it is the only placement the cached back/forward path cannot beat.
 > are deliberately *not* in the always-loaded set. The surface that needs one fetches
 > it when it renders. Charts additionally need Chart.js, which stays your app's own
 > dependency.
+
+### Where the files actually come from
+
+They are **real files under `public/vendor/<package>`**, and they get there on
+their own. The first page render after a deploy copies each package's bundles out
+of the installed package and into `public/`, then emits those paths:
+
+```html
+<script src="/vendor/wire-core/wire-core-dropdown.js?id=1786118403" ...></script>
+```
+
+Nothing to run, nothing to configure. The copy is incremental — a file already
+present and current is left alone — so in steady state a request does a handful of
+`stat` calls and no writes at all. After an upgrade it is one copy per changed
+bundle, on one request. Copies land through a temporary file and an atomic rename,
+so a browser fetching a bundle mid-copy never receives a half-written one.
+
+This matters more than it sounds. Serving the bundles from a package *route* only
+works if the request reaches PHP, and a very common web-server layout answers `.js`
+itself:
+
+```nginx
+location ~* \.(js|css)$ {
+    try_files $uri =404;      # a route is not a file on disk → 404
+}
+```
+
+On shared hosting that block is frequently not yours to change — and it breaks
+Livewire's own `/livewire/livewire.js` in exactly the same way. A file that exists
+is served by every web server configuration there is, so that is what the packages
+ship you.
+
+**Publishing is still supported** and does the same copy ahead of time, which moves
+it off the first request after a deploy:
+
+```bash
+php artisan vendor:publish --tag=laravel-assets --force
+```
+
+`laravel-assets` is the tag the Laravel skeleton already runs from its composer
+`post-update-cmd`, so `composer update` keeps the copies current on its own. Neither
+the command nor the hook is required.
+
+### If `public/` is not writable
+
+A read-only container, Vapor, a hardened deployment: nothing throws. The package
+route serves the bundles exactly as it did before, and you want either the publish
+command above (run at build time, when the filesystem still is writable) or the
+`try_files … /index.php?$query_string` fall-through so the route is reachable.
+
+If an *older* copy is already there, it keeps being served rather than falling back
+to a route that may be unreachable — and the console says so, on every page and
+regardless of `APP_DEBUG`, naming the bundles and the command that fixes them. See
+[Troubleshooting](troubleshooting.md#javascript-404s-and-wirex-is-not-defined).
 
 ## Config Publishing (optional)
 

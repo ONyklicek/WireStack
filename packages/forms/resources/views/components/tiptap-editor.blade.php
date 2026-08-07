@@ -1,4 +1,5 @@
 @php
+    use NyonCode\LaravelPackageToolkit\Support\PublishedAssets;
     use NyonCode\WireForms\Components\TiptapEditor;
     use NyonCode\WireForms\WireFormsServiceProvider;
     assert($field instanceof TiptapEditor);
@@ -18,13 +19,23 @@
     // (no npm install / build step on the consumer side). ESM code-split: the core
     // editor entry pulls the shared chunk; the opt-in extension addon (below) is a
     // sibling entry sharing that same chunk, injected only when this field needs it.
+    // The bundle stays outside the AssetManager registry (it is on-request by
+    // nature), but it resolves through the same published-assets owner, so an app
+    // that published gets `public/vendor/wire-forms/tiptap/…` here too. The publish
+    // mirrors the directory, so the entry's relative chunk import still resolves.
     $tiptapDir    = WireFormsServiceProvider::ASSETS_PATH.'/tiptap';
-    $assetVersion = @filemtime($tiptapDir.'/tiptap-editor.js') ?: null;
-    $assetUrl     = route('wire-forms.tiptap', ['file' => 'tiptap-editor.js']).($assetVersion ? '?id='.$assetVersion : '');
+    $published    = app(PublishedAssets::class);
 
-    $needsAddon   = $field->needsExtensionAddon();
-    $addonVersion = $needsAddon ? (@filemtime($tiptapDir.'/tiptap-editor-addons.js') ?: null) : null;
-    $addonUrl     = $needsAddon ? route('wire-forms.tiptap', ['file' => 'tiptap-editor-addons.js']).($addonVersion ? '?id='.$addonVersion : '') : null;
+    $tiptapUrl = static function (string $file) use ($tiptapDir, $published): string {
+        $version = @filemtime($tiptapDir.'/'.$file) ?: null;
+
+        return $published->url('wire-forms', $tiptapDir.'/'.$file)
+            ?? route('wire-forms.tiptap', ['file' => $file]).($version ? '?id='.$version : '');
+    };
+
+    $assetUrl   = $tiptapUrl('tiptap-editor.js');
+    $needsAddon = $field->needsExtensionAddon();
+    $addonUrl   = $needsAddon ? $tiptapUrl('tiptap-editor-addons.js') : null;
 
     // Button icon SVGs + Alpine expressions, keyed by button name. Titles come
     // from the package's shared editor vocabulary (resources/lang/*/fields.php),

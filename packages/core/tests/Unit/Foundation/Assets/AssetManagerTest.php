@@ -125,7 +125,7 @@ it('resolves the cache-busted URL of one registered asset', function () {
     ], 'wire-core');
 
     expect($manager->url('wire-core', 'dropdown'))
-        ->toContain('/wire-core/assets/dropdown.js?id=');
+        ->toContain('/vendor/wire-core/wire-core-dropdown.js?id=');
 });
 
 it('names the fix when an asset was never registered', function () {

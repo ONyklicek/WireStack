@@ -8,17 +8,20 @@ use NyonCode\WireCore\Exceptions\AssetRegistrationException;
 use NyonCode\WireCore\Foundation\Assets\Js;
 use NyonCode\WireCore\WireCoreServiceProvider;
 
-it('serves a package bundle from its named route, cache-busted by the file mtime', function () {
+it('serves a package bundle as a static file, cache-busted by the mirrored copy', function () {
+    // PublishedAssets mirrors dist/ into public/vendor and the URL points there —
+    // the buster is the *copy's* mtime, set when it was written, not the shipped
+    // file's. See PublishedAssetsTest for the mirror itself.
     $path = WireCoreServiceProvider::ASSETS_PATH.'/wire-core-dropdown.js';
 
     $url = Js::make('dropdown', $path)->withPackage('wire-core')->getUrl();
 
     expect($url)
-        ->toContain('/wire-core/assets/dropdown.js')
-        ->toContain('?id='.filemtime($path));
+        ->toContain('/vendor/wire-core/wire-core-dropdown.js')
+        ->toContain('?id='.filemtime(public_path('vendor/wire-core/wire-core-dropdown.js')));
 });
 
-it('omits the cache-buster when the bundle is not on disk yet', function () {
+it('falls back to the package route for a bundle with nothing to mirror', function () {
     $url = Js::make('missing', '/does/not/exist.js')->withPackage('wire-core')->getUrl();
 
     expect($url)->toEndWith('/wire-core/assets/missing.js');

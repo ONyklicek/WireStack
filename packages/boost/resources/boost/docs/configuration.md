@@ -31,9 +31,10 @@ You only need the tags for packages you installed.
 
 ## JavaScript Assets
 
-There is no asset configuration and nothing to publish: every package serves its
-own pre-built bundles from its own route, cache-busted by file modification time.
-The one thing your app decides is *where* they are emitted — put
+Nothing needs configuring and nothing needs publishing: every package copies its
+own pre-built bundles into `public/vendor/<package>` and serves them as static
+files, cache-busted by file modification time. The one thing your app decides is
+*where* they are emitted — put
 
 ```blade
 @wireStackScripts
@@ -43,6 +44,10 @@ once in the layout `<head>` and every installed package's Alpine controllers are
 the initial document, which is what keeps them working across `wire:navigate`
 (including the cached Back/Forward path). Pass a package name —
 `@wireStackScripts('wire-table')` — to emit only one package's bundles.
+
+`php artisan vendor:publish --tag=laravel-assets --force` does the same copy ahead
+of time, which moves it off the first request after a deploy — useful, never
+required. There is no config key either way.
 
 Full explanation in [Getting Started → JavaScript Assets](getting-started.md#javascript-assets).
 

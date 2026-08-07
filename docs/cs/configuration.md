@@ -32,9 +32,10 @@ Potřebujete jen tagy balíčků, které jste nainstalovali.
 <a id="javascript-assets"></a>
 ## JavaScriptové assety
 
-Assety se nekonfigurují a není co publikovat: každý balíček servíruje své
-předsestavené bundly z vlastní routy, s cache-bustingem podle času poslední změny
-souboru. Jediné, o čem rozhoduje vaše aplikace, je *kde* se vypíšou — dejte
+Není co konfigurovat ani co publikovat: každý balíček si své předsestavené bundly
+zkopíruje do `public/vendor/<balíček>` a servíruje je jako statické soubory,
+s cache-bustingem podle času poslední změny souboru. Jediné, o čem rozhoduje vaše
+aplikace, je *kde* se vypíšou — dejte
 
 ```blade
 @wireStackScripts
@@ -44,6 +45,10 @@ jednou do `<head>` layoutu a Alpine controllery všech nainstalovaných balíčk
 v úvodním dokumentu, což je přesně to, co je udrží funkční napříč `wire:navigate`
 (včetně cesty cachovaného Zpět/Vpřed). Předáním jména balíčku —
 `@wireStackScripts('wire-table')` — vypíšete jen bundly jednoho balíčku.
+
+`php artisan vendor:publish --tag=laravel-assets --force` udělá tutéž kopii dopředu,
+čímž ji sundá z prvního requestu po nasazení — užitečné, nikdy povinné. Konfigurační
+klíč k tomu tak jako tak žádný není.
 
 Podrobné vysvětlení v [Začínáme → JavaScriptové assety](getting-started.md#javascriptove-assety).
 

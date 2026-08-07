@@ -7,8 +7,8 @@ use NyonCode\WireCore\Foundation\Assets\AssetManager;
 
 it('ships the image-upload controller with the always-loaded set', function () {
     expect(Blade::render('@wireStackScripts'))
-        ->toContain('/wire-forms/assets/image.js?id=')
-        ->toContain('/wire-core/assets/dropdown.js?id=');
+        ->toContain('/vendor/wire-forms/wire-forms-image.js?id=')
+        ->toContain('/vendor/wire-core/wire-core-dropdown.js?id=');
 });
 
 it('leaves the TipTap bundle out of the always-loaded set', function () {

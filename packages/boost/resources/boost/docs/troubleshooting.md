@@ -134,6 +134,59 @@ See [Getting Started → JavaScript Assets](getting-started.md#javascript-assets
 
 ---
 
+## JavaScript 404s and `wireX is not defined`
+
+**Symptom:** The same `ReferenceError` as the previous entry, but on *every* page
+and however you reached it — a hard reload shows it too. The network tab has 404s on
+`/wire-core/assets/dropdown.js`, `/wire-table/assets/records.js`, or a sibling
+under `/wire-forms/…` or `/wire-sortable/…`.
+
+**Cause:** Two things went wrong together. The packages normally copy their bundles
+into `public/vendor/<package>` and emit *those* paths, so nothing hits PHP — a
+`/wire-core/assets/…` URL in your markup means that copy could not be made and the
+package route is standing in for it. And your web server is answering the route
+itself instead of forwarding it to PHP. The stock Laravel nginx config sends
+anything not on disk to `index.php`, but a config with a static-asset block does not:
+
+```nginx
+location ~* \.(js|css)$ {
+    try_files $uri =404;      # a route is not a file on disk → 404, PHP never sees it
+}
+```
+
+Nothing here is package-specific: the same block 404s Livewire's own
+`/livewire/livewire.js`.
+
+**Fix — make `public/` writable, or write it at build time.** The usual cause is a
+`public/` the web user cannot write to, or a read-only container. Either grant the
+write, or do the copy while the filesystem still is writable:
+
+```bash
+php artisan vendor:publish --tag=laravel-assets --force
+```
+
+**Or make the route reachable**, by letting the block fall through to the front
+controller — the right answer where a writable `public/` is genuinely not on offer:
+
+```nginx
+location ~* \.(js|css)$ {
+    try_files $uri /index.php?$query_string;   // [tl! focus]
+}
+```
+
+A related warning, when copies exist but could not be refreshed after an upgrade:
+
+```text
+wireStack: the published copies of wire-core/dropdown are older than the bundles
+the packages ship, and are what this page just loaded.
+```
+
+The page still works — an old bundle beats no bundle — but the same writability
+problem is behind it. See
+[Getting Started → JavaScript Assets](getting-started.md#javascript-assets).
+
+---
+
 ## Reordering stops working, or my own code loses `window.Sortable`
 
 **Symptom:** After upgrading, your application's own JavaScript throws

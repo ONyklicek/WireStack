@@ -82,10 +82,74 @@ final class AssetManager
      */
     public function renderScripts(?string $package = null): HtmlString
     {
-        return $this->rendered[$package ?? '*'] ??= new HtmlString(implode("\n", array_map(
+        if (isset($this->rendered[$package ?? '*'])) {
+            return $this->rendered[$package ?? '*'];
+        }
+
+        // The tags first, the warning second, and the order is load-bearing: resolving
+        // a URL is what runs the mirror, so judging staleness before that would find
+        // every copy out of date on the first request after an upgrade — and warn
+        // about a state the very next line repairs.
+        $tags = array_map(
             static fn (Asset $asset): string => $asset->toHtml(),
             $this->getScripts($package),
+        );
+
+        return $this->rendered[$package ?? '*'] = new HtmlString(implode("\n", array_filter([
+            $this->stalePublishWarning($package),
+            ...$tags,
+        ])));
+    }
+
+    /**
+     * A console warning when `public/vendor` holds a copy of a bundle older than the
+     * one the package ships.
+     *
+     * That copy **is** what the page loads ({@see PublishedAssets} explains why
+     * dropping back to the route is not an option), so this is the only thing
+     * standing between an app and last release's JavaScript running against this
+     * release's markup. It is therefore not gated on `app.debug`: the deployment that
+     * gets this wrong is a production one, where a debug-only warning would never be
+     * seen. Livewire warns unconditionally for the same reason.
+     */
+    private function stalePublishWarning(?string $package): ?string
+    {
+        $stale = array_values(array_unique(array_map(
+            static fn (Asset $asset): string => $asset->getPackage().'/'.$asset->getId(),
+            array_filter($this->getScripts($package), static fn (Asset $asset): bool => $asset->isStale()),
         )));
+
+        if ($stale === []) {
+            return null;
+        }
+
+        return '<script>console.warn('.json_encode(
+            'wireStack: the published copies of '.implode(', ', $stale).' are older than '
+            .'the bundles the packages ship, and are what this page just loaded. Re-run '
+            .'`php artisan vendor:publish --tag=laravel-assets --force`.',
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+        ).')</script>';
+    }
+
+    /**
+     * Forget every resolved URL and rendered tag, keeping the registry itself.
+     *
+     * For a long-lived worker (Octane), where these memos would otherwise outlive the
+     * deploy that changed the files. A bundle's `?id=` is the mtime of its mirrored
+     * copy, so a worker holding last release's query string is a worker whose
+     * `data-navigate-track` never fires — the browser keeps a bundle the mirror has
+     * already replaced on disk. Re-binding each asset to its package is what clears
+     * its URL, the same path {@see register()} takes.
+     */
+    public function flushUrls(): void
+    {
+        foreach ($this->assets as $package => $group) {
+            foreach ($group as $id => $asset) {
+                $this->assets[$package][$id] = $asset->withPackage($package);
+            }
+        }
+
+        $this->rendered = [];
     }
 
     /**

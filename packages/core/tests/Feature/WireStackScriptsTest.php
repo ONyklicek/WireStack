@@ -16,7 +16,7 @@ it('emits the core interaction bundle', function () {
 
     expect($html)
         ->toContain('<script src="')
-        ->toContain('/wire-core/assets/dropdown.js?id=');
+        ->toContain('/vendor/wire-core/wire-core-dropdown.js?id=');
 });
 
 it('marks the bundle so a deploy is picked up across wire:navigate', function () {
@@ -33,7 +33,7 @@ it('forwards its expression to the canonical owner', function () {
     app(AssetManager::class)->register([Js::make('extra', 'https://cdn.example.test/extra.js')], 'wire-core');
 
     expect(Blade::render("@wireStackScripts('wire-core')"))
-        ->toContain('/wire-core/assets/dropdown.js')
+        ->toContain('/vendor/wire-core/wire-core-dropdown.js')
         ->toContain('https://cdn.example.test/extra.js');
 });
 
@@ -48,5 +48,5 @@ it('puts the controllers in a rendered page that has no wireStack component on i
     $this->get('/no-component')
         ->assertOk()
         ->assertSee('Nothing here.')
-        ->assertSee('/wire-core/assets/dropdown.js', false);
+        ->assertSee('/vendor/wire-core/wire-core-dropdown.js', false);
 });
