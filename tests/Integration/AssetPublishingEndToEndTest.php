@@ -105,17 +105,54 @@ it('leaves the per-package assets tag publishing the same files', function () {
 it('keeps assets out of the per-package install commands', function () {
     // Nothing to install: the mirror runs itself. An installer step would only be a
     // second way to do the same copy, and it covered one package of four.
+    $packages = ['wire-core', 'wire-forms', 'wire-table', 'wire-sortable'];
+
     $public = sys_get_temp_dir().'/wire-mirror-e2e-'.bin2hex(random_bytes(6));
     File::ensureDirectoryExists($public);
     $this->app->usePublicPath($public);
 
+    // `{package}:install` publishes config, migrations and views as well as running
+    // the mirror check below, and only `public/` has a path override — the rest lands
+    // in the testbench skeleton and STAYS there. Both leftovers break the workbench,
+    // silently and in different ways:
+    //
+    //   views      — Laravel resolves a published view first, so the whole suite and
+    //                the preview server render a frozen snapshot instead of the source,
+    //                and editing a Blade file appears to do nothing.
+    //   migrations — each run publishes a fresh timestamped copy, so after the second
+    //                run `migrate:fresh` dies on "table already exists" and leaves the
+    //                workbench database half-migrated and unseeded. Every CDP driver
+    //                then fails against an empty preview.
+    //
+    // So the directories are snapshotted here and anything new is removed below. A
+    // snapshot rather than a name list because the published migration names carry the
+    // publish timestamp, and because it keeps working when a package adds a file.
+    $watched = [config_path(), database_path('migrations'), resource_path('views/vendor')];
+    $before = [];
+
+    foreach ($watched as $dir) {
+        $before[$dir] = is_dir($dir) ? array_flip(scandir($dir) ?: []) : [];
+    }
+
     try {
-        foreach (['wire-core', 'wire-forms', 'wire-table', 'wire-sortable'] as $package) {
+        foreach ($packages as $package) {
             $this->artisan($package.':install --no-interaction')->assertSuccessful();
         }
 
         expect(is_dir($public.'/vendor/wire-core'))->toBeFalse();
     } finally {
         File::deleteDirectory($public);
+
+        foreach ($watched as $dir) {
+            foreach (is_dir($dir) ? scandir($dir) ?: [] : [] as $entry) {
+                if ($entry === '.' || $entry === '..' || isset($before[$dir][$entry])) {
+                    continue;
+                }
+
+                $path = $dir.DIRECTORY_SEPARATOR.$entry;
+
+                is_dir($path) ? File::deleteDirectory($path) : File::delete($path);
+            }
+        }
     }
 });
