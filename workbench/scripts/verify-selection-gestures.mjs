@@ -43,7 +43,16 @@ const MOD = { alt: 1, ctrl: 2, meta: 4, shift: 8 };
 const userDataDir = join(tmpdir(), `wire-selection-gestures-${Date.now()}`);
 const chrome = spawn(chromeBin, [
   '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-  '--hide-scrollbars', `--remote-debugging-port=${devtoolsPort}`,
+  '--hide-scrollbars',
+  // Headless Chrome backgrounds a window it never shows and throttles the renderer.
+  // Polling (see waitFor) wakes the JS thread, but NOT requestAnimationFrame — so an
+  // Alpine leave transition never finishes and a closed modal stays on screen with
+  // `show: false` and `display: block`. That is what made "Escape closes the shortcut
+  // help" fail on unmodified code. Both halves are needed: these flags for anything
+  // animated, waitFor for anything awaited.
+  '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows',
+  '--disable-renderer-backgrounding',
+  `--remote-debugging-port=${devtoolsPort}`,
   `--user-data-dir=${userDataDir}`, 'about:blank',
 ], { stdio: 'ignore' });
 
@@ -89,6 +98,38 @@ try {
   `;
   // Real mouse click at an element's current position — measured now, because
   // the document scrolls (40 rows) and focus() moves the viewport.
+  /*
+   * Wait for a condition instead of sleeping at it.
+   *
+   * Headless Chrome backgrounds a window it never shows and throttles the renderer, so
+   * a driver sitting in a dead `sleep()` watches a page that is barely running — the
+   * work it is waiting for lands late and the check reads "nothing happened". Any CDP
+   * evaluation wakes the renderer, so polling both waits and keeps the page moving.
+   * (Diagnosed on verify-gesture-lab, which this driver's sleeps had the same disease.)
+   *
+   * The second win is time: this driver slept 80 s against a 180 s cap, so any extra
+   * slowness pushed the whole run over and it was killed mid-sweep. Most of these waits
+   * resolve in a fraction of their budget.
+   *
+   * Returns whether the condition ever held, so a real failure still fails.
+   */
+  const waitFor = async (expression, timeout = 6000) => {
+    const deadline = Date.now() + timeout;
+
+    while (Date.now() < deadline) {
+      if (await eval_(`!!(${expression})`)) return true;
+      await sleep(100);
+    }
+
+    return false;
+  };
+
+  /* A page is ready when its rows are in the DOM and Alpine has wired the table. */
+  const waitForTable = async (minRows = 1) => waitFor(
+    `(() => { try { return rows().length >= ${minRows} && !!sel(); } catch { return false; } })()`,
+    8000,
+  );
+
   const realClick = async (expr, modifiers = 0) => {
     const box = JSON.parse(await eval_(`(() => {
       const el = ${expr};
@@ -121,8 +162,9 @@ try {
 
   // ════ Section 1 — one page of 40 rows ═══════════════════════════════════
   await page('Page.navigate', { url: `${base}/table-selection-gestures` });
-  await sleep(3000);
+  await sleep(900);
   await eval_(helpers);
+  await waitForTable();
 
   check('the gesture fixture renders all 40 rows on one page', await eval_('rows().length') === 40);
 
@@ -637,8 +679,9 @@ try {
 
   // ── sweep coexists with sortable's row drag handles ──────────────────────
   await page('Page.navigate', { url: `${base}/sortable-overview` });
-  await sleep(3000);
+  await sleep(900);
   await eval_(helpers);
+  await waitForTable();
   const sortableState = JSON.parse(await eval_(`JSON.stringify({
     rows: rows().length,
     handles: $qa('.wire-sortable-handle').length > 0,
@@ -652,8 +695,9 @@ try {
     JSON.stringify({ ...sortableState, swept: sortSwept }));
 
   await page('Page.navigate', { url: `${base}/table-selection-gestures` });
-  await sleep(3000);
+  await sleep(900);
   await eval_(helpers);
+  await waitForTable();
 
   // ── the help documents this table's own record actions ───────────────────
   // Same key, different legend: this table has record actions, so the actions
@@ -686,8 +730,9 @@ try {
 
   // ════ Section 1b — selection-only: the grid works without record actions ═
   await page('Page.navigate', { url: `${base}/table-selection-only` });
-  await sleep(3000);
+  await sleep(900);
   await eval_(helpers);
+  await waitForTable();
 
   check('selection-only: the delegated controller mounts without record actions',
     await eval_('!!tbody() && rows().length === 40'));
@@ -765,13 +810,14 @@ try {
     ! helpText.sections.includes('Actions'));
 
   await eval_(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`);
-  await sleep(600);
+  await waitFor(`!vis(help())`);
   check('Escape closes the shortcut help', ! await eval_(`vis(help())`));
 
   // ════ Section 2 — 20 a page, the `all` mode ═════════════════════════════
   await page('Page.navigate', { url: `${base}/table-selection-gestures-paged` });
-  await sleep(3000);
+  await sleep(900);
   await eval_(helpers);
+  await waitForTable();
 
   await eval_(`$q('[data-testid="table-select-all"]').click()`);
   await sleep(600);
@@ -836,8 +882,9 @@ try {
   // (selectAllRecords), a fully selected page becomes the exclusions
   // (deselectPageRecords) — everything off-page stays selected either way.
   await page('Page.navigate', { url: `${base}/table-selection-gestures-paged` });
-  await sleep(3000);
+  await sleep(900);
   await eval_(helpers);
+  await waitForTable();
   await eval_(`$q('[data-testid="table-select-all"]').click()`);
   await sleep(600);
   await eval_(`$q('[data-testid="table-select-all-matching"]').click()`);
@@ -869,12 +916,15 @@ try {
   // count seeded into x-data would stay at the first render's value forever;
   // it must be read from the DOM the morph refreshes.
   await page('Page.navigate', { url: `${base}/table-selection-gestures-paged` });
-  await sleep(3000);
+  await sleep(900);
   await eval_(helpers);
+  await waitForTable();
   await eval_(`(() => { const i = $q('[data-testid="table-search"]'); i.value = 'Record 0'; i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
-  await sleep(3000);
+  // The search is debounced and then re-renders: wait for the narrowed page rather
+  // than for a stopwatch, or the select-all below runs against the unfiltered table.
+  await waitFor(`rows().length < 20`, 8000);
   await eval_(`$q('[data-testid="table-select-all"]').click()`);
-  await sleep(600);
+  await waitFor(`sel().selectedCount > 0`);
   const narrowed = JSON.parse(await eval_(`JSON.stringify({ rows: rows().length, matching: sel().matching, shown: sel().selectedCount })`));
   check('the matching count follows a filter change instead of staying baked in',
     narrowed.rows === 9 && narrowed.matching === 9 && narrowed.shown === 9,
@@ -883,8 +933,9 @@ try {
   // ════ Section 3 — mobile cards (C11) ════════════════════════════════════
   await page('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
   await page('Page.navigate', { url: `${base}/table-selection-gestures` });
-  await sleep(3000);
+  await sleep(900);
   await eval_(helpers);
+  await waitForTable();
 
   const cards = JSON.parse(await eval_(`JSON.stringify({
     cards: $qa('[data-testid="table-card"]').length,

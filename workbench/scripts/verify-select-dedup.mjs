@@ -18,7 +18,7 @@ const shotDir = process.env.SHOT_DIR ?? join(tmpdir(), 'wire-select-dedup-shots'
 await mkdir(shotDir, { recursive: true });
 const userDataDir = join(tmpdir(), `wire-select-dedup-${Date.now()}`);
 const chrome = spawn(chromeBin, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-  '--hide-scrollbars', `--remote-debugging-port=${devtoolsPort}`, `--user-data-dir=${userDataDir}`, 'about:blank'], { stdio: 'ignore' });
+  '--hide-scrollbars', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', `--remote-debugging-port=${devtoolsPort}`, `--user-data-dir=${userDataDir}`, 'about:blank'], { stdio: 'ignore' });
 
 const results = [];
 const check = (name, ok, detail = '') => { results.push({ ok }); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`); };

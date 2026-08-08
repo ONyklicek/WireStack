@@ -24,7 +24,7 @@ await mkdir(shotDir, { recursive: true });
 const userDataDir = join(tmpdir(), `wire-default-on-null-${Date.now()}`);
 const chrome = spawn(chromeBin, [
   '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-  '--hide-scrollbars', `--remote-debugging-port=${devtoolsPort}`,
+  '--hide-scrollbars', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', `--remote-debugging-port=${devtoolsPort}`,
   `--user-data-dir=${userDataDir}`, 'about:blank',
 ], { stdio: 'ignore' });
 

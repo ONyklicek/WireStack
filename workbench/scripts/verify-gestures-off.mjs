@@ -51,7 +51,7 @@ const MOD = { alt: 1, ctrl: 2, meta: 4, shift: 8 };
 const userDataDir = join(tmpdir(), `wire-gestures-off-${Date.now()}`);
 const chrome = spawn(chromeBin, [
   '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-  '--hide-scrollbars', `--remote-debugging-port=${devtoolsPort}`,
+  '--hide-scrollbars', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', `--remote-debugging-port=${devtoolsPort}`,
   `--user-data-dir=${userDataDir}`, 'about:blank',
 ], { stdio: 'ignore' });
 
@@ -339,7 +339,12 @@ try {
   // And they run: a tap opens the action's modal, the same one the desktop
   // double-click opens.
   await eval_(`$q('[data-testid="table-card-actions"]').querySelectorAll('button')[0].click()`);
-  await sleep(1500);
+  // Polled, not slept: the tap is a Livewire round-trip and the modal renders after it,
+  // which a fixed sleep loses often enough to read as "the button does nothing".
+  for (let i = 0; i < 40; i++) {
+    if (await eval_(`$qa('[role="dialog"]').filter(vis).length > 0`)) break;
+    await sleep(100);
+  }
   check('tapping a fallback button runs the action',
     await eval_(`$qa('[role="dialog"]').filter(vis).length > 0`) === true);
   await shot('06-mobile-modal');

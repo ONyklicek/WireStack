@@ -38,7 +38,7 @@ async function waitForDevtools() {
 }
 
 const chrome = spawn(CHROME, [
-  '--headless=new', `--remote-debugging-port=${PORT}`,
+  '--headless=new', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', `--remote-debugging-port=${PORT}`,
   '--no-first-run', '--no-default-browser-check', '--disable-gpu', 'about:blank',
 ], { stdio: 'ignore' });
 

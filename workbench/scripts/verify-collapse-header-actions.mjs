@@ -5,26 +5,32 @@ import { join } from 'node:path';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 
 /*
- * CDP driver verifying Table::collapseActionsOnMobile() in the workbench preview
- * (/previews/table-stacked-actions-collapse). Emulates a mobile viewport so the
- * stacked-card layout renders, then asserts the three inline row actions collapse
- * into one dropdown group ("⋮") whose menu opens with all three actions.
+ * CDP driver verifying Table::collapseHeaderActionsOnMobile() in the workbench
+ * preview (/previews/table-header-actions-collapse). Unlike the row-action
+ * collapse this is not tied to the stacked cards: both halves of the toolbar are
+ * in the document at every width and CSS picks one, so the only honest check is
+ * a real browser measuring what is visible at two viewport widths.
+ *
+ * Asserts, at 390px: one group trigger, no visible header-action buttons, the
+ * menu opens with all three actions; at 1200px: the three buttons back, no
+ * trigger. Plus the shortcut listener count — a keyboardShortcut() bound by both
+ * halves would run the action twice per keypress.
  *
  * Usage:
  *   vendor/bin/testbench serve --host=127.0.0.1 --port=8085   # in background
- *   node workbench/scripts/verify-collapse-mobile-actions.mjs
+ *   node workbench/scripts/verify-collapse-header-actions.mjs
  *
  * Exit 0 = all checks passed; 1 = a check failed; 2 = driver error.
  */
 
-const url = process.env.PREVIEW_URL ?? 'http://127.0.0.1:8085/previews/table-stacked-actions-collapse';
+const url = process.env.PREVIEW_URL ?? 'http://127.0.0.1:8085/previews/table-header-actions-collapse';
 const chromeBin = process.env.CHROME_BIN
   ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const devtoolsPort = Number(process.env.CHROME_PORT ?? 9337);
-const shotDir = process.env.SHOT_DIR ?? join(tmpdir(), 'wire-collapse-actions-shots');
+const devtoolsPort = Number(process.env.CHROME_PORT ?? 9338);
+const shotDir = process.env.SHOT_DIR ?? join(tmpdir(), 'wire-collapse-header-actions-shots');
 await mkdir(shotDir, { recursive: true });
 
-const userDataDir = join(tmpdir(), `wire-collapse-verify-${Date.now()}`);
+const userDataDir = join(tmpdir(), `wire-collapse-header-verify-${Date.now()}`);
 const chrome = spawn(chromeBin, [
   '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
   '--hide-scrollbars', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', `--remote-debugging-port=${devtoolsPort}`,
@@ -58,49 +64,44 @@ try {
 
   await page('Page.enable');
   await page('Runtime.enable');
-  // Mobile viewport: below the md (768px) stacked breakpoint so cards render.
+  // Phone: below the default sm (640px) mobile breakpoint, where the fold applies.
   await page('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
   await page('Page.navigate', { url });
   await sleep(3000);
 
   const helpers = `
-    window.$q = (sel) => document.querySelector(sel);
     window.$qa = (sel) => [...document.querySelectorAll(sel)];
-    window.firstCard = () => $q('[data-testid="table-card"]');
     window.isVisible = (el) => !!el && el.getClientRects().length > 0;
+    // The toolbar's fold, not a row's: scope to the header-actions surfaces.
+    window.headerBtns = () => $qa('[data-testid^="header-action-"]');
+    window.mobileTrigger = () => $qa('[data-testid="table-header-actions-mobile"] [data-testid="action-group-trigger"]');
     true;
   `;
   await eval_(helpers);
 
-  // ── 0. Page booted + mobile cards rendered ─────────────────────────────
-  const booted = await eval_(`typeof Alpine !== 'undefined' && $qa('[data-testid="table-card"]').length > 0`);
-  const cardCount = await eval_(`$qa('[data-testid="table-card"]').length`);
-  check('mobile stacked cards render with Alpine booted', booted, `cards=${cardCount}`);
-  await shot('01-mobile-cards');
+  // ── 0. Page booted ─────────────────────────────────────────────────────
+  const booted = await eval_(`typeof Alpine !== 'undefined' && $qa('[data-testid="table-row"], [data-testid="table-card"]').length > 0`);
+  check('preview booted with Alpine and a rendered table', booted);
+  await shot('01-phone-toolbar');
 
-  // ── 1. Each card collapses its actions into ONE group trigger ──────────
-  const collapse = await eval_(`JSON.stringify({
-    triggers: $qa('[data-testid="table-card"] [data-testid="action-group-trigger"]').length,
-    cards: $qa('[data-testid="table-card"]').length,
-    // Inline row-action buttons carry data-testid="action-<name>"; collapsed away.
-    inlineActionBtns: $qa('[data-testid="table-card"] [data-testid^="action-"]:not([data-testid="action-group-trigger"])').length,
+  // ── 1. On a phone: one trigger, no visible header buttons ──────────────
+  const phone = await eval_(`JSON.stringify({
+    triggers: mobileTrigger().filter(isVisible).length,
+    // Both halves are in the DOM; only the desktop one must be hidden here.
+    buttonsInDom: headerBtns().length,
+    buttonsVisible: headerBtns().filter(isVisible).length,
   })`);
-  const s1 = JSON.parse(collapse);
-  check('every card header shows one action-group trigger', s1.triggers === s1.cards && s1.cards > 0, collapse);
-  check('no inline per-action buttons remain in the cards', s1.inlineActionBtns === 0, `inline=${s1.inlineActionBtns}`);
+  const s1 = JSON.parse(phone);
+  check('the toolbar shows exactly one collapsed trigger at 390px', s1.triggers === 1, phone);
+  check('no header-action button is visible at 390px', s1.buttonsVisible === 0, `visible=${s1.buttonsVisible} of ${s1.buttonsInDom} in DOM`);
 
-  // ── 2. Menu is closed until the trigger is clicked ─────────────────────
+  // ── 2. Menu closed until asked ─────────────────────────────────────────
   const menuClosedBefore = await eval_(`!$qa('[role="menu"]').some(isVisible)`);
   check('dropdown menu is closed before interaction', menuClosedBefore);
 
-  // ── 3. Open the first card's group → all three actions appear ──────────
-  const clicked = await eval_(`
-    (() => {
-      const t = firstCard().querySelector('[data-testid="action-group-trigger"]');
-      if (!t) return false; t.click(); return true;
-    })()
-  `);
-  check('first card group trigger clicked', clicked === true);
+  // ── 3. Opening it reveals all three header actions ─────────────────────
+  const clicked = await eval_(`(() => { const t = mobileTrigger()[0]; if (!t) return false; t.click(); return true; })()`);
+  check('collapsed trigger clicked', clicked === true);
   await sleep(1200);
 
   const opened = await eval_(`JSON.stringify({
@@ -109,10 +110,30 @@ try {
   })`);
   const s3 = JSON.parse(opened);
   const labels = s3.items.join(' | ').toLowerCase();
-  const hasAll = ['view', 'edit', 'delete'].every(l => labels.includes(l));
+  const hasAll = ['invite', 'import', 'export'].every(l => labels.includes(l));
   check('opening the group reveals a visible menu', s3.menuVisible, opened);
-  check('menu contains all three collapsed actions (View/Edit/Delete)', hasAll, `items=[${s3.items.join(', ')}]`);
+  check('menu contains all three header actions', hasAll, `items=[${s3.items.join(', ')}]`);
   await shot('02-menu-open');
+
+  // ── 4. The shortcut is bound once, by the button half only ─────────────
+  const shortcutBindings = await eval_(`
+    $qa('[x-on\\\\:keydown\\\\.i\\\\.window\\\\.prevent], [data-testid="header-action-import"][x-on\\\\:keydown\\\\.i\\\\.window\\\\.prevent]').length
+  `);
+  check('the header action keyboard shortcut is bound exactly once', shortcutBindings === 1, `bindings=${shortcutBindings}`);
+
+  // ── 5. Desktop width: the buttons are back, the trigger is gone ────────
+  await eval_(`(() => { const t = mobileTrigger()[0]; t && document.body.click(); return true; })()`);
+  await page('Emulation.setDeviceMetricsOverride', { width: 1200, height: 900, deviceScaleFactor: 1, mobile: false });
+  await sleep(800);
+
+  const desktop = await eval_(`JSON.stringify({
+    triggers: mobileTrigger().filter(isVisible).length,
+    buttonsVisible: headerBtns().filter(isVisible).length,
+  })`);
+  const s5 = JSON.parse(desktop);
+  check('all three header buttons are visible at 1200px', s5.buttonsVisible === 3, desktop);
+  check('the collapsed trigger is hidden at 1200px', s5.triggers === 0, desktop);
+  await shot('03-desktop-toolbar');
 
   console.log('\nSummary: ' + results.filter(r => r.ok).length + '/' + results.length + ' checks passed');
   console.log('Screenshots: ' + shotDir);
