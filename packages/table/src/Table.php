@@ -24,7 +24,9 @@ use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Enums\Alignment;
 use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Foundation\Icons\Icon;
+use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\ValueObjects\ShortcutHint;
+use NyonCode\WireCore\Foundation\View\Skeleton;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireTable\Actions\EmptyStateActionClickResolver;
 use NyonCode\WireTable\Actions\RecordActionResolver;
@@ -94,6 +96,22 @@ class Table implements Htmlable
     protected bool $paginated = true;
 
     protected bool $selectable = false;
+
+    /** The selection cell's compiled markup — {@see getSelectionCellSkeleton()}. */
+    protected ?Skeleton $selectionCellSkeleton = null;
+
+    /** The context-menu panel's compiled markup — {@see getRowContextMenuSkeleton()}. */
+    protected ?Skeleton $rowContextMenuSkeleton = null;
+
+    /**
+     * The sub-row expander cell, one compiled shape per state.
+     *
+     * @var array<string, Skeleton>
+     */
+    protected array $subRowCellSkeletons = [];
+
+    /** The group header row's compiled markup — {@see getGroupHeaderRow()}. */
+    protected ?Skeleton $groupHeaderSkeleton = null;
 
     // Policy-based authorization
     protected bool $usePolicy = false;
@@ -771,6 +789,46 @@ class Table implements Htmlable
     }
 
     /**
+     * The selection checkbox's tick, resolved once per request.
+     *
+     * Record-invariant chrome, so it goes through the canonical IconManager (which
+     * memoises the rendered SVG by name+size+class) rather than being inlined — the
+     * row echoes a string instead of re-entering the icon layer per row. Shared by
+     * the row's cell and the stacked card view's select-all.
+     */
+    public function getSelectionCheckIcon(): string
+    {
+        return app(IconManager::class)->render('check', 'h-4 w-4', 'absolute inset-0 text-white');
+    }
+
+    /**
+     * The selection cell, rendered once and spliced per row.
+     *
+     * `tables.partials.selection-cell` is still the one source of this markup and
+     * still the vendor:publish override point; what changed is that it is rendered
+     * ONCE per table instead of once per row, with a {@see Skeleton} slot standing in
+     * for the record key. The row loop then fills the key — the same "static once,
+     * dynamic per row" move the `<tr>` and the `<td>` chrome already make.
+     *
+     * Worth it because this cell was the most expensive thing left in the row:
+     * measured at 2 251 B and 10 whitespace text nodes per row, more than the entire
+     * rest of a three-column row. Memoised per table instance, which is also per
+     * render — Livewire rebuilds the Table on every request, so nothing goes stale.
+     */
+    public function getSelectionCellSkeleton(): Skeleton
+    {
+        return $this->selectionCellSkeleton ??= Skeleton::compile(
+            view('wire-table::tables.partials.selection-cell', [
+                'cellPadding' => $this->getCellPadding(),
+                'usesRangeSelection' => $this->usesRangeSelection(),
+                'checkIcon' => $this->getSelectionCheckIcon(),
+                'keyJs' => Skeleton::slot('keyJs'),
+            ])->render(),
+            'keyJs',
+        );
+    }
+
+    /**
      * Enable model policy auto-resolution.
      *
      * When enabled, create/update/delete/view permissions are resolved
@@ -1311,6 +1369,22 @@ class Table implements Htmlable
     public function isCompact(): bool
     {
         return $this->compact;
+    }
+
+    /**
+     * The body cell's padding utilities. One owner for the density map, so the row
+     * view and anything that renders a cell outside it (the selection cell) cannot
+     * drift apart.
+     */
+    public function getCellPadding(): string
+    {
+        return $this->compact ? 'px-4 py-2' : 'px-6 py-4';
+    }
+
+    /** The header cell's padding utilities — {@see getCellPadding()}. */
+    public function getHeaderPadding(): string
+    {
+        return $this->compact ? 'px-4 py-2' : 'px-6 py-3';
     }
 
     /**
@@ -1974,6 +2048,115 @@ class Table implements Htmlable
         }
 
         return new HtmlString($html);
+    }
+
+    /**
+     * A group's header row, rendered once for the table and spliced per group.
+     *
+     * Only the label varies, so this is a one-slot skeleton. It matters because group
+     * count is not bounded by anything: grouped by a status there are three of these,
+     * grouped by a date there is one per row — and it used to be a view render and six
+     * DOM text nodes either way.
+     *
+     * The label is escaped here, at the one place that knows it is text content.
+     */
+    public function getGroupHeaderRow(Model $record, int $colSpan): string
+    {
+        $skeleton = $this->groupHeaderSkeleton ??= Skeleton::compile(
+            view('wire-table::tables.partials.group-header', [
+                'colSpan' => $colSpan,
+                'cellPadding' => $this->getCellPadding(),
+                'label' => Skeleton::slot('label'),
+            ])->render(),
+            'label',
+        );
+
+        return $skeleton->fill(['label' => e((string) $this->resolveGroupLabel($record))]);
+    }
+
+    /**
+     * The sub-row expander cell for one row, rendered once per shape and spliced.
+     *
+     * The cell has exactly three shapes — no toggle, toggle collapsed, toggle expanded
+     * — and every row is one of them, so `tables.partials.sub-row-cell` is rendered at
+     * most three times per table instead of once per row. Before this it was an
+     * `@include` inside the row loop, which is the N×View anti-pattern the render fuse
+     * exists to catch: 1 044 B, 8 whitespace text nodes and a view render per row.
+     *
+     * A record with no sub-rows still gets the cell, empty — drop it and the columns
+     * stop lining up.
+     *
+     * @param  string  $keyJs  the record key, already encoded for an Alpine expression
+     */
+    public function getSubRowCell(string $keyJs, bool $hasToggle, bool $isExpanded): string
+    {
+        $shape = ($hasToggle ? 't' : '-').($isExpanded ? 'e' : '-');
+
+        $skeleton = $this->subRowCellSkeletons[$shape] ??= Skeleton::compile(
+            view('wire-table::tables.partials.sub-row-cell', [
+                'cellPadding' => $this->getCellPadding(),
+                'borderClass' => $this->isBordered() ? 'border border-gray-200 dark:border-gray-700' : '',
+                'hasToggle' => $hasToggle,
+                'isExpanded' => $isExpanded,
+                'keyJs' => Skeleton::slot('keyJs'),
+            ])->render(),
+            'keyJs',
+        );
+
+        return $skeleton->fill(['keyJs' => $keyJs]);
+    }
+
+    /**
+     * The teleported context-menu panel, rendered once and spliced per row.
+     *
+     * The panel is pure scaffolding — position, colours, `role="menu"` — and it holds
+     * no per-row Alpine state, because one `wireRecordActions` controller on the
+     * `<tbody>` drives every row's menu by record key. So the whole thing is one shape
+     * with two holes: the key, and the item markup {@see getRowContextMenuHtml()}
+     * already renders per record.
+     *
+     * Rendering the scaffolding per row cost a measured 1 659 B and 14 whitespace text
+     * nodes per row for a one-item menu, most of it identical on every row.
+     *
+     * Memoised per table instance, which is per render — Livewire rebuilds the Table on
+     * every request, so nothing goes stale.
+     */
+    public function getRowContextMenuSkeleton(): Skeleton
+    {
+        return $this->rowContextMenuSkeleton ??= Skeleton::compile(
+            view('wire-table::tables.partials.record-context-menu', [
+                'key' => Skeleton::slot('key'),
+                'menu' => Skeleton::slot('menu'),
+            ])->render(),
+            'key',
+            'menu',
+        );
+    }
+
+    /**
+     * This record's context-menu panel, or an empty string when the row has no visible
+     * action.
+     *
+     * The caller still wraps the echo in an `@if`, and must: the morph markers that
+     * conditional emits are what let morphdom pair a row's children when the cell list
+     * changes under it (a column reorder). See the note at the call site.
+     */
+    public function getRowContextMenuPanel(Model $record): string
+    {
+        if (! $this->hasRowContextMenu()) {
+            return '';
+        }
+
+        $menu = trim($this->getRowContextMenuHtml($record)->toHtml());
+
+        if ($menu === '') {
+            return '';
+        }
+
+        return $this->getRowContextMenuSkeleton()->fill([
+            'key' => e((string) $record->{$this->getPrimaryKey()}),
+            'menu' => $menu,
+        ]);
     }
 
     // Record actions (row-level interaction: click, double-click, right-click, keys)

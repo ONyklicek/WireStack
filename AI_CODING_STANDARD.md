@@ -277,6 +277,52 @@ rendered template once, `fill()` per row in one `strtr()` pass. Use it rather th
 local token-and-`str_replace`; `strtr` is also the correct primitive, because it does
 not re-examine what it just substituted.
 
+**Always `Htmlable`, always Blade — no exceptions.** Markup lives in a `.blade.php`
+template, and PHP produces it only through an `Htmlable` owner (`Skeleton`, `HtmlString`,
+a component's own `toHtml()` / `getXHtml()`). Raw HTML concatenated from PHP strings is
+never acceptable — not for speed, not for a single tag, not when the output is
+byte-identical and the suite is green.
+
+**The markup MUST stay in a Blade template. This is not negotiable.** A skeleton is
+compiled from `view(...)->render()` — it is a template *rendered once*, never a tag
+soup concatenated from PHP strings. Building `'<td class="'.$x.'">…'` in a `@php`
+preamble, a helper or a class body is a violation even when the output is byte-identical
+and even when it is faster to write: it destroys the `vendor:publish` override point,
+puts markup where no Blade tooling, formatter or reviewer looks for it, and splits one
+element's markup across two languages. What moves out of the loop is the **render**, not
+the template.
+
+```php
+// WRONG — markup assembled in PHP, no override point, invisible to Blade tooling.
+$cell = Skeleton::compile('<td class="'.$pad.'"><button …>'.$icon.'</button></td>', 'key');
+
+// RIGHT — the partial stays the one source of the markup; only the render moves.
+$cell = Skeleton::compile(
+    view('wire-table::tables.partials.selection-cell', [
+        'cellPadding' => $this->getCellPadding(),
+        'keyJs' => Skeleton::slot('keyJs'),   // the hole, handed to the template
+    ])->render(),
+    'keyJs',
+);
+```
+
+Two consequences worth stating, because they are what makes the Blade version as cheap
+as the PHP one:
+
+- **Slots are passed *into* the view as data**, so the template decides where each
+  per-record value lands and under which encoding — which is what keeps "one slot, one
+  position, one encoding" a property of the template rather than of the caller.
+- **Whitespace between tags is the template's job.** Tags that must touch (`>…<` with
+  no run between them) are written touching in the Blade; whitespace *between
+  attributes* is free and stays laid out. A skeleton is not a licence to minify by
+  moving markup into PHP.
+
+The same rule covers any table/row/cell chrome resolved once per render: put it in a
+partial and render it once (`tables.partials.selection-cell`), do not inline it as a
+string. Values a template needs that come from a density/variant map (padding,
+alignment) get a **getter on the owning object** (`Table::getCellPadding()`), so the
+partial and the parent view cannot drift.
+
 **Reference implementation:** `Column::renderCellFast()` — resolves
 `tables.columns.text` once into a `Skeleton` and splices per-record values per row
 (byte-identical to `renderCell()`, one view render per cell *shape*, not V×R). The

@@ -116,10 +116,10 @@
     $hasFilters = !empty($filters);
     $isSelectable = $table->isSelectable();
     // Record-invariant chrome icon resolved once per render (IconManager owns the
-    // SVG cache); the row loop echoes the string instead of re-entering @icon per row.
-    $selectCheckIcon = $isSelectable
-        ? app(\NyonCode\WireCore\Foundation\Icons\IconManager::class)->render('check', 'h-4 w-4', 'absolute inset-0 text-white')
-        : '';
+    // SVG cache); the card view's select-all echoes the string instead of re-entering
+    // @icon. The row's own selection cell gets it from the same owner, baked into its
+    // skeleton — see Table::getSelectionCellSkeleton().
+    $selectCheckIcon = $isSelectable ? $table->getSelectionCheckIcon() : '';
     $hasSummaries = $component->tableHasSummaries();
 
     // One `:class` expression per row, merging every dynamic row state that has
@@ -225,8 +225,10 @@
     $isCompact = $table->isCompact();
     $isBordered = $table->isBordered();
     // Row hover/striping/tint now composed in Table::getRowClasses($record, $rowIndex).
-    $cellPadding = $isCompact ? 'px-4 py-2' : 'px-6 py-4';
-    $headerPadding = $isCompact ? 'px-4 py-2' : 'px-6 py-3';
+    // Density map owned by the Table, so a cell rendered outside this view (the
+    // selection cell's partial) cannot drift from the ones rendered inside it.
+    $cellPadding = $table->getCellPadding();
+    $headerPadding = $table->getHeaderPadding();
 
     // The body cell's opening tag, built once per column instead of once per cell.
     //
@@ -317,6 +319,12 @@
         .'>',
         'rowClass', 'keyJs', 'tabindex', 'rowIndex', 'ariaRowIndex', 'key',
     );
+
+    // The selection cell, compiled once for the table — the same move as the <tr>
+    // above, except the markup stays where it belongs, in
+    // `tables.partials.selection-cell`. The Table renders that partial once with a
+    // slot where the record key goes; the row loop fills the key.
+    $selectionCellSkeleton = $isSelectable ? $table->getSelectionCellSkeleton() : null;
 
     // Whole sentences for the selection live region: only the server can
     // translate them, and the counts are substituted client-side because the
@@ -1053,12 +1061,22 @@
                                         $isGroupStart = $hasGrouping && ($prevRecord === null || $table->getGroupComparisonKey($prevRecord) !== $groupValue);
                                         $isGroupEnd = $hasGrouping && ($nextRecord === null || $table->getGroupComparisonKey($nextRecord) !== $groupValue);
 
-                                        // Right-click context menu: only render one for rows that
-                                        // actually have a visible action.
-                                        $rowContextMenuHtml = $rowContextMenuEnabled
-                                            ? trim($table->getRowContextMenuHtml($record)->toHtml())
-                                            : '';
-                                        $hasRowContextMenu = $rowContextMenuHtml !== '';
+                                        // Right-click context menu. The Table owns both halves: the
+                                        // panel's shape (a skeleton compiled once for the table) and
+                                        // the decision that a row with no visible action gets none.
+                                        //
+                                        // The `@if` at the emit site therefore looks redundant — the
+                                        // string is already empty — and it is NOT. It emits a pair of
+                                        // Livewire morph markers around the <template>, and those are
+                                        // load-bearing: the row's children CAN change between renders
+                                        // (a column reorder rewrites the cell list), and morphdom needs
+                                        // that block boundary to pair them up. Removing the `@if` to
+                                        // save two comment nodes per row breaks the reorder — the
+                                        // header reorders, the body does not. Both fuses stayed green
+                                        // through that; only verify-gesture-lab.mjs caught it
+                                        // ("dragging a column header moves that column, in the header
+                                        // and the body alike").
+                                        $rowContextMenuPanel = $table->getRowContextMenuPanel($record);
 
                                         // Per-record sub-rows (subRowsVisible): decides this row's
                                         // chevron and panel only — the expander cell itself still
@@ -1066,14 +1084,9 @@
                                         $recordHasSubRows = $hasSubRows && $table->hasSubRowsFor($record);
                                     @endphp
 
-                                    {{-- Group header --}}
-                                    @if($isGroupStart)
-                                        @include('wire-table::tables.partials.group-header', [
-                                            'label' => $table->resolveGroupLabel($record),
-                                            'colSpan' => $colSpan,
-                                            'cellPadding' => $cellPadding,
-                                        ])
-                                    @endif
+                                    {{-- Group header. Compiled once for the table; this group
+                                         supplies its label. --}}
+                                    @if($isGroupStart){!! $table->getGroupHeaderRow($record, $colSpan) !!}@endif
                                     @php
                                         $recordKeyJs = \Illuminate\Support\Js::from((string) $recordKey)->toHtml();
                                         // Values only — the shape was settled once, above.
@@ -1087,84 +1100,30 @@
                                         ]);
                                     @endphp
                                     {!! $rowOpen !!}
-                                        @if($hasRowContextMenu)
-                                            {{-- Teleported context-menu panel for this row. It carries no
-                                                 per-row Alpine state: the single wireRecordActions controller
-                                                 on the <tbody> opens, positions and closes it by record key
-                                                 (data-record-menu). <template> is a script-supporting element,
-                                                 valid as a direct child of <tr>. --}}
-                                            <template x-teleport="body">
-                                                <div
-                                                        data-record-menu="{{ $recordKey }}"
-                                                        class="fixed z-50 min-w-[12rem] origin-top-left rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black/5 dark:ring-white/10 focus:outline-none"
-                                                        style="display: none; left: 0; top: 0;"
-                                                        role="menu"
-                                                >
-                                                    <div class="py-1">
-                                                        {!! $rowContextMenuHtml !!}
-                                                    </div>
-                                                </div>
-                                            </template>
-                                        @endif
-                                        {{-- Selection Checkbox. data-select-cell marks the selection
-                                             column for the sweep gesture (and the widened click
-                                             target): the cell is found by this hook, never by column
-                                             position — sortable prepends a drag-handle <td> and would
-                                             shift every index. --}}
-                                        @if($isSelectable)
-                                            {{-- The whole cell toggles, not just the 16px box, which is
-                                                 under every touch-target guideline while the rest of the
-                                                 cell sits dead. While ranges are on, a modified click is
-                                                 left alone: Shift and mod mean range and add-to-selection,
-                                                 and the row controller answers those for the whole row,
-                                                 cell included. With ranges off nobody else would answer
-                                                 them, so the cell takes every click and toggles. --}}
-                                            <td class="w-12 {{ $cellPadding }} cursor-pointer"
-                                                data-select-cell
-                                                x-on:click="{{ $usesRangeSelection ? '$event.shiftKey || $event.ctrlKey || $event.metaKey || ' : '' }}toggle(@js((string) $recordKey))">
-                                                <div class="flex items-center justify-center">
-                                                    {{-- No handler of its own: a click (or Enter/Space on
-                                                         the focused box) bubbles to the cell, which owns
-                                                         the toggle. Two handlers would toggle twice. --}}
-                                                    <button
-                                                            type="button"
-                                                            role="checkbox"
-                                                            :aria-checked="isSelected(@js((string) $recordKey))"
-                                                            aria-label="{{ __('wire-table::messages.select_row') }}"
-                                                            data-testid="table-row-select"
-                                                            class="relative h-4 w-4 rounded border focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors"
-                                                            :class="isSelected(@js((string) $recordKey)) ? 'bg-primary-600 border-primary-600' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:border-gray-400'"
-                                                    >
-                                                        <span x-show="isSelected(@js((string) $recordKey))" x-cloak>
-                                                            {!! $selectCheckIcon !!}
-                                                        </span>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        @endif
+                                        @if($rowContextMenuPanel !== ''){!! $rowContextMenuPanel !!}@endif
+                                        {{-- Selection cell. The shape was settled once, in the
+                                             preamble; this row supplies the key. --}}
+                                        @if($isSelectable){!! $selectionCellSkeleton->fill(['keyJs' => $recordKeyJs]) !!}@endif
 
-                                        {{-- Sub-row Toggle Cell --}}
-                                        @if($hasSubRows)
-                                            <td class="w-10 {{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }}">
-                                                @if($isSubRowsExpandable && $recordHasSubRows)
-                                                    @include('wire-table::tables.partials.sub-row-toggle', [
-                                                        'recordKey' => $recordKey,
-                                                        'isExpanded' => $component->isRowExpanded($recordKey),
-                                                    ])
-                                                @endif
-                                            </td>
-                                        @endif
+                                        {{-- Sub-row expander cell. Three shapes, each compiled once
+                                             for the table; this row picks one and supplies its key.
+                                             The `@if` the partial keeps inside itself is what puts
+                                             this row's morph markers back — see the partial. --}}
+                                        @if($hasSubRows){!! $table->getSubRowCell(
+                                            $recordKeyJs,
+                                            $isSubRowsExpandable && $recordHasSubRows,
+                                            $component->isRowExpanded($recordKey),
+                                        ) !!}@endif
 
                                         {{-- Actions Cell (Start Position) --}}
                                         @if($hasActions && $actionsPosition === 'start')
-                                            <td class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }}">
-                                                <div
-                                                        class="flex flex-wrap items-center gap-1 {{ $actionsJustifyClass }}">
-                                                    @foreach($actions as $action)
-                                                        {!! $action->render($record, $actionClick) !!}
-                                                    @endforeach
-                                                </div>
-                                            </td>
+                                            {{-- Tags touch, and the @foreach stays. The whitespace between
+                                                 them was four DOM text nodes per row for markup that never
+                                                 varies; the loop's morph markers are NOT surplus, because
+                                                 the button list genuinely changes per record (an action can
+                                                 be non-executable for one row and not the next) — the case
+                                                 §8f showed those markers exist for. --}}
+                                            <td class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }}"><div class="flex flex-wrap items-center gap-1 {{ $actionsJustifyClass }}">@foreach($actions as $action){!! $action->render($record, $actionClick) !!}@endforeach</div></td>
                                         @endif
 
                                         {{-- Column Cells. Assembled in PHP rather than by a @foreach, so
@@ -1197,14 +1156,13 @@
 
                                         {{-- Actions Cell (End Position - Default) --}}
                                         @if($hasActions && $actionsPosition === 'end')
-                                            <td class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }}">
-                                                <div
-                                                        class="flex flex-wrap items-center gap-1 {{ $actionsJustifyClass }}">
-                                                    @foreach($actions as $action)
-                                                        {!! $action->render($record, $actionClick) !!}
-                                                    @endforeach
-                                                </div>
-                                            </td>
+                                            {{-- Tags touch, and the @foreach stays. The whitespace between
+                                                 them was four DOM text nodes per row for markup that never
+                                                 varies; the loop's morph markers are NOT surplus, because
+                                                 the button list genuinely changes per record (an action can
+                                                 be non-executable for one row and not the next) — the case
+                                                 §8f showed those markers exist for. --}}
+                                            <td class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }}"><div class="flex flex-wrap items-center gap-1 {{ $actionsJustifyClass }}">@foreach($actions as $action){!! $action->render($record, $actionClick) !!}@endforeach</div></td>
                                         @endif
                                     </tr>
 

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Livewire\Component;
 use Livewire\Livewire;
+use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Columns\TextInputColumn;
 use NyonCode\WireTable\Concerns\WithTable;
@@ -36,6 +37,18 @@ class RcRow extends Model
     protected $table = 'rc_rows';
 
     protected $guarded = [];
+
+    public function kids()
+    {
+        return $this->hasMany(RcKid::class, 'row_id');
+    }
+}
+
+class RcKid extends Model
+{
+    protected $table = 'rc_kids';
+
+    protected $guarded = [];
 }
 
 class RcComponent extends Component
@@ -48,11 +61,30 @@ class RcComponent extends Component
 
     public bool $editable = false;
 
-    public function mount(int $cols = 2, bool $copyable = false, bool $editable = false): void
-    {
+    public bool $selectable = false;
+
+    public bool $contextMenu = false;
+
+    public bool $subRows = false;
+
+    public bool $grouped = false;
+
+    public function mount(
+        int $cols = 2,
+        bool $copyable = false,
+        bool $editable = false,
+        bool $selectable = false,
+        bool $contextMenu = false,
+        bool $subRows = false,
+        bool $grouped = false,
+    ): void {
         $this->cols = $cols;
         $this->copyable = $copyable;
         $this->editable = $editable;
+        $this->selectable = $selectable;
+        $this->contextMenu = $contextMenu;
+        $this->subRows = $subRows;
+        $this->grouped = $grouped;
     }
 
     public function table(Table $table): Table
@@ -80,9 +112,24 @@ class RcComponent extends Component
             $columns[] = $column;
         }
 
+        if ($this->contextMenu) {
+            $table->gestures()->rowContextMenu([Action::make('edit')->label('Edit')]);
+        }
+
+        if ($this->subRows) {
+            $table->subRows('kids')->subRowColumns([TextColumn::make('label')]);
+        }
+
+        // `name` is unique per row, so this is one group per row — the worst case, and
+        // the shape a table grouped by a timestamp actually has.
+        if ($this->grouped) {
+            $table->groupBy('name');
+        }
+
         return $table
             ->model(RcRow::class)
             ->paginated(false)
+            ->selectable($this->selectable)
             ->columns($columns);
     }
 
@@ -143,20 +190,41 @@ function rcRenderCount(Closure $render): int
 function rcSeed(int $rows): void
 {
     $now = now();
+    $first = (int) (RcRow::max('id') ?? 0);
 
     RcRow::insert(array_map(fn (int $i) => [
         'name' => 'row-'.$i,
         'created_at' => $now,
         'updated_at' => $now,
     ], range(1, $rows)));
+
+    // One child each, so every row renders the expander's toggle shape rather than
+    // the empty one — the shape that used to cost an @include per row.
+    RcKid::insert(array_map(fn (int $i) => [
+        'row_id' => $first + $i,
+        'label' => 'k',
+        'created_at' => $now,
+        'updated_at' => $now,
+    ], range(1, $rows)));
 }
 
-function rcRender(int $cols = 2, bool $copyable = false, bool $editable = false): Closure
-{
+function rcRender(
+    int $cols = 2,
+    bool $copyable = false,
+    bool $editable = false,
+    bool $selectable = false,
+    bool $contextMenu = false,
+    bool $subRows = false,
+    bool $grouped = false,
+): Closure {
     return fn () => Livewire::test(RcComponent::class, [
         'cols' => $cols,
         'copyable' => $copyable,
         'editable' => $editable,
+        'selectable' => $selectable,
+        'contextMenu' => $contextMenu,
+        'subRows' => $subRows,
+        'grouped' => $grouped,
     ])->html();
 }
 
@@ -173,10 +241,18 @@ beforeEach(function () {
         $table->string('name');
         $table->timestamps();
     });
+
+    Schema::create('rc_kids', function (Blueprint $table) {
+        $table->id();
+        $table->unsignedBigInteger('row_id');
+        $table->string('label');
+        $table->timestamps();
+    });
 });
 
 afterEach(function () {
     Schema::dropIfExists('rc_rows');
+    Schema::dropIfExists('rc_kids');
 });
 
 // ─── The fuse ────────────────────────────────────────────────────────────────
@@ -240,6 +316,85 @@ it('adds zero view renders per row for a copyable cell too (§7 multi-slot)', fu
     $large = rcRenderCount(rcRender(2, copyable: true));
 
     expect($large - $small)->toBe(0);
+});
+
+it('renders the selection cell partial once per table, never once per row', function () {
+    // The selection cell moved from inline markup in the row loop to its own partial,
+    // `tables.partials.selection-cell` — which means it now costs a view render where
+    // it cost none. That trade is only sound if the render is O(1): the Table compiles
+    // the partial into a Skeleton once and the rows splice the record key into it.
+    //
+    // Measured as a delta between selectable and plain at two row counts, so the fixed
+    // chrome and the one-off partial render both drop out and what is left is the
+    // per-row slope. Rendering the partial per row instead would make this grow.
+    rcSeed(4);
+    $selectableSmall = rcRenderCount(rcRender(2, selectable: true));
+    $plainSmall = rcRenderCount(rcRender(2));
+
+    rcSeed(8); // 4 → 12 rows
+    $selectableLarge = rcRenderCount(rcRender(2, selectable: true));
+    $plainLarge = rcRenderCount(rcRender(2));
+
+    expect($selectableLarge - $selectableSmall)->toBe($plainLarge - $plainSmall)
+        ->and($selectableLarge - $selectableSmall)->toBe(0);
+});
+
+it('renders the context-menu panel partial once per table, never once per row', function () {
+    // Same trade as the selection cell: the panel moved into its own partial, so it
+    // now costs a view render where inline markup cost none. That is only sound if the
+    // render is O(1) — the Table compiles the partial into a Skeleton once and each row
+    // splices its key and its (genuinely per-record) items into it.
+    //
+    // The items themselves still render per row, and must: an action can be hidden for
+    // one record and visible for the next. So this compares the SLOPE against a table
+    // whose menu is switched off, which nets out everything but the panel scaffolding.
+    rcSeed(4);
+    $menuSmall = rcRenderCount(rcRender(2, contextMenu: true));
+    $plainSmall = rcRenderCount(rcRender(2));
+
+    rcSeed(8); // 4 → 12 rows
+    $menuLarge = rcRenderCount(rcRender(2, contextMenu: true));
+    $plainLarge = rcRenderCount(rcRender(2));
+
+    $panelSlope = ($menuLarge - $menuSmall) - ($plainLarge - $plainSmall);
+
+    // The items are one dropdown-item render per row; the scaffolding around them is
+    // zero. Putting the panel back in the row loop would make this 2 per row.
+    expect($panelSlope / 8)->toEqual(1)
+        ->and($plainLarge - $plainSmall)->toBe(0);
+});
+
+it('renders the sub-row expander cell once per shape, never once per row', function () {
+    // The expander cell was an @include in the row loop — the N×View shape this fuse
+    // exists to catch. It is now three compiled shapes (no toggle, collapsed, expanded)
+    // and every row splices its key into one of them, so growing the row count adds no
+    // renders at all.
+    rcSeed(4);
+    $subSmall = rcRenderCount(rcRender(2, subRows: true));
+    $plainSmall = rcRenderCount(rcRender(2));
+
+    rcSeed(8); // 4 → 12 rows
+    $subLarge = rcRenderCount(rcRender(2, subRows: true));
+    $plainLarge = rcRenderCount(rcRender(2));
+
+    expect($subLarge - $subSmall)->toBe($plainLarge - $plainSmall)
+        ->and($subLarge - $subSmall)->toBe(0);
+});
+
+it('renders the group header once for the table, never once per group', function () {
+    // Group count is unbounded: grouped by a status there are three headers, grouped by
+    // a date there is one per row. The header is a one-slot skeleton now, so its render
+    // cost is the same either way — measured here at its worst, one group per row.
+    rcSeed(4);
+    $groupedSmall = rcRenderCount(rcRender(2, grouped: true));
+    $plainSmall = rcRenderCount(rcRender(2));
+
+    rcSeed(8); // 4 → 12 rows, and 4 → 12 groups
+    $groupedLarge = rcRenderCount(rcRender(2, grouped: true));
+    $plainLarge = rcRenderCount(rcRender(2));
+
+    expect($groupedLarge - $groupedSmall)->toBe($plainLarge - $plainSmall)
+        ->and($groupedLarge - $groupedSmall)->toBe(0);
 });
 
 // The fill handle is one element per table, positioned over the active cell by

@@ -643,21 +643,259 @@ stashing the view and re-running; their failures are older and unrelated).
 markers into `@if`s that sit *inside* an HTML tag, so the four conditionals on the
 `<tr>` never had any. The 24 → 16 drop is the per-cell `@foreach`/`@if` alone.
 
+### §8e. The selection cell — a partial rendered once, spliced per row — **Done (2026-08-08)**
+
+The most expensive thing left in the row, and it was not a column: a selectable table's
+`<td>` cost **2 251 B and 10 whitespace text nodes per row** — *more than the entire rest
+of a three-column row* (1 823 B / 11 nodes). Four nested tags over eleven lines of Blade,
+with the record key interpolated four times.
+
+It is now compiled once per table by `Table::getSelectionCellSkeleton()` and filled with
+the record key per row. Measured: **2 251 → 1 172 B (−48 %) and 10 → 0 whitespace nodes**.
+On the five-configuration golden master (6 rows) that is **−6 474 B** on every selectable
+variant — −9.9 % of the whole `selectable` page, −12.1 % of `summaries`.
+
+**The template did not move — only the render did.** The markup lives in
+`tables/partials/selection-cell.blade.php`, rendered once with `Skeleton::slot('keyJs')`
+standing in for the key. A first attempt assembled the same HTML as a PHP string in the
+view preamble; it was byte-identical and green, and it was still wrong — it destroys the    
+`vendor:publish` override point and hides markup from every Blade tool. That is now a
+binding rule in `AI_CODING_STANDARD.md` § Rendering: **always `Htmlable`, always Blade.**
+Whitespace is the template's job: the tags that must touch are written touching, while
+whitespace *between attributes* stays laid out and costs nothing.
+
+One slot, because the key appears four times under one encoding (`Js::from()`, inside
+four Alpine expressions) — unlike the `<tr>`, which needed two.
+
+Two ownership moves came with it, so the partial cannot drift from the view that hosts
+it: `Table::getCellPadding()` / `getHeaderPadding()` own the density map (the view was
+re-deriving it from `isCompact()`), and `Table::getSelectionCheckIcon()` owns the tick for
+both the row cell and the card view's select-all.
+
+**How it was proven.** Golden master over five configurations (plain, selectable, ranges,
+summaries, full) — all five **structurally identical**, masking only Livewire's per-render
+ids and insignificant whitespace, with `plain` as the untouched control. Two fuses gained
+an assertion: the payload fuse budgets the cell at <1 250 B and **exactly zero**
+whitespace nodes, and the render fuse pins the new partial at **O(1) renders — the
+selectable-vs-plain slope is 0 per row**, which is the trade the partial has to earn (it
+costs a view render where inline markup cost none). Suites green: table 2 011, core 2 036,
+sortable 87, integration 44; PHPStan clean. Drivers over the rebuilt cell: `copy-cell`
+16/16, `record-actions` 14/14 + `record-actions-dual` 5/5, `column-reorder` 12/12,
+`gestures-off` 25/25, `fill-selection` 30/30, `mobile-selection` 13/13. `selection-gestures`
+and `gesture-lab` were re-run against the pre-change view in the same session and came back
+with **identical failures** — both are flaky here for older, unrelated reasons.
+
+**A trap found on the way, worth knowing:** a published copy of the package views under
+`vendor/orchestra/testbench-core/laravel/resources/views/vendor/wire-*/` shadows
+`packages/*/resources/views/` in every Pest run *and* in the workbench preview server. It
+had been published from an identical working tree, so it was invisible — until a view was
+edited, at which point the edit silently did nothing. Delete it if a Blade change appears
+to have no effect.
+
+### §8f. The context-menu panel — and the marker that turned out to be load-bearing — **Done (2026-08-08)**
+
+The teleported right-click panel was laid out by Blade on every row: **1 659 B and 14
+whitespace text nodes per row for a one-item menu**, nearly all of it identical from row
+to row, because the panel holds no per-row Alpine state (one `wireRecordActions`
+controller on the `<tbody>` drives every row's menu by record key).
+
+`tables/partials/record-context-menu.blade.php` is now compiled once by
+`Table::getRowContextMenuSkeleton()` with two slots — the key, and the item markup that
+`getRowContextMenuHtml()` still renders per record, as it must (an action can be hidden
+for one row and visible for the next). `Table::getRowContextMenuPanel()` owns the "this
+row has no visible action" case. Measured: **1 659 → 982 B (−41 %) and 14 → 6 whitespace
+nodes**; on the golden master, **−4 062 B over six rows** on each menu variant (−6.7 % of
+the page), with the no-menu variants byte-identical.
+
+**The finding worth more than the bytes.** The obvious next step was to delete the
+`@if` around the panel — the string is already empty when there is no menu, so the
+conditional looked like two morph markers per row bought for nothing. Doing it saved
+55 B/row, kept the golden master structurally identical, and **broke the column
+reorder**: the header reordered and the body did not. Both fuses stayed green;
+`verify-gesture-lab.mjs` caught it (28/28 → 27/28, reproduced three times and bisected
+against the pre-change view). The markers are the block boundary morphdom needs when a
+row's children can change between renders, which is exactly what a reorder does.
+
+So the `@if` stays, with the reason written at the call site. This also answers the
+"stripping morph markers from a compiled skeleton" idea in Still open below: it is not
+free, and the row loop is where it is least free.
+
+**Verification.** Golden master over six configurations (plain, selectable, menu,
+menu-group, menu-conditional, full) — all six structurally identical, marker counts
+unchanged, `plain` and `selectable` byte-identical as controls; `menu-conditional`
+(action visible on half the rows) keeps 3 panels of 6 either way, so the emptiness
+decision is preserved. The payload fuse budgets the panel at <1 050 B and ≤7 whitespace
+nodes; the render fuse pins the scaffolding at **zero** extra renders per row (the slope
+is exactly the 1 dropdown-item per row, which is the per-record part). Suites: table
+2 013, core 2 036, sortable 87, integration 44; Pint and PHPStan clean. Drivers:
+`gesture-lab` 28/28, `record-actions` 14/14 (including the three context-menu checks) +
+`record-actions-dual` 5/5, `gestures-off` 25/25.
+
+**Second trap found and fixed.** `tests/Integration/AssetPublishingEndToEndTest.php` runs
+`{package}:install`, whose `publishViews()` writes into the testbench skeleton's
+`resources/views/vendor/wire-*/`. Nothing removed them, and Laravel resolves a published
+view first — so **one Integration run poisoned every later test run and preview in that
+working copy**, rendering a frozen snapshot instead of the package views. A Blade edit
+then does nothing, silently. The test now cleans up after itself.
+
+### §8g. The sub-row expander cell, and what the actions cell is worth — **Done (2026-08-08)**
+
+The expander cell was the row loop's last `@include` — the N×View shape §1's fuse exists
+to catch — at **1 044 B, 8 whitespace text nodes and a view render per row**, for a button
+whose only per-record part is the key in one Alpine expression.
+
+It has exactly **three shapes** (no toggle, toggle collapsed, toggle expanded), so
+`tables/partials/sub-row-cell.blade.php` is compiled once per shape by
+`Table::getSubRowCell()` and each row splices its key. Measured: **1 044 → 760 B (−27 %),
+8 → 1 whitespace nodes, zero view renders per row**. `sub-row-toggle.blade.php` now takes
+`$keyJs` (pre-encoded for the Alpine expression) instead of `$recordKey`, the same
+convention the selection cell uses; its own inter-tag whitespace was closed too, because
+a partial compiled into a skeleton emits its layout on *every* row.
+
+**The `@if` is inside the partial on purpose.** Compiling it into each shape bakes the
+morph-marker pair into the skeleton, so every row still emits them — marker counts are
+unchanged across all eight golden-master variants. That is the §8f lesson applied rather
+than re-learned.
+
+**The actions cell was evaluated and deliberately left as Blade.** Its `<td>`/`<div>`
+layout was closed up (**1 470 → 1 155 B, 16 → 10 whitespace nodes per row for one
+action**), but the `@foreach` stays: an action can be non-executable for one record and
+not the next, so the button list genuinely changes between renders — exactly what §8f
+showed the markers are for. What remains is the button markup itself
+(`wire-core::actions.button`), which belongs to the action-render work, not to this loop.
+
+**Verification.** Golden master over eight configurations (plain, subrows, subrows-mixed
+with children on half the rows, subrows-expanded, subrows-flat, actions with a
+per-record-visible action, actions-start, full) — all eight **structurally identical**,
+**marker counts unchanged everywhere**, `plain` byte-identical as the control. Fuses: the
+render fuse pins the expander at zero renders per row; the payload fuse budgets both cells
+including their *marker counts*, so a future "cleanup" that drops a conditional trips a
+test instead of a customer's reorder. Suites: table 2 016, core 2 036, sortable 87,
+integration 44; Pint and PHPStan clean. Drivers: `subrows-expansion` 17/17,
+`subrow-filter` 10/10, `gesture-lab` 28/28, `record-actions` 14/14 + dual 5/5,
+`column-reorder` 12/12, `column-surfaces` 20/20, `copy-cell` 16/16.
+
+### §8h. The sibling rows, and a marker fuse that should have existed all along — **Done (2026-08-08)**
+
+Three rows can sit *beside* a body row, and none of them is bounded: group by a date and
+there is one header per row; expand by default and every row carries a sub-rows panel.
+Measured as a per-row slope against a same-columns baseline:
+
+| sibling | before | after |
+| --- | --- | --- |
+| group header | 318 B, 6 nodes, 1 view render/group | **222 B, 0 nodes, 1 render/table** |
+| group subtotal (with header) | 1 674 B, 28 nodes | **1 222 B, 4 nodes** |
+| expanded sub-rows panel | 3 019 B, 37 nodes | **2 113 B, 8 nodes** |
+
+The group header became a one-slot skeleton (`Table::getGroupHeaderRow()`). The other two
+are the row loop's biggest *partials*, and their per-record content is real — a nested
+table of children, per-group summary values — so what was taken out of them is the
+indentation: **whitespace between two tags is a DOM text node**, and these partials are
+emitted once per group / per expanded row. On the golden master a table with expanded
+sub-rows is **−10.7 %**, a richer one (sortable + filterable sub-rows, a limit, sub-row
+summaries) **−20.4 %**.
+
+**The trap, and the fuse it produced.** Closing up the whitespace silently cost six
+morph markers per panel. Livewire injects `[if BLOCK]` / `[if ENDBLOCK]` around each
+conditional by matching directives with a regex, and it **skips ones it cannot classify**
+— gluing a directive straight onto a Blade comment (`--}}@if(…)`) loses the *opening*
+marker while the closing one is still emitted. The result is unbalanced block boundaries:
+the exact condition §8f showed breaks a morph, arrived at by a change that looked like
+pure whitespace, with the golden master structurally identical and every existing fuse
+green.
+
+So `TablePayloadFuseTest` gained **`emits balanced morph markers in every table shape`**,
+which asserts `[if BLOCK]` count === `[if ENDBLOCK]` count across nine shapes. It is
+sabotage-verified (re-gluing one directive turns it red, naming the shape) and it asserts
+the *invariant* rather than the authoring rule, so it catches the next way to lose a
+marker too. Every marker count on the golden master is now identical before and after.
+
+**Verification.** Eight golden-master configurations (plain, grouped, grouped with a
+hostile label, grouped+summaries, grouped+everything, sub-rows, rich sub-rows,
+sub-rows-empty) — all structurally identical, **marker counts identical**, `plain`
+byte-for-byte unchanged. Suites: table 2 019, core 2 036, sortable 87, integration 44;
+Pint and PHPStan clean. Drivers: `subrows-expansion` 17/17, `subrow-filter` 10/10,
+`record-actions` 14/14 + dual 5/5, `column-reorder` 12/12, `copy-cell` 16/16.
+
+**`gesture-lab`'s reorder check was failing, and it was the driver, not the engine** —
+verified first by stashing the entire working tree and running at `HEAD`, where it failed
+identically. `verify-gesture-lab.mjs` simulated the drag with
+`document.querySelectorAll('thead th')`, which spans **both** header rows on this table
+(it has a column-filter row), so "move after the last `<th>`" dropped the dragged column
+*into the filter row* — something no real drag can do. `initColumnSortable` binds
+SortableJS to `thead tr`, the first row, and its `onEnd` reads the new order off that same
+row, which no longer held the dragged column: the controller sent a short list, and the
+body never matched the header. Scoped to the first header row, the check passes.
+
+The driver's remaining failures were a second, unrelated fault: **headless Chrome
+backgrounds a window it never shows and throttles the renderer**, so a driver sitting in a
+dead `sleep()` watches a page that is barely running. It needs **two** fixes, and each
+covers a failure the other does not:
+
+- **Polling instead of sleeping** (`waitFor`) — a CDP evaluation wakes the JS thread, so
+  the wait keeps the page moving. This is what anything *awaited* needs: the modal those
+  checks are about opens ~700 ms after the click on a settled page, yet `sleep(1600)`
+  reported it missing on every run of unmodified code.
+- **The Chrome flags** (`--disable-background-timer-throttling` and the two beside it) —
+  because polling does **not** wake `requestAnimationFrame`. Without them an Alpine leave
+  transition never finishes: `verify-selection-gestures`' "Escape closes the shortcut
+  help" failed with the modal reporting `show: false` and `display: block` at the same
+  time. This is what anything *animated* needs, so it lives in `scripts/lib/cdp.mjs` for
+  the whole harness.
+
+Applying only one of the two is worse than useless — flags alone flipped
+`verify-gestures-off` red, polling alone left the Escape check failing. With both:
+**`gesture-lab` 28/28** (was 22/28) and **`selection-gestures` 77/77 in 75 s** (was 75/77
+in ~150 s against a 180 s cap it regularly hit, which is why it kept being killed).
+
+**The flags went to all 64 drivers** (55 spawn Chrome themselves, 9 share
+`scripts/lib/cdp.mjs`) because the same fault was hiding in seven more: every `*-sheet`
+driver and `select-floating` failed "opens on desktop" — a teleported panel whose *enter*
+transition never finished, the mirror image of the Escape case — and `record-active-row`
+failed five modal/keyboard checks. A full sweep went from **56/64 to 63/64**.
+
+The last one, `spa-navigate`, was two driver bugs of its own: the same both-header-rows
+drag as `gesture-lab`, and a `headerCols()` that read `data-sortable-column` — an
+attribute the sortable controller adds and every morph wipes, so straight after a reorder
+it legitimately reads empty. Reading the server-rendered `data-column` instead fixed it.
+**The sweep is 64/64.**
+
+**Third publishing trap, fixed.** The same Integration test that was leaving published
+*views* behind (§8f) was also leaving published **migrations and config**: `{package}:install`
+timestamps its migrations, so every run added another copy — **75 files had accumulated**
+— and from the second run on, `migrate:fresh` dies on "table already exists", leaving the
+workbench database half-migrated and unseeded. Every CDP driver then runs against an empty
+preview. The test now snapshots `config/`, `database/migrations/` and
+`resources/views/vendor/` before the installs and removes anything new afterwards.
+
 ### Still open
 
-- **The rest of the row loop.** §8d took the `<td>` and the `<tr>`; what still runs
-  Blade per row is the genuinely per-record structure — the teleported context-menu
-  panel, the selection cell, the sub-row toggle, the two action cells, and the group
-  header / subtotal / sub-rows siblings. Those are real branches (a record has a
-  context menu or it does not), so they need shape-keyed skeletons rather than one
-  compile, and they are where the remaining 11 whitespace nodes and 16 markers per
-  row live.
-- **Stripping morph markers from a compiled skeleton.** Within one shape the block
-  boundaries are fixed, so the marker pairs inside a skeleton carry no information the
-  morph can use. Removing them would take a further ~16 nodes/row. Not attempted: a
-  row that *changes* shape between renders is exactly the case the markers exist for,
-  and `wire:key` alone may not be enough for morphdom to pair the children correctly.
-  Wants its own experiment and its own CDP driver.
+- **The rest of the row loop.** §8d took the `<td>` and the `<tr>`, §8e the selection
+  cell, §8f the context-menu panel, §8g the expander, §8h the sibling rows. What still
+  renders per row is the action buttons themselves (`wire-core::actions.button`, the
+  action-render work's territory) and the sub-rows panel's own view render — one per
+  expanded parent, for a genuinely per-record nested table.
+- **Most CDP drivers still sleep at their waits.** `verify-gesture-lab`,
+  `verify-selection-gestures` and one check in `verify-gestures-off` poll; the rest keep
+  fixed sleeps. They no longer *have* to change — the anti-throttling flags now cover the
+  animated half everywhere — but a check that waits on a Livewire round-trip is still one
+  slow response away from a false failure. Convert one when it misbehaves, measuring
+  before and after.
+- **The `<td>` and `<tr>` chrome from §8d are PHP-built strings** in the view preamble,
+  which the rule above now forbids. They predate the rule and are byte-identical, so they
+  are not urgent — but they should move into partials compiled the §8e way.
+- **The stacked mobile card layout renders every record a second time.** With
+  `stackOnMobile()` on, the whole record set is serialized twice — once as `<tr>`s, once
+  as cards hidden by CSS at desktop widths (`index.blade.php`, `@if($isStackedOnMobile …)`).
+  That doubles the per-row payload for those tables, which is larger than everything §8d
+  and §8e recovered. It is not a skeleton problem: the question is whether the card should
+  be built on the server at all, which makes it an API/UX decision like §6's `lazyMenu()`.
+- **Stripping morph markers from a compiled skeleton.** ~~Not attempted.~~ **Attempted
+  in §8f, on one conditional, and it broke.** The theory was that within one shape the
+  block boundaries carry no information the morph can use; in practice a row's children
+  *do* change between renders — a column reorder rewrites the cell list — and morphdom
+  needs the boundary to pair them. `wire:key` on the `<tr>` was not enough. Any further
+  attempt needs a CDP driver that reorders, filters and paginates, not just a fuse.
 - **Two copy implementations.** `Infolists/entries/{text,color}.blade.php` carry their
   own copy affordance, unrelated to the table partial. A canonical owner (core
   `Foundation/View`) would let both shrink the same way — see the ownership rule in
@@ -690,6 +928,20 @@ markers into `@if`s that sit *inside* an HTML tag, so the four conditionals on t
    **Done (2026-08-08)** — 11–22× per cell, and the 3.5× whole-table cliff gone.
 10. **§8d row: `<td>` chrome per column + `<tr>` skeleton per table** — last, behind
     both fuses and a golden master. **Done (2026-08-08)** — 4 214 → 1 823 B/row.
+11. **§8e selection cell** — the same treatment for the one remaining per-row `<td>`,
+    with the markup kept in its partial. **Done (2026-08-08)** — 2 251 → 1 172 B/row
+    and 10 → 0 whitespace nodes.
+12. **§8f context-menu panel** — same again, plus the negative result on morph markers.
+    **Done (2026-08-08)** — 1 659 → 982 B/row and 14 → 6 whitespace nodes; the `@if`
+    stays, because removing it breaks the column reorder.
+13. **§8g sub-row expander cell** (three shapes) **+ the actions cell evaluated**.
+    **Done (2026-08-08)** — expander 1 044 → 760 B/row, 8 → 1 whitespace nodes and the
+    row loop's last per-row `@include` gone; actions cell 1 470 → 1 155 B/row with its
+    `@foreach` deliberately kept.
+14. **§8h sibling rows** (group header skeleton; subtotal and sub-rows panels reflowed)
+    **+ the morph-marker balance fuse**. **Done (2026-08-08)** — expanded sub-rows
+    −10.7 % (rich −20.4 %), and losing a marker is now a failing test rather than a
+    broken reorder.
 
 Steps 1–4 are internal and BC-safe. §6 adds one opt-in method. §7 is internal but
 high-blast-radius — do not attempt it before the fuse exists.
