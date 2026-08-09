@@ -143,8 +143,9 @@ it('forgets resolved URLs and rendered tags, so a long-lived worker can re-resol
     // RequestTerminated hook calls flushUrls(); this proves it empties both memos.
     //
     // End to end the flush also needs `PublishedAssets::flush()`, one layer down —
-    // without it the re-resolve asks the toolkit and gets its memo back. That lands
-    // in laravel-package-toolkit 2.3.1; the hook already calls it when present.
+    // without it the re-resolve asks the toolkit and gets its memo back. That landed
+    // in laravel-package-toolkit 2.3.1, and the constraint is `^2.4.0`, so the hook
+    // calls it outright rather than probing for it.
     $manager = new AssetManager;
     $manager->register([Js::make('bundle', $this->bundle)], 'wire-fixture');
 

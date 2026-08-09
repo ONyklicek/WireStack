@@ -224,16 +224,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
             Event::listen($octaneRequestTerminated, function (): void {
                 Component::flushViewRenderCache();
                 $this->app->make(AssetManager::class)->flushUrls();
-
-                // Transitional: `flush()` is on the toolkit's roadmap and not in the
-                // version this constraint allows yet, so the call is a no-op until it
-                // ships. Drop the guard, and this comment, once the constraint
-                // requires the release that carries it.
-                $published = $this->app->make(PublishedAssets::class);
-
-                if (method_exists($published, 'flush')) {
-                    $published->flush();
-                }
+                $this->app->make(PublishedAssets::class)->flush();
             });
         }
     }
