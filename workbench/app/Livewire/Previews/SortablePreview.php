@@ -29,7 +29,7 @@ class SortablePreview extends Component
         // Column order is persisted per user, so the reorder preview needs
         // someone logged in — without an id, reorderColumns() returns early and
         // the next render puts the columns straight back.
-        if (in_array($variant, ['columns', 'morph'], true) && ! auth()->check()) {
+        if (in_array($variant, ['columns', 'morph', 'everything'], true) && ! auth()->check()) {
             $user = User::query()->first();
 
             if ($user !== null) {
@@ -38,10 +38,27 @@ class SortablePreview extends Component
         }
     }
 
+    /**
+     * Saved column order is keyed by user + model + this identifier, which
+     * defaults to the component class — and every column-reorderable variant
+     * here is the same class over the same model. Without the variant in the
+     * key, a drag on `sortable-columns` decides what `sortable-morph` and
+     * `sortable-everything` open with, and one driver run leaves the next
+     * fixture in a state nobody set up.
+     */
+    protected function getReorderableTableIdentifier(): string
+    {
+        return static::class.':'.$this->variant;
+    }
+
     public function table(Table $table): Table
     {
         if ($this->variant === 'morph') {
             return $this->morphTable($table);
+        }
+
+        if ($this->variant === 'everything') {
+            return $this->everythingTable($table);
         }
 
         $status = BadgeColumn::make('status')
@@ -111,10 +128,10 @@ class SortablePreview extends Component
      *
      * `columnReorderable()` alone, deliberately: it renders the sortable
      * wrapper — and with it the drag controller's morph guards — without
-     * putting the table in row-reorder mode, which bypasses search by design
-     * (see WithSortable::interceptTableRecords). So what the search box does
-     * here is exactly what it does on any other table, and any difference is
-     * the wrapper's doing.
+     * putting the table in row-reorder mode, so nothing but the wrapper stands
+     * between the search box and the records. What the search box does here is
+     * exactly what it does on any other table, and any difference is the
+     * wrapper's doing.
      *
      * The editable column is the other half: the guards exist to protect a
      * cell mid-write from a morph, and narrowing them must not stop them
@@ -132,6 +149,57 @@ class SortablePreview extends Component
             ])
             ->defaultSort('sort_order')
             ->paginated(false);
+    }
+
+    /**
+     * Both kinds of reordering on a table that still has every ordinary control.
+     *
+     * The combination is the fixture: row drag handles, draggable headers, a
+     * search box, pagination and a poll on one surface, because each of them is
+     * something reordering could quietly break, and only together do they break
+     * in the ways worth seeing.
+     *
+     * - Search and pagination stay live *inside* reorder mode. They used to be
+     *   dropped there, which is what made a search box on an always-reorderable
+     *   table inert.
+     * - `paginatedWhileReordering()` keeps the pager rather than expanding to
+     *   the full list on toggle, so a drag here permutes one page. That is only
+     *   safe because a drop redistributes the slots the dragged rows already
+     *   own — writing the client's `1..n` positions would move page one every
+     *   time someone tidied page two.
+     * - `poll()` rather than `live()`: change detection would skip the render on
+     *   a fixture whose data nobody is changing, and the render is the point.
+     *   Every tick is a morph aimed at a table that may be mid-drag or holding a
+     *   half-typed search term — the two things the drag controller's guards
+     *   exist to protect.
+     */
+    private function everythingTable(Table $table): Table
+    {
+        return $table
+            ->model(Task::class)
+            ->reorderable('sort_order')
+            ->paginatedWhileReordering()
+            ->columnReorderable()
+            ->columns([
+                TextColumn::make('title')->label('Task')->searchable(),
+                TextColumn::make('owner_name')->label('Owner')->searchable(),
+                BadgeColumn::make('status')
+                    ->label('Status')
+                    ->colors([
+                        'todo' => 'gray',
+                        'in_progress' => 'info',
+                        'review' => 'warning',
+                        'blocked' => 'danger',
+                        'done' => 'success',
+                    ]),
+                TextColumn::make('due_at')->label('Due')->date('M j'),
+            ])
+            ->defaultSort('sort_order')
+            // Six seeded tasks over three a page: enough for a second page, so
+            // paging and dragging are visible at the same time.
+            ->paginated()
+            ->perPage(3)
+            ->poll('3s');
     }
 
     public function render()

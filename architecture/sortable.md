@@ -50,6 +50,28 @@ Plugin-level integration with the shared plugin system.
 
 Trait-level sortable behavior.
 
+Two methods there decide together what reorder mode is allowed to be, and neither
+reads right without the other:
+
+- `interceptTableRecords()` takes over the fetch in row-reorder mode. It drops
+  pagination and the user's column sort — the sequence on screen is the sequence
+  a drop writes back, so it can only be the order column's — but it goes through
+  `WithTable::buildTableQuery()`, so **search and filters stay applied**. They
+  used to be dropped too, which left `alwaysReorderable()` tables rendering a
+  search box that could never do anything, since those never leave reorder mode.
+- `reorderRows()` is why that is safe. The client reports each row's new position
+  as `1..n`, and writing those positions renumbers the visible subset over the
+  top of every row it cannot see — a filtered drag, or any drag under
+  `paginatedWhileReordering()`, would move rows on other pages. Instead
+  `resolveReorderSlots()` collects the order values the dragged rows already
+  hold, sorts them ascending, and redistributes them in the new visual order.
+  Rows outside the drag keep their slots; gaps in the column survive.
+
+The lookup runs through `$table->getQuery()`, which is also what keeps a
+client-supplied key outside the scoped set out of the write (see
+`tests/Feature/ReorderScopeTest.php`). Behaviour is asserted by
+`tests/Feature/ReorderSearchTest.php`.
+
 ### `SortableTable.php`
 
 Focused sortable support surface for table consumers.
@@ -137,6 +159,12 @@ rebuild the bundle and run the drivers:
 - `npm run build:sortable-assets`
 - `npm run verify:drivers -- sortable-morph` — the morph guards
 - `npm run verify:drivers -- column-reorder` — the header drag and the body mirror
+- `npm run verify:drivers -- sortable-everything` — a real drop over a narrowed
+  list: what `onEnd` reads out of the DOM, and what the slot redistribution in
+  `reorderRows()` does with it. The only check that a drag on page two, or over
+  two search matches, leaves the rows it cannot see alone. It **writes to the
+  workbench database** and restores the seeded order on the way out — the other
+  sortable fixtures read the same six tasks.
 
 Useful authored docs:
 

@@ -105,9 +105,12 @@ Handle row drag & drop. Called by Alpine.js after a drag operation completes. Up
 
 Each item: `['value' => string|int, 'order' => int]`
 
+`order` is the row's new position on screen, not the value written. The dragged rows keep the set of order values they already held, redistributed in the new visual sequence, so a drag over a searched, filtered or paginated subset cannot move the rows it does not show — see [Reordering a narrowed list](row-sorting.md#reordering-a-narrowed-list). The positions are written verbatim only when the order column is null or constant and has nothing to redistribute.
+
 No-op if:
 - The table is not reorderable
 - The table is not in reorder mode (`$isReordering === false`)
+- A row's key falls outside the table's base query (it is dropped from the write)
 
 #### `reorderColumns(array $columnOrder): void`
 
@@ -140,7 +143,7 @@ Returns `'wire-sortable::tables.index'` when row or column reordering is enabled
 
 #### `interceptTableRecords(): LengthAwarePaginator|Paginator|CursorPaginator|Collection|null`
 
-In reorder mode (without `paginatedWhileReordering`): bypasses search, filters, sorting, and pagination. Returns all records ordered by the sort column ascending.
+In reorder mode (without `paginatedWhileReordering`): bypasses pagination and the column sort, but keeps search and filters applied. Returns every matching record ordered by the sort column ascending.
 
 Otherwise: returns `null` to let `WithTable` handle record fetching normally.
 

@@ -121,9 +121,13 @@ trait WithSortable
     /**
      * Intercept record fetching in reorder mode.
      *
-     * Called by WithTable via method_exists. Returns all records
-     * ordered by the sort column when in reorder mode (bypassing
-     * search, filters, sorting, and pagination).
+     * Called by WithTable via method_exists. Reorder mode drops pagination and
+     * the user's sort — a drag needs the list whole and in its canonical order —
+     * but it keeps search and filters applied. A narrowed list is safe to drag
+     * because {@see reorderRows()} redistributes the slots the dragged rows
+     * already own rather than renumbering the table from 1; and a table left
+     * permanently in reorder mode by `alwaysReorderable()` would otherwise
+     * render a search box that can never do anything.
      */
     protected function interceptTableRecords(): LengthAwarePaginator|Paginator|CursorPaginator|Collection|null
     {
@@ -134,10 +138,15 @@ trait WithSortable
             && $table->isReorderable()
             && ! $table->isPaginatedWhileReordering()
         ) {
-            $query = $table->getQuery();
-            $query->orderBy($table->getOrderColumn(), 'asc');
+            // WithTable owns search, filters and the query cache; fall back to the
+            // bare table query for a host that composes this trait on its own.
+            $query = method_exists($this, 'buildTableQuery')
+                ? $this->buildTableQuery()
+                : $table->getQuery();
 
-            return $query->get();
+            // reorder() rather than orderBy(): the sort the user picked from a
+            // header, and any grouping order, have to give way to the drag order.
+            return $query->reorder($table->getOrderColumn(), 'asc')->get();
         }
 
         return null;
@@ -186,8 +195,10 @@ trait WithSortable
 
         $this->beforeReorder($items);
 
-        DB::transaction(function () use ($items, $orderColumn, $primaryKey, $table) {
-            foreach ($items as $item) {
+        $slots = $this->resolveReorderSlots($items, $table, $orderColumn, $primaryKey);
+
+        DB::transaction(function () use ($slots, $orderColumn, $primaryKey, $table) {
+            foreach ($slots as $key => $order) {
                 // Scope every write through the table's base query so a developer
                 // `->query(Task::where('team_id', $tid))` / modifyQueryCallback applies:
                 // a client-supplied primary key outside the visible/scoped set matches
@@ -195,14 +206,73 @@ trait WithSortable
                 // `$modelClass::where(...)` that rewrote the order column of ANY row of
                 // the model by client key — an IDOR write.
                 (clone $table->getQuery())
-                    ->where($primaryKey, $item['value'])
-                    ->update([$orderColumn => $item['order']]);
+                    ->where($primaryKey, $key)
+                    ->update([$orderColumn => $order]);
             }
         });
 
         $this->afterReorder($items);
 
         $this->cachedRecords = null;
+    }
+
+    /**
+     * Work out the order value each dragged row should end up with.
+     *
+     * The dragged rows keep the set of slots they already occupied: their current
+     * order values, sorted ascending, handed back out in the new visual sequence.
+     * Rows that were not part of the drag — hidden by a search, by a filter, or
+     * sitting on another page — therefore keep the positions they had. That is
+     * what makes dragging a narrowed list safe: writing the client's own `1..n`
+     * positions instead would renumber the visible subset straight over the top
+     * of every row it cannot see.
+     *
+     * The lookup runs through the table's base query, so a key outside the scoped
+     * set brings no slot back with it and drops out of the write entirely.
+     *
+     * @param  array<int, array{value: string|int, order: int}>  $items
+     * @return array<array-key, mixed> primary key => order value
+     */
+    private function resolveReorderSlots(array $items, Table $table, string $orderColumn, string $primaryKey): array
+    {
+        $keys = [];
+
+        foreach ($items as $item) {
+            if (isset($item['value']) && $item['value'] !== '') {
+                $keys[] = $item['value'];
+            }
+        }
+
+        if ($keys === []) {
+            return [];
+        }
+
+        $existing = (clone $table->getQuery())
+            ->whereIn($primaryKey, $keys)
+            ->pluck($orderColumn, $primaryKey);
+
+        // The dragged keys that survived the scope, still in their new visual order.
+        $targets = array_values(array_filter($keys, fn ($key) => $existing->has($key)));
+
+        if ($targets === []) {
+            return [];
+        }
+
+        $slots = array_map(fn ($key) => $existing->get($key), $targets);
+
+        // Null or duplicated order values give nothing to redistribute — an order
+        // column that was never populated, or a table seeded with a constant. Fall
+        // back to the client's positions, which is all the ordering there is.
+        $usable = ! in_array(null, $slots, true)
+            && count(array_unique($slots)) === count($slots);
+
+        if (! $usable) {
+            $slots = range(1, count($targets));
+        }
+
+        sort($slots);
+
+        return array_combine($targets, $slots);
     }
 
     /**
