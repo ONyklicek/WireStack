@@ -13,4 +13,8 @@ return [
     'entry_not_editable' => 'Toto pole nelze upravovat.',
     'no_permission' => 'Nemáte oprávnění upravovat toto pole.',
     'no_permission_edit' => 'Nemáte oprávnění upravovat tento záznam.',
+
+    // The copy-to-clipboard affordance ({@see Foundation\View\CopyButton}).
+    'copy' => 'Kopírovat',
+    'copied' => 'Zkopírováno!',
 ];

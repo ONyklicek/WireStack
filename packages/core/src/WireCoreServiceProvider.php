@@ -30,6 +30,7 @@ use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Icons\IconSet;
 use NyonCode\WireCore\Foundation\Support\RecordVersion;
 use NyonCode\WireCore\Foundation\View\CellSync;
+use NyonCode\WireCore\Foundation\View\CopyButton;
 use NyonCode\WireCore\Foundation\View\FloatingAssets;
 use NyonCode\WireCore\Foundation\View\Primitives;
 use NyonCode\WireCore\Modals\View\ConfirmationComponent;
@@ -164,6 +165,11 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // Canonical owner of record-invariant primitive markup (spinner, success
         // check). Singleton so its per-request string memo spans the whole request.
         $this->app->singleton(Primitives::class);
+
+        // Canonical owner of the copy-to-clipboard affordance — markup here, the
+        // delegated listener in the `copy` bundle, the feedback pill in
+        // `partials.copy-assets`. Singleton so its per-shape compile is per request.
+        $this->app->singleton(CopyButton::class);
 
         // Canonical owner of an editable cell's server→client sync node. Singleton
         // for the same reason: the partial is rendered once into a skeleton and
@@ -380,6 +386,12 @@ class WireCoreServiceProvider extends PackageServiceProvider
                 ->navigateTrack()
                 ->navigateOnce()
                 ->loadedOnRequest(),
+            // The delegated clipboard controller. In core because two packages ask
+            // for the same affordance — a table's copyable cell and an infolist's
+            // copyable entry — and core is the lowest layer that can own it.
+            Js::make('copy', self::ASSETS_PATH.'/wire-core-copy.js')
+                ->navigateTrack()
+                ->navigateOnce(),
         ], 'wire-core');
     }
 }

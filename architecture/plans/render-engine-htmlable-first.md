@@ -963,6 +963,45 @@ The cost of that separator is a stray space inside the tag when a condition is f
 masking whitespace *inside the `<tr>` tag only* and comparing the eight configurations —
 identical every one.
 
+### §8l. One copy affordance, owned by core — **Done (2026-08-09)**
+
+There were two. §8b gave a table's copyable cell the good one — a plain
+`<button data-copy>` and one document listener for the page — while an infolist's
+copyable entry still carried an Alpine component *per entry*: its own `copied` flag, its
+own `setTimeout`, two icons toggled by `x-show`, and `navigator.clipboard.writeText`
+inline in an `@click`. Same capability, two implementations, and the worse one sitting in
+the lower package.
+
+`Foundation\View\CopyButton` is the owner now, and it owns all three parts: the markup
+(`partials/copy-button`), the behaviour (`copy.js`, moved from wire-table and registered
+as the `wire-core::copy` bundle) and the feedback pill (`partials/copy-assets`). Core is
+the lowest layer both callers can reach, which is where CLAUDE.md says a shared capability
+belongs — and what ADR 0024 already established for assets.
+
+Rendered **once per shape** and spliced, like every other surface in the engine: the value
+and the announcement are the only per-caller parts and both land in one attribute under
+one encoding.
+
+**The table's page did not change by a byte.** It still passes its own
+`wire-table::messages.copy` — a consumer has already translated it, and reaching for
+core's key instead would change the page to save a parameter — and the button's attribute
+order was kept, so the move is invisible in the output. `CopyButtonTest` asserts that
+exact markup.
+
+**What the infolist gained**: the entry lost its Alpine island, and both entries now get
+the shared pill and the delegated listener they never had.
+
+**A bug the move surfaced.** The assets partial was included once per table, but per
+copyable *entry* — so two copyable entries meant two feedback pills, and the controller
+writes into the first one it finds, leaving the second dead. The pill is `@once` now, with
+a test that renders the partial twice in one pass. (`@once` resets between top-level
+renders, so the test has to include it twice inside a single `Blade::render` — rendering
+the view twice would pass for the wrong reason.)
+
+Costs one view render per copy shape, one-off: the button partial compiles into its
+skeleton. `TextColumnSkeletonTest` moves from ≤2 to ≤3 renders for 100 rows, which is the
+number that matters — it does not grow with the row count.
+
 ### Still open
 
 - **The stacked card's second rendering** — see the decision above. This is the largest
@@ -985,10 +1024,7 @@ identical every one.
   *do* change between renders — a column reorder rewrites the cell list — and morphdom
   needs the boundary to pair them. `wire:key` on the `<tr>` was not enough. Any further
   attempt needs a CDP driver that reorders, filters and paginates, not just a fuse.
-- **Two copy implementations.** `Infolists/entries/{text,color}.blade.php` carry their
-  own copy affordance, unrelated to the table partial. A canonical owner (core
-  `Foundation/View`) would let both shrink the same way — see the ownership rule in
-  CLAUDE.md.
+*(The two copy implementations are now one — see §8l.)*
 
 ---
 
@@ -1041,6 +1077,10 @@ identical every one.
 17. **§8k the `<td>` and `<tr>` chrome into partials** — closing §8d's debt against the
     rule §8e set. **Done (2026-08-09)** — cell byte-identical, row +4 B/row of
     insignificant intra-tag whitespace.
+18. **§8l one copy affordance, owned by core** — the infolist entries drop their Alpine
+    island and join the table's delegated button. **Done (2026-08-09)** — table output
+    byte-identical, bundle moved to `wire-core::copy`, and the duplicate feedback pill
+    the move exposed is fixed.
 
 Steps 1–4 are internal and BC-safe. §6 adds one opt-in method. §7 is internal but
 high-blast-radius — do not attempt it before the fuse exists.

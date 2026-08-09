@@ -145,8 +145,10 @@ it('renders one view per cell SHAPE, not one per row', function () {
         }
     });
 
-    // 2: the text partial plus the copyable partial it includes, once between them.
-    expect($renders)->toBeLessThanOrEqual(2);
+    // 3, all one-off: the text partial, the copyable partial it includes, and core's
+    // copy-button partial that one compiles into its own skeleton. What matters is
+    // that the number does not move with the row count — 100 rows, 3 renders.
+    expect($renders)->toBeLessThanOrEqual(3);
 });
 
 it('renders one skeleton per shape when a record turns a part off', function () {

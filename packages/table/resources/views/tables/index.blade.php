@@ -1510,7 +1510,7 @@
                      controller binds to the document, not to this table. --}}
                 @if($hasCopyableColumn)
                     @once
-                        @include('wire-table::tables.partials.copy-assets')
+                        @include('wire-core::partials.copy-assets')
                     @endonce
                 @endif
 

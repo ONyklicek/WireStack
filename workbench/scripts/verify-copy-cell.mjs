@@ -5,7 +5,7 @@ import { openPage, checker, sleep } from './lib/cdp.mjs';
  * (/previews/table-column-surfaces — a copyable ColorColumn).
  *
  * The copy button used to be an Alpine component per cell; it is now a plain
- * `<button data-copy>` and one document listener in the `record-copy` bundle. Pest
+ * `<button data-copy>` and one document listener in the core `copy` bundle. Pest
  * sees the markup either way — everything that makes the new shape correct is
  * browser behaviour:
  *
@@ -87,7 +87,9 @@ try {
         && b.closest('[x-data]').getAttribute('x-data')?.includes('copied')),
       pills: document.querySelectorAll('[data-copy-feedback]').length,
       scripts: [...document.querySelectorAll('script[src]')]
-        .filter((s) => s.src.includes('wire-table-copy')).length,
+        // The bundle lives in core now — two packages ask for the same affordance,
+        // and core is the lowest layer that can own it.
+        .filter((s) => s.src.includes('wire-core-copy') || s.src.includes('wire-core/assets/copy')).length,
     });
   })()`));
 

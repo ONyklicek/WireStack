@@ -323,6 +323,12 @@ it('adds zero view renders per row for a copyable cell too (§7 multi-slot)', fu
     // per-cell render and cost a measured 33× a splice. The copy value is a slot now,
     // so its per-row slope is the plain cell's: zero.
     rcSeed(4);
+
+    // Warm-up: core's copy-button partial compiles into its skeleton on first use,
+    // and whichever measurement ran first would otherwise carry that one-off and
+    // read as a negative slope.
+    rcRender(2, copyable: true)();
+
     $small = rcRenderCount(rcRender(2, copyable: true));
 
     rcSeed(8); // 4 → 12 rows

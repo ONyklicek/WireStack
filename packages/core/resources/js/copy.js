@@ -94,7 +94,7 @@ function onClick(event) {
 // absent the partial can inline this source, and two IIFE copies in one document
 // would each hold their own flag and bind a second listener — so every click
 // would be copied, and announced, twice.
-if (! window.wireTableCopyInstalled) {
-    window.wireTableCopyInstalled = true
+if (! window.wireCoreCopyInstalled) {
+    window.wireCoreCopyInstalled = true
     document.addEventListener('click', onClick)
 }
