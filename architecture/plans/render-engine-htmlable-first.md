@@ -868,13 +868,50 @@ workbench database half-migrated and unseeded. Every CDP driver then runs agains
 preview. The test now snapshots `config/`, `database/migrations/` and
 `resources/views/vendor/` before the installs and removes anything new afterwards.
 
+### §8i. The stacked mobile card — the second rendering of every record — **Done (2026-08-09)**
+
+`stackedOnMobile()` renders every record **twice**: the desktop `<tr>`s and the cards are
+both in the document and CSS decides which is seen. So the card's layout is emitted per
+row on every commit, at any width, and it was the single biggest per-row cost anywhere in
+this plan — **4 391 B, 36 whitespace nodes and 22 morph markers per row, 225 % on top of
+the row itself.** A `stackedOnMobile()` table shipped 3.25× the payload of the same table
+without it.
+
+Closing up the card body (the part inside the `@forelse`; the select-all bar and the
+summary footer are O(1) and were left alone) takes it to **2 830 B and 10 whitespace
+nodes — −36 % and −72 %**, markers unchanged. On a five-row golden master that is
+**−10.5 % of the whole page**, up to −12.8 % on the plain stacked variant.
+
+It stays inline rather than becoming a partial: the card is per-record, so a partial would
+add a view render per row — the very thing §1's fuse exists to catch.
+
+**Verification.** Nine configurations (not-stacked, plain, selectable, actions,
+collapsed-actions, record-url, subrows, summaries, full) — all **structurally identical**,
+**marker counts unchanged in every one**, and `not-stacked` byte-for-byte as the control.
+The payload fuse pins the card at <2 950 B, ≤10 nodes and exactly 22 markers. Table suite
+2 020, Pint and PHPStan clean; drivers `mobile-selection` 13/13, `gestures-off` 25/25,
+`collapse-mobile-actions` 7/7, `phase2-mobile` 5/5, `swipe` and `modal-mobile` clean.
+
+**What is NOT done, and needs a decision rather than a measurement:** the card is still a
+second full server-side rendering of the whole page of records. Even at 2 830 B/row that
+is more than the row it duplicates (1 950 B), and every byte of it is invisible at
+whichever width the reader happens to be at. Making it conditional — one layout server-
+side, swapped on a breakpoint change — is an API/UX change of the same kind as §6's
+`->lazyMenu()`: it trades a no-JS, no-latency, always-present DOM for half the payload,
+and it changes what a consumer gets by default. That is a call for the maintainer, not a
+refactor to slip in.
+
 ### Still open
 
+- **The stacked card's second rendering** — see the decision above. This is the largest
+  single item left, worth roughly another 2 830 B and 10 nodes per row on tables that use
+  it.
 - **The rest of the row loop.** §8d took the `<td>` and the `<tr>`, §8e the selection
-  cell, §8f the context-menu panel, §8g the expander, §8h the sibling rows. What still
-  renders per row is the action buttons themselves (`wire-core::actions.button`, the
-  action-render work's territory) and the sub-rows panel's own view render — one per
-  expanded parent, for a genuinely per-record nested table.
+  cell, §8f the context-menu panel, §8g the expander, §8h the sibling rows, §8i the card.
+  What still renders per row is the action buttons themselves
+  (`wire-core::actions.button`, the action-render work's territory) and the sub-rows
+  panel's own view render — one per expanded parent, for a genuinely per-record nested
+  table.
 - **Most CDP drivers still sleep at their waits.** `verify-gesture-lab`,
   `verify-selection-gestures` and one check in `verify-gestures-off` poll; the rest keep
   fixed sleeps. They no longer *have* to change — the anti-throttling flags now cover the
@@ -942,6 +979,10 @@ preview. The test now snapshots `config/`, `database/migrations/` and
     **+ the morph-marker balance fuse**. **Done (2026-08-08)** — expanded sub-rows
     −10.7 % (rich −20.4 %), and losing a marker is now a failing test rather than a
     broken reorder.
+15. **§8i the stacked mobile card** — the biggest per-row cost in the plan, because it is
+    a second rendering of every record. **Done (2026-08-09)** — 4 391 → 2 830 B/row and
+    36 → 10 whitespace nodes, −10.5 % of a whole stacked page. Whether that second
+    rendering should happen at all is left as a decision, not a refactor.
 
 Steps 1–4 are internal and BC-safe. §6 adds one opt-in method. §7 is internal but
 high-blast-radius — do not attempt it before the fuse exists.

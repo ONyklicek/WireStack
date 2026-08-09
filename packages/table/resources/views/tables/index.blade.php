@@ -1325,6 +1325,22 @@
                                  right-click record actions do not apply to these touch cards. The
                                  same actions reach a finger as ordinary buttons instead — see
                                  $mobileActions, which folds the behaviour-only bindings in. --}}
+                            {{-- Mind the whitespace below: the tags touch on purpose.
+
+                                 This is a SECOND full rendering of every record — the desktop
+                                 rows are in the same document, hidden by CSS at this width — so
+                                 the card's layout is emitted per row and every run of whitespace
+                                 between two tags is one more DOM text node the morph walks on
+                                 every commit. Measured before this was closed up: 4391 B and 36
+                                 whitespace nodes per row, 225% on top of the row itself.
+
+                                 Whitespace BETWEEN ATTRIBUTES is free (no node), so the
+                                 attributes stay laid out, and every conditional stays exactly
+                                 where it was — the morph markers an @if emits are load-bearing
+                                 (see §8f in architecture/plans/render-engine-htmlable-first.md).
+                                 Mind also that a directive must never be glued straight onto a
+                                 Blade comment: Livewire then fails to inject its opening marker.
+                            --}}
                             @forelse($records as $record)
                                 @php
                                     $recordKey = $record->{$table->getPrimaryKey()};
@@ -1335,118 +1351,73 @@
                                         data-testid="table-card"
                                         data-row-key="{{ $recordKey }}"
                                         @if($isSelectable) :class="isSelected(@js((string) $recordKey)) ? 'ring-2 ring-primary-500 ring-inset bg-primary-50/50 dark:bg-primary-900/30' : ''" @endif
-                                >
-                                    {{-- Header: identifier on the left, the figure the list is
-                                         read for on the right, actions after it. --}}
-                                    <div class="flex items-start gap-3 px-4 pt-4 {{ count($cardDetails) > 0 ? 'pb-3' : 'pb-4' }}">
-                                        @if($isSelectable)
-                                            <label class="flex items-center pt-0.5 flex-shrink-0" data-select-cell>
-                                                <input
-                                                        type="checkbox"
-                                                        x-on:change="toggle(@js((string) $recordKey))"
-                                                        :checked="isSelected(@js((string) $recordKey))"
-                                                        data-testid="table-card-select"
-                                                        aria-label="{{ __('wire-table::messages.select_row') }}"
-                                                        class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:focus:ring-offset-gray-800 touch-manipulation"
-                                                >
-                                                <span class="sr-only">{{ __('wire-table::messages.select_row') }}</span>
-                                            </label>
-                                        @endif
-
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-baseline gap-3">
-                                                @if($cardTitle)
-                                                    <div class="min-w-0 font-medium text-gray-900 dark:text-white truncate text-base">
-                                                        @if($recordUrl)
-                                                            <a href="{{ $recordUrl }}" class="hover:text-primary-600 dark:hover:text-primary-400">
-                                                                {!! $mobileCell($cardTitle, $record) !!}
-                                                            </a>
-                                                        @else
-                                                            {!! $mobileCell($cardTitle, $record) !!}
-                                                        @endif
-                                                    </div>
-                                                @endif
-
-                                                {{-- Amounts line up on one right edge and use tabular
-                                                     figures, so a column of them can be compared. --}}
-                                                @if($cardMetric)
-                                                    <div class="ml-auto shrink-0 font-semibold text-gray-900 dark:text-white text-base tabular-nums whitespace-nowrap"
-                                                         data-testid="table-card-metric">
-                                                        {!! $mobileCell($cardMetric, $record) !!}
-                                                    </div>
-                                                @endif
-                                            </div>
-
-                                            @if($cardSubtitle)
-                                                <div class="mt-0.5 text-sm text-gray-600 dark:text-gray-300 truncate">
-                                                    {!! $mobileCell($cardSubtitle, $record) !!}
-                                                </div>
-                                            @endif
-
-                                            @if(count($cardMeta) > 0)
-                                                <div class="mt-1.5 flex flex-wrap items-center gap-2">
-                                                    @foreach($cardMeta as $metaColumn)
-                                                        <span>{!! $mobileCell($metaColumn, $record) !!}</span>
-                                                    @endforeach
-                                                </div>
-                                            @endif
-                                        </div>
-
-                                        {{-- Only a collapsed group belongs beside the title: it is one
-                                             icon wide. Labelled buttons go to their own row below —
-                                             sharing this line, they take the width the identity needs
-                                             and the title collapses to nothing (min-w-0 does the rest). --}}
-                                        @if($hasMobileActions && $collapseMobileActions)
-                                            <div class="flex items-center justify-end flex-shrink-0 -mr-1">
-                                                {!! $mobileActionGroup->render($record, $actionClick) !!}
-                                            </div>
-                                        @endif
-                                    </div>
-
-                                    {{-- Whatever no slot claimed, as the label/value grid --}}
-                                    @if(count($cardDetails) > 0)
-                                        <dl class="px-4 pb-3 grid grid-cols-2 gap-x-4 gap-y-2 {{ $isSelectable ? 'pl-12' : '' }}">
-                                            @php $detailCount = count($cardDetails); @endphp
-                                            @foreach($cardDetails as $index => $column)
-                                                @php $isLastOdd = ($index === $detailCount - 1) && ($detailCount % 2 === 1); @endphp
-                                                <div class="{{ $isLastOdd ? 'col-span-2' : 'col-span-1' }}">
-                                                    <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">
-                                                        {{ $column->getLabel() }}
-                                                    </dt>
-                                                    <dd class="text-sm text-gray-900 dark:text-white">
-                                                        {!! $mobileCell($column, $record) !!}
-                                                    </dd>
-                                                </div>
-                                            @endforeach
-                                        </dl>
-                                    @endif
-
-                                    @if($hasMobileActions && ! $collapseMobileActions)
-                                        <div class="flex flex-wrap items-center gap-2 px-4 pb-3 {{ $isSelectable ? 'pl-12' : '' }}"
-                                             data-testid="table-card-actions">
-                                            @foreach($mobileActions as $action)
-                                                {!! $action->render($record, $actionClick) !!}
-                                            @endforeach
-                                        </div>
-                                    @endif
-
-                                    {{-- Sub-rows: the same children, subtotal, "show more" and
-                                         per-child actions the desktop panel renders. Guarded here
-                                         rather than inside the partial — the card's own toggle
-                                         button lives there, in two branches. --}}
-                                    @if($hasSubRows && $table->hasSubRowsFor($record))
-                                        @include('wire-table::tables.partials.sub-rows-mobile', [
-                                            'table' => $table,
-                                            'component' => $component,
-                                            'record' => $record,
-                                            'recordKey' => $recordKey,
-                                            'visibleSubRowColumns' => $visibleSubRowColumns,
-                                            'isExpanded' => $component->isRowExpanded($recordKey),
-                                            'isSubRowsExpandable' => $isSubRowsExpandable,
-                                            'isSelectable' => $isSelectable,
-                                        ])
-                                    @endif
-                                </div>
+                                >{{-- Header: identifier on the left, the figure the list is read
+                                    for on the right, actions after it. --}}<div
+                                        class="flex items-start gap-3 px-4 pt-4 {{ count($cardDetails) > 0 ? 'pb-3' : 'pb-4' }}"
+                                >@if($isSelectable)<label class="flex items-center pt-0.5 flex-shrink-0" data-select-cell><input
+                                        type="checkbox"
+                                        x-on:change="toggle(@js((string) $recordKey))"
+                                        :checked="isSelected(@js((string) $recordKey))"
+                                        data-testid="table-card-select"
+                                        aria-label="{{ __('wire-table::messages.select_row') }}"
+                                        class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:focus:ring-offset-gray-800 touch-manipulation"
+                                ><span class="sr-only">{{ __('wire-table::messages.select_row') }}</span></label>@endif<div
+                                        class="flex-1 min-w-0"
+                                ><div class="flex items-baseline gap-3">@if($cardTitle)<div
+                                        class="min-w-0 font-medium text-gray-900 dark:text-white truncate text-base"
+                                >@if($recordUrl)<a
+                                        href="{{ $recordUrl }}"
+                                        class="hover:text-primary-600 dark:hover:text-primary-400"
+                                >{!! $mobileCell($cardTitle, $record) !!}</a>@else{!! $mobileCell($cardTitle, $record) !!}@endif</div>@endif{{--
+                                    Amounts line up on one right edge and use tabular figures, so
+                                    a column of them can be compared. --}}
+                                    @if($cardMetric)<div
+                                        class="ml-auto shrink-0 font-semibold text-gray-900 dark:text-white text-base tabular-nums whitespace-nowrap"
+                                        data-testid="table-card-metric"
+                                >{!! $mobileCell($cardMetric, $record) !!}</div>@endif</div>@if($cardSubtitle)<div
+                                        class="mt-0.5 text-sm text-gray-600 dark:text-gray-300 truncate"
+                                >{!! $mobileCell($cardSubtitle, $record) !!}</div>@endif
+                                    @if(count($cardMeta) > 0)<div
+                                        class="mt-1.5 flex flex-wrap items-center gap-2"
+                                >@foreach($cardMeta as $metaColumn)<span>{!! $mobileCell($metaColumn, $record) !!}</span>@endforeach</div>@endif</div>{{--
+                                    Only a collapsed group belongs beside the title: it is one icon
+                                    wide. Labelled buttons go to their own row below — sharing this
+                                    line, they take the width the identity needs and the title
+                                    collapses to nothing (min-w-0 does the rest). --}}
+                                    @if($hasMobileActions && $collapseMobileActions)<div
+                                        class="flex items-center justify-end flex-shrink-0 -mr-1"
+                                >{!! $mobileActionGroup->render($record, $actionClick) !!}</div>@endif</div>{{--
+                                Whatever no slot claimed, as the label/value grid --}}
+                                @if(count($cardDetails) > 0)<dl
+                                        class="px-4 pb-3 grid grid-cols-2 gap-x-4 gap-y-2 {{ $isSelectable ? 'pl-12' : '' }}"
+                                >@php $detailCount = count($cardDetails); @endphp
+                                    @foreach($cardDetails as $index => $column)
+                                        @php $isLastOdd = ($index === $detailCount - 1) && ($detailCount % 2 === 1); @endphp
+                                        <div class="{{ $isLastOdd ? 'col-span-2' : 'col-span-1' }}"><dt
+                                        class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5"
+                                >{{ $column->getLabel() }}</dt><dd
+                                        class="text-sm text-gray-900 dark:text-white"
+                                >{!! $mobileCell($column, $record) !!}</dd></div>@endforeach</dl>@endif
+                                @if($hasMobileActions && ! $collapseMobileActions)<div
+                                        class="flex flex-wrap items-center gap-2 px-4 pb-3 {{ $isSelectable ? 'pl-12' : '' }}"
+                                        data-testid="table-card-actions"
+                                >@foreach($mobileActions as $action){!! $action->render($record, $actionClick) !!}@endforeach</div>@endif{{--
+                                Sub-rows: the same children, subtotal, "show more" and per-child
+                                actions the desktop panel renders. Guarded here rather than inside
+                                the partial — the card's own toggle button lives there, in two
+                                branches. --}}
+                                @if($hasSubRows && $table->hasSubRowsFor($record))
+                                    @include('wire-table::tables.partials.sub-rows-mobile', [
+                                        'table' => $table,
+                                        'component' => $component,
+                                        'record' => $record,
+                                        'recordKey' => $recordKey,
+                                        'visibleSubRowColumns' => $visibleSubRowColumns,
+                                        'isExpanded' => $component->isRowExpanded($recordKey),
+                                        'isSubRowsExpandable' => $isSubRowsExpandable,
+                                        'isSelectable' => $isSelectable,
+                                    ])
+                                @endif</div>
                             @empty
                                 <div class="px-4 py-12 text-center bg-white dark:bg-gray-800">
                                     {{-- The same canonical surface the desktop table's empty state

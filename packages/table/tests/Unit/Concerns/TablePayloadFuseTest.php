@@ -145,6 +145,10 @@ class PfComponent extends Component
             $columns[0]->summarize('count');
         }
 
+        if ($this->siblings === 'stacked') {
+            $table->stackedOnMobile();
+        }
+
         if ($this->siblings === 'subrows-expanded') {
             $table->subRows('kids')
                 ->subRowColumns([TextColumn::make('label')])
@@ -481,6 +485,33 @@ it('keeps the sibling rows off the row budget', function () {
         ->and($cost('grouped-summaries')['whitespaceRuns'])->toBeLessThanOrEqual(4)
         ->and($cost('subrows-expanded')['bytes'])->toBeLessThan(2200)
         ->and($cost('subrows-expanded')['whitespaceRuns'])->toBeLessThanOrEqual(8);
+});
+
+it('keeps the stacked mobile card off the row budget', function () {
+    // `stackedOnMobile()` renders every record a SECOND time: the desktop rows and the
+    // cards are both in the document, and CSS decides which one is seen. So the card's
+    // layout is emitted per row on every commit, whichever width the reader is at, and
+    // its indentation was the single biggest per-row cost in the table — 4391 B and 36
+    // whitespace nodes, 225 % on top of the row itself.
+    //
+    // Closed up 2026-08-09: 2830 B and 10 nodes, markers unchanged at 22. What is left
+    // is the card's real content plus the conditionals that shape it.
+    //
+    // The budget is deliberately tight on the NODE count, because that is the part a
+    // re-indent silently undoes. Whether this second rendering should happen at all is
+    // a separate, larger question — see the plan.
+    $base = pfPerRow(siblings: 'none');
+    $stacked = pfPerRow(siblings: 'stacked');
+
+    $card = [
+        'bytes' => $stacked['bytes'] - $base['bytes'],
+        'whitespaceRuns' => $stacked['whitespaceRuns'] - $base['whitespaceRuns'],
+        'comments' => $stacked['comments'] - $base['comments'],
+    ];
+
+    expect($card['bytes'])->toBeLessThan(2950)
+        ->and($card['whitespaceRuns'])->toBeLessThanOrEqual(10)
+        ->and($card['comments'])->toEqual(22);
 });
 
 it('keeps a copyable cell to one button', function () {
