@@ -69,6 +69,8 @@ class RcComponent extends Component
 
     public bool $grouped = false;
 
+    public int $actions = 0;
+
     public function mount(
         int $cols = 2,
         bool $copyable = false,
@@ -77,6 +79,7 @@ class RcComponent extends Component
         bool $contextMenu = false,
         bool $subRows = false,
         bool $grouped = false,
+        int $actions = 0,
     ): void {
         $this->cols = $cols;
         $this->copyable = $copyable;
@@ -85,6 +88,7 @@ class RcComponent extends Component
         $this->contextMenu = $contextMenu;
         $this->subRows = $subRows;
         $this->grouped = $grouped;
+        $this->actions = $actions;
     }
 
     public function table(Table $table): Table
@@ -124,6 +128,13 @@ class RcComponent extends Component
         // the shape a table grouped by a timestamp actually has.
         if ($this->grouped) {
             $table->groupBy('name');
+        }
+
+        if ($this->actions > 0) {
+            $table->actions(array_map(
+                fn (int $i) => Action::make('a'.$i)->label('A'.$i),
+                range(1, $this->actions),
+            ));
         }
 
         return $table
@@ -216,6 +227,7 @@ function rcRender(
     bool $contextMenu = false,
     bool $subRows = false,
     bool $grouped = false,
+    int $actions = 0,
 ): Closure {
     return fn () => Livewire::test(RcComponent::class, [
         'cols' => $cols,
@@ -225,6 +237,7 @@ function rcRender(
         'contextMenu' => $contextMenu,
         'subRows' => $subRows,
         'grouped' => $grouped,
+        'actions' => $actions,
     ])->html();
 }
 
@@ -395,6 +408,28 @@ it('renders the group header once for the table, never once per group', function
 
     expect($groupedLarge - $groupedSmall)->toBe($plainLarge - $plainSmall)
         ->and($groupedLarge - $groupedSmall)->toBe(0);
+});
+
+it('adds zero view renders per row for an action button', function () {
+    // The action column was the last N×View in the engine: a button was two renders
+    // (the button view and the content partial it includes) for every action on every
+    // row. Action::render() compiles one skeleton per SHAPE now and splices the click
+    // expression, so a table with actions has the same per-row slope as one without.
+    rcSeed(4);
+
+    // Warm-up: the canonical spinner partial resolves once per request, and whichever
+    // measurement ran first would otherwise carry it and read as a negative slope.
+    rcRender(2, actions: 3)();
+
+    $withSmall = rcRenderCount(rcRender(2, actions: 3));
+    $plainSmall = rcRenderCount(rcRender(2));
+
+    rcSeed(8); // 4 → 12 rows
+    $withLarge = rcRenderCount(rcRender(2, actions: 3));
+    $plainLarge = rcRenderCount(rcRender(2));
+
+    expect($withLarge - $withSmall)->toBe($plainLarge - $plainSmall)
+        ->and($withLarge - $withSmall)->toBe(0);
 });
 
 // The fill handle is one element per table, positioned over the active cell by

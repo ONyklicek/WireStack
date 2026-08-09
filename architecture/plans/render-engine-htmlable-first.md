@@ -901,17 +901,51 @@ side, swapped on a breakpoint change — is an API/UX change of the same kind as
 and it changes what a consumer gets by default. That is a call for the maintainer, not a
 refactor to slip in.
 
+### §8j. The action button — the last N×View — **Done (2026-08-09)**
+
+An action button was **two `view()->render()` calls per action per row** (the button view
+and the content partial it includes), measured at 2.06 renders per action per row. Three
+actions over twelve rows was 72 view renders, and it was the last N×View left in the
+engine.
+
+`Action::render()` now compiles **one skeleton per shape** and splices. What makes it a
+one-slot case is that the click expression is the *only* per-record value that reaches the
+markup — `recordKey` is in the render array but no view echoes it — and it lands in
+`wire:click` and up to three `wire:target`s, every one a Blade `{{ }}` inside an
+attribute. One slot, one position kind, one encoding.
+
+**Correctness does not depend on guessing which actions are "simple".** The shape key is
+the whole render array minus the two spliced fields, plus the three methods the view calls
+on the action directly (`isHidden`, `getLabel`, `getName`). An action whose label, colour,
+icon, tooltip, url, disabled state or extra attributes vary by record simply lands on a
+different skeleton and is rendered for itself — the split is measured, not assumed
+(`ActionButtonSkeletonTest`: a `disabled(fn)` action over twenty rows compiles exactly
+two).
+
+Measured: **2.06 → 0 renders per action per row**; the table's render fuse now pins a
+three-action table to the same per-row slope as a table with none.
+
+**One deliberate output change**: a compiled skeleton is trimmed, so a button no longer
+carries the view file's own leading and trailing newline — one DOM text node per button,
+gone. Everything else is byte-identical, and that is asserted rather than asserted-of:
+21 shapes × 10 record keys chosen to break naive escaping (quotes, `&`, `<x>`, unicode,
+backslash, `'0'`), plus the no-record and default-resolver paths, each compared against
+the view rendered directly.
+
+Nothing else in the button changed, so the actions cell stays at 1 155 B and 10 whitespace
+nodes per row — that is the button's own markup, which is the action-render plan's
+territory, not this one's.
+
 ### Still open
 
 - **The stacked card's second rendering** — see the decision above. This is the largest
   single item left, worth roughly another 2 830 B and 10 nodes per row on tables that use
   it.
 - **The rest of the row loop.** §8d took the `<td>` and the `<tr>`, §8e the selection
-  cell, §8f the context-menu panel, §8g the expander, §8h the sibling rows, §8i the card.
-  What still renders per row is the action buttons themselves
-  (`wire-core::actions.button`, the action-render work's territory) and the sub-rows
-  panel's own view render — one per expanded parent, for a genuinely per-record nested
-  table.
+  cell, §8f the context-menu panel, §8g the expander, §8h the sibling rows, §8i the card,
+  §8j the action buttons. What still renders per row is the sub-rows panel — one view per
+  expanded parent, for a genuinely per-record nested table — and nothing else in the row
+  loop.
 - **Most CDP drivers still sleep at their waits.** `verify-gesture-lab`,
   `verify-selection-gestures` and one check in `verify-gestures-off` poll; the rest keep
   fixed sleeps. They no longer *have* to change — the anti-throttling flags now cover the
@@ -983,6 +1017,9 @@ refactor to slip in.
     a second rendering of every record. **Done (2026-08-09)** — 4 391 → 2 830 B/row and
     36 → 10 whitespace nodes, −10.5 % of a whole stacked page. Whether that second
     rendering should happen at all is left as a decision, not a refactor.
+16. **§8j the action button** — the last N×View. **Done (2026-08-09)** — 2.06 → 0 view
+    renders per action per row, one skeleton per shape, byte-identical bar the view's
+    own trailing newline.
 
 Steps 1–4 are internal and BC-safe. §6 adds one opt-in method. §7 is internal but
 high-blast-radius — do not attempt it before the fuse exists.
