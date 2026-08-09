@@ -230,28 +230,30 @@
     $cellPadding = $table->getCellPadding();
     $headerPadding = $table->getHeaderPadding();
 
-    // The body cell's opening tag, built once per column instead of once per cell.
+    // The body cell, compiled once per column instead of interpolated once per cell.
     //
-    // Every attribute on it is column-static — only what goes BETWEEN the tags
-    // varies by record — so a 50×10 page was re-emitting the same ten strings five
-    // hundred times, and paying Blade's interpolation for each. Assembling it here
-    // also lets the row loop emit a cell with no whitespace between its tags: each
+    // Every attribute on it is column-static — only what goes BETWEEN the tags varies
+    // by record — so a 50×10 page was re-emitting the same ten opening tags five
+    // hundred times. The markup lives in `tables.partials.body-cell`, rendered once
+    // per column here with a slot where the record's content goes; the row loop fills
+    // it. That also lets a cell be emitted with no whitespace between its tags: each
     // run of whitespace is one DOM text node, and the morph walks every one of them
     // on every commit (see TablePayloadFuseTest).
-    //
-    // The single spaces inside class="" are deliberate and match the Blade that was
-    // here: an empty $wrapClass or $alignment collapses to a double space exactly as
-    // it did before, so the attribute stays byte-identical rather than merely
-    // equivalent.
     $cellBorderClass = $isBordered ? 'border border-gray-200 dark:border-gray-700' : '';
     foreach ($columnMeta as $name => $meta) {
-        $columnMeta[$name]['open'] = '<td class="'
-            .$cellPadding.' '.$meta['wrapClass'].' '.$cellBorderClass.' '.$meta['alignment']
-            .' dark:text-white '.$meta['responsive'].'"'
-            .' data-testid="table-cell-'.e($name).'"'
-            .' data-column="'.e($name).'"'
-            .($meta['extraCell'] ? ' '.$meta['extraCell'] : '')
-            .'>';
+        $columnMeta[$name]['cell'] = \NyonCode\WireCore\Foundation\View\Skeleton::compile(
+            view('wire-table::tables.partials.body-cell', [
+                'cellPadding' => $cellPadding,
+                'wrapClass' => $meta['wrapClass'],
+                'borderClass' => $cellBorderClass,
+                'alignment' => $meta['alignment'],
+                'responsive' => $meta['responsive'],
+                'name' => $name,
+                'extraAttributes' => $meta['extraCell'],
+                'content' => \NyonCode\WireCore\Foundation\View\Skeleton::slot('content'),
+            ])->render(),
+            'content',
+        );
     }
 
     // Responsive layout — class maps owned by the Table (literal Tailwind names).
@@ -277,46 +279,23 @@
     // one.
     $headerRowCount = 1 + ($hasColumnFilters ? 1 : 0);
 
-    // The body row's opening tag, compiled once for the whole table.
-    //
-    // Every condition below is a property of the TABLE, not of a record — keyboard
-    // nav, the ARIA role, selection, the row-class binding are either on for the
-    // page or off for it — so the <tr> has exactly one shape and the four `@if`s
-    // that used to decide it per row were re-deciding a settled question 50 times.
-    // Each `@if` also cost a pair of Livewire morph markers per row, and the Blade
-    // between the attributes cost a text node.
-    //
-    // What is left is per-record and arrives through slots. The record key appears
-    // under TWO encodings — `e()` inside an HTML attribute, and Js::from() inside
-    // an Alpine expression — so it takes two slots: one slot, one position, one
-    // encoding (see Foundation\View\Skeleton).
+    // The body row's opening tag, compiled once for the whole table from
+    // `tables.partials.body-row-open`. Every condition on it is a property of the
+    // TABLE, so the row has one shape; what is per-record arrives through slots.
+    // See the partial for why it is an opening tag and not a whole row.
     $rowSkeleton = \NyonCode\WireCore\Foundation\View\Skeleton::compile(
-        '<tr class="'.\NyonCode\WireCore\Foundation\View\Skeleton::slot('rowClass').' '
-        .($keyboardNav ? 'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500' : '').'"'
-        .($rowClassBinding
-            ? ' :class="'.str_replace('%key%', \NyonCode\WireCore\Foundation\View\Skeleton::slot('keyJs'), $rowClassBinding).'"'
-            : '')
-        // The roving tabindex is bound, not printed: Livewire morphs the rows back
-        // to this markup on every update, which would wipe an assigned tabstop and
-        // drop the grid out of the tab order.
-        .($keyboardNav
-            ? ' role="row" tabindex="'.\NyonCode\WireCore\Foundation\View\Skeleton::slot('tabindex').'"'
-              .' :tabindex="rowTabindex('.\NyonCode\WireCore\Foundation\View\Skeleton::slot('keyJs').', '
-              .\NyonCode\WireCore\Foundation\View\Skeleton::slot('rowIndex').')"'
-            : '')
-        // Position in the whole grid, so it survives paging: the header rows come
-        // first, then this page's offset.
-        .($tableRole ? ' aria-rowindex="'.\NyonCode\WireCore\Foundation\View\Skeleton::slot('ariaRowIndex').'"' : '')
-        // Bound, never printed: the selection lives in Alpine and a static value
-        // would snap back to the server's truth on the next morph, leaving the row
-        // lying about itself.
-        .($isSelectable
-            ? ' :aria-selected="isSelected('.\NyonCode\WireCore\Foundation\View\Skeleton::slot('keyJs').") ? 'true' : 'false'\""
-            : '')
-        .' wire:key="row-'.\NyonCode\WireCore\Foundation\View\Skeleton::slot('key').'"'
-        .' data-testid="table-row"'
-        .' data-row-key="'.\NyonCode\WireCore\Foundation\View\Skeleton::slot('key').'"'
-        .'>',
+        view('wire-table::tables.partials.body-row-open', [
+            'keyboardNav' => $keyboardNav,
+            'rowClassBinding' => $rowClassBinding,
+            'tableRole' => $tableRole,
+            'isSelectable' => $isSelectable,
+            'rowClass' => \NyonCode\WireCore\Foundation\View\Skeleton::slot('rowClass'),
+            'keyJs' => \NyonCode\WireCore\Foundation\View\Skeleton::slot('keyJs'),
+            'tabindex' => \NyonCode\WireCore\Foundation\View\Skeleton::slot('tabindex'),
+            'rowIndex' => \NyonCode\WireCore\Foundation\View\Skeleton::slot('rowIndex'),
+            'ariaRowIndex' => \NyonCode\WireCore\Foundation\View\Skeleton::slot('ariaRowIndex'),
+            'key' => \NyonCode\WireCore\Foundation\View\Skeleton::slot('key'),
+        ])->render(),
         'rowClass', 'keyJs', 'tabindex', 'rowIndex', 'ariaRowIndex', 'key',
     );
 
@@ -1130,7 +1109,7 @@
                                              the row emits no whitespace between the cells and Blade runs
                                              no per-cell conditional — the two things that made a <td>
                                              cost ~900 bytes and a fistful of DOM nodes to say `v`. The
-                                             opening tag is $cm['open'], resolved once per column above. --}}
+                                             cell is $cm['cell'], compiled once per column above. --}}
                                         @php
                                             $cellsHtml = '';
                                             $linkOpen = $recordUrl
@@ -1149,7 +1128,7 @@
                                                     $cell = $linkOpen.$cell.'</a>';
                                                 }
 
-                                                $cellsHtml .= $cm['open'].$cell.'</td>';
+                                                $cellsHtml .= $cm['cell']->fill(['content' => $cell]);
                                             }
                                         @endphp
                                         {!! $cellsHtml !!}

@@ -936,6 +936,33 @@ Nothing else in the button changed, so the actions cell stays at 1 155 B and 10 
 nodes per row — that is the button's own markup, which is the action-render plan's
 territory, not this one's.
 
+### §8k. The `<td>` and `<tr>` chrome moved into Blade — **Done (2026-08-09)**
+
+§8d built both as PHP strings in the view preamble, which the rule §8e added — *always
+`Htmlable`, always Blade* — then forbade. They are partials now:
+
+- **`tables/partials/body-cell.blade.php`** — the whole `<td>`, balanced, with a slot for
+  the record's content. Compiled once per column, filled per cell. **Byte-identical**
+  across all eight golden-master configurations.
+- **`tables/partials/body-row-open.blade.php`** — the row's opening tag. Deliberately not
+  a whole row: the row's children each sit behind a conditional whose morph markers are
+  load-bearing (§8f), and wrapping them in a slot would swallow those conditionals.
+
+Two things the `<tr>` partial had to be taught, both measured rather than guessed:
+
+- **It is all on one line.** Laid out over eight lines it cost **+50 B per row** — half of
+  what §8d won — because whitespace between attributes costs no DOM node but does cost
+  bytes, and this tag is emitted once per row. The explanation lives in the comment block
+  above, where Blade strips it.
+- **A literal space separates each `@if` from the one before it.** `@endif@if(` is
+  invisible to Blade's compiler — a directive preceded by a word character never matches —
+  and comes out as literal text in the page. Same family as the `--}}@if` trap in §8h.
+
+The cost of that separator is a stray space inside the tag when a condition is false:
+**+4 B per row**, no DOM node, no semantics. Everything else is byte-identical, verified by
+masking whitespace *inside the `<tr>` tag only* and comparing the eight configurations —
+identical every one.
+
 ### Still open
 
 - **The stacked card's second rendering** — see the decision above. This is the largest
@@ -952,15 +979,6 @@ territory, not this one's.
   animated half everywhere — but a check that waits on a Livewire round-trip is still one
   slow response away from a false failure. Convert one when it misbehaves, measuring
   before and after.
-- **The `<td>` and `<tr>` chrome from §8d are PHP-built strings** in the view preamble,
-  which the rule above now forbids. They predate the rule and are byte-identical, so they
-  are not urgent — but they should move into partials compiled the §8e way.
-- **The stacked mobile card layout renders every record a second time.** With
-  `stackOnMobile()` on, the whole record set is serialized twice — once as `<tr>`s, once
-  as cards hidden by CSS at desktop widths (`index.blade.php`, `@if($isStackedOnMobile …)`).
-  That doubles the per-row payload for those tables, which is larger than everything §8d
-  and §8e recovered. It is not a skeleton problem: the question is whether the card should
-  be built on the server at all, which makes it an API/UX decision like §6's `lazyMenu()`.
 - **Stripping morph markers from a compiled skeleton.** ~~Not attempted.~~ **Attempted
   in §8f, on one conditional, and it broke.** The theory was that within one shape the
   block boundaries carry no information the morph can use; in practice a row's children
@@ -1020,6 +1038,9 @@ territory, not this one's.
 16. **§8j the action button** — the last N×View. **Done (2026-08-09)** — 2.06 → 0 view
     renders per action per row, one skeleton per shape, byte-identical bar the view's
     own trailing newline.
+17. **§8k the `<td>` and `<tr>` chrome into partials** — closing §8d's debt against the
+    rule §8e set. **Done (2026-08-09)** — cell byte-identical, row +4 B/row of
+    insignificant intra-tag whitespace.
 
 Steps 1–4 are internal and BC-safe. §6 adds one opt-in method. §7 is internal but
 high-blast-radius — do not attempt it before the fuse exists.
