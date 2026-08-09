@@ -48,27 +48,78 @@ import { rowAtY } from '../../../core/resources/js/support/rows'
 // right-clicking another row) always closes any other first.
 let openRecordMenu = null
 
+// …and the same fact in terms no re-render can take away: which record's menu
+// is open, and where it was put. The panel node cannot carry that on its own.
+// It is open only by way of inline style, which the server renders as
+// `display: none` on every request, so any morph — a poll tick above all —
+// re-applies "closed" over it. A morph that re-creates the teleported panel
+// throws the node away entirely. The key and the coordinates survive both.
+let openRecordMenuState = null
+
 // One morph guard for the page rather than one per table: Livewire's hook() has
 // no off switch, so registering inside init() would stack a fresh hook every
 // time a table re-initialises. Same pattern as the fill handle's guard — a poll
 // landing mid-sweep would morph the rows out from under the pointer.
 const sweepingControllers = new Set()
-let sweepMorphGuardInstalled = false
+let morphGuardsInstalled = false
 
-const installSweepMorphGuard = () => {
-    if (sweepMorphGuardInstalled || ! window.Livewire) return
+const installMorphGuards = () => {
+    if (morphGuardsInstalled || ! window.Livewire) return
 
-    sweepMorphGuardInstalled = true
+    morphGuardsInstalled = true
 
     window.Livewire.hook('morph.updating', ({ skip }) => {
         if (sweepingControllers.size > 0) skip()
     })
+
+    // Put the open menu back after every morph. Deliberately a restore rather
+    // than a skip: a menu can stay open indefinitely, and refusing the morph
+    // for as long as it does would freeze the whole table behind it.
+    window.Livewire.hook('morphed', restoreRecordMenu)
+}
+
+/**
+ * Re-open the context menu the user still has open, on whatever node now
+ * represents it.
+ *
+ * The row it belongs to may be gone — filtered out, or on another page after a
+ * poll — and then the menu is closed for good: acting on a record that is no
+ * longer on screen is exactly the surprise this is meant to prevent.
+ */
+function restoreRecordMenu() {
+    if (! openRecordMenuState) return
+
+    const { key, left, top } = openRecordMenuState
+    const panel = document.querySelector(`[data-record-menu="${CSS.escape(key)}"]`)
+
+    if (! panel) {
+        openRecordMenu = null
+        openRecordMenuState = null
+
+        return
+    }
+
+    if (panel.style.display === 'none') panel.style.display = ''
+    if (panel.style.left !== left) panel.style.left = left
+    if (panel.style.top !== top) panel.style.top = top
+
+    // A re-created panel takes the focus down with it, and the keyboard path
+    // opens this menu with a menu item focused. Without this the arrow keys go
+    // dead against a menu that is still on screen.
+    if (panel !== openRecordMenu && document.activeElement === document.body) {
+        panel.querySelector('[role="menuitem"], button, a')?.focus()
+    }
+
+    openRecordMenu = panel
 }
 
 function hideRecordMenu(panel) {
     if (! panel) return
     panel.style.display = 'none'
-    if (openRecordMenu === panel) openRecordMenu = null
+    if (openRecordMenu === panel) {
+        openRecordMenu = null
+        openRecordMenuState = null
+    }
 }
 
 const wireRecordActions = (config = {}) => ({
@@ -131,6 +182,11 @@ const wireRecordActions = (config = {}) => ({
         this.initSweep()
 
         if (! this.contextMenu) return
+
+        // Installed on the way in, not when a menu opens: the restore runs off a
+        // morph, and the first morph can land before the user's first right
+        // click has finished (a poll ticks on its own schedule).
+        installMorphGuards()
 
         // Global close triggers, bound once for the whole table (not per row).
         this._onDocPointer = () => hideRecordMenu(openRecordMenu)
@@ -211,7 +267,7 @@ const wireRecordActions = (config = {}) => ({
 
                 sweep.engaged = true
                 sweepingControllers.add(this)
-                installSweepMorphGuard()
+                installMorphGuards()
                 sweep.scroller = createAutoScroller(rows[0])
                 sweep.scroller.start()
                 this.suppressSweepTransitions(rows)
@@ -811,6 +867,15 @@ const wireRecordActions = (config = {}) => ({
 
         panel.style.left = `${Math.max(pad, x)}px`
         panel.style.top = `${Math.max(pad, y)}px`
+
+        // The clamped values, not the raw cursor: a restore after a morph has to
+        // land the menu exactly where the user is looking, and re-clamping
+        // against a re-measured panel could put it somewhere else.
+        openRecordMenuState = {
+            key: panel.dataset.recordMenu,
+            left: panel.style.left,
+            top: panel.style.top,
+        }
     },
 })
 

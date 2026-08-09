@@ -73,9 +73,11 @@ trait HasPolling
      * {@see TableRecordsChanged::channelFor()} in the
      * app.
      *
-     * A tick never disturbs an edit in progress: a re-render leaves an editable
-     * cell's own state alone (`wire:ignore.self`), and the cell refuses to
-     * reconcile a value the user is typing or a write still in flight.
+     * A tick never disturbs what the user is in the middle of: a re-render
+     * leaves an editable cell's own state alone (`wire:ignore.self`), the cell
+     * refuses to reconcile a value being typed or a write still in flight, and
+     * an open row context menu is put back where it was afterwards — it closes
+     * on a tick only when the row it belongs to has left the page.
      *
      * Change detection reads the parent rows, so a table whose visible data
      * lives in child rows (a rollup, a sum over a relation) should pass its own

@@ -60,7 +60,7 @@ class TablePreview extends Component
     private const MODAL_VARIANTS = ['modal-form', 'modal-slideover-mobile', 'modal-slideover-compose', 'modal-fullscreen-mobile', 'modal-wizard', 'modal-nested'];
 
     /** Variants backed by the GestureRow selection-gesture fixtures. */
-    private const GESTURE_VARIANTS = ['selection-gestures', 'selection-gestures-paged', 'selection-only'];
+    private const GESTURE_VARIANTS = ['selection-gestures', 'selection-gestures-paged', 'selection-only', 'gestures-poll', 'gestures-live', 'gestures-live-broadcast', 'gestures-poll-url'];
 
     /**
      * Variants of the users table that exist to show whole-row interaction, and
@@ -562,6 +562,43 @@ class TablePreview extends Component
             $table->paginated(false);
         }
 
+
+        // Two fixtures for the two halves of polling, because they take
+        // different paths through the request and stomp different things.
+        //
+        // `poll()` renders on every tick: the morph is the hazard, and what it
+        // can reach is the open context menu.
+        //
+        // `live()` adds change detection, so a tick over unchanged data answers
+        // with NO html at all — and that is the more interesting case, because a
+        // skipped render still carries a full snapshot back to the browser. Any
+        // client state Livewire syncs from that snapshot (the half-typed search
+        // box) is stomped with nothing on screen to explain it.
+        if ($this->variant === 'gestures-poll') {
+            $table->poll('1s');
+        }
+
+        if ($this->variant === 'gestures-live') {
+            $table->live('1s');
+        }
+
+        // The shape an ordinary application table has: paginated, and with the
+        // search term mirrored into the URL. queryString() is the one thing that
+        // reads state back from somewhere other than the component — worth a
+        // fixture of its own, because a stale read there would land on the
+        // search box precisely while it is being typed into.
+        if ($this->variant === 'gestures-poll-url') {
+            $table->poll('1s')->queryString()->paginated()->perPage(10);
+        }
+
+        // The third shape, and the one most people actually write: broadcast on
+        // top. It puts an Alpine root (`wireTableLive`) on the poll wrapper, so
+        // pausing does not just drop an attribute — it removes an x-data element
+        // wrapping the whole table, and the morph has to re-home everything
+        // inside it.
+        if ($this->variant === 'gestures-live-broadcast') {
+            $table->live('1s', broadcast: true);
+        }
         if ($this->variant === 'selection-only') {
             return $table;
         }
