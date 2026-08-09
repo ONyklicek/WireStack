@@ -97,8 +97,9 @@ Before changing shared behavior, ask:
   `architecture/plans/action-render-unification.md`
 - Shipping or changing a JS bundle, an Alpine controller's registration, the
   `@wireStackScripts` directive or `Foundation/Assets/` (`AssetManager`, `Js`):
-  `architecture/plans/js-asset-registration.md`, then ADR
-  `architecture/decisions/0024-js-asset-delivery-and-registration.md`
+  `architecture/assets.md` for the current state (what ships, what the toolkit
+  owns, the traps), then `architecture/plans/js-asset-registration.md` and ADR
+  `architecture/decisions/0024-js-asset-delivery-and-registration.md` for why
 - Full analysis, inconsistency review, bug-hunting, or audit:
   `architecture/audit.md`
 - Writing or changing any page under `docs/`:
@@ -212,6 +213,7 @@ npm run docs:verify-ui
 - `AI_RECIPES.md`
 - `AI_COMPONENT_CATALOG.md`
 - `architecture/README.md`
+- `architecture/assets.md`
 - `architecture/core.md`
 - `architecture/forms.md`
 - `architecture/table.md`

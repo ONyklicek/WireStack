@@ -246,10 +246,25 @@ the two cannot point at different directories. `hasAssets(mirror: false)` opts a
 package out while keeping the publish tags.
 
 Nothing in wire-core registers, declares or copies any more. What stays here is what
-the toolkit deliberately does not do: `Js::getUrl()` falls back to the package's own
-asset route when the mirror returns `null`, and `AssetManager::renderScripts()`
-renders the console warning off `PublishedAssets::isStale()` — the toolkit has no
-renderer and no route to fall back to.
+the toolkit did not do: `Js::getUrl()` falls back to the package's own asset route
+when the mirror returns `null`, and `AssetManager::renderScripts()` renders the
+console warning off `PublishedAssets::isStale()`.
+
+That was written against 2.3, where the toolkit had no renderer at all. **2.4 has
+one** — `hasAssets(entries: …)` plus `@packageAssets` / `@packageStyles` /
+`@packageScripts` / `@packageAssetUrl`, with `Asset::make()->classic()` for a
+non-module bundle and `->attributes()` for anything else a tag needs — and the
+constraint is now `^2.4.0`, so the renderer here is no longer justified by absence.
+What still justifies it is the **fallback**: `PackageAssets::url()` returns `null`
+and stops, while the decision above is static files *with* a route behind them for
+the app whose `public/` is not writable. The rest of `Js`'s vocabulary has a 2.4
+equivalent; `architecture/assets.md` § What the toolkit owns as of 2.4 keeps the
+mapping, including the trap that would break a naive port — these bundles are IIFE
+and the toolkit renders `.js` as `type="module"` unless told `classic()`.
+
+`hasViteAssets()`, also 2.4, has no counterpart here: it lets the consuming
+application's own Vite build compile a package's sources, which is what an app on
+Tailwind needs to stop its purge pass dropping this repo's classes. Not adopted.
 
 This raised wire-core's floor to the toolkit's: `illuminate/support ^12.0|^13.0`.
 Laravel 10 and 11 are no longer supported by the stack.

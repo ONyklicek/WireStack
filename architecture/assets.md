@@ -44,13 +44,16 @@ Committed IIFE bundles under each package's `dist/`, built with esbuild:
 |---|---|---|---|
 | core | `wire-core-dropdown.js` | `dropdown` | `resources/js/dropdown.js` (+ `editable/`, `fill/`, `support/`) |
 | core | `wire-core-chart.js` | `chart` (`loadedOnRequest`) | `resources/js/chart.js` |
+| core | `wire-core-copy.js` | `copy` | `resources/js/copy.js` |
 | forms | `wire-forms-image.js` | `image` | `resources/js/image-processor.js` |
 | forms | `tiptap/` (code-split ESM) | — not registered | `resources/js/tiptap-editor{,-addons}.js` |
 | table | `wire-table-records.js` | `records` | `resources/js/record-actions.js` |
 | table | `wire-table-selection.js` | `selection` | `resources/js/record-selection.js` |
 | table | `wire-table-live.js` | `live` | `resources/js/record-live.js` |
-| table | `wire-table-copy.js` | `copy` | `resources/js/record-copy.js` |
 | sortable | `wire-sortable.js` | `sortable` | `resources/js/sortable.js` (SortableJS bundled in) |
+
+The copy affordance is core's, not table's (`2137b46`) — it is the one bundle that
+moved packages, and the id stayed `copy` while the file became `wire-core-copy.js`.
 
 `wire-core-dropdown.js` carries the whole shared interaction layer — `wireDropdown`,
 `wireContextMenu`, `wireTabs`, `wireWizard`, `wireEditableCell`, `wireFillHandle` —
@@ -60,9 +63,9 @@ which is exactly the set that must never arrive late.
 a package's `resources/js/`, run its build script:
 
 ```bash
-npm run build:core-assets       # dropdown + chart
+npm run build:core-assets       # dropdown + chart + copy
 npm run build:forms-assets      # tiptap (ESM, split) + image processor
-npm run build:table-assets      # records, selection, live, copy
+npm run build:table-assets      # records, selection, live
 npm run build:sortable-assets   # sortable, SortableJS compiled in
 ```
 
@@ -207,8 +210,46 @@ drift this removed once already.
 | fall back | `Js::getUrl()` (core) | the package's own asset route when the mirror returns `null` |
 | warn | `AssetManager::stalePublishWarning()` (core) | `console.warn` off `PublishedAssets::isStale()` |
 
-Nothing in wire-core registers, declares or copies. What stays here is what the
-toolkit deliberately does not do — it has no renderer and no route to fall back to.
+Nothing in wire-core registers, declares or copies.
+
+### What the toolkit owns as of 2.4
+
+The split above was drawn against toolkit **2.3**, where the toolkit had a mirror
+and no renderer, so "the toolkit cannot render a tag" was the whole reason
+`AssetManager` exists. **2.4 has a renderer**, and since `768c299` the constraint
+is `^2.4.0` — so that reason no longer holds on its own and the divergence has to
+be argued rather than assumed. Declared with `hasAssets(entries: [...])`:
+
+| Toolkit 2.4 | Ours | Overlap |
+|---|---|---|
+| `@packageAssets` / `@packageStyles` / `@packageScripts` / `@packageAssetUrl` | `@wireStackScripts`, `FloatingAssets` | full — both render tags for a named package, both narrow by package, both take an explicit entry list |
+| `Asset::make()->classic()`, `->attributes()`, `->asStylesheet()`, `->asScript()` | `Js::module()`, `->defer()`, `->navigateTrack()`, `->navigateOnce()` | full — `navigateOnce()` is `->attributes(['data-navigate-once' => true])`, and `data-navigate-track="reload"` is on every toolkit tag by default |
+| `PackageAssets::resolution()`, the `hasAbout()` row | — | toolkit only |
+| `hasViteAssets()` — the consuming app's Vite build compiles the package's sources | — | toolkit only |
+| — | `Js::getUrl()`'s route fallback | ours only: `PackageAssets::url()` returns `null` and stops |
+| — | `loadedOnRequest()` | ours only, as a *default*; the toolkit expresses it per call site instead (`@packageScripts('wire-core', 'js/chart.js')`) |
+| — | `AssetManager::stalePublishWarning()` | ours only, though it is built on the toolkit's `isStale()` |
+
+So one thing keeps the renderer here rather than making it a thin wrapper: **the
+route fallback**. ADR 0024 chose static files first *and* a route behind them for
+the app whose `public/` cannot be written, and the toolkit's renderer has no
+second place to look. Everything else in the left column is now expressible.
+
+Two things to know before anyone migrates:
+
+- **Our bundles are IIFE, and the toolkit renders `.js` as `type="module"`.** A
+  module is deferred and its top-level declarations never reach `window`, which
+  is exactly how the registration idiom above works — so a naive port registers
+  nothing and every `x-data` fails, with no error at the point of the mistake.
+  Each entry needs `Asset::make(...)->classic()`.
+- **Declaring `entries:` while the per-surface partials still emit their own tags
+  means two tags per bundle.** Harmless only because the `registered` guard makes
+  the second execution a no-op — which is a reason the guard is load-bearing, not
+  a reason to rely on it.
+
+`hasViteAssets()` is the one piece with no counterpart here and a real consumer
+benefit: an app on Tailwind currently has to point `@source` at this repo's Blade
+markup by hand or watch half the classes get purged. Not adopted yet.
 
 ### Properties of the mirror
 
