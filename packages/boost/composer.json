@@ -16,7 +16,7 @@
         "illuminate/console": "^12.0|^13.0",
         "laravel/mcp": "^0.8",
         "livewire/livewire": "^3.0",
-        "nyoncode/laravel-package-toolkit": "^2.4.0"
+        "nyoncode/laravel-package-toolkit": "^2.4"
     },
     "require-dev": {
         "orchestra/testbench": "^10.0|^11.0",
