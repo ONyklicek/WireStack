@@ -220,20 +220,38 @@ and no renderer, so "the toolkit cannot render a tag" was the whole reason
 is `^2.4.0` — so that reason no longer holds on its own and the divergence has to
 be argued rather than assumed. Declared with `hasAssets(entries: [...])`:
 
-| Toolkit 2.4 | Ours | Overlap |
+| Capability | Ours | Toolkit 2.4.1 |
 |---|---|---|
-| `@packageAssets` / `@packageStyles` / `@packageScripts` / `@packageAssetUrl` | `@wireStackScripts`, `FloatingAssets` | full — both render tags for a named package, both narrow by package, both take an explicit entry list |
-| `Asset::make()->classic()`, `->attributes()`, `->asStylesheet()`, `->asScript()` | `Js::module()`, `->defer()`, `->navigateTrack()`, `->navigateOnce()` | full — `navigateOnce()` is `->attributes(['data-navigate-once' => true])`, and `data-navigate-track="reload"` is on every toolkit tag by default |
-| `PackageAssets::resolution()`, the `hasAbout()` row | — | toolkit only |
-| `hasViteAssets()` — the consuming app's Vite build compiles the package's sources | — | toolkit only |
-| — | `Js::getUrl()`'s route fallback | ours only: `PackageAssets::url()` returns `null` and stops |
-| — | `loadedOnRequest()` | ours only, as a *default*; the toolkit expresses it per call site instead (`@packageScripts('wire-core', 'js/chart.js')`) |
-| — | `AssetManager::stalePublishWarning()` | ours only, though it is built on the toolkit's `isStale()` |
+| narrow to one package | `@wireStackScripts('wire-table')` | `@packageAssets('wire-table')` — same |
+| name individual entries | `AssetManager::url($package, $id)` | `@packageScripts('blog', 'js/blog.js')` — same |
+| `type="module"` / `defer` / arbitrary attributes | `Js::module()`, `->defer()`, `->navigateTrack()`, `->navigateOnce()` | `Asset::make()->classic()`, `->attributes()` — same, and `data-navigate-track="reload"` is on by default |
+| **render every installed package at once** | `@wireStackScripts` with no argument | **none.** `PackageAssets::tags(string $package, …)` — the argument is required |
+| **a remote/CDN URL as an entry** | `http(s)://` and `//` used verbatim | **none.** `hasAssets()` throws `FileNotFoundException` for an entry that is not a file in the asset directory |
+| **fall back when nothing is published** | the package's own asset route | **none.** `render()` does `if ($tag === null) continue;` — the tag is silently dropped |
+| keep an entry out of the default set | `loadedOnRequest()`, a property of the declaration | expressed per call site instead |
+| warn about a stale published copy | `AssetManager::stalePublishWarning()` | `isStale()` exists; the renderer does not use it |
+| entry key | an id — `'dropdown'` | the file — `'wire-core-dropdown.js'` |
+| the app's Vite build compiles our sources | — | `hasViteAssets()` |
+| how each entry resolved | — | `resolution()`, and a `hasAbout()` row |
 
-So one thing keeps the renderer here rather than making it a thin wrapper: **the
-route fallback**. ADR 0024 chose static files first *and* a route behind them for
-the app whose `public/` cannot be written, and the toolkit's renderer has no
-second place to look. Everything else in the left column is now expressible.
+**Three** things keep the renderer here, not one:
+
+1. **The aggregate form.** `@wireStackScripts` with no argument renders whatever
+   is installed, which is why a consuming app's layout is one line and stays one
+   line when it adds `wire-sortable`. The toolkit's directives take a required
+   short name, so the same layout becomes four calls that have to be edited on
+   every install. `package:discover` does not help — it discovers *providers*,
+   and the template still names packages by hand. Note the toolkit's own
+   reasoning rejects a **generated** `@blogStyles`, not an aggregate: a no-argument
+   `@packageAssets` rendering every declared package is consistent with it.
+2. **The route fallback.** ADR 0024 chose static files first *and* a route behind
+   them for the app whose `public/` cannot be written. The toolkit's renderer has
+   no second place to look, and drops the tag without saying so.
+3. **Remote URLs.** Cheapest to give up — nothing here ships from a CDN today —
+   but it is a documented capability of `Js`, not an oversight.
+
+`loadedOnRequest()` and the stale warning are real differences but not blockers:
+the first is expressible at each call site, the second is ours to keep either way.
 
 Two things to know before anyone migrates:
 

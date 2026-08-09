@@ -255,10 +255,12 @@ one** — `hasAssets(entries: …)` plus `@packageAssets` / `@packageStyles` /
 `@packageScripts` / `@packageAssetUrl`, with `Asset::make()->classic()` for a
 non-module bundle and `->attributes()` for anything else a tag needs — and the
 constraint is now `^2.4.0`, so the renderer here is no longer justified by absence.
-What still justifies it is the **fallback**: `PackageAssets::url()` returns `null`
-and stops, while the decision above is static files *with* a route behind them for
-the app whose `public/` is not writable. The rest of `Js`'s vocabulary has a 2.4
-equivalent; `architecture/assets.md` § What the toolkit owns as of 2.4 keeps the
+Three things still justify it, and only one was the fallback. `PackageAssets::tags()`
+takes a **required** package name, so the aggregate `@wireStackScripts` — one line in
+a consuming layout, whatever is installed — has no counterpart; `hasAssets()` rejects
+a remote URL as an entry; and `render()` drops a tag it cannot resolve rather than
+falling back, against a decision that put a route behind the static files for the app
+whose `public/` is not writable. The rest of `Js`'s vocabulary has a 2.4 equivalent; `architecture/assets.md` § What the toolkit owns as of 2.4 keeps the
 mapping, including the trap that would break a naive port — these bundles are IIFE
 and the toolkit renders `.js` as `type="module"` unless told `classic()`.
 
