@@ -728,6 +728,78 @@ action still shows that action inline. The dropdown inherits the table's
 `sheetOnMobile()` / `mobileBreakpoint()` settings (bottom-sheet on small screens
 by default).
 
+### Header Actions on a Phone
+
+The toolbar carries the same crowding problem one level up: the search field,
+the filter trigger and the view menu already sit there, and two labelled header
+buttons ("New invoice", "Import CSV") push the row into a wrap at phone width.
+`collapseHeaderActionsOnMobile()` folds them into one dropdown:
+
+```php
+$table->collapseHeaderActionsOnMobile()   // one "⋮" trigger instead of the buttons
+```
+
+Unlike `collapseActionsOnMobile()` this needs no `stackedOnMobile()` — the
+toolbar is the same toolbar at every width, so the collapse is purely a width
+switch. The switch is the table's **`mobileBreakpoint()`** (`sm` by default,
+i.e. below 640px), not the stacking breakpoint:
+
+```php
+$table
+    ->mobileBreakpoint('md')              // fold below 768px instead
+    ->collapseHeaderActionsOnMobile()
+```
+
+It folds from **2** executable header actions up — a lone button is not a crowd,
+and the toolbar folds sooner than a card's row actions because it shares its row
+with the search field. Tune it the same way:
+
+```php
+->collapseHeaderActionsOnMobile(threshold: 3)   // keep two buttons inline, fold from three
+->collapseHeaderActionsOnMobile(threshold: 1)   // always fold
+```
+
+Only actions the viewer may run are counted, so a table whose second action is
+gated by an authorization guard keeps the first one as a plain button. The
+dropdown is the canonical `ActionGroup` — it inherits `sheetOnMobile()` /
+`mobileBreakpoint()`, so it opens as a bottom sheet on a phone by default, and
+it collapses to a single inline button when only one action survives its guards.
+
+Both halves sit in the document at every width (CSS decides which is shown), so
+the folded copy renders **without** each action's `keyboardShortcut()`: a
+rendered shortcut is a *window* listener, and a second binding would run the
+action twice on one keypress. The visible desktop button keeps it.
+
+```php
+class ListInvoices extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(Invoice::class)
+            ->columns([
+                TextColumn::make('number'),
+                TextColumn::make('total')->money('CZK'),
+            ])
+            ->headerActions([
+                HeaderAction::make('create')          // [tl! focus:start]
+                    ->label('New invoice')
+                    ->icon('plus')
+                    ->keyboardShortcut('c')           // desktop only — see above
+                    ->url(route('invoices.create')),
+
+                HeaderAction::make('import')
+                    ->label('Import CSV')
+                    ->icon('arrow-up-tray')
+                    ->action(fn () => $this->importInvoices()),
+            ])
+            ->collapseHeaderActionsOnMobile();        // [tl! focus:end]
+    }
+}
+```
+
 ### The Card's Anatomy
 
 A card is a record, not the column order in disguise. Five named slots carry the

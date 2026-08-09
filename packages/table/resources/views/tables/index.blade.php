@@ -71,6 +71,12 @@
     // Mobile stacked cards can collapse the row actions into one dropdown group.
     $collapseMobileActions = $table->shouldCollapseActionsOnMobile();
     $mobileActionGroup = $collapseMobileActions ? $table->getMobileActionGroup() : null;
+    // The toolbar can do the same with its header actions. Both halves sit in the
+    // document at every width; CSS decides which one is shown, which is why the
+    // collapsed copy renders shortcut-less (see getMobileHeaderActionGroup()).
+    $collapseHeaderActions = $table->shouldCollapseHeaderActionsOnMobile();
+    $mobileHeaderActionGroup = $collapseHeaderActions ? $table->getMobileHeaderActionGroup() : null;
+    $headerActionClick = $collapseHeaderActions ? new \NyonCode\WireTable\Actions\HeaderActionClickResolver() : null;
     // Host click resolver: the single place that maps a row action to the table's
     // executeTableAction/openActionModal (core action views stay host-agnostic).
     $actionClick = new \NyonCode\WireTable\Actions\TableActionClickResolver();
@@ -592,13 +598,23 @@
                                     @endforeach
                                 @endif
 
-                                {{-- Header Actions --}}
+                                {{-- Header Actions. With collapseHeaderActionsOnMobile() the
+                                     buttons move into a wrapper that hides below the mobile
+                                     breakpoint and one dropdown trigger takes their place;
+                                     without it they sit in the toolbar flex unwrapped, as
+                                     they always did. --}}
                                 @if($hasHeaderActions)
-                                    @foreach($headerActions as $headerAction)
-                                        @if($headerAction->canExecute())
-                                            {!! $headerAction->render() !!}
-                                        @endif
-                                    @endforeach
+                                    @if($collapseHeaderActions)
+                                        <div class="{{ $table->getInlineHeaderActionsClass() }} items-center gap-2">
+                                            @include('wire-table::tables.partials.header-actions', ['headerActions' => $headerActions])
+                                        </div>
+
+                                        <div class="{{ $table->getMobileHeaderActionsVisibleClass() }}" data-testid="table-header-actions-mobile">
+                                            {!! $mobileHeaderActionGroup->render(null, $headerActionClick) !!}
+                                        </div>
+                                    @else
+                                        @include('wire-table::tables.partials.header-actions', ['headerActions' => $headerActions])
+                                    @endif
                                 @endif
 
                                 {{-- View menu: column visibility + sub-row expansion, the two

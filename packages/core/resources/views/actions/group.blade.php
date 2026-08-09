@@ -5,10 +5,12 @@
 
     assert($group instanceof ActionGroup);
     /** @var Model|null $record */
+    $record = $record ?? null;
 
     // Resolve visible actions once (auto-dividers included) and count only the
-    // executable ones so a lone action collapses to an inline button.
-    $visibleActions = $record ? $group->getVisibleActionsWithDividers($record) : [];
+    // executable ones so a lone action collapses to an inline button. A null
+    // record is a record-less surface (the toolbar), not "nothing to show".
+    $visibleActions = $group->getVisibleActionsWithDividers($record);
     $actionCount = $group->countExecutableActions($visibleActions);
 @endphp
 

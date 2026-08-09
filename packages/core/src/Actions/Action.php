@@ -7,6 +7,7 @@ namespace NyonCode\WireCore\Actions;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Actions\Contracts\RendersAsButton;
+use NyonCode\WireCore\Actions\Contracts\RendersAsMenuItem;
 use NyonCode\WireCore\Actions\Contracts\ResolvesActionClick;
 use NyonCode\WireCore\Actions\Support\FixedClickResolver;
 use NyonCode\WireCore\Actions\Support\MountActionClickResolver;
@@ -23,7 +24,7 @@ use NyonCode\WireCore\Foundation\View\Skeleton;
  *
  * @phpstan-consistent-constructor
  */
-class Action extends BaseAction implements RendersAsButton
+class Action extends BaseAction implements RendersAsButton, RendersAsMenuItem
 {
     // Only a row action has one record to lock against; a header action has none
     // and a bulk action has a set, which is why this sits here and not on
@@ -295,8 +296,12 @@ class Action extends BaseAction implements RendersAsButton
      *
      * Dividers resolve to the shared separator partial; everything else renders
      * through the canonical dropdown-item partial so menu rows stay consistent.
+     *
+     * The record is optional for the same reason {@see render()} makes it optional:
+     * a group can be built on a record-less surface (the table toolbar), and an
+     * action whose visibility or URL needs a record simply resolves without one.
      */
-    public function renderForDropdown(Model $record, ?ResolvesActionClick $click = null): string
+    public function renderForDropdown(?Model $record = null, ?ResolvesActionClick $click = null): string
     {
         if ($this->isDivider) {
             return $this->renderDivider();

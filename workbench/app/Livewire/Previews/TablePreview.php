@@ -562,7 +562,6 @@ class TablePreview extends Component
             $table->paginated(false);
         }
 
-
         // Two fixtures for the two halves of polling, because they take
         // different paths through the request and stomp different things.
         //
@@ -599,6 +598,7 @@ class TablePreview extends Component
         if ($this->variant === 'gestures-live-broadcast') {
             $table->live('1s', broadcast: true);
         }
+
         if ($this->variant === 'selection-only') {
             return $table;
         }
@@ -645,6 +645,13 @@ class TablePreview extends Component
         // forced" without a dedicated action list.
         if ($this->variant === 'stacked-actions-collapse-two') {
             $table->stackedOnMobile()->collapseActionsOnMobile(threshold: 1)->lazy();
+        }
+
+        // The toolbar's own fold — no stacking involved, the switch is the
+        // table's mobileBreakpoint(). Three header actions below 640px would
+        // otherwise wrap under the search field.
+        if ($this->variant === 'header-actions-collapse') {
+            $table->collapseHeaderActionsOnMobile();
         }
 
         $table
@@ -719,9 +726,28 @@ class TablePreview extends Component
                 BulkAction::make('export')->label('Export selected')->icon('outline:arrow-down-tray')->color('gray'),
                 DeleteBulkAction::make(),
             ])
-            ->headerActions($this->variant === 'modal-nested'
-                ? [$this->inviteHeaderAction(), $this->quickRoleHeaderAction()]
-                : [$this->inviteHeaderAction()])
+            ->headerActions(match ($this->variant) {
+                'modal-nested' => [$this->inviteHeaderAction(), $this->quickRoleHeaderAction()],
+                // Three labelled buttons — a toolbar that has to fold on a phone.
+                'header-actions-collapse' => [
+                    $this->inviteHeaderAction(),
+                    HeaderAction::make('import')
+                        ->label('Import CSV')
+                        ->icon('outline:arrow-up-tray')
+                        ->color('gray')
+                        ->keyboardShortcut('i')
+                        ->requiresConfirmation()
+                        ->modalHeading('Import users')
+                        ->modalDescription('Bound to a keyboard shortcut, which only the desktop button keeps.')
+                        ->action(fn () => null),
+                    HeaderAction::make('exportAll')
+                        ->label('Export all')
+                        ->icon('outline:arrow-down-tray')
+                        ->color('gray')
+                        ->action(fn () => null),
+                ],
+                default => [$this->inviteHeaderAction()],
+            })
             ->defaultSort('created_at', 'desc')
             ->searchable()
             ->selectable()

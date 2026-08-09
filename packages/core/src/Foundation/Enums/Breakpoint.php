@@ -118,6 +118,22 @@ enum Breakpoint: string
     }
 
     /**
+     * `hidden {bp}:flex` — hidden below this breakpoint, a flex row from it up
+     * (desktop half of a responsive control strip, e.g. the toolbar's header
+     * actions before they collapse into one dropdown).
+     */
+    public function flexFromClass(): string
+    {
+        return match ($this) {
+            self::Sm => 'hidden sm:flex',
+            self::Md => 'hidden md:flex',
+            self::Lg => 'hidden lg:flex',
+            self::Xl => 'hidden xl:flex',
+            self::TwoXl => 'hidden 2xl:flex',
+        };
+    }
+
+    /**
      * `hidden {bp}:inline` — hidden below this breakpoint, inline from it up
      * (desktop half of a responsive cell wrapper).
      */

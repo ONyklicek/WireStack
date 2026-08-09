@@ -60,6 +60,14 @@ it('maps every case to its block-from class', function () {
         ->and(Breakpoint::TwoXl->blockFromClass())->toBe('hidden 2xl:block');
 });
 
+it('maps every case to its flex-from class', function () {
+    expect(Breakpoint::Sm->flexFromClass())->toBe('hidden sm:flex')
+        ->and(Breakpoint::Md->flexFromClass())->toBe('hidden md:flex')
+        ->and(Breakpoint::Lg->flexFromClass())->toBe('hidden lg:flex')
+        ->and(Breakpoint::Xl->flexFromClass())->toBe('hidden xl:flex')
+        ->and(Breakpoint::TwoXl->flexFromClass())->toBe('hidden 2xl:flex');
+});
+
 it('maps every case to its inline-from class', function () {
     expect(Breakpoint::Sm->inlineFromClass())->toBe('hidden sm:inline')
         ->and(Breakpoint::Md->inlineFromClass())->toBe('hidden md:inline')

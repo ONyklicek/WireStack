@@ -14,6 +14,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
+use NyonCode\WireCore\Actions\BaseAction;
 use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Query\Search\SearchConfig;
@@ -193,6 +194,12 @@ class Table implements Htmlable
 
     /** Minimum number of row actions before the mobile card collapses them into a dropdown. */
     protected int $collapseActionsOnMobileThreshold = 3;
+
+    /** Collapse the toolbar's header actions into a single dropdown group on a phone. */
+    protected bool $collapseHeaderActionsOnMobile = false;
+
+    /** Minimum number of header actions before the toolbar collapses them into a dropdown. */
+    protected int $collapseHeaderActionsOnMobileThreshold = 2;
 
     // Lazy loading
     protected bool $lazy = false;
@@ -526,7 +533,12 @@ class Table implements Htmlable
 
         foreach ($this->actions as $action) {
             if ($action instanceof ActionGroup) {
-                $allActions = array_merge($allActions, $action->getActions());
+                // A group can also hold record-less actions (the toolbar folds
+                // its header actions into one); only row actions belong here.
+                $allActions = array_merge($allActions, array_filter(
+                    $action->getActions(),
+                    fn (BaseAction|ActionGroup $inner): bool => $inner instanceof Action,
+                ));
             } else {
                 $allActions[] = $action;
             }
@@ -1563,7 +1575,9 @@ class Table implements Htmlable
         foreach ($this->getMobileRowActionsForDisplay() as $action) {
             if ($action instanceof ActionGroup) {
                 foreach ($action->getActions() as $inner) {
-                    if ($inner instanceof Action && $inner->isDivider()) {
+                    // Dividers are chrome, and a group's record-less members
+                    // belong to another surface than a row's actions.
+                    if (! $inner instanceof Action || $inner->isDivider()) {
                         continue;
                     }
 
@@ -1631,13 +1645,113 @@ class Table implements Htmlable
     }
 
     /**
-     * @param  array<int, Action|ActionGroup>  $actions
+     * @param  array<int, BaseAction|ActionGroup>  $actions
      */
     private function buildMobileActionGroup(array $actions): ActionGroup
     {
         return ActionGroup::make($actions)
             ->sheetOnMobile($this->usesSheetOnMobile())
             ->mobileBreakpoint($this->getMobileBreakpoint());
+    }
+
+    /**
+     * Collapse the toolbar's header actions into one dropdown group on a phone,
+     * so a narrow toolbar shows a single "⋮" trigger instead of several labelled
+     * buttons competing with the search field, the filters and the view menu.
+     *
+     * Unlike {@see collapseActionsOnMobile()} this needs no `stackedOnMobile()`:
+     * the toolbar is the same toolbar at every width, so the collapse is purely a
+     * width switch. **Desktop is untouched** — from the mobile breakpoint up the
+     * inline buttons render exactly as before; the breakpoint is the table's
+     * {@see mobileBreakpoint()} (`sm` by default, i.e. below 640px).
+     *
+     * The collapse only kicks in once the toolbar carries at least `$threshold`
+     * executable header actions (default 2 — one button alone is not a crowd, and
+     * the toolbar folds sooner than a card's row actions because it also holds the
+     * search field and the view menu). The threshold is clamped to at least 1.
+     */
+    public function collapseHeaderActionsOnMobile(bool $collapse = true, int $threshold = 2): static
+    {
+        $this->collapseHeaderActionsOnMobile = $collapse;
+        $this->collapseHeaderActionsOnMobileThreshold = max(1, $threshold);
+
+        return $this;
+    }
+
+    public function getCollapseHeaderActionsOnMobileThreshold(): int
+    {
+        return $this->collapseHeaderActionsOnMobileThreshold;
+    }
+
+    /**
+     * Whether the toolbar should collapse its header actions on a phone: the
+     * feature is enabled and at least the configured threshold of header actions
+     * would actually render. The count only includes actions the viewer may run,
+     * because those are the ones that reach the toolbar at all — a table whose
+     * per-viewer guards leave one action keeps that action as a plain button.
+     */
+    public function shouldCollapseHeaderActionsOnMobile(): bool
+    {
+        return $this->collapseHeaderActionsOnMobile
+            && count($this->executableHeaderActions()) >= $this->collapseHeaderActionsOnMobileThreshold;
+    }
+
+    /**
+     * The header actions that reach the toolbar at all: the ones the viewer may
+     * run. Shared by the collapse threshold and {@see getMobileHeaderActionGroup()}
+     * so the count matches what the dropdown would really contain — the inline
+     * buttons drop a guarded action the same way.
+     *
+     * @return array<int, BaseAction>
+     */
+    protected function executableHeaderActions(): array
+    {
+        return array_values(array_filter(
+            $this->headerActions,
+            fn (BaseAction $action): bool => $action->canExecute(),
+        ));
+    }
+
+    /**
+     * Canonical builder for the toolbar's collapsed header-action dropdown: the
+     * same {@see ActionGroup} the row actions collapse into, so a phone gets one
+     * dropdown vocabulary rather than two.
+     *
+     * Both halves sit in the document at every width — CSS decides which is shown
+     * — so the collapsed copy drops each action's `keyboardShortcut()`: a rendered
+     * menu row binds it as a *window* listener, and two of them would answer one
+     * keypress twice. Same reason the mobile row actions and the mobile empty
+     * state clone.
+     */
+    public function getMobileHeaderActionGroup(): ActionGroup
+    {
+        return $this->buildMobileActionGroup(array_map(
+            fn (BaseAction $action): BaseAction => (clone $action)->withoutKeyboardShortcut(),
+            $this->executableHeaderActions(),
+        ));
+    }
+
+    /**
+     * Responsive class for the toolbar's inline header actions: hidden below the
+     * mobile breakpoint (the dropdown stands in for them), a plain flex row from
+     * it up. Empty while the collapse is off, so the buttons render unwrapped.
+     */
+    public function getInlineHeaderActionsClass(): string
+    {
+        if (! $this->shouldCollapseHeaderActionsOnMobile()) {
+            return '';
+        }
+
+        return Breakpoint::resolve($this->getMobileBreakpoint())->flexFromClass();
+    }
+
+    /**
+     * Companion to {@see getInlineHeaderActionsClass()}: shows the collapsed
+     * dropdown only below the mobile breakpoint.
+     */
+    public function getMobileHeaderActionsVisibleClass(): string
+    {
+        return Breakpoint::resolve($this->getMobileBreakpoint())->hiddenAtClass();
     }
 
     /**

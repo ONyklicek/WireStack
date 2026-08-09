@@ -10,6 +10,7 @@ use Illuminate\Support\HtmlString;
 use NyonCode\WireCore\Actions\Concerns\HasBadge;
 use NyonCode\WireCore\Actions\Concerns\HasColor;
 use NyonCode\WireCore\Actions\Concerns\HasIcons;
+use NyonCode\WireCore\Actions\Contracts\RendersAsMenuItem;
 use NyonCode\WireCore\Actions\Contracts\ResolvesActionClick;
 use NyonCode\WireCore\Actions\Support\MountActionClickResolver;
 use NyonCode\WireCore\Foundation\Colors\Color;
@@ -53,7 +54,13 @@ class ActionGroup implements Htmlable
     // Gray fallback, and HasColor stays for the class-map resolvers.
     use InteractsWithColor;
 
-    /** @var array<int, Action|ActionGroup> */
+    /**
+     * Group items. A row {@see Action} is the common case; any {@see BaseAction}
+     * that renders as a menu row is accepted, so a record-less surface (the table
+     * toolbar's header actions) can collapse into the same canonical dropdown.
+     *
+     * @var array<int, BaseAction|ActionGroup>
+     */
     public array $actions = [];
 
     public ?string $label = null;
@@ -80,7 +87,7 @@ class ActionGroup implements Htmlable
     protected bool $lazyMenu = false;
 
     /**
-     * @param  array<int, Action|ActionGroup>  $actions
+     * @param  array<int, BaseAction|ActionGroup>  $actions
      */
     public function __construct(array $actions)
     {
@@ -88,7 +95,7 @@ class ActionGroup implements Htmlable
     }
 
     /**
-     * @param  array<int, Action|ActionGroup>  $actions
+     * @param  array<int, BaseAction|ActionGroup>  $actions
      */
     public static function make(array $actions): static
     {
@@ -210,7 +217,7 @@ class ActionGroup implements Htmlable
     }
 
     /**
-     * @return array<int, Action|ActionGroup>
+     * @return array<int, BaseAction|ActionGroup>
      */
     public function getActions(): array
     {
@@ -220,18 +227,21 @@ class ActionGroup implements Htmlable
     /**
      * Get visible actions for a record.
      * Filters out hidden actions but preserves dividers.
+     *
+     * The record is optional: a group on a record-less surface still asks each
+     * action whether it may run, only without a record to judge by.
      */
     /**
-     * @return array<int, Action|ActionGroup>
+     * @return array<int, BaseAction|ActionGroup>
      */
-    public function getVisibleActions(Model $record): array
+    public function getVisibleActions(?Model $record = null): array
     {
         $visible = [];
 
         foreach ($this->actions as $action) {
             if ($action instanceof Action && $action->isDivider()) {
                 $visible[] = $action;
-            } elseif ($action instanceof Action) {
+            } elseif ($action instanceof BaseAction) {
                 if ($action->canExecute($record)) {
                     $visible[] = $action;
                 }
@@ -248,9 +258,9 @@ class ActionGroup implements Htmlable
      * Get visible actions with auto-dividers inserted if $this->divided is true.
      */
     /**
-     * @return array<int, Action|ActionGroup>
+     * @return array<int, BaseAction|ActionGroup>
      */
-    public function getVisibleActionsWithDividers(Model $record): array
+    public function getVisibleActionsWithDividers(?Model $record = null): array
     {
         $visible = $this->getVisibleActions($record);
 
@@ -280,8 +290,8 @@ class ActionGroup implements Htmlable
      * Remove orphaned dividers (leading, trailing, consecutive).
      */
     /**
-     * @param  array<int, Action|ActionGroup>  $actions
-     * @return array<int, Action|ActionGroup>
+     * @param  array<int, BaseAction|ActionGroup>  $actions
+     * @return array<int, BaseAction|ActionGroup>
      */
     protected function cleanDividers(array $actions): array
     {
@@ -382,7 +392,7 @@ class ActionGroup implements Htmlable
      * A group with one real action plus dividers should still collapse to a
      * single inline button rather than a dropdown.
      *
-     * @param  array<int, Action|ActionGroup>  $items
+     * @param  array<int, BaseAction|ActionGroup>  $items
      */
     public function countExecutableActions(array $items): int
     {
@@ -401,15 +411,20 @@ class ActionGroup implements Htmlable
 
     /**
      * Render the single visible action inline (used when the group collapses).
+     *
+     * A row action renders through the record/click pipeline; anything else —
+     * a header action, which owns its host wiring — renders itself.
      */
-    public function getSingleActionHtml(Model $record, ?ResolvesActionClick $click = null): Htmlable
+    public function getSingleActionHtml(?Model $record = null, ?ResolvesActionClick $click = null): Htmlable
     {
         foreach ($this->getVisibleActions($record) as $item) {
             if ($item instanceof Action && $item->isDivider()) {
                 continue;
             }
 
-            return new HtmlString($item->render($record, $click));
+            return new HtmlString($item instanceof Action
+                ? $item->render($record, $click)
+                : $item->toHtml());
         }
 
         return new HtmlString('');
@@ -422,14 +437,18 @@ class ActionGroup implements Htmlable
      * (divided()) and manual Action::divider() entries are resolved here so the
      * group views only emit {{ $group->getDropdownItemsHtml($record) }}.
      */
-    public function getDropdownItemsHtml(Model $record, ?ResolvesActionClick $click = null): Htmlable
+    public function getDropdownItemsHtml(?Model $record = null, ?ResolvesActionClick $click = null): Htmlable
     {
         $html = '';
 
         foreach ($this->getVisibleActionsWithDividers($record) as $item) {
-            $html .= $item instanceof self
-                ? $item->render($record, $click)
-                : $item->renderForDropdown($record, $click);
+            $html .= match (true) {
+                $item instanceof self => $item->render($record, $click),
+                $item instanceof RendersAsMenuItem => $item->renderForDropdown($record, $click),
+                // An action with no menu surface of its own falls back to its
+                // own rendering rather than being silently dropped.
+                default => $item->toHtml(),
+            };
         }
 
         return new HtmlString($html);
@@ -445,7 +464,7 @@ class ActionGroup implements Htmlable
      *
      * @return array<int, array<string, mixed>>
      */
-    public function getDropdownItemSpecs(Model $record, ?ResolvesActionClick $click = null): array
+    public function getDropdownItemSpecs(?Model $record = null, ?ResolvesActionClick $click = null): array
     {
         $click ??= new MountActionClickResolver;
         $specs = [];
@@ -453,6 +472,19 @@ class ActionGroup implements Htmlable
         foreach ($this->getVisibleActionsWithDividers($record) as $item) {
             if ($item instanceof self) {
                 $specs[] = ['type' => 'html', 'html' => $item->render($record, $click)];
+
+                continue;
+            }
+
+            // Only a row Action has the per-record vocabulary the spec shape is
+            // built from; anything else ships as its rendered fragment.
+            if (! $item instanceof Action) {
+                $specs[] = [
+                    'type' => 'html',
+                    'html' => $item instanceof RendersAsMenuItem
+                        ? $item->renderForDropdown($record, $click)
+                        : $item->toHtml(),
+                ];
 
                 continue;
             }
@@ -526,7 +558,7 @@ class ActionGroup implements Htmlable
         return [$m[1], $args[1]];
     }
 
-    public function render(Model $record, ?ResolvesActionClick $click = null): string
+    public function render(?Model $record = null, ?ResolvesActionClick $click = null): string
     {
         $visible = $this->getVisibleActions($record);
         if (empty($visible)) {
