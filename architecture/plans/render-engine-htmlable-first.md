@@ -892,8 +892,9 @@ The payload fuse pins the card at <2 950 B, ≤10 nodes and exactly 22 markers. 
 2 020, Pint and PHPStan clean; drivers `mobile-selection` 13/13, `gestures-off` 25/25,
 `collapse-mobile-actions` 7/7, `phase2-mobile` 5/5, `swipe` and `modal-mobile` clean.
 
-**What is NOT done, and needs a decision rather than a measurement:** the card is still a
-second full server-side rendering of the whole page of records. Even at 2 830 B/row that
+**What is NOT done, and needs a decision rather than a measurement** (analysed in full
+under Still open — including why a CSS-restyled row is the likely answer): the card is
+still a second full server-side rendering of the whole page of records. Even at 2 830 B/row that
 is more than the row it duplicates (1 950 B), and every byte of it is invisible at
 whichever width the reader happens to be at. Making it conditional — one layout server-
 side, swapped on a breakpoint change — is an API/UX change of the same kind as §6's
@@ -1004,9 +1005,55 @@ number that matters — it does not grow with the row count.
 
 ### Still open
 
-- **The stacked card's second rendering** — see the decision above. This is the largest
-  single item left, worth roughly another 2 830 B and 10 nodes per row on tables that use
-  it.
+- **The stacked card's second rendering — OPEN QUESTION, deliberately not decided.**
+  The largest single item left: 2 830 B and 10 nodes per row on tables that use it, after
+  §8i already took a third off. Analysed 2026-08-09, left open on purpose; the notes below
+  are so the next attempt starts from measurement rather than from scratch.
+
+  **The measurement that frames it: 0.9 % of a card is text, 99.1 % is markup.** The
+  duplication is chrome, not data — so reusing the row's already-rendered cell strings
+  would buy nothing, and only *not emitting a second subtree* helps.
+
+  **What the card adds beyond restyling** (this is what "without losing functions" has to
+  keep): the named slot hierarchy `MobileCard` resolves (title / metric / subtitle / meta
+  / details) rather than column order; labels beside values, because `<thead>` is hidden;
+  `renderMobileCell()`, which is different *content* per breakpoint; its own sub-rows and
+  summary-footer partials; per-record card classes; the select-all bar, because the header
+  row carrying it is hidden; and — the one that rules out the naive answers —
+  **`getMobileRowActionsForDisplay()` is a SUPERSET**: row action buttons *plus*
+  `mobileFallbackButtons()`, the behaviour-only record actions (click, double-click,
+  right-click, key) turned into things a finger can reach.
+
+  | | bytes | what it costs |
+  | --- | --- | --- |
+  | leave it | 2 830 B/row | nothing |
+  | server picks one layout (cookie / client hint) | ~0 | first paint guesses; crossing the breakpoint needs a round-trip; no-JS gets whichever was guessed; fragments full-page caching |
+  | lazy cards, like `->lazyMenu()` | ~0 until opened | no-JS gets the table; a phone waits a round-trip for its first card; still duplicated afterwards |
+  | **restyle the rows into cards with CSS** | **~0** | the card stops being free-form markup — it may only be what CSS can do over a `<tr>` |
+
+  The last one looks like the optimum, and the mechanism is already in this codebase:
+  `Table.php`'s active-row marker is `[&>td:first-of-type]:before:absolute …`, arbitrary
+  descendant variants on the row's own class, paid once per row and styling every cell in
+  it. A card would be the same trick — `max-md:grid` plus `order` over `<td>`s tagged with
+  the slot `MobileCard` already resolves, and `before:content-[attr(...)]` for the labels.
+  The actions cell would simply be *moved* by `order`, which for a table with no
+  behaviour-only bindings means the two button sets are identical and nothing extra is
+  emitted at all.
+
+  Only two things would still need their own markup: the fallback buttons (and only when
+  `recordActionButtonsOnMobile` is on and behaviour-only bindings exist), and the
+  select-all bar — or the header checkbox unhidden and restyled instead.
+
+  **Why it is not just "do it":** it is a rewrite whose whole point is changing the
+  markup, so neither the payload fuse nor a golden master can guard it — the guard has to
+  be CDP screenshots at two widths, plus `mobile-selection`, `gestures-off` and
+  `collapse-mobile-actions`. It also permanently constrains what a card may look like, and
+  `sub-rows-mobile` / `summary-footer-mobile` would want the same treatment or stay
+  duplicated (they are O(expanded) and O(1), not O(rows)).
+
+  **There is no cheaper interim step.** The card is already reflowed and renders inline —
+  zero view renders — so a skeleton would remove renders it does not have and no bytes.
+  Inside the current design there is nothing left to take.
 - **The rest of the row loop.** §8d took the `<td>` and the `<tr>`, §8e the selection
   cell, §8f the context-menu panel, §8g the expander, §8h the sibling rows, §8i the card,
   §8j the action buttons. What still renders per row is the sub-rows panel — one view per
