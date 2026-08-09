@@ -54,6 +54,16 @@ register()                         boot()
     └─ PluginManager (singleton, populated afterResolving from wire-core.plugins)
 ```
 
+What the toolkit can own is declared on the packager rather than done by hand in
+either half: config, views, migrations, translations, the asset directory, the
+`PruneAuditEntriesCommand`, and `hasSubscriber(AuditEventSubscriber::class)` —
+which the toolkit subscribes in the same boot pass a manual `Event::subscribe()`
+would have. The Blade component namespaces and aliases stay manual on purpose:
+declaring them through `hasComponentNamespaces()` would also register a
+`wire-core::view-component-namespaces` publish tag that copies this package's
+component *classes* into `app/View/Components/`, where their namespace does not
+resolve and the copy is dead code.
+
 ### Container bindings — singleton vs transient
 
 | Binding | Lifetime | Why |

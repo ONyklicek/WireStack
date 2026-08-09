@@ -231,7 +231,8 @@ code-split ESM breaks on its relative chunk import.
 
 #### The toolkit owns the mirror; core owns the fallback and the warning
 
-The mechanism lives in `nyoncode/laravel-package-toolkit` (2.3.0), not in wire-core.
+The mechanism lives in `nyoncode/laravel-package-toolkit` (2.3.0; the constraint is
+`^2.4.0`, see below), not in wire-core.
 It belongs there: the toolkit already owns `hasAssets()`, the `{package}::assets`
 publish tag and the `public/vendor/{short-name}` destination, and `PublishedAssets`
 is the same rule read back. Splitting write and read across two repositories on
@@ -252,6 +253,16 @@ renderer and no route to fall back to.
 
 This raised wire-core's floor to the toolkit's: `illuminate/support ^12.0|^13.0`.
 Laravel 10 and 11 are no longer supported by the stack.
+
+The constraint is `^2.4.0` rather than the `^2.3.0` the mirror shipped under, because
+the Octane listener below needs `PublishedAssets::flush()` and 2.4.0 is the first
+release carrying it. 2.4.0's own requirement, `illuminate/support ^12.61.1|^13.12.0`,
+is therefore the stack's effective Laravel floor — tighter than what any package here
+declares. `WireCoreServiceProvider` calls `flush()` outright; the `method_exists()`
+guard it used to sit behind existed only because the constraint allowed a release
+without the method, which made the call a silent no-op in the one deployment it is for.
+`OctaneRequestTerminatedTest` declares the event class Octane would have brought and
+dispatches it, so the listener is exercised without the optional dependency.
 
 #### A stale copy is served, not skipped
 

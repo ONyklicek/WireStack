@@ -11,10 +11,20 @@ This guide covers the production setup for Wire in a Laravel application.
 | Dependency | Version |
 |------------|---------|
 | PHP | ^8.2 |
-| Laravel | 12 or 13 |
+| Laravel | 12.61+ or 13.12+ |
 | Livewire | 3.x |
 | Tailwind CSS | 3.x+ |
 | Alpine.js | 3.x+ (included with Livewire) |
+| `nyoncode/laravel-package-toolkit` | ^2.4 (installed for you) |
+
+The last row is not something you require yourself — Composer pulls it in with the
+Wire packages. It is listed because it decides the two rows above it. The toolkit
+owns the `public/vendor` mirror that puts the JavaScript bundles on disk (see
+[JavaScript Assets](#javascript-assets)), and 2.4 requires
+`illuminate/support ^12.61.1|^13.12.0`, so that — not the `^12.0` the Wire packages
+declare — is the Laravel version an install actually resolves against. An app that
+pins the toolkit itself has to allow `^2.4` before `composer require nyoncode/wire-table`
+can resolve at all.
 
 ## Installation
 

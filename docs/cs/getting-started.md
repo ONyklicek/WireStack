@@ -11,10 +11,20 @@ Tento průvodce popisuje produkční nastavení Wire v Laravel aplikaci.
 | Závislost | Verze |
 |------------|---------|
 | PHP | ^8.2 |
-| Laravel | 12 nebo 13 |
+| Laravel | 12.61+ nebo 13.12+ |
 | Livewire | 3.x |
 | Tailwind CSS | 3.x+ |
 | Alpine.js | 3.x+ (součástí Livewire) |
+| `nyoncode/laravel-package-toolkit` | ^2.4 (nainstaluje se sám) |
+
+Poslední řádek si sami nevyžadujete — Composer ho stáhne spolu s balíčky Wire.
+Je tu proto, že určuje dva řádky nad sebou. Toolkit vlastní mirror do
+`public/vendor`, který dostane JavaScriptové bundly na disk (viz
+[JavaScriptové assety](#javascriptove-assety)), a verze 2.4 vyžaduje
+`illuminate/support ^12.61.1|^13.12.0` — takže právě tohle, a ne `^12.0`
+deklarované balíčky Wire, je verze Laravelu, proti které se instalace opravdu
+řeší. Aplikace, která si toolkit připíná sama, mu musí povolit `^2.4`, jinak
+`composer require nyoncode/wire-table` vůbec neprojde.
 
 ## Instalace
 

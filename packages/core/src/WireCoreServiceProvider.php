@@ -66,7 +66,6 @@ class WireCoreServiceProvider extends PackageServiceProvider
             ->bootedPackage(function ($packager) {
                 $this->bootFoundation();
                 $this->bootActions();
-                $this->bootAudit();
                 $this->bootNotifications();
                 $this->bootModals();
                 $this->bootPlugins();
@@ -75,6 +74,13 @@ class WireCoreServiceProvider extends PackageServiceProvider
             })
             ->hasConfig()
             ->hasCommand(PruneAuditEntriesCommand::class)
+            // Wire the audit pipeline: HasAuditable models fire AuditableEvents and
+            // this subscriber persists them through AuditLogger. Declared rather than
+            // subscribed by hand — the toolkit subscribes it in the same boot pass —
+            // and unconditional, because the logger itself gates on
+            // `wire-core.audit.enabled` and the subscription is idempotent for apps
+            // that also register it themselves.
+            ->hasSubscriber(AuditEventSubscriber::class)
             ->hasViews()
             ->hasMigrations()
             ->hasTranslations('resources/lang')
@@ -262,17 +268,6 @@ class WireCoreServiceProvider extends PackageServiceProvider
     }
 
     // ─── Notifications ──────────────────────────────────────────
-
-    /**
-     * Wire the audit pipeline: HasAuditable models fire AuditableEvents, and this
-     * subscriber persists them through AuditLogger. Registered unconditionally —
-     * the logger itself gates on `wire-core.audit.enabled`, and the subscription
-     * is idempotent for apps that also register it manually.
-     */
-    protected function bootAudit(): void
-    {
-        Event::subscribe(AuditEventSubscriber::class);
-    }
 
     protected function registerNotifications(): void
     {

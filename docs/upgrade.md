@@ -35,11 +35,37 @@ the changelog before bumping:
 | Dependency | Supported |
 |------------|-----------|
 | PHP | 8.2, 8.3, 8.4 |
-| Laravel | 10, 11, 12 |
+| Laravel | 12.61+, 13.12+ |
 | Livewire | 3.x |
 | Tailwind CSS | 3.x or 4.x |
+| `nyoncode/laravel-package-toolkit` | ^2.4 |
 
 Confirm your app meets these before upgrading.
+
+---
+
+## Dependency floors (1.17)
+
+**Laravel 10 and 11 are gone.** 1.17 moved the JavaScript bundles from a package
+route to real files under `public/vendor`, and the code that mirrors them lives in
+`nyoncode/laravel-package-toolkit` — next to the `hasAssets()` declaration and the
+publish tag it is the read side of. The toolkit is on `illuminate/support ^12.61.1|^13.12.0`,
+and a dependency's floor is your floor: an app below it cannot resolve the Wire
+packages, whatever the `^12.0` in their own `composer.json` says. Upgrade Laravel
+first, then Wire.
+
+**The toolkit constraint is `^2.4`.** You do not require it directly, so in the
+normal case `composer update "nyoncode/wire-*"` moves it with everything else and
+there is nothing to do. It only becomes visible in two shapes:
+
+- your `composer.json` names `nyoncode/laravel-package-toolkit` — from building
+  your own package on it, or from an old pin — and holds it below 2.4. Composer
+  reports the Wire packages as uninstallable rather than the toolkit as too old,
+  so widen that constraint to `^2.4` first.
+- you run Octane. The per-worker asset memo is flushed on `RequestTerminated`
+  through the toolkit's `PublishedAssets::flush()`, which 2.4 is the first release
+  to carry. Below it, a worker that survives a deploy keeps emitting the previous
+  release's `?id=<mtime>` and `wire:navigate` never notices the new bundles.
 
 ---
 
