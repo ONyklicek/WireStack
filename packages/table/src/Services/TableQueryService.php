@@ -27,6 +27,7 @@ use NyonCode\WireCore\Core\Query\StableOrder;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Filters\SelectFilter;
+use NyonCode\WireTable\Support\SearchTypeGuard;
 use NyonCode\WireTable\Table;
 
 /**
@@ -194,6 +195,11 @@ final class TableQueryService
         // Not `! empty()`: that discards the perfectly good search term "0".
         $searchTerm = $search !== null && trim($search) !== '' ? $search : null;
         $searchCallbacks = $searchTerm !== null ? $customSearchCallbacks : [];
+
+        // A column that declares what it holds for search while the box cannot
+        // ask for it is refused here, before anything is typed — the alternative
+        // is an empty table that never says why.
+        SearchTypeGuard::assert($table, $columns);
 
         // How the term is read — split on spaces, ranges, wildcards — is the
         // table's configuration, and the parser is the only thing that knows it.

@@ -329,11 +329,23 @@ nulami. Označte sloupec přes
 zadávat rozsah:
 
 ```php
-TextColumn::make('reference')->searchable()->searchAs('code');
+$table
+    ->searchable()
+    ->search(fn (SearchConfig $s) => $s->tokenize()->ranges())
+    ->columns([
+        TextColumn::make('reference')->searchable()->searchAs('code'),
+    ]);
 
 // Uživatel napíše:  8866 01..08
 // SQL:              reference BETWEEN '8866 01' AND '8866 08'
 ```
+
+Potřeba jsou obě poloviny: `searchAs('code')` říká, co sloupec drží, `ranges()`
+je to, co vůbec dovolí rozsah napsat, a `tokenize()` je to, co oddělí řadu od
+pořadového čísla. Deklarace, na kterou se hledání nemůže zeptat, se při renderu
+tabulky odmítne — s vypnutým `ranges()` by se `8866 01..08` hledalo jako
+doslovný text a tabulka by se vrátila prázdná, aniž by to na obrazovce cokoli
+vysvětlovalo.
 
 Mezera uvnitř kódu je zároveň tím, co výraz dělí — `8866 01..08` tedy přijde
 jako slovo `8866` a rozsah `01..08`. Rozsah si nese slovo, které mu přímo
@@ -346,10 +358,12 @@ Dvě pravidla, která to drží poctivé:
 
 - **Číslo musí být uložené doplněné nulami a psát se tak, jak je uložené.**
   Porovnání textem je správně jen dokud je šířka konstantní (`01 … 08` se
-  abecedně řadí stejně jako číselně, `9 … 10` už ne). Napsat `1..8` proti
-  uloženým `01 … 08` nenajde nic. Rozsah přes hranici šířky se doplní za vás —
-  `8866 50..100` se čte jako `050..100`, protože stý člen může existovat jen
-  v třímístné řadě.
+  abecedně řadí stejně jako číselně, `9 … 10` už ne). Rozsah se porovnává v té
+  šířce, v jaké byl napsaný — `1..8` proti uloženým `01 … 08` je tedy
+  `BETWEEN '8866 1' AND '8866 8'` a porovnává se textem: celou doplněnou řadu
+  mine a dosáhne místo toho na `8866 12`. Rozsah přes hranici šířky se doplní za
+  vás — `8866 50..100` se čte jako `050..100`, protože stý člen může existovat
+  jen v třímístné řadě.
 - **Řada je jedno slovo před rozsahem.** `faktura 8866 01..08` hledá rozsah uvnitř
   `8866` a `faktura` musí sedet zvlášť; kód se dvěma mezerami je mimo dosah.
 
@@ -528,6 +542,9 @@ kombinovat na téže tabulce:
 
 // Sbalit akce řádku v mobilní kartě do jednoho rozbalovacího menu (od N akcí)
 ->collapseActionsOnMobile(bool $collapse = true, int $threshold = 3)
+
+// Totéž pro akce hlavičky v toolbaru, pod mobileBreakpoint() tabulky
+->collapseHeaderActionsOnMobile(bool $collapse = true, int $threshold = 2)
 ```
 
 ### Prázdný stav

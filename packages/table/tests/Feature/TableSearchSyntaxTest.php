@@ -490,3 +490,94 @@ it('narrows a series range by another word', function () {
 
     expect($records->pluck('reference')->all())->toBe(['8866 05']);
 });
+
+// ── The declaration the search box cannot ask for ───────────
+//
+// `searchAs()` only says which comparisons a column can answer; without
+// `ranges()` none can be typed, so the table would come back empty with nothing
+// to explain it. That is refused at render, before anything is typed.
+
+class GuardedSearchHost extends Component
+{
+    use WithTable;
+
+    public string $type = 'code';
+
+    public bool $columnSearchable = true;
+
+    public bool $tableSearchable = true;
+
+    public bool $ranges = false;
+
+    public function table(Table $table): Table
+    {
+        $reference = TextColumn::make('reference')->searchAs($this->type);
+
+        $table
+            ->model(CodeOrder::class)
+            ->columns([$reference->searchable($this->columnSearchable)])
+            ->searchable($this->tableSearchable)
+            ->paginated(false);
+
+        return $this->ranges
+            ? $table->search(fn (SearchConfig $s) => $s->ranges())
+            : $table;
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+/**
+ * The root cause of a render: the guard fires while the table is being built,
+ * so Blade wraps it before it reaches the caller.
+ */
+function guardFailure(array $params = []): Throwable
+{
+    try {
+        Livewire::test(GuardedSearchHost::class, $params);
+    } catch (Throwable $error) {
+        return $error->getPrevious() ?? $error;
+    }
+
+    throw new RuntimeException('The table rendered without refusing its search declaration.');
+}
+
+it('refuses a code column the search box cannot range over', function () {
+    $error = guardFailure();
+
+    expect($error)->toBeInstanceOf(TableConfigurationException::class)
+        ->and($error->getMessage())->toContain("Column [reference] declares searchAs('code')");
+});
+
+it('names tokenize() as well, since a code carries its series as a word', function () {
+    expect(guardFailure()->getMessage())->toContain('$s->tokenize()->ranges())');
+});
+
+it('asks only for ranges() where no series has to be rejoined', function () {
+    expect(guardFailure(['type' => 'numeric']))
+        ->getMessage()->toContain('$s->ranges())')
+        ->getMessage()->not->toContain('tokenize');
+});
+
+it('accepts the declaration once the table reads ranges', function () {
+    Livewire::test(GuardedSearchHost::class, ['ranges' => true])
+        ->assertOk();
+});
+
+it('leaves a text declaration alone, since it asserts no comparison', function () {
+    Livewire::test(GuardedSearchHost::class, ['type' => 'text'])
+        ->assertOk();
+});
+
+it('leaves a column that is not searchable alone', function () {
+    Livewire::test(GuardedSearchHost::class, ['columnSearchable' => false])
+        ->assertOk();
+});
+
+it('leaves a table with no search box alone', function () {
+    Livewire::test(GuardedSearchHost::class, ['tableSearchable' => false])
+        ->assertOk();
+});
