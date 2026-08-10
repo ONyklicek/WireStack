@@ -57,6 +57,14 @@ Dependency direction matters:
 
 Root `composer.json` loads all packages as local path repositories with symlinks.
 
+Every sibling requirement in that graph is pinned with `self.version`. The
+packages are cut from one tree and tagged together by `.github/workflows/split.yml`,
+so a consumer must never end up with two of them from different releases: the
+edges of the graph are internal API, not a published contract, and a range like
+`^1.0` lets Composer pair a new downstream package with an old `wire-core` that
+no longer has the class it imports. `self.version` resolves to the shared
+dev version on any branch, and to the exact tag once split.
+
 ## Required Reading Order
 
 For every task:
