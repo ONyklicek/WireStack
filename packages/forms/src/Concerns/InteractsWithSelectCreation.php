@@ -7,7 +7,9 @@ namespace NyonCode\WireForms\Concerns;
 use Livewire\Component;
 use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Foundation\Components\Component as FieldComponent;
+use NyonCode\WireCore\Foundation\Schema\Wizard;
 use NyonCode\WireForms\Components\Select;
+use NyonCode\WireForms\Forms\Form;
 
 /**
  * Livewire endpoints backing {@see Select::createOptionForm()} and
@@ -42,6 +44,10 @@ trait InteractsWithSelectCreation
      */
     public function mountCreateOption(string $statePath): void
     {
+        if ($this->isOptionFormStatePath($statePath)) {
+            return;
+        }
+
         $field = $this->resolveFieldForAction($statePath);
 
         if (! $field instanceof Select || ! $field->hasCreateOptionForm()) {
@@ -139,6 +145,10 @@ trait InteractsWithSelectCreation
      */
     public function mountEditOption(string $statePath): void
     {
+        if ($this->isOptionFormStatePath($statePath)) {
+            return;
+        }
+
         $field = $this->resolveFieldForAction($statePath);
 
         if (! $field instanceof Select || ! $field->hasEditOptionForm() || $field->isMultiple()) {
@@ -210,8 +220,75 @@ trait InteractsWithSelectCreation
     }
 
     /**
+     * The forms of the currently mounted option modals, handed to the host's
+     * form enumeration so an option form is treated like any other live form on
+     * this host — a {@see Wizard} inside it
+     * gates its steps, a nested Select reaches the search endpoint, and field
+     * actions resolve.
+     *
+     * The owning Select is looked up through the *base* forms only: this method
+     * feeds `fieldActionForms()`, so resolving through the full set would
+     * recurse.
+     *
+     * @return array<int, Form>
+     */
+    protected function mountedOptionForms(): array
+    {
+        $forms = [];
+
+        if ($this->mountedCreateOptionSelect !== null) {
+            $field = $this->resolveBaseFieldForAction($this->mountedCreateOptionSelect);
+
+            if ($field instanceof Select && $field->hasCreateOptionForm()) {
+                $form = $field->getCreateOptionForm($this);
+
+                if ($form !== null) {
+                    $forms[] = $form;
+                }
+            }
+        }
+
+        if ($this->mountedEditOptionSelect !== null) {
+            $field = $this->resolveBaseFieldForAction($this->mountedEditOptionSelect);
+
+            if ($field instanceof Select && $field->hasEditOptionForm()) {
+                $form = $field->getEditOptionForm($this);
+
+                if ($form !== null) {
+                    $forms[] = $form;
+                }
+            }
+        }
+
+        return $forms;
+    }
+
+    /**
+     * Whether a state path lives inside one of the option-form bags.
+     *
+     * Only one option modal of each kind can be mounted at a time — the mounted
+     * path and its data bag are single properties — so opening a second one from
+     * *inside* an option form would silently discard the form the user is
+     * filling in. Option forms became reachable from the field resolver once
+     * {@see mountedOptionForms()} joined the enumeration, so the case has to be
+     * refused explicitly rather than by not being found.
+     */
+    private function isOptionFormStatePath(string $statePath): bool
+    {
+        return str_starts_with($statePath, Select::CREATE_OPTION_STATE_PATH.'.')
+            || str_starts_with($statePath, Select::EDIT_OPTION_STATE_PATH.'.');
+    }
+
+    /**
      * Provided by {@see InteractsWithFieldActions}, which every forms host also
      * composes. Declared abstract so this trait resolves in isolation.
      */
     abstract protected function resolveFieldForAction(string $statePath): ?FieldComponent;
+
+    /**
+     * Provided by {@see InteractsWithFieldActions}. Resolves against the host's
+     * own forms only, which is what keeps {@see mountedOptionForms()} from
+     * re-entering the enumeration it feeds.
+     */
+    abstract protected function resolveBaseFieldForAction(string $statePath): ?FieldComponent;
 }

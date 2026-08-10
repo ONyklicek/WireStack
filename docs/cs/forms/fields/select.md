@@ -156,6 +156,39 @@ chybami; při úspěchu se nová hodnota vybere (přidá u multi-selectu).
   odesílá browser události `select-option-created` / `select-option-updated`) — žádné
   obnovení stránky není potřeba.
 
+### Plnohodnotný formulář, ne seznam polí
+
+Option schéma je běžné formulářové schéma a namountovaný option form je
+plnohodnotný formulář hostitele, takže věci, které potřebují, aby hostitel našel
+pole podle state path, uvnitř něj fungují stejně jako kdekoli jinde:
+
+```php
+Select::make('category_id')
+    ->createOptionForm([
+        Wizard::make('category')->schema([                       // [tl! focus:start]
+            Step::make('Základ')->schema([
+                TextInput::make('name')->required(),
+            ]),
+            Step::make('Zařazení')->schema([
+                Select::make('parent_id')
+                    ->getSearchResultsUsing(fn (string $search) =>
+                        Category::where('name', 'like', "%{$search}%")->pluck('name', 'id')->all()
+                    ),
+            ]),
+        ]),                                                      // [tl! focus:end]
+    ])
+    ->createOptionUsing(fn (array $data) => Category::create($data)->getKey())
+```
+
+- [`Wizard`](../../core/schema/layout/wizard.md) gatuje jednotlivé kroky: „Next"
+  validuje jen pole daného kroku a při neúspěchu zůstane stát, přičemž chyby
+  přistanou na option bagu (`createOptionFormData.*`), kde je modal už zobrazuje.
+- Vnořený `Select` dosáhne na endpoint remote searche a field actions
+  (`suffixAction()`, `hintAction()`, `Button`) se resolvnou a proběhnou.
+- Otevření *druhého* option modalu zevnitř option formu je odmítnuto, ne vnořeno:
+  na každý druh je jedna mounted path a jeden data bag, takže vyhovět by znamenalo
+  zahodit rozepsaný formulář.
+
 ### Konfigurace option modalu
 
 Ani jeden option modal není zvláštní případ: oba se konfigurují přes stejný objekt

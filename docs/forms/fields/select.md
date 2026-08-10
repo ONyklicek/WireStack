@@ -153,6 +153,39 @@ errors; on success the new value is selected (appended for a multi-select).
   dispatches `select-option-created` / `select-option-updated` browser events) — no
   page refresh needed.
 
+### A Full Form, Not A Field List
+
+The option schema is an ordinary form schema and the mounted option form is a
+first-class form on the host, so the pieces that need the host to find a field by
+state path work inside it like anywhere else:
+
+```php
+Select::make('category_id')
+    ->createOptionForm([
+        Wizard::make('category')->schema([                       // [tl! focus:start]
+            Step::make('Basics')->schema([
+                TextInput::make('name')->required(),
+            ]),
+            Step::make('Placement')->schema([
+                Select::make('parent_id')
+                    ->getSearchResultsUsing(fn (string $search) =>
+                        Category::where('name', 'like', "%{$search}%")->pluck('name', 'id')->all()
+                    ),
+            ]),
+        ]),                                                      // [tl! focus:end]
+    ])
+    ->createOptionUsing(fn (array $data) => Category::create($data)->getKey())
+```
+
+- A [`Wizard`](../../core/schema/layout/wizard.md) gates each step: "Next" validates only that step's
+  fields and stays put on failure, with the errors landing on the option bag
+  (`createOptionFormData.*`) where the modal already shows them.
+- A nested `Select` reaches the remote-search endpoint, and field actions
+  (`suffixAction()`, `hintAction()`, `Button`) resolve and run.
+- Opening a *second* option modal from inside an option form is refused, not
+  nested: there is one mounted path and one data bag per kind, so honouring it
+  would discard the form being filled in.
+
 ### Configuring The Option Modal
 
 Neither option modal is a special case: both are configured through the same

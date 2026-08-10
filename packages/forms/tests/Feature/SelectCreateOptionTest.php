@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Livewire\Component;
 use Livewire\Livewire;
 use NyonCode\WireCore\Foundation\Enums\ModalWidth;
+use NyonCode\WireCore\Foundation\Schema\Step;
+use NyonCode\WireCore\Foundation\Schema\Wizard;
 use NyonCode\WireCore\Modals\Modal;
 use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Components\TextInput;
@@ -319,4 +321,120 @@ test('the create and edit option modals keep distinct teleport keys when both ar
 
     expect($matches[1])->toHaveCount(2)
         ->and($matches[1])->toBe(array_unique($matches[1]));
+});
+
+// ─── The option form as a first-class host form ──────────────────────────
+
+class OptionFormHostComponent extends Component
+{
+    use WithForms;
+
+    /** @var array<string, mixed> */
+    public array $data = ['category' => 'c1'];
+
+    public function form(Form $form): Form
+    {
+        return $form
+            ->statePath('data')
+            ->schema([
+                Select::make('category')
+                    ->options(fn () => OptionStore::all())
+                    ->createOptionForm([
+                        Wizard::make('opt')->schema([
+                            Step::make('Basics')->schema([TextInput::make('name')->required()]),
+                            Step::make('Details')->schema([
+                                // A remote-search Select nested in the option form: its
+                                // search endpoint resolves the field by state path.
+                                Select::make('parent')
+                                    ->getSearchResultsUsing(fn (string $search) => array_filter(
+                                        OptionStore::all(),
+                                        fn (string $label) => str_contains(strtolower($label), strtolower($search)),
+                                    )),
+                            ]),
+                        ]),
+                    ])
+                    ->createOptionUsing(fn (array $data) => OptionStore::create((string) $data['name']))
+                    ->editOptionForm([
+                        Wizard::make('editopt')->schema([
+                            Step::make('Rename')->schema([TextInput::make('name')->required()]),
+                            Step::make('Confirm')->schema([TextInput::make('reason')]),
+                        ]),
+                    ])
+                    ->fillEditOptionUsing(fn ($value) => ['name' => OptionStore::label($value)])
+                    ->updateOptionUsing(fn () => null),
+            ]);
+    }
+
+    public function render(): string
+    {
+        return '<div>{{ $this->form }}</div>';
+    }
+}
+
+test('a wizard step inside the create-option form refuses to advance while invalid', function () {
+    Livewire::test(OptionFormHostComponent::class)
+        ->call('mountCreateOption', 'data.category')
+        ->set('createOptionFormData.name', '')
+        ->call('validateWizardStep', 0, 'opt')
+        ->assertReturned(false)
+        ->assertHasErrors('createOptionFormData.name');
+});
+
+test('a wizard step inside the create-option form advances once valid', function () {
+    Livewire::test(OptionFormHostComponent::class)
+        ->call('mountCreateOption', 'data.category')
+        ->set('createOptionFormData.name', 'Sport')
+        ->call('validateWizardStep', 0, 'opt')
+        ->assertReturned(true)
+        ->assertHasNoErrors();
+});
+
+test('a fixed step clears the stale errors it left behind', function () {
+    Livewire::test(OptionFormHostComponent::class)
+        ->call('mountCreateOption', 'data.category')
+        ->call('validateWizardStep', 0, 'opt')
+        ->assertHasErrors('createOptionFormData.name')
+        ->set('createOptionFormData.name', 'Sport')
+        ->call('validateWizardStep', 0, 'opt')
+        ->assertHasNoErrors();
+});
+
+test('the edit-option form gates its wizard steps too', function () {
+    Livewire::test(OptionFormHostComponent::class)
+        ->call('mountEditOption', 'data.category')
+        ->set('editOptionFormData.name', '')
+        ->call('validateWizardStep', 0, 'editopt')
+        ->assertReturned(false)
+        ->assertHasErrors('editOptionFormData.name');
+});
+
+test('step gating is inert while no option modal is mounted', function () {
+    Livewire::test(OptionFormHostComponent::class)
+        ->call('validateWizardStep', 0, 'opt')
+        ->assertReturned(true)
+        ->assertHasNoErrors();
+});
+
+test('a Select nested in the option form reaches the search endpoint', function () {
+    Livewire::test(OptionFormHostComponent::class)
+        ->call('mountCreateOption', 'data.category')
+        ->call('searchSelectOptions', 'createOptionFormData.parent', 'new')
+        ->assertReturned(['c1' => 'News']);
+});
+
+test('the nested search endpoint stays closed while the option modal is shut', function () {
+    Livewire::test(OptionFormHostComponent::class)
+        ->call('searchSelectOptions', 'createOptionFormData.parent', 'new')
+        ->assertReturned([]);
+});
+
+test('an option modal cannot be opened from inside an option form', function () {
+    // One mounted path per kind: honouring this would discard the form the user
+    // is filling in.
+    Livewire::test(OptionFormHostComponent::class)
+        ->call('mountCreateOption', 'data.category')
+        ->set('createOptionFormData.name', 'Half typed')
+        ->call('mountCreateOption', 'createOptionFormData.parent')
+        ->assertSet('mountedCreateOptionSelect', 'data.category')
+        ->assertSet('createOptionFormData.name', 'Half typed');
 });

@@ -127,7 +127,11 @@ Selects: `Select` supports server-driven options (`getSearchResultsUsing()` remo
 `getOptionLabelUsing()`, `preload()`) and create/edit-option modals (`createOptionForm()` +
 `createOptionUsing()`, `editOptionForm()` + `fillEditOptionUsing()`/`updateOptionUsing()`) —
 both work in standalone forms and inside table action modals, and a created/edited option is
-selected and merged into the open combobox immediately (no page refresh). Both option modals are
+selected and merged into the open combobox immediately (no page refresh). The option schema is
+a full form schema, not a field list: a `Wizard` inside `createOptionForm()` gates its steps
+(errors land on `createOptionFormData.*`), a nested `Select` reaches remote search, and field
+actions resolve — the mounted option form is enumerated as a host form. Opening an option modal
+from inside an option form is refused (one mounted path per kind). Both option modals are
 configured through the canonical `Modals\Modal` config object —
 `->createOptionModal(fn (Modal $modal) => $modal->heading(…)->description(…)->icon(…)->width('2xl')
 ->closeOnClickAway(false)->stickyFooter()->submitLabel(…)->cancelLabel(…))`, and the same for
