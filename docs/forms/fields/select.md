@@ -146,13 +146,91 @@ errors; on success the new value is selected (appended for a multi-select).
 - `createOptionUsing()` returns the new option's value — a scalar key, or a model
   whose key is used.
 - Editing targets the single selected option, so it is unavailable on `multiple()`.
-- `createOptionModalHeading()` / `editOptionModalHeading()` customise the headings.
 - Works in standalone `WithForms` components **and** inside table action modals.
 - So the newly created value renders a label, pair with `getOptionLabelUsing()`
   or a preloaded option list.
 - The created/edited option is merged into the open combobox immediately (the host
   dispatches `select-option-created` / `select-option-updated` browser events) — no
   page refresh needed.
+
+### A Full Form, Not A Field List
+
+The option schema is an ordinary form schema and the mounted option form is a
+first-class form on the host, so the pieces that need the host to find a field by
+state path work inside it like anywhere else:
+
+```php
+Select::make('category_id')
+    ->createOptionForm([
+        Wizard::make('category')->schema([                       // [tl! focus:start]
+            Step::make('Basics')->schema([
+                TextInput::make('name')->required(),
+            ]),
+            Step::make('Placement')->schema([
+                Select::make('parent_id')
+                    ->getSearchResultsUsing(fn (string $search) =>
+                        Category::where('name', 'like', "%{$search}%")->pluck('name', 'id')->all()
+                    ),
+            ]),
+        ]),                                                      // [tl! focus:end]
+    ])
+    ->createOptionUsing(fn (array $data) => Category::create($data)->getKey())
+```
+
+- A [`Wizard`](../../core/schema/layout/wizard.md) gates each step: "Next" validates only that step's
+  fields and stays put on failure, with the errors landing on the option bag
+  (`createOptionFormData.*`) where the modal already shows them.
+- A nested `Select` reaches the remote-search endpoint, and field actions
+  (`suffixAction()`, `hintAction()`, `Button`) resolve and run.
+- Opening a *second* option modal from inside an option form is refused, not
+  nested: there is one mounted path and one data bag per kind, so honouring it
+  would discard the form being filled in.
+
+Add [`navigation(false)`](../../core/schema/layout/wizard.md#handing-the-navigation-elsewhere)
+to the wizard and the **modal footer takes over its navigation** — Back and Next
+next to Cancel, with the submit button appearing only on the last step, instead of
+a second navigation row inside the panel. Name the wizard when both option modals
+can be open at once: the footer and the wizard find each other by that name.
+
+### Configuring The Option Modal
+
+Neither option modal is a special case: both are configured through the same
+`Modal` object the action modals use, so heading, description, icon, width, close
+behaviour, sticky chrome and the two button labels all live in one place.
+
+```php
+use NyonCode\WireCore\Modals\Modal;
+
+Select::make('category_id')
+    ->options(fn () => Category::pluck('name', 'id')->all())
+    ->createOptionForm([TextInput::make('name')->required()])
+    ->createOptionUsing(fn (array $data) => Category::create($data)->getKey())
+    ->createOptionModal(fn (Modal $modal) => $modal   // [tl! focus:start]
+        ->heading('New category')
+        ->description('It becomes selectable as soon as you save it.')
+        ->icon('outline:folder-plus')
+        ->width('2xl')
+        ->closeOnClickAway(false)
+        ->stickyFooter()
+        ->submitLabel('Create category')
+        ->cancelLabel('Discard'))                     // [tl! focus:end]
+    ->editOptionModal(fn (Modal $modal) => $modal->width('xl'))
+```
+
+The callback configures the modal in place; returning a `Modal` replaces it
+wholesale. It runs when the schema is defined, not once per render, so text that
+depends on state goes through the config's own closure support —
+`$modal->heading(fn (Select $field) => …)`, evaluated with the field as context.
+
+`createOptionModalHeading()` / `createOptionModalWidth()` and their `editOption…`
+twins remain as shorthands and write into that same object, so the two ways of
+setting a heading cannot drift apart. Width takes a `ModalWidth` case or its token
+(`sm`…`7xl`, `full`); an unknown token falls back to `md`, and an unconfigured
+modal follows `wire-core.modals.default_width` like every other modal.
+
+The modal's `id`, `wire:model` and close action are deliberately **not**
+configurable. They key the teleport Livewire morphs by, and both option modals can
+be mounted at once — a caller-set `id` would let their contents swap.
 
 ## Reactivity
 
@@ -250,7 +328,9 @@ Select::make('tier')
 | `preload()` | bool | Eagerly seed the remote option list on render |
 | `createOptionForm(array\|Closure)` / `createOptionUsing(Closure)` | — | Create a new option from a modal |
 | `editOptionForm(array\|Closure)` / `fillEditOptionUsing(Closure)` / `updateOptionUsing(Closure)` | — | Edit the selected option from a modal |
-| `createOptionModalHeading(string)` / `editOptionModalHeading(string)` | string | Modal headings |
+| `createOptionModal(Closure)` / `editOptionModal(Closure)` | — | Configure the option modal through the canonical `Modal` object |
+| `createOptionModalHeading(string)` / `editOptionModalHeading(string)` | string | Modal headings (shorthand) |
+| `createOptionModalWidth(string\|ModalWidth\|null)` / `editOptionModalWidth(string\|ModalWidth\|null)` | string | Modal widths (`sm`…`7xl`, `full`; default `md`) (shorthand) |
 | `placeholder(string\|Closure)` | string | Empty/blank option label |
 | `disabled(bool\|Closure)` | bool | Disable the select |
 | `required()` | — | Mark as required |

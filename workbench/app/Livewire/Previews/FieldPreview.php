@@ -12,9 +12,11 @@ use NyonCode\WireForms\Components\DateTimePicker;
 use NyonCode\WireForms\Components\Field;
 use NyonCode\WireForms\Components\FileUpload;
 use NyonCode\WireForms\Components\KeyValue;
+use NyonCode\WireForms\Components\MarkdownEditor;
 use NyonCode\WireForms\Components\OtpInput;
 use NyonCode\WireForms\Components\Radio;
 use NyonCode\WireForms\Components\Rating;
+use NyonCode\WireForms\Components\RichEditor;
 use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Components\Slider;
 use NyonCode\WireForms\Components\Tags;
@@ -139,13 +141,30 @@ class FieldPreview extends Component
                 ->label('Rich text (core only)')
                 ->helperText('Core editor — the tables/images addon chunk is not loaded.'),
 
-            // Enables tables + images, so the field injects the opt-in addon entry
-            // (which shares the same core chunk as the base).
+            // A pre-formatted starting document. `intro` is deliberately absent
+            // from $data, so nothing seeded it server-side — the editor itself
+            // has to open on ->default() and push it back into Livewire.
+            'tiptap-default' => TiptapEditor::make('intro')
+                ->label('Rich text with a default document')
+                ->default('<h2>Zápis z porady</h2><p>Nějaký <strong>text</strong>.</p><ul><li>První bod</li></ul>')
+                ->helperText('Opens on the ->default() markup when the bound state is empty.'),
+
             'tiptap-tables' => TiptapEditor::make('bio')
                 ->label('Rich text with tables')
                 ->withTables()
                 ->withImages()
                 ->helperText('Enables the opt-in extension addon chunk.'),
+
+            // The two older editors: both title their toolbars from the same
+            // shared vocabulary as TipTap, and RichEditor's link prompt is
+            // rendered into its x-data — which only a browser can vouch for.
+            'rich-editor' => RichEditor::make('bio')
+                ->label('Rich text (execCommand)')
+                ->helperText('Toolbar titles and the link prompt come from wire-forms::fields.editor.*.'),
+
+            'markdown-editor' => MarkdownEditor::make('bio')
+                ->label('Markdown')
+                ->helperText('Toolbar titles and the Write/Preview tabs share the same vocabulary.'),
 
             'select' => Select::make('role')
                 ->label('Workspace role')

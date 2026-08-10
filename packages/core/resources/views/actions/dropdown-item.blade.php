@@ -1,12 +1,14 @@
 @php
 
     use Illuminate\Database\Eloquent\Model;
-    use NyonCode\WireCore\Actions\Action;
+    use NyonCode\WireCore\Actions\BaseAction;
     use NyonCode\WireCore\Actions\Contracts\ResolvesActionClick;
     use NyonCode\WireCore\Actions\Support\MountActionClickResolver;
 
-    assert($action instanceof Action);
-    assert($record instanceof Model);
+    // Any action that renders as a menu row lands here — a row action with its
+    // record, or a record-less one (a header action folded into a group).
+    assert($action instanceof BaseAction);
+    assert($record === null || $record instanceof Model);
 
     /** @var ResolvesActionClick $click */
     $click ??= new MountActionClickResolver();

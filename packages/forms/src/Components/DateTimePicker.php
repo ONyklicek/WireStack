@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Closure;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Foundation\Concerns\CanBeTyped;
 use NyonCode\WireCore\Foundation\Concerns\HasExtraInputAttributes;
 use NyonCode\WireCore\Foundation\Concerns\HasNativeControl;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
@@ -25,6 +26,7 @@ use NyonCode\WireCore\Foundation\Support\DateBoundary;
  */
 class DateTimePicker extends Field implements DehydratesState, HydratesState
 {
+    use CanBeTyped;
     use HasExtraInputAttributes;
     use HasNativeControl {
         HasNativeControl::isNative as protected nativeChoice;
@@ -254,6 +256,37 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
     public function getDisplayFormat(): ?string
     {
         return $this->displayFormat;
+    }
+
+    /**
+     * Whether the trigger really accepts typing right now.
+     *
+     * `typeable()` is the owner's choice, but `readOnly()` and `disabled()`
+     * outrank it — both mean "this value is not yours to change", and a keyboard
+     * is a way to change it. Resolved here because both picker views need the
+     * same answer, and a predicate re-spelled in two Blade files is one that
+     * ends up disagreeing with itself.
+     *
+     * Custom picker only. A native control's keyboard belongs to the browser;
+     * the only way to take it away is `readonly`, which would disable the
+     * browser's own picker along with it.
+     */
+    public function acceptsTypedInput(): bool
+    {
+        return $this->isTypeable() && ! $this->isReadOnly() && ! $this->isDisabled();
+    }
+
+    /**
+     * The format a typed value is read back through.
+     *
+     * The trigger shows `displayFormat()` when there is one and the raw state
+     * otherwise, so the parser has to invert whichever of the two the user is
+     * looking at. Resolved here rather than rebuilt in JS: the mode already
+     * decides the state's shape, and only one of the two places should know it.
+     */
+    public function getTypedFormat(): string
+    {
+        return $this->displayFormat ?? $this->getStateFormat();
     }
 
     /**

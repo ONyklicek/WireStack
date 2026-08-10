@@ -16,13 +16,13 @@
         "nyoncode/wire-table": "@dev",
         "nyoncode/wire-sortable": "@dev",
         "nyoncode/wire-boost": "@dev",
-        "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
-        "symfony/yaml": "^6.0|^7.0|^8.0"
+        "illuminate/support": "^12.0|^13.0",
+        "symfony/yaml": "^7.0|^8.0"
     },
     "require-dev": {
-        "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
+        "orchestra/testbench": "^10.0|^11.0",
         "laravel/pint": "^1.29",
-        "pestphp/pest": "^2.0|^3.0|^4.0",
+        "pestphp/pest": "^2.0|^3.0|^4.0|^5.0",
         "phpstan/phpstan": "^2.0",
         "symplify/monorepo-builder": "^11.2",
         "laravel/mcp": "^0.8"

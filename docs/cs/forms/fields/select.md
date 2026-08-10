@@ -149,13 +149,91 @@ chybami; při úspěchu se nová hodnota vybere (přidá u multi-selectu).
 - `createOptionUsing()` vrací hodnotu nové option — skalární klíč nebo model,
   jehož klíč se použije.
 - Editace cílí na jedinou vybranou option, takže není dostupná na `multiple()`.
-- `createOptionModalHeading()` / `editOptionModalHeading()` přizpůsobí nadpisy.
 - Funguje v samostatných `WithForms` komponentách **i** uvnitř table action modalů.
 - Aby nově vytvořená hodnota vykreslila label, spárujte s `getOptionLabelUsing()`
   nebo přednačteným seznamem options.
 - Vytvořená/editovaná option se okamžitě sloučí do otevřeného comboboxu (hostitel
   odesílá browser události `select-option-created` / `select-option-updated`) — žádné
   obnovení stránky není potřeba.
+
+### Plnohodnotný formulář, ne seznam polí
+
+Option schéma je běžné formulářové schéma a namountovaný option form je
+plnohodnotný formulář hostitele, takže věci, které potřebují, aby hostitel našel
+pole podle state path, uvnitř něj fungují stejně jako kdekoli jinde:
+
+```php
+Select::make('category_id')
+    ->createOptionForm([
+        Wizard::make('category')->schema([                       // [tl! focus:start]
+            Step::make('Základ')->schema([
+                TextInput::make('name')->required(),
+            ]),
+            Step::make('Zařazení')->schema([
+                Select::make('parent_id')
+                    ->getSearchResultsUsing(fn (string $search) =>
+                        Category::where('name', 'like', "%{$search}%")->pluck('name', 'id')->all()
+                    ),
+            ]),
+        ]),                                                      // [tl! focus:end]
+    ])
+    ->createOptionUsing(fn (array $data) => Category::create($data)->getKey())
+```
+
+- [`Wizard`](../../core/schema/layout/wizard.md) gatuje jednotlivé kroky: „Next"
+  validuje jen pole daného kroku a při neúspěchu zůstane stát, přičemž chyby
+  přistanou na option bagu (`createOptionFormData.*`), kde je modal už zobrazuje.
+- Vnořený `Select` dosáhne na endpoint remote searche a field actions
+  (`suffixAction()`, `hintAction()`, `Button`) se resolvnou a proběhnou.
+- Otevření *druhého* option modalu zevnitř option formu je odmítnuto, ne vnořeno:
+  na každý druh je jedna mounted path a jeden data bag, takže vyhovět by znamenalo
+  zahodit rozepsaný formulář.
+
+Přidejte wizardu [`navigation(false)`](../../core/schema/layout/wizard.md#predani-navigace-jinam)
+a **patička modalu převezme jeho navigaci** — Back a Next vedle Cancel, s tlačítkem
+odeslání, které se objeví až na posledním kroku, místo druhého navigačního řádku
+uvnitř panelu. Wizard pojmenujte, když můžou být oba option modaly otevřené naráz:
+patička a wizard se najdou právě podle toho názvu.
+
+### Konfigurace option modalu
+
+Ani jeden option modal není zvláštní případ: oba se konfigurují přes stejný objekt
+`Modal`, jaký používají action modaly, takže nadpis, popis, ikona, šířka, chování
+při zavírání, sticky chrome i popisky obou tlačítek žijí na jednom místě.
+
+```php
+use NyonCode\WireCore\Modals\Modal;
+
+Select::make('category_id')
+    ->options(fn () => Category::pluck('name', 'id')->all())
+    ->createOptionForm([TextInput::make('name')->required()])
+    ->createOptionUsing(fn (array $data) => Category::create($data)->getKey())
+    ->createOptionModal(fn (Modal $modal) => $modal   // [tl! focus:start]
+        ->heading('Nová kategorie')
+        ->description('Bude vybratelná, jakmile ji uložíte.')
+        ->icon('outline:folder-plus')
+        ->width('2xl')
+        ->closeOnClickAway(false)
+        ->stickyFooter()
+        ->submitLabel('Vytvořit kategorii')
+        ->cancelLabel('Zahodit'))                     // [tl! focus:end]
+    ->editOptionModal(fn (Modal $modal) => $modal->width('xl'))
+```
+
+Callback konfiguruje modal na místě; vrácený `Modal` ho nahradí celý. Běží při
+definici schématu, ne jednou za render, takže text závislý na stavu jde přes
+closure podporu samotného configu — `$modal->heading(fn (Select $field) => …)`,
+vyhodnocenou s polem jako kontextem.
+
+`createOptionModalHeading()` / `createOptionModalWidth()` a jejich `editOption…`
+dvojčata zůstávají jako zkratky a zapisují do téhož objektu, takže se dva způsoby
+nastavení nadpisu nemůžou rozejít. Šířka bere case `ModalWidth` nebo jeho token
+(`sm`…`7xl`, `full`); neznámý token spadne na `md` a nenakonfigurovaný modal
+následuje `wire-core.modals.default_width` jako každý jiný modal.
+
+`id` modalu, `wire:model` a zavírací akce konfigurovatelné záměrně **nejsou**.
+Klíčují teleport, podle kterého Livewire morfuje, a oba option modaly můžou být
+namountované najednou — `id` nastavené volajícím by nechalo jejich obsah prohodit.
 
 ## Reaktivita
 
@@ -253,7 +331,9 @@ Select::make('tier')
 | `preload()` | bool | Dychtivě naplnit remote seznam options při renderu |
 | `createOptionForm(array\|Closure)` / `createOptionUsing(Closure)` | — | Vytvořit novou option z modalu |
 | `editOptionForm(array\|Closure)` / `fillEditOptionUsing(Closure)` / `updateOptionUsing(Closure)` | — | Editovat vybranou option z modalu |
-| `createOptionModalHeading(string)` / `editOptionModalHeading(string)` | string | Nadpisy modalu |
+| `createOptionModal(Closure)` / `editOptionModal(Closure)` | — | Konfigurace option modalu přes kanonický objekt `Modal` |
+| `createOptionModalHeading(string)` / `editOptionModalHeading(string)` | string | Nadpisy modalu (zkratka) |
+| `createOptionModalWidth(string\|ModalWidth\|null)` / `editOptionModalWidth(string\|ModalWidth\|null)` | string | Šířky modalu (`sm`…`7xl`, `full`; výchozí `md`) (zkratka) |
 | `placeholder(string\|Closure)` | string | Label prázdné/blank option |
 | `disabled(bool\|Closure)` | bool | Znepřístupnit select |
 | `required()` | — | Označit jako povinné |

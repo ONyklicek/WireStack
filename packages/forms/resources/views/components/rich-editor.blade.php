@@ -5,6 +5,12 @@
     $wireAttr = 'wire:model' . ($wireModifier ? ".{$wireModifier}" : '');
     $toolbarButtons = $field->getToolbarButtons();
     $fieldId = $field->getId();
+
+    // Shared editor vocabulary (resources/lang/*/fields.php) — the same keys
+    // TiptapEditor and MarkdownEditor title their buttons from, so the three
+    // editors read alike and cs comes from the package, not the app.
+    $t = static fn (string $key, array $replace = []): string
+        => (string) trans("wire-forms::fields.editor.{$key}", $replace);
 @endphp
 
 @include('wire-forms::partials.field-wrapper-start')
@@ -55,7 +61,7 @@
         },
 
         insertLink() {
-            const url = prompt('{{ __('Enter URL') }}');
+            const url = prompt(@js($t('link_url')));
             if (url) {
                 this.exec('createLink', url);
             }
@@ -81,7 +87,7 @@
                     @click="exec('bold')" data-testid="form-editor-{{ $field->getStatePath() }}-bold"
                     :class="{ 'bg-gray-200 dark:bg-gray-600': activeFormats.bold }"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
-                    title="{{ __('Bold') }}"
+                    title="{{ $t('bold') }}"
             >
                 {!! icon('bold', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
@@ -93,7 +99,7 @@
                     @click="exec('italic')" data-testid="form-editor-{{ $field->getStatePath() }}-italic"
                     :class="{ 'bg-gray-200 dark:bg-gray-600': activeFormats.italic }"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
-                    title="{{ __('Italic') }}"
+                    title="{{ $t('italic') }}"
             >
                 {!! icon('italic', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
@@ -105,7 +111,7 @@
                     @click="exec('underline')" data-testid="form-editor-{{ $field->getStatePath() }}-underline"
                     :class="{ 'bg-gray-200 dark:bg-gray-600': activeFormats.underline }"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
-                    title="{{ __('Underline') }}"
+                    title="{{ $t('underline') }}"
             >
                 {!! icon('underline', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
@@ -117,7 +123,7 @@
                     @click="exec('strikeThrough')" data-testid="form-editor-{{ $field->getStatePath() }}-strikeThrough"
                     :class="{ 'bg-gray-200 dark:bg-gray-600': activeFormats.strikeThrough }"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
-                    title="{{ __('Strikethrough') }}"
+                    title="{{ $t('strike') }}"
             >
                 {!! icon('strikethrough', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
@@ -134,7 +140,7 @@
                     type="button"
                     @click="exec('formatBlock', 'h2')"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
-                    title="{{ __('Heading 2') }}"
+                    title="{{ $t('heading', ['level' => 2]) }}"
             >
                 <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M13 20h-2v-7H4v7H2V4h2v7h7V4h2v16zm8-12v12h-2v-9.796l-2 .536V8.67L19.5 8H21z"/>
@@ -147,7 +153,7 @@
                     type="button"
                     @click="exec('formatBlock', 'h3')"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
-                    title="{{ __('Heading 3') }}"
+                    title="{{ $t('heading', ['level' => 3]) }}"
             >
                 <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M13 20h-2v-7H4v7H2V4h2v7h7V4h2v16zm5.46-7.24c.61.17 1.07.51 1.39.99.32.49.49 1.06.49 1.71 0 1-.36 1.79-1.07 2.36-.72.58-1.71.87-2.99.87-1.2 0-2.17-.23-2.92-.68l.44-1.64c.68.41 1.42.62 2.22.62.63 0 1.12-.14 1.46-.43.34-.29.51-.69.51-1.21 0-.54-.18-.96-.53-1.26-.36-.3-.87-.45-1.54-.45h-.74v-1.5h.74c.6 0 1.07-.14 1.41-.42.34-.28.51-.67.51-1.16 0-.45-.15-.8-.46-1.06-.31-.25-.72-.38-1.24-.38-.72 0-1.38.21-2 .64l-.44-1.6c.74-.5 1.68-.75 2.82-.75 1.06 0 1.89.27 2.48.81.6.55.9 1.25.9 2.12 0 .93-.38 1.64-1.13 2.15z"/>
@@ -161,7 +167,7 @@
                     @click="exec('insertUnorderedList')" data-testid="form-editor-{{ $field->getStatePath() }}-insertUnorderedList"
                     :class="{ 'bg-gray-200 dark:bg-gray-600': activeFormats.insertUnorderedList }"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
-                    title="{{ __('Bullet list') }}"
+                    title="{{ $t('bullet_list') }}"
             >
                 {!! icon('list-bullet', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
@@ -173,7 +179,7 @@
                     @click="exec('insertOrderedList')" data-testid="form-editor-{{ $field->getStatePath() }}-insertOrderedList"
                     :class="{ 'bg-gray-200 dark:bg-gray-600': activeFormats.insertOrderedList }"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
-                    title="{{ __('Numbered list') }}"
+                    title="{{ $t('ordered_list') }}"
             >
                 {!! icon('numbered-list', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
@@ -184,7 +190,7 @@
                     type="button"
                     @click="exec('formatBlock', 'blockquote')"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
-                    title="{{ __('Blockquote') }}"
+                    title="{{ $t('blockquote') }}"
             >
                 <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M4.583 17.321C3.553 16.227 3 15 3 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 01-3.5 3.5 3.871 3.871 0 01-2.748-1.179zm10 0C13.553 16.227 13 15 13 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 01-3.5 3.5 3.871 3.871 0 01-2.748-1.179z"/>
@@ -197,7 +203,7 @@
                     type="button"
                     @click="exec('formatBlock', 'pre')"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
-                    title="{{ __('Code block') }}"
+                    title="{{ $t('code_block') }}"
             >
                 {!! icon('code-bracket', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
@@ -212,7 +218,7 @@
                     type="button"
                     @click="insertLink()"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
-                    title="{{ __('Insert link') }}"
+                    title="{{ $t('link') }}"
             >
                 {!! icon('link', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
@@ -227,7 +233,7 @@
                     type="button"
                     @click="exec('undo')" data-testid="form-editor-{{ $field->getStatePath() }}-undo"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
-                    title="{{ __('Undo') }}"
+                    title="{{ $t('undo') }}"
             >
                 {!! icon('arrow-uturn-left', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
@@ -238,7 +244,7 @@
                     type="button"
                     @click="exec('redo')" data-testid="form-editor-{{ $field->getStatePath() }}-redo"
                     class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
-                    title="{{ __('Redo') }}"
+                    title="{{ $t('redo') }}"
             >
                 {!! icon('arrow-uturn-right', 'w-4 h-4', 'w-4 h-4') !!}
             </button>

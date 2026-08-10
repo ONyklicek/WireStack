@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Illuminate\Support\ViewErrorBag;
 use Illuminate\Validation\Rules\In;
 use NyonCode\WireCore\Foundation\Contracts\Enum\HasLabel;
+use NyonCode\WireCore\Foundation\Enums\ModalWidth;
+use NyonCode\WireCore\Modals\Modal;
 use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Forms\Form;
@@ -483,6 +485,76 @@ test('normalizeOptionValue returns null for a non-scalar, non-model result', fun
 test('create option modal heading defaults and is overridable', function () {
     expect(Select::make('category')->getCreateOptionModalHeading())->toBe('Create option')
         ->and(Select::make('category')->createOptionModalHeading('New tag')->getCreateOptionModalHeading())->toBe('New tag');
+});
+
+test('option modal widths default to md and accept a token or the enum', function () {
+    expect(Select::make('category')->getCreateOptionModalWidth())->toBe('md')
+        ->and(Select::make('category')->getEditOptionModalWidth())->toBe('md')
+        ->and(Select::make('category')->createOptionModalWidth('3xl')->getCreateOptionModalWidth())->toBe('3xl')
+        ->and(Select::make('category')->editOptionModalWidth(ModalWidth::Xl)->getEditOptionModalWidth())->toBe('xl');
+});
+
+test('createOptionModal exposes the canonical modal config and its defaults', function () {
+    $modal = Select::make('category')->getCreateOptionModal();
+
+    expect($modal)->toBeInstanceOf(Modal::class)
+        ->and($modal->getHeading())->toBe('Create option')
+        ->and($modal->getSubmitLabel())->toBe('Create')
+        ->and($modal->getCancelLabel())->toBe('Cancel')
+        ->and(Select::make('category')->getEditOptionModal()->getSubmitLabel())->toBe('Save');
+});
+
+test('createOptionModal configures the modal in place and keeps one config object', function () {
+    $field = Select::make('category')
+        ->createOptionModal(fn (Modal $modal) => $modal
+            ->description('Pick a name')
+            ->icon('outline:folder-plus')
+            ->width('4xl')
+            ->closeOnClickAway(false)
+            ->stickyFooter()
+            ->submitLabel('Add it'));
+
+    $modal = $field->getCreateOptionModal();
+
+    expect($modal->getDescription())->toBe('Pick a name')
+        ->and($modal->getWidth())->toBe('4xl')
+        ->and($modal->shouldCloseOnClickAway())->toBeFalse()
+        ->and($modal->hasStickyFooter())->toBeTrue()
+        ->and($modal->getSubmitLabel())->toBe('Add it')
+        // The narrow setters write into that same object rather than a parallel bag.
+        ->and($field->createOptionModalWidth('2xl')->getCreateOptionModalWidth())->toBe('2xl')
+        ->and($field->getCreateOptionModal())->toBe($modal);
+});
+
+test('a modal returned from the configurator replaces the config', function () {
+    $replacement = Modal::make()->heading('Replaced')->width('lg');
+
+    $field = Select::make('category')->createOptionModal(fn () => $replacement);
+
+    expect($field->getCreateOptionModal())->toBe($replacement)
+        ->and($field->getCreateOptionModalHeading())->toBe('Replaced')
+        ->and($field->getCreateOptionModalWidth())->toBe('lg');
+});
+
+test('a closure heading is evaluated with the field as context', function () {
+    $field = Select::make('category')
+        ->editOptionModal(fn (Modal $modal) => $modal->heading(fn (Select $f) => 'Edit '.$f->getName()));
+
+    expect($field->getEditOptionModalHeading())->toBe('Edit category');
+});
+
+test('the option modal headings fall back to their defaults when nulled', function () {
+    expect(Select::make('category')->createOptionModalHeading('X')->createOptionModalHeading(null)->getCreateOptionModalHeading())->toBe('Create option')
+        ->and(Select::make('category')->editOptionModalHeading('X')->editOptionModalHeading(null)->getEditOptionModalHeading())->toBe('Edit option')
+        ->and(Select::make('category')->createOptionModal(fn (Modal $m) => $m->heading(null))->getCreateOptionModalHeading())->toBe('Create option')
+        ->and(Select::make('category')->editOptionModal(fn (Modal $m) => $m->heading(null))->getEditOptionModalHeading())->toBe('Edit option');
+});
+
+test('an unknown or null option modal width falls back to md', function () {
+    expect(Select::make('category')->createOptionModalWidth('enormous')->getCreateOptionModalWidth())->toBe('md')
+        ->and(Select::make('category')->createOptionModalWidth('3xl')->createOptionModalWidth(null)->getCreateOptionModalWidth())->toBe('md')
+        ->and(Select::make('category')->editOptionModalWidth('enormous')->getEditOptionModalWidth())->toBe('md')
+        ->and(Select::make('category')->editOptionModalWidth('xl')->editOptionModalWidth(null)->getEditOptionModalWidth())->toBe('md');
 });
 
 // ─── Edit option modal (editOptionForm / fillEditOptionUsing / updateOptionUsing) ─

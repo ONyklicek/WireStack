@@ -113,3 +113,36 @@ test('a subclass inherits the lock under its own name', function () {
     expect(fn () => $subclass->asDate())
         ->toThrow(FormConfigurationException::class, '['.$subclass::class.']');
 });
+
+// ─── Typing into the trigger ─────────────────────────────────────────
+
+// The slot list is a convenience, not the vocabulary: at a 30-minute interval
+// there was no way at all to express 08:07, because the trigger was readonly.
+test('the trigger accepts a typed time, inheriting the shared parser', function () {
+    $html = renderTimePickerView(TimePicker::make('opens_at'));
+
+    expect($html)->not->toContain('readonly')
+        ->toContain('@input="onTyped($event.target.value)"')
+        ->toContain('readTyped(text)')
+        ->toContain('applyTyped(parts)')
+        // No displayFormat, so the box shows the state and the parser reads it.
+        ->toContain("typedFormat: 'H:i'");
+});
+
+test('seconds widen the format the parser reads', function () {
+    expect(TimePicker::make('opens_at')->withSeconds()->getTypedFormat())->toBe('H:i:s')
+        ->and(TimePicker::make('opens_at')->displayFormat('G.i')->getTypedFormat())->toBe('G.i');
+});
+
+test('typeable(false) leaves only the slot list', function () {
+    expect(renderTimePickerView(TimePicker::make('opens_at')->typeable(false)))
+        ->toContain('readonly')
+        ->not->toContain('onTyped(');
+});
+
+test('the list opens from the keyboard and from a real toggle button', function () {
+    expect(renderTimePickerView(TimePicker::make('opens_at')))
+        ->toContain('@keydown.down.prevent="open = true"')
+        ->toContain('aria-haspopup="dialog"')
+        ->toContain('data-testid="form-time-opens_at-toggle"');
+});

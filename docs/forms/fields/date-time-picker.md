@@ -96,6 +96,50 @@ DateTimePicker::make('date')
 > the stored value is untouched. It is honoured by the custom picker; a native
 > input's display format belongs to the browser and the user's locale.
 
+## Typing
+
+The trigger is a text box, not a button: the value can be typed as well as
+picked. What is typed is read back through the same format the box shows —
+`displayFormat()` when there is one, the stored shape otherwise — so a field
+displaying `9. 3. 2026 14:30` accepts exactly that back.
+
+The parser is loose about everything except the *order* of the parts, which the
+format fixes. Under `->displayFormat('j. n. Y H:i')` all of these land on the
+same value:
+
+```text
+9. 3. 2026 14:30
+9.3.2026 14:30
+9/3/2026 14:30
+9. 3. 26 14:30        a two-digit year is this century
+9. 3. 2026            no clock typed, so the time already showing is kept
+```
+
+The entry commits on blur and on <kbd>Enter</kbd>; <kbd>Escape</kbd> abandons it.
+Anything the parser cannot read — `31. 2. 2026`, an hour past 23, a day that
+`minDate()`/`maxDate()`/`disabledDates()` exclude — is refused whole and the
+previous value comes back, so a half-read date can never reach the state.
+Emptying the box clears the field.
+
+A typed value goes through the same clamp a picked one does: on a boundary day
+that carries a time, the clock is pulled inside the bound rather than rejected —
+typing `10. 3. 2026 07:00` under `->minDate('2026-03-10 08:30')` stores 08:30.
+
+Close the keyboard route where the value really must come from the widget:
+
+```php
+DateTimePicker::make('slot')->typeable(false)
+```
+
+> `readOnly()` outranks `typeable()`: it closes the keyboard *and* the panel,
+> because the value is not the user's to change by any route. `typeable(false)`
+> closes only the keyboard and leaves the calendar working.
+
+> Typing is a custom-picker feature. A native input's keyboard belongs to the
+> browser, and the only way to take it away is `readonly` — which would disable
+> the browser's own picker along with it — so `typeable(false)` has no effect
+> under `->native()`.
+
 ## Native Picker
 
 The custom Alpine picker is the default. Opt out to the browser's own control:
@@ -130,8 +174,9 @@ The only exception is [`asMonth()`](#modes), which is always native.
 | `secondsStep(int)` | int | Second increment step |
 | `timezone(string)` | string | Show the value in this timezone and convert back to the app timezone on save; `datetime` only |
 | `native(bool $native = true)` | bool | Use the browser-native control instead of the custom picker (default: `false`) |
+| `typeable(bool\|Closure)` | bool | Let the value be typed into the input as well as picked (default: `true`); custom picker only |
 | `disabled(bool\|Closure)` | bool | Disable the picker |
-| `readOnly(bool\|Closure)` | bool | Read-only mode |
+| `readOnly(bool\|Closure)` | bool | Read-only mode — no typing and no panel |
 | `required()` | — | Mark as required |
 | `live()` | — | Trigger Livewire update on change |
 

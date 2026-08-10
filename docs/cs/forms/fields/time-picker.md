@@ -40,6 +40,10 @@ Samostatný setter `interval()` neexistuje — je to tentýž pojem pod názvem,
 už měl. `hoursStep()` a `secondsStep()` jsou zděděné, ale tady nedělají nic:
 seznam slotů má jeden krok, ne tři.
 
+Interval omezuje **seznam**, ne hodnotu. Čas jde napsat rovnou do triggeru, takže
+`08:07` zůstává dosažitelný i při třicetiminutovém kroku — napsaný čas odmítnou
+jen meze. Viz [Psaní z klávesnice](date-time-picker.md#psani-z-klavesnice).
+
 ## Meze
 
 `minDate()` / `maxDate()` se čtou jako časy a sloty mimo ně **zakážou**, takže
@@ -64,6 +68,7 @@ Hodnotová strana je celá zděděná, takže tohle se chová přesně podle dok
 TimePicker::make('opens_at')
     ->withSeconds()               // ukládá H:i:s; sloty pořád padají na :00
     ->displayFormat('H:i')
+    ->typeable(false)             // jen seznam — do triggeru se psát nedá
     ->native()                    // nativní <input type="time"> prohlížeče
     ->placeholder('Vyber čas')
 ```

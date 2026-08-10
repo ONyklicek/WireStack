@@ -11,7 +11,9 @@ use NyonCode\WireCore\Foundation\Concerns\HasExtraInputAttributes;
 use NyonCode\WireCore\Foundation\Concerns\HasNativeControl;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
+use NyonCode\WireCore\Foundation\Enums\ModalWidth;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireCore\Modals\Modal;
 use NyonCode\WireForms\Concerns\CanBeMultiple;
 use NyonCode\WireForms\Concerns\CanBeSearchable;
 use NyonCode\WireForms\Concerns\HasItemLimits;
@@ -61,7 +63,8 @@ class Select extends Field implements DehydratesState, ProvidesImplicitValidatio
 
     protected ?Closure $createOptionCallback = null;
 
-    protected ?string $createOptionModalHeading = null;
+    /** Create-option modal configuration; seeded on first access, then reused. */
+    protected ?Modal $createOptionModal = null;
 
     /** @var array<int, mixed>|Closure|null Edit-option modal form schema. */
     protected array|Closure|null $editOptionSchema = null;
@@ -70,7 +73,8 @@ class Select extends Field implements DehydratesState, ProvidesImplicitValidatio
 
     protected ?Closure $updateOptionCallback = null;
 
-    protected ?string $editOptionModalHeading = null;
+    /** Edit-option modal configuration; seeded on first access, then reused. */
+    protected ?Modal $editOptionModal = null;
 
     protected ?string $noSearchResultsMessage = null;
 
@@ -165,10 +169,43 @@ class Select extends Field implements DehydratesState, ProvidesImplicitValidatio
         return $this;
     }
 
+    /**
+     * Configure the create-option modal through the canonical {@see Modal} config
+     * object — heading, description, icon, width, close behaviour, sticky
+     * header/footer, submit and cancel labels, mobile presentation.
+     *
+     * The callback receives the modal and configures it in place; a returned
+     * `Modal` replaces it. Runs when the schema is defined, not per render, so
+     * dynamic text goes through the config's own Closure support
+     * (`$modal->heading(fn (Select $field) => …)`), which is evaluated with the
+     * field as context.
+     */
+    public function createOptionModal(Closure $callback): static
+    {
+        $configured = $callback($this->getCreateOptionModal());
+
+        if ($configured instanceof Modal) {
+            $this->createOptionModal = $configured;
+        }
+
+        return $this;
+    }
+
     /** Set the heading of the create-option modal (see `createOptionForm()`/`createOptionUsing()`). */
     public function createOptionModalHeading(?string $heading): static
     {
-        $this->createOptionModalHeading = $heading;
+        $this->getCreateOptionModal()->heading($heading ?? trans('wire-forms::fields.create_option'));
+
+        return $this;
+    }
+
+    /**
+     * Set the width of the create-option modal — a {@see ModalWidth} case or its
+     * token (`sm`…`7xl`, `full`). Unknown tokens and `null` fall back to `md`.
+     */
+    public function createOptionModalWidth(string|ModalWidth|null $width): static
+    {
+        $this->getCreateOptionModal()->width($width === null ? ModalWidth::Md : ModalWidth::resolve($width));
 
         return $this;
     }
@@ -216,10 +253,36 @@ class Select extends Field implements DehydratesState, ProvidesImplicitValidatio
         return $this;
     }
 
+    /**
+     * Configure the edit-option modal through the canonical {@see Modal} config
+     * object. Same surface and semantics as {@see createOptionModal()}.
+     */
+    public function editOptionModal(Closure $callback): static
+    {
+        $configured = $callback($this->getEditOptionModal());
+
+        if ($configured instanceof Modal) {
+            $this->editOptionModal = $configured;
+        }
+
+        return $this;
+    }
+
     /** Set the heading of the edit-option modal (see `editOptionForm()`/`editOptionUsing()`). */
     public function editOptionModalHeading(?string $heading): static
     {
-        $this->editOptionModalHeading = $heading;
+        $this->getEditOptionModal()->heading($heading ?? trans('wire-forms::fields.edit_option'));
+
+        return $this;
+    }
+
+    /**
+     * Set the width of the edit-option modal — a {@see ModalWidth} case or its
+     * token (`sm`…`7xl`, `full`). Unknown tokens and `null` fall back to `md`.
+     */
+    public function editOptionModalWidth(string|ModalWidth|null $width): static
+    {
+        $this->getEditOptionModal()->width($width === null ? ModalWidth::Md : ModalWidth::resolve($width));
 
         return $this;
     }
@@ -446,9 +509,29 @@ class Select extends Field implements DehydratesState, ProvidesImplicitValidatio
         return $this->createOptionSchema !== null;
     }
 
+    /**
+     * The create-option modal's configuration, seeded with the option-modal
+     * defaults on first access. The teleport `id`, `wireModel` and close action
+     * stay owned by the rendering partial — a caller-set `id` would collide with
+     * the per-field key the two option modals are morphed by.
+     */
+    public function getCreateOptionModal(): Modal
+    {
+        return $this->createOptionModal ??= Modal::make()
+            ->heading(trans('wire-forms::fields.create_option'))
+            ->submitLabel(trans('wire-forms::fields.create'))
+            ->cancelLabel(trans('wire-forms::fields.cancel'));
+    }
+
     public function getCreateOptionModalHeading(): string
     {
-        return $this->createOptionModalHeading ?? trans('wire-forms::fields.create_option');
+        return $this->getCreateOptionModal()->getHeading($this) ?? trans('wire-forms::fields.create_option');
+    }
+
+    /** Width token the create-option modal renders at (default `md`). */
+    public function getCreateOptionModalWidth(): string
+    {
+        return $this->getCreateOptionModal()->getWidth();
     }
 
     /**
@@ -521,9 +604,28 @@ class Select extends Field implements DehydratesState, ProvidesImplicitValidatio
         return $this->editOptionSchema !== null;
     }
 
+    /**
+     * The edit-option modal's configuration, seeded with the option-modal
+     * defaults on first access. Same ownership split as
+     * {@see getCreateOptionModal()}.
+     */
+    public function getEditOptionModal(): Modal
+    {
+        return $this->editOptionModal ??= Modal::make()
+            ->heading(trans('wire-forms::fields.edit_option'))
+            ->submitLabel(trans('wire-forms::fields.save'))
+            ->cancelLabel(trans('wire-forms::fields.cancel'));
+    }
+
     public function getEditOptionModalHeading(): string
     {
-        return $this->editOptionModalHeading ?? trans('wire-forms::fields.edit_option');
+        return $this->getEditOptionModal()->getHeading($this) ?? trans('wire-forms::fields.edit_option');
+    }
+
+    /** Width token the edit-option modal renders at (default `md`). */
+    public function getEditOptionModalWidth(): string
+    {
+        return $this->getEditOptionModal()->getWidth();
     }
 
     /**

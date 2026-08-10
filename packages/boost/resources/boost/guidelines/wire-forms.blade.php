@@ -127,7 +127,19 @@ Selects: `Select` supports server-driven options (`getSearchResultsUsing()` remo
 `getOptionLabelUsing()`, `preload()`) and create/edit-option modals (`createOptionForm()` +
 `createOptionUsing()`, `editOptionForm()` + `fillEditOptionUsing()`/`updateOptionUsing()`) —
 both work in standalone forms and inside table action modals, and a created/edited option is
-selected and merged into the open combobox immediately (no page refresh). The combobox honours
+selected and merged into the open combobox immediately (no page refresh). The option schema is
+a full form schema, not a field list: a `Wizard` inside `createOptionForm()` gates its steps
+(errors land on `createOptionFormData.*`), a nested `Select` reaches remote search, and field
+actions resolve — the mounted option form is enumerated as a host form. Give that wizard
+`->navigation(false)` and the modal footer drives it (Back/Next beside Cancel, submit only on the
+last step); name it, since footer and wizard pair up by name. Opening an option modal
+from inside an option form is refused (one mounted path per kind). Both option modals are
+configured through the canonical `Modals\Modal` config object —
+`->createOptionModal(fn (Modal $modal) => $modal->heading(…)->description(…)->icon(…)->width('2xl')
+->closeOnClickAway(false)->stickyFooter()->submitLabel(…)->cancelLabel(…))`, and the same for
+`->editOptionModal()`; `createOptionModalHeading()`/`createOptionModalWidth()` (+ `editOption…`
+twins) are shorthands writing into that same object. The modal's id/wire:model are not
+configurable — they key the teleport Livewire morphs by. The combobox honours
 `->live()` — add it when siblings react to the selection. `BelongsToSelect::searchable()`
 without `preload()` searches the related table on the server automatically (title-attribute
 `like`, limit 50); `preload()` ships the full option list and filters client-side.

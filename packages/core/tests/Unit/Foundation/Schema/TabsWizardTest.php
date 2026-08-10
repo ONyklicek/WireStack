@@ -141,6 +141,39 @@ test('wizard skippable flag reaches the rendered markup', function () {
     expect($html)->toContain('skippable: true');
 });
 
+test('wizard navigation is on by default and can be handed to an outer surface', function () {
+    expect(Wizard::make()->hasNavigation())->toBeTrue()
+        ->and(Wizard::make()->navigation(false)->hasNavigation())->toBeFalse()
+        ->and(Wizard::make()->navigation(false)->navigation()->hasNavigation())->toBeTrue();
+});
+
+test('navigation(false) drops the wizard nav row but keeps the steps and their state', function () {
+    $html = Wizard::make('signup')->navigation(false)->schema([
+        Step::make('account'),
+        Step::make('profile'),
+    ])->toHtml();
+
+    expect($html)
+        ->not->toContain('wizard-next')
+        ->not->toContain('wizard-back')
+        // The panels and the indicator stay: only the Previous/Next row goes.
+        ->toContain('wizard-step-0')
+        ->toContain('sync(2, null)');
+});
+
+test('the wizard publishes its step state and takes navigation commands from outside', function () {
+    // The driving surface (a modal footer) is a sibling subtree, so the bridge is
+    // a window event scoped by the wizard name — a bubbling dispatch never
+    // reaches a sibling.
+    $html = Wizard::make('signup')->navigation(false)->schema([Step::make('a'), Step::make('b')])->toHtml();
+
+    expect($html)
+        ->toContain("wizard: 'signup'")
+        ->toContain('wire-wizard-state')
+        ->toContain('x-effect="broadcast()"')
+        ->toContain('x-on:wire-wizard-navigate.window');
+});
+
 test('the tab bar scrolls horizontally instead of wrapping (mobile)', function () {
     $html = Tabs::make()->schema([
         Tab::make('profile'),

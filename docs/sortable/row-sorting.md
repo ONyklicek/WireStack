@@ -56,12 +56,18 @@ The Blade template uses the computed `$table` property:
 3. In reorder mode:
    - Drag handles appear on each row
    - Pagination is disabled (all records are shown)
-   - Sorting, search, and filters are bypassed
-   - Rows are ordered by the sort column ascending
+   - The column sort is bypassed -- rows are ordered by the sort column ascending
+   - **Search and filters stay applied**, so the list can still be narrowed
 4. User drags rows to their desired position
 5. On drag end, the new order is saved to the database
 6. User clicks **"Done reordering"** to exit reorder mode
-7. The table returns to its normal state with pagination, sorting, and filters restored
+7. The table returns to its normal state with pagination and the column sort restored
+
+The column sort has to give way because the sequence on screen is the sequence a
+drop writes back: it can only ever be the order column's. Search and filters do
+not, because they change *which* rows can be dragged, not what dragging means --
+see [Reordering a narrowed list](#reordering-a-narrowed-list) for why that is
+safe.
 
 ## Custom order column
 
@@ -94,7 +100,7 @@ return $table
     ->columns([...]);
 ```
 
-In this mode the table is always in reorder mode -- no toggle button is rendered and `$isReordering` is set to `true` on mount.
+In this mode the table is always in reorder mode -- no toggle button is rendered and `$isReordering` is set to `true` on mount. There is no way back to a plain table, which is exactly why reorder mode keeps search and filters working: the search box on an always-reorderable table would otherwise never do anything.
 
 ## Conditional reordering
 
@@ -121,7 +127,36 @@ return $table
     ->columns([...]);
 ```
 
-> **Note:** With pagination enabled, users can only reorder within the current page.
+> **Note:** With pagination enabled, users can only reorder within the current page. A drop rearranges that page's rows among themselves and leaves every other page where it was.
+
+## Reordering a narrowed list
+
+A user in reorder mode can still search, filter and -- with
+`paginatedWhileReordering()` -- page. So a drag usually happens over a *subset*
+of the table, and the rows that subset hides must not move.
+
+They do not, because a drop does not number the rows it was given. It collects
+the order values those rows already hold, sorts them ascending, and hands them
+back out in the new visual sequence:
+
+```php
+// Rows holding sort_order 10, 20, 30. Drag the last one to the top:
+//   before   after
+//   A  10    C  10
+//   B  20    A  20
+//   C  30    B  30
+```
+
+Three consequences worth knowing:
+
+- **Rows outside the drag never move.** They keep their slots, so a search for
+  `audit` can reorder the four matching rows without disturbing the four hundred
+  it hid.
+- **Gaps are preserved.** An order column of `10, 20, 30` stays `10, 20, 30`. If
+  you leave gaps to insert into later, reordering does not close them.
+- **An empty or constant order column has nothing to redistribute.** There, and
+  only there, the client's own positions (`1..n`) are written instead -- which is
+  the correct answer for a column that carried no ordering to begin with.
 
 ## Lifecycle hooks
 

@@ -23,6 +23,9 @@
         <testsuite name="Table Feature">
             <directory>packages/table/tests/Feature</directory>
         </testsuite>
+        <testsuite name="Table Benchmarks">
+            <directory>packages/table/tests/Benchmarks</directory>
+        </testsuite>
         <testsuite name="Sortable Unit">
             <directory>packages/sortable/tests/Unit</directory>
         </testsuite>

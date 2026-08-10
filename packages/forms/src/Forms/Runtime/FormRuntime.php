@@ -97,9 +97,20 @@ final class FormRuntime
      */
     public function hasWizard(?string $wizardName = null): bool
     {
+        return $this->getWizard($wizardName) !== null;
+    }
+
+    /**
+     * The wizard in the schema — optionally the one with the given name, else the
+     * first. A surface that renders the wizard's navigation itself (a modal
+     * footer) needs the instance, not just its presence: its name scopes the
+     * client-side events and its visible step count sizes the controls.
+     */
+    public function getWizard(?string $wizardName = null): ?Wizard
+    {
         $this->prepare();
 
-        return $this->findWizard($this->config->schema, $wizardName) !== null;
+        return $this->findWizard($this->config->schema, $wizardName);
     }
 
     private function findWizardStep(int $stepIndex, ?string $wizardName): ?Step

@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Route;
 use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
+use NyonCode\LaravelPackageToolkit\Support\PackageAssets;
+use NyonCode\LaravelPackageToolkit\Support\PublishedAssets;
 use NyonCode\WireCore\Actions\View\BulkButtonComponent;
 use NyonCode\WireCore\Actions\View\ButtonComponent;
 use NyonCode\WireCore\Actions\View\GroupComponent;
@@ -22,13 +24,13 @@ use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
 use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
-use NyonCode\WireCore\Foundation\Assets\AssetManager;
-use NyonCode\WireCore\Foundation\Assets\Js;
+use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Icons\IconSet;
 use NyonCode\WireCore\Foundation\Support\RecordVersion;
 use NyonCode\WireCore\Foundation\View\CellSync;
+use NyonCode\WireCore\Foundation\View\CopyButton;
 use NyonCode\WireCore\Foundation\View\FloatingAssets;
 use NyonCode\WireCore\Foundation\View\Primitives;
 use NyonCode\WireCore\Modals\View\ConfirmationComponent;
@@ -64,27 +66,53 @@ class WireCoreServiceProvider extends PackageServiceProvider
             ->bootedPackage(function ($packager) {
                 $this->bootFoundation();
                 $this->bootActions();
-                $this->bootAudit();
                 $this->bootNotifications();
                 $this->bootModals();
                 $this->bootPlugins();
                 $this->registerAssetRoutes();
-                $this->registerAssets();
             })
             ->hasConfig()
             ->hasCommand(PruneAuditEntriesCommand::class)
+            // Wire the audit pipeline: HasAuditable models fire AuditableEvents and
+            // this subscriber persists them through AuditLogger. Declared rather than
+            // subscribed by hand — the toolkit subscribes it in the same boot pass —
+            // and unconditional, because the logger itself gates on
+            // `wire-core.audit.enabled` and the subscription is idempotent for apps
+            // that also register it themselves.
+            ->hasSubscriber(AuditEventSubscriber::class)
             ->hasViews()
             ->hasMigrations()
             ->hasTranslations('resources/lang')
-            ->hasAssets('dist')
+            // `wire-core-dropdown.js` carries every shared Alpine controller
+            // (wireDropdown, wireContextMenu, wireTabs, wireWizard, wireEditableCell,
+            // wireFillHandle) — the interaction layer, which is exactly what must never
+            // arrive late.
+            ->hasAssets('dist', entries: [
+                Bundle::make('wire-core-dropdown.js'),
+                // The delegated clipboard controller. In core because two packages ask
+                // for the same affordance — a table's copyable cell and an infolist's
+                // copyable entry — and core is the lowest layer that can own it.
+                Bundle::make('wire-core-copy.js'),
+                // Was `loadedOnRequest()` under the old registry, on the grounds that
+                // charts are the heavy optional class. They are not: this is 671 bytes
+                // of Alpine registrar around `window.Chart`, which is the consuming
+                // app's own dependency and is not shipped here. Delivering a registrar
+                // late is the one thing ADR 0024 forbids, so it ships with the rest.
+                Bundle::make('wire-core-chart.js'),
+            ])
+            ->hasAssetFallback(Bundle::servedByRoute('wire-core'))
             ->hasAbout()
             ->hasInstallCommand(function (InstallCommand $command) {
+                // Assets are deliberately not published here. Publishing is what
+                // switches this package's bundles from route delivery to static
+                // files, and that is a decision about the whole stack — one
+                // `vendor:publish --tag=laravel-assets` covers every installed
+                // package, where the installer would flip only this one.
                 $command
                     ->publishConfig()
                     ->publishMigrations()
                     ->publishViews()
-                    ->publishTranslations()
-                    ->publishAssets();
+                    ->publishTranslations();
             });
     }
 
@@ -160,6 +188,11 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // check). Singleton so its per-request string memo spans the whole request.
         $this->app->singleton(Primitives::class);
 
+        // Canonical owner of the copy-to-clipboard affordance — markup here, the
+        // delegated listener in the `copy` bundle, the feedback pill in
+        // `partials.copy-assets`. Singleton so its per-shape compile is per request.
+        $this->app->singleton(CopyButton::class);
+
         // Canonical owner of an editable cell's server→client sync node. Singleton
         // for the same reason: the partial is rendered once into a skeleton and
         // every editable cell on the page splices its two values into it.
@@ -171,12 +204,8 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // editable columns, for an object with no constructor and no state.
         $this->app->singleton(RecordVersion::class);
 
-        // Canonical owner of every package's browser assets. Singleton so the
-        // registry — and each asset's route + mtime memo — spans the whole request.
-        $this->app->singleton(AssetManager::class);
-
-        // Thin facade over the manager for the floating-dropdown bundle URL, kept
-        // because a dozen partials already resolve it by that name.
+        // Thin facade over the toolkit's renderer for the floating-dropdown bundle
+        // URL, kept because a dozen partials already resolve it by that name.
         $this->app->singleton(FloatingAssets::class);
     }
 
@@ -192,24 +221,41 @@ class WireCoreServiceProvider extends PackageServiceProvider
 
         // `@wireStackScripts` — the one tag an app puts in its layout <head> to get
         // every wireStack Alpine controller into the initial document (which is what
-        // survives Livewire's cached Back/Forward navigation). A thin passthrough:
-        // the whole expression is forwarded to the canonical owner, which resolves
-        // and memoises the markup; no presentation logic lives in the compiler.
+        // survives Livewire's cached Back/Forward navigation).
+        //
+        // Now an alias for the toolkit's `@packageAssets`, which since 2.4.2 renders
+        // every package that declared entries when given no argument. Kept rather than
+        // removed because it is in consuming apps' layouts, and a minor release is no
+        // place to break a `<head>`. Note the widened meaning: the aggregate is every
+        // *toolkit* package, not only the four wireStack ones — which is what a layout
+        // wants anyway, and the argument the aggregate was added for.
+        //
+        // A thin passthrough, the same as before: the whole expression goes to the
+        // renderer, so an app may still narrow it to one package.
         Blade::directive('wireStackScripts', static fn (string $expression): string => sprintf(
-            '<?php echo app(%s::class)->renderScripts(%s); ?>',
-            '\\'.AssetManager::class,
+            '<?php echo app(%s::class)->tags(%s); ?>',
+            '\\'.PackageAssets::class,
             $expression,
         ));
 
-        // Octane: the state-driven view-render memo is a class static that would
-        // otherwise accumulate across requests in a long-lived worker (unbounded
-        // growth; potential cross-tenant bleed). Flush it as each request ends.
+        // Octane: two memos that are per-request everywhere else become
+        // per-worker-lifetime here, so flush them as each request ends.
+        //
+        // The view-render memo is a class static that would otherwise accumulate
+        // (unbounded growth; potential cross-tenant bleed). The asset URLs are the
+        // subtler one: each carries the `?id=<mtime>` of its mirrored copy, so a
+        // worker still alive across a deploy would keep emitting last release's query
+        // string — and `data-navigate-track`, which exists to catch exactly that,
+        // would never fire. Since the toolkit owns the tag there is one memo to
+        // flush, not two.
+        //
         // Referenced by string, not ::class import: laravel/octane is an optional
         // dependency the package does not require, so the symbol may not exist.
         $octaneRequestTerminated = 'Laravel\\Octane\\Events\\RequestTerminated';
         if (class_exists($octaneRequestTerminated)) {
-            Event::listen($octaneRequestTerminated, static function (): void {
+            Event::listen($octaneRequestTerminated, function (): void {
                 Component::flushViewRenderCache();
+                $this->app->make(PublishedAssets::class)->flush();
             });
         }
     }
@@ -241,17 +287,6 @@ class WireCoreServiceProvider extends PackageServiceProvider
     }
 
     // ─── Notifications ──────────────────────────────────────────
-
-    /**
-     * Wire the audit pipeline: HasAuditable models fire AuditableEvents, and this
-     * subscriber persists them through AuditLogger. Registered unconditionally —
-     * the logger itself gates on `wire-core.audit.enabled`, and the subscription
-     * is idempotent for apps that also register it manually.
-     */
-    protected function bootAudit(): void
-    {
-        Event::subscribe(AuditEventSubscriber::class);
-    }
 
     protected function registerNotifications(): void
     {
@@ -339,32 +374,5 @@ class WireCoreServiceProvider extends PackageServiceProvider
         })
             ->where('asset', '[A-Za-z0-9_-]+')
             ->name('wire-core.asset');
-    }
-
-    /**
-     * Declare the package's browser bundles with the canonical {@see AssetManager},
-     * so `@wireStackScripts` emits them into the app's layout.
-     *
-     * `wire-core-dropdown.js` carries every shared Alpine controller (wireDropdown,
-     * wireContextMenu, wireTabs, wireWizard, wireEditableCell, wireFillHandle) — the
-     * interaction layer, which is exactly what must never arrive late.
-     *
-     * `wire-core-chart.js` is declared `loadedOnRequest()`: charts are the optional,
-     * heavy class, so the directive leaves the body out of every page and the widget's
-     * own partial fetches it. Registering it anyway keeps one owner of its URL —
-     * the partial asks {@see AssetManager::url()} instead of recomputing route+mtime.
-     * The registrar inside the bundle is unconditional, so arriving late is safe.
-     */
-    protected function registerAssets(): void
-    {
-        $this->app->make(AssetManager::class)->register([
-            Js::make('dropdown', self::ASSETS_PATH.'/wire-core-dropdown.js')
-                ->navigateTrack()
-                ->navigateOnce(),
-            Js::make('chart', self::ASSETS_PATH.'/wire-core-chart.js')
-                ->navigateTrack()
-                ->navigateOnce()
-                ->loadedOnRequest(),
-        ], 'wire-core');
     }
 }

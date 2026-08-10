@@ -120,6 +120,11 @@ A column left as text is skipped by a comparison rather than compared
 lexically, so a wrong or missing declaration narrows what search understands —
 it never returns wrong rows.
 
+The declaration alone switches nothing on. A searchable column that declares a
+type while the table's search does not read ranges is refused when the table
+renders, naming the call it is missing — the alternative is a table that comes
+back empty because `10..20` was looked for as literal text.
+
 `'code'` is the one type that is *never* inferred: it says the value is a series
 plus a **zero-padded** number (`8866 01`, `8866 02`), which is what makes
 comparing it as text correct, and only the owner knows that. It unlocks

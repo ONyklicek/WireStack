@@ -15,25 +15,27 @@
 
     <div class="text-sm">
         @if($value !== '-' && $value !== '')
-            <span
-                    @class(['inline-flex items-center gap-2', 'cursor-pointer hover:opacity-70' => $field->isCopyable()])
-                    @if($field->isCopyable())
-                        x-data="{ copied: false }"
-                    @click="navigator.clipboard.writeText(@js($value)); copied = true; setTimeout(() => copied = false, 1500)"
-                    role="button"
-                    title="{{ __('Copy') }}"
-                @endif
-            >
+            {{-- Same canonical copy affordance the text entry and a table's copyable
+                 cell use: one button, one document listener, no Alpine per entry. --}}
+            <span class="inline-flex items-center gap-2 group">
                 @if($swatch !== null)
                     <span class="w-5 h-5 rounded ring-1 ring-gray-200 dark:ring-gray-700"
                           @style(['background-color: '.$swatch])></span>
                 @endif
                 <span class="font-mono text-gray-700 dark:text-gray-300">{{ $value }}</span>
+                @if($field->isCopyable())
+                    {!! app(\NyonCode\WireCore\Foundation\View\CopyButton::class)->render(
+                        value: (string) $value,
+                        message: __('wire-core::messages.copied'),
+                        testId: 'entry-copy',
+                    ) !!}
+                @endif
             </span>
         @else
             <span class="text-gray-400">{{ $field->getPlaceholder() ?? '-' }}</span>
         @endif
     </div>
 
+    @if($field->isCopyable())@include('wire-core::partials.copy-assets')@endif
     @if($field->hasActions())@include('wire-core::infolists.entry-actions')@endif
 </div>

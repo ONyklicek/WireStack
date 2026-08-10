@@ -43,10 +43,13 @@ const tiptapEditor = (config = {}) => {
             // never create a second editor over an existing view.
             mount.querySelector('.ProseMirror')?.remove()
 
-            const initialRaw = this.$wire.get(config.wireAttribute) ?? ''
-            const initialContent = config.outputFormat === 'json'
-                ? safeParse(initialRaw)
-                : (initialRaw || '')
+            const bound = this.$wire.get(config.wireAttribute) ?? ''
+            // ->default() is normally already in the state bag (the form runtime
+            // seeds it), so this only fires for a host that never seeded — a null
+            // column, a hand-bound property. A cleared editor stores '<p></p>',
+            // not '', so re-opening one the user emptied does NOT re-seed it.
+            const seeded = isBlank(bound) && config.default ? config.default : bound
+            const initialContent = toContent(seeded, config.outputFormat)
 
             editor = new Editor({
                 element: mount,
@@ -61,13 +64,9 @@ const tiptapEditor = (config = {}) => {
                 onUpdate: ({ editor: ed }) => {
                     this.updatedAt = Date.now()
 
-                    const value = config.outputFormat === 'json'
+                    this.syncValue(config.outputFormat === 'json'
                         ? JSON.stringify(ed.getJSON())
-                        : ed.getHTML()
-                    lastEmitted = value
-                    // Sync to Livewire via the hidden input carrying wire:model.
-                    this.$refs.hiddenInput.value = value
-                    this.$refs.hiddenInput.dispatchEvent(new Event('input', { bubbles: true }))
+                        : ed.getHTML())
 
                     if (config.maxLength) {
                         this.characterCount = ed.storage.characterCount?.characters() ?? 0
@@ -77,6 +76,14 @@ const tiptapEditor = (config = {}) => {
                 onFocus: () => { this.updatedAt = Date.now() },
                 onBlur: () => { this.updatedAt = Date.now() },
             })
+
+            // A default we seeded ourselves is only on screen — push it into
+            // Livewire (after the tree is wired, so wire:model is listening) or
+            // saving an untouched form would store nothing. Read it back from the
+            // editor so the stored value is the document TipTap actually parsed.
+            if (seeded !== bound) {
+                this.$nextTick(() => { if (editor) this.syncValue(read()) })
+            }
 
             // Reflect server-driven value changes (form reset / fill) only — never
             // our own edits, and never while the user is editing.
@@ -90,10 +97,17 @@ const tiptapEditor = (config = {}) => {
                 // TipTap v3 the second arg is an options object (a bare `false`
                 // would be ignored and emitUpdate would default back to true).
                 editor.commands.setContent(
-                    config.outputFormat === 'json' ? safeParse(val) : (val || ''),
+                    toContent(val, config.outputFormat),
                     { emitUpdate: false },
                 )
             })
+        },
+
+        /** Push a value to Livewire through the hidden input carrying wire:model. */
+        syncValue(value) {
+            lastEmitted = value
+            this.$refs.hiddenInput.value = value
+            this.$refs.hiddenInput.dispatchEvent(new Event('input', { bubbles: true }))
         },
 
         destroy() {
@@ -127,7 +141,7 @@ const tiptapEditor = (config = {}) => {
 
         insertLink() {
             const prev = editor?.getAttributes('link').href ?? ''
-            const url = prompt('URL', prev || 'https://')
+            const url = prompt(config.prompts?.linkUrl ?? 'Link URL', prev || 'https://')
             if (url === null) return
             if (url === '') {
                 editor?.chain().focus().unsetLink().run()
@@ -140,7 +154,7 @@ const tiptapEditor = (config = {}) => {
         },
 
         insertImage() {
-            const url = prompt('Image URL')
+            const url = prompt(config.prompts?.imageUrl ?? 'Image URL')
             if (url) editor?.chain().focus().setImage({ src: url }).run()
         },
 
@@ -201,9 +215,24 @@ function buildTiptapExtensions(config) {
     return extensions
 }
 
-function safeParse(value) {
+/** Nothing to show: no value at all, or an empty JSON document string. */
+function isBlank(value) {
+    return value === null || value === undefined || value === '' || value === '{}'
+}
+
+/**
+ * Turn a stored value into something Editor/setContent accepts.
+ *
+ * Under outputJson() the value is normally a JSON document string — but a
+ * ->default() is written as markup ('<p>Draft</p>'), so anything that does not
+ * parse as JSON is handed to TipTap as HTML and parsed into a document instead
+ * of being dropped for an empty editor.
+ */
+function toContent(value, outputFormat) {
+    if (outputFormat !== 'json') return value || ''
     if (!value) return {}
-    try { return JSON.parse(value) } catch { return {} }
+
+    try { return JSON.parse(value) } catch { return value }
 }
 
 // ─── Self-registration ──────────────────────────────────────────

@@ -329,11 +329,23 @@ number. Declare the column with
 over directly:
 
 ```php
-TextColumn::make('reference')->searchable()->searchAs('code');
+$table
+    ->searchable()
+    ->search(fn (SearchConfig $s) => $s->tokenize()->ranges())
+    ->columns([
+        TextColumn::make('reference')->searchable()->searchAs('code'),
+    ]);
 
 // User types:  8866 01..08
 // SQL:         reference BETWEEN '8866 01' AND '8866 08'
 ```
+
+Both halves are required: `searchAs('code')` says what the column holds,
+`ranges()` is what lets a range be typed at all, and `tokenize()` is what splits
+the series from the sequence. A declaration the search box cannot ask for is
+refused when the table renders — with `ranges()` off, `8866 01..08` would
+otherwise be looked for as literal text and the table would come back empty with
+nothing on screen to explain it.
 
 The space inside the code is also what splits the term, so `8866 01..08`
 arrives as the word `8866` and the range `01..08`. The range carries the word
@@ -348,9 +360,11 @@ Two rules keep it honest:
 - **The number must be stored padded, and typed the way it is stored.**
   Comparing as text is only correct while the width is constant (`01 … 08`
   sorts alphabetically in the same order it sorts numerically; `9 … 10` does
-  not). Typing `1..8` against stored `01 … 08` finds nothing. A range typed
-  across a width boundary is completed for you — `8866 50..100` is read as
-  `050..100`, since a hundredth member can only exist in a three-digit series.
+  not). A range is compared at the width it was typed, so `1..8` against stored
+  `01 … 08` is `BETWEEN '8866 1' AND '8866 8'` and matches by text — it misses
+  the whole padded series and reaches `8866 12` instead. A range typed across a
+  width boundary is completed for you — `8866 50..100` is read as `050..100`,
+  since a hundredth member can only exist in a three-digit series.
 - **The series is the one word before the range.** `faktura 8866 01..08` ranges
   inside `8866` and requires `faktura` separately; a code containing two spaces
   is out of reach.
@@ -530,6 +544,9 @@ be combined on the same table:
 
 // Collapse the mobile card's row actions into one dropdown group (from N actions up)
 ->collapseActionsOnMobile(bool $collapse = true, int $threshold = 3)
+
+// The same for the toolbar's header actions, below the table's mobileBreakpoint()
+->collapseHeaderActionsOnMobile(bool $collapse = true, int $threshold = 2)
 ```
 
 ### Empty State

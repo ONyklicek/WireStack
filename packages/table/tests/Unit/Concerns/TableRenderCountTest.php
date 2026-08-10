@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Livewire\Component;
 use Livewire\Livewire;
+use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Columns\TextInputColumn;
 use NyonCode\WireTable\Concerns\WithTable;
@@ -36,6 +37,18 @@ class RcRow extends Model
     protected $table = 'rc_rows';
 
     protected $guarded = [];
+
+    public function kids()
+    {
+        return $this->hasMany(RcKid::class, 'row_id');
+    }
+}
+
+class RcKid extends Model
+{
+    protected $table = 'rc_kids';
+
+    protected $guarded = [];
 }
 
 class RcComponent extends Component
@@ -46,10 +59,36 @@ class RcComponent extends Component
 
     public bool $copyable = false;
 
-    public function mount(int $cols = 2, bool $copyable = false): void
-    {
+    public bool $editable = false;
+
+    public bool $selectable = false;
+
+    public bool $contextMenu = false;
+
+    public bool $subRows = false;
+
+    public bool $grouped = false;
+
+    public int $actions = 0;
+
+    public function mount(
+        int $cols = 2,
+        bool $copyable = false,
+        bool $editable = false,
+        bool $selectable = false,
+        bool $contextMenu = false,
+        bool $subRows = false,
+        bool $grouped = false,
+        int $actions = 0,
+    ): void {
         $this->cols = $cols;
         $this->copyable = $copyable;
+        $this->editable = $editable;
+        $this->selectable = $selectable;
+        $this->contextMenu = $contextMenu;
+        $this->subRows = $subRows;
+        $this->grouped = $grouped;
+        $this->actions = $actions;
     }
 
     public function table(Table $table): Table
@@ -57,6 +96,15 @@ class RcComponent extends Component
         $columns = [];
 
         for ($i = 0; $i < $this->cols; $i++) {
+            // An inline-edit column is the Rule 2 boundary: its per-record variation
+            // is structural (input value, wire:key, per-record Alpine commit config),
+            // so it renders a view per cell and is the fuse's negative control.
+            if ($this->editable) {
+                $columns[] = TextInputColumn::make('name');
+
+                continue;
+            }
+
             // displayUsing keeps the cell off any DB attribute, so a plain cell is
             // exactly one view render (tables.columns.text) with no icon/url/copy.
             $column = TextColumn::make('c'.$i)->displayUsing(fn () => 'v');
@@ -68,9 +116,31 @@ class RcComponent extends Component
             $columns[] = $column;
         }
 
+        if ($this->contextMenu) {
+            $table->gestures()->rowContextMenu([Action::make('edit')->label('Edit')]);
+        }
+
+        if ($this->subRows) {
+            $table->subRows('kids')->subRowColumns([TextColumn::make('label')]);
+        }
+
+        // `name` is unique per row, so this is one group per row — the worst case, and
+        // the shape a table grouped by a timestamp actually has.
+        if ($this->grouped) {
+            $table->groupBy('name');
+        }
+
+        if ($this->actions > 0) {
+            $table->actions(array_map(
+                fn (int $i) => Action::make('a'.$i)->label('A'.$i),
+                range(1, $this->actions),
+            ));
+        }
+
         return $table
             ->model(RcRow::class)
             ->paginated(false)
+            ->selectable($this->selectable)
             ->columns($columns);
     }
 
@@ -131,19 +201,43 @@ function rcRenderCount(Closure $render): int
 function rcSeed(int $rows): void
 {
     $now = now();
+    $first = (int) (RcRow::max('id') ?? 0);
 
     RcRow::insert(array_map(fn (int $i) => [
         'name' => 'row-'.$i,
         'created_at' => $now,
         'updated_at' => $now,
     ], range(1, $rows)));
+
+    // One child each, so every row renders the expander's toggle shape rather than
+    // the empty one — the shape that used to cost an @include per row.
+    RcKid::insert(array_map(fn (int $i) => [
+        'row_id' => $first + $i,
+        'label' => 'k',
+        'created_at' => $now,
+        'updated_at' => $now,
+    ], range(1, $rows)));
 }
 
-function rcRender(int $cols = 2, bool $copyable = false): Closure
-{
+function rcRender(
+    int $cols = 2,
+    bool $copyable = false,
+    bool $editable = false,
+    bool $selectable = false,
+    bool $contextMenu = false,
+    bool $subRows = false,
+    bool $grouped = false,
+    int $actions = 0,
+): Closure {
     return fn () => Livewire::test(RcComponent::class, [
         'cols' => $cols,
         'copyable' => $copyable,
+        'editable' => $editable,
+        'selectable' => $selectable,
+        'contextMenu' => $contextMenu,
+        'subRows' => $subRows,
+        'grouped' => $grouped,
+        'actions' => $actions,
     ])->html();
 }
 
@@ -160,10 +254,18 @@ beforeEach(function () {
         $table->string('name');
         $table->timestamps();
     });
+
+    Schema::create('rc_kids', function (Blueprint $table) {
+        $table->id();
+        $table->unsignedBigInteger('row_id');
+        $table->string('label');
+        $table->timestamps();
+    });
 });
 
 afterEach(function () {
     Schema::dropIfExists('rc_rows');
+    Schema::dropIfExists('rc_kids');
 });
 
 // ─── The fuse ────────────────────────────────────────────────────────────────
@@ -196,19 +298,144 @@ it('makes column count a one-time skeleton cost, not O(rows × cols) (§7)', fun
 });
 
 it('still catches per-row renders in non-skeletonable cells (the fuse lives)', function () {
-    // A copyable cell is NOT skeletonable (per-record copy value) → it falls back to
-    // the full per-cell render. So its per-row slope is > 0 while the plain cell's is
-    // 0 — the fuse still trips on any per-row view render, which is its whole job.
+    // The fuse is only worth anything if it can still trip, so it needs a cell that
+    // genuinely renders per row. That is the inline-edit column, and deliberately so:
+    // its per-record variation is STRUCTURAL (input value, wire:key, the per-record
+    // Alpine commit config), which a value-splice cannot express — the Rule 2
+    // boundary documented in render-engine-htmlable-first.md §7.
+    //
+    // It used to be the copyable column. That stopped working as a control when the
+    // copy value became a slot, which is the point of the assertion below it.
     rcSeed(4);
-    $plainSmall = rcRenderCount(rcRender(2, copyable: false));
-    $copySmall = rcRenderCount(rcRender(2, copyable: true));
+    $plainSmall = rcRenderCount(rcRender(2, editable: false));
+    $editSmall = rcRenderCount(rcRender(2, editable: true));
 
     rcSeed(8); // 4 → 12 rows
-    $plainLarge = rcRenderCount(rcRender(2, copyable: false));
-    $copyLarge = rcRenderCount(rcRender(2, copyable: true));
+    $plainLarge = rcRenderCount(rcRender(2, editable: false));
+    $editLarge = rcRenderCount(rcRender(2, editable: true));
 
     expect(($plainLarge - $plainSmall) / 8)->toBe(0)              // skeletonised → 0/row
-        ->and(($copyLarge - $copySmall) / 8)->toBeGreaterThan(0); // fallback → per-row
+        ->and(($editLarge - $editSmall) / 8)->toBeGreaterThan(0); // per-cell render
+});
+
+it('adds zero view renders per row for a copyable cell too (§7 multi-slot)', function () {
+    // A copyable cell carried a per-record copy value, so it fell back to the full
+    // per-cell render and cost a measured 33× a splice. The copy value is a slot now,
+    // so its per-row slope is the plain cell's: zero.
+    rcSeed(4);
+
+    // Warm-up: core's copy-button partial compiles into its skeleton on first use,
+    // and whichever measurement ran first would otherwise carry that one-off and
+    // read as a negative slope.
+    rcRender(2, copyable: true)();
+
+    $small = rcRenderCount(rcRender(2, copyable: true));
+
+    rcSeed(8); // 4 → 12 rows
+    $large = rcRenderCount(rcRender(2, copyable: true));
+
+    expect($large - $small)->toBe(0);
+});
+
+it('renders the selection cell partial once per table, never once per row', function () {
+    // The selection cell moved from inline markup in the row loop to its own partial,
+    // `tables.partials.selection-cell` — which means it now costs a view render where
+    // it cost none. That trade is only sound if the render is O(1): the Table compiles
+    // the partial into a Skeleton once and the rows splice the record key into it.
+    //
+    // Measured as a delta between selectable and plain at two row counts, so the fixed
+    // chrome and the one-off partial render both drop out and what is left is the
+    // per-row slope. Rendering the partial per row instead would make this grow.
+    rcSeed(4);
+    $selectableSmall = rcRenderCount(rcRender(2, selectable: true));
+    $plainSmall = rcRenderCount(rcRender(2));
+
+    rcSeed(8); // 4 → 12 rows
+    $selectableLarge = rcRenderCount(rcRender(2, selectable: true));
+    $plainLarge = rcRenderCount(rcRender(2));
+
+    expect($selectableLarge - $selectableSmall)->toBe($plainLarge - $plainSmall)
+        ->and($selectableLarge - $selectableSmall)->toBe(0);
+});
+
+it('renders the context-menu panel partial once per table, never once per row', function () {
+    // Same trade as the selection cell: the panel moved into its own partial, so it
+    // now costs a view render where inline markup cost none. That is only sound if the
+    // render is O(1) — the Table compiles the partial into a Skeleton once and each row
+    // splices its key and its (genuinely per-record) items into it.
+    //
+    // The items themselves still render per row, and must: an action can be hidden for
+    // one record and visible for the next. So this compares the SLOPE against a table
+    // whose menu is switched off, which nets out everything but the panel scaffolding.
+    rcSeed(4);
+    $menuSmall = rcRenderCount(rcRender(2, contextMenu: true));
+    $plainSmall = rcRenderCount(rcRender(2));
+
+    rcSeed(8); // 4 → 12 rows
+    $menuLarge = rcRenderCount(rcRender(2, contextMenu: true));
+    $plainLarge = rcRenderCount(rcRender(2));
+
+    $panelSlope = ($menuLarge - $menuSmall) - ($plainLarge - $plainSmall);
+
+    // The items are one dropdown-item render per row; the scaffolding around them is
+    // zero. Putting the panel back in the row loop would make this 2 per row.
+    expect($panelSlope / 8)->toEqual(1)
+        ->and($plainLarge - $plainSmall)->toBe(0);
+});
+
+it('renders the sub-row expander cell once per shape, never once per row', function () {
+    // The expander cell was an @include in the row loop — the N×View shape this fuse
+    // exists to catch. It is now three compiled shapes (no toggle, collapsed, expanded)
+    // and every row splices its key into one of them, so growing the row count adds no
+    // renders at all.
+    rcSeed(4);
+    $subSmall = rcRenderCount(rcRender(2, subRows: true));
+    $plainSmall = rcRenderCount(rcRender(2));
+
+    rcSeed(8); // 4 → 12 rows
+    $subLarge = rcRenderCount(rcRender(2, subRows: true));
+    $plainLarge = rcRenderCount(rcRender(2));
+
+    expect($subLarge - $subSmall)->toBe($plainLarge - $plainSmall)
+        ->and($subLarge - $subSmall)->toBe(0);
+});
+
+it('renders the group header once for the table, never once per group', function () {
+    // Group count is unbounded: grouped by a status there are three headers, grouped by
+    // a date there is one per row. The header is a one-slot skeleton now, so its render
+    // cost is the same either way — measured here at its worst, one group per row.
+    rcSeed(4);
+    $groupedSmall = rcRenderCount(rcRender(2, grouped: true));
+    $plainSmall = rcRenderCount(rcRender(2));
+
+    rcSeed(8); // 4 → 12 rows, and 4 → 12 groups
+    $groupedLarge = rcRenderCount(rcRender(2, grouped: true));
+    $plainLarge = rcRenderCount(rcRender(2));
+
+    expect($groupedLarge - $groupedSmall)->toBe($plainLarge - $plainSmall)
+        ->and($groupedLarge - $groupedSmall)->toBe(0);
+});
+
+it('adds zero view renders per row for an action button', function () {
+    // The action column was the last N×View in the engine: a button was two renders
+    // (the button view and the content partial it includes) for every action on every
+    // row. Action::render() compiles one skeleton per SHAPE now and splices the click
+    // expression, so a table with actions has the same per-row slope as one without.
+    rcSeed(4);
+
+    // Warm-up: the canonical spinner partial resolves once per request, and whichever
+    // measurement ran first would otherwise carry it and read as a negative slope.
+    rcRender(2, actions: 3)();
+
+    $withSmall = rcRenderCount(rcRender(2, actions: 3));
+    $plainSmall = rcRenderCount(rcRender(2));
+
+    rcSeed(8); // 4 → 12 rows
+    $withLarge = rcRenderCount(rcRender(2, actions: 3));
+    $plainLarge = rcRenderCount(rcRender(2));
+
+    expect($withLarge - $withSmall)->toBe($plainLarge - $plainSmall)
+        ->and($withLarge - $withSmall)->toBe(0);
 });
 
 // The fill handle is one element per table, positioned over the active cell by

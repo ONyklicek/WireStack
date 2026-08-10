@@ -9,6 +9,40 @@ use NyonCode\WireForms\Tests\TestCase as FormsTestCase;
 use NyonCode\WireSortable\Tests\TestCase as SortableTestCase;
 use NyonCode\WireTable\Tests\TestCase as TableTestCase;
 
+/*
+ * One throwaway `public/` for the whole run.
+ *
+ * PublishedAssets mirrors each package's `dist/` into `public_path('vendor/…')` the
+ * first time a bundle resolves a URL, so tests write real files — and neither the
+ * testbench skeleton inside `vendor/` nor the repo should collect them. One shared
+ * directory rather than one per test: the mirror then runs once and every later test
+ * finds it current, which is also what the production path does.
+ */
+$wirePublicPath = sys_get_temp_dir().'/wire-tests-public-'.getmypid();
+
+register_shutdown_function(static function () use ($wirePublicPath): void {
+    if (! is_dir($wirePublicPath)) {
+        return;
+    }
+
+    $entries = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($wirePublicPath, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::CHILD_FIRST,
+    );
+
+    foreach ($entries as $entry) {
+        $entry->isDir() ? @rmdir($entry->getPathname()) : @unlink($entry->getPathname());
+    }
+
+    @rmdir($wirePublicPath);
+});
+
+uses()->beforeEach(function () use ($wirePublicPath): void {
+    if (isset($this->app)) {
+        $this->app->usePublicPath($wirePublicPath);
+    }
+})->in(__DIR__.'/Integration', __DIR__.'/../packages');
+
 uses(TestCase::class)->in(__DIR__.'/Integration');
 
 uses(SortableTestCase::class)->in(

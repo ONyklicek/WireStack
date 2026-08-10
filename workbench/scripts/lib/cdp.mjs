@@ -34,7 +34,16 @@ export async function openPage({ url, shotPrefix, width = 1200, height = 1200, m
   const userDataDir = join(tmpdir(), `wire-${shotPrefix}-${Date.now()}`);
   const chrome = spawn(chromeBin, [
     '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-    '--hide-scrollbars', `--remote-debugging-port=${devtoolsPort}`,
+    '--hide-scrollbars',
+    // Headless Chrome backgrounds a window it never shows and throttles the renderer.
+    // Without these, requestAnimationFrame barely runs: an Alpine enter/leave
+    // transition never finishes, so a modal that has already been told to close sits
+    // there with `show: false` and `display: block` and the driver reports a bug that
+    // does not exist. Waking the JS thread (a CDP evaluate, i.e. polling) does NOT
+    // cover this — rAF needs the flags.
+    '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows',
+    '--disable-renderer-backgrounding',
+    `--remote-debugging-port=${devtoolsPort}`,
     `--user-data-dir=${userDataDir}`, 'about:blank',
   ], { stdio: 'ignore' });
 

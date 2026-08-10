@@ -107,7 +107,7 @@ test('a rendered page carries the chart controller in its document', function ()
     $this->get('/chart-page')
         ->assertOk()
         ->assertSee('x-data="wireChart(', false)
-        ->assertSee('/wire-core/assets/chart.js?id=', false);
+        ->assertSee('/vendor/wire-core/wire-core-chart.js?id=', false);
 });
 
 test('the source registers unconditionally so the bundle survives a wire:navigate', function () {

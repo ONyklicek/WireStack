@@ -1,34 +1,27 @@
-{{-- Copyable button partial --}}
+{{-- Copy affordance around an already-rendered cell. --}}
 {{-- Variables: $content, $copyValue, $copyMessage --}}
-<span class="inline-flex items-center gap-1.5 group" x-data="{ copied: false }">
-    {!! $content !!}
-    <button
-        type="button"
-        x-on:click="
-            navigator.clipboard.writeText(@js((string) $copyValue));
-            copied = true;
-            setTimeout(() => copied = false, 2000);
-        "
-        data-testid="cell-copy"
-        aria-label="{{ $copyMessage ?? __('wire-table::messages.copy') }}"
-        class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-        title="{{ __('wire-table::messages.copy') }}"
-    >
-        <template x-if="!copied">
-            {!! icon('clipboard-document', 'w-4 h-4', 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300') !!}
-        </template>
-        <template x-if="copied">
-            {!! icon('check', 'w-4 h-4', 'text-emerald-500') !!}
-        </template>
-    </button>
-    <span
-        x-show="copied"
-        x-transition:enter="transition ease-out duration-200"
-        x-transition:enter-start="opacity-0 translate-x-1"
-        x-transition:enter-end="opacity-100 translate-x-0"
-        x-transition:leave="transition ease-in duration-150"
-        x-transition:leave-start="opacity-100"
-        x-transition:leave-end="opacity-0"
-        class="text-xs text-emerald-600 dark:text-emerald-400 font-medium"
-    >{{ $copyMessage }}</span>
-</span>
+@php
+    /** @var string $content already-rendered cell markup, spliced in verbatim */
+    /** @var mixed $copyValue the value the button puts on the clipboard */
+    /** @var string|null $copyMessage what to announce afterwards */
+
+    // The button itself is core's — the same affordance an infolist entry uses, so
+    // it has one owner ({@see NyonCode\WireCore\Foundation\View\CopyButton}) rather
+    // than a copy per package. It is compiled once per shape there and spliced, so
+    // this stays what it was: no view render per cell.
+    //
+    // The table still passes its own strings. `wire-table::messages.copy` is what a
+    // consumer has already translated and what this cell has always announced;
+    // reaching for core's key instead would change the page to save a parameter.
+    $out = '<span class="inline-flex items-center gap-1.5 group">'
+        .$content
+        .app(\NyonCode\WireCore\Foundation\View\CopyButton::class)->render(
+            value: (string) $copyValue,
+            message: (string) $copyMessage,
+            label: $copyMessage ?? __('wire-table::messages.copy'),
+            title: __('wire-table::messages.copy'),
+            testId: 'cell-copy',
+        )
+        .'</span>';
+@endphp
+{!! $out !!}

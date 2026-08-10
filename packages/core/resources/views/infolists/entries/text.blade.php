@@ -39,30 +39,31 @@
                 {{ $field->getFormattedState() }}
             </span>
         @else
+            {{-- The copy affordance is the canonical one: a plain button that the
+                 document-wide listener in the `copy` bundle answers, not an Alpine
+                 component with its own `copied` flag and timeout per entry. Same
+                 markup a table's copyable cell uses — see Foundation\View\CopyButton. --}}
             <span
                     @class([
-                        'inline-flex items-center gap-1',
+                        'inline-flex items-center gap-1 group',
                         $field->isProse() ? 'prose dark:prose-invert max-w-none' : $textColor,
-                        'cursor-pointer hover:opacity-70' => $field->isCopyable(),
                     ])
-                    @if($field->isCopyable())
-                        x-data="{ copied: false }"
-                    @click="navigator.clipboard.writeText(@js($field->getFormattedState())); copied = true; setTimeout(() => copied = false, 1500)"
-                    role="button"
-                    title="{{ __('Copy') }}"
-                @endif
             >
                 @if($field->getIcon())
                     {!! icon($field->getIcon(), 'w-4 h-4', 'w-4 h-4 text-gray-400') !!}
                 @endif
                 {{ $field->getFormattedState() }}
                 @if($field->isCopyable())
-                    {!! icon('clipboard', 'w-4 h-4', 'w-3.5 h-3.5 text-gray-400', '', ['x-show' => '!copied']) !!}
-                    {!! icon('check', 'w-4 h-4', 'w-3.5 h-3.5 text-emerald-500', '', ['x-show' => 'copied', 'x-cloak' => '']) !!}
+                    {!! app(\NyonCode\WireCore\Foundation\View\CopyButton::class)->render(
+                        value: (string) $field->getFormattedState(),
+                        message: __('wire-core::messages.copied'),
+                        testId: 'entry-copy',
+                    ) !!}
                 @endif
             </span>
         @endif
     </div>
 
+    @if($field->isCopyable())@include('wire-core::partials.copy-assets')@endif
     @if($field->hasActions())@include('wire-core::infolists.entry-actions')@endif
 </div>

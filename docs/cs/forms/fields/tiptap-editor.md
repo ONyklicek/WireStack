@@ -22,12 +22,16 @@ zapnutí tabulek nikdy neposílá druhou kopii jádra editoru. Script tagy
 `@assets`; registrují Alpine komponentu `tiptapEditor`, na kterou pohled spoléhá
 (Alpine se dodává s Livewire).
 
-> **Publikování assetu (volitelné).** Pokud dáváte přednost servírování souborů přes
-> vlastní asset pipeline/CDN, publikujte je pomocí:
+> **Publikování assetu (volitelné).** Pokud má soubory servírovat váš webserver
+> místo routy balíčku, publikujte je pomocí:
 > ```bash
-> php artisan vendor:publish --tag=wire-forms::assets
+> php artisan vendor:publish --tag=laravel-assets --force
 > ```
-> To zkopíruje bundly do `public/vendor/wire-forms/`.
+> To zkopíruje bundly do `public/vendor/wire-forms/` — celého stacku, nejen tohoto
+> balíčku — a editor od té chvíle emituje tyhle cesty včetně cache-busteru. Publish
+> zrcadlí `dist/` doslova, takže si entry pointy dál resolvují sdílený chunk relativně
+> vůči `vendor/wire-forms/tiptap/`. Viz
+> [Začínáme → JavaScriptové assety](../../getting-started.md#javascriptove-assety).
 
 > **Přispěvatelé.** Bundly se generují z
 > `packages/forms/resources/js/tiptap-editor.js` a `tiptap-editor-addons.js` a
@@ -44,6 +48,34 @@ zapnutí tabulek nikdy neposílá druhou kopii jádra editoru. Script tagy
 ```php
 TiptapEditor::make('content')
 ```
+
+## Výchozí obsah
+
+Editor se otevře nad hodnotou z `->default()` — kanonického výchozího nastavení,
+které má každá komponenta; žádná metoda navíc jen pro editor. Je to **markup, ne
+holý text**, takže šablona přichází předformátovaná:
+
+```php
+TiptapEditor::make('minutes')
+    ->default('<h2>Zápis z porady</h2><p>Nějaký <strong>text</strong>.</p><ul><li>První bod</li></ul>')
+```
+
+Jak se to vyhodnotí, v tomto pořadí:
+
+1. **Runtime formuláře hodnotu naseeduje.** `fill()` (a stejně tak výchozí stav
+   modalové akce) zapíše `->default()` do state bagu pro každý klíč, který volající
+   nedodal, takže editor se prostě otevře nad hodnotou, která už tam je.
+2. **Editor ji naseeduje, když to hostitel neudělal** — `null` sloupec, ručně
+   navázaná property — výchozí obsah dosadí vždy, když je navázaná hodnota
+   prázdná, a rozparsovaný dokument pošle zpět do Livewire, takže uložení
+   formuláře, kterého se uživatel ani nedotkl, uloží šablonu, a ne nic.
+3. **Vyprázdněný editor není prázdný.** Smazání obsahu uloží `<p></p>`, takže
+   znovuotevření dokumentu, který uživatel záměrně vyčistil, výchozí obsah
+   *nevrátí*. U editačního formuláře, kde je sloupec skutečně `null`, přidejte
+   `->defaultOnNull()`, aby default doplnil hodnotu i na straně serveru.
+
+Při `->outputJson()` může být výchozí hodnotou TipTap JSON dokument jako řetězec,
+nebo totéž HTML — HTML se tak jako tak rozparsuje na dokument a uloží jako JSON.
 
 ## Vlastní toolbar
 
@@ -122,6 +154,32 @@ TiptapEditor::make('content')
     ->disabled(fn () => ! $this->canEdit)
 ```
 
+## Lokalizace
+
+Editor si nenese vlastní angličtinu. Tooltipy toolbaru, popisky nadpisů i
+prohlížečové prompty, které otevírá tlačítko odkazu a obrázku, se všechny
+překládají z `wire-forms::fields.editor.*`, takže pole respektuje
+`app()->getLocale()`. Angličtina (`en`) a čeština (`cs`) jsou součástí balíčku —
+česká aplikace zobrazí *Tučné*, *Odrážkový seznam*, *Nadpis 2* a prompt
+*URL odkazu*.
+
+Titulky promptů se vyhodnocují v PHP a předávají se do Alpine konfigurace
+editoru — proto se změna jazyka propíše i do řetězců, které žijí uvnitř JS bundlu.
+
+[RichEditor](rich-editor.md#lokalizace) a
+[MarkdownEditor](markdown-editor.md#lokalizace) popisují své toolbary z týchž
+klíčů, takže všechny tři editory zní v každém jazyce stejně.
+
+Formulaci změníte (nebo přidáte další jazyk) publikováním překladů a úpravou
+`lang/vendor/wire-forms/{locale}/fields.php`:
+
+```bash
+php artisan vendor:publish --tag=wire-forms::translations
+```
+
+Popisky tlačítek zůstávají `H1` / `H2` / `H3` ve všech jazycích — to jsou
+symboly, ne slova; překládá se tooltip.
+
 ## Dostupná toolbarová tlačítka
 
 | Klíč | Popis |
@@ -167,6 +225,8 @@ TiptapEditor::make('content')
 | `toolbarButtons(array)` | array | Přepsat seznam toolbarových tlačítek |
 | `disableToolbarButtons(array)` | array | Odstranit konkrétní tlačítka |
 | `disableAllToolbarButtons()` | — | Skrýt toolbar úplně |
+| `default(string\|Closure)` | string | Předformátovaný dokument, nad kterým se prázdný editor otevře |
+| `defaultOnNull()` | — | Nechat `default()` doplnit i existující `null` při fill |
 | `outputHtml()` | — | Uložit obsah jako HTML (výchozí) |
 | `outputJson()` | — | Uložit obsah jako TipTap JSON řetězec |
 | `withImages(bool)` | bool | Zapnout rozšíření obrázků + tlačítko |

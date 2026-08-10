@@ -59,7 +59,7 @@ async function connect(wsUrl) {
 
 const chrome = spawn(CHROME, [
   '--headless=new',
-  `--remote-debugging-port=${PORT}`,
+  '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', `--remote-debugging-port=${PORT}`,
   '--no-first-run',
   '--no-default-browser-check',
   '--disable-gpu',

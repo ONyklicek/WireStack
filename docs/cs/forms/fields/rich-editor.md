@@ -61,6 +61,22 @@ RichEditor::make('summary')
     ->maxLength(500)
 ```
 
+## Lokalizace
+
+Tooltipy toolbaru i prompt pro odkaz pocházejí ze sdílené slovní zásoby editorů
+`wire-forms::fields.editor.*` — ze stejných klíčů, jaké používají
+[TiptapEditor](tiptap-editor.md#lokalizace) a
+[MarkdownEditor](markdown-editor.md#lokalizace), takže všechny tři editory zní
+v každém jazyce stejně. Angličtina (`en`) a čeština (`cs`) jsou součástí balíčku;
+česká aplikace zobrazí *Tučné*, *Číslovaný seznam*, *Nadpis 2* a prompt *URL odkazu*.
+
+Formulaci změníte (nebo přidáte další jazyk) publikováním překladů a úpravou
+`lang/vendor/wire-forms/{locale}/fields.php`:
+
+```bash
+php artisan vendor:publish --tag=wire-forms::translations
+```
+
 ## Metody
 
 | Metoda | Typ | Popis |

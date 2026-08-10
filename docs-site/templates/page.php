@@ -64,7 +64,7 @@ $nextPage = ($activeIndex !== null && isset($flatNav[$activeIndex + 1])) ? $flat
     <script defer src="<?= htmlspecialchars(str_replace('site.js', 'scrolltrigger.min.js', $jsUrl), ENT_QUOTES) ?>"></script>
     <script defer src="<?= htmlspecialchars($jsUrl, ENT_QUOTES) ?>"></script>
 </head>
-<?php // Chrome strings the scripts render at runtime (copy buttons, search states). ?>
+<?php // Chrome strings the scripts render at runtime (copy buttons, search states).?>
 <body
     class="docs-body"
     data-copy-label="<?= htmlspecialchars($t('Copy'), ENT_QUOTES) ?>"

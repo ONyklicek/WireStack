@@ -56,12 +56,18 @@ Blade šablona používá computed vlastnost `$table`:
 3. V reorder režimu:
    - Na každém řádku se objeví drag handly
    - Stránkování je vypnuté (zobrazí se všechny záznamy)
-   - Řazení, hledání a filtry se obejdou
-   - Řádky jsou seřazené podle sort sloupce vzestupně
+   - Řazení podle sloupce se obejde -- řádky jsou seřazené podle sort sloupce vzestupně
+   - **Hledání a filtry zůstávají v platnosti**, seznam tedy jde stále zúžit
 4. Uživatel táhne řádky na požadovanou pozici
 5. Při konci tažení se nové pořadí uloží do databáze
 6. Uživatel klikne na **„Done reordering"** pro opuštění reorder režimu
-7. Tabulka se vrátí do normálního stavu s obnoveným stránkováním, řazením a filtry
+7. Tabulka se vrátí do normálního stavu s obnoveným stránkováním a řazením podle sloupce
+
+Řazení podle sloupce musí ustoupit, protože pořadí na obrazovce je přesně to
+pořadí, které se při puštění zapíše zpět: může být jedině pořadím sort sloupce.
+Hledání a filtry ustupovat nemusí, protože mění to, *které* řádky lze táhnout,
+nikoli význam tažení -- proč je to bezpečné, viz
+[Přeřazování zúženého seznamu](#prerazovani-zuzeneho-seznamu).
 
 ## Vlastní sloupec pořadí
 
@@ -94,7 +100,7 @@ return $table
     ->columns([...]);
 ```
 
-V tomto režimu je tabulka vždy v reorder režimu -- žádné toggle tlačítko se nevykreslí a `$isReordering` je při mountu nastaveno na `true`.
+V tomto režimu je tabulka vždy v reorder režimu -- žádné toggle tlačítko se nevykreslí a `$isReordering` je při mountu nastaveno na `true`. Cesta zpět k běžné tabulce neexistuje, a přesně proto reorder režim ponechává hledání a filtry funkční: vyhledávací pole by na vždy přeřaditelné tabulce jinak nikdy nic neudělalo.
 
 ## Podmíněné řazení
 
@@ -121,7 +127,37 @@ return $table
     ->columns([...]);
 ```
 
-> **Poznámka:** Se zapnutým stránkováním mohou uživatelé přeřazovat jen v rámci aktuální stránky.
+> **Poznámka:** Se zapnutým stránkováním mohou uživatelé přeřazovat jen v rámci aktuální stránky. Puštění přeuspořádá řádky té stránky mezi sebou a všechny ostatní stránky nechá tam, kde byly.
+
+## Přeřazování zúženého seznamu
+
+Uživatel v reorder režimu může stále hledat, filtrovat a -- s
+`paginatedWhileReordering()` -- stránkovat. Tažení se tedy obvykle odehrává nad
+*podmnožinou* tabulky a řádky, které tato podmnožina skryla, se pohnout nesmí.
+
+A nepohnou se, protože puštění řádky, které dostane, nepřečísluje. Posbírá
+hodnoty pořadí, které tyto řádky už mají, seřadí je vzestupně a rozdá je zpět
+v novém vizuálním pořadí:
+
+```php
+// Řádky s sort_order 10, 20, 30. Přetáhněte poslední úplně nahoru:
+//   před     po
+//   A  10    C  10
+//   B  20    A  20
+//   C  30    B  30
+```
+
+Tři důsledky, které stojí za to znát:
+
+- **Řádky mimo tažení se nikdy nepohnou.** Zůstávají na svých pozicích, takže
+  hledání `audit` může přeřadit čtyři odpovídající řádky, aniž by rozhodilo čtyři
+  sta, které skrylo.
+- **Mezery zůstávají zachované.** Sloupec pořadí `10, 20, 30` zůstane
+  `10, 20, 30`. Pokud necháváte mezery pro pozdější vkládání, přeřazení je
+  nezavře.
+- **Prázdný nebo konstantní sloupec pořadí nemá co rozdávat.** Tam, a jen tam, se
+  místo toho zapíšou pozice od klienta (`1..n`) -- což je pro sloupec, který
+  žádné pořadí nenesl, ta správná odpověď.
 
 ## Lifecycle hooky
 

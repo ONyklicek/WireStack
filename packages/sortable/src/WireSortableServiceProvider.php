@@ -11,8 +11,7 @@ use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
-use NyonCode\WireCore\Foundation\Assets\AssetManager;
-use NyonCode\WireCore\Foundation\Assets\Js;
+use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireTable\Table;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -39,11 +38,13 @@ class WireSortableServiceProvider extends PackageServiceProvider
             ->bootedPackage(function ($packager) {
                 $this->registerTableMacros();
                 $this->registerAssetRoutes();
-                $this->registerAssets();
             })
             ->hasConfig()
             ->hasViews()
-            ->hasAssets('dist')
+            ->hasAssets('dist', entries: [
+                Bundle::make('wire-sortable.js'),
+            ])
+            ->hasAssetFallback(Bundle::servedByRoute('wire-sortable'))
             ->hasTranslations()
             ->hasMigrations()
             ->hasAbout()
@@ -54,26 +55,6 @@ class WireSortableServiceProvider extends PackageServiceProvider
                     ->publishViews()
                     ->publishTranslations();
             });
-    }
-
-    /**
-     * Declare the drag controller to the canonical asset registry, so an app that
-     * puts one `@wireStackScripts` in its layout gets reordering on every page —
-     * including one reached by `wire:navigate`, where a bundle arriving with the
-     * new document can lose the race on the cached Back/Forward path.
-     *
-     * Registration is push-based from this provider: `wire-core` owns the registry
-     * but never learns that `wire-sortable` exists, which keeps the dependency
-     * graph pointing one way. The per-surface `@assets` partial stays as the
-     * fallback for apps that do not add the directive.
-     */
-    protected function registerAssets(): void
-    {
-        app(AssetManager::class)->register([
-            Js::make('sortable', self::ASSETS_PATH.'/wire-sortable.js')
-                ->navigateTrack()
-                ->navigateOnce(),
-        ], 'wire-sortable');
     }
 
     /**

@@ -14,6 +14,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
+use NyonCode\WireCore\Actions\BaseAction;
 use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Query\Search\SearchConfig;
@@ -24,7 +25,9 @@ use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Enums\Alignment;
 use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Foundation\Icons\Icon;
+use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\ValueObjects\ShortcutHint;
+use NyonCode\WireCore\Foundation\View\Skeleton;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireTable\Actions\EmptyStateActionClickResolver;
 use NyonCode\WireTable\Actions\RecordActionResolver;
@@ -94,6 +97,22 @@ class Table implements Htmlable
     protected bool $paginated = true;
 
     protected bool $selectable = false;
+
+    /** The selection cell's compiled markup — {@see getSelectionCellSkeleton()}. */
+    protected ?Skeleton $selectionCellSkeleton = null;
+
+    /** The context-menu panel's compiled markup — {@see getRowContextMenuSkeleton()}. */
+    protected ?Skeleton $rowContextMenuSkeleton = null;
+
+    /**
+     * The sub-row expander cell, one compiled shape per state.
+     *
+     * @var array<string, Skeleton>
+     */
+    protected array $subRowCellSkeletons = [];
+
+    /** The group header row's compiled markup — {@see getGroupHeaderRow()}. */
+    protected ?Skeleton $groupHeaderSkeleton = null;
 
     // Policy-based authorization
     protected bool $usePolicy = false;
@@ -175,6 +194,12 @@ class Table implements Htmlable
 
     /** Minimum number of row actions before the mobile card collapses them into a dropdown. */
     protected int $collapseActionsOnMobileThreshold = 3;
+
+    /** Collapse the toolbar's header actions into a single dropdown group on a phone. */
+    protected bool $collapseHeaderActionsOnMobile = false;
+
+    /** Minimum number of header actions before the toolbar collapses them into a dropdown. */
+    protected int $collapseHeaderActionsOnMobileThreshold = 2;
 
     // Lazy loading
     protected bool $lazy = false;
@@ -508,7 +533,12 @@ class Table implements Htmlable
 
         foreach ($this->actions as $action) {
             if ($action instanceof ActionGroup) {
-                $allActions = array_merge($allActions, $action->getActions());
+                // A group can also hold record-less actions (the toolbar folds
+                // its header actions into one); only row actions belong here.
+                $allActions = array_merge($allActions, array_filter(
+                    $action->getActions(),
+                    fn (BaseAction|ActionGroup $inner): bool => $inner instanceof Action,
+                ));
             } else {
                 $allActions[] = $action;
             }
@@ -768,6 +798,46 @@ class Table implements Htmlable
     public function isSelectable(): bool
     {
         return $this->selectable || ! empty($this->bulkActions);
+    }
+
+    /**
+     * The selection checkbox's tick, resolved once per request.
+     *
+     * Record-invariant chrome, so it goes through the canonical IconManager (which
+     * memoises the rendered SVG by name+size+class) rather than being inlined — the
+     * row echoes a string instead of re-entering the icon layer per row. Shared by
+     * the row's cell and the stacked card view's select-all.
+     */
+    public function getSelectionCheckIcon(): string
+    {
+        return app(IconManager::class)->render('check', 'h-4 w-4', 'absolute inset-0 text-white');
+    }
+
+    /**
+     * The selection cell, rendered once and spliced per row.
+     *
+     * `tables.partials.selection-cell` is still the one source of this markup and
+     * still the vendor:publish override point; what changed is that it is rendered
+     * ONCE per table instead of once per row, with a {@see Skeleton} slot standing in
+     * for the record key. The row loop then fills the key — the same "static once,
+     * dynamic per row" move the `<tr>` and the `<td>` chrome already make.
+     *
+     * Worth it because this cell was the most expensive thing left in the row:
+     * measured at 2 251 B and 10 whitespace text nodes per row, more than the entire
+     * rest of a three-column row. Memoised per table instance, which is also per
+     * render — Livewire rebuilds the Table on every request, so nothing goes stale.
+     */
+    public function getSelectionCellSkeleton(): Skeleton
+    {
+        return $this->selectionCellSkeleton ??= Skeleton::compile(
+            view('wire-table::tables.partials.selection-cell', [
+                'cellPadding' => $this->getCellPadding(),
+                'usesRangeSelection' => $this->usesRangeSelection(),
+                'checkIcon' => $this->getSelectionCheckIcon(),
+                'keyJs' => Skeleton::slot('keyJs'),
+            ])->render(),
+            'keyJs',
+        );
     }
 
     /**
@@ -1314,6 +1384,22 @@ class Table implements Htmlable
     }
 
     /**
+     * The body cell's padding utilities. One owner for the density map, so the row
+     * view and anything that renders a cell outside it (the selection cell) cannot
+     * drift apart.
+     */
+    public function getCellPadding(): string
+    {
+        return $this->compact ? 'px-4 py-2' : 'px-6 py-4';
+    }
+
+    /** The header cell's padding utilities — {@see getCellPadding()}. */
+    public function getHeaderPadding(): string
+    {
+        return $this->compact ? 'px-4 py-2' : 'px-6 py-3';
+    }
+
+    /**
      * Set bordered mode
      */
     public function bordered(bool $bordered = true): static
@@ -1489,7 +1575,9 @@ class Table implements Htmlable
         foreach ($this->getMobileRowActionsForDisplay() as $action) {
             if ($action instanceof ActionGroup) {
                 foreach ($action->getActions() as $inner) {
-                    if ($inner instanceof Action && $inner->isDivider()) {
+                    // Dividers are chrome, and a group's record-less members
+                    // belong to another surface than a row's actions.
+                    if (! $inner instanceof Action || $inner->isDivider()) {
                         continue;
                     }
 
@@ -1557,13 +1645,113 @@ class Table implements Htmlable
     }
 
     /**
-     * @param  array<int, Action|ActionGroup>  $actions
+     * @param  array<int, BaseAction|ActionGroup>  $actions
      */
     private function buildMobileActionGroup(array $actions): ActionGroup
     {
         return ActionGroup::make($actions)
             ->sheetOnMobile($this->usesSheetOnMobile())
             ->mobileBreakpoint($this->getMobileBreakpoint());
+    }
+
+    /**
+     * Collapse the toolbar's header actions into one dropdown group on a phone,
+     * so a narrow toolbar shows a single "⋮" trigger instead of several labelled
+     * buttons competing with the search field, the filters and the view menu.
+     *
+     * Unlike {@see collapseActionsOnMobile()} this needs no `stackedOnMobile()`:
+     * the toolbar is the same toolbar at every width, so the collapse is purely a
+     * width switch. **Desktop is untouched** — from the mobile breakpoint up the
+     * inline buttons render exactly as before; the breakpoint is the table's
+     * {@see mobileBreakpoint()} (`sm` by default, i.e. below 640px).
+     *
+     * The collapse only kicks in once the toolbar carries at least `$threshold`
+     * executable header actions (default 2 — one button alone is not a crowd, and
+     * the toolbar folds sooner than a card's row actions because it also holds the
+     * search field and the view menu). The threshold is clamped to at least 1.
+     */
+    public function collapseHeaderActionsOnMobile(bool $collapse = true, int $threshold = 2): static
+    {
+        $this->collapseHeaderActionsOnMobile = $collapse;
+        $this->collapseHeaderActionsOnMobileThreshold = max(1, $threshold);
+
+        return $this;
+    }
+
+    public function getCollapseHeaderActionsOnMobileThreshold(): int
+    {
+        return $this->collapseHeaderActionsOnMobileThreshold;
+    }
+
+    /**
+     * Whether the toolbar should collapse its header actions on a phone: the
+     * feature is enabled and at least the configured threshold of header actions
+     * would actually render. The count only includes actions the viewer may run,
+     * because those are the ones that reach the toolbar at all — a table whose
+     * per-viewer guards leave one action keeps that action as a plain button.
+     */
+    public function shouldCollapseHeaderActionsOnMobile(): bool
+    {
+        return $this->collapseHeaderActionsOnMobile
+            && count($this->executableHeaderActions()) >= $this->collapseHeaderActionsOnMobileThreshold;
+    }
+
+    /**
+     * The header actions that reach the toolbar at all: the ones the viewer may
+     * run. Shared by the collapse threshold and {@see getMobileHeaderActionGroup()}
+     * so the count matches what the dropdown would really contain — the inline
+     * buttons drop a guarded action the same way.
+     *
+     * @return array<int, BaseAction>
+     */
+    protected function executableHeaderActions(): array
+    {
+        return array_values(array_filter(
+            $this->headerActions,
+            fn (BaseAction $action): bool => $action->canExecute(),
+        ));
+    }
+
+    /**
+     * Canonical builder for the toolbar's collapsed header-action dropdown: the
+     * same {@see ActionGroup} the row actions collapse into, so a phone gets one
+     * dropdown vocabulary rather than two.
+     *
+     * Both halves sit in the document at every width — CSS decides which is shown
+     * — so the collapsed copy drops each action's `keyboardShortcut()`: a rendered
+     * menu row binds it as a *window* listener, and two of them would answer one
+     * keypress twice. Same reason the mobile row actions and the mobile empty
+     * state clone.
+     */
+    public function getMobileHeaderActionGroup(): ActionGroup
+    {
+        return $this->buildMobileActionGroup(array_map(
+            fn (BaseAction $action): BaseAction => (clone $action)->withoutKeyboardShortcut(),
+            $this->executableHeaderActions(),
+        ));
+    }
+
+    /**
+     * Responsive class for the toolbar's inline header actions: hidden below the
+     * mobile breakpoint (the dropdown stands in for them), a plain flex row from
+     * it up. Empty while the collapse is off, so the buttons render unwrapped.
+     */
+    public function getInlineHeaderActionsClass(): string
+    {
+        if (! $this->shouldCollapseHeaderActionsOnMobile()) {
+            return '';
+        }
+
+        return Breakpoint::resolve($this->getMobileBreakpoint())->flexFromClass();
+    }
+
+    /**
+     * Companion to {@see getInlineHeaderActionsClass()}: shows the collapsed
+     * dropdown only below the mobile breakpoint.
+     */
+    public function getMobileHeaderActionsVisibleClass(): string
+    {
+        return Breakpoint::resolve($this->getMobileBreakpoint())->hiddenAtClass();
     }
 
     /**
@@ -1974,6 +2162,115 @@ class Table implements Htmlable
         }
 
         return new HtmlString($html);
+    }
+
+    /**
+     * A group's header row, rendered once for the table and spliced per group.
+     *
+     * Only the label varies, so this is a one-slot skeleton. It matters because group
+     * count is not bounded by anything: grouped by a status there are three of these,
+     * grouped by a date there is one per row — and it used to be a view render and six
+     * DOM text nodes either way.
+     *
+     * The label is escaped here, at the one place that knows it is text content.
+     */
+    public function getGroupHeaderRow(Model $record, int $colSpan): string
+    {
+        $skeleton = $this->groupHeaderSkeleton ??= Skeleton::compile(
+            view('wire-table::tables.partials.group-header', [
+                'colSpan' => $colSpan,
+                'cellPadding' => $this->getCellPadding(),
+                'label' => Skeleton::slot('label'),
+            ])->render(),
+            'label',
+        );
+
+        return $skeleton->fill(['label' => e((string) $this->resolveGroupLabel($record))]);
+    }
+
+    /**
+     * The sub-row expander cell for one row, rendered once per shape and spliced.
+     *
+     * The cell has exactly three shapes — no toggle, toggle collapsed, toggle expanded
+     * — and every row is one of them, so `tables.partials.sub-row-cell` is rendered at
+     * most three times per table instead of once per row. Before this it was an
+     * `@include` inside the row loop, which is the N×View anti-pattern the render fuse
+     * exists to catch: 1 044 B, 8 whitespace text nodes and a view render per row.
+     *
+     * A record with no sub-rows still gets the cell, empty — drop it and the columns
+     * stop lining up.
+     *
+     * @param  string  $keyJs  the record key, already encoded for an Alpine expression
+     */
+    public function getSubRowCell(string $keyJs, bool $hasToggle, bool $isExpanded): string
+    {
+        $shape = ($hasToggle ? 't' : '-').($isExpanded ? 'e' : '-');
+
+        $skeleton = $this->subRowCellSkeletons[$shape] ??= Skeleton::compile(
+            view('wire-table::tables.partials.sub-row-cell', [
+                'cellPadding' => $this->getCellPadding(),
+                'borderClass' => $this->isBordered() ? 'border border-gray-200 dark:border-gray-700' : '',
+                'hasToggle' => $hasToggle,
+                'isExpanded' => $isExpanded,
+                'keyJs' => Skeleton::slot('keyJs'),
+            ])->render(),
+            'keyJs',
+        );
+
+        return $skeleton->fill(['keyJs' => $keyJs]);
+    }
+
+    /**
+     * The teleported context-menu panel, rendered once and spliced per row.
+     *
+     * The panel is pure scaffolding — position, colours, `role="menu"` — and it holds
+     * no per-row Alpine state, because one `wireRecordActions` controller on the
+     * `<tbody>` drives every row's menu by record key. So the whole thing is one shape
+     * with two holes: the key, and the item markup {@see getRowContextMenuHtml()}
+     * already renders per record.
+     *
+     * Rendering the scaffolding per row cost a measured 1 659 B and 14 whitespace text
+     * nodes per row for a one-item menu, most of it identical on every row.
+     *
+     * Memoised per table instance, which is per render — Livewire rebuilds the Table on
+     * every request, so nothing goes stale.
+     */
+    public function getRowContextMenuSkeleton(): Skeleton
+    {
+        return $this->rowContextMenuSkeleton ??= Skeleton::compile(
+            view('wire-table::tables.partials.record-context-menu', [
+                'key' => Skeleton::slot('key'),
+                'menu' => Skeleton::slot('menu'),
+            ])->render(),
+            'key',
+            'menu',
+        );
+    }
+
+    /**
+     * This record's context-menu panel, or an empty string when the row has no visible
+     * action.
+     *
+     * The caller still wraps the echo in an `@if`, and must: the morph markers that
+     * conditional emits are what let morphdom pair a row's children when the cell list
+     * changes under it (a column reorder). See the note at the call site.
+     */
+    public function getRowContextMenuPanel(Model $record): string
+    {
+        if (! $this->hasRowContextMenu()) {
+            return '';
+        }
+
+        $menu = trim($this->getRowContextMenuHtml($record)->toHtml());
+
+        if ($menu === '') {
+            return '';
+        }
+
+        return $this->getRowContextMenuSkeleton()->fill([
+            'key' => e((string) $record->{$this->getPrimaryKey()}),
+            'menu' => $menu,
+        ]);
     }
 
     // Record actions (row-level interaction: click, double-click, right-click, keys)

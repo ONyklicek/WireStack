@@ -29,7 +29,7 @@ await mkdir(shotDir, { recursive: true });
 const userDataDir = join(tmpdir(), `wire-tiptap-split-${Date.now()}`);
 const chrome = spawn(chromeBin, [
   '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-  '--hide-scrollbars', `--remote-debugging-port=${devtoolsPort}`,
+  '--hide-scrollbars', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', `--remote-debugging-port=${devtoolsPort}`,
   `--user-data-dir=${userDataDir}`, 'about:blank',
 ], { stdio: 'ignore' });
 
@@ -129,6 +129,29 @@ try {
   const tableInserted = await eval_(`!!document.querySelector('.ProseMirror table')`);
   check('insertTable() renders a <table> (addon extension is active)', tableInserted);
   await shot('03-table-inserted');
+
+  // ─────────────── ->default() document (client-side seed) ───────────────
+  // `intro` is not in the preview's state bag, so nothing seeded it server-side:
+  // the editor has to open on the default markup AND push it into Livewire, or an
+  // untouched form would save nothing.
+  await page('Page.navigate', { url: `${base}/field-tiptap-default` });
+  await sleep(4000);
+  const seededDoc = await eval_(`(() => {
+    const pm = document.querySelector('.ProseMirror');
+    return pm ? { html: pm.innerHTML, headings: pm.querySelectorAll('h2').length, items: pm.querySelectorAll('li').length } : null;
+  })()`);
+  check('editor opens on the ->default() document', !!seededDoc && /Nějaký/.test(seededDoc.html),
+    seededDoc ? seededDoc.html.slice(0, 80) : 'no editor');
+  check('the default keeps its formatting (h2 + list + <strong>)',
+    !!seededDoc && seededDoc.headings === 1 && seededDoc.items === 1 && /<strong>/.test(seededDoc.html));
+  const seededState = await eval_(`(() => {
+    const root = document.querySelector('[x-data^="tiptapEditor"]');
+    const wire = window.Livewire.find(root.closest('[wire\\\\:id]').getAttribute('wire:id'));
+    return wire.get('data.intro') ?? null;
+  })()`);
+  check('the seeded default is pushed into Livewire state', typeof seededState === 'string' && /Nějaký/.test(seededState),
+    String(seededState).slice(0, 80));
+  await shot('04-default-document');
 
   check('no console errors during the run', consoleErrors.length === 0,
     consoleErrors.slice(0, 3).join(' | '));

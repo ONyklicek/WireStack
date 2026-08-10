@@ -105,9 +105,12 @@ Zpracovat drag & drop řádků. Voláno Alpine.js po dokončení drag operace. A
 
 Každá položka: `['value' => string|int, 'order' => int]`
 
+`order` je nová pozice řádku na obrazovce, nikoli zapisovaná hodnota. Tažené řádky si ponechají sadu hodnot pořadí, které už měly, rozdanou v novém vizuálním pořadí -- tažení nad prohledanou, vyfiltrovanou nebo stránkovanou podmnožinou tedy nemůže pohnout řádky, které nezobrazuje; viz [Přeřazování zúženého seznamu](row-sorting.md#prerazovani-zuzeneho-seznamu). Pozice se zapíšou doslova jen tehdy, když je sloupec pořadí prázdný nebo konstantní a nemá co rozdávat.
+
 No-op, pokud:
 - Tabulka není reorderable
 - Tabulka není v reorder režimu (`$isReordering === false`)
+- Klíč řádku leží mimo základní dotaz tabulky (ze zápisu vypadne)
 
 #### `reorderColumns(array $columnOrder): void`
 
@@ -140,7 +143,7 @@ Vrací `'wire-sortable::tables.index'`, když je zapnuté řazení řádků nebo
 
 #### `interceptTableRecords(): LengthAwarePaginator|Paginator|CursorPaginator|Collection|null`
 
-V reorder režimu (bez `paginatedWhileReordering`): obejde hledání, filtry, řazení a stránkování. Vrátí všechny záznamy seřazené podle sort sloupce vzestupně.
+V reorder režimu (bez `paginatedWhileReordering`): obejde stránkování a řazení podle sloupce, ale hledání a filtry ponechá v platnosti. Vrátí všechny odpovídající záznamy seřazené podle sort sloupce vzestupně.
 
 Jinak: vrátí `null`, aby `WithTable` zpracoval načítání záznamů normálně.
 

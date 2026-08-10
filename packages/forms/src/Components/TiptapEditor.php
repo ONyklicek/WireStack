@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Components;
 
+use NyonCode\WireCore\Foundation\Concerns\HasDefault;
+
 /**
  * TipTap rich text editor with a fully configurable toolbar and extension system.
  *
@@ -218,6 +220,39 @@ class TiptapEditor extends Field
     }
 
     /**
+     * The canonical {@see HasDefault::default()} value as editor content.
+     *
+     * The default is pre-formatted markup, not plain text: `->default('<p>Draft
+     * <strong>notes</strong></p>')` opens the editor on that document. It is a
+     * string because that is what the field stores — HTML for `outputHtml()`, a
+     * TipTap JSON document string for `outputJson()`; an HTML default is parsed
+     * into a document by the editor either way. Anything non-string (an int, an
+     * enum, a closure returning null) is not editor content and yields ''.
+     */
+    public function getDefaultContent(): string
+    {
+        $default = $this->getDefault();
+
+        return is_string($default) ? $default : '';
+    }
+
+    /**
+     * Localised titles for the browser prompts the editor opens (link, image).
+     *
+     * Resolved here rather than in JS so they follow the app locale like every
+     * other string in the field — the bundle ships no vocabulary of its own.
+     *
+     * @return array<string, string>
+     */
+    protected function getPromptLabels(): array
+    {
+        return [
+            'linkUrl' => (string) trans('wire-forms::fields.editor.link_url'),
+            'imageUrl' => (string) trans('wire-forms::fields.editor.image_url'),
+        ];
+    }
+
+    /**
      * Whether this editor needs the opt-in extension addon chunk (tables, images,
      * highlight, text-align). When false — the default — the page loads only the
      * core editor entry + shared chunk and never downloads the addon.
@@ -238,6 +273,8 @@ class TiptapEditor extends Field
             'disabled' => $this->isDisabled(),
             'readOnly' => $this->isReadOnly(),
             'placeholder' => $this->getPlaceholder(),
+            'default' => $this->getDefaultContent(),
+            'prompts' => $this->getPromptLabels(),
             'maxLength' => $this->maxLength,
             'withImages' => $this->withImages,
             'withTables' => $this->withTables,

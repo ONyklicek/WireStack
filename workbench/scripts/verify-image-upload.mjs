@@ -33,6 +33,8 @@ const port = Number(process.env.CHROME_PORT ?? 9461);
 
 const chrome = spawn(chromeBin, [
   '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+  '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows',
+  '--disable-renderer-backgrounding',
   `--remote-debugging-port=${port}`, `--user-data-dir=${join(tmpdir(), `img-${Date.now()}`)}`, 'about:blank',
 ], { stdio: 'ignore' });
 

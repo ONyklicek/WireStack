@@ -134,6 +134,60 @@ Viz [Začínáme → JavaScriptové assety](getting-started.md#javascriptove-ass
 
 ---
 
+## JavaScriptové 404 a `wireX is not defined`
+
+**Příznak:** Tentýž `ReferenceError` jako v předchozí sekci, ale na *každé* stránce
+a bez ohledu na to, jak jste se na ni dostali — objeví se i po tvrdém reloadu.
+V network tabu jsou 404 na
+`/wire-core/assets/dropdown.js`, `/wire-table/assets/records.js` nebo sourozence
+pod `/wire-forms/…` či `/wire-sortable/…`.
+
+**Příčina:** Sešly se dvě věci. Balíčky si normálně bundly zkopírují do
+`public/vendor/<balíček>` a emitují *tyhle* cesty, takže PHP nic neřeší — URL
+`/wire-core/assets/…` ve vašem markupu znamená, že se kopie nepovedla a zaskakuje
+za ni routa balíčku. A váš webserver na tu routu odpovídá sám, místo aby ji předal
+PHP. Standardní nginx konfigurace Laravelu posílá cokoliv, co není na disku, do
+`index.php`, konfigurace s blokem pro statické assety už ne:
+
+```nginx
+location ~* \.(js|css)$ {
+    try_files $uri =404;      # routa není soubor na disku → 404, PHP to nikdy neuvidí
+}
+```
+
+Nic z toho není specifické pro tyhle balíčky: tentýž blok vrací 404 i na Livewire
+vlastní `/livewire/livewire.js`.
+
+**Řešení — zapisovatelné `public/`, nebo kopie při buildu.** Obvyklou příčinou je
+`public/`, do kterého webový uživatel nesmí zapisovat, nebo read-only kontejner.
+Buď zápis povolte, nebo kopii udělejte, dokud je filesystém ještě zapisovatelný:
+
+```bash
+php artisan vendor:publish --tag=laravel-assets --force
+```
+
+**Nebo zpřístupněte routu** tím, že necháte blok propadnout do front controlleru —
+správná odpověď tam, kde zapisovatelné `public/` opravdu není ve hře:
+
+```nginx
+location ~* \.(js|css)$ {
+    try_files $uri /index.php?$query_string;   // [tl! focus]
+}
+```
+
+Příbuzné varování, když kopie existují, ale po upgradu je nešlo obnovit:
+
+```text
+wireStack: the published copies of wire-core/dropdown are older than the bundles
+the packages ship, and are what this page just loaded.
+```
+
+Stránka funguje dál — starý bundle je lepší než žádný — ale stojí za tím tentýž
+problém se zápisem. Viz
+[Začínáme → JavaScriptové assety](getting-started.md#javascriptove-assety).
+
+---
+
 <a id="reordering-stops-working-or-my-own-code-loses-window-sortable"></a>
 ## Řazení přestalo fungovat, nebo můj kód přišel o `window.Sortable`
 

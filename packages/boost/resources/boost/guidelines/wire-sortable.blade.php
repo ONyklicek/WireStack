@@ -27,7 +27,7 @@ wire-sortable is installed.
 ### JavaScript assets
 
 `wireSortable` ships as a package bundle (`dist/wire-sortable.js`) with **SortableJS compiled in**,
-served by the `wire-sortable.asset` route and registered with core's `AssetManager` — so reordering
+declared as a toolkit asset entry with the `wire-sortable.asset` route behind it — so reordering
 needs no npm install, no `vendor:publish` and no CDN request, and works offline and under a strict CSP.
 `resources/views/partials/scripts.blade.php` is now only a thin `@@assets` wrapper (script tag + the
 `.wire-sortable-*` drag CSS); the Alpine component is not in the Blade any more.

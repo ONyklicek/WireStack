@@ -18,7 +18,7 @@ import { join } from 'node:path';
 const url = process.env.PREVIEW_URL ?? 'http://127.0.0.1:8085/previews/field-file-upload';
 const port = Number(process.env.CHROME_PORT ?? 9481);
 const chrome = spawn(process.env.CHROME_BIN ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  ['--headless=new','--disable-gpu','--no-first-run',`--remote-debugging-port=${port}`,`--user-data-dir=${join(tmpdir(),`cr-${Date.now()}`)}`,'about:blank'], { stdio:'ignore' });
+  ['--headless=new','--disable-gpu','--no-first-run','--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', `--remote-debugging-port=${port}`,`--user-data-dir=${join(tmpdir(),`cr-${Date.now()}`)}`,'about:blank'], { stdio:'ignore' });
 let cdp; const R=[]; const chk=(n,ok,d='')=>{R.push(ok);console.log(`${ok?'PASS':'FAIL'}  ${n}${d?` — ${d}`:''}`)};
 try {
   const wsUrl = await waitForDevtools(port); cdp = await connect(wsUrl);

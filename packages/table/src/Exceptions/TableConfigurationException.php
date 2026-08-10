@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Exceptions;
 
 use InvalidArgumentException;
+use NyonCode\WireCore\Core\Query\Search\SearchValueType;
 use NyonCode\WireCore\Foundation\Contracts\WireException;
 
 /**
@@ -45,6 +46,26 @@ final class TableConfigurationException extends InvalidArgumentException impleme
     {
         return new self(
             "Unknown search value type [{$type}]. Valid types: ".implode(', ', $valid).'.'
+        );
+    }
+
+    /**
+     * A declared search value type the table's search box can never ask for.
+     *
+     * The series of a structured code arrives as its own word — `8866 01..08`
+     * is the word `8866` and the range `01..08` — so a code column is only
+     * whole once the term is split as well, and the suggested line says so.
+     */
+    public static function searchValueTypeNeedsRanges(string $column, SearchValueType $type): self
+    {
+        $call = $type === SearchValueType::Code
+            ? '->search(fn (SearchConfig $s) => $s->tokenize()->ranges())'
+            : '->search(fn (SearchConfig $s) => $s->ranges())';
+
+        return new self(
+            "Column [{$column}] declares searchAs('{$type->value}'), but this table's search does not read ".
+            'ranges, so the comparison it allows can never be typed into the box — the term is matched as '.
+            "literal text and the table comes back empty. Add {$call} to the table, or drop the declaration."
         );
     }
 

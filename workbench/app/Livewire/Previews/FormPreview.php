@@ -93,6 +93,10 @@ class FormPreview extends Component
             'bio' => 'Owns product configuration, release notes, and customer rollouts.',
         ];
 
+        if ($variant === 'option-wizard') {
+            $this->data = ['category' => null];
+        }
+
         if ($variant === 'wizard-live') {
             $this->data = [
                 'name' => '',
@@ -119,6 +123,7 @@ class FormPreview extends Component
             'tabs' => $this->buildTabsForm($form),
             'wizard' => $this->buildWizardForm($form),
             'wizard-live' => $this->buildWizardLiveForm($form),
+            'option-wizard' => $this->buildOptionWizardForm($form),
             default => $this->buildOverviewForm($form),
         };
     }
@@ -182,6 +187,44 @@ class FormPreview extends Component
     {
         $this->form->validate();
         $this->dispatch('preview-validated');
+    }
+
+    /**
+     * A wizard *inside* a create-option modal, with its own navigation handed to
+     * the modal footer (`Wizard::navigation(false)`).
+     *
+     * Two things here are only observable in a browser: the footer mirrors the
+     * wizard's step across two sibling Alpine scopes over a window event, and
+     * "Next" gates on server-side per-step validation of the option form — which
+     * only works because the mounted option form is enumerated as a host form.
+     */
+    protected function buildOptionWizardForm(Form $form): Form
+    {
+        return $form
+            ->statePath('data')
+            ->schema([
+                Select::make('category')
+                    ->label('Category')
+                    ->options(fn () => $this->categoryOptions)
+                    ->getOptionLabelUsing(fn ($value) => $this->categoryOptions[$value] ?? null)
+                    ->createOptionForm([
+                        Wizard::make('optwiz')->navigation(false)->schema([
+                            Step::make('Name')->description('What to call it')->schema([
+                                TextInput::make('label')->label('Label')->rules(['required']),
+                            ]),
+                            Step::make('Detail')->description('Anything else')->schema([
+                                TextInput::make('note')->label('Note'),
+                            ]),
+                        ]),
+                    ])
+                    ->createOptionModalWidth('2xl')
+                    ->createOptionUsing(function (array $data) {
+                        $key = 'c'.(count($this->categoryOptions) + 1);
+                        $this->categoryOptions[$key] = (string) $data['label'];
+
+                        return $key;
+                    }),
+            ]);
     }
 
     /**
@@ -288,6 +331,7 @@ class FormPreview extends Component
                             ->schema([
                                 TextInput::make('name')
                                     ->label('Full name')
+                                    ->placeholder('John Doe')
                                     ->required(),
                                 TextInput::make('email')
                                     ->label('Email address')

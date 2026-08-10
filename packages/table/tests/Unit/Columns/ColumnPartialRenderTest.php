@@ -189,9 +189,14 @@ it('renders base text cell url link through the text partial', function () {
 it('renders base text cell copyable through the text partial', function () {
     $html = TextColumn::make('email')->copyable()->renderCell(partialRecord(['email' => 'a@b.test']));
 
-    expect($html)->toContain('x-data')
-        ->and($html)->toContain('clipboard')
-        ->and($html)->toContain('a@b.test');
+    // The behaviour is bound once for the document by the record-copy bundle, so the
+    // cell carries the value on `data-copy` and no Alpine component of its own. The
+    // assertion used to look for the string "clipboard", which only ever matched the
+    // `navigator.clipboard` call in the inline handler that has now moved out.
+    expect($html)->toContain('data-copy="a@b.test"')
+        ->and($html)->toContain('data-testid="cell-copy"')
+        ->and($html)->toContain('a@b.test')
+        ->and($html)->not->toContain('x-data');
 });
 
 it('renders base text cell tooltip + description through the text partial', function () {

@@ -7,10 +7,13 @@ namespace NyonCode\WireCore\Actions;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Actions\Contracts\RendersAsButton;
+use NyonCode\WireCore\Actions\Contracts\RendersAsMenuItem;
 use NyonCode\WireCore\Actions\Contracts\ResolvesActionClick;
+use NyonCode\WireCore\Actions\Support\FixedClickResolver;
 use NyonCode\WireCore\Actions\Support\MountActionClickResolver;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Foundation\View\Primitives;
+use NyonCode\WireCore\Foundation\View\Skeleton;
 
 /**
  * Class Action - Row-level action with lifecycle hooks, dynamic properties, and more.
@@ -21,7 +24,7 @@ use NyonCode\WireCore\Foundation\View\Primitives;
  *
  * @phpstan-consistent-constructor
  */
-class Action extends BaseAction implements RendersAsButton
+class Action extends BaseAction implements RendersAsButton, RendersAsMenuItem
 {
     // Only a row action has one record to lock against; a header action has none
     // and a bulk action has a set, which is why this sits here and not on
@@ -204,6 +207,16 @@ class Action extends BaseAction implements RendersAsButton
     private ?array $staticRenderCache = null;
 
     /**
+     * One compiled button per shape, keyed by {@see buttonShapeKey()}.
+     *
+     * Per instance, which is per render: the host rebuilds its actions on every
+     * Livewire request, so nothing here outlives the markup it belongs to.
+     *
+     * @var array<string, Skeleton>
+     */
+    private array $buttonSkeletons = [];
+
+    /**
      * Render this action's button through the canonical core view.
      *
      * The host supplies a {@see ResolvesActionClick} so core never hardcodes a
@@ -223,11 +236,59 @@ class Action extends BaseAction implements RendersAsButton
             return '';
         }
 
-        return view('wire-core::actions.button', [
-            'action' => $this,
-            'record' => $record,
-            'click' => $click ?? new MountActionClickResolver,
-        ])->render();
+        $click ??= new MountActionClickResolver;
+
+        // Rendered once per SHAPE, then spliced — a table's action column was the
+        // last `view()->render()` per row in the engine (two, in fact: the button
+        // view and the content partial it includes), and an action button is the
+        // same markup for every row bar one value.
+        //
+        // That value is the click expression. It is the only per-record thing that
+        // reaches the output — `recordKey` is in the render data but no view echoes
+        // it — and it lands in `wire:click` and up to three `wire:target`s, every
+        // one of them a Blade `{{ }}` inside an attribute. One slot, one position
+        // kind, one encoding, which is what makes this safe (see Skeleton).
+        //
+        // Everything else the view reads is the shape key below, so a row whose
+        // button differs in ANY other way — a per-record label, colour, icon,
+        // tooltip, url, disabled state, extra attribute — simply lands on a
+        // different skeleton and is rendered for itself. Correctness does not
+        // depend on guessing which of those an action uses.
+        $shape = $this->buttonShapeKey($record, $click);
+
+        $skeleton = $this->buttonSkeletons[$shape] ??= Skeleton::compile(
+            view('wire-core::actions.button', [
+                'action' => $this,
+                'record' => $record,
+                'click' => new FixedClickResolver(Skeleton::slot('click')),
+            ])->render(),
+            'click',
+        );
+
+        return $skeleton->fill(['click' => e($click->clickHandler($this, $record))]);
+    }
+
+    /**
+     * Everything a rendered button depends on EXCEPT the click expression.
+     *
+     * The view reads the render array, and calls three methods on the action
+     * directly (`isHidden`, `getLabel`, `getName`) — all four are folded in here,
+     * so two records sharing a key really do produce identical markup once the
+     * click expression is spliced.
+     */
+    private function buttonShapeKey(?Model $record, ResolvesActionClick $click): string
+    {
+        $data = $this->toButtonRenderArray($record, $click);
+
+        // The two the skeleton splices, and the one that never reaches the markup.
+        unset($data['wireClick'], $data['loadingTarget'], $data['recordKey']);
+
+        return md5(serialize([
+            $data,
+            $this->isHidden($record),
+            $this->getLabel($record),
+            $this->getName(),
+        ]));
     }
 
     /**
@@ -235,8 +296,12 @@ class Action extends BaseAction implements RendersAsButton
      *
      * Dividers resolve to the shared separator partial; everything else renders
      * through the canonical dropdown-item partial so menu rows stay consistent.
+     *
+     * The record is optional for the same reason {@see render()} makes it optional:
+     * a group can be built on a record-less surface (the table toolbar), and an
+     * action whose visibility or URL needs a record simply resolves without one.
      */
-    public function renderForDropdown(Model $record, ?ResolvesActionClick $click = null): string
+    public function renderForDropdown(?Model $record = null, ?ResolvesActionClick $click = null): string
     {
         if ($this->isDivider) {
             return $this->renderDivider();

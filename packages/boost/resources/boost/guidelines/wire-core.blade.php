@@ -174,20 +174,28 @@ add it: without it a bundle first reaching the page via `wire:navigate` may lose
 cached Back/Forward path, where Livewire does not wait for newly injected head scripts before
 initialising Alpine.
 
-A package registers its own bundles from its own service provider's `bootedPackage()`; core never
-learns about downstream packages:
+The tag itself is `nyoncode/laravel-package-toolkit`'s (`PackageAssets`); `@@wireStackScripts` is a
+thin alias for its `@@packageAssets`, kept because it is already in consuming layouts. A package
+declares its own bundles in its own `configure()`; core never learns about downstream packages:
 
 ```php
-app(AssetManager::class)->register([
-    Js::make('records', self::ASSETS_PATH.'/wire-table-records.js')->navigateTrack(),
-], 'wire-table');
+$packager
+    ->hasAssets('dist', entries: [
+        Bundle::make('wire-table-records.js'),
+    ])
+    ->hasAssetFallback(Bundle::servedByRoute('wire-table'));
 ```
 
-`Js::make($id, $path)` takes a *filesystem* path (used for the `?id=<mtime>` cache-buster) and
-resolves its URL from the `{package}.asset` named route each package already registers — assets are
-served straight out of `dist/`, so there is no `vendor:publish` and no build step for consumers. A
-path starting `http://`/`https://`/`//` is treated as remote and used verbatim. Fluent modifiers:
-`module()`, `defer()`, `navigateTrack()`, `navigateOnce()`, `loadedOnRequest()`.
+`Bundle` (core) is the one place that knows what shape a wireStack bundle is: `classic()`, because
+every bundle is an esbuild IIFE and the toolkit would otherwise emit `type="module"` — a module is
+deferred and its top-level declarations never reach `window`, so the registrar below would register
+nothing and every `x-data` would die with no error at the point of the mistake. It also removes the
+`defer` that `classic()` adds by default, and adds `data-navigate-once`.
+
+Entries are keyed by the **shipped filename**, not a short id. Delivery is the toolkit's: the mirror
+copies `dist/` into `public/vendor/{package}` on first resolve — no `vendor:publish`, no build step
+for consumers — and `hasAssetFallback()` points at the package's own `{package}.asset` route for the
+app whose `public/` cannot be written. Without that fallback the renderer drops the tag silently.
 
 **Register Alpine components unconditionally, never only inside `alpine:init`.** That event fires
 exactly once per document, so a bundle arriving later (SPA navigation, a lazily rendered table, an
@@ -210,8 +218,8 @@ The `registered` guard is load-bearing, not defensive: the directive and a per-s
 both emit the same `src`, so the bundle may execute twice.
 
 Core interaction controllers are **never** lazy per-component — that is what causes the bug above.
-Lazy is for heavy, optional bodies only (TipTap is registered `loadedOnRequest()` and excluded from
-the always-loaded set). Lazy-load bodies, never registrators.
+Lazy is for heavy, optional bodies only: TipTap is the one case, and it stays outside the entry list
+entirely, delivered by the field that needs it. Lazy-load bodies, never registrators.
 
 ### Browser-testing hooks
 

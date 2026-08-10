@@ -77,6 +77,15 @@ unchanged. The native branch is a shared partial
 (`wire-forms::partials.date-time-native-input`) precisely because a duplicated
 copy of it is the half that would silently drift.
 
+Typing into the trigger is shared the same way. Both panels sit behind a box
+showing a *formatted* value, so both need the inverse of that formatter to read a
+typed string back, and that parser lives once in
+`wire-forms::partials.date-time-typing`. What each view keeps is `applyTyped()` —
+what a parsed set of numbers *means* here, a calendar day plus a clock or a clock
+alone. The split is the rule this ADR states, applied to the one seam the
+amendment above leaves open: a date parser that drifts by one format token stores
+the wrong day without saying so.
+
 The slot interval is the **inherited `minutesStep()`**, not a new `interval()`
 setter — one concept keeps one name — defaulted to 30 in `TimePicker` because a
 list at the picker-wide default of one minute would be 1440 rows long, and

@@ -10,7 +10,7 @@ const base = process.env.PREVIEW_BASE ?? 'http://127.0.0.1:8085/previews';
 const chromeBin = process.env.CHROME_BIN ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const devtoolsPort = Number(process.env.CHROME_PORT ?? 9360);
 const userDataDir = join(tmpdir(), `wire-swipe-${Date.now()}`);
-const chrome = spawn(chromeBin, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', `--remote-debugging-port=${devtoolsPort}`, `--user-data-dir=${userDataDir}`, 'about:blank'], { stdio: 'ignore' });
+const chrome = spawn(chromeBin, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', `--remote-debugging-port=${devtoolsPort}`, `--user-data-dir=${userDataDir}`, 'about:blank'], { stdio: 'ignore' });
 
 let cdp;
 try {

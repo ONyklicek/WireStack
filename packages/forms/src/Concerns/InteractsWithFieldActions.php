@@ -88,7 +88,26 @@ trait InteractsWithFieldActions
      */
     protected function resolveFieldForAction(string $statePath): ?FieldComponent
     {
-        foreach ($this->fieldActionForms() as $form) {
+        return $this->resolveFieldIn($this->fieldActionForms(), $statePath);
+    }
+
+    /**
+     * Locate a field across the host's own forms only, skipping the forms of any
+     * mounted option modal. This is what breaks the cycle: resolving an option
+     * form needs its Select looked up first, and looking it up in the full set
+     * would re-enter {@see fieldActionForms()}.
+     */
+    protected function resolveBaseFieldForAction(string $statePath): ?FieldComponent
+    {
+        return $this->resolveFieldIn($this->baseFieldActionForms(), $statePath);
+    }
+
+    /**
+     * @param  array<int, Form>  $forms
+     */
+    private function resolveFieldIn(array $forms, string $statePath): ?FieldComponent
+    {
+        foreach ($forms as $form) {
             // Canonical lookup: resolves flat fields and fields inside repeater
             // items (per-item schema) alike.
             $component = $form->findComponentByStatePath($statePath);
@@ -102,12 +121,41 @@ trait InteractsWithFieldActions
     }
 
     /**
-     * Every form whose fields can dispatch actions on this host: the standalone
-     * forms plus any embedded table action-modal form.
+     * Every form whose fields can dispatch actions on this host: the host's own
+     * forms, any embedded table action-modal form, and the form of a mounted
+     * Select create/edit option modal.
+     *
+     * The option form belongs here for the same reason the action-modal form
+     * does — it is a live form on this host. Leaving it out is what made a
+     * `Wizard` inside `createOptionForm()` skip its per-step validation, a
+     * nested `Select` fail to reach the search endpoint, and a field action
+     * inside an option form resolve to nothing.
      *
      * @return array<int, Form>
      */
     protected function fieldActionForms(): array
+    {
+        $forms = $this->baseFieldActionForms();
+
+        // Probed rather than required: a host can compose field actions without
+        // the option modals, exactly as it can without an action modal.
+        if (method_exists($this, 'mountedOptionForms')) {
+            foreach ($this->mountedOptionForms() as $optionForm) {
+                if ($optionForm instanceof Form) {
+                    $forms[] = $optionForm;
+                }
+            }
+        }
+
+        return $forms;
+    }
+
+    /**
+     * The host's own forms plus any embedded table action-modal form.
+     *
+     * @return array<int, Form>
+     */
+    protected function baseFieldActionForms(): array
     {
         $forms = [];
 

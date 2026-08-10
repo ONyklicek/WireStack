@@ -54,7 +54,7 @@ await mkdir(shotDir, { recursive: true });
 const userDataDir = join(tmpdir(), `wire-spa-navigate-${Date.now()}`);
 const chrome = spawn(chromeBin, [
   '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-  '--hide-scrollbars', `--remote-debugging-port=${devtoolsPort}`,
+  '--hide-scrollbars', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', `--remote-debugging-port=${devtoolsPort}`,
   `--user-data-dir=${userDataDir}`, 'about:blank',
 ], { stdio: 'ignore' });
 
@@ -151,7 +151,11 @@ try {
     // Drive the production onEnd the way Sortable does — Sortable runs with
     // forceFallback and ignores synthesised pointer input (see
     // verify-column-reorder.mjs, which established this).
-    window.headerCols = () => $qa('thead th[data-sortable-column]').map(th => th.getAttribute('data-sortable-column'));
+    // Read the SERVER-rendered attribute, not the one the sortable controller adds:
+    // \`data-sortable-column\` is applied by markHeaderCells() and wiped by every
+    // Livewire morph until Alpine re-runs, so reading it right after a reorder can
+    // legitimately come back empty — which reads as "the header lost its columns".
+    window.headerCols = () => $qa('thead th[data-column]').map(th => th.getAttribute('data-column'));
     window.bodyCols = (i = 0) => [...rows()[i].children]
       .map(el => el.tagName === 'TEMPLATE' ? 'TEMPLATE' : (el.getAttribute('data-column') ?? (el.hasAttribute('data-select-cell') ? 'SELECT' : 'FIXED')))
       .filter(c => !['TEMPLATE', 'SELECT', 'FIXED'].includes(c));
@@ -161,7 +165,11 @@ try {
     window.dragHeader = (name, toEnd = true) => {
       const sortRoot = $q('[x-data*="wireSortable"]');
       const d = Alpine.$data(sortRoot);
-      const ths = $qa('thead th');
+      // The FIRST header row only — that is the row SortableJS is bound to
+      // (initColumnSortable: \`this.$root.querySelector('thead tr')\`). A table with a
+      // column-filter row has a second one, and a document-wide 'thead th' would drop
+      // the dragged column into it, where a real drag can never put it.
+      const ths = [...$q('thead tr').children];
       const moved = ths.find(t => t.getAttribute('data-sortable-column') === name);
       const target = toEnd ? ths[ths.length - 1] : ths.find(t => t.hasAttribute('data-sortable-column'));
       const oldIndex = thIndex(moved);

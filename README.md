@@ -22,10 +22,13 @@ Monorepo for the Wire ecosystem – enterprise-grade Livewire components for Lar
 ## Requirements
 
 - PHP 8.2+
-- Laravel 10, 11, or 12
+- Laravel 12.61+ or 13.12+
 - Livewire 3.x
 - Tailwind CSS 3.x
 - Node.js & npm (for Vite)
+
+`nyoncode/laravel-package-toolkit` `^2.4` comes with the packages and sets that
+Laravel floor — see [Getting Started → Requirements](docs/getting-started.md#requirements).
 
 ## Installation
 

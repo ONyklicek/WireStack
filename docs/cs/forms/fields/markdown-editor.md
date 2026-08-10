@@ -59,6 +59,24 @@ Toolbar poskytuje klávesnicí přístupná tlačítka pro:
 
 Vestavěný náhled zvládá: nadpisy (`#`, `##`, `###`), bold/italic/strikethrough, inline kód, odkazy, blockquoty a neseřazené/seřazené seznamy. Pro plné GFM vykreslení uložený Markdown post-processujte na straně serveru knihovnou jako [CommonMark](https://commonmark.thephpleague.com/).
 
+Náhled běží v prohlížeči a zapisuje se přes `x-html`, takže syrové HTML v Markdownu se **escapuje, nevykresluje**: `<img src=x onerror=…>` se zobrazí jako text. URL odkazů jsou navíc omezené na `http(s):`, `mailto:`, `#` a cesty od kořene — cokoli jiného se změní na `#`, takže přes náhled nelze podstrčit `javascript:` odkaz.
+
+## Lokalizace
+
+Tooltipy toolbaru i popisky záložek Psát/Náhled pocházejí ze sdílené slovní
+zásoby editorů `wire-forms::fields.editor.*` — ze stejných klíčů, jaké používají
+[TiptapEditor](tiptap-editor.md#lokalizace) a
+[RichEditor](rich-editor.md#lokalizace), takže všechny tři editory zní v každém
+jazyce stejně. Angličtina (`en`) a čeština (`cs`) jsou součástí balíčku; česká
+aplikace zobrazí *Tučné*, *Kód v textu* a záložky *Psát* / *Náhled*.
+
+Formulaci změníte (nebo přidáte další jazyk) publikováním překladů a úpravou
+`lang/vendor/wire-forms/{locale}/fields.php`:
+
+```bash
+php artisan vendor:publish --tag=wire-forms::translations
+```
+
 ## Metody
 
 | Metoda | Typ | Popis |

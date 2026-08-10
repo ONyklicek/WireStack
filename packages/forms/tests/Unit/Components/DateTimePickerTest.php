@@ -319,3 +319,91 @@ test('the first day of the week comes from config, and can be set per field', fu
         // null clears it again, back to the configured value.
         ->and(DateTimePicker::make('at')->firstDayOfWeek(3)->firstDayOfWeek(null)->getFirstDayOfWeek())->toBe(0);
 });
+
+// ─── Typing into the trigger ─────────────────────────────────────────
+
+// Regression: the trigger carried an unconditional `readonly`, so the calendar
+// and the steppers were the only route to a value — setting a date three years
+// out meant 36 clicks on the month arrow — and `readOnly()` was a no-op, because
+// nothing in the view ever read it while the panel stayed fully interactive.
+
+test('the trigger accepts typing by default', function () {
+    $html = renderPickerView(DateTimePicker::make('event_at'));
+
+    expect($html)->not->toContain('readonly')
+        ->toContain('@input="onTyped($event.target.value)"')
+        ->toContain('@blur="commitTyped()"');
+});
+
+test('typeable(false) hands the value back to the picker alone', function () {
+    $field = DateTimePicker::make('event_at')->typeable(false);
+
+    expect($field->acceptsTypedInput())->toBeFalse()
+        ->and(renderPickerView($field))
+        ->toContain('readonly')
+        ->not->toContain('onTyped(');
+});
+
+// readOnly() outranks typeable(): it means the value is not the user's to
+// change, and a keyboard is a way to change it.
+test('readOnly closes the keyboard route and the panel with it', function () {
+    $field = DateTimePicker::make('event_at')->readOnly();
+    $html = renderPickerView($field);
+
+    expect($field->acceptsTypedInput())->toBeFalse()
+        ->and($html)->toContain('readonly')
+        ->not->toContain('onTyped(')
+        // Nothing may open the panel — leaving it reachable was the half that
+        // made readOnly() decorative, since the calendar wrote to the state
+        // regardless.
+        ->not->toContain('@click="open = true"')
+        ->not->toContain('@keydown.down.prevent="open = true"')
+        // The chevron is the other way in, and a disabled button is not a way in.
+        ->toContain('data-testid="form-datetime-event_at-toggle"')
+        ->toMatch('/form-datetime-event_at-toggle.*?\sdisabled\s/s');
+});
+
+test('a disabled picker is not typeable either', function () {
+    expect(DateTimePicker::make('event_at')->disabled()->acceptsTypedInput())->toBeFalse();
+});
+
+test('typeable accepts a closure, like every other conditional setter', function () {
+    expect(DateTimePicker::make('event_at')->typeable(fn (): bool => false)->acceptsTypedInput())->toBeFalse();
+});
+
+// The parser inverts whichever format the box is actually showing, so the two
+// have to be resolved from the same place.
+test('the typed format is the display format when there is one, and the state shape otherwise', function () {
+    expect(DateTimePicker::make('at')->displayFormat('j. n. Y H:i')->getTypedFormat())->toBe('j. n. Y H:i')
+        ->and(DateTimePicker::make('at')->getTypedFormat())->toBe('Y-m-d\TH:i')
+        ->and(DateTimePicker::make('at')->withSeconds()->getTypedFormat())->toBe('Y-m-d\TH:i:s')
+        ->and(DateTimePicker::make('at')->asDate()->getTypedFormat())->toBe('Y-m-d')
+        ->and(DateTimePicker::make('at')->asTime()->getTypedFormat())->toBe('H:i');
+});
+
+test('the parser is given the format, and the shared partial that reads it', function () {
+    $html = renderPickerView(DateTimePicker::make('at')->displayFormat('d.m.Y H:i'));
+
+    expect($html)->toContain("typedFormat: 'd.m.Y H:i'")
+        ->toContain('readTyped(text)')
+        ->toContain('applyTyped(parts)');
+});
+
+// The panel could not be opened from the keyboard at all: the trigger listened
+// for clicks only, and the icon was a pointer-events-none div.
+test('the panel opens from the keyboard and from a real toggle button', function () {
+    $html = renderPickerView(DateTimePicker::make('event_at'));
+
+    expect($html)->toContain('@keydown.down.prevent="open = true"')
+        ->toContain('aria-haspopup="dialog"')
+        ->toContain(':aria-expanded="open ? \'true\' : \'false\'"')
+        ->toContain('data-testid="form-datetime-event_at-toggle"');
+});
+
+// A native control's keyboard is the browser's, and the only way to take it
+// away is `readonly` — which would disable the browser's own picker too.
+test('a native input keeps the browser keyboard whatever typeable says', function () {
+    expect(renderPickerView(DateTimePicker::make('at')->native()->typeable(false)))
+        ->not->toContain('readonly')
+        ->not->toContain('onTyped(');
+});

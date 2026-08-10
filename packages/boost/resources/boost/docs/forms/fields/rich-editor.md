@@ -61,6 +61,22 @@ RichEditor::make('summary')
     ->maxLength(500)
 ```
 
+## Localization
+
+Toolbar tooltips and the link prompt come from the shared editor vocabulary
+`wire-forms::fields.editor.*` — the same keys
+[TiptapEditor](tiptap-editor.md#localization) and
+[MarkdownEditor](markdown-editor.md#localization) use, so the three editors read
+alike in every locale. English (`en`) and Czech (`cs`) ship with the package; a
+Czech app shows *Tučné*, *Číslovaný seznam*, *Nadpis 2*, and prompts *URL odkazu*.
+
+Reword a string, or add a locale, by publishing the translations and editing
+`lang/vendor/wire-forms/{locale}/fields.php`:
+
+```bash
+php artisan vendor:publish --tag=wire-forms::translations
+```
+
 ## Methods
 
 | Method | Type | Description |

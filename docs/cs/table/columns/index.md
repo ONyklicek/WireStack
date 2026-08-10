@@ -120,6 +120,11 @@ Sloupec ponechaný jako text porovnání přeskočí, místo aby porovnával
 lexikograficky — chybná nebo chybějící deklarace tak jen zúží, čemu hledání
 rozumí, nikdy nevrátí špatné řádky.
 
+Samotná deklarace nic nezapíná. Hledatelný sloupec, který typ deklaruje, zatímco
+hledání tabulky rozsahy nečte, se při renderu tabulky odmítne a pojmenuje
+chybějící volání — jinak by se tabulka vrátila prázdná, protože `10..20` by se
+hledalo jako doslovný text.
+
 `'code'` je jediný typ, který se **nikdy** neodvozuje: říká, že hodnota je řada
 plus číslo **doplněné nulami** (`8866 01`, `8866 02`), což je právě to, co dělá
 porovnání textem správným — a ví to jen vlastník. Odemyká

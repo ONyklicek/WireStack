@@ -13,4 +13,8 @@ return [
     'entry_not_editable' => 'This field cannot be edited.',
     'no_permission' => 'You are not allowed to edit this field.',
     'no_permission_edit' => 'You are not allowed to edit this record.',
+
+    // The copy-to-clipboard affordance ({@see Foundation\View\CopyButton}).
+    'copy' => 'Copy',
+    'copied' => 'Copied!',
 ];

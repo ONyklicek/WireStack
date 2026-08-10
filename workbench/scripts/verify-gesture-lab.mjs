@@ -37,7 +37,12 @@ await mkdir(shotDir, { recursive: true });
 const userDataDir = join(tmpdir(), `wire-gesture-lab-${Date.now()}`);
 const chrome = spawn(chromeBin, [
   '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-  '--hide-scrollbars', `--remote-debugging-port=${devtoolsPort}`,
+  '--hide-scrollbars',
+  // See the note in scripts/lib/cdp.mjs: without these, rAF-driven Alpine transitions
+  // never finish in a headless window. waitFor below covers the other half.
+  '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows',
+  '--disable-renderer-backgrounding',
+  `--remote-debugging-port=${devtoolsPort}`,
   `--user-data-dir=${userDataDir}`, 'about:blank',
 ], { stdio: 'ignore' });
 
@@ -101,6 +106,31 @@ try {
     window.dialogOpen = () => $qa('[role=dialog]').some((d) => vis(d) && getComputedStyle(d).display !== 'none');
     true;
   `;
+
+  /*
+   * Wait for a condition instead of sleeping at it.
+   *
+   * This is not cosmetic. Headless Chrome backgrounds a window it never shows and
+   * throttles the renderer, so a driver that sits in a dead `sleep()` is watching a
+   * page that is barely running: the modal these checks are about opens ~700 ms after
+   * the click on a settled page, yet a `sleep(1600)` reported it missing — every time,
+   * on unmodified code. Any CDP evaluation wakes the renderer, so polling for the
+   * condition both waits and keeps the page moving; swapping the sleeps for this took
+   * the driver from 22/28 to 28/28 with nothing else changed.
+   *
+   * It still returns whether the condition ever held, so a real failure still fails —
+   * it is just no longer decided by a stopwatch.
+   */
+  const waitFor = async (expression, timeout = 6000) => {
+    const deadline = Date.now() + timeout;
+
+    while (Date.now() < deadline) {
+      if (await eval_(`!!(${expression})`)) return true;
+      await sleep(120);
+    }
+
+    return false;
+  };
 
   const realClick = async (expr, modifiers = 0) => {
     const box = JSON.parse(await eval_(`(() => {
@@ -227,15 +257,18 @@ try {
   // (the focus was left wherever tabbing had put it, and the grid only answers
   // when a row itself has the focus).
   await page('Page.navigate', { url: `${base}/gesture-lab-click` });
-  await sleep(3000);
+  await sleep(1200);
   await eval_(helpers);
+  // Wait for the row controller to be live rather than trusting a sleep: clicking
+  // before Alpine has wired the tbody looks exactly like a table that ignores clicks.
+  await waitFor(`(() => { try { return rows().length > 3 && !!ctrl().bindings.click; } catch { return false; } })()`);
   await eval_(`window.where = () => {
     const a = document.activeElement;
     return { inDialog: !!a?.closest?.('[role=dialog]'), tag: a?.tagName, testid: a?.getAttribute?.('data-testid') ?? null };
   }; true`);
 
   await realClick(`cell(3)`);
-  await sleep(1600);
+  await waitFor(`dialogOpen()`);
   const inModal = JSON.parse(await eval_(`JSON.stringify({ ...where(), open: dialogOpen() })`));
   check('a modal opened by a single click takes the focus into the dialog',
     inModal.open && inModal.inDialog, JSON.stringify(inModal));
@@ -253,7 +286,8 @@ try {
 
   const rowBefore = await eval_(`ctrl().activeKey`);
   await eval_(`(() => { const b = [...document.querySelectorAll('[data-testid=confirmation-cancel]')].find((x) => x.getClientRects().length); b && b.click(); })()`);
-  await sleep(1500);
+  await waitFor(`!dialogOpen()`);
+  await sleep(250); // the focus is handed back after the dialog goes
   const returned = JSON.parse(await eval_(`JSON.stringify({ ...where(), open: dialogOpen(), active: ctrl().activeKey })`));
   check('closing it hands the focus back to the row it was opened from',
     !returned.open && returned.tag === 'TR' && returned.active === rowBefore, JSON.stringify(returned));
@@ -266,8 +300,9 @@ try {
   await shot('03b-modal-focus');
 
   await page('Page.navigate', { url: `${base}/gesture-lab` });
-  await sleep(3000);
+  await sleep(1200);
   await eval_(helpers);
+  await waitFor(`(() => { try { return rows().length > 6; } catch { return false; } })()`);
   await eval_(`rows()[6].focus()`);
   await sleep(200);
   await eval_(`fireKey(rows()[6], ' ')`);
@@ -322,7 +357,14 @@ try {
   await eval_(`(() => {
     const root = $q('[x-data*="wireSortable"]');
     const d = Alpine.$data(root);
-    const ths = [...document.querySelectorAll('thead th')];
+    // Scoped to the FIRST header row, which is the row SortableJS is bound to
+    // (initColumnSortable: \`this.$root.querySelector('thead tr')\`). This table has a
+    // second header row for the column filters, and a document-wide 'thead th' used to
+    // sweep up its cells too — so "move after the last th" dropped the dragged column
+    // INTO the filter row. A real drag cannot do that, and the controller then read the
+    // new order off the row it is bound to, which no longer held the dragged column.
+    const headerRow = $q('thead tr');
+    const ths = [...headerRow.children];
     const moved = ths.find((t) => t.getAttribute('data-sortable-column') === 'name');
     // Sibling index from the DOM rather than Sortable.utils.index: SortableJS is
     // bundled inside wire-sortable.js and is no longer exposed as a global.
@@ -431,8 +473,20 @@ try {
     const root = document.querySelector('[wire\\\\:id]');
     if (root && window.Livewire) window.Livewire.find(root.getAttribute('wire:id'))?.call('resetColumnOrder');
   })()`);
-  await sleep(1200);
-  const restored = await eval_(`[...document.querySelectorAll('thead th[data-column]')].map((th) => th.getAttribute('data-column')).join(',')`);
+
+  // Polled rather than slept: the reset is a round-trip plus a morph, and a fixed
+  // 1200 ms lost the race often enough to make this check read as a failure when the
+  // reset had simply not landed yet. Waiting for the condition keeps a real failure
+  // (the order never coming back) as the only way to fail.
+  const headerOrder = `[...document.querySelectorAll('thead th[data-column]')].map((th) => th.getAttribute('data-column')).join(',')`;
+  let restored = '';
+
+  for (let i = 0; i < 20; i++) {
+    restored = await eval_(headerOrder);
+    if (restored === 'name,status,amount') break;
+    await sleep(250);
+  }
+
   check('the driver leaves the persisted column order back at its default',
     restored === 'name,status,amount', restored);
 } catch (err) {

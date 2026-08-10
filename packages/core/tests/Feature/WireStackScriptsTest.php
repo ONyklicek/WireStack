@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Route;
-use NyonCode\WireCore\Foundation\Assets\AssetManager;
-use NyonCode\WireCore\Foundation\Assets\Js;
 
 /**
  * `@wireStackScripts` is the one tag an app adds to its layout <head>. Everything
@@ -16,7 +14,7 @@ it('emits the core interaction bundle', function () {
 
     expect($html)
         ->toContain('<script src="')
-        ->toContain('/wire-core/assets/dropdown.js?id=');
+        ->toContain('/vendor/wire-core/wire-core-dropdown.js?id=');
 });
 
 it('marks the bundle so a deploy is picked up across wire:navigate', function () {
@@ -28,13 +26,11 @@ it('marks the bundle so a deploy is picked up across wire:navigate', function ()
 });
 
 it('forwards its expression to the canonical owner', function () {
-    // A thin passthrough: the whole expression goes to renderScripts(), so an app
+    // A thin passthrough: the whole expression goes to the renderer, so an app
     // may narrow the tag to one package without the compiler knowing anything.
-    app(AssetManager::class)->register([Js::make('extra', 'https://cdn.example.test/extra.js')], 'wire-core');
-
     expect(Blade::render("@wireStackScripts('wire-core')"))
-        ->toContain('/wire-core/assets/dropdown.js')
-        ->toContain('https://cdn.example.test/extra.js');
+        ->toContain('/vendor/wire-core/wire-core-dropdown.js')
+        ->not->toContain('/vendor/wire-table/');
 });
 
 it('puts the controllers in a rendered page that has no wireStack component on it', function () {
@@ -48,5 +44,5 @@ it('puts the controllers in a rendered page that has no wireStack component on i
     $this->get('/no-component')
         ->assertOk()
         ->assertSee('Nothing here.')
-        ->assertSee('/wire-core/assets/dropdown.js', false);
+        ->assertSee('/vendor/wire-core/wire-core-dropdown.js', false);
 });

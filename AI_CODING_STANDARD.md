@@ -146,7 +146,7 @@ across the `TypeCatalog` is missing a summary.
 | Interfaces | `HasLabel`, `HasIcon`, `CanDelete`, `CanSort` |
 | Traits | `InteractsWithLabel`, `InteractsWithIcon`, `CanDelete`, `CanSort` |
 | Actions | `CreateUser`, `DeleteUser`, `SyncPermissions`, `GenerateColumns` |
-| Services | `TranslationService`, `AssetManager`, `NavigationManager` |
+| Services | `TranslationService`, `NavigationManager`, `IconManager` |
 | Managers | `PluginManager`, `ComponentManager`, `ThemeManager` |
 
 ## Directory Structure
@@ -272,15 +272,78 @@ pattern to eliminate (per-column Htmlable skeletons; see the plans below). Rule 
 speed are the *same* requirement: self-render, done once. Record-invariant markup MUST
 be resolved once, never re-rendered per row.
 
-**Reference implementation:** `Column::renderCellFast()` — resolve `tables.columns.text`
-once into a skeleton with a content token, splice `e($state)` per row (measured
-byte-identical to `renderCell()` and ~5× cheaper; one view render per column, not V×R).
-It falls back to the full `renderCell()` when the skeleton cannot apply — a per-record
-url/copy/description-closure (`isCellSkeletonable()`), or a subclass that overrides
-`renderCell` with its own view (`supportsCellSkeleton()`). Any new fast path MUST carry
-the same two guards: a **byte-identity test** vs the classic render across escaping /
-edge-whitespace / unicode / html / empty content, and the **render-count fuse** proving
-zero per-row view renders.
+**Canonical owner:** `Foundation\View\Skeleton` (core, `Htmlable`) — compile a
+rendered template once, `fill()` per row in one `strtr()` pass. Use it rather than a
+local token-and-`str_replace`; `strtr` is also the correct primitive, because it does
+not re-examine what it just substituted.
+
+**Always `Htmlable`, always Blade — no exceptions.** Markup lives in a `.blade.php`
+template, and PHP produces it only through an `Htmlable` owner (`Skeleton`, `HtmlString`,
+a component's own `toHtml()` / `getXHtml()`). Raw HTML concatenated from PHP strings is
+never acceptable — not for speed, not for a single tag, not when the output is
+byte-identical and the suite is green.
+
+**The markup MUST stay in a Blade template. This is not negotiable.** A skeleton is
+compiled from `view(...)->render()` — it is a template *rendered once*, never a tag
+soup concatenated from PHP strings. Building `'<td class="'.$x.'">…'` in a `@php`
+preamble, a helper or a class body is a violation even when the output is byte-identical
+and even when it is faster to write: it destroys the `vendor:publish` override point,
+puts markup where no Blade tooling, formatter or reviewer looks for it, and splits one
+element's markup across two languages. What moves out of the loop is the **render**, not
+the template.
+
+```php
+// WRONG — markup assembled in PHP, no override point, invisible to Blade tooling.
+$cell = Skeleton::compile('<td class="'.$pad.'"><button …>'.$icon.'</button></td>', 'key');
+
+// RIGHT — the partial stays the one source of the markup; only the render moves.
+$cell = Skeleton::compile(
+    view('wire-table::tables.partials.selection-cell', [
+        'cellPadding' => $this->getCellPadding(),
+        'keyJs' => Skeleton::slot('keyJs'),   // the hole, handed to the template
+    ])->render(),
+    'keyJs',
+);
+```
+
+Two consequences worth stating, because they are what makes the Blade version as cheap
+as the PHP one:
+
+- **Slots are passed *into* the view as data**, so the template decides where each
+  per-record value lands and under which encoding — which is what keeps "one slot, one
+  position, one encoding" a property of the template rather than of the caller.
+- **Whitespace between tags is the template's job.** Tags that must touch (`>…<` with
+  no run between them) are written touching in the Blade; whitespace *between
+  attributes* is free and stays laid out. A skeleton is not a licence to minify by
+  moving markup into PHP.
+
+The same rule covers any table/row/cell chrome resolved once per render: put it in a
+partial and render it once (`tables.partials.selection-cell`), do not inline it as a
+string. Values a template needs that come from a density/variant map (padding,
+alignment) get a **getter on the owning object** (`Table::getCellPadding()`), so the
+partial and the parent view cannot drift.
+
+**Reference implementation:** `Column::renderCellFast()` — resolves
+`tables.columns.text` once into a `Skeleton` and splices per-record values per row
+(byte-identical to `renderCell()`, one view render per cell *shape*, not V×R). The
+rule that makes it safe is **one slot, one position, one encoding**: the caller hands
+each value in already encoded exactly as the template would have encoded it there
+(`e()` inside an attribute, raw for markup). A value appearing twice under two
+encodings is the boundary where this stops being cheap — see the inline-edit
+evaluation in the plan.
+
+A slot substitutes a **value, never a shape**. When a record changes the structure (a
+url on one row, none on the next), that is a second skeleton, cached per shape —
+O(shapes), not O(rows). The only remaining fallback is a subclass that overrides
+`renderCell` with its own view (`supportsCellSkeleton()`).
+
+Any new fast path MUST carry the same two guards: a **byte-identity test** vs the
+classic render across escaping / edge-whitespace / unicode / html / empty content
+*and* hostile per-record values, and the **render-count fuse** proving zero per-row
+view renders. Client-side there is a third: the **payload fuse**
+(`TablePayloadFuseTest`) budgets bytes, whitespace text nodes and morph markers per
+row — the morph walks every node, and a run of whitespace between tags is one node
+however short you make it.
 
 Pick the mechanism by *what varies per row*: **content columns** (structure fixed, only
 the value changes) use the **skeleton splice** above; **state-driven columns**
@@ -434,15 +497,15 @@ else document.addEventListener('alpine:init', register)
   it is already too late for the page it fires on.
 
 **Delivery is the other half.** Core interaction controllers must be in the initial
-document — a package declares them to `Foundation\Assets\AssetManager` from its own
-provider, and the app adds one `@wireStackScripts` to its layout. Downstream packages
+document — a package declares them with `hasAssets(entries: [Bundle::make(...)])` in
+its own `configure()`, and the app adds one `@wireStackScripts` to its layout. Downstream packages
 push their own registration; core never learns they exist. Only the always-present case
 is safe on the cached Back/Forward path, where Livewire does **not** wait for newly
 injected head scripts before initialising Alpine.
 
-**Lazy-load bodies, never registrators.** Lazy is for heavy, optional assets (rich text,
-charts) via `loadedOnRequest()`; the registrar inside such a bundle is still
-unconditional. A lazily delivered *registration mechanism* is precisely the bug above.
+**Lazy-load bodies, never registrators.** Lazy is for heavy, optional assets (rich
+text): leave them out of `entries:` and have the surface deliver them; the registrar
+inside such a bundle is still unconditional. A lazily delivered *registration mechanism* is precisely the bug above.
 
 Verify with `verify-spa-navigate` plus the drivers for whatever the bundle touches. See
 `architecture/plans/js-asset-registration.md` and ADR

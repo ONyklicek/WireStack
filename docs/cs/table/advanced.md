@@ -731,6 +731,78 @@ akcí ji stále zobrazí přímo. Menu přebírá nastavení tabulky `sheetOnMob
 `mobileBreakpoint()` (na malých obrazovkách se ve výchozím stavu chová jako
 spodní sheet).
 
+### Akce hlavičky na telefonu
+
+Toolbar má stejný problém s teteskem o patro výš: už v něm sedí vyhledávací pole,
+spouštěč filtrů a menu zobrazení, a dvě popsaná tlačítka hlavičky („Nová
+faktura", „Import CSV") celý řádek na šířce telefonu zalomí.
+`collapseHeaderActionsOnMobile()` je sbalí do jednoho menu:
+
+```php
+$table->collapseHeaderActionsOnMobile()   // jeden spouštěč "⋮" místo tlačítek
+```
+
+Na rozdíl od `collapseActionsOnMobile()` k tomu není potřeba `stackedOnMobile()`
+— toolbar je na každé šířce tentýž, takže sbalení je čistě přepínač podle šířky.
+Přepíná se na **`mobileBreakpoint()`** tabulky (výchozí `sm`, tedy pod 640 px),
+ne na breakpointu skládání:
+
+```php
+$table
+    ->mobileBreakpoint('md')              // sbalit až pod 768 px
+    ->collapseHeaderActionsOnMobile()
+```
+
+Sbalí se od **2** spustitelných akcí hlavičky výš — jedno tlačítko ještě není
+tlačenice a toolbar se sbaluje dřív než akce řádku v kartě, protože sdílí řádek
+s vyhledávacím polem. Práh nastavíš stejně:
+
+```php
+->collapseHeaderActionsOnMobile(threshold: 3)   // dvě tlačítka nechat vedle sebe, sbalit od tří
+->collapseHeaderActionsOnMobile(threshold: 1)   // sbalit vždy
+```
+
+Počítají se jen akce, které smí uživatel spustit, takže tabulka, jejíž druhá akce
+je zahrazená autorizací, si první nechá jako běžné tlačítko. Menu je kanonická
+`ActionGroup` — přebírá `sheetOnMobile()` / `mobileBreakpoint()`, takže se na
+telefonu ve výchozím stavu otevře jako spodní sheet, a když jeho podmínky přežije
+jediná akce, sbalí se rovnou na její tlačítko.
+
+Obě poloviny leží v dokumentu na každé šířce (co je vidět, rozhoduje CSS), takže
+se sbalená kopie vykreslí **bez** `keyboardShortcut()` jednotlivých akcí:
+vykreslená zkratka je posluchač na *okně* a druhá registrace by na jeden stisk
+spustila akci dvakrát. Viditelné desktopové tlačítko si ji ponechá.
+
+```php
+class ListInvoices extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(Invoice::class)
+            ->columns([
+                TextColumn::make('number'),
+                TextColumn::make('total')->money('CZK'),
+            ])
+            ->headerActions([
+                HeaderAction::make('create')          // [tl! focus:start]
+                    ->label('Nová faktura')
+                    ->icon('plus')
+                    ->keyboardShortcut('c')           // jen desktop — viz výše
+                    ->url(route('invoices.create')),
+
+                HeaderAction::make('import')
+                    ->label('Import CSV')
+                    ->icon('arrow-up-tray')
+                    ->action(fn () => $this->importInvoices()),
+            ])
+            ->collapseHeaderActionsOnMobile();        // [tl! focus:end]
+    }
+}
+```
+
 ### Anatomie karty
 
 Karta je záznam, ne přestrojené pořadí sloupců. Hierarchii nesou čtyři pojmenované

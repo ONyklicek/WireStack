@@ -218,6 +218,83 @@ it('the mobile action group inherits the table mobile-sheet settings', function 
         ->and($group->getMobileBreakpoint())->toBe('lg');
 });
 
+// ─── Header actions on a phone ──────────────────────────────────────────────
+
+it('does not collapse header actions by default', function () {
+    $table = Table::make()->headerActions([HeaderAction::make('create'), HeaderAction::make('import')]);
+
+    expect($table->shouldCollapseHeaderActionsOnMobile())->toBeFalse()
+        ->and($table->getCollapseHeaderActionsOnMobileThreshold())->toBe(2)
+        // Nothing wraps the inline buttons while the collapse is off.
+        ->and($table->getInlineHeaderActionsClass())->toBe('');
+});
+
+it('collapses header actions only from the threshold up (default 2)', function () {
+    // A lone button is not a crowd — it stays inline even with the collapse on.
+    expect(Table::make()->headerActions([HeaderAction::make('create')])->collapseHeaderActionsOnMobile()->shouldCollapseHeaderActionsOnMobile())->toBeFalse()
+        ->and(Table::make()->headerActions([HeaderAction::make('create'), HeaderAction::make('import')])->collapseHeaderActionsOnMobile()->shouldCollapseHeaderActionsOnMobile())->toBeTrue();
+});
+
+it('honours a custom header-action collapse threshold and clamps it to at least 1', function () {
+    $two = [HeaderAction::make('create'), HeaderAction::make('import')];
+
+    expect(Table::make()->headerActions($two)->collapseHeaderActionsOnMobile(threshold: 3)->shouldCollapseHeaderActionsOnMobile())->toBeFalse()
+        ->and(Table::make()->headerActions($two)->collapseHeaderActionsOnMobile(threshold: 3)->getCollapseHeaderActionsOnMobileThreshold())->toBe(3)
+        ->and(Table::make()->headerActions([HeaderAction::make('create')])->collapseHeaderActionsOnMobile(threshold: 0)->shouldCollapseHeaderActionsOnMobile())->toBeTrue()
+        ->and(Table::make()->collapseHeaderActionsOnMobile(threshold: 0)->getCollapseHeaderActionsOnMobileThreshold())->toBe(1)
+        // Turned off outright, however many actions there are.
+        ->and(Table::make()->headerActions($two)->collapseHeaderActionsOnMobile(false)->shouldCollapseHeaderActionsOnMobile())->toBeFalse();
+});
+
+it('counts only header actions the viewer may run against the threshold', function () {
+    $table = Table::make()
+        ->headerActions([
+            HeaderAction::make('create'),
+            HeaderAction::make('import')->visible(false),
+        ])
+        ->collapseHeaderActionsOnMobile();
+
+    // One executable action left → no dropdown, the button stays inline.
+    expect($table->shouldCollapseHeaderActionsOnMobile())->toBeFalse()
+        ->and($table->getMobileHeaderActionGroup()->getActions())->toHaveCount(1);
+});
+
+it('builds the collapsed header dropdown without the actions keyboard shortcuts', function () {
+    $table = Table::make()
+        ->headerActions([
+            HeaderAction::make('create')->keyboardShortcut('c'),
+            HeaderAction::make('import'),
+        ])
+        ->collapseHeaderActionsOnMobile()
+        ->sheetOnMobile(false)
+        ->mobileBreakpoint('lg');
+
+    $group = $table->getMobileHeaderActionGroup();
+
+    expect($group)->toBeInstanceOf(ActionGroup::class)
+        ->and($group->getActions())->toHaveCount(2)
+        // The menu row would bind the shortcut as a window listener, and the
+        // inline button (present at every width) already binds it.
+        ->and($group->getActions()[0]->getKeyboardShortcut())->toBeNull()
+        // …while the table's own declaration is untouched.
+        ->and($table->getHeaderActions()[0]->getKeyboardShortcut())->toBe('c')
+        // The dropdown inherits the table's mobile-sheet settings.
+        ->and($group->usesSheetOnMobile())->toBeFalse()
+        ->and($group->getMobileBreakpoint())->toBe('lg');
+});
+
+it('splits the header actions across the mobile breakpoint with literal classes', function () {
+    $table = Table::make()
+        ->headerActions([HeaderAction::make('create'), HeaderAction::make('import')])
+        ->collapseHeaderActionsOnMobile();
+
+    // Default breakpoint (sm): buttons from 640px up, dropdown below it.
+    expect($table->getInlineHeaderActionsClass())->toBe('hidden sm:flex')
+        ->and($table->getMobileHeaderActionsVisibleClass())->toBe('sm:hidden')
+        ->and($table->mobileBreakpoint('md')->getInlineHeaderActionsClass())->toBe('hidden md:flex')
+        ->and($table->getMobileHeaderActionsVisibleClass())->toBe('md:hidden');
+});
+
 // ─── Columns ────────────────────────────────────────────────────────────────
 
 it('can set and get columns', function () {

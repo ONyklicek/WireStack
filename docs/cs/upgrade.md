@@ -35,11 +35,38 @@ zvýšením si přečtěte changelog:
 | Závislost | Podporováno |
 |------------|-----------|
 | PHP | 8.2, 8.3, 8.4 |
-| Laravel | 10, 11, 12 |
+| Laravel | 12.61+, 13.12+ |
 | Livewire | 3.x |
 | Tailwind CSS | 3.x nebo 4.x |
+| `nyoncode/laravel-package-toolkit` | ^2.4 |
 
 Před upgradem ověřte, že je vaše aplikace splňuje.
+
+---
+
+## Minimální verze závislostí (1.17)
+
+**Laravel 10 a 11 končí.** Verze 1.17 přesunula JavaScriptové bundly z package
+route do reálných souborů pod `public/vendor` a kód, který je tam zrcadlí, žije
+v `nyoncode/laravel-package-toolkit` — vedle deklarace `hasAssets()` a publish
+tagu, jehož je čtecí stranou. Toolkit stojí na
+`illuminate/support ^12.61.1|^13.12.0` a minimum závislosti je i vaše minimum:
+aplikace pod ním balíčky Wire nenainstaluje, ať v jejich vlastním
+`composer.json` stojí `^12.0`. Nejdřív povyšte Laravel, pak Wire.
+
+**Constraint toolkitu je `^2.4`.** Přímo si ho nevyžadujete, takže v běžném
+případě ho `composer update "nyoncode/wire-*"` posune se vším ostatním a není co
+řešit. Viditelný je jen ve dvou situacích:
+
+- váš `composer.json` `nyoncode/laravel-package-toolkit` jmenuje — protože na něm
+  stavíte vlastní balíček, nebo ze starého pinu — a drží ho pod 2.4. Composer pak
+  hlásí jako neinstalovatelné balíčky Wire, ne toolkit jako starý, takže ten
+  constraint rozšiřte na `^2.4` jako první.
+- běžíte na Octane. Memo assetů, které je jinak per-request a tady přežívá celý
+  worker, se na `RequestTerminated` zahazuje přes `PublishedAssets::flush()`
+  z toolkitu, a 2.4 je první vydání, které ho nese. Pod ním worker, který přežije
+  deploy, dál emituje `?id=<mtime>` z minulého vydání a `wire:navigate` si nových
+  bundlů nikdy nevšimne.
 
 ---
 
