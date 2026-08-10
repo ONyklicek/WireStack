@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
-use NyonCode\WireCore\Foundation\Assets\AssetManager;
-use NyonCode\WireCore\Foundation\Assets\Js;
+use NyonCode\LaravelPackageToolkit\Support\PackageAssets;
+use NyonCode\WireCore\Foundation\Assets\Bundle;
 
 /**
  * The Octane hook. Two memos that are per-request everywhere else — the manager's
@@ -46,10 +46,16 @@ it('re-mirrors and re-stamps a bundle the deploy replaced under a live worker', 
     touch($this->bundle, time() - 7200);
     touch($this->published, time() - 3600);
 
-    $manager = app(AssetManager::class);
-    $manager->register([Js::make('bundle', $this->bundle)], 'wire-fixture');
+    $manager = app(PackageAssets::class);
+    $manager->declare(
+        package: 'wire-fixture',
+        directory: dirname($this->bundle),
+        entries: [Bundle::make(basename($this->bundle))],
+        base: null,
+        mirrored: true,
+    );
 
-    $booted = $manager->renderScripts()->toHtml();
+    $booted = $manager->scripts('wire-fixture')->toHtml();
 
     expect($booted)->toContain('?id='.filemtime($this->published));
 
@@ -59,11 +65,11 @@ it('re-mirrors and re-stamps a bundle the deploy replaced under a live worker', 
     // Nothing has ended a request yet, so the URL memo still names the old release and
     // the sync mark still says this package was mirrored — the failure the hook exists
     // to prevent, not an artefact of the test.
-    expect($manager->renderScripts()->toHtml())->toBe($booted)
+    expect($manager->scripts('wire-fixture')->toHtml())->toBe($booted)
         ->and(file_get_contents($this->published))->toBe('/* bundle */');
 
     Event::dispatch('Laravel\\Octane\\Events\\RequestTerminated');
 
-    expect($manager->renderScripts()->toHtml())->not->toBe($booted)
+    expect($manager->scripts('wire-fixture')->toHtml())->not->toBe($booted)
         ->and(file_get_contents($this->published))->toBe('/* next release */');
 });

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
+use NyonCode\LaravelPackageToolkit\Support\PackageAssets;
 use NyonCode\LaravelPackageToolkit\Support\PublishedAssets;
 use NyonCode\WireCore\Actions\View\BulkButtonComponent;
 use NyonCode\WireCore\Actions\View\ButtonComponent;
@@ -23,8 +24,7 @@ use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
 use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
-use NyonCode\WireCore\Foundation\Assets\AssetManager;
-use NyonCode\WireCore\Foundation\Assets\Js;
+use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Icons\IconSet;
@@ -70,7 +70,6 @@ class WireCoreServiceProvider extends PackageServiceProvider
                 $this->bootModals();
                 $this->bootPlugins();
                 $this->registerAssetRoutes();
-                $this->registerAssets();
             })
             ->hasConfig()
             ->hasCommand(PruneAuditEntriesCommand::class)
@@ -84,7 +83,24 @@ class WireCoreServiceProvider extends PackageServiceProvider
             ->hasViews()
             ->hasMigrations()
             ->hasTranslations('resources/lang')
-            ->hasAssets('dist')
+            // `wire-core-dropdown.js` carries every shared Alpine controller
+            // (wireDropdown, wireContextMenu, wireTabs, wireWizard, wireEditableCell,
+            // wireFillHandle) — the interaction layer, which is exactly what must never
+            // arrive late.
+            ->hasAssets('dist', entries: [
+                Bundle::make('wire-core-dropdown.js'),
+                // The delegated clipboard controller. In core because two packages ask
+                // for the same affordance — a table's copyable cell and an infolist's
+                // copyable entry — and core is the lowest layer that can own it.
+                Bundle::make('wire-core-copy.js'),
+                // Was `loadedOnRequest()` under the old registry, on the grounds that
+                // charts are the heavy optional class. They are not: this is 671 bytes
+                // of Alpine registrar around `window.Chart`, which is the consuming
+                // app's own dependency and is not shipped here. Delivering a registrar
+                // late is the one thing ADR 0024 forbids, so it ships with the rest.
+                Bundle::make('wire-core-chart.js'),
+            ])
+            ->hasAssetFallback(Bundle::servedByRoute('wire-core'))
             ->hasAbout()
             ->hasInstallCommand(function (InstallCommand $command) {
                 // Assets are deliberately not published here. Publishing is what
@@ -188,12 +204,8 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // editable columns, for an object with no constructor and no state.
         $this->app->singleton(RecordVersion::class);
 
-        // Canonical owner of every package's browser assets. Singleton so the
-        // registry — and each asset's route + mtime memo — spans the whole request.
-        $this->app->singleton(AssetManager::class);
-
-        // Thin facade over the manager for the floating-dropdown bundle URL, kept
-        // because a dozen partials already resolve it by that name.
+        // Thin facade over the toolkit's renderer for the floating-dropdown bundle
+        // URL, kept because a dozen partials already resolve it by that name.
         $this->app->singleton(FloatingAssets::class);
     }
 
@@ -209,12 +221,20 @@ class WireCoreServiceProvider extends PackageServiceProvider
 
         // `@wireStackScripts` — the one tag an app puts in its layout <head> to get
         // every wireStack Alpine controller into the initial document (which is what
-        // survives Livewire's cached Back/Forward navigation). A thin passthrough:
-        // the whole expression is forwarded to the canonical owner, which resolves
-        // and memoises the markup; no presentation logic lives in the compiler.
+        // survives Livewire's cached Back/Forward navigation).
+        //
+        // Now an alias for the toolkit's `@packageAssets`, which since 2.4.2 renders
+        // every package that declared entries when given no argument. Kept rather than
+        // removed because it is in consuming apps' layouts, and a minor release is no
+        // place to break a `<head>`. Note the widened meaning: the aggregate is every
+        // *toolkit* package, not only the four wireStack ones — which is what a layout
+        // wants anyway, and the argument the aggregate was added for.
+        //
+        // A thin passthrough, the same as before: the whole expression goes to the
+        // renderer, so an app may still narrow it to one package.
         Blade::directive('wireStackScripts', static fn (string $expression): string => sprintf(
-            '<?php echo app(%s::class)->renderScripts(%s); ?>',
-            '\\'.AssetManager::class,
+            '<?php echo app(%s::class)->tags(%s); ?>',
+            '\\'.PackageAssets::class,
             $expression,
         ));
 
@@ -226,8 +246,8 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // subtler one: each carries the `?id=<mtime>` of its mirrored copy, so a
         // worker still alive across a deploy would keep emitting last release's query
         // string — and `data-navigate-track`, which exists to catch exactly that,
-        // would never fire. `PublishedAssets` holds the same memo one layer down;
-        // flushing only ours would re-ask it and get the same answer back.
+        // would never fire. Since the toolkit owns the tag there is one memo to
+        // flush, not two.
         //
         // Referenced by string, not ::class import: laravel/octane is an optional
         // dependency the package does not require, so the symbol may not exist.
@@ -235,7 +255,6 @@ class WireCoreServiceProvider extends PackageServiceProvider
         if (class_exists($octaneRequestTerminated)) {
             Event::listen($octaneRequestTerminated, function (): void {
                 Component::flushViewRenderCache();
-                $this->app->make(AssetManager::class)->flushUrls();
                 $this->app->make(PublishedAssets::class)->flush();
             });
         }
@@ -355,38 +374,5 @@ class WireCoreServiceProvider extends PackageServiceProvider
         })
             ->where('asset', '[A-Za-z0-9_-]+')
             ->name('wire-core.asset');
-    }
-
-    /**
-     * Declare the package's browser bundles with the canonical {@see AssetManager},
-     * so `@wireStackScripts` emits them into the app's layout.
-     *
-     * `wire-core-dropdown.js` carries every shared Alpine controller (wireDropdown,
-     * wireContextMenu, wireTabs, wireWizard, wireEditableCell, wireFillHandle) — the
-     * interaction layer, which is exactly what must never arrive late.
-     *
-     * `wire-core-chart.js` is declared `loadedOnRequest()`: charts are the optional,
-     * heavy class, so the directive leaves the body out of every page and the widget's
-     * own partial fetches it. Registering it anyway keeps one owner of its URL —
-     * the partial asks {@see AssetManager::url()} instead of recomputing route+mtime.
-     * The registrar inside the bundle is unconditional, so arriving late is safe.
-     */
-    protected function registerAssets(): void
-    {
-        $this->app->make(AssetManager::class)->register([
-            Js::make('dropdown', self::ASSETS_PATH.'/wire-core-dropdown.js')
-                ->navigateTrack()
-                ->navigateOnce(),
-            Js::make('chart', self::ASSETS_PATH.'/wire-core-chart.js')
-                ->navigateTrack()
-                ->navigateOnce()
-                ->loadedOnRequest(),
-            // The delegated clipboard controller. In core because two packages ask
-            // for the same affordance — a table's copyable cell and an infolist's
-            // copyable entry — and core is the lowest layer that can own it.
-            Js::make('copy', self::ASSETS_PATH.'/wire-core-copy.js')
-                ->navigateTrack()
-                ->navigateOnce(),
-        ], 'wire-core');
     }
 }

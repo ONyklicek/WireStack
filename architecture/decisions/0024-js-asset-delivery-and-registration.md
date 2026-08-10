@@ -2,10 +2,30 @@
 
 ## Status
 
-ACCEPTED — implemented 2026-07-29.
+ACCEPTED — implemented 2026-07-29. **Amended 2026-08-10: the mechanism moved, the
+decision did not.**
 
 Supersedes [ADR 0002](0002-js-alpine-distribution.md), which is falsified on
 every clause it asserts.
+
+### Amendment — the renderer is the toolkit's
+
+Everything this ADR decided still holds: unconditional registration, bundles in the
+initial document, static files first with a route behind them, one directive in the
+layout. What changed is who implements it. `nyoncode/laravel-package-toolkit` 2.4.2
+gained the two capabilities that were the reason for a wire-core renderer — a
+no-argument `@packageAssets` rendering every installed package, and
+`hasAssetFallback()` for the app whose `public/` cannot be written — so
+`Foundation\Assets\AssetManager`, `Js`, `Contracts\Asset` and
+`AssetRegistrationException` were removed and their work handed over.
+
+`Foundation\Assets\Bundle` is what remains on this side: the declaration's shape
+(classic/IIFE, no `defer`, `data-navigate-once`) and the route behind the fallback.
+`@wireStackScripts` survives as an alias for `@packageAssets`.
+
+Two things were given up with it — the stale-publish warning and `loadedOnRequest()`.
+Both, and why, are in [`../assets.md`](../assets.md) § How this got here. Read that
+for the current state; this ADR is the reasoning, which is unchanged.
 
 ## Context
 

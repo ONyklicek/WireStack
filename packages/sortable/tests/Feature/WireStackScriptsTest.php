@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
-use NyonCode\WireCore\Foundation\Assets\AssetManager;
+use NyonCode\LaravelPackageToolkit\Support\PackageAssets;
 
 /*
  * The drag controller has to reach a page the app navigated *to*. Reordering is
@@ -31,7 +31,7 @@ it('registers the bundle under its own package, not core', function () {
     // wire-core owns the registry but must never learn that wire-sortable exists;
     // the provider pushes its own declaration. Narrowing to the package proves the
     // registration is filed under `wire-sortable` rather than leaking into core's.
-    $html = app(AssetManager::class)->renderScripts('wire-sortable')->toHtml();
+    $html = app(PackageAssets::class)->scripts('wire-sortable')->toHtml();
 
     expect($html)
         ->toContain('/vendor/wire-sortable/wire-sortable.js')
@@ -42,7 +42,7 @@ it('cache-busts the bundle by the mirrored copy\'s mtime', function () {
     // The buster is the mtime of the copy under public/, stamped when the mirror
     // wrote it — not the shipped file's. That is what moves the query string on an
     // upgrade and makes data-navigate-track reload the app.
-    expect(app(AssetManager::class)->url('wire-sortable', 'sortable'))
+    expect(app(PackageAssets::class)->url('wire-sortable', 'wire-sortable.js'))
         ->toBe(asset('vendor/wire-sortable/wire-sortable.js')
             .'?id='.filemtime(public_path('vendor/wire-sortable/wire-sortable.js')));
 });
@@ -60,7 +60,7 @@ it('falls back to a URL its own route actually serves', function () {
     $this->app->usePublicPath($blocker.'/public');
 
     try {
-        $url = app(AssetManager::class)->url('wire-sortable', 'sortable');
+        $url = app(PackageAssets::class)->url('wire-sortable', 'wire-sortable.js');
 
         expect($url)->toContain('/wire-sortable/assets/sortable.js');
 
@@ -73,7 +73,7 @@ it('falls back to a URL its own route actually serves', function () {
 });
 
 it('marks the bundle so a rebuild busts the SPA cache', function () {
-    $html = app(AssetManager::class)->renderScripts('wire-sortable')->toHtml();
+    $html = app(PackageAssets::class)->scripts('wire-sortable')->toHtml();
 
     // data-navigate-track reloads the page when the query string changes (the mtime
     // buster supplies it); data-navigate-once stops Livewire re-running the tag.

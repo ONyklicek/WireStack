@@ -40,20 +40,20 @@ the bundles are in the initial document.** Neither substitutes for the other.
 
 Committed IIFE bundles under each package's `dist/`, built with esbuild:
 
-| Package | `dist/` | Registered id | Source |
-|---|---|---|---|
-| core | `wire-core-dropdown.js` | `dropdown` | `resources/js/dropdown.js` (+ `editable/`, `fill/`, `support/`) |
-| core | `wire-core-chart.js` | `chart` (`loadedOnRequest`) | `resources/js/chart.js` |
-| core | `wire-core-copy.js` | `copy` | `resources/js/copy.js` |
-| forms | `wire-forms-image.js` | `image` | `resources/js/image-processor.js` |
-| forms | `tiptap/` (code-split ESM) | — not registered | `resources/js/tiptap-editor{,-addons}.js` |
-| table | `wire-table-records.js` | `records` | `resources/js/record-actions.js` |
-| table | `wire-table-selection.js` | `selection` | `resources/js/record-selection.js` |
-| table | `wire-table-live.js` | `live` | `resources/js/record-live.js` |
-| sortable | `wire-sortable.js` | `sortable` | `resources/js/sortable.js` (SortableJS bundled in) |
+| Package | `dist/` (also the entry key) | Source |
+|---|---|---|
+| core | `wire-core-dropdown.js` | `resources/js/dropdown.js` (+ `editable/`, `fill/`, `support/`) |
+| core | `wire-core-chart.js` | `resources/js/chart.js` |
+| core | `wire-core-copy.js` | `resources/js/copy.js` |
+| forms | `wire-forms-image.js` | `resources/js/image-processor.js` |
+| forms | `tiptap/` (code-split ESM) | not an entry — the field delivers it | `resources/js/tiptap-editor{,-addons}.js` |
+| table | `wire-table-records.js` | `resources/js/record-actions.js` |
+| table | `wire-table-selection.js` | `resources/js/record-selection.js` |
+| table | `wire-table-live.js` | `resources/js/record-live.js` |
+| sortable | `wire-sortable.js` | `resources/js/sortable.js` (SortableJS bundled in) |
 
 The copy affordance is core's, not table's (`2137b46`) — it is the one bundle that
-moved packages, and the id stayed `copy` while the file became `wire-core-copy.js`.
+moved packages.
 
 `wire-core-dropdown.js` carries the whole shared interaction layer — `wireDropdown`,
 `wireContextMenu`, `wireTabs`, `wireWizard`, `wireEditableCell`, `wireFillHandle` —
@@ -106,61 +106,49 @@ else document.addEventListener('alpine:init', registerWireX)
 
 ## Declaration (in PHP)
 
-`Foundation/Assets/` is the canonical owner, in core because that is the lowest
-layer that can hold it — the same placement as `Foundation/Icons/IconManager`.
+`Foundation/Assets/Bundle` is what wire-core still owns. Everything else — the
+registry, the URL, the tag, the memo — is `nyoncode/laravel-package-toolkit`'s
+`PackageAssets`, which each provider hands its declaration to through the packager.
 
 ```text
 Foundation/Assets/
-├─ Contracts/Asset.php   the interface a future Css would implement
-├─ Js.php                one bundle, as a value object
-└─ AssetManager.php      container singleton: package => id => asset
+└─ Bundle.php   how a wireStack bundle is declared, and where its route is
 ```
 
-Each provider declares its own bundles from `bootedPackage()`. **Core never learns
-that downstream packages exist**; the registry is assembled by whoever is
-installed:
+Each provider declares its own bundles in `configure()`. **Core never learns that
+downstream packages exist**; the registry is assembled by whoever is installed:
 
 ```php
-protected function registerAssets(): void
-{
-    app(AssetManager::class)->register([
-        Js::make('selection', self::ASSETS_PATH.'/wire-table-selection.js')
-            ->navigateTrack()
-            ->navigateOnce(),
-    ], 'wire-table');
-}
+$packager
+    ->hasAssets('dist', entries: [
+        Bundle::make('wire-table-selection.js'),
+    ])
+    ->hasAssetFallback(Bundle::servedByRoute('wire-table'));
 ```
 
-`Js::make($id, $path)` takes an **absolute filesystem path** (needed for the
-`?id=<mtime>` cache-buster) or an absolute URL. `$id` doubles as the `{asset}`
-parameter of the package's `{package}.asset` route, which keeps a declaration to
-one line.
+The entry key is the **shipped filename**, not a short id — that is the toolkit's
+vocabulary, and it is what `@packageScripts('wire-table', 'wire-table-selection.js')`
+and `PackageAssets::url()` take.
 
-| Builder | Effect |
+### `Bundle`, and why it exists
+
+Three properties are true of every bundle in this repo, and saying them once beats
+saying them in four providers:
+
+| Property | Why |
 |---|---|
-| `->module()` | `type="module"` |
-| `->defer()` | `defer` |
-| `->navigateTrack()` | `data-navigate-track` — Livewire full-reloads a `wire:navigate` visit when the query string changed, so a deploy is picked up instead of running new markup against a cached bundle |
-| `->navigateOnce()` | `data-navigate-once` — never re-execute on a navigate visit |
-| `->loadedOnRequest()` | keep out of the always-emitted set; the surface fetches it itself |
+| `classic()` | every bundle is built `--format=iife`. The toolkit renders a `.js` entry as `type="module"` unless told otherwise, and a module is deferred with its top-level declarations sealed off from `window` — which is exactly how the registration idiom works. A module here registers nothing, and every `x-data` fails with no error at the point of the mistake. |
+| `defer => null` | `classic()` adds `defer` by default. Removing it keeps the emitted tag byte-identical to what the stack shipped before the toolkit owned it. Nothing is known to break under `defer` — the registrars are order-independent by construction — but nothing had watched it in a browser either, and a structural change should not carry a timing change in with it. |
+| `data-navigate-once` | parity with what the old `Js::navigateOnce()` emitted. |
 
-A path starting `http://`, `https://` or `//` is treated as remote and used
-verbatim — the way Filament detects remoteness. There is deliberately no
-`remote()` builder to get wrong.
+`data-navigate-track="reload"` is the toolkit's own default and is kept — Livewire
+tests it with `hasAttribute`, so the value it gained is immaterial.
 
-### `AssetManager`
-
-| Method | Use |
-|---|---|
-| `register(array $assets, string $package)` | from a provider's `bootedPackage()`; re-registering an id replaces it |
-| `renderScripts(?string $package)` | what `@wireStackScripts` compiles to; memoised per package |
-| `url(string $package, string $id)` | for a surface emitting its own tag |
-| `get(string $package, string $id)` | the asset object; throws `AssetRegistrationException` when unknown |
-| `flushUrls()` | Octane: drop every resolved URL and rendered tag, keep the registry |
-
-`Foundation/View/FloatingAssets` is a thin facade over `url('wire-core',
-'dropdown')`, kept because a dozen partials already ask for it by that name. It
-holds no cache of its own — a canonical owner *is* the resolve-once.
+`Bundle::servedByRoute($package)` is the other half: the `hasAssetFallback()`
+resolver pointing at the `{package}.asset` route each provider registers. It reads
+the route's id back off the filename (`wire-core-dropdown.js` → `dropdown`, and
+`wire-sortable.js` → `sortable`), because the routes take an id and the toolkit
+speaks filenames.
 
 ### The directive
 
@@ -169,8 +157,14 @@ holds no cache of its own — a canonical owner *is* the resolve-once.
 passthrough — no presentation logic lives in the compiled string:
 
 ```php
-<?php echo app(\NyonCode\WireCore\Foundation\Assets\AssetManager::class)->renderScripts(); ?>
+<?php echo app(\NyonCode\LaravelPackageToolkit\Support\PackageAssets::class)->tags(); ?>
 ```
+
+It is an **alias for the toolkit's `@packageAssets`**, kept because it is already in
+consuming apps' layouts and a minor release is no place to break a `<head>`. Note the
+widened meaning: the no-argument form renders every *toolkit* package that declared
+entries, not only the four wireStack ones — which is what a layout wants anyway, and
+the whole argument for the aggregate.
 
 `@wireStackScripts('wire-table')` narrows to one package. It is **additive**:
 every surface still `@include`s its own asset partial, so an app that never adds
@@ -207,67 +201,55 @@ drift this removed once already.
 |---|---|---|
 | declare | `MirrorsPackageAssets` (toolkit) | `$packager->assetDirectory()` → `PublishedAssets::mirrors()`, from `register()` |
 | copy | `PublishedAssets::sync()` (toolkit) | lazy, incremental, atomic mirror of the whole directory |
-| fall back | `Js::getUrl()` (core) | the package's own asset route when the mirror returns `null` |
-| warn | `AssetManager::stalePublishWarning()` (core) | `console.warn` off `PublishedAssets::isStale()` |
+| render | `PackageAssets` (toolkit) | the `<script>`, its attributes, the CSP nonce, the aggregate |
+| fall back | `Bundle::servedByRoute()` (core) → `hasAssetFallback()` | the package's own asset route when nothing is published |
 
-Nothing in wire-core registers, declares or copies.
+Nothing in wire-core registers, renders or copies. What it still owns is the
+declaration's shape (`Bundle`) and the routes behind the fallback.
 
-### What the toolkit owns as of 2.4
+### How this got here
 
-The split above was drawn against toolkit **2.3**, where the toolkit had a mirror
-and no renderer, so "the toolkit cannot render a tag" was the whole reason
-`AssetManager` exists. **2.4 has a renderer**, and since `768c299` the constraint
-is `^2.4.0` — so that reason no longer holds on its own and the divergence has to
-be argued rather than assumed. Declared with `hasAssets(entries: [...])`:
+The split above was drawn against toolkit **2.3**, which had a mirror and no
+renderer — "the toolkit cannot render a tag" was the whole reason wire-core carried
+an `AssetManager`, a `Js` value object and a registry of its own. **2.4 added a
+renderer**, which retired that reason and left three capabilities as the argument for
+keeping ours (`fcb2c28`). Toolkit **2.4.2** closed all three:
 
-| Capability | Ours | Toolkit 2.4.1 |
-|---|---|---|
-| narrow to one package | `@wireStackScripts('wire-table')` | `@packageAssets('wire-table')` — same |
-| name individual entries | `AssetManager::url($package, $id)` | `@packageScripts('blog', 'js/blog.js')` — same |
-| `type="module"` / `defer` / arbitrary attributes | `Js::module()`, `->defer()`, `->navigateTrack()`, `->navigateOnce()` | `Asset::make()->classic()`, `->attributes()` — same, and `data-navigate-track="reload"` is on by default |
-| **render every installed package at once** | `@wireStackScripts` with no argument | **none.** `PackageAssets::tags(string $package, …)` — the argument is required |
-| **a remote/CDN URL as an entry** | `http(s)://` and `//` used verbatim | **none.** `hasAssets()` throws `FileNotFoundException` for an entry that is not a file in the asset directory |
-| **fall back when nothing is published** | the package's own asset route | **none.** `render()` does `if ($tag === null) continue;` — the tag is silently dropped |
-| keep an entry out of the default set | `loadedOnRequest()`, a property of the declaration | expressed per call site instead |
-| warn about a stale published copy | `AssetManager::stalePublishWarning()` | `isStale()` exists; the renderer does not use it |
-| entry key | an id — `'dropdown'` | the file — `'wire-core-dropdown.js'` |
-| the app's Vite build compiles our sources | — | `hasViteAssets()` |
-| how each entry resolved | — | `resolution()`, and a `hasAbout()` row |
+| Kept ours for | Closed by |
+|---|---|
+| rendering every installed package from one line | `@packageAssets` with no argument |
+| falling back when nothing is published | `hasAssetFallback()` |
+| a remote/CDN URL as an entry | withdrawn — nothing here ships from a CDN, and we do not intend to |
 
-**Three** things keep the renderer here, not one:
+So the stack migrated. `AssetManager`, `Js`, `Contracts/Asset` and
+`AssetRegistrationException` are gone; `Bundle` replaced them at about a tenth of the
+size, and `FloatingAssets` stayed as the facade a dozen partials already ask by name.
 
-1. **The aggregate form.** `@wireStackScripts` with no argument renders whatever
-   is installed, which is why a consuming app's layout is one line and stays one
-   line when it adds `wire-sortable`. The toolkit's directives take a required
-   short name, so the same layout becomes four calls that have to be edited on
-   every install. `package:discover` does not help — it discovers *providers*,
-   and the template still names packages by hand. Note the toolkit's own
-   reasoning rejects a **generated** `@blogStyles`, not an aggregate: a no-argument
-   `@packageAssets` rendering every declared package is consistent with it.
-2. **The route fallback.** ADR 0024 chose static files first *and* a route behind
-   them for the app whose `public/` cannot be written. The toolkit's renderer has
-   no second place to look, and drops the tag without saying so.
-3. **Remote URLs.** Cheapest to give up — nothing here ships from a CDN today —
-   but it is a documented capability of `Js`, not an oversight.
+**Two things were given up, deliberately.**
 
-`loadedOnRequest()` and the stale warning are real differences but not blockers:
-the first is expressible at each call site, the second is ours to keep either way.
+- **The stale-publish warning.** `AssetManager` used to `console.warn` when
+  `public/vendor` held a copy older than the shipped one — the case where a page
+  loads last release's JavaScript against this release's markup. It cannot be rebuilt
+  on this side: it needs each entry's absolute path, which the toolkit does not
+  expose, so the only ways back are a parallel registry (the thing this removed) or
+  core learning which packages exist downstream (forbidden outright). It belongs in
+  the toolkit's renderer, next to `PublishedAssets::isStale()`, which already knows
+  the answer and is not asked. **Worth raising as a toolkit issue.**
+- **`loadedOnRequest()`.** It had exactly one user, `wire-core-chart.js`, filed as
+  the heavy optional class. It is 671 bytes of Alpine registrar around the app's own
+  `window.Chart`, and delivering a registrar late is the one thing ADR 0024 forbids —
+  so it now ships with the rest, and the concept has no remaining caller. TipTap, the
+  genuinely heavy case, was never in the registry and still is not: the field
+  delivers it.
 
-Two things to know before anyone migrates:
+One thing to know if you touch `Bundle`: **declaring `entries:` while the per-surface
+partials still emit their own tags means two tags per bundle.** Harmless only because
+the `registered` guard makes the second execution a no-op — which is a reason the
+guard is load-bearing, not a reason to rely on it.
 
-- **Our bundles are IIFE, and the toolkit renders `.js` as `type="module"`.** A
-  module is deferred and its top-level declarations never reach `window`, which
-  is exactly how the registration idiom above works — so a naive port registers
-  nothing and every `x-data` fails, with no error at the point of the mistake.
-  Each entry needs `Asset::make(...)->classic()`.
-- **Declaring `entries:` while the per-surface partials still emit their own tags
-  means two tags per bundle.** Harmless only because the `registered` guard makes
-  the second execution a no-op — which is a reason the guard is load-bearing, not
-  a reason to rely on it.
-
-`hasViteAssets()` is the one piece with no counterpart here and a real consumer
-benefit: an app on Tailwind currently has to point `@source` at this repo's Blade
-markup by hand or watch half the classes get purged. Not adopted yet.
+`hasViteAssets()` remains the one toolkit feature with no counterpart here and a real
+consumer benefit: an app on Tailwind currently has to point `@source` at this repo's
+Blade markup by hand or watch half the classes get purged. Not adopted.
 
 ### Properties of the mirror
 
@@ -295,11 +277,12 @@ condition, and Livewire does not gate its equivalent either.
 
 ## Traps
 
-- **`loadedOnRequest()` is for heavy optional bodies, never for a registrator.**
+- **Lazy delivery is for heavy optional bodies, never for a registrator.**
   Per-component lazy delivery of an interaction controller is the practice that
-  produced the original defect. `wire-core-chart.js` is the legitimate case: the
-  directive leaves it out, the widget's partial fetches it, and it is still
-  registered so `AssetManager::url()` stays the single owner of its URL.
+  produced the original defect. There is no longer a builder for it: TipTap, the one
+  genuinely heavy case, simply is not an entry, and the field that needs it delivers
+  it. `wire-core-chart.js` used to be filed here and was not heavy — 671 bytes of
+  registrar — so it ships with the rest.
 - **`record-selection.js` must stay import-free.** `selection-assets.blade.php`
   inlines its source verbatim (wrapped in an IIFE, matching what `--format=iife`
   does) when `dist/` is missing, because the `x-data` on the table wrapper owns
@@ -311,8 +294,8 @@ condition, and Livewire does not gate its equivalent either.
   Livewire-loaded modal never executes. `wireChart` was undelivered in consuming
   apps for exactly this reason, and survived because the only caller was a
   workbench preview.
-- **Octane.** `AssetManager::flushUrls()` and `PublishedAssets::flush()` run on
-  `RequestTerminated`. Without them a worker alive across a deploy keeps emitting
+- **Octane.** `PublishedAssets::flush()` runs on `RequestTerminated` — one memo now,
+  not two. Without them a worker alive across a deploy keeps emitting
   last release's `?id=`, and `data-navigate-track` — which exists to catch exactly
   that — never fires.
 - **TipTap stays outside the registry.** The field delivers it; the mirror still
@@ -328,10 +311,10 @@ condition, and Livewire does not gate its equivalent either.
 | Goal | Touch |
 |---|---|
 | change a controller's behaviour | `packages/<pkg>/resources/js/*.js` **+ its `npm run build:<pkg>-assets`** |
-| ship a new bundle | source + build script + `Js::make()` in the provider's `registerAssets()` |
-| new package joining the stack | `hasAssets('dist')`, an asset route named `{package}.asset`, `registerAssets()` |
-| a surface needs a URL | `AssetManager::url($package, $id)` from the partial — never recompute route + mtime |
-| make a bundle lazy | `->loadedOnRequest()` + a per-surface `@assets` partial. Bodies only, never registrators |
+| ship a new bundle | source + build script + `Bundle::make('file.js')` in the provider's `hasAssets(entries: [...])` |
+| new package joining the stack | `hasAssets('dist', entries: [...])` with `Bundle::make()`, `hasAssetFallback(Bundle::servedByRoute(...))`, and a route named `{package}.asset` |
+| a surface needs a tag | `@packageScripts('wire-table', 'wire-table-live.js')` — never hand-write the `<script>`, which drops the attributes and the nonce |
+| make a bundle lazy | leave it out of `entries:` and have the surface deliver it, as the TipTap field does. Bodies only, never registrators |
 | change delivery/mirroring | the toolkit (`PublishedAssets`, `MirrorsPackageAssets`), not wire-core |
 
 ---
@@ -339,9 +322,10 @@ condition, and Livewire does not gate its equivalent either.
 ## Tests To Run
 
 ```bash
-composer test:core        # AssetManagerTest, JsTest, PublishedAssetsTest, WireStackScriptsTest,
-                          # DropdownAssetTest, ChartAssetTest, FloatingAssetsTest
-composer test:table       # SelectionAssetTest, RecordActionAssetTest, CopyAssetTest, LazyTableAssetsTest
+composer test:core        # PublishedAssetsTest, WireStackScriptsTest, DropdownAssetTest,
+                          # ChartAssetTest, CopyAssetTest, FloatingAssetsTest,
+                          # OctaneRequestTerminatedTest
+composer test:table       # SelectionAssetTest, RecordActionAssetTest, LazyTableAssetsTest
 composer test:forms       # ImageAssetTest, TiptapAssetTest
 composer test:sortable    # SortableAssetTest
 ```

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
-use NyonCode\WireCore\Foundation\Assets\AssetManager;
+use NyonCode\LaravelPackageToolkit\Support\PackageAssets;
 
 it('ships the image-upload controller with the always-loaded set', function () {
     expect(Blade::render('@wireStackScripts'))
@@ -16,5 +16,5 @@ it('leaves the TipTap bundle out of the always-loaded set', function () {
     // stays on-request, served by its own route. Lazy the heavy bodies, never the
     // controllers that register them.
     expect(Blade::render('@wireStackScripts'))->not->toContain('tiptap')
-        ->and(app(AssetManager::class)->getScripts('wire-forms'))->toHaveCount(1);
+        ->and(app(PackageAssets::class)->resolution('wire-forms'))->toHaveCount(1);
 });

@@ -47,9 +47,15 @@ it('emits each bundle exactly once', function () {
     // The per-surface @assets partials still exist for apps without the directive;
     // the directive must not turn into a second copy of them for apps with it.
     //
-    // Six, since the clipboard controller joined the live-broadcast bridge. Both
-    // ship on every page for the same reason the others do: the behaviour a table's
-    // markup reaches for has to exist before a wire:navigate visit renders the
-    // table, and the page that visit is made *from* may have no table on it at all.
-    expect(substr_count(Blade::render('@wireStackScripts'), '<script'))->toBe(6);
+    // Seven: dropdown, copy and chart from core, image from forms, records,
+    // selection and live from the table. They ship on every page for the same
+    // reason: the behaviour a table's markup reaches for has to exist before a
+    // wire:navigate visit renders the table, and the page that visit is made
+    // *from* may have no table on it at all.
+    //
+    // Chart is the one that moved. It was held back as an optional heavy body,
+    // which it is not — 671 bytes of Alpine registrar around the app's own
+    // Chart.js — and delivering a registrar late is precisely what ADR 0024
+    // forbids.
+    expect(substr_count(Blade::render('@wireStackScripts'), '<script'))->toBe(7);
 });

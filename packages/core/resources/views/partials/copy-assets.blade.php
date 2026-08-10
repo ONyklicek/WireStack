@@ -1,12 +1,9 @@
 @php
-    // The URL (route + cache-busting mtime) is owned and memoised by the canonical
-    // AssetManager, which this package's provider registers the bundle with. The
-    // path is still needed here to choose the branch below, and to read the source
-    // for the fallback when the compiled bundle is absent.
+    // The tag itself belongs to the toolkit's renderer (`@packageScripts` below),
+    // which owns delivery and the attributes the declaration carries. The path is
+    // still needed here to choose the branch, and to read the source for the
+    // fallback when the compiled bundle is absent.
     $copyAssetFile = \NyonCode\WireCore\WireCoreServiceProvider::ASSETS_PATH.'/wire-core-copy.js';
-    $copyAssetUrl = is_file($copyAssetFile)
-        ? app(\NyonCode\WireCore\Foundation\Assets\AssetManager::class)->url('wire-core', 'copy')
-        : null;
 @endphp
 
 {{-- Pre-bundled clipboard controller (copy.js), included once by any surface that
@@ -16,8 +13,8 @@
      the table renders inside a Livewire-loaded modal, where a DOM-morphed <script>
      would never execute. --}}
 @assets
-@if($copyAssetUrl !== null)
-<script src="{{ $copyAssetUrl }}"></script>
+@if(is_file($copyAssetFile))
+@packageScripts('wire-core', 'wire-core-copy.js')
 @else
 {{-- Wrapped in an IIFE, which is what esbuild does to the same source for the
      bundle above (`--format=iife`): inlined bare, its top-level `const`/`let`

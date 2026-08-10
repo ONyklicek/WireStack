@@ -732,25 +732,30 @@ emitted twice on one page (a per-surface include plus
 [`@wireStackScripts`](../getting-started.md#javascript-assets)), and the browser
 will execute it both times.
 
-If your package ships more than an occasional heavy field, declare the bundle
-with the shared `AssetManager` from your own service provider's boot instead of
-only including it per surface, and `@wireStackScripts` will emit it alongside
-Wire's own:
+If your package ships more than an occasional heavy field, declare the bundle in
+your own package's `configure()` instead of only including it per surface, and
+`@wireStackScripts` will emit it alongside Wire's own:
 
 ```php
-use NyonCode\WireCore\Foundation\Assets\AssetManager;
-use NyonCode\WireCore\Foundation\Assets\Js;
+use NyonCode\WireCore\Foundation\Assets\Bundle;
 
-app(AssetManager::class)->register([
-    Js::make('my-field', __DIR__.'/../dist/my-field.js')->navigateTrack(),
-], 'my-package');
+$packager
+    ->hasAssets('dist', entries: [
+        Bundle::make('my-field.js'),
+    ])
+    ->hasAssetFallback(Bundle::servedByRoute('my-package'));
 ```
 
-`Js::make()` takes the bundle id and a **filesystem** path (that is where the
-`?id=<mtime>` cache-buster comes from) and resolves its URL from your package's
-`{package}.asset` named route. Keep heavy bodies off pages that do not need them
-with `->loadedOnRequest()` — but never the small controller that registers the
-component.
+Entries are keyed by the **shipped filename**, relative to the asset directory.
+`Bundle::make()` declares what every Wire bundle is — a classic (non-module)
+script, because an ES module's top-level declarations never reach `window` and
+your registration would silently do nothing. `hasAssetFallback()` keeps the tag
+alive where `public/` cannot be written, by pointing at your package's own
+`{package}.asset` route.
+
+Keep heavy bodies off pages that do not need them by leaving them out of
+`entries:` and having the field deliver them per surface — but never the small
+controller that registers the component.
 
 ---
 

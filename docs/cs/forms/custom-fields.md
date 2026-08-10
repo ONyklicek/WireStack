@@ -735,23 +735,30 @@ vypsat dvakrát (per-surface include plus
 [`@wireStackScripts`](../getting-started.md#javascriptove-assety)) a prohlížeč ho
 oba dva krát spustí.
 
-Pokud váš balíček dodává víc než občasné těžké pole, deklarujte bundle sdílenému
-`AssetManageru` z bootu vlastního service provideru místo pouhého per-surface
-includu — `@wireStackScripts` ho pak vypíše vedle vlastních bundlů Wire:
+Pokud váš balíček dodává víc než občasné těžké pole, deklarujte bundle v
+`configure()` vlastního balíčku místo pouhého per-surface includu —
+`@wireStackScripts` ho pak vypíše vedle vlastních bundlů Wire:
 
 ```php
-use NyonCode\WireCore\Foundation\Assets\AssetManager;
-use NyonCode\WireCore\Foundation\Assets\Js;
+use NyonCode\WireCore\Foundation\Assets\Bundle;
 
-app(AssetManager::class)->register([
-    Js::make('my-field', __DIR__.'/../dist/my-field.js')->navigateTrack(),
-], 'my-package');
+$packager
+    ->hasAssets('dist', entries: [
+        Bundle::make('my-field.js'),
+    ])
+    ->hasAssetFallback(Bundle::servedByRoute('my-package'));
 ```
 
-`Js::make()` bere id bundlu a **filesystemovou** cestu (odtud pochází cache-buster
-`?id=<mtime>`) a URL si vyřeší z pojmenované routy `{package}.asset` vašeho
-balíčku. Těžká těla držte mimo stránky, které je nepotřebují, pomocí
-`->loadedOnRequest()` — ale nikdy ne malý controller, který komponentu registruje.
+Entries se klíčují **jménem dodávaného souboru** relativně k adresáři assetů.
+`Bundle::make()` deklaruje to, čím každý bundle Wire je — klasický (nemodulový)
+skript, protože top-level deklarace ES modulu se nikdy nedostanou na `window` a
+vaše registrace by tiše neudělala nic. `hasAssetFallback()` udrží tag naživu tam,
+kde do `public/` nejde zapisovat, tím že ukáže na vlastní routu
+`{package}.asset` vašeho balíčku.
+
+Těžká těla držte mimo stránky, které je nepotřebují, tak že je vynecháte z
+`entries:` a necháte je dodat pole per-surface — ale nikdy ne malý controller,
+který komponentu registruje.
 
 ---
 

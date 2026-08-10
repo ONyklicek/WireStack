@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-use NyonCode\WireCore\Foundation\Assets\AssetManager;
+use NyonCode\LaravelPackageToolkit\Support\PackageAssets;
 use NyonCode\WireCore\Foundation\View\FloatingAssets;
 
 /**
  * The floating-dropdown asset URL by the name a dozen partials ask for it
  * (render-engine-htmlable-first.md §4). Its reason to exist is that the emitting
  * partial is included many times per page; the route + mtime must resolve once.
- * The memo itself now belongs to the canonical AssetManager.
+ * The resolution itself now belongs to the toolkit's PackageAssets.
  */
 it('builds the cache-busted dropdown asset URL', function () {
     $url = app(FloatingAssets::class)->url();
@@ -26,7 +26,7 @@ it('delegates to the registered asset so the route + mtime resolve once per requ
     // consumer — there is no second copy of the resolution to drift.
     expect($assets->url())
         ->toBe($assets->url())
-        ->toBe(app(AssetManager::class)->url('wire-core', 'dropdown'));
+        ->toBe(app(PackageAssets::class)->url('wire-core', 'wire-core-dropdown.js'));
 });
 
 it('is bound as a singleton so the memo spans the whole request', function () {

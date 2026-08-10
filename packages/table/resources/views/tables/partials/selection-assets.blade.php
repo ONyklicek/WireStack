@@ -1,12 +1,9 @@
 @php
-    // The URL (route + cache-busting mtime) is owned and memoised by the canonical
-    // AssetManager, which this package's provider registers the bundle with.
-    // The path is still needed here to choose the branch below, and to read the
-    // source for the fallback when the compiled bundle is absent.
+    // The tag itself belongs to the toolkit's renderer (`@packageScripts` below),
+    // which owns delivery and the attributes the declaration carries. The path is
+    // still needed here to choose the branch, and to read the source for the
+    // fallback when the compiled bundle is absent.
     $selectionAssetFile = \NyonCode\WireTable\WireTableServiceProvider::ASSETS_PATH.'/wire-table-selection.js';
-    $selectionAssetUrl = is_file($selectionAssetFile)
-        ? app(\NyonCode\WireCore\Foundation\Assets\AssetManager::class)->url('wire-table', 'selection')
-        : null;
 @endphp
 
 {{-- Pre-bundled selection component (wireRecordSelection). Loaded through
@@ -14,8 +11,8 @@
      the table renders inside a Livewire-loaded modal, where a DOM-morphed
      <script> tag would never execute. --}}
 @assets
-@if($selectionAssetUrl !== null)
-<script src="{{ $selectionAssetUrl }}"></script>
+@if(is_file($selectionAssetFile))
+@packageScripts('wire-table', 'wire-table-selection.js')
 @else
 {{-- The x-data on the table wrapper references the factory either way, and the
      wrapper owns search, filters, the bulk bar, pagination, the mobile cards

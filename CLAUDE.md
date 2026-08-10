@@ -96,7 +96,7 @@ Before changing shared behavior, ask:
   becomes a button (`RendersAsButton`, `ResolvesActionClick`, the button views):
   `architecture/plans/action-render-unification.md`
 - Shipping or changing a JS bundle, an Alpine controller's registration, the
-  `@wireStackScripts` directive or `Foundation/Assets/` (`AssetManager`, `Js`):
+  `@wireStackScripts` directive or `Foundation/Assets/Bundle`:
   `architecture/assets.md` for the current state (what ships, what the toolkit
   owns, the traps), then `architecture/plans/js-asset-registration.md` and ADR
   `architecture/decisions/0024-js-asset-delivery-and-registration.md` for why

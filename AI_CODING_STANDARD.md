@@ -146,7 +146,7 @@ across the `TypeCatalog` is missing a summary.
 | Interfaces | `HasLabel`, `HasIcon`, `CanDelete`, `CanSort` |
 | Traits | `InteractsWithLabel`, `InteractsWithIcon`, `CanDelete`, `CanSort` |
 | Actions | `CreateUser`, `DeleteUser`, `SyncPermissions`, `GenerateColumns` |
-| Services | `TranslationService`, `AssetManager`, `NavigationManager` |
+| Services | `TranslationService`, `NavigationManager`, `IconManager` |
 | Managers | `PluginManager`, `ComponentManager`, `ThemeManager` |
 
 ## Directory Structure
@@ -497,15 +497,15 @@ else document.addEventListener('alpine:init', register)
   it is already too late for the page it fires on.
 
 **Delivery is the other half.** Core interaction controllers must be in the initial
-document — a package declares them to `Foundation\Assets\AssetManager` from its own
-provider, and the app adds one `@wireStackScripts` to its layout. Downstream packages
+document — a package declares them with `hasAssets(entries: [Bundle::make(...)])` in
+its own `configure()`, and the app adds one `@wireStackScripts` to its layout. Downstream packages
 push their own registration; core never learns they exist. Only the always-present case
 is safe on the cached Back/Forward path, where Livewire does **not** wait for newly
 injected head scripts before initialising Alpine.
 
-**Lazy-load bodies, never registrators.** Lazy is for heavy, optional assets (rich text,
-charts) via `loadedOnRequest()`; the registrar inside such a bundle is still
-unconditional. A lazily delivered *registration mechanism* is precisely the bug above.
+**Lazy-load bodies, never registrators.** Lazy is for heavy, optional assets (rich
+text): leave them out of `entries:` and have the surface deliver them; the registrar
+inside such a bundle is still unconditional. A lazily delivered *registration mechanism* is precisely the bug above.
 
 Verify with `verify-spa-navigate` plus the drivers for whatever the bundle touches. See
 `architecture/plans/js-asset-registration.md` and ADR

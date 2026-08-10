@@ -67,15 +67,14 @@ Colors/icons:
 - `Foundation\Icons\DefaultIconSet`
 - `Foundation\Icons\HeroiconsOutlineSet`
 
-Browser assets (canonical owner of every package's JS bundle):
+Browser assets (the registry, the URL and the tag belong to the toolkit's
+`PackageAssets`; what is core's is the declaration):
 
-- `Foundation\Assets\AssetManager` — container singleton; `register()` per package,
-  `getScripts()` / `renderScripts()` behind the `@wireStackScripts` directive,
-  `get()` / `url()` for a surface emitting its own tag
-- `Foundation\Assets\Js` — one bundle: `make($id, $filesystemPath)` plus `module()`,
-  `defer()`, `navigateTrack()`, `navigateOnce()`, `loadedOnRequest()`
-- `Foundation\Assets\Contracts\Asset`
-- `Exceptions\AssetRegistrationException`
+- `Foundation\Assets\Bundle` — `make($shippedFile)` for a declaration every package
+  shares (classic/IIFE, no `defer`, `data-navigate-once`) and
+  `servedByRoute($package)` for the `hasAssetFallback()` resolver
+- `Foundation\View\FloatingAssets` — the dropdown bundle's URL, by the name a dozen
+  partials already ask for it
 
 Foundation Blade components:
 
@@ -549,9 +548,8 @@ Views:
 Assets:
 
 - `packages/sortable/resources/js/sortable.js` → `packages/sortable/dist/wire-sortable.js`
-  (`npm run build:sortable-assets`; SortableJS compiled in), registered with the core
-  `AssetManager` as `wire-sortable`/`sortable` and served by the `wire-sortable.asset`
-  route
+  (`npm run build:sortable-assets`; SortableJS compiled in), declared as a toolkit
+  asset entry with the `wire-sortable.asset` route behind it as fallback
 
 ## Test Locations
 
