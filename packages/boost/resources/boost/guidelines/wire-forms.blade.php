@@ -127,7 +127,13 @@ Selects: `Select` supports server-driven options (`getSearchResultsUsing()` remo
 `getOptionLabelUsing()`, `preload()`) and create/edit-option modals (`createOptionForm()` +
 `createOptionUsing()`, `editOptionForm()` + `fillEditOptionUsing()`/`updateOptionUsing()`) —
 both work in standalone forms and inside table action modals, and a created/edited option is
-selected and merged into the open combobox immediately (no page refresh). The combobox honours
+selected and merged into the open combobox immediately (no page refresh). Both option modals are
+configured through the canonical `Modals\Modal` config object —
+`->createOptionModal(fn (Modal $modal) => $modal->heading(…)->description(…)->icon(…)->width('2xl')
+->closeOnClickAway(false)->stickyFooter()->submitLabel(…)->cancelLabel(…))`, and the same for
+`->editOptionModal()`; `createOptionModalHeading()`/`createOptionModalWidth()` (+ `editOption…`
+twins) are shorthands writing into that same object. The modal's id/wire:model are not
+configurable — they key the teleport Livewire morphs by. The combobox honours
 `->live()` — add it when siblings react to the selection. `BelongsToSelect::searchable()`
 without `preload()` searches the related table on the server automatically (title-attribute
 `like`, limit 50); `preload()` ships the full option list and filters client-side.

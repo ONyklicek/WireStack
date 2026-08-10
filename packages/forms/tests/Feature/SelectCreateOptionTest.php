@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Livewire\Component;
 use Livewire\Livewire;
+use NyonCode\WireCore\Foundation\Enums\ModalWidth;
+use NyonCode\WireCore\Modals\Modal;
 use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Forms\Form;
@@ -219,6 +221,89 @@ class CreateAndEditOptionSelectComponent extends Component
         return '<div>{{ $this->form }}</div>';
     }
 }
+
+class WideOptionModalSelectComponent extends Component
+{
+    use WithForms;
+
+    /** @var array<string, mixed> */
+    public array $data = ['category' => 'c1'];
+
+    public function form(Form $form): Form
+    {
+        return $form
+            ->statePath('data')
+            ->schema([
+                Select::make('category')
+                    ->options(fn () => OptionStore::all())
+                    ->createOptionForm([TextInput::make('name')->required()])
+                    ->createOptionModalWidth('3xl')
+                    ->createOptionModal(fn (Modal $modal) => $modal
+                        ->description('Name the new category')
+                        ->submitLabel('Add it')
+                        ->cancelLabel('Never mind')
+                        ->closeOnClickAway(false))
+                    ->editOptionForm([TextInput::make('name')->required()])
+                    ->fillEditOptionUsing(fn ($value) => ['name' => OptionStore::label($value)])
+                    ->editOptionModalWidth(ModalWidth::Xl),
+            ]);
+    }
+
+    public function render(): string
+    {
+        return '<div>{{ $this->form }}</div>';
+    }
+}
+
+test('the option modals render at the configured width', function () {
+    Livewire::test(WideOptionModalSelectComponent::class)
+        ->call('mountCreateOption', 'data.category')
+        ->assertSeeHtml('max-w-3xl')
+        ->assertDontSeeHtml('max-w-md')
+        ->call('unmountCreateOption')
+        ->call('mountEditOption', 'data.category')
+        ->assertSeeHtml('max-w-xl');
+});
+
+test('the option modals fall back to the md width', function () {
+    Livewire::test(CreateAndEditOptionSelectComponent::class)
+        ->call('mountCreateOption', 'data.category')
+        ->assertSeeHtml('max-w-md');
+});
+
+test('the modal config reaches the rendered option modal', function () {
+    Livewire::test(WideOptionModalSelectComponent::class)
+        ->call('mountCreateOption', 'data.category')
+        ->assertSee('Name the new category')
+        ->assertSee('Add it')
+        ->assertSee('Never mind');
+});
+
+test('closeOnClickAway(false) drops the backdrop close handler', function () {
+    // The escape binding and the header's X button emit the same close
+    // expression unconditionally, so the flag is only visible as one fewer
+    // occurrence — asserting its plain absence would pass either way.
+    $closable = Livewire::test(CreateAndEditOptionSelectComponent::class)
+        ->call('mountCreateOption', 'data.category')
+        ->html();
+
+    $locked = Livewire::test(WideOptionModalSelectComponent::class)
+        ->call('mountCreateOption', 'data.category')
+        ->html();
+
+    expect(substr_count($locked, '$wire.unmountCreateOption()'))
+        ->toBe(substr_count($closable, '$wire.unmountCreateOption()') - 1);
+});
+
+test('the option modal footer keeps its default labels', function () {
+    Livewire::test(CreateAndEditOptionSelectComponent::class)
+        ->call('mountCreateOption', 'data.category')
+        ->assertSee('Create')
+        ->assertSee('Cancel')
+        ->call('unmountCreateOption')
+        ->call('mountEditOption', 'data.category')
+        ->assertSee('Save');
+});
 
 test('the create and edit option modals keep distinct teleport keys when both are mounted', function () {
     // Nothing makes the two mounted-* properties mutually exclusive, so both
