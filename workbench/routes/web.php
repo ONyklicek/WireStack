@@ -365,6 +365,7 @@ foreach ([
     'forms-tabs' => ['title' => 'Wire Forms Tabs', 'subtitle' => 'Tabbed form layout.', 'component' => FormPreview::class, 'variant' => 'tabs'],
     'forms-wizard' => ['title' => 'Wire Forms Wizard', 'subtitle' => 'Standalone multi-step wizard layout.', 'component' => FormPreview::class, 'variant' => 'wizard'],
     'forms-wizard-live' => ['title' => 'Wire Forms Wizard (Live)', 'subtitle' => 'Per-step validation, dynamic steps, live select with create-option.', 'component' => FormPreview::class, 'variant' => 'wizard-live'],
+    'forms-option-wizard' => ['title' => 'Wire Forms Option Wizard', 'subtitle' => 'A wizard inside a create-option modal, its navigation handed to the modal footer.', 'component' => FormPreview::class, 'variant' => 'option-wizard'],
     'forms-repeater' => ['title' => 'Wire Forms Repeater', 'subtitle' => 'Focused nested repeater preview.', 'component' => FormPreview::class, 'variant' => 'repeater'],
     'forms-repeater-table' => ['title' => 'Wire Forms Repeater (table layout)', 'subtitle' => 'The same repeater laid out as rows under one header: one column per schema field, the per-cell label hidden.', 'component' => FormPreview::class, 'variant' => 'repeater-table'],
     'forms-builder' => ['title' => 'Wire Forms Builder', 'subtitle' => 'Heterogeneous content: every item picks its own block type from the add picker and is edited with that block\'s schema.', 'component' => FormPreview::class, 'variant' => 'builder'],

@@ -189,6 +189,12 @@ Select::make('category_id')
   na každý druh je jedna mounted path a jeden data bag, takže vyhovět by znamenalo
   zahodit rozepsaný formulář.
 
+Přidejte wizardu [`navigation(false)`](../../core/schema/layout/wizard.md#predani-navigace-jinam)
+a **patička modalu převezme jeho navigaci** — Back a Next vedle Cancel, s tlačítkem
+odeslání, které se objeví až na posledním kroku, místo druhého navigačního řádku
+uvnitř panelu. Wizard pojmenujte, když můžou být oba option modaly otevřené naráz:
+patička a wizard se najdou právě podle toho názvu.
+
 ### Konfigurace option modalu
 
 Ani jeden option modal není zvláštní případ: oba se konfigurují přes stejný objekt

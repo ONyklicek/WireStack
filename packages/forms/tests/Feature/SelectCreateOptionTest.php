@@ -438,3 +438,102 @@ test('an option modal cannot be opened from inside an option form', function () 
         ->assertSet('mountedCreateOptionSelect', 'data.category')
         ->assertSet('createOptionFormData.name', 'Half typed');
 });
+
+// ─── Wizard-aware modal footer ───────────────────────────────────────────
+
+class FooterDrivenWizardComponent extends Component
+{
+    use WithForms;
+
+    /** @var array<string, mixed> */
+    public array $data = ['category' => 'c1'];
+
+    public function form(Form $form): Form
+    {
+        return $form
+            ->statePath('data')
+            ->schema([
+                Select::make('category')
+                    ->options(fn () => OptionStore::all())
+                    ->createOptionForm([
+                        Wizard::make('opt')->navigation(false)->schema([
+                            Step::make('Basics')->schema([TextInput::make('name')->required()]),
+                            Step::make('Details')->schema([TextInput::make('note')]),
+                        ]),
+                    ])
+                    ->createOptionUsing(fn (array $data) => OptionStore::create((string) $data['name']))
+                    ->editOptionForm([
+                        Wizard::make('editopt')->navigation(false)->schema([
+                            Step::make('Rename')->schema([TextInput::make('name')->required()]),
+                            Step::make('Confirm')->schema([TextInput::make('reason')]),
+                        ]),
+                    ])
+                    ->fillEditOptionUsing(fn ($value) => ['name' => OptionStore::label($value)])
+                    ->updateOptionUsing(fn () => null),
+            ]);
+    }
+
+    public function render(): string
+    {
+        return '<div>{{ $this->form }}</div>';
+    }
+}
+
+test('a wizard that gave up its navigation gets it back in the modal footer', function () {
+    $html = Livewire::test(FooterDrivenWizardComponent::class)
+        ->call('mountCreateOption', 'data.category')
+        ->html();
+
+    expect($html)->toContain('select-create-back')
+        ->and($html)->toContain('select-create-next')
+        // The wizard's own row is gone, so the two navigations cannot both show.
+        ->and($html)->not->toContain('wizard-next')
+        ->and($html)->not->toContain('wizard-back')
+        // Submit is seeded hidden on a multi-step wizard and revealed on the last step.
+        ->and($html)->toContain('x-show="step >= total - 1"')
+        // The footer is seeded with the real step count, so it is correct before
+        // the first broadcast rather than after it.
+        ->and($html)->toContain('total: 2');
+});
+
+test('the footer scopes its wizard events by name', function () {
+    $create = Livewire::test(FooterDrivenWizardComponent::class)
+        ->call('mountCreateOption', 'data.category')
+        ->html();
+
+    $edit = Livewire::test(FooterDrivenWizardComponent::class)
+        ->call('mountEditOption', 'data.category')
+        ->html();
+
+    expect($create)->toContain("wizard: 'opt'")
+        ->and($edit)->toContain("wizard: 'editopt'");
+});
+
+test('a wizard that kept its navigation leaves the footer alone', function () {
+    $html = Livewire::test(OptionFormHostComponent::class)
+        ->call('mountCreateOption', 'data.category')
+        ->html();
+
+    expect($html)->toContain('wizard-next')
+        ->and($html)->not->toContain('select-create-next')
+        ->and($html)->not->toContain('select-create-back');
+});
+
+test('an option form without a wizard keeps the plain footer', function () {
+    $html = Livewire::test(CreateAndEditOptionSelectComponent::class)
+        ->call('mountCreateOption', 'data.category')
+        ->html();
+
+    expect($html)->not->toContain('select-create-next')
+        ->and($html)->not->toContain('wire-wizard-navigate')
+        ->and($html)->toContain('select-create-save');
+});
+
+test('the footer still submits through the same endpoint on the last step', function () {
+    Livewire::test(FooterDrivenWizardComponent::class)
+        ->call('mountCreateOption', 'data.category')
+        ->set('createOptionFormData.name', 'Sport')
+        ->call('createSelectOption')
+        ->assertSet('mountedCreateOptionSelect', null)
+        ->assertSet('data.category', 'c2');
+});

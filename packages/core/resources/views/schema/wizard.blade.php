@@ -57,8 +57,26 @@
                 this.validating = false;
             }
         },
-        prev() { this.step = Math.max(0, this.step - 1); }
+        prev() { this.step = Math.max(0, this.step - 1); },
+        broadcast() {
+            // Lets a surface outside this Alpine scope — a modal footer, a page
+            // toolbar — mirror the step state. On window because such a surface
+            // is a sibling subtree, not a descendant, so a bubbling $dispatch
+            // would never reach it. Scoped by the wizard name.
+            //
+            // total stays 0 until the sync carrier's x-init runs, and this effect
+            // fires first — publishing that 0 would tell a driving footer the
+            // wizard has no steps, collapsing its controls until the next sync.
+            // Nothing to say yet, so say nothing.
+            if (this.total === 0) return;
+            window.dispatchEvent(new CustomEvent('wire-wizard-state', {
+                detail: { wizard: this.wizard, step: this.step, total: this.total, validating: this.validating },
+            }));
+        }
     }"
+    x-effect="broadcast()"
+    x-on:wire-wizard-navigate.window="if ($event.detail?.wizard === wizard) { $event.detail.direction === 'previous' ? prev() : next() }"
+    data-testid="wizard"
     class="space-y-6"
 >
     {{-- Sync carrier: x-init re-runs whenever a morph changes this expression
@@ -118,7 +136,9 @@
         </div>
     @endforeach
 
-    {{-- Navigation --}}
+    {{-- Navigation. Suppressed by ->navigation(false) when an outer surface (a
+         modal footer) drives the steps instead; the state still broadcasts. --}}
+    @if($layout->hasNavigation())
     <div class="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
         <button
             type="button"
@@ -145,4 +165,5 @@
             {!! icon('outline:chevron-right', 'w-4 h-4', 'w-4 h-4') !!}
         </button>
     </div>
+    @endif
 </div>

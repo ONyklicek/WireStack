@@ -21,6 +21,8 @@ class Wizard extends LayoutComponent
 
     protected bool $skippable = false;
 
+    protected bool $navigation = true;
+
     /**
      * Zero-based index of the step shown first.
      */
@@ -39,6 +41,28 @@ class Wizard extends LayoutComponent
         $this->skippable = $condition;
 
         return $this;
+    }
+
+    /**
+     * Render the wizard without its own Previous / Next row.
+     *
+     * For a surface that drives the steps from its own chrome — a modal footer,
+     * a page toolbar — so the two navigations do not sit on screen at once. The
+     * wizard still owns the step state: an external driver mirrors it from the
+     * `wire-wizard-state` window event and steps it with `wire-wizard-navigate`,
+     * both scoped by the wizard's name. Name the wizard when more than one can be
+     * on screen at a time, or the two share an (empty) scope.
+     */
+    public function navigation(bool $condition = true): static
+    {
+        $this->navigation = $condition;
+
+        return $this;
+    }
+
+    public function hasNavigation(): bool
+    {
+        return $this->navigation;
     }
 
     public function getActiveStep(): int

@@ -130,7 +130,9 @@ both work in standalone forms and inside table action modals, and a created/edit
 selected and merged into the open combobox immediately (no page refresh). The option schema is
 a full form schema, not a field list: a `Wizard` inside `createOptionForm()` gates its steps
 (errors land on `createOptionFormData.*`), a nested `Select` reaches remote search, and field
-actions resolve — the mounted option form is enumerated as a host form. Opening an option modal
+actions resolve — the mounted option form is enumerated as a host form. Give that wizard
+`->navigation(false)` and the modal footer drives it (Back/Next beside Cancel, submit only on the
+last step); name it, since footer and wizard pair up by name. Opening an option modal
 from inside an option form is refused (one mounted path per kind). Both option modals are
 configured through the canonical `Modals\Modal` config object —
 `->createOptionModal(fn (Modal $modal) => $modal->heading(…)->description(…)->icon(…)->width('2xl')

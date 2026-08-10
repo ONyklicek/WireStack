@@ -57,12 +57,46 @@ Více wizardů na jednom hostiteli se adresuje podle názvu — dejte každému 
 (`Wizard::make('signup')`), aby jeho kroky validovaly nezávisle; nepojmenovaný
 wizard se resolvuje na první ve schématu.
 
+## Předání navigace jinam
+
+`navigation(false)` vykreslí wizard bez jeho řádku Previous / Next, pro plochu,
+která chce ty ovládací prvky ve vlastním chrome — patička modalu, toolbar
+stránky — aby na obrazovce neseděly dvě navigace naráz:
+
+```php
+Wizard::make('category')
+    ->navigation(false)          // [tl! focus]
+    ->schema([
+        Step::make('Name')->schema([TextInput::make('label')->required()]),
+        Step::make('Detail')->schema([TextInput::make('note')]),
+    ])
+```
+
+Wizard dál vlastní stav kroku; vnější plocha ho zrcadlí a posouvá přes dvě window
+události, protože řídící patička je *sourozenecký* podstrom a bublající událost by
+se k ní nikdy nedostala:
+
+- `wire-wizard-state` — publikuje wizard, kdykoli se změní jeho krok, celkový
+  počet nebo příznak validace: `{ wizard, step, total, validating }`.
+- `wire-wizard-navigate` — pošle se wizardu pro posun: `{ wizard, direction }`,
+  kde direction je `'next'` nebo `'previous'`. `'next'` spustí tu samou validaci
+  po krocích jako vestavěné tlačítko, takže externí ovládání gatuje stejně.
+
+Obě jsou zúžené podle `wizard` — názvu wizardu, `null` u nepojmenovaného. Wizard
+pojmenujte vždy, když můžou být dva na obrazovce naráz, jinak sdílí prázdný scope.
+
+[Option modal `Select`u](../../../forms/fields/select.md#plnohodnotny-formular-ne-seznam-poli)
+tohle udělá za vás: dejte do `createOptionForm()` wizard s `navigation(false)` a
+patička modalu převezme řízení — zobrazí Back / Next až do posledního kroku a
+tlačítko odeslání jen tam.
+
 ## Metody
 
 | Metoda | Na | Popis |
 |--------|----|-------------|
 | `activeStep(int)` | `Wizard` | Index (od nuly) kroku zobrazeného jako první |
 | `skippable()` | `Wizard` | Povolit skok na jakýkoli krok z indikátoru |
+| `navigation(bool)` | `Wizard` | Vykreslit bez vestavěného řádku Previous / Next, k řízení vnější plochou |
 | `description(string)` | `Step` | Sekundární řádek pod labelem kroku |
 | `icon(string\|Icon)` | `Step` | Ikona kroku |
 | `columns(int)` | `Step` | Sloupcový grid pro dětské schéma kroku |

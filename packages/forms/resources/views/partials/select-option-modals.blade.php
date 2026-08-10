@@ -28,7 +28,14 @@
 @endphp
 
 @if($isCreateModalMounted)
-    @php($createModal = $field->getCreateOptionModal())
+    @php
+        $createModal = $field->getCreateOptionModal();
+        $createForm = $field->getCreateOptionForm($livewire);
+        // A wizard that gave up its own navigation hands it to this footer; one
+        // that kept it drives itself and the footer stays a plain submit/cancel.
+        $createWizard = $createForm?->getWizard();
+        $createWizard = ($createWizard !== null && ! $createWizard->hasNavigation()) ? $createWizard : null;
+    @endphp
     {{-- Rule 5: Htmlable object, not the <x-wire::modal> component. --}}
     {{ new \NyonCode\WireCore\Modals\Html\Modal(
         heading: $field->getCreateOptionModalHeading(),
@@ -50,7 +57,7 @@
         closeAction: 'unmountCreateOption',
         wireModel: 'mountedCreateOptionSelect',
         bodyView: 'wire-forms::partials.select-option-modal-body',
-        bodyData: ['field' => $field, 'form' => $field->getCreateOptionForm($livewire), 'mode' => 'create'],
+        bodyData: ['field' => $field, 'form' => $createForm, 'mode' => 'create'],
         footerView: 'wire-forms::partials.select-option-modal-footer',
         footerData: [
             'mode' => 'create',
@@ -58,12 +65,19 @@
             'saveAction' => 'createSelectOption',
             'saveLabel' => $createModal->getSubmitLabel(),
             'cancelLabel' => $createModal->getCancelLabel(),
+            'wizardKey' => $createWizard?->getName() ?: null,
+            'wizardSteps' => $createWizard === null ? 0 : count($createWizard->getSteps()),
         ],
     ) }}
 @endif
 
 @if($isEditModalMounted)
-    @php($editModal = $field->getEditOptionModal())
+    @php
+        $editModal = $field->getEditOptionModal();
+        $editForm = $field->getEditOptionForm($livewire);
+        $editWizard = $editForm?->getWizard();
+        $editWizard = ($editWizard !== null && ! $editWizard->hasNavigation()) ? $editWizard : null;
+    @endphp
     {{-- Rule 5: Htmlable object, not the <x-wire::modal> component. --}}
     {{ new \NyonCode\WireCore\Modals\Html\Modal(
         heading: $field->getEditOptionModalHeading(),
@@ -82,7 +96,7 @@
         closeAction: 'unmountEditOption',
         wireModel: 'mountedEditOptionSelect',
         bodyView: 'wire-forms::partials.select-option-modal-body',
-        bodyData: ['field' => $field, 'form' => $field->getEditOptionForm($livewire), 'mode' => 'edit'],
+        bodyData: ['field' => $field, 'form' => $editForm, 'mode' => 'edit'],
         footerView: 'wire-forms::partials.select-option-modal-footer',
         footerData: [
             'mode' => 'edit',
@@ -90,6 +104,8 @@
             'saveAction' => 'updateSelectOption',
             'saveLabel' => $editModal->getSubmitLabel(),
             'cancelLabel' => $editModal->getCancelLabel(),
+            'wizardKey' => $editWizard?->getName() ?: null,
+            'wizardSteps' => $editWizard === null ? 0 : count($editWizard->getSteps()),
         ],
     ) }}
 @endif

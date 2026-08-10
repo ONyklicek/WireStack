@@ -186,6 +186,12 @@ Select::make('category_id')
   nested: there is one mounted path and one data bag per kind, so honouring it
   would discard the form being filled in.
 
+Add [`navigation(false)`](../../core/schema/layout/wizard.md#handing-the-navigation-elsewhere)
+to the wizard and the **modal footer takes over its navigation** — Back and Next
+next to Cancel, with the submit button appearing only on the last step, instead of
+a second navigation row inside the panel. Name the wizard when both option modals
+can be open at once: the footer and the wizard find each other by that name.
+
 ### Configuring The Option Modal
 
 Neither option modal is a special case: both are configured through the same

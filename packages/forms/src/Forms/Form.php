@@ -268,6 +268,16 @@ class Form implements Htmlable, ModalForm
     }
 
     /**
+     * The wizard in the schema — optionally the one with the given name, else the
+     * first. For a surface that renders the wizard's navigation itself and needs
+     * its name (to scope the client-side events) and step count.
+     */
+    public function getWizard(?string $wizard = null): ?Wizard
+    {
+        return $this->getRuntime()->getWizard($wizard);
+    }
+
+    /**
      * Absolute state paths owned by one wizard step's fields (wildcards for
      * repeaters). Used by hosts to clear a step's stale error-bag entries.
      *
