@@ -33,8 +33,7 @@
         <button type="button" wire:click="{{ $nextStepAction }}" data-testid="modal-next" class="{{ $primaryButtonClasses }}">
             {{ $modalData['nextLabel'] ?? __('Next') }}
         </button>
-    @elseunless($hasInfolist)
-        {{-- Submit (single-step form, wizard last step, or confirmation-in-shell) --}}
+    @elseif(! $hasInfolist)                                                                                                                                                                                                {{-- Submit (single-step form, wizard last step, or confirmation-in-shell) --}}
         <button
             type="button"
             wire:click="{{ $submitAction }}"
@@ -47,7 +46,7 @@
             <span wire:loading.remove wire:target="{{ $submitAction }}">{{ $modalData['submitLabel'] }}</span>
             <span wire:loading wire:target="{{ $submitAction }}">{{ $modalData['savingLabel'] ?? __('Saving...') }}</span>
         </button>
-    @endunless
+    @endif
 
     {{-- Custom footer actions (position: after) --}}
     @foreach($footerActions as $footerAction)
