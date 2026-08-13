@@ -329,26 +329,40 @@ it('emits balanced morph markers in every table shape', function () {
 });
 
 it('keeps a row under its byte budget', function () {
-    // Measured 2026-08-08: 1823 B/row for three plain text cells, down from 4214.
-    // Two changes got it there — the <td> chrome assembled once per column instead of
-    // interpolated by Blade per cell (4214 → 2347), and the <tr> opening tag compiled
-    // once for the table instead of re-deciding four table-level `@if`s per row
+    // Measured 2026-08-08 on Livewire 3: 1823 B/row for three plain text cells, down
+    // from 4214. Two changes got it there — the <td> chrome assembled once per column
+    // instead of interpolated by Blade per cell (4214 → 2347), and the <tr> opening tag
+    // compiled once for the table instead of re-deciding four table-level `@if`s per row
     // (2347 → 1823). The headroom is for a class-list edit, not for a new wrapper:
     // crossing this means every commit got bigger for every user.
+    //
+    // Re-measured 2026-08-14 on Livewire 4.4.0: 1826.75 B/row. `smart_wire_keys`
+    // defaults to true on v4 and compiles wire:keys into loops, so this was expected to
+    // move — it did not, because the cells are concatenated by a raw PHP `foreach`
+    // inside an `@php` block (`$cellsHtml` in `tables/index.blade.php`), not by a Blade
+    // `@foreach`, so the v4 key compiler never sees a loop here. The +3.75 B is drift.
     expect(pfPerRow()['bytes'])->toBeLessThan(1900);
 });
 
 it('keeps a row under its whitespace-node budget', function () {
-    // Measured 2026-08-08: 11 runs/row, down from 21 — the cells no longer contribute
-    // any, because they are concatenated in PHP rather than laid out by a @foreach.
-    // Deterministic, so the budget is the measurement: one more nested tag pair
-    // written into the row loop shows up here immediately.
+    // Measured 2026-08-08 on Livewire 3: 11 runs/row, down from 21 — the cells no longer
+    // contribute any, because they are concatenated in PHP rather than laid out by a
+    // @foreach. Deterministic, so the budget is the measurement: one more nested tag
+    // pair written into the row loop shows up here immediately.
+    //
+    // Re-measured 2026-08-14 on Livewire 4.4.0: 11 runs/row, unchanged. Note the budget
+    // sits EXACTLY on the measurement — there is no headroom, so the next change to trip
+    // this has not necessarily regressed anything, it has simply used the first byte of
+    // slack that never existed. Re-measure before deciding.
     expect(pfPerRow()['whitespaceRuns'])->toBeLessThanOrEqual(11);
 });
 
 it('keeps a row under its morph-marker budget', function () {
-    // Measured 2026-08-08: 16 comments/row = 8 conditionals, down from 24. Dropping
-    // the per-cell @foreach and its nested @if took four pairs with it.
+    // Measured 2026-08-08 on Livewire 3: 16 comments/row = 8 conditionals, down from 24.
+    // Dropping the per-cell @foreach and its nested @if took four pairs with it.
+    //
+    // Re-measured 2026-08-14 on Livewire 4.4.0: 16 comments/row, unchanged. Like the
+    // whitespace budget above, this one sits exactly on the measurement.
     //
     // Do NOT try to win the last few by deleting conditionals from the row loop. The
     // context-menu `@if` was removed on exactly that reasoning — the panel string is
