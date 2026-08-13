@@ -11,7 +11,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
  *   vendor/bin/testbench serve --host=127.0.0.1 --port=8085   # background
  *   node workbench/scripts/verify-select-dedup.mjs
  */
-const url = process.env.PREVIEW_URL ?? 'http://127.0.0.1:8085/previews/field-select';
+const url = process.env.PREVIEW_URL ?? `${process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085'}/previews/field-select`;
 const chromeBin = process.env.CHROME_BIN ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const devtoolsPort = Number(process.env.CHROME_PORT ?? 9338);
 const shotDir = process.env.SHOT_DIR ?? join(tmpdir(), 'wire-select-dedup-shots');

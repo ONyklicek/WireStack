@@ -24,7 +24,7 @@ import { openPage, checker, sleep } from './lib/cdp.mjs';
  * See .claude/skills/verify-preview.
  */
 
-const base = process.env.PREVIEW_BASE ?? 'http://127.0.0.1:8085/previews';
+const base = process.env.PREVIEW_BASE ?? `${process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085'}/previews`;
 const { check, finish } = checker();
 
 let session;

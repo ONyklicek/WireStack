@@ -32,7 +32,7 @@ import { openPage, checker, sleep } from './lib/cdp.mjs';
  */
 
 const url = process.env.PREVIEW_URL
-  ?? 'http://127.0.0.1:8085/previews/table-gestures-live';
+  ?? `${process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085'}/previews/table-gestures-live`;
 
 const { page, eval_, shot, shotDir, consoleErrors, badResponses, close } = await openPage({
   url, shotPrefix: 'poll-client-state', width: 1400, height: 1100, settle: 3500,

@@ -19,7 +19,7 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 
 // table-actions-quiet has direct DeleteAction row actions wired to the action
 // runtime, so clicking one opens the (Htmlable-object) confirmation for real.
-const url = process.env.PREVIEW_URL ?? 'http://127.0.0.1:8085/previews/table-actions-quiet';
+const url = process.env.PREVIEW_URL ?? `${process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085'}/previews/table-actions-quiet`;
 const chromeBin = process.env.CHROME_BIN
   ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const devtoolsPort = Number(process.env.CHROME_PORT ?? 9336);

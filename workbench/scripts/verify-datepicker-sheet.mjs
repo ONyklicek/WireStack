@@ -10,7 +10,7 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
  * floating panel on desktop. See .claude/skills/verify-preview.
  */
 
-const base = process.env.PREVIEW_BASE ?? 'http://127.0.0.1:8085/previews';
+const base = process.env.PREVIEW_BASE ?? `${process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085'}/previews`;
 const chromeBin = process.env.CHROME_BIN
   ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const devtoolsPort = Number(process.env.CHROME_PORT ?? 9343);

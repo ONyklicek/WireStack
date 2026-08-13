@@ -6,7 +6,7 @@ import { rm } from 'node:fs/promises';
 
 /* Confirms x-sheet-dismiss: a downward drag on the grabber closes the sheet. */
 
-const base = process.env.PREVIEW_BASE ?? 'http://127.0.0.1:8085/previews';
+const base = process.env.PREVIEW_BASE ?? `${process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085'}/previews`;
 const chromeBin = process.env.CHROME_BIN ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const devtoolsPort = Number(process.env.CHROME_PORT ?? 9360);
 const userDataDir = join(tmpdir(), `wire-swipe-${Date.now()}`);

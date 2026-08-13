@@ -11,7 +11,7 @@ import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 
-const BASE = process.env.PREVIEW_URL ?? 'http://127.0.0.1:8085';
+const BASE = process.env.PREVIEW_URL ?? process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085';
 const URL_SUBROWS = `${BASE}/previews/table-subrows`;
 const CHROME = process.env.CHROME_BIN ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const PORT = Number(process.env.CHROME_PORT ?? 9222);

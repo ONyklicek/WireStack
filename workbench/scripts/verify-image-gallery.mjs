@@ -18,7 +18,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
  * where a user would see it.
  */
 
-const url = process.env.PREVIEW_URL ?? 'http://127.0.0.1:8085/previews/table-image-gallery';
+const url = process.env.PREVIEW_URL ?? `${process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085'}/previews/table-image-gallery`;
 const chromeBin = process.env.CHROME_BIN ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const port = Number(process.env.CHROME_PORT ?? 9421);
 const shotDir = process.env.SHOT_DIR ?? join(tmpdir(), 'wire-gallery-shots');

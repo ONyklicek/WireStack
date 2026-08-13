@@ -45,7 +45,7 @@ import { openPage, checker, sleep } from './lib/cdp.mjs';
  * Exit code 0 = all checks passed; 1 = a check failed; 2 = driver error.
  */
 
-const url = process.env.PREVIEW_URL ?? 'http://127.0.0.1:8085/previews/sortable-everything';
+const url = process.env.PREVIEW_URL ?? `${process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085'}/previews/sortable-everything`;
 
 const { page, eval_, shot, shotDir, consoleErrors, badResponses, close } = await openPage({
   url, shotPrefix: 'sortable-everything', width: 1400, height: 1100, settle: 3500,

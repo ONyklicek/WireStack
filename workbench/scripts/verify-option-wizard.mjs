@@ -28,7 +28,7 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
  * at them, don't only trust the assertions.
  */
 
-const url = process.env.PREVIEW_URL ?? 'http://127.0.0.1:8085/previews/forms-option-wizard';
+const url = process.env.PREVIEW_URL ?? `${process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085'}/previews/forms-option-wizard`;
 const chromeBin = process.env.CHROME_BIN
   ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const devtoolsPort = Number(process.env.CHROME_PORT ?? 9346);

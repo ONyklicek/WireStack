@@ -14,7 +14,7 @@ import { openPage, checker, sleep } from './lib/cdp.mjs';
  *   node workbench/scripts/verify-repeater-table.mjs
  */
 
-const url = process.env.PREVIEW_URL ?? 'http://127.0.0.1:8085/previews/forms-repeater-table';
+const url = process.env.PREVIEW_URL ?? `${process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085'}/previews/forms-repeater-table`;
 
 const { eval_, shot, shotDir, consoleErrors, badResponses, close } =
   await openPage({ url, shotPrefix: 'repeater-table' });

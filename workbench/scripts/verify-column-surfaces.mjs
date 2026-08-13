@@ -15,7 +15,7 @@ import { openPage, checker, sleep } from './lib/cdp.mjs';
  *   node workbench/scripts/verify-column-surfaces.mjs
  */
 
-const url = process.env.PREVIEW_URL ?? 'http://127.0.0.1:8085/previews/table-column-surfaces';
+const url = process.env.PREVIEW_URL ?? `${process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085'}/previews/table-column-surfaces`;
 
 const { eval_, shot, shotDir, consoleErrors, badResponses, close } =
   await openPage({ url, shotPrefix: 'column-surfaces' });

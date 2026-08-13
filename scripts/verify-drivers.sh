@@ -30,6 +30,16 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 PREVIEW_PORT="${PREVIEW_PORT:-8085}"
+
+# The drivers hardcode 127.0.0.1:8085 as their FALLBACK origin, so a sweep on any
+# other port has to tell them. It never did: PREVIEW_PORT moved the server and the
+# 66 drivers kept talking to 8085, failing with "Alpine is not defined" and "not
+# booted" — which reads exactly like a framework regression rather than a wrong
+# port. Exporting the origin here is what makes the usage line above true.
+#
+# Per-driver PREVIEW_URL still wins over this, for driving one driver at an
+# arbitrary URL.
+export PREVIEW_ORIGIN="http://127.0.0.1:${PREVIEW_PORT}"
 FILTER="${1:-}"
 
 drivers=()

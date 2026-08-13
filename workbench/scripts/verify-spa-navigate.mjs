@@ -42,7 +42,7 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
  * Exit code 0 = all checks passed; 1 = a check failed; 2 = driver error.
  */
 
-const base = process.env.PREVIEW_BASE ?? 'http://127.0.0.1:8085/previews';
+const base = process.env.PREVIEW_BASE ?? `${process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085'}/previews`;
 const pageA = `${base}/spa-navigate`;
 const pageB = `${base}/spa-navigate-table`;
 const chromeBin = process.env.CHROME_BIN

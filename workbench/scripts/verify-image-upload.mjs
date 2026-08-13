@@ -27,7 +27,7 @@ import { join } from 'node:path';
  * Exit 0 = all checks passed; 1 = a check failed; 2 = driver error.
  */
 
-const url = process.env.PREVIEW_URL ?? 'http://127.0.0.1:8085/previews/field-file-upload-auto';
+const url = process.env.PREVIEW_URL ?? `${process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085'}/previews/field-file-upload-auto`;
 const chromeBin = process.env.CHROME_BIN ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const port = Number(process.env.CHROME_PORT ?? 9461);
 

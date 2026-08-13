@@ -15,7 +15,7 @@ import { openPage, checker, sleep } from './lib/cdp.mjs';
  *   node workbench/scripts/verify-choice-variants.mjs
  */
 
-const url = process.env.PREVIEW_URL ?? 'http://127.0.0.1:8085/previews/field-checkbox-list-choices';
+const url = process.env.PREVIEW_URL ?? `${process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085'}/previews/field-checkbox-list-choices`;
 
 const { eval_, shot, shotDir, consoleErrors, badResponses, close } =
   await openPage({ url, shotPrefix: 'choice-variants' });

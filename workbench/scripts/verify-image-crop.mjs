@@ -15,7 +15,7 @@ import { spawn } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-const url = process.env.PREVIEW_URL ?? 'http://127.0.0.1:8085/previews/field-file-upload';
+const url = process.env.PREVIEW_URL ?? `${process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085'}/previews/field-file-upload`;
 const port = Number(process.env.CHROME_PORT ?? 9481);
 const chrome = spawn(process.env.CHROME_BIN ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   ['--headless=new','--disable-gpu','--no-first-run','--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', `--remote-debugging-port=${port}`,`--user-data-dir=${join(tmpdir(),`cr-${Date.now()}`)}`,'about:blank'], { stdio:'ignore' });
