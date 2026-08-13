@@ -156,7 +156,7 @@ location ~* \.(js|css)$ {
 ```
 
 Nic z toho není specifické pro tyhle balíčky: tentýž blok vrací 404 i na Livewire
-vlastní `/livewire/livewire.js`.
+vlastní `/livewire-{hash}/livewire.js`.
 
 **Řešení — zapisovatelné `public/`, nebo kopie při buildu.** Obvyklou příčinou je
 `public/`, do kterého webový uživatel nesmí zapisovat, nebo read-only kontejner.

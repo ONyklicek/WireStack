@@ -155,7 +155,7 @@ location ~* \.(js|css)$ {
 ```
 
 Nothing here is package-specific: the same block 404s Livewire's own
-`/livewire/livewire.js`.
+`/livewire-{hash}/livewire.js`.
 
 **Fix — make `public/` writable, or write it at build time.** The usual cause is a
 `public/` the web user cannot write to, or a read-only container. Either grant the

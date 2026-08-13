@@ -253,7 +253,7 @@ location ~* \.(js|css)$ {
 ```
 
 Na sdíleném hostingu tenhle blok často není váš, abyste ho měnili — a úplně stejně
-rozbíjí i Livewire vlastní `/livewire/livewire.js`. Soubor, který existuje,
+rozbíjí i Livewire vlastní `/livewire-{hash}/livewire.js`. Soubor, který existuje,
 naservíruje každá konfigurace webserveru, jaká je, a proto vám ho balíčky připraví.
 
 **Publikování je pořád podporované** a dělá tutéž kopii dopředu, čímž ji sundá

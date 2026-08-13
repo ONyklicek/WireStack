@@ -250,7 +250,7 @@ location ~* \.(js|css)$ {
 ```
 
 On shared hosting that block is frequently not yours to change — and it breaks
-Livewire's own `/livewire/livewire.js` in exactly the same way. A file that exists
+Livewire's own `/livewire-{hash}/livewire.js` in exactly the same way. A file that exists
 is served by every web server configuration there is, so that is what the packages
 ship you.
 
