@@ -96,17 +96,13 @@ abstract class Field extends Component implements HasFieldActions, HasStateAcces
         return $this;
     }
 
-    public function getDebounceModifier(): string
+    /**
+     * A reactive field debounces by default, so `live()` does not mean a commit
+     * per keystroke. The modifier itself is composed by `HasDebounce` in core.
+     */
+    protected function defaultLiveDebounce(): ?int
     {
-        if ($this->debounce !== null) {
-            return ".debounce.{$this->debounce}ms";
-        }
-
-        if ($this->isLive) {
-            return ".debounce.{$this->defaultLiveDebounce}ms";
-        }
-
-        return '';
+        return $this->defaultLiveDebounce;
     }
 
     /**
