@@ -41,6 +41,12 @@ trait CanBeLive
 
     /**
      * Get the wire:model modifier for Blade templates.
+     *
+     * `liveOnBlur()` emits `live.blur`, not a bare `blur`. From Livewire 4 the
+     * `.blur` and `.change` modifiers control when the CLIENT syncs its state,
+     * not when it talks to the server, so `wire:model.blur` on its own no longer
+     * sends anything — `.live` is what makes it a network binding, and `.blur`
+     * then says when. The fluent API is unchanged; only the emitted attribute is.
      */
     public function getWireModelModifier(): string
     {
@@ -49,7 +55,7 @@ trait CanBeLive
         }
 
         if ($this->isLiveOnBlur) {
-            return 'blur';
+            return 'live.blur';
         }
 
         return '';

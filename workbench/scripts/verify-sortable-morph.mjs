@@ -211,31 +211,48 @@ try {
   // on the page — and each stacked copy goes on running against a component
   // that no longer exists. Tearing the Alpine tree down and building it again
   // is what a navigation does to this wrapper, in one step.
+  //
+  // What this section can assert changed with Alpine 3.16 (the one Livewire 4
+  // bundles), and the difference is worth writing down because it reads like a
+  // regression and is not one. Measured on the same fixture:
+  //
+  //              destroyTree      initTree      scope object after re-init
+  //   3.15.12    stack 1 → 0      0 → 1         a NEW object
+  //   3.16.0     stack 1 → 0      0 → 1         the SAME object, reused
+  //
+  // The controller is torn down and rebuilt on both (`columnSortableInstance`
+  // goes true → false → true either way), so the behaviour this guards is
+  // intact. But on 3.16 there is no second object to hold: a reference taken
+  // before the teardown IS the live controller afterwards, so "set isDragging
+  // on the destroyed one and watch the morph go through" can no longer be
+  // expressed — it now says "set it on the live one", which must block.
   await eval_(`
-    window.stale = d;
+    window.staleScope = root._x_dataStack[0];
     Alpine.destroyTree(root);
+    window.stackWhileDestroyed = root._x_dataStack ? root._x_dataStack.length : -1;
     Alpine.initTree(root);
     window.d = Alpine.$data(root);
     true;
   `);
   await sleep(800);
-  check('re-initialising the wrapper yields a new controller',
-    await eval_('d !== stale') && await eval_('!! d.columnSortableInstance'));
+  check('the wrapper is torn down and rebuilt, with its column drag wired up again',
+    await eval_('stackWhileDestroyed') === 0 && await eval_('!! d.columnSortableInstance'),
+    `stack while destroyed=${await eval_('stackWhileDestroyed')} columnSortable=${await eval_('!! d.columnSortableInstance')}`);
 
-  // The destroyed controller still points at the same element, so a stale
-  // registration would let its isDragging keep blocking every morph the page
-  // asks for — the original bug's failure mode, arrived at from the other side.
-  await eval_(`stale.isDragging = true; morph()`);
-  await sleep(800);
-  check('a destroyed controller no longer speaks for the table',
-    await eval_('probe.inBody') > 0,
-    `${await eval_('probe.visited')} nodes visited, ${await eval_('probe.inBody')} in <tbody>`);
-  await eval_(`stale.isDragging = false`);
+  // The invariant that replaces the stale-controller check on Alpine 3.16: the
+  // rebuilt wrapper carries exactly one scope, and it is the one the live
+  // controller answers from. If a future Alpine goes back to minting a fresh
+  // object here, this fails and the stale-controller check above is worth
+  // restoring — `controllers` is keyed by element precisely for that case.
+  check('exactly one controller answers for the rebuilt wrapper',
+    await eval_('root._x_dataStack.length') === 1
+      && await eval_('root._x_dataStack[0] === staleScope'),
+    `stack=${await eval_('root._x_dataStack.length')} reused=${await eval_('root._x_dataStack[0] === staleScope')}`);
 
-  // …and the live one still does.
+  // …and it guards the morph.
   await eval_(`d.isDragging = true; morph()`);
   await sleep(800);
-  check('the controller that replaced it guards the morph instead',
+  check('the rebuilt controller guards the morph',
     await eval_('probe.inBody') === 0,
     `${await eval_('probe.visited')} nodes visited, ${await eval_('probe.inBody')} in <tbody>`);
   await eval_(`d.isDragging = false`);

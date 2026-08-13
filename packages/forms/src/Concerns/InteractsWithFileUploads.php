@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Concerns;
 
-use Illuminate\Http\UploadedFile;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -18,84 +17,27 @@ use NyonCode\WireForms\Forms\WithForms;
  * form components ({@see WithForms}) and table/form action modals.
  *
  * Composes Livewire's {@see WithFileUploads} so `<input wire:model>` file inputs
- * actually upload to temporary storage, then — via the `updated` lifecycle hook —
- * merges each finished upload into the field state (store-on-submit): the file
- * stays a pending `TemporaryUploadedFile` until the form is saved, at which
- * point the SaveHandler moves it to permanent storage. This keeps abandoned
- * forms orphan-free (temp uploads expire on their own).
+ * actually upload to temporary storage. The file stays a pending
+ * `TemporaryUploadedFile` until the form is saved (store-on-submit), at which
+ * point the SaveHandler moves it to permanent storage — which is what keeps
+ * abandoned forms orphan-free, since temp uploads expire on their own.
  *
- *  - **single** fields keep the value Livewire just set;
- *  - **multiple** fields append new uploads to the already-present entries
- *    (existing paths + earlier pending uploads), captured in `updating`.
+ * **Appending is Livewire's job, not ours.** Up to Livewire 3 `_finishUpload()`
+ * defaulted to `$append = false`, so a multiple-file field lost its existing
+ * entries on every upload and this trait merged them back in from a value it had
+ * captured in `updating`. Livewire 4 flipped that default to `true` and merges
+ * onto the current property value itself, so the hooks that used to do it were
+ * removed — keeping them merged the existing entries twice.
  *
- * The "remove file" button is backed by {@see removeUploadedFile()}.
- * Writes go through {@see StateContainer::writeInto()} so they work through the
- * ArrayAccess bag used by table action modals too.
+ * The "remove file" button is backed by {@see removeUploadedFile()}, and that one
+ * still writes through {@see StateContainer::writeInto()}: `data_set()` cannot
+ * write through the ArrayAccess bag an action modal keeps its state in.
  *
  * @phpstan-require-extends Component
  */
 trait InteractsWithFileUploads
 {
     use WithFileUploads;
-
-    /**
-     * Value at each state path captured before an update, so a multiple-file
-     * field can merge new uploads with its already-stored paths.
-     *
-     * @var array<string, mixed>
-     */
-    protected array $fileUploadStateBeforeUpdate = [];
-
-    public function updatingInteractsWithFileUploads(string $name, mixed $value): void
-    {
-        if ($this->containsUploadedFile($value)) {
-            $this->fileUploadStateBeforeUpdate[$name] = data_get($this, $name);
-        }
-    }
-
-    public function updatedInteractsWithFileUploads(string $name, mixed $value): void
-    {
-        // Only act on genuine file uploads — every other property update flows
-        // through here too and must stay untouched.
-        if (! $this->containsUploadedFile($value)) {
-            return;
-        }
-
-        $old = $this->fileUploadStateBeforeUpdate[$name] ?? null;
-        unset($this->fileUploadStateBeforeUpdate[$name]);
-
-        $this->processFileUploadState($name, $old);
-    }
-
-    /**
-     * Merge a freshly-uploaded file into the field state without moving it to
-     * permanent storage — that happens on submit ({@see SaveHandler}). A
-     * **multiple** field appends the new uploads to whatever was already there
-     * (existing paths + earlier pending uploads, captured in `updating`); a
-     * **single** field keeps the value Livewire just set. Returns true when a
-     * multiple field was merged.
-     */
-    protected function processFileUploadState(string $statePath, mixed $old): bool
-    {
-        $field = $this->resolveFileUploadField($statePath);
-
-        if (! $field instanceof FileUpload || ! $field->isMultiple()) {
-            return false;
-        }
-
-        $existing = is_array($old) ? $old : ($old === null || $old === '' ? [] : [$old]);
-
-        $value = data_get($this, $statePath);
-        $incoming = is_array($value) ? $value : [$value];
-        $incoming = array_filter(
-            $incoming,
-            static fn ($item): bool => $item instanceof UploadedFile || (is_string($item) && $item !== ''),
-        );
-
-        StateContainer::writeInto($this, $statePath, array_values(array_merge($existing, $incoming)));
-
-        return true;
-    }
 
     /**
      * Remove a file (a stored path or a still-pending upload) from a FileUpload
@@ -146,23 +88,6 @@ trait InteractsWithFileUploads
         if ($field instanceof FileUpload && $field->isStoredReference($removed)) {
             $field->deleteStoredFile($removed);
         }
-    }
-
-    private function containsUploadedFile(mixed $value): bool
-    {
-        if ($value instanceof UploadedFile) {
-            return true;
-        }
-
-        if (is_array($value)) {
-            foreach ($value as $item) {
-                if ($item instanceof UploadedFile) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 
     private function resolveFileUploadField(string $statePath): ?FileUpload

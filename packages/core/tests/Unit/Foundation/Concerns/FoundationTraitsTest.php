@@ -448,8 +448,10 @@ it('can be live', function () {
 it('can be live on blur', function () {
     $field = makeFoundationField('name');
     $field->liveOnBlur();
+    // `live.blur`, not `blur`: from Livewire 4 a bare `.blur` only says when the
+    // client syncs its own state, so it would never reach the server.
     expect($field->isLiveOnBlur())->toBeTrue()
-        ->and($field->getWireModelModifier())->toBe('blur');
+        ->and($field->getWireModelModifier())->toBe('live.blur');
 });
 
 // ─── HasDebounce ────────────────────────────────────────────
