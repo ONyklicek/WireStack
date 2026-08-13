@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable;
 
 use Illuminate\Support\Facades\Route;
-use Livewire\Mechanisms\HandleComponents\HandleComponents;
+use Livewire\LivewireManager;
 use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
@@ -31,8 +31,15 @@ class WireTableServiceProvider extends PackageServiceProvider
             ->name('WireTable')
             ->hasShortName('wire-table')
             ->bootedPackage(function ($packager) {
-                app(HandleComponents::class)
-                    ->registerPropertySynthesizer(TableStateSynthesizer::class);
+                // The manager, not `app(HandleComponents::class)`: Livewire 4 moved
+                // the synthesizer registry out of that mechanism into
+                // `HandleSynths::registerSynth()`, and `registerPropertySynthesizer()`
+                // no longer exists there. `propertySynthesizer()` is the supported
+                // seam and forwards to the right owner in both 3.x and 4.x. Resolved
+                // from the container rather than through the `Livewire` facade
+                // because the facade's `@method` list does not carry it — same
+                // pattern as core's CurrentComponentDriver.
+                app(LivewireManager::class)->propertySynthesizer(TableStateSynthesizer::class);
 
                 $this->registerRecordActionMacros();
                 $this->registerAssetRoutes();
