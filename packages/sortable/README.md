@@ -5,8 +5,8 @@ Drag and drop row and column reordering for Wire Table.
 ## Requirements
 
 - PHP 8.2+
-- Laravel 10, 11, or 12
-- Livewire 3.x
+- Laravel 12.61+ or 13.12+
+- Livewire 4.x
 - Tailwind CSS 3.x
 - `nyoncode/wire-table`
 

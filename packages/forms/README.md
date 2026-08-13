@@ -5,8 +5,8 @@ Standalone form system for Laravel Livewire. Includes input fields, layout compo
 ## Requirements
 
 - PHP 8.2+
-- Laravel 10, 11, or 12
-- Livewire 3.x
+- Laravel 12.61+ or 13.12+
+- Livewire 4.x
 - Tailwind CSS 3.x
 - Node.js & npm (for Vite asset compilation)
 

@@ -22,8 +22,8 @@ Enterprise-grade Livewire table component for Laravel. Inline editing, actions, 
 ## Requirements
 
 - PHP 8.2+
-- Laravel 10, 11, or 12
-- Livewire 3.x
+- Laravel 12.61+ or 13.12+
+- Livewire 4.x
 - Tailwind CSS 3.x
 - Node.js & npm (for Vite asset compilation)
 
@@ -92,7 +92,7 @@ Your layout needs Vite assets, Livewire, `@wireStackScripts`, and the toast noti
 </html>
 ```
 
-> **Note:** Livewire 3 includes Alpine.js automatically. Do not add Alpine.js separately.
+> **Note:** Livewire 4 includes Alpine.js automatically. Do not add Alpine.js separately.
 
 > **`@wireStackScripts`** puts every installed Wire package's Alpine controllers in the
 > document. It is additive — the table still emits its own bundles when it renders — but

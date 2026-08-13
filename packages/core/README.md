@@ -5,8 +5,8 @@ Shared foundation for the [Wire ecosystem](https://github.com/NyonCode/wire) - t
 ## Requirements
 
 - PHP 8.2+
-- Laravel 10, 11, or 12
-- Livewire 3.x
+- Laravel 12.61+ or 13.12+
+- Livewire 4.x
 
 ## Installation
 
@@ -39,7 +39,7 @@ export default {
 
 ### Alpine.js
 
-Wire Core uses Alpine.js (included via Livewire 3). No separate Alpine installation needed.
+Wire Core uses Alpine.js (included via Livewire 4). No separate Alpine installation needed.
 
 Its interactive controllers — `wireDropdown`, `wireContextMenu`, `wireTabs`, `wireWizard`,
 `wireEditableCell`, `wireFillHandle` — ship as a pre-built bundle served from the package's
