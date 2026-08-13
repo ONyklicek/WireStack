@@ -19,7 +19,7 @@ Built on [SortableJS](https://sortablejs.github.io/Sortable/) and [Alpine.js](ht
 - **Lifecycle hooks** -- `beforeReorder()` / `afterReorder()` for authorization, caching, events
 - **Multi-table support** -- multiple table components over the same model get independent column orders
 - **Dark mode** -- all drag indicators support light and dark themes
-- **Livewire 3 compatible** -- survives morphs, pagination, and filter changes
+- **Livewire 4 compatible** -- survives morphs, pagination, and filter changes
 
 ## Typical Setup
 

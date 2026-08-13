@@ -36,11 +36,50 @@ the changelog before bumping:
 |------------|-----------|
 | PHP | 8.2, 8.3, 8.4 |
 | Laravel | 12.61+, 13.12+ |
-| Livewire | 3.x |
+| Livewire | 4.x |
 | Tailwind CSS | 3.x or 4.x |
 | `nyoncode/laravel-package-toolkit` | ^2.4 |
 
 Confirm your app meets these before upgrading.
+
+---
+
+## Livewire 4 (2.0)
+
+**2.0 requires Livewire 4.** The 1.x line stays on Livewire 3 and keeps receiving
+fixes; there is no release that runs on both. Upgrade Livewire first, confirm your
+own components still work, then move Wire.
+
+```bash
+composer require livewire/livewire:^4.0
+php artisan optimize:clear
+composer update "nyoncode/wire-*"
+```
+
+Livewire's own [upgrade guide](https://livewire.laravel.com/docs/upgrading) covers
+your application code. Four of its changes reach into what Wire renders for you,
+and only the last one needs anything from you.
+
+**`liveOnBlur()` still means what it meant.** From Livewire 4, `wire:model.blur`
+says when the *client* syncs its own state, not when it talks to the server — a
+bare `.blur` never reaches the server at all. Wire emits `wire:model.live.blur`
+instead, so a field declared `->liveOnBlur()` (or `->validateOnBlur()`, which
+turns it on) behaves exactly as before. Nothing to change unless you hand-wrote
+`wire:model.blur` in an overridden field view, in which case add `.live`.
+
+**Multiple file uploads append themselves.** Livewire 4 merges a new upload onto
+a multiple-file field's existing entries itself, where 3.x replaced them. Wire
+used to fill that gap and no longer does. If you wrote the same merge in an
+`updated()` hook of your own, remove it — otherwise your existing entries are
+counted twice.
+
+**The Livewire endpoints moved.** URLs are now `/livewire-{hash}/…` rather than
+`/livewire/…`, where the hash derives from your `APP_KEY`. Firewall rules, CDN
+bypass rules and anything else matching that prefix by hand needs updating. Wire's
+own asset routes are unaffected — they were never under that prefix.
+
+**Alpine comes from Livewire, still.** Livewire 4 ships Alpine 3.16. As on 3.x, do
+not install or start Alpine separately.
 
 ---
 

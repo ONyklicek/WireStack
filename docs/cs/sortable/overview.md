@@ -19,7 +19,7 @@ Postaveno na [SortableJS](https://sortablejs.github.io/Sortable/) a [Alpine.js](
 - **Lifecycle hooky** -- `beforeReorder()` / `afterReorder()` pro autorizaci, cachování, události
 - **Podpora více tabulek** -- více table komponent nad stejným modelem dostane nezávislá pořadí sloupců
 - **Dark mode** -- všechny drag indikátory podporují světlý a tmavý motiv
-- **Livewire 3 kompatibilní** -- přežije morphy, stránkování a změny filtrů
+- **Livewire 4 kompatibilní** -- přežije morphy, stránkování a změny filtrů
 
 ## Typické nastavení
 

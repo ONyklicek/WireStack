@@ -204,7 +204,7 @@ TextInput::make('email')->email()->required()->validateLive();   // při každé
 TextInput::make('name')->required()->validateOnBlur();           // když focus odejde
 ```
 
-`validateLive()` zapne `live()` a `validateOnBlur()` zapne `blur` vazbu, takže
+`validateLive()` zapne `live()` a `validateOnBlur()` zapne `live.blur` vazbu, takže
 server vidí změnu a obnoví jen položku error bagu daného pole. Podmiňovací helpery
 jako `requiredIf()` se ctí i live, protože čtou aktuální stav sousedů při každém
 roundtripu. Live validace funguje i pro pole uvnitř `Repeater` položek — pole

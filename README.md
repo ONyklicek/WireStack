@@ -23,7 +23,7 @@ Monorepo for the Wire ecosystem – enterprise-grade Livewire components for Lar
 
 - PHP 8.2+
 - Laravel 12.61+ or 13.12+
-- Livewire 3.x
+- Livewire 4.x
 - Tailwind CSS 3.x
 - Node.js & npm (for Vite)
 

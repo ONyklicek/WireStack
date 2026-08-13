@@ -363,7 +363,7 @@ Every field inherits:
 ->defaultOnNull(bool $condition = true) // also fill the default over an edit-mode null
 ->extraAttributes(array $attrs)         // HTML attributes
 ->live()                                // wire:model.live
-->debounce(int $ms = 500)              // wire:model.blur with debounce
+->debounce(int $ms = 500)              // adds .debounce.{ms}ms to the binding
 ->afterStateUpdated(Closure $callback)  // react to value changes (auto-enables live)
 ->rules(string|array $rules)            // Laravel validation rules
 ->validationMessages(array $messages)   // custom validation messages

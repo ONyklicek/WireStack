@@ -36,11 +36,49 @@ zvýšením si přečtěte changelog:
 |------------|-----------|
 | PHP | 8.2, 8.3, 8.4 |
 | Laravel | 12.61+, 13.12+ |
-| Livewire | 3.x |
+| Livewire | 4.x |
 | Tailwind CSS | 3.x nebo 4.x |
 | `nyoncode/laravel-package-toolkit` | ^2.4 |
 
 Před upgradem ověřte, že je vaše aplikace splňuje.
+
+---
+
+## Livewire 4 (2.0)
+
+**Verze 2.0 vyžaduje Livewire 4.** Linie 1.x zůstává na Livewire 3 a dál dostává
+opravy; žádné vydání neběží na obou. Nejdřív povyšte Livewire, ověřte, že vaše
+vlastní komponenty fungují, teprve pak posuňte Wire.
+
+```bash
+composer require livewire/livewire:^4.0
+php artisan optimize:clear
+composer update "nyoncode/wire-*"
+```
+
+Vlastní [upgrade guide Livewiru](https://livewire.laravel.com/docs/upgrading)
+pokrývá kód vaší aplikace. Čtyři jeho změny zasahují do toho, co Wire vykresluje
+za vás, a jen poslední z nich po vás něco chce.
+
+**`liveOnBlur()` znamená pořád totéž.** Od Livewire 4 říká `wire:model.blur`, kdy
+*klient* synchronizuje vlastní stav, ne kdy mluví se serverem — samotné `.blur` se
+na server nedostane vůbec. Wire proto emituje `wire:model.live.blur`, takže pole
+deklarované přes `->liveOnBlur()` (nebo `->validateOnBlur()`, které to zapíná) se
+chová přesně jako dřív. Měnit není co, ledaže jste `wire:model.blur` napsali ručně
+v přepsaném view pole — tam doplňte `.live`.
+
+**Vícesouborové uploady se slučují samy.** Livewire 4 si nový upload přislučuje ke
+stávajícím položkám vícesouborového pole sám, kdežto 3.x je nahrazoval. Wire tuhle
+mezeru dřív zaceloval a už to nedělá. Pokud jste totéž sloučení napsali ve vlastním
+`updated()` hooku, odstraňte ho — jinak se stávající položky započtou dvakrát.
+
+**Endpointy Livewiru se přesunuly.** URL jsou nově `/livewire-{hash}/…` místo
+`/livewire/…`, kde se hash odvozuje z vašeho `APP_KEY`. Pravidla firewallu, bypass
+na CDN a cokoli dalšího, co ten prefix porovnává ručně, je potřeba upravit. Vlastní
+asset routes Wiru to nezasahuje — pod tím prefixem nikdy nebyly.
+
+**Alpine dodává Livewire, stále.** Livewire 4 dodává Alpine 3.16. Stejně jako u 3.x
+Alpine neinstalujte ani nestartujte samostatně.
 
 ---
 

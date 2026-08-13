@@ -48,7 +48,7 @@ are addressed by name (`Wizard::make('signup')`).
 - Options accept arrays or an enum class: `->options(Status::class)` (shared `HasOptions`).
 - Reactivity is opt-in with `->live()`; default fields use deferred `wire:model`.
 - `Select`/`Radio`/`CheckboxList` share the same options API.
-- `FileUpload` is **store-on-submit** (orphan-free): `InteractsWithFileUploads` composes Livewire `WithFileUploads`; an upload stays a pending `TemporaryUploadedFile` (multiple fields merge/append via the `updating`-captured value, single keeps newest) and is moved to the `disk()`/`directory()` only on **save** by a `SaveHandler` step (`FileUpload::storeUploadedFile`). The view lists stored paths + pending uploads with index-based `removeUploadedFile`; `->deletable(false)` is read-only.
+- `FileUpload` is **store-on-submit** (orphan-free): `InteractsWithFileUploads` composes Livewire `WithFileUploads`; an upload stays a pending `TemporaryUploadedFile` (Livewire 4 appends new uploads onto a `multiple()` field's existing entries itself — do NOT add an `updated()`/`updating()` hook that merges them again, it double-counts what is already there; a single field keeps the newest) and is moved to the `disk()`/`directory()` only on **save** by a `SaveHandler` step (`FileUpload::storeUploadedFile`). The view lists stored paths + pending uploads with index-based `removeUploadedFile`, which writes through `StateContainer::writeInto()` so it works in an action modal too; `->deletable(false)` is read-only.
 - `Radio` has display variants: `->cards()` (selectable cards, `->inline()` for a row,
   `->hideIndicator()` to drop the dot), `->segmented()` (pill over a track), and `->buttons()`
   (separate buttons, selected filled; `->inline()` for a row). `->icons([value => name])` and

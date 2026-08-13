@@ -99,7 +99,7 @@ Skupiny jsou `config`, `views`, `translations` a (kde je to relevantní)
 **Příznak:** Chyby v konzoli o dvojité inicializaci Alpine, nebo direktivy
 spouštějící se dvakrát.
 
-**Příčina:** Alpine byl nainstalován a nastartován samostatně. Livewire 3 už
+**Příčina:** Alpine byl nainstalován a nastartován samostatně. Livewire 4 už
 Alpine dodává a startuje.
 
 **Náprava:** Odstraňte jakoukoli samostatnou instalaci Alpine a volání

@@ -100,7 +100,7 @@ The groups are `config`, `views`, `translations`, and (where applicable)
 **Symptom:** Console errors about Alpine being initialized twice, or directives
 firing twice.
 
-**Cause:** Alpine was installed and started separately. Livewire 3 already ships
+**Cause:** Alpine was installed and started separately. Livewire 4 already ships
 and starts Alpine.
 
 **Fix:** Remove any standalone Alpine install and `Alpine.start()` call. Let

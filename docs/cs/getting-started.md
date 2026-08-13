@@ -58,7 +58,7 @@ Service providery se registrují automaticky přes Laravel auto-discovery.
 
 Než vykreslíte první komponentu, ujistěte se, že platí všechno níže:
 
-- Livewire 3 je nainstalováno
+- Livewire 4 je nainstalováno
 - Tailwind skenuje vendor pohledy Wire
 - vaše aplikace definuje barvu `primary`
 - hlavní layout obsahuje `@vite`, `@livewireStyles` a `@livewireScripts`
@@ -170,7 +170,7 @@ v `<head>`. Přidejte kontejner notifikací, pokud používáte zpětnou vazbu a
 </html>
 ```
 
-Neinstalujte Alpine samostatně. Livewire 3 ho už obsahuje.
+Neinstalujte Alpine samostatně. Livewire 4 ho už obsahuje.
 
 <a id="javascript-assets"></a>
 ## JavaScriptové assety

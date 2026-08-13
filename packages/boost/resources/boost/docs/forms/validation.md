@@ -205,7 +205,7 @@ TextInput::make('email')->email()->required()->validateLive();   // on each chan
 TextInput::make('name')->required()->validateOnBlur();           // when focus leaves
 ```
 
-`validateLive()` enables `live()` and `validateOnBlur()` enables `blur` binding,
+`validateLive()` enables `live()` and `validateOnBlur()` enables `live.blur` binding,
 so the server sees the change and refreshes only that field's error bag entry.
 Conditioning helpers such as `requiredIf()` are honoured live, because they read
 the current sibling state on each roundtrip. Live validation also works for

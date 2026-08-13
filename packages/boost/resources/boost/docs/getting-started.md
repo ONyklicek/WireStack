@@ -58,7 +58,7 @@ Service providers register automatically via Laravel auto-discovery.
 
 Before you render the first component, make sure all of these are true:
 
-- Livewire 3 is installed
+- Livewire 4 is installed
 - Tailwind scans the Wire vendor views
 - your app defines a `primary` color
 - the main layout includes `@vite`, `@livewireStyles`, and `@livewireScripts`
@@ -168,7 +168,7 @@ in the `<head>`. Add the notifications container if you use action feedback or t
 </html>
 ```
 
-Do not install Alpine separately. Livewire 3 already ships it.
+Do not install Alpine separately. Livewire 4 already ships it.
 
 ## JavaScript Assets
 

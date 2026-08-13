@@ -364,7 +364,7 @@ Každé pole dědí:
 ->defaultOnNull(bool $condition = true) // doplnit výchozí hodnotu i pro null v edit módu
 ->extraAttributes(array $attrs)         // HTML atributy
 ->live()                                // wire:model.live
-->debounce(int $ms = 500)              // wire:model.blur s debounce
+->debounce(int $ms = 500)              // přidá .debounce.{ms}ms k vazbě
 ->afterStateUpdated(Closure $callback)  // reagovat na změny hodnoty (auto-zapne live)
 ->rules(string|array $rules)            // Laravel validační pravidla
 ->validationMessages(array $messages)   // vlastní validační zprávy
