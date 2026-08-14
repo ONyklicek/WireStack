@@ -522,6 +522,30 @@ for the shapes it renders, and the driver sweep is what covers the rest.
 `TableRenderPlanTest` now pins the invariant directly (verified to fail against
 the eager build), so it is no longer browser-only.
 
+The practical rule that follows: **the probe table must exercise what the slice
+touches.** The actions slice was verified against a table carrying all four
+action surfaces, the quiet style, both collapse modes and a row context menu —
+not the plain table the first two slices used.
+
+#### A second render-time mutation, found by sweeping for the first
+
+A search for other views that reconfigure state mid-render turned up only one
+more thing, and it is not in a view at all — it is behind a getter the plan now
+calls:
+
+`Table::composeRowActions()` applies the quiet style by calling `$action->quiet()`
+on the Table's **own** `Action` instances, without cloning them. So
+`getRowActionsForDisplay()` and `getMobileRowActionsForDisplay()` mutate shared
+objects on a Table that `WithTable` memoises for the request.
+
+Harmless today: the write is idempotent and re-derived from the same
+`actionsStyle`, and the action slice's render output is byte-identical. But it is
+the same shape as the column-order bug — state that changes when a getter is
+called, on a memoised object — and the plan calls that getter earlier in the
+render than the view did. Pinned by a test asserting the row actions come back
+quiet. The clean fix, if it ever bites, already exists two methods away:
+`getMobileHeaderActionGroup()` does `(clone $action)->withoutKeyboardShortcut()`.
+
 **The plan is a composition root, one value object per slice** —
 `$plan->state->activeFilters`, `$plan->columns->visible`. That shape was settled
 at the second slice rather than the seventh, and not for taste:
@@ -546,11 +570,30 @@ visibility and the compiled per-column markup.
 |---|---|---|
 | State + active filters | `search`, `filters`, `columnFilters`, `activeFilters`, `activeColumnFilters`, `sortColumn`, `sortDirection`, `perPage`, `hasActiveFilters` (+ the recursive `$filterHasValue` closure, now `holdsValue()`) | **done** |
 | Columns | `visibleColumns`, `columnMeta` incl. the compiled `<td>` skeletons, `fillColumns`, `filterableColumns`, sub-row columns, `toggleableColumns`, `colSpan`, `hasCopyableColumn`, `mobileSortableColumns` | **done** |
-| Actions | row/bulk/header/mobile action lists, the click resolvers, positions and alignment | next |
-| Interaction | keyboard nav, gestures, active-row marker, record bindings, shortcut help | |
-| Layout | styling, padding, responsive and mobile-sheet classes | |
-| Paging | paginator, counts, `rangeFrom`/`rangeTo`, `headerRowCount` | |
-| Skeletons | `rowSkeleton`, `selectionCellSkeleton`, selection announcements | |
+| Actions | row/bulk/header/mobile action lists, both collapsed groups, the click resolvers, position/alignment/label/width | **done** |
+| Layout | styling, padding, responsive and mobile-sheet classes | next — 13 vars, all `$table`-only, no edges in or out |
+| Paging | paginator, counts, `rangeFrom`/`rangeTo`, `headerRowCount` | needs `$records`; do it as the slice that changes the builder signature |
+| Interaction | keyboard nav, gestures, active-row marker, record bindings, shortcut help | two edges out into skeletons |
+| Skeletons | `rowSkeleton`, `selectionCellSkeleton`, selection announcements, row-class binding, page record keys | last — the dependency sink, and also needs `$records` |
+
+That order is not the order they appear in the file. It comes from a dependency
+map of the remaining locals: layout is the only group with no edges in or out,
+paging is self-contained but forces the `$records` change, and skeletons consumes
+from interaction (`keyboardNav`, `tableRole`, `activeRowConfig`) and from the
+not-yet-sliced leftovers (`isSelectable`, `hasSummaries`), so it goes last.
+
+**Dead locals found while mapping, to delete rather than migrate:**
+`$actionsAlignment` (the raw `left`/`center`/`right`; only the derived class is
+ever rendered — removed with this slice), `$isCompact`, `$hasRecordPointer`, and
+`$usesRangeSelection`. The last is the interesting one: it looks live because
+`partials/selection-cell.blade.php` uses a variable of that name, but that one is
+supplied by `Table::getSelectionCellSkeleton()`, not by the view local.
+
+The inverse trap, for whoever does the remaining slices: `$pollingConfig`,
+`$shortcutLegend` and `$shortcutHelpEvent` read as dead — zero occurrences in the
+view body — but are consumed by `partials/polling-indicator.blade.php` and
+`partials/shortcut-help-modal.blade.php` through **implicit `@include` scope
+inheritance**. Grep alone would delete them.
 
 After two slices: the head block is **322 → 258 lines**, and of the ~102
 assignments left in it 24 are now one-line aliases off the plan — so about a
