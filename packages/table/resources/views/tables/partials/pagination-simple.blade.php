@@ -1,3 +1,18 @@
+{{--
+    Prev/next only, for a simple paginator.
+
+    `Table::simplePagination()` trades the COUNT query for speed, so the paginator
+    cannot say how many pages there are: no `total()`, no `lastPage()`, and
+    `links()` passes no `$elements`. The numbered partial next door needs all
+    three, which is why this one exists rather than a branch inside it — a missing
+    `$elements` is an undefined-variable error, not a degraded render.
+
+    What it does have is `onFirstPage()` and `hasMorePages()`, both answered from
+    one extra row fetched beyond the page, so prev/next are exact rather than
+    guesses. The current page number is shown without a total for the same reason.
+
+    Variables: $paginator (from `links()`).
+--}}
 @if ($paginator->hasPages())
     <nav role="navigation" aria-label="{{ __('wire-table::messages.pagination_navigation') }}" class="flex items-center gap-1">
         {{-- Previous Page Link --}}
@@ -17,41 +32,9 @@
             </button>
         @endif
 
-        {{-- Page Numbers --}}
-        <div class="hidden sm:flex items-center gap-1">
-            @foreach ($elements as $element)
-                {{-- "Three Dots" Separator --}}
-                @if (is_string($element))
-                    <span class="relative inline-flex items-center px-2 py-1.5 text-sm font-medium text-gray-400 dark:text-gray-500">
-                        {{ $element }}
-                    </span>
-                @endif
-
-                {{-- Array Of Links --}}
-                @if (is_array($element))
-                    @foreach ($element as $page => $url)
-                        @if ($page == $paginator->currentPage())
-                            <span class="relative inline-flex items-center justify-center w-9 h-9 text-sm font-semibold text-white bg-primary-600 rounded-lg">
-                                {{ $page }}
-                            </span>
-                        @else
-                            <button
-                                    wire:click="gotoPage({{ $page }})"
-                                    data-testid="table-page-{{ $page }}"
-                                    aria-label="{{ __('wire-table::messages.pagination_goto', ['page' => $page]) }}"
-                                    class="relative inline-flex items-center justify-center w-9 h-9 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                            >
-                                {{ $page }}
-                            </button>
-                        @endif
-                    @endforeach
-                @endif
-            @endforeach
-        </div>
-
-        {{-- Mobile Page Info --}}
-        <span class="sm:hidden text-sm text-gray-600 dark:text-gray-400 px-2">
-            {{ $paginator->currentPage() }} / {{ $paginator->lastPage() }}
+        {{-- Page number, with no total to put it out of --}}
+        <span class="text-sm text-gray-600 dark:text-gray-400 px-2" data-testid="table-page-current">
+            {{ $paginator->currentPage() }}
         </span>
 
         {{-- Next Page Link --}}

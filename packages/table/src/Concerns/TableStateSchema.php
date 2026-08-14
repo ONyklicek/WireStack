@@ -29,6 +29,9 @@ final class TableStateSchema
             ],
             'pagination' => [
                 'perPage' => 10,
+                // Cursor pagination only. Livewire's pagination is page-based, so
+                // a cursor has nowhere else to live — see WithTable::setTableCursor().
+                'cursor' => null,
             ],
             'search' => null,
             'filters' => [],

@@ -1313,9 +1313,12 @@
                     {{-- Footer / Pagination --}}
                     @if($isPaginated && $hasVisibleColumns)
                         @php
-                            // $hasPaginator and the range come from the preamble — aria-rowindex
-                            // needs them before the body renders.
-                            $hasMultiplePages = $hasPaginator && $records->hasPages();
+                            // The range comes from the preamble — aria-rowindex needs it before
+                            // the body renders. Which of the three questions may be asked of the
+                            // records is PagingRenderPlan's business, not this view's.
+                            $hasMultiplePages = $plan->paging()->hasLinks;
+                            $knowsTotal = $hasPaginator;
+                            $knowsRange = $plan->paging()->knowsRange;
                             $total = $recordCount;
                             $from = $rangeFrom;
                             $to = $rangeTo;
@@ -1343,19 +1346,24 @@
                                     <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('wire-table::messages.records') }}</span>
                                 </div>
 
-                                {{-- Results Info - Always visible when paginated --}}
-                                <div class="text-sm text-gray-500 dark:text-gray-400">
-                                    {{ __('wire-table::messages.showing') }} <span
-                                            class="font-medium text-gray-700 dark:text-gray-300">{{ $from }}</span> -
-                                    <span class="font-medium text-gray-700 dark:text-gray-300">{{ $to }}</span> {{ __('wire-table::messages.of') }} <span
-                                            class="font-medium text-gray-700 dark:text-gray-300">{{ $total }}</span>
-                                    {{ __('wire-table::messages.records') }}
-                                </div>
+                                {{-- Results info. A simple paginator knows its offsets but not
+                                     the total, so it says "showing 1 - 10" and stops; a cursor
+                                     paginator knows neither and says nothing rather than a
+                                     confident wrong number. --}}
+                                @if($knowsRange)
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                                        {{ __('wire-table::messages.showing') }} <span
+                                                class="font-medium text-gray-700 dark:text-gray-300">{{ $from }}</span> -
+                                        <span class="font-medium text-gray-700 dark:text-gray-300">{{ $to }}</span>@if($knowsTotal) {{ __('wire-table::messages.of') }} <span
+                                                class="font-medium text-gray-700 dark:text-gray-300">{{ $total }}</span>@endif
+                                        {{ __('wire-table::messages.records') }}
+                                    </div>
+                                @endif
 
                                 {{-- Pagination Links - Only when multiple pages --}}
                                 @if($hasMultiplePages)
                                     <div>
-                                        {{ $records->links('wire-table::tables.partials.pagination') }}
+                                        {{ $records->links($plan->paging()->linksView) }}
                                     </div>
                                 @endif
                             </div>

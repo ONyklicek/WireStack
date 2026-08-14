@@ -111,6 +111,7 @@ return [
     'showing' => 'Showing',
     'of' => 'of',
     'records' => 'records',
+    'pagination_navigation' => 'Pagination Navigation',
     'pagination_previous' => 'Previous page',
     'pagination_next' => 'Next page',
     'pagination_goto' => 'Go to page :page',

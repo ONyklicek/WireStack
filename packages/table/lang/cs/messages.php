@@ -111,6 +111,7 @@ return [
     'showing' => 'Zobrazuje se',
     'of' => 'z',
     'records' => 'záznamů',
+    'pagination_navigation' => 'Stránkování',
     'pagination_previous' => 'Předchozí stránka',
     'pagination_next' => 'Další stránka',
     'pagination_goto' => 'Přejít na stránku :page',

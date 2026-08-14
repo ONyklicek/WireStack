@@ -262,6 +262,17 @@ rows × columns (× actions). Keep the per-row work cheap and lean on the levers
 already gives you:
 
 - **A page size is what bounds a table's memory, and `'all'` removes it.** `Table::perPageOptions([10, 25, 50, 'all'])` adds a "show everything on one page" option (`Table::perPage('all')` makes it the default). It is stored as the integer `Table::PER_PAGE_ALL` (`-1`) — the word never survives configuration, because the select, the `per_page` query-string parameter and the query cache key all compare page sizes strictly as integers — and it is paginated by counting first, since a negative limit would give the paginator a negative page count. Deliberately **not** among the shipped `[10, 25, 50, 100]`: the host clamps any page size the table does not offer back to `perPage()`, which is the same guard that stops a forged `perPage: 500000`, so a table only reads its whole source into memory when it said `'all'` itself. There is **no** ceiling behind it (unlike `bulkMaxRecords()`), so it belongs on a table whose row count is known, not on one over an unbounded source.
+- **Pagination has three modes, and they are not interchangeable.** The default is length-aware:
+  numbered pages, and a "showing 1 - 10 of 240" line, paid for with a COUNT query.
+  `Table::simplePagination()` drops that COUNT — so it offers **prev/next only** and states no
+  total, which is the trade, not a defect. `Table::cursorPagination()` is the fastest over a large
+  or shifting set and also offers prev/next, but it can state neither a total nor a position — a
+  cursor is an opaque point in an ordering, not an offset. Its controls are driven by
+  `setTableCursor()` rather than `previousPage`/`nextPage`, because Livewire's pagination is
+  page-based and has no cursor equivalent; the cursor lives in table state and is **dropped
+  whenever the set is re-sorted or narrowed**, since it would otherwise point into an ordering that
+  no longer exists. Reach for simple when the COUNT is the cost you are avoiding and a total is not
+  needed on screen; reach for cursor when the set is large or shifting under the reader.
 - **Defer off-screen tables.** `Table::lazy()` returns no rows and runs no query until the
   table scrolls into view (optional `->lazyPlaceholder(...)`). Use it for tables below the fold
   or in tabs. It defers the JS too: the table's Alpine bundles ship with the *deferred* render,

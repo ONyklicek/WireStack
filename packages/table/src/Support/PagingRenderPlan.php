@@ -36,18 +36,26 @@ use NyonCode\WireTable\Table;
  * the length-aware case. `total()` is never reached for the other three, and
  * `firstItem()`/`lastItem()` never for the last two.
  *
- * ### A known gap, deliberately preserved
+ * ### Three modes, not a boolean
  *
- * That gate is a boolean over what is really three cases, and the consequence is
- * visible: a simple- or cursor-paginated table takes the fallback branch
- * everywhere, so it renders no pagination links and a "showing 1 – N of N" line
- * counting only its own page. Simple pagination is the sharper loss, because its
- * `firstItem()`/`lastItem()` do work.
+ * The view used to branch on `instanceof LengthAwarePaginator` alone, so both
+ * other modes fell down the "not paginated" path: no links at all, and a
+ * "showing 1 – N of N" counting only the current page. Simple pagination was the
+ * sharper loss, since its `firstItem()`/`lastItem()` do work.
  *
- * This class reproduces that exactly rather than fixing it. The extraction it
- * belongs to is warranted by producing byte-identical output; changing what a
- * simple-paginated table renders is a separate change with its own gate. See
- * `architecture/plans/livewire-4-migration-and-performance.md` §5.2.
+ * So the three questions are asked separately:
+ *
+ *  - {@see $knowsTotal} — may `total()` be called (length-aware only);
+ *  - {@see $knowsRange} — may `firstItem()`/`lastItem()` be called (not cursor);
+ *  - {@see $hasLinks} — is there more than one page to offer at all.
+ *
+ * Each mode gets the controls it can actually drive, which is why
+ * {@see $linksView} is a decision rather than a constant. Cursor is the one that
+ * needed building: Livewire's pagination trait is page-based
+ * (`previousPage`/`nextPage`/`gotoPage`) with no cursor equivalent, so its
+ * buttons hand the paginator's own encoded cursor back through
+ * `WithTable::setTableCursor()`, and the cursor lives in table state where the
+ * rest of this table's paging already lives.
  */
 final class PagingRenderPlan
 {
@@ -55,7 +63,12 @@ final class PagingRenderPlan
      * @param  bool  $isPaginated  The table's configuration, independent of what
      *                             this page's records turned out to be.
      * @param  bool  $hasPaginator  Whether the records can answer for the whole
-     *                              set — length-aware only.
+     *                              set — length-aware only. Kept as the name the
+     *                              view has always used for that question.
+     * @param  bool  $knowsRange  Whether an item offset may be asked for.
+     * @param  bool  $hasLinks  Whether there is a second page to offer.
+     * @param  string  $linksView  The partial `links()` should render — the full
+     *                             numbered one, or prev/next for simple.
      * @param  int  $recordCount  The whole set when known, otherwise this page.
      * @param  int  $rangeFrom  1-based offset of this page's first row.
      * @param  int  $rangeTo  …and its last.
@@ -66,6 +79,9 @@ final class PagingRenderPlan
     private function __construct(
         public readonly bool $isPaginated,
         public readonly bool $hasPaginator,
+        public readonly bool $knowsRange,
+        public readonly bool $hasLinks,
+        public readonly string $linksView,
         public readonly int $recordCount,
         public readonly bool $isEmptyDueToFilter,
         public readonly int $rangeFrom,
@@ -88,19 +104,34 @@ final class PagingRenderPlan
     ): self {
         $hasPaginator = $records instanceof LengthAwarePaginator;
 
+        // A simple paginator has no total() but does have working item offsets;
+        // a cursor paginator has neither. Both can still say whether they have
+        // more pages.
+        $isSimple = ! $hasPaginator && $records instanceof Paginator;
+        $knowsRange = $hasPaginator || $isSimple;
+
         $recordCount = $hasPaginator ? $records->total() : $records->count();
 
         return new self(
             isPaginated: $table->isPaginated(),
             hasPaginator: $hasPaginator,
+            knowsRange: $knowsRange,
+            hasLinks: $records instanceof Collection ? false : $records->hasPages(),
+            linksView: match (true) {
+                $hasPaginator => 'wire-table::tables.partials.pagination',
+                $isSimple => 'wire-table::tables.partials.pagination-simple',
+                // A cursor cannot call previousPage()/nextPage(); its controls
+                // hand the encoded cursor back through setTableCursor().
+                default => 'wire-table::tables.partials.pagination-cursor',
+            },
             recordCount: $recordCount,
             // "No results match your filters" rather than "nothing here yet" —
             // the empty state that offers a way back.
             isEmptyDueToFilter: $hasActiveFilters && $recordCount === 0,
-            rangeFrom: $hasPaginator
+            rangeFrom: $knowsRange
                 ? ($records->firstItem() ?? 0)
                 : ($records->count() > 0 ? 1 : 0),
-            rangeTo: $hasPaginator
+            rangeTo: $knowsRange
                 ? ($records->lastItem() ?? 0)
                 : $records->count(),
             headerRowCount: 1 + ($hasColumnFilters ? 1 : 0),

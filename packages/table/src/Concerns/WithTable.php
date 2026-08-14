@@ -416,6 +416,10 @@ trait WithTable
                 }
 
                 $this->resetPage();
+                // A cursor points into an ordering that no longer exists once the
+                // set is narrowed or re-sorted, so it cannot survive the reset the
+                // way a page number nominally can.
+                $this->tableState->set('pagination.cursor', null);
 
                 return;
             }
@@ -930,6 +934,31 @@ trait WithTable
     }
 
     /**
+     * Move a cursor-paginated table, which nothing else can do for it.
+     *
+     * Livewire's pagination is page-based — `previousPage()`, `nextPage()`,
+     * `gotoPage()` — and offers no cursor equivalent, so a `CursorPaginator` had
+     * no control that could drive it: the rows paged correctly but only through a
+     * `cursor` query parameter nobody was setting. The cursor therefore lives in
+     * table state, where the rest of this table's paging already lives, and the
+     * pagination partial hands back the encoded cursor the paginator itself
+     * produced.
+     *
+     * `null` returns to the first page, which is what the paginator means by an
+     * absent cursor.
+     */
+    public function setTableCursor(?string $cursor = null): void
+    {
+        $this->tableState->set('pagination.cursor', $cursor);
+
+        // Same reasoning as setPage(): the rows on screen are no longer the ones
+        // a selection or a poll checksum was taken against.
+        $this->markTableViewChanged();
+
+        $this->cachedRecords = null;
+    }
+
+    /**
      * Run the table query for the current page, honouring the cache config.
      */
     protected function fetchTableRecords(Table $table): LengthAwarePaginator|Paginator|CursorPaginator|Collection
@@ -1011,7 +1040,14 @@ trait WithTable
 
         return match ($table->getPaginationMode()) {
             'simple' => $query->simplePaginate($perPage),
-            'cursor' => $query->cursorPaginate($perPage),
+            // The cursor comes from table state rather than the request: Livewire's
+            // pagination is page-based and has no cursor of its own to read.
+            'cursor' => $query->cursorPaginate(
+                $perPage,
+                ['*'],
+                'cursor',
+                $this->tableState->get('pagination.cursor'),
+            ),
             default => $query->paginate($perPage),
         };
     }
