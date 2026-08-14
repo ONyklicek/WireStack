@@ -573,8 +573,8 @@ visibility and the compiled per-column markup.
 | Actions | row/bulk/header/mobile action lists, both collapsed groups, the click resolvers, position/alignment/label/width | **done** |
 | Layout | density and border, the stacked-on-mobile class pair, the five mobile-sheet classes | **done** |
 | Paging | paginator, counts, `rangeFrom`/`rangeTo`, `headerRowCount` | **done** — carried the builder's signature change (§5.2) |
-| Interaction | keyboard nav, gestures, active-row marker, record bindings, shortcut help | next — two edges out into skeletons |
-| Skeletons | `rowSkeleton`, `selectionCellSkeleton`, selection announcements, row-class binding, page record keys | last — the dependency sink, and also needs `$records` |
+| Interaction | keyboard nav, gestures, active-row marker, record bindings, shortcut help | **done** |
+| Skeletons | `rowSkeleton`, `selectionCellSkeleton`, selection announcements, row-class binding, page record keys | last — the dependency sink; `$records` is already plumbed |
 
 That order is not the order they appear in the file. It comes from a dependency
 map of the remaining locals: layout is the only group with no edges in or out,
@@ -595,10 +595,10 @@ view body — but are consumed by `partials/polling-indicator.blade.php` and
 `partials/shortcut-help-modal.blade.php` through **implicit `@include` scope
 inheritance**. Grep alone would delete them.
 
-After five slices: the head block is **322 → 254 lines**, and of the 100
-assignments left in it **62 are one-line aliases** off the plan — so **64 of the
+After six slices: the head block is **322 → 233 lines**, and of the 98
+assignments left in it **72 are one-line aliases** off the plan — so **76 of the
 original ~102 computations have moved**, including the whole hot path. What
-remains is interaction, skeletons and the leftovers.
+remains is skeletons and the leftovers it depends on.
 
 Two behaviours the column slice's tests pinned that nothing had asserted before,
 both easy to get backwards when the islands work starts moving this code again:

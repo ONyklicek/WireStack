@@ -68,6 +68,8 @@ final class TableRenderPlan
         public readonly LayoutRenderPlan $layout,
         /** Where this page sits in the whole result set. */
         public readonly PagingRenderPlan $paging,
+        /** How a row answers to a pointer, a keyboard and a drag. */
+        public readonly InteractionRenderPlan $interaction,
     ) {}
 
     /**
@@ -92,6 +94,7 @@ final class TableRenderPlan
             columns: $columns,
             actions: ActionRenderPlan::resolve($table),
             layout: LayoutRenderPlan::resolve($table),
+            interaction: InteractionRenderPlan::resolve($table, $component),
             paging: PagingRenderPlan::resolve(
                 $table,
                 $records,

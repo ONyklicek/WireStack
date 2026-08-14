@@ -68,43 +68,22 @@
     $actionClick = $plan->actions->click;
 
     $filters = $table->getFilters();
-    $rowContextMenuEnabled = $table->hasRowContextMenu(); // dedicated actions, independent of the actions column
-    // Record actions: whole-row click/dblclick bindings (name map) + whether the
-    // delegated controller must be mounted at all (bindings, a context menu, or
-    // keyboard navigation).
-    $recordActionBindings = $table->getRecordActionBindings();
-    $hasRecordPointer = $recordActionBindings !== [];
-    $keyboardNav = $table->keyboardNavEnabled();
-    $tableRole = $table->getTableRole();
-    $recordKeyboardConfig = $keyboardNav ? $table->getRecordActionKeyboardConfig() : null;
-    // The controller mount has its own owner: grid semantics (role/tabindex)
-    // now cover selectable tables too, but mounting wireRecordActions there is
-    // a visible change that ships separately — see mountsRecordActionController().
-    $recordActionsRootEnabled = $table->mountsRecordActionController();
-    // The mouse half of the gesture layer (sweep, Shift/mod ranges) — switchable
-    // independently of the keyboard one, so the controller gets its own config.
-    $gestureConfig = $table->getGestureConfig();
-    $usesRangeSelection = $table->usesRangeSelection();
-    // The marker only exists where something continues from the marked row: the
-    // keyboard, a range or a sweep. A table left with a bare click binding runs
-    // the action and highlights nothing.
-    $activeRowConfig = $table->usesActiveRowMarker() ? $table->getActiveRowConfig() : null;
-    // `?` opens the shortcut help. The event name is derived from the component
-    // id, so a page with several tables opens only the one whose row has focus —
-    // a bare window event would open every help modal at once. It goes through
-    // a lowercase hash, because the listener lives in an ATTRIBUTE NAME
-    // (x-on:{event}.window) and the DOM lowercases those: a mixed-case Livewire
-    // id would never match what the controller dispatches. The controller learns
-    // the name through its keyboard config; a table whose legend is empty gets
-    // no event and no modal at all.
-    $shortcutLegend = $table->usesShortcutHelp() ? $table->shortcutLegend() : null;
-    $shortcutHelpEvent = $shortcutLegend !== null && ! $shortcutLegend->isEmpty()
-        ? 'wire-table-shortcut-help-'.substr(md5($component->getId()), 0, 12)
-        : null;
-
-    if ($recordKeyboardConfig !== null) {
-        $recordKeyboardConfig['help'] = $shortcutHelpEvent;
-    }
+    // Row interaction — the pointer bindings, the two independently switchable
+    // halves of the gesture layer, the active-row marker and the `?` shortcut
+    // help. All resolved in InteractionRenderPlan, including folding the help
+    // event into the keyboard config (which this block used to write back after
+    // the fact). $shortcutLegend and $shortcutHelpEvent look unused below: they
+    // reach partials.shortcut-help-modal through @include scope inheritance.
+    $rowContextMenuEnabled = $plan->interaction->rowContextMenuEnabled;
+    $recordActionBindings = $plan->interaction->recordActionBindings;
+    $keyboardNav = $plan->interaction->keyboardNav;
+    $tableRole = $plan->interaction->tableRole;
+    $recordKeyboardConfig = $plan->interaction->recordKeyboardConfig;
+    $recordActionsRootEnabled = $plan->interaction->recordActionsRootEnabled;
+    $gestureConfig = $plan->interaction->gestureConfig;
+    $activeRowConfig = $plan->interaction->activeRowConfig;
+    $shortcutLegend = $plan->interaction->shortcutLegend;
+    $shortcutHelpEvent = $plan->interaction->shortcutHelpEvent;
     $hasBulkActions = $plan->actions->hasBulk;
     $hasHeaderActions = $plan->actions->hasHeader;
     $hasFilters = !empty($filters);

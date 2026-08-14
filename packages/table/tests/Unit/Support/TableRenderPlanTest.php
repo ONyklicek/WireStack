@@ -6,12 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
+use Livewire\Livewire;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Foundation\Support\MobileSheet;
 use NyonCode\WireTable\Actions\TableActionClickResolver;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Columns\TextInputColumn;
 use NyonCode\WireTable\Concerns\WithTable;
+use NyonCode\WireTable\Support\TableGestures;
 use NyonCode\WireTable\Support\TableRenderPlan;
 use NyonCode\WireTable\Table;
 
@@ -614,6 +616,105 @@ it('counts the column-filter row into the ARIA header offset', function () {
     // every body index is off by one.
     expect(trpPlan(trpComponent())->paging->headerRowCount)->toBe(1)
         ->and(trpWidePlan()->paging->headerRowCount)->toBe(2);
+});
+
+// ─── Interaction ─────────────────────────────────────────────────────────────
+
+class TrpGestureComponent extends Component
+{
+    use WithTable;
+
+    public string $mode = 'full';
+
+    public function table(Table $table): Table
+    {
+        $table->model(TrpRow::class)->selectable()->columns([TextColumn::make('name')]);
+
+        return match ($this->mode) {
+            'full' => $table->gestures()->rowContextMenu([Action::make('ctxOpen')]),
+            // all()->shortcutHelp(false), not a closure: the closure form is handed
+            // the CURRENT gestures object, which is "none" until something turns
+            // them on — so it would leave the layer off rather than trim it.
+            'nohelp' => $table->gestures(TableGestures::all()->shortcutHelp(false)),
+            default => $table,
+        };
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+function trpGesturePlan(string $mode): TableRenderPlan
+{
+    // Livewire::test rather than a bare instance: the shortcut-help event is
+    // derived from the component id, which only a mounted component has. Mounting
+    // renders, and rendering reads records, so the table has to exist.
+    if (! Schema::hasTable('trp_rows')) {
+        Schema::create('trp_rows', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+        });
+    }
+
+    // The mode goes in as a mount parameter, not assigned afterwards: table() runs
+    // during mount and the Table it returns is memoised, so a later write would
+    // configure nothing.
+    $component = Livewire::test(TrpGestureComponent::class, ['mode' => $mode])->instance();
+
+    return TableRenderPlan::build($component->getTable(), $component, collect());
+}
+
+it('scopes the shortcut-help event to one component', function () {
+    // A page can hold several tables and a bare window event would open every
+    // help modal at once. The hash is lowercase because the listener lives in an
+    // ATTRIBUTE NAME (x-on:{event}.window) and the DOM lowercases those — a
+    // mixed-case Livewire id would never match what the controller dispatches.
+    $interaction = trpGesturePlan('full')->interaction;
+
+    expect($interaction->shortcutHelpEvent)->toStartWith('wire-table-shortcut-help-')
+        ->and(substr((string) $interaction->shortcutHelpEvent, -12))->toMatch('/^[0-9a-f]{12}$/')
+        ->and($interaction->shortcutHelpEvent)->toBe(strtolower((string) $interaction->shortcutHelpEvent));
+});
+
+it('hands the help event to the keyboard controller', function () {
+    // The controller learns the event name through its keyboard config. The view
+    // used to write this key back onto the array a dozen lines after building it.
+    $interaction = trpGesturePlan('full')->interaction;
+
+    expect($interaction->keyboardNav)->toBeTrue()
+        ->and($interaction->recordKeyboardConfig)->toHaveKey('help')
+        ->and($interaction->recordKeyboardConfig['help'])->toBe($interaction->shortcutHelpEvent);
+});
+
+it('emits no help event when the table has no legend to show', function () {
+    // No event and no modal at all — not an event pointing at an empty modal.
+    $interaction = trpGesturePlan('nohelp')->interaction;
+
+    expect($interaction->shortcutLegend)->toBeNull()
+        ->and($interaction->shortcutHelpEvent)->toBeNull()
+        // …and the keyboard config still carries the key, holding null.
+        ->and($interaction->recordKeyboardConfig)->toHaveKey('help')
+        ->and($interaction->recordKeyboardConfig['help'])->toBeNull();
+});
+
+it('marks no active row on a table where nothing continues from one', function () {
+    // The marker exists only where the keyboard, a range or a sweep carries on
+    // from the marked row. A bare click binding runs the action and highlights
+    // nothing, so this is null rather than an unused config.
+    $bare = trpGesturePlan('bare')->interaction;
+    $full = trpGesturePlan('full')->interaction;
+
+    expect($bare->activeRowConfig)->toBeNull()
+        ->and($bare->keyboardNav)->toBeFalse()
+        ->and($bare->recordKeyboardConfig)->toBeNull()
+        ->and($full->activeRowConfig)->not->toBeNull();
+});
+
+it('keeps the context menu independent of the actions column', function () {
+    expect(trpGesturePlan('full')->interaction->rowContextMenuEnabled)->toBeTrue()
+        ->and(trpGesturePlan('bare')->interaction->rowContextMenuEnabled)->toBeFalse();
 });
 
 it('resolves after a view has reconfigured the table, not before', function () {
