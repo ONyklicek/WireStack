@@ -95,14 +95,19 @@ it('marks every selection cell with the data-select-cell hook', function () {
 it('keeps the selection assets include on the wrapper, outside the tbody', function () {
     // The tbody is not rendered without visible columns, but the selection is
     // live in the stacked cards too — the include must not depend on it.
-    $blade = file_get_contents(
-        dirname(__DIR__, 2).'/resources/views/tables/index.blade.php'
-    );
+    //
+    // The two now live in different files: the data region (table, cards,
+    // footer) was extracted so it could become an island, and an island body is
+    // re-rendered on its own. The assets must stay on the wrapper OUTSIDE it, or
+    // a targeted island render would re-emit them on every row change.
+    $views = dirname(__DIR__, 2).'/resources/views/tables';
 
-    $include = strpos($blade, 'partials.selection-assets');
-    $tbody = strpos($blade, '<tbody');
+    $wrapper = file_get_contents($views.'/index.blade.php');
+    $region = file_get_contents($views.'/partials/data-region.blade.php');
 
-    expect($include)->toBeInt()
-        ->and($tbody)->toBeInt()
-        ->and($include)->toBeLessThan($tbody);
+    expect($wrapper)->toContain('partials.selection-assets')
+        ->and($region)->not->toContain('partials.selection-assets')
+        // …and the tbody is entirely on the other side of that boundary.
+        ->and($wrapper)->not->toContain('<tbody')
+        ->and($region)->toContain('<tbody');
 });
