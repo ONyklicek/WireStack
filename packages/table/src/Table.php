@@ -35,7 +35,9 @@ use NyonCode\WireTable\Actions\TableActionClickResolver;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Concerns\CanSelectRecords;
 use NyonCode\WireTable\Concerns\HasSqlDebug;
+use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Exceptions\TableConfigurationException;
+use NyonCode\WireTable\Exceptions\TableHasNoHostException;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
 use NyonCode\WireTable\Services\TableIntrospector;
@@ -2749,8 +2751,39 @@ class Table implements Htmlable
         return $this->toHtml();
     }
 
+    /**
+     * Render through the host, which is the only thing that can render a table.
+     *
+     * `AI_CODING_STANDARD.md` rule 3 is why this has to work rather than go away:
+     * *components implement `Htmlable`; `{{ $component }}` must render without
+     * helpers.* It did not. The method called
+     * `view('wire-table::tables.index', ['table' => $this])` directly and had been
+     * broken for as long as that view needed anything beyond the table — it left
+     * `$component` and `$records` undefined, so `{{ $table }}` died on a method
+     * call against null. Nothing caught it because nothing exercised it:
+     * `relation-manager.blade.php` renders `{{ $this->table }}`, which is the
+     * component's computed property and already goes through
+     * {@see WithTable::getTableProperty()}.
+     *
+     * Delegating there fixes a second thing the direct call got wrong — the view
+     * name. `getTableProperty()` honours `getTableView()`, so a reorderable table
+     * renders wire-sortable's wrapper rather than the inner table stripped of its
+     * drag controller.
+     *
+     * Reaching for the host sits uneasily beside rule 6 (a component knows only
+     * itself and its configuration). The exception is deliberate and already
+     * conceded by {@see livewireComponent()}: a table's *definition* cannot
+     * produce a render, because the state, the page of records and the component
+     * id every client binding is scoped to all live on the host.
+     */
     public function toHtml(): string
     {
-        return view('wire-table::tables.index', ['table' => $this])->render();
+        $component = $this->getLivewireComponent();
+
+        if (! is_object($component) || ! method_exists($component, 'getTableProperty')) {
+            throw TableHasNoHostException::make();
+        }
+
+        return $component->getTableProperty()->render();
     }
 }
