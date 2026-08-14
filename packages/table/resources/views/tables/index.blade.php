@@ -49,29 +49,23 @@
     $sheetPanel = \NyonCode\WireCore\Foundation\Support\MobileSheet::panel($sheetBp);
     $sheetMotion = \NyonCode\WireCore\Foundation\Support\MobileSheet::motion($sheetBp);
     $sheetBackdrop = \NyonCode\WireCore\Foundation\Support\MobileSheet::backdropHide($sheetBp);
-    $actions = $table->getRowActionsForDisplay(); // applies the configured row-action style (solid/quiet)
-    $bulkActions = $table->getBulkActions();
-    $headerActions = $table->getHeaderActions();
-    $filters = $table->getFilters();
+    // Actions — the four surfaces (row, bulk, header, mobile card), their
+    // collapsed dropdown forms, and the click resolvers that keep wire-core's
+    // action views host-agnostic. All resolved in ActionRenderPlan.
+    $actions = $plan->actions->row;
+    $bulkActions = $plan->actions->bulk;
+    $headerActions = $plan->actions->header;
+    $hasActions = $plan->actions->hasAny;
+    $mobileActions = $plan->actions->mobile;
+    $hasMobileActions = $plan->actions->hasMobile;
+    $collapseMobileActions = $plan->actions->collapseMobile;
+    $mobileActionGroup = $plan->actions->mobileGroup;
+    $collapseHeaderActions = $plan->actions->collapseHeader;
+    $mobileHeaderActionGroup = $plan->actions->mobileHeaderGroup;
+    $headerActionClick = $plan->actions->headerClick;
+    $actionClick = $plan->actions->click;
 
-    $hasActions = $table->hasActions();
-    // The stacked cards have their own action list: a finger has no double-click,
-    // no right-click and no Delete key, so a behaviour-only record action also
-    // renders here as an ordinary button (recordActionButtonsOnMobile()).
-    $mobileActions = $table->getMobileRowActionsForDisplay();
-    $hasMobileActions = $mobileActions !== [];
-    // Mobile stacked cards can collapse the row actions into one dropdown group.
-    $collapseMobileActions = $table->shouldCollapseActionsOnMobile();
-    $mobileActionGroup = $collapseMobileActions ? $table->getMobileActionGroup() : null;
-    // The toolbar can do the same with its header actions. Both halves sit in the
-    // document at every width; CSS decides which one is shown, which is why the
-    // collapsed copy renders shortcut-less (see getMobileHeaderActionGroup()).
-    $collapseHeaderActions = $table->shouldCollapseHeaderActionsOnMobile();
-    $mobileHeaderActionGroup = $collapseHeaderActions ? $table->getMobileHeaderActionGroup() : null;
-    $headerActionClick = $collapseHeaderActions ? new \NyonCode\WireTable\Actions\HeaderActionClickResolver() : null;
-    // Host click resolver: the single place that maps a row action to the table's
-    // executeTableAction/openActionModal (core action views stay host-agnostic).
-    $actionClick = new \NyonCode\WireTable\Actions\TableActionClickResolver();
+    $filters = $table->getFilters();
     $rowContextMenuEnabled = $table->hasRowContextMenu(); // dedicated actions, independent of the actions column
     // Record actions: whole-row click/dblclick bindings (name map) + whether the
     // delegated controller must be mounted at all (bindings, a context menu, or
@@ -109,8 +103,8 @@
     if ($recordKeyboardConfig !== null) {
         $recordKeyboardConfig['help'] = $shortcutHelpEvent;
     }
-    $hasBulkActions = !empty($bulkActions);
-    $hasHeaderActions = !empty($headerActions);
+    $hasBulkActions = $plan->actions->hasBulk;
+    $hasHeaderActions = $plan->actions->hasHeader;
     $hasFilters = !empty($filters);
     $isSelectable = $table->isSelectable();
     // Record-invariant chrome icon resolved once per render (IconManager owns the
@@ -186,12 +180,13 @@
         : __('wire-table::messages.view_options');
 
     // Action configuration
-    $actionsPosition = $table->getActionsPosition(); // 'start' or 'end'
-    $actionsAlignment = $table->getActionsAlignment(); // 'left', 'center', 'right'
-    $actionsAlignmentClass = $table->getActionsAlignmentClass(); // literal text-* utility
-    $actionsJustifyClass = $table->getActionsJustifyClass(); // literal justify-* utility
-    $actionsColumnLabel = $table->getActionsColumnLabel() ?? __('wire-table::messages.actions_label');
-    $actionsColumnWidth = $table->getActionsColumnWidth();
+    $actionsPosition = $plan->actions->position; // 'start' or 'end'
+    // ($plan->actions->alignment is the raw 'left'/'center'/'right'; nothing in
+    // any view reads it — the class below is what gets rendered.)
+    $actionsAlignmentClass = $plan->actions->alignmentClass; // literal text-* utility
+    $actionsJustifyClass = $plan->actions->justifyClass; // literal justify-* utility
+    $actionsColumnLabel = $plan->actions->columnLabel;
+    $actionsColumnWidth = $plan->actions->columnWidth;
 
     // Table styling
     $isCompact = $table->isCompact();

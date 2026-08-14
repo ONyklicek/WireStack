@@ -57,6 +57,8 @@ final class TableRenderPlan
         public readonly TableQueryState $state,
         /** Which columns this render shows, and what was resolved off them. */
         public readonly ColumnRenderPlan $columns,
+        /** Which actions it offers, and how they reach the host. */
+        public readonly ActionRenderPlan $actions,
     ) {}
 
     /**
@@ -71,6 +73,7 @@ final class TableRenderPlan
         return new self(
             state: TableQueryState::resolve($table, $component),
             columns: ColumnRenderPlan::resolve($table, $component),
+            actions: ActionRenderPlan::resolve($table),
         );
     }
 }

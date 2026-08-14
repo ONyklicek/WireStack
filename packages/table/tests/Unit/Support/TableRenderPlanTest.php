@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
+use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireTable\Actions\TableActionClickResolver;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Columns\TextInputColumn;
 use NyonCode\WireTable\Concerns\WithTable;
@@ -292,6 +294,115 @@ it('has no sub-row columns on a table without sub-rows', function () {
 
     expect($plan->columns->subRow)->toBe([])
         ->and($plan->columns->visibleSubRow)->toBe([]);
+});
+
+// ─── Actions ─────────────────────────────────────────────────────────────────
+
+class TrpActionsComponent extends Component
+{
+    use WithTable;
+
+    public bool $collapse = false;
+
+    public function table(Table $table): Table
+    {
+        $table->model(TrpRow::class)
+            ->actionsStyle('quiet')
+            ->actionsPosition('start')
+            ->actionsColumnWidth('12rem')
+            ->columns([TextColumn::make('name')])
+            ->actions([Action::make('edit'), Action::make('delete')])
+            ->headerActions([Action::make('create')])
+            ->bulkActions([Action::make('bulkDelete')]);
+
+        if ($this->collapse) {
+            $table->collapseActionsOnMobile(true, 1)->collapseHeaderActionsOnMobile(true, 1);
+        }
+
+        return $table;
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+function trpActionsPlan(bool $collapse = false): TableRenderPlan
+{
+    $component = new TrpActionsComponent;
+    $component->collapse = $collapse;
+    $component->mountWithTable();
+
+    return TableRenderPlan::build($component->getTable(), $component);
+}
+
+it('resolves all four action surfaces', function () {
+    // Row, bulk, header and the stacked card's own list — the mobile one is
+    // separate on purpose, because a finger has no double-click or right-click.
+    $actions = trpActionsPlan()->actions;
+
+    expect($actions->hasAny)->toBeTrue()
+        ->and($actions->row)->toHaveCount(2)
+        ->and($actions->bulk)->toHaveCount(1)
+        ->and($actions->hasBulk)->toBeTrue()
+        ->and($actions->header)->toHaveCount(1)
+        ->and($actions->hasHeader)->toBeTrue();
+});
+
+it('applies the configured row-action style', function () {
+    // `quiet` is applied by the getter, to the Table's own Action instances —
+    // it does not clone them. Pinned because the plan now calls that getter
+    // earlier in the render than the view used to.
+    foreach (trpActionsPlan()->actions->row as $action) {
+        expect($action->isQuiet())->toBeTrue();
+    }
+});
+
+it('builds no collapsed group and no header resolver unless asked to collapse', function () {
+    // The three nullable members are gated on their own flag. Building a group
+    // that is never rendered would be per-render work for nothing.
+    $actions = trpActionsPlan()->actions;
+
+    expect($actions->collapseMobile)->toBeFalse()
+        ->and($actions->mobileGroup)->toBeNull()
+        ->and($actions->collapseHeader)->toBeFalse()
+        ->and($actions->mobileHeaderGroup)->toBeNull()
+        ->and($actions->headerClick)->toBeNull();
+});
+
+it('builds them once collapsing is on', function () {
+    $actions = trpActionsPlan(collapse: true)->actions;
+
+    expect($actions->collapseMobile)->toBeTrue()
+        ->and($actions->mobileGroup)->not->toBeNull()
+        ->and($actions->collapseHeader)->toBeTrue()
+        ->and($actions->mobileHeaderGroup)->not->toBeNull()
+        ->and($actions->headerClick)->not->toBeNull();
+});
+
+it('always carries the click resolver that maps an action to this host', function () {
+    // The seam that lets wire-core's action views stay host-agnostic; unlike the
+    // header one it is not optional, because the row actions always need it.
+    expect(trpActionsPlan()->actions->click)
+        ->toBeInstanceOf(TableActionClickResolver::class);
+});
+
+it('falls back to the translated label for the actions column', function () {
+    $actions = trpActionsPlan()->actions;
+
+    expect($actions->columnLabel)->toBe(__('wire-table::messages.actions_label'))
+        ->and($actions->position)->toBe('start')
+        ->and($actions->columnWidth)->toBe('12rem');
+});
+
+it('has no actions at all on a table that declares none', function () {
+    $plan = trpPlan(trpComponent());
+
+    expect($plan->actions->hasAny)->toBeFalse()
+        ->and($plan->actions->row)->toBe([])
+        ->and($plan->actions->hasBulk)->toBeFalse()
+        ->and($plan->actions->hasHeader)->toBeFalse();
 });
 
 it('resolves after a view has reconfigured the table, not before', function () {
