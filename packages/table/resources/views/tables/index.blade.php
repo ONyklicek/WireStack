@@ -42,13 +42,15 @@
     $hasActiveFilters = $plan->state->hasActiveFilters;
 
     // Floating filter/column-toggle panels present as a bottom sheet on mobile
-    // unless disabled via Table::sheetOnMobile(false) or the global config.
-    $sheetOnMobile = $table->usesSheetOnMobile();
-    $sheetBp = $table->getMobileBreakpoint();
-    $sheetBpPx = \NyonCode\WireCore\Foundation\Support\MobileSheet::px($sheetBp);
-    $sheetPanel = \NyonCode\WireCore\Foundation\Support\MobileSheet::panel($sheetBp);
-    $sheetMotion = \NyonCode\WireCore\Foundation\Support\MobileSheet::motion($sheetBp);
-    $sheetBackdrop = \NyonCode\WireCore\Foundation\Support\MobileSheet::backdropHide($sheetBp);
+    // unless disabled via Table::sheetOnMobile(false) or the global config. The
+    // five class strings all derive from the one breakpoint — LayoutRenderPlan
+    // resolves them together so a partial cannot recompute them differently.
+    $sheetOnMobile = $plan->layout->sheetOnMobile;
+    $sheetBp = $plan->layout->sheetBreakpoint;
+    $sheetBpPx = $plan->layout->sheetBreakpointPx;
+    $sheetPanel = $plan->layout->sheetPanel;
+    $sheetMotion = $plan->layout->sheetMotion;
+    $sheetBackdrop = $plan->layout->sheetBackdrop;
     // Actions — the four surfaces (row, bulk, header, mobile card), their
     // collapsed dropdown forms, and the click resolvers that keep wire-core's
     // action views host-agnostic. All resolved in ActionRenderPlan.
@@ -188,22 +190,20 @@
     $actionsColumnLabel = $plan->actions->columnLabel;
     $actionsColumnWidth = $plan->actions->columnWidth;
 
-    // Table styling
-    $isCompact = $table->isCompact();
-    $isBordered = $table->isBordered();
-    // Row hover/striping/tint now composed in Table::getRowClasses($record, $rowIndex).
-    // Density map owned by the Table, so a cell rendered outside this view (the
-    // selection cell's partial) cannot drift from the ones rendered inside it.
-    $cellPadding = $table->getCellPadding();
-    $headerPadding = $table->getHeaderPadding();
+    // Table styling. Row hover/striping/tint is composed in
+    // Table::getRowClasses($record, $rowIndex), not here. Table::isCompact() is
+    // not carried: it feeds the padding maps below and no view reads it directly.
+    $isBordered = $plan->layout->isBordered;
+    $cellPadding = $plan->layout->cellPadding;
+    $headerPadding = $plan->layout->headerPadding;
 
     // The body cell is compiled once per column, into $columnMeta[...]['cell'] —
-    // see TableRenderPlan::columnMeta(), which owns it now.
+    // see ColumnRenderPlan::meta(), which owns it now.
 
-    // Responsive layout — class maps owned by the Table (literal Tailwind names).
-    $isStackedOnMobile = $table->isStackedOnMobile();
-    $tableHiddenClass = $table->getStackedTableHiddenClass();
-    $cardsVisibleClass = $table->getStackedCardsVisibleClass();
+    // Responsive layout — literal Tailwind class names, never interpolated.
+    $isStackedOnMobile = $plan->layout->isStackedOnMobile;
+    $tableHiddenClass = $plan->layout->tableHiddenClass;
+    $cardsVisibleClass = $plan->layout->cardsVisibleClass;
 
     // Check if search/filter is active but no results ($hasActiveFilters above).
     $hasPaginator = $records instanceof LengthAwarePaginator;

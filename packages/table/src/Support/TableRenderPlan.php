@@ -59,6 +59,8 @@ final class TableRenderPlan
         public readonly ColumnRenderPlan $columns,
         /** Which actions it offers, and how they reach the host. */
         public readonly ActionRenderPlan $actions,
+        /** How it is spaced, bordered and adapted to a narrow screen. */
+        public readonly LayoutRenderPlan $layout,
     ) {}
 
     /**
@@ -74,6 +76,7 @@ final class TableRenderPlan
             state: TableQueryState::resolve($table, $component),
             columns: ColumnRenderPlan::resolve($table, $component),
             actions: ActionRenderPlan::resolve($table),
+            layout: LayoutRenderPlan::resolve($table),
         );
     }
 }

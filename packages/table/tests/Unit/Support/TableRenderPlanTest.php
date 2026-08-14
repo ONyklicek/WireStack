@@ -7,6 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
 use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Foundation\Support\MobileSheet;
 use NyonCode\WireTable\Actions\TableActionClickResolver;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Columns\TextInputColumn;
@@ -403,6 +404,83 @@ it('has no actions at all on a table that declares none', function () {
         ->and($plan->actions->row)->toBe([])
         ->and($plan->actions->hasBulk)->toBeFalse()
         ->and($plan->actions->hasHeader)->toBeFalse();
+});
+
+// ─── Layout ──────────────────────────────────────────────────────────────────
+
+class TrpLayoutComponent extends Component
+{
+    use WithTable;
+
+    public bool $dense = false;
+
+    public function table(Table $table): Table
+    {
+        $table->model(TrpRow::class)->columns([TextColumn::make('name')]);
+
+        return $this->dense
+            ? $table->compact()->bordered()->stackedOnMobile(true, 'lg')->sheetOnMobile()->mobileBreakpoint('lg')
+            : $table->stackedOnMobile(false)->sheetOnMobile(false);
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+function trpLayoutPlan(bool $dense): TableRenderPlan
+{
+    $component = new TrpLayoutComponent;
+    $component->dense = $dense;
+    $component->mountWithTable();
+
+    return TableRenderPlan::build($component->getTable(), $component);
+}
+
+it('resolves the density and border a render uses', function () {
+    // The padding maps are the Table's, so a cell rendered outside the main view
+    // — the selection cell has its own partial — cannot drift from the rest.
+    $dense = trpLayoutPlan(dense: true)->layout;
+    $roomy = trpLayoutPlan(dense: false)->layout;
+
+    expect($dense->isBordered)->toBeTrue()
+        ->and($roomy->isBordered)->toBeFalse()
+        ->and($dense->cellPadding)->not->toBe($roomy->cellPadding)
+        ->and($dense->headerPadding)->not->toBe($roomy->headerPadding);
+});
+
+it('carries both halves of the stacked-on-mobile swap', function () {
+    // Both are always in the document; only CSS decides which is shown, so the
+    // two class strings have to be resolved together or they can disagree.
+    $layout = trpLayoutPlan(dense: true)->layout;
+
+    expect($layout->isStackedOnMobile)->toBeTrue()
+        ->and($layout->tableHiddenClass)->not->toBe('')
+        ->and($layout->cardsVisibleClass)->not->toBe('');
+});
+
+it('derives every sheet class from the one breakpoint', function () {
+    // Five strings, one source. Resolving them together is what stops a partial
+    // recomputing them from a breakpoint it was handed separately.
+    $layout = trpLayoutPlan(dense: true)->layout;
+
+    expect($layout->sheetOnMobile)->toBeTrue()
+        ->and($layout->sheetBreakpoint)->toBe('lg')
+        ->and($layout->sheetBreakpointPx)->toBe(MobileSheet::px('lg'))
+        ->and($layout->sheetPanel)->toBe(MobileSheet::panel('lg'))
+        ->and($layout->sheetMotion)->toBe(MobileSheet::motion('lg'))
+        ->and($layout->sheetBackdrop)->toBe(MobileSheet::backdropHide('lg'));
+});
+
+it('still resolves the sheet classes when the sheet is switched off', function () {
+    // The flag is what the view branches on; the classes stay resolved either
+    // way, so nothing has to guard against reading a null.
+    $layout = trpLayoutPlan(dense: false)->layout;
+
+    expect($layout->sheetOnMobile)->toBeFalse()
+        ->and($layout->sheetPanel)->toBeString()
+        ->and($layout->sheetBackdrop)->toBeString();
 });
 
 it('resolves after a view has reconfigured the table, not before', function () {
