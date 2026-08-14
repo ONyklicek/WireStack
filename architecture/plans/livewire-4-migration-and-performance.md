@@ -470,14 +470,146 @@ Re-anchored on the 2.0.0 decision (§3). Phases 0 and 1 are 1.x work that makes 
 | Phase | Content | Branch | Gate |
 |---|---|---|---|
 | 0 | Synthesizer registration through the supported seam — **done** (§1.1, `TableStateSynthesizerRegistrationTest`) | `2.0.0`, back-port to `1.x` | table + sortable + Integration, lint, analyse, coverage ✅ |
-| 1 | Extract `TableRenderPlan` out of `index.blade.php`'s head block | `1.x`, merges forward | `WideTableBenchmarkTest` + `IslandDecompositionBenchmarkTest` before/after — must not regress |
+| 1 | Extract `TableRenderPlan` out of `index.blade.php`'s head block — **started**, see §5.1 | `2.0.0` | `WideTableBenchmarkTest` + `IslandDecompositionBenchmarkTest` before/after — must not regress |
 | 2 | Floor all five `composer.json` at `^4.0`; fix what the suites report; `.blur`/`.change` mapping in `CanBeLive`; re-measure the payload fuse under v4 and record the new numbers next to the v3 ones | `2.0.0` | `composer test`, `npm run verify:drivers`, new concurrent-commit driver (§2.2) |
 | 3 | Islands in `tables/index.blade.php`, seams 1–4 from §4.3 | `2.0.0` | decomposition benchmark before/after, published |
 | 4 | Per-row islands behind a flag; `wire:intersect`, `.renderless`, `data-loading`, `wire:click.async` | `2.0.0` | drivers + snapshot-size check on the islands memo |
 | 5 | `wire:sort` delegation, SFC in docs and recipes, CSP claim, 2.0 upgrade guide | `2.0.0` | full gate + docs EN/CS |
 
-Phase 1 is worth doing on 1.x whatever happens to the rest: it is the only item
-here that improves v3 users' tables, and without it phase 3 cannot start.
+Phase 1 was scoped as 1.x work, before the 2.0 floor landed first. It is now
+being done on `2.0.0` — the branch the islands it gates live on — and nothing
+about it is v4-specific.
+
+### 5.1 Phase 1 — how it is being done, and where it is
+
+`tables/index.blade.php` opened with a **322-line `@php` block computing ~102
+locals**. The move is **slice by slice**, not one commit: each group of locals
+goes into {@see TableRenderPlan}, the view aliases what moved
+(`$activeTableFilters = $plan->activeFilters`), and the ~1 200 lines below the
+head block stay untouched. That keeps every step small enough to gate and
+reversible on its own, and the aliases disappear later — as each island is carved
+out, its body reads `$plan->…` directly, because an island body cannot see view
+locals at all (§4.2).
+
+The seam, landed with the first slice:
+
+- `NyonCode\WireTable\Support\TableRenderPlan` — resolves, never renders.
+- `WithTable::tableRenderPlan()` — memoised **within** one render so the view and
+  every island body share one instance, and dropped **between** renders because a
+  request may write state before it renders.
+
+**The plan is resolved on first use, by the view that reads it** — not built by
+`getTableProperty()` and handed over. That is a correctness requirement, not a
+lazy-loading preference, and it cost a regression to learn:
+
+> `wire-sortable`'s table view applies the user's persisted **column order** by
+> calling `$table->columns(...)` inside its own `@php` block, deliberately ahead
+> of including wire-table's view ("so that `$table->getColumns()` returns columns
+> in the persisted order… without this, Livewire's morph undoes the visual
+> reordering on every re-render").
+
+A plan built when `getTableProperty()` returns has already read the *declared*
+order, so the reorder was silently undone on every render. The general rule the
+remaining slices must keep: **a view is allowed to reconfigure the table before
+the part that reads the plan renders**, so the plan must be resolved as late as
+possible.
+
+Worth noting how it was caught, because it bears on how the rest of phase 1 is
+verified: the byte-identical HTML check passed, because the table it renders has
+no column reordering. Only `verify-column-reorder.mjs` went red. The HTML diff is
+still the right first check — it is fast and exact — but it proves identity only
+for the shapes it renders, and the driver sweep is what covers the rest.
+`TableRenderPlanTest` now pins the invariant directly (verified to fail against
+the eager build), so it is no longer browser-only.
+
+**The plan is a composition root, one value object per slice** —
+`$plan->state->activeFilters`, `$plan->columns->visible`. That shape was settled
+at the second slice rather than the seventh, and not for taste:
+
+- flat promoted properties would reach ~100 constructor parameters, with the
+  documentation for all of them stranded in one docblock;
+- the obvious escape — declaring the properties and filling them from a private
+  method per slice — is legal PHP (a readonly property may be initialised from
+  anywhere in the declaring class's scope, verified before relying on it) but
+  **PHPStan rejects it**: `property.readOnlyAssignNotInConstructor` wants the
+  assignment in the constructor literally, and it was right to, because the
+  pattern makes "is this property set yet" unanswerable by reading the class.
+
+So each slice gets its own small object with a promoted constructor and a
+`resolve()` factory: `TableQueryState` and `ColumnRenderPlan` so far. Note the
+latter is deliberately NOT `ColumnSet`, which already exists and answers
+*config*-level questions about the columns a table declares; this one is what a
+particular render resolved for a particular user, including their per-user column
+visibility and the compiled per-column markup.
+
+| Slice | Locals | Status |
+|---|---|---|
+| State + active filters | `search`, `filters`, `columnFilters`, `activeFilters`, `activeColumnFilters`, `sortColumn`, `sortDirection`, `perPage`, `hasActiveFilters` (+ the recursive `$filterHasValue` closure, now `holdsValue()`) | **done** |
+| Columns | `visibleColumns`, `columnMeta` incl. the compiled `<td>` skeletons, `fillColumns`, `filterableColumns`, sub-row columns, `toggleableColumns`, `colSpan`, `hasCopyableColumn`, `mobileSortableColumns` | **done** |
+| Actions | row/bulk/header/mobile action lists, the click resolvers, positions and alignment | next |
+| Interaction | keyboard nav, gestures, active-row marker, record bindings, shortcut help | |
+| Layout | styling, padding, responsive and mobile-sheet classes | |
+| Paging | paginator, counts, `rangeFrom`/`rangeTo`, `headerRowCount` | |
+| Skeletons | `rowSkeleton`, `selectionCellSkeleton`, selection announcements | |
+
+After two slices: the head block is **322 → 258 lines**, and of the ~102
+assignments left in it 24 are now one-line aliases off the plan — so about a
+quarter of the computation has moved, including the whole hot path.
+
+Two behaviours the column slice's tests pinned that nothing had asserted before,
+both easy to get backwards when the islands work starts moving this code again:
+
+- `toggleableColumns` filters on `canView()` **alone**, deliberately. A column the
+  user has hidden must stay in the toggle menu or there is no way to switch it
+  back on; `visibleToggleableCount` is the other half, counting how many are
+  currently on.
+- `isFillEnabled` is not `fillHandle()`. Only a writable column is fillable, so a
+  table can have the handle on and nothing to fill — the flag exists to catch a
+  handle that would write nowhere.
+
+**Evidence the first slice is a pure lift** — stronger than the benchmark, and
+cheap to repeat for each of the remaining slices: two representative tables (one
+plain, one searched + sorted + column-filtered + a cleared range filter) rendered
+before and after produce **byte-identical HTML** once the random Livewire
+component id and the checksum derived from it are normalised.
+
+#### Benchmarking this on a developer machine
+
+Worth writing down, because the first two attempts produced numbers that were not
+merely noisy but self-contradictory — 5 editable columns "slower" than 10, and a
+baseline run at 60.6 ms where the previous baseline run said 23.3.
+
+The cause was the measurement itself. Swapping the files to switch between
+baseline and change makes PhpStorm reindex — measured at **712 % CPU** — and that
+storm lands on the benchmark run immediately after the swap. The A/B method was
+sabotaging its own measurement.
+
+`scripts`-free fix, kept in the scratchpad rather than the repo: swap, then
+**wait for the load average to come down**, and only then measure. Two rounds,
+alternating, at load 2:
+
+| | 0 ed. | 5 ed. | 10 ed. | 25 ed. |
+|---|---|---|---|---|
+| baseline | 19.7, 20.4 | 42.5, 40.8 | 66.1, 61.4 | 123.2, 121.1 |
+| with the plan | 21.2, 20.7 | 42.4, 42.5 | 62.8, 61.5 | 126.4, 122.2 |
+
+No measurable regression: the differences run in both directions (10 editable
+columns is *faster* with the plan in both rounds), and the spread within the
+baseline alone — 61.4 to 66.1 at 10 editable — is wider than the gap between the
+two variants. Nor is there a mechanism: the same calls happen, one object is
+allocated, and `columnMeta` is now built in one pass instead of two.
+
+The deterministic half is better evidence than the timings. **Bytes are unchanged
+to the byte** across both slices — 5 651 B/row + 88 469 B fixed, 25 699 B/row +
+88 349 B fixed, 201 502 B and 602 297 B totals — and the per-row slope did not
+move.
+
+That run also carries its own control: the decomposition benchmark reports a
+**framework floor** measured from a bare Livewire component with an empty view,
+which none of this work touches. When the whole run reads high, that floor reads
+high with it (1.36 → 1.62 ms), which is how a machine-drift run is told apart
+from a regression — in that run the full 20-row render rose *less* than the floor
+did.
 
 ---
 

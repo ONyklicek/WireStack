@@ -322,7 +322,9 @@ already gives you:
   Livewire component both re-render on every interaction; for a large table with its own action
   workflow, put the table in a dedicated child component so an action elsewhere on the page does
   not re-render the whole grid.
-- **Column-static metadata is already resolved once per column** (`$columnMeta`), and hidden
-  columns / non-executable actions short-circuit to an empty render — you get those for free.
+- **Column-static metadata is already resolved once per column** — `Support\ColumnRenderPlan`
+  owns it and the table view reads it as `$columnMeta`, keyed by column name and carrying each
+  column's compiled `<td>` skeleton. Hidden columns / non-executable actions short-circuit to an
+  empty render. You get all of that for free; never re-derive it per cell.
 
 Use `describe-table` on an existing component to see its resolved columns, filters and actions.
