@@ -223,7 +223,7 @@ The plan's own residual-risk table already says "not covered". It was the
 highest-value single piece of work in this list — and writing it immediately
 turned up §3.4a, which is why it was.
 
-### 3.4a What the new driver found — a false conflict on same-tick sibling edits
+### 3.4a What the new driver found — a false conflict on same-tick sibling edits — **fixed**
 
 Writing §3.4's driver turned up a real product gap, and it is not the one the
 analysis document predicted.
@@ -256,16 +256,36 @@ row, and the second edit is rejected with a misleading message. Nothing is
 silently lost — the cell reverts, shows the error, adopts the server version and
 can immediately be re-saved — so this is a UX defect, not a data-integrity one.
 
-Fixes worth weighing, none of them in this audit's scope:
+**Fixed 2026-08-14**, in `RecordVersion` — the canonical owner of the convention,
+so the table's inline edit, the fill handle, the action modal's lock and core's
+editable panel all take it from one place.
 
-- have the server return the *fresh* stamp per call and let the pipeline treat a
-  version that matches "the value this same request just wrote" as non-conflicting;
-- or resolve the version server-side per record rather than trusting the render-time
-  stamp when the caller is the same component instance;
-- or give `updated_at` sub-second precision, which narrows but does not close it.
+The rule: **the first stamp a request sees for a record is remembered as its
+baseline, and a client version equal to that baseline is accepted however many
+times the request has written since.** A version matching neither the current
+stamp nor the baseline is still a conflict, so the cross-client guarantee is
+exactly as strict as before — that is what the "forged version" assertions in the
+new tests hold.
 
-Pinned by `workbench/scripts/verify-concurrent-commits.mjs` (17/17), which asserts
-the safety properties rather than blessing the behaviour — see its header.
+Deliberate consequence: **a request boundary is now load-bearing.** In an app the
+container that owns the singleton is rebuilt per request, so this is free. Two
+places needed telling:
+
+- **Octane**, where the worker outlives the request — `flush()` joins the two
+  memos already cleared on `RequestTerminated`, and a baseline surviving into the
+  next request would forgive a version that has genuinely gone stale;
+- **tests that simulate two requests in one process.** `FillHandleTest`'s "refuses
+  a fill still carrying the versions from before an earlier one" is exactly that,
+  and it correctly went red — two drags are two requests, so it now draws the
+  boundary explicitly. Its companion, "accepts a second fill that rides in the
+  same request as the first", covers the other side.
+
+Verified: the test fails without the fix (checked by reverting it), the driver's
+race checks flipped from "the second is refused" to "the second is accepted too",
+and both writes now survive a reload.
+
+Not chosen: sub-second `updated_at` precision, which narrows the window without
+closing it and changes every stored stamp.
 
 ### 3.5 Three tests are written but uncommitted
 
@@ -486,9 +506,10 @@ So a future audit does not redo this:
 
 ## 5. Recommended order
 
-### 5.1 Done — the seven cheap closures (2026-08-14)
+### 5.1 Done (2026-08-14)
 
-All seven landed after the audit was written, each gated:
+The seven cheap closures, plus the defect the sixth of them uncovered — each
+gated before the next started:
 
 | # | Item | What changed |
 |---|---|---|
@@ -499,18 +520,18 @@ All seven landed after the audit was written, each gated:
 | 5 | §3.6 `PREVIEW_PORT` | drivers now fall back through `PREVIEW_ORIGIN`, exported by the sweep. Verified both ways: `PREVIEW_PORT=8087 … toasts` passes (it could not before) and the default path still passes |
 | 6 | §3.4 concurrent-commit driver | `verify-concurrent-commits.mjs`, 17/17 — and it found §3.4a |
 | 7 | §3.7 `getDebounceModifier()` | the modifier's shape and precedence now live only in core's `HasDebounce`; `Field` keeps its `$defaultLiveDebounce` property and overrides one small hook. `TextFilter`, which takes the debounce without `CanBeLive`, is unaffected |
+| 8 | §3.4a the false conflict | the defect item 6 turned up, fixed in `RecordVersion` with a per-request baseline. Not one of the seven — it did not exist when the list was written |
 
-Gates for the batch: `composer test` **5492 passed / 2 skipped**, Integration
-**47 passed**, `composer analyse` **0 errors**, `composer lint` passed,
-`composer coverage:verify` **OK** (core 95.5 / forms 95.9 / table 90.3 / sortable
-96.3 / boost 100, no floor moved), and the full driver sweep re-run after the
-mechanical edit to all 66 driver files.
+Gates after the batch: `composer test` **5498 passed / 2 skipped** (up from 5492
+— the six new tests), Integration **47 passed**, `composer analyse` **0 errors**,
+`composer lint` passed, `composer coverage:verify` **OK** (core 95.5 / forms 95.9
+/ table 90.3 / sortable 96.3 / boost 100, no floor moved), and the full driver
+sweep re-run twice: once after the mechanical edit to all 66 driver files, once
+after the `RecordVersion` fix.
 
 ### 5.2 Next — the work that actually needs deciding
 
-1. **§3.4a the false conflict** — new, and the only user-visible defect in this
-   document. Not a migration item; it wants a decision on which of the three
-   fixes to take.
+1. ~~**§3.4a the false conflict**~~ — **fixed 2026-08-14**, see above.
 2. **`TableRenderPlan` extraction** (Phase 1) — v3-safe, independently
    measurable, kills the documented magic-property hazard at
    `index.blade.php:24-26`, and gates everything below.
