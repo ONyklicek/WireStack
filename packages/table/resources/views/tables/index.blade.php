@@ -8,6 +8,12 @@
     /** @var LengthAwarePaginator|Collection $records */
     /** @var mixed $component */
 
+    // What this render resolved, in PHP. Asked for here rather than handed in,
+    // because a view may reconfigure the table before this one renders — see
+    // WithTable::tableRenderPlan(), and wire-sortable's column order for the case
+    // that proves it.
+    $plan = $component->tableRenderPlan();
+
     $isLazy = $table->isLazy();
     $isTableReady = $component->isTableReady();
     $lazyPlaceholder = $table->getLazyPlaceholder();
@@ -21,9 +27,20 @@
     // for it ships no listener and needs no channel authorization.
     $liveChannel = $component->getTableLiveChannel();
 
-    // Table state — read once via the state container; the legacy magic
-    // properties ($component->tableFilters, …) build the deprecation map on
-    // every access and must not be used in per-row/per-column loops.
+    // Table state and everything derived from it now comes resolved, from
+    // TableRenderPlan — including which filters count as ACTIVE, a rule with a
+    // sharp edge (see the class) that used to live here as a recursive closure.
+    // The magic-property hazard this block used to warn about goes with it: the
+    // plan reads the state container, so there is nothing here to reach for.
+    $tableFilters = $plan->state->filters;
+    $columnFilterValues = $plan->state->columnFilters;
+    $activeTableFilters = $plan->state->activeFilters;
+    $activeColumnFilters = $plan->state->activeColumnFilters;
+    $sortColumn = $plan->state->sortColumn;
+    $sortDirection = $plan->state->sortDirection;
+    $perPage = $plan->state->perPage;
+    $hasActiveFilters = $plan->state->hasActiveFilters;
+
     // Floating filter/column-toggle panels present as a bottom sheet on mobile
     // unless disabled via Table::sheetOnMobile(false) or the global config.
     $sheetOnMobile = $table->usesSheetOnMobile();
@@ -32,31 +49,6 @@
     $sheetPanel = \NyonCode\WireCore\Foundation\Support\MobileSheet::panel($sheetBp);
     $sheetMotion = \NyonCode\WireCore\Foundation\Support\MobileSheet::motion($sheetBp);
     $sheetBackdrop = \NyonCode\WireCore\Foundation\Support\MobileSheet::backdropHide($sheetBp);
-    $tableSearch = $component->tableState->get('search');
-    $tableFilters = $component->tableState->get('filters', []) ?? [];
-    $columnFilterValues = $component->tableState->get('columnFilters', []) ?? [];
-    $sortColumn = $component->tableState->get('sort.column');
-    $sortDirection = $component->tableState->get('sort.direction', 'asc');
-    $perPage = (int) $component->tableState->get('pagination.perPage', $table->getPerPage());
-    // Treat a filter as active only when it holds a real value. A range filter
-    // that was typed then cleared leaves ['min' => '', 'max' => ''] — a truthy
-    // array that plain array_filter would wrongly count as active.
-    $filterHasValue = function ($value) use (&$filterHasValue) {
-        if (is_array($value)) {
-            foreach ($value as $inner) {
-                if ($filterHasValue($inner)) {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        return $value !== null && $value !== '';
-    };
-    $activeTableFilters = array_filter($tableFilters, $filterHasValue);
-    $activeColumnFilters = array_filter($columnFilterValues, $filterHasValue);
-
     $actions = $table->getRowActionsForDisplay(); // applies the configured row-action style (solid/quiet)
     $bulkActions = $table->getBulkActions();
     $headerActions = $table->getHeaderActions();
@@ -157,63 +149,37 @@
     }
     $selectionSyncLive = $isSelectable && $hasSummaries;
     $isPaginated = $table->isPaginated();
-    $visibleColumns = array_filter($table->getColumns(), fn($c) => $c->canView() && $component->isColumnVisible($c->getName()));
-    $hasVisibleColumns = count($visibleColumns) > 0;
-    // Column-static render metadata: resolved once per column here instead of
-    // re-calling these getters for every cell (N rows × M columns → M). Reused by
-    // the header and body. Keyed by column name.
-    $columnMeta = [];
-    foreach ($visibleColumns as $col) {
-        $columnMeta[$col->getName()] = [
-            'wrapClass' => $col->shouldWrap() ? '' : 'whitespace-nowrap',
-            'alignment' => $col->getAlignmentClass(),
-            'responsive' => $col->getResponsiveClasses(),
-            'editable' => $col->isEditable(),
-            'responsiveDisplay' => $col->hasResponsiveDisplay(),
-            // Author-supplied cell/header attributes. Resolved here with the rest
-            // of the column-static metadata rather than per cell; both setters
-            // stored their value and nothing read it until now.
-            'extraCell' => $col->getExtraAttributes(),
-            'extraHeader' => collect($col->getExtraHeaderAttributes())
-                ->map(fn ($v, $k) => e($k).'="'.e($v).'"')
-                ->implode(' '),
-        ];
-    }
-    // Columns a fill drag may write. The client additionally requires the cell to
-    // have actually rendered an editable root, so a per-record disabled cell is
-    // skipped without this list having to know about records.
-    $fillColumns = array_values(array_map(
-        fn($c) => $c->getName(),
-        array_filter($visibleColumns, fn($c) => $c->isFillable()),
-    ));
-    $isFillEnabled = $table->isFillHandleEnabled() && $fillColumns !== [];
-    $filterableColumns = array_filter($table->getColumns(), fn($c) => $c->canView() && $c->isFilterable() && $component->isColumnVisible($c->getName()));
-    $hasColumnFilters = count($filterableColumns) > 0;
+
+    // Columns, and everything derived from them — which visible column set the
+    // page has, the per-column render metadata (including each column's compiled
+    // <td> skeleton), and the lists the fill handle, the column filters, the
+    // column toggles and the mobile sort control each read. All resolved once,
+    // in TableRenderPlan; see the class for why the metadata is per-column
+    // rather than per-cell.
+    $visibleColumns = $plan->columns->visible;
+    $hasVisibleColumns = $plan->columns->hasVisible;
+    $columnMeta = $plan->columns->meta;
+    $fillColumns = $plan->columns->fillable;
+    $isFillEnabled = $plan->columns->isFillEnabled;
+    $filterableColumns = $plan->columns->filterable;
+    $hasColumnFilters = $plan->columns->hasFilters;
+    $subRowColumns = $plan->columns->subRow;
+    $visibleSubRowColumns = $plan->columns->visibleSubRow;
+    $hasCopyableColumn = $plan->columns->hasCopyable;
+    $colSpan = $plan->columns->colSpan;
+    $toggleableColumns = $plan->columns->toggleable;
+    $visibleToggleableCount = $plan->columns->visibleToggleableCount;
+    $hasColumnToggles = $plan->columns->hasToggles;
+    $mobileSortableColumns = $plan->columns->mobileSortable;
+    $hasMobileSort = $plan->columns->hasMobileSort;
+
     $hasSubRows = $table->hasSubRows();
     $isSubRowsExpandable = $hasSubRows && $table->isSubRowsExpandable();
     $allRowsExpanded = $hasSubRows && $component->expandsSubRowsByDefault();
     $hasGrouping = $table->hasGrouping();
     $hasGroupSummaries = $hasGrouping && $component->tableHasGroupSummaries();
-    $subRowColumns = $hasSubRows ? $table->getSubRowColumns() : [];
-    $visibleSubRowColumns = $hasSubRows ? array_filter($subRowColumns, fn($c) => $c->canView()) : [];
-    // Whether any cell on this table renders a copy button, and so whether the
-    // delegated clipboard controller is worth shipping. Sub-rows are included: they
-    // render through the same column partials, and the controller is one listener
-    // for the document either way.
-    $hasCopyableColumn = array_filter($visibleColumns, fn($c) => $c->isCopyable()) !== []
-        || array_filter($visibleSubRowColumns, fn($c) => $c->isCopyable()) !== [];
-    $colSpan = ($isSelectable ? 1 : 0) + count($visibleColumns) + ($hasActions ? 1 : 0) + ($hasSubRows ? 1 : 0);
-    $toggleableColumns = array_filter($table->getColumns(), fn($c) => $c->isToggleable() && $c->canView());
-    $visibleToggleableCount = count(array_filter($toggleableColumns, fn($c) => $component->isColumnVisible($c->getName())));
-    // Sorting on a phone: the stacked card view hides the header row that holds
-    // the sort buttons, so the control has to exist somewhere else.
-    $mobileSortableColumns = ($table->isStackedOnMobile() && $table->isSortable())
-        ? array_values(array_filter($visibleColumns, fn($c) => $c->isSortable()))
-        : [];
-    $hasMobileSort = count($mobileSortableColumns) > 0;
 
     // The view menu earns its place from either section it can hold.
-    $hasColumnToggles = count($toggleableColumns) > 0;
     $hasViewMenu = $hasColumnToggles || $isSubRowsExpandable;
     $viewMenuLabel = $hasColumnToggles && ! $isSubRowsExpandable
         ? __('wire-table::messages.toggle_columns')
@@ -236,39 +202,15 @@
     $cellPadding = $table->getCellPadding();
     $headerPadding = $table->getHeaderPadding();
 
-    // The body cell, compiled once per column instead of interpolated once per cell.
-    //
-    // Every attribute on it is column-static — only what goes BETWEEN the tags varies
-    // by record — so a 50×10 page was re-emitting the same ten opening tags five
-    // hundred times. The markup lives in `tables.partials.body-cell`, rendered once
-    // per column here with a slot where the record's content goes; the row loop fills
-    // it. That also lets a cell be emitted with no whitespace between its tags: each
-    // run of whitespace is one DOM text node, and the morph walks every one of them
-    // on every commit (see TablePayloadFuseTest).
-    $cellBorderClass = $isBordered ? 'border border-gray-200 dark:border-gray-700' : '';
-    foreach ($columnMeta as $name => $meta) {
-        $columnMeta[$name]['cell'] = \NyonCode\WireCore\Foundation\View\Skeleton::compile(
-            view('wire-table::tables.partials.body-cell', [
-                'cellPadding' => $cellPadding,
-                'wrapClass' => $meta['wrapClass'],
-                'borderClass' => $cellBorderClass,
-                'alignment' => $meta['alignment'],
-                'responsive' => $meta['responsive'],
-                'name' => $name,
-                'extraAttributes' => $meta['extraCell'],
-                'content' => \NyonCode\WireCore\Foundation\View\Skeleton::slot('content'),
-            ])->render(),
-            'content',
-        );
-    }
+    // The body cell is compiled once per column, into $columnMeta[...]['cell'] —
+    // see TableRenderPlan::columnMeta(), which owns it now.
 
     // Responsive layout — class maps owned by the Table (literal Tailwind names).
     $isStackedOnMobile = $table->isStackedOnMobile();
     $tableHiddenClass = $table->getStackedTableHiddenClass();
     $cardsVisibleClass = $table->getStackedCardsVisibleClass();
 
-    // Check if search/filter is active but no results
-    $hasActiveFilters = !empty($tableSearch) || $activeTableFilters !== [] || $activeColumnFilters !== [];
+    // Check if search/filter is active but no results ($hasActiveFilters above).
     $hasPaginator = $records instanceof LengthAwarePaginator;
     $recordCount = $hasPaginator ? $records->total() : $records->count();
     $isEmptyDueToFilter = $hasActiveFilters && $recordCount === 0;

@@ -1,0 +1,351 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Livewire\Component;
+use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\Columns\TextInputColumn;
+use NyonCode\WireTable\Concerns\WithTable;
+use NyonCode\WireTable\Support\TableRenderPlan;
+use NyonCode\WireTable\Table;
+
+/**
+ * What a render resolved, asserted directly instead of through the markup.
+ *
+ * Every rule below used to live in `tables/index.blade.php`'s opening `@php`
+ * block, where the only way to check it was to render a table and go looking for
+ * the affordance it drives. The recursive "does this filter hold a value" rule is
+ * the one that earns the move on its own: it has a genuinely sharp edge and was
+ * verified by a chip appearing in some HTML.
+ */
+class TrpRow extends Model
+{
+    protected $table = 'trp_rows';
+
+    protected $guarded = [];
+
+    public $timestamps = false;
+}
+
+class TrpComponent extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(TrpRow::class)
+            ->perPage(25)
+            ->columns([TextColumn::make('name')]);
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+function trpComponent(): TrpComponent
+{
+    $component = new TrpComponent;
+    $component->mountWithTable();
+
+    return $component;
+}
+
+function trpPlan(TrpComponent $component): TableRenderPlan
+{
+    return TableRenderPlan::build($component->getTable(), $component);
+}
+
+it('reads the state a render depends on', function () {
+    $component = trpComponent();
+    $component->tableState->set('search', 'amelia');
+    $component->tableState->set('sort.column', 'name');
+    $component->tableState->set('sort.direction', 'desc');
+
+    $plan = trpPlan($component);
+
+    expect($plan->state->search)->toBe('amelia')
+        ->and($plan->state->sortColumn)->toBe('name')
+        ->and($plan->state->sortDirection)->toBe('desc');
+});
+
+it('falls back to the table for a page size the state never set', function () {
+    // perPage() on the Table is the default; state only overrides it once a user
+    // picks something from the per-page select.
+    expect(trpPlan(trpComponent())->state->perPage)->toBe(25);
+});
+
+it('sorts ascending until told otherwise', function () {
+    expect(trpPlan(trpComponent())->state->sortDirection)->toBe('asc');
+});
+
+it('counts a filter as active only when it holds a value', function () {
+    $component = trpComponent();
+    $component->tableState->set('filters', [
+        'status' => 'open',
+        'empty' => '',
+        'missing' => null,
+    ]);
+
+    $plan = trpPlan($component);
+
+    expect(array_keys($plan->state->activeFilters))->toBe(['status'])
+        // The unfiltered set is still there — "active" is a reading of it, not a
+        // replacement for it.
+        ->and($plan->state->filters)->toHaveCount(3);
+});
+
+it('does not count a range filter that was typed and then cleared', function () {
+    // The sharp edge. A cleared range leaves ['min' => '', 'max' => ''], which is
+    // a non-empty array — so plain array_filter() counts it as active and the
+    // table offers to clear a filter that is not applied.
+    $component = trpComponent();
+    $component->tableState->set('filters', [
+        'price' => ['min' => '', 'max' => ''],
+        'weight' => ['min' => '5', 'max' => ''],
+    ]);
+
+    $plan = trpPlan($component);
+
+    expect(array_keys($plan->state->activeFilters))->toBe(['weight'])
+        ->and($plan->state->hasActiveFilters)->toBeTrue();
+});
+
+it('looks as deep as the filter value nests', function () {
+    $component = trpComponent();
+    $component->tableState->set('filters', [
+        'nested' => ['a' => ['b' => ['c' => '']]],
+        'deep' => ['a' => ['b' => ['c' => 'yes']]],
+    ]);
+
+    expect(array_keys(trpPlan($component)->state->activeFilters))->toBe(['deep']);
+});
+
+it('reads column filters by the same rule', function () {
+    $component = trpComponent();
+    $component->tableState->set('columnFilters', ['name' => 'a', 'role' => '']);
+
+    $plan = trpPlan($component);
+
+    expect(array_keys($plan->state->activeColumnFilters))->toBe(['name'])
+        ->and($plan->state->hasActiveFilters)->toBeTrue();
+});
+
+it('has nothing active on a table nobody has touched', function () {
+    $plan = trpPlan(trpComponent());
+
+    expect($plan->state->hasActiveFilters)->toBeFalse()
+        ->and($plan->state->activeFilters)->toBe([])
+        ->and($plan->state->activeColumnFilters)->toBe([]);
+});
+
+it('treats a search on its own as an active filter', function () {
+    // What drives the "no results match your filters" empty state rather than the
+    // plain one — a search with no filter still means the user narrowed something.
+    $component = trpComponent();
+    $component->tableState->set('search', 'nothing matches this');
+
+    expect(trpPlan($component)->state->hasActiveFilters)->toBeTrue();
+});
+
+it('survives a state container holding nulls where arrays belong', function () {
+    // `get('filters', [])` still returns null if null was stored, which is why the
+    // read coalesces. Cheap to assert, and the alternative is a TypeError inside
+    // array_filter() on someone's page.
+    $component = trpComponent();
+    $component->tableState->set('filters', null);
+    $component->tableState->set('columnFilters', null);
+
+    $plan = trpPlan($component);
+
+    expect($plan->state->filters)->toBe([])
+        ->and($plan->state->columnFilters)->toBe([])
+        ->and($plan->state->hasActiveFilters)->toBeFalse();
+});
+
+// ─── Columns ─────────────────────────────────────────────────────────────────
+
+class TrpWideComponent extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(TrpRow::class)
+            ->selectable()
+            ->fillHandle()
+            ->columns([
+                TextColumn::make('name')->sortable()->toggleable()->filterAsSelect(['a' => 'A']),
+                TextInputColumn::make('role')->toggleable(),
+                TextColumn::make('secret')->visible(false),
+                TextColumn::make('note')->copyable(),
+            ]);
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+function trpWidePlan(): TableRenderPlan
+{
+    $component = new TrpWideComponent;
+    $component->mountWithTable();
+
+    return TableRenderPlan::build($component->getTable(), $component);
+}
+
+it('resolves the visible columns and skips the ones nobody may see', function () {
+    $plan = trpWidePlan();
+
+    expect(array_map(fn ($c) => $c->getName(), array_values($plan->columns->visible)))
+        ->toBe(['name', 'role', 'note'])
+        ->and($plan->columns->hasVisible)->toBeTrue();
+});
+
+it('resolves column metadata once per column, keyed by name', function () {
+    // The arithmetic that earns this: these are per-COLUMN answers a naive view
+    // asks per CELL, so a 20x25 page asked each of them 500 times for 25 results.
+    $meta = trpWidePlan()->columns->meta;
+
+    expect(array_keys($meta))->toBe(['name', 'role', 'note'])
+        ->and($meta['role']['editable'])->toBeTrue()
+        ->and($meta['name']['editable'])->toBeFalse();
+});
+
+it('compiles each column a body cell with a slot for the record content', function () {
+    // The compiled <td>: every attribute on it is column-static, so the row loop
+    // splices content into a prepared string rather than re-rendering the tag per
+    // cell. A skeleton that lost its slot would silently render empty cells.
+    $meta = trpWidePlan()->columns->meta;
+
+    foreach ($meta as $name => $entry) {
+        expect($entry)->toHaveKey('cell')
+            ->and($entry['cell']->fill(['content' => 'XYZ']))
+            ->toContain('XYZ')
+            ->toContain('<td');
+    }
+});
+
+it('lists only the fillable columns, and turns the handle off without any', function () {
+    // Fillable means writable: an editable column is, a plain TextColumn is not.
+    // So a table can have fillHandle() on and still offer nothing to fill, which
+    // is what isFillEnabled has to catch — a handle that writes nowhere.
+    expect(trpWidePlan()->columns->fillable)->toBe(['role'])
+        ->and(trpWidePlan()->columns->isFillEnabled)->toBeTrue()
+        // The plain table has fillHandle() off AND no fillable column.
+        ->and(trpPlan(trpComponent())->columns->fillable)->toBe([])
+        ->and(trpPlan(trpComponent())->columns->isFillEnabled)->toBeFalse();
+});
+
+it('counts the selection and action columns into the colspan', function () {
+    // Three visible columns + the selection cell. Off by one here and every
+    // full-width row — empty state, group subtotal, summary footer — is wrong.
+    expect(trpWidePlan()->columns->colSpan)->toBe(4);
+});
+
+it('knows whether any cell will render a copy button', function () {
+    expect(trpWidePlan()->columns->hasCopyable)->toBeTrue()
+        ->and(trpPlan(trpComponent())->columns->hasCopyable)->toBeFalse();
+});
+
+it('keeps a hidden column in the toggle list but out of the visible count', function () {
+    // The distinction the two lists exist for, and it is easy to get backwards.
+    // `toggleableColumns` filters on canView() ALONE — a column the user has
+    // hidden must stay in the menu, or there is no way to switch it back on.
+    // `visibleToggleableCount` is the other half: how many of them are on right
+    // now, which is what the menu's counter shows.
+    $plan = trpWidePlan();
+
+    expect(array_map(fn ($c) => $c->getName(), array_values($plan->columns->toggleable)))
+        ->toBe(['name', 'role', 'secret', 'note'])
+        ->and($plan->columns->hasToggles)->toBeTrue()
+        // 'secret' is hidden, so it is offered but not counted.
+        ->and($plan->columns->visibleToggleableCount)->toBe(3);
+});
+
+it('lists the filterable columns separately', function () {
+    $plan = trpWidePlan();
+
+    expect(array_map(fn ($c) => $c->getName(), array_values($plan->columns->filterable)))
+        ->toBe(['name'])
+        ->and($plan->columns->hasFilters)->toBeTrue()
+        ->and(trpPlan(trpComponent())->columns->hasFilters)->toBeFalse();
+});
+
+it('offers no mobile sort control unless the table stacks on mobile', function () {
+    // The stacked card view hides the header row that holds the sort buttons, so
+    // the control only exists when that view can appear.
+    expect(trpWidePlan()->columns->mobileSortable)->toBe([])
+        ->and(trpWidePlan()->columns->hasMobileSort)->toBeFalse();
+});
+
+it('has no sub-row columns on a table without sub-rows', function () {
+    $plan = trpWidePlan();
+
+    expect($plan->columns->subRow)->toBe([])
+        ->and($plan->columns->visibleSubRow)->toBe([]);
+});
+
+it('resolves after a view has reconfigured the table, not before', function () {
+    // The regression this exists for, and only the browser gate caught it:
+    // wire-sortable's table view applies the user's persisted COLUMN ORDER by
+    // calling $table->columns(...) in its own @php block, ahead of including
+    // wire-table's view. A plan built when getTableProperty() hands the view back
+    // has already read the declared order, so the reorder was silently undone on
+    // every render — verify-column-reorder.mjs went red and nothing else did.
+    //
+    // So the plan is resolved on FIRST USE, by the view that reads it.
+    Schema::create('trp_rows', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+    });
+
+    $component = new TrpWideComponent;
+    $component->mountWithTable();
+
+    // A render begins: the memo is dropped, and deliberately not refilled.
+    $component->getTableProperty();
+
+    // Now a view reconfigures the table, exactly as wire-sortable's does.
+    $component->getTable()->columns([
+        TextColumn::make('note'),
+        TextColumn::make('name'),
+    ]);
+
+    expect(array_map(fn ($c) => $c->getName(), array_values($component->tableRenderPlan()->columns->visible)))
+        ->toBe(['note', 'name']);
+
+    Schema::dropIfExists('trp_rows');
+});
+
+it('gives one render one plan, and the next render its own', function () {
+    // The only test here that renders, and rendering reads records.
+    Schema::create('trp_rows', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+    });
+
+    // The memo is what lets the view and an island body share an answer; dropping
+    // it per render is what stops the second render reusing the first one's, since
+    // a request may write state before it renders.
+    $component = trpComponent();
+
+    $first = $component->tableRenderPlan();
+    expect($component->tableRenderPlan())->toBe($first);
+
+    $component->tableState->set('search', 'now set');
+    $component->getTableProperty();
+
+    expect($component->tableRenderPlan())->not->toBe($first)
+        ->and($component->tableRenderPlan()->state->search)->toBe('now set');
+
+    Schema::dropIfExists('trp_rows');
+});

@@ -59,6 +59,7 @@ use NyonCode\WireTable\Services\TableQueryCacheKey;
 use NyonCode\WireTable\Services\TableQueryService;
 use NyonCode\WireTable\Services\WriteGeneration;
 use NyonCode\WireTable\Support\CellEditOutcome;
+use NyonCode\WireTable\Support\TableRenderPlan;
 use NyonCode\WireTable\Table;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
@@ -151,6 +152,13 @@ trait WithTable
 
     /** @var LengthAwarePaginator|Paginator|CursorPaginator|Collection|null Cached records for current request lifecycle */
     protected LengthAwarePaginator|Paginator|CursorPaginator|Collection|null $cachedRecords = null;
+
+    /**
+     * @var TableRenderPlan|null What this render resolved, shared by the view and
+     *                           any island body. Held for the length of ONE
+     *                           render — see tableRenderPlan().
+     */
+    protected ?TableRenderPlan $renderPlan = null;
 
     /** @var Builder<Model>|null Cached query builder so summaries don't re-plan the query */
     protected ?Builder $cachedQuery = null;
@@ -789,6 +797,33 @@ trait WithTable
     }
 
     /**
+     * What this render resolved — see {@see TableRenderPlan}.
+     *
+     * Deliberately NOT memoised across renders. The plan reads table state, and
+     * a request is free to write state before it renders (a filter, a cell edit,
+     * a page change); a memo living longer than one render would hand the second
+     * render the first one's answers. {@see getTableProperty()} therefore drops
+     * it as each render begins, and this rebuilds on demand — which is exactly
+     * what the view's `@php` block used to do, so it costs nothing new.
+     *
+     * The memo is what makes it shareable WITHIN a render: the main view and
+     * every island body resolve the same instance rather than each rebuilding.
+     *
+     * **Resolved on first use, not handed to the view.** That is load-bearing
+     * rather than lazy for its own sake: a view is allowed to reconfigure the
+     * table before the part that reads the plan renders, and one does —
+     * `wire-sortable`'s table view applies the user's persisted column order by
+     * calling `$table->columns(...)` in its own `@php` block, ahead of including
+     * wire-table's view. A plan built in this method, when the innermost view
+     * asks for it, sees that order; a plan built here in `getTableProperty()` saw
+     * the order the component declared and silently undid the reorder.
+     */
+    public function tableRenderPlan(): TableRenderPlan
+    {
+        return $this->renderPlan ??= TableRenderPlan::build($this->getTable(), $this);
+    }
+
+    /**
      * Render the table view.
      */
     public function getTableProperty(): View
@@ -798,6 +833,10 @@ trait WithTable
         $viewName = method_exists($this, 'getTableView')
             ? $this->getTableView()
             : (method_exists($table, 'getViewName') ? $table->getViewName() : 'wire-table::tables.index');
+
+        // A new render, so a new plan. Dropped rather than built: the view
+        // resolves it when it first needs it — see tableRenderPlan().
+        $this->renderPlan = null;
 
         return view($viewName, [
             'table' => $table,
