@@ -144,7 +144,7 @@
         }
     }
     $selectionSyncLive = $isSelectable && $hasSummaries;
-    $isPaginated = $table->isPaginated();
+    $isPaginated = $plan->paging->isPaginated;
 
     // Columns, and everything derived from them — which visible column set the
     // page has, the per-column render metadata (including each column's compiled
@@ -205,22 +205,17 @@
     $tableHiddenClass = $plan->layout->tableHiddenClass;
     $cardsVisibleClass = $plan->layout->cardsVisibleClass;
 
-    // Check if search/filter is active but no results ($hasActiveFilters above).
-    $hasPaginator = $records instanceof LengthAwarePaginator;
-    $recordCount = $hasPaginator ? $records->total() : $records->count();
-    $isEmptyDueToFilter = $hasActiveFilters && $recordCount === 0;
-
-    // Where this page sits in the whole result set. Read by the footer's
-    // "from - to of total" line and, before it, by aria-rowindex: an ARIA row
-    // index counts through the entire grid, not the page, so row 1 of page 2
-    // is not index 1. Hence the lift out of the footer.
-    $rangeFrom = $hasPaginator ? ($records->firstItem() ?? 0) : ($records->count() > 0 ? 1 : 0);
-    $rangeTo = $hasPaginator ? ($records->lastItem() ?? 0) : $records->count();
-
-    // Header rows come first in the ARIA row numbering, and the column-filter
-    // row is one of them when present — miss it and every body index is off by
-    // one.
-    $headerRowCount = 1 + ($hasColumnFilters ? 1 : 0);
+    // Where this page sits in the whole result set — read by the footer's
+    // "from - to of total" line and, before it, by aria-rowindex, since an ARIA
+    // row index counts through the entire grid rather than the page. Resolved in
+    // PagingRenderPlan, which is also where the rule lives that only a
+    // length-aware paginator may be asked for a total or an item offset.
+    $hasPaginator = $plan->paging->hasPaginator;
+    $recordCount = $plan->paging->recordCount;
+    $isEmptyDueToFilter = $plan->paging->isEmptyDueToFilter;
+    $rangeFrom = $plan->paging->rangeFrom;
+    $rangeTo = $plan->paging->rangeTo;
+    $headerRowCount = $plan->paging->headerRowCount;
 
     // The body row's opening tag, compiled once for the whole table from
     // `tables.partials.body-row-open`. Every condition on it is a property of the

@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Support;
 
+use Illuminate\Contracts\Pagination\CursorPaginator;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Contracts\Pagination\Paginator;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use NyonCode\WireTable\Table;
 
 /**
@@ -61,6 +66,8 @@ final class TableRenderPlan
         public readonly ActionRenderPlan $actions,
         /** How it is spaced, bordered and adapted to a narrow screen. */
         public readonly LayoutRenderPlan $layout,
+        /** Where this page sits in the whole result set. */
+        public readonly PagingRenderPlan $paging,
     ) {}
 
     /**
@@ -69,14 +76,28 @@ final class TableRenderPlan
      * `$component` is the Livewire host using `WithTable`. It is `mixed` because
      * that is how {@see Table::livewireComponent()} already types it — there is
      * no host contract to depend on yet.
+     *
+     * @param  LengthAwarePaginator<int, Model>|Paginator<int, Model>|CursorPaginator<int, Model>|Collection<int, Model>  $records
      */
-    public static function build(Table $table, mixed $component): self
-    {
+    public static function build(
+        Table $table,
+        mixed $component,
+        LengthAwarePaginator|Paginator|CursorPaginator|Collection $records,
+    ): self {
+        $state = TableQueryState::resolve($table, $component);
+        $columns = ColumnRenderPlan::resolve($table, $component);
+
         return new self(
-            state: TableQueryState::resolve($table, $component),
-            columns: ColumnRenderPlan::resolve($table, $component),
+            state: $state,
+            columns: $columns,
             actions: ActionRenderPlan::resolve($table),
             layout: LayoutRenderPlan::resolve($table),
+            paging: PagingRenderPlan::resolve(
+                $table,
+                $records,
+                $state->hasActiveFilters,
+                $columns->hasFilters,
+            ),
         );
     }
 }

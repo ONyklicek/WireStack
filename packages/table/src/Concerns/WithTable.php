@@ -820,7 +820,16 @@ trait WithTable
      */
     public function tableRenderPlan(): TableRenderPlan
     {
-        return $this->renderPlan ??= TableRenderPlan::build($this->getTable(), $this);
+        // The records are sourced here rather than required as an argument so an
+        // island body can ask for the plan with nothing but the component. They
+        // are memoised by getTableRecords() for every path except lazy-not-ready,
+        // which returns a fresh empty collection each call — value-identical, so
+        // the plan agrees with the view either way.
+        return $this->renderPlan ??= TableRenderPlan::build(
+            $this->getTable(),
+            $this,
+            $this->getTableRecords(),
+        );
     }
 
     /**

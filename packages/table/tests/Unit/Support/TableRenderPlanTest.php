@@ -61,7 +61,7 @@ function trpComponent(): TrpComponent
 
 function trpPlan(TrpComponent $component): TableRenderPlan
 {
-    return TableRenderPlan::build($component->getTable(), $component);
+    return TableRenderPlan::build($component->getTable(), $component, collect());
 }
 
 it('reads the state a render depends on', function () {
@@ -202,7 +202,7 @@ function trpWidePlan(): TableRenderPlan
     $component = new TrpWideComponent;
     $component->mountWithTable();
 
-    return TableRenderPlan::build($component->getTable(), $component);
+    return TableRenderPlan::build($component->getTable(), $component, collect());
 }
 
 it('resolves the visible columns and skips the ones nobody may see', function () {
@@ -335,7 +335,7 @@ function trpActionsPlan(bool $collapse = false): TableRenderPlan
     $component->collapse = $collapse;
     $component->mountWithTable();
 
-    return TableRenderPlan::build($component->getTable(), $component);
+    return TableRenderPlan::build($component->getTable(), $component, collect());
 }
 
 it('resolves all four action surfaces', function () {
@@ -435,7 +435,7 @@ function trpLayoutPlan(bool $dense): TableRenderPlan
     $component->dense = $dense;
     $component->mountWithTable();
 
-    return TableRenderPlan::build($component->getTable(), $component);
+    return TableRenderPlan::build($component->getTable(), $component, collect());
 }
 
 it('resolves the density and border a render uses', function () {
@@ -481,6 +481,139 @@ it('still resolves the sheet classes when the sheet is switched off', function (
     expect($layout->sheetOnMobile)->toBeFalse()
         ->and($layout->sheetPanel)->toBeString()
         ->and($layout->sheetBackdrop)->toBeString();
+});
+
+// ─── Paging ──────────────────────────────────────────────────────────────────
+
+class TrpPagedComponent extends Component
+{
+    use WithTable;
+
+    public string $mode = 'standard';
+
+    public function table(Table $table): Table
+    {
+        $table->model(TrpRow::class)
+            ->searchable()
+            ->columns([TextColumn::make('name')->searchable()]);
+
+        return match ($this->mode) {
+            'simple' => $table->paginated()->perPage(3)->simplePagination(),
+            'cursor' => $table->paginated()->perPage(3)->cursorPagination(),
+            'none' => $table->paginated(false),
+            default => $table->paginated()->perPage(3),
+        };
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+function trpPagedPlan(string $mode): TableRenderPlan
+{
+    $component = new TrpPagedComponent;
+    $component->mode = $mode;
+    $component->mountWithTable();
+
+    return $component->tableRenderPlan();
+}
+
+function trpSeedRows(int $count): void
+{
+    Schema::create('trp_rows', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+    });
+
+    // NOT range(1, $count): range(1, 0) counts DOWN and yields [1, 0], so a
+    // "seed nothing" call would quietly create two rows.
+    for ($i = 1; $i <= $count; $i++) {
+        TrpRow::create(['name' => 'Row '.$i]);
+    }
+}
+
+it('counts the whole set when the paginator can answer for it', function () {
+    trpSeedRows(11);
+
+    $paging = trpPagedPlan('standard')->paging;
+
+    expect($paging->hasPaginator)->toBeTrue()
+        ->and($paging->recordCount)->toBe(11)   // total(), not the 3-row page
+        ->and($paging->rangeFrom)->toBe(1)
+        ->and($paging->rangeTo)->toBe(3);
+
+    Schema::dropIfExists('trp_rows');
+});
+
+it('never asks a simple or cursor paginator for a total it does not have', function () {
+    // Both __call-forward to the underlying collection, so asking would surface
+    // as a BadMethodCallException from Collection rather than a type error. The
+    // numbers below are the CURRENT behaviour, gap included: recordCount is the
+    // page, and the range reads 1..count. See the class docblock — fixing that is
+    // a separate change, not part of an extraction that must not alter output.
+    trpSeedRows(11);
+
+    foreach (['simple', 'cursor'] as $mode) {
+        $paging = trpPagedPlan($mode)->paging;
+
+        expect($paging->hasPaginator)->toBeFalse()
+            ->and($paging->recordCount)->toBe(3)
+            ->and($paging->rangeFrom)->toBe(1)
+            ->and($paging->rangeTo)->toBe(3);
+    }
+
+    Schema::dropIfExists('trp_rows');
+});
+
+it('counts a plain collection as the whole set', function () {
+    trpSeedRows(11);
+
+    $paging = trpPagedPlan('none')->paging;
+
+    expect($paging->hasPaginator)->toBeFalse()
+        ->and($paging->recordCount)->toBe(11)
+        ->and($paging->rangeFrom)->toBe(1)
+        ->and($paging->rangeTo)->toBe(11)
+        ->and($paging->isPaginated)->toBeFalse();
+
+    Schema::dropIfExists('trp_rows');
+});
+
+it('ranges from zero when there is nothing to show', function () {
+    trpSeedRows(0);
+
+    $paging = trpPagedPlan('none')->paging;
+
+    expect($paging->recordCount)->toBe(0)
+        ->and($paging->rangeFrom)->toBe(0)
+        ->and($paging->rangeTo)->toBe(0)
+        // Nothing is filtered, so this is "nothing here yet", not "no matches".
+        ->and($paging->isEmptyDueToFilter)->toBeFalse();
+
+    Schema::dropIfExists('trp_rows');
+});
+
+it('tells an empty result from a filtered-empty one', function () {
+    // The two empty states differ: one offers a way back, the other does not.
+    trpSeedRows(3);
+
+    $component = new TrpPagedComponent;
+    $component->mode = 'none';
+    $component->mountWithTable();
+    $component->tableState->set('search', 'nothing matches this at all');
+
+    expect($component->tableRenderPlan()->paging->isEmptyDueToFilter)->toBeTrue();
+
+    Schema::dropIfExists('trp_rows');
+});
+
+it('counts the column-filter row into the ARIA header offset', function () {
+    // Header rows come first in the ARIA numbering. Miss the filter row and
+    // every body index is off by one.
+    expect(trpPlan(trpComponent())->paging->headerRowCount)->toBe(1)
+        ->and(trpWidePlan()->paging->headerRowCount)->toBe(2);
 });
 
 it('resolves after a view has reconfigured the table, not before', function () {

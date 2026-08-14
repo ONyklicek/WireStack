@@ -572,8 +572,8 @@ visibility and the compiled per-column markup.
 | Columns | `visibleColumns`, `columnMeta` incl. the compiled `<td>` skeletons, `fillColumns`, `filterableColumns`, sub-row columns, `toggleableColumns`, `colSpan`, `hasCopyableColumn`, `mobileSortableColumns` | **done** |
 | Actions | row/bulk/header/mobile action lists, both collapsed groups, the click resolvers, position/alignment/label/width | **done** |
 | Layout | density and border, the stacked-on-mobile class pair, the five mobile-sheet classes | **done** |
-| Paging | paginator, counts, `rangeFrom`/`rangeTo`, `headerRowCount` | next — needs `$records`; the slice that changes the builder signature (see §5.2) |
-| Interaction | keyboard nav, gestures, active-row marker, record bindings, shortcut help | two edges out into skeletons |
+| Paging | paginator, counts, `rangeFrom`/`rangeTo`, `headerRowCount` | **done** — carried the builder's signature change (§5.2) |
+| Interaction | keyboard nav, gestures, active-row marker, record bindings, shortcut help | next — two edges out into skeletons |
 | Skeletons | `rowSkeleton`, `selectionCellSkeleton`, selection announcements, row-class binding, page record keys | last — the dependency sink, and also needs `$records` |
 
 That order is not the order they appear in the file. It comes from a dependency
@@ -595,10 +595,10 @@ view body — but are consumed by `partials/polling-indicator.blade.php` and
 `partials/shortcut-help-modal.blade.php` through **implicit `@include` scope
 inheritance**. Grep alone would delete them.
 
-After four slices: the head block is **322 → 259 lines**, and of the 100
-assignments left in it **55 are one-line aliases** off the plan — so **57 of the
+After five slices: the head block is **322 → 254 lines**, and of the 100
+assignments left in it **62 are one-line aliases** off the plan — so **64 of the
 original ~102 computations have moved**, including the whole hot path. What
-remains is interaction, paging, skeletons and the leftovers.
+remains is interaction, skeletons and the leftovers.
 
 Two behaviours the column slice's tests pinned that nothing had asserted before,
 both easy to get backwards when the islands work starts moving this code again:
@@ -657,15 +657,17 @@ did.
 
 ### 5.2 The paging slice, and what mapping it turned up
 
-Paging is the slice that changes `TableRenderPlan::build()`'s signature, because
-four of its locals read the page of records. Two facts settle *how*:
+Paging is the slice that changed `TableRenderPlan::build()`'s signature, because
+four of its locals read the page of records. Two facts settled *how*:
 
-- **The records must be passed in, not fetched by the plan.** `getTableRecords()`
-  is memoised in `WithTable::$cachedRecords` — except on the lazy-not-ready path,
-  which returns a bare `collect()` **without** assigning the memo. So a plan that
-  called it itself would hold a different (equally empty) instance than the view's
-  `$records`. Passing them in also matches how `getTableProperty()` already
-  resolves them once.
+- **`build()` takes the records; the accessor sources them.** They are a
+  parameter so the class stays testable without a database, but
+  `WithTable::tableRenderPlan()` fills it from `getTableRecords()` rather than
+  requiring callers to — because an island body will ask for the plan with
+  nothing but the component in hand, and must not have to find the records
+  first. The memo makes that free everywhere except the lazy-not-ready path,
+  which returns a fresh `collect()` each call; the two are value-identical, so
+  the plan and the view agree either way.
 - **Nothing invalidates the records mid-render.** All six `cachedRecords = null`
   sites are action-phase (`setPage`, `refreshRow`, `importTable`,
   `invalidateTable`, and wire-sortable's two), and every `$component->` call the
