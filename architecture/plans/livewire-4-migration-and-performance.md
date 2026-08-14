@@ -571,8 +571,8 @@ visibility and the compiled per-column markup.
 | State + active filters | `search`, `filters`, `columnFilters`, `activeFilters`, `activeColumnFilters`, `sortColumn`, `sortDirection`, `perPage`, `hasActiveFilters` (+ the recursive `$filterHasValue` closure, now `holdsValue()`) | **done** |
 | Columns | `visibleColumns`, `columnMeta` incl. the compiled `<td>` skeletons, `fillColumns`, `filterableColumns`, sub-row columns, `toggleableColumns`, `colSpan`, `hasCopyableColumn`, `mobileSortableColumns` | **done** |
 | Actions | row/bulk/header/mobile action lists, both collapsed groups, the click resolvers, position/alignment/label/width | **done** |
-| Layout | styling, padding, responsive and mobile-sheet classes | next — 13 vars, all `$table`-only, no edges in or out |
-| Paging | paginator, counts, `rangeFrom`/`rangeTo`, `headerRowCount` | needs `$records`; do it as the slice that changes the builder signature |
+| Layout | density and border, the stacked-on-mobile class pair, the five mobile-sheet classes | **done** |
+| Paging | paginator, counts, `rangeFrom`/`rangeTo`, `headerRowCount` | next — needs `$records`; the slice that changes the builder signature (see §5.2) |
 | Interaction | keyboard nav, gestures, active-row marker, record bindings, shortcut help | two edges out into skeletons |
 | Skeletons | `rowSkeleton`, `selectionCellSkeleton`, selection announcements, row-class binding, page record keys | last — the dependency sink, and also needs `$records` |
 
@@ -595,9 +595,10 @@ view body — but are consumed by `partials/polling-indicator.blade.php` and
 `partials/shortcut-help-modal.blade.php` through **implicit `@include` scope
 inheritance**. Grep alone would delete them.
 
-After two slices: the head block is **322 → 258 lines**, and of the ~102
-assignments left in it 24 are now one-line aliases off the plan — so about a
-quarter of the computation has moved, including the whole hot path.
+After four slices: the head block is **322 → 259 lines**, and of the 100
+assignments left in it **55 are one-line aliases** off the plan — so **57 of the
+original ~102 computations have moved**, including the whole hot path. What
+remains is interaction, paging, skeletons and the leftovers.
 
 Two behaviours the column slice's tests pinned that nothing had asserted before,
 both easy to get backwards when the islands work starts moving this code again:
@@ -653,6 +654,57 @@ which none of this work touches. When the whole run reads high, that floor reads
 high with it (1.36 → 1.62 ms), which is how a machine-drift run is told apart
 from a regression — in that run the full 20-row render rose *less* than the floor
 did.
+
+### 5.2 The paging slice, and what mapping it turned up
+
+Paging is the slice that changes `TableRenderPlan::build()`'s signature, because
+four of its locals read the page of records. Two facts settle *how*:
+
+- **The records must be passed in, not fetched by the plan.** `getTableRecords()`
+  is memoised in `WithTable::$cachedRecords` — except on the lazy-not-ready path,
+  which returns a bare `collect()` **without** assigning the memo. So a plan that
+  called it itself would hold a different (equally empty) instance than the view's
+  `$records`. Passing them in also matches how `getTableProperty()` already
+  resolves them once.
+- **Nothing invalidates the records mid-render.** All six `cachedRecords = null`
+  sites are action-phase (`setPage`, `refreshRow`, `importTable`,
+  `invalidateTable`, and wire-sortable's two), and every `$component->` call the
+  view makes is read-only. The one intra-method reset — `rehomeOutOfRangePage()`
+  clamping an out-of-range page — completes *inside* `getTableRecords()` before
+  the view is handed anything, so the plan can never observe the pre-clamp page.
+
+#### A product gap found while mapping it — not to be fixed inside the refactor
+
+The four record-derived locals all branch on
+`$records instanceof LengthAwarePaginator`. That is a boolean over what is really
+**three** cases, and the other two are reachable configuration:
+
+| mode | set by | `total()` | `firstItem()` / `lastItem()` |
+|---|---|---|---|
+| standard | default | yes | yes |
+| simple | `Table::simplePagination()` | **no** | yes |
+| cursor | `Table::cursorPagination()` | **no** | **no** |
+
+`WithTable::paginateQuery()` really does construct all three, and both are
+exercised by existing tests. But because the view's boolean is false for the
+latter two, they take the fallback branch everywhere — so a simple- or
+cursor-paginated table today renders **no pagination links at all**
+(`$hasMultiplePages = $hasPaginator && …`) and a "showing 1 – N of N" line
+counting only the current page. Simple pagination is the sharper case: it *has*
+working `firstItem()`/`lastItem()`, so the fallback is strictly worse than what
+the type can answer.
+
+Neither paginator fails loudly if called wrongly, which is why this went
+unnoticed: both abstract paginators `__call`-forward to the underlying
+collection, so `total()` on a cursor paginator ends in a `BadMethodCallException`
+from `Collection` rather than a clear type error.
+
+**The paging slice must preserve this exactly.** A refactor whose whole warrant is
+byte-identical output is the wrong place to change what a simple-paginated table
+renders. The value object should model the three cases faithfully — never
+reaching `total()` for the latter two, never `firstItem()`/`lastItem()` for cursor
+— while the view keeps branching as it does now. Fixing the UI is a separate
+change with its own gate.
 
 ---
 
