@@ -60,4 +60,31 @@ trait CanBeLive
 
         return '';
     }
+
+    /**
+     * The same binding mode, for a field that entangles instead of `wire:model`.
+     *
+     * `@entangle` is not `wire:model` and does not take its modifiers. Livewire's
+     * Blade directive only honours `.live`, and only when handed a `WireDirective`
+     * rather than a string; the JS behind it defines exactly one property on the
+     * value it returns:
+     *
+     * ```js
+     * Object.defineProperty(obj, 'live', { get() { isLive = true; return obj } })
+     * ```
+     *
+     * So anything past `.live` is `undefined`. Appending this concern's other
+     * answer — `live.blur` — produced `x-data="{ value: undefined }"` and the
+     * field rendered with no state at all. (It was broken before Livewire 4 too:
+     * the modifier was then a bare `blur`, and `.blur` was just as undefined.)
+     *
+     * **`blur` has no meaning for an entangled field.** There is no input element
+     * whose focus it could follow — the value syncs through Alpine. So the
+     * question collapses to whether the binding is live at all, which is what
+     * `$wire.$entangle($path, $live)` takes as its second argument.
+     */
+    public function getEntangleModifier(): string
+    {
+        return $this->isLive || $this->isLiveOnBlur ? 'live' : '';
+    }
 }

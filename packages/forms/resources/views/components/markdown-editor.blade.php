@@ -1,7 +1,8 @@
 @php
     use NyonCode\WireForms\Components\MarkdownEditor;
     assert($field instanceof MarkdownEditor);
-    $wireModifier = $field->getWireModelModifier();
+    // @entangle takes no wire:model modifiers — see CanBeLive::getEntangleModifier().
+    $entangleModifier = $field->getEntangleModifier();
     $fieldId = $field->getId();
 
     // Shared editor vocabulary (resources/lang/*/fields.php) — the same keys
@@ -15,7 +16,7 @@
 
 <div
     x-data="{
-        content: @entangle($field->getWireModelAttribute()){{ $wireModifier ? '.' . $wireModifier : '' }},
+        content: @entangle($field->getWireModelAttribute()){{ $entangleModifier ? '.' . $entangleModifier : '' }},
         tab: 'write',
         livePreview: @js($field->isLivePreview()),
 

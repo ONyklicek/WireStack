@@ -5,6 +5,10 @@
     assert($field instanceof ColorPicker);
 
     $wireModifier = $field->getWireModelModifier();
+
+    // @entangle takes no wire:model modifiers — see CanBeLive::getEntangleModifier().
+
+    $entangleModifier = $field->getEntangleModifier();
     $wireAttr = 'wire:model' . ($wireModifier ? ".$wireModifier" : '');
 @endphp
 
@@ -16,7 +20,7 @@
 <div
     x-data="{
         format: @js($field->getFormat()),
-        color: @entangle($field->getWireModelAttribute()){{ $wireModifier ? '.' . $wireModifier : '' }},
+        color: @entangle($field->getWireModelAttribute()){{ $entangleModifier ? '.' . $entangleModifier : '' }},
 
         /** Any supported notation → {r,g,b,a}; unparseable → black, so the swatch never breaks. */
         parse(value) {

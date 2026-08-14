@@ -1,5 +1,7 @@
 @php /** @var \NyonCode\WireForms\Components\Toggle $field */
     $wireModifier = $field->getWireModelModifier();
+    // @entangle takes no wire:model modifiers — see CanBeLive::getEntangleModifier().
+    $entangleModifier = $field->getEntangleModifier();
     $wireAttr = 'wire:model' . ($wireModifier ? ".{$wireModifier}" : '');
 @endphp
 
@@ -7,7 +9,7 @@
 
     <div
         {{-- Honor live(): mirror the other entangle-based fields (slider, tags, …). --}}
-        x-data="{ enabled: @entangle($field->getWireModelAttribute()){{ $wireModifier ? '.' . $wireModifier : '' }} }"
+        x-data="{ enabled: @entangle($field->getWireModelAttribute()){{ $entangleModifier ? '.' . $entangleModifier : '' }} }"
         class="flex items-center gap-3"
     >
         <button

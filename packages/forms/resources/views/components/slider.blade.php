@@ -3,7 +3,9 @@
 
     assert($field instanceof Slider);
 
-    $wireModifier = $field->getWireModelModifier();
+    // @entangle takes no wire:model modifiers — see CanBeLive::getEntangleModifier().
+
+    $entangleModifier = $field->getEntangleModifier();
 @endphp
 
 @include('wire-forms::partials.field-wrapper-start')
@@ -41,7 +43,7 @@
 
 <div
     x-data="{
-        value: @entangle($field->getWireModelAttribute()){{ $wireModifier ? '.' . $wireModifier : '' }},
+        value: @entangle($field->getWireModelAttribute()){{ $entangleModifier ? '.' . $entangleModifier : '' }},
         min: {{ $field->getMin() }},
         max: {{ $field->getMax() }},
         init() {

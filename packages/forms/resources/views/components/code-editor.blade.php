@@ -1,14 +1,15 @@
 @php
     use NyonCode\WireForms\Components\CodeEditor;
     assert($field instanceof CodeEditor);
-    $wireModifier = $field->getWireModelModifier();
+    // @entangle takes no wire:model modifiers — see CanBeLive::getEntangleModifier().
+    $entangleModifier = $field->getEntangleModifier();
 @endphp
 
 @include('wire-forms::partials.field-wrapper-start')
 
 <div
     x-data="{
-        content: @entangle($field->getWireModelAttribute()){{ $wireModifier ? '.' . $wireModifier : '' }},
+        content: @entangle($field->getWireModelAttribute()){{ $entangleModifier ? '.' . $entangleModifier : '' }},
 
         get lines() {
             return (this.content || '').split('\n');

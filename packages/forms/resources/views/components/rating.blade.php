@@ -1,7 +1,8 @@
 @php
     use NyonCode\WireForms\Components\Rating;
     assert($field instanceof Rating);
-    $wireModifier = $field->getWireModelModifier();
+    // @entangle takes no wire:model modifiers — see CanBeLive::getEntangleModifier().
+    $entangleModifier = $field->getEntangleModifier();
     $colorClasses = $field->getColorClasses();
 @endphp
 
@@ -9,7 +10,7 @@
 
 <div
     x-data="{
-        rating: @entangle($field->getWireModelAttribute()){{ $wireModifier ? '.' . $wireModifier : '' }},
+        rating: @entangle($field->getWireModelAttribute()){{ $entangleModifier ? '.' . $entangleModifier : '' }},
         hovered: 0,
         allowHalf: @js($field->isAllowHalf()),
         clearable: @js($field->isClearable()),

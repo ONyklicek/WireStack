@@ -1,7 +1,8 @@
 @php
     use NyonCode\WireForms\Components\Tags;
     assert($field instanceof Tags);
-    $wireModifier = $field->getWireModelModifier();
+    // @entangle takes no wire:model modifiers — see CanBeLive::getEntangleModifier().
+    $entangleModifier = $field->getEntangleModifier();
     // Below the configured breakpoint the suggestions list becomes a bottom sheet
     // instead of a floating panel — unless disabled via ->sheetOnMobile(false).
     $sheetOnMobile = $field->usesSheetOnMobile();
@@ -20,7 +21,7 @@
 
 <div
     x-data="{
-        tags: @entangle($field->getWireModelAttribute()){{ $wireModifier ? '.' . $wireModifier : '' }},
+        tags: @entangle($field->getWireModelAttribute()){{ $entangleModifier ? '.' . $entangleModifier : '' }},
         input: '',
         suggestions: @js($field->getSuggestions()),
         splitKeys: @js($field->getSplitKeys()),

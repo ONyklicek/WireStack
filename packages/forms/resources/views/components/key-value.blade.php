@@ -1,14 +1,15 @@
 @php
     use NyonCode\WireForms\Components\KeyValue;
     assert($field instanceof KeyValue);
-    $wireModifier = $field->getWireModelModifier();
+    // @entangle takes no wire:model modifiers — see CanBeLive::getEntangleModifier().
+    $entangleModifier = $field->getEntangleModifier();
 @endphp
 
 @include('wire-forms::partials.field-wrapper-start')
 
 <div
     x-data="{
-        pairs: @entangle($field->getWireModelAttribute()){{ $wireModifier ? '.' . $wireModifier : '' }},
+        pairs: @entangle($field->getWireModelAttribute()){{ $entangleModifier ? '.' . $entangleModifier : '' }},
 
         init() {
             if (!Array.isArray(this.pairs)) this.pairs = [];
