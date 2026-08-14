@@ -32,40 +32,40 @@
     // sharp edge (see the class) that used to live here as a recursive closure.
     // The magic-property hazard this block used to warn about goes with it: the
     // plan reads the state container, so there is nothing here to reach for.
-    $tableFilters = $plan->state->filters;
-    $columnFilterValues = $plan->state->columnFilters;
-    $activeTableFilters = $plan->state->activeFilters;
-    $activeColumnFilters = $plan->state->activeColumnFilters;
-    $sortColumn = $plan->state->sortColumn;
-    $sortDirection = $plan->state->sortDirection;
-    $perPage = $plan->state->perPage;
-    $hasActiveFilters = $plan->state->hasActiveFilters;
+    $tableFilters = $plan->state()->filters;
+    $columnFilterValues = $plan->state()->columnFilters;
+    $activeTableFilters = $plan->state()->activeFilters;
+    $activeColumnFilters = $plan->state()->activeColumnFilters;
+    $sortColumn = $plan->state()->sortColumn;
+    $sortDirection = $plan->state()->sortDirection;
+    $perPage = $plan->state()->perPage;
+    $hasActiveFilters = $plan->state()->hasActiveFilters;
 
     // Floating filter/column-toggle panels present as a bottom sheet on mobile
     // unless disabled via Table::sheetOnMobile(false) or the global config. The
     // five class strings all derive from the one breakpoint — LayoutRenderPlan
     // resolves them together so a partial cannot recompute them differently.
-    $sheetOnMobile = $plan->layout->sheetOnMobile;
-    $sheetBp = $plan->layout->sheetBreakpoint;
-    $sheetBpPx = $plan->layout->sheetBreakpointPx;
-    $sheetPanel = $plan->layout->sheetPanel;
-    $sheetMotion = $plan->layout->sheetMotion;
-    $sheetBackdrop = $plan->layout->sheetBackdrop;
+    $sheetOnMobile = $plan->layout()->sheetOnMobile;
+    $sheetBp = $plan->layout()->sheetBreakpoint;
+    $sheetBpPx = $plan->layout()->sheetBreakpointPx;
+    $sheetPanel = $plan->layout()->sheetPanel;
+    $sheetMotion = $plan->layout()->sheetMotion;
+    $sheetBackdrop = $plan->layout()->sheetBackdrop;
     // Actions — the four surfaces (row, bulk, header, mobile card), their
     // collapsed dropdown forms, and the click resolvers that keep wire-core's
     // action views host-agnostic. All resolved in ActionRenderPlan.
-    $actions = $plan->actions->row;
-    $bulkActions = $plan->actions->bulk;
-    $headerActions = $plan->actions->header;
-    $hasActions = $plan->actions->hasAny;
-    $mobileActions = $plan->actions->mobile;
-    $hasMobileActions = $plan->actions->hasMobile;
-    $collapseMobileActions = $plan->actions->collapseMobile;
-    $mobileActionGroup = $plan->actions->mobileGroup;
-    $collapseHeaderActions = $plan->actions->collapseHeader;
-    $mobileHeaderActionGroup = $plan->actions->mobileHeaderGroup;
-    $headerActionClick = $plan->actions->headerClick;
-    $actionClick = $plan->actions->click;
+    $actions = $plan->actions()->row;
+    $bulkActions = $plan->actions()->bulk;
+    $headerActions = $plan->actions()->header;
+    $hasActions = $plan->actions()->hasAny;
+    $mobileActions = $plan->actions()->mobile;
+    $hasMobileActions = $plan->actions()->hasMobile;
+    $collapseMobileActions = $plan->actions()->collapseMobile;
+    $mobileActionGroup = $plan->actions()->mobileGroup;
+    $collapseHeaderActions = $plan->actions()->collapseHeader;
+    $mobileHeaderActionGroup = $plan->actions()->mobileHeaderGroup;
+    $headerActionClick = $plan->actions()->headerClick;
+    $actionClick = $plan->actions()->click;
 
     $filters = $table->getFilters();
     // Row interaction — the pointer bindings, the two independently switchable
@@ -74,18 +74,18 @@
     // event into the keyboard config (which this block used to write back after
     // the fact). $shortcutLegend and $shortcutHelpEvent look unused below: they
     // reach partials.shortcut-help-modal through @include scope inheritance.
-    $rowContextMenuEnabled = $plan->interaction->rowContextMenuEnabled;
-    $recordActionBindings = $plan->interaction->recordActionBindings;
-    $keyboardNav = $plan->interaction->keyboardNav;
-    $tableRole = $plan->interaction->tableRole;
-    $recordKeyboardConfig = $plan->interaction->recordKeyboardConfig;
-    $recordActionsRootEnabled = $plan->interaction->recordActionsRootEnabled;
-    $gestureConfig = $plan->interaction->gestureConfig;
-    $activeRowConfig = $plan->interaction->activeRowConfig;
-    $shortcutLegend = $plan->interaction->shortcutLegend;
-    $shortcutHelpEvent = $plan->interaction->shortcutHelpEvent;
-    $hasBulkActions = $plan->actions->hasBulk;
-    $hasHeaderActions = $plan->actions->hasHeader;
+    $rowContextMenuEnabled = $plan->interaction()->rowContextMenuEnabled;
+    $recordActionBindings = $plan->interaction()->recordActionBindings;
+    $keyboardNav = $plan->interaction()->keyboardNav;
+    $tableRole = $plan->interaction()->tableRole;
+    $recordKeyboardConfig = $plan->interaction()->recordKeyboardConfig;
+    $recordActionsRootEnabled = $plan->interaction()->recordActionsRootEnabled;
+    $gestureConfig = $plan->interaction()->gestureConfig;
+    $activeRowConfig = $plan->interaction()->activeRowConfig;
+    $shortcutLegend = $plan->interaction()->shortcutLegend;
+    $shortcutHelpEvent = $plan->interaction()->shortcutHelpEvent;
+    $hasBulkActions = $plan->actions()->hasBulk;
+    $hasHeaderActions = $plan->actions()->hasHeader;
     $hasFilters = !empty($filters);
     $isSelectable = $table->isSelectable();
     // Record-invariant chrome icon resolved once per render (IconManager owns the
@@ -123,7 +123,7 @@
         }
     }
     $selectionSyncLive = $isSelectable && $hasSummaries;
-    $isPaginated = $plan->paging->isPaginated;
+    $isPaginated = $plan->paging()->isPaginated;
 
     // Columns, and everything derived from them — which visible column set the
     // page has, the per-column render metadata (including each column's compiled
@@ -131,22 +131,22 @@
     // column toggles and the mobile sort control each read. All resolved once,
     // in TableRenderPlan; see the class for why the metadata is per-column
     // rather than per-cell.
-    $visibleColumns = $plan->columns->visible;
-    $hasVisibleColumns = $plan->columns->hasVisible;
-    $columnMeta = $plan->columns->meta;
-    $fillColumns = $plan->columns->fillable;
-    $isFillEnabled = $plan->columns->isFillEnabled;
-    $filterableColumns = $plan->columns->filterable;
-    $hasColumnFilters = $plan->columns->hasFilters;
-    $subRowColumns = $plan->columns->subRow;
-    $visibleSubRowColumns = $plan->columns->visibleSubRow;
-    $hasCopyableColumn = $plan->columns->hasCopyable;
-    $colSpan = $plan->columns->colSpan;
-    $toggleableColumns = $plan->columns->toggleable;
-    $visibleToggleableCount = $plan->columns->visibleToggleableCount;
-    $hasColumnToggles = $plan->columns->hasToggles;
-    $mobileSortableColumns = $plan->columns->mobileSortable;
-    $hasMobileSort = $plan->columns->hasMobileSort;
+    $visibleColumns = $plan->columns()->visible;
+    $hasVisibleColumns = $plan->columns()->hasVisible;
+    $columnMeta = $plan->columns()->meta;
+    $fillColumns = $plan->columns()->fillable;
+    $isFillEnabled = $plan->columns()->isFillEnabled;
+    $filterableColumns = $plan->columns()->filterable;
+    $hasColumnFilters = $plan->columns()->hasFilters;
+    $subRowColumns = $plan->columns()->subRow;
+    $visibleSubRowColumns = $plan->columns()->visibleSubRow;
+    $hasCopyableColumn = $plan->columns()->hasCopyable;
+    $colSpan = $plan->columns()->colSpan;
+    $toggleableColumns = $plan->columns()->toggleable;
+    $visibleToggleableCount = $plan->columns()->visibleToggleableCount;
+    $hasColumnToggles = $plan->columns()->hasToggles;
+    $mobileSortableColumns = $plan->columns()->mobileSortable;
+    $hasMobileSort = $plan->columns()->hasMobileSort;
 
     $hasSubRows = $table->hasSubRows();
     $isSubRowsExpandable = $hasSubRows && $table->isSubRowsExpandable();
@@ -161,40 +161,40 @@
         : __('wire-table::messages.view_options');
 
     // Action configuration
-    $actionsPosition = $plan->actions->position; // 'start' or 'end'
-    // ($plan->actions->alignment is the raw 'left'/'center'/'right'; nothing in
+    $actionsPosition = $plan->actions()->position; // 'start' or 'end'
+    // ($plan->actions()->alignment is the raw 'left'/'center'/'right'; nothing in
     // any view reads it — the class below is what gets rendered.)
-    $actionsAlignmentClass = $plan->actions->alignmentClass; // literal text-* utility
-    $actionsJustifyClass = $plan->actions->justifyClass; // literal justify-* utility
-    $actionsColumnLabel = $plan->actions->columnLabel;
-    $actionsColumnWidth = $plan->actions->columnWidth;
+    $actionsAlignmentClass = $plan->actions()->alignmentClass; // literal text-* utility
+    $actionsJustifyClass = $plan->actions()->justifyClass; // literal justify-* utility
+    $actionsColumnLabel = $plan->actions()->columnLabel;
+    $actionsColumnWidth = $plan->actions()->columnWidth;
 
     // Table styling. Row hover/striping/tint is composed in
     // Table::getRowClasses($record, $rowIndex), not here. Table::isCompact() is
     // not carried: it feeds the padding maps below and no view reads it directly.
-    $isBordered = $plan->layout->isBordered;
-    $cellPadding = $plan->layout->cellPadding;
-    $headerPadding = $plan->layout->headerPadding;
+    $isBordered = $plan->layout()->isBordered;
+    $cellPadding = $plan->layout()->cellPadding;
+    $headerPadding = $plan->layout()->headerPadding;
 
     // The body cell is compiled once per column, into $columnMeta[...]['cell'] —
     // see ColumnRenderPlan::meta(), which owns it now.
 
     // Responsive layout — literal Tailwind class names, never interpolated.
-    $isStackedOnMobile = $plan->layout->isStackedOnMobile;
-    $tableHiddenClass = $plan->layout->tableHiddenClass;
-    $cardsVisibleClass = $plan->layout->cardsVisibleClass;
+    $isStackedOnMobile = $plan->layout()->isStackedOnMobile;
+    $tableHiddenClass = $plan->layout()->tableHiddenClass;
+    $cardsVisibleClass = $plan->layout()->cardsVisibleClass;
 
     // Where this page sits in the whole result set — read by the footer's
     // "from - to of total" line and, before it, by aria-rowindex, since an ARIA
     // row index counts through the entire grid rather than the page. Resolved in
     // PagingRenderPlan, which is also where the rule lives that only a
     // length-aware paginator may be asked for a total or an item offset.
-    $hasPaginator = $plan->paging->hasPaginator;
-    $recordCount = $plan->paging->recordCount;
-    $isEmptyDueToFilter = $plan->paging->isEmptyDueToFilter;
-    $rangeFrom = $plan->paging->rangeFrom;
-    $rangeTo = $plan->paging->rangeTo;
-    $headerRowCount = $plan->paging->headerRowCount;
+    $hasPaginator = $plan->paging()->hasPaginator;
+    $recordCount = $plan->paging()->recordCount;
+    $isEmptyDueToFilter = $plan->paging()->isEmptyDueToFilter;
+    $rangeFrom = $plan->paging()->rangeFrom;
+    $rangeTo = $plan->paging()->rangeTo;
+    $headerRowCount = $plan->paging()->headerRowCount;
 
     // The body row's opening tag, compiled once for the whole table from
     // `tables.partials.body-row-open`. Every condition on it is a property of the

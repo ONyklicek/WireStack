@@ -637,11 +637,17 @@ alternating, at load 2:
 | baseline | 19.7, 20.4 | 42.5, 40.8 | 66.1, 61.4 | 123.2, 121.1 |
 | with the plan | 21.2, 20.7 | 42.4, 42.5 | 62.8, 61.5 | 126.4, 122.2 |
 
-No measurable regression: the differences run in both directions (10 editable
-columns is *faster* with the plan in both rounds), and the spread within the
-baseline alone — 61.4 to 66.1 at 10 editable — is wider than the gap between the
-two variants. Nor is there a mechanism: the same calls happen, one object is
-allocated, and `columnMeta` is now built in one pass instead of two.
+At **two slices** this read as no measurable regression: the differences ran in
+both directions, and the spread within the baseline alone — 61.4 to 66.1 at 10
+editable — was wider than the gap between the variants.
+
+> **That conclusion did not survive the rest of the phase, and the way it failed
+> is the lesson.** The gate was then skipped on the next four slices on the
+> strength of byte-identical output ("identical HTML ⇒ identical work"), which is
+> sound for *correctness* and worthless for *cost*: allocating objects and writing
+> properties produces no bytes. Measured across all six slices, the fixed cost had
+> accumulated — see below. Run the gate per slice, or the arithmetic hides in the
+> total.
 
 The deterministic half is better evidence than the timings. **Bytes are unchanged
 to the byte** across both slices — 5 651 B/row + 88 469 B fixed, 25 699 B/row +
@@ -654,6 +660,76 @@ which none of this work touches. When the whole run reads high, that floor reads
 high with it (1.36 → 1.62 ms), which is how a machine-drift run is told apart
 from a regression — in that run the full 20-row render rose *less* than the floor
 did.
+
+#### The measured cost of all six slices
+
+Run against the phase's starting point (`4e99925`), two rounds, load 2:
+
+| editable | baseline | with the plan | Δ |
+|---|---|---|---|
+| 0 of 25 | 19.6, 18.9 | 20.1, 20.7 | **+1.15 ms** |
+| 5 of 25 | 40.1, 40.2 | 42.1, 41.6 | **+1.70 ms** |
+| 10 of 25 | 61.0, 59.4 | 60.7, 60.9 | +0.60 ms |
+| 25 of 25 | 118.9, 118.3 | 121.0, 120.1 | **+1.95 ms** |
+
+Three of the four ranges do not overlap, so this is signal. It does not grow with
+the editable ratio — +1.15 ms at zero, +1.95 ms at twenty-five — which is the
+signature of a **fixed per-render cost**, and the decomposition isolates it
+exactly:
+
+```
+chrome (fixed):    8.13 → 9.25 ms   (+1.12)
+per-row slope:     0.483 → 0.465    (unchanged)
+bytes:             identical, to the byte
+framework floor:   1.41 → 1.39 ms   ← untouched code, so the machine was steady
+```
+
+**≈ +1.1 ms fixed, nothing per row.** On a 19–61 ms render that is 2–6 %.
+
+#### Why that is a design fault rather than an acceptable tax
+
+The first reading was that this buys islands and islands repay it many times over.
+That is backwards. **An eagerly-built plan is actively wrong under islands.**
+
+When the `rows` island renders on its own, its body asks for the plan — and an
+eager plan builds all seven groups although rows need only `columns`. It pays for
+layout, actions, paging, interaction and state that reach no markup. The entire
+premise of islands is that cost is proportional to what changed; an eager plan
+installs a fixed floor the island cannot get under.
+
+**Filament, which has the same problem, memoises lazily and per question** rather
+than building a plan up front —
+`packages/tables/src/Table/Concerns/HasColumns.php`:
+
+```php
+protected ?array $cachedVisibleColumns = null;
+
+public function getVisibleColumns(): array
+{
+    return $this->cachedVisibleColumns ??= array_filter(
+        $this->getColumns(),
+        fn (Column $column): bool => $column->isVisible() && ! $column->isToggledHidden(),
+    );
+}
+
+public function flushCachedVisibleColumns(): void { $this->cachedVisibleColumns = null; }
+```
+
+Same intent as `ColumnRenderPlan`, different shape: cached on the object it
+belongs to, resolved on demand. They pair it with `#[Renderless]` /
+`skipRenderAfterStateUpdated()` at the action level, and Filament v5's whole major
+bump is Livewire 4 so it can use islands.
+
+Worth noting for contrast that **Nova does not have this problem at all**: it is a
+Vue SPA whose fields are client-side components (`IndexField.vue`, `FormField.vue`)
+receiving a `field` prop, so nothing re-renders 500 cells of HTML on the server.
+That is an architecture, not a technique to borrow.
+
+**So the plan's groups should resolve lazily** — `$plan->columns()` built on first
+ask — before the last slice lands, so `skeletons` arrives in the final shape
+rather than being rewritten. It also settles the argument that forced the grouped
+value objects in the first place: `readonly` properties could not be filled
+lazily, and PHPStan was right to refuse it; accessor methods can.
 
 ### 5.2 The paging slice, and what mapping it turned up
 

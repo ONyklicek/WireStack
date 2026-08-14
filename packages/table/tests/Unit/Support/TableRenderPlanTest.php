@@ -74,19 +74,19 @@ it('reads the state a render depends on', function () {
 
     $plan = trpPlan($component);
 
-    expect($plan->state->search)->toBe('amelia')
-        ->and($plan->state->sortColumn)->toBe('name')
-        ->and($plan->state->sortDirection)->toBe('desc');
+    expect($plan->state()->search)->toBe('amelia')
+        ->and($plan->state()->sortColumn)->toBe('name')
+        ->and($plan->state()->sortDirection)->toBe('desc');
 });
 
 it('falls back to the table for a page size the state never set', function () {
     // perPage() on the Table is the default; state only overrides it once a user
     // picks something from the per-page select.
-    expect(trpPlan(trpComponent())->state->perPage)->toBe(25);
+    expect(trpPlan(trpComponent())->state()->perPage)->toBe(25);
 });
 
 it('sorts ascending until told otherwise', function () {
-    expect(trpPlan(trpComponent())->state->sortDirection)->toBe('asc');
+    expect(trpPlan(trpComponent())->state()->sortDirection)->toBe('asc');
 });
 
 it('counts a filter as active only when it holds a value', function () {
@@ -99,10 +99,10 @@ it('counts a filter as active only when it holds a value', function () {
 
     $plan = trpPlan($component);
 
-    expect(array_keys($plan->state->activeFilters))->toBe(['status'])
+    expect(array_keys($plan->state()->activeFilters))->toBe(['status'])
         // The unfiltered set is still there — "active" is a reading of it, not a
         // replacement for it.
-        ->and($plan->state->filters)->toHaveCount(3);
+        ->and($plan->state()->filters)->toHaveCount(3);
 });
 
 it('does not count a range filter that was typed and then cleared', function () {
@@ -117,8 +117,8 @@ it('does not count a range filter that was typed and then cleared', function () 
 
     $plan = trpPlan($component);
 
-    expect(array_keys($plan->state->activeFilters))->toBe(['weight'])
-        ->and($plan->state->hasActiveFilters)->toBeTrue();
+    expect(array_keys($plan->state()->activeFilters))->toBe(['weight'])
+        ->and($plan->state()->hasActiveFilters)->toBeTrue();
 });
 
 it('looks as deep as the filter value nests', function () {
@@ -128,7 +128,7 @@ it('looks as deep as the filter value nests', function () {
         'deep' => ['a' => ['b' => ['c' => 'yes']]],
     ]);
 
-    expect(array_keys(trpPlan($component)->state->activeFilters))->toBe(['deep']);
+    expect(array_keys(trpPlan($component)->state()->activeFilters))->toBe(['deep']);
 });
 
 it('reads column filters by the same rule', function () {
@@ -137,16 +137,16 @@ it('reads column filters by the same rule', function () {
 
     $plan = trpPlan($component);
 
-    expect(array_keys($plan->state->activeColumnFilters))->toBe(['name'])
-        ->and($plan->state->hasActiveFilters)->toBeTrue();
+    expect(array_keys($plan->state()->activeColumnFilters))->toBe(['name'])
+        ->and($plan->state()->hasActiveFilters)->toBeTrue();
 });
 
 it('has nothing active on a table nobody has touched', function () {
     $plan = trpPlan(trpComponent());
 
-    expect($plan->state->hasActiveFilters)->toBeFalse()
-        ->and($plan->state->activeFilters)->toBe([])
-        ->and($plan->state->activeColumnFilters)->toBe([]);
+    expect($plan->state()->hasActiveFilters)->toBeFalse()
+        ->and($plan->state()->activeFilters)->toBe([])
+        ->and($plan->state()->activeColumnFilters)->toBe([]);
 });
 
 it('treats a search on its own as an active filter', function () {
@@ -155,7 +155,7 @@ it('treats a search on its own as an active filter', function () {
     $component = trpComponent();
     $component->tableState->set('search', 'nothing matches this');
 
-    expect(trpPlan($component)->state->hasActiveFilters)->toBeTrue();
+    expect(trpPlan($component)->state()->hasActiveFilters)->toBeTrue();
 });
 
 it('survives a state container holding nulls where arrays belong', function () {
@@ -168,9 +168,9 @@ it('survives a state container holding nulls where arrays belong', function () {
 
     $plan = trpPlan($component);
 
-    expect($plan->state->filters)->toBe([])
-        ->and($plan->state->columnFilters)->toBe([])
-        ->and($plan->state->hasActiveFilters)->toBeFalse();
+    expect($plan->state()->filters)->toBe([])
+        ->and($plan->state()->columnFilters)->toBe([])
+        ->and($plan->state()->hasActiveFilters)->toBeFalse();
 });
 
 // ─── Columns ─────────────────────────────────────────────────────────────────
@@ -210,15 +210,15 @@ function trpWidePlan(): TableRenderPlan
 it('resolves the visible columns and skips the ones nobody may see', function () {
     $plan = trpWidePlan();
 
-    expect(array_map(fn ($c) => $c->getName(), array_values($plan->columns->visible)))
+    expect(array_map(fn ($c) => $c->getName(), array_values($plan->columns()->visible)))
         ->toBe(['name', 'role', 'note'])
-        ->and($plan->columns->hasVisible)->toBeTrue();
+        ->and($plan->columns()->hasVisible)->toBeTrue();
 });
 
 it('resolves column metadata once per column, keyed by name', function () {
     // The arithmetic that earns this: these are per-COLUMN answers a naive view
     // asks per CELL, so a 20x25 page asked each of them 500 times for 25 results.
-    $meta = trpWidePlan()->columns->meta;
+    $meta = trpWidePlan()->columns()->meta;
 
     expect(array_keys($meta))->toBe(['name', 'role', 'note'])
         ->and($meta['role']['editable'])->toBeTrue()
@@ -229,7 +229,7 @@ it('compiles each column a body cell with a slot for the record content', functi
     // The compiled <td>: every attribute on it is column-static, so the row loop
     // splices content into a prepared string rather than re-rendering the tag per
     // cell. A skeleton that lost its slot would silently render empty cells.
-    $meta = trpWidePlan()->columns->meta;
+    $meta = trpWidePlan()->columns()->meta;
 
     foreach ($meta as $name => $entry) {
         expect($entry)->toHaveKey('cell')
@@ -243,22 +243,22 @@ it('lists only the fillable columns, and turns the handle off without any', func
     // Fillable means writable: an editable column is, a plain TextColumn is not.
     // So a table can have fillHandle() on and still offer nothing to fill, which
     // is what isFillEnabled has to catch — a handle that writes nowhere.
-    expect(trpWidePlan()->columns->fillable)->toBe(['role'])
-        ->and(trpWidePlan()->columns->isFillEnabled)->toBeTrue()
+    expect(trpWidePlan()->columns()->fillable)->toBe(['role'])
+        ->and(trpWidePlan()->columns()->isFillEnabled)->toBeTrue()
         // The plain table has fillHandle() off AND no fillable column.
-        ->and(trpPlan(trpComponent())->columns->fillable)->toBe([])
-        ->and(trpPlan(trpComponent())->columns->isFillEnabled)->toBeFalse();
+        ->and(trpPlan(trpComponent())->columns()->fillable)->toBe([])
+        ->and(trpPlan(trpComponent())->columns()->isFillEnabled)->toBeFalse();
 });
 
 it('counts the selection and action columns into the colspan', function () {
     // Three visible columns + the selection cell. Off by one here and every
     // full-width row — empty state, group subtotal, summary footer — is wrong.
-    expect(trpWidePlan()->columns->colSpan)->toBe(4);
+    expect(trpWidePlan()->columns()->colSpan)->toBe(4);
 });
 
 it('knows whether any cell will render a copy button', function () {
-    expect(trpWidePlan()->columns->hasCopyable)->toBeTrue()
-        ->and(trpPlan(trpComponent())->columns->hasCopyable)->toBeFalse();
+    expect(trpWidePlan()->columns()->hasCopyable)->toBeTrue()
+        ->and(trpPlan(trpComponent())->columns()->hasCopyable)->toBeFalse();
 });
 
 it('keeps a hidden column in the toggle list but out of the visible count', function () {
@@ -269,34 +269,34 @@ it('keeps a hidden column in the toggle list but out of the visible count', func
     // now, which is what the menu's counter shows.
     $plan = trpWidePlan();
 
-    expect(array_map(fn ($c) => $c->getName(), array_values($plan->columns->toggleable)))
+    expect(array_map(fn ($c) => $c->getName(), array_values($plan->columns()->toggleable)))
         ->toBe(['name', 'role', 'secret', 'note'])
-        ->and($plan->columns->hasToggles)->toBeTrue()
+        ->and($plan->columns()->hasToggles)->toBeTrue()
         // 'secret' is hidden, so it is offered but not counted.
-        ->and($plan->columns->visibleToggleableCount)->toBe(3);
+        ->and($plan->columns()->visibleToggleableCount)->toBe(3);
 });
 
 it('lists the filterable columns separately', function () {
     $plan = trpWidePlan();
 
-    expect(array_map(fn ($c) => $c->getName(), array_values($plan->columns->filterable)))
+    expect(array_map(fn ($c) => $c->getName(), array_values($plan->columns()->filterable)))
         ->toBe(['name'])
-        ->and($plan->columns->hasFilters)->toBeTrue()
-        ->and(trpPlan(trpComponent())->columns->hasFilters)->toBeFalse();
+        ->and($plan->columns()->hasFilters)->toBeTrue()
+        ->and(trpPlan(trpComponent())->columns()->hasFilters)->toBeFalse();
 });
 
 it('offers no mobile sort control unless the table stacks on mobile', function () {
     // The stacked card view hides the header row that holds the sort buttons, so
     // the control only exists when that view can appear.
-    expect(trpWidePlan()->columns->mobileSortable)->toBe([])
-        ->and(trpWidePlan()->columns->hasMobileSort)->toBeFalse();
+    expect(trpWidePlan()->columns()->mobileSortable)->toBe([])
+        ->and(trpWidePlan()->columns()->hasMobileSort)->toBeFalse();
 });
 
 it('has no sub-row columns on a table without sub-rows', function () {
     $plan = trpWidePlan();
 
-    expect($plan->columns->subRow)->toBe([])
-        ->and($plan->columns->visibleSubRow)->toBe([]);
+    expect($plan->columns()->subRow)->toBe([])
+        ->and($plan->columns()->visibleSubRow)->toBe([]);
 });
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
@@ -343,7 +343,7 @@ function trpActionsPlan(bool $collapse = false): TableRenderPlan
 it('resolves all four action surfaces', function () {
     // Row, bulk, header and the stacked card's own list — the mobile one is
     // separate on purpose, because a finger has no double-click or right-click.
-    $actions = trpActionsPlan()->actions;
+    $actions = trpActionsPlan()->actions();
 
     expect($actions->hasAny)->toBeTrue()
         ->and($actions->row)->toHaveCount(2)
@@ -357,7 +357,7 @@ it('applies the configured row-action style', function () {
     // `quiet` is applied by the getter, to the Table's own Action instances —
     // it does not clone them. Pinned because the plan now calls that getter
     // earlier in the render than the view used to.
-    foreach (trpActionsPlan()->actions->row as $action) {
+    foreach (trpActionsPlan()->actions()->row as $action) {
         expect($action->isQuiet())->toBeTrue();
     }
 });
@@ -365,7 +365,7 @@ it('applies the configured row-action style', function () {
 it('builds no collapsed group and no header resolver unless asked to collapse', function () {
     // The three nullable members are gated on their own flag. Building a group
     // that is never rendered would be per-render work for nothing.
-    $actions = trpActionsPlan()->actions;
+    $actions = trpActionsPlan()->actions();
 
     expect($actions->collapseMobile)->toBeFalse()
         ->and($actions->mobileGroup)->toBeNull()
@@ -375,7 +375,7 @@ it('builds no collapsed group and no header resolver unless asked to collapse', 
 });
 
 it('builds them once collapsing is on', function () {
-    $actions = trpActionsPlan(collapse: true)->actions;
+    $actions = trpActionsPlan(collapse: true)->actions();
 
     expect($actions->collapseMobile)->toBeTrue()
         ->and($actions->mobileGroup)->not->toBeNull()
@@ -387,12 +387,12 @@ it('builds them once collapsing is on', function () {
 it('always carries the click resolver that maps an action to this host', function () {
     // The seam that lets wire-core's action views stay host-agnostic; unlike the
     // header one it is not optional, because the row actions always need it.
-    expect(trpActionsPlan()->actions->click)
+    expect(trpActionsPlan()->actions()->click)
         ->toBeInstanceOf(TableActionClickResolver::class);
 });
 
 it('falls back to the translated label for the actions column', function () {
-    $actions = trpActionsPlan()->actions;
+    $actions = trpActionsPlan()->actions();
 
     expect($actions->columnLabel)->toBe(__('wire-table::messages.actions_label'))
         ->and($actions->position)->toBe('start')
@@ -402,10 +402,10 @@ it('falls back to the translated label for the actions column', function () {
 it('has no actions at all on a table that declares none', function () {
     $plan = trpPlan(trpComponent());
 
-    expect($plan->actions->hasAny)->toBeFalse()
-        ->and($plan->actions->row)->toBe([])
-        ->and($plan->actions->hasBulk)->toBeFalse()
-        ->and($plan->actions->hasHeader)->toBeFalse();
+    expect($plan->actions()->hasAny)->toBeFalse()
+        ->and($plan->actions()->row)->toBe([])
+        ->and($plan->actions()->hasBulk)->toBeFalse()
+        ->and($plan->actions()->hasHeader)->toBeFalse();
 });
 
 // ─── Layout ──────────────────────────────────────────────────────────────────
@@ -443,8 +443,8 @@ function trpLayoutPlan(bool $dense): TableRenderPlan
 it('resolves the density and border a render uses', function () {
     // The padding maps are the Table's, so a cell rendered outside the main view
     // — the selection cell has its own partial — cannot drift from the rest.
-    $dense = trpLayoutPlan(dense: true)->layout;
-    $roomy = trpLayoutPlan(dense: false)->layout;
+    $dense = trpLayoutPlan(dense: true)->layout();
+    $roomy = trpLayoutPlan(dense: false)->layout();
 
     expect($dense->isBordered)->toBeTrue()
         ->and($roomy->isBordered)->toBeFalse()
@@ -455,7 +455,7 @@ it('resolves the density and border a render uses', function () {
 it('carries both halves of the stacked-on-mobile swap', function () {
     // Both are always in the document; only CSS decides which is shown, so the
     // two class strings have to be resolved together or they can disagree.
-    $layout = trpLayoutPlan(dense: true)->layout;
+    $layout = trpLayoutPlan(dense: true)->layout();
 
     expect($layout->isStackedOnMobile)->toBeTrue()
         ->and($layout->tableHiddenClass)->not->toBe('')
@@ -465,7 +465,7 @@ it('carries both halves of the stacked-on-mobile swap', function () {
 it('derives every sheet class from the one breakpoint', function () {
     // Five strings, one source. Resolving them together is what stops a partial
     // recomputing them from a breakpoint it was handed separately.
-    $layout = trpLayoutPlan(dense: true)->layout;
+    $layout = trpLayoutPlan(dense: true)->layout();
 
     expect($layout->sheetOnMobile)->toBeTrue()
         ->and($layout->sheetBreakpoint)->toBe('lg')
@@ -478,7 +478,7 @@ it('derives every sheet class from the one breakpoint', function () {
 it('still resolves the sheet classes when the sheet is switched off', function () {
     // The flag is what the view branches on; the classes stay resolved either
     // way, so nothing has to guard against reading a null.
-    $layout = trpLayoutPlan(dense: false)->layout;
+    $layout = trpLayoutPlan(dense: false)->layout();
 
     expect($layout->sheetOnMobile)->toBeFalse()
         ->and($layout->sheetPanel)->toBeString()
@@ -539,7 +539,7 @@ function trpSeedRows(int $count): void
 it('counts the whole set when the paginator can answer for it', function () {
     trpSeedRows(11);
 
-    $paging = trpPagedPlan('standard')->paging;
+    $paging = trpPagedPlan('standard')->paging();
 
     expect($paging->hasPaginator)->toBeTrue()
         ->and($paging->recordCount)->toBe(11)   // total(), not the 3-row page
@@ -558,7 +558,7 @@ it('never asks a simple or cursor paginator for a total it does not have', funct
     trpSeedRows(11);
 
     foreach (['simple', 'cursor'] as $mode) {
-        $paging = trpPagedPlan($mode)->paging;
+        $paging = trpPagedPlan($mode)->paging();
 
         expect($paging->hasPaginator)->toBeFalse()
             ->and($paging->recordCount)->toBe(3)
@@ -572,7 +572,7 @@ it('never asks a simple or cursor paginator for a total it does not have', funct
 it('counts a plain collection as the whole set', function () {
     trpSeedRows(11);
 
-    $paging = trpPagedPlan('none')->paging;
+    $paging = trpPagedPlan('none')->paging();
 
     expect($paging->hasPaginator)->toBeFalse()
         ->and($paging->recordCount)->toBe(11)
@@ -586,7 +586,7 @@ it('counts a plain collection as the whole set', function () {
 it('ranges from zero when there is nothing to show', function () {
     trpSeedRows(0);
 
-    $paging = trpPagedPlan('none')->paging;
+    $paging = trpPagedPlan('none')->paging();
 
     expect($paging->recordCount)->toBe(0)
         ->and($paging->rangeFrom)->toBe(0)
@@ -606,7 +606,7 @@ it('tells an empty result from a filtered-empty one', function () {
     $component->mountWithTable();
     $component->tableState->set('search', 'nothing matches this at all');
 
-    expect($component->tableRenderPlan()->paging->isEmptyDueToFilter)->toBeTrue();
+    expect($component->tableRenderPlan()->paging()->isEmptyDueToFilter)->toBeTrue();
 
     Schema::dropIfExists('trp_rows');
 });
@@ -614,8 +614,8 @@ it('tells an empty result from a filtered-empty one', function () {
 it('counts the column-filter row into the ARIA header offset', function () {
     // Header rows come first in the ARIA numbering. Miss the filter row and
     // every body index is off by one.
-    expect(trpPlan(trpComponent())->paging->headerRowCount)->toBe(1)
-        ->and(trpWidePlan()->paging->headerRowCount)->toBe(2);
+    expect(trpPlan(trpComponent())->paging()->headerRowCount)->toBe(1)
+        ->and(trpWidePlan()->paging()->headerRowCount)->toBe(2);
 });
 
 // ─── Interaction ─────────────────────────────────────────────────────────────
@@ -671,7 +671,7 @@ it('scopes the shortcut-help event to one component', function () {
     // help modal at once. The hash is lowercase because the listener lives in an
     // ATTRIBUTE NAME (x-on:{event}.window) and the DOM lowercases those — a
     // mixed-case Livewire id would never match what the controller dispatches.
-    $interaction = trpGesturePlan('full')->interaction;
+    $interaction = trpGesturePlan('full')->interaction();
 
     expect($interaction->shortcutHelpEvent)->toStartWith('wire-table-shortcut-help-')
         ->and(substr((string) $interaction->shortcutHelpEvent, -12))->toMatch('/^[0-9a-f]{12}$/')
@@ -681,7 +681,7 @@ it('scopes the shortcut-help event to one component', function () {
 it('hands the help event to the keyboard controller', function () {
     // The controller learns the event name through its keyboard config. The view
     // used to write this key back onto the array a dozen lines after building it.
-    $interaction = trpGesturePlan('full')->interaction;
+    $interaction = trpGesturePlan('full')->interaction();
 
     expect($interaction->keyboardNav)->toBeTrue()
         ->and($interaction->recordKeyboardConfig)->toHaveKey('help')
@@ -690,7 +690,7 @@ it('hands the help event to the keyboard controller', function () {
 
 it('emits no help event when the table has no legend to show', function () {
     // No event and no modal at all — not an event pointing at an empty modal.
-    $interaction = trpGesturePlan('nohelp')->interaction;
+    $interaction = trpGesturePlan('nohelp')->interaction();
 
     expect($interaction->shortcutLegend)->toBeNull()
         ->and($interaction->shortcutHelpEvent)->toBeNull()
@@ -703,8 +703,8 @@ it('marks no active row on a table where nothing continues from one', function (
     // The marker exists only where the keyboard, a range or a sweep carries on
     // from the marked row. A bare click binding runs the action and highlights
     // nothing, so this is null rather than an unused config.
-    $bare = trpGesturePlan('bare')->interaction;
-    $full = trpGesturePlan('full')->interaction;
+    $bare = trpGesturePlan('bare')->interaction();
+    $full = trpGesturePlan('full')->interaction();
 
     expect($bare->activeRowConfig)->toBeNull()
         ->and($bare->keyboardNav)->toBeFalse()
@@ -713,8 +713,8 @@ it('marks no active row on a table where nothing continues from one', function (
 });
 
 it('keeps the context menu independent of the actions column', function () {
-    expect(trpGesturePlan('full')->interaction->rowContextMenuEnabled)->toBeTrue()
-        ->and(trpGesturePlan('bare')->interaction->rowContextMenuEnabled)->toBeFalse();
+    expect(trpGesturePlan('full')->interaction()->rowContextMenuEnabled)->toBeTrue()
+        ->and(trpGesturePlan('bare')->interaction()->rowContextMenuEnabled)->toBeFalse();
 });
 
 it('resolves after a view has reconfigured the table, not before', function () {
@@ -743,7 +743,7 @@ it('resolves after a view has reconfigured the table, not before', function () {
         TextColumn::make('name'),
     ]);
 
-    expect(array_map(fn ($c) => $c->getName(), array_values($component->tableRenderPlan()->columns->visible)))
+    expect(array_map(fn ($c) => $c->getName(), array_values($component->tableRenderPlan()->columns()->visible)))
         ->toBe(['note', 'name']);
 
     Schema::dropIfExists('trp_rows');
@@ -768,7 +768,7 @@ it('gives one render one plan, and the next render its own', function () {
     $component->getTableProperty();
 
     expect($component->tableRenderPlan())->not->toBe($first)
-        ->and($component->tableRenderPlan()->state->search)->toBe('now set');
+        ->and($component->tableRenderPlan()->state()->search)->toBe('now set');
 
     Schema::dropIfExists('trp_rows');
 });
