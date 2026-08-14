@@ -248,6 +248,18 @@ it('flips the baseline from the master toggle', function () {
     expect($test->instance()->expandsSubRowsByDefault())->toBeFalse();
 });
 
+it('takes the full render, because the setting is shown outside the island', function () {
+    // The chevron that calls this sits in the header row, inside the
+    // `data-region` island, and Livewire targets the nearest enclosing island
+    // automatically — so without opting out, the response would carry the region
+    // alone and the toolbar's "expand on every row" checkbox would keep showing
+    // the old value. Only `verify-subrows-expansion.mjs` saw it; nothing here
+    // could, which is why the opt-out is pinned rather than left to a comment.
+    $test = Livewire::test(CeSubRowsComponent::class)->call('toggleAllRowExpansion');
+
+    expect($test->instance()->shouldSkipIslandsRender())->toBeTrue();
+});
+
 it('keeps toggleFlattenMode working as an alias of the master toggle', function () {
     $test = Livewire::test(CeSubRowsComponent::class)->call('toggleFlattenMode');
 

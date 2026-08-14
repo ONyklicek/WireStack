@@ -14,6 +14,15 @@
     // that proves it.
     $plan = $component->tableRenderPlan();
 
+    // This is the WRAPPER's half of the plan. The table, the stacked cards and the
+    // pagination footer moved to partials/data-region.blade.php, which is an
+    // ISLAND: Livewire renders an island body from its own view file, with the
+    // component and its public properties and nothing else, so it cannot inherit
+    // one line of what follows. It reads its own half from the same plan.
+    //
+    // What is left here is everything the region does not touch: the toolbar and
+    // its panels, the selection root, the polling wrapper and the modals.
+
     // The frame around the rows — whether it renders yet (lazy), how it keeps
     // itself current (poll, and the broadcast channel `live(broadcast: true)`
     // adds), and which optional regions exist at all. All resolved in
@@ -27,28 +36,21 @@
     $liveChannel = $plan->shell()->liveChannel;
     $filters = $plan->shell()->filters;
     $hasFilters = $plan->shell()->hasFilters;
-    $hasSubRows = $plan->shell()->hasSubRows;
     $isSubRowsExpandable = $plan->shell()->isSubRowsExpandable;
     $allRowsExpanded = $plan->shell()->allRowsExpanded;
-    $hasGrouping = $plan->shell()->hasGrouping;
-    $hasGroupSummaries = $plan->shell()->hasGroupSummaries;
     // The view menu earns its place from either section it can hold.
     $hasViewMenu = $plan->shell()->hasViewMenu;
     $viewMenuLabel = $plan->shell()->viewMenuLabel;
 
-    // Table state and everything derived from it now comes resolved, from
-    // TableRenderPlan — including which filters count as ACTIVE, a rule with a
-    // sharp edge (see the class) that used to live here as a recursive closure.
-    // The magic-property hazard this block used to warn about goes with it: the
-    // plan reads the state container, so there is nothing here to reach for.
+    // Table state. Which filters count as ACTIVE is a rule with a sharp edge (see
+    // TableQueryState) that used to live here as a recursive closure. The
+    // magic-property hazard this block used to warn about goes with it: the plan
+    // reads the state container, so there is nothing here to reach for.
     $tableFilters = $plan->state()->filters;
-    $columnFilterValues = $plan->state()->columnFilters;
     $activeTableFilters = $plan->state()->activeFilters;
-    $activeColumnFilters = $plan->state()->activeColumnFilters;
+    // The mobile sort control names the current column and direction.
     $sortColumn = $plan->state()->sortColumn;
     $sortDirection = $plan->state()->sortDirection;
-    $perPage = $plan->state()->perPage;
-    $hasActiveFilters = $plan->state()->hasActiveFilters;
 
     // Floating filter/column-toggle panels present as a bottom sheet on mobile
     // unless disabled via Table::sheetOnMobile(false) or the global config. The
@@ -60,113 +62,44 @@
     $sheetPanel = $plan->layout()->sheetPanel;
     $sheetMotion = $plan->layout()->sheetMotion;
     $sheetBackdrop = $plan->layout()->sheetBackdrop;
-    // Actions — the four surfaces (row, bulk, header, mobile card), their
-    // collapsed dropdown forms, and the click resolvers that keep wire-core's
-    // action views host-agnostic. All resolved in ActionRenderPlan.
-    $actions = $plan->actions()->row;
+    $cardsVisibleClass = $plan->layout()->cardsVisibleClass;
+
+    // Actions — the two surfaces the toolbar owns (bulk and header), their
+    // collapsed dropdown forms, and the click resolver that keeps wire-core's
+    // action views host-agnostic. Row and mobile-card actions belong to the
+    // region.
     $bulkActions = $plan->actions()->bulk;
     $headerActions = $plan->actions()->header;
-    $hasActions = $plan->actions()->hasAny;
-    $mobileActions = $plan->actions()->mobile;
-    $hasMobileActions = $plan->actions()->hasMobile;
-    $collapseMobileActions = $plan->actions()->collapseMobile;
-    $mobileActionGroup = $plan->actions()->mobileGroup;
+    $hasBulkActions = $plan->actions()->hasBulk;
+    $hasHeaderActions = $plan->actions()->hasHeader;
     $collapseHeaderActions = $plan->actions()->collapseHeader;
     $mobileHeaderActionGroup = $plan->actions()->mobileHeaderGroup;
     $headerActionClick = $plan->actions()->headerClick;
-    $actionClick = $plan->actions()->click;
 
-    // Row interaction — the pointer bindings, the two independently switchable
-    // halves of the gesture layer, the active-row marker and the `?` shortcut
-    // help. All resolved in InteractionRenderPlan, including folding the help
-    // event into the keyboard config (which this block used to write back after
-    // the fact). $shortcutLegend and $shortcutHelpEvent look unused below: they
-    // reach partials.shortcut-help-modal through @include scope inheritance.
-    $rowContextMenuEnabled = $plan->interaction()->rowContextMenuEnabled;
-    $recordActionBindings = $plan->interaction()->recordActionBindings;
-    $keyboardNav = $plan->interaction()->keyboardNav;
-    $tableRole = $plan->interaction()->tableRole;
-    $recordKeyboardConfig = $plan->interaction()->recordKeyboardConfig;
-    $recordActionsRootEnabled = $plan->interaction()->recordActionsRootEnabled;
-    $gestureConfig = $plan->interaction()->gestureConfig;
-    $activeRowConfig = $plan->interaction()->activeRowConfig;
+    // The `?` shortcut help. Both look unused below: they reach
+    // partials.shortcut-help-modal through @include scope inheritance.
     $shortcutLegend = $plan->interaction()->shortcutLegend;
     $shortcutHelpEvent = $plan->interaction()->shortcutHelpEvent;
-    $hasBulkActions = $plan->actions()->hasBulk;
-    $hasHeaderActions = $plan->actions()->hasHeader;
-    // The row and everything selection needs — the compiled <tr>, the checkbox
-    // cell, the per-row class binding and the live-region sentences. Resolved in
-    // RowRenderPlan; see it for why the markup is compiled once per TABLE.
+
+    // Selection lives on the wrapper, not in the region: the Alpine root has to
+    // enclose both renderings of the page (desktop rows and mobile cards) and the
+    // bulk bar above them, and it must survive a targeted render of the region.
     $isSelectable = $plan->row()->isSelectable;
-    $selectCheckIcon = $plan->row()->selectCheckIcon;
-    $hasSummaries = $plan->row()->hasSummaries;
-    $rowClassBinding = $plan->row()->rowClassBinding;
     $pageRecordKeys = $plan->row()->pageRecordKeys;
     $selectionSyncLive = $plan->row()->selectionSyncLive;
-    $isPaginated = $plan->paging()->isPaginated;
+    $selectionAnnouncements = $plan->row()->selectionAnnouncements;
 
-    // Columns, and everything derived from them — which visible column set the
-    // page has, the per-column render metadata (including each column's compiled
-    // <td> skeleton), and the lists the fill handle, the column filters, the
-    // column toggles and the mobile sort control each read. All resolved once,
-    // in TableRenderPlan; see the class for why the metadata is per-column
-    // rather than per-cell.
-    $visibleColumns = $plan->columns()->visible;
-    $hasVisibleColumns = $plan->columns()->hasVisible;
-    $columnMeta = $plan->columns()->meta;
-    $fillColumns = $plan->columns()->fillable;
-    $isFillEnabled = $plan->columns()->isFillEnabled;
-    $filterableColumns = $plan->columns()->filterable;
-    $hasColumnFilters = $plan->columns()->hasFilters;
-    $subRowColumns = $plan->columns()->subRow;
-    $visibleSubRowColumns = $plan->columns()->visibleSubRow;
-    $hasCopyableColumn = $plan->columns()->hasCopyable;
-    $colSpan = $plan->columns()->colSpan;
+    // What the toolbar's column menu, the mobile sort control and the clipboard
+    // controller each read.
     $toggleableColumns = $plan->columns()->toggleable;
     $visibleToggleableCount = $plan->columns()->visibleToggleableCount;
     $hasColumnToggles = $plan->columns()->hasToggles;
     $mobileSortableColumns = $plan->columns()->mobileSortable;
     $hasMobileSort = $plan->columns()->hasMobileSort;
+    $hasCopyableColumn = $plan->columns()->hasCopyable;
 
-    // Action configuration
-    $actionsPosition = $plan->actions()->position; // 'start' or 'end'
-    // ($plan->actions()->alignment is the raw 'left'/'center'/'right'; nothing in
-    // any view reads it — the class below is what gets rendered.)
-    $actionsAlignmentClass = $plan->actions()->alignmentClass; // literal text-* utility
-    $actionsJustifyClass = $plan->actions()->justifyClass; // literal justify-* utility
-    $actionsColumnLabel = $plan->actions()->columnLabel;
-    $actionsColumnWidth = $plan->actions()->columnWidth;
-
-    // Table styling. Row hover/striping/tint is composed in
-    // Table::getRowClasses($record, $rowIndex), not here. Table::isCompact() is
-    // not carried: it feeds the padding maps below and no view reads it directly.
-    $isBordered = $plan->layout()->isBordered;
-    $cellPadding = $plan->layout()->cellPadding;
-    $headerPadding = $plan->layout()->headerPadding;
-
-    // The body cell is compiled once per column, into $columnMeta[...]['cell'] —
-    // see ColumnRenderPlan::meta(), which owns it now.
-
-    // Responsive layout — literal Tailwind class names, never interpolated.
-    $isStackedOnMobile = $plan->layout()->isStackedOnMobile;
-    $tableHiddenClass = $plan->layout()->tableHiddenClass;
-    $cardsVisibleClass = $plan->layout()->cardsVisibleClass;
-
-    // Where this page sits in the whole result set — read by the footer's
-    // "from - to of total" line and, before it, by aria-rowindex, since an ARIA
-    // row index counts through the entire grid rather than the page. Resolved in
-    // PagingRenderPlan, which is also where the rule lives that only a
-    // length-aware paginator may be asked for a total or an item offset.
-    $hasPaginator = $plan->paging()->hasPaginator;
+    // The size of the whole result set, for the selection strip's "n of N".
     $recordCount = $plan->paging()->recordCount;
-    $isEmptyDueToFilter = $plan->paging()->isEmptyDueToFilter;
-    $rangeFrom = $plan->paging()->rangeFrom;
-    $rangeTo = $plan->paging()->rangeTo;
-    $headerRowCount = $plan->paging()->headerRowCount;
-
-    $rowSkeleton = $plan->row()->rowSkeleton;
-    $selectionCellSkeleton = $plan->row()->selectionCellSkeleton;
-    $selectionAnnouncements = $plan->row()->selectionAnnouncements;
 @endphp
 
 {{-- Lazy loading: trigger load when visible --}}
@@ -693,10 +626,28 @@
                         </div>
                     @endif
 
-                    {{-- Table --}}
-                    {{-- `relative` is the positioning context the fill handle and its
-                         range overlay are placed against, so they scroll with the table. --}}
-                    @include('wire-table::tables.partials.data-region')
+                    {{-- The table, the stacked cards and the pagination footer.
+
+                         An island, so a row change costs the rows instead of the
+                         page. Anything that fires an action from inside these
+                         markers targets it automatically — Livewire's JS walks up
+                         to the nearest island fragment, no attribute needed — so a
+                         sort, a page, a cell save, a sub-row expansion or a row
+                         action renders THIS ALONE and leaves the toolbar, the
+                         filter panels and the modals untouched and un-morphed.
+
+                         `always` matters for the other direction: a request that
+                         does not target the island — a search, a filter, a column
+                         toggle, a poll tick — must still re-render it, or the rows
+                         behind it go stale. With it, every untargeted path behaves
+                         exactly as before.
+
+                         The region has its own `@php` scope because an island body
+                         cannot see one line of this view's locals. See the partial.
+                         --}}
+                    @island('data-region', always: true)
+                        @include('wire-table::tables.partials.data-region')
+                    @endisland
                 </div>
 
                 {{-- Action Modal.

@@ -96,6 +96,18 @@ trait CanExpandSubRows
      */
     public function toggleAllRowExpansion(): void
     {
+        // This one setting is shown in two places on opposite sides of the
+        // `data-region` island: the chevron in the header row, and the "expand on
+        // every row" checkbox in the toolbar's view menu. Livewire targets the
+        // nearest enclosing island automatically, so the chevron's click would
+        // come back as the region alone and leave the checkbox showing the old
+        // value — `verify-subrows-expansion.mjs` is what noticed.
+        //
+        // So this write opts out of island rendering and takes the full render.
+        // It is a once-in-a-while table-wide switch, not a per-row or per-keystroke
+        // path, and the two controls agreeing is worth more than the saving.
+        $this->skipIslandsRender();
+
         $this->setSubRowsExpandAll(! $this->expandsSubRowsByDefault());
     }
 

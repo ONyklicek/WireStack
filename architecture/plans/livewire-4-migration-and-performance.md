@@ -997,6 +997,31 @@ fact.
 2. **Rows island.** The next win — chrome stops re-rendering on every
    interaction. Gate: the decomposition benchmark, and a driver that asserts a
    cell save leaves the toolbar's DOM untouched.
+
+   **Done, 2026-08-15.** Landed as `@island('data-region', always: true)` in two
+   commits: a pure extraction of the region into
+   `partials/data-region.blade.php` (byte-identical), then the island itself.
+
+   **The boundary is wider than "rows", and deliberately so.** It holds the
+   desktop table, the stacked mobile cards *and* the pagination footer, because
+   one call can target exactly one island — `SupportIslands::call()` reads a
+   single `$metadata['island']` — and all three change together. The cards are a
+   second full rendering of the same records; the footer's "showing 1 - 10 of
+   240" moves when an edit drops a row out of the active filter. Leaving either
+   outside would have made the island a staleness generator, which is the ERP
+   trap in 5.4.2.
+
+   Measured on `/previews/table-overview` by `verify-rows-island.mjs`, comparing
+   like with like — a targeted sort against a full render of **the same four
+   rows**: **64 240 B of markup against 113 160 B, 43 % less**. The comparison
+   matters more than the number: measuring the whole response body would have
+   said 2 %, because the snapshot rides along either way and dwarfs the
+   difference. The saving is fixed-size chrome, so the percentage falls as rows
+   grow while the ~49 kB stays.
+
+   The decomposition benchmark's byte fit is unchanged apart from the fragment
+   markers — 25 699 B/row + 89 120 B fixed against 88 860 B before, i.e. **+260 B
+   for the whole mechanism**.
 3. **Measure the `islands` memo** before going finer. `SupportIslands::dehydrate()`
    adds every island's name and token to the snapshot, so per-row islands grow it
    linearly in rows. Fine at 20; the question is 200. Gate: snapshot size at 20,
@@ -1027,6 +1052,41 @@ properties are load-bearing here rather than incidental:
 - the plan resolves **per group, on first ask**, so a rows island pays for
   `columns()` alone. An eagerly-built plan would put a fixed floor under every
   island and undo the proportionality that is the whole point.
+
+#### 5.4.4a Targeting is automatic, so the boundary *is* the policy
+
+The thing that changes how the rest of this plan should be read, found in
+Livewire's JS rather than its docs (`supportIslands.js`, `interceptAction`):
+
+```js
+let islandAttr = …find(attr => attr.name.startsWith('wire:island'))
+if (islandAttr) { …; return }            // an explicit target wins
+let fragment = closestIsland(origin.el)  // otherwise: the nearest island ANCESTOR
+if (!fragment) return
+action.mergeMetadata({ island: { name: fragment.metadata.name, mode: 'morph' } })
+```
+
+**Any action fired from inside an island targets that island, with no attribute
+at all.** `wire:island="…"` is for the other case — targeting an island from
+outside it, which is exactly what the modal buttons need and why they carry it.
+
+Two consequences worth writing down:
+
+- **Drawing the boundary is the whole design decision.** There is no separate
+  step where targeting gets wired up: put the region in an island and every sort,
+  page, cell save, sub-row toggle and row action inside it becomes targeted at
+  once. So the boundary has to enclose *everything a change inside it can alter* —
+  which is why the footer is in, and why the toolbar (which nothing inside can
+  change) is out.
+- **`wire:island="action-modals"` on a row action is load-bearing, not
+  decoration.** Row actions sit inside the data region, so without the attribute
+  a modal-opening click would target the region instead and never render the
+  modal. It was added for the opposite reason — to target from outside — and now
+  also protects against being captured by the enclosing island.
+
+Teleported markup is outside all of this: a modal's own submit button lives under
+`<body>` via `x-teleport`, so `closestIsland()` finds nothing and it does a full
+render, which is what a write needs.
 
 #### 5.4.5 The prerequisite the first island turned up: islands vs. Htmlable
 
@@ -1067,6 +1127,25 @@ Two things follow for the rest of the plan:
 - **it is a Livewire gap, not a mistake here.** Any app rendering a Blade view
   from PHP inside an island hits it. Worth reporting upstream; the fix here is
   ~10 lines on a public hook and does not wait on that.
+
+The rows island turned up the **mirror image**, and it is the more dangerous of
+the two because it does not throw. `Table::toHtml()` — rule 3's
+`{{ $table }}` — renders the component's own view straight from PHP, outside
+Livewire's pipeline, so nothing shares `$__livewire`. And `@island` compiles to:
+
+```php
+if (isset($__livewire)) echo $__livewire->renderIslandDirective(…);
+```
+
+Guarded. Missing scope is not an error, it is **silence**: the table rendered its
+toolbar, its filter panels, its modals — and not one row. Caught by
+`TableHtmlableTest`, which asserts the echo contains a record.
+
+`IslandViewScope::within()` covers that path, and the shape generalises: **the
+moment any part of a view moves into an island, every render of that view outside
+Livewire's pipeline must borrow the scope or lose that part silently.** The test
+pins both halves — bare render missing the body, scoped render carrying it — so
+the trap is documented by something that fails rather than by this paragraph.
 
 ---
 

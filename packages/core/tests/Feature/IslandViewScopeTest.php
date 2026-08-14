@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Support\Htmlable;
 use Livewire\Component;
+use Livewire\Drawer\Utils;
 use Livewire\Livewire;
+use NyonCode\WireCore\Foundation\Support\IslandViewScope;
 
 /**
  * An island has to be able to render this framework's modals.
@@ -83,4 +85,33 @@ it('still renders the same modal through a full component render', function () {
     expect(Livewire::test(IvsHost::class)->html())
         ->toContain('Delete?')
         ->toContain('.entangle(');
+});
+
+it('renders a component view containing an island straight from PHP', function () {
+    // The other path with no shared scope, and the one rule 3 depends on: a
+    // component's own view rendered from PHP rather than through Livewire.
+    // `@island` compiles to a directive guarded on `$__livewire`, so without the
+    // scope it emits NOTHING — no error, no content. A view whose body lives in
+    // an island would render its chrome and none of its body.
+    $component = Livewire::test(IvsHost::class)->instance();
+
+    $view = Utils::generateBladeView($component->render());
+
+    // Straight through Blade: no Livewire pipeline, so nothing shares the scope.
+    expect($view->render())->not->toContain('Delete?')
+        // …and with it borrowed for the render, the island body is there.
+        ->and(IslandViewScope::within($component, fn (): string => $view->render()))
+        ->toContain('Delete?');
+});
+
+it('hands the scope back even when the render throws', function () {
+    // It borrows global state; a leak would outlive the request and answer
+    // `@this` for unrelated views.
+    $component = Livewire::test(IvsHost::class)->instance();
+
+    expect(fn () => IslandViewScope::within($component, function (): string {
+        throw new RuntimeException('render failed');
+    }))->toThrow(RuntimeException::class);
+
+    expect(view()->shared('__livewire', 'absent'))->toBe('absent');
 });

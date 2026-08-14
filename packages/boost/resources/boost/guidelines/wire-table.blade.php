@@ -284,6 +284,17 @@ already gives you:
   Blade renders (an eager group renders one view per item per row). Opt-in; the default is eager.
   Trade-offs: keyboard shortcuts and `wire:click` modifiers on menu items are not wired in lazy
   mode. Reach for it on large tables whose every row carries a multi-item action dropdown.
+- **An interaction inside the table re-renders only the table.** The desktop table, the stacked
+  mobile cards and the pagination footer are one Livewire island, and Livewire targets the nearest
+  enclosing island automatically — so a sort, a page change, a cell save, a sub-row expansion or a
+  row action renders that region alone and leaves the toolbar, the filter panels and the modals
+  neither rendered nor morphed (43% less markup on a small table; the saving is fixed-size chrome,
+  so it is a smaller share of a bigger page but the same absolute bytes). Anything fired from
+  **outside** the table — the search box, a filter, a column toggle, a poll tick — still renders
+  everything, so nothing goes stale. You get this without asking for it; the one thing to know is
+  that a **custom action whose only effect is outside the table region** (say it writes a property
+  that a heading above the table reads) will not repaint that heading when fired from a row. Put
+  such an action in the toolbar, or have it dispatch to the surface that owns the heading.
 - **Opening an action modal does not re-render the table.** Any action with a modal renders
   `wire:island="action-modals"`, and a call targeting an island makes Livewire skip the component
   render and return the island alone — the modal instead of every cell behind it (9.5 KB against

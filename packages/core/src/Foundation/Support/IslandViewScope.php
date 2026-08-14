@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Foundation\Support;
 
+use Closure;
 use Illuminate\Contracts\Support\Htmlable;
 use Livewire\Drawer\Utils;
 
@@ -45,5 +46,34 @@ final class IslandViewScope
                 $revertInstance();
             };
         });
+    }
+
+    /**
+     * Render something with the component in view scope, as a full render has it.
+     *
+     * For the render that does NOT go through Livewire's pipeline at all: a
+     * component's own view rendered straight from PHP, which is what
+     * `AI_CODING_STANDARD.md` rule 3 asks of every `Htmlable` — `{{ $table }}`
+     * must produce the table without a helper.
+     *
+     * Nothing shares `$__livewire` on that path, and `@island` compiles to
+     * `if (isset($__livewire)) echo $__livewire->renderIslandDirective(…)`. The
+     * guard means a missing component does not throw — it emits **nothing**, so a
+     * view whose content sits inside an island renders its chrome and none of its
+     * content, silently. Borrowing the scope for the duration restores it.
+     *
+     * @param  Closure(): string  $render
+     */
+    public static function within(mixed $component, Closure $render): string
+    {
+        $revertLivewire = Utils::shareWithViews('__livewire', $component);
+        $revertInstance = Utils::shareWithViews('_instance', $component);
+
+        try {
+            return $render();
+        } finally {
+            $revertLivewire();
+            $revertInstance();
+        }
     }
 }

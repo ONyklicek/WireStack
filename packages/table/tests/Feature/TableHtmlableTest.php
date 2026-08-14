@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
+use NyonCode\WireCore\Foundation\Support\IslandViewScope;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Exceptions\TableHasNoHostException;
@@ -87,8 +88,18 @@ it('renders through the host, so it honours the host view', function () {
     // wire-sortable's wrapper, which is what mounts the drag controller.
     $component = Livewire::test(ThtHost::class)->instance();
 
-    expect($component->getTable()->toHtml())
-        ->toBe($component->getTableProperty()->render());
+    // Compared against the host's view rendered WITH the component in view scope,
+    // which is what toHtml() now does and what a Livewire render does for free.
+    // A naked ->render() is no longer the same thing: the rows live in an
+    // `@island`, and `@island` compiles to a directive guarded on `$__livewire`,
+    // so without that scope it emits nothing at all — chrome, and no rows.
+    $scoped = IslandViewScope::within(
+        $component,
+        fn (): string => $component->getTableProperty()->render(),
+    );
+
+    expect($component->getTable()->toHtml())->toBe($scoped)
+        ->and($scoped)->toContain('<table');
 });
 
 it('refuses to render a table that has no host, and says why', function () {

@@ -26,6 +26,7 @@ use NyonCode\WireCore\Foundation\Enums\Alignment;
 use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
+use NyonCode\WireCore\Foundation\Support\IslandViewScope;
 use NyonCode\WireCore\Foundation\ValueObjects\ShortcutHint;
 use NyonCode\WireCore\Foundation\View\Skeleton;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
@@ -2784,6 +2785,13 @@ class Table implements Htmlable
             throw TableHasNoHostException::make();
         }
 
-        return $component->getTableProperty()->render();
+        // Rendering the view directly is not a Livewire render, so nothing shares
+        // the component with the view factory — and the table's rows live in an
+        // `@island`, which emits NOTHING without it rather than throwing. See
+        // IslandViewScope::within().
+        return IslandViewScope::within(
+            $component,
+            fn (): string => $component->getTableProperty()->render(),
+        );
     }
 }

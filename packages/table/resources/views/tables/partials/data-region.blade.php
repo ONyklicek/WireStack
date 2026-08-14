@@ -1,3 +1,122 @@
+{{--
+    The data region: the desktop table, the stacked mobile cards, and the
+    pagination footer under both.
+
+    An ISLAND, which is why it has a scope of its own instead of inheriting the
+    wrapper's. Livewire extracts an `@island` body into its own view file at
+    compile time and renders it with the component plus its public properties —
+    `HandlesIslands::renderIslandView()` — and nothing else. Not one of the
+    wrapper's locals reaches here, so the region asks the same plan the wrapper
+    asks and reads its own half.
+
+    What that buys: an action fired from anything inside these markers targets the
+    island automatically (`closestIsland()` in Livewire's JS — no attribute
+    needed), so a sort, a page, a cell save, a sub-row expansion or a row action
+    makes the server render THIS ALONE and skip the toolbar, the filter panels and
+    the modals. The boundary is drawn where it is for that reason: everything a
+    row change can alter is inside it, including the "showing 1 - 10 of 240" line
+    and the page links, which move when an edit drops a row out of the filter.
+
+    Rendered through `@island(always: true)`, so a request that does NOT target it
+    still renders it — a search, a filter, a column toggle, a poll tick. Without
+    `always` those would leave the rows behind stale.
+--}}
+@php
+    use NyonCode\WireTable\Table;
+
+    /** @var mixed $__livewire */
+    $component = $__livewire;
+    $table = $component->getTable();
+    $records = $component->getTableRecords();
+    $plan = $component->tableRenderPlan();
+
+    assert($table instanceof Table);
+
+    // Sub-rows and grouping — the regions inside the body that are their own
+    // shape of row.
+    $hasSubRows = $plan->shell()->hasSubRows;
+    $isSubRowsExpandable = $plan->shell()->isSubRowsExpandable;
+    $allRowsExpanded = $plan->shell()->allRowsExpanded;
+    $hasGrouping = $plan->shell()->hasGrouping;
+    $hasGroupSummaries = $plan->shell()->hasGroupSummaries;
+
+    // What the header row's own filter inputs and sort indicators show.
+    $columnFilterValues = $plan->state()->columnFilters;
+    $activeColumnFilters = $plan->state()->activeColumnFilters;
+    $sortColumn = $plan->state()->sortColumn;
+    $sortDirection = $plan->state()->sortDirection;
+    $perPage = $plan->state()->perPage;
+
+    // Row and mobile-card actions, and the resolver that keeps wire-core's action
+    // views host-agnostic.
+    $actions = $plan->actions()->row;
+    $hasActions = $plan->actions()->hasAny;
+    $mobileActions = $plan->actions()->mobile;
+    $hasMobileActions = $plan->actions()->hasMobile;
+    $collapseMobileActions = $plan->actions()->collapseMobile;
+    $mobileActionGroup = $plan->actions()->mobileGroup;
+    $actionClick = $plan->actions()->click;
+    $actionsPosition = $plan->actions()->position; // 'start' or 'end'
+    $actionsAlignmentClass = $plan->actions()->alignmentClass; // literal text-* utility
+    $actionsJustifyClass = $plan->actions()->justifyClass; // literal justify-* utility
+    $actionsColumnLabel = $plan->actions()->columnLabel;
+    $actionsColumnWidth = $plan->actions()->columnWidth;
+
+    // Row interaction — the pointer bindings, the two independently switchable
+    // halves of the gesture layer, and the active-row marker.
+    $rowContextMenuEnabled = $plan->interaction()->rowContextMenuEnabled;
+    $recordActionBindings = $plan->interaction()->recordActionBindings;
+    $keyboardNav = $plan->interaction()->keyboardNav;
+    $tableRole = $plan->interaction()->tableRole;
+    $recordKeyboardConfig = $plan->interaction()->recordKeyboardConfig;
+    $recordActionsRootEnabled = $plan->interaction()->recordActionsRootEnabled;
+    $gestureConfig = $plan->interaction()->gestureConfig;
+    $activeRowConfig = $plan->interaction()->activeRowConfig;
+
+    // The row itself: the compiled <tr>, the checkbox cell and the per-row class
+    // binding. Compiled once per TABLE — see RowRenderPlan.
+    $rowSkeleton = $plan->row()->rowSkeleton;
+    $selectionCellSkeleton = $plan->row()->selectionCellSkeleton;
+    $rowClassBinding = $plan->row()->rowClassBinding;
+    $isSelectable = $plan->row()->isSelectable;
+    $selectCheckIcon = $plan->row()->selectCheckIcon;
+    $hasSummaries = $plan->row()->hasSummaries;
+    $pageRecordKeys = $plan->row()->pageRecordKeys;
+
+    // Columns, and everything derived from them — the visible set, the per-column
+    // render metadata (including each column's compiled <td> skeleton), and the
+    // lists the fill handle and the column filters read.
+    $visibleColumns = $plan->columns()->visible;
+    $hasVisibleColumns = $plan->columns()->hasVisible;
+    $columnMeta = $plan->columns()->meta;
+    $fillColumns = $plan->columns()->fillable;
+    $isFillEnabled = $plan->columns()->isFillEnabled;
+    $filterableColumns = $plan->columns()->filterable;
+    $hasColumnFilters = $plan->columns()->hasFilters;
+    $subRowColumns = $plan->columns()->subRow;
+    $visibleSubRowColumns = $plan->columns()->visibleSubRow;
+    $colSpan = $plan->columns()->colSpan;
+
+    // Table styling. Row hover/striping/tint is composed in
+    // Table::getRowClasses($record, $rowIndex), not here.
+    $isBordered = $plan->layout()->isBordered;
+    $cellPadding = $plan->layout()->cellPadding;
+    $headerPadding = $plan->layout()->headerPadding;
+    $isStackedOnMobile = $plan->layout()->isStackedOnMobile;
+    $tableHiddenClass = $plan->layout()->tableHiddenClass;
+    $cardsVisibleClass = $plan->layout()->cardsVisibleClass;
+
+    // Where this page sits in the whole result set — read by the footer's
+    // "from - to of total" line and, before it, by aria-rowindex, since an ARIA
+    // row index counts through the entire grid rather than the page.
+    $isPaginated = $plan->paging()->isPaginated;
+    $hasPaginator = $plan->paging()->hasPaginator;
+    $recordCount = $plan->paging()->recordCount;
+    $isEmptyDueToFilter = $plan->paging()->isEmptyDueToFilter;
+    $rangeFrom = $plan->paging()->rangeFrom;
+    $rangeTo = $plan->paging()->rangeTo;
+    $headerRowCount = $plan->paging()->headerRowCount;
+@endphp
                     <div class="relative overflow-x-auto {{ $tableHiddenClass }}"
                          @if($isFillEnabled)
                              x-data="wireFillHandle()"
