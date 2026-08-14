@@ -238,7 +238,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
             $expression,
         ));
 
-        // Octane: two memos that are per-request everywhere else become
+        // Octane: three memos that are per-request everywhere else become
         // per-worker-lifetime here, so flush them as each request ends.
         //
         // The view-render memo is a class static that would otherwise accumulate
@@ -249,6 +249,11 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // would never fire. Since the toolkit owns the tag there is one memo to
         // flush, not two.
         //
+        // RecordVersion's baselines are the third, and the one where a leak would
+        // be a correctness bug rather than a stale URL: a baseline is "the stamp
+        // this REQUEST first saw", and holding one into the next request would
+        // forgive an optimistic-lock version that has genuinely gone stale since.
+        //
         // Referenced by string, not ::class import: laravel/octane is an optional
         // dependency the package does not require, so the symbol may not exist.
         $octaneRequestTerminated = 'Laravel\\Octane\\Events\\RequestTerminated';
@@ -256,6 +261,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
             Event::listen($octaneRequestTerminated, function (): void {
                 Component::flushViewRenderCache();
                 $this->app->make(PublishedAssets::class)->flush();
+                $this->app->make(RecordVersion::class)->flush();
             });
         }
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
@@ -156,6 +157,36 @@ class WtiTsComponent extends Component
     {
         return $this->getTableProperty();
     }
+}
+
+/** Two editable columns on one row — the shape that produced the false conflict. */
+class WtiRaceComponent extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(WtiTsUser::class)
+            ->paginated(false)
+            ->columns([
+                TextInputColumn::make('name'),
+                TextInputColumn::make('email'),
+            ]);
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+function wtiRaceComponent(): WtiRaceComponent
+{
+    $component = new WtiRaceComponent;
+    $component->mountWithTable();
+
+    return $component;
 }
 
 function wtiComponent(): WtiComponent
@@ -504,6 +535,63 @@ it('rejects a stale edit as an optimistic-lock conflict and returns the current 
     // The edit was rejected — the row is untouched.
     expect(WtiTsUser::find(1)->name)->toBe('Amelia');
 
+    Schema::dropIfExists('wti_ts_users');
+});
+
+it('accepts a second cell of the same row carrying the version from before this request wrote', function () {
+    // Two cells of one row, edited in the same tick. Livewire bundles calls made
+    // in one tick into a SINGLE request and runs them in order, so both arrive
+    // holding the stamp their shared render read. The first write moves
+    // `updated_at`, and the second used to be refused as "modified by another
+    // user" — by the very request that moved it, one call earlier.
+    //
+    // The client cannot avoid it: `wire-editable-committed`, which teaches
+    // sibling cells the new version, is dispatched from the commit's RESPONSE
+    // handler, long after a sibling in the same request was serialised.
+    Schema::create('wti_ts_users', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->string('email');
+        $table->timestamps();
+    });
+
+    Carbon::setTestNow(now()->startOfMinute());
+    $user = WtiTsUser::create(['name' => 'Amelia', 'email' => 'amelia@example.test']);
+    $held = (string) $user->updated_at->getTimestamp();
+
+    // The stamp is `updated_at` in WHOLE SECONDS, so without this the two writes
+    // would share one and the lock could not fire either way — the bug needs the
+    // first write to genuinely move the stamp, and so does the test.
+    Carbon::setTestNow(now()->addSeconds(5));
+
+    $component = wtiRaceComponent();
+
+    $first = $component->updateTableCell('1', 'name', 'Renamed', $held);
+    expect($first['success'])->toBeTrue();
+
+    // The premise: the row really did move under the second cell.
+    expect((string) WtiTsUser::find(1)->updated_at->getTimestamp())->not->toBe($held);
+
+    $second = $component->updateTableCell('1', 'email', 'new@example.test', $held);
+
+    expect($second['success'])->toBeTrue()
+        ->and($second['conflict'] ?? false)->toBeFalse();
+
+    // Both writes landed. Before the fix the second was rejected and lost.
+    $fresh = WtiTsUser::find(1);
+    expect($fresh->name)->toBe('Renamed')
+        ->and($fresh->email)->toBe('new@example.test');
+
+    // The forgiveness is for exactly one stamp — the one the row carried when the
+    // request opened. A version that was never this row's is still a conflict, so
+    // the cross-client guarantee is untouched.
+    $forged = $component->updateTableCell('1', 'name', 'Nope', '1');
+
+    expect($forged['success'])->toBeFalse()
+        ->and($forged['conflict'] ?? false)->toBeTrue()
+        ->and(WtiTsUser::find(1)->name)->toBe('Renamed');
+
+    Carbon::setTestNow();
     Schema::dropIfExists('wti_ts_users');
 });
 

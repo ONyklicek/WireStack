@@ -412,6 +412,13 @@ it('refuses a fill still carrying the versions from before an earlier one', func
 
     $component->fillTableCells(fhFillVersioned('status', 'doing', $stale));
 
+    // Two drags are two requests, and a request starts with no version baselines:
+    // an app rebuilds the container that owns RecordVersion for each one. A test
+    // process has no such boundary, so it is drawn here — without it these two
+    // fills are one request, which is the case the next test covers and where the
+    // stale versions are deliberately forgiven.
+    app(RecordVersion::class)->flush();
+
     // The second fill never saw the first one's answer — every row is stale now.
     $second = $component->fillTableCells(fhFillVersioned('status', 'done', $stale));
 
@@ -421,6 +428,41 @@ it('refuses a fill still carrying the versions from before an earlier one', func
         ->and($second['results']['status']['3']['conflict'])->toBeTrue()
         // Nothing moved: the rows still hold what the FIRST fill wrote.
         ->and(fhStatuses())->toBe([1 => 'doing', 2 => 'doing', 3 => 'doing', 9 => 'open']);
+
+    Carbon::setTestNow();
+});
+
+it('accepts a second fill that rides in the same request as the first', function () {
+    // The other side of the boundary above. Livewire bundles calls made in one
+    // tick into a SINGLE request, so two fills can arrive together — and the
+    // second still carries the versions read before the first one wrote, because
+    // the response that would have refreshed them has not been sent yet.
+    //
+    // Refusing that was the false conflict: nobody else touched the rows, this
+    // very request did. Inside one request the earlier stamp stays acceptable.
+    $component = fhComponent();
+    $stale = fhVersions([1, 2, 3]);
+
+    // Same trick as above — without it the two writes share a second and the lock
+    // could not fire either way, so the test would pass without proving anything.
+    Carbon::setTestNow(Carbon::now()->addSeconds(2));
+
+    $first = $component->fillTableCells(fhFillVersioned('status', 'doing', $stale));
+    expect($first['success'])->toBeTrue();
+
+    // No flush: this is still the same request.
+    $second = $component->fillTableCells(fhFillVersioned('status', 'done', $stale));
+
+    expect($second['success'])->toBeTrue()
+        ->and(fhStatuses())->toBe([1 => 'done', 2 => 'done', 3 => 'done', 9 => 'open']);
+
+    // The forgiveness is for the baseline only. A version that was never these
+    // rows' is still refused, in the same request, right after our own writes.
+    $forged = $component->fillTableCells(fhFillVersioned('status', 'nope', ['1' => '1', '2' => '1', '3' => '1']));
+
+    expect($forged['success'])->toBeFalse()
+        ->and($forged['results']['status']['1']['conflict'])->toBeTrue()
+        ->and(fhStatuses())->toBe([1 => 'done', 2 => 'done', 3 => 'done', 9 => 'open']);
 
     Carbon::setTestNow();
 });

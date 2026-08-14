@@ -33,28 +33,30 @@ import { openPage, checker, sleep } from './lib/cdp.mjs';
  * conflict branch is also exercised deterministically, by handing the server a
  * version that is definitely stale.
  *
- * WHAT THIS DRIVER FOUND, AND NOW PINS
+ * WHAT THIS DRIVER FOUND, AND NOW GUARDS
  *
  * Two same-tick commits are not two requests. Livewire bundles them into ONE
  * (`requests: 1, maxInFlight: 1` — printed below), and the server then runs them
  * in order within it. The first write moves the record's `updated_at`; the second
- * arrives carrying the version read at RENDER time, no longer matches, and is
+ * arrived carrying the version read at RENDER time, no longer matched, and was
  * refused as "modified by another user" — when in fact it was the same user, in
- * the same request, one call earlier.
+ * the same request, one call earlier. The second edit was lost.
  *
- * `wire-editable-committed` cannot help: it is dispatched from the commit's
- * RESPONSE handler (dropdown.js:697), so it fires long after a sibling bundled
- * into the same request has already been serialised into the payload.
+ * `wire-editable-committed` could never have covered it: it is dispatched from
+ * the commit's RESPONSE handler (dropdown.js:697), so it fires long after a
+ * sibling bundled into the same request was serialised into the payload. It was
+ * not a Livewire 4 regression either — v3 squashed same-tick calls into a single
+ * commit inside its 5 ms buffer too.
  *
- * This is NOT a Livewire 4 regression — v3 squashed same-tick calls into a single
- * commit inside its 5 ms buffer too, so it behaves the same there. It is a
- * pre-existing gap in the sibling-version design that the v4 work surfaced.
+ * Fixed in RecordVersion, which now remembers the stamp each record carried when
+ * the request first looked at it and accepts that baseline however many times the
+ * request has written since. A version matching neither the current stamp nor the
+ * baseline is still a conflict, so the cross-client guarantee is unchanged — and
+ * the forced-conflict checks at the end of this driver are what hold that line.
  *
- * The checks below therefore pin the SAFETY properties, which do hold: the loser
- * is refused rather than silently dropped, it says so on the cell, it adopts the
- * server's version, and it can immediately write again. If the false conflict is
- * ever fixed, the "refused" check goes red — and that is the intended signal to
- * come and update it deliberately, not a failure.
+ * So BOTH commits must now land, and this driver is the only thing that runs the
+ * bundling for real: the Pest coverage drives two calls through one component,
+ * but only a browser actually puts them in one Livewire request.
  *
  * Usage:
  *   vendor/bin/testbench serve --host=127.0.0.1 --port=8085   # in background
@@ -162,14 +164,17 @@ try {
     raced.email.serverValue === newEmail && ! raced.email.error,
     JSON.stringify(raced.email));
 
-  // Pins today's behaviour — see the header. The second cell loses because the
-  // first moved `updated_at` inside the same request, and its version predates it.
-  check('the second is refused on the optimistic lock, not silently dropped',
-    !! raced.role.error, JSON.stringify(raced.role));
+  // The regression this driver exists for: the second call rides in the same
+  // request as the first, so it carries a version the first has already
+  // superseded. It must still be accepted — it is the same request, not another
+  // user.
+  check('the second is accepted too, though the first already moved the record',
+    raced.role.serverValue === raced.nextRole && ! raced.role.error,
+    JSON.stringify(raced.role));
 
-  check('…and the refused cell reverts to the server value rather than showing a write that never happened',
-    raced.role.value === raced.role.serverValue,
-    JSON.stringify({ shown: raced.role.value, server: raced.role.serverValue }));
+  check('…and neither cell shows a value it did not write',
+    raced.email.value === raced.email.serverValue && raced.role.value === raced.role.serverValue,
+    JSON.stringify({ email: raced.email.value, role: raced.role.value }));
 
   // The sibling broadcast is what stops the SECOND edit of a record from carrying
   // a version the FIRST one already invalidated. Parallel requests are exactly the
@@ -207,10 +212,10 @@ try {
     return JSON.stringify({ email: e?.serverValue, role: r?.serverValue, version: e?.recordVersion });
   })()`));
 
-  check('the accepted write survives a reload — it reached the database',
+  check('the first write survives a reload — it reached the database',
     reloaded.email === newEmail, `email=${reloaded.email}`);
-  check('…and the refused one did not reach it, so the cell was telling the truth',
-    reloaded.role !== raced.nextRole, `role=${reloaded.role}, refused=${raced.nextRole}`);
+  check('…and so does the second, so no edit was lost to a false conflict',
+    reloaded.role === raced.nextRole, `role=${reloaded.role}, wrote=${raced.nextRole}`);
 
   await shot('03-after-reload');
 
