@@ -575,6 +575,7 @@ visibility and the compiled per-column markup.
 | Paging | paginator, counts, `rangeFrom`/`rangeTo`, `headerRowCount` | **done** — carried the builder's signature change (§5.2) |
 | Interaction | keyboard nav, gestures, active-row marker, record bindings, shortcut help | **done** |
 | Skeletons | `rowSkeleton`, `selectionCellSkeleton`, selection announcements, row-class binding, page record keys | **done** — as `RowRenderPlan`; reads `interaction()` for the two things the `<tr>` is shaped by |
+| Shell | `isLazy`, `isTableReady`, `lazyPlaceholder`, `pollingConfig`, `pollingAttribute`, `liveChannel`, `filters`, `hasFilters`, sub-rows and grouping with their three guards, `hasViewMenu`, `viewMenuLabel` | **done** — last, because nothing depended on it; takes `hasToggles` from the columns group |
 
 That order is not the order they appear in the file. It comes from a dependency
 map of the remaining locals: layout is the only group with no edges in or out,
@@ -595,14 +596,32 @@ view body — but are consumed by `partials/polling-indicator.blade.php` and
 `partials/shortcut-help-modal.blade.php` through **implicit `@include` scope
 inheritance**. Grep alone would delete them.
 
-After all seven slices: the head block is **322 → 175 lines**, and of the 97
-assignments left in it **81 are one-line aliases** off the plan — so **86 of the
-original ~102 computations have moved**.
+After all eight slices: the head block is **322 → 172 lines**, and of the 97
+assignments left in it **96 are one-line aliases** off the plan. The
+ninety-seventh is `$plan = $component->tableRenderPlan()`. **Every computation
+has moved**; what remains is a name table.
 
-What is left in the view is one coherent group of sixteen, none of which any
-other slice depends on: lazy loading, polling and the live channel, the filter
-definitions, sub-rows and grouping, and the view menu. They are a `shell` slice
-whenever it is wanted; nothing blocks on them.
+The eighth is the `shell` slice — the sixteen locals nothing else depended on, so
+they went last: lazy loading, polling and the live channel, the filter
+definitions, sub-rows and grouping, and the view menu. `ShellRenderPlan` earns
+its place on the three `&&` pairs the block wrote by hand
+(`$hasSubRows && $table->isSubRowsExpandable()` and two more): each feature flag
+answers from a default whether or not its feature is on, so the guard is what
+stops an expand-all control rendering over rows that cannot expand. That rule now
+has a test rather than a convention.
+
+`hasViewMenu` is the one shell value with an edge outside its group — the menu
+holds column toggles, sub-row expansion, or both — so it takes `hasToggles` as an
+argument, the same shape `paging` uses. Writing its test also corrected an
+assumption worth recording: **columns are toggleable by default**
+(`Column::$toggleable = true`), so a table that declared nothing still has a view
+menu. The "no optional regions" case only exists with `toggleable(false)`.
+
+Verified the same way as every slice before it: ten previews chosen to exercise
+each shell local — lazy, poll, `live(broadcast:)`, sub-rows both ways, grouping
+with summaries, column filters, the gesture lab — normalised for the four things
+that genuinely vary per request, and **byte-for-byte identical** across
+2 084 123 B. Plus the benchmark gate, which is the one this slice did not skip.
 
 Two behaviours the column slice's tests pinned that nothing had asserted before,
 both easy to get backwards when the islands work starts moving this code again:

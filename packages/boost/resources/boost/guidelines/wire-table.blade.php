@@ -284,6 +284,14 @@ already gives you:
   Blade renders (an eager group renders one view per item per row). Opt-in; the default is eager.
   Trade-offs: keyboard shortcuts and `wire:click` modifiers on menu items are not wired in lazy
   mode. Reach for it on large tables whose every row carries a multi-item action dropdown.
+- **Opening an action modal does not re-render the table.** Any action with a modal renders
+  `wire:island="action-modals"`, and a call targeting an island makes Livewire skip the component
+  render and return the island alone — the modal instead of every cell behind it (9.5 KB against
+  125 KB on a four-row table; the island is a fixed size, so the gap widens with rows). Two
+  consequences worth knowing: an action that **opens** a modal should not also mutate what the
+  table shows, because nothing behind the modal re-renders until the next request — do the write on
+  submit, which is a normal full render; and a modal opened any other way (a keyboard shortcut, the
+  row context menu, `openOn()`, a method call from a test) still renders exactly as before.
 - **An inline edit re-renders the table, and the cell survives it.** `TextInputColumn` /
   `ToggleColumn` / `SelectColumn` commit through `updateTableCell`, which renders — everything
   derived from the written value (summaries, rollups, a badge computed from the same column, the

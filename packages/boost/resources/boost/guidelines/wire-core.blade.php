@@ -69,6 +69,12 @@ Htmlable render object: @verbatim`{{ new NyonCode\WireCore\Modals\Html\Modal(hea
 Both render the same shell. (Three families under `Modals\`: `Html\*` = Htmlable render objects,
 `Modals\Modal` etc. = config, `Modals\View\*Component` = the Blade components — don't conflate.)
 
+Either form works inside your own `@@island`. Livewire renders a targeted island without the shared
+`$__livewire` a full render has, and these modals build their view from an explicit data array, so
+`@@entangle` and `@@this` would otherwise fail with `Undefined variable $__livewire` — wire-core
+restores that scope for the duration of an island render, so you do not have to. This applies to any
+view you render from PHP inside an island, not only these.
+
 ### Mobile sheets
 
 Floating panels (dropdowns, action-group menus, select/date/tag pickers, table filter & column-toggle

@@ -14,18 +14,27 @@
     // that proves it.
     $plan = $component->tableRenderPlan();
 
-    $isLazy = $table->isLazy();
-    $isTableReady = $component->isTableReady();
-    $lazyPlaceholder = $table->getLazyPlaceholder();
-
-    // Polling
-    $pollingConfig = $component->getTablePollingConfig();
-    $pollingAttribute = $component->getTablePollingAttribute();
-
-    // live(broadcast: true): re-read as soon as somebody else commits, instead
-    // of on the next tick. Null without the opt-in, so a table that did not ask
-    // for it ships no listener and needs no channel authorization.
-    $liveChannel = $component->getTableLiveChannel();
+    // The frame around the rows — whether it renders yet (lazy), how it keeps
+    // itself current (poll, and the broadcast channel `live(broadcast: true)`
+    // adds), and which optional regions exist at all. All resolved in
+    // ShellRenderPlan, including the three feature guards this block used to
+    // write as `&&` pairs.
+    $isLazy = $plan->shell()->isLazy;
+    $isTableReady = $plan->shell()->isTableReady;
+    $lazyPlaceholder = $plan->shell()->lazyPlaceholder;
+    $pollingConfig = $plan->shell()->pollingConfig;
+    $pollingAttribute = $plan->shell()->pollingAttribute;
+    $liveChannel = $plan->shell()->liveChannel;
+    $filters = $plan->shell()->filters;
+    $hasFilters = $plan->shell()->hasFilters;
+    $hasSubRows = $plan->shell()->hasSubRows;
+    $isSubRowsExpandable = $plan->shell()->isSubRowsExpandable;
+    $allRowsExpanded = $plan->shell()->allRowsExpanded;
+    $hasGrouping = $plan->shell()->hasGrouping;
+    $hasGroupSummaries = $plan->shell()->hasGroupSummaries;
+    // The view menu earns its place from either section it can hold.
+    $hasViewMenu = $plan->shell()->hasViewMenu;
+    $viewMenuLabel = $plan->shell()->viewMenuLabel;
 
     // Table state and everything derived from it now comes resolved, from
     // TableRenderPlan — including which filters count as ACTIVE, a rule with a
@@ -67,7 +76,6 @@
     $headerActionClick = $plan->actions()->headerClick;
     $actionClick = $plan->actions()->click;
 
-    $filters = $table->getFilters();
     // Row interaction — the pointer bindings, the two independently switchable
     // halves of the gesture layer, the active-row marker and the `?` shortcut
     // help. All resolved in InteractionRenderPlan, including folding the help
@@ -86,7 +94,6 @@
     $shortcutHelpEvent = $plan->interaction()->shortcutHelpEvent;
     $hasBulkActions = $plan->actions()->hasBulk;
     $hasHeaderActions = $plan->actions()->hasHeader;
-    $hasFilters = !empty($filters);
     // The row and everything selection needs — the compiled <tr>, the checkbox
     // cell, the per-row class binding and the live-region sentences. Resolved in
     // RowRenderPlan; see it for why the markup is compiled once per TABLE.
@@ -120,18 +127,6 @@
     $hasColumnToggles = $plan->columns()->hasToggles;
     $mobileSortableColumns = $plan->columns()->mobileSortable;
     $hasMobileSort = $plan->columns()->hasMobileSort;
-
-    $hasSubRows = $table->hasSubRows();
-    $isSubRowsExpandable = $hasSubRows && $table->isSubRowsExpandable();
-    $allRowsExpanded = $hasSubRows && $component->expandsSubRowsByDefault();
-    $hasGrouping = $table->hasGrouping();
-    $hasGroupSummaries = $hasGrouping && $component->tableHasGroupSummaries();
-
-    // The view menu earns its place from either section it can hold.
-    $hasViewMenu = $hasColumnToggles || $isSubRowsExpandable;
-    $viewMenuLabel = $hasColumnToggles && ! $isSubRowsExpandable
-        ? __('wire-table::messages.toggle_columns')
-        : __('wire-table::messages.view_options');
 
     // Action configuration
     $actionsPosition = $plan->actions()->position; // 'start' or 'end'

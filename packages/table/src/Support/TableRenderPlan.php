@@ -87,6 +87,8 @@ final class TableRenderPlan
 
     private ?RowRenderPlan $row = null;
 
+    private ?ShellRenderPlan $shell = null;
+
     /**
      * @param  LengthAwarePaginator<int, Model>|Paginator<int, Model>|CursorPaginator<int, Model>|Collection<int, Model>  $records
      */
@@ -156,6 +158,21 @@ final class TableRenderPlan
             $this->component,
             $this->records,
             $this->interaction(),
+        );
+    }
+
+    /**
+     * The frame: whether it renders yet, how it stays current, which regions exist.
+     *
+     * Resolves the columns too, because the view menu holds column toggles — the
+     * same cross-group input {@see paging()} takes, and passed the same way.
+     */
+    public function shell(): ShellRenderPlan
+    {
+        return $this->shell ??= ShellRenderPlan::resolve(
+            $this->table,
+            $this->component,
+            $this->columns()->hasToggles,
         );
     }
 

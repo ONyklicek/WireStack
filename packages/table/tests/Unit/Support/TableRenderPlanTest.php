@@ -13,6 +13,7 @@ use NyonCode\WireTable\Actions\TableActionClickResolver;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Columns\TextInputColumn;
 use NyonCode\WireTable\Concerns\WithTable;
+use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Support\TableGestures;
 use NyonCode\WireTable\Support\TableRenderPlan;
 use NyonCode\WireTable\Table;
@@ -844,4 +845,132 @@ it('gives one render one plan, and the next render its own', function () {
         ->and($component->tableRenderPlan()->state()->search)->toBe('now set');
 
     Schema::dropIfExists('trp_rows');
+});
+
+// ─── Shell ───────────────────────────────────────────────────────────────────
+
+class TrpShellComponent extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(TrpRow::class)
+            // Columns are toggleable by default, and a toggleable column is a view
+            // menu, so switching it off is what makes "no optional regions" true.
+            ->columns([TextColumn::make('name')->toggleable(false)]);
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+class TrpShellFullComponent extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(TrpRow::class)
+            ->lazy()
+            ->lazyPlaceholder('<p>loading</p>')
+            ->live(interval: '3s', broadcast: true)
+            ->subRows('children')
+            ->subRowsExpandable()
+            ->groupBy('name')
+            ->groupSummaries()
+            ->filters([SelectFilter::make('name')->options(['a' => 'A'])])
+            // Group subtotals need something to subtotal; no toggles, so the view
+            // menu here is the sub-row half alone.
+            ->columns([TextColumn::make('name')->toggleable(false)->summarizeSum()]);
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+function trpShellPlan(string $componentClass): TableRenderPlan
+{
+    $component = new $componentClass;
+    $component->mountWithTable();
+
+    return TableRenderPlan::build($component->getTable(), $component, collect());
+}
+
+it('leaves every optional region off a table that asked for none', function () {
+    $shell = trpShellPlan(TrpShellComponent::class)->shell();
+
+    expect($shell->isLazy)->toBeFalse()
+        ->and($shell->lazyPlaceholder)->toBeNull()
+        // Not polling, so no attribute at all rather than an inert one.
+        ->and($shell->pollingAttribute)->toBeNull()
+        ->and($shell->pollingConfig)->toBe(['enabled' => false])
+        // No opt-in, so no listener and no channel to authorize.
+        ->and($shell->liveChannel)->toBeNull()
+        ->and($shell->filters)->toBe([])
+        ->and($shell->hasFilters)->toBeFalse()
+        ->and($shell->hasSubRows)->toBeFalse()
+        ->and($shell->hasGrouping)->toBeFalse()
+        ->and($shell->hasViewMenu)->toBeFalse();
+});
+
+it('resolves the frame of a table that asked for all of it', function () {
+    $shell = trpShellPlan(TrpShellFullComponent::class)->shell();
+
+    expect($shell->isLazy)->toBeTrue()
+        ->and($shell->lazyPlaceholder)->toBe('<p>loading</p>')
+        ->and($shell->pollingAttribute)->toContain('3s')
+        ->and($shell->pollingConfig['enabled'])->toBeTrue()
+        ->and($shell->liveChannel)->toBeString()
+        ->and($shell->hasFilters)->toBeTrue()
+        ->and($shell->filters)->toHaveCount(1)
+        ->and($shell->hasSubRows)->toBeTrue()
+        ->and($shell->isSubRowsExpandable)->toBeTrue()
+        ->and($shell->hasGrouping)->toBeTrue()
+        ->and($shell->hasGroupSummaries)->toBeTrue();
+});
+
+it('is not ready to render until the host says so, and only when lazy', function () {
+    // The placeholder is the whole document until then, so these two are read
+    // together — a table that is ready renders rows whatever isLazy says.
+    expect(trpShellPlan(TrpShellFullComponent::class)->shell()->isTableReady)->toBeFalse()
+        ->and(trpShellPlan(TrpShellComponent::class)->shell()->isTableReady)->toBeTrue();
+});
+
+it('does not claim sub-row or group behaviour the table cannot deliver', function () {
+    // The guards, which are the reason this group is a class. Both flags are set,
+    // neither feature is: `subRowsExpandable()` and `groupSummaries()` answer from
+    // their own defaults, and an expand-all control over rows that cannot expand
+    // is precisely what that produces.
+    $component = new TrpShellComponent;
+    $component->mountWithTable();
+    $component->getTable()->subRowsExpandable()->groupSummaries();
+
+    $shell = TableRenderPlan::build($component->getTable(), $component, collect())->shell();
+
+    expect($shell->hasSubRows)->toBeFalse()
+        ->and($shell->isSubRowsExpandable)->toBeFalse()
+        ->and($shell->allRowsExpanded)->toBeFalse()
+        ->and($shell->hasGrouping)->toBeFalse()
+        ->and($shell->hasGroupSummaries)->toBeFalse();
+});
+
+it('names the view menu after what is actually under it', function () {
+    // Column toggles alone -> "toggle columns"; anything else in the menu and the
+    // label has to widen, or it describes half of what is under it.
+    $togglesOnly = trpWidePlan()->shell();
+
+    expect($togglesOnly->hasViewMenu)->toBeTrue()
+        ->and($togglesOnly->viewMenuLabel)->toBe(__('wire-table::messages.toggle_columns'));
+
+    $expandableOnly = trpShellPlan(TrpShellFullComponent::class)->shell();
+
+    expect($expandableOnly->hasViewMenu)->toBeTrue()
+        ->and($expandableOnly->viewMenuLabel)->toBe(__('wire-table::messages.view_options'));
 });
