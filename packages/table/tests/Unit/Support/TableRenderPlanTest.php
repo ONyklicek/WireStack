@@ -717,6 +717,79 @@ it('keeps the context menu independent of the actions column', function () {
         ->and(trpGesturePlan('bare')->interaction()->rowContextMenuEnabled)->toBeFalse();
 });
 
+// ─── The row ─────────────────────────────────────────────────────────────────
+
+it('binds both halves of the row class when selection and gestures are on', function () {
+    // One :class expression per row, merging every dynamic row state that has to
+    // survive a morph. Both halves are Alpine bindings rather than classes
+    // toggled from JS, so the roundtrip a click triggers cannot wash them off.
+    $binding = trpGesturePlan('full')->row()->rowClassBinding;
+
+    expect($binding)->toContain('isSelected(%key%)')
+        ->and($binding)->toContain('...rowClass(%key%)');
+});
+
+it('binds nothing when no row state is dynamic', function () {
+    // Null rather than an empty object: the attribute is omitted entirely.
+    // A table with neither selection nor an active-row marker — note the gesture
+    // fixtures are all selectable(), so the selection half is present there even
+    // with the gesture layer off.
+    expect(trpPlan(trpComponent())->row()->rowClassBinding)->toBeNull();
+});
+
+it('binds only the selection half when nothing continues from a row', function () {
+    // Selectable, gestures off: no active-row marker, so no rowClass() spread.
+    $binding = trpGesturePlan('bare')->row()->rowClassBinding;
+
+    expect($binding)->toContain('isSelected(%key%)')
+        ->and($binding)->not->toContain('rowClass(%key%)');
+});
+
+it('compiles the row opening tag once, with a slot for every per-record value', function () {
+    // Static once, dynamic per row. Six slots, so a 200-row page splices six
+    // strings instead of rendering the partial 200 times.
+    $skeleton = trpWidePlan()->row()->rowSkeleton;
+
+    $filled = $skeleton->fill([
+        'rowClass' => 'CLS', 'keyJs' => 'KEY', 'tabindex' => '0',
+        'rowIndex' => '7', 'ariaRowIndex' => '9', 'key' => 'K',
+    ]);
+
+    expect($filled)->toContain('<tr')
+        ->and($filled)->toContain('CLS')
+        ->and($filled)->toContain('K');
+});
+
+it('gives a selectable table a checkbox cell and a non-selectable one none', function () {
+    expect(trpWidePlan()->row()->selectionCellSkeleton)->not->toBeNull()
+        ->and(trpWidePlan()->row()->selectCheckIcon)->not->toBe('')
+        ->and(trpPlan(trpComponent())->row()->selectionCellSkeleton)->toBeNull()
+        // The icon is chrome, so it is not resolved at all when unused.
+        ->and(trpPlan(trpComponent())->row()->selectCheckIcon)->toBe('');
+});
+
+it('commits the selection only when something reads it back', function () {
+    // Selection is entangled deferred, so a checkbox click costs no roundtrip.
+    // Summaries are the exception: a selection-scope total goes stale otherwise.
+    expect(trpWidePlan()->row()->selectionSyncLive)->toBeFalse();
+});
+
+it('collects the page keys only for a selectable table', function () {
+    // The loop walks the records, so it is skipped entirely when nothing can be
+    // selected rather than being built and ignored.
+    expect(trpPlan(trpComponent())->row()->pageRecordKeys)->toBe([]);
+});
+
+it('translates the selection announcements whole, with client-side counts', function () {
+    // Only the server can translate them; the counts are substituted in Alpine,
+    // which is why the placeholders survive into the string.
+    $announcements = trpWidePlan()->row()->selectionAnnouncements;
+
+    expect(array_keys($announcements))->toBe(['some', 'all', 'none'])
+        ->and($announcements['some'])->toContain(':count')
+        ->and($announcements['all'])->toContain(':total');
+});
+
 it('resolves after a view has reconfigured the table, not before', function () {
     // The regression this exists for, and only the browser gate caught it:
     // wire-sortable's table view applies the user's persisted COLUMN ORDER by

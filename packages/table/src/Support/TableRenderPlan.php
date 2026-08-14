@@ -85,6 +85,8 @@ final class TableRenderPlan
 
     private ?InteractionRenderPlan $interaction = null;
 
+    private ?RowRenderPlan $row = null;
+
     /**
      * @param  LengthAwarePaginator<int, Model>|Paginator<int, Model>|CursorPaginator<int, Model>|Collection<int, Model>  $records
      */
@@ -139,6 +141,22 @@ final class TableRenderPlan
     public function interaction(): InteractionRenderPlan
     {
         return $this->interaction ??= InteractionRenderPlan::resolve($this->table, $this->component);
+    }
+
+    /**
+     * The row itself: its compiled markup, and everything selection needs.
+     *
+     * Reads {@see interaction()}, because the row's opening tag is shaped by
+     * whether it is keyboard-navigable and whether an active-row marker exists.
+     */
+    public function row(): RowRenderPlan
+    {
+        return $this->row ??= RowRenderPlan::resolve(
+            $this->table,
+            $this->component,
+            $this->records,
+            $this->interaction(),
+        );
     }
 
     /**

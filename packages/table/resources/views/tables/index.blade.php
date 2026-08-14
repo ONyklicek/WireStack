@@ -87,42 +87,15 @@
     $hasBulkActions = $plan->actions()->hasBulk;
     $hasHeaderActions = $plan->actions()->hasHeader;
     $hasFilters = !empty($filters);
-    $isSelectable = $table->isSelectable();
-    // Record-invariant chrome icon resolved once per render (IconManager owns the
-    // SVG cache); the card view's select-all echoes the string instead of re-entering
-    // @icon. The row's own selection cell gets it from the same owner, baked into its
-    // skeleton — see Table::getSelectionCellSkeleton().
-    $selectCheckIcon = $isSelectable ? $table->getSelectionCheckIcon() : '';
-    $hasSummaries = $component->tableHasSummaries();
-
-    // One `:class` expression per row, merging every dynamic row state that has
-    // to survive a Livewire morph: the selection tint and the record-action
-    // active marker. Both are Alpine bindings rather than classes toggled from
-    // JS, so the roundtrip a click triggers cannot wash them off. `rowClass()`
-    // returns an object (it also switches the row's hover tint off while it is
-    // the active row); `%key%` is substituted with the record key per row.
-    $rowClassBindingParts = [];
-    if ($isSelectable) {
-        $rowClassBindingParts[] = "'bg-primary-50 dark:bg-primary-900/20': isSelected(%key%)";
-    }
-    if ($activeRowConfig !== null) {
-        $rowClassBindingParts[] = '...rowClass(%key%)';
-    }
-    $rowClassBinding = $rowClassBindingParts === []
-        ? null
-        : '{ '.implode(', ', $rowClassBindingParts).' }';
-
-    // Selection is managed client-side (Alpine) and entangled deferred — a
-    // checkbox click costs no server roundtrip. When the footer renders
-    // summaries, changes are committed (debounced) so selection-scope totals
-    // and the scope toggle stay correct.
-    $pageRecordKeys = [];
-    if ($isSelectable) {
-        foreach ($records as $pageRecord) {
-            $pageRecordKeys[] = (string) $pageRecord->{$table->getPrimaryKey()};
-        }
-    }
-    $selectionSyncLive = $isSelectable && $hasSummaries;
+    // The row and everything selection needs — the compiled <tr>, the checkbox
+    // cell, the per-row class binding and the live-region sentences. Resolved in
+    // RowRenderPlan; see it for why the markup is compiled once per TABLE.
+    $isSelectable = $plan->row()->isSelectable;
+    $selectCheckIcon = $plan->row()->selectCheckIcon;
+    $hasSummaries = $plan->row()->hasSummaries;
+    $rowClassBinding = $plan->row()->rowClassBinding;
+    $pageRecordKeys = $plan->row()->pageRecordKeys;
+    $selectionSyncLive = $plan->row()->selectionSyncLive;
     $isPaginated = $plan->paging()->isPaginated;
 
     // Columns, and everything derived from them — which visible column set the
@@ -196,40 +169,9 @@
     $rangeTo = $plan->paging()->rangeTo;
     $headerRowCount = $plan->paging()->headerRowCount;
 
-    // The body row's opening tag, compiled once for the whole table from
-    // `tables.partials.body-row-open`. Every condition on it is a property of the
-    // TABLE, so the row has one shape; what is per-record arrives through slots.
-    // See the partial for why it is an opening tag and not a whole row.
-    $rowSkeleton = \NyonCode\WireCore\Foundation\View\Skeleton::compile(
-        view('wire-table::tables.partials.body-row-open', [
-            'keyboardNav' => $keyboardNav,
-            'rowClassBinding' => $rowClassBinding,
-            'tableRole' => $tableRole,
-            'isSelectable' => $isSelectable,
-            'rowClass' => \NyonCode\WireCore\Foundation\View\Skeleton::slot('rowClass'),
-            'keyJs' => \NyonCode\WireCore\Foundation\View\Skeleton::slot('keyJs'),
-            'tabindex' => \NyonCode\WireCore\Foundation\View\Skeleton::slot('tabindex'),
-            'rowIndex' => \NyonCode\WireCore\Foundation\View\Skeleton::slot('rowIndex'),
-            'ariaRowIndex' => \NyonCode\WireCore\Foundation\View\Skeleton::slot('ariaRowIndex'),
-            'key' => \NyonCode\WireCore\Foundation\View\Skeleton::slot('key'),
-        ])->render(),
-        'rowClass', 'keyJs', 'tabindex', 'rowIndex', 'ariaRowIndex', 'key',
-    );
-
-    // The selection cell, compiled once for the table — the same move as the <tr>
-    // above, except the markup stays where it belongs, in
-    // `tables.partials.selection-cell`. The Table renders that partial once with a
-    // slot where the record key goes; the row loop fills the key.
-    $selectionCellSkeleton = $isSelectable ? $table->getSelectionCellSkeleton() : null;
-
-    // Whole sentences for the selection live region: only the server can
-    // translate them, and the counts are substituted client-side because the
-    // selection itself lives in Alpine.
-    $selectionAnnouncements = [
-        'some' => __('wire-table::messages.selection_announce_some', ['count' => ':count', 'total' => ':total']),
-        'all' => __('wire-table::messages.selection_announce_all', ['total' => ':total']),
-        'none' => __('wire-table::messages.selection_announce_none'),
-    ];
+    $rowSkeleton = $plan->row()->rowSkeleton;
+    $selectionCellSkeleton = $plan->row()->selectionCellSkeleton;
+    $selectionAnnouncements = $plan->row()->selectionAnnouncements;
 @endphp
 
 {{-- Lazy loading: trigger load when visible --}}
