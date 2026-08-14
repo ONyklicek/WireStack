@@ -38,6 +38,11 @@
     <button
             type="button"
             wire:click{{ $wireModifiers }}="{{ $wireClickAction }}"
+            {{-- Targets the host's modal island, so opening this action returns the
+                 modal instead of the whole table. Only for actions that open one:
+                 a targeted call makes Livewire skipRender() everything else, which
+                 would be wrong for an action that mutates rows. --}}
+            @if($action->hasModal()) wire:island="action-modals" @endif
             class="{{ $data['classes'] }}"
             data-testid="action-{{ $action->getName() }}"
             @if($action->getLabel($record ?? null)) aria-label="{{ $action->getLabel($record ?? null) }}" @endif

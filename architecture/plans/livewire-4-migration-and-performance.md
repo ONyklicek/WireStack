@@ -925,17 +925,67 @@ fact.
 
 #### 5.4.3 Ordering, with the gate that decides each step
 
-1. **Rows island.** The large, safe win — chrome stops re-rendering on every
+1. **The action-modal island** — ahead of the rows island, which is not the order
+   §4.3 lists. It is smaller, it raises no memo question (one island per table,
+   not per row), and it targets the ERP complaint directly: opening a dialog on a
+   wide table currently re-renders 500 cells. §4.4 sizes that class of
+   interaction — "nothing row-shaped changed" — at **86 % of the time and 85 % of
+   the bytes** on a 10-editable table.
+
+   The mechanism is not the obvious one, and the obvious reading is wrong. An
+   island is **skipped** on every request after the mount unless it is `always` or
+   explicitly targeted (`HandlesIslands::renderIslandDirective()`), so the saving
+   does *not* come from skipping the modal — a closed modal's markup is empty
+   anyway. It comes from targeting: `SupportIslands::call()` calls
+   `$this->component->skipRender()` and renders **only** the island, so the
+   response carries the modal and nothing else. That is Filament's behaviour
+   reached natively, where they had to swap Livewire's `DataStore` to fake
+   `skipRender` and ship their own morph JS.
+
+   Targeting is client-driven, through **`wire:island="action-modals"`** on the
+   element that fires the action (`js/features/supportIslands.js` reads any
+   attribute starting `wire:island`; `$wire.$island(name)` is the imperative
+   equivalent). That lands well here: `TableActionClickResolver` is already the
+   single place that knows a modal action from a plain one, and the action button
+   is skeleton-compiled per *shape* with `hasModal()` already in the shape key.
+
+   **The risk to gate for** is the corollary of skipping: any request that changes
+   modal state without targeting the island leaves the old modal DOM in place, and
+   any request that targets it renders *nothing else* — so an action that both
+   opens a modal and changes a row must not target. First step is therefore the
+   pure-open path only, with everything else left on the full render. Gate: the
+   modal drivers — `modal-layering`, `nested-modal`, `modal-open-on`,
+   `option-wizard`, `wizard-live` — plus the halt-modal path.
+
+   **Done, 2026-08-14.** `@island('action-modals', always: true)` in
+   `tables/index.blade.php`, `wire:island="action-modals"` on any action with
+   `hasModal()` in `actions/button.blade.php`, and one prerequisite nobody could
+   have predicted from the docs — see 5.4.5. Measured by
+   `verify-modal-island.mjs`, which reads the *response* rather than the DOM,
+   because the modal looks identical either way: opening the same modal costs
+   **9,559 B targeted** against **125,603 B untargeted**, on a four-row preview.
+   The island is a fixed size; the full render is not, so the ratio grows with the
+   row count — 13× here is the floor, not the headline.
+
+   `always: true` is load-bearing and was found the hard way: without it an
+   island is skipped on every request that does not target it, so a modal opened
+   by a keyboard shortcut, the row context menu, `openOn()` or a test calling the
+   method renders **nothing at all** (10 red tests in
+   `ActionModalMobileVariantTest`). With it, the untargeted path is byte-for-byte
+   today's behaviour and only the targeted one changes. Both paths are asserted
+   in the driver.
+
+2. **Rows island.** The next win — chrome stops re-rendering on every
    interaction. Gate: the decomposition benchmark, and a driver that asserts a
    cell save leaves the toolbar's DOM untouched.
-2. **Measure the `islands` memo** before going finer. `SupportIslands::dehydrate()`
+3. **Measure the `islands` memo** before going finer. `SupportIslands::dehydrate()`
    adds every island's name and token to the snapshot, so per-row islands grow it
    linearly in rows. Fine at 20; the question is 200. Gate: snapshot size at 20,
    50 and 200 rows, published like the decomposition fit.
-3. **Per-row islands, editable tables only.** Where the win is largest (a cell
+4. **Per-row islands, editable tables only.** Where the win is largest (a cell
    save goes from the full render to ~4.6 ms) and where the staleness cost is
    already being paid for by the lock.
-4. **The freshness channel.** Targeted row refresh driven by poll or broadcast,
+5. **The freshness channel.** Targeted row refresh driven by poll or broadcast,
    and — the part that is easy to forget — the refreshed row must carry a **fresh
    version stamp**, or islands will have made the lock worse rather than better.
    Gate: a driver with two browsers editing the same table.
@@ -958,6 +1008,46 @@ properties are load-bearing here rather than incidental:
 - the plan resolves **per group, on first ask**, so a rows island pays for
   `columns()` alone. An eagerly-built plan would put a fixed floor under every
   island and undo the proportionality that is the whole point.
+
+#### 5.4.5 The prerequisite the first island turned up: islands vs. Htmlable
+
+Wrapping the action modal in an island produced a **500 on the very roundtrip the
+island exists to make cheap** — `Undefined variable $__livewire` from
+`modals/confirmation.blade.php`. Green in Pest, green in every full render, red
+only in a browser. Worth stating plainly, because it governs every island in the
+program and not just this one:
+
+- a **full** component render shares the component with the *view factory*
+  (`HandleComponents::render()` → `Utils::shareWithViews('__livewire', …)`), so
+  every nested view sees it, including one built in PHP with an explicit data
+  array;
+- a **targeted island** render does not. `Component::renderIslandView()` puts
+  `__livewire` into the island body's *own data* instead. That reaches an
+  `@include`; it stops dead at the first `view(...)->render()`.
+
+Which is the whole framework. Rule 5 says a modal is an `Htmlable` that owns one
+view and builds it with an explicit array — `Modals\Html\Confirmation`,
+`SlideOver`, `Modal`, and the same shape for forms and infolists. None of them
+inherit the caller's variables, so shared data is the only channel that reaches
+them, and `@entangle` compiles to `$__livewire->getId()`. **Every modal in this
+framework is unrenderable from inside an island until that scope is restored.**
+
+`Foundation\Support\IslandViewScope` restores it, on Livewire's own
+`renderIsland` hook, for exactly the duration of that render and reverted after —
+the same two keys the full path shares (`__livewire`, and `_instance` for
+`@this`, which `forms/components/checkbox-list.blade.php` still uses, and a
+checkbox list inside an action modal is precisely this case).
+
+Two things follow for the rest of the plan:
+
+- **no Pest test can catch this class of bug.** The full render shares the scope,
+  so the island path is only ever exercised by a real targeted request. The
+  browser drivers are not a nicety for islands — they are the only gate that sees
+  the path at all. `IslandViewScopeTest` reaches it by calling
+  `renderIslandView()` directly, which is the closest Pest gets;
+- **it is a Livewire gap, not a mistake here.** Any app rendering a Blade view
+  from PHP inside an island hits it. Worth reporting upstream; the fix here is
+  ~10 lines on a public hook and does not wait on that.
 
 ---
 

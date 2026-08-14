@@ -28,6 +28,7 @@ use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Icons\IconSet;
+use NyonCode\WireCore\Foundation\Support\IslandViewScope;
 use NyonCode\WireCore\Foundation\Support\RecordVersion;
 use NyonCode\WireCore\Foundation\View\CellSync;
 use NyonCode\WireCore\Foundation\View\CopyButton;
@@ -211,6 +212,10 @@ class WireCoreServiceProvider extends PackageServiceProvider
 
     protected function bootFoundation(): void
     {
+        // An island renders without the shared `$__livewire` a full render has, and
+        // every modal here is an Htmlable that only shared data reaches. See the class.
+        IslandViewScope::register();
+
         // Register <x-wire::icon />, <x-wire::badge />, etc. `<x-wire::icon>` stays
         // the consumer-facing Blade API. The framework's OWN partials never render
         // icons through it (a full Blade component = one view render per call);

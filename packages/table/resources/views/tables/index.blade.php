@@ -1371,8 +1371,30 @@
                     @endif
                 </div>
 
-                {{-- Action Modal --}}
-                @include('wire-table::tables.partials.action-modal')
+                {{-- Action Modal.
+
+                     An island, so opening one costs the modal instead of the whole
+                     table. The saving is not in skipping this island — a closed
+                     modal renders nothing anyway — it is that a call TARGETING an
+                     island makes Livewire skipRender() the component and return
+                     only the island, which is why the buttons carry
+                     wire:island="action-modals".
+
+                     `always` is load-bearing: without it an island is SKIPPED on
+                     every request after the mount unless that request targeted it,
+                     and a modal opened by anything other than a wire:island button
+                     — a keyboard shortcut, the row context menu, openOn(), a test
+                     calling the method — would simply never render. With it the
+                     behaviour is exactly today's, and a targeted call is the only
+                     thing that changes: it skips the rest of the table.
+
+                     $component is a view variable, and an island body sees only
+                     the component plus its public properties, so it is re-bound
+                     from $__livewire here. --}}
+                @island('action-modals', always: true)
+                    @php($component = $__livewire)
+                    @include('wire-table::tables.partials.action-modal')
+                @endisland
 
                 {{-- Halt Modal --}}
                 @include('wire-table::tables.partials.halt-modal')
