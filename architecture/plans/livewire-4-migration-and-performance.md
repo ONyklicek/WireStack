@@ -788,6 +788,177 @@ reaching `total()` for the latter two, never `firstItem()`/`lastItem()` for curs
 — while the view keeps branching as it does now. Fixing the UI is a separate
 change with its own gate.
 
+### 5.3 What Filament v5 actually does — read from its source, not its docs
+
+Three questions were put to `filamentphp/filament` at `5.x` (commit `0b845f7`),
+which pins `livewire/livewire: ^4.1` and is therefore a real Livewire 4 consumer.
+Two answers changed decisions here.
+
+**Islands: Filament does not use them.** Zero occurrences of `@island` in 5.x or
+6.x. They built their own partial rendering instead — a `wire:partial` HTML
+attribute plus a `ComponentHook` — and **the tables package does not use even
+that**: their inline cell save (`updateTableColumnState`) carries no
+`#[Renderless]` and triggers no partial render, so **a single cell save in
+Filament v5 re-renders the whole table**, exactly the pain §4.3 describes here.
+There is no blueprint to copy for rows; islanding ours puts us ahead of them.
+
+What is worth copying is the shape of their anchor. `wire:partial` costs nothing
+per anchor — no server registration, nothing in the snapshot — and only the
+partials the server *chose* are serialised, into one `partials` effect. That is
+the direct answer to the open worry in §4.3 about the `islands` memo growing with
+a per-row island: anchor count and memo cost *can* be decoupled, and their ~300
+lines are the existence proof if Livewire's memo turns out to be the constraint.
+Their fail-safe is worth copying outright: a full render is skipped only when
+every call and update was individually covered by a partial, so an unaccounted
+update degrades to a full render rather than to stale DOM.
+
+**`wire:sort`: Filament does not use it either**, and the reason settles open
+decision 4. Their `sortable.js` is byte-identical between 4.x and 5.x — they
+crossed the Livewire 3→4 boundary without touching it — and `sortablejs ^1.15.0`
+is still bundled in their *core* asset, so a Filament v5 app ships SortableJS
+twice as well. The blocker is the contract, not inertia: `wire:sort` passes
+`($item, $position)`, a single moved item, while their server (like ours) wants
+the whole new order in one call so it can do one `CASE` UPDATE in a transaction
+with before/after hooks. Delegating means reshaping the server half, not deleting
+a bundle. **Recommendation: stay self-contained.**
+
+**The `wire:model` modifier: they reached our conclusion independently.** Filament
+has one owner (`HasStateBindingModifiers`) and fixed it in January 2026 with a
+one-line change, `['blur']` → `['live', 'blur']` — the same answer as
+`CanBeLive::getWireModelModifier()`. Two deliberate divergences remain: our
+`live()` adds a 250 ms debounce where theirs relies on Livewire's built-in 150 ms,
+and they inherit by *pulling* (a child asks its container) where we *push*.
+
+That comparison also found a real bug here, which is the argument for doing it:
+their `$entangle` branch suppresses blur and debounce, and ours did not. Eight of
+our fields append the `wire:model` modifier to an `@entangle()` call, so
+`liveOnBlur()` rendered `.entangle(...).live.blur` — `undefined` in the browser,
+a field with no state — and had done since before Livewire 4. Fixed with
+`CanBeLive::getEntangleModifier()`.
+
+**File uploads: not comparable.** Filament never hand-rolled the merge we deleted
+because they never had array-shaped state — they mint a UUID per file and upload
+to `path.<uuid>`, so Livewire's `$append` never applies. Our deletion was right
+for our regime. Their keyed design is more robust (per-file cancel, delete,
+reorder; no races between parallel uploads) and is the shape to move to if
+ordering bugs ever appear.
+
+### 5.4 The ERP variant — many editors on one table
+
+Everything above is written for a table with one reader. An ERP table has several
+people in it at once, and two of the conclusions change under that premise. This
+section is the variant, not a replacement: phases 1–3 are unchanged, the ordering
+inside phase 4 is not.
+
+**The premise, stated so it can be argued with:** several users hold the same
+table open; rows are edited in place rather than through a form; the set is large
+enough that a full re-render is felt; and a lost write is worse than a slow one.
+
+#### 5.4.1 Reordering: the payload shape is a concurrency decision
+
+§5.3 settled that we keep our own client rather than delegating to `wire:sort`.
+That still holds. What does **not** hold under this premise is the other half of
+today's design — the *contract*:
+
+```php
+// WithSortable::reorderRows()
+@param  array<int, array{value: string|int, order: int}>  $items
+```
+
+The client sends **the whole new order**, computed from what that user could see.
+That is last-writer-wins by construction: user A drags one row and silently
+overwrites every reorder B made in the meantime, because A is not saying "move X
+after Y" — A is asserting "the order is exactly this". Nothing can detect the
+conflict, because nothing was claimed to be true beforehand.
+
+The fix is not `wire:sort`. It is to separate two things the current design fuses:
+
+| | today | ERP |
+|---|---|---|
+| client | ours | **ours** — scoped reordering, gap handling and the morph guard all live there |
+| contract | whole order | **delta — "place X after Y" — plus the versions it assumed** |
+
+A delta is mergeable and checkable: it names the moved record and its neighbours,
+and it can carry the same optimistic-lock stamps the inline edit already uses, so
+a reorder against a moved set is *refused* rather than silently applied. This is
+the same discipline `CellEditPipeline` already has, extended to the one write that
+currently lacks it.
+
+Note this is precisely the shape `wire:sort` imposes (`$item, $position`), which
+is worth saying plainly: the contract it would have forced on us is the right one
+for ERP. We can adopt the shape without adopting the directive, and keep the
+client and the `beforeReordering`/`afterReordering` hooks that the delegation
+would have cost.
+
+#### 5.4.2 Islands make staleness visible — that is the ERP trap
+
+The counter-intuitive part, and the reason this section exists.
+
+**Today's full re-render is accidentally a freshness mechanism.** Every commit
+re-renders the whole table, so any interaction also refreshes everyone else's
+changes. Nobody designed that; it falls out of the cost we are trying to remove.
+
+With a per-row island, an inline save re-renders **that row only**. Every other
+row keeps whatever it was showing — for as long as that user does nothing. In a
+single-reader table that is invisible. With several editors it is a regression in
+correctness-as-perceived, and it lands directly on the optimistic lock: **every
+cell captures its record's version at render time**, so rows that never re-render
+hold stamps that age, and the conflict branch is taken *more* often, not less.
+
+Two findings from this session sharpen it. The lock's resolution is one second
+(`RecordVersion::stamp()` is `updated_at` in whole seconds), and the sibling
+broadcast that keeps versions current — `wire-editable-committed` — is dispatched
+from the commit's *response* handler, so it only ever reaches cells in the same
+browser.
+
+**So islands are not enough on their own here; they are what makes the remedy
+affordable.** The numbers are already measured in §4.5: `Table::poll()` on a
+25×10-editable table costs **76.9 ms and 602 kB per tick** today, which is why
+nobody enables it. With a rows island the tick renders ~63 ms and only the rows
+morph; a single targeted row is **~4.6 ms**. Polling and `live(broadcast: true)`
+— both of which already exist (`Table::poll()`, `getTableLiveChannel()`) — become
+usable for the first time *because* of islands.
+
+The ERP design is therefore **islands plus a freshness channel**, and the channel
+should refresh the row island rather than the table: a version bump is a row-level
+fact.
+
+#### 5.4.3 Ordering, with the gate that decides each step
+
+1. **Rows island.** The large, safe win — chrome stops re-rendering on every
+   interaction. Gate: the decomposition benchmark, and a driver that asserts a
+   cell save leaves the toolbar's DOM untouched.
+2. **Measure the `islands` memo** before going finer. `SupportIslands::dehydrate()`
+   adds every island's name and token to the snapshot, so per-row islands grow it
+   linearly in rows. Fine at 20; the question is 200. Gate: snapshot size at 20,
+   50 and 200 rows, published like the decomposition fit.
+3. **Per-row islands, editable tables only.** Where the win is largest (a cell
+   save goes from the full render to ~4.6 ms) and where the staleness cost is
+   already being paid for by the lock.
+4. **The freshness channel.** Targeted row refresh driven by poll or broadcast,
+   and — the part that is easy to forget — the refreshed row must carry a **fresh
+   version stamp**, or islands will have made the lock worse rather than better.
+   Gate: a driver with two browsers editing the same table.
+
+**If step 2 says no**, the escape hatch is Filament's, and it is proven in
+production: `wire:partial` anchors cost nothing per anchor — a plain HTML
+attribute, no server registration, nothing in the snapshot — and only the partials
+the server chose are serialised. It is ~300 lines across a `ComponentHook`, a
+`DataStore` override and a small JS file. Adopting the *shape* does not require
+adopting Filament.
+
+#### 5.4.4 What phase 1 already bought for this
+
+Nothing in 5.4.2 or 5.4.3 is reachable without the render plan, and two of its
+properties are load-bearing here rather than incidental:
+
+- an island body sees no view locals, so the compiled cell skeletons had to move
+  into PHP first — they are `Htmlable` (`Skeleton`) on `$plan->columns()->meta`,
+  which an island reaches through `$component->tableRenderPlan()`;
+- the plan resolves **per group, on first ask**, so a rows island pays for
+  `columns()` alone. An eagerly-built plan would put a fixed floor under every
+  island and undo the proportionality that is the whole point.
+
 ---
 
 ## 6. Open decisions
@@ -800,8 +971,12 @@ change with its own gate.
    there, and does it land before or after V2.0's data-source work?
 3. **Per-row islands** — opt-in for editable tables, or not at all until the
    `islands` memo growth is measured?
-4. **wire-sortable's future** (§4.7) — pluggable client delegating to `wire:sort`,
-   or stay self-contained and accept that v4 apps ship SortableJS twice?
+4. ~~**wire-sortable's future** (§4.7)~~ — **settled by §5.3**: stay
+   self-contained. `wire:sort` passes a single moved item and its index, while the
+   server contract wants the whole new order so it can write one `CASE` UPDATE in
+   a transaction; delegating means reshaping the server half rather than deleting
+   a bundle. Filament reached the same place — their sortable layer is unchanged
+   across the Livewire 3→4 boundary and their apps ship SortableJS twice too.
 5. **Do we want to claim CSP support?** v4 makes it reachable; it is a real
    differentiator for the enterprise positioning, and it is a test-surface
    commitment, not a config flag.
