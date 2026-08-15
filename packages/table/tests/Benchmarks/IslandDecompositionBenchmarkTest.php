@@ -193,3 +193,52 @@ it('decomposes the render into framework, chrome and rows', function () {
 
     expect(true)->toBeTrue();
 });
+
+/*
+ * What a cell save costs on the shape this is for.
+ *
+ * The decomposition above extrapolates each seam from a fit. This measures the
+ * two that actually exist — the full component render, and the `data-region`
+ * island rendered on its own, which is what an editable cell's commit now asks
+ * for — on one 25-column, 20-row page. The third line is the per-row slope from
+ * the same page: what a row-granular mechanism (Filament's `wire:partial`) would
+ * leave, and therefore the number the decision to build one is worth measuring
+ * against.
+ *
+ * Reports, never asserts.
+ */
+it('measures what an inline cell save costs, and what is left to win', function () {
+    $rows = 20;
+    $editable = 10;
+
+    $test = Livewire::test(IdHost::class, ['editable' => $editable, 'rows' => $rows]);
+    $instance = $test->instance();
+
+    $island = collect($instance->getIslands())->firstWhere('name', 'data-region');
+
+    expect($island)->not->toBeNull();
+
+    $full = idMeasure(fn () => Livewire::test(IdHost::class, ['editable' => $editable, 'rows' => $rows])->html());
+    $region = idMeasure(fn () => $instance->renderIslandView('data-region', $island['token']));
+
+    // One row of the same page, from the sweep's slope — the same arithmetic the
+    // decomposition uses, kept here so the three numbers are comparable.
+    $one = idMeasure(fn () => Livewire::test(IdHost::class, ['editable' => $editable, 'rows' => 1])->html());
+    $rowMs = ($full['ms'] - $one['ms']) / ($rows - 1);
+    $rowBytes = ($full['bytes'] - $one['bytes']) / ($rows - 1);
+
+    fwrite(STDERR, sprintf(
+        "\n  ── An inline cell save, 25 columns x %d rows (%d editable) ──────\n".
+        "    full component render (what it cost before targeting): %6.1f ms  %7d B\n".
+        "    data-region island    (what it costs now):              %6.1f ms  %7d B   %2.0f%% / %2.0f%% saved\n".
+        "    one row               (what wire:partial would leave):  %6.1f ms  %7.0f B   %2.0f%% / %2.0f%% saved\n\n",
+        $rows, $editable,
+        $full['ms'], $full['bytes'],
+        $region['ms'], $region['bytes'],
+        100 * (1 - $region['ms'] / $full['ms']), 100 * (1 - $region['bytes'] / $full['bytes']),
+        $rowMs, $rowBytes,
+        100 * (1 - $rowMs / $full['ms']), 100 * (1 - $rowBytes / $full['bytes']),
+    ));
+
+    expect(true)->toBeTrue();
+});

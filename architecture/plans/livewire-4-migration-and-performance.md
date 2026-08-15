@@ -1147,40 +1147,88 @@ $wire.$island('data-region')…       hasHtml=false  data-region 42 374 B   −2
 region island is currently doing nothing for the most frequent interaction in an
 ERP table, and one call-site change fixes that.
 
-**What each option is worth**, on the benchmark's 25-column, 20-row page (full
-render 63.0 ms / 603 kB; chrome 8.9 ms / 89 kB; one row 2.6 ms / 25.7 kB):
+**What each option is worth.** Measured rather than extrapolated, on one
+25-column, 20-row page with 10 editable columns — the shape this is for — by
+`IslandDecompositionBenchmarkTest`'s cell-save case:
 
-| a cell save costs | time | bytes |
+| an inline cell save costs | time | bytes |
 |---|---|---|
-| today | ~63 ms | ~603 kB |
-| with `$island` targeting (one line per call site) | ~54 ms | ~514 kB |
-| with `wire:partial` (one row) | ~4 ms | ~26 kB |
+| full component render (before targeting) | 77.2 ms | 609 268 B |
+| `data-region` island (what it costs now) | 49.3 ms | 555 776 B — **36 % / 9 %** saved |
+| one row (what `wire:partial` would leave) | 3.2 ms | 26 028 B — **96 % / 96 %** saved |
 
-So `wire:partial` is worth roughly **13× more than island targeting** on that
-interaction. The win is real and large.
+Read the byte column twice. Island targeting removes a **third of the time and
+almost none of the bytes**, because on a 20×25 grid the region *is* the bytes —
+the chrome it skips is a rounding error next to 500 cells. The 43 % and 28 %
+measured earlier came from four-row previews, where chrome dominates; those
+numbers are true and unrepresentative, which is exactly why this table exists.
+
+So the remaining gap is **49.3 ms → 3.2 ms and 556 kB → 26 kB**, on the most
+frequent write in an ERP grid. `wire:partial` is worth an order of magnitude more
+than everything islands could reach here, and that is measured on the shape that
+matters rather than inferred from a fit.
 
 **Why not yet, in order of weight:**
 
-1. **It claims an app-wide container binding.** `$this->app->bind(DataStore::class,
-   DataStoreOverride::class)` swaps a Livewire mechanism for the whole
-   application. Filament can do that because it *is* the app's UI layer. These
-   packages ship into somebody else's app, which may already run Filament or
-   another package doing the same — last binding wins, and two overrides conflict
-   silently. Copying the shape means either finding a mechanism that does not
-   claim a global singleton, or documenting an incompatibility with Filament. That
-   is the blocking question, not the line count.
-2. **It rides on Livewire internals** (`store($instance)->get('skipRender')`).
-   Three times in this migration, island and render internals have behaved
-   differently from the documentation, and differently by request phase. Owning
-   ~400 lines against them is a standing cost at every Livewire release.
-3. **The cheaper win is unclaimed.** Measuring `wire:partial`'s value against
-   today's number flatters it by 89 kB of chrome that one line of JS removes.
+1. ~~**It claims an app-wide container binding.**~~ **Answered 2026-08-15: it does
+   not have to.** `$this->app->bind(DataStore::class, DataStoreOverride::class)`
+   swaps a Livewire mechanism for the whole application, and two packages doing
+   that in one app silently disable each other — which mattered, because these
+   packages ship into apps that may already run Filament.
 
-**Order, then:** target the programmatic `$wire` calls at the island first
-(gate: the editable and fill drivers, plus the payload fuse), re-measure a cell
-save on a 25×20 table, and decide on `wire:partial` against *that* number and
-after answering the binding question. Adopting the *shape* does not require
-adopting Filament — but it does require solving what Filament never had to.
+   > The reasoning that got here was also wrong on its own terms and is worth
+   > correcting rather than quietly dropping: it said Filament may claim the
+   > binding because it *is* the app's UI layer and these packages are not. They
+   > are — `wire-core` ships actions, modals, notifications, infolists, panels and
+   > widgets, and the blueprint's stated identity is enterprise-grade UI
+   > components with a deliberate Filament/Nova bias. The real difference is
+   > narrower: Filament owns the whole app surface and can require exclusivity,
+   > while these packages register nothing but asset routes and expect the app to
+   > own its own layout. That is a positioning choice, and a reversible one.
+
+   And it turns out to be moot. Filament overrides `DataStore` to intercept the
+   *read* of `skipRender`; but a hook can simply **write** it, and Livewire reads
+   it once at render — after every call and update in the request:
+
+   ```php
+   public function call($method = null, …) {
+       return function () { store($this->component)->set('skipRender', true); };
+   }
+   ```
+
+   Measured, not assumed: renders go 2 → 1 with that hook active
+   (`SkipRenderFromHookTest`, which is shipped precisely because this decision now
+   rests on it). Emission needs no override either — Filament's own hook ships its
+   partials through `$context->addEffect('partials', …)` in `dehydrate()`, a plain
+   `ComponentHook` API. **So `wire:partial`'s shape is reachable with no container
+   binding and no incompatibility.**
+2. **It rides on Livewire internals** (`store($instance)->get('skipRender')`).
+   Four times in this migration, island and render internals have behaved
+   differently from what the documentation implies, and every one of them was
+   visible only in a browser. Owning ~400 lines against them is a standing cost at
+   every Livewire release. This is now the *only* argument left against.
+3. ~~**The cheaper win is unclaimed.**~~ Claimed — and it turned out to be much
+   smaller on the shape that matters than the preview suggested. See below.
+
+**Where this leaves the decision.** Both gating questions are now answered, and
+both answers point the same way:
+
+- the measurement says the gap islands cannot close is **an order of magnitude**,
+  on the most frequent write there is (49.3 ms / 556 kB against 3.2 ms / 26 kB);
+- the binding question, which was the blocking one, **dissolved**: the mechanism
+  is reachable from ordinary `ComponentHook` APIs, so nothing has to be claimed
+  app-wide and nothing becomes incompatible with Filament.
+
+What is left is a maintenance judgement, not an unknown: ~400 lines of our own
+riding on `skipRender` and a response effect, against internals that have
+surprised this migration four times. That is a real cost and it is the whole of
+the remaining case against. It is also **the user's call rather than a technical
+verdict**, so it stays open here with the numbers attached instead of being
+decided by whoever writes the next paragraph.
+
+If it is built: behind a flag, editable tables only, and the first test is
+`SkipRenderFromHookTest` — which already exists, because the decision rests on
+it.
 
 **Step one landed 2026-08-15**, and did not go where it was aimed. The cell
 commit targets the island — 59 123 B → **42 765 B**, as predicted — through
