@@ -2,6 +2,7 @@ import { computePosition, autoUpdate, flip, shift, offset, size } from '@floatin
 
 import { syncNodeOf } from './editable/sync'
 import { targeting } from './support/island'
+import './support/partials'
 import wireFillHandle from './fill/controller'
 
 /**

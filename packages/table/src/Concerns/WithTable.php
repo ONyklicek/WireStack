@@ -32,6 +32,7 @@ use NyonCode\WireCore\Core\Events\TableSearching;
 use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithPartials;
 use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
@@ -94,8 +95,13 @@ trait WithTable
         InteractsWithTableActions::resolveActionRecordIds insteadof InteractsWithActions;
         InteractsWithTableActions::sendActionNotification insteadof InteractsWithActions;
     }
+
     use InteractsWithFieldActions;
     use InteractsWithFileUploads;
+    // Lets a write render the regions it touched instead of the whole table. The
+    // engine is here; the table's own anchors and the flag that turns them on are
+    // the next slice — nothing calls renderPartial() yet.
+    use InteractsWithPartials;
     use InteractsWithRepeaters;
     use InteractsWithSelectCreation;
     use InteractsWithTableModals;

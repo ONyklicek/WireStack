@@ -7,6 +7,7 @@ namespace NyonCode\WireCore;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
+use Livewire\ComponentHookRegistry;
 use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
@@ -29,6 +30,7 @@ use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Icons\IconSet;
 use NyonCode\WireCore\Foundation\Support\IslandViewScope;
+use NyonCode\WireCore\Foundation\Support\PartialRenderHook;
 use NyonCode\WireCore\Foundation\Support\RecordVersion;
 use NyonCode\WireCore\Foundation\View\CellSync;
 use NyonCode\WireCore\Foundation\View\CopyButton;
@@ -137,6 +139,16 @@ class WireCoreServiceProvider extends PackageServiceProvider
 
     protected function registerFoundation(): void
     {
+        // Row-granular rendering: a write can render the regions it touched
+        // instead of the view. Inert until something calls renderPartial().
+        //
+        // In the REGISTER phase deliberately. ComponentHookRegistry::boot() walks
+        // its static list once and wires an `on('mount')` listener per hook; one
+        // registered after that sits in the list unwired until the NEXT app boot.
+        // Under Testbench that means the first test of a process silently has no
+        // hook and later ones do — which is exactly how it presented.
+        ComponentHookRegistry::register(PartialRenderHook::class);
+
         $this->app->singleton(IconManager::class, function ($app) {
             $manager = new IconManager;
 

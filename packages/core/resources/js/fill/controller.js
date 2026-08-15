@@ -46,6 +46,16 @@ const HANDLE_INSET = 12
 const draggingControllers = new Set()
 let morphGuardInstalled = false
 
+/**
+ * Whether a fill drag is in flight, and therefore whether anything else is
+ * allowed to morph the rows.
+ *
+ * Exported because the guard below only covers Livewire's OWN morph: an island
+ * fragment and a partial are morphed by other paths that never reach
+ * `morph.updating`. Anything that morphs rows out of band has to ask.
+ */
+export const isFillDragging = () => draggingControllers.size > 0
+
 const installMorphGuard = () => {
     if (morphGuardInstalled || ! window.Livewire) return
 

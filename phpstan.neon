@@ -26,6 +26,7 @@ parameters:
         - { identifier: trait.unused, path: packages/core/src/Actions/Concerns/InteractsWithActions.php }
         - { identifier: trait.unused, path: packages/core/src/Audit/Concerns/HasAuditable.php }
         - { identifier: trait.unused, path: packages/core/src/Foundation/Concerns/HasLivewire.php }
+        - { identifier: trait.unused, path: packages/core/src/Foundation/Concerns/InteractsWithPartials.php }
         - { identifier: trait.unused, path: packages/core/src/Infolists/Concerns/WithInfolists.php }
         - { identifier: trait.unused, path: packages/core/src/Panels/Concerns/WithEditablePanel.php }
         - { identifier: trait.unused, path: packages/core/src/Notifications/Concerns/InteractsWithNotifications.php }
