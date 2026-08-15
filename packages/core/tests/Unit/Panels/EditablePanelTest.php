@@ -314,7 +314,13 @@ it('renders an editable toggle entry through its view', function () {
     expect($html)
         ->toContain('data-testid="panel-editable-is_active"')
         ->toContain("commitMethod: 'updatePanelEntry'")
-        ->toContain('role="switch"');
+        ->toContain('role="switch"')
+        // …and NOT an island. `wireEditableCell` is shared with wire-table, whose
+        // cells name the island their writes belong to so Livewire re-renders the
+        // table alone. A panel has no island, and naming one it does not have
+        // would be a call the server finds nothing to answer — the default is no
+        // targeting, and this is what holds it there.
+        ->not->toContain('island:');
 });
 
 it('renders every editable entry type through the panel', function () {

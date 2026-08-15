@@ -115,7 +115,7 @@ it('keeps the page keys on the selection root while the fill handle nests inside
     expect($pageKeys)->toBeLessThan($selectionRoot) // both are attributes of the same tag
         ->and($rootTag)->toContain('data-matching')
         ->and($rootTag)->toContain('wireRecordSelection(')
-        ->and($fillTag)->toContain('wireFillHandle()')
+        ->and($fillTag)->toContain('wireFillHandle(')
         ->and($fillTag)->not->toContain('data-page-keys')
         ->and(substr_count($html, 'data-page-keys'))->toBe(1)
         ->and(substr_count($html, 'data-selection-root'))->toBe(1);

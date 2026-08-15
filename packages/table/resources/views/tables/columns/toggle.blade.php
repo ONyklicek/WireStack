@@ -16,6 +16,7 @@
     wire:key="{{ $wireKey }}"
     wire:ignore.self
     x-data="wireEditableCell({
+        island: 'data-region',
         value: {{ $state ? 'true' : 'false' }},
         recordVersion: '{{ $recordVersion }}',
         parse: (v) => v === true || v === 1 || v === '1' || v === 'true',

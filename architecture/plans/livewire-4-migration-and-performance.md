@@ -1182,6 +1182,31 @@ save on a 25×20 table, and decide on `wire:partial` against *that* number and
 after answering the binding question. Adopting the *shape* does not require
 adopting Filament — but it does require solving what Filament never had to.
 
+**Step one landed 2026-08-15**, and did not go where it was aimed. The cell
+commit targets the island — 59 123 B → **42 765 B**, as predicted — through
+`support/island.js`, with the island named by the four editable column views and
+**not** by wire-core's panel entries, which share the controller and have no
+island. Both halves are pinned by tests.
+
+The fill handle was aimed at too, and **must not be**. It suppresses rendering
+while a drag is in flight through Livewire's `morph.updating` hook; an island
+fragment is morphed by `morphFragment`, which does not go through that hook. A
+targeted fill therefore wipes the cells it has just painted. `verify-spa-navigate.mjs`
+was the only thing that saw it — `verify-fill-handle.mjs` passed 26/26 with the
+bug in place — and the isolation was one run each way: with the island, its two
+fill checks fail; without it, 22/22. The option was removed from the controller
+rather than left unused: one that must never be set is worse than none.
+
+The general rule, which the remaining steps have to respect: **a controller that
+manages its own DOM state across a write must not have a render pushed at it out
+of band.** The fill needs no render at all — it reconciles each cell from the
+response payload.
+
+And a fourth entry for the tally that bears on the decision above: this is the
+third time in this migration that island machinery has behaved differently from
+what the documentation implies, and the third time only a browser driver saw it.
+`wire:partial` would put ~400 lines on the same internals, one layer deeper.
+
 #### 5.4.4 What phase 1 already bought for this
 
 Nothing in 5.4.2 or 5.4.3 is reachable without the render plan, and two of its

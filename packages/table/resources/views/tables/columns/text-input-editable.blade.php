@@ -26,6 +26,7 @@
 <div wire:key="{{ $wireKey }}"
      wire:ignore.self
      x-data="wireEditableCell({
+        island: 'data-region',
         value: {{ $valueJson }},
         recordVersion: '{{ $recordVersion }}',
         saveOnBlur: {{ $saveOnBlur }},

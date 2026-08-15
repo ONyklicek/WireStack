@@ -1,6 +1,7 @@
 import { computePosition, autoUpdate, flip, shift, offset, size } from '@floating-ui/dom'
 
 import { syncNodeOf } from './editable/sync'
+import { targeting } from './support/island'
 import wireFillHandle from './fill/controller'
 
 /**
@@ -498,6 +499,10 @@ const wireEditableCell = (config = {}) => ({
     // editable infolist) point these at their own host methods with the same
     // (recordKey, name, value, version) contract.
     commitMethod: config.commitMethod ?? 'updateTableCell',
+    // The island this cell's writes belong to, or null for a surface that has
+    // none (an editable panel entry). See support/island.js: a $wire call from
+    // Alpine has no DOM origin, so Livewire cannot work this out for itself.
+    island: config.island ?? null,
     validateMethod: config.validateMethod ?? 'validateTableCell',
     recordKey: null,
     columnName: null,
@@ -672,7 +677,7 @@ const wireEditableCell = (config = {}) => ({
         this.saving = true
         this.error = null
         try {
-            const r = await this.$wire[this.commitMethod](
+            const r = await targeting(this.$wire, this.island)[this.commitMethod](
                 this.recordKey,
                 this.columnName,
                 next,

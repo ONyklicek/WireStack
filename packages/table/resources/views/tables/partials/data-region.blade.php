@@ -119,6 +119,13 @@
 @endphp
                     <div class="relative overflow-x-auto {{ $tableHiddenClass }}"
                          @if($isFillEnabled)
+                             {{-- Deliberately NOT island-targeted, unlike the editable
+                                  cells inside it: the fill suppresses morphs while a drag
+                                  is in flight through Livewire's `morph.updating` hook, and
+                                  an island fragment morph does not go through it. Targeted,
+                                  a fill's own response wipes the cells it just painted —
+                                  verify-spa-navigate.mjs is what says so. It needs no render
+                                  anyway; it reconciles each cell from the response payload. --}}
                              x-data="wireFillHandle()"
                              data-fill-root
                              data-fill-columns="{{ json_encode($fillColumns) }}"

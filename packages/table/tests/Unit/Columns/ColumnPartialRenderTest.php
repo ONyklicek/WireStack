@@ -12,10 +12,12 @@ use NyonCode\WireTable\Columns\IconColumn;
 use NyonCode\WireTable\Columns\ImageColumn;
 use NyonCode\WireTable\Columns\PollColumn;
 use NyonCode\WireTable\Columns\RatingColumn;
+use NyonCode\WireTable\Columns\SelectColumn;
 use NyonCode\WireTable\Columns\SplitColumn;
 use NyonCode\WireTable\Columns\StackedColumn;
 use NyonCode\WireTable\Columns\TagsColumn;
 use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\Columns\TextInputColumn;
 use NyonCode\WireTable\Columns\ToggleColumn;
 
 /**
@@ -386,4 +388,22 @@ it('renders chips from an Arrayable relation collection', function () {
         ->renderCell(partialRecord(['tags' => collect(['alpha', 'beta'])]));
 
     expect(substr_count($html, 'rounded-full'))->toBe(2)->and($html)->toContain('alpha');
+});
+
+it('names the island every editable cell writes into', function () {
+    // A `$wire` call from Alpine carries no DOM origin, so Livewire cannot work
+    // out which island it belongs to — an inline save re-rendered the whole
+    // component while a sort header inside the same island re-rendered only the
+    // table. The cell has to say. Measured on the editable preview: 59,123 B
+    // against 42,765 B for the same write.
+    //
+    // Asserted for all four editable columns, because the one that forgets is the
+    // one that quietly costs the most.
+    $record = partialRecord(['id' => 1, 'active' => true, 'role' => 'a', 'name' => 'x']);
+
+    expect(ToggleColumn::make('active')->renderCell($record))->toContain("island: 'data-region'")
+        ->and(CheckboxColumn::make('active')->renderCell($record))->toContain("island: 'data-region'")
+        ->and(TextInputColumn::make('name')->renderCell($record))->toContain("island: 'data-region'")
+        ->and(SelectColumn::make('role')->options(['a' => 'A'])->renderCell($record))
+        ->toContain("island: 'data-region'");
 });
