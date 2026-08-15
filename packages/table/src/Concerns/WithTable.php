@@ -160,6 +160,20 @@ trait WithTable
      */
     protected ?TableRenderPlan $renderPlan = null;
 
+    /**
+     * Totals resolved so far this render, keyed by scope.
+     *
+     * @var array<string, array<string, array<int, array<string, mixed>>>>
+     */
+    protected array $summaryMemo = [];
+
+    /**
+     * Sub-row grand totals resolved so far this render, keyed by scope.
+     *
+     * @var array<string, array<string, array<int, array<string, mixed>>>>
+     */
+    protected array $subRowGrandTotalMemo = [];
+
     /** @var Builder<Model>|null Cached query builder so summaries don't re-plan the query */
     protected ?Builder $cachedQuery = null;
 
@@ -850,6 +864,8 @@ trait WithTable
         // A new render, so a new plan. Dropped rather than built: the view
         // resolves it when it first needs it — see tableRenderPlan().
         $this->renderPlan = null;
+        $this->summaryMemo = [];
+        $this->subRowGrandTotalMemo = [];
 
         return view($viewName, [
             'table' => $table,
@@ -1504,6 +1520,27 @@ trait WithTable
      */
     public function computeTableSummaries(string $scope = 'query', mixed $parentRecord = null, ?Collection $subRecords = null): array
     {
+        // The desktop `<tfoot>` and the mobile card footer are two renderings of
+        // one set of totals in the same document — both halves are always in it,
+        // only CSS decides which is shown — so this ran the whole aggregate batch
+        // twice per render of a stacked table, producing byte-identical SQL. The
+        // memo is per render, so the second reading is free.
+        //
+        // Only the main-table scopes are memoised. The sub-rows scope is asked per
+        // parent record and has no single answer to remember.
+        if ($parentRecord === null && $subRecords === null) {
+            return $this->summaryMemo[$scope] ??= $this->resolveTableSummaries($scope);
+        }
+
+        return $this->resolveTableSummaries($scope, $parentRecord, $subRecords);
+    }
+
+    /**
+     * @param  Collection<int, mixed>|null  $subRecords
+     * @return array<string, array<int, array<string, mixed>>>
+     */
+    private function resolveTableSummaries(string $scope, mixed $parentRecord = null, ?Collection $subRecords = null): array
+    {
         $table = $this->getTable();
 
         // For sub-rows scope, use sub-row records
@@ -1713,6 +1750,16 @@ trait WithTable
      * @return array<string, array<int, array<string, mixed>>> [columnName => [['label' => …, 'value' => …], …]]
      */
     public function computeSubRowGrandTotals(string $scope = 'query'): array
+    {
+        // Asked once for the desktop footer and once for the mobile one, same as
+        // the column totals above.
+        return $this->subRowGrandTotalMemo[$scope] ??= $this->resolveSubRowGrandTotals($scope);
+    }
+
+    /**
+     * @return array<string, array<int, array<string, mixed>>>
+     */
+    private function resolveSubRowGrandTotals(string $scope): array
     {
         if (! $this->tableHasSubRowGrandTotals()) {
             return [];

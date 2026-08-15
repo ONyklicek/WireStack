@@ -387,6 +387,11 @@ it('batches sub-row grand totals into a single query', function () {
     $component->getTableRecords();
     $component->computeSubRowGrandTotals(); // warm the parent query plan
 
+    // …and then start a new render, which is what drops the per-render memo. The
+    // count below is of a COLD computation; without this it would measure the
+    // memo instead of the batching.
+    $component->getTableProperty();
+
     $totals = [];
     $queries = wtperfQueryCount(function () use ($component, &$totals) {
         $totals = $component->computeSubRowGrandTotals();
@@ -395,6 +400,10 @@ it('batches sub-row grand totals into a single query', function () {
     expect($queries)->toBe(1)
         ->and($totals['amount'][0]['value'])->toEqual(60)  // sum across all parents
         ->and($totals['amount'][1]['value'])->toEqual(30); // max
+
+    // Asked a second time in the same render — which a stacked table does, once
+    // for the desktop footer and once for the card one — it costs nothing.
+    expect(wtperfQueryCount(fn () => $component->computeSubRowGrandTotals()))->toBe(0);
 });
 
 // ─── Limited sub-row eager loading ───────────────────────────────────────────

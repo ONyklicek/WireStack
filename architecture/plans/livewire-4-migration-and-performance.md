@@ -319,9 +319,11 @@ loops"), and it is a prerequisite for anything island-shaped later.
 2. **`toolbar`** — search field, filters, column toggles, header actions. Today a
    search keystroke re-renders it because the field lives in it; as an island it
    renders once.
-3. **`summary-footer` / `group-subtotal`** — aggregate work that changes rarely.
+3. ~~**`summary-footer` / `group-subtotal`** — aggregate work that changes rarely.
    `skip`-by-default is exactly the right semantic; target it from the write paths
-   that can change a total.
+   that can change a total.~~ **Withdrawn 2026-08-15**: a nested island under an
+   `always` parent is never skipped, so there is no `skip` semantic to have here —
+   see §5.4.3 step 2a for the probe and for what the cost actually was.
 4. **`pagination`**.
 5. **`row-{key}`, per row** — the biggest single win and the one to gate. An inline
    cell save currently costs the full 178.8 ms and morphs ~38 kB; one row is ~9 ms
@@ -1022,6 +1024,52 @@ fact.
    The decomposition benchmark's byte fit is unchanged apart from the fragment
    markers — 25 699 B/row + 89 120 B fixed against 88 860 B before, i.e. **+260 B
    for the whole mechanism**.
+2a. **Summary footer / group subtotals.** §4.3 put these third, on the reasoning
+   that aggregate work changes rarely and `skip`-by-default is the right
+   semantic. **Half of that is now unreachable, and the other half was never
+   about islands.** Both findings are measured rather than argued.
+
+   **The island half does not work inside `data-region`.** A probe of nested
+   islands (a parent with `always`, two children — one plain, one `always`) shows
+   that when the parent renders *on its own*, **both children render inline with
+   fresh content**:
+
+   ```
+   PARENT ISLAND RENDERED ALONE (n = 2):
+     parent 2         present
+     child-plain 2    present     ← no `always`, still rendered
+     child-always 2   present
+   ```
+
+   Skipping applies to a *component* render, not to a nested island inside a
+   parent that is rendering. So a `summary` island under an `always` parent
+   renders every time the parent does — it saves nothing on the paths that
+   matter — and it cannot be targeted on its own either, because a click inside
+   it already targets the parent (one call, one island; §5.4.4a). To get skip
+   semantics the footer would have to be a *sibling* of the region, and it cannot
+   be: it is the `<tfoot>` of the same `<table>`.
+
+   **The real cost here was a duplicate, not a missing island.** A stacked table
+   renders its totals twice into one document — the desktop `<tfoot>` and a card
+   footer for the width that hides the table — and each include asked the host to
+   compute them, so the whole `SummaryBatch` ran twice per render:
+
+   ```
+   before:  4 queries (2 aggregate)   select SUM(...), AVG(...) from ...   ← twice, identical
+   after:   3 queries (1 aggregate)
+   ```
+
+   Memoised per render (dropped by `getTableProperty()`, like the render plan),
+   keyed by scope so the toggle still recomputes, and never for the sub-rows
+   scope, which is asked per parent record. Output byte-identical across the ten
+   previews. On the tables this is for, that aggregate runs over the entire
+   filtered set — which is the whole reason it is worth one query rather than
+   two.
+
+   Pinned by `SummaryComputedOnceTest` (verified to fail without the memo) and by
+   the batching test next door, which now drops the memo before counting so it
+   still measures batching rather than the memo.
+
 3. **Measure the `islands` memo** before going finer. `SupportIslands::dehydrate()`
    adds every island's name and token to the snapshot, so per-row islands grow it
    linearly in rows. Fine at 20; the question is 200. Gate: snapshot size at 20,
