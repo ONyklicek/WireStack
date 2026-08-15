@@ -321,16 +321,34 @@ loops"), and it is a prerequisite for anything island-shaped later.
    renders once.
 3. ~~**`summary-footer` / `group-subtotal`** — aggregate work that changes rarely.
    `skip`-by-default is exactly the right semantic; target it from the write paths
-   that can change a total.~~ **Withdrawn 2026-08-15**: a nested island under an
-   `always` parent is never skipped, so there is no `skip` semantic to have here —
-   see §5.4.3 step 2a for the probe and for what the cost actually was.
+   that can change a total.~~ **Withdrawn 2026-08-15**: the `skip` semantic exists
+   but cannot be undone — a nested island that skips cannot be targeted back into
+   life from a click inside its parent, so the totals would go stale on the paths
+   that change them. §5.4.3 step 2a has the probe and what the cost actually was.
 4. **`pagination`**.
-5. **`row-{key}`, per row** — the biggest single win and the one to gate. An inline
-   cell save currently costs the full 178.8 ms and morphs ~38 kB; one row is ~9 ms
-   and ~1.9 kB. Caveat from the source: `SupportIslands::dehydrate()` adds an
-   `islands` memo listing every island's name and token, so per-row islands grow the
-   snapshot linearly in rows. Fine at 20 rows; measure before allowing it at 200.
-   Recommend it as an opt-in for editable tables only.
+5. ~~**`row-{key}`, per row**~~ — **impossible, established 2026-08-15.** Not a
+   trade-off and not a cost: it does not compile. The reason is sharper than the
+   docs' "islands can't be used in loops", and it is the *name* rather than the
+   body that breaks. `IslandCompiler` extracts the body into its own view file and
+   re-evaluates **the directive's own arguments inside that file**:
+
+   ```php
+   })(name: 'row-'.$row['id'], always: true);   // ← $row is not, and cannot be, here
+   ```
+
+   That file is given the component and its public properties, never the enclosing
+   loop's variables, so a dynamic name throws `Undefined variable $row` on the very
+   first render. **An island's name must be resolvable from the component alone**,
+   which rules out one island per record by construction. Pinned by
+   `IslandSemanticsTest`.
+
+   Two things follow. The snapshot question this step was gated on — the `islands`
+   memo growing linearly with rows — **cannot arise**: that memo lists hand-written
+   directives, of which this repo has two. And the win it was after (an inline cell
+   save costing one row instead of the page: ~9 ms and ~1.9 kB against the full
+   render) needs a different mechanism — Filament's `wire:partial`, already
+   described in §5.4.3 as the escape hatch, which picks its anchors server-side and
+   costs nothing per anchor.
 
 ### 4.4 Sizing the win — measured decomposition
 
@@ -475,7 +493,7 @@ Re-anchored on the 2.0.0 decision (§3). Phases 0 and 1 are 1.x work that makes 
 | 1 | Extract `TableRenderPlan` out of `index.blade.php`'s head block — **started**, see §5.1 | `2.0.0` | `WideTableBenchmarkTest` + `IslandDecompositionBenchmarkTest` before/after — must not regress |
 | 2 | Floor all five `composer.json` at `^4.0`; fix what the suites report; `.blur`/`.change` mapping in `CanBeLive`; re-measure the payload fuse under v4 and record the new numbers next to the v3 ones | `2.0.0` | `composer test`, `npm run verify:drivers`, new concurrent-commit driver (§2.2) |
 | 3 | Islands in `tables/index.blade.php`, seams 1–4 from §4.3 | `2.0.0` | decomposition benchmark before/after, published |
-| 4 | Per-row islands behind a flag; `wire:intersect`, `.renderless`, `data-loading`, `wire:click.async` | `2.0.0` | drivers + snapshot-size check on the islands memo |
+| 4 | ~~Per-row islands behind a flag~~ (impossible — §4.3 step 5); `wire:intersect`, `.renderless`, `data-loading`, `wire:click.async` | `2.0.0` | drivers |
 | 5 | `wire:sort` delegation, SFC in docs and recipes, CSP claim, 2.0 upgrade guide | `2.0.0` | full gate + docs EN/CS |
 
 Phase 1 was scoped as 1.x work, before the 2.0 floor landed first. It is now
@@ -1029,24 +1047,37 @@ fact.
    semantic. **Half of that is now unreachable, and the other half was never
    about islands.** Both findings are measured rather than argued.
 
-   **The island half does not work inside `data-region`.** A probe of nested
-   islands (a parent with `always`, two children — one plain, one `always`) shows
-   that when the parent renders *on its own*, **both children render inline with
-   fresh content**:
+   **The island half is a dead end either way.** A nested island under a
+   rendering parent behaves like this on an update:
 
    ```
-   PARENT ISLAND RENDERED ALONE (n = 2):
+   PARENT ISLAND RENDERED ALONE, islands already mounted (n = 2):
      parent 2         present
-     child-plain 2    present     ← no `always`, still rendered
+     child-plain 2    ABSENT      ← mode=skip, empty content
      child-always 2   present
    ```
 
-   Skipping applies to a *component* render, not to a nested island inside a
-   parent that is rendering. So a `summary` island under an `always` parent
-   renders every time the parent does — it saves nothing on the paths that
-   matter — and it cannot be targeted on its own either, because a click inside
-   it already targets the parent (one call, one island; §5.4.4a). To get skip
-   semantics the footer would have to be a *sibling* of the region, and it cannot
+   > **Corrected 2026-08-15.** The first version of this probe rendered the parent
+   > straight after a mount, where `islandIsMounting()` is still true and *every*
+   > island takes the mounting branch and renders. It reported that nested islands
+   > are never skipped, and this section drew that conclusion. Wrong: the flag
+   > `SupportIslands::hydrate()` sets on every later request is what makes skipping
+   > visible, and `markIslandsAsMounted()` is what a probe must call to see it. The
+   > verdict below is unchanged; the reason for it is the opposite of what was
+   > written here first. Pinned now by `IslandSemanticsTest` rather than by a
+   > paragraph.
+
+   So both settings are dead ends, for opposite reasons:
+
+   - **without `always`** the child *is* skipped — and cannot be brought back,
+     because a click inside the region targets the region (one call, one island;
+     §5.4.4a). Totals would go stale on exactly the paths that change them: a page
+     change, a cell save. That is the ERP trap in 5.4.2, and worse than the cost;
+   - **with `always`** it renders every time the parent does, which is today's
+     behaviour with extra markers.
+
+   Nothing in between exists. To have a footer that skips *and* stays correct it
+   would have to be a sibling of the region, targetable on its own — and it cannot
    be: it is the `<tfoot>` of the same `<table>`.
 
    **The real cost here was a duplicate, not a missing island.** A stacked table
@@ -1070,13 +1101,16 @@ fact.
    the batching test next door, which now drops the memo before counting so it
    still measures batching rather than the memo.
 
-3. **Measure the `islands` memo** before going finer. `SupportIslands::dehydrate()`
-   adds every island's name and token to the snapshot, so per-row islands grow it
-   linearly in rows. Fine at 20; the question is 200. Gate: snapshot size at 20,
-   50 and 200 rows, published like the decomposition fit.
-4. **Per-row islands, editable tables only.** Where the win is largest (a cell
-   save goes from the full render to ~4.6 ms) and where the staleness cost is
-   already being paid for by the lock.
+3. ~~**Measure the `islands` memo** before going finer.~~ **Moot, 2026-08-15.**
+   The memo lists hand-written `@island` directives, and there is no way to
+   generate them per record (step 4), so it cannot grow with rows. This repo has
+   two.
+4. ~~**Per-row islands, editable tables only.**~~ **Impossible, 2026-08-15** —
+   §4.3 step 5 has the mechanism. An island's name is re-evaluated inside its own
+   compiled view file, which never sees a loop variable, so `row-{key}` throws on
+   the first render. The win it was after — a cell save costing one row rather
+   than the page — is real and unclaimed; `wire:partial` below is the only route
+   left to it.
 5. **The freshness channel.** Targeted row refresh driven by poll or broadcast,
    and — the part that is easy to forget — the refreshed row must carry a **fresh
    version stamp**, or islands will have made the lock worse rather than better.
@@ -1205,8 +1239,12 @@ the trap is documented by something that fails rather than by this paragraph.
 2. **Where this plan is registered.** `v2-master-plan.md` is the authoritative V2
    document and predates v4. Does the framework floor become an explicit V2 gate
    there, and does it land before or after V2.0's data-source work?
-3. **Per-row islands** — opt-in for editable tables, or not at all until the
-   `islands` memo growth is measured?
+3. ~~**Per-row islands** — opt-in for editable tables, or not at all until the
+   `islands` memo growth is measured?~~ **Settled 2026-08-15: neither.** They do
+   not compile (§4.3 step 5), and the memo growth that worried this question
+   cannot happen. The open question that replaces it: **do we adopt
+   `wire:partial`** for the per-row win, which is ~300 lines of our own against a
+   mechanism Filament runs in production?
 4. ~~**wire-sortable's future** (§4.7)~~ — **settled by §5.3**: stay
    self-contained. `wire:sort` passes a single moved item and its index, while the
    server contract wants the whole new order so it can write one `CASE` UPDATE in
