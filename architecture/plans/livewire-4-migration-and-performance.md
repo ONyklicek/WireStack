@@ -1230,6 +1230,51 @@ If it is built: behind a flag, editable tables only, and the first test is
 `SkipRenderFromHookTest` — which already exists, because the decision rests on
 it.
 
+#### 5.4.3b The engine is built; the table's anchors are blocked on a fork
+
+**Landed 2026-08-15**: `InteractsWithPartials::renderPartial()`,
+`PartialRenderHook`, `support/partials.js`, and the coverage rule that decides
+when a partial response is allowed to stand in for a render. No container
+binding, its own effect name, five tests, all gates green. Nothing calls it yet.
+
+**The table integration then hit the repo's own tripwire, and the tripwire is
+right.** A row partial needs the row's markup renderable for ONE record, so the
+obvious first move is to lift the row body out of the loop into
+`partials/body-row.blade.php` and `@include` it. Byte-identical once whitespace
+is collapsed — it even removes 37 B per row of inter-row indentation — but
+`TableRenderCountTest` went red:
+
+```
+8 extra rows → 8 extra view renders   (expected 0)
+```
+
+That test exists for exactly this: *"a PR that drops an `@include` back into the
+row loop stays green everywhere else and only shows up on a customer's
+Debugbar."* An `@include` per row is O(rows) view renders, which is the
+anti-pattern the whole Htmlable-first engine was built to remove. Reverted.
+
+So the table integration needs the row body renderable **without** a per-row
+`view()->render()`, and there are exactly two ways, each giving up something the
+repo currently protects:
+
+1. **Move the row body into PHP** — a `RowRenderer` assembling the pieces that
+   are already Htmlable (the compiled `<tr>` tag, the selection cell, the three
+   expander shapes, the per-column cell skeletons, `$action->render()`). This is
+   where `render-engine-htmlable-first.md` was heading anyway. **What it gives
+   up:** the per-record `@if`s in the loop emit Livewire morph markers, and those
+   are load-bearing — the file's own comment records that removing one broke the
+   column reorder, green on both fuses, caught only by
+   `verify-gesture-lab.mjs`. PHP assembly emits no markers.
+2. **Keep the loop inline and give the write path its own row view** — one view
+   render per write, which is fine, and the loop keeps its markers. **What it
+   gives up:** the row's markup then exists in two places, which is the kind of
+   drift no test catches until the two disagree.
+
+Both are real work and both trade something. The measurement says the prize is
+49.3 ms → 3.2 ms and 556 kB → 26 kB on the most frequent write in the product,
+so it is worth doing properly rather than quickly — and worth choosing
+deliberately rather than by whichever is easier to type.
+
 **Step one landed 2026-08-15**, and did not go where it was aimed. The cell
 commit targets the island — 59 123 B → **42 765 B**, as predicted — through
 `support/island.js`, with the island named by the four editable column views and
