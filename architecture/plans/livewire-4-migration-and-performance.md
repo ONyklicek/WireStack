@@ -347,7 +347,7 @@ loops"), and it is a prerequisite for anything island-shaped later.
    directives, of which this repo has two. And the win it was after (an inline cell
    save costing one row instead of the page: ~9 ms and ~1.9 kB against the full
    render) needs a different mechanism — Filament's `wire:partial`, already
-   described in §5.4.3 as the escape hatch, which picks its anchors server-side and
+   assessed in §5.4.3a, which picks its anchors server-side and
    costs nothing per anchor.
 
 ### 4.4 Sizing the win — measured decomposition
@@ -1109,19 +1109,78 @@ fact.
    §4.3 step 5 has the mechanism. An island's name is re-evaluated inside its own
    compiled view file, which never sees a loop variable, so `row-{key}` throws on
    the first render. The win it was after — a cell save costing one row rather
-   than the page — is real and unclaimed; `wire:partial` below is the only route
+   than the page — is real and unclaimed; `wire:partial` (§5.4.3a) is the only route
    left to it.
 5. **The freshness channel.** Targeted row refresh driven by poll or broadcast,
    and — the part that is easy to forget — the refreshed row must carry a **fresh
    version stamp**, or islands will have made the lock worse rather than better.
    Gate: a driver with two browsers editing the same table.
 
-**If step 2 says no**, the escape hatch is Filament's, and it is proven in
-production: `wire:partial` anchors cost nothing per anchor — a plain HTML
-attribute, no server registration, nothing in the snapshot — and only the partials
-the server chose are serialised. It is ~300 lines across a `ComponentHook`, a
-`DataStore` override and a small JS file. Adopting the *shape* does not require
-adopting Filament.
+#### 5.4.3a `wire:partial` — assessed 2026-08-15, and not yet
+
+The escape hatch is Filament's and it is proven in production: `wire:partial`
+anchors cost nothing per anchor — a plain HTML attribute, no server
+registration, nothing in the snapshot — and only the partials the server chose
+are serialised. Measured in their tree: **401 lines** (`DataStoreOverride` 36,
+`PartialsComponentHook` 224, `partials.js` 141), plus what we would add around
+it.
+
+**First, a correction that changes the arithmetic.** A cell save is *not*
+island-targeted today, and this plan said it was. Automatic targeting reads
+`action.origin` — the DOM element that fired it — and returns immediately when
+there is none:
+
+```js
+let origin = action.origin
+if (! origin) return
+```
+
+Editable cells commit through `$wire.updateTableCell(…)` from Alpine, which has
+no origin. Measured on `/previews/table-editable-fill`, the same write, twice:
+
+```
+as shipped                          hasHtml=true   no island   58 726 B
+$wire.$island('data-region')…       hasHtml=false  data-region 42 374 B   −28 %
+```
+
+`$island` is a documented `$wire` magic and is present in this build. So the
+region island is currently doing nothing for the most frequent interaction in an
+ERP table, and one call-site change fixes that.
+
+**What each option is worth**, on the benchmark's 25-column, 20-row page (full
+render 63.0 ms / 603 kB; chrome 8.9 ms / 89 kB; one row 2.6 ms / 25.7 kB):
+
+| a cell save costs | time | bytes |
+|---|---|---|
+| today | ~63 ms | ~603 kB |
+| with `$island` targeting (one line per call site) | ~54 ms | ~514 kB |
+| with `wire:partial` (one row) | ~4 ms | ~26 kB |
+
+So `wire:partial` is worth roughly **13× more than island targeting** on that
+interaction. The win is real and large.
+
+**Why not yet, in order of weight:**
+
+1. **It claims an app-wide container binding.** `$this->app->bind(DataStore::class,
+   DataStoreOverride::class)` swaps a Livewire mechanism for the whole
+   application. Filament can do that because it *is* the app's UI layer. These
+   packages ship into somebody else's app, which may already run Filament or
+   another package doing the same — last binding wins, and two overrides conflict
+   silently. Copying the shape means either finding a mechanism that does not
+   claim a global singleton, or documenting an incompatibility with Filament. That
+   is the blocking question, not the line count.
+2. **It rides on Livewire internals** (`store($instance)->get('skipRender')`).
+   Three times in this migration, island and render internals have behaved
+   differently from the documentation, and differently by request phase. Owning
+   ~400 lines against them is a standing cost at every Livewire release.
+3. **The cheaper win is unclaimed.** Measuring `wire:partial`'s value against
+   today's number flatters it by 89 kB of chrome that one line of JS removes.
+
+**Order, then:** target the programmatic `$wire` calls at the island first
+(gate: the editable and fill drivers, plus the payload fuse), re-measure a cell
+save on a 25×20 table, and decide on `wire:partial` against *that* number and
+after answering the binding question. Adopting the *shape* does not require
+adopting Filament — but it does require solving what Filament never had to.
 
 #### 5.4.4 What phase 1 already bought for this
 
