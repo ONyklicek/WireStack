@@ -1403,18 +1403,28 @@ the card and the totals together. The totals are computed once for both, because
 `computeTableSummaries()` memoises per render, which is the second time that fix
 paid for itself.
 
-**Grouping is the one refusal left, and for a structural reason worth recording
-rather than rediscovering.** A group's subtotal is not one element:
+**Grouping followed, and the structural change it seemed to need turned out to be
+the wrong question.** A subtotal is not one element:
 
 ```blade
 @for($i = 0; $i < $groupMaxRows; $i++)<tr class="bg-gray-50 …">
 ```
 
-`wire:partial` addresses a single element, so anchoring a subtotal means giving
-each group its own `<tbody>` — valid HTML, and a change to the table's
-*structure* rather than an attribute on it. It would touch CSS selectors, the
-keyboard grid, the selection sweep and every driver that looks for a `<tbody>`.
-That is a decision worth taking on its own, not inside another slice.
+The obvious reading — `wire:partial` addresses one element, so each group needs
+its own `<tbody>` — would have been a change to the table's structure, and the
+real objection to it was never CSS: the delegated `wireRecordActions` controller
+is mounted on the **one** `<tbody>` precisely so a nested table cannot be mistaken
+for it, and N tbodies would mean N controllers.
+
+Nothing required the *group* to be the anchor. Each subtotal **row** carries its
+own (`group-{crc32(value)}-{i}`), the count is stable between renders because it
+is the widest column's declared summary list rather than data, and no structure
+changes at all.
+
+**So `usesRowPartials()` refuses no shape of table.** What still takes a full
+render is a property of the *write*: editing the column the table groups BY moves
+the record into another group, which changes the page's shape rather than a row's
+contents. Pinned by its own test.
 
 #### 5.4.4a Targeting is automatic, so the boundary *is* the policy
 

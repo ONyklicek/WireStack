@@ -61,7 +61,7 @@ class RpHost extends Component
             ->rowPartials($this->partials);
 
         if ($this->grouped) {
-            $table->groupBy('amount');
+            $table->groupBy('amount')->groupSummaries();
         }
 
         return $this->stacked ? $table->stackedOnMobile() : $table;
@@ -152,11 +152,37 @@ it('anchors no totals on a table that shows none', function () {
     expect(Livewire::test(RpHost::class)->html())->not->toContain('wire:partial="summary"');
 });
 
-it('refuses on a grouped table', function () {
-    // A group subtotal is a sibling row, not part of any row.
-    $test = Livewire::test(RpHost::class, ['grouped' => true]);
+it('answers with the group subtotal a write moved', function () {
+    // A subtotal is moved by a write to any member of its group, and it is a
+    // sibling row rather than part of one. Each subtotal ROW carries its own
+    // anchor: a subtotal is as many rows as the widest column has summaries, and
+    // wrapping them would need a <tbody> per group — which would break the
+    // invariant that the delegated record-actions controller has one root.
+    $test = Livewire::test(RpHost::class, ['grouped' => true, 'summaries' => true]);
 
-    expect($test->instance()->getTable()->usesRowPartials())->toBeFalse();
+    expect($test->instance()->getTable()->usesRowPartials())->toBeTrue()
+        ->and($test->html())->toContain('wire:partial="group-');
+
+    $test->call('updateTableCell', '1', 'name', 'Edited', null);
+
+    $partials = array_keys($test->effects['wirePartials'] ?? []);
+
+    expect($partials)->toContain('row-1')
+        ->and(collect($partials)->filter(fn ($n) => str_starts_with($n, 'group-'))->values()->all())
+        ->not->toBeEmpty()
+        ->and($test->effects['html'] ?? null)->toBeNull();
+});
+
+it('takes the full render when the write moves the record to another group', function () {
+    // Editing the column the table groups BY is a change to the page's shape, not
+    // to a row's contents — the record leaves one group for another, and no set
+    // of regions can describe that.
+    $test = Livewire::test(RpHost::class, ['grouped' => true, 'summaries' => true]);
+
+    $test->call('updateTableCell', '1', 'amount', '99', null);
+
+    expect($test->effects['wirePartials'] ?? null)->toBeNull()
+        ->and($test->effects['html'] ?? null)->not->toBeNull();
 });
 
 it('answers with the card too, where the table renders one', function () {
@@ -181,10 +207,10 @@ it('anchors no card on a table that does not render one', function () {
     expect(Livewire::test(RpHost::class)->html())->not->toContain('wire:partial="card-');
 });
 
-it('falls back to a full render where it refuses', function () {
-    // The refusal must not merely skip the partial — the write still has to
-    // repaint what it changed.
-    $test = Livewire::test(RpHost::class, ['grouped' => true]);
+it('falls back to a full render when the flag is off', function () {
+    // Without the flag nothing is anchored, so the write must still repaint what
+    // it changed the ordinary way.
+    $test = Livewire::test(RpHost::class, ['partials' => false]);
 
     $test->call('updateTableCell', '1', 'name', 'Edited', null);
 

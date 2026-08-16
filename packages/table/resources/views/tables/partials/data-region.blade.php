@@ -382,6 +382,7 @@
                                             'table' => $table,
                                             'component' => $component,
                                             'groupSummaries' => $component->computeGroupSummaries($groupValue),
+                                            'partialAnchors' => $summaryRenderer->groupAnchors($groupValue),
                                             'visibleColumns' => $visibleColumns,
                                             'colSpan' => $colSpan,
                                             'cellPadding' => $cellPadding,

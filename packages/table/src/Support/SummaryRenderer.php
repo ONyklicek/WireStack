@@ -70,6 +70,96 @@ final class SummaryRenderer
         ])->render();
     }
 
+    /**
+     * The anchors for one group's subtotal rows, in order.
+     *
+     * One per row rather than one for the group: a subtotal is as many `<tr>`s as
+     * the widest column has summaries, and `wire:partial` addresses a single
+     * element. Wrapping them would mean a `<tbody>` per group — valid HTML, but a
+     * change to the table's structure, and the delegated `wireRecordActions`
+     * controller is mounted on the one `<tbody>` precisely so a nested table
+     * cannot be mistaken for it.
+     *
+     * @return array<int, string>
+     */
+    public function groupAnchors(mixed $groupValue): array
+    {
+        if (! $this->table->usesRowPartials()) {
+            return [];
+        }
+
+        $name = self::groupPartialName($groupValue);
+
+        return array_map(
+            fn (int $i): string => ' wire:partial="'.$name.'-'.$i.'"',
+            range(0, max(0, $this->groupRowCount($groupValue) - 1)),
+        );
+    }
+
+    /**
+     * One group's subtotal rows, re-rendered on their own.
+     *
+     * @return array<string, string> anchor name => that row's markup
+     */
+    public function group(mixed $groupValue): array
+    {
+        $summaries = $this->component->computeGroupSummaries($groupValue);
+        $name = self::groupPartialName($groupValue);
+        $columns = $this->plan->columns();
+        $actions = $this->plan->actions();
+        $layout = $this->plan->layout();
+
+        $html = view('wire-table::tables.partials.group-subtotal', [
+            'table' => $this->table,
+            'component' => $this->component,
+            'groupSummaries' => $summaries,
+            'visibleColumns' => $columns->visible,
+            'colSpan' => $columns->colSpan,
+            'cellPadding' => $layout->cellPadding,
+            'isBordered' => $layout->isBordered,
+            'isSelectable' => $this->plan->row()->isSelectable,
+            'hasActions' => $actions->hasAny,
+            'actionsPosition' => $actions->position,
+            'partialAnchors' => $this->groupAnchors($groupValue),
+        ])->render();
+
+        // The partial emits every subtotal row in one string; each is its own
+        // region, so they are split back apart on the anchor that opens them.
+        $rows = [];
+
+        foreach (explode('<tr wire:partial="', $html) as $index => $chunk) {
+            if ($index === 0) {
+                continue;
+            }
+
+            [$anchor] = explode('"', $chunk, 2);
+            $rows[$anchor] = '<tr wire:partial="'.$chunk;
+        }
+
+        return $rows;
+    }
+
+    /**
+     * A group's value can be any scalar a column holds — a date, a name with a
+     * quote in it — so the name it is addressed by is a hash rather than the
+     * value.
+     */
+    public static function groupPartialName(mixed $groupValue): string
+    {
+        return 'group-'.crc32((string) $groupValue);
+    }
+
+    private function groupRowCount(mixed $groupValue): int
+    {
+        $rows = 0;
+
+        foreach ($this->component->computeGroupSummaries($groupValue) as $summaryList) {
+            $rows = max($rows, count($summaryList));
+        }
+
+        return $rows;
+    }
+
     /** @return array<string, mixed> */
     private function shared(): array
     {

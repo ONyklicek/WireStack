@@ -2328,22 +2328,24 @@ class Table implements Htmlable
     /**
      * Whether a write may answer with rows rather than the table.
      *
-     * The flag alone is not enough, and what is left is one refusal: **grouping**.
-     * A group's subtotal is a sibling row that a write to any member moves, and
-     * it cannot be anchored the way the others were — a subtotal is `@for`-many
-     * `<tr>`s and `wire:partial` addresses one element, so anchoring it needs a
-     * `<tbody>` per group, which is a change to the table's structure rather than
-     * an attribute on it. Worth doing when a grouped table asks.
-     *
-     * Two things that used to refuse no longer do, because both grew anchors of
-     * their own and a write now queues them alongside the row:
+     * Everything that moves with a row now has an anchor of its own, so nothing
+     * refuses any more:
      *
      *  - **stacked cards**, the same record rendered again for a narrow width;
-     *  - **summaries**, computed over the whole set and living outside every row.
+     *  - **summaries**, computed over the whole set and living outside every row;
+     *  - **group subtotals**, moved by a write to any member of the group. Each
+     *    subtotal ROW is anchored rather than the group, because a subtotal is
+     *    several `<tr>`s and `wire:partial` addresses one element — the
+     *    alternative, a `<tbody>` per group, would break the invariant that the
+     *    delegated record-actions controller has exactly one root.
+     *
+     * One thing still takes the full render, and it is a property of the write
+     * rather than of the table: editing the column the table groups BY moves the
+     * record to another group, which is a change to the page's shape.
      */
     public function usesRowPartials(): bool
     {
-        return $this->rowPartials && ! $this->hasGrouping();
+        return $this->rowPartials;
     }
 
     public function getActionCellSkeleton(): Skeleton

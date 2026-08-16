@@ -310,11 +310,14 @@ A write answers with **everything it moved**, not just the row: the record's car
   the totals where it has any (`wire:partial="summary"`, computed over the whole filtered set, so
   any write moves them). Refresh one and not the others and a phone keeps the old value while the
   footer keeps the old total.
-  **Where it refuses, and renders normally instead:** a **grouped** table. A group's subtotal is a
-  sibling row that a write to any member moves, and it cannot be anchored the way the rest were —
-  a subtotal is several `<tr>`s and `wire:partial` addresses one element, so it needs a `<tbody>`
-  per group, which changes the table's structure rather than adding an attribute to it.
-  `usesRowPartials()` is the honest answer to whether it is on.
+  A **grouped** table is covered too: each subtotal ROW carries its own anchor rather than the
+  group carrying one, because a subtotal is several `<tr>`s and `wire:partial` addresses a single
+  element — the alternative, a `<tbody>` per group, would break the invariant that the delegated
+  record-actions controller has exactly one root.
+  **The one write that still takes a full render** is a property of the write rather than the
+  table: editing the column the table groups BY moves the record to another group, which changes
+  the page's shape and is not something any set of regions can describe. `usesRowPartials()` is
+  the honest answer to whether the feature is on.
 - **With `rowPartials()` on, a poll answers with the rows that moved.** `refreshTable()` — what
   `poll()` calls and what the `live(broadcast: true)` bridge nudges — compares each row on the
   page against a hash of the record it last sent, and queues a partial for the ones that changed:

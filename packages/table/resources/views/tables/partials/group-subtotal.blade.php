@@ -1,6 +1,19 @@
 {{-- Group subtotal row(s) — mirrors the summary footer layout inside the body --}}
 {{-- Variables: $table, $component, $groupSummaries, $visibleColumns, $colSpan,
-     $cellPadding, $isBordered, $isSelectable, $hasActions, $actionsPosition --}}
+     $cellPadding, $isBordered, $isSelectable, $hasActions, $actionsPosition,
+     $partialAnchors --}}
+{{-- $partialAnchors is one whole `wire:partial` attribute per subtotal row, or an
+     empty array where the table does not send rows.
+
+     ONE ANCHOR PER ROW rather than one for the group, because a subtotal is
+     `@for`-many `<tr>`s and `wire:partial` addresses a single element. The
+     alternative — a `<tbody>` per group — is valid HTML but changes the table's
+     structure, and the delegated `wireRecordActions` controller is mounted on the
+     one `<tbody>` precisely so a nested table cannot be mistaken for it. Anchoring
+     each row keeps that invariant and needs no structural change at all.
+
+     The count is stable between renders: it is the widest column's declared
+     summary list, which is configuration, not data. --}}
 {{-- Tags touch on purpose: this renders once per group, which on a table grouped by
      something high-cardinality is once per row, and every whitespace run between two
      tags is a DOM text node the morph walks. Whitespace between attributes is free.
@@ -15,7 +28,7 @@
         $groupMaxRows = max($groupMaxRows, count($summaryList));
     }
 @endphp
-@for($i = 0; $i < $groupMaxRows; $i++)<tr class="bg-gray-50 dark:bg-gray-800/40">{{-- Selection spacer — carries data-select-cell so the selection column
+@for($i = 0; $i < $groupMaxRows; $i++)<tr{!! $partialAnchors[$i] ?? '' !!} class="bg-gray-50 dark:bg-gray-800/40">{{-- Selection spacer — carries data-select-cell so the selection column
     stays one addressable track through the subtotal rows. --}}
 @if($isSelectable)<td class="w-12 {{ $cellPadding }}" data-select-cell></td>@endif{{-- Sub-row toggle spacer --}}
 @if($hasExpanderSpacer)<td class="w-10 {{ $cellPadding }}"></td>@endif{{-- Actions (start position) --}}

@@ -710,11 +710,28 @@ trait WithTable
             }
         }
 
+        $summaries = SummaryRenderer::for($table, $this, $plan);
+
+        // A group's subtotal is moved by a write to any of its members, and it is
+        // a sibling row rather than part of one — so each changed record's group
+        // is re-rendered too, once however many of its rows moved.
+        if ($this->tableHasGroupSummaries()) {
+            $groups = [];
+
+            foreach ($records as $record) {
+                $groups[(string) $table->getGroupComparisonKey($record)] ??= $table->getGroupComparisonKey($record);
+            }
+
+            foreach ($groups as $groupValue) {
+                foreach ($summaries->group($groupValue) as $name => $html) {
+                    $this->renderPartial($name, fn (): string => $html);
+                }
+            }
+        }
+
         if (! $this->tableHasSummaries()) {
             return;
         }
-
-        $summaries = SummaryRenderer::for($table, $this, $plan);
 
         $this->renderPartial('summary', fn (): string => $summaries->desktop());
 
@@ -2449,7 +2466,7 @@ trait WithTable
 
             if ($outcome->success) {
                 $this->announceTableWrite();
-                $this->queueRowPartial($recordKey);
+                $this->queueRowPartial($recordKey, $columnName);
             }
 
             // The conflict is always shown inline on the cell; a table can opt in
@@ -2484,11 +2501,17 @@ trait WithTable
      * A record that is no longer on the page renders nothing, which is correct:
      * the client finds no anchor for it and leaves the page alone.
      */
-    protected function queueRowPartial(mixed $recordKey): void
+    protected function queueRowPartial(mixed $recordKey, ?string $columnName = null): void
     {
         $table = $this->getTable();
 
         if (! $table->usesRowPartials() || ! method_exists($this, 'renderPartial')) {
+            return;
+        }
+
+        // Editing the column a table groups BY moves the record to another group:
+        // the page's shape changes, and no set of regions can describe that.
+        if ($columnName !== null && $table->getGroupColumn() === $columnName) {
             return;
         }
 
