@@ -59,6 +59,7 @@ use NyonCode\WireTable\Services\SummaryBatch;
 use NyonCode\WireTable\Services\TableQueryCacheKey;
 use NyonCode\WireTable\Services\TableQueryService;
 use NyonCode\WireTable\Services\WriteGeneration;
+use NyonCode\WireTable\Support\CardRenderer;
 use NyonCode\WireTable\Support\CellEditOutcome;
 use NyonCode\WireTable\Support\RowRenderer;
 use NyonCode\WireTable\Support\TableRenderPlan;
@@ -2349,13 +2350,27 @@ trait WithTable
                 continue;
             }
 
-            $renderer = RowRenderer::for($table, $this, $this->tableRenderPlan());
+            $plan = $this->tableRenderPlan();
+            $renderer = RowRenderer::for($table, $this, $plan);
 
             $this->skipIslandsRender();
             $this->renderPartial(
                 'row-'.$recordKey,
                 fn (): string => $renderer->render($record, (int) $index),
             );
+
+            // The card is the same record rendered a second time for the width
+            // where the table is hidden. Both are in the document at once, so a
+            // write that refreshed only one would leave a phone showing the old
+            // value and a desktop the new one.
+            if ($table->isStackedOnMobile()) {
+                $cards = CardRenderer::for($table, $this, $plan);
+
+                $this->renderPartial(
+                    'card-'.$recordKey,
+                    fn (): string => $cards->render($record),
+                );
+            }
 
             return;
         }

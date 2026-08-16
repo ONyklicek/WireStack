@@ -481,10 +481,10 @@ class TablePreview extends Component
 
         if ($this->variant === 'editable-row-partials') {
             // The one variant with Table::rowPartials(): a cell save answers with
-            // that row instead of the data region. No summary, no grouping and no
-            // stacked cards, because each of those makes usesRowPartials() refuse
-            // — they keep a number outside the row that an edit moves.
-            $table->rowPartials();
+            // that record's row AND its card, instead of the data region. Stacked
+            // on purpose — both renderings of the record are in the document and
+            // a write has to move both, which is the half that came last.
+            $table->rowPartials()->stackedOnMobile();
         }
 
         if ($this->variant === 'editable-fill-paged') {

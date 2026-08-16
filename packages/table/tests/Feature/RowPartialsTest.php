@@ -149,12 +149,26 @@ it('refuses on a grouped table', function () {
     expect($test->instance()->getTable()->usesRowPartials())->toBeFalse();
 });
 
-it('refuses on a table that also renders cards', function () {
-    // The stacked layout is a second rendering of every record, and only the
-    // desktop row carries an anchor today.
+it('answers with the card too, where the table renders one', function () {
+    // The stacked layout renders every record twice — the rows are in the same
+    // document, hidden by CSS at this width. A write that refreshed only one of
+    // them would leave a phone showing the old value and a desktop the new one,
+    // which is why this shape refused outright until the card had an anchor.
     $test = Livewire::test(RpHost::class, ['stacked' => true]);
 
-    expect($test->instance()->getTable()->usesRowPartials())->toBeFalse();
+    expect($test->instance()->getTable()->usesRowPartials())->toBeTrue()
+        ->and($test->html())->toContain('wire:partial="row-1"')
+        ->toContain('wire:partial="card-1"');
+
+    $test->call('updateTableCell', '1', 'name', 'Edited', null);
+
+    expect(array_keys($test->effects['wirePartials'] ?? []))->toBe(['row-1', 'card-1'])
+        ->and($test->effects['wirePartials']['card-1'])->toContain('Edited');
+});
+
+it('anchors no card on a table that does not render one', function () {
+    // …and the anchor costs nothing where there is no card to anchor.
+    expect(Livewire::test(RpHost::class)->html())->not->toContain('wire:partial="card-');
 });
 
 it('falls back to a full render where it refuses', function () {

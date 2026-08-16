@@ -42,6 +42,7 @@ use NyonCode\WireTable\Exceptions\TableHasNoHostException;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
 use NyonCode\WireTable\Services\TableIntrospector;
+use NyonCode\WireTable\Support\CardRenderer;
 use NyonCode\WireTable\Support\ColumnSet;
 use NyonCode\WireTable\Support\MobileCard;
 use NyonCode\WireTable\Support\RecordAction;
@@ -109,6 +110,13 @@ class Table implements Htmlable
 
     /** The row action cell's compiled markup — {@see getActionCellSkeleton()}. */
     protected ?Skeleton $actionCellSkeleton = null;
+
+    /**
+     * The stacked card's compiled markup, one shape per slot signature.
+     *
+     * @var array<string, Skeleton>
+     */
+    protected array $mobileCardSkeletons = [];
 
     /**
      * The sub-row expander cell, one compiled shape per state.
@@ -2235,6 +2243,59 @@ class Table implements Htmlable
     }
 
     /**
+     * The stacked-layout card, compiled once for the table and filled per record.
+     *
+     * Keyed by the card's slot signature rather than memoised flat: which slots a
+     * card has is derived from the visible columns, so hiding one changes the
+     * shape and must not reuse the shape before it.
+     *
+     * @see CardRenderer
+     */
+    public function getMobileCardSkeleton(MobileCard $card): Skeleton
+    {
+        $signature = implode('|', [
+            $card->title()?->getName() ?? '',
+            $card->metric()?->getName() ?? '',
+            $card->subtitle()?->getName() ?? '',
+            count($card->meta()),
+            count($card->details()),
+        ]);
+
+        return $this->mobileCardSkeletons[$signature] ??= Skeleton::compile(
+            view('wire-table::tables.partials.mobile-card', [
+                'isSelectable' => $this->isSelectable(),
+                'cardTitle' => $card->title() !== null,
+                'cardMetric' => $card->metric() !== null,
+                'cardSubtitle' => $card->subtitle() !== null,
+                'hasMeta' => $card->meta() !== [],
+                'hasDetails' => $card->details() !== [],
+                'hasMobileActions' => $this->getMobileRowActionsForDisplay() !== [],
+                'collapseMobileActions' => $this->shouldCollapseActionsOnMobile(),
+                'detailsClass' => 'px-4 pb-3 grid grid-cols-2 gap-x-4 gap-y-2'
+                    .($this->isSelectable() ? ' pl-12' : ''),
+                'actionsClass' => 'flex flex-wrap items-center gap-2 px-4 pb-3'
+                    .($this->isSelectable() ? ' pl-12' : ''),
+                'partialAnchor' => $this->usesRowPartials()
+                    ? ' wire:partial="card-'.Skeleton::slot('key').'"'
+                    : '',
+                'cardClasses' => Skeleton::slot('cardClasses'),
+                'key' => Skeleton::slot('key'),
+                'keyJs' => Skeleton::slot('keyJs'),
+                'title' => Skeleton::slot('title'),
+                'metric' => Skeleton::slot('metric'),
+                'subtitle' => Skeleton::slot('subtitle'),
+                'meta' => Skeleton::slot('meta'),
+                'groupActions' => Skeleton::slot('groupActions'),
+                'details' => Skeleton::slot('details'),
+                'actions' => Skeleton::slot('actions'),
+                'subRows' => Skeleton::slot('subRows'),
+            ])->render(),
+            'cardClasses', 'key', 'keyJs', 'title', 'metric', 'subtitle',
+            'meta', 'groupActions', 'details', 'actions', 'subRows',
+        );
+    }
+
+    /**
      * The row's action cell, compiled once for the table and filled per row.
      *
      * The `<td>`/`<div>` wrapper never varies — its padding, border and
@@ -2273,13 +2334,15 @@ class Table implements Htmlable
      * avoid, so they refuse rather than degrade:
      *
      *  - **summaries**: a total is computed over the set, and an edit moves it;
-     *  - **grouping**: a group subtotal is a sibling row, not part of any row;
-     *  - **stacked-on-mobile**: the cards are a second rendering of every record,
-     *    and only the desktop row carries a partial anchor today.
+     *  - **grouping**: a group subtotal is a sibling row, not part of any row.
+     *
+     * A stacked table used to refuse too, because the cards are a second
+     * rendering of every record and only the desktop row was anchored. Both are
+     * anchored now, and a write queues both.
      */
     public function usesRowPartials(): bool
     {
-        if (! $this->rowPartials || $this->hasGrouping() || $this->isStackedOnMobile()) {
+        if (! $this->rowPartials || $this->hasGrouping()) {
             return false;
         }
 

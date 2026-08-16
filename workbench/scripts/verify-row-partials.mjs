@@ -134,10 +134,17 @@ try {
   check('the write reaches the server and is confirmed',
     save.serverValue === save.written, saved);
 
-  check('…and comes back as that row alone',
+  check('…and comes back as that record alone',
     save.wire.length > 0
       && save.wire.every((r) => r.hasHtml === false && r.hasIslands === false)
-      && save.wire.some((r) => r.partials.length === 1 && /^row-/.test(r.partials[0])),
+      && save.wire.some((r) => r.partials.length === 2 && r.partials[0].startsWith('row-')),
+    JSON.stringify(save.wire));
+
+  // The card is the same record rendered again for the width where the table is
+  // hidden. Both are in the document at once, so a write that refreshed one and
+  // not the other would show two different values at two window widths.
+  check('…including the card, which is the same record rendered twice',
+    save.wire.some((r) => r.partials.some((n) => n.startsWith('card-'))),
     JSON.stringify(save.wire));
 
   check('the row was really re-rendered into the page',

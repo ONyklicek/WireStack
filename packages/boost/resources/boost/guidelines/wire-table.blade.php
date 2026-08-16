@@ -305,11 +305,14 @@ already gives you:
   without the flag emits no anchor and pays nothing.
   **What you trade:** a row re-rendered on its own keeps its position, so an edit that would move
   the record under the current sort leaves it where it is until the next full render.
+  A `stackedOnMobile()` table anchors its cards too (`wire:partial="card-{key}"`) and a write
+  answers with both: the card is the same record rendered again for the width where the table is
+  hidden, so refreshing one and not the other would show a phone the old value and a desktop the
+  new one.
   **Where it refuses, and renders normally instead** — each of these keeps a number outside the
   row that the edit moves, so a row-only answer would leave it stale: a table with any column
-  summary, a grouped table (the subtotal is a sibling row), and `stackedOnMobile()` (the cards are
-  a second rendering of every record and only the desktop row is anchored). `usesRowPartials()`
-  is the honest answer to whether it is on.
+  summary, and a grouped table (the subtotal is a sibling row). `usesRowPartials()` is the honest
+  answer to whether it is on.
 - **A row costs what its cells cost, and little else.** The row body is assembled in PHP from
   markup Blade compiled once per table — the `<tr>` tag, the selection cell, the three sub-row
   expander shapes, the action cell, one skeleton per column — so a page of rows runs no per-row

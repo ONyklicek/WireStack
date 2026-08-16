@@ -530,7 +530,11 @@ it('keeps the stacked mobile card off the row budget', function () {
 
     expect($card['bytes'])->toBeLessThan(2950)
         ->and($card['whitespaceRuns'])->toBeLessThanOrEqual(10)
-        ->and($card['comments'])->toEqual(22);
+        // 22 → 13 when the card body moved into Support\CardRenderer: its shell is
+        // compiled once for the table now, so the conditionals that were decided
+        // per card — and emitted a morph marker each time — are decided once.
+        // What is left belongs to the cells themselves.
+        ->and($card['comments'])->toEqual(13);
 });
 
 it('keeps a copyable cell to one button', function () {
