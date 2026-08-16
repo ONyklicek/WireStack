@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
 use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Table;
@@ -55,6 +56,7 @@ class RmkHost extends Component
             ->subRows('children')
             ->actions([Action::make('open')->label('Open')])
             ->rowContextMenu([Action::make('open')->label('Open')])
+            ->headerActions([HeaderAction::make('create')->label('Create')])
             ->columns([TextColumn::make('name')]);
     }
 
@@ -98,4 +100,20 @@ it('keys them per record, so two rows never pair against each other', function (
         ->toContain('wire:key="ctx-2"')
         ->toContain('wire:key="sel-2"')
         ->toContain('wire:key="exp-2"');
+});
+
+it('keys a record-scoped action button, and leaves a record-less one alone', function () {
+    // A row's action list varies per record — an action can be non-executable for
+    // one row and not the next — so these have to pair by identity too. It is the
+    // same net as the row's leading children, one level in.
+    //
+    // A header action renders the same set every time and stays unkeyed: a key
+    // there would be noise on every surface that has no record.
+    $html = Livewire::test(RmkHost::class)->html();
+
+    expect($html)->toContain('wire:key="act-1-open"')
+        // …and the same action rendered without a record carries no key at all,
+        // which is what keeps every record-less surface unchanged.
+        ->and(Action::make('open')->label('Open')->render())
+        ->not->toContain('wire:key');
 });

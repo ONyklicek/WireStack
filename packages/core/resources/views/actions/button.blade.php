@@ -15,12 +15,26 @@
     // wire:loading target so the spinner gates on the exact click.
     $wireClickAction = $wireClick ?? $data['wireClick'];
     $wireModifiers = $wireClickModifiers ?? $data['wireModifiers'] ?? '';
+
+    // A key, but only where the button belongs to a record. A row's action list
+    // genuinely varies per record — an action can be non-executable for one row
+    // and not the next — so the morph has to pair these by identity rather than
+    // by position, or a row whose first action is hidden pairs its second against
+    // its neighbour's first. Livewire's `@foreach` markers do that job today; the
+    // key is what lets the row loop stop paying 702 B a row for them.
+    //
+    // Record-less surfaces (a header action, a bulk action, an empty state) render
+    // exactly the same set every time and are left alone.
+    $recordKeyForMorph = isset($record) && $record instanceof Model
+        ? 'act-'.$record->getKey().'-'.$action->getName()
+        : null;
 @endphp
 
 @if($action->isHidden($record ?? null))
     {{-- Hidden actions render nothing. --}}
 @elseif($data['url'])
     <a
+            @if($recordKeyForMorph) wire:key="{{ $recordKeyForMorph }}" @endif
             href="{{ $data['url'] }}"
             @if($data['target']) target="{{ $data['target'] }}" @endif
             class="{{ $data['classes'] }}"
@@ -36,6 +50,7 @@
     </a>
 @else
     <button
+            @if($recordKeyForMorph) wire:key="{{ $recordKeyForMorph }}" @endif
             type="button"
             wire:click{{ $wireModifiers }}="{{ $wireClickAction }}"
             {{-- Targets the host's modal island, so opening this action returns the
