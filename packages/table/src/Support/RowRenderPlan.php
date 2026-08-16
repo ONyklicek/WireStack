@@ -117,7 +117,7 @@ final class RowRenderPlan
             rowClassBinding: $rowClassBinding,
             pageRecordKeys: $pageRecordKeys,
             selectionSyncLive: $isSelectable && $hasSummaries,
-            rowSkeleton: self::rowSkeleton($rowClassBinding, $interaction, $isSelectable),
+            rowSkeleton: self::rowSkeleton($table, $rowClassBinding, $interaction, $isSelectable),
             selectionCellSkeleton: $isSelectable ? $table->getSelectionCellSkeleton() : null,
             selectionAnnouncements: [
                 'some' => __('wire-table::messages.selection_announce_some', ['count' => ':count', 'total' => ':total']),
@@ -128,6 +128,7 @@ final class RowRenderPlan
     }
 
     private static function rowSkeleton(
+        Table $table,
         ?string $rowClassBinding,
         InteractionRenderPlan $interaction,
         bool $isSelectable,
@@ -138,6 +139,12 @@ final class RowRenderPlan
                 'rowClassBinding' => $rowClassBinding,
                 'tableRole' => $interaction->tableRole,
                 'isSelectable' => $isSelectable,
+                // The anchor a write re-renders this row into — a whole attribute
+                // or nothing, so a table that does not use partials emits not one
+                // byte for the feature. The key slot rides inside it.
+                'partialAnchor' => $table->usesRowPartials()
+                    ? ' wire:partial="row-'.Skeleton::slot('key').'"'
+                    : '',
                 'rowClass' => Skeleton::slot('rowClass'),
                 'keyJs' => Skeleton::slot('keyJs'),
                 'tabindex' => Skeleton::slot('tabindex'),

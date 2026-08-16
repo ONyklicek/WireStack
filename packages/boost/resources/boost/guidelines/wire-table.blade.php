@@ -297,6 +297,19 @@ already gives you:
   that a **custom action whose only effect is outside the table region** (say it writes a property
   that a heading above the table reads) will not repaint that heading when fired from a row. Put
   such an action in the toolbar, or have it dispatch to the surface that owns the heading.
+- **`Table::rowPartials()` answers a cell save with the row, not the table.** Opt-in, and worth
+  it on exactly one shape: a wide editable grid where the edit *is* the work. On a 25-column,
+  20-row page an inline save costs 49.3 ms and 556 kB as a normal render of the data region, and
+  **3.2 ms and 26 kB** as one row. The server picks the row at write time and sends it as a
+  `wirePartials` effect; the client morphs it into the `wire:partial="row-{key}"` anchor. A table
+  without the flag emits no anchor and pays nothing.
+  **What you trade:** a row re-rendered on its own keeps its position, so an edit that would move
+  the record under the current sort leaves it where it is until the next full render.
+  **Where it refuses, and renders normally instead** — each of these keeps a number outside the
+  row that the edit moves, so a row-only answer would leave it stale: a table with any column
+  summary, a grouped table (the subtotal is a sibling row), and `stackedOnMobile()` (the cards are
+  a second rendering of every record and only the desktop row is anchored). `usesRowPartials()`
+  is the honest answer to whether it is on.
 - **A row costs what its cells cost, and little else.** The row body is assembled in PHP from
   markup Blade compiled once per table — the `<tr>` tag, the selection cell, the three sub-row
   expander shapes, the action cell, one skeleton per column — so a page of rows runs no per-row

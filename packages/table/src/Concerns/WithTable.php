@@ -60,6 +60,7 @@ use NyonCode\WireTable\Services\TableQueryCacheKey;
 use NyonCode\WireTable\Services\TableQueryService;
 use NyonCode\WireTable\Services\WriteGeneration;
 use NyonCode\WireTable\Support\CellEditOutcome;
+use NyonCode\WireTable\Support\RowRenderer;
 use NyonCode\WireTable\Support\TableRenderPlan;
 use NyonCode\WireTable\Table;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -95,9 +96,9 @@ trait WithTable
         InteractsWithTableActions::resolveActionRecordIds insteadof InteractsWithActions;
         InteractsWithTableActions::sendActionNotification insteadof InteractsWithActions;
     }
-
     use InteractsWithFieldActions;
     use InteractsWithFileUploads;
+
     // Lets a write render the regions it touched instead of the whole table. The
     // engine is here; the table's own anchors and the flag that turns them on are
     // the next slice — nothing calls renderPartial() yet.
@@ -2297,6 +2298,7 @@ trait WithTable
 
             if ($outcome->success) {
                 $this->announceTableWrite();
+                $this->queueRowPartial($recordKey);
             }
 
             // The conflict is always shown inline on the cell; a table can opt in
@@ -2311,6 +2313,51 @@ trait WithTable
 
         } catch (Exception $e) {
             return ['success' => false, 'message' => __('wire-table::messages.save_error', ['error' => $e->getMessage()])];
+        }
+    }
+
+    /**
+     * Answer a successful write with the row it changed, if the table asked.
+     *
+     * Opt-in through {@see Table::rowPartials()}, and refused for the three
+     * shapes that keep numbers outside a row — see
+     * {@see Table::usesRowPartials()}. Without it this is a no-op and the write
+     * renders whatever it rendered before.
+     *
+     * Two things have to happen together. The row goes into the partial queue
+     * ({@see InteractsWithPartials}),
+     * and the island render is declined: an editable cell targets the
+     * `data-region` island, and letting both answer would render the region AND
+     * the row — the region would win the morph and the row would be wasted work.
+     *
+     * A record that is no longer on the page renders nothing, which is correct:
+     * the client finds no anchor for it and leaves the page alone.
+     */
+    protected function queueRowPartial(mixed $recordKey): void
+    {
+        $table = $this->getTable();
+
+        if (! $table->usesRowPartials() || ! method_exists($this, 'renderPartial')) {
+            return;
+        }
+
+        $records = $this->getTableRecords();
+        $key = $table->getPrimaryKey();
+
+        foreach ($records as $index => $record) {
+            if ((string) $record->{$key} !== (string) $recordKey) {
+                continue;
+            }
+
+            $renderer = RowRenderer::for($table, $this, $this->tableRenderPlan());
+
+            $this->skipIslandsRender();
+            $this->renderPartial(
+                'row-'.$recordKey,
+                fn (): string => $renderer->render($record, (int) $index),
+            );
+
+            return;
         }
     }
 

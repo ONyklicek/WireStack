@@ -255,6 +255,9 @@ class Table implements Htmlable
     // rollups and anything derived from the edited value move with it.
     protected bool $refreshAfterEdit = true;
 
+    /** Opt-in row-granular rendering — {@see rowPartials()}. */
+    protected bool $rowPartials = false;
+
     // Excel-style fill handle on editable cells. Opt-in: dragging it overwrites
     // rows, which would be a silent behaviour change for every existing table
     // with an editable column.
@@ -2240,6 +2243,55 @@ class Table implements Htmlable
      * moved into PHP this was inline in the loop, where Blade re-decided both
      * classes and emitted `@foreach` markers on every row.
      */
+    /**
+     * Send back only the rows a write changed, instead of the table.
+     *
+     * Opt-in, and it stays opt-in because it trades a real thing away: a row
+     * re-rendered on its own keeps its position, so a cell edit that would move
+     * the record under the current sort leaves it where it is until the next full
+     * render. On the tables this is for — a wide editable grid where the edit is
+     * the work — that is the right trade and the win is large: a cell save on a
+     * 25-column, 20-row page costs 3.2 ms and 26 kB as one row against 49.3 ms and
+     * 556 kB as the whole data region.
+     *
+     * {@see usesRowPartials()} is the honest answer to whether it is on, because
+     * three shapes of table cannot use it.
+     */
+    public function rowPartials(bool $condition = true): static
+    {
+        $this->rowPartials = $condition;
+
+        return $this;
+    }
+
+    /**
+     * Whether a write may answer with rows rather than the table.
+     *
+     * The flag alone is not enough. Three things live outside a row and change
+     * when a row does, and a row-only response would leave every one of them
+     * showing the old number — which is the staleness this whole plan exists to
+     * avoid, so they refuse rather than degrade:
+     *
+     *  - **summaries**: a total is computed over the set, and an edit moves it;
+     *  - **grouping**: a group subtotal is a sibling row, not part of any row;
+     *  - **stacked-on-mobile**: the cards are a second rendering of every record,
+     *    and only the desktop row carries a partial anchor today.
+     */
+    public function usesRowPartials(): bool
+    {
+        if (! $this->rowPartials || $this->hasGrouping() || $this->isStackedOnMobile()) {
+            return false;
+        }
+
+        foreach ($this->getColumns() as $column) {
+            if ($column->hasSummary()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public function getActionCellSkeleton(): Skeleton
     {
         return $this->actionCellSkeleton ??= Skeleton::compile(

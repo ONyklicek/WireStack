@@ -151,7 +151,7 @@ class TablePreview extends Component
             return $this->imageGalleryTable($table);
         }
 
-        if (in_array($this->variant, ['editable-fill', 'editable-fill-selectable', 'editable-fill-paged', 'editable-live'], true)) {
+        if (in_array($this->variant, ['editable-fill', 'editable-fill-selectable', 'editable-fill-paged', 'editable-live', 'editable-row-partials'], true)) {
             return $this->editableFillTable($table);
         }
 
@@ -478,6 +478,14 @@ class TablePreview extends Component
             ])
             ->searchable(false)
             ->paginated(false);
+
+        if ($this->variant === 'editable-row-partials') {
+            // The one variant with Table::rowPartials(): a cell save answers with
+            // that row instead of the data region. No summary, no grouping and no
+            // stacked cards, because each of those makes usesRowPartials() refuse
+            // — they keep a number outside the row that an edit moves.
+            $table->rowPartials();
+        }
 
         if ($this->variant === 'editable-fill-paged') {
             // Two page sizes over the four seeded users, so switching visibly

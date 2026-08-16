@@ -13,6 +13,13 @@
     conditionals, so the row loop keeps them and this partial contributes the tag
     they hang from.
 
+    $partialAnchor is a whole attribute or an empty string, composed in PHP rather
+    than by an `@if` here: Blade needs a non-word character on both sides of a
+    directive, so an `@if` wedged between `@endif` and `wire:key` cannot be spaced
+    without emitting a byte on every row of every table that does NOT use row
+    partials. It carries the key slot inside it, which works because a slot is
+    just a token in the compiled string.
+
     Every condition below is a property of the TABLE, not of a record — keyboard
     nav, the ARIA role, selection, the row-class binding are either on for the page
     or off for it — so the row has exactly one shape and these `@if`s are decided
@@ -40,4 +47,4 @@
     about itself. aria-rowindex counts through the whole grid, not the page, so it
     carries the header rows plus this page's offset and survives paging.
 --}}
-<tr class="{!! $rowClass !!} {{ $keyboardNav ? 'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500' : '' }}" @if($rowClassBinding):class="{!! str_replace('%key%', $keyJs, $rowClassBinding) !!}" @endif @if($keyboardNav)role="row" tabindex="{!! $tabindex !!}" :tabindex="rowTabindex({!! $keyJs !!}, {!! $rowIndex !!})" @endif @if($tableRole)aria-rowindex="{!! $ariaRowIndex !!}" @endif @if($isSelectable):aria-selected="isSelected({!! $keyJs !!}) ? 'true' : 'false'" @endif wire:key="row-{!! $key !!}" data-testid="table-row" data-row-key="{!! $key !!}">
+<tr class="{!! $rowClass !!} {{ $keyboardNav ? 'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500' : '' }}" @if($rowClassBinding):class="{!! str_replace('%key%', $keyJs, $rowClassBinding) !!}" @endif @if($keyboardNav)role="row" tabindex="{!! $tabindex !!}" :tabindex="rowTabindex({!! $keyJs !!}, {!! $rowIndex !!})" @endif @if($tableRole)aria-rowindex="{!! $ariaRowIndex !!}" @endif @if($isSelectable):aria-selected="isSelected({!! $keyJs !!}) ? 'true' : 'false'" @endif{!! $partialAnchor !!} wire:key="row-{!! $key !!}" data-testid="table-row" data-row-key="{!! $key !!}">
