@@ -344,11 +344,11 @@ loops"), and it is a prerequisite for anything island-shaped later.
 
    Two things follow. The snapshot question this step was gated on — the `islands`
    memo growing linearly with rows — **cannot arise**: that memo lists hand-written
-   directives, of which this repo has two. And the win it was after (an inline cell
-   save costing one row instead of the page: ~9 ms and ~1.9 kB against the full
-   render) needs a different mechanism — Filament's `wire:partial`, already
-   assessed in §5.4.3a, which picks its anchors server-side and
-   costs nothing per anchor.
+   directives, of which this repo has two. And the win it was after — an inline
+   cell save costing one row instead of the page — **was claimed by a different
+   mechanism**: `Table::rowPartials()`, shipped 2026-08-16 (§5.4.3c). 3.2 ms and
+   26 kB against 49.3 ms and 556 kB, with the anchor chosen server-side at write
+   time and costing one HTML attribute per row.
 
 ### 4.4 Sizing the win — measured decomposition
 
@@ -493,7 +493,7 @@ Re-anchored on the 2.0.0 decision (§3). Phases 0 and 1 are 1.x work that makes 
 | 1 | Extract `TableRenderPlan` out of `index.blade.php`'s head block — **started**, see §5.1 | `2.0.0` | `WideTableBenchmarkTest` + `IslandDecompositionBenchmarkTest` before/after — must not regress |
 | 2 | Floor all five `composer.json` at `^4.0`; fix what the suites report; `.blur`/`.change` mapping in `CanBeLive`; re-measure the payload fuse under v4 and record the new numbers next to the v3 ones | `2.0.0` | `composer test`, `npm run verify:drivers`, new concurrent-commit driver (§2.2) |
 | 3 | Islands in `tables/index.blade.php`, seams 1–4 from §4.3 | `2.0.0` | decomposition benchmark before/after, published |
-| 4 | ~~Per-row islands behind a flag~~ (impossible — §4.3 step 5); `wire:intersect`, `.renderless`, `data-loading`, `wire:click.async` | `2.0.0` | drivers |
+| 4 | ~~Per-row islands behind a flag~~ (impossible — §4.3 step 5) → **done as `Table::rowPartials()`** (§5.4.3c); `wire:intersect`, `.renderless`, `data-loading`, `wire:click.async` still open | `2.0.0` | drivers |
 | 5 | `wire:sort` delegation, SFC in docs and recipes, CSP claim, 2.0 upgrade guide | `2.0.0` | full gate + docs EN/CS |
 
 Phase 1 was scoped as 1.x work, before the 2.0 floor landed first. It is now
@@ -1105,16 +1105,24 @@ fact.
    The memo lists hand-written `@island` directives, and there is no way to
    generate them per record (step 4), so it cannot grow with rows. This repo has
    two.
-4. ~~**Per-row islands, editable tables only.**~~ **Impossible, 2026-08-15** —
-   §4.3 step 5 has the mechanism. An island's name is re-evaluated inside its own
-   compiled view file, which never sees a loop variable, so `row-{key}` throws on
-   the first render. The win it was after — a cell save costing one row rather
-   than the page — is real and unclaimed; `wire:partial` (§5.4.3a) is the only route
-   left to it.
+4. ~~**Per-row islands, editable tables only.**~~ **Impossible as islands,
+   2026-08-15; done as partials, 2026-08-16.** An island's name is re-evaluated
+   inside its own compiled view file, which never sees a loop variable, so
+   `row-{key}` throws on the first render (§4.3 step 5). The win it was after — a
+   cell save costing one row rather than the page — is claimed instead by
+   `Table::rowPartials()`: **3.2 ms and 26 kB against 49.3 ms and 556 kB**, opt-in,
+   refusing on the three shapes that keep a number outside the row. §5.4.3c.
 5. **The freshness channel.** Targeted row refresh driven by poll or broadcast,
    and — the part that is easy to forget — the refreshed row must carry a **fresh
    version stamp**, or islands will have made the lock worse rather than better.
    Gate: a driver with two browsers editing the same table.
+
+   **Now the last step of this plan**, and better placed than it was: the anchor
+   and the renderer it needs already exist. A poll or a broadcast that knows which
+   records changed can queue exactly those rows through `renderPartial()` rather
+   than re-rendering the page — the same mechanism, driven by a different event.
+   What it must not lose is the version stamp: a row refreshed without one hands
+   the next editor a lock that cannot detect the write it just missed.
 
 #### 5.4.3a `wire:partial` — assessed 2026-08-15, and not yet
 
@@ -1155,7 +1163,7 @@ ERP table, and one call-site change fixes that.
 |---|---|---|
 | full component render (before targeting) | 77.2 ms | 609 268 B |
 | `data-region` island (what it costs now) | 49.3 ms | 555 776 B — **36 % / 9 %** saved |
-| one row (what `wire:partial` would leave) | 3.2 ms | 26 028 B — **96 % / 96 %** saved |
+| one row (`Table::rowPartials()`, shipped — §5.4.3c) | 3.2 ms | 26 028 B — **96 % / 96 %** saved |
 
 Read the byte column twice. Island targeting removes a **third of the time and
 almost none of the bytes**, because on a 20×25 grid the region *is* the bytes —
@@ -1219,18 +1227,14 @@ both answers point the same way:
   is reachable from ordinary `ComponentHook` APIs, so nothing has to be claimed
   app-wide and nothing becomes incompatible with Filament.
 
-What is left is a maintenance judgement, not an unknown: ~400 lines of our own
+What was left was a maintenance judgement, not an unknown: ~400 lines of our own
 riding on `skipRender` and a response effect, against internals that have
-surprised this migration four times. That is a real cost and it is the whole of
-the remaining case against. It is also **the user's call rather than a technical
-verdict**, so it stays open here with the numbers attached instead of being
-decided by whoever writes the next paragraph.
+surprised this migration four times. **Decided 2026-08-16: build it, behind a
+flag.** It came in at 5 commits and rather less than 400 lines, because half of
+Filament's is the container override this does not need. See 5.4.3c for what
+shipped.
 
-If it is built: behind a flag, editable tables only, and the first test is
-`SkipRenderFromHookTest` — which already exists, because the decision rests on
-it.
-
-#### 5.4.3b The engine is built; the table's anchors are blocked on a fork
+#### 5.4.3b The engine, and the fork the table integration hit
 
 **Landed 2026-08-15**: `InteractsWithPartials::renderPartial()`,
 `PartialRenderHook`, `support/partials.js`, and the coverage rule that decides
@@ -1275,6 +1279,24 @@ Both are real work and both trade something. The measurement says the prize is
 so it is worth doing properly rather than quickly — and worth choosing
 deliberately rather than by whichever is easier to type.
 
+**Chosen 2026-08-16: (1).** Measuring the two before choosing changed the
+picture, and it is worth recording *why* the frightening option turned out to be
+the cheaper one:
+
+- **the cells already carry no markers.** They are spliced from compiled
+  skeletons, one per visible column, always — so the morph pairs them by position
+  and only their contents change. What the markers actually bracket is the row's
+  *leading* children, of which there are three;
+- **so the net was replaceable, and cheaply.** `ctx-`/`sel-`/`exp-` keys on those
+  three, plus `act-{key}-{name}` on each record-scoped action button: ~35 B and
+  ~72–152 B per row respectively, against 459–999 B of markers;
+- and (2)'s duplication would have been ~50 lines of markup in two places, which
+  a byte-identity test can catch but nothing can prevent.
+
+The order that made it provable rather than argued: replace each net and gate it
+on the drivers that would see a mispaired row **before** taking any marker away.
+Two commits of pure addition, then the removal.
+
 **Step one landed 2026-08-15**, and did not go where it was aimed. The cell
 commit targets the island — 59 123 B → **42 765 B**, as predicted — through
 `support/island.js`, with the island named by the four editable column views and
@@ -1311,6 +1333,48 @@ properties are load-bearing here rather than incidental:
 - the plan resolves **per group, on first ask**, so a rows island pays for
   `columns()` alone. An eagerly-built plan would put a fixed floor under every
   island and undo the proportionality that is the whole point.
+
+#### 5.4.3c What shipped — row-granular rendering, 2026-08-16
+
+Five commits, each gated on its own before the next leaned on it:
+
+| | |
+|---|---|
+| `309d64e` | the engine — `InteractsWithPartials::renderPartial()`, `PartialRenderHook`, `support/partials.js`, the coverage rule |
+| `acd2ddb` | `ctx-`/`sel-`/`exp-` keys on the row's conditional children |
+| `f08034e` | `act-{key}-{name}` on every record-scoped action button |
+| `3ce49dd` | `Support\RowRenderer` — the row assembled in PHP, markers gone |
+| `c905cbd` | `Table::rowPartials()`, the anchors, and `updateTableCell` queueing the row |
+
+**What it costs a table that does not use it: nothing.** No anchor, no key change
+in the response, no extra byte — verified byte-identical across the ten previews
+on stable data. The `RowRenderer` half is unconditional and *saves* 848–1035 B
+per row on every table, because the loop's conditionals are no longer emitting
+morph markers and the whitespace nodes between them.
+
+**What it costs a table that does:** an edit that would move the record under
+the current sort leaves it where it is until the next full render. That is the
+whole of the trade, and it is why the flag is opt-in.
+
+**Where it refuses**, rather than degrading — each keeps a number outside the row
+that an edit moves: any column summary, grouping (the subtotal is a sibling row),
+and `stackedOnMobile()` (the cards are a second rendering of every record and only
+the desktop row is anchored). Six of `RowPartialsTest`'s nine cases are about the
+refusals.
+
+**Two mechanisms worth knowing before extending this.** The write declines the
+island render (`skipIslandsRender()`): an editable cell targets `data-region`, and
+letting both answer would render the region *and* the row, with the region winning
+the morph. And the anchor is composed in PHP rather than by an `@if`, because
+Blade needs a non-word character on both sides of a directive — an `@if` wedged
+between `@endif` and `wire:key` cannot be spaced without costing a byte on every
+row of every table that does not use partials, and `{{-- --}}` does not help
+because comments are stripped before directives compile.
+
+**What is still unclaimed.** The mobile card is a second rendering of the same
+record and has no anchor, which is why `stackedOnMobile()` refuses rather than
+half-updating. A card anchor plus a card renderer would lift that restriction and
+is the obvious next step if a consumer wants both.
 
 #### 5.4.4a Targeting is automatic, so the boundary *is* the policy
 
