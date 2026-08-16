@@ -1397,11 +1397,24 @@ Then the freshness channel (step 5 above) reused the same anchor for the read
 side, which is what the whole ERP argument was for: a colleague's write repaints
 their row and leaves the reader's half-typed cell alone.
 
-**What is still unclaimed**, and it is small: a table with a column summary or
-grouping still takes the full render on every write. Both are the same shape of
-problem — a number outside the row that the edit moves — and both would need a
-second anchor on the footer or the subtotal row, plus a rule for when the total
-itself has to be recomputed. Worth doing only if a real table asks.
+**Summaries followed** (`Support\SummaryRenderer`): both footers — the desktop
+`<tfoot>` and the card one — carry an anchor, and a write answers with the row,
+the card and the totals together. The totals are computed once for both, because
+`computeTableSummaries()` memoises per render, which is the second time that fix
+paid for itself.
+
+**Grouping is the one refusal left, and for a structural reason worth recording
+rather than rediscovering.** A group's subtotal is not one element:
+
+```blade
+@for($i = 0; $i < $groupMaxRows; $i++)<tr class="bg-gray-50 …">
+```
+
+`wire:partial` addresses a single element, so anchoring a subtotal means giving
+each group its own `<tbody>` — valid HTML, and a change to the table's
+*structure* rather than an attribute on it. It would touch CSS selectors, the
+keyboard grid, the selection sweep and every driver that looks for a `<tbody>`.
+That is a decision worth taking on its own, not inside another slice.
 
 #### 5.4.4a Targeting is automatic, so the boundary *is* the policy
 

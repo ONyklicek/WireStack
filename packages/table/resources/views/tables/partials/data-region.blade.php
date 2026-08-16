@@ -41,6 +41,11 @@
     // way, and for the same two reasons.
     $cardRenderer = \NyonCode\WireTable\Support\CardRenderer::for($table, $component, $plan);
 
+    // The totals, for the two footers that show them — and for a write that has
+    // to re-render them on their own, which is what let a summarised table use
+    // row partials at all.
+    $summaryRenderer = \NyonCode\WireTable\Support\SummaryRenderer::for($table, $component, $plan);
+
     assert($table instanceof Table);
 
     // Sub-rows and grouping — the regions inside the body that are their own
@@ -411,22 +416,7 @@
 
                                 {{-- Summary footer --}}
                                 @if($hasSummaries)
-                                    @php $summaryScope = $component->getSummaryScope(); @endphp
-                                    @include('wire-table::tables.partials.summary-footer', [
-                                        'table' => $table,
-                                        'component' => $component,
-                                        'summaries' => $component->computeTableSummaries($summaryScope),
-                                        'subRowGrandTotals' => $component->computeSubRowGrandTotals($summaryScope),
-                                        'summaryScope' => $summaryScope,
-                                        'summaryScopeOptions' => $component->getSummaryScopeOptions(),
-                                        'isSelectable' => $isSelectable,
-                                        'hasActions' => $hasActions,
-                                        'actionsPosition' => $actionsPosition,
-                                        'cellPadding' => $cellPadding,
-                                        'isBordered' => $isBordered,
-                                        'visibleColumns' => $visibleColumns,
-                                        'colSpan' => $colSpan,
-                                    ])
+                                    {!! $summaryRenderer->desktop() !!}
                                 @endif
                             </table>
 
@@ -560,16 +550,7 @@
                                  the table this layout hides, so without this a phone shows
                                  no totals at all. --}}
                             @if($hasSummaries)
-                                @php $cardSummaryScope = $component->getSummaryScope(); @endphp
-                                @include('wire-table::tables.partials.summary-footer-mobile', [
-                                    'table' => $table,
-                                    'component' => $component,
-                                    'summaries' => $component->computeTableSummaries($cardSummaryScope),
-                                    'subRowGrandTotals' => $component->computeSubRowGrandTotals($cardSummaryScope),
-                                    'summaryScope' => $cardSummaryScope,
-                                    'summaryScopeOptions' => $component->getSummaryScopeOptions(),
-                                    'visibleColumns' => $visibleColumns,
-                                ])
+                                {!! $summaryRenderer->mobile() !!}
                             @endif
                         </div>
                     @endif

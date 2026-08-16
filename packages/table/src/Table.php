@@ -2328,31 +2328,22 @@ class Table implements Htmlable
     /**
      * Whether a write may answer with rows rather than the table.
      *
-     * The flag alone is not enough. Three things live outside a row and change
-     * when a row does, and a row-only response would leave every one of them
-     * showing the old number — which is the staleness this whole plan exists to
-     * avoid, so they refuse rather than degrade:
+     * The flag alone is not enough, and what is left is one refusal: **grouping**.
+     * A group's subtotal is a sibling row that a write to any member moves, and
+     * it cannot be anchored the way the others were — a subtotal is `@for`-many
+     * `<tr>`s and `wire:partial` addresses one element, so anchoring it needs a
+     * `<tbody>` per group, which is a change to the table's structure rather than
+     * an attribute on it. Worth doing when a grouped table asks.
      *
-     *  - **summaries**: a total is computed over the set, and an edit moves it;
-     *  - **grouping**: a group subtotal is a sibling row, not part of any row.
+     * Two things that used to refuse no longer do, because both grew anchors of
+     * their own and a write now queues them alongside the row:
      *
-     * A stacked table used to refuse too, because the cards are a second
-     * rendering of every record and only the desktop row was anchored. Both are
-     * anchored now, and a write queues both.
+     *  - **stacked cards**, the same record rendered again for a narrow width;
+     *  - **summaries**, computed over the whole set and living outside every row.
      */
     public function usesRowPartials(): bool
     {
-        if (! $this->rowPartials || $this->hasGrouping()) {
-            return false;
-        }
-
-        foreach ($this->getColumns() as $column) {
-            if ($column->hasSummary()) {
-                return false;
-            }
-        }
-
-        return true;
+        return $this->rowPartials && ! $this->hasGrouping();
     }
 
     public function getActionCellSkeleton(): Skeleton

@@ -27,7 +27,7 @@
 @endphp
 
 @if($rows !== [])
-    <div class="border-t-2 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50"
+    <div{!! $partialAnchor ?? '' !!} class="border-t-2 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50"
          data-testid="table-card-summary">
         @if($showScopeToggle)
             <div class="flex items-center justify-between gap-2 border-b border-gray-200 dark:border-gray-700 px-4 py-2.5">

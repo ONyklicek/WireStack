@@ -305,14 +305,16 @@ already gives you:
   without the flag emits no anchor and pays nothing.
   **What you trade:** a row re-rendered on its own keeps its position, so an edit that would move
   the record under the current sort leaves it where it is until the next full render.
-  A `stackedOnMobile()` table anchors its cards too (`wire:partial="card-{key}"`) and a write
-  answers with both: the card is the same record rendered again for the width where the table is
-  hidden, so refreshing one and not the other would show a phone the old value and a desktop the
-  new one.
-  **Where it refuses, and renders normally instead** — each of these keeps a number outside the
-  row that the edit moves, so a row-only answer would leave it stale: a table with any column
-  summary, and a grouped table (the subtotal is a sibling row). `usesRowPartials()` is the honest
-  answer to whether it is on.
+A write answers with **everything it moved**, not just the row: the record's card where the table
+  is `stackedOnMobile()` (the same record rendered again for the width that hides the table), and
+  the totals where it has any (`wire:partial="summary"`, computed over the whole filtered set, so
+  any write moves them). Refresh one and not the others and a phone keeps the old value while the
+  footer keeps the old total.
+  **Where it refuses, and renders normally instead:** a **grouped** table. A group's subtotal is a
+  sibling row that a write to any member moves, and it cannot be anchored the way the rest were —
+  a subtotal is several `<tr>`s and `wire:partial` addresses one element, so it needs a `<tbody>`
+  per group, which changes the table's structure rather than adding an attribute to it.
+  `usesRowPartials()` is the honest answer to whether it is on.
 - **With `rowPartials()` on, a poll answers with the rows that moved.** `refreshTable()` — what
   `poll()` calls and what the `live(broadcast: true)` bridge nudges — compares each row on the
   page against a hash of the record it last sent, and queues a partial for the ones that changed:

@@ -1,4 +1,12 @@
-{{-- Table summary footer --}}
+{{-- Table summary footer.
+
+     $partialAnchor is a whole `wire:partial` attribute or an empty string, and it
+     is composed in PHP for the same reason the row's is: Blade needs a non-word
+     character on both sides of a directive, so an `@if` between two attributes
+     cannot be spaced without costing a byte on every table that does not send
+     rows. It matters here because a write moves the totals as surely as it moves
+     the row — a total is computed over the whole filtered set — so the footer is
+     queued alongside it. See Support\SummaryRenderer. --}}
 {{-- Variables: $table, $component, $summaries, $summaryScope, $summaryScopeOptions,
      $isSelectable, $hasActions, $actionsPosition, $cellPadding, $isBordered, $visibleColumns, $colSpan,
      $subRowGrandTotals (optional) --}}
@@ -16,7 +24,7 @@
 @endphp
 
 @if($maxRows > 0 || $subRowGrandTotals !== [])
-    <tfoot class="bg-gray-50 dark:bg-gray-800/50 border-t-2 border-gray-300 dark:border-gray-600">
+    <tfoot{!! $partialAnchor ?? '' !!} class="bg-gray-50 dark:bg-gray-800/50 border-t-2 border-gray-300 dark:border-gray-600">
         {{-- Scope toggle row: this page / all / selection --}}
         @if($showScopeToggle)
             <tr>

@@ -62,6 +62,7 @@ use NyonCode\WireTable\Services\WriteGeneration;
 use NyonCode\WireTable\Support\CardRenderer;
 use NyonCode\WireTable\Support\CellEditOutcome;
 use NyonCode\WireTable\Support\RowRenderer;
+use NyonCode\WireTable\Support\SummaryRenderer;
 use NyonCode\WireTable\Support\TableRenderPlan;
 use NyonCode\WireTable\Table;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -656,9 +657,9 @@ trait WithTable
 
         $plan = $this->tableRenderPlan();
         $rows = RowRenderer::for($table, $this, $plan);
-        $cards = $table->isStackedOnMobile() ? CardRenderer::for($table, $this, $plan) : null;
 
         $index = 0;
+        $moved = [];
 
         foreach ($ordered as $recordKey => $record) {
             $position = $index++;
@@ -667,17 +668,58 @@ trait WithTable
                 continue;
             }
 
+            $moved[$recordKey] = $record;
+
             $this->renderPartial(
                 'row-'.$recordKey,
                 fn (): string => $rows->render($record, $position),
             );
+        }
 
-            if ($cards !== null) {
+        $this->queueSatellitePartials($table, $plan, $moved);
+    }
+
+    /**
+     * Everything else a changed record moves: its card, and the totals.
+     *
+     * A row is never the whole answer. The card is the same record rendered again
+     * for the width where the table is hidden — refresh one and not the other and
+     * a phone shows the old value while a desktop shows the new one. The totals
+     * are computed over the whole filtered set, so any write moves them, and they
+     * sit outside every row.
+     *
+     * The totals are queued **once** however many records moved: they are one
+     * region, and `computeTableSummaries()` memoises them per render anyway.
+     *
+     * @param  array<string, Model>  $records
+     */
+    protected function queueSatellitePartials(Table $table, TableRenderPlan $plan, array $records): void
+    {
+        if ($records === []) {
+            return;
+        }
+
+        if ($table->isStackedOnMobile()) {
+            $cards = CardRenderer::for($table, $this, $plan);
+
+            foreach ($records as $recordKey => $record) {
                 $this->renderPartial(
                     'card-'.$recordKey,
                     fn (): string => $cards->render($record),
                 );
             }
+        }
+
+        if (! $this->tableHasSummaries()) {
+            return;
+        }
+
+        $summaries = SummaryRenderer::for($table, $this, $plan);
+
+        $this->renderPartial('summary', fn (): string => $summaries->desktop());
+
+        if ($table->isStackedOnMobile()) {
+            $this->renderPartial('summary-mobile', fn (): string => $summaries->mobile());
         }
     }
 
@@ -2467,18 +2509,7 @@ trait WithTable
                 fn (): string => $renderer->render($record, (int) $index),
             );
 
-            // The card is the same record rendered a second time for the width
-            // where the table is hidden. Both are in the document at once, so a
-            // write that refreshed only one would leave a phone showing the old
-            // value and a desktop the new one.
-            if ($table->isStackedOnMobile()) {
-                $cards = CardRenderer::for($table, $this, $plan);
-
-                $this->renderPartial(
-                    'card-'.$recordKey,
-                    fn (): string => $cards->render($record),
-                );
-            }
+            $this->queueSatellitePartials($table, $plan, [$recordKey => $record]);
 
             return;
         }

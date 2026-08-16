@@ -134,17 +134,19 @@ try {
   check('the write reaches the server and is confirmed',
     save.serverValue === save.written, saved);
 
-  check('…and comes back as that record alone',
+  check('…and comes back as regions, never as the page',
     save.wire.length > 0
       && save.wire.every((r) => r.hasHtml === false && r.hasIslands === false)
-      && save.wire.some((r) => r.partials.length === 2 && r.partials[0].startsWith('row-')),
+      && save.wire.some((r) => r.partials[0].startsWith('row-')),
     JSON.stringify(save.wire));
 
-  // The card is the same record rendered again for the width where the table is
-  // hidden. Both are in the document at once, so a write that refreshed one and
-  // not the other would show two different values at two window widths.
-  check('…including the card, which is the same record rendered twice',
-    save.wire.some((r) => r.partials.some((n) => n.startsWith('card-'))),
+  // Everything one write moves, and nothing else. The card is the same record
+  // rendered again for the width where the table is hidden; the totals are
+  // computed over the whole set, so any write moves them. Refresh the row alone
+  // and a phone keeps the old value while the footer keeps the old total.
+  check('…the card and the totals with it, because one write moves all three',
+    save.wire.some((r) => ['card-', 'summary', 'summary-mobile']
+      .every((n) => r.partials.some((p) => p.startsWith(n)))),
     JSON.stringify(save.wire));
 
   check('the row was really re-rendered into the page',

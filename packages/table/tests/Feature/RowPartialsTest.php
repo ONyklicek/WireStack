@@ -133,13 +133,23 @@ it('sends nothing partial when the write fails', function () {
     expect($test->effects['wirePartials'] ?? null)->toBeNull();
 });
 
-it('refuses on a table with a summary', function () {
-    // A total is computed over the whole set and an edit moves it. It lives
-    // outside every row, so a row-only answer would leave it stale.
+it('answers with the totals too, where the table shows them', function () {
+    // A total is computed over the whole filtered set, so any write moves it, and
+    // it sits outside every row — which is why a summarised table refused row
+    // partials outright until the footer had an anchor of its own.
     $test = Livewire::test(RpHost::class, ['summaries' => true]);
 
-    expect($test->instance()->getTable()->usesRowPartials())->toBeFalse()
-        ->and($test->html())->not->toContain('wire:partial');
+    expect($test->instance()->getTable()->usesRowPartials())->toBeTrue()
+        ->and($test->html())->toContain('wire:partial="summary"');
+
+    $test->call('updateTableCell', '1', 'name', 'Edited', null);
+
+    expect(array_keys($test->effects['wirePartials'] ?? []))->toBe(['row-1', 'summary'])
+        ->and($test->effects['html'] ?? null)->toBeNull();
+});
+
+it('anchors no totals on a table that shows none', function () {
+    expect(Livewire::test(RpHost::class)->html())->not->toContain('wire:partial="summary"');
 });
 
 it('refuses on a grouped table', function () {
@@ -172,9 +182,9 @@ it('anchors no card on a table that does not render one', function () {
 });
 
 it('falls back to a full render where it refuses', function () {
-    // The refusals must not merely skip the partial — the write still has to
+    // The refusal must not merely skip the partial — the write still has to
     // repaint what it changed.
-    $test = Livewire::test(RpHost::class, ['summaries' => true]);
+    $test = Livewire::test(RpHost::class, ['grouped' => true]);
 
     $test->call('updateTableCell', '1', 'name', 'Edited', null);
 

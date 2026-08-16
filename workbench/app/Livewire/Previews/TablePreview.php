@@ -484,7 +484,17 @@ class TablePreview extends Component
             // that record's row AND its card, instead of the data region. Stacked
             // on purpose — both renderings of the record are in the document and
             // a write has to move both, which is the half that came last.
+            // Stacked AND summarised on purpose: a write has to answer with the
+            // row, the same record's card, and the totals that moved with it —
+            // the three regions that had to grow anchors before this shape could
+            // use partials at all.
             $table->rowPartials()->stackedOnMobile();
+
+            foreach ($table->getColumns() as $column) {
+                if ($column->getName() === 'email') {
+                    $column->summarizeCount('Rows');
+                }
+            }
         }
 
         if ($this->variant === 'editable-fill-paged') {
