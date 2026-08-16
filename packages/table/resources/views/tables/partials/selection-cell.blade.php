@@ -25,7 +25,7 @@
      data-select-cell marks the selection column for the sweep gesture (and the widened
      click target): the cell is found by this hook, never by column position — sortable
      prepends a drag-handle <td> and would shift every index. --}}
-<td class="w-12 {{ $cellPadding }} cursor-pointer"
+<td wire:key="sel-{!! $key !!}" class="w-12 {{ $cellPadding }} cursor-pointer"
     data-select-cell
     x-on:click="{{ $usesRangeSelection ? '$event.shiftKey || $event.ctrlKey || $event.metaKey || ' : '' }}toggle({!! $keyJs !!})"><div
         class="flex items-center justify-center"><button {{-- No handler of its own: a

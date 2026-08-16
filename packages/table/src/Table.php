@@ -838,8 +838,10 @@ class Table implements Htmlable
                 'usesRangeSelection' => $this->usesRangeSelection(),
                 'checkIcon' => $this->getSelectionCheckIcon(),
                 'keyJs' => Skeleton::slot('keyJs'),
+                'key' => Skeleton::slot('key'),
             ])->render(),
             'keyJs',
+            'key',
         );
     }
 
@@ -2204,8 +2206,9 @@ class Table implements Htmlable
      * stop lining up.
      *
      * @param  string  $keyJs  the record key, already encoded for an Alpine expression
+     * @param  string  $key  the same key, escaped for an HTML attribute
      */
-    public function getSubRowCell(string $keyJs, bool $hasToggle, bool $isExpanded): string
+    public function getSubRowCell(string $keyJs, string $key, bool $hasToggle, bool $isExpanded): string
     {
         $shape = ($hasToggle ? 't' : '-').($isExpanded ? 'e' : '-');
 
@@ -2216,11 +2219,13 @@ class Table implements Htmlable
                 'hasToggle' => $hasToggle,
                 'isExpanded' => $isExpanded,
                 'keyJs' => Skeleton::slot('keyJs'),
+                'key' => Skeleton::slot('key'),
             ])->render(),
             'keyJs',
+            'key',
         );
 
-        return $skeleton->fill(['keyJs' => $keyJs]);
+        return $skeleton->fill(['keyJs' => $keyJs, 'key' => $key]);
     }
 
     /**

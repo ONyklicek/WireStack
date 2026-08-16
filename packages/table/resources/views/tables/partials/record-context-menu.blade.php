@@ -12,7 +12,7 @@
     below deliberately touch: a run of whitespace between two tags is one DOM text node
     that the morph walks on every commit. Whitespace between attributes is free.
 --}}
-<template x-teleport="body"><div
+<template wire:key="ctx-{!! $key !!}" x-teleport="body"><div
         data-record-menu="{!! $key !!}"
         class="fixed z-50 min-w-[12rem] origin-top-left rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black/5 dark:ring-white/10 focus:outline-none"
         style="display: none; left: 0; top: 0;"

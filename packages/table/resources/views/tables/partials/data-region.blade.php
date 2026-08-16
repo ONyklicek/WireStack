@@ -374,7 +374,7 @@
                                         @if($rowContextMenuPanel !== ''){!! $rowContextMenuPanel !!}@endif
                                         {{-- Selection cell. The shape was settled once, in the
                                              preamble; this row supplies the key. --}}
-                                        @if($isSelectable){!! $selectionCellSkeleton->fill(['keyJs' => $recordKeyJs]) !!}@endif
+                                        @if($isSelectable){!! $selectionCellSkeleton->fill(['keyJs' => $recordKeyJs, 'key' => e((string) $recordKey)]) !!}@endif
 
                                         {{-- Sub-row expander cell. Three shapes, each compiled once
                                              for the table; this row picks one and supplies its key.
@@ -382,6 +382,7 @@
                                              this row's morph markers back — see the partial. --}}
                                         @if($hasSubRows){!! $table->getSubRowCell(
                                             $recordKeyJs,
+                                            e((string) $recordKey),
                                             $isSubRowsExpandable && $recordHasSubRows,
                                             $component->isRowExpanded($recordKey),
                                         ) !!}@endif

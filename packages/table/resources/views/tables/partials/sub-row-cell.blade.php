@@ -17,4 +17,4 @@
 
     Tags touch on purpose: a whitespace run between two tags is one DOM text node.
 --}}
-<td class="w-10 {{ $cellPadding }} {{ $borderClass }}">@if($hasToggle)@include('wire-table::tables.partials.sub-row-toggle', ['keyJs' => $keyJs, 'isExpanded' => $isExpanded])@endif</td>
+<td wire:key="exp-{!! $key !!}" class="w-10 {{ $cellPadding }} {{ $borderClass }}">@if($hasToggle)@include('wire-table::tables.partials.sub-row-toggle', ['keyJs' => $keyJs, 'isExpanded' => $isExpanded])@endif</td>
