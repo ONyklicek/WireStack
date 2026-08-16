@@ -490,10 +490,10 @@ Re-anchored on the 2.0.0 decision (§3). Phases 0 and 1 are 1.x work that makes 
 | Phase | Content | Branch | Gate |
 |---|---|---|---|
 | 0 | Synthesizer registration through the supported seam — **done** (§1.1, `TableStateSynthesizerRegistrationTest`) | `2.0.0`, back-port to `1.x` | table + sortable + Integration, lint, analyse, coverage ✅ |
-| 1 | Extract `TableRenderPlan` out of `index.blade.php`'s head block — **started**, see §5.1 | `2.0.0` | `WideTableBenchmarkTest` + `IslandDecompositionBenchmarkTest` before/after — must not regress |
+| 1 | Extract `TableRenderPlan` out of `index.blade.php`'s head block — **done**, all eight slices (§5.1) | `2.0.0` | `WideTableBenchmarkTest` + `IslandDecompositionBenchmarkTest` before/after — must not regress |
 | 2 | Floor all five `composer.json` at `^4.0`; fix what the suites report; `.blur`/`.change` mapping in `CanBeLive`; re-measure the payload fuse under v4 and record the new numbers next to the v3 ones | `2.0.0` | `composer test`, `npm run verify:drivers`, new concurrent-commit driver (§2.2) |
-| 3 | Islands in `tables/index.blade.php`, seams 1–4 from §4.3 | `2.0.0` | decomposition benchmark before/after, published |
-| 4 | ~~Per-row islands behind a flag~~ (impossible — §4.3 step 5) → **done as `Table::rowPartials()`** (§5.4.3c); `wire:intersect`, `.renderless`, `data-loading`, `wire:click.async` still open | `2.0.0` | drivers |
+| 3 | Islands in `tables/index.blade.php`, seams 1–4 from §4.3 — **done**: the modal island and `data-region` shipped, the summary island was withdrawn on measurement (§5.4.3 step 2a), and per-row islands proved impossible (§4.3 step 5) | `2.0.0` | decomposition benchmark before/after, published |
+| 4 | ~~Per-row islands behind a flag~~ (impossible — §4.3 step 5) → **done as `Table::rowPartials()`**, with the card, the totals, the group subtotals and the freshness channel (§5.4.3c); `wire:intersect`, `.renderless`, `data-loading`, `wire:click.async` still open | `2.0.0` | drivers ✅ |
 | 5 | `wire:sort` delegation, SFC in docs and recipes, CSP claim, 2.0 upgrade guide | `2.0.0` | full gate + docs EN/CS |
 
 Phase 1 was scoped as 1.x work, before the 2.0 floor landed first. It is now
@@ -1351,7 +1351,7 @@ properties are load-bearing here rather than incidental:
 
 #### 5.4.3c What shipped — row-granular rendering, 2026-08-16
 
-Five commits, each gated on its own before the next leaned on it:
+Nine commits, each gated on its own before the next leaned on it:
 
 | | |
 |---|---|
@@ -1360,6 +1360,10 @@ Five commits, each gated on its own before the next leaned on it:
 | `f08034e` | `act-{key}-{name}` on every record-scoped action button |
 | `3ce49dd` | `Support\RowRenderer` — the row assembled in PHP, markers gone |
 | `c905cbd` | `Table::rowPartials()`, the anchors, and `updateTableCell` queueing the row |
+| `66bc499` | `Support\CardRenderer` — the mobile card anchored, so a stacked table stopped refusing |
+| `d65ebb5` | the freshness channel — a poll answers with the rows that moved |
+| `3856395` | `Support\SummaryRenderer` — both footers anchored, so a summarised table stopped refusing |
+| `c3dff0c` | group subtotals anchored per row, so nothing refuses any more |
 
 **What it costs a table that does not use it: nothing.** No anchor, no key change
 in the response, no extra byte — verified byte-identical across the ten previews
@@ -1371,11 +1375,12 @@ morph markers and the whitespace nodes between them.
 the current sort leaves it where it is until the next full render. That is the
 whole of the trade, and it is why the flag is opt-in.
 
-**Where it refuses**, rather than degrading — each keeps a number outside the row
-that an edit moves: any column summary, grouping (the subtotal is a sibling row),
-and `stackedOnMobile()` (the cards are a second rendering of every record and only
-the desktop row is anchored). Six of `RowPartialsTest`'s nine cases are about the
-refusals.
+**What refuses.** Nothing, in the end: the card, both summary footers and each
+group's subtotal rows all grew anchors of their own, and a write queues whichever
+of them its change moved. What still takes a full render is a property of the
+*write* — editing the column the table groups by moves the record into another
+group, which changes the page's shape rather than a row's contents. Half of
+`RowPartialsTest` is about which regions a given shape of table gets back.
 
 **Two mechanisms worth knowing before extending this.** The write declines the
 island render (`skipIslandsRender()`): an editable cell targets `data-region`, and

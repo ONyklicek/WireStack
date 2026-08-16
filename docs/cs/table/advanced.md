@@ -546,6 +546,114 @@ Kompromisy:
 
 Nejlepší pro: real-time datové feedy, infinite scroll UI, tabulky > 1M řádků.
 
+### Řádkové partials
+
+Zápis normálně překreslí celou tabulku. `rowPartials()` způsobí, že odpoví
+**oblastmi, kterými pohnul** — řádkem a tím, čeho se jeho změna dotkla.
+
+```php
+$table->rowPartials()
+```
+
+Na stránce s 25 sloupci a 20 řádky, z toho deseti editovatelnými, stojí uložení
+buňky **49,3 ms a 556 kB** při běžném renderu a **3,2 ms a 26 kB** jako jeden
+řádek.
+
+#### Jak to funguje
+
+Každý řádek je ukotvený obyčejným HTML atributem — `wire:partial="row-42"` —
+takže tabulka o 200 řádcích zaplatí 200 atributů a nic víc: žádná registrace,
+žádný růst snapshotu. Po úspěšném zápisu server vyrenderuje ten řádek samostatně,
+pošle ho jako efekt a prohlížeč ho vmorfuje do jeho kotvy. Nic dalšího na stránce
+se nerenderuje, neposílá ani nemorfuje.
+
+Řádek nikdy není celá odpověď, takže zápis zařadí všechno, čím jeho změna pohnula:
+
+| co se pohnulo | kdy |
+|---|---|
+| řádek | vždy |
+| **karta** téhož záznamu | u tabulky se `stackedOnMobile()` — týž záznam vykreslený znovu pro šířku, která tabulku schová |
+| **totály**, obě patičky | když má některý sloupec summary — totál se počítá přes celou filtrovanou množinu, takže s ním pohne každý zápis |
+| **mezisoučtové** řádky skupiny | u seskupené tabulky se souhrny skupin |
+
+#### Co za to platíte
+
+Řádek překreslený samostatně **si drží svou pozici**. Editace, která by záznam
+pod aktuálním řazením posunula, ho nechá na místě až do dalšího plného renderu.
+To je celá ta výměna a proto je přepínač dobrovolný: na široké editovatelné
+mřížce, kde je editace ta práce, je to ta správná volba.
+
+Jeden zápis si plný render pořád vezme, a je to vlastnost zápisu, ne tabulky:
+**editace sloupce, podle kterého tabulka seskupuje**, přesune záznam do jiné
+skupiny. To je změna tvaru stránky, ne obsahu řádku, a žádná sada oblastí ji
+nepopíše.
+
+#### S pollingem
+
+Kde je zapnuté `poll()` nebo `live()`, slouží tytéž kotvy i pro čtení.
+`refreshTable()` porovná každý řádek stránky proti hashi záznamu, který naposledy
+poslal, a odpoví řádky, které se pohnuly:
+
+- **nic se nepohnulo** → neodešle se vůbec nic, ani markup;
+- **pohnul se řádek** → ten řádek (a jeho karta a totály);
+- **pohnul se tvar stránky** — řádek přibyl, zmizel nebo se posunul pod řazením →
+  celá tabulka.
+
+Tohle je případ, kvůli kterému ta funkce existuje: víc lidí edituje jednu tabulku
+a zápis kolegy má překreslit jeho řádek a nechat na pokoji to, co máte
+rozepsané ve své vlastní buňce.
+
+Které řádky se změnily se zjišťuje **na serveru, z vaší vlastní stránky**.
+Záměrně se to nepřenáší broadcastem: kanál je scopovaný na třídu modelu, ne na
+diváka, takže klíče záznamů na něm by každému posluchači prozradily, které
+záznamy existují a mění se — včetně těch, které by jeho vlastní dotaz nikdy
+nevrátil.
+
+Porovnává se hash vlastních atributů záznamu, takže to sdílí slepé místo
+[detekce změn](#detekce-zmen-preskocit-nezmenene-rendery): změna, která se
+rodičovského řádku nedotkne — souhrn z podřízené tabulky, počítaný sloupec — je
+pro ni neviditelná. Řekněte si o ni closure v `pollChangeDetection()`.
+
+#### Příklad
+
+```php
+use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\Columns\TextInputColumn;
+use NyonCode\WireTable\Table;
+
+class InvoiceLines extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(InvoiceLine::class)
+            ->live()                                    // [tl! focus]
+            ->rowPartials()                             // [tl! focus]
+            ->columns([
+                TextColumn::make('sku'),
+                TextInputColumn::make('quantity'),
+                TextInputColumn::make('unit_price'),
+                TextColumn::make('total')->summarizeSum(),
+            ]);
+    }
+}
+```
+
+Editace množství pošle zpět ten řádek a totál v patičce. Kolegova editace na jiném
+řádku dorazí na dalším ticku jako ten jeden řádek.
+
+#### Row Partials API
+
+```php
+// Odpovědět na zápis oblastmi, kterými pohnul, místo celou tabulkou
+->rowPartials(bool $condition = true): static
+
+// Jestli je to zapnuté — poctivá odpověď, a to, na co se ptají views
+->usesRowPartials(): bool
+```
+
 ### Cachování dotazů
 
 Cachovat výsledky dotazu na nakonfigurovaný TTL:

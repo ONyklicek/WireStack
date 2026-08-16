@@ -663,6 +663,11 @@ $table->lazy()
 
 // Zpracovat záznamy po chuncích (pro hromadné operace)
 ->chunk(int $size, Closure $callback)
+
+// Odpovědět na zápis oblastmi, kterými pohnul — řádek, jeho karta, totály,
+// mezisoučet jeho skupiny — místo překreslení celé tabulky
+->rowPartials(bool $condition = true)
+->usesRowPartials(): bool
 ```
 
 ```php
@@ -671,6 +676,10 @@ $table->cacheQuery(60);
 
 // Vlastní cache klíč
 $table->cacheQuery(300, 'users-table');
+
+// Uložení buňky odpoví tím řádkem (49,3 ms → 3,2 ms na stránce 25×20). Řádek si
+// drží pozici až do dalšího plného renderu — viz Pokročilé → Řádkové partials.
+$table->rowPartials();
 ```
 
 ### Notifikace

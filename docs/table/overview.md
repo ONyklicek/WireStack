@@ -665,6 +665,11 @@ $table->lazy()
 
 // Process records in chunks (for bulk operations)
 ->chunk(int $size, Closure $callback)
+
+// Answer a write with the regions it moved — the row, its card, the totals,
+// its group's subtotal — instead of re-rendering the table
+->rowPartials(bool $condition = true)
+->usesRowPartials(): bool
 ```
 
 ```php
@@ -673,6 +678,10 @@ $table->cacheQuery(60);
 
 // Custom cache key
 $table->cacheQuery(300, 'users-table');
+
+// A cell save answers with that row (49.3 ms → 3.2 ms on a 25×20 page). The row
+// keeps its position until the next full render — see Advanced → Row Partials.
+$table->rowPartials();
 ```
 
 ### Notifications
