@@ -1112,17 +1112,32 @@ fact.
    cell save costing one row rather than the page — is claimed instead by
    `Table::rowPartials()`: **3.2 ms and 26 kB against 49.3 ms and 556 kB**, opt-in,
    refusing on the three shapes that keep a number outside the row. §5.4.3c.
-5. **The freshness channel.** Targeted row refresh driven by poll or broadcast,
-   and — the part that is easy to forget — the refreshed row must carry a **fresh
-   version stamp**, or islands will have made the lock worse rather than better.
-   Gate: a driver with two browsers editing the same table.
+5. ~~**The freshness channel.**~~ **Done 2026-08-16.** `refreshTable()` — what
+   `poll()` calls and what the broadcast bridge nudges — compares each row on the
+   page against a hash of the record it last sent and queues a partial for the
+   ones that moved. Nothing at all when nothing moved; the whole table when the
+   page's *shape* changed, because a row that arrived, left or moved under the
+   sort is not something a per-row partial can express.
 
-   **Now the last step of this plan**, and better placed than it was: the anchor
-   and the renderer it needs already exist. A poll or a broadcast that knows which
-   records changed can queue exactly those rows through `renderPartial()` rather
-   than re-rendering the page — the same mechanism, driven by a different event.
-   What it must not lose is the version stamp: a row refreshed without one hands
-   the next editor a lock that cannot detect the write it just missed.
+   **Which rows changed is worked out server-side, from the listener's own page,
+   and is deliberately not carried on the broadcast.** The channel is scoped to a
+   model class rather than to a viewer, so record keys on it would tell every
+   listener which records exist and change — including the ones their own query
+   would never return. The event stays a bare signal and each listener answers it
+   for itself. That is a security property, not an implementation detail, and it
+   should survive any later optimisation that is tempted to "just send the ids".
+
+   **The stamp trap, avoided the hard way.** The first version hashed
+   `RecordVersion` — the `updated_at` the optimistic lock uses. Its own test
+   caught it immediately: that column is stored to the second, so two writes
+   inside one second look identical and the second would never be sent. It hashes
+   the record's attributes instead, which the page already holds. It shares
+   `pollChangeDetection()`'s blind spot (a change that never touches the parent
+   row) and says so.
+
+   And the row it sends carries the current version stamp, pinned by its own test:
+   a row refreshed without one hands the next editor a lock that cannot detect the
+   write it just missed.
 
 #### 5.4.3a `wire:partial` — assessed 2026-08-15, and not yet
 
@@ -1371,10 +1386,22 @@ between `@endif` and `wire:key` cannot be spaced without costing a byte on every
 row of every table that does not use partials, and `{{-- --}}` does not help
 because comments are stripped before directives compile.
 
-**What is still unclaimed.** The mobile card is a second rendering of the same
-record and has no anchor, which is why `stackedOnMobile()` refuses rather than
-half-updating. A card anchor plus a card renderer would lift that restriction and
-is the obvious next step if a consumer wants both.
+**Both halves landed after this was written.** `66bc499` gave the mobile card its
+own anchor and `Support\CardRenderer` — the card is the same record rendered
+again for the width where the table is hidden, so a write answers with `row-{key}`
+*and* `card-{key}`, and `stackedOnMobile()` stopped refusing. It saves 1 347 B a
+card on top, for the same reason the row does. `usesRowPartials()` is down to two
+refusals: a column summary, and grouping.
+
+Then the freshness channel (step 5 above) reused the same anchor for the read
+side, which is what the whole ERP argument was for: a colleague's write repaints
+their row and leaves the reader's half-typed cell alone.
+
+**What is still unclaimed**, and it is small: a table with a column summary or
+grouping still takes the full render on every write. Both are the same shape of
+problem — a number outside the row that the edit moves — and both would need a
+second anchor on the footer or the subtotal row, plus a rule for when the total
+itself has to be recomputed. Worth doing only if a real table asks.
 
 #### 5.4.4a Targeting is automatic, so the boundary *is* the policy
 

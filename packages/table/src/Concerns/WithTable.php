@@ -568,9 +568,117 @@ trait WithTable
             return;
         }
 
-        // Simply re-render - Livewire will fetch new data
-        // The table instance is recreated on each request
+        // The table instance is recreated on each request, so dropping it is what
+        // makes the poll fetch new data.
         $this->tableInstance = null;
+
+        // …and where the table asked for row partials, send the rows that moved
+        // rather than the page they sit in. This is the freshness half of the ERP
+        // case: while several people edit one table, a colleague's write should
+        // repaint their row and leave everything else — including whatever the
+        // reader has half-typed in a cell of their own — untouched.
+        $this->queueChangedRowPartials();
+    }
+
+    /**
+     * Queue a partial for each row whose data moved since the last poll.
+     *
+     * Which rows changed is worked out **server-side, from this component's own
+     * page**, and deliberately not carried on the broadcast: the channel is
+     * scoped to a model class rather than to a viewer, so putting record keys on
+     * it would tell every listener which records exist and change — including the
+     * ones their own query would never return. The event stays a bare "something
+     * moved" signal and each listener answers it for its own rows.
+     *
+     * A row is "the same row" by key and "unchanged" by a hash of its own
+     * attributes. Deliberately not the `updated_at` the optimistic lock uses:
+     * that column is stored to the second, so two writes inside one second look
+     * identical and the second one would never be sent. Hashing what the record
+     * holds costs nothing extra — the page is already in memory — and sees every
+     * change to the record itself.
+     *
+     * It shares the blind spot of `pollChangeDetection()`'s default: a change
+     * that never touches the parent row (a child-table rollup, a computed column)
+     * is invisible to it, and a table that renders one should say so with a
+     * `pollChangeDetection()` closure, which decides whether the poll renders at
+     * all before this is reached.
+     *
+     * The hashes live in the poll state, which costs the snapshot a few bytes a
+     * row and is why this only runs where row partials are on.
+     *
+     * **The key SET changing means a full render**, and that is not a shortcut: a
+     * row that arrived, left, or moved under the sort is a change no per-row
+     * partial can express — the page's shape moved, not a row's contents.
+     */
+    protected function queueChangedRowPartials(): void
+    {
+        $table = $this->getTable();
+
+        if (! $table->usesRowPartials() || ! method_exists($this, 'renderPartial')) {
+            return;
+        }
+
+        $key = $table->getPrimaryKey();
+        $records = $this->getTableRecords();
+
+        $stamps = [];
+        $ordered = [];
+
+        foreach ($records as $record) {
+            $recordKey = (string) $record->{$key};
+            $ordered[$recordKey] = $record;
+            $stamps[$recordKey] = crc32((string) json_encode($record->getAttributes()));
+        }
+
+        $previous = $this->tableState->get('polling.rows');
+        $this->tableState->set('polling.rows', $stamps);
+
+        // First poll of this page, or the page itself changed: nothing partial can
+        // describe it.
+        if (! is_array($previous) || array_keys($previous) !== array_keys($stamps)) {
+            return;
+        }
+
+        $changed = array_keys(array_filter(
+            $stamps,
+            fn (int $stamp, string $recordKey): bool => ($previous[$recordKey] ?? null) !== $stamp,
+            ARRAY_FILTER_USE_BOTH,
+        ));
+
+        // Nothing moved, and this knew it per row rather than from a checksum over
+        // the set — so the poll can answer with nothing at all. That is the common
+        // case on a table nobody is editing, and the cheapest answer there is.
+        if ($changed === []) {
+            $this->skipTableRender();
+
+            return;
+        }
+
+        $plan = $this->tableRenderPlan();
+        $rows = RowRenderer::for($table, $this, $plan);
+        $cards = $table->isStackedOnMobile() ? CardRenderer::for($table, $this, $plan) : null;
+
+        $index = 0;
+
+        foreach ($ordered as $recordKey => $record) {
+            $position = $index++;
+
+            if (! in_array($recordKey, $changed, true)) {
+                continue;
+            }
+
+            $this->renderPartial(
+                'row-'.$recordKey,
+                fn (): string => $rows->render($record, $position),
+            );
+
+            if ($cards !== null) {
+                $this->renderPartial(
+                    'card-'.$recordKey,
+                    fn (): string => $cards->render($record),
+                );
+            }
+        }
     }
 
     /**

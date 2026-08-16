@@ -313,6 +313,21 @@ already gives you:
   row that the edit moves, so a row-only answer would leave it stale: a table with any column
   summary, and a grouped table (the subtotal is a sibling row). `usesRowPartials()` is the honest
   answer to whether it is on.
+- **With `rowPartials()` on, a poll answers with the rows that moved.** `refreshTable()` — what
+  `poll()` calls and what the `live(broadcast: true)` bridge nudges — compares each row on the
+  page against a hash of the record it last sent, and queues a partial for the ones that changed:
+  nothing at all when nothing moved, the whole table when the page's *shape* changed (a row
+  arrived, left, or moved under the sort — no per-row partial can express that). This is the point
+  of the feature on a shared table: a colleague's write repaints their row and leaves whatever you
+  have half-typed in a cell of your own alone, where a full re-render morphs the lot.
+  **Which rows changed is worked out server-side, from your own page**, and is deliberately not
+  carried on the broadcast — the channel is scoped to a model class rather than to a viewer, so
+  record keys on it would tell every listener which records exist and change, including ones their
+  query would never return. The event stays a bare "something moved" signal.
+  It compares a hash of the record's own attributes, so it shares `pollChangeDetection()`'s blind
+  spot: a change that never touches the parent row (a child-table rollup, a computed column) is
+  invisible to it, and a table that renders one should say so with a `pollChangeDetection()`
+  closure.
 - **A row costs what its cells cost, and little else.** The row body is assembled in PHP from
   markup Blade compiled once per table — the `<tr>` tag, the selection cell, the three sub-row
   expander shapes, the action cell, one skeleton per column — so a page of rows runs no per-row
