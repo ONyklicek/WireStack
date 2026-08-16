@@ -107,6 +107,9 @@ class Table implements Htmlable
     /** The context-menu panel's compiled markup — {@see getRowContextMenuSkeleton()}. */
     protected ?Skeleton $rowContextMenuSkeleton = null;
 
+    /** The row action cell's compiled markup — {@see getActionCellSkeleton()}. */
+    protected ?Skeleton $actionCellSkeleton = null;
+
     /**
      * The sub-row expander cell, one compiled shape per state.
      *
@@ -2226,6 +2229,28 @@ class Table implements Htmlable
         );
 
         return $skeleton->fill(['keyJs' => $keyJs, 'key' => $key]);
+    }
+
+    /**
+     * The row's action cell, compiled once for the table and filled per row.
+     *
+     * The `<td>`/`<div>` wrapper never varies — its padding, border and
+     * justification are table-level — so it is one shape with one hole: the
+     * buttons, which this row's records renders into it. Before the row body
+     * moved into PHP this was inline in the loop, where Blade re-decided both
+     * classes and emitted `@foreach` markers on every row.
+     */
+    public function getActionCellSkeleton(): Skeleton
+    {
+        return $this->actionCellSkeleton ??= Skeleton::compile(
+            view('wire-table::tables.partials.action-cell', [
+                'cellPadding' => $this->getCellPadding(),
+                'borderClass' => $this->isBordered() ? 'border border-gray-200 dark:border-gray-700' : '',
+                'justifyClass' => $this->getActionsJustifyClass(),
+                'actions' => Skeleton::slot('actions'),
+            ])->render(),
+            'actions',
+        );
     }
 
     /**

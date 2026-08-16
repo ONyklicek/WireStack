@@ -30,6 +30,12 @@
     $records = $component->getTableRecords();
     $plan = $component->tableRenderPlan();
 
+    // The row, assembled from compiled pieces instead of laid out here. See
+    // Support\RowRenderer: the loop's own `@if`s emitted 459-999 B of morph
+    // markers per row, and a row that exists only inside this loop cannot be sent
+    // back on its own when a write changes it.
+    $rowRenderer = \NyonCode\WireTable\Support\RowRenderer::for($table, $component, $plan);
+
     assert($table instanceof Table);
 
     // Sub-rows and grouping — the regions inside the body that are their own
@@ -323,7 +329,6 @@
                                 @forelse($records as $record)
                                     @php
                                         $recordKey = $record->{$table->getPrimaryKey()};
-                                        $recordUrl = $table->getRecordUrl($record);
                                         $rowIndex = $loop->index;
 
                                         $groupValue = $hasGrouping ? $table->getGroupComparisonKey($record) : null;
@@ -331,23 +336,6 @@
                                         $nextRecord = $hasGrouping ? ($records[$rowIndex + 1] ?? null) : null;
                                         $isGroupStart = $hasGrouping && ($prevRecord === null || $table->getGroupComparisonKey($prevRecord) !== $groupValue);
                                         $isGroupEnd = $hasGrouping && ($nextRecord === null || $table->getGroupComparisonKey($nextRecord) !== $groupValue);
-
-                                        // Right-click context menu. The Table owns both halves: the
-                                        // panel's shape (a skeleton compiled once for the table) and
-                                        // the decision that a row with no visible action gets none.
-                                        //
-                                        // The `@if` at the emit site therefore looks redundant — the
-                                        // string is already empty — and it is NOT. It emits a pair of
-                                        // Livewire morph markers around the <template>, and those are
-                                        // load-bearing: the row's children CAN change between renders
-                                        // (a column reorder rewrites the cell list), and morphdom needs
-                                        // that block boundary to pair them up. Removing the `@if` to
-                                        // save two comment nodes per row breaks the reorder — the
-                                        // header reorders, the body does not. Both fuses stayed green
-                                        // through that; only verify-gesture-lab.mjs caught it
-                                        // ("dragging a column header moves that column, in the header
-                                        // and the body alike").
-                                        $rowContextMenuPanel = $table->getRowContextMenuPanel($record);
 
                                         // Per-record sub-rows (subRowsVisible): decides this row's
                                         // chevron and panel only — the expander cell itself still
@@ -358,85 +346,7 @@
                                     {{-- Group header. Compiled once for the table; this group
                                          supplies its label. --}}
                                     @if($isGroupStart){!! $table->getGroupHeaderRow($record, $colSpan) !!}@endif
-                                    @php
-                                        $recordKeyJs = \Illuminate\Support\Js::from((string) $recordKey)->toHtml();
-                                        // Values only — the shape was settled once, above.
-                                        $rowOpen = $rowSkeleton->fill([
-                                            'rowClass' => e($table->getRowClasses($record, $rowIndex)),
-                                            'keyJs' => $recordKeyJs,
-                                            'tabindex' => $rowIndex === 0 ? '0' : '-1',
-                                            'rowIndex' => (string) $rowIndex,
-                                            'ariaRowIndex' => (string) ($headerRowCount + $rangeFrom + $rowIndex),
-                                            'key' => e((string) $recordKey),
-                                        ]);
-                                    @endphp
-                                    {!! $rowOpen !!}
-                                        @if($rowContextMenuPanel !== ''){!! $rowContextMenuPanel !!}@endif
-                                        {{-- Selection cell. The shape was settled once, in the
-                                             preamble; this row supplies the key. --}}
-                                        @if($isSelectable){!! $selectionCellSkeleton->fill(['keyJs' => $recordKeyJs, 'key' => e((string) $recordKey)]) !!}@endif
-
-                                        {{-- Sub-row expander cell. Three shapes, each compiled once
-                                             for the table; this row picks one and supplies its key.
-                                             The `@if` the partial keeps inside itself is what puts
-                                             this row's morph markers back — see the partial. --}}
-                                        @if($hasSubRows){!! $table->getSubRowCell(
-                                            $recordKeyJs,
-                                            e((string) $recordKey),
-                                            $isSubRowsExpandable && $recordHasSubRows,
-                                            $component->isRowExpanded($recordKey),
-                                        ) !!}@endif
-
-                                        {{-- Actions Cell (Start Position) --}}
-                                        @if($hasActions && $actionsPosition === 'start')
-                                            {{-- Tags touch, and the @foreach stays. The whitespace between
-                                                 them was four DOM text nodes per row for markup that never
-                                                 varies; the loop's morph markers are NOT surplus, because
-                                                 the button list genuinely changes per record (an action can
-                                                 be non-executable for one row and not the next) — the case
-                                                 §8f showed those markers exist for. --}}
-                                            <td class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }}"><div class="flex flex-wrap items-center gap-1 {{ $actionsJustifyClass }}">@foreach($actions as $action){!! $action->render($record, $actionClick) !!}@endforeach</div></td>
-                                        @endif
-
-                                        {{-- Column Cells. Assembled in PHP rather than by a @foreach, so
-                                             the row emits no whitespace between the cells and Blade runs
-                                             no per-cell conditional — the two things that made a <td>
-                                             cost ~900 bytes and a fistful of DOM nodes to say `v`. The
-                                             cell is $cm['cell'], compiled once per column above. --}}
-                                        @php
-                                            $cellsHtml = '';
-                                            $linkOpen = $recordUrl
-                                                ? '<a href="'.e($recordUrl).'" class="hover:text-primary-600 dark:hover:text-primary-400">'
-                                                : '';
-
-                                            foreach ($visibleColumns as $column) {
-                                                $cm = $columnMeta[$column->getName()];
-                                                $cell = $cm['responsiveDisplay']
-                                                    ? $column->renderResponsiveCell($record)
-                                                    : $column->renderCellFast($record);
-
-                                                // A record url turns every non-editable cell into a link to
-                                                // the record; an editable one keeps its own interaction.
-                                                if ($linkOpen !== '' && ! $cm['editable']) {
-                                                    $cell = $linkOpen.$cell.'</a>';
-                                                }
-
-                                                $cellsHtml .= $cm['cell']->fill(['content' => $cell]);
-                                            }
-                                        @endphp
-                                        {!! $cellsHtml !!}
-
-                                        {{-- Actions Cell (End Position - Default) --}}
-                                        @if($hasActions && $actionsPosition === 'end')
-                                            {{-- Tags touch, and the @foreach stays. The whitespace between
-                                                 them was four DOM text nodes per row for markup that never
-                                                 varies; the loop's morph markers are NOT surplus, because
-                                                 the button list genuinely changes per record (an action can
-                                                 be non-executable for one row and not the next) — the case
-                                                 §8f showed those markers exist for. --}}
-                                            <td class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }}"><div class="flex flex-wrap items-center gap-1 {{ $actionsJustifyClass }}">@foreach($actions as $action){!! $action->render($record, $actionClick) !!}@endforeach</div></td>
-                                        @endif
-                                    </tr>
+                                    {!! $rowRenderer->render($record, $rowIndex) !!}
 
                                     {{-- Sub-rows --}}
                                     @if($recordHasSubRows && $component->isRowExpanded($recordKey))

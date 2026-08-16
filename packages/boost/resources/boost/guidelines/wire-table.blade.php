@@ -288,13 +288,25 @@ already gives you:
   mobile cards and the pagination footer are one Livewire island, and Livewire targets the nearest
   enclosing island automatically — so a sort, a page change, a cell save, a sub-row expansion or a
   row action renders that region alone and leaves the toolbar, the filter panels and the modals
-  neither rendered nor morphed (43% less markup on a small table; the saving is fixed-size chrome,
-  so it is a smaller share of a bigger page but the same absolute bytes). Anything fired from
+  neither rendered nor morphed. What it saves is the chrome, which is a fixed size, so the share
+  depends entirely on the table: 43% less markup on a four-row page, but **36% of the render time
+  and only 9% of the bytes** on a 25-column, 20-row page, where 500 cells dwarf the chrome. Judge
+  it by the absolute figure — roughly 50-90 kB a render — not by a percentage. Anything fired from
   **outside** the table — the search box, a filter, a column toggle, a poll tick — still renders
   everything, so nothing goes stale. You get this without asking for it; the one thing to know is
   that a **custom action whose only effect is outside the table region** (say it writes a property
   that a heading above the table reads) will not repaint that heading when fired from a row. Put
   such an action in the toolbar, or have it dispatch to the surface that owns the heading.
+- **A row costs what its cells cost, and little else.** The row body is assembled in PHP from
+  markup Blade compiled once per table — the `<tr>` tag, the selection cell, the three sub-row
+  expander shapes, the action cell, one skeleton per column — so a page of rows runs no per-row
+  view render and emits no per-row conditional markers. That is worth **850-1000 B per row**
+  against the same table before it, on top of the per-cell work. Two things follow for anyone
+  extending the row: every child of a `<tr>` whose *presence* varies carries a `wire:key`
+  (`ctx-`/`sel-`/`exp-`, and `act-{key}-{name}` on each record-scoped action button) because that
+  is what pairs them through a morph now — add a conditional child without one and it will pair
+  against its neighbour; and a per-row `@@include` re-introduces the O(rows) view renders the
+  engine exists to remove, which `TableRenderCountTest` fails on.
 - **Opening an action modal does not re-render the table.** Any action with a modal renders
   `wire:island="action-modals"`, and a call targeting an island makes Livewire skip the component
   render and return the island alone — the modal instead of every cell behind it (9.5 KB against

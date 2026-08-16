@@ -448,10 +448,15 @@ it('keeps the actions cell to its buttons', function () {
     // used to lay out around markup that never varies.
     //
     // What is left is the button itself (core's actions/button.blade.php), which is
-    // genuinely per-record and belongs to the action-render work, not to this loop. The
-    // @foreach and its markers stay: an action can be non-executable for one row and
-    // not the next, so the button list really does change — the case §8f showed the
-    // markers exist for.
+    // genuinely per-record and belongs to the action-render work, not to this loop.
+    //
+    // The comment budget went 10 → 8 when the row body moved into PHP
+    // (Support\RowRenderer). It used to say the `@foreach` and its markers had to
+    // stay, because an action can be non-executable for one row and not the next
+    // and the button list really does change. That was true of the markers and is
+    // now true of something cheaper: each record-scoped button carries
+    // `wire:key="act-{key}-{name}"`, so the morph pairs them by identity instead —
+    // see RowMorphKeysTest, which is what holds that in place.
     $plain = pfPerRow();
     $actions = pfPerRow(actions: true);
 
@@ -463,7 +468,7 @@ it('keeps the actions cell to its buttons', function () {
 
     expect($cell['bytes'])->toBeLessThan(1220)
         ->and($cell['whitespaceRuns'])->toBeLessThanOrEqual(10)
-        ->and($cell['comments'])->toEqual(10);
+        ->and($cell['comments'])->toEqual(8);
 });
 
 it('keeps the sibling rows off the row budget', function () {
