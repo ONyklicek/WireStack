@@ -83,6 +83,72 @@ not install or start Alpine separately.
 
 ---
 
+## Row markup and partial rendering (2.0)
+
+Two changes here. One is opt-in and you can ignore it until you want it; the
+other happened to every table and is worth ten minutes of your attention if you
+have styled, scripted or tested against the table's own markup.
+
+### Every table's rows are assembled differently
+
+The row body used to be laid out in Blade inside the row loop. It is now
+assembled in PHP from markup Blade compiles once per table
+(`Support\RowRenderer`, and `Support\CardRenderer` for the stacked cards). The
+rendered result is the same markup, with two differences:
+
+- **the per-row morph markers are gone.** Livewire injects an
+  `<!--[if BLOCK]><![endif]-->` pair around every `@if` and `@foreach` it
+  compiles, and the row loop's own conditionals were emitting 459–999 B of them
+  per row — 848–1035 B per row once the whitespace between them is counted, and
+  1 347 B per stacked card. Nothing in the DOM depended on them except Livewire's
+  own morph;
+- **the row's conditional children now carry `wire:key`**, which is what pairs
+  them through a morph in place of those markers: `ctx-{key}` on the teleported
+  context menu, `sel-{key}` on the selection cell, `exp-{key}` on the sub-row
+  expander, and `act-{key}-{name}` on every action button rendered **with** a
+  record. A button rendered without one — a header action, a bulk action, the
+  empty state — is unchanged.
+
+**What to check.** Anything that walks the row's children by position or counts
+comment nodes: a CSS `:nth-child()` that assumed a stable child count, a
+`querySelector` chain that stepped over the markers, a browser test asserting on
+them. Ordinary selectors — `[data-row-key]`, `[data-testid]`, `[data-column]`,
+`tbody tr` — are untouched and remain the supported way in.
+
+**If you published the table views**, this is the one that can bite silently.
+`tables/index.blade.php` no longer contains the row body at all: it was split
+into `partials/data-region.blade.php`, and the row and card are rendered from
+PHP. A published copy from 1.x keeps working — Laravel prefers it — but it keeps
+the old cost and none of the new behaviour, and it will not pick up
+`rowPartials()`. Re-publish it, or better, delete the copy and configure instead:
+
+```bash
+php artisan vendor:publish --tag=wire-table::views --force
+```
+
+### `rowPartials()` — opt-in, and off by default
+
+A write can answer with the regions it moved rather than re-rendering the table:
+
+```php
+$table->rowPartials()
+```
+
+On a 25-column, 20-row page an inline cell save costs 49.3 ms and 556 kB as an
+ordinary render, and 3.2 ms and 26 kB as one row. Nothing changes for a table
+that does not ask for it — no anchor is emitted and no byte is spent.
+
+**What you trade** is that a re-rendered row keeps its position: an edit that
+would move the record under the current sort leaves it where it is until the next
+full render. On a wide editable grid that is the right trade, which is why it is
+opt-in rather than on.
+
+See [Advanced → Row Partials](table/advanced.md#row-partials) for what a write
+answers with on each shape of table, and for how the same anchors serve `poll()`
+and `live()`.
+
+---
+
 ## Dependency floors (1.17)
 
 **Laravel 10 and 11 are gone.** 1.17 moved the JavaScript bundles from a package

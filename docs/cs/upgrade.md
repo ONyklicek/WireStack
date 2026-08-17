@@ -82,6 +82,71 @@ Alpine neinstalujte ani nestartujte samostatně.
 
 ---
 
+## Markup řádku a částečné renderování (2.0)
+
+Dvě změny. Jedna je dobrovolná a můžete ji ignorovat, dokud ji nebudete chtít; ta
+druhá se stala každé tabulce a stojí za deset minut pozornosti, pokud stylujete,
+skriptujete nebo testujete proti markupu tabulky.
+
+### Řádky každé tabulky se skládají jinak
+
+Tělo řádku se dřív rozkládalo v Blade uvnitř řádkové smyčky. Teď se skládá v PHP
+z markupu, který Blade zkompiluje jednou pro tabulku (`Support\RowRenderer`, a
+`Support\CardRenderer` pro stacked karty). Výsledný markup je tentýž, se dvěma
+rozdíly:
+
+- **zmizely per-řádkové morph markery.** Livewire vkládá dvojici
+  `<!--[if BLOCK]><![endif]-->` kolem každého `@if` a `@foreach`, který
+  zkompiluje, a podmínky řádkové smyčky jich emitovaly 459–999 B na řádek —
+  848–1035 B na řádek i s whitespace mezi nimi, a 1 347 B na stacked kartu. Nic
+  v DOM na nich nezáviselo kromě samotného morphu Livewire;
+- **podmíněné děti řádku teď nesou `wire:key`**, což je to, co je při morphu
+  páruje místo těch markerů: `ctx-{key}` na teleportovaném kontextovém menu,
+  `sel-{key}` na výběrové buňce, `exp-{key}` na rozbalovači podřádků a
+  `act-{key}-{name}` na každém akčním tlačítku vykresleném **se** záznamem.
+  Tlačítko bez záznamu — hlavičková akce, hromadná akce, prázdný stav — se
+  nezměnilo.
+
+**Co zkontrolovat.** Cokoli, co prochází děti řádku podle pozice nebo počítá
+komentářové uzly: CSS `:nth-child()`, které předpokládalo stabilní počet dětí,
+řetězec `querySelector`, který markery překračoval, browser test, který na ně
+asertoval. Běžné selektory — `[data-row-key]`, `[data-testid]`, `[data-column]`,
+`tbody tr` — se nezměnily a zůstávají podporovanou cestou dovnitř.
+
+**Pokud jste publikovali views tabulky**, tohle je ta změna, která umí kousnout
+potichu. `tables/index.blade.php` už tělo řádku vůbec neobsahuje: rozdělilo se do
+`partials/data-region.blade.php` a řádek s kartou se renderují z PHP.
+Publikovaná kopie z 1.x dál funguje — Laravel jí dá přednost — ale drží si starou
+cenu a žádné z nového chování, a `rowPartials()` nepřevezme. Publikujte znovu,
+nebo lépe, kopii smažte a konfigurujte:
+
+```bash
+php artisan vendor:publish --tag=wire-table::views --force
+```
+
+### `rowPartials()` — dobrovolné a ve výchozím stavu vypnuté
+
+Zápis může odpovědět oblastmi, kterými pohnul, místo překreslení celé tabulky:
+
+```php
+$table->rowPartials()
+```
+
+Na stránce s 25 sloupci a 20 řádky stojí uložení buňky 49,3 ms a 556 kB při
+běžném renderu a 3,2 ms a 26 kB jako jeden řádek. Pro tabulku, která si o to
+neřekne, se nemění nic — nevykreslí se žádná kotva a neutratí se žádný bajt.
+
+**Co za to platíte** je, že překreslený řádek si drží svou pozici: editace, která
+by záznam pod aktuálním řazením posunula, ho nechá na místě až do dalšího plného
+renderu. Na široké editovatelné mřížce je to ta správná výměna, a proto je to
+dobrovolné, ne zapnuté.
+
+Viz [Pokročilé → Řádkové partials](table/advanced.md#radkove-partials), kde je,
+čím zápis odpoví u kterého tvaru tabulky, a jak tytéž kotvy slouží `poll()`
+a `live()`.
+
+---
+
 ## Minimální verze závislostí (1.17)
 
 **Laravel 10 a 11 končí.** Verze 1.17 přesunula JavaScriptové bundly z package
