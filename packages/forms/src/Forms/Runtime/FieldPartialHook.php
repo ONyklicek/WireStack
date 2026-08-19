@@ -21,6 +21,10 @@ use NyonCode\WireForms\Concerns\InteractsWithFieldPartials;
  * queueing here is early enough for `PartialRenderHook::call()` to see the
  * regions and skip the view, and late enough that the diff reads the state the
  * request actually produced rather than a half-applied one.
+ *
+ * This fires once per property, and a commit can carry several. Doing the work
+ * only once is the concern's own business, not the hook's — see
+ * `InteractsWithFieldPartials::queueChangedFieldPartials()`.
  */
 final class FieldPartialHook extends ComponentHook
 {
@@ -39,18 +43,7 @@ final class FieldPartialHook extends ComponentHook
                 return;
             }
 
-            // Once per request however many properties the commit carried: the
-            // diff already looks at every field, so a second pass would render
-            // them all again to reach the same answer.
-            if ($this->ran) {
-                return;
-            }
-
-            $this->ran = true;
-
             (fn () => $this->queueChangedFieldPartials())->call($component);
         };
     }
-
-    private bool $ran = false;
 }

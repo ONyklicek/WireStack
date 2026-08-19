@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Livewire\Component;
 use Livewire\Livewire;
+use NyonCode\WireForms\Components\Display\Placeholder;
 use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Forms\Form;
@@ -34,11 +35,18 @@ class FieldPartialHost extends Component
 
     public bool $conditional = false;
 
-    public function mount(bool $partials = true, bool $dependent = false, bool $conditional = false): void
-    {
+    public bool $unanchored = false;
+
+    public function mount(
+        bool $partials = true,
+        bool $dependent = false,
+        bool $conditional = false,
+        bool $unanchored = false,
+    ): void {
         $this->partials = $partials;
         $this->dependent = $dependent;
         $this->conditional = $conditional;
+        $this->unanchored = $unanchored;
     }
 
     public function form(Form $form): Form
@@ -55,6 +63,13 @@ class FieldPartialHost extends Component
 
         if ($this->conditional) {
             $schema[] = TextInput::make('role')->visibleWhen('kind', 'b');
+        }
+
+        if ($this->unanchored) {
+            // Placeholder renders no field wrapper, so it carries no anchor and
+            // nothing can be morphed into it. (Hidden is unanchored too, but
+            // reports isVisible() === false, so the diff never reaches it.)
+            $schema[] = Placeholder::make('token')->content('read only');
         }
 
         return $form->statePath('data')->fieldPartials($this->partials)->schema($schema);
@@ -144,4 +159,43 @@ it('carries the anchor in the markup it sends, or the next update finds nothing 
 
     expect($markup)->toContain('wire:partial="field-data.role"')
         ->and($markup)->toStartWith('<div');
+});
+
+it('falls back to a full render when any field carries no anchor', function () {
+    // Eight field views render no wrapper — hidden, alert, placeholder,
+    // view-field, html, repeater, repeater-table, builder — so there is nothing
+    // to morph a region into. One of them on the form is enough: sending regions
+    // for the rest would leave the next update comparing against markup that was
+    // never delivered.
+    //
+    // Detected by looking for the anchor in the rendered markup rather than by
+    // keeping a list of view names, so the rule cannot drift as views change.
+    $effects = fieldPartialCommit(['unanchored' => true, 'dependent' => true], 'data.name', 'Grace');
+
+    expect($effects['wirePartials'] ?? null)->toBeNull()
+        ->and($effects['html'] ?? null)->not->toBeNull();
+});
+
+it('runs the diff once however many properties one commit carried', function () {
+    // Livewire fires the update hook once per property, and a debounced commit can
+    // carry several. The diff renders every field, so a second pass would render
+    // them all again to reach the same answer — and would compare against the
+    // stamps the first pass just wrote, making every field look unchanged.
+    //
+    // Driven directly rather than through `set()`, which sends one request per
+    // property (Testable::set loops setProperty) and so cannot express a
+    // multi-property commit at all.
+    $component = Livewire::test(FieldPartialHost::class, ['dependent' => true]);
+    $instance = $component->instance();
+
+    $run = fn () => (fn () => $this->queueChangedFieldPartials())->call($instance);
+
+    $run();
+    $first = $instance->fieldPartialStamps;
+
+    // A second pass would stamp this new state; the guard means it does not.
+    $instance->data['name'] = 'Changed after the first pass';
+    $run();
+
+    expect($instance->fieldPartialStamps)->toBe($first);
 });

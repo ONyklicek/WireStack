@@ -154,20 +154,17 @@ final class PartialRenderHook extends ComponentHook
             return false;
         }
 
-        if (store($this->component)->get(self::FORCE_KEY, false)) {
-            return false;
-        }
-
-        // A property update can change anything the view shows, so it still
-        // forces the render by default. The exception is a component that has
-        // looked at what changed and queued regions for all of it — see
+        // A property update can change anything the view shows, so it forces the
+        // render by default. The exception is a component that has looked at what
+        // changed and queued regions for all of it — see
         // `InteractsWithPartials::coverUpdatesWithPartials()`. Asked here rather
         // than decided in `update()` so the answer does not depend on which hook
         // Livewire happens to run first.
-        if (store($this->component)->get(self::UPDATED_KEY, false)) {
-            return (bool) store($this->component)->get(self::UPDATES_COVERED_KEY, false);
-        }
+        $updatesCovered = ! store($this->component)->get(self::UPDATED_KEY, false)
+            || (bool) store($this->component)->get(self::UPDATES_COVERED_KEY, false);
 
-        return true;
+        // An uncovered call forces the render whatever else the request did.
+        return $updatesCovered
+            && ! store($this->component)->get(self::FORCE_KEY, false);
     }
 }

@@ -8,6 +8,8 @@ use Livewire\Component;
 use NyonCode\WireCore\Foundation\Support\IslandViewScope;
 use NyonCode\WireForms\Forms\Form;
 
+use function Livewire\store;
+
 /**
  * Answer a field update with the fields that changed, not the whole view.
  *
@@ -53,6 +55,9 @@ trait InteractsWithFieldPartials
      */
     public array $fieldPartialStamps = [];
 
+    /** Request-scoped marker: the diff has already run for this commit. */
+    private const RAN_KEY = 'wireFormsFieldPartialsRan';
+
     /**
      * Queue the fields whose markup moved, and say so if they cover the update.
      *
@@ -61,6 +66,16 @@ trait InteractsWithFieldPartials
      */
     protected function queueChangedFieldPartials(): void
     {
+        // Once per request, however many properties the commit carried. The diff
+        // renders every field, so a second pass would render them all again to
+        // reach the same answer — and would compare against the stamps the first
+        // pass just wrote, making every field look unchanged.
+        if (store($this)->get(self::RAN_KEY, false)) {
+            return;
+        }
+
+        store($this)->set(self::RAN_KEY, true);
+
         $form = $this->form ?? null;
 
         if (! is_object($form) || ! method_exists($form, 'usesFieldPartials') || ! $form->usesFieldPartials()) {
