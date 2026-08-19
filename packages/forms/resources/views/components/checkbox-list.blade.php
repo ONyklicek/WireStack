@@ -69,19 +69,16 @@
                         <p class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                             {{ $groupLabel }}
                         </p>
-                        <div class="{{ $gridClasses }}">
-                            @foreach($groupOptions as $value => $label)
-                                @include('wire-forms::partials.checkbox-list-option', compact('field', 'wireAttr', 'value', 'label'))
-                            @endforeach
-                        </div>
+                        @include('wire-forms::partials.checkbox-list-options', [
+                            'field' => $field,
+                            'wireAttr' => $wireAttr,
+                            'options' => $groupOptions,
+                            'gridClasses' => $gridClasses,
+                        ])
                     </div>
                 @endforeach
             @else
-                <div class="{{ $gridClasses }}">
-                    @foreach($options as $value => $label)
-                        @include('wire-forms::partials.checkbox-list-option', compact('field', 'wireAttr', 'value', 'label'))
-                    @endforeach
-                </div>
+                @include('wire-forms::partials.checkbox-list-options', compact('field', 'wireAttr', 'options', 'gridClasses'))
             @endif
         </div>
     </div>

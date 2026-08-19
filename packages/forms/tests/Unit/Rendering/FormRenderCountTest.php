@@ -243,19 +243,21 @@ it('renders the option-modal partial only while a modal is actually mounted', fu
     expect($open)->toBeGreaterThan($closed);
 });
 
-it('costs exactly one view render per CheckboxList option', function () {
-    // `checkbox-list.blade.php` includes `partials.checkbox-list-option` from
-    // inside its `@foreach` — the only include written inside a loop anywhere in
-    // the wire-forms view tree, and the N×View shape this fuse exists to catch:
-    // 210 options, 216 views.
+it('costs zero view renders per CheckboxList option', function () {
+    // `checkbox-list.blade.php` used to include `partials.checkbox-list-option`
+    // from inside its `@foreach` — the only include written inside a loop
+    // anywhere in the wire-forms view tree, and the N×View shape this fuse exists
+    // to catch. It measured exactly 1.00 renders per option: 210 options, 216
+    // views.
     //
-    // Pinned at the measured 1.00 so moving the loop into the partial has to
-    // bring this to 0 deliberately.
+    // The loop moved into `partials.checkbox-list-options`, which is included once
+    // per grid, so the slope is zero and the list is O(1) in renders. Putting an
+    // `@include` back inside the loop is what this catches.
     expect(frcSlope(
         ['shape' => 'checkbox-list', 'options' => 4],
         ['shape' => 'checkbox-list', 'options' => 20],
         'options',
-    ))->toEqual(1.0);
+    ))->toEqual(0.0);
 });
 
 it('costs one field-render per child per repeater item, and no per-item chrome', function () {
