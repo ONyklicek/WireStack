@@ -101,8 +101,11 @@ it('translates the rich editor toolbar from the same keys', function () {
             ->and($html)->toContain('title="Nadpis 3"')
             ->and($html)->toContain('title="Blok kódu"')
             ->and($html)->toContain('title="Znovu"')
-            // The link prompt lives inside x-data, and is translated too.
-            ->and($html)->toContain("prompt('URL odkazu')");
+            // The prompt text the controller calls prompt() with is handed in as
+            // config, and is translated too. It stays in the markup — the
+            // translation is a server-side value — while the prompt() call
+            // itself moved into the bundle.
+            ->and($html)->toContain("linkPrompt: 'URL odkazu'");
     } finally {
         app()->setLocale('en');
     }
@@ -115,12 +118,15 @@ it('escapes the rich editor prompt so a translation cannot break its x-data', fu
     // &#039;, which decodes back to a quote and terminates the JS string — and
     // with it the double-quoted x-data attribute around it. @js() hex-escapes
     // both quote characters instead.
+    //
+    // Moving the body into the bundle does not retire this: the translated text
+    // is a server-side value and still reaches the attribute, now as config.
     app('translator')->addLines(['fields.editor.link_url' => "URL 'odkazu'"], 'cs', 'wire-forms');
 
     try {
         $html = renderEditorField(RichEditor::make('content'));
 
-        expect($html)->toContain('prompt(\'URL \u0027odkazu\u0027\')')
+        expect($html)->toContain('linkPrompt: \'URL \u0027odkazu\u0027\'')
             ->and($html)->not->toContain('&#039;');
     } finally {
         app()->setLocale('en');

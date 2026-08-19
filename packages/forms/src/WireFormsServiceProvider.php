@@ -6,12 +6,14 @@ namespace NyonCode\WireForms;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Route;
+use Livewire\ComponentHookRegistry;
 use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Actions\Contracts\ModalFormFactory;
 use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireForms\Forms\Form;
+use NyonCode\WireForms\Forms\Runtime\FieldPartialHook;
 use NyonCode\WireForms\Forms\Support\FormModalFormFactory;
 use NyonCode\WireForms\Integration\ActionMacros;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -24,6 +26,17 @@ class WireFormsServiceProvider extends PackageServiceProvider
     /**
      * @throws \Exception
      */
+    public function register(): void
+    {
+        parent::register();
+
+        // In the REGISTER phase, for the same reason wire-core registers its own:
+        // ComponentHookRegistry::boot() walks what is registered at boot time, so
+        // a hook added later is silently absent for the first component of the
+        // process.
+        ComponentHookRegistry::register(FieldPartialHook::class);
+    }
+
     public function configure(Packager $packager): void
     {
         $packager
@@ -45,6 +58,10 @@ class WireFormsServiceProvider extends PackageServiceProvider
             ->hasViews()
             ->hasAssets('dist', entries: [
                 Bundle::make('wire-forms-image.js'),
+                // The field controllers (date/time pickers, tags, rating, the
+                // editors). A registrar, so it ships with the document rather
+                // than being delivered per field — see architecture/assets.md.
+                Bundle::make('wire-forms-fields.js'),
             ])
             ->hasAssetFallback(Bundle::servedByRoute('wire-forms'))
             ->hasTranslations('resources/lang')

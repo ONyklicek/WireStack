@@ -6,52 +6,18 @@
     $colorClasses = $field->getColorClasses();
 @endphp
 
+@include('wire-forms::partials.field-assets')
+
 @include('wire-forms::partials.field-wrapper-start')
 
 <div
-    x-data="{
-        rating: @entangle($field->getWireModelAttribute()){{ $entangleModifier ? '.' . $entangleModifier : '' }},
-        hovered: 0,
+    {{-- Body registered as `wireRating`; only per-instance config here. --}}
+    x-data="wireRating({
+        state: @entangle($field->getWireModelAttribute()){{ $entangleModifier ? '.' . $entangleModifier : '' }},
         allowHalf: @js($field->isAllowHalf()),
         clearable: @js($field->isClearable()),
         disabled: @js($field->isDisabled()),
-
-        setRating(val) {
-            if (this.disabled) return;
-            if (this.clearable && this.rating === val) {
-                this.rating = 0;
-            } else {
-                this.rating = val;
-            }
-        },
-
-        setHalf(index, event) {
-            if (!this.allowHalf || this.disabled) return;
-            const rect = event.currentTarget.getBoundingClientRect();
-            const half = event.clientX - rect.left < rect.width / 2;
-            this.hovered = half ? index - 0.5 : index;
-        },
-
-        clickStar(index, event) {
-            if (this.allowHalf) {
-                const rect = event.currentTarget.getBoundingClientRect();
-                const half = event.clientX - rect.left < rect.width / 2;
-                this.setRating(half ? index - 0.5 : index);
-            } else {
-                this.setRating(index);
-            }
-        },
-
-        isFilled(index) {
-            const active = this.hovered || this.rating;
-            return index <= active;
-        },
-
-        isHalfFilled(index) {
-            const active = this.hovered || this.rating;
-            return active >= index - 0.5 && active < index;
-        }
-    }"
+    })"
     class="inline-flex items-center gap-0.5"
 >
     @for($i = 1; $i <= $field->getMax(); $i++)

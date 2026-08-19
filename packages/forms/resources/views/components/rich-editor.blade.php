@@ -13,64 +13,17 @@
         => (string) trans("wire-forms::fields.editor.{$key}", $replace);
 @endphp
 
+@include('wire-forms::partials.field-assets')
+
 @include('wire-forms::partials.field-wrapper-start')
 
 <div
-        x-data="{
-        content: '',
-        toolbar: @js($toolbarButtons),
-        activeFormats: {},
-
-        init() {
-            const initial = $wire.get('{{ $field->getWireModelAttribute() }}');
-            if (initial) {
-                this.content = initial;
-                this.$nextTick(() => { this.$refs.editor.innerHTML = this.content; });
-            }
-
-            $wire.$watch('{{ $field->getWireModelAttribute() }}', (val) => {
-                if (document.activeElement !== this.$refs.editor) {
-                    this.content = val || '';
-                    this.$refs.editor.innerHTML = this.content;
-                }
-            });
-        },
-
-        onInput() {
-            this.content = this.$refs.editor.innerHTML;
-            this.$refs.textarea.value = this.content;
-            this.$refs.textarea.dispatchEvent(new Event('input'));
-            this.updateActiveFormats();
-        },
-
-        exec(command, value = null) {
-            this.$refs.editor.focus();
-            document.execCommand(command, false, value);
-            this.onInput();
-        },
-
-        updateActiveFormats() {
-            this.activeFormats = {
-                bold: document.queryCommandState('bold'),
-                italic: document.queryCommandState('italic'),
-                underline: document.queryCommandState('underline'),
-                strikeThrough: document.queryCommandState('strikeThrough'),
-                insertOrderedList: document.queryCommandState('insertOrderedList'),
-                insertUnorderedList: document.queryCommandState('insertUnorderedList'),
-            };
-        },
-
-        insertLink() {
-            const url = prompt(@js($t('link_url')));
-            if (url) {
-                this.exec('createLink', url);
-            }
-        },
-
-        hasButton(name) {
-            return this.toolbar.includes(name);
-        }
-    }"
+        {{-- Body registered as `wireRichEditor`; only per-instance config here. --}}
+        x-data="wireRichEditor({
+            statePath: @js($field->getWireModelAttribute()),
+            toolbar: @js($toolbarButtons),
+            linkPrompt: @js($t('link_url')),
+        })"
         @class([
             'rounded-md border overflow-hidden',
             'border-gray-300 dark:border-gray-600',

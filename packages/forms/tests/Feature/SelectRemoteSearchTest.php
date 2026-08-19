@@ -69,7 +69,12 @@ test('searchSelectOptions on a select without a remote callback returns an empty
 });
 
 test('the remote select seeds the current selection label into the trigger', function () {
+    // The seeded label is the point: without it the trigger goes blank, because
+    // remote results are transient. The searchSelectOptions() call itself moved
+    // into core's combobox controller and takes the path from config, so what the
+    // markup must carry is that path plus the remote flag.
     Livewire::test(RemoteSelectComponent::class)
         ->assertSee('John Doe')
-        ->assertSeeHtml("searchSelectOptions('data.user'");
+        ->assertSeeHtml("statePath: 'data.user'")
+        ->assertSeeHtml('remote: true');
 });

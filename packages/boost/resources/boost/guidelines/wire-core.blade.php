@@ -223,6 +223,15 @@ else document.addEventListener('alpine:init', register)
 The `registered` guard is load-bearing, not defensive: the directive and a per-surface partial can
 both emit the same `src`, so the bundle may execute twice.
 
+**Declaring the entry is not enough — the surface still has to include its own `@@assets` partial.**
+`@@wireStackScripts` is *additive*: an app that never puts it in a layout is supported, and then the
+declaration delivers nothing. A view whose `x-data` calls a factory from a bundle nobody delivered
+evaluates against an empty registry and the component silently does nothing — no exception, no
+console error at the point of the mistake. This is invisible to PHP tests, which read the markup and
+find it correct; only `npm run verify:drivers` catches it. So a new controller bundle needs both: the
+`Bundle::make()` entry, and an `@@assets`/`@@packageScripts` partial included from every view that
+uses it (`wire-core::partials.floating-assets`, `wire-forms::partials.field-assets`).
+
 Core interaction controllers are **never** lazy per-component — that is what causes the bug above.
 Lazy is for heavy, optional bodies only: TipTap is the one case, and it stays outside the entry list
 entirely, delivered by the field that needs it. Lazy-load bodies, never registrators.

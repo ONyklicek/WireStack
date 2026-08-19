@@ -46,6 +46,7 @@ Committed IIFE bundles under each package's `dist/`, built with esbuild:
 | core | `wire-core-chart.js` | `resources/js/chart.js` |
 | core | `wire-core-copy.js` | `resources/js/copy.js` |
 | forms | `wire-forms-image.js` | `resources/js/image-processor.js` |
+| forms | `wire-forms-fields.js` | `resources/js/fields.js` (+ `fields/`) |
 | forms | `tiptap/` (code-split ESM) | not an entry — the field delivers it | `resources/js/tiptap-editor{,-addons}.js` |
 | table | `wire-table-records.js` | `resources/js/record-actions.js` |
 | table | `wire-table-selection.js` | `resources/js/record-selection.js` |
@@ -81,7 +82,7 @@ a package's `resources/js/`, run its build script:
 
 ```bash
 npm run build:core-assets       # dropdown + chart + copy
-npm run build:forms-assets      # tiptap (ESM, split) + image processor
+npm run build:forms-assets      # tiptap (ESM, split) + image processor + field controllers
 npm run build:table-assets      # records, selection, live
 npm run build:sortable-assets   # sortable, SortableJS compiled in
 ```

@@ -203,16 +203,22 @@ test('a chosen option is persisted into the seed so its label survives the post-
     // fetchRemote('') and rebuilt `options` from `initialOptions` only — dropping
     // the just-chosen label so the trigger went blank. select() must mirror
     // upsertOption and merge the choice into initialOptions before resetting.
-    $html = renderSelect(Select::make('role')->options(['a' => 'A']));
+    // The combobox body is `wireSearchableSelect` in core's dropdown bundle now
+    // (seven surfaces across forms and table include the partial), so the
+    // ordering this regression is about is asserted where the code lives. The
+    // markup only carries config, which the assertion below it covers.
+    $controller = file_get_contents(
+        __DIR__.'/../../../../core/resources/js/select/controller.js',
+    );
 
-    expect($html)
+    expect($controller)
         // The seed-persist helper exists and writes into initialOptions.
         ->toContain('persistSelectedOption(value)')
         ->toContain('this.initialOptions = { ...this.initialOptions, [value]: label }')
         // Single-select: persist runs BEFORE the search reset that would wipe options.
-        ->toContain("this.persistSelectedOption(value);\n            this.selected = value;")
+        ->toContain("this.persistSelectedOption(value)\n        this.selected = value")
         // Multi-select: persist runs when a value is added (not on removal).
-        ->toContain("list.push(value);\n                    this.persistSelectedOption(value);");
+        ->toContain("list.push(value)\n                this.persistSelectedOption(value)");
 });
 
 test('native() forces a native select even when searchable', function () {
@@ -385,9 +391,12 @@ test('remote searchable select renders the async combobox wiring', function () {
         Select::make('user')->getSearchResultsUsing(fn () => ['u1' => 'One']),
     );
 
+    // `statePath` is config now: the controller calls
+    // $wire.searchSelectOptions(this.statePath, term), so what the markup has to
+    // carry is the path, and the call itself is pinned in the bundle test.
     expect($html)
         ->toContain('remote: true')
-        ->toContain("searchSelectOptions('user'");
+        ->toContain("statePath: 'user'");
 });
 
 test('a client-side searchable select is not flagged for remote search', function () {

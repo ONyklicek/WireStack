@@ -355,8 +355,10 @@ test('remote relationship select renders the remote combobox with the seeded sel
 
     $html = renderBelongsToSelect($field);
 
+    // The searchSelectOptions() call lives in core's combobox controller; what a
+    // remote relationship select has to emit is the flag and the path it asks on.
     expect($html)
-        ->toContain('searchSelectOptions')
+        ->toContain("statePath: 'company_id'")
         ->toContain('remote: true');
 });
 

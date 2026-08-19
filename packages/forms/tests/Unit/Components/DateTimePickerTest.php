@@ -381,11 +381,18 @@ test('the typed format is the display format when there is one, and the state sh
         ->and(DateTimePicker::make('at')->asTime()->getTypedFormat())->toBe('H:i');
 });
 
-test('the parser is given the format, and the shared partial that reads it', function () {
+test('the parser is given the format, and the shared module that reads it', function () {
+    // The format is the per-instance half and stays in the markup; the parser and
+    // the picker's own applyTyped() are `wireDateTimePicker` in the fields bundle,
+    // sharing one `typing.js` with TimePicker so the two cannot drift.
     $html = renderPickerView(DateTimePicker::make('at')->displayFormat('d.m.Y H:i'));
 
     expect($html)->toContain("typedFormat: 'd.m.Y H:i'")
-        ->toContain('readTyped(text)')
+        ->toContain('typeable: true');
+
+    expect(file_get_contents(__DIR__.'/../../../resources/js/fields/typing.js'))
+        ->toContain('readTyped(text)');
+    expect(file_get_contents(__DIR__.'/../../../resources/js/fields/date-time-picker.js'))
         ->toContain('applyTyped(parts)');
 });
 

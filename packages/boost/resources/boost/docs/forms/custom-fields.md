@@ -687,11 +687,18 @@ $form->schema([
 
 There are two levels of client-side behaviour in the built-in fields:
 
-- **Inline Alpine.** Lightweight interactivity needs no separate bundle. `Slider`
-  and `Rating`, for example, drive everything from an `x-data` block and
-  `@entangle` the field's state path, with any CSS inlined once via `@once`. For
-  most custom fields this is all you need — see
+- **Inline Alpine.** Lightweight interactivity needs no separate bundle. `Slider`,
+  for example, drives everything from an `x-data` block and `@entangle`s the
+  field's state path, with any CSS inlined once via `@once`. For most custom
+  fields this is all you need — see
   `packages/forms/resources/views/components/slider.blade.php`.
+
+  Watch where the line is, though: an inline block is re-sent for **every
+  instance on the page**, so a body worth more than a few lines belongs in a
+  registered component. That is why the date and time pickers, `Tags`, `Rating`
+  and the two editors keep only their config in the markup and call a factory
+  from `wire-forms-fields.js` — a `DateTimePicker` was 28.4 kB of HTML per field
+  before the move and is 14.5 kB after it.
 
 - **Pre-bundled script via `@assets`.** Heavier fields (like `TiptapEditor`) ship
   a pre-built JS bundle that the provider serves from a route

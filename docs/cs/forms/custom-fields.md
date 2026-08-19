@@ -691,10 +691,16 @@ $form->schema([
 Ve vestavěných polích existují dvě úrovně chování na straně klienta:
 
 - **Inline Alpine.** Lehká interaktivita nepotřebuje samostatný bundle. `Slider`
-  a `Rating` například řídí vše z `x-data` bloku a `@entangle`ují state path
-  pole, s případným CSS inlinovaným jednou přes `@once`. Pro
+  například řídí vše z `x-data` bloku a `@entangle`uje state path pole,
+  s případným CSS inlinovaným jednou přes `@once`. Pro
   většinu vlastních polí je to vše, co potřebujete — viz
   `packages/forms/resources/views/components/slider.blade.php`.
+
+  Dávejte ale pozor, kde je hranice: inline blok se posílá znovu **pro každou
+  instanci na stránce**, takže tělo delší než pár řádků patří do registrované
+  komponenty. Proto si date a time pickery, `Tags`, `Rating` a oba editory nechávají
+  v markupu jen konfiguraci a volají factory z `wire-forms-fields.js` — jeden
+  `DateTimePicker` stál 28,4 kB HTML na pole před přesunem a 14,5 kB po něm.
 
 - **Předbundlovaný skript přes `@assets`.** Těžší pole (jako `TiptapEditor`) dodávají
   předsestavený JS bundle, který provider servíruje z routy

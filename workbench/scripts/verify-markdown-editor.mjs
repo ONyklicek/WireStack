@@ -5,18 +5,23 @@ import { join } from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
 
 /*
- * CDP driver for the two editors whose Alpine component is written inline as an
- * x-data attribute — where the HTML parser reads the code before JavaScript
- * does, and Pest sees only the markup that went in.
+ * CDP driver for the two editors, whose behaviour Pest cannot see: it reads the
+ * markup, not what the browser does with it.
  *
- * Both bugs this covers were invisible to PHP tests:
+ * Both bugs this covers were invisible to PHP tests. They came from the bodies
+ * being written inline as an x-data attribute, where the HTML parser read the
+ * code before JavaScript did:
  *  - a RAW double quote inside x-data ends the attribute there, so a regex
  *    literal truncated the MarkdownEditor mid-function and Alpine threw
  *    "Invalid regular expression: missing /" — no tabs, no preview, no entangle;
  *  - an entity is DECODED, so the preview's sanitiser, written once, arrived as
  *    replace(& with &) and let raw HTML through to x-html.
  *
- * The RichEditor half guards its link prompt, which is rendered into x-data too.
+ * The bodies are registered Alpine.data() factories now, so neither trap can
+ * recur — but what they threatened is still worth driving: the component really
+ * initialises, the sanitiser really escapes, and the link prompt (still rendered
+ * into the attribute as config, and still the one server-side string in there)
+ * really parses.
  *
  * Usage:
  *   vendor/bin/testbench serve --host=127.0.0.1 --port=8085   # background
@@ -80,17 +85,17 @@ try {
   await sleep(4000);
 
   const booted = await eval_(`(() => {
-    const root = [...document.querySelectorAll('[x-data]')].find(e => e.getAttribute('x-data').includes('renderMd'));
+    const root = [...document.querySelectorAll('[x-data]')].find(e => e.getAttribute('x-data').includes('wireMarkdownEditor'));
     if (!root) return { found: false };
     const d = window.Alpine.$data(root);
     return { found: true, tab: d.tab, hasRender: typeof d.renderMd === 'function' };
   })()`);
-  check('Alpine initialises the markdown component (x-data parses whole)',
+  check('Alpine initialises the markdown component (the factory is registered)',
     booted.found && booted.hasRender && booted.tab === 'write', JSON.stringify(booted));
 
   // Type markdown that carries raw HTML, switch to Preview, read what rendered.
   const preview = await eval_(`(() => {
-    const root = [...document.querySelectorAll('[x-data]')].find(e => e.getAttribute('x-data').includes('renderMd'));
+    const root = [...document.querySelectorAll('[x-data]')].find(e => e.getAttribute('x-data').includes('wireMarkdownEditor'));
     const d = window.Alpine.$data(root);
     d.content = '## Nadpis\\n\\n**tučně** a [odkaz](https://example.com) plus <img src=x onerror=alert(1)>';
     d.tab = 'preview';
@@ -111,7 +116,7 @@ try {
   await page('Page.navigate', { url: `${base}/field-rich-editor` });
   await sleep(3000);
   const rich = await eval_(`(() => {
-    const root = [...document.querySelectorAll('[x-data]')].find(e => e.getAttribute('x-data').includes('insertLink('));
+    const root = [...document.querySelectorAll('[x-data]')].find(e => e.getAttribute('x-data').includes('wireRichEditor'));
     if (!root) return { found: false };
     const d = window.Alpine.$data(root);
     return {

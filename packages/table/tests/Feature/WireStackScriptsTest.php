@@ -47,15 +47,19 @@ it('emits each bundle exactly once', function () {
     // The per-surface @assets partials still exist for apps without the directive;
     // the directive must not turn into a second copy of them for apps with it.
     //
-    // Seven: dropdown, copy and chart from core, image from forms, records,
-    // selection and live from the table. They ship on every page for the same
-    // reason: the behaviour a table's markup reaches for has to exist before a
-    // wire:navigate visit renders the table, and the page that visit is made
+    // Eight: dropdown, copy and chart from core, image and fields from forms,
+    // records, selection and live from the table. They ship on every page for the
+    // same reason: the behaviour a table's markup reaches for has to exist before
+    // a wire:navigate visit renders the table, and the page that visit is made
     // *from* may have no table on it at all.
     //
     // Chart is the one that moved. It was held back as an optional heavy body,
     // which it is not — 671 bytes of Alpine registrar around the app's own
     // Chart.js — and delivering a registrar late is precisely what ADR 0024
     // forbids.
-    expect(substr_count(Blade::render('@wireStackScripts'), '<script'))->toBe(7);
+    //
+    // `wire-forms-fields.js` is the newest, and is here for the same rule: it
+    // registers the date/time pickers, tags, rating and the two editors, so it is
+    // a registrar rather than a body.
+    expect(substr_count(Blade::render('@wireStackScripts'), '<script'))->toBe(8);
 });

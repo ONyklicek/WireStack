@@ -4,6 +4,7 @@ import { syncNodeOf } from './editable/sync'
 import { targeting } from './support/island'
 import './support/partials'
 import wireFillHandle from './fill/controller'
+import wireSearchableSelect from './select/controller'
 
 /**
  * Canonical "Teleport + Floating UI" primitive for every floating surface in the
@@ -809,6 +810,9 @@ const registerWireCoreDropdown = () => {
     window.Alpine.data('wireWizard', wireWizard)
     window.Alpine.data('wireEditableCell', wireEditableCell)
     window.Alpine.data('wireFillHandle', wireFillHandle)
+    // The searchable-select combobox is core's because seven surfaces across
+    // forms and table include `wire-core::partials.searchable-select`.
+    window.Alpine.data('wireSearchableSelect', wireSearchableSelect)
     registerSheetDismiss(window.Alpine)
     registerFocusTrap(window.Alpine)
 }

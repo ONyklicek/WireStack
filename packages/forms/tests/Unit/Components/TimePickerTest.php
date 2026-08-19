@@ -123,10 +123,16 @@ test('the trigger accepts a typed time, inheriting the shared parser', function 
 
     expect($html)->not->toContain('readonly')
         ->toContain('@input="onTyped($event.target.value)"')
-        ->toContain('readTyped(text)')
-        ->toContain('applyTyped(parts)')
+        ->toContain('typeable: true')
         // No displayFormat, so the box shows the state and the parser reads it.
         ->toContain("typedFormat: 'H:i'");
+
+    // The parser is the shared module; applyTyped() is this picker's own reading
+    // of it. Both moved into the bundle with the rest of the controller.
+    expect(file_get_contents(__DIR__.'/../../../resources/js/fields/typing.js'))
+        ->toContain('readTyped(text)');
+    expect(file_get_contents(__DIR__.'/../../../resources/js/fields/time-picker.js'))
+        ->toContain('applyTyped(parts)');
 });
 
 test('seconds widen the format the parser reads', function () {
