@@ -313,6 +313,14 @@ Route::get('/previews', function () {
             'variant' => 'bar-chart',
         ],
         [
+            'slug' => 'widgets-polling',
+            'title' => 'Wire Core Widgets',
+            'label' => 'Polling widget',
+            'copy' => 'A four-widget dashboard where one widget polls: the tick must answer with that widget alone, not with the grid around it.',
+            'component' => WidgetPreview::class,
+            'variant' => 'polling',
+        ],
+        [
             'slug' => 'infolists-overview',
             'title' => 'Wire Core',
             'label' => 'Infolist overview',
@@ -452,6 +460,7 @@ $fieldPreviews = [
     'tiptap-tables' => 'TipTap (with tables)',
     'tiptap-default' => 'TipTap · default document',
     'rich-editor' => 'Rich Editor',
+    'widgets-polling' => ['title' => 'Wire Core Widgets', 'subtitle' => 'A four-widget dashboard where one widget polls: the tick must answer with that widget alone, not with the grid around it.', 'component' => WidgetPreview::class, 'variant' => 'polling'],
     'markdown-editor' => 'Markdown Editor',
     'select' => 'Select',
     'select-floating' => 'Select · floating on mobile (opt-out)',

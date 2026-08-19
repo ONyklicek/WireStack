@@ -33,11 +33,37 @@ abstract class Widget implements Htmlable
 
     protected ?string $description = null;
 
-    protected bool $lazy = false;
+    protected ?string $key = null;
 
     public static function make(): static
     {
         return new static;
+    }
+
+    /**
+     * A stable identity for this widget within its dashboard.
+     *
+     * Widgets are the one component here built by `make()` with no name, which
+     * is fine until something has to address *one* of them across a round trip —
+     * which polling does. {@see Concerns\WithWidgets} stamps a key derived from
+     * the widget's position in `getWidgets()` when none was set, so the default
+     * needs no ceremony; set one explicitly where the declaration's order is
+     * likely to change, since the derived key moves with it.
+     *
+     * Deliberately position-in-`getWidgets()` rather than position among the
+     * *visible* ones: a widget hidden by a condition would otherwise renumber
+     * every widget after it, and a poll would then answer with the wrong one.
+     */
+    public function key(string $key): static
+    {
+        $this->key = $key;
+
+        return $this;
+    }
+
+    public function getKey(): ?string
+    {
+        return $this->key;
     }
 
     /** Set the widget heading. */
@@ -64,19 +90,6 @@ abstract class Widget implements Htmlable
     public function getDescription(): ?string
     {
         return $this->description;
-    }
-
-    /** Defer rendering until the widget scrolls into view. */
-    public function lazy(bool $lazy = true): static
-    {
-        $this->lazy = $lazy;
-
-        return $this;
-    }
-
-    public function isLazy(): bool
-    {
-        return $this->lazy;
     }
 
     abstract protected function viewName(): string;

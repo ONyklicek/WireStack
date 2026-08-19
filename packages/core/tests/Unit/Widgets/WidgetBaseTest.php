@@ -135,10 +135,14 @@ it('supports heading and description', function () {
 
 // ─── Lazy Loading ────────────────────────────────────────────────────────────
 
-it('is not lazy by default', function () {
-    expect(CustomWidget::make()->isLazy())->toBeFalse();
-});
-
-it('can be set to lazy', function () {
-    expect(CustomWidget::make()->lazy()->isLazy())->toBeTrue();
+it('has no lazy() setter, because deferral was never wired up', function () {
+    // Widget::lazy()/isLazy() were removed in 2.0: no widget view ever read the
+    // flag — no `wire:init`, no intersect, no island — so the method promised
+    // deferral and delivered a full render. Per-widget islands cannot supply it
+    // either (`@island` inside `@foreach` does not compile: one compiled body per
+    // directive occurrence, and the loop variable is not in its scope). Deferring
+    // a whole dashboard is Table/Dashboard-level lazy, which is a different
+    // feature. See architecture/plans/forms-and-surfaces-performance.md step 4.
+    expect(method_exists(CustomWidget::class, 'lazy'))->toBeFalse()
+        ->and(method_exists(CustomWidget::class, 'isLazy'))->toBeFalse();
 });

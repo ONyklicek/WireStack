@@ -56,8 +56,25 @@ The copy affordance is core's, not table's (`2137b46`) — it is the one bundle 
 moved packages.
 
 `wire-core-dropdown.js` carries the whole shared interaction layer — `wireDropdown`,
-`wireContextMenu`, `wireTabs`, `wireWizard`, `wireEditableCell`, `wireFillHandle` —
-which is exactly the set that must never arrive late.
+`wireContextMenu`, `wireTabs`, `wireWizard`, `wireEditableCell`, `wireFillHandle`,
+`wireSearchableSelect` — which is exactly the set that must never arrive late. The
+combobox is core's rather than forms' because
+`wire-core::partials.searchable-select` is included by seven surfaces across forms
+*and* table.
+
+`wire-core-dropdown.js` also carries `support/partials.js`, the client half of
+`wire:partial` — which is why any surface emitting an anchor has to deliver it.
+Every table does already (a dropdown, an editable cell, a filter or a sheet pulls
+it in through `floating-assets`); a widget-only dashboard has none of those, so
+the widget grid includes `wire-core::partials.partial-assets` when a widget polls.
+Without it the anchor is inert: the response carries the region, the browser
+receives it, and nothing on the page changes — no error, no warning, and only
+`npm run verify:drivers` sees it.
+
+`wire-forms-fields.js` carries the field controllers whose bodies used to be
+inlined per instance — `wireDateTimePicker`, `wireTimePicker`, `wireTagsInput`,
+`wireRating`, `wireRichEditor`, `wireMarkdownEditor` — and is delivered to views
+that do not have `@wireStackScripts` by `wire-forms::partials.field-assets`.
 
 **`dist/` is committed and is not rebuilt for you.** After editing anything under
 a package's `resources/js/`, run its build script:

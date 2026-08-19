@@ -71,12 +71,6 @@ it('supports polling', function () {
         ->and($widget->getPollingDirective())->toBe('wire:poll.30s.visible');
 });
 
-it('supports lazy loading', function () {
-    $widget = StatsOverviewWidget::make()->lazy();
-
-    expect($widget->isLazy())->toBeTrue();
-});
-
 it('supports visibility', function () {
     $widget = StatsOverviewWidget::make()->visible(false);
 

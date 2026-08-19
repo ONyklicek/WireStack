@@ -53,7 +53,6 @@ Every widget supports:
 ```php
 ->heading(?string $heading)          // widget title
 ->description(?string $description)  // subtitle text
-->lazy(bool $lazy = true)            // defer rendering
 ->columnSpan(int|string $span)       // grid column span (1-12, 'full')
 ->extraAttributes(array $attrs)      // custom HTML attributes
 ->hidden(bool|Closure $hidden)       // visibility control
@@ -546,6 +545,46 @@ ChartWidget::make()
 
 > **Polling is visibility-aware by default.** `pollingOnlyVisible` defaults to `true`, so widgets use `wire:poll.visible` and pause requests while scrolled out of view. Call `->pollingOnlyVisible(false)` to keep refreshing off-screen.
 
+### A tick refreshes the widget, not the dashboard
+
+A plain `wire:poll` is `$refresh` — Livewire renders the whole component. On a
+dashboard that means one polling widget re-renders every other widget beside it,
+and any table sharing the page: measured on a 12-widget grid, **6.5 ms and
+57 219 B** to deliver one widget's **3 940 B**.
+
+So the tick names the widget instead. Each widget carries a key, and the grid
+anchors the polling one:
+
+```blade
+<div wire:poll.30s.visible="refreshWidget('w1')">   {{-- [tl! focus] --}}
+    <div wire:partial="widget-w1"> … </div>         {{-- [tl! focus] --}}
+</div>
+```
+
+`WithWidgets::refreshWidget()` renders that widget alone and the response carries
+only its markup. Nothing to configure — it is how a polling widget behaves.
+
+Keys are derived from the widget's position in `getWidgets()`, so hiding a widget
+does not renumber the rest. Where the declaration's order is likely to change,
+name the key yourself:
+
+```php
+StatsOverviewWidget::make()
+    ->key('revenue')               // [tl! focus]
+    ->pollingInterval('30s')
+    ->stats([...])
+```
+
+If the key names nothing on the next request — the widget was hidden, stopped
+polling, or was removed — the tick falls back to a full render rather than
+answering with half a page.
+
+> **The grid ships wire-core's bundle when a widget polls.** The anchor is only
+> an attribute; the code that applies the region lives in `wire-core-dropdown.js`.
+> A dashboard with no dropdown, modal or table has no other reason to load it, so
+> the grid asks for it — otherwise the response would arrive and nothing on the
+> page would change.
+
 ---
 
 ## Dashboard Layout (WithWidgets)
@@ -663,8 +702,8 @@ Widget::make(): static                              // static factory
 ->getHeading(): ?string
 ->description(?string $description): static
 ->getDescription(): ?string
-->lazy(bool $lazy = true): static
-->isLazy(): bool
+->key(string $key): static
+->getKey(): ?string
 ->render(): View
 ->toHtml(): string
 ```

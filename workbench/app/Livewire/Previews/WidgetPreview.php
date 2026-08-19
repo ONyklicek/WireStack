@@ -8,11 +8,15 @@ use Livewire\Component;
 use NyonCode\WireCore\Widgets\BarChartWidget;
 use NyonCode\WireCore\Widgets\ChartItem;
 use NyonCode\WireCore\Widgets\ChartWidget;
+use NyonCode\WireCore\Widgets\Concerns\WithWidgets;
 use NyonCode\WireCore\Widgets\Stat;
 use NyonCode\WireCore\Widgets\StatsOverviewWidget;
+use NyonCode\WireCore\Widgets\Widget;
 
 class WidgetPreview extends Component
 {
+    use WithWidgets;
+
     public string $variant = 'overview';
 
     public function mount(string $variant = 'overview'): void
@@ -20,8 +24,40 @@ class WidgetPreview extends Component
         $this->variant = $variant;
     }
 
+    /**
+     * A dashboard whose one polling widget must not re-render the rest of it.
+     *
+     * Every widget shows the moment it was rendered, so a tick that re-rendered
+     * the whole grid moves all four stamps and a targeted one moves exactly the
+     * polling widget's. Nothing is stored to make that work: a stamp taken at
+     * render time differs on every request by construction, where a counter on
+     * the component would ride the snapshot and be restored on a partial
+     * response — hiding the very difference this fixture exists to show.
+     *
+     * @return array<int, Widget>
+     */
+    protected function getWidgets(): array
+    {
+        $stamp = (string) (int) (microtime(true) * 1000);
+
+        return array_map(function (int $i) use ($stamp) {
+            $widget = StatsOverviewWidget::make()
+                ->heading('Widget '.$i)
+                ->stats([Stat::make('Rendered', $stamp.'-w'.$i)]);
+
+            return $i === 2 ? $widget->pollingInterval('2s') : $widget;
+        }, range(1, 4));
+    }
+
     public function render()
     {
+        if ($this->variant === 'polling') {
+            return view('wire-core::widgets.widget-grid', [
+                'widgets' => $this->getVisibleWidgets(),
+                'columns' => 2,
+            ]);
+        }
+
         return view('livewire.previews.widget-preview', [
             'variant' => $this->variant,
             'stats' => $this->statsWidget(),

@@ -54,7 +54,6 @@ Každý widget podporuje:
 ```php
 ->heading(?string $heading)          // titulek widgetu
 ->description(?string $description)  // podtitulek
-->lazy(bool $lazy = true)            // odložit vykreslení
 ->columnSpan(int|string $span)       // column span gridu (1-12, 'full')
 ->extraAttributes(array $attrs)      // vlastní HTML atributy
 ->hidden(bool|Closure $hidden)       // řízení viditelnosti
@@ -548,6 +547,45 @@ ChartWidget::make()
 
 > **Polling je ve výchozím stavu vědomý si viditelnosti.** `pollingOnlyVisible` je výchozí `true`, takže widgety používají `wire:poll.visible` a pozastavují requesty, když jsou vyscrollovány mimo dohled. Zavolejte `->pollingOnlyVisible(false)` pro udržení obnovování mimo obrazovku.
 
+<a id="a-tick-refreshes-the-widget-not-the-dashboard"></a>
+### Tik obnoví widget, ne celý dashboard
+
+Holé `wire:poll` je `$refresh` — Livewire vykreslí celou komponentu. Na dashboardu
+to znamená, že jeden pollující widget překreslí každý další widget vedle sebe
+i případnou tabulku na stránce: naměřeno na mřížce dvanácti widgetů **6,5 ms
+a 57 219 B**, aby se doručilo 3 940 B jednoho widgetu.
+
+Tik proto widget pojmenuje. Každý widget nese klíč a mřížka ten pollující ukotví:
+
+```blade
+<div wire:poll.30s.visible="refreshWidget('w1')">   {{-- [tl! focus] --}}
+    <div wire:partial="widget-w1"> … </div>         {{-- [tl! focus] --}}
+</div>
+```
+
+`WithWidgets::refreshWidget()` vykreslí jen ten widget a odpověď nese pouze jeho
+markup. Není co nastavovat — takhle se pollující widget prostě chová.
+
+Klíče se odvozují z pozice widgetu v `getWidgets()`, takže skrytí jednoho
+widgetu ostatní nepřečísluje. Tam, kde se pořadí deklarace bude nejspíš měnit,
+si klíč pojmenujte sami:
+
+```php
+StatsOverviewWidget::make()
+    ->key('revenue')               // [tl! focus]
+    ->pollingInterval('30s')
+    ->stats([...])
+```
+
+Pokud klíč při dalším requestu nic nepojmenuje — widget byl skryt, přestal
+pollovat nebo zmizel — tik se vrátí k plnému renderu, místo aby odpověděl půlkou
+stránky.
+
+> **Mřížka dodá bundle z wire-core, když nějaký widget polluje.** Kotva je jen
+> atribut; kód, který oblast aplikuje, je v `wire-core-dropdown.js`. Dashboard bez
+> dropdownu, modalu nebo tabulky nemá jiný důvod ho načíst, takže si o něj mřížka
+> řekne — jinak by odpověď dorazila a na stránce by se nezměnilo nic.
+
 ---
 
 <a id="dashboard-layout-withwidgets"></a>
@@ -668,8 +706,8 @@ Widget::make(): static                              // statická factory
 ->getHeading(): ?string
 ->description(?string $description): static
 ->getDescription(): ?string
-->lazy(bool $lazy = true): static
-->isLazy(): bool
+->key(string $key): static
+->getKey(): ?string
 ->render(): View
 ->toHtml(): string
 ```
