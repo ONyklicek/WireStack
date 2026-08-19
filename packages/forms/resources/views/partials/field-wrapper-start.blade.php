@@ -22,7 +22,9 @@
     @endforeach
 >
 
-    @if($field->getLabel() && !($hideLabel ?? false) && !$field->isLabelHidden())
+    {{-- $hideLabel is this wrapper's own override (a layout that already names the
+         field); the rest of the rule lives on HasLabel so every surface agrees. --}}
+    @if($field->hasVisibleLabel() && !($hideLabel ?? false))
         <label for="{{ $field->getId() }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             {{ $field->getLabel() }}
             @if($field->isRequired())

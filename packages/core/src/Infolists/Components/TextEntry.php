@@ -208,7 +208,9 @@ class TextEntry extends Entry
 
         return implode("\0", [
             (string) $this->getColumnSpan(),
-            (string) $this->getLabel(),
+            // Same reason as IconEntry: the view gates the label on
+            // hasVisibleLabel(), so a hidden label is a different render.
+            $this->hasVisibleLabel() ? (string) $this->getLabel() : "\0hidden",
             $this->getWeightClass(),
             (string) $this->getTooltip(),
             $this->getBadgeColorClass(),

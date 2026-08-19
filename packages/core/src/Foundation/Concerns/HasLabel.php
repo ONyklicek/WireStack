@@ -44,6 +44,23 @@ trait HasLabel
         return $this->labelHidden;
     }
 
+    /**
+     * Whether a surface should draw this label as visible markup.
+     *
+     * Two rules decide it and both belong here rather than in each view:
+     * `hiddenLabel()` suppresses the markup, and an empty label has nothing to
+     * draw — {@see getLabel()} falls back to a humanised name, so `label('')` is
+     * how a caller says "no label at all" and must not render an empty heading.
+     *
+     * Surfaces that render a label element gate on this. A surface with its own
+     * extra rule (the form field wrapper takes a `$hideLabel` override from the
+     * including view) ands it with this one instead of restating these two.
+     */
+    public function hasVisibleLabel(): bool
+    {
+        return ! $this->labelHidden && $this->getLabel() !== null && $this->getLabel() !== '';
+    }
+
     public function getLabel(): ?string
     {
         $label = $this->evaluate($this->label);

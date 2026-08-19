@@ -146,7 +146,10 @@ class IconEntry extends Entry
 
         return implode("\0", [
             $this->getColumnSpanClass(),
-            (string) $this->getLabel(),
+            // The view gates the label on hasVisibleLabel(), so the flag is part of
+            // the markup: without it a hiddenLabel() entry would be served a
+            // labelled sibling's cached render.
+            $this->hasVisibleLabel() ? (string) $this->getLabel() : "\0hidden",
             (string) $this->getResolvedIcon(),
             $this->getIconColorClass(),
             (string) $this->getTooltip(),
