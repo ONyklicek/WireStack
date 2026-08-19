@@ -176,3 +176,76 @@ EditAction::make()
 - `->position('before'|'after')` umístí tlačítko před nebo za vestavěné Cancel/Submit.
 - `->requiresConfirmation()` se zeptá uživatele před během callbacku (nativní `wire:confirm`
   dialog s přeloženou výchozí zprávou); `->confirm('Really reset?')` nastaví vlastní zprávu.
+
+
+---
+
+<a id="field-partials"></a>
+## Částečné renderování polí
+
+Pole s `live()` posílá změnu na server při každé úpravě a server odpovídá
+překreslením celé hostitelské komponenty. U dvanáctipolního formuláře je to
+**19 860 B** HTML kvůli 1 562 B jednoho pole — 12,7× surově, 2,3× po gzipu — plus
+morph toho všeho v prohlížeči.
+
+`fieldPartials()` zařídí, že formulář odpoví poli, která se pohnula:
+
+```php
+public function form(Form $form): Form
+{
+    return $form
+        ->statePath('data')
+        ->fieldPartials()                                    // [tl! focus]
+        ->schema([
+            TextInput::make('name')->live(),
+            TextInput::make('summary')
+                ->helperText(fn () => 'Souhrn pro '.$this->data['name']),
+        ]);
+}
+```
+
+<a id="what-a-commit-answers-with"></a>
+### Čím commit odpoví
+
+Tři výsledky, a ten nejčastější neposílá vůbec nic:
+
+| co se změnilo | co přijde zpátky |
+|---|---|
+| nic — běžné ťuknutí do klávesnice | ani view, ani region |
+| markup jednoho či více polí | ta pole jako regiony |
+| *množina* polí — sourozenec s `visibleWhen()` se objevil nebo zmizel | plný render |
+
+První řádek lidi překvapí, a právě o to jde: hodnota pole jede přes `wire:model`
+a datovou payload, ne přes markup. `TextInput` žádný atribut `value` nerenderuje,
+takže jeho commit nikde markup nezmění a opravdu není co posílat. Markup se hne
+jen tehdy, když se hne něco *odvozeného* — sourozenec, jehož `options()`,
+`label()` nebo `helperText()` čte stav, objevivší se validační chyba, pole, které
+se stalo disabled.
+
+<a id="how-it-decides"></a>
+### Jak se to rozhoduje
+
+Tak, že pole vyrenderuje a porovná markup každého z nich s tím, co naposledy
+poslal — ne tak, že by odvozoval, které pole na kterém závisí. To je záměr: graf
+závislostí by musel rozumět každé closure, kterou konfigurace pole může nést, a to
+jedno přehlédnuté by tiše ukazovalo zvětralou hodnotu. Jediné, čeho si tohle musí
+všimnout, je odlišný markup — stejně, jako si `Table::rowPartials()` všímá
+změněného řádku.
+
+<a id="what-you-trade"></a>
+### Co za to platíte
+
+**View hostitele se při pokrytém commitu nepřekresluje.** Cokoliv kreslí *mimo*
+formulář — živý náhled dat, nadpis počítající vyplněná pole — si drží předchozí
+hodnotu až do dalšího plného renderu:
+
+```blade
+<div>
+    <h2>{{ $this->data['name'] }}</h2>   {{-- při commitu pole se neaktualizuje --}}
+    {{ $this->form }}
+</div>
+```
+
+Pokud na tom stránka formuláře stojí, příznak nezapínejte. Nic jiného se
+nemění: sourozenci s `visibleWhen()` zůstanou správně sami od sebe, protože
+objevení nebo zmizení pole je změna tvaru, která spadne zpět na plný render.

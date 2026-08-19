@@ -124,8 +124,41 @@ class FormPreview extends Component
             'wizard' => $this->buildWizardForm($form),
             'wizard-live' => $this->buildWizardLiveForm($form),
             'option-wizard' => $this->buildOptionWizardForm($form),
+            'field-partials' => $this->buildFieldPartialsForm($form),
             default => $this->buildOverviewForm($form),
         };
+    }
+
+    /**
+     * `fieldPartials()` under a live field: what a keystroke commit answers with.
+     *
+     * Four shapes on one form, because they take four different routes:
+     *  - `note` is live and nothing reads it, so committing it moves no markup
+     *    anywhere — a TextInput renders no `value` attribute — and the answer is
+     *    nothing at all;
+     *  - `name` is live and `summary` reads it, so committing it moves one region;
+     *  - `summary` reads `name` in its `helperText()` closure, so its markup moves
+     *    with it and comes back as a region;
+     *  - `extra` appears only when `kind` is `b`, so changing `kind` changes the
+     *    set of fields and falls back to a full render.
+     *
+     * The heading outside the form is the witness for the documented trade: it
+     * shows the same state and must NOT update on a covered commit.
+     */
+    protected function buildFieldPartialsForm(Form $form): Form
+    {
+        return $form
+            ->statePath('data')
+            ->fieldPartials()
+            ->schema([
+                TextInput::make('note')->label('Note')->live(),
+                TextInput::make('name')->label('Name')->live(),
+                TextInput::make('summary')
+                    ->label('Summary')
+                    ->helperText(fn (): string => 'Summary for '.($this->data['name'] ?? '')),
+                TextInput::make('kind')->label('Kind')->live(),
+                TextInput::make('extra')->label('Extra')->visibleWhen('kind', 'b'),
+            ]);
     }
 
     /**

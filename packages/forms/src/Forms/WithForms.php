@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Forms;
 
 use Livewire\Component;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithPartials;
 use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
 use NyonCode\WireForms\Concerns\InteractsWithFieldActions;
+use NyonCode\WireForms\Concerns\InteractsWithFieldPartials;
 use NyonCode\WireForms\Concerns\InteractsWithFileUploads;
 use NyonCode\WireForms\Concerns\InteractsWithRepeaters;
 use NyonCode\WireForms\Concerns\InteractsWithSelectCreation;
@@ -27,7 +29,9 @@ trait WithForms
 {
     use DispatchesStateUpdates;
     use InteractsWithFieldActions;
+    use InteractsWithFieldPartials;
     use InteractsWithFileUploads;
+    use InteractsWithPartials;
     use InteractsWithRepeaters;
     use InteractsWithSelectCreation;
     use InteractsWithWizards;

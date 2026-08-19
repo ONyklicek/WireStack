@@ -34,6 +34,7 @@ parameters:
         - { identifier: trait.unused, path: packages/forms/src/Concerns/DispatchesStateUpdates.php }
         - { identifier: trait.unused, path: packages/forms/src/Concerns/InteractsWithActionForms.php }
         - { identifier: trait.unused, path: packages/forms/src/Concerns/InteractsWithFieldActions.php }
+        - { identifier: trait.unused, path: packages/forms/src/Concerns/InteractsWithFieldPartials.php }
         - { identifier: trait.unused, path: packages/forms/src/Concerns/InteractsWithFileUploads.php }
         - { identifier: trait.unused, path: packages/forms/src/Concerns/WithActions.php }
         - { identifier: trait.unused, path: packages/forms/src/Concerns/InteractsWithRepeaters.php }

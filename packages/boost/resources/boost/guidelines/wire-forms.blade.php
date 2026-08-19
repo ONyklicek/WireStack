@@ -116,6 +116,20 @@ reactive roundtrip and refreshes only its error bag entry — the rest of the fo
 Conditional rules (`requiredIf()` etc.) are honoured live. Cross-field Laravel string rules like
 `required_if:other,value` still validate on submit; use `requiredIf()` for the reactive equivalent.
 
+- **`Form::fieldPartials()` answers a field commit with the fields that moved, not the host view.** Opt-in.
+  A `live()` field re-renders the whole component otherwise: 19 860 B of HTML to carry one field's 1 562 B on a
+  12-field form (12.7× raw, 2.3× gzipped). Three outcomes, and the common one sends **nothing at all** — a
+  field's value rides `wire:model` and the data payload rather than its markup (a `TextInput` renders no
+  `value` attribute), so an ordinary keystroke moves no markup anywhere. Markup moves only when something
+  *derived* does: a sibling whose `options()`/`label()`/`helperText()` closure reads the state, an error
+  appearing, a field becoming disabled — those come back as regions. A `visibleWhen()` sibling appearing or
+  disappearing changes the SET of fields, which is a shape change no region describes, and falls back to a
+  full render on its own. **It decides by comparing rendered markup, never by reasoning about dependencies** —
+  a graph would have to understand every closure a field's config can hold, and the one it missed would show
+  a stale value silently. **What you trade:** the host's own view does not re-render on a covered commit, so
+  anything it draws outside the form (a live preview of `$data`, a heading counting filled fields) keeps its
+  previous value until the next full render. Tell consumers that before suggesting the flag.
+
 All of this reactivity works for fields inside `Repeater` items too — `afterStateUpdated()`,
 live validation, field actions, remote search and conditional visibility (`visibleWhen()` /
 `visible(fn ($get) => …)`) resolve per item, and `$get`/`$set` read/write that item's own bag

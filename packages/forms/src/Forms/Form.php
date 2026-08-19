@@ -10,6 +10,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
+use Livewire\Drawer\Utils;
 use NyonCode\WireCore\Actions\Contracts\ModalForm;
 use NyonCode\WireCore\Foundation\Schema\Wizard;
 use NyonCode\WireForms\Forms\Config\ConfigBuilder;
@@ -40,6 +41,8 @@ class Form implements Htmlable, ModalForm
 
     private bool $usePolicy = false;
 
+    private bool $fieldPartials = false;
+
     private ?Closure $authorizeUsingCallback = null;
 
     public function __construct()
@@ -51,6 +54,39 @@ class Form implements Htmlable, ModalForm
     public static function make(): static
     {
         return app(static::class);
+    }
+
+    /**
+     * Answer a field update with the fields that changed, not the whole view.
+     *
+     * A `wire:model` commit re-renders the host component: on a 12-field form
+     * that is 19 860 B of HTML to carry one field's 1 562 B — 12.7× raw, 2.3×
+     * gzipped — plus the browser morphing all of it.
+     *
+     * With this on, the host renders the form's fields, compares each one's
+     * markup against what it last sent, and answers with the ones that moved. It
+     * is a comparison rather than a dependency analysis on purpose: a sibling
+     * whose `options()`, `label()` or `helperText()` closure reads the updated
+     * field's state produces different markup, and different markup is all this
+     * has to notice.
+     *
+     * **What you trade.** The host's own view does not re-render on a field
+     * update, so anything it draws *outside* the form — a live preview of the
+     * data, a heading counting filled fields — keeps its previous value until the
+     * next full render. A field appearing or disappearing is a shape change no
+     * region can express and falls back to a full render on its own, so
+     * `visibleWhen()` siblings stay correct without any help.
+     */
+    public function fieldPartials(bool $condition = true): static
+    {
+        $this->fieldPartials = $condition;
+
+        return $this;
+    }
+
+    public function usesFieldPartials(): bool
+    {
+        return $this->fieldPartials;
     }
 
     // ─── Livewire binding ──────────────────────────────────────────
@@ -432,7 +468,32 @@ class Form implements Htmlable, ModalForm
 
     public function toHtml(): string
     {
-        return $this->getRenderer()->toHtml();
+        return $this->renderingFields(fn (): string => $this->getRenderer()->toHtml());
+    }
+
+    /**
+     * Run a render with the field-partial flag in view scope.
+     *
+     * The flag has to reach `partials.field-wrapper-start`, which is `@include`d
+     * from 23 field views — and a field builds its view from PHP with an explicit
+     * data array, so it inherits nothing from the form's own view. Shared scope is
+     * the only channel that reaches it, the same one Livewire uses for `$errors`.
+     *
+     * Public because the host renders single fields through it too: a partial
+     * whose markup lacked the anchor would not match the element it replaces, and
+     * the next update would find nothing to morph into.
+     *
+     * @param  Closure(): string  $render
+     */
+    public function renderingFields(Closure $render): string
+    {
+        $revert = Utils::shareWithViews('fieldPartials', $this->fieldPartials);
+
+        try {
+            return $render();
+        } finally {
+            $revert();
+        }
     }
 
     public function __toString(): string

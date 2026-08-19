@@ -6,7 +6,9 @@ namespace NyonCode\WireCore\Foundation\Support;
 
 use Closure;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\ViewErrorBag;
 use Livewire\Drawer\Utils;
+use Livewire\Mechanisms\ExtendBlade\ExtendBlade;
 
 use function Livewire\on;
 
@@ -74,6 +76,56 @@ final class IslandViewScope
         } finally {
             $revertLivewire();
             $revertInstance();
+        }
+    }
+
+    /**
+     * Render as though Livewire were rendering the component itself.
+     *
+     * {@see within()} shares the component, which is enough for `@entangle` and
+     * `@this`. It is not enough for a view that has to come out *the same as it
+     * would inside a full render*, which is what a partial replacing part of one
+     * needs. Three things are missing from the narrower scope, and each was a
+     * thrown exception or a silent difference:
+     *
+     *  - **the view error bag.** Livewire shares it from its `render` and
+     *    `renderIsland` hooks only, so a view reading `$errors` — every wire-forms
+     *    field wrapper does — dies with `Undefined variable $errors`. Sharing the
+     *    *component's* bag rather than whatever the web middleware left behind is
+     *    also what makes an error added during this request reach the markup.
+     *  - **`$this`.** `ExtendedCompilerEngine` binds it only while
+     *    `ExtendBlade::isRenderingLivewireComponent()`, so `FileUpload`,
+     *    `Repeater` and `Builder` throw `Using $this when not in object context`.
+     *  - **morph markers.** Compiled Blade emits its `[if BLOCK]` pairs behind the
+     *    same flag. Markup rendered without them cannot pair against markup
+     *    rendered with them, so a partial and the region it replaces have to agree.
+     *
+     * Kept separate from `within()` rather than folded into it, because that
+     * third point cuts both ways: `Table::toHtml()` renders `{{ $table }}` outside
+     * any Livewire render and switching markers on there would change what a
+     * standalone render emits.
+     *
+     * @param  Closure(): string  $render
+     */
+    public static function asLivewireRender(mixed $component, Closure $render): string
+    {
+        $blade = app(ExtendBlade::class);
+        $shared = app('view')->getShared()['errors'] ?? null;
+
+        $errors = $shared instanceof ViewErrorBag ? clone $shared : new ViewErrorBag;
+
+        if (is_object($component) && method_exists($component, 'getErrorBag')) {
+            $errors->put('default', $component->getErrorBag());
+        }
+
+        $revertErrors = Utils::shareWithViews('errors', $errors);
+        $blade->startLivewireRendering($component);
+
+        try {
+            return self::within($component, $render);
+        } finally {
+            $blade->endLivewireRendering();
+            $revertErrors();
         }
     }
 }

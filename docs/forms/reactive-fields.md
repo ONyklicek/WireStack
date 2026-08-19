@@ -175,3 +175,71 @@ EditAction::make()
 - `->position('before'|'after')` places the button before or after the built-in Cancel/Submit.
 - `->requiresConfirmation()` asks the user before the callback runs (a native `wire:confirm`
   dialog with a translated default message); `->confirm('Really reset?')` sets a custom message.
+
+---
+
+## Field partials
+
+A `live()` field commits to the server on every change, and the server answers by
+re-rendering the host component. On a 12-field form that is **19 860 B** of HTML
+to carry one field's **1 562 B** — 12.7× raw, 2.3× gzipped — plus the browser
+morphing all of it.
+
+`fieldPartials()` makes the form answer with the fields that moved instead:
+
+```php
+public function form(Form $form): Form
+{
+    return $form
+        ->statePath('data')
+        ->fieldPartials()                                    // [tl! focus]
+        ->schema([
+            TextInput::make('name')->live(),
+            TextInput::make('summary')
+                ->helperText(fn () => 'Summary for '.$this->data['name']),
+        ]);
+}
+```
+
+### What a commit answers with
+
+Three outcomes, and the most common one sends nothing at all:
+
+| what changed | what comes back |
+|---|---|
+| nothing — an ordinary keystroke | neither a view nor a region |
+| one or more fields' markup | those fields, as regions |
+| the *set* of fields — a `visibleWhen()` sibling appeared or disappeared | a full render |
+
+The first row surprises people, and it is the point: a field's value rides
+`wire:model` and the data payload, not its markup. A `TextInput` renders no
+`value` attribute at all, so committing one changes no markup anywhere and there
+is genuinely nothing to send. Markup moves only when something *derived* moves — a
+sibling whose `options()`, `label()` or `helperText()` closure reads the state, a
+validation error appearing, a field becoming disabled.
+
+### How it decides
+
+By rendering the fields and comparing each one's markup against what it last
+sent — not by working out which fields depend on which. That is deliberate: a
+dependency graph would have to understand every closure a field's configuration
+can hold, and the one it missed would silently show a stale value. Different
+markup is the only thing this has to notice, and it notices it the same way
+`Table::rowPartials()` notices a changed row.
+
+### What you trade
+
+**The host's own view does not re-render on a covered commit.** Anything it draws
+*outside* the form — a live preview of the data, a heading counting filled
+fields — keeps its previous value until the next full render:
+
+```blade
+<div>
+    <h2>{{ $this->data['name'] }}</h2>   {{-- will not update on a field commit --}}
+    {{ $this->form }}
+</div>
+```
+
+If a form's page depends on that, leave the flag off. Nothing else about the form
+changes: `visibleWhen()` siblings stay correct on their own, because a field
+appearing or disappearing is a shape change that falls back to a full render.

@@ -10,6 +10,11 @@
 
 <div
     wire:key="field-{{ $statePath }}"
+    {{-- The anchor a field partial replaces. Emitted only where the form asked
+         for it, the way the table gates its row anchors: an anchor costs an
+         attribute, and `partials.js` errors on a duplicate name, so a form that
+         will never send one should not carry it. --}}
+    @if($fieldPartials ?? false) wire:partial="field-{{ $statePath }}" @endif
     data-testid="form-field-{{ $statePath }}"
     data-field="{{ $statePath }}"
     @class([
