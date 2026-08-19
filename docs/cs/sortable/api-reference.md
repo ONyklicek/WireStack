@@ -105,6 +105,8 @@ Zpracovat drag & drop řádků. Voláno Alpine.js po dokončení drag operace. A
 
 Každá položka: `['value' => string|int, 'order' => int]`
 
+Posílají se jen řádky, které se pohnuly — rozsah mezi první a poslední změněnou pozicí, ne celá stránka. Je to bezpečné ze stejného důvodu jako přerozdělení níže: řádky, o kterých se zápis nedozví, si drží slot, který měly. Tažení, které posune jeden řádek o tři místa, stojí čtyři zápisy, ať tabulka ukazuje dvacet řádků nebo dvacet tisíc.
+
 `order` je nová pozice řádku na obrazovce, nikoli zapisovaná hodnota. Tažené řádky si ponechají sadu hodnot pořadí, které už měly, rozdanou v novém vizuálním pořadí -- tažení nad prohledanou, vyfiltrovanou nebo stránkovanou podmnožinou tedy nemůže pohnout řádky, které nezobrazuje; viz [Přeřazování zúženého seznamu](row-sorting.md#prerazovani-zuzeneho-seznamu). Pozice se zapíšou doslova jen tehdy, když je sloupec pořadí prázdný nebo konstantní a nemá co rozdávat.
 
 No-op, pokud:

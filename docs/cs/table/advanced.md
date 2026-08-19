@@ -588,6 +588,27 @@ Jeden zápis si plný render pořád vezme, a je to vlastnost zápisu, ne tabulk
 skupiny. To je změna tvaru stránky, ne obsahu řádku, a žádná sada oblastí ji
 nepopíše.
 
+#### S markupem přidaným v prohlížeči
+
+Partial morphuje vlastní applier Wiru, ne morph Livewiru — takže cokoli, co do
+řádku přidal prohlížeč a server o tom neví, se musí potom vrátit, jinak to zanikne.
+Wire po každé dávce vyšle na `document` událost `wire:partials-applied` s elementy,
+které nahradil, a jeho vlastní balíčky ji poslouchají: wire-sortable vrací buňku
+s úchytem pro tažení, kterou přidává ke každému řádku a která jinak zmizela při
+prvním inline uložení v režimu přeskládávání.
+
+Pokud si řádky zdobíte vlastním JavaScriptem, poslouchejte tutéž událost:
+
+```js
+document.addEventListener('wire:partials-applied', ({ detail }) => {
+    detail.elements.forEach((row) => decorate(row))   // [tl! focus]
+})
+```
+
+Je to oznámení, ne hook, a to záměrně: posluchač opraví, co vlastní, ale zápis
+zrušit nemůže. `morph.updating` z Livewiru by strážci psanému pro render celé
+tabulky dovolil `skip()`nout právě tu buňku, kvůli které partial vznikl.
+
 #### S pollingem
 
 Kde je zapnuté `poll()` nebo `live()`, slouží tytéž kotvy i pro čtení.

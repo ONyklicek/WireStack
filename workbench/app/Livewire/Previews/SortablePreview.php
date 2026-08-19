@@ -61,6 +61,10 @@ class SortablePreview extends Component
             return $this->everythingTable($table);
         }
 
+        if ($this->variant === 'partials') {
+            return $this->partialsTable($table);
+        }
+
         $status = BadgeColumn::make('status')
             ->label('Status')
             ->colors([
@@ -121,6 +125,34 @@ class SortablePreview extends Component
         }
 
         return $table;
+    }
+
+    /**
+     * Row partials and row reordering on one table.
+     *
+     * The drag handle `<td>` is created client-side and prepended to every
+     * `<tr>` (`sortable.js`), rebuilt from Livewire's `morph.updated` hook. A row
+     * partial is morphed by `partials.js`, which calls `Alpine.morph()` directly
+     * and never reaches that hook — so an inline save in reorder mode used to
+     * replace a three-cell row with the server's two-cell one and leave the
+     * handle gone, with nothing to put it back.
+     *
+     * The editable column is what makes a save produce a partial at all;
+     * `alwaysReorderable()` keeps the table in reorder mode with no toggle, so
+     * the driver can type into a cell while the handles are up.
+     */
+    private function partialsTable(Table $table): Table
+    {
+        return $table
+            ->model(Task::class)
+            ->alwaysReorderable('sort_order')
+            ->rowPartials()
+            ->columns([
+                TextInputColumn::make('title')->label('Task'),
+                TextColumn::make('owner_name')->label('Owner'),
+            ])
+            ->defaultSort('sort_order')
+            ->paginated(false);
     }
 
     /**

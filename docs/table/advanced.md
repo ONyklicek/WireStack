@@ -587,6 +587,29 @@ than of the table: **editing the column the table groups by** moves the record
 into another group. That changes the page's shape rather than a row's contents,
 and no set of regions can describe it.
 
+#### With client-side markup
+
+A partial is morphed by Wire's own applier rather than by Livewire's morph, so
+anything the browser added to a row — markup the server render knows nothing
+about — has to be put back afterwards or it is destroyed. Wire announces
+`wire:partials-applied` on `document` after each batch, carrying the elements it
+replaced, and its own packages listen: wire-sortable re-adds the drag handle
+cell it prepends to every row, which otherwise vanished on the first inline save
+made in reorder mode.
+
+If you decorate rows from your own JavaScript, listen for the same event:
+
+```js
+document.addEventListener('wire:partials-applied', ({ detail }) => {
+    detail.elements.forEach((row) => decorate(row))   // [tl! focus]
+})
+```
+
+It is an announcement rather than a hook on purpose: a listener repairs what it
+owns and cannot cancel the write. Livewire's `morph.updating` would let a guard
+written for a whole-table render `skip()` the very cell the partial exists to
+update.
+
 #### With polling
 
 Where `poll()` or `live()` is on, the same anchors serve the read side.

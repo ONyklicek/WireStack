@@ -333,6 +333,18 @@ A write answers with **everything it moved**, not just the row: the record's car
   spot: a change that never touches the parent row (a child-table rollup, a computed column) is
   invisible to it, and a table that renders one should say so with a `pollChangeDetection()`
   closure.
+- **A partial is morphed by Wire's applier, not by Livewire's morph — so client-side row markup
+  has to be put back.** `partials.js` drives `Alpine.morph()` itself and reaches neither
+  `morph.updating` nor `morph.updated`, so anything the browser added to a row that the server
+  render knows nothing about is destroyed by a partial. wire-sortable's drag handle `<td>` is the
+  case that proved it: an inline save in reorder mode replaced a three-cell row with the server's
+  two-cell one and left that row undraggable, silently, only for rows somebody had edited. Wire
+  dispatches `wire:partials-applied` on `document` after each batch with `detail.elements` — the
+  anchors it replaced — and a listener repairs what it owns. Tell consumers to use it if they
+  decorate rows from their own JS. It is an **announcement, not a hook**, deliberately:
+  `window.Livewire.trigger` is public and firing `morph.updating` from this path would let a guard
+  written for a whole-table render `skip()` the very cell the partial exists to update. Only
+  `npm run verify:drivers` can see this class of bug; Pest reads markup that never had the handle.
 - **A row costs what its cells cost, and little else.** The row body is assembled in PHP from
   markup Blade compiled once per table — the `<tr>` tag, the selection cell, the three sub-row
   expander shapes, the action cell, one skeleton per column — so a page of rows runs no per-row

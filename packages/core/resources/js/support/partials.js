@@ -23,7 +23,37 @@ import { isFillDragging } from '../fill/controller'
  *    state and mark themselves `wire:ignore.self`; an `innerHTML =` would throw
  *    that away on every save, which is the bug this feature exists to avoid
  *    rather than cause.
+ *
+ * And one thing this path owes the rest of the page: **say what it replaced.**
+ * See `PARTIALS_APPLIED` below.
  */
+
+/**
+ * Dispatched on `document` after a batch of partials has been morphed in, with
+ * `detail.elements` listing the anchors that were replaced.
+ *
+ * Client-side markup that is not in the server's render is invisible to this
+ * path and gets silently destroyed by it. wire-sortable's drag handle is the
+ * case that proved it: the handle `<td>` is created in the browser and prepended
+ * to every `<tr>`, and it is rebuilt from Livewire's `morph.updated` hook — which
+ * this path never reaches, because it drives `Alpine.morph()` itself. A row
+ * partial therefore replaced a three-cell row with the server's two-cell one and
+ * left the row undraggable, with no error anywhere.
+ *
+ * Firing Livewire's own `morph.updating` / `morph.updated` instead was the
+ * obvious fix and is the wrong one. Those listeners are written for a
+ * whole-component morph: wire-sortable's `morph.updating` guard `skip()`s the
+ * cell the user is typing in, which is right when the whole table is being
+ * re-rendered around it and exactly backwards for a partial, whose entire
+ * purpose is to carry that cell's saved value back. An announcement lets a
+ * listener repair what it owns without giving it a veto over a targeted write.
+ *
+ * A DOM event rather than an exported function because the bundles are separate
+ * IIFEs — wire-sortable cannot import from wire-core at runtime — and because
+ * core must not learn that downstream packages exist.
+ */
+const PARTIALS_APPLIED = 'wire:partials-applied'
+
 const isElement = (el) => typeof el?.hasAttribute === 'function'
 
 const morphOptions = (component) => ({
@@ -60,6 +90,8 @@ document.addEventListener('livewire:init', () => {
             if (isFillDragging()) return
 
             queueMicrotask(() => {
+                const applied = []
+
                 for (const [name, html] of Object.entries(partials)) {
                     const anchors = Array.from(
                         message.component.el.querySelectorAll(`[wire\\:partial="${name}"]`),
@@ -92,8 +124,17 @@ document.addEventListener('livewire:init', () => {
 
                     if (! incoming) continue
 
+                    // Alpine.morph patches the anchor in place, so the node
+                    // reference survives and is what a listener has to repair.
                     window.Alpine.morph(anchors[0], incoming, morphOptions(message.component))
+                    applied.push(anchors[0])
                 }
+
+                if (applied.length === 0) return
+
+                document.dispatchEvent(new CustomEvent(PARTIALS_APPLIED, {
+                    detail: { component: message.component, elements: applied },
+                }))
             })
         })
     })

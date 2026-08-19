@@ -55,6 +55,21 @@ const installMorphGuards = () => {
     window.Livewire.hook('morph.updated', ({ el }) => {
         eachController((controller) => controller.onMorphUpdated(el));
     });
+
+    // A row partial is morphed by wire-core's own applier, which drives
+    // Alpine.morph() directly and never reaches the hook above. The drag handle
+    // <td> is client-side markup the server render knows nothing about, so a
+    // partial replaced a three-cell row with the server's two-cell one and left
+    // that row undraggable — silently, and only for rows somebody had edited.
+    //
+    // This is an announcement, not a hook: it says what was replaced and leaves
+    // each listener to repair what it owns. Unlike `morph.updated` it is honoured
+    // while a cell is being edited, because a partial IS the answer to that
+    // cell's save and re-adding a missing handle neither destroys anything nor
+    // moves focus.
+    document.addEventListener('wire:partials-applied', ({ detail }) => {
+        eachController((controller) => controller.onPartialsApplied(detail?.elements ?? []));
+    });
 };
 
 export function wireSortable(config = {}) {
@@ -62,6 +77,7 @@ export function wireSortable(config = {}) {
         rowSortableInstance: null,
         columnSortableInstance: null,
         isDragging: false,
+        orderBeforeDrag: null,
         config: {
             rowReorderable: config.rowReorderable ?? false,
             columnReorderable: config.columnReorderable ?? false,
@@ -107,6 +123,56 @@ export function wireSortable(config = {}) {
 
             const cell = this.editingCell();
             if (cell && el === cell) skip();
+        },
+
+        /**
+         * Put back the drag handles a row partial took with it.
+         *
+         * Deliberately narrower than `onMorphUpdated`: no `destroyRowSortable()`,
+         * no re-init, no width lock. `addRowDragHandles()` skips any row that
+         * still has a handle, so this touches exactly the rows that were
+         * replaced — which is why it is safe to run while a cell is focused,
+         * where a full setup() would collapse the table layout and kill focus.
+         *
+         * SortableJS is bound to the <tbody>, not to the rows, so a replaced row
+         * needs its handle back and nothing else to be draggable again.
+         */
+        onPartialsApplied(elements) {
+            if (this.isDragging) return;
+            if (!elements.some((el) => this.$root.contains(el))) return;
+
+            // Two repairs with two different preconditions: handles exist only
+            // in row-reorder mode, while column order is the client's whenever
+            // headers are draggable — including on a table that has no row
+            // reordering at all, which is the shape `columnReorderable()` alone
+            // renders.
+            if (this.config.rowReorderable && this.isReordering) {
+                const tbody = this.$root.querySelector('tbody');
+                if (tbody) this.addRowDragHandles(tbody);
+            }
+
+            this.reorderPartialColumns();
+        },
+
+        /**
+         * Put a replaced row's cells back into the column order the headers show.
+         *
+         * The smaller half of the same bug. Between a header drag and the server
+         * persisting it, the body carries the client's order while the server
+         * still renders its own — so a partial arriving in that window puts one
+         * row back into the old order while every other row keeps the new one.
+         *
+         * `reorderBodyColumns()` only moves cells carrying `data-column`, so the
+         * drag handle and any leading/trailing cell stay where they are, and it
+         * is a no-op once the two orders agree.
+         */
+        reorderPartialColumns() {
+            if (!this.config.columnReorderable) return;
+
+            const thead = this.$root.querySelector('thead');
+            if (!thead) return;
+
+            this.reorderBodyColumns(this.headerColumnOrder(thead));
         },
 
         /** Re-initialize after Livewire morphs (pagination, filters, etc.). */
@@ -203,6 +269,10 @@ export function wireSortable(config = {}) {
                     this.pausePolling();
                     document.body.classList.add('wire-sortable-active');
 
+                    // The order before the drag, so onEnd can send the rows that
+                    // actually moved rather than the whole tbody.
+                    this.orderBeforeDrag = this.rowKeys(tbody);
+
                     // Set explicit height on ghost to prevent collapse
                     evt.item.style.height = evt.item.offsetHeight + 'px';
                 },
@@ -217,16 +287,10 @@ export function wireSortable(config = {}) {
 
                     if (evt.oldIndex === evt.newIndex) return;
 
-                    const rows = tbody.querySelectorAll('tr[wire\\:key]');
-                    const items = [];
+                    const before = this.orderBeforeDrag;
+                    this.orderBeforeDrag = null;
 
-                    rows.forEach((row, index) => {
-                        const wireKey = row.getAttribute('wire:key');
-                        const value = wireKey ? wireKey.replace('row-', '') : null;
-                        if (value) {
-                            items.push({ value: value, order: index + 1 });
-                        }
-                    });
+                    const items = this.reorderPayload(before, this.rowKeys(tbody));
 
                     if (items.length > 0) {
                         this.getLivewireComponent()?.call('reorderRows', items);
@@ -277,6 +341,57 @@ export function wireSortable(config = {}) {
                 td.style.minWidth = '';
                 td.style.maxWidth = '';
             });
+        },
+
+        /** The record keys currently in the tbody, in visual order. */
+        rowKeys(tbody) {
+            return Array.from(tbody.querySelectorAll('tr[wire\\:key]'))
+                .map((row) => (row.getAttribute('wire:key') ?? '').replace('row-', ''))
+                .filter(Boolean);
+        },
+
+        /**
+         * The rows a drop has to tell the server about — the moved range, not the
+         * page.
+         *
+         * A drop used to send every row in the tbody, so the write cost one
+         * UPDATE per row on the page however far anything moved: measured, the
+         * query count rose 1:1 with the row count. `alwaysReorderable()` drops
+         * pagination, so "the page" can be the entire table.
+         *
+         * Sending a contiguous slice is safe because of what the server does with
+         * it: `resolveReorderSlots()` redistributes the sent rows' OWN existing
+         * order values among themselves and leaves every row it was not sent
+         * alone. So the slice between the first and last position that changed
+         * lands byte-identical order values to the full payload — pinned by
+         * `ReorderWriteCostTest`.
+         *
+         * `order` stays the row's absolute 1-based position rather than its index
+         * within the slice: the server ignores it, but `canReorder()`,
+         * `beforeReorder()` and `afterReorder()` are handed the payload and a
+         * consumer may read it.
+         *
+         * Falls back to the whole tbody when the before/after lists cannot be
+         * compared — a morph that added or removed a row mid-drag — because the
+         * full payload is always correct, only expensive.
+         */
+        reorderPayload(before, after) {
+            const item = (key, index) => ({ value: key, order: index + 1 });
+
+            if (! Array.isArray(before) || before.length !== after.length) {
+                return after.map(item);
+            }
+
+            let first = 0;
+            while (first < after.length && before[first] === after[first]) first++;
+
+            // Identical lists: the drop put everything back where it was.
+            if (first === after.length) return [];
+
+            let last = after.length - 1;
+            while (last > first && before[last] === after[last]) last--;
+
+            return after.slice(first, last + 1).map((key, i) => item(key, first + i));
         },
 
         addRowDragHandles(tbody) {
@@ -368,12 +483,7 @@ export function wireSortable(config = {}) {
 
                     if (evt.oldIndex === evt.newIndex) return;
 
-                    const headers = thead.querySelectorAll('th[data-sortable-column]');
-                    const columnOrder = [];
-                    headers.forEach((th) => {
-                        const name = th.getAttribute('data-sortable-column');
-                        if (name) columnOrder.push(name);
-                    });
+                    const columnOrder = this.headerColumnOrder(thead);
 
                     this.reorderBodyColumns(columnOrder);
 
@@ -382,6 +492,24 @@ export function wireSortable(config = {}) {
                     }
                 },
             });
+        },
+
+        /**
+         * The column order the headers are currently in.
+         *
+         * Read from the DOM rather than kept as state, because the headers ARE
+         * the record of a drag until the server confirms it — which is also what
+         * makes it the right answer for a row that arrives mid-flight.
+         */
+        headerColumnOrder(thead) {
+            const order = [];
+
+            thead?.querySelectorAll('th[data-sortable-column]').forEach((th) => {
+                const name = th.getAttribute('data-sortable-column');
+                if (name) order.push(name);
+            });
+
+            return order;
         },
 
         markHeaderCells(thead) {

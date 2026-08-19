@@ -1075,6 +1075,14 @@ trait WithTable
             if ($intercepted !== null) {
                 $this->cachedRecords = $intercepted;
 
+                // An intercepted set is still a page of records, and its sub-rows
+                // still have to be batched. Returning without this sent reorder
+                // mode down the per-parent N+1 the eager load exists to remove —
+                // on the one mode that also drops pagination, so with the most
+                // parents on the page. Pinned by wire-sortable's
+                // ReorderSubRowLoadTest.
+                $this->eagerLoadSubRows($this->cachedRecords);
+
                 return $this->cachedRecords;
             }
         }

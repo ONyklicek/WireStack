@@ -72,6 +72,30 @@ client-supplied key outside the scoped set out of the write (see
 `tests/Feature/ReorderScopeTest.php`). Behaviour is asserted by
 `tests/Feature/ReorderSearchTest.php`.
 
+**That redistribution is also what makes the payload small.** Because the dragged
+rows only ever exchange slots among *themselves*, the algorithm is correct for
+any contiguous subset — so the client sends the rows between the first and last
+position that changed, not the whole tbody. It used to send everything, and the
+write cost one UPDATE per row on the page however far anything moved; measured,
+the query count rose 1:1 with the row count, and `alwaysReorderable()` drops
+pagination, so "the page" can be the entire table. `onStart` records the key
+order, `onEnd` diffs it, and `reorderPayload()` slices. `order` stays the row's
+absolute 1-based position, because `canReorder()` / `beforeReorder()` /
+`afterReorder()` are handed the payload even though the write ignores it. A
+before/after list that cannot be compared — a morph that added or removed a row
+mid-drag — falls back to the whole tbody, which is always correct and only
+expensive. `tests/Feature/ReorderWriteCostTest.php` pins both the slope and the
+fact that a range payload lands byte-identical order values.
+
+**Reorder mode is an intercepted record fetch, and that has to stay a whole page
+of records.** `WithTable::getTableRecords()` lets a plugin trait replace the
+fetch, which is how reorder mode returns its unpaginated set — and it used to
+return before `eagerLoadSubRows()` ran, so a sub-row table in reorder mode fell
+back to one query per parent: the N+1 the eager load exists to remove, on the one
+mode with the most parents on the page. Anything else that intercepts the fetch
+inherits the same obligation. `tests/Feature/ReorderSubRowLoadTest.php` asserts
+the slope is flat.
+
 ### `SortableTable.php`
 
 Focused sortable support surface for table consumers.
@@ -123,6 +147,39 @@ DOM holds rows the server render knows nothing about.
 `morph.updated` fires once per patched element, so the re-init it schedules is
 coalesced (`scheduleSetup()`) — one `setup()` per morph, not one per node.
 
+**Livewire's morph is not the only thing that patches the rows.** A row partial
+is morphed by `packages/core/resources/js/support/partials.js`, which drives
+`Alpine.morph()` itself and reaches neither hook. The drag handle `<td>` is
+created in the browser and prepended to every `<tr>`, so a partial replaced a
+three-cell row with the server's two-cell one and left that row undraggable —
+silently, and only for rows somebody had edited. wire-core announces
+`wire:partials-applied` on `document` after each batch, and `onPartialsApplied()`
+repairs what this package owns.
+
+Three things about that handler are load-bearing:
+
+- **It is an announcement, not a hook, and deliberately.** `window.Livewire.trigger`
+  is public, so firing `morph.updating` from the partial path was available — and
+  is wrong: `onMorphUpdating` `skip()`s the cell being typed in, which is right
+  when the whole table re-renders around it and exactly backwards for a partial,
+  whose purpose is to carry that cell's saved value back. A listener may repair
+  what it owns; it may not veto a targeted write.
+- **It repairs, it does not re-init.** No `destroyRowSortable()`, no width lock —
+  `addRowDragHandles()` skips rows that still have a handle, and SortableJS is
+  bound to the `<tbody>` rather than the rows, so a replaced row needs its handle
+  back and nothing else. That is why it may run while a cell is focused, where
+  `onMorphUpdated`'s `editingCell()` early-return exists to avoid a full
+  `setup()`.
+- **Its two repairs have separate guards.** Handles exist only in row-reorder
+  mode; column order is the client's whenever headers are draggable, including on
+  a `columnReorderable()`-only table with no row reordering at all. One shared
+  guard skips exactly the case the column repair is for.
+
+`packages/sortable/tests/Feature/SortablePartialsTest.php` pins both halves of the
+contract in the shipped bundles, and
+`workbench/scripts/verify-sortable-partials.mjs` is the only thing that can see a
+handle go missing.
+
 The bundle is committed: any change here needs `npm run build:sortable-assets`,
 which `SortableAssetTest` and `MorphGuardTest` will fail without.
 
@@ -152,6 +209,11 @@ Usually also run:
 Add integration tests if plugin boot or state flow changed:
 
 - `vendor/bin/pest --configuration phpunit.xml --testsuite "Integration"`
+
+Anything touching `sortable.js` or the morph/partial seams needs the browser, which
+is the only place a drag or a lost handle is visible:
+
+- `npm run build:sortable-assets && npm run verify:drivers -- sortable`
 
 Anything in `resources/js/sortable.js` is browser-only and Pest cannot see it —
 rebuild the bundle and run the drivers:
