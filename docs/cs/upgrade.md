@@ -147,6 +147,73 @@ a `live()`.
 
 ---
 
+## `Widget::lazy()` končí (2.0)
+
+`Widget::lazy()` a `Widget::isLazy()` byly odstraněny. Nikdy nic neodkládaly:
+žádná view widgetu ten příznak nečetla — nestálo za ním `wire:init`, žádná
+intersect direktiva ani island — takže widget označený jako lazy se vykreslil
+celý jako kterýkoli jiný.
+
+```php
+StatsOverviewWidget::make()->lazy()   // [tl! --]
+StatsOverviewWidget::make()           // [tl! ++]
+```
+
+Smazání volání je celá migrace; předtím se nic nevykreslovalo jinak.
+
+**Pokud odklad opravdu chcete**, odložte celou komponentu místo jednoho widgetu —
+dashboard je jedna Livewire komponenta a widget je markup uvnitř ní, ne vlastní
+komponenta. `<livewire:my-dashboard lazy />` odloží celý grid. Odklad po
+jednotlivých widgetech k dispozici není: vyžadoval by island na každý widget
+a `@island` uvnitř `@foreach` se nezkompiluje — Blade vytvoří jedno tělo islandu
+na jeden výskyt direktivy a to tělo proměnnou cyklu nikdy nedostane.
+
+---
+
+## Views polí: Alpine tělo se přesunulo do bundlu (2.0)
+
+Sedm typů polí mělo celý svůj Alpine controller inlinovaný v markupu jako `x-data`
+objekt, takže stránka se šesti date pickery poslala tytéž stovky řádků šestkrát.
+Těla jsou teď registrované `Alpine.data()` factory.
+
+**Nemusíte dělat nic, pokud si nepřepisujete některý z těchto views**:
+`DateTimePicker`, `TimePicker`, `Select` (searchable combobox), `Tags`, `Rating`,
+`RichEditor`, `MarkdownEditor`. Pokud ano, zkopírované `x-data` už neexistuje —
+zavolejte factory s konfiguračním objektem:
+
+```blade
+{{-- předtím --}}
+<div x-data="{ open: false, value: $wire.entangle('data.at'), hasDate: true, /* …300 řádků… */ }">   {{-- [tl! --] --}}
+
+{{-- potom --}}
+<div x-data="wireDateTimePicker({                    {{-- [tl! ++:4] --}}
+    state: $wire.entangle('data.at'),
+    hasDate: true,
+    typeable: true,
+})">
+```
+
+Dvě věci zůstávají v markupu záměrně. **`state`**, protože `$wire.entangle`
+a `@entangle` jsou Alpine *magics* a jsou ve scope jen uvnitř `x-data` výrazu —
+do bundlu se přesunout nemohou. A jakýkoli **řetězec ze serveru**, který
+controller potřebuje, například přeložený titulek pro `prompt()`; ten přichází
+jako config.
+
+Třetí pravidlo vás dostane, když portujete vlastní pole: Blade `@if` uvnitř těla
+se musí stát runtime větví. Factory se kompiluje jednou a sdílí ji každá instance,
+takže *tvar* objektu už nemůže nic měnit — jen jeho chování.
+
+Controllery jsou v `wire-forms-fields.js`, searchable-select combobox
+v `wire-core-dropdown.js` (patří core: ten partial includuje sedm povrchů napříč
+forms i table). Oba jsou registrátory, takže se načítají s dokumentem, ne na
+vyžádání. Každý převedený view navíc includuje
+`wire-forms::partials.field-assets`, protože
+[`@wireStackScripts`](getting-started.md#javascriptove-assety) je aditivní — aplikace,
+která direktivu nikdy nepřidá, musí controller dostat stejně, jinak se `x-data`
+vyhodnotí proti prázdnému registru a pole tiše nedělá nic.
+
+---
+
 ## Minimální verze závislostí (1.17)
 
 **Laravel 10 a 11 končí.** Verze 1.17 přesunula JavaScriptové bundly z package

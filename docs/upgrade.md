@@ -149,6 +149,74 @@ and `live()`.
 
 ---
 
+## `Widget::lazy()` is gone (2.0)
+
+`Widget::lazy()` and `Widget::isLazy()` were removed. They never deferred
+anything: no widget view read the flag — there was no `wire:init`, no intersect
+directive and no island behind it — so a widget marked lazy rendered in full like
+any other.
+
+```php
+StatsOverviewWidget::make()->lazy()   // [tl! --]
+StatsOverviewWidget::make()           // [tl! ++]
+```
+
+Deleting the calls is the whole migration; nothing rendered differently before.
+
+**If you actually want deferral**, defer at the component level rather than the
+widget level — a dashboard is one Livewire component, and a widget is markup
+inside it, not a component of its own. `<livewire:my-dashboard lazy />` defers the
+whole grid. Per-widget deferral is not available: it would need an island per
+widget, and an `@island` inside a `@foreach` does not compile — Blade emits one
+island body per directive occurrence and the extracted body never receives the
+loop variable.
+
+---
+
+## Field views: the Alpine body moved into a bundle (2.0)
+
+Seven field types used to inline their whole Alpine controller into the markup as
+an `x-data` object literal, so a page with six date pickers sent the same few
+hundred lines six times. The bodies are registered `Alpine.data()` factories now.
+
+**Nothing to do unless you override one of these field views**: `DateTimePicker`,
+`TimePicker`, `Select` (the searchable combobox), `Tags`, `Rating`, `RichEditor`,
+`MarkdownEditor`. If you do, the `x-data` you copied is gone — call the factory
+with a config object instead:
+
+```blade
+{{-- before --}}
+<div x-data="{ open: false, value: $wire.entangle('data.at'), hasDate: true, /* …300 lines… */ }">   {{-- [tl! --] --}}
+
+{{-- after --}}
+<div x-data="wireDateTimePicker({                    {{-- [tl! ++:4] --}}
+    state: $wire.entangle('data.at'),
+    hasDate: true,
+    typeable: true,
+})">
+```
+
+Two things stay in the markup on purpose. **`state`**, because `$wire.entangle`
+and `@entangle` are Alpine *magics* and are in scope only inside an `x-data`
+expression — it cannot move into the bundle. And any **server-side string** the
+controller needs, such as a translated `prompt()` title, which arrives as config.
+
+A third rule bites if you are porting your own field: a Blade `@if` inside the
+body has to become a runtime branch. A factory is compiled once and shared by
+every instance, so nothing can vary the *shape* of the object any more — only its
+behaviour.
+
+The controllers ship in `wire-forms-fields.js`, and the searchable-select
+combobox in `wire-core-dropdown.js` (it is core's: seven surfaces across forms and
+table include that partial). Both are registrars, so they load with the document
+rather than on request. Each converted view also includes
+`wire-forms::partials.field-assets`, because
+[`@wireStackScripts`](getting-started.md#javascript-assets) is additive — an app
+that never adds the directive still has to get the controller, or the `x-data`
+evaluates against an empty registry and the field silently does nothing.
+
+---
+
 ## Dependency floors (1.17)
 
 **Laravel 10 and 11 are gone.** 1.17 moved the JavaScript bundles from a package
