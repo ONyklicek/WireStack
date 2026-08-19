@@ -102,7 +102,9 @@
 
     @include('wire-forms::partials.field-wrapper-end')
 
-@if($livewire !== null)
-    {{-- Isolated create/edit option modals (one open at a time, keyed by state path). --}}
+@if($livewire !== null && $field->hasMountedOptionModal($livewire))
+    {{-- Isolated create/edit option modals (one open at a time, keyed by state path).
+         Gated on the mount check so a Select with no modal open costs no view
+         render here — the partial emits nothing in that case. --}}
     @include('wire-forms::partials.select-option-modals')
 @endif

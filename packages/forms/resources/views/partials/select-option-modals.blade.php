@@ -13,10 +13,11 @@
        $field     Select   the field owning the option forms
        $livewire  mixed    the bound Livewire host (non-null when included) --}}
 @php
-    $isCreateModalMounted = $field->hasCreateOptionForm()
-        && data_get($livewire, 'mountedCreateOptionSelect') === $field->getStatePath();
-    $isEditModalMounted = $field->hasEditOptionForm() && ! $field->isMultiple()
-        && data_get($livewire, 'mountedEditOptionSelect') === $field->getStatePath();
+    // Which modal to draw. Select owns the rule (the callers gate on
+    // hasMountedOptionModal() before including this at all), so the two views and
+    // this partial can never disagree about what "mounted" means.
+    $isCreateModalMounted = $field->hasMountedCreateOptionModal($livewire);
+    $isEditModalMounted = $field->hasMountedEditOptionModal($livewire);
 
     // When the Select lives inside a stacked action modal, the option overlay must
     // sit one layer above the top action frame — otherwise it renders behind the

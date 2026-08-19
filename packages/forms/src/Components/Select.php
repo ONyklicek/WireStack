@@ -510,6 +510,19 @@ class Select extends Field implements DehydratesState, ProvidesImplicitValidatio
     }
 
     /**
+     * Whether this Select's create-option modal is open on the given Livewire host.
+     *
+     * `$livewire` is the bound host composing {@see InteractsWithSelectCreation},
+     * which holds the state path of the one Select showing a modal. Read through
+     * `data_get()` because a Select can also render outside such a host.
+     */
+    public function hasMountedCreateOptionModal(mixed $livewire): bool
+    {
+        return $this->hasCreateOptionForm()
+            && data_get($livewire, 'mountedCreateOptionSelect') === $this->getStatePath();
+    }
+
+    /**
      * The create-option modal's configuration, seeded with the option-modal
      * defaults on first access. The teleport `id`, `wireModel` and close action
      * stay owned by the rendering partial — a caller-set `id` would collide with
@@ -602,6 +615,35 @@ class Select extends Field implements DehydratesState, ProvidesImplicitValidatio
     public function hasEditOptionForm(): bool
     {
         return $this->editOptionSchema !== null;
+    }
+
+    /**
+     * Whether this Select's edit-option modal is open on the given Livewire host.
+     *
+     * Multiple selects are excluded for the same reason
+     * {@see InteractsWithSelectCreation::mountEditOption()} refuses them: there is
+     * no single selected option to edit.
+     */
+    public function hasMountedEditOptionModal(mixed $livewire): bool
+    {
+        return $this->hasEditOptionForm()
+            && ! $this->isMultiple()
+            && data_get($livewire, 'mountedEditOptionSelect') === $this->getStatePath();
+    }
+
+    /**
+     * Whether either option modal is open on the given Livewire host.
+     *
+     * The Select-family views gate the option-modal partial on this. Nothing is
+     * emitted when no modal is mounted — which is almost always — so without the
+     * gate every Select on a page pays a view render to produce zero bytes. The
+     * partial asks the two questions above to decide *which* modal to draw, so
+     * the rule is owned here and not duplicated across the two call sites.
+     */
+    public function hasMountedOptionModal(mixed $livewire): bool
+    {
+        return $this->hasMountedCreateOptionModal($livewire)
+            || $this->hasMountedEditOptionModal($livewire);
     }
 
     /**

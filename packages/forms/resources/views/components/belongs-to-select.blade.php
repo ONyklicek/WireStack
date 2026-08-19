@@ -86,7 +86,8 @@
 
 @include('wire-forms::partials.field-wrapper-end')
 
-@if($livewire !== null)
-    {{-- Isolated create/edit option modals — same canonical flow as the base select. --}}
+@if($livewire !== null && $field->hasMountedOptionModal($livewire))
+    {{-- Isolated create/edit option modals — same canonical flow, and the same
+         mount gate, as the base select. --}}
     @include('wire-forms::partials.select-option-modals')
 @endif
