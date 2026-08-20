@@ -46,7 +46,23 @@ class RpHost extends Component
 
     public bool $grouped = false;
 
+    public bool $groupedByEditable = false;
+
     public bool $stacked = false;
+
+    public function mount(
+        bool $partials = true,
+        bool $summaries = false,
+        bool $grouped = false,
+        bool $groupedByEditable = false,
+        bool $stacked = false,
+    ): void {
+        $this->partials = $partials;
+        $this->summaries = $summaries;
+        $this->grouped = $grouped;
+        $this->groupedByEditable = $groupedByEditable;
+        $this->stacked = $stacked;
+    }
 
     public function table(Table $table): Table
     {
@@ -62,6 +78,13 @@ class RpHost extends Component
 
         if ($this->grouped) {
             $table->groupBy('amount')->groupSummaries();
+        }
+
+        // Grouping by the column the table lets you EDIT, which is the only way a
+        // write to the group column gets past the editability guard and reaches
+        // the shape check.
+        if ($this->groupedByEditable) {
+            $table->groupBy('name');
         }
 
         return $this->stacked ? $table->stackedOnMobile() : $table;
@@ -177,12 +200,32 @@ it('takes the full render when the write moves the record to another group', fun
     // Editing the column the table groups BY is a change to the page's shape, not
     // to a row's contents — the record leaves one group for another, and no set
     // of regions can describe that.
-    $test = Livewire::test(RpHost::class, ['grouped' => true, 'summaries' => true]);
+    //
+    // The table groups by `name` here, which is the editable column, so the write
+    // actually lands and the shape check is what refuses the partial. Grouping by
+    // a read-only column would have the write refused for being uneditable, and
+    // this would pass without the guard existing at all.
+    $test = Livewire::test(RpHost::class, ['groupedByEditable' => true]);
 
-    $test->call('updateTableCell', '1', 'amount', '99', null);
+    $test->call('updateTableCell', '1', 'name', 'Moved', null);
 
-    expect($test->effects['wirePartials'] ?? null)->toBeNull()
+    expect(RpRow::find(1)->name)->toBe('Moved')
+        ->and($test->effects['wirePartials'] ?? null)->toBeNull()
         ->and($test->effects['html'] ?? null)->not->toBeNull();
+});
+
+it('finds the edited record wherever it sits on the page', function () {
+    // The row is located by walking the page, so a record that is not the first
+    // one has rows skipped ahead of it — and the position it is rendered at is
+    // the position it was FOUND at, not zero. A row rendered at the wrong index
+    // would strip the wrong background and read as a striping bug.
+    $test = Livewire::test(RpHost::class);
+
+    $test->call('updateTableCell', '2', 'name', 'Second edited', null);
+
+    expect(array_keys($test->effects['wirePartials'] ?? []))->toBe(['row-2'])
+        ->and($test->effects['wirePartials']['row-2'])->toContain('Second edited')
+        ->and($test->effects['wirePartials']['row-2'])->toContain('wire:partial="row-2"');
 });
 
 it('answers with the card too, where the table renders one', function () {
@@ -216,4 +259,41 @@ it('falls back to a full render when the flag is off', function () {
 
     expect($test->effects['wirePartials'] ?? null)->toBeNull()
         ->and($test->effects['html'] ?? null)->not->toBeNull();
+});
+
+it('answers with both footers where the table renders both', function () {
+    // A stacked table renders its totals twice into one document — the desktop
+    // <tfoot> and a card footer for the width that hides the table. Refreshing
+    // one and not the other leaves a phone showing the old total and a desktop
+    // the new one, which is the same trap the card itself was anchored for.
+    $test = Livewire::test(RpHost::class, ['stacked' => true, 'summaries' => true]);
+
+    expect($test->html())
+        ->toContain('wire:partial="summary"')
+        ->toContain('wire:partial="summary-mobile"');
+
+    $test->call('updateTableCell', '1', 'name', 'Edited', null);
+
+    expect(array_keys($test->effects['wirePartials'] ?? []))
+        ->toBe(['row-1', 'card-1', 'summary', 'summary-mobile']);
+});
+
+it('queues nothing at all when no record moved', function () {
+    // The satellite pass is what a row partial drags along with it — the card,
+    // the totals, the group subtotal. Handed nothing, it must queue nothing:
+    // a response carrying a fresh total but no row would be a partial truth, and
+    // the coverage rule exists to keep those off the wire.
+    //
+    // Called directly because neither in-repo caller can produce an empty set —
+    // refreshTable() returns earlier when nothing changed, and the write path
+    // always passes the one record it wrote. The guard is for a host that
+    // computes its own moved set, which the protected seam invites.
+    $test = Livewire::test(RpHost::class, ['summaries' => true, 'stacked' => true]);
+    $instance = $test->instance();
+
+    (function () {
+        $this->queueSatellitePartials($this->getTable(), $this->tableRenderPlan(), []);
+    })->call($instance);
+
+    expect($test->effects['wirePartials'] ?? null)->toBeNull();
 });
