@@ -18,6 +18,61 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 export { sleep };
 
 /**
+ * Wait for a condition instead of guessing how long it takes.
+ *
+ * A driver that does its work and then `sleep(1600)` is asserting a *timing*,
+ * not a behaviour: it passes on an idle machine and fails in a sweep, where 74
+ * Chromes have taken turns on one PHP dev server. That failure is
+ * indistinguishable from a real one — same FAIL line, same exit code — so the
+ * gate stops meaning anything.
+ *
+ * Polling removes the guess from both ends: a fast machine continues as soon as
+ * the condition holds (usually well inside one sleep), and a slow one waits as
+ * long as it needs. A timeout still reports FAIL, because after this long the
+ * condition genuinely is not true.
+ *
+ * `probe` returns whatever it likes; the poll stops on the first truthy value
+ * and hands it back, so a probe can return the state it was checking:
+ *
+ *     const rows = await until(() => eval_('document.querySelectorAll("tr").length'))
+ *
+ * Two traps, both of which have bitten:
+ *
+ *  - **wait for the thing to CHANGE, not for the state you are about to
+ *    assert.** Polling "the focus is inside the trap" before reading it passes
+ *    instantly if the focus never moved — which is the bug the check exists to
+ *    catch. Poll `activeElement !== before` instead.
+ *  - a wait that falls short rarely reports itself as a wait. The page is in the
+ *    wrong state, the next line indexes into an empty collection, and the driver
+ *    dies with every remaining check unrun — which the sweep reports as "aborted
+ *    after N check(s)", not as a timing problem.
+ *
+ * About 230 blind sleeps still sit directly before a check in the older drivers.
+ * They are converted as they bite rather than in one sweep: what to wait *for*
+ * is per-driver semantics, and a mechanical rewrite would quietly assert the
+ * wrong thing.
+ *
+ * **This is not a substitute for the anti-throttling flags above.** Alpine's
+ * enter/leave transitions run on requestAnimationFrame, which headless Chrome
+ * barely schedules for a backgrounded window — evaluating from CDP wakes the JS
+ * thread but does not make rAF tick. Polling fixes *when we look*; the flags
+ * fix *whether the page runs at all*.
+ */
+export async function until(probe, { timeout = 10000, interval = 100 } = {}) {
+  const deadline = Date.now() + timeout;
+  let last;
+
+  for (;;) {
+    last = await probe();
+
+    if (last) return last;
+    if (Date.now() >= deadline) return last;
+
+    await sleep(interval);
+  }
+}
+
+/**
  * Boot a page and hand back everything a driver needs to drive it.
  *
  * Honours CHROME_PORT (the sweep gives each driver its own DevTools port —
@@ -95,7 +150,18 @@ export async function openPage({ url, shotPrefix, width = 1200, height = 1200, m
     await rm(userDataDir, { recursive: true, force: true }).catch(() => {});
   };
 
-  return { page, eval_, shot, shotDir, consoleErrors, badResponses, close };
+  /**
+   * Poll a JS expression in the page until it is truthy.
+   *
+   * The ergonomic half of {@see until}: what a driver almost always waits on is
+   * something the page can answer for itself — a row count, a class, an open
+   * panel, a request having landed.
+   *
+   *     await waitFor('document.querySelectorAll("tbody tr").length === 3')
+   */
+  const waitFor = (expression, options) => until(() => eval_(expression), options);
+
+  return { page, eval_, waitFor, shot, shotDir, consoleErrors, badResponses, close };
 }
 
 /** A check recorder that prints as it goes and can report the verdict. */

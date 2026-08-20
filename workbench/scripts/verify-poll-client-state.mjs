@@ -1,4 +1,4 @@
-import { openPage, checker, sleep } from './lib/cdp.mjs';
+import { openPage, checker, sleep, until } from './lib/cdp.mjs';
 
 /*
  * CDP driver for what a poll tick is allowed to do to client-side state.
@@ -92,7 +92,10 @@ try {
   check('typing into search survives the poll ticks it spans',
     stomps.length === 0, stomps.slice(0, 3).join('; ') || 'no rollback');
 
-  await sleep(1600);
+  // The 300ms debounce, a roundtrip and a morph. Waiting for the filtered row
+  // set rather than guessing at the sum: on a loaded machine the guess falls
+  // short, and everything downstream then asserts against an unfiltered table.
+  await until(async () => await rowCount() === 1);
   const settled = await searchValue();
   const filtered = await rowCount();
   check('the finished search term is still intact', settled === term, `"${settled}"`);
@@ -110,7 +113,7 @@ try {
   await eval_(`search().focus(); search().select();`);
   await page('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Delete', code: 'Delete', windowsVirtualKeyCode: 46 });
   await page('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Delete', code: 'Delete', windowsVirtualKeyCode: 46 });
-  await sleep(1500);
+  await until(async () => await rowCount() === baseline);
   check('clearing the search restores every row', await rowCount() === baseline,
     `${await rowCount()} rows`);
 
@@ -126,7 +129,7 @@ try {
     }));
     true;
   `);
-  await sleep(400);
+  await until(async () => await eval_('menus().length') === 1);
   const openedCount = await eval_('menus().length');
   check('right-click opens the row context menu', openedCount === 1, `${openedCount} visible`);
 

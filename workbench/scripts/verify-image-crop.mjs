@@ -15,6 +15,7 @@ import { spawn } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { until } from './lib/cdp.mjs';
 const url = process.env.PREVIEW_URL ?? `${process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085'}/previews/field-file-upload`;
 const port = Number(process.env.CHROME_PORT ?? 9481);
 const chrome = spawn(process.env.CHROME_BIN ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -109,9 +110,18 @@ try {
     const d = Alpine.$data(${root});
     for (let i=0;i<40 && !d.cropping;i++) await new Promise(r=>setTimeout(r,100));
   })()`);
-  await sleep(600);
 
   const box = '[data-testid$="-cropper"]';
+
+  // `cropping` flips before the overlay is in the DOM with the focus moved into
+  // it, so this used to be a blind settle. A sweep runs 74 Chromes over one PHP
+  // dev server and that guess stopped holding — the two checks below then failed
+  // for a reason that had nothing to do with the cropper. Waiting for the state
+  // they assert against costs nothing when it is already true.
+  await until(() => ev(`(() => {
+    const b = document.querySelector('${box}');
+    return !! b && b.contains(document.activeElement);
+  })()`));
   chk('the cropper announces itself as a modal dialog',
     await ev(`(() => { const b = document.querySelector('${box}'); return b?.getAttribute('role') === 'dialog' && b?.getAttribute('aria-modal') === 'true'; })()`));
 
@@ -120,10 +130,20 @@ try {
     await ev(`document.activeElement?.getAttribute?.('data-testid') ?? document.activeElement?.tagName`));
 
   const tabbed = [];
+  const focused = () => ev(`document.activeElement?.getAttribute?.('data-testid') ?? document.activeElement?.tagName ?? ''`);
+
   for (let i = 0; i < 3; i++) {
+    const before = await focused();
+
     await cdp.send('Input.dispatchKeyEvent',{type:'rawKeyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9},sessionId);
     await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Tab',code:'Tab',windowsVirtualKeyCode:9},sessionId);
-    await sleep(220);
+
+    // Wait for the focus to MOVE, not for a guessed number of milliseconds.
+    // Reading too early is the dangerous direction here: the focus is inside the
+    // trap before Tab as well, so a stale read passes the check without the trap
+    // having done anything.
+    await until(async () => (await focused()) !== before);
+
     tabbed.push(await ev(`(() => { const b = document.querySelector('${box}'); return !!b && b.contains(document.activeElement); })()`));
   }
   chk('Tab stays inside it instead of reaching the picker behind it',

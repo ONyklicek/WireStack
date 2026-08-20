@@ -234,6 +234,14 @@ for f in "${drivers[@]}"; do
         printf "  FAIL  %-26s %s%s\n" "$name" "$summary" "${retried:-}"
         failed+=("$name")
         echo "$out" | grep -aE "^FAIL|DRIVER ERROR" | head -5 | sed 's/^/            /'
+
+        # Keep the whole run, not just the FAIL lines. A driver that fails only
+        # inside a sweep is the hardest kind to diagnose — it passes the moment
+        # you run it by hand — so the one run that showed the problem is the one
+        # worth keeping. Without this the evidence dies with the sweep.
+        log="/tmp/wire-driver-${name}.log"
+        printf '%s\n' "$out" > "$log"
+        printf '            full output: %s\n' "$log"
     fi
     unset retried
 done
