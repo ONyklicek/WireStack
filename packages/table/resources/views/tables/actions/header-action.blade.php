@@ -53,23 +53,33 @@
         {{-- Loading spinner --}}
         @if($loadingState['showLoading'])
             @include('wire-core::partials.spinner', ['wireTarget' => $wireAction, 'class' => 'w-4 h-4'])
-            <span wire:loading.remove wire:target="{{ $wireAction }}" class="inline-flex items-center gap-1.5">
         @endif
 
-                @if($action->getIcon())
-                    {!! $action->renderIconSvg($action->getIcon(), 'w-4 h-4') !!}
-                @endif
-        <span>{{ $action->getLabel() }}</span>
-        @if($shortcutLabel)
-                    <kbd
-                            class="hidden sm:inline-block ml-1 px-1 py-0.5 text-[10px] font-mono bg-white/20 rounded opacity-60">{{ $shortcutLabel }}</kbd>
-                @endif
-
-                @if($loadingState['showLoading'])
-            </span>
-            @if($loadingState['loadingText'])
-                <span wire:loading wire:target="{{ $wireAction }}">{{ $loadingState['loadingText'] }}</span>
+        {{-- The button's face, and what `wire:loading.remove` swaps for the
+             spinner. The wrapper is unconditional and only the directive is
+             conditional: opening the span inside one `@if` and closing it inside
+             another two blocks later parses as valid Blade and reads as a bug —
+             and an editor that reformats the file, or a later `@if` inserted
+             between them, silently changes which elements it wraps. --}}
+        <span
+            @if($loadingState['showLoading'])
+                wire:loading.remove wire:target="{{ $wireAction }}"
             @endif
+            class="inline-flex items-center gap-1.5"
+        >
+            @if($action->getIcon())
+                {!! $action->renderIconSvg($action->getIcon(), 'w-4 h-4') !!}
+            @endif
+
+            <span>{{ $action->getLabel() }}</span>
+
+            @if($shortcutLabel)
+                <kbd class="hidden sm:inline-block ml-1 px-1 py-0.5 text-[10px] font-mono bg-white/20 rounded opacity-60">{{ $shortcutLabel }}</kbd>
+            @endif
+        </span>
+
+        @if($loadingState['showLoading'] && $loadingState['loadingText'])
+            <span wire:loading wire:target="{{ $wireAction }}">{{ $loadingState['loadingText'] }}</span>
         @endif
 
         {!! $action->getBadgeHtml() !!}
