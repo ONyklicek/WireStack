@@ -29,6 +29,15 @@ class EdsRow extends Model
     protected $guarded = [];
 }
 
+class EdsStampless extends Model
+{
+    protected $table = 'eds_stampless';
+
+    protected $guarded = [];
+
+    public $timestamps = false;
+}
+
 beforeEach(function () {
     Schema::dropIfExists('eds_rows');
     Schema::create('eds_rows', function (Blueprint $t) {
@@ -123,7 +132,7 @@ it('counts what the query matches', function () {
 it('answers a change token that moves when the data does', function () {
     $before = edsSource()->changeToken(new QueryPlan);
 
-    expect($before)->toBeString()->toStartWith('7:');
+    expect($before)->toBeString()->toStartWith('7|');
 
     EdsRow::create(['name' => 'row 8']);
 
@@ -133,8 +142,8 @@ it('answers a change token that moves when the data does', function () {
 it('scopes the token to the query, not the table', function () {
     $narrow = new EloquentDataSource(EdsRow::query()->where('name', 'row 1'));
 
-    expect($narrow->changeToken(new QueryPlan))->toStartWith('1:')
-        ->and(edsSource()->changeToken(new QueryPlan))->toStartWith('7:');
+    expect($narrow->changeToken(new QueryPlan))->toStartWith('1|')
+        ->and(edsSource()->changeToken(new QueryPlan))->toStartWith('7|');
 });
 
 // ─── Capabilities and degradation ────────────────────────────────────────────
@@ -209,6 +218,45 @@ it('keeps the Eloquent source answering what the limited one refuses', function 
     $sorted = new QueryPlan(sortClauses: [new SortClause('name')]);
 
     expect(edsSource()->count($sorted))->toBe(7);
+});
+
+// ─── changeToken: the cases the extraction must not lose ─────────────────────
+
+it('returns no token for a model that keeps no timestamps', function () {
+    // WithTable::computePollChecksum() guards on this before touching the
+    // column. Without the guard there is no updated_at to wrap and the query is
+    // nonsense — so a source that cannot answer must say null, which is a real
+    // answer meaning "compare rows yourself".
+    Schema::dropIfExists('eds_stampless');
+    Schema::create('eds_stampless', function (Blueprint $t) {
+        $t->id();
+        $t->string('name');
+    });
+    EdsStampless::create(['name' => 'a']);
+
+    expect((new EloquentDataSource(EdsStampless::query()))->changeToken(new QueryPlan))->toBeNull();
+});
+
+it('qualifies the timestamp column, so a join cannot make it ambiguous', function () {
+    // Two tables both carrying updated_at is the ordinary case once a column
+    // sorts or filters through a relation.
+    Schema::dropIfExists('eds_tags');
+    Schema::create('eds_tags', function (Blueprint $t) {
+        $t->id();
+        $t->foreignId('eds_row_id');
+        $t->timestamps();
+    });
+
+    $joined = EdsRow::query()->join('eds_tags', 'eds_tags.eds_row_id', '=', 'eds_rows.id');
+
+    expect((new EloquentDataSource($joined))->changeToken(new QueryPlan))->toBeString();
+});
+
+it('ignores the ordering and any selected columns the query arrived with', function () {
+    // An aggregate over an ordered, column-selected query is a different query.
+    $shaped = EdsRow::query()->select(['name'])->orderByDesc('name');
+
+    expect((new EloquentDataSource($shaped))->changeToken(new QueryPlan))->toStartWith('7|');
 });
 
 // ─── Table wiring ────────────────────────────────────────────────────────────

@@ -29,6 +29,7 @@ use NyonCode\WireCore\Core\Events\TableFiltered;
 use NyonCode\WireCore\Core\Events\TableFiltering;
 use NyonCode\WireCore\Core\Events\TableSearched;
 use NyonCode\WireCore\Core\Events\TableSearching;
+use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
@@ -44,6 +45,7 @@ use NyonCode\WireForms\Concerns\InteractsWithSelectCreation;
 use NyonCode\WireForms\Concerns\InteractsWithWizards;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Data\EloquentDataSource;
 use NyonCode\WireTable\Events\TableRecordsChanged;
 use NyonCode\WireTable\Export\ExportAction;
 use NyonCode\WireTable\Export\ExportFormat;
@@ -871,20 +873,15 @@ trait WithTable
             return (string) $detector($query);
         }
 
-        $model = $query->getModel();
+        // The COUNT/MAX half belongs to whatever the rows come from, so it is
+        // asked of the source rather than assembled here. Built over *this*
+        // query — the narrowed one — because that is the set being polled, not
+        // the table's base query.
+        $token = (new EloquentDataSource($query))->changeToken(new QueryPlan);
 
-        if (! $model->usesTimestamps() || $model->getUpdatedAtColumn() === null) {
+        if ($token === null) {
             return null;
         }
-
-        $updatedAt = $query->getQuery()->getGrammar()->wrap(
-            $query->qualifyColumn($model->getUpdatedAtColumn()),
-        );
-
-        $base = $query->toBase();
-        $base->select([]);
-        $base->selectRaw("COUNT(*) as wt_count, MAX({$updatedAt}) as wt_max");
-        $row = $base->first();
 
         // The write generation is the third term, and it is what makes this
         // usable. `updated_at` is stored to the second, so an edit landing in the
@@ -893,9 +890,11 @@ trait WithTable
         // shown late, because the next tick compares against that same second. The
         // counter moves on every write through a table whatever the clock says,
         // while COUNT and MAX still catch a write that never went through one.
+        // It is the half no data source can answer for: it is about this
+        // application's writes, not about the dataset.
         $generation = app(WriteGeneration::class)->current($this->queryCacheScope($this->getTable()));
 
-        return ($row->wt_count ?? 0).'|'.($row->wt_max ?? '').'|'.$generation;
+        return $token.'|'.$generation;
     }
 
     /**

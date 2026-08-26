@@ -97,25 +97,52 @@ final class EloquentDataSource implements DataSource
      * The data half of change detection: how many rows match, and the newest
      * timestamp among them.
      *
-     * Deliberately *not* the whole token the table polls on. `WithTable`
-     * combines this with a write generation counter, which is a fact about the
-     * application — writes this process has made and has not yet seen come back
-     * — and no data source can answer for that. The host keeps that half.
+     * Extracted from `WithTable::computePollChecksum()` rather than rewritten
+     * beside it — every guard below is one that method already had, and a
+     * reimplementation lost two of them before this was caught. `null` means
+     * the source cannot answer cheaply, which is a real answer: the caller
+     * compares rows itself.
+     *
+     * Deliberately *not* the whole token the table polls on. `WithTable` appends
+     * a write generation counter, which is a fact about the application — writes
+     * this process made and has not yet seen come back — and no data source can
+     * answer for that. `updated_at` is stored to the second, so an edit landing
+     * in the same second as the tick that took the last token is otherwise
+     * invisible for good, not merely late.
      */
     public function changeToken(QueryPlan $plan): ?string
     {
-        $base = $this->query->toBase();
-        $grammar = $this->query->getQuery()->getGrammar();
-        $updatedAt = $grammar->wrap($this->query->getModel()->getUpdatedAtColumn());
+        $query = clone $this->query;
+        // The ordering is irrelevant to an aggregate and only costs a sort.
+        // Called as a statement, not chained: reorder() forwards to the base
+        // query builder, so chaining loses the Eloquent builder's type.
+        $query->reorder();
 
-        /** @var object{aggregate_count: int|string|null, aggregate_max: string|null}|null $row */
-        $row = $base->selectRaw("COUNT(*) as aggregate_count, MAX({$updatedAt}) as aggregate_max")->first();
+        $model = $query->getModel();
+
+        if (! $model->usesTimestamps() || $model->getUpdatedAtColumn() === null) {
+            return null;
+        }
+
+        // Qualified before it is wrapped: once a column sorts or filters through
+        // a relation the query carries a join, and two tables both having
+        // updated_at is the ordinary case, not the exotic one.
+        $updatedAt = $query->getQuery()->getGrammar()->wrap(
+            $query->qualifyColumn($model->getUpdatedAtColumn()),
+        );
+
+        $base = $query->toBase();
+        // Whatever the caller selected is not what an aggregate selects.
+        $base->select([]);
+        $base->selectRaw("COUNT(*) as wt_count, MAX({$updatedAt}) as wt_max");
+
+        $row = $base->first();
 
         if ($row === null) {
             return null;
         }
 
-        return ($row->aggregate_count ?? 0).':'.($row->aggregate_max ?? '');
+        return ($row->wt_count ?? 0).'|'.($row->wt_max ?? '');
     }
 
     /**
