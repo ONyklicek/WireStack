@@ -35,7 +35,6 @@ use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Foundation\Concerns\InteractsWithPartials;
-use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
 use NyonCode\WireForms\Concerns\InteractsWithActionForms;
@@ -2596,34 +2595,9 @@ trait WithTable
             return ['valid' => false, 'errors' => [__('wire-table::messages.record_not_found')]];
         }
 
-        // Apply the column's own dehydration before validating, so rules see the
-        // value that would actually be stored.
-        if ($column instanceof DehydratesState) {
-            $value = $column->dehydrateState($value, $record);
-        }
-
-        // Use column's validate method (for TextInputColumn)
-        if (method_exists($column, 'validate')) {
-            return $column->validate($value, $record);
-        }
-
-        // Validate using editable rules
-        $rules = $column->getEditableRules($record);
-        if (! empty($rules)) {
-            $validationResult = app(ValidationPipeline::class)->validate(
-                [$columnName => $value],
-                [$columnName => $rules],
-            );
-
-            if ($validationResult->failed()) {
-                return [
-                    'valid' => false,
-                    'errors' => $validationResult->getError($columnName) ?? [],
-                ];
-            }
-        }
-
-        return ['valid' => true, 'errors' => []];
+        // Dehydration and the rules live with the commit path, so this check and
+        // the save it predicts cannot drift apart.
+        return app(CellEditPipeline::class)->validateAgainstRecord($column, $columnName, $value, $record);
     }
 
     /**

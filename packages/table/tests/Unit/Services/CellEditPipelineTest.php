@@ -277,3 +277,52 @@ it('answers the client with only the keys that apply', function () {
             'currentVersion' => '17',
         ]);
 });
+
+// ─── validateAgainstRecord ───────────────────────────────────────────────────
+
+it('validates against a record without writing anything', function () {
+    $column = Column::make('name')->editableRules(fn () => ['required', 'min:3']);
+
+    expect(cepPipeline()->validateAgainstRecord($column, 'name', 'Alice', CepUser::find(1)))
+        ->toBe(['valid' => true, 'errors' => []])
+        ->and(CepUser::find(1)->name)->toBe('Carol');
+});
+
+it('reports the rule that failed', function () {
+    $column = Column::make('name')->editableRules(fn () => ['required', 'min:3']);
+
+    $result = cepPipeline()->validateAgainstRecord($column, 'name', 'ab', CepUser::find(1));
+
+    expect($result['valid'])->toBeFalse()
+        ->and($result['errors'])->not->toBeEmpty();
+});
+
+it('passes a column with no rules', function () {
+    expect(cepPipeline()->validateAgainstRecord(Column::make('name'), 'name', '', CepUser::find(1)))
+        ->toBe(['valid' => true, 'errors' => []]);
+});
+
+it('lets rules depend on the record they are checked against', function () {
+    // getEditableRules() takes the record for a reason, and the live check has
+    // one — so a rule that tightens for a locked row must tighten here too, not
+    // only at commit.
+    $column = Column::make('name')->editableRules(
+        fn (?Model $record): array => $record?->locked ? ['min:10'] : ['min:3'],
+    );
+
+    expect(cepPipeline()->validateAgainstRecord($column, 'name', 'Alice', CepUser::find(1))['valid'])->toBeTrue()
+        ->and(cepPipeline()->validateAgainstRecord($column, 'name', 'Alice', CepUser::find(2))['valid'])->toBeFalse();
+});
+
+it('validates the value that would be stored, not the one that was typed', function () {
+    // The reason this shares dehydrate() with the commit path rather than
+    // repeating it: a check that validates raw input and then stores something
+    // else has told the user nothing. The column trims on write, so "  ab  "
+    // is two characters once stored, however long it looked.
+    $column = TextInputColumn::make('name')->trim()->rules(['min:3']);
+
+    expect(cepPipeline()->validateAgainstRecord($column, 'name', '  ab  ', CepUser::find(1))['valid'])
+        ->toBeFalse()
+        ->and(cepPipeline()->validateAgainstRecord($column, 'name', '  abc  ', CepUser::find(1))['valid'])
+        ->toBeTrue();
+});

@@ -119,6 +119,56 @@ final class CellEditPipeline
     }
 
     /**
+     * Validate a value against a record, without writing anything.
+     *
+     * The live check behind an editable cell: the client asks "would this
+     * save?" while the user is still typing, so it must see the same rules and
+     * the same dehydrated value the commit would — a check that validates the
+     * raw input and then stores something else has told the user nothing.
+     *
+     * Which is why this shares {@see dehydrate()} rather than repeating it.
+     * Its previous home spelled `$column->dehydrateState($value, $record)` out
+     * again, and a second copy of a rule is a rule that will diverge from the
+     * commit path without anything failing.
+     *
+     * A column carrying its own `validate()` — `TextInputColumn` does — answers
+     * for itself; that is the column's contract, not something to route around.
+     *
+     * @return array{valid: bool, errors: array<int, string>}
+     */
+    public function validateAgainstRecord(Column $column, string $columnName, mixed $value, Model $record): array
+    {
+        $value = $this->dehydrate($column, $value, $record);
+
+        if (method_exists($column, 'validate')) {
+            /** @var array{valid: bool, errors: array<int, string>} $result */
+            $result = $column->validate($value, $record);
+
+            return $result;
+        }
+
+        $rules = $column->getEditableRules($record);
+
+        if ($rules === []) {
+            return ['valid' => true, 'errors' => []];
+        }
+
+        $result = $this->validator->validate(
+            [$columnName => $value],
+            [$columnName => $rules],
+        );
+
+        if (! $result->failed()) {
+            return ['valid' => true, 'errors' => []];
+        }
+
+        return [
+            'valid' => false,
+            'errors' => $result->getError($columnName) ?? [],
+        ];
+    }
+
+    /**
      * The record-aware half: per-record permission, optimistic lock, the
      * record-aware dehydrate and validation, then the write.
      *
