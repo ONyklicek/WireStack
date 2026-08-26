@@ -12,8 +12,6 @@ use Illuminate\Contracts\Pagination\Paginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
-use Illuminate\Database\Eloquent\Relations\MorphOneOrMany;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -57,6 +55,7 @@ use NyonCode\WireTable\Import\TableImport;
 use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
 use NyonCode\WireTable\Preferences\TablePreferenceManager;
 use NyonCode\WireTable\Services\CellEditPipeline;
+use NyonCode\WireTable\Services\SubRowQuery;
 use NyonCode\WireTable\Services\SummaryBatch;
 use NyonCode\WireTable\Services\SummarySet;
 use NyonCode\WireTable\Services\TableQueryCacheKey;
@@ -1994,26 +1993,15 @@ trait WithTable
     protected function buildSubRowGrandTotalQuery(string $scope = 'query'): ?Builder
     {
         $table = $this->getTable();
-        $relationName = $table->getSubRowRelation();
+        $relation = app(SubRowQuery::class)->open($table);
 
-        if ($relationName === null) {
+        if ($relation === null) {
             return null;
         }
 
-        $relation = $table->getQuery()->getModel()->{$relationName}();
-
-        if (! $relation instanceof HasOneOrMany) {
-            return null;
-        }
-
-        $childQuery = $relation->getRelated()->newQuery();
-
-        if ($relation instanceof MorphOneOrMany) {
-            $childQuery->where($relation->getQualifiedMorphType(), $relation->getMorphClass());
-        }
-
-        $foreignKey = $relation->getQualifiedForeignKeyName();
-        $localKey = $relation->getLocalKeyName();
+        $childQuery = $relation->children;
+        $foreignKey = $relation->foreignKey;
+        $localKey = $relation->localKey;
 
         if ($scope === 'page') {
             // Paginators forward collection calls, so pluck() works on both.
