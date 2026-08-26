@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Foundation\Concerns;
 
-use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
+use NyonCode\WireCore\Foundation\Support\StateWriter;
 
 /**
  * Canonical owner of the reactive `$get` / `$set` / `$state` accessors injected
@@ -63,10 +63,10 @@ trait InteractsWithState
             },
             'set' => static function (string $path, mixed $value) use ($livewire, $resolvePath): mixed {
                 if ($livewire !== null) {
-                    // Route through the canonical StateContainer-aware writer: inside a
-                    // table action modal the bag is a StateContainer, and a plain
-                    // data_set() would silently drop the write.
-                    StateContainer::writeInto($livewire, $resolvePath($path), $value);
+                    // Route through the canonical bag-aware writer: inside a table
+                    // action modal the state under the path is a WritableStateBag,
+                    // and a plain data_set() would silently drop the write.
+                    StateWriter::write($livewire, $resolvePath($path), $value);
                 }
 
                 return $value;

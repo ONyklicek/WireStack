@@ -113,10 +113,6 @@ function coreLayerDebt(): array
         'Foundation/Schema/Section.php' => ['Actions' => 1],
         'Foundation/View/WidgetGrid.php' => ['Widgets' => 1],
 
-        // Foundation -> Core. The one runtime call: it writes through a
-        // StateContainer and wants a contract to write through instead.
-        'Foundation/Concerns/InteractsWithState.php' => ['Core' => 1],
-
         // What is left of the cycle, now one-directional: an action opens a
         // modal. `Modals\Wizard` no longer reaches back — it asks for
         // `Foundation\Contracts\WizardStep` instead of `Actions\ModalStep`.
@@ -262,10 +258,10 @@ it('carries the debt it was written with, and no more', function () {
     // import can be silenced by adding it to coreLayerDebt(). These two ceilings
     // are what make that a visible act. They are the numbers as of the day the
     // rule got enforced — 13 file/target pairs, 19 imports — and they ratchet
-    // down as the debt is paid, never up. Down to 11 and 17 since.
-    expect(count(flattenCoreEdges(coreLayerDebt())))->toBeLessThanOrEqual(11)
+    // down as the debt is paid, never up. Down to 10 and 16 since.
+    expect(count(flattenCoreEdges(coreLayerDebt())))->toBeLessThanOrEqual(10)
         ->and(array_sum(array_map(
             fn (array $targets): int => array_sum($targets),
             coreLayerDebt(),
-        )))->toBeLessThanOrEqual(17);
+        )))->toBeLessThanOrEqual(16);
 });

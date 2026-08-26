@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Core\State;
 
+use NyonCode\WireCore\Foundation\Contracts\WritableStateBag;
+use NyonCode\WireCore\Foundation\Support\StateWriter;
+
 /**
  * Central state container replacing multiple Livewire properties.
  *
@@ -17,7 +20,7 @@ namespace NyonCode\WireCore\Core\State;
  * overloaded element" notice.
  */
 /** @implements \ArrayAccess<string, mixed> */
-final class StateContainer implements \ArrayAccess
+final class StateContainer implements \ArrayAccess, WritableStateBag
 {
     /** @var array<string, mixed> */
     private array $state;
@@ -180,32 +183,7 @@ final class StateContainer implements \ArrayAccess
      */
     public static function writeInto(object $host, string $path, mixed $value): void
     {
-        $segments = explode('.', $path);
-        $current = $host;
-
-        foreach ($segments as $index => $segment) {
-            $child = match (true) {
-                is_object($current) => $current->{$segment} ?? null,
-                is_array($current) => $current[$segment] ?? null,
-                default => null,
-            };
-
-            if ($child instanceof self) {
-                $subPath = implode('.', array_slice($segments, $index + 1));
-
-                if ($subPath === '') {
-                    $child->replace(is_array($value) ? $value : []);
-                } else {
-                    $child->set($subPath, $value);
-                }
-
-                return;
-            }
-
-            $current = $child;
-        }
-
-        data_set($host, $path, $value);
+        StateWriter::write($host, $path, $value);
     }
 
     /**
