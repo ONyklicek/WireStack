@@ -2,7 +2,13 @@
 
 ## Status
 
-PROPOSED
+ACCEPTED — 2026-08-26.
+
+All four open questions below were closed in
+[`v2.0-datasource-implementation.md`](../plans/v2.0-datasource-implementation.md) §2.
+A fifth, which that plan did not see, was raised by the
+[V2 audit](../plans/v2-audit-2026-08-26.md) §2.1 and decided by the repo owner
+the same day — see "Open questions", now answered rather than open.
 
 Gate for **V2.0** (`architecture/plans/v2-master-plan.md`). Builds on ADR 0013
 (Unified Data UI Engine) and serves ADR 0017 invariant C (headless table engine)
@@ -225,18 +231,35 @@ parallel one.
 - **BC surface:** `Builder` leaks through several public signatures; each needs a
   deprecation shim, not a rename.
 
-## Open questions
+## Open questions — answered
 
-1. Does `Model` implement `RecordContract` directly, or only via an
-   `EloquentRecord` wrapper? (Directly = fewer allocations; wrapper = cleaner
-   boundary and no framework-class edit.)
-2. Where do **metadata/capabilities** come from for a non-Eloquent source that
-   has no DB schema to introspect? (Explicit declaration API vs. inference from
-   sample rows — ties into ADR 0013 metadata registry and v2-deferred #2.)
-3. Is pagination `LengthAware` only, or do we also model cursor/simple paging in
-   `PagingRequest` from day one?
-4. Do exports/imports consume `DataSource` too, or keep their own path in V2.0
-   (they already stream from the filtered query)?
+1. **`Model` directly, or an `EloquentRecord` wrapper?** → **Wrapper.** Lazy, and
+   only on the record-resolution seam; the list-render path stays on native
+   models in V2.0.a, so there is no allocation regression on the hot list.
+   `unwrap()` returns the model for code that still wants one.
+2. **Where do metadata/capabilities come from for a non-Eloquent source?** →
+   **Out of scope for V2.0.** The source declares its capabilities explicitly;
+   auto-resolution is V2.2 (v2-deferred #2).
+3. **Length-aware only, or cursor and simple from day one?** → **All three**,
+   because `WithTable::paginateQuery()` already switches on all three. Modelled
+   as `PagingMode`.
+4. **Do exports consume `DataSource`?** → **In V2.0.c**, not before. Import stays
+   out — it is write-side.
+5. **What happens to the part of the query `QueryPlan` cannot describe?**
+   Raised by the audit: `TableQueryService::buildQuery()` keeps going after
+   `QueryExecutor::execute()` with user closures typed `Builder`,
+   `Column::applyFilter()`, `StableOrder` and the `table.queried` hook.
+   → **Capability degradation.** A source declares what it can answer; an aspect
+   the plan asks for that the source has not claimed raises
+   `UnsupportedQueryAspectException`. The Eloquent path keeps every post-execute
+   step exactly as today, and a non-Eloquent source refuses loudly rather than
+   returning a result that quietly ignores half the query. Two of the seven
+   steps — explicit eager loads and `AggregateSubqueries` — are plannable and
+   move into `QueryPlan` instead, since it already has the fields for them.
+
+   This is the smallest change that keeps the boundary invariant in
+   "Boundary invariants" true, and it is the policy this ADR already states;
+   the audit's contribution was finding how much of the query it has to cover.
 
 ## References
 
