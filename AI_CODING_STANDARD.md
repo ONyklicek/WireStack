@@ -42,6 +42,46 @@ interface CanBeHidden
 One interface represents exactly one capability. Never create large interfaces
 containing unrelated methods.
 
+## Adapters
+
+An abstraction introduced over behaviour that already works is a **layer** over
+the existing implementation, never a second implementation of it. Extract the
+logic to one owner and have the old call site delegate.
+
+```php
+// Wrong — the new class retypes what WithTable already does.
+final class EloquentDataSource
+{
+    public function changeToken(): ?string
+    {
+        $base = $this->query->toBase();
+        $base->selectRaw('COUNT(*) …');   // second copy, already drifting
+    }
+}
+
+// Right — the logic moves here, and the old caller delegates.
+protected function computePollChecksum(): ?string
+{
+    $token = (new EloquentDataSource($query))->changeToken(new QueryPlan);
+
+    return $token === null ? null : $token.'|'.$generation;
+}
+```
+
+Two copies of the same logic diverge immediately, and the new copy is the one
+nobody has exercised — its tests test the copy. Measured here: within one commit
+a new adapter had lost four guards the original had, two of them producing wrong
+SQL.
+
+If the original is a `protected` method on a trait and therefore unreachable,
+that is a signal to extract it, not a licence to retype it. Where the old caller
+holds a differently-shaped input — a narrowed builder rather than a base one —
+it constructs the adapter over *its* input rather than changing which input the
+logic sees.
+
+"Temporarily, until the wiring lands" is not an exception. Land the wiring in the
+same change.
+
 ## Traits
 
 Traits provide reusable implementations. A trait implements a single capability,
