@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Core\Data;
 
+use Illuminate\Contracts\Pagination\CursorPaginator;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\Pagination\Paginator;
 use Illuminate\Support\Collection;
 use NyonCode\WireCore\Core\Capabilities\CapabilitySet;
@@ -40,9 +42,14 @@ interface DataSource
     /**
      * The main dataset, as the paginator the views already consume.
      *
-     * @return Paginator<int, mixed>
+     * The union is not laziness: `CursorPaginator` does **not** implement
+     * `Paginator` — Laravel models keyset paging as a separate contract — so a
+     * single return type would have made cursor mode unreachable. This is the
+     * same union `WithTable::paginateQuery()` already declares.
+     *
+     * @return LengthAwarePaginator<int, mixed>|Paginator<int, mixed>|CursorPaginator<int, mixed>
      */
-    public function paginate(QueryPlan $plan, PagingRequest $paging): Paginator;
+    public function paginate(QueryPlan $plan, PagingRequest $paging): LengthAwarePaginator|Paginator|CursorPaginator;
 
     /**
      * The whole dataset, unpaginated — exports, and "select all matching".
