@@ -180,7 +180,23 @@ shim removalu (seznam BC breaků pro 2.0). F1 je 1.9, neblokuje V2.
 
 ## Fáze V2
 
-### V2.0 — Odemčení read-cesty (`DataSource` kontrakt) 🔴 strategický strop
+### V2.0 — Odemčení read-cesty (`DataSource` kontrakt) — **HOTOVO 2026-08-26**
+
+> Všechny tři podfáze doběhly. Exit kritérium splněno: tabulka běží nad
+> `Collection` zdrojem bez modelu i builderu, Eloquent cesta beze změny chování.
+>
+> - **.a** kontrakt + `EloquentDataSource`; `paginateQuery`, nepaginované čtení
+>   i poll token delegují na zdroj (nulová duplicita — `simplePaginate`,
+>   `cursorPaginate` a `PER_PAGE_ALL` existují v repu právě jednou).
+> - **.b** `RecordContract` + `EloquentRecord`/`ArrayRecord`; čtyři resolution
+>   místa přes zdroj, unwrap na hranici. Rollupy nad výběrem a zámek fill handlu
+>   zůstávají na builderu — kontrakt je vyjádřit neumí, a to je zapsané.
+> - **.c** `CollectionDataSource`, export přes `chunk()`, docs EN/CS + boost.
+>   `->query()`/`getQuery()` **nedeprecated** (viz plán .c).
+>
+> Odchylky od původního plánu a jejich důvody jsou v
+> [`v2.0-datasource-implementation.md`](v2.0-datasource-implementation.md);
+> ADR 0019 je ACCEPTED.
 
 **Proč první:** dnes bounded context nemůže tabulku nakrmit read modelem/DTO/API
 zdrojem — celá read pipeline cílí na `Illuminate\…\Builder`. Bez tohoto je čisté
