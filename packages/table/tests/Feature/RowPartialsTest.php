@@ -10,6 +10,7 @@ use Livewire\Livewire;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Columns\TextInputColumn;
 use NyonCode\WireTable\Concerns\WithTable;
+use NyonCode\WireTable\Support\TablePartials;
 use NyonCode\WireTable\Table;
 
 /**
@@ -284,16 +285,17 @@ it('queues nothing at all when no record moved', function () {
     // a response carrying a fresh total but no row would be a partial truth, and
     // the coverage rule exists to keep those off the wire.
     //
-    // Called directly because neither in-repo caller can produce an empty set —
-    // refreshTable() returns earlier when nothing changed, and the write path
-    // always passes the one record it wrote. The guard is for a host that
-    // computes its own moved set, which the protected seam invites.
+    // Asked of the owner directly because neither in-repo caller can produce an
+    // empty set — refreshTable() returns earlier when nothing changed, and the
+    // write path always passes the one record it wrote. The guard is for a host
+    // that computes its own moved set.
     $test = Livewire::test(RpHost::class, ['summaries' => true, 'stacked' => true]);
     $instance = $test->instance();
 
-    (function () {
-        $this->queueSatellitePartials($this->getTable(), $this->tableRenderPlan(), []);
+    $partials = (function () {
+        return TablePartials::for($this->getTable(), $this, $this->tableRenderPlan())->satellites([]);
     })->call($instance);
 
-    expect($test->effects['wirePartials'] ?? null)->toBeNull();
+    expect($partials)->toBe([])
+        ->and($test->effects['wirePartials'] ?? null)->toBeNull();
 });

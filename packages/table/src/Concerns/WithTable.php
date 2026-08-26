@@ -58,10 +58,10 @@ use NyonCode\WireTable\Services\TableQueryCacheKey;
 use NyonCode\WireTable\Services\TableQueryEvents;
 use NyonCode\WireTable\Services\TableQueryService;
 use NyonCode\WireTable\Services\WriteGeneration;
-use NyonCode\WireTable\Support\CardRenderer;
 use NyonCode\WireTable\Support\CellEditOutcome;
 use NyonCode\WireTable\Support\RowRenderer;
-use NyonCode\WireTable\Support\SummaryRenderer;
+use NyonCode\WireTable\Support\RowStamps;
+use NyonCode\WireTable\Support\TablePartials;
 use NyonCode\WireTable\Support\TableRenderPlan;
 use NyonCode\WireTable\Table;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -619,31 +619,23 @@ trait WithTable
         }
 
         $key = $table->getPrimaryKey();
-        $records = $this->getTableRecords();
 
-        $stamps = [];
         $ordered = [];
 
-        foreach ($records as $record) {
-            $recordKey = (string) $record->{$key};
-            $ordered[$recordKey] = $record;
-            $stamps[$recordKey] = crc32((string) json_encode($record->getAttributes()));
+        foreach ($this->getTableRecords() as $record) {
+            $ordered[(string) $record->{$key}] = $record;
         }
 
-        $previous = $this->tableState->get('polling.rows');
+        $stamps = RowStamps::of($ordered, $key);
+        $changed = RowStamps::changed($this->tableState->get('polling.rows'), $stamps);
+
         $this->tableState->set('polling.rows', $stamps);
 
-        // First poll of this page, or the page itself changed: nothing partial can
-        // describe it.
-        if (! is_array($previous) || array_keys($previous) !== array_keys($stamps)) {
+        // Null, not empty: the page holds different rows than last time, so no
+        // per-row partial can describe what happened and the full render stands.
+        if ($changed === null) {
             return;
         }
-
-        $changed = array_keys(array_filter(
-            $stamps,
-            fn (int $stamp, string $recordKey): bool => ($previous[$recordKey] ?? null) !== $stamp,
-            ARRAY_FILTER_USE_BOTH,
-        ));
 
         // Nothing moved, and this knew it per row rather than from a checksum over
         // the set — so the poll can answer with nothing at all. That is the common
@@ -654,88 +646,15 @@ trait WithTable
             return;
         }
 
-        $plan = $this->tableRenderPlan();
-        $rows = RowRenderer::for($table, $this, $plan);
+        $partials = TablePartials::for($table, $this, $this->tableRenderPlan());
+        $moved = array_intersect_key($ordered, array_flip($changed));
 
-        $index = 0;
-        $moved = [];
-
-        foreach ($ordered as $recordKey => $record) {
-            $position = $index++;
-
-            if (! in_array($recordKey, $changed, true)) {
-                continue;
-            }
-
-            $moved[$recordKey] = $record;
-
-            $this->renderPartial(
-                'row-'.$recordKey,
-                fn (): string => $rows->render($record, $position),
-            );
+        foreach ($partials->rows($ordered, $changed) as $name => $html) {
+            $this->renderPartial($name, $html);
         }
 
-        $this->queueSatellitePartials($table, $plan, $moved);
-    }
-
-    /**
-     * Everything else a changed record moves: its card, and the totals.
-     *
-     * A row is never the whole answer. The card is the same record rendered again
-     * for the width where the table is hidden — refresh one and not the other and
-     * a phone shows the old value while a desktop shows the new one. The totals
-     * are computed over the whole filtered set, so any write moves them, and they
-     * sit outside every row.
-     *
-     * The totals are queued **once** however many records moved: they are one
-     * region, and `computeTableSummaries()` memoises them per render anyway.
-     *
-     * @param  array<string, Model>  $records
-     */
-    protected function queueSatellitePartials(Table $table, TableRenderPlan $plan, array $records): void
-    {
-        if ($records === []) {
-            return;
-        }
-
-        if ($table->isStackedOnMobile()) {
-            $cards = CardRenderer::for($table, $this, $plan);
-
-            foreach ($records as $recordKey => $record) {
-                $this->renderPartial(
-                    'card-'.$recordKey,
-                    fn (): string => $cards->render($record),
-                );
-            }
-        }
-
-        $summaries = SummaryRenderer::for($table, $this, $plan);
-
-        // A group's subtotal is moved by a write to any of its members, and it is
-        // a sibling row rather than part of one — so each changed record's group
-        // is re-rendered too, once however many of its rows moved.
-        if ($this->tableHasGroupSummaries()) {
-            $groups = [];
-
-            foreach ($records as $record) {
-                $groups[(string) $table->getGroupComparisonKey($record)] ??= $table->getGroupComparisonKey($record);
-            }
-
-            foreach ($groups as $groupValue) {
-                foreach ($summaries->group($groupValue) as $name => $html) {
-                    $this->renderPartial($name, fn (): string => $html);
-                }
-            }
-        }
-
-        if (! $this->tableHasSummaries()) {
-            return;
-        }
-
-        $this->renderPartial('summary', fn (): string => $summaries->desktop());
-
-        if ($table->isStackedOnMobile()) {
-            $this->renderPartial('summary-mobile', fn (): string => $summaries->mobile());
+        foreach ($partials->satellites($moved) as $name => $html) {
+            $this->renderPartial($name, $html);
         }
     }
 
@@ -2502,8 +2421,7 @@ trait WithTable
                 continue;
             }
 
-            $plan = $this->tableRenderPlan();
-            $renderer = RowRenderer::for($table, $this, $plan);
+            $renderer = RowRenderer::for($table, $this, $this->tableRenderPlan());
 
             $this->skipIslandsRender();
             $this->renderPartial(
@@ -2511,7 +2429,15 @@ trait WithTable
                 fn (): string => $renderer->render($record, (int) $index),
             );
 
-            $this->queueSatellitePartials($table, $plan, [$recordKey => $record]);
+            // The one row is rendered here rather than through TablePartials
+            // because its position is known already; everything the write moves
+            // *around* it goes through the same owner as the poll path.
+            $satellites = TablePartials::for($table, $this, $this->tableRenderPlan())
+                ->satellites([$recordKey => $record]);
+
+            foreach ($satellites as $name => $html) {
+                $this->renderPartial($name, $html);
+            }
 
             return;
         }
