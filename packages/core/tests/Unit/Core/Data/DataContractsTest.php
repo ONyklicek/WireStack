@@ -38,13 +38,19 @@ it('builds a cursor request that carries a cursor instead of a page', function (
     expect($paging->mode)->toBe(PagingMode::Cursor)
         ->and($paging->cursor)->toBe('eyJpZCI6NDJ9')
         ->and($paging->pageName)->toBe('cursor')
-        // Keyset paging has no page number; the field keeps its default rather
-        // than pretending to mean something.
-        ->and($paging->page)->toBe(1);
+        // Keyset paging has no page number at all.
+        ->and($paging->page)->toBeNull();
 });
 
 it('starts a cursor request with no cursor at all', function () {
     expect(PagingRequest::cursor(50)->cursor)->toBeNull();
+});
+
+it('leaves the page unset, so the paginator resolves it itself', function () {
+    // Livewire's WithPagination owns the current page; a request that named one
+    // would bypass setPage()/resetPage() and the table would stop paging.
+    expect(PagingRequest::lengthAware(10)->page)->toBeNull()
+        ->and(PagingRequest::simple(10)->page)->toBeNull();
 });
 
 it('accepts a custom page name, so two tables can page independently', function () {

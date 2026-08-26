@@ -24,6 +24,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\Concerns\InteractsWithActions;
+use NyonCode\WireCore\Core\Data\PagingRequest;
 use NyonCode\WireCore\Core\Events\CellUpdating;
 use NyonCode\WireCore\Core\Events\TableFiltered;
 use NyonCode\WireCore\Core\Events\TableFiltering;
@@ -1226,28 +1227,31 @@ trait WithTable
     {
         $perPage = (int) $this->tableState->get('pagination.perPage', 10);
 
-        if ($perPage === Table::PER_PAGE_ALL) {
-            // The sentinel cannot be handed to the paginator: a negative limit
-            // is silently dropped by the query builder (so the rows would be
-            // right) while the paginator still divides the total by it (so the
-            // page count would be negative). Counting first is what makes "all"
-            // one honest page — and max(1) keeps an empty table from dividing
-            // by zero.
-            $perPage = max(1, $query->toBase()->getCountForPagination());
-        }
-
-        return match ($table->getPaginationMode()) {
-            'simple' => $query->simplePaginate($perPage),
-            // The cursor comes from table state rather than the request: Livewire's
-            // pagination is page-based and has no cursor of its own to read.
-            'cursor' => $query->cursorPaginate(
-                $perPage,
-                ['*'],
-                'cursor',
-                $this->tableState->get('pagination.cursor'),
-            ),
-            default => $query->paginate($perPage),
+        // The PER_PAGE_ALL sentinel is resolved by the source, which is where
+        // the count it needs lives; it arrives here as a negative perPage and
+        // leaves as one honest page.
+        $paging = match ($table->getPaginationMode()) {
+            'simple' => PagingRequest::simple($perPage),
+            // The cursor comes from table state rather than the request:
+            // Livewire's pagination is page-based and has no cursor of its own
+            // to read.
+            'cursor' => PagingRequest::cursor($perPage, $this->tableState->get('pagination.cursor')),
+            default => PagingRequest::lengthAware($perPage),
         };
+
+        // Built over this query — already searched, filtered and sorted — rather
+        // than the table's own source, which wraps the base query. Same reason
+        // the poll token is: what gets paged is this set, not the table's.
+        $source = new EloquentDataSource($query);
+
+        // The plan the query was built from, so a source that has to honour it
+        // itself can. EloquentDataSource does not need it — this query is
+        // already narrowed — but the contract is the same for every source, and
+        // handing it an empty plan would be a lie about what was asked for.
+        return $source->paginate(
+            $this->getQueryService()->getLastPlan() ?? new QueryPlan,
+            $paging,
+        );
     }
 
     /**
