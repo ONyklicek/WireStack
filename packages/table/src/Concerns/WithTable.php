@@ -24,10 +24,6 @@ use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\Concerns\InteractsWithActions;
 use NyonCode\WireCore\Core\Data\PagingRequest;
 use NyonCode\WireCore\Core\Events\CellUpdating;
-use NyonCode\WireCore\Core\Events\TableFiltered;
-use NyonCode\WireCore\Core\Events\TableFiltering;
-use NyonCode\WireCore\Core\Events\TableSearched;
-use NyonCode\WireCore\Core\Events\TableSearching;
 use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\Support\Deprecation;
@@ -59,6 +55,7 @@ use NyonCode\WireTable\Services\SubRowQuery;
 use NyonCode\WireTable\Services\SummaryBatch;
 use NyonCode\WireTable\Services\SummarySet;
 use NyonCode\WireTable\Services\TableQueryCacheKey;
+use NyonCode\WireTable\Services\TableQueryEvents;
 use NyonCode\WireTable\Services\TableQueryService;
 use NyonCode\WireTable\Services\WriteGeneration;
 use NyonCode\WireTable\Support\CardRenderer;
@@ -1483,43 +1480,23 @@ trait WithTable
         $sortDirection = $this->tableState->get('sort.direction', '') ?: ($table->getDefaultSortDirection() ?? 'asc');
         $columnFilters = $this->tableState->get('columnFilters', []);
 
-        // Dispatch search event
-        if ($search) {
-            $searchableColumns = [];
-            foreach ($table->getColumns() as $col) {
-                if ($col->isSearchable()) {
-                    $searchableColumns[] = $col->getName();
-                }
-            }
-            event(new TableSearching($tableId, $search, $searchableColumns));
-        }
-
-        // Dispatch filter event
-        $activeFilters = array_filter($filters, fn ($v) => $v !== null && $v !== '' && $v !== []);
-        if (! empty($activeFilters)) {
-            event(new TableFiltering($tableId, $activeFilters));
-        }
-
-        $query = $this->getQueryService()->buildQuery(
-            baseQuery: $baseQuery,
-            table: $table,
-            search: $search,
-            filterValues: $filters,
-            sortColumn: ! empty($sortColumn) ? $sortColumn : null,
-            sortDirection: $sortDirection,
-            columnFilterValues: $columnFilters,
+        // The four search/filter events bracket the build, so their two halves
+        // cannot come apart — see TableQueryEvents.
+        $query = app(TableQueryEvents::class)->around(
+            $tableId,
+            $table,
+            $search,
+            $filters,
+            fn (): Builder => $this->getQueryService()->buildQuery(
+                baseQuery: $baseQuery,
+                table: $table,
+                search: $search,
+                filterValues: $filters,
+                sortColumn: ! empty($sortColumn) ? $sortColumn : null,
+                sortDirection: $sortDirection,
+                columnFilterValues: $columnFilters,
+            ),
         );
-
-        // Post-search event
-        if ($search) {
-            // Count is deferred — we dispatch with -1 as a signal that count is not yet known
-            event(new TableSearched($tableId, $search, -1));
-        }
-
-        // Post-filter event
-        if (! empty($activeFilters)) {
-            event(new TableFiltered($tableId, $activeFilters, -1));
-        }
 
         $query = $this->applyGroupOrdering($query);
 
