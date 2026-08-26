@@ -13,6 +13,7 @@ use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Core\Capabilities\CapabilitySet;
 use NyonCode\WireCore\Core\Data\DataSource;
 use NyonCode\WireCore\Core\Data\PagingRequest;
+use NyonCode\WireCore\Core\Data\RecordContract;
 use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireCore\Core\Query\SortClause;
 use NyonCode\WireCore\Exceptions\UnsupportedQueryAspectException;
@@ -146,6 +147,44 @@ it('scopes the token to the query, not the table', function () {
         ->and(edsSource()->changeToken(new QueryPlan))->toStartWith('7|');
 });
 
+// ─── Record resolution ───────────────────────────────────────────────────────
+
+it('resolves one record by key, as a contract that unwraps to the model', function () {
+    $record = edsSource()->resolveRecord(3);
+
+    expect($record)->toBeInstanceOf(RecordContract::class)
+        ->and($record->getKey())->toBe(3)
+        ->and($record->get('name'))->toBe('row 3')
+        ->and($record->unwrap())->toBeInstanceOf(EdsRow::class)
+        ->and($record->toArray()['name'])->toBe('row 3');
+});
+
+it('answers null for a key the query does not match', function () {
+    expect(edsSource()->resolveRecord(999))->toBeNull()
+        // Scoped to the query, not the table: a key outside the narrowed set is
+        // as absent as one that does not exist.
+        ->and((new EloquentDataSource(EdsRow::query()->where('name', 'row 1')))->resolveRecord(2))->toBeNull();
+});
+
+it('resolves several records by key', function () {
+    $records = edsSource()->resolveRecords([2, 4]);
+
+    expect($records)->toHaveCount(2)
+        ->and($records->map(fn (RecordContract $r) => $r->get('name'))->all())
+        ->toBe(['row 2', 'row 4']);
+});
+
+it('answers an empty list for no keys, without asking the database', function () {
+    // whereIn() with an empty list is `where 0 = 1` on some grammars and a
+    // syntax error on others, so this branch is not an optimisation.
+    expect(edsSource()->resolveRecords([]))->toHaveCount(0);
+});
+
+it('drops keys that do not match rather than failing on them', function () {
+    expect(edsSource()->resolveRecords([1, 999])->map(fn (RecordContract $r) => $r->getKey())->all())
+        ->toBe([1]);
+});
+
 // ─── Capabilities and degradation ────────────────────────────────────────────
 
 it('declares everything an Eloquent builder can be asked for', function () {
@@ -184,6 +223,20 @@ it('lets a source that cannot sort say so, and refuse loudly', function () {
         public function count(QueryPlan $plan): int
         {
             return 0;
+        }
+
+        public function resolveRecord(int|string $key): ?RecordContract
+        {
+            return null;
+        }
+
+        /**
+         * @param  array<int, int|string>  $keys
+         * @return Collection<int, RecordContract>
+         */
+        public function resolveRecords(array $keys): Collection
+        {
+            return new Collection;
         }
 
         public function capabilities(): CapabilitySet

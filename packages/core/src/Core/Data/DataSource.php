@@ -64,6 +64,27 @@ interface DataSource
     public function count(QueryPlan $plan): int;
 
     /**
+     * One row by key, or null when the source has no such row.
+     *
+     * This is the seam an action asks "which record was clicked?" through. The
+     * framework unwraps before user code sees the answer — see
+     * {@see RecordContract}.
+     */
+    public function resolveRecord(int|string $key): ?RecordContract;
+
+    /**
+     * Several rows by key, for bulk actions and selections.
+     *
+     * Order is not promised: a caller that needs the keys' order must impose
+     * it, because a source is free to answer in whatever order its store
+     * returns.
+     *
+     * @param  array<int, int|string>  $keys
+     * @return Collection<int, RecordContract>
+     */
+    public function resolveRecords(array $keys): Collection;
+
+    /**
      * What this source can be asked to do.
      */
     public function capabilities(): CapabilitySet;

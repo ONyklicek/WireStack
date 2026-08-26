@@ -1172,7 +1172,7 @@ trait WithTable
             return $this->paginateQuery($table, $query);
         }
 
-        return $query->get();
+        return $this->readAll($query);
     }
 
     /**
@@ -1273,13 +1273,35 @@ trait WithTable
             app(WriteGeneration::class)->current($this->queryCacheScope($table)),
         );
 
+        // The cache sits *above* the source, not inside it. What makes an entry
+        // stale here is the write generation and the table's own view state —
+        // facts about this host, not about the dataset — so a source that knew
+        // how to cache would be caching the wrong thing.
         return Cache::remember($key, $ttl, function () use ($table, $query) {
             if ($table->isPaginated()) {
                 return $this->paginateQuery($table, $query);
             }
 
-            return $query->get();
+            return $this->readAll($query);
         });
+    }
+
+    /**
+     * Every matching row, unpaginated — the "no pagination" table and the
+     * cached form of it.
+     *
+     * Goes through the source for the same reason paging does: one owner for
+     * how rows are read, so a custom source is asked here too rather than only
+     * on the paged path.
+     *
+     * @param  Builder<Model>  $query
+     * @return Collection<int, mixed>
+     */
+    protected function readAll(Builder $query): Collection
+    {
+        return (new EloquentDataSource($query))->get(
+            $this->getQueryService()->getLastPlan() ?? new QueryPlan,
+        );
     }
 
     /**
@@ -2568,7 +2590,7 @@ trait WithTable
             return ['valid' => false, 'errors' => [__('wire-table::messages.column_not_found')]];
         }
 
-        $record = $table->getQuery()->find($recordKey);
+        $record = $table->getDataSource()->resolveRecord($recordKey)?->unwrap();
 
         if (! $record) {
             return ['valid' => false, 'errors' => [__('wire-table::messages.record_not_found')]];

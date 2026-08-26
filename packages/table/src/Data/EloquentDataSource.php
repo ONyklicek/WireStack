@@ -13,8 +13,10 @@ use Illuminate\Support\Collection;
 use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Core\Capabilities\CapabilitySet;
 use NyonCode\WireCore\Core\Data\DataSource;
+use NyonCode\WireCore\Core\Data\EloquentRecord;
 use NyonCode\WireCore\Core\Data\PagingMode;
 use NyonCode\WireCore\Core\Data\PagingRequest;
+use NyonCode\WireCore\Core\Data\RecordContract;
 use NyonCode\WireCore\Core\Query\QueryPlan;
 
 /**
@@ -68,6 +70,38 @@ final class EloquentDataSource implements DataSource
     public function count(QueryPlan $plan): int
     {
         return $this->query->count();
+    }
+
+    public function resolveRecord(int|string $key): ?RecordContract
+    {
+        $model = (clone $this->query)->find($key);
+
+        return $model === null ? null : new EloquentRecord($model);
+    }
+
+    /**
+     * @param  array<int, int|string>  $keys
+     * @return Collection<int, RecordContract>
+     */
+    public function resolveRecords(array $keys): Collection
+    {
+        if ($keys === []) {
+            // Not merely an optimisation: whereIn() with an empty list is
+            // `where 0 = 1` on some grammars and a syntax error on others.
+            return new Collection;
+        }
+
+        $query = clone $this->query;
+        $model = $query->getModel();
+
+        // Qualified, because a selection over a joined query is the ordinary
+        // case and both tables commonly have an `id`. Applied as a statement
+        // rather than chained, so the builder keeps its Eloquent type.
+        $query->whereIn($model->qualifyColumn($model->getKeyName()), $keys);
+
+        return $query->get()
+            ->map(fn (Model $record): RecordContract => new EloquentRecord($record))
+            ->values();
     }
 
     /**

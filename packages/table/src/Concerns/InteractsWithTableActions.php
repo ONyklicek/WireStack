@@ -291,7 +291,11 @@ trait InteractsWithTableActions
         }
 
         $table = $this->getTable();
-        $record = $table->getQuery()->find($recordKey);
+        // Through the source, and unwrapped straight away: the framework
+        // resolves by contract so a custom source is asked too, and hands
+        // user code a Model, which is what every action closure expects
+        // (ADR 0019 invariant 3, as amended).
+        $record = $table->getDataSource()->resolveRecord($recordKey)?->unwrap();
 
         if (! $record || ! $action->canExecute($record)) {
             return;

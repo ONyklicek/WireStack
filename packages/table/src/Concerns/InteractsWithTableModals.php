@@ -255,7 +255,7 @@ trait InteractsWithTableModals
 
         $table = $this->getTable();
 
-        return $table->getQuery()->where($table->getPrimaryKey(), $key)->first();
+        return $table->getDataSource()->resolveRecord($key)?->unwrap();
     }
 
     // ==========================================
@@ -337,7 +337,7 @@ trait InteractsWithTableModals
         }
 
         $table = $this->getTable();
-        $record = $table->getQuery()->where($table->getPrimaryKey(), $recordKey)->first();
+        $record = $table->getDataSource()->resolveRecord($recordKey)?->unwrap();
 
         if (! $record || ! $action->canExecute($record)) {
             return;
