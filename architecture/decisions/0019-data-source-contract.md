@@ -186,9 +186,28 @@ parallel one.
    (ADR 0017 invariant G, V2.4) is applied by/around the `DataSource`, so it
    holds for every source type — not just Eloquent (`table.querying` hook at
    priority `-100` composes with this).
-3. **Actions depend on `RecordContract`, not `Model`.** Concrete-model
-   convenience stays available on `EloquentDataSource` but is not required by the
-   engine.
+3. **Actions depend on `RecordContract`, not `Model` — *internally*.** The
+   engine's own resolution and dispatch go through the contract; concrete-model
+   convenience stays available on `EloquentDataSource` but is not required.
+
+   **Amended 2026-08-26: the contract stops at the user boundary.**
+   `ActionContext::$record` and `getRecord()` keep returning `?Model`, unwrapped
+   by the framework, so `->action(fn (Model $record) => …)` keeps working — in
+   tables and in standalone actions alike. As written, this invariant would have
+   broken every action closure a consumer has ever written, and standalone
+   actions hardest: an action on an infolist entry or a form field is invoked
+   with whatever the host holds, which today is always a model.
+
+   The cost is stated rather than hidden: **over a non-Eloquent source there is
+   no model to unwrap**, so an action that wants one is not available there.
+   That is the same capability degradation this ADR already applies to queries,
+   one level up — a source declares what it can offer and the engine refuses
+   loudly, rather than handing the closure something that is not what its
+   signature says.
+
+   Consequence for V2.0.b: the phase converts the *resolution seam*
+   (`find`/`where->first`/`whereIn->get`) and stops there. The 149 `Model $record`
+   signatures across 54 files are not in its scope.
 4. **`EloquentDataSource` is the compatibility anchor.** Any code path that does
    not opt into a custom source must behave byte-for-byte as V1.
 

@@ -17,6 +17,8 @@ use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireCore\Core\Query\SortClause;
 use NyonCode\WireCore\Exceptions\UnsupportedQueryAspectException;
 use NyonCode\WireTable\Data\EloquentDataSource;
+use NyonCode\WireTable\Exceptions\TableHasNoDataSourceException;
+use NyonCode\WireTable\Table;
 
 // ─── Fixture ─────────────────────────────────────────────────────────────────
 
@@ -207,4 +209,43 @@ it('keeps the Eloquent source answering what the limited one refuses', function 
     $sorted = new QueryPlan(sortClauses: [new SortClause('name')]);
 
     expect(edsSource()->count($sorted))->toBe(7);
+});
+
+// ─── Table wiring ────────────────────────────────────────────────────────────
+
+it('gives a table an Eloquent source it never asked for', function () {
+    $table = Table::make()->model(EdsRow::class);
+
+    expect($table->getDataSource())->toBeInstanceOf(EloquentDataSource::class)
+        ->and($table->hasCustomDataSource())->toBeFalse()
+        ->and($table->getDataSource()->count(new QueryPlan))->toBe(7);
+});
+
+it('memoises the default, so two asks are not two sources', function () {
+    $table = Table::make()->model(EdsRow::class);
+
+    expect($table->getDataSource())->toBe($table->getDataSource());
+});
+
+it('takes a source handed in, and says it was handed in', function () {
+    $given = new EloquentDataSource(EdsRow::query()->where('name', 'row 1'));
+    $table = Table::make()->model(EdsRow::class)->dataSource($given);
+
+    expect($table->getDataSource())->toBe($given)
+        ->and($table->hasCustomDataSource())->toBeTrue()
+        ->and($table->getDataSource()->count(new QueryPlan))->toBe(1);
+});
+
+it('still refuses a table with no source at all', function () {
+    expect(fn () => Table::make()->getDataSource())
+        ->toThrow(TableHasNoDataSourceException::class);
+});
+
+it('lets a source stand in for a model entirely', function () {
+    // The point of the opt-in: no model(), no query(), and the table still has
+    // somewhere to read from.
+    $table = Table::make()->dataSource(new EloquentDataSource(EdsRow::query()));
+
+    expect($table->getDataSource()->count(new QueryPlan))->toBe(7)
+        ->and($table->hasCustomDataSource())->toBeTrue();
 });

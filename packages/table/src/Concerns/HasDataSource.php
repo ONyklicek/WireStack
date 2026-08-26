@@ -7,6 +7,8 @@ namespace NyonCode\WireTable\Concerns;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Data\DataSource;
+use NyonCode\WireTable\Data\EloquentDataSource;
 use NyonCode\WireTable\Exceptions\TableHasNoDataSourceException;
 use NyonCode\WireTable\Services\TableQueryService;
 use NyonCode\WireTable\Table;
@@ -37,6 +39,19 @@ trait HasDataSource
     protected ?Builder $query = null;
 
     protected ?Closure $modifyQueryCallback = null;
+
+    /**
+     * Memoised once resolved, so a table asked twice does not build two sources
+     * over two clones of the base query.
+     */
+    protected ?DataSource $dataSource = null;
+
+    /**
+     * Tracked separately from `$dataSource` because that field is also the
+     * memoisation slot for the default — once `getDataSource()` has run, "is
+     * set" no longer means "was given".
+     */
+    protected bool $customDataSource = false;
 
     /** Build the table's rows from this Eloquent model. */
     public function model(string $model): static
@@ -128,5 +143,57 @@ trait HasDataSource
         }
 
         return $query;
+    }
+
+    /**
+     * Hand the table a data source of its own instead of letting it build one.
+     *
+     * The opt-in half of V2.0: a table fed by a read model, a DTO collection or
+     * an API declares its source here, and the engine asks that source what it
+     * can do rather than assuming Eloquent.
+     *
+     * @internal Until V2.0.c settles the public surface — the contract still
+     *           grows record resolution in V2.0.b, and a consumer who
+     *           implemented it now would be broken by that.
+     */
+    public function dataSource(DataSource $source): static
+    {
+        $this->dataSource = $source;
+        $this->customDataSource = true;
+
+        return $this;
+    }
+
+    /**
+     * The table's data source: the one it was given, or an Eloquent source over
+     * {@see getQuery()}.
+     *
+     * The fallback is what keeps every existing table working unchanged — a
+     * table that never heard of `DataSource` still has one, and it is the source
+     * whose behaviour is the V1 anchor.
+     *
+     * Note what the default is built from: the *base* query, before search,
+     * filters and sorting. `TableQueryService::buildQuery()` is still what
+     * narrows it, so this is not yet the whole read path — see the V2.0.a
+     * scope in `architecture/plans/v2.0-datasource-implementation.md`.
+     *
+     * @internal See {@see DataSource()}.
+     *
+     * @throws TableHasNoDataSourceException when neither a source, a model nor a query was given
+     */
+    public function getDataSource(): DataSource
+    {
+        return $this->dataSource ??= new EloquentDataSource($this->getQuery());
+    }
+
+    /**
+     * Whether a source was handed in rather than derived from a model or query.
+     *
+     * Asked by the engine before it assumes Eloquent-shaped behaviour it cannot
+     * express through the contract.
+     */
+    public function hasCustomDataSource(): bool
+    {
+        return $this->customDataSource;
     }
 }
