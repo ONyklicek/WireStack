@@ -48,6 +48,50 @@ přes **typed contracts** místo generic hooků (H).
 
 ---
 
+## Revize proti kódu (2026-08-26)
+
+Plán níže je z 6. 7. Mezi tím doběhla migrace na Livewire 4 a celá výkonnostní
+větev (render engine, islands, row/field partials), takže část jeho „ověřeného
+stavu" už neplatí. Tohle je přeměření, ne přepis záměru — fáze i jejich pořadí
+drží, mění se čísla, jména a jeden návrh.
+
+| Tvrzení plánu | Realita 2026-08-26 | Dopad |
+|---|---|---|
+| `WithTable` **3213 ř.**, 96 metod | **2855 ř., 102 metod** | V2.1(A) je menší, než plán počítal |
+| `Column` **1717 / 1749 ř.**, 139 metod | **1681 ř., 123 metod** | totéž pro V2.1(B) |
+| V2.1(A) čeká: `TableDataset`, `TableSelection`, `TableRenderState`, `TableActionRunner` | **render polovina hotová**, pod jinými jmény a jiným plánem — `table/src/Support/` má `TableRenderPlan` + sedm slice-plánů (`Column/Action/Layout/Paging/Interaction/Shell/RowRenderPlan`), `ColumnSet`, `TableQueryState`, `RowRenderer`, `CardRenderer`, `SummaryRenderer` | **viz níže — V2.1 se přepisuje** |
+| V2.0 zavede `DataSourceCapabilities` | `Core/Capabilities/{Capability,CapabilitySet}` mezitím vznikly a jsou kanonický slovník (čte je `QueryPlanner` i `Column`) | **návrh V2.0 se opravuje** — rozšířit enum, nezakládat druhý slovník (`CLAUDE.md` § kanonické vlastnictví) |
+| V2.0 mapa seamů s čísly řádků `WithTable.php:614-664` atd. | čísla posunutá, soubor přepsán render-engine prací | mapu seamů **znovu odvodit** před V2.0.a, nepřebírat |
+| V2.2: `SaveHandler` `app()`×8, `new`×6 | **beze změny, přesně tak** | V2.2(S1) platí doslova |
+| V2.2: `ActionPipeline` `new`×4 | **×6** | mírně větší, než plán psal |
+| V2.3/V2.4/V2.5 greenfield | **potvrzeno**: `Resource`, `ResourceRegistry`, `Workspace`, `NavigationItem`, `Tenancy`, `StateMachine`, `WorkflowState`, `SavedView`, `GlobalSearch` = 0 výskytů v `packages/*/src` | beze změny |
+| V2.1(B) chybí ERP typy sloupců | **potvrzeno**: žádný `StatusColumn`, `MoneyColumn`, `RelationColumn`, `MetricColumn` | beze změny |
+| V2.5 grouping hotový | potvrzeno (`HasGrouping`); saved views, presety i virtual scroll dál 0 | beze změny |
+| Pre-V2 **N6** shim removal | **hotovo 2026-08-26** — devět `class_alias` traitů pryč, migrace v `docs/upgrade.md`. Druhá půlka N6 (`Modals\Wizard` orphaned) byla už dřív uzavřena jako neplatná (`ddd-enterprise-roadmap.md:130`) | **vstupní brána do V2 je volná** |
+
+### Co z toho plyne pro V2.1
+
+Fáze se nemaže, ale její těžiště se posunulo. Render polovina — „resolve všechno
+v PHP, ať view jen echuje" — je hotová a stojí za ní vlastní benchmark. Co
+`WithTable` drží dál, je **chování**: query cesta, selection, akce, modaly,
+inline edit, polling, export. Kolaboranti, které plán jmenoval, ať tedy vzniknou
+kolem *toho*, a **ne pod jmény z plánu** — `TableRenderState` by dnes byl třetí
+název pro `TableRenderPlan`.
+
+### Co z toho plyne pro V2.0
+
+Fáze V2.0.a platí, se dvěma opravami: `capabilities()` vrací `CapabilitySet`
+(enum `Capability` se rozšíří o `Joinable`, `Paginable`, `SubRows`,
+`ChangeToken`), a seam mapa se přeměří proti dnešnímu `WithTable`.
+
+**Zbývá jedna brána, která není moje:** ADR 0019 je pořád `PROPOSED`, přestože
+`v2.0-datasource-implementation.md` §2 jeho čtyři otevřené otázky uzavírá
+(wrapper místo edice `Model`, Laravel paginator místo `DataResult`,
+`PagingRequest` se třemi režimy, export až v .c). Přijmout ADR je rozhodnutí
+vlastníka repa, ne implementace.
+
+---
+
 ## Ověřený stav (2026-07-06)
 
 **Hotovo (mimo V2 scope):** StateContainer + `TableStateSynthesizer` (WithTable
