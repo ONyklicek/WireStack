@@ -59,6 +59,21 @@ interface DataSource
     public function get(QueryPlan $plan): Collection;
 
     /**
+     * The whole dataset in batches, for callers that must not hold it all.
+     *
+     * Separate from {@see get()} on purpose. An export of a hundred thousand
+     * rows streams today through `chunkById()`, and routing it through `get()`
+     * would have turned a bounded-memory operation into an unbounded one — a
+     * regression dressed as a migration. So the contract grows the shape the
+     * caller actually needs rather than the caller losing what it had.
+     *
+     * The callback receives each batch and may return `false` to stop early.
+     *
+     * @param  callable(Collection<int, mixed>): mixed  $callback
+     */
+    public function chunk(QueryPlan $plan, int $size, callable $callback): void;
+
+    /**
      * How many rows the plan matches.
      */
     public function count(QueryPlan $plan): int;

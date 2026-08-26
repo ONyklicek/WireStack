@@ -67,6 +67,26 @@ final class EloquentDataSource implements DataSource
         return $this->query->get();
     }
 
+    /**
+     * Delegates to `chunkById()` rather than paging by offset, and passes the
+     * qualified key deliberately: an export query carries a LEFT JOIN whenever
+     * the table sorts by a relation column, and chunkById's default unqualified
+     * `id` cursor is ambiguous against the joined table.
+     *
+     * @param  callable(Collection<int, mixed>): mixed  $callback
+     */
+    public function chunk(QueryPlan $plan, int $size, callable $callback): void
+    {
+        $model = $this->query->getModel();
+
+        $this->query->chunkById(
+            $size,
+            static fn (Collection $records): mixed => $callback($records),
+            $model->getQualifiedKeyName(),
+            $model->getKeyName(),
+        );
+    }
+
     public function count(QueryPlan $plan): int
     {
         return $this->query->count();

@@ -6,7 +6,9 @@ namespace NyonCode\WireTable\Export;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Data\EloquentDataSource;
 use NyonCode\WireTable\Export\Contracts\Exporter;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -46,12 +48,11 @@ class CsvExporter implements Exporter
                 );
             }
 
-            // Pass the qualified key: the export query carries a relation LEFT JOIN
-            // whenever the table is sorted by a relation column, and chunkById's
-            // default unqualified `id` cursor is ambiguous against the joined table.
-            $model = $query->getModel();
-
-            $query->chunkById(1000, function ($records) use ($handle, $columns) {
+            // Streams through the source, so an export is available over
+            // whatever the table reads from — and still chunked, because get()
+            // would turn a bounded-memory export into an unbounded one. The
+            // qualified-key cursor moved into the source with the call.
+            $writeBatch = function ($records) use ($handle, $columns): void {
                 foreach ($records as $record) {
                     $row = [];
                     foreach ($columns as $column) {
@@ -59,7 +60,9 @@ class CsvExporter implements Exporter
                     }
                     fputcsv($handle, $row, $this->delimiter, $this->enclosure);
                 }
-            }, $model->getQualifiedKeyName(), $model->getKeyName());
+            };
+
+            (new EloquentDataSource($query))->chunk(new QueryPlan, 1000, $writeBatch);
 
             foreach ($summaryRows as $summaryRow) {
                 fputcsv($handle, array_map([$this, 'escapeFormula'], $summaryRow), $this->delimiter, $this->enclosure);

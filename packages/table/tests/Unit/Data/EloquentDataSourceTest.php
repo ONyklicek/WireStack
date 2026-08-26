@@ -225,6 +225,14 @@ it('lets a source that cannot sort say so, and refuse loudly', function () {
             return 0;
         }
 
+        /**
+         * @param  callable(Collection<int, mixed>): mixed  $callback
+         */
+        public function chunk(QueryPlan $plan, int $size, callable $callback): void
+        {
+            $this->guard($plan);
+        }
+
         public function resolveRecord(int|string $key): ?RecordContract
         {
             return null;
@@ -349,4 +357,43 @@ it('lets a source stand in for a model entirely', function () {
 
     expect($table->getDataSource()->count(new QueryPlan))->toBe(7)
         ->and($table->hasCustomDataSource())->toBeTrue();
+});
+
+it('streams in batches through chunkById, not by offset', function () {
+    $batches = [];
+
+    edsSource()->chunk(new QueryPlan, 3, function ($records) use (&$batches): void {
+        $batches[] = $records->pluck('name')->all();
+    });
+
+    expect($batches)->toBe([
+        ['row 1', 'row 2', 'row 3'],
+        ['row 4', 'row 5', 'row 6'],
+        ['row 7'],
+    ]);
+});
+
+it('streams a joined query without an ambiguous cursor', function () {
+    // chunkById defaults to an unqualified `id`, which a LEFT JOIN makes
+    // ambiguous — the case an export hits whenever the table sorts by a
+    // relation column. The source passes the qualified key for exactly this.
+    Schema::dropIfExists('eds_notes');
+    Schema::create('eds_notes', function (Blueprint $t) {
+        $t->id();
+        $t->foreignId('eds_row_id');
+    });
+
+    // Shaped the way the framework builds a joined query: ApplyRelations:35
+    // selects `<table>.*`, without which the joined table's own `id` shadows the
+    // parent's in the result and chunkById cannot find its cursor at all.
+    $joined = EdsRow::query()
+        ->select('eds_rows.*')
+        ->leftJoin('eds_notes', 'eds_notes.eds_row_id', '=', 'eds_rows.id');
+    $count = 0;
+
+    (new EloquentDataSource($joined))->chunk(new QueryPlan, 2, function ($records) use (&$count): void {
+        $count += $records->count();
+    });
+
+    expect($count)->toBe(7);
 });

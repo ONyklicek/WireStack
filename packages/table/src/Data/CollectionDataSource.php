@@ -96,6 +96,18 @@ final class CollectionDataSource implements DataSource
         return $this->apply($plan)->values();
     }
 
+    /**
+     * @param  callable(Collection<int, mixed>): mixed  $callback
+     */
+    public function chunk(QueryPlan $plan, int $size, callable $callback): void
+    {
+        foreach ($this->apply($plan)->values()->chunk($size) as $batch) {
+            if ($callback($batch->values()) === false) {
+                return;
+            }
+        }
+    }
+
     public function count(QueryPlan $plan): int
     {
         return $this->apply($plan)->count();

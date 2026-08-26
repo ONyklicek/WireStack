@@ -155,3 +155,37 @@ it('drives a table that has no model and no builder', function () {
         ->and($table->getDataSource()->count(new QueryPlan))->toBe(3)
         ->and($table->getDataSource()->resolveRecord(1)?->get('name'))->toBe('Ada');
 });
+
+// ─── Streaming ───────────────────────────────────────────────────────────────
+
+it('streams in batches instead of materialising everything', function () {
+    $batches = [];
+
+    cds()->chunk(new QueryPlan, 2, function ($rows) use (&$batches): void {
+        $batches[] = $rows->pluck('name')->all();
+    });
+
+    expect($batches)->toBe([['Ada', 'Grace'], ['Alan']]);
+});
+
+it('stops streaming when the callback says so', function () {
+    $seen = 0;
+
+    cds()->chunk(new QueryPlan, 1, function () use (&$seen): bool {
+        $seen++;
+
+        return false;
+    });
+
+    expect($seen)->toBe(1);
+});
+
+it('streams only what the plan matched', function () {
+    $names = [];
+
+    cds()->chunk(new QueryPlan(filters: [new FilterClause('score', '>=', 80)]), 10, function ($rows) use (&$names): void {
+        $names = $rows->pluck('name')->all();
+    });
+
+    expect($names)->toBe(['Ada', 'Alan']);
+});
