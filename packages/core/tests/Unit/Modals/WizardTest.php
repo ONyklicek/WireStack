@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use NyonCode\WireCore\Actions\ModalStep;
+use NyonCode\WireCore\Foundation\Contracts\WizardStep;
 use NyonCode\WireCore\Modals\Wizard;
 use NyonCode\WireForms\Components\TextInput;
 
@@ -69,6 +70,31 @@ it('serializes ModalStep objects in steps config', function () {
         ->and($config[0]['description'])->toBe('First step')
         ->and($config[0]['icon'])->toBe('user')
         ->and($config[0]['schema'])->toHaveCount(1);
+});
+
+it('serializes any WizardStep, not only the ModalStep it used to name', function () {
+    // The wizard type-hinted Actions\ModalStep, which made Modals depend on
+    // Actions while Actions already depended on Modals. It only ever needed
+    // toArray(), so it asks for the contract now — and this is the assertion
+    // that the contract is what it consults, since nothing else in the suite
+    // passes it a step that is not a ModalStep.
+    $step = new class implements WizardStep
+    {
+        public function toArray(mixed $context = null): array
+        {
+            return ['label' => 'Custom', 'context' => $context];
+        }
+    };
+
+    $config = Wizard::make()->steps([$step])->getStepsConfig('order-7');
+
+    expect($config)->toHaveCount(1)
+        ->and($config[0]['label'])->toBe('Custom')
+        ->and($config[0]['context'])->toBe('order-7');
+});
+
+it('keeps ModalStep a WizardStep, so declared steps still type-check', function () {
+    expect(ModalStep::make('Step 1'))->toBeInstanceOf(WizardStep::class);
 });
 
 it('passes through array steps as-is in steps config', function () {

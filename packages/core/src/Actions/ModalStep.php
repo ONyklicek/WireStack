@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Actions;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Contracts\WizardStep;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
@@ -26,7 +27,7 @@ use NyonCode\WireCore\Foundation\Icons\Icon;
  *
  * @phpstan-consistent-constructor
  */
-class ModalStep
+class ModalStep implements WizardStep
 {
     protected string $label;
 

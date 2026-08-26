@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Modals;
 
-use NyonCode\WireCore\Actions\ModalStep;
+use NyonCode\WireCore\Foundation\Contracts\WizardStep;
 use NyonCode\WireCore\Modals\Concerns\HasFooterActions;
 use NyonCode\WireCore\Modals\Concerns\HasModalIcon;
 use NyonCode\WireCore\Modals\Concerns\HasModalProperties;
@@ -36,7 +36,7 @@ class Wizard implements ModalContract
     use HasModalIcon;
     use HasModalProperties;
 
-    /** @var array<int, ModalStep|array<string, mixed>> */
+    /** @var array<int, WizardStep|array<string, mixed>> */
     protected array $steps = [];
 
     protected bool $skippable = false;
@@ -58,7 +58,7 @@ class Wizard implements ModalContract
     /**
      * Define wizard steps.
      *
-     * @param  array<int, ModalStep|array<string, mixed>>  $steps
+     * @param  array<int, WizardStep|array<string, mixed>>  $steps
      */
     public function steps(array $steps): static
     {
@@ -78,7 +78,7 @@ class Wizard implements ModalContract
     }
 
     /**
-     * @return array<int, ModalStep|array<string, mixed>>
+     * @return array<int, WizardStep|array<string, mixed>>
      */
     public function getSteps(): array
     {
@@ -103,7 +103,7 @@ class Wizard implements ModalContract
     public function getStepsConfig(mixed $context = null): array
     {
         return array_map(function ($step) use ($context) {
-            if ($step instanceof ModalStep) {
+            if ($step instanceof WizardStep) {
                 return $step->toArray($context);
             }
 

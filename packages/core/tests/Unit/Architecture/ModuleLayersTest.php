@@ -117,10 +117,9 @@ function coreLayerDebt(): array
         // StateContainer and wants a contract to write through instead.
         'Foundation/Concerns/InteractsWithState.php' => ['Core' => 1],
 
-        // The cycle. `Modals\Wizard` type-hints and instanceof-checks
-        // `Actions\ModalStep`, while Actions reaches back into Modals — the one
-        // pair here that could not survive being two packages.
-        'Modals/Wizard.php' => ['Actions' => 1],
+        // What is left of the cycle, now one-directional: an action opens a
+        // modal. `Modals\Wizard` no longer reaches back — it asks for
+        // `Foundation\Contracts\WizardStep` instead of `Actions\ModalStep`.
         'Actions/Concerns/HasModal.php' => ['Modals' => 4, 'Infolists' => 1],
 
         // The action host trait. It is a Livewire host, not an Action, which is
@@ -263,10 +262,10 @@ it('carries the debt it was written with, and no more', function () {
     // import can be silenced by adding it to coreLayerDebt(). These two ceilings
     // are what make that a visible act. They are the numbers as of the day the
     // rule got enforced — 13 file/target pairs, 19 imports — and they ratchet
-    // down as the debt is paid, never up. Down to 12 and 18 since.
-    expect(count(flattenCoreEdges(coreLayerDebt())))->toBeLessThanOrEqual(12)
+    // down as the debt is paid, never up. Down to 11 and 17 since.
+    expect(count(flattenCoreEdges(coreLayerDebt())))->toBeLessThanOrEqual(11)
         ->and(array_sum(array_map(
             fn (array $targets): int => array_sum($targets),
             coreLayerDebt(),
-        )))->toBeLessThanOrEqual(18);
+        )))->toBeLessThanOrEqual(17);
 });
