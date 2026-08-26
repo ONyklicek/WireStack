@@ -48,6 +48,19 @@ try {
   })()`);
   chk('picking an image opens the frame instead of uploading', opened === true, String(opened));
 
+  // `cropping` flips as soon as the picker hands the file over, but the frame is
+  // sized from the image's onload, which lands a tick or two later. Reading the
+  // width in the next round-trip therefore caught a 0 whenever the machine was
+  // busy — a driver failure that says nothing about the product, since the crop
+  // below then measures a correct 320x180. Poll for the value, do not assume the
+  // clock.
+  await ev(`(async()=>{
+    for (let i=0;i<40 && !(Number(Alpine.\$data(${root}).frame.width) > 0);i++) {
+      await new Promise(r=>setTimeout(r,100));
+    }
+    return true;
+  })()`);
+
   // Read primitives, not the reactive objects: CDP cannot serialise an Alpine
   // Proxy and silently hands back {} — which reads as a failure that is not one.
   const fw = await ev(`Number(Alpine.\$data(${root}).frame.width)`);
