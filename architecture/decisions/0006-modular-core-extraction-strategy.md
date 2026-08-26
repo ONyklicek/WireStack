@@ -1,7 +1,16 @@
 # ADR 0006: Modular Core Extraction Strategy
 
 ## Status
-Accepted
+Accepted. **Amended by [ADR 0025](0025-core-module-layers.md) (2026-08-26)** on two
+points: extraction now has a stated bar and a readiness checklist before it may be
+reopened (0025 §5), and the pre-extraction checklist below is incomplete — it says
+nothing about translations, config keys, the shared JS bundle or service provider
+boot order, each of which binds a module to the package more tightly than its
+imports do. The claim that extraction is "a 30-minute mechanical task" does not
+hold today; `Actions\Concerns\InteractsWithActions` alone pulls in `Core/Actions`,
+`Core/Plugin` and `Core/Events`.
+
+The recipe itself is unchanged and still the one to follow when the bar is met.
 
 ## Context
 `wire-core` contains four logical modules: Foundation, Actions, Notifications, Modals. Actions, Notifications, and Modals are candidates for future extraction into standalone packages (`wire-actions`, `wire-notifications`, `wire-modals`) when a real use case arises (e.g., `wire-infolist` needing Actions without Table).

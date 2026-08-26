@@ -115,8 +115,10 @@ shim removalu (seznam BC breaků pro 2.0). F1 je 1.9, neblokuje V2.
   přijdou jako opt-in vedle stávajícího API; default chování se nemění.
 - **Deprecation-first:** staré API žije celý 2.x cyklus s `@deprecated` +
   `Core\Support\Deprecation`; tvrdé odstranění až v 3.0.
-- **BC breaky rozložené:** shim removal (`core/src/Concerns/*`), orphaned API a
-  raw-property přístupy padnou v **2.0**; vše ostatní je aditivní přes 2.x.
+- **BC breaky rozložené:** shim removal (`core/src/Concerns/*`) — **hotovo
+  2026-08-26**, devět `class_alias` traitů pryč, migrace v `docs/upgrade.md`;
+  orphaned API a raw-property přístupy padnou rovněž v **2.0**; vše ostatní je
+  aditivní přes 2.x.
 - **Každá fáze = zelené CI:** PHPStan čistý, Pint čistý, nový kód 100% coverage
   (repo politika — pozor na shape coverage, ne jen happy path), docs + boost
   guidelines sync (stop hook to vynucuje).
@@ -339,6 +341,14 @@ higher-order registration base; V2.3 owneři = co modul grupuje). Modul = kompoz
 potřeba **≥2 doménových modulů** / distribuce business balíčků. Jinak **default V3**
 — owner vrstva (V2.3) pokrývá single-domain aplikace sama; předčasná modularizace
 = náklady bez protihodnoty. Není blocker pro žádnou nižší fázi.
+
+**Tentýž test platí i pro technickou osu.** Otázka „rozpadnout `wire-core` na
+samostatné balíčky" byla položena a zodpovězena stejně:
+[ADR 0025](../decisions/0025-core-module-layers.md) — bez jmenovaného konzumenta,
+který chce modul bez zbytku, se neštěpí. Místo toho se hranice modulů vynucují
+uvnitř core arch testem. Detaily, proč by rozpad dnes nedodal nezávislost
+(překlady bez namespace, jeden config, jeden JS bundle, `self.version` lockstep),
+jsou v ADR.
 
 **Detailní plán:** [`v2.6-domain-modules-implementation.md`](v2.6-domain-modules-implementation.md)
 (`DomainModule` nad plugin lifecyclem, dvě osy architektury, referenční modul,

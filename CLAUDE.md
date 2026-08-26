@@ -67,6 +67,22 @@ Prefer APIs that feel closer to Laravel Nova / Filament:
 - New abstractions must stay modular and portable: minimal package assumptions, stable contracts, testable in isolation, and usable from other contexts besides the original caller.
 - Copy Nova/Filament ergonomics, not their internals verbatim. The target is the same quality of composition and reuse, adapted to this repository's package graph.
 
+### Module Layers Inside `wire-core`
+
+`wire-core`'s eleven modules are layered, and the layering is enforced by
+`packages/core/tests/Unit/Architecture/ModuleLayersTest.php` — not by review:
+
+- **L0** `Foundation/`, `Exceptions/` — the base; imports nothing above it.
+- **L1** `Core/` — the headless engine; may see L0.
+- **L2** `Actions/`, `Modals/`, `Notifications/`, `Widgets/`, `Infolists/`,
+  `Panels/`, `Audit/` — surfaces; may see L0 and L1, never each other.
+
+Crossing a boundary means writing a contract in `Foundation/Contracts/`, or using
+the soft seam `Actions\Concerns\HasLifecycle::resolveNotificationManagerClass()`
+demonstrates. The test's two lists (deliberate exceptions, and remaining debt) may
+shrink and may not grow silently. Rationale and the bar for ever splitting these
+modules into packages: `architecture/decisions/0025-core-module-layers.md`.
+
 Before changing shared behavior, ask:
 
 1. What is the canonical owner of this concern?
@@ -173,6 +189,10 @@ vendor/bin/pest --configuration phpunit.xml --testsuite "Integration"
 
 composer lint
 composer analyse
+
+# Module-layer gate for wire-core (part of test:core; run it alone while
+# refactoring across modules). See ADR 0025.
+vendor/bin/pest --filter ModuleLayers
 
 # Coverage gate (CI runs this on PRs and on pushes to 1.x/2.x).
 # Every line you add or edit must be covered; no package may drop below its
