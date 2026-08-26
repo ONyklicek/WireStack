@@ -58,6 +58,7 @@ use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
 use NyonCode\WireTable\Preferences\TablePreferenceManager;
 use NyonCode\WireTable\Services\CellEditPipeline;
 use NyonCode\WireTable\Services\SummaryBatch;
+use NyonCode\WireTable\Services\SummarySet;
 use NyonCode\WireTable\Services\TableQueryCacheKey;
 use NyonCode\WireTable\Services\TableQueryService;
 use NyonCode\WireTable\Services\WriteGeneration;
@@ -1749,56 +1750,37 @@ trait WithTable
     private function resolveTableSummaries(string $scope, mixed $parentRecord = null, ?Collection $subRecords = null): array
     {
         $table = $this->getTable();
+        $set = app(SummarySet::class);
 
-        // For sub-rows scope, use sub-row records
+        // Sub-rows summarise a parent's children, over the sub-row columns.
+        // Already-fetched children are reused; only an unprovided set queries.
         if ($scope === 'subRows' && $parentRecord !== null && $table->hasSubRows()) {
-            // Reuse already-fetched sub-rows when provided; only query otherwise.
-            $subRecords ??= $this->getSubRows($parentRecord);
-            $columnsToSummarize = $table->getSubRowColumns();
-
-            $summaries = [];
-            foreach ($columnsToSummarize as $column) {
-                if ($column->hasSummary()) {
-                    $summaries[$column->getName()] = $column->computeSummaries($subRecords, null);
-                }
-            }
-
-            return $summaries;
+            return $set->build(
+                $table->getSubRowColumns(),
+                $subRecords ?? $this->getSubRows($parentRecord),
+            );
         }
 
-        // For main table — resolve the in-memory record set per scope.
-        // The page scope is unwrapped: getTableRecords() hands back a paginator
-        // whenever the table is paginated, and computeSummaries() takes a
-        // Collection — so "this page" was a TypeError on every paginated table,
-        // hidden only because summaries are usually exercised unpaginated.
+        // What a scope *means* is the host's to answer — only it knows which
+        // rows are on the page and which are selected. The page scope is
+        // unwrapped: getTableRecords() hands back a paginator whenever the table
+        // is paginated, and the summaries take a Collection, so "this page" was
+        // a TypeError on every paginated table — hidden only because summaries
+        // are usually exercised unpaginated.
         $pageRecords = $this->getTableRecords();
 
-        $inMemoryRecords = match ($scope) {
+        $records = match ($scope) {
             'page' => $pageRecords instanceof Collection ? $pageRecords : collect($pageRecords->items()),
             'selection' => $this->getSelectedRecords(),
             default => collect(),
         };
-        $query = ($scope === 'query') ? $this->buildTableQuery() : null;
 
-        $columns = $table->getColumns();
-        $summaries = [];
-
-        // Batch all SQL-native query-scope aggregates into at most two queries
-        // instead of one query per summary per column on every render.
-        $batched = $query !== null ? app(SummaryBatch::class)->compute($columns, $query) : [];
-
-        foreach ($columns as $column) {
-            if ($column->hasSummary()) {
-                $summaries[$column->getName()] = $column->computeSummaries(
-                    $inMemoryRecords,
-                    $query,
-                    null,
-                    $batched[$column->getName()] ?? [],
-                );
-            }
-        }
-
-        return $summaries;
+        return $set->build(
+            $table->getColumns(),
+            $records,
+            // Only the query scope hands the batcher something to batch.
+            $scope === 'query' ? $this->buildTableQuery() : null,
+        );
     }
 
     /**
