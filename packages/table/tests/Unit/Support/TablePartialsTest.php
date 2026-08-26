@@ -3,7 +3,11 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\Contracts\ExpandsTableRows;
+use NyonCode\WireTable\Contracts\ShowsTableColumns;
+use NyonCode\WireTable\Contracts\SummarisesTable;
 use NyonCode\WireTable\Support\TablePartials;
 use NyonCode\WireTable\Support\TableRenderPlan;
 use NyonCode\WireTable\Table;
@@ -20,13 +24,10 @@ use NyonCode\WireTable\Table;
  * and these closures are deliberately not called: a partial the host decides
  * not to send must cost nothing to have been offered.
  *
- * **What is missing, and why.** The branches that build a renderer — the card,
- * and the group subtotals — are not here. CardRenderer resolves a column plan,
- * which asks the host for isColumnVisible(), and there is no host contract to
- * satisfy with a double. That is the same gap V2.1's DoD 2 records against the
- * render branch: the collaborators are testable without Livewire only up to the
- * point where one needs the component. Those branches stay covered end to end
- * by RowPartialsTest, through a real host.
+ * The host is a double implementing the three contracts the render layer names —
+ * ShowsTableColumns, ExpandsTableRows and SummarisesTable. That is what those
+ * contracts are for: before them the card branch could not be reached at all
+ * without a Livewire component, which is what V2.1's DoD 2 records as unmet.
  */
 
 class TpRow extends Model
@@ -52,10 +53,20 @@ function tpFor(array $traits = []): TablePartials
         $table->stackedOnMobile();
     }
 
-    $host = new class($traits)
+    $host = new class($traits) implements ExpandsTableRows, ShowsTableColumns, SummarisesTable
     {
         /** @param array<string, bool> $traits */
         public function __construct(private array $traits) {}
+
+        public function isColumnVisible(string $column): bool
+        {
+            return true;
+        }
+
+        public function isRowExpanded(mixed $recordKey): bool
+        {
+            return false;
+        }
 
         public function tableHasSummaries(): bool
         {
@@ -65,6 +76,31 @@ function tpFor(array $traits = []): TablePartials
         public function tableHasGroupSummaries(): bool
         {
             return $this->traits['groupSummaries'] ?? false;
+        }
+
+        public function computeTableSummaries(string $scope = 'query', mixed $parentRecord = null, ?Collection $subRecords = null): array
+        {
+            return [];
+        }
+
+        public function computeGroupSummaries(mixed $groupValue): array
+        {
+            return [];
+        }
+
+        public function computeSubRowGrandTotals(string $scope = 'query'): array
+        {
+            return [];
+        }
+
+        public function getSummaryScope(): string
+        {
+            return 'query';
+        }
+
+        public function getSummaryScopeOptions(): array
+        {
+            return [];
         }
     };
 
@@ -98,4 +134,18 @@ it('offers the mobile footer only alongside the desktop one', function () {
     $partials = tpFor(['summaries' => true])->satellites([1 => tpRecord(1)]);
 
     expect(array_keys($partials))->toBe(['summary']);
+});
+
+it('offers a card per changed record where the table is stacked', function () {
+    // Unreachable before the host contracts: this line builds a CardRenderer,
+    // which resolves a column plan, which asks the host which columns show.
+    $partials = tpFor(['stacked' => true, 'summaries' => true])
+        ->satellites([1 => tpRecord(1), 2 => tpRecord(2)]);
+
+    expect($partials)->toHaveKeys(['card-1', 'card-2', 'summary', 'summary-mobile']);
+});
+
+it('offers closures, and does not call them', function () {
+    // A partial the host drops must not have cost a render to offer.
+    expect(tpFor(['stacked' => true])->satellites([1 => tpRecord(1)])['card-1'])->toBeCallable();
 });

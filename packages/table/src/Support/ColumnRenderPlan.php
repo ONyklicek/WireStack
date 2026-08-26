@@ -6,6 +6,7 @@ namespace NyonCode\WireTable\Support;
 
 use NyonCode\WireCore\Foundation\View\Skeleton;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Contracts\ShowsTableColumns;
 use NyonCode\WireTable\Table;
 
 /**
@@ -60,6 +61,11 @@ final class ColumnRenderPlan
         public readonly bool $hasMobileSort,
     ) {}
 
+    /**
+     * @param  ShowsTableColumns|mixed  $component  The host. Typed `mixed` so a
+     *                                              consumer's component needs no `implements` to keep working; the contract
+     *                                              is what it must be able to answer, and what a test double implements.
+     */
     public static function resolve(Table $table, mixed $component): self
     {
         $visible = array_filter(
