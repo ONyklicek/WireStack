@@ -50,17 +50,21 @@ that credible rather than lucky:
    the compatibility table could not have caught, which is exactly why the probe
    was run instead of trusted to reading.
 
-### 0.1 A tooling bug found on the way
+### 0.1 A tooling bug found on the way — **fixed** (`48007ea`)
 
-`scripts/verify-drivers.sh` passes each driver a `CHROME_PORT` but never a
-`PREVIEW_URL`, while every driver hardcodes `http://127.0.0.1:8085`. The
-documented `PREVIEW_PORT=8086 bash scripts/verify-drivers.sh` therefore starts a
-server on 8086 and then runs 66 drivers against a port with nothing on it — they
-fail with `Alpine is not defined` and "not booted", which reads exactly like a
-framework regression. It cost an hour here and it will cost it again.
+`scripts/verify-drivers.sh` passed each driver a `CHROME_PORT` but never an
+origin, while every driver hardcoded `http://127.0.0.1:8085`. The documented
+`PREVIEW_PORT=8086 bash scripts/verify-drivers.sh` therefore started a server on
+8086 and then ran 66 drivers against a port with nothing on it — they failed with
+`Alpine is not defined` and "not booted", which reads exactly like a framework
+regression. It cost an hour here.
 
-Not part of this migration; filed as a follow-up, because fixing it inside a
-framework-floor change would blur the diff.
+Kept out of the migration commits so it would not blur the diff, and landed after
+them: the sweep exports `PREVIEW_ORIGIN`, and all 74 drivers resolve their URL as
+`PREVIEW_URL ?? ${PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085'}/previews/…`, so a
+per-driver `PREVIEW_URL` still wins for driving one driver at an arbitrary URL.
+Verified 2026-08-26: `PREVIEW_PORT=8086 CHROME_PORT_BASE=9700 bash
+scripts/verify-drivers.sh toasts` starts its own server on 8086 and passes 10/10.
 
 ---
 
@@ -322,8 +326,8 @@ bulk actions; `wire:intersect` lazy loading; `data-loading`; the `$errors` JS
 magic; the CSP build. Each is a separate phase in the analysis document, each
 with its own benchmark.
 
-Also out of scope, though found here: the `verify-drivers.sh` `PREVIEW_URL` bug
-(§0.1), and the duplicated `getDebounceModifier()` between
+Also out of scope, though found here: the `verify-drivers.sh` origin bug (§0.1,
+since fixed in `48007ea`), and the duplicated `getDebounceModifier()` between
 `core/Foundation/Concerns/HasDebounce` and `forms/Components/Field`.
 
 ---

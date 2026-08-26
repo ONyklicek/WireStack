@@ -52,7 +52,7 @@ trait WithForms
 
     public function bootWithForms(): void
     {
-        // Livewire 3 lifecycle hook — validate form coexistence
+        // Livewire trait boot hook — validate form coexistence
         $this->validateFormCoexistence();
     }
 
