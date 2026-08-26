@@ -48,6 +48,9 @@ přes **typed contracts** místo generic hooků (H).
 
 ---
 
+> **Kde to právě stojí:** [`v2-progress.md`](v2-progress.md) — co je hotové, co
+> je vědomě neudělané a čím pokračovat. Aktualizuje se na konci každého běhu.
+
 ## Revize proti kódu (2026-08-26)
 
 > **Navazuje audit:** [`v2-audit-2026-08-26.md`](v2-audit-2026-08-26.md) — deset
