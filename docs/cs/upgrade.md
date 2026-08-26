@@ -214,6 +214,33 @@ vyhodnotí proti prázdnému registru a pole tiše nedělá nic.
 
 ---
 
+## Deprecated shimy traitů končí (2.0)
+
+Devět aliasů traitů pod `NyonCode\WireCore\Concerns\` bylo odstraněno. Každý
+byl `class_alias()` shim s poznámkou `@deprecated … Will be removed in v2.0`
+a tohle je to vydání.
+
+Všechny ukazovaly na trait stejného jména pod `Actions\Concerns\`, takže
+migrace je řádek s importem a nic víc:
+
+```php
+use NyonCode\WireCore\Concerns\HasIcons;          // [tl! --]
+use NyonCode\WireCore\Actions\Concerns\HasIcons;  // [tl! ++]
+```
+
+Těch devět jmen: `HasButtonStyles`, `HasColor`, `HasDynamicProperties`,
+`HasIcons`, `HasKeyboardShortcut`, `HasLifecycle`, `HasLoadingState`,
+`HasModal`, `HasVisibility`.
+
+Samotné traity zůstávají beze změny — stejné metody, stejné chování. Pokud jste
+z `WireCore\Concerns\` nikdy neimportovali, není co dělat.
+
+**Jedna výjimka, která stojí za to.** U barev sáhněte po
+`Foundation\Concerns\HasColor`: ten je kanonickým vlastníkem a
+`Actions\Concerns\HasColor` je sám jen jeho tenký alias.
+
+---
+
 ## Minimální verze závislostí (1.17)
 
 **Laravel 10 a 11 končí.** Verze 1.17 přesunula JavaScriptové bundly z package

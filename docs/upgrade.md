@@ -217,6 +217,33 @@ evaluates against an empty registry and the field silently does nothing.
 
 ---
 
+## Deprecated trait shims are gone (2.0)
+
+The nine trait aliases under `NyonCode\WireCore\Concerns\` were removed. Each
+was a `class_alias()` shim carrying `@deprecated … Will be removed in v2.0`, and
+this is that release.
+
+Every one of them pointed at the trait of the same name under
+`Actions\Concerns\`, so the migration is the import line and nothing else:
+
+```php
+use NyonCode\WireCore\Concerns\HasIcons;          // [tl! --]
+use NyonCode\WireCore\Actions\Concerns\HasIcons;  // [tl! ++]
+```
+
+The nine names: `HasButtonStyles`, `HasColor`, `HasDynamicProperties`,
+`HasIcons`, `HasKeyboardShortcut`, `HasLifecycle`, `HasLoadingState`,
+`HasModal`, `HasVisibility`.
+
+The traits themselves are untouched — same methods, same behaviour. If you never
+imported from `WireCore\Concerns\`, there is nothing to do.
+
+**One exception worth taking.** For colors, prefer
+`Foundation\Concerns\HasColor`: it is the canonical owner, and
+`Actions\Concerns\HasColor` is itself only a thin alias of it.
+
+---
+
 ## Dependency floors (1.17)
 
 **Laravel 10 and 11 are gone.** 1.17 moved the JavaScript bundles from a package

@@ -20,21 +20,3 @@ test('TableNotificationManager is a deprecated alias of NotificationManager', fu
 
     expect($alias->getName())->toBe(NotificationManager::class);
 });
-
-test('deprecated trait shims in Concerns resolve to their canonical traits', function (string $alias) {
-    // Referencing the alias triggers PSR-4 autoload of the shim file, which
-    // runs its class_alias() call.
-    @class_exists($alias);
-
-    expect(trait_exists($alias))->toBeTrue();
-})->with([
-    'NyonCode\WireCore\Concerns\HasColor',
-    'NyonCode\WireCore\Concerns\HasButtonStyles',
-    'NyonCode\WireCore\Concerns\HasVisibility',
-    'NyonCode\WireCore\Concerns\HasModal',
-    'NyonCode\WireCore\Concerns\HasIcons',
-    'NyonCode\WireCore\Concerns\HasDynamicProperties',
-    'NyonCode\WireCore\Concerns\HasKeyboardShortcut',
-    'NyonCode\WireCore\Concerns\HasLifecycle',
-    'NyonCode\WireCore\Concerns\HasLoadingState',
-]);
