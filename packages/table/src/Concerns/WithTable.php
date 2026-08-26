@@ -203,105 +203,14 @@ trait WithTable
      */
     public function mountWithTable(): void
     {
+        // Seeded with the bare defaults before getTable(), because a consumer's
+        // table() may read state while it configures — then replaced with what
+        // this table's own configuration decides.
         $this->tableState = new StateContainer(TableStateSchema::defaults());
 
         $table = $this->getTable();
 
-        // If lazy loading is enabled, don't load data yet
-        $this->tableState->set('ready', ! $table->isLazy());
-
-        if ($table->getDefaultSort()) {
-            $this->tableState->set('sort.column', $table->getDefaultSort());
-            $this->tableState->set('sort.direction', $table->getDefaultSortDirection());
-        }
-
-        $this->tableState->set('pagination.perPage', $table->getPerPage());
-
-        // Initialize filters with defaults (wrapped to match form-field state shape).
-        // Every *rendered* filter gets a slot, not only the ones with a default:
-        // non-native filters bind through $wire.entangle(), and Livewire's entangle
-        // silently no-ops when the path is undefined at render, so a filter without
-        // a default would never reach the server. A null value stays inactive
-        // everywhere — apply() ignores it and it is not counted as an active filter.
-        $filters = [];
-        foreach ($table->getFilters() as $filter) {
-            $default = $filter->getDefault();
-
-            // A hidden filter renders no control to bind, so it only needs a slot
-            // when a default actually forces a value into the query.
-            if ($default === null && ! $filter->canView()) {
-                continue;
-            }
-
-            // Arr::set so dotted (relation) filter names nest the same way the
-            // live wire:model binding writes them — keeps init and UI in sync.
-            Arr::set($filters, $filter->getName(), $filter->wrapValue($default));
-        }
-        if ($filters !== []) {
-            $this->tableState->set('filters', $filters);
-        }
-
-        // Initialize hidden columns (columns that start hidden)
-        $hidden = [];
-        foreach ($table->getColumns() as $column) {
-            if ($column->isToggleable() && ! $column->isVisible()) {
-                $hidden[] = $column->getName();
-            }
-        }
-        if ($hidden !== []) {
-            $this->tableState->set('columns.hidden', $hidden);
-        }
-
-        // Every column filter needs a state slot up front, for the same reason the
-        // panel filters above do: the header controls entangle their path, and an
-        // undefined path makes Livewire's entangle a silent no-op.
-        //
-        // Multi-select filters must specifically start as an *array* so Livewire
-        // treats their header checkboxes as an array group (toggle membership)
-        // rather than replacing a scalar on each click.
-        foreach ($table->getColumns() as $column) {
-            if (! $column->isFilterable()) {
-                continue;
-            }
-
-            $path = 'columnFilters.'.$column->getName();
-            $current = $this->tableState->get($path);
-
-            if ($column->filterExpectsArray()) {
-                if (! is_array($current)) {
-                    $this->tableState->set($path, []);
-                }
-
-                continue;
-            }
-
-            if ($current === null) {
-                $this->tableState->set($path, null);
-            }
-        }
-
-        // Sub-row filter columns need the same up-front slot, for the same
-        // entangle-no-op reason: an interactive sub-row filter bar binds each
-        // control to rows.subRowFilters.<name>, and a select/multi-select there
-        // entangles that path.
-        if ($table->isSubRowsFilterable()) {
-            foreach ($table->getSubRowColumns() as $column) {
-                if (! $column->isFilterable()) {
-                    continue;
-                }
-
-                $path = 'rows.subRowFilters.'.$column->getName();
-                $current = $this->tableState->get($path);
-
-                if ($column->filterExpectsArray()) {
-                    if (! is_array($current)) {
-                        $this->tableState->set($path, []);
-                    }
-                } elseif ($current === null) {
-                    $this->tableState->set($path, null);
-                }
-            }
-        }
+        $this->tableState->replace(TableStateSchema::initialFor($table));
 
         // Per-user view layout (columns, sub-row expansion): a saved preference
         // (if any) overrides the configured defaults above.

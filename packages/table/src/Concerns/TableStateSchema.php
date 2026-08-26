@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Concerns;
 
+use Illuminate\Support\Arr;
+use NyonCode\WireTable\Table;
+
 /**
  * Defines the default state schema for table components.
  *
@@ -14,6 +17,106 @@ final class TableStateSchema
 {
     /** @var array<string, string>|null Memoized legacy map — __get/__set run per property access. */
     private static ?array $legacyPropertyMap = null;
+
+    /**
+     * The state a specific table starts in: {@see defaults()} with everything
+     * the table's own configuration decides applied over it.
+     *
+     * Pure, and that is the point. This used to be eighty-five lines inside
+     * `WithTable::mountWithTable()`, where the rules below could only be
+     * observed by mounting a Livewire component — and two of them are rules
+     * about a silent failure, which is the worst kind to leave unasserted.
+     *
+     * **Every rendered filter gets a slot, not only the ones with a default.**
+     * Non-native filters bind through `$wire.entangle()`, and Livewire's
+     * entangle silently no-ops when the path is undefined at render — so a
+     * filter without a default would never reach the server at all. A null
+     * value stays inactive everywhere: `apply()` ignores it and it does not
+     * count as an active filter.
+     *
+     * **A multi-select column filter must start as an array**, not null, or
+     * Livewire treats its header checkboxes as a scalar to replace on each
+     * click rather than a group to toggle membership in.
+     *
+     * @return array<string, mixed>
+     */
+    public static function initialFor(Table $table): array
+    {
+        $state = self::defaults();
+
+        // Lazy tables render a placeholder until something asks them to load.
+        Arr::set($state, 'ready', ! $table->isLazy());
+
+        if ($table->getDefaultSort()) {
+            Arr::set($state, 'sort.column', $table->getDefaultSort());
+            Arr::set($state, 'sort.direction', $table->getDefaultSortDirection());
+        }
+
+        Arr::set($state, 'pagination.perPage', $table->getPerPage());
+
+        $filters = [];
+
+        foreach ($table->getFilters() as $filter) {
+            $default = $filter->getDefault();
+
+            // A hidden filter renders no control to bind, so it only needs a
+            // slot when a default actually forces a value into the query.
+            if ($default === null && ! $filter->canView()) {
+                continue;
+            }
+
+            // Arr::set so dotted (relation) filter names nest the same way the
+            // live wire:model binding writes them — keeps init and UI in sync.
+            Arr::set($filters, $filter->getName(), $filter->wrapValue($default));
+        }
+
+        if ($filters !== []) {
+            Arr::set($state, 'filters', $filters);
+        }
+
+        $hidden = [];
+
+        foreach ($table->getColumns() as $column) {
+            if ($column->isToggleable() && ! $column->isVisible()) {
+                $hidden[] = $column->getName();
+            }
+        }
+
+        if ($hidden !== []) {
+            Arr::set($state, 'columns.hidden', $hidden);
+        }
+
+        foreach ($table->getColumns() as $column) {
+            if (! $column->isFilterable()) {
+                continue;
+            }
+
+            Arr::set(
+                $state,
+                'columnFilters.'.$column->getName(),
+                $column->filterExpectsArray() ? [] : null,
+            );
+        }
+
+        // Sub-row filter columns need the same up-front slot, for the same
+        // entangle reason: an interactive sub-row bar binds each control to
+        // rows.subRowFilters.<name>.
+        if ($table->isSubRowsFilterable()) {
+            foreach ($table->getSubRowColumns() as $column) {
+                if (! $column->isFilterable()) {
+                    continue;
+                }
+
+                Arr::set(
+                    $state,
+                    'rows.subRowFilters.'.$column->getName(),
+                    $column->filterExpectsArray() ? [] : null,
+                );
+            }
+        }
+
+        return $state;
+    }
 
     /**
      * Get the default state values for a table component.
