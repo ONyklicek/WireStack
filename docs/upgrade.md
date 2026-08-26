@@ -255,6 +255,33 @@ Nothing in the docs asks you to construct it, so this is unlikely to reach you.
 
 ---
 
+## A table can read from something other than Eloquent (2.0)
+
+Nothing you have written changes. `->model()` and `->query()` behave exactly as
+before, and every action closure keeps its `Model $record`.
+
+What is new is that a table now reads through a `DataSource`, so it can be given
+rows that are not in a database:
+
+```php
+use NyonCode\WireTable\Data\CollectionDataSource;
+
+$table->dataSource(new CollectionDataSource([         // [tl! focus]
+    ['id' => 1, 'name' => 'Ada', 'score' => 90],      // [tl! focus]
+]));                                                  // [tl! focus]
+```
+
+Such a table is a **restricted** table: a source declares what it can answer, and
+asking for something it declined raises `UnsupportedQueryAspectException` rather
+than quietly returning rows that ignored half the query. For a collection that
+means no raw SQL expressions, no relation paths, no subquery aggregates and no
+cursor paging.
+
+See [Data Sources](table/data-sources.md) for the whole surface. If you only use
+Eloquent tables, there is nothing to do.
+
+---
+
 ## Dependency floors (1.17)
 
 **Laravel 10 and 11 are gone.** 1.17 moved the JavaScript bundles from a package

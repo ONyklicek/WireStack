@@ -252,6 +252,32 @@ Dokumentace nikde nežádá, abyste ji vytvářeli sami, takže vás to nejspí�
 
 ---
 
+## Tabulka umí číst i odjinud než z Eloquentu (2.0)
+
+Nic, co máte napsané, se nemění. `->model()` i `->query()` fungují přesně jako
+dřív a každá closure akce si drží svůj `Model $record`.
+
+Nové je, že tabulka teď čte přes `DataSource`, takže jí jdou předat řádky, které
+nejsou v databázi:
+
+```php
+use NyonCode\WireTable\Data\CollectionDataSource;
+
+$table->dataSource(new CollectionDataSource([         // [tl! focus]
+    ['id' => 1, 'name' => 'Ada', 'score' => 90],      // [tl! focus]
+]));                                                  // [tl! focus]
+```
+
+Taková tabulka je **omezená**: zdroj deklaruje, na co umí odpovědět, a žádost
+o něco, co odmítl, vyhodí `UnsupportedQueryAspectException` místo tichého vrácení
+řádků, které ignorovaly půlku dotazu. U kolekce to znamená žádné raw SQL výrazy,
+žádné cesty přes relace, žádné agregace přes subquery a žádné cursor stránkování.
+
+Celá plocha je v [Zdrojích dat](table/data-sources.md). Pokud používáte jen
+Eloquent tabulky, není co dělat.
+
+---
+
 ## Minimální verze závislostí (1.17)
 
 **Laravel 10 a 11 končí.** Verze 1.17 přesunula JavaScriptové bundly z package

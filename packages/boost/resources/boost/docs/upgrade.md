@@ -83,6 +83,205 @@ not install or start Alpine separately.
 
 ---
 
+## Row markup and partial rendering (2.0)
+
+Two changes here. One is opt-in and you can ignore it until you want it; the
+other happened to every table and is worth ten minutes of your attention if you
+have styled, scripted or tested against the table's own markup.
+
+### Every table's rows are assembled differently
+
+The row body used to be laid out in Blade inside the row loop. It is now
+assembled in PHP from markup Blade compiles once per table
+(`Support\RowRenderer`, and `Support\CardRenderer` for the stacked cards). The
+rendered result is the same markup, with two differences:
+
+- **the per-row morph markers are gone.** Livewire injects an
+  `<!--[if BLOCK]><![endif]-->` pair around every `@if` and `@foreach` it
+  compiles, and the row loop's own conditionals were emitting 459–999 B of them
+  per row — 848–1035 B per row once the whitespace between them is counted, and
+  1 347 B per stacked card. Nothing in the DOM depended on them except Livewire's
+  own morph;
+- **the row's conditional children now carry `wire:key`**, which is what pairs
+  them through a morph in place of those markers: `ctx-{key}` on the teleported
+  context menu, `sel-{key}` on the selection cell, `exp-{key}` on the sub-row
+  expander, and `act-{key}-{name}` on every action button rendered **with** a
+  record. A button rendered without one — a header action, a bulk action, the
+  empty state — is unchanged.
+
+**What to check.** Anything that walks the row's children by position or counts
+comment nodes: a CSS `:nth-child()` that assumed a stable child count, a
+`querySelector` chain that stepped over the markers, a browser test asserting on
+them. Ordinary selectors — `[data-row-key]`, `[data-testid]`, `[data-column]`,
+`tbody tr` — are untouched and remain the supported way in.
+
+**If you published the table views**, this is the one that can bite silently.
+`tables/index.blade.php` no longer contains the row body at all: it was split
+into `partials/data-region.blade.php`, and the row and card are rendered from
+PHP. A published copy from 1.x keeps working — Laravel prefers it — but it keeps
+the old cost and none of the new behaviour, and it will not pick up
+`rowPartials()`. Re-publish it, or better, delete the copy and configure instead:
+
+```bash
+php artisan vendor:publish --tag=wire-table::views --force
+```
+
+### `rowPartials()` — opt-in, and off by default
+
+A write can answer with the regions it moved rather than re-rendering the table:
+
+```php
+$table->rowPartials()
+```
+
+On a 25-column, 20-row page an inline cell save costs 49.3 ms and 556 kB as an
+ordinary render, and 3.2 ms and 26 kB as one row. Nothing changes for a table
+that does not ask for it — no anchor is emitted and no byte is spent.
+
+**What you trade** is that a re-rendered row keeps its position: an edit that
+would move the record under the current sort leaves it where it is until the next
+full render. On a wide editable grid that is the right trade, which is why it is
+opt-in rather than on.
+
+See [Advanced → Row Partials](table/advanced.md#row-partials) for what a write
+answers with on each shape of table, and for how the same anchors serve `poll()`
+and `live()`.
+
+---
+
+## `Widget::lazy()` is gone (2.0)
+
+`Widget::lazy()` and `Widget::isLazy()` were removed. They never deferred
+anything: no widget view read the flag — there was no `wire:init`, no intersect
+directive and no island behind it — so a widget marked lazy rendered in full like
+any other.
+
+```php
+StatsOverviewWidget::make()->lazy()   // [tl! --]
+StatsOverviewWidget::make()           // [tl! ++]
+```
+
+Deleting the calls is the whole migration; nothing rendered differently before.
+
+**If you actually want deferral**, defer at the component level rather than the
+widget level — a dashboard is one Livewire component, and a widget is markup
+inside it, not a component of its own. `<livewire:my-dashboard lazy />` defers the
+whole grid. Per-widget deferral is not available: it would need an island per
+widget, and an `@island` inside a `@foreach` does not compile — Blade emits one
+island body per directive occurrence and the extracted body never receives the
+loop variable.
+
+---
+
+## Field views: the Alpine body moved into a bundle (2.0)
+
+Seven field types used to inline their whole Alpine controller into the markup as
+an `x-data` object literal, so a page with six date pickers sent the same few
+hundred lines six times. The bodies are registered `Alpine.data()` factories now.
+
+**Nothing to do unless you override one of these field views**: `DateTimePicker`,
+`TimePicker`, `Select` (the searchable combobox), `Tags`, `Rating`, `RichEditor`,
+`MarkdownEditor`. If you do, the `x-data` you copied is gone — call the factory
+with a config object instead:
+
+```blade
+{{-- before --}}
+<div x-data="{ open: false, value: $wire.entangle('data.at'), hasDate: true, /* …300 lines… */ }">   {{-- [tl! --] --}}
+
+{{-- after --}}
+<div x-data="wireDateTimePicker({                    {{-- [tl! ++:4] --}}
+    state: $wire.entangle('data.at'),
+    hasDate: true,
+    typeable: true,
+})">
+```
+
+Two things stay in the markup on purpose. **`state`**, because `$wire.entangle`
+and `@entangle` are Alpine *magics* and are in scope only inside an `x-data`
+expression — it cannot move into the bundle. And any **server-side string** the
+controller needs, such as a translated `prompt()` title, which arrives as config.
+
+A third rule bites if you are porting your own field: a Blade `@if` inside the
+body has to become a runtime branch. A factory is compiled once and shared by
+every instance, so nothing can vary the *shape* of the object any more — only its
+behaviour.
+
+The controllers ship in `wire-forms-fields.js`, and the searchable-select
+combobox in `wire-core-dropdown.js` (it is core's: seven surfaces across forms and
+table include that partial). Both are registrars, so they load with the document
+rather than on request. Each converted view also includes
+`wire-forms::partials.field-assets`, because
+[`@wireStackScripts`](getting-started.md#javascript-assets) is additive — an app
+that never adds the directive still has to get the controller, or the `x-data`
+evaluates against an empty registry and the field silently does nothing.
+
+---
+
+## Deprecated trait shims are gone (2.0)
+
+The nine trait aliases under `NyonCode\WireCore\Concerns\` were removed. Each
+was a `class_alias()` shim carrying `@deprecated … Will be removed in v2.0`, and
+this is that release.
+
+Every one of them pointed at the trait of the same name under
+`Actions\Concerns\`, so the migration is the import line and nothing else:
+
+```php
+use NyonCode\WireCore\Concerns\HasIcons;          // [tl! --]
+use NyonCode\WireCore\Actions\Concerns\HasIcons;  // [tl! ++]
+```
+
+The nine names: `HasButtonStyles`, `HasColor`, `HasDynamicProperties`,
+`HasIcons`, `HasKeyboardShortcut`, `HasLifecycle`, `HasLoadingState`,
+`HasModal`, `HasVisibility`.
+
+The traits themselves are untouched — same methods, same behaviour. If you never
+imported from `WireCore\Concerns\`, there is nothing to do.
+
+Alongside them, `NyonCode\WireTable\Concerns\TableQueryService` — the same kind
+of alias, left behind when that class moved to `Services\`, and carrying the same
+`Will be removed in v2.0` note:
+
+```php
+use NyonCode\WireTable\Concerns\TableQueryService;   // [tl! --]
+use NyonCode\WireTable\Services\TableQueryService;   // [tl! ++]
+```
+
+Nothing in the docs asks you to construct it, so this is unlikely to reach you.
+
+**One exception worth taking.** For colors, prefer
+`Foundation\Concerns\HasColor`: it is the canonical owner, and
+`Actions\Concerns\HasColor` is itself only a thin alias of it.
+
+---
+
+## A table can read from something other than Eloquent (2.0)
+
+Nothing you have written changes. `->model()` and `->query()` behave exactly as
+before, and every action closure keeps its `Model $record`.
+
+What is new is that a table now reads through a `DataSource`, so it can be given
+rows that are not in a database:
+
+```php
+use NyonCode\WireTable\Data\CollectionDataSource;
+
+$table->dataSource(new CollectionDataSource([         // [tl! focus]
+    ['id' => 1, 'name' => 'Ada', 'score' => 90],      // [tl! focus]
+]));                                                  // [tl! focus]
+```
+
+Such a table is a **restricted** table: a source declares what it can answer, and
+asking for something it declined raises `UnsupportedQueryAspectException` rather
+than quietly returning rows that ignored half the query. For a collection that
+means no raw SQL expressions, no relation paths, no subquery aggregates and no
+cursor paging.
+
+See [Data Sources](table/data-sources.md) for the whole surface. If you only use
+Eloquent tables, there is nothing to do.
+
+---
+
 ## Dependency floors (1.17)
 
 **Laravel 10 and 11 are gone.** 1.17 moved the JavaScript bundles from a package

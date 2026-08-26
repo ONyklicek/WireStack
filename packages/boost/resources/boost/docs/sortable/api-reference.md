@@ -105,6 +105,8 @@ Handle row drag & drop. Called by Alpine.js after a drag operation completes. Up
 
 Each item: `['value' => string|int, 'order' => int]`
 
+Only the rows that moved are sent — the range between the first and last position that changed, not the whole page. That is safe for the same reason the redistribution below is: rows the write is not told about keep the slots they had. A drag that moves one row three places costs four writes whether the table shows twenty rows or twenty thousand.
+
 `order` is the row's new position on screen, not the value written. The dragged rows keep the set of order values they already held, redistributed in the new visual sequence, so a drag over a searched, filtered or paginated subset cannot move the rows it does not show — see [Reordering a narrowed list](row-sorting.md#reordering-a-narrowed-list). The positions are written verbatim only when the order column is null or constant and has nothing to redistribute.
 
 No-op if:

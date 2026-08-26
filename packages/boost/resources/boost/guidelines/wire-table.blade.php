@@ -27,6 +27,34 @@ Build a data table inside a Livewire component using the `WithTable` trait and a
         }
     }
 
+### Data sources
+
+A table reads rows through a `DataSource`. `->model()` / `->query()` build an
+`EloquentDataSource` behind the scenes and nothing about them changed; the seam
+matters when the rows are not in a database.
+
+**`->dataSource(new CollectionDataSource([...]))` gives a table with no model and
+no builder.** Search, filters, sorting and paging all work — the source answers
+them over the array, because `QueryPlan` states a filter as a column, an operator
+and a value rather than a closure.
+
+**A source declares what it can do, and an undeclared aspect throws.** That is
+the safety property, not a limitation to route around: a table that sorts by
+nothing and looks sorted is worse than one that errors. `CollectionDataSource`
+declines raw SQL expressions, relation paths, subquery aggregates and cursor
+paging, and returns `null` from `changeToken()` so polling compares rows instead.
+
+**User code still receives models.** The framework unwraps `RecordContract` at
+the boundary, so `->action(fn (Model $record) => …)` is unchanged — including on
+standalone actions. Over a source with no model to unwrap, such an action is
+simply not available.
+
+**Two paths stay Eloquent-only**, because the contract cannot express them:
+selection rollups replay aggregate subqueries, and the fill handle's writes take
+a pessimistic row lock.
+
+Full page: `docs/table/data-sources.md`.
+
 ### Columns
 
 `TextColumn`, `BadgeColumn`, `BooleanColumn`, `IconColumn`, `ImageColumn`, `ButtonColumn`, `ToggleColumn`,

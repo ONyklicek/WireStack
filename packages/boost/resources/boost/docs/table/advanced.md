@@ -545,6 +545,136 @@ Trade-offs:
 
 Best for: real-time data feeds, infinite scroll UIs, tables > 1M rows.
 
+### Row Partials
+
+A write normally re-renders the table. `rowPartials()` makes it answer with the
+**regions it moved** instead — the row, and whatever else that row's change
+touched.
+
+```php
+$table->rowPartials()
+```
+
+On a 25-column, 20-row page with ten editable columns, an inline cell save costs
+**49.3 ms and 556 kB** as an ordinary render, and **3.2 ms and 26 kB** as one row.
+
+#### How it works
+
+Every row is anchored with a plain HTML attribute — `wire:partial="row-42"` — so
+a table of 200 rows pays 200 attributes and nothing else: no registration, no
+snapshot growth. On a successful write the server renders that row on its own,
+ships it as an effect, and the browser morphs it into its anchor. Nothing else on
+the page is rendered, sent, or morphed.
+
+A row is never the whole answer, so the write queues everything its change moved:
+
+| what moved | when |
+|---|---|
+| the row | always |
+| that record's **card** | on a `stackedOnMobile()` table — the same record rendered again for the width that hides the table |
+| the **totals**, both footers | when any column has a summary — a total is computed over the whole filtered set, so any write moves it |
+| that group's **subtotal** rows | on a grouped table with group summaries |
+
+#### What you trade
+
+A row re-rendered on its own **keeps its position**. An edit that would move the
+record under the current sort leaves it where it is until the next full render.
+That is the whole of the trade, and it is why the flag is opt-in: on a wide
+editable grid, where the edit is the work, it is the right one.
+
+One write still takes the full render, and it is a property of the write rather
+than of the table: **editing the column the table groups by** moves the record
+into another group. That changes the page's shape rather than a row's contents,
+and no set of regions can describe it.
+
+#### With client-side markup
+
+A partial is morphed by Wire's own applier rather than by Livewire's morph, so
+anything the browser added to a row — markup the server render knows nothing
+about — has to be put back afterwards or it is destroyed. Wire announces
+`wire:partials-applied` on `document` after each batch, carrying the elements it
+replaced, and its own packages listen: wire-sortable re-adds the drag handle
+cell it prepends to every row, which otherwise vanished on the first inline save
+made in reorder mode.
+
+If you decorate rows from your own JavaScript, listen for the same event:
+
+```js
+document.addEventListener('wire:partials-applied', ({ detail }) => {
+    detail.elements.forEach((row) => decorate(row))   // [tl! focus]
+})
+```
+
+It is an announcement rather than a hook on purpose: a listener repairs what it
+owns and cannot cancel the write. Livewire's `morph.updating` would let a guard
+written for a whole-table render `skip()` the very cell the partial exists to
+update.
+
+#### With polling
+
+Where `poll()` or `live()` is on, the same anchors serve the read side.
+`refreshTable()` compares each row on the page against a hash of the record it
+last sent and answers with the rows that moved:
+
+- **nothing moved** → nothing is sent at all, not even markup;
+- **a row moved** → that row (and its card, and the totals);
+- **the page's shape moved** — a row arrived, left, or moved under the sort →
+  the whole table.
+
+This is the case the feature exists for: several people editing one table, where
+a colleague's write should repaint their row and leave whatever you have
+half-typed in a cell of your own alone.
+
+Which rows changed is worked out **server-side, from your own page**. It is
+deliberately not carried on the broadcast: the channel is scoped to a model class
+rather than to a viewer, so record keys on it would tell every listener which
+records exist and change — including the ones their own query would never return.
+
+It compares a hash of the record's own attributes, so it shares
+[change detection](#change-detection-skip-unchanged-renders)'s blind spot: a
+change that never touches the parent row — a child-table rollup, a computed
+column — is invisible to it. Say so with a `pollChangeDetection()` closure.
+
+#### Example
+
+```php
+use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\Columns\TextInputColumn;
+use NyonCode\WireTable\Table;
+
+class InvoiceLines extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(InvoiceLine::class)
+            ->live()                                    // [tl! focus]
+            ->rowPartials()                             // [tl! focus]
+            ->columns([
+                TextColumn::make('sku'),
+                TextInputColumn::make('quantity'),
+                TextInputColumn::make('unit_price'),
+                TextColumn::make('total')->summarizeSum(),
+            ]);
+    }
+}
+```
+
+Editing a quantity sends back that line and the footer total. A colleague's edit
+on another line arrives on the next tick as that line alone.
+
+#### Row Partials API
+
+```php
+// Answer a write with the regions it moved, rather than the table
+->rowPartials(bool $condition = true): static
+
+// Whether it is on — the honest answer, and what the views ask
+->usesRowPartials(): bool
+```
+
 ### Query Caching
 
 Cache query results for a configured TTL:
