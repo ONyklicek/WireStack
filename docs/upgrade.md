@@ -238,6 +238,17 @@ The nine names: `HasButtonStyles`, `HasColor`, `HasDynamicProperties`,
 The traits themselves are untouched — same methods, same behaviour. If you never
 imported from `WireCore\Concerns\`, there is nothing to do.
 
+Alongside them, `NyonCode\WireTable\Concerns\TableQueryService` — the same kind
+of alias, left behind when that class moved to `Services\`, and carrying the same
+`Will be removed in v2.0` note:
+
+```php
+use NyonCode\WireTable\Concerns\TableQueryService;   // [tl! --]
+use NyonCode\WireTable\Services\TableQueryService;   // [tl! ++]
+```
+
+Nothing in the docs asks you to construct it, so this is unlikely to reach you.
+
 **One exception worth taking.** For colors, prefer
 `Foundation\Concerns\HasColor`: it is the canonical owner, and
 `Actions\Concerns\HasColor` is itself only a thin alias of it.

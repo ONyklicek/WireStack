@@ -139,6 +139,7 @@ function coreCrossModuleEdges(): array
     $root = dirname(__DIR__, 3).'/src';
     $layers = coreModuleLayers();
     $edges = [];
+    $unlisted = [];
 
     $files = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS)
@@ -158,7 +159,16 @@ function coreCrossModuleEdges(): array
 
         $module = $parts[0];
 
+        // An unknown top-level directory is a hole in the rule, not a file to
+        // skip. Every module V2 plans to add — Workflow, Tenancy, GlobalSearch,
+        // Modules — would otherwise be invisible here: unlisted as a source, its
+        // imports go unchecked; unlisted as a target, everyone may import it.
+        // Failing loudly makes "add the module to coreModuleLayers() with its
+        // layer" the first commit of any such phase rather than the forgotten
+        // one.
         if (! isset($layers[$module])) {
+            $unlisted[$module] = true;
+
             continue;
         }
 
@@ -169,7 +179,13 @@ function coreCrossModuleEdges(): array
 
             $target = $match[1];
 
-            if ($target === $module || ! isset($layers[$target])) {
+            if ($target === $module) {
+                continue;
+            }
+
+            if (! isset($layers[$target])) {
+                $unlisted[$target] = true;
+
                 continue;
             }
 
@@ -183,6 +199,17 @@ function coreCrossModuleEdges(): array
     }
 
     ksort($edges);
+
+    if ($unlisted !== []) {
+        $names = array_keys($unlisted);
+        sort($names);
+
+        throw new RuntimeException(
+            'These top-level modules under packages/core/src are not in coreModuleLayers(): '
+            .implode(', ', $names).'. Add each one with the layer it belongs to (L0 base, '
+            .'L1 engine, L2 surface). Until then the rule cannot see it, in either direction.'
+        );
+    }
 
     return $edges;
 }

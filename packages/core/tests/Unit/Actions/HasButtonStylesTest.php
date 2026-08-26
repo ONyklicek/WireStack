@@ -7,10 +7,9 @@ use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
 
 /**
- * The Actions\Concerns\HasButtonStyles trait is the canonical target behind the
- * deprecated WireCore\Concerns\HasButtonStyles shim. It is exercised here in
- * isolation through a double that also pulls in the HasColor color helpers it
- * depends on.
+ * Actions\Concerns\HasButtonStyles is the canonical owner of button styling. It
+ * is exercised here in isolation through a double that also pulls in the
+ * HasColor color helpers it depends on.
  */
 function buttonStyleDouble(): object
 {

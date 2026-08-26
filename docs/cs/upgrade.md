@@ -235,6 +235,17 @@ Těch devět jmen: `HasButtonStyles`, `HasColor`, `HasDynamicProperties`,
 Samotné traity zůstávají beze změny — stejné metody, stejné chování. Pokud jste
 z `WireCore\Concerns\` nikdy neimportovali, není co dělat.
 
+Vedle nich padá `NyonCode\WireTable\Concerns\TableQueryService` — týž druh
+aliasu, zbylý po přesunu té třídy do `Services\`, se stejnou poznámkou
+`Will be removed in v2.0`:
+
+```php
+use NyonCode\WireTable\Concerns\TableQueryService;   // [tl! --]
+use NyonCode\WireTable\Services\TableQueryService;   // [tl! ++]
+```
+
+Dokumentace nikde nežádá, abyste ji vytvářeli sami, takže vás to nejspíš nepotká.
+
 **Jedna výjimka, která stojí za to.** U barev sáhněte po
 `Foundation\Concerns\HasColor`: ten je kanonickým vlastníkem a
 `Actions\Concerns\HasColor` je sám jen jeho tenký alias.
