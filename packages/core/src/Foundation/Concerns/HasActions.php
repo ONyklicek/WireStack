@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Foundation\Concerns;
 
-use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Foundation\Contracts\ActionContract;
 
 /**
- * Holds a list of interactive {@see Action} buttons on a read-only display
+ * Holds a list of interactive {@see ActionContract} buttons on a read-only display
  * component — infolist entries and schema section header actions.
  *
  * This is the canonical owner of the "a display component carries actions"
@@ -18,13 +18,13 @@ use NyonCode\WireCore\Actions\Action;
  */
 trait HasActions
 {
-    /** @var array<int, Action> */
+    /** @var array<int, ActionContract> */
     protected array $actions = [];
 
     /**
      * Replace the component's action list.
      *
-     * @param  array<int, Action>  $actions
+     * @param  array<int, ActionContract>  $actions
      */
     public function actions(array $actions): static
     {
@@ -36,7 +36,7 @@ trait HasActions
     /**
      * Append a single action to the list.
      */
-    public function action(Action $action): static
+    public function action(ActionContract $action): static
     {
         $this->actions[] = $action;
 
@@ -46,13 +46,13 @@ trait HasActions
     /**
      * The visible actions, in declaration order.
      *
-     * @return array<int, Action>
+     * @return array<int, ActionContract>
      */
     public function getActions(): array
     {
         return array_values(array_filter(
             $this->actions,
-            fn (Action $action): bool => ! $action->isHidden(),
+            fn (ActionContract $action): bool => ! $action->isHidden(),
         ));
     }
 
@@ -69,7 +69,7 @@ trait HasActions
      * the full list — a hidden action is not clickable, so no visibility filter
      * is needed here.
      */
-    public function getFieldAction(string $name): ?Action
+    public function getFieldAction(string $name): ?ActionContract
     {
         foreach ($this->actions as $action) {
             if ($action->getName() === $name) {

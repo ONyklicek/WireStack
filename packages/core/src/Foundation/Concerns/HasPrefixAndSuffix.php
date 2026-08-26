@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Foundation\Concerns;
 
 use Closure;
-use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Foundation\Contracts\ActionContract;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
@@ -23,11 +23,11 @@ trait HasPrefixAndSuffix
 
     protected string|Closure|null $suffixIcon = null;
 
-    protected ?Action $prefixAction = null;
+    protected ?ActionContract $prefixAction = null;
 
-    protected ?Action $suffixAction = null;
+    protected ?ActionContract $suffixAction = null;
 
-    protected ?Action $hintAction = null;
+    protected ?ActionContract $hintAction = null;
 
     /** Show static text inside the field, before the input. */
     public function prefix(string|Closure|null $prefix): static
@@ -64,7 +64,7 @@ trait HasPrefixAndSuffix
     /**
      * Interactive action rendered before the input (inside the affix wrapper).
      */
-    public function prefixAction(Action $action): static
+    public function prefixAction(ActionContract $action): static
     {
         $this->prefixAction = $action;
 
@@ -74,7 +74,7 @@ trait HasPrefixAndSuffix
     /**
      * Interactive action rendered after the input (inside the affix wrapper).
      */
-    public function suffixAction(Action $action): static
+    public function suffixAction(ActionContract $action): static
     {
         $this->suffixAction = $action;
 
@@ -84,7 +84,7 @@ trait HasPrefixAndSuffix
     /**
      * Interactive action rendered alongside the field hint.
      */
-    public function hintAction(Action $action): static
+    public function hintAction(ActionContract $action): static
     {
         $this->hintAction = $action;
 
@@ -115,17 +115,17 @@ trait HasPrefixAndSuffix
         return $value instanceof Icon ? $value->value() : $value;
     }
 
-    public function getPrefixAction(): ?Action
+    public function getPrefixAction(): ?ActionContract
     {
         return $this->prefixAction;
     }
 
-    public function getSuffixAction(): ?Action
+    public function getSuffixAction(): ?ActionContract
     {
         return $this->suffixAction;
     }
 
-    public function getHintAction(): ?Action
+    public function getHintAction(): ?ActionContract
     {
         return $this->hintAction;
     }
@@ -133,7 +133,7 @@ trait HasPrefixAndSuffix
     /**
      * Resolve an affix action by name (prefix, suffix, or hint slot).
      */
-    public function getFieldAction(string $name): ?Action
+    public function getFieldAction(string $name): ?ActionContract
     {
         foreach ([$this->prefixAction, $this->suffixAction, $this->hintAction] as $action) {
             if ($action !== null && $action->getName() === $name) {

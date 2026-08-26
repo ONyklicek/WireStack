@@ -18,6 +18,7 @@ use NyonCode\WireCore\Actions\Concerns\HasModal;
 use NyonCode\WireCore\Actions\Concerns\HasVisibility;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasSize;
+use NyonCode\WireCore\Foundation\Contracts\ActionContract;
 
 /**
  * Abstract BaseAction
@@ -31,7 +32,7 @@ use NyonCode\WireCore\Foundation\Concerns\HasSize;
  * @phpstan-consistent-constructor
  */
 #[AllowDynamicProperties]
-abstract class BaseAction implements Htmlable
+abstract class BaseAction implements ActionContract, Htmlable
 {
     use HasColor;
     use HasDynamicProperties;

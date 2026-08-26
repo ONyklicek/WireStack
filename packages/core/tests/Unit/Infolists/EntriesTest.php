@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Contracts\ActionContract;
 use NyonCode\WireCore\Foundation\Contracts\HasFieldActions;
 use NyonCode\WireCore\Foundation\Enums\FontWeight;
 use NyonCode\WireCore\Infolists\Components\BadgeEntry;
@@ -321,6 +322,45 @@ it('filters hidden actions out of getActions()', function () {
 
     expect($entry->getActions())->toBe([$visible])
         ->and($entry->hasActions())->toBeTrue();
+});
+
+it('carries any ActionContract, not only the Action class it used to name', function () {
+    // Foundation\Concerns\HasActions typed against Actions\Action, which put
+    // the base layer in the debt of a module above it. It only ever asks an
+    // action its name and whether it is hidden, so it asks the contract now —
+    // and every other case in this file passes a real Action, so without this
+    // the trait could go back to the concrete class unnoticed.
+    $hidden = new class implements ActionContract
+    {
+        public function getName(): string
+        {
+            return 'ghost';
+        }
+
+        public function isHidden(): bool
+        {
+            return true;
+        }
+    };
+
+    $visible = new class implements ActionContract
+    {
+        public function getName(): string
+        {
+            return 'shown';
+        }
+
+        public function isHidden(): bool
+        {
+            return false;
+        }
+    };
+
+    $entry = TextEntry::make('email')->actions([$visible, $hidden]);
+
+    expect($entry->getActions())->toBe([$visible])
+        ->and($entry->getFieldAction('ghost'))->toBe($hidden)
+        ->and($entry->getFieldAction('missing'))->toBeNull();
 });
 
 it('resolves an entry action by name including hidden ones', function () {

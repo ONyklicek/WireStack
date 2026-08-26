@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Foundation\Schema;
 
 use Closure;
-use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 use NyonCode\WireCore\Foundation\Concerns\HasActions;
+use NyonCode\WireCore\Foundation\Contracts\ActionContract;
 use NyonCode\WireCore\Foundation\Contracts\HasFieldActions;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 
@@ -106,7 +106,7 @@ class Section extends LayoutComponent implements HasFieldActions
      * Interactive actions rendered in the section header (Filament-style).
      * Alias for {@see HasActions::actions()} with header-slot semantics.
      *
-     * @param  array<int, Action>  $actions
+     * @param  array<int, ActionContract>  $actions
      */
     public function headerActions(array $actions): static
     {
@@ -116,7 +116,7 @@ class Section extends LayoutComponent implements HasFieldActions
     /**
      * The visible header actions, in declaration order.
      *
-     * @return array<int, Action>
+     * @return array<int, ActionContract>
      */
     public function getHeaderActions(): array
     {

@@ -7,6 +7,7 @@ namespace NyonCode\WireForms\Components;
 use Closure;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Contracts\ActionContract;
 use NyonCode\WireCore\Foundation\Enums\IconPosition;
 use NyonCode\WireCore\Foundation\Enums\Size;
 use NyonCode\WireCore\Foundation\Icons\Icon;
@@ -99,8 +100,12 @@ class Button extends Field
     /**
      * The button itself is the field's only action; fall back to any affix
      * actions for completeness.
+     *
+     * Typed against the contract rather than Action because the parent lookup
+     * is: Foundation carries actions by contract, so whatever it hands back is
+     * what this hands on.
      */
-    public function getFieldAction(string $name): ?Action
+    public function getFieldAction(string $name): ?ActionContract
     {
         if ($name === $this->buttonAction->getName()) {
             return $this->buttonAction;
