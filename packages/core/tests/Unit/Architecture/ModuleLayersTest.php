@@ -39,8 +39,9 @@ declare(strict_types=1);
  *
  *   - `permittedCoreEdges()` — deliberate and permanent. Reviewed, documented,
  *     not going anywhere.
- *   - `coreLayerDebt()` — the 19 edges that existed when this test was written.
- *     Each one is a thing to remove, not a thing to live with.
+ *   - `coreLayerDebt()` — what was left over. 19 edges the day this was
+ *     written; the ceilings in the last test are where it stands now. Each one
+ *     is a thing to remove, not a thing to live with.
  *
  * Both are counted, so an already-listed file cannot quietly grow a new edge,
  * and both are checked for staleness, so an entry cannot outlive the import it
@@ -95,16 +96,21 @@ function permittedCoreEdges(): array
 function coreLayerDebt(): array
 {
     return [
-        // Foundation -> Actions. Three of these are types on a signature and
-        // want `Foundation\Contracts\ActionContract`; three are docblock-only
-        // and want nothing but a fully-qualified `@param`.
+        // Foundation -> Actions on a signature. These want
+        // `Foundation\Contracts\ActionContract` to point at instead.
         'Foundation/Contracts/HasFieldActions.php' => ['Actions' => 1],
         'Foundation/Concerns/HasActions.php' => ['Actions' => 1],
         'Foundation/Concerns/HasPrefixAndSuffix.php' => ['Actions' => 1],
-        'Foundation/Schema/Section.php' => ['Actions' => 1],
-        'Foundation/Support/ShortcutLabelFormatter.php' => ['Actions' => 1],
 
-        // Foundation -> Widgets, docblock-only.
+        // Foundation -> Actions/Widgets from a docblock only — no runtime
+        // coupling at all, since a `use` is a compile-time alias and PHP never
+        // resolves it for an `@param`. They are still listed, because the
+        // cheap-looking fix does not work here: inline the FQCN instead and
+        // Pint's fully_qualified_strict_types rule puts the import straight
+        // back, and `composer lint` is a required gate. So these two get paid
+        // the same way the signatures above do — by naming a contract that
+        // Foundation is allowed to see — not by moving text around.
+        'Foundation/Schema/Section.php' => ['Actions' => 1],
         'Foundation/View/WidgetGrid.php' => ['Widgets' => 1],
 
         // Foundation -> Core. The one runtime call: it writes through a
@@ -257,10 +263,10 @@ it('carries the debt it was written with, and no more', function () {
     // import can be silenced by adding it to coreLayerDebt(). These two ceilings
     // are what make that a visible act. They are the numbers as of the day the
     // rule got enforced — 13 file/target pairs, 19 imports — and they ratchet
-    // down as the debt is paid, never up.
-    expect(count(flattenCoreEdges(coreLayerDebt())))->toBeLessThanOrEqual(13)
+    // down as the debt is paid, never up. Down to 12 and 18 since.
+    expect(count(flattenCoreEdges(coreLayerDebt())))->toBeLessThanOrEqual(12)
         ->and(array_sum(array_map(
             fn (array $targets): int => array_sum($targets),
             coreLayerDebt(),
-        )))->toBeLessThanOrEqual(19);
+        )))->toBeLessThanOrEqual(18);
 });

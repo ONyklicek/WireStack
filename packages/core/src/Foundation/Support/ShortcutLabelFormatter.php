@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Foundation\Support;
 
-use NyonCode\WireCore\Actions\Concerns\HasKeyboardShortcut;
-
 /**
  * Canonical shortcut-label formatter — the single owner of how a shortcut
  * string reads on screen (`mod+s` → `Ctrl+S`, or `⌘S` on macOS).
@@ -13,8 +11,13 @@ use NyonCode\WireCore\Actions\Concerns\HasKeyboardShortcut;
  * The shortcut vocabulary itself stays platform-neutral (`mod`, `ctrl`,
  * `shift`, key names); the platform is decided only at display time via the
  * `$mac` flag, so PHP never bakes one platform's chrome into a canonical
- * string. Consumers: {@see HasKeyboardShortcut}
- * label generation and every shortcut legend (table `?` help, palette, wizard).
+ * string. Consumers: `Actions\Concerns\HasKeyboardShortcut` label generation
+ * and every shortcut legend (table `?` help, palette, wizard).
+ *
+ * Named in prose rather than linked with `{@see}` on purpose: the link needs an
+ * import, Foundation is the one layer that may not import from a module above
+ * it, and inlining the FQCN instead does not help — Pint's
+ * fully_qualified_strict_types rule puts the import straight back.
  */
 final class ShortcutLabelFormatter
 {
