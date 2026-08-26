@@ -61,6 +61,7 @@ use NyonCode\WireTable\Services\WriteGeneration;
 use NyonCode\WireTable\Support\CellEditOutcome;
 use NyonCode\WireTable\Support\RowRenderer;
 use NyonCode\WireTable\Support\RowStamps;
+use NyonCode\WireTable\Support\StateInvalidation;
 use NyonCode\WireTable\Support\TablePartials;
 use NyonCode\WireTable\Support\TableRenderPlan;
 use NyonCode\WireTable\Table;
@@ -320,40 +321,34 @@ trait WithTable
             $this->normalizeSelectionMode();
         }
 
-        $resetPaths = [
-            'pagination.perPage',
-            'search',
-            'filters',
-            'columnFilters',
-            'sort.column',
-            'sort.direction',
-        ];
+        // What the write invalidates is a decision about the path; doing the
+        // resetting is this host's job. See StateInvalidation for the rules,
+        // including why a re-sort leaves the selection alone and a filter does
+        // not.
+        $invalidated = StateInvalidation::forPath($path);
 
-        foreach ($resetPaths as $resetPath) {
-            if ($path === $resetPath || str_starts_with($path, $resetPath.'.')) {
-                if ($path === 'pagination.perPage') {
-                    $this->normalizePerPage();
-                }
-
-                // The view this render must produce is not the one the poll
-                // checksum was taken for — see refreshTable().
-                $this->markTableViewChanged();
-
-                // "Everything the filter matches" is defined by the filter that
-                // was on screen. Narrowing the set while that selection stands
-                // would silently redefine what a bulk action is about to touch.
-                if ($path !== 'sort.column' && $path !== 'sort.direction' && $path !== 'pagination.perPage') {
-                    $this->resetSelectionScope();
-                }
-
-                $this->resetPage();
-                // A cursor points into an ordering that no longer exists once the
-                // set is narrowed or re-sorted, so it cannot survive the reset the
-                // way a page number nominally can.
-                $this->tableState->set('pagination.cursor', null);
-
-                return;
+        if ($invalidated !== null) {
+            if ($invalidated->normalisesPerPage) {
+                $this->normalizePerPage();
             }
+
+            if ($invalidated->marksViewChanged) {
+                $this->markTableViewChanged();
+            }
+
+            if ($invalidated->resetsSelectionScope) {
+                $this->resetSelectionScope();
+            }
+
+            if ($invalidated->resetsPage) {
+                $this->resetPage();
+            }
+
+            if ($invalidated->clearsCursor) {
+                $this->tableState->set('pagination.cursor', null);
+            }
+
+            return;
         }
 
         // A field inside an action/halt modal form changed — run its reactive
