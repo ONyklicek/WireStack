@@ -50,6 +50,14 @@ přes **typed contracts** místo generic hooků (H).
 
 ## Revize proti kódu (2026-08-26)
 
+> **Navazuje audit:** [`v2-audit-2026-08-26.md`](v2-audit-2026-08-26.md) — deset
+> agentů (pět měření po fázích, ke každému oponent) proti kódu. Tabulka níže
+> zůstává platná, audit ji prohlubuje a na dvou místech opravuje: `WithTable` má
+> **99** deklarací metod (ne 102) a extrakce `169decb` monolit reálně zmenšila
+> o 39 %, takže dnešní nárůst jde z nových odpovědností, ne z redistribuce.
+> Nový nález, který tabulka nemá: **`QueryPlan` nepopisuje celý dotaz**, což je
+> návrhová díra ve V2.0, ne posunuté číslo.
+
 Plán níže je z 6. 7. Mezi tím doběhla migrace na Livewire 4 a celá výkonnostní
 větev (render engine, islands, row/field partials), takže část jeho „ověřeného
 stavu" už neplatí. Tohle je přeměření, ne přepis záměru — fáze i jejich pořadí
