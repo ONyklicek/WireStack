@@ -32,7 +32,7 @@ hran na 12, cyklus `Actions ↔ Modals` je pryč.
 
 **Nedokončené kroky 8 a 10** — viz §3.
 
-### V2.1 — jedenáct extrakcí
+### V2.1 — dvanáct extrakcí
 
 | # | Metoda | Bylo → je | Vlastník |
 |---|---|---|---|
@@ -47,23 +47,33 @@ hran na 12, cyklus `Actions ↔ Modals` je pryč.
 | 9 | Table: whole-row interaction | 15 metod | `Concerns\HasRecordActions` |
 | 10 | Table: akce — kolekce a prezentace | 27 metod | `Concerns\HasTableActions` |
 | 11 | Table: akce na telefonu | 19 metod | `Concerns\CollapsesActionsOnMobile` |
+| 12 | Table: stacked karty | 9 metod | `Concerns\StacksOnMobile` + `MobileCard::shapeSignature()` |
 
 Plus **tři host kontrakty** — `Contracts\{ShowsTableColumns, ExpandsTableRows,
 SummarisesTable}` — které poprvé umožnily testovat render větev bez Livewire
 komponenty (DoD 2, částečně splněno).
 
-**Čísla:** `WithTable` 2880 → **2632** ř. · `Table` 2935 → 2730 → **2061** ř.
-`Table`: 190 → **144** metod, 1340 → **992** řádků v tělech, a jediná metoda nad
-25 řádků, která zbyla, je `getMobileCardSkeleton` (43) — tedy přesně §4 bod 2.
+**Čísla:** `WithTable` 2880 → **2632** ř. · `Table` 2935 → 2730 → 2061 →
+**1880** ř. `Table`: 190 → **135** metod, 1340 → **891** řádků v tělech.
 
-Akční cluster je tím uzavřený: 61 metod ve třech concernech, jak měření
-předpovědělo. Nic se nezměnilo než umístění — každá metoda si nechala jméno,
-signaturu i viditelnost, protože jsou to veřejné API `Table`.
+**Nejdelší metoda v celém souboru má 19 řádků** (`getSubRowCell`). Nad 25 řádků
+už není nic — to byla celou dobu ta metrika a je splněná.
 
-Jedna vazba je vědomá a je pojmenovaná v docblocku `CollapsesActionsOnMobile`:
-mobilní půlka volá privátní `composeRowActions()` a `renderEmptyStateActions()`
-z `HasTableActions`. To je ten smysl — telefon ukazuje *tytéž* akce, které
-složil desktop, takže je nesmí skládat sám.
+Akční cluster je uzavřený: 61 metod ve třech concernech, jak měření předpovědělo.
+U karet se ale měření spletlo v druhou stranu, viz §2.
+
+Nic se nezměnilo než umístění — reflektovaný veřejný a protected povrch `Table`
+je 295 signatur před i po, bez rozdílu. Jediné, co přibylo, je
+`MobileCard::shapeSignature()`, a to je přesun těla, ne nové chování.
+
+Dvě vazby jsou vědomé a pojmenované v docblocích:
+
+- `CollapsesActionsOnMobile` volá privátní `composeRowActions()` a
+  `renderEmptyStateActions()` z `HasTableActions`. To je ten smysl — telefon
+  ukazuje *tytéž* akce, které složil desktop, takže je nesmí skládat sám.
+- `StacksOnMobile` se ptá `MobileCard` na tvar karty místo aby si ho počítal.
+  Tvar je vlastnost karty; slot přidaný v `MobileCard` tak nemůže být zapomenut
+  v cache klíči.
 
 ---
 
@@ -87,6 +97,15 @@ je z nich nejhorší kandidát: `generateQueryCacheKey` je jednořádková deleg
 `queryCacheScope` je **zdokumentovaný override hook**. Extrakce by odebrala
 rozšiřovací bod a nezmenšila nic.
 
+**Odhad počtu metod stárne, jakmile hýbeš sousedy.** §4 psala o „mobilním
+shluku (22 metod)". Po kroku 11 jich zbylo **devět**: těch dvacet dva bylo
+měřeno, když v `Table` ještě seděl mobilní collapsing, který mezitím odešel do
+vlastního concernu. Skutečná práce byla jinde než v počtu — největší metoda
+souboru (`getMobileCardSkeleton`, 43 ř.) počítala klíč cache z pěti přístupových
+metod cizího objektu. To není délka, to je vlastnictví: tvar karty je vlastnost
+karty. Přesun do `MobileCard::shapeSignature()` metodu zkrátil a hlavně zařídil,
+že slot přidaný v `MobileCard` nemůže být zapomenut v klíči.
+
 **Grupování odhalí, co testy nehlídají — a je to pokaždé jinde, než čekáš.**
 Mobilní collapsing vypadal jako nejrizikovější půlka akčního clusteru (dvě
 brány `verify-drivers` jsou právě na něj) a měl **nejhustší pokrytí v celém
@@ -98,6 +117,13 @@ jedno volání musí dojít na dvě místa ve dvou slovnících: `text-*` na hla
 `<th>` a `justify-*` na flex řádek v buňce. Buňka, která centruje tlačítka pod
 hlavičkou zarovnanou doprava, prošla všemi branami. Mutace to potvrdila:
 zadrátovaný `justify-end` neshodil nic v celém balíčku `table`.
+
+Krok 12 to zopakoval do písmene. `getMobileCardSkeleton` neměl jedinou zmínku
+v `tests/` a **plochá memoizace místo klíčované tvarem prošla všemi 2258 testy**
+— přitom právě ta klíčovaná je to, co docblok označuje za důvod existence
+metody: schovej sloupec a karta se větví jinak. Stejně tak odsazení `pl-12`,
+kterým detailní mřížka a řádek akcí obcházejí sloupec s checkboxem; bez něj
+visí pod checkboxem a nikde to nepraskne.
 
 ---
 
@@ -119,17 +145,16 @@ zadrátovaný `justify-end` neshodil nic v celém balíčku `table`.
 
 Klesající výnos, seřazeno podle poměru:
 
-1. **`Table.php` — mobilní shluk (22 metod).** `HasSheetOnMobile` už existuje
-   vedle; `getMobileCardSkeleton` (43 ř.) je teď **jediná** metoda nad 25 řádků
-   v celém souboru. Vlastník na `MobileCard` / `CardRenderer` už existuje, takže
-   je to spíš „kam patří skeleton" než přesun. *Brána: `verify-drivers` na
-   `phase2-mobile`, `phase3-sheet`, `mobile-selection`, `swipe`.*
-2. **`WithTable` — zbylé tři velké metody**: `submitHaltModal` (52),
+1. **`WithTable` — zbylé tři velké metody**: `submitHaltModal` (52),
    `getTableRecords` (48), `getGroupRecords` (42). Dohromady 142 řádků, tedy
-   stejný řád jako jeden dosavadní krok.
-3. **V2.1 fáze B — chybějící ERP typy sloupců**: `StatusColumn`, `MoneyColumn`,
+   stejný řád jako jeden dosavadní krok. **Znovu změř** — tři kroky na `Table`
+   se `WithTable` nedotkly, ale čísla jsou z původního průzkumu.
+2. **V2.1 fáze B — chybějící ERP typy sloupců**: `StatusColumn`, `MoneyColumn`,
    `RelationColumn`, `MetricColumn`. Aditivní, bez BC rizika, a **vidí to
    uživatel** — na rozdíl od všeho výše. Revizí nedotčeno, ověřeno že chybí.
+
+**`Table.php` je hotová.** Nezbyla v ní metoda nad 19 řádků a každý soudržný
+shluk má concern. Další práce na ní by už byla přerovnávání, ne úklid.
 
 Po V2.1 následuje **V2.3** (owner vrstva), jejíž brána je rozhodnutí o vlastníku
 `ResourceRegistry` — už padlo, viz `v2.3-…` § R.1.
@@ -161,6 +186,14 @@ Stálo to dva reálné defekty v jednom commitu.
 prohlížeči" nehledej tam, kde je feature nejsložitější — tam už testy jsou,
 protože právě tam je někdo psal. Hledej ho **greppem po metodách s nula
 zmínkami v `tests/`**. Zabralo to jeden příkaz a našlo to `getActionCellSkeleton`
-uprostřed jinak hustě pokrytého clusteru. A mutuj **před** psaním testu i po
-něm: mutace zadrátovaného `justify-end` proti staré sadě je důkaz, že to
-pravidlo opravdu bylo nepokryté, ne jen tvůj dojem.
+uprostřed jinak hustě pokrytého clusteru — a v dalším kroku `getMobileCardSkeleton`
+úplně stejně. A mutuj **před** psaním testu i po něm: mutace zadrátovaného
+`justify-end` proti staré sadě je důkaz, že to pravidlo opravdu bylo nepokryté,
+ne jen tvůj dojem.
+
+**Dvakrát to byl `*Skeleton`, a to není náhoda.** Zkompilovaný tvar je přesně
+to, co Pest vidí jako řetězec a nikdo neasertuje, protože „to je jen markup" —
+jenže podmínky zapečené do tvaru (zarovnání, odsazení za checkboxem, klíč cache)
+jsou rozhodnutí v PHP se symptomem jen v prohlížeči. **Každý nový `Skeleton`
+chce test na svoje zapečené podmínky, hned s sebou.** Zbývající neotestované:
+`getSelectionCellSkeleton`, `getRowContextMenuSkeleton`, `getSubRowCellSkeleton`.

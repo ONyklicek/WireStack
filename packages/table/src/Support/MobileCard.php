@@ -178,6 +178,30 @@ final class MobileCard
     }
 
     /**
+     * A key for the card's *shape* — which slots exist, not what fills them.
+     *
+     * The stacked card is compiled once and filled per record, so the compiled
+     * markup may only be reused by a card that branches the same way. That is a
+     * question about this card, not about the table holding it, which is why it
+     * is answered here: add a slot to the card and this key moves with it, in one
+     * place, instead of a caller's cache quietly serving the shape before it.
+     *
+     * Names and counts rather than bare booleans: the template branches only on
+     * presence, so this over-discriminates on purpose. An extra cache entry costs
+     * one compile; a collision costs a card rendered in the wrong shape.
+     */
+    public function shapeSignature(): string
+    {
+        return implode('|', [
+            $this->title?->getName() ?? '',
+            $this->metric?->getName() ?? '',
+            $this->subtitle?->getName() ?? '',
+            count($this->meta),
+            count($this->details),
+        ]);
+    }
+
+    /**
      * @param  array<int, Column>  $columns
      */
     private static function first(array $columns, callable $matches): ?Column

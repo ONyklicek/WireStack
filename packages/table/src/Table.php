@@ -20,7 +20,6 @@ use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
-use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Support\IslandViewScope;
@@ -37,9 +36,7 @@ use NyonCode\WireTable\Exceptions\TableHasNoHostException;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
 use NyonCode\WireTable\Services\TableIntrospector;
-use NyonCode\WireTable\Support\CardRenderer;
 use NyonCode\WireTable\Support\ColumnSet;
-use NyonCode\WireTable\Support\MobileCard;
 use NyonCode\WireTable\Support\TableShortcutLegend;
 
 /** @phpstan-consistent-constructor */
@@ -54,6 +51,7 @@ class Table implements Htmlable
     use Concerns\HasRecordActions;
     use Concerns\HasSubRows;
     use Concerns\HasTableActions;
+    use Concerns\StacksOnMobile;
     use HasSheetOnMobile;
     use HasSqlDebug;
     use Macroable;
@@ -95,13 +93,6 @@ class Table implements Htmlable
 
     /** The context-menu panel's compiled markup — {@see getRowContextMenuSkeleton()}. */
     protected ?Skeleton $rowContextMenuSkeleton = null;
-
-    /**
-     * The stacked card's compiled markup, one shape per slot signature.
-     *
-     * @var array<string, Skeleton>
-     */
-    protected array $mobileCardSkeletons = [];
 
     /**
      * The sub-row expander cell, one compiled shape per state.
@@ -160,18 +151,6 @@ class Table implements Htmlable
 
     /** @var string|Closure|null Semantic/hue color tint for a whole row; a Closure receives the record. */
     protected string|Closure|null $rowColor = null;
-
-    // Responsive layout
-    protected bool $stackedOnMobile = false;
-
-    /** Explicit stacked-card slot assignment; null derives from the columns. */
-    protected ?Closure $mobileCardCallback = null;
-
-    private ?MobileCard $resolvedMobileCard = null;
-
-    private ?string $resolvedMobileCardSignature = null;
-
-    protected string $stackedBreakpoint = 'md';
 
     // Lazy loading
     protected bool $lazy = false;
@@ -1018,97 +997,6 @@ class Table implements Htmlable
     }
 
     /**
-     * Shape the stacked mobile card: which column is the title, which is the
-     * supporting line, which is the figure set right, and what sits beside them
-     * as status.
-     *
-     *   ->mobileCard(fn (MobileCardConfig $card) => $card
-     *       ->title('number')->subtitle('customer')->metric('total')->meta('status'))
-     *
-     * Slots left unnamed are derived from the columns, so this is an override,
-     * never a requirement.
-     */
-    public function mobileCard(Closure $callback): static
-    {
-        $this->mobileCardCallback = $callback;
-        $this->resolvedMobileCard = null;
-
-        return $this;
-    }
-
-    /**
-     * The card resolved for a set of visible columns, memoized per column set —
-     * the stacked view would otherwise resolve it once per record.
-     *
-     * @param  array<int, Column>  $visibleColumns
-     */
-    public function getMobileCard(array $visibleColumns): MobileCard
-    {
-        $signature = implode('|', array_map(fn (Column $c): string => $c->getName(), $visibleColumns));
-
-        if ($this->resolvedMobileCard === null || $this->resolvedMobileCardSignature !== $signature) {
-            $this->resolvedMobileCard = MobileCard::resolve($visibleColumns, $this->mobileCardCallback);
-            $this->resolvedMobileCardSignature = $signature;
-        }
-
-        return $this->resolvedMobileCard;
-    }
-
-    /**
-     * Enable stacked/card layout on mobile devices
-     *
-     * @param  bool  $stacked  Whether to use stacked layout
-     * @param  string|Breakpoint  $breakpoint  Breakpoint below which to use stacked layout (sm, md, lg)
-     */
-    public function stackedOnMobile(bool $stacked = true, string|Breakpoint $breakpoint = Breakpoint::Md): static
-    {
-        $this->stackedOnMobile = $stacked;
-        $this->stackedBreakpoint = $breakpoint instanceof Breakpoint ? $breakpoint->value : $breakpoint;
-
-        return $this;
-    }
-
-    public function isStackedOnMobile(): bool
-    {
-        return $this->stackedOnMobile;
-    }
-
-    public function getStackedBreakpoint(): string
-    {
-        return $this->stackedBreakpoint;
-    }
-
-    /**
-     * Responsive class that hides the full table below the stacked breakpoint.
-     *
-     * Owns the breakpoint → Tailwind class mapping in PHP (literal class names so
-     * the JIT scanner sees them); the view only consumes the result. Returns no
-     * hiding class when mobile stacking is disabled.
-     */
-    public function getStackedTableHiddenClass(): string
-    {
-        if (! $this->stackedOnMobile) {
-            return '';
-        }
-
-        return Breakpoint::resolve($this->stackedBreakpoint)->blockFromClass();
-    }
-
-    /**
-     * Responsive class that shows the mobile cards only below the stacked
-     * breakpoint. Companion to {@see getStackedTableHiddenClass()}; defaults to a
-     * fully hidden cards layout when mobile stacking is disabled.
-     */
-    public function getStackedCardsVisibleClass(): string
-    {
-        if (! $this->stackedOnMobile) {
-            return 'hidden';
-        }
-
-        return Breakpoint::resolve($this->stackedBreakpoint)->hiddenAtClass();
-    }
-
-    /**
      * Set custom table class
      */
     public function tableClass(?string $class): static
@@ -1334,21 +1222,6 @@ class Table implements Htmlable
     }
 
     /**
-     * Companion of {@see getRowClasses()} for the mobile stacked-card view: the
-     * row tint (or the default white card background) plus the card border and
-     * any custom row class, so a colored row reads the same on phone and desktop.
-     */
-    public function getRowCardClasses(?Model $record): string
-    {
-        $tint = $record === null ? null : $this->getRowColor($record);
-        $background = $tint !== null
-            ? HasColor::getRowTintClasses($tint)
-            : 'bg-white dark:bg-gray-800';
-
-        return trim("{$background} border-b border-gray-200 dark:border-gray-700 ".((string) $this->getRowClass($record)));
-    }
-
-    /**
      * Remember each user's column layout under a stable key.
      *
      * When set, the table loads the user's saved hidden-column set on mount and
@@ -1500,59 +1373,6 @@ class Table implements Htmlable
         );
 
         return $skeleton->fill(['keyJs' => $keyJs, 'key' => $key]);
-    }
-
-    /**
-     * The stacked-layout card, compiled once for the table and filled per record.
-     *
-     * Keyed by the card's slot signature rather than memoised flat: which slots a
-     * card has is derived from the visible columns, so hiding one changes the
-     * shape and must not reuse the shape before it.
-     *
-     * @see CardRenderer
-     */
-    public function getMobileCardSkeleton(MobileCard $card): Skeleton
-    {
-        $signature = implode('|', [
-            $card->title()?->getName() ?? '',
-            $card->metric()?->getName() ?? '',
-            $card->subtitle()?->getName() ?? '',
-            count($card->meta()),
-            count($card->details()),
-        ]);
-
-        return $this->mobileCardSkeletons[$signature] ??= Skeleton::compile(
-            view('wire-table::tables.partials.mobile-card', [
-                'isSelectable' => $this->isSelectable(),
-                'cardTitle' => $card->title() !== null,
-                'cardMetric' => $card->metric() !== null,
-                'cardSubtitle' => $card->subtitle() !== null,
-                'hasMeta' => $card->meta() !== [],
-                'hasDetails' => $card->details() !== [],
-                'hasMobileActions' => $this->getMobileRowActionsForDisplay() !== [],
-                'collapseMobileActions' => $this->shouldCollapseActionsOnMobile(),
-                'detailsClass' => 'px-4 pb-3 grid grid-cols-2 gap-x-4 gap-y-2'
-                    .($this->isSelectable() ? ' pl-12' : ''),
-                'actionsClass' => 'flex flex-wrap items-center gap-2 px-4 pb-3'
-                    .($this->isSelectable() ? ' pl-12' : ''),
-                'partialAnchor' => $this->usesRowPartials()
-                    ? ' wire:partial="card-'.Skeleton::slot('key').'"'
-                    : '',
-                'cardClasses' => Skeleton::slot('cardClasses'),
-                'key' => Skeleton::slot('key'),
-                'keyJs' => Skeleton::slot('keyJs'),
-                'title' => Skeleton::slot('title'),
-                'metric' => Skeleton::slot('metric'),
-                'subtitle' => Skeleton::slot('subtitle'),
-                'meta' => Skeleton::slot('meta'),
-                'groupActions' => Skeleton::slot('groupActions'),
-                'details' => Skeleton::slot('details'),
-                'actions' => Skeleton::slot('actions'),
-                'subRows' => Skeleton::slot('subRows'),
-            ])->render(),
-            'cardClasses', 'key', 'keyJs', 'title', 'metric', 'subtitle',
-            'meta', 'groupActions', 'details', 'actions', 'subRows',
-        );
     }
 
     /**
