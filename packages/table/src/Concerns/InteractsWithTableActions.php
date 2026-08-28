@@ -323,7 +323,6 @@ trait InteractsWithTableActions
         $this->cachedQuery = null;
         $this->queryService = null;
         $this->cachedSelectedRecords = null;
-        $this->cachedGroupPartitions = null;
         $this->resolvedActionFrameCache = [];
 
         event(new TableRefreshed(static::class));

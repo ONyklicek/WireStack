@@ -75,6 +75,7 @@ trait WithTable
 {
     use CanExpandSubRows;
     use CanFillCells;
+    use CanGroupRecords;
     use CanSelectRecords;
     use DispatchesStateUpdates;
     use HasSqlDebug;
@@ -190,14 +191,6 @@ trait WithTable
     protected ?TableQueryService $queryService = null;
 
     // $cachedSelectedRecords comes from CanSelectRecords.
-
-    /**
-     * Memoized page records partitioned by group value, in page order.
-     * Each entry: ['value' => mixed, 'records' => Collection].
-     *
-     * @var array<int, array{value: mixed, records: Collection<int, Model>}>|null
-     */
-    protected ?array $cachedGroupPartitions = null;
 
     /**
      * Initialize table state via StateContainer.
@@ -1329,36 +1322,6 @@ trait WithTable
     }
 
     /**
-     * Keep groups contiguous: prepend an order on the group column so every
-     * other sort applies within a group. Skipped when the user explicitly
-     * sorts by the group column — that sort already keeps groups together.
-     *
-     * @param  Builder<Model>  $query
-     * @return Builder<Model>
-     */
-    protected function applyGroupOrdering(Builder $query): Builder
-    {
-        $table = $this->getTable();
-        $groupColumn = $table->getGroupColumn();
-
-        if ($groupColumn === null) {
-            return $query;
-        }
-
-        if ($this->tableState->get('sort.column', '') === $groupColumn) {
-            return $query;
-        }
-
-        $base = $query->getQuery();
-        $base->orders = array_merge(
-            [['column' => $query->qualifyColumn($groupColumn), 'direction' => 'asc']],
-            $base->orders ?? [],
-        );
-
-        return $query;
-    }
-
-    /**
      * Check if table is ready to display data
      */
     public function isTableReady(): bool
@@ -1596,112 +1559,6 @@ trait WithTable
         }
 
         return $this->tableHasSubRowGrandTotals();
-    }
-
-    /**
-     * Whether group subtotal rows should render: grouping is active, enabled,
-     * and at least one column has a summary to subtotal.
-     */
-    public function tableHasGroupSummaries(): bool
-    {
-        $table = $this->getTable();
-
-        if (! $table->hasGrouping() || ! $table->hasGroupSummaries()) {
-            return false;
-        }
-
-        foreach ($table->getColumns() as $column) {
-            if ($column->hasSummary()) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Per-group subtotals, computed in memory over the group's records on the
-     * current page (groups crossing a page boundary subtotal per page).
-     *
-     * @return array<string, array<int, array<string, mixed>>> [columnName => [['label' => …, 'value' => …], …]]
-     */
-    public function computeGroupSummaries(mixed $groupValue): array
-    {
-        $table = $this->getTable();
-
-        if (! $table->hasGrouping()) {
-            return [];
-        }
-
-        $groupRecords = $this->getGroupRecords($groupValue);
-
-        $summaries = [];
-
-        foreach ($table->getColumns() as $column) {
-            if (! $column->hasSummary()) {
-                continue;
-            }
-
-            // In-memory over the group's rows; selection/subRows scopes don't
-            // describe a group, so only query/page declarations subtotal.
-            $summaries[$column->getName()] = $column->computeSummaries(
-                $groupRecords,
-                null,
-                ['query', 'page'],
-            );
-        }
-
-        return $summaries;
-    }
-
-    /**
-     * Records of one group on the current page. The page is partitioned once
-     * per request — group subtotals are rendered per group, and re-filtering
-     * the whole page for each of them is O(groups × page size).
-     *
-     * @return Collection<int, Model>
-     */
-    protected function getGroupRecords(mixed $groupValue): Collection
-    {
-        if ($this->cachedGroupPartitions === null) {
-            $table = $this->getTable();
-            $records = $this->getTableRecords();
-            $records = $records instanceof Collection ? $records : collect($records->items());
-
-            $partitions = [];
-
-            foreach ($records as $record) {
-                // Normalised scalar key: the raw value may be a date/object cast
-                // (a fresh Carbon per record), so a strict compare of the raw value
-                // would never match and every row would form its own group. The
-                // caller (computeGroupSummaries) is handed the same key by the view.
-                $value = $table->getGroupComparisonKey($record);
-                $matched = false;
-
-                // 'records' is a Collection object, push() mutates it in place.
-                foreach ($partitions as $partition) {
-                    if ($partition['value'] === $value) {
-                        $partition['records']->push($record);
-                        $matched = true;
-                        break;
-                    }
-                }
-
-                if (! $matched) {
-                    $partitions[] = ['value' => $value, 'records' => collect([$record])];
-                }
-            }
-
-            $this->cachedGroupPartitions = $partitions;
-        }
-
-        foreach ($this->cachedGroupPartitions as $partition) {
-            if ($partition['value'] === $groupValue) {
-                return $partition['records'];
-            }
-        }
-
-        return collect();
     }
 
     /**
@@ -2532,7 +2389,6 @@ trait WithTable
         // cachedQuery is intentionally kept — the query plan doesn't change,
         // only the row data; re-running the planner would be wasted work.
         $this->cachedRecords = null;
-        $this->cachedGroupPartitions = null;
     }
 
     // ==========================================
@@ -2603,7 +2459,6 @@ trait WithTable
         // New rows changed the dataset — drop cached records/partitions so the
         // next render reflects the import.
         $this->cachedRecords = null;
-        $this->cachedGroupPartitions = null;
 
         return $result;
     }

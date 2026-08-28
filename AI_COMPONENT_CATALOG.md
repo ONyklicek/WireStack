@@ -496,9 +496,19 @@ Record actions (whole-row interaction — click/dblclick/right-click/keyboard):
 - Deprecated alias: `Table::rowContextMenu()` → prefer `recordAction()->onContextMenu()`
 - Mobile fallback: `Table::getMobileRowActionsForDisplay()` / `hasMobileActions()` / `recordActionButtonsOnMobile(bool)` — behaviour-only bindings render as ordinary buttons on a stacked card (copies with `HasKeyboardShortcut::withoutKeyboardShortcut()`, since a rendered button binds its shortcut as a *window* listener)
 
+Host concerns (composed into `Concerns\WithTable`, one feature each):
+
+- `Concerns\CanSelectRecords`, `Concerns\CanExpandSubRows`, `Concerns\CanFillCells`
+- `Concerns\CanGroupRecords` — the host's half of grouping: `applyGroupOrdering()` (prepends the group order so every other sort applies within a group; stands aside when the viewer sorts by the group column), `tableHasGroupSummaries()`, `computeGroupSummaries()` (in memory, `query`/`page` scopes only) and `getGroupRecords()` over `Support\GroupPartitions`
+- `Concerns\InteractsWithTableActions`, `Concerns\InteractsWithTableModals`
+
 Services:
 
 - `Services\TableQueryService` — the table-to-core query seam
+
+Support:
+
+- `Support\GroupPartitions` — the page split by normalised group key, in page order. Carries the identity of the record set it split (`describes()`), so paging inside one request cannot leave subtotals describing the page before
 
 State:
 

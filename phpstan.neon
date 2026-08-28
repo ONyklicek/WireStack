@@ -43,6 +43,7 @@ parameters:
         - { identifier: trait.unused, path: packages/forms/src/Forms/WithForms.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/CanExpandSubRows.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/CanFillCells.php }
+        - { identifier: trait.unused, path: packages/table/src/Concerns/CanGroupRecords.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/InteractsWithTableActions.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/InteractsWithTableModals.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/CanSelectRecords.php }

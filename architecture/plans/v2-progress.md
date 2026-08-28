@@ -32,7 +32,7 @@ hran na 12, cyklus `Actions ↔ Modals` je pryč.
 
 **Nedokončené kroky 8 a 10** — viz §3.
 
-### V2.1 — dvanáct extrakcí
+### V2.1 — třináct extrakcí
 
 | # | Metoda | Bylo → je | Vlastník |
 |---|---|---|---|
@@ -48,13 +48,15 @@ hran na 12, cyklus `Actions ↔ Modals` je pryč.
 | 10 | Table: akce — kolekce a prezentace | 27 metod | `Concerns\HasTableActions` |
 | 11 | Table: akce na telefonu | 19 metod | `Concerns\CollapsesActionsOnMobile` |
 | 12 | Table: stacked karty | 9 metod | `Concerns\StacksOnMobile` + `MobileCard::shapeSignature()` |
+| 13 | WithTable: grupování | 4 metody | `Concerns\CanGroupRecords` + `Support\GroupPartitions` — **našlo defekt**, viz §2 |
 
 Plus **tři host kontrakty** — `Contracts\{ShowsTableColumns, ExpandsTableRows,
 SummarisesTable}` — které poprvé umožnily testovat render větev bez Livewire
 komponenty (DoD 2, částečně splněno).
 
-**Čísla:** `WithTable` 2880 → **2632** ř. · `Table` 2935 → 2730 → 2061 →
-**1880** ř. `Table`: 190 → **135** metod, 1340 → **891** řádků v tělech.
+**Čísla:** `WithTable` 2880 → 2632 → **2486** ř. (99 → 95 metod, 1689 → 1580
+řádků v tělech) · `Table` 2935 → 2730 → 2061 → **1880** ř. (190 → **135** metod,
+1340 → **891** řádků v tělech).
 
 **Nejdelší metoda v celém souboru má 19 řádků** (`getSubRowCell`). Nad 25 řádků
 už není nic — to byla celou dobu ta metrika a je splněná.
@@ -97,6 +99,21 @@ je z nich nejhorší kandidát: `generateQueryCacheKey` je jednořádková deleg
 `queryCacheScope` je **zdokumentovaný override hook**. Extrakce by odebrala
 rozšiřovací bod a nezmenšila nic.
 
+**Extrakce našla ostrý defekt, a našla ho tím, že se ptala „kdo tuhle memo
+zneplatňuje".** `cachedGroupPartitions` se nulovala ručně na pěti místech, která
+nulují `cachedRecords` — a jen na třech z nich. Chyběly `setPage()` a
+`setTableCursor()`. Stránkování uvnitř jednoho requestu tedy nechalo podsoučty
+skupin popisovat **předchozí stránku**: skupina na obrazovce sečetla 0, zatímco
+skupina, která už na stránce nebyla, dál ukazovala svoje číslo. Ověřeno na
+dvoustránkové tabulce: po `setPage(2)` vracelo `Acme` 300 a `Zeta` (jediná
+skupina na stránce) 0.
+
+Oprava není šestý `= null`. `GroupPartitions` si nese **identitu záznamů, které
+rozdělil**, takže pravidlo je jedno porovnání na jednom místě místo řádku, který
+si musí pamatovat každý volající. Všech pět ručních nulování je pryč. Tohle je
+ta třída chyby, kterou soubor `AI_CODING_STANDARD.md` § Adapters popisuje z
+druhé strany: rozsypané zneplatňování je duplicitní znalost a rozjede se.
+
 **Odhad počtu metod stárne, jakmile hýbeš sousedy.** §4 psala o „mobilním
 shluku (22 metod)". Po kroku 11 jich zbylo **devět**: těch dvacet dva bylo
 měřeno, když v `Table` ještě seděl mobilní collapsing, který mezitím odešel do
@@ -117,6 +134,11 @@ jedno volání musí dojít na dvě místa ve dvou slovnících: `text-*` na hla
 `<th>` a `justify-*` na flex řádek v buňce. Buňka, která centruje tlačítka pod
 hlavičkou zarovnanou doprava, prošla všemi branami. Mutace to potvrdila:
 zadrátovaný `justify-end` neshodil nic v celém balíčku `table`.
+
+Krok 13 potvrdil, že to platí i mimo `Skeleton`: memoizace rozdělení stránky
+**neexistovala z pohledu testů vůbec** — zahodit ji celou prošlo všemi 2264
+testy. Nepozorované byly obě půlky: že se cachuje, i že se to zneplatňuje. Druhá
+z nich byla přitom rozbitá.
 
 Krok 12 to zopakoval do písmene. `getMobileCardSkeleton` neměl jedinou zmínku
 v `tests/` a **plochá memoizace místo klíčované tvarem prošla všemi 2258 testy**
@@ -145,16 +167,30 @@ visí pod checkboxem a nikde to nepraskne.
 
 Klesající výnos, seřazeno podle poměru:
 
-1. **`WithTable` — zbylé tři velké metody**: `submitHaltModal` (52),
-   `getTableRecords` (48), `getGroupRecords` (42). Dohromady 142 řádků, tedy
-   stejný řád jako jeden dosavadní krok. **Znovu změř** — tři kroky na `Table`
-   se `WithTable` nedotkly, ale čísla jsou z původního průzkumu.
-2. **V2.1 fáze B — chybějící ERP typy sloupců**: `StatusColumn`, `MoneyColumn`,
+1. **V2.1 fáze B — chybějící ERP typy sloupců**: `StatusColumn`, `MoneyColumn`,
    `RelationColumn`, `MetricColumn`. Aditivní, bez BC rizika, a **vidí to
    uživatel** — na rozdíl od všeho výše. Revizí nedotčeno, ověřeno že chybí.
 
 **`Table.php` je hotová.** Nezbyla v ní metoda nad 19 řádků a každý soudržný
 shluk má concern. Další práce na ní by už byla přerovnávání, ne úklid.
+
+**`WithTable` — přeměřeno 2026-08-28, seznam v §4 byl neúplný.** Největší metoda
+není žádná ze tří, které tam stály, ale `updateTableCell` (**73**), a hned za
+sebou `queueRowPartial` (43); obě v seznamu chyběly. Zbytek pořadí:
+
+| Metoda | ř. | Poznámka |
+|---|---|---|
+| `updateTableCell` | 73 | **Nechat.** `CellEditPipeline` má v docblocku napsáno, že transakci a zámek řádku vlastní *volající* — jedna řádka pod `lockForUpdate()` pro edit, množina pod jednou transakcí pro fill. Další extrakce jde proti doloženému rozhodnutí. |
+| `updatedTableState` | 53 | Krok 8, doražené vědomě (59 → 53). |
+| `submitHaltModal` | 52 | Čte halt kontext ze stavu a přeposílá podle typu akce. Kandidát na value object nad stavem. |
+| `getTableRecords` | 48 | Sekvence hostitelských volání: memo, plugin seam, lazy gate, rehome, eager load. Přesouvat není co. |
+| `queueChangedRowPartials` | 47 | Krok 5, hotovo. |
+| `queueRowPartial` | 43 | Vázané na `renderPartial()` / `skipIslandsRender()` — hostitelské. |
+| `buildTableQuery` | 42 | Krok 4, hotovo. |
+
+Čtyři z osmi největších jsou tedy **už doražené kroky**, které skončily v téhle
+velikosti záměrně. Zbývá `submitHaltModal` jako jediný nesporný kandidát, a to
+je jedna metoda, ne krok.
 
 Po V2.1 následuje **V2.3** (owner vrstva), jejíž brána je rozhodnutí o vlastníku
 `ResourceRegistry` — už padlo, viz `v2.3-…` § R.1.
@@ -190,6 +226,12 @@ uprostřed jinak hustě pokrytého clusteru — a v dalším kroku `getMobileCar
 úplně stejně. A mutuj **před** psaním testu i po něm: mutace zadrátovaného
 `justify-end` proti staré sadě je důkaz, že to pravidlo opravdu bylo nepokryté,
 ne jen tvůj dojem.
+
+**Pravidlo z kroku 13:** u každé memoizace se ptej **kdo ji zneplatňuje**, ne
+jestli funguje. Zneplatnění rozsypané po volajících je duplicitní znalost a
+rozjede se — tady se rozjelo na dvou z pěti míst a nikdo si nevšiml, protože
+cache samotná nebyla ničím pozorovaná. Oprava, která drží: ať si memo nese
+identitu vstupu, ze kterého vzniklo.
 
 **Dvakrát to byl `*Skeleton`, a to není náhoda.** Zkompilovaný tvar je přesně
 to, co Pest vidí jako řetězec a nikdo neasertuje, protože „to je jen markup" —
