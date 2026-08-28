@@ -183,6 +183,29 @@ it('counts flattened non-divider actions against the collapse threshold', functi
     expect($below->shouldCollapseActionsOnMobile())->toBeFalse();
 });
 
+it('drops a divider and a record-less member from inside a group as well', function () {
+    // The same two exclusions one level down. A group is free to hold its own
+    // separators and a header action folded into the toolbar's menu; neither is
+    // a row action, so neither counts toward the threshold nor reaches the card.
+    $table = Table::make()
+        ->actions([
+            ActionGroup::make([
+                Action::make('edit'),
+                Action::divider(),
+                HeaderAction::make('import'),
+                Action::make('delete'),
+            ]),
+            Action::make('view'),
+        ])
+        ->collapseActionsOnMobile();
+
+    $names = array_map(fn ($action) => $action->getName(), $table->getMobileActionGroup()->getActions());
+
+    // edit + delete + view = 3, not the five members the group and list declare.
+    expect($names)->toBe(['edit', 'delete', 'view'])
+        ->and($table->shouldCollapseActionsOnMobile())->toBeTrue();
+});
+
 it('is disabled outright when collapse is turned off, regardless of action count', function () {
     $manyActions = [Action::make('a'), Action::make('b'), Action::make('c'), Action::make('d')];
 

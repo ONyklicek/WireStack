@@ -1,6 +1,6 @@
 ---
 title: V2 — kde to stojí a čím pokračovat
-date: 2026-08-26
+date: 2026-08-28
 scope: V2.0 (hotová), V2.1 (rozpracovaná), ADR 0025 (rozpracované)
 status: progress record — aktualizovat na konci každého běhu
 ---
@@ -32,7 +32,7 @@ hran na 12, cyklus `Actions ↔ Modals` je pryč.
 
 **Nedokončené kroky 8 a 10** — viz §3.
 
-### V2.1 — devět extrakcí
+### V2.1 — jedenáct extrakcí
 
 | # | Metoda | Bylo → je | Vlastník |
 |---|---|---|---|
@@ -45,12 +45,25 @@ hran na 12, cyklus `Actions ↔ Modals` je pryč.
 | 7 | `mountWithTable` | **110 → 19** | `Concerns\TableStateSchema::initialFor()` |
 | 8 | `updatedTableState` | 59 → 53 | `Support\StateInvalidation` |
 | 9 | Table: whole-row interaction | 15 metod | `Concerns\HasRecordActions` |
+| 10 | Table: akce — kolekce a prezentace | 27 metod | `Concerns\HasTableActions` |
+| 11 | Table: akce na telefonu | 19 metod | `Concerns\CollapsesActionsOnMobile` |
 
 Plus **tři host kontrakty** — `Contracts\{ShowsTableColumns, ExpandsTableRows,
 SummarisesTable}` — které poprvé umožnily testovat render větev bez Livewire
 komponenty (DoD 2, částečně splněno).
 
-**Čísla:** `WithTable` 2880 → **2632** ř. · `Table` 2935 → **2730** ř.
+**Čísla:** `WithTable` 2880 → **2632** ř. · `Table` 2935 → 2730 → **2061** ř.
+`Table`: 190 → **144** metod, 1340 → **992** řádků v tělech, a jediná metoda nad
+25 řádků, která zbyla, je `getMobileCardSkeleton` (43) — tedy přesně §4 bod 2.
+
+Akční cluster je tím uzavřený: 61 metod ve třech concernech, jak měření
+předpovědělo. Nic se nezměnilo než umístění — každá metoda si nechala jméno,
+signaturu i viditelnost, protože jsou to veřejné API `Table`.
+
+Jedna vazba je vědomá a je pojmenovaná v docblocku `CollapsesActionsOnMobile`:
+mobilní půlka volá privátní `composeRowActions()` a `renderEmptyStateActions()`
+z `HasTableActions`. To je ten smysl — telefon ukazuje *tytéž* akce, které
+složil desktop, takže je nesmí skládat sám.
 
 ---
 
@@ -74,6 +87,18 @@ je z nich nejhorší kandidát: `generateQueryCacheKey` je jednořádková deleg
 `queryCacheScope` je **zdokumentovaný override hook**. Extrakce by odebrala
 rozšiřovací bod a nezmenšila nic.
 
+**Grupování odhalí, co testy nehlídají — a je to pokaždé jinde, než čekáš.**
+Mobilní collapsing vypadal jako nejrizikovější půlka akčního clusteru (dvě
+brány `verify-drivers` jsou právě na něj) a měl **nejhustší pokrytí v celém
+souboru**: prahy, klamp na 1, dividery, ne-spustitelné akce, klonování bez
+klávesové zkratky, literální breakpoint třídy. Nepokrytá byla nudná půlka —
+**chrome akčního sloupce**. `getActionCellSkeleton()` neměl jediný test a
+`actionsAlignment()` neměl žádné tvrzení nad vyrenderovaným markupem, přestože
+jedno volání musí dojít na dvě místa ve dvou slovnících: `text-*` na hlavičkové
+`<th>` a `justify-*` na flex řádek v buňce. Buňka, která centruje tlačítka pod
+hlavičkou zarovnanou doprava, prošla všemi branami. Mutace to potvrdila:
+zadrátovaný `justify-end` neshodil nic v celém balíčku `table`.
+
 ---
 
 ## 3. Co je vědomě neudělané
@@ -94,17 +119,15 @@ rozšiřovací bod a nezmenšila nic.
 
 Klesající výnos, seřazeno podle poměru:
 
-1. **`Table.php` — zbylé dva akční shluky.** Akční cluster je 62 metod, tedy
-   **tři** concerny, ne jeden: kolekce a prezentace (~25), mobilní collapsing
-   (~20), a whole-row interakce (hotová). Zbývají dva a jsou to čisté přesuny
-   podle vzoru, který třída už používá. *Brána: `verify-drivers` na
-   `collapse-*`, `swipe`, `phase2-mobile`.*
-2. **`Table.php` — mobilní shluk (22 metod).** `HasSheetOnMobile` už existuje
-   vedle; `getMobileCardSkeleton` (43 ř.) je největší metoda v souboru.
-3. **`WithTable` — zbylé tři velké metody**: `submitHaltModal` (52),
+1. **`Table.php` — mobilní shluk (22 metod).** `HasSheetOnMobile` už existuje
+   vedle; `getMobileCardSkeleton` (43 ř.) je teď **jediná** metoda nad 25 řádků
+   v celém souboru. Vlastník na `MobileCard` / `CardRenderer` už existuje, takže
+   je to spíš „kam patří skeleton" než přesun. *Brána: `verify-drivers` na
+   `phase2-mobile`, `phase3-sheet`, `mobile-selection`, `swipe`.*
+2. **`WithTable` — zbylé tři velké metody**: `submitHaltModal` (52),
    `getTableRecords` (48), `getGroupRecords` (42). Dohromady 142 řádků, tedy
    stejný řád jako jeden dosavadní krok.
-4. **V2.1 fáze B — chybějící ERP typy sloupců**: `StatusColumn`, `MoneyColumn`,
+3. **V2.1 fáze B — chybějící ERP typy sloupců**: `StatusColumn`, `MoneyColumn`,
    `RelationColumn`, `MetricColumn`. Aditivní, bez BC rizika, a **vidí to
    uživatel** — na rozdíl od všeho výše. Revizí nedotčeno, ověřeno že chybí.
 
@@ -133,3 +156,11 @@ jím: query cache vypadala jako nejlevnější první krok a byla nejhorší,
 **Pravidlo, které tenhle běh vynutil:** adaptér se **extrahuje a deleguje**,
 nikdy nepíše vedle jako druhá kopie — `AI_CODING_STANDARD.md` § Adapters.
 Stálo to dva reálné defekty v jednom commitu.
+
+**Pravidlo z běhu 2026-08-28:** test na „pravidlo pozorovatelné jen v
+prohlížeči" nehledej tam, kde je feature nejsložitější — tam už testy jsou,
+protože právě tam je někdo psal. Hledej ho **greppem po metodách s nula
+zmínkami v `tests/`**. Zabralo to jeden příkaz a našlo to `getActionCellSkeleton`
+uprostřed jinak hustě pokrytého clusteru. A mutuj **před** psaním testu i po
+něm: mutace zadrátovaného `justify-end` proti staré sadě je důkaz, že to
+pravidlo opravdu bylo nepokryté, ne jen tvůj dojem.

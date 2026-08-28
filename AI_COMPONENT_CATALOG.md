@@ -471,6 +471,9 @@ Main concerns:
 - `Concerns\HasResponsive`
 - `Concerns\HasSqlDebug`
 - `Concerns\HasSubRows`
+- `Concerns\HasTableActions` — which actions a table carries (row, bulk, header, empty state) and how the actions column presents them: position, alignment, label, width, `solid`/`quiet` style, the composition rule in `composeRowActions()`, and the compiled `getActionCellSkeleton()`
+- `Concerns\CollapsesActionsOnMobile` — the phone's half of the same feature: the row, header and sub-row folds into one `ActionGroup` dropdown, the counting rules that decide whether to fold, and the breakpoint classes that swap the two halves
+- `Concerns\HasRecordActions` — whole-row interaction (see *Record actions* below)
 - `Concerns\HasRecordTriggers` — record-action trigger vocabulary (on the `RecordAction` wrapper)
 - `Concerns\HasGestures` — the table's side of the gesture layer
 
