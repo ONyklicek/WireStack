@@ -1051,9 +1051,25 @@ TextColumn::make('metadata')->onlyOnLargeScreens()  // ≥xl
 
 ```php
 TextColumn::make('user')
-    ->mobileDisplayUsing(fn ($record) => $record->name)
-    ->desktopDisplayUsing(fn ($record) => "{$record->name} ({$record->email})")
+    ->mobileDisplayUsing(fn ($state, $record) => $record->name)
+    ->desktopDisplayUsing(fn ($state, $record) => "{$record->name} ({$record->email})")
 ```
+
+Closure varianty dodává **obsah** buňky, přesně jako `displayUsing()`. Všechno
+ostatní, co sloupec deklaruje — odkaz na záznam, ikona, velikost a řez,
+kopírovací tlačítko, popisek — ho pořád obaluje, takže sloupec o svoje
+affordance na jedné šířce nepřijde:
+
+```php
+TextColumn::make('user')
+    ->actionUrl(fn ($record) => route('users.show', $record))   // [tl! focus]
+    ->copyable()                                                // [tl! focus]
+    ->mobileDisplayUsing(fn ($state, $record) => $record->name)  // pořád odkaz, pořád kopírovatelné
+```
+
+Deklarovat jen jednu variantu je v pořádku: druhá šířka spadne na
+`displayUsing()`, pokud existuje, jinak na naformátovaný stav. Když se obě šířky
+vykreslí stejně, buňka se vypíše jednou, bez breakpointových obalů.
 
 ---
 

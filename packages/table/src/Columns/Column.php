@@ -720,14 +720,32 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
 
     public function renderCell(Model $record): string
     {
+        return $this->renderCellContent($this->displayUsing, $record);
+    }
+
+    /**
+     * The cell, with the closure that supplies its content.
+     *
+     * There is one cell and one set of chrome — the link, the icon, the copy
+     * button, the classes, the description — and a closure only ever replaces
+     * what sits *inside* it. That is already how `displayUsing()` behaves, and
+     * making the per-width closures share this method is what stopped
+     * {@see renderMobileCell()} from returning bare escaped text: a column with
+     * `mobileDisplayUsing()` kept its record link and its copy button on a
+     * desktop and lost both on a phone, which is the width that needs them.
+     *
+     * @param  Closure|null  $contentUsing  fn ($state, $record, $column): mixed — null formats the state
+     */
+    private function renderCellContent(?Closure $contentUsing, Model $record): string
+    {
         if (! $this->canView() || ! $this->isVisibleForRecord($record)) {
             return '';
         }
 
         $state = $this->getState($record);
 
-        $content = $this->displayUsing
-            ? (string) ($this->displayUsing)($state, $record)
+        $content = $contentUsing
+            ? (string) $contentUsing($state, $record, $this)
             : $this->formatValue($state, $record);
 
         $description = $this->description !== null
@@ -1154,14 +1172,7 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
      */
     public function renderMobileCell(Model $record): string
     {
-        if ($this->mobileDisplayUsing) {
-            $state = $this->getState($record);
-            $content = ($this->mobileDisplayUsing)($state, $record, $this);
-
-            return $this->html ? (string) $content : e((string) $content);
-        }
-
-        return $this->renderCell($record);
+        return $this->renderCellContent($this->mobileDisplayUsing ?? $this->displayUsing, $record);
     }
 
     /**
@@ -1169,14 +1180,7 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
      */
     public function renderDesktopCell(Model $record): string
     {
-        if ($this->desktopDisplayUsing) {
-            $state = $this->getState($record);
-            $content = ($this->desktopDisplayUsing)($state, $record, $this);
-
-            return $this->html ? (string) $content : e((string) $content);
-        }
-
-        return $this->renderCell($record);
+        return $this->renderCellContent($this->desktopDisplayUsing ?? $this->displayUsing, $record);
     }
 
     /**

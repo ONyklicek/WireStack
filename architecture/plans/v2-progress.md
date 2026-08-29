@@ -49,11 +49,13 @@ hran na 12, cyklus `Actions ↔ Modals` je pryč.
 | 11 | Table: akce na telefonu | 19 metod | `Concerns\CollapsesActionsOnMobile` |
 | 12 | Table: stacked karty | 9 metod | `Concerns\StacksOnMobile` + `MobileCard::shapeSignature()` |
 | 13 | WithTable: grupování | 4 metody | `Concerns\CanGroupRecords` + `Support\GroupPartitions` — **našlo defekt**, viz §2 |
+| 14 | B-1: audit `Column` base | — | **žádný přesun**; audit našel defekt v responzivní buňce, viz §2 |
 
-**Fáze B — ERP typy sloupců.** `MoneyColumn` a `MetricColumn` hotové (+ rozšířený
-kanonický `FormatsState::money()`, nový `Foundation\View\Sparkline`, sdílený
-`Concerns\RendersAsFigure`, EN/CS docs). `StatusColumn` **se dělat nebude** —
-`BadgeColumn` ho už umí, ověřeno. Zbývá `RelationColumn`, viz §4.
+**Fáze B — ERP typy sloupců: uzavřená.** `MoneyColumn` a `MetricColumn` hotové
+(+ rozšířený kanonický `FormatsState::money()`, nový `Foundation\View\Sparkline`,
+sdílený `Concerns\RendersAsFigure`, EN/CS docs). `StatusColumn` ani
+`RelationColumn` **se dělat nebudou** — oba by byly prázdné podtřídy, ověřeno.
+B-1 (audit base) hotový a jeho závěr je „nepřesouvat", viz §2. **Tím V2.1 končí.**
 
 Plus **tři host kontrakty** — `Contracts\{ShowsTableColumns, ExpandsTableRows,
 SummarisesTable}` — které poprvé umožnily testovat render větev bez Livewire
@@ -103,6 +105,43 @@ jak už dělá pro data source, grouping, polling, sub-rows a gesta.
 je z nich nejhorší kandidát: `generateQueryCacheKey` je jednořádková delegace a
 `queryCacheScope` je **zdokumentovaný override hook**. Extrakce by odebrala
 rozšiřovací bod a nezmenšila nic.
+
+**B-1 dopadl stejně jako `Table.php` — a to je ten výsledek.** Plán chtěl
+rozdělit 139 metod base na *cross-cutting* (zůstává) a *surface-specific* (patří
+do typu) a přesunout druhou skupinu s `@deprecated` shimem. Změřeno: 123 metod,
+**117 z nich public**, a žádný shluk, který by patřil do typu:
+
+| Shluk | Verdikt |
+|---|---|
+| Inline edit (12 metod) | Tenká delegace na `Core\Capabilities\Capability::Editable`; `isEditable()` je sdílený slovník s panel entries v core. Přesun by rozbil zdokumentované `Column::make()->editable()`. |
+| Agregáty `counts()`/`sums()`/… (10) | **Není duplicita** tečkové notace, jak to vypadalo. Jsou to *rollupy* se službou `Services\AggregateSubqueries`, napojené na souhrny a sub-row constraint. Tečková notace jde přes core `QueryPlanner`. Dvě různé věci, obě zdokumentované. |
+| `renderCell` + `renderCellFast` (103 ř.) | Vědomý §7 design se `supportsCellSkeleton()` přes reflexi a **důkladnou** paritní sadou (configs × obsah × id, únik cache mezi řádky, fallback podtříd). |
+| Mobilní sloty, copyable, responzivní viditelnost | Cross-cutting; kterýkoli sloupec je smí použít. |
+
+Sken „metody bez volajícího v src" našel šest kandidátů (`desktopOnly`,
+`getInlineEditAbility`, `getTextSize`, `getTextWeight`, `mobileSlot`,
+`renderDesktopCell`) — všechny mají testy a jsou to gettery/API pro konzumenta.
+Mrtvá plocha to není.
+
+Závěr je tedy stejný jako u `Table.php` v §2: **široký fluent builder, ne god
+object.** B-6 (přesun + deprecation shimy, odhad 2 dny) by byl čistý náklad.
+
+**Ale audit něco našel: responzivní buňka zahazovala chrome sloupce.**
+`renderMobileCell()` vracela holý escapovaný text — bez odkazu na záznam, bez
+ikony, bez třídy velikosti, **bez kopírovacího tlačítka**, bez popisku. Druhá
+půlka téhož sloupce přitom propadla na `renderCell()` a všechno si nechala.
+Takže jeden sloupec renderoval s odkazem a kopírováním na desktopu a bez nich na
+telefonu — na šířce, kde je palec potřebuje nejvíc. Na stacked kartě to bylo
+horší: `CardRenderer` volá `renderMobileCell()` přímo, takže responzivní sloupec
+seděl vedle obyčejného, který si chrome nechal.
+
+Nikdo si nevšiml, protože existující test asertuje jen obsah closure (`M:Ada`) —
+což platilo tak i tak — a **všechny příklady v docs deklarují obě closure**, což
+obě půlky ořeže symetricky a rozdíl schová.
+
+Pravidlo je to, které `displayUsing()` dodržoval už předtím: **closure dodává
+obsah, chrome sloupce ho obaluje.** Je to změna chování a je zdokumentovaná
+v obou jazycích.
 
 **Sparkline byl `@php` blok uvnitř Blade — a měl tři chyby, které nikdo nemohl
 vidět.** `MetricColumn` má podle plánu kreslit „agregace/sparkline nad existující
@@ -223,17 +262,20 @@ visí pod checkboxem a nikde to nepraskne.
 
 Klesající výnos, seřazeno podle poměru:
 
-1. **`RelationColumn`** (B-4) — **nejdřív změř, pravděpodobně další prázdná
-   podtřída.** Base už má `getRelation()`, `getRelationName()`, `hasRelation()`,
-   `getRelationshipAttribute()` i `eagerLoadRelations()`, a tečková notace má
-   vlastní docs stránku (`docs/table/columns/relations.md`) včetně agregátů,
-   pivotů a morphů. Plán mluví o „konsolidaci `->relationship()` roztroušeného
-   v base" — což je přesun, ne nový typ. **Reálná otázka není „napsat typ", ale
-   „je v base něco, co patří do typu".** To je B-1 (audit 139 metod base), který
-   se nikdy neudělal — a je to jediný zbytek fáze B, co dává smysl.
+**V2.1 je hotová.** Fáze A doražená (13 extrakcí), fáze B uzavřená včetně B-1.
+Zbytek §4 je prázdný — další na řadě je **V2.3** (owner vrstva), jejíž brána už
+padla (viz `v2.3-…` § R.1).
 
-**Tím V2.1 v podstatě končí.** Fáze A doražená (13 extrakcí), fáze B hotová až
-na B-1/B-4. Další je **V2.3** (owner vrstva).
+Než se do V2.3 pustíš, stojí za zvážení dvě věci, které tenhle běh vyhodil a
+neřešil:
+
+1. **`@php` bloky ve views** — sparkline byl jeden z nich a měl tři chyby.
+   Zbývající hnízda: `data-region.blade.php` (6), `sub-rows.blade.php` (5),
+   `forms/radio.blade.php` (5), `tables/index.blade.php` (4). Stejný vzorec:
+   nepokrytý kód s vizuálním symptomem.
+2. **`*Skeleton` bez testu zapečených podmínek** — zbývají
+   `getSelectionCellSkeleton`, `getRowContextMenuSkeleton`,
+   `getSubRowCellSkeleton` (ověřeno greppem, nula zmínek v `tests/`).
 
 **`Table.php` je hotová.** Nezbyla v ní metoda nad 19 řádků a každý soudržný
 shluk má concern. Další práce na ní by už byla přerovnávání, ne úklid.
@@ -290,6 +332,12 @@ uprostřed jinak hustě pokrytého clusteru — a v dalším kroku `getMobileCar
 úplně stejně. A mutuj **před** psaním testu i po něm: mutace zadrátovaného
 `justify-end` proti staré sadě je důkaz, že to pravidlo opravdu bylo nepokryté,
 ne jen tvůj dojem.
+
+**Pravidlo z kroku 16:** audit, který skončí „nic nepřesouvat", **není
+neúspěch** — je to výsledek, pokud je podložený, a ušetří odhadované dva dny
+deprecation shimů. Ale nikdy ho nekonči u samotného verdiktu: čtení base kvůli
+klasifikaci je nejlevnější příležitost najít, co je v ní rozbité. B-1 nenašel
+nic k přesunu a našel zahozený chrome v responzivní buňce.
 
 **Pravidlo z kroku 15:** aritmetika v `@php` bloku uvnitř Blade je **nepokrytý
 kód s vizuálním symptomem** — nejhorší kombinace, jakou tenhle repozitář má.
