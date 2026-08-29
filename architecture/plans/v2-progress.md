@@ -1,7 +1,7 @@
 ---
 title: V2 — kde to stojí a čím pokračovat
-date: 2026-08-28
-scope: V2.0 (hotová), V2.1 (rozpracovaná), ADR 0025 (rozpracované)
+date: 2026-08-30
+scope: V2.0 (hotová), V2.1 (hotová), ADR 0025 (rozpracované), V2.3 (na řadě)
 status: progress record — aktualizovat na konci každého běhu
 ---
 
@@ -32,7 +32,10 @@ hran na 12, cyklus `Actions ↔ Modals` je pryč.
 
 **Nedokončené kroky 8 a 10** — viz §3.
 
-### V2.1 — třináct extrakcí + fáze B (částečně)
+### V2.1 — hotová ✅
+
+Fáze A: čtrnáct kroků (třináct extrakcí + audit base, který skončil „nepřesouvat").
+Fáze B: uzavřená — dva nové typy sloupců, dva zamítnuté. Detaily níže.
 
 | # | Metoda | Bylo → je | Vlastník |
 |---|---|---|---|
@@ -50,6 +53,7 @@ hran na 12, cyklus `Actions ↔ Modals` je pryč.
 | 12 | Table: stacked karty | 9 metod | `Concerns\StacksOnMobile` + `MobileCard::shapeSignature()` |
 | 13 | WithTable: grupování | 4 metody | `Concerns\CanGroupRecords` + `Support\GroupPartitions` — **našlo defekt**, viz §2 |
 | 14 | B-1: audit `Column` base | — | **žádný přesun**; audit našel defekt v responzivní buňce, viz §2 |
+| 15 | Tři zkompilované buňky | — | testy na zapečené podmínky; bez defektu, viz §2 |
 
 **Fáze B — ERP typy sloupců: uzavřená.** `MoneyColumn` a `MetricColumn` hotové
 (+ rozšířený kanonický `FormatsState::money()`, nový `Foundation\View\Sparkline`,
@@ -60,6 +64,21 @@ B-1 (audit base) hotový a jeho závěr je „nepřesouvat", viz §2. **Tím V2.
 Plus **tři host kontrakty** — `Contracts\{ShowsTableColumns, ExpandsTableRows,
 SummarisesTable}` — které poprvé umožnily testovat render větev bez Livewire
 komponenty (DoD 2, částečně splněno).
+
+**Čtyři ostré defekty, které ta práce našla** — všechny byly v produkci, žádný
+neshodil jediný test, a všechny čtyři mají symptom jen v prohlížeči:
+
+| Defekt | Symptom |
+|---|---|
+| `cachedGroupPartitions` se nezneplatňovala v `setPage()` / `setTableCursor()` | Po stránkování v jednom requestu skupina na obrazovce sečetla **0**, skupina, která tam nebyla, ukazovala svoje staré číslo |
+| `$max = max($data) ?: 1` v sparkline | Každá řada končící na nule (burndown k cíli) zmáčknutá, nikdy nedosáhla nahoru |
+| Rovná řada / jedno čtení v sparkline | Stabilní číslo vypadalo jako spadlé na nulu; jedno čtení nenakreslilo nic |
+| `renderMobileCell()` vracela holý text | Sloupec ztratil odkaz na záznam, ikonu a **kopírovací tlačítko** na telefonu, zatímco na desktopu je měl |
+
+Plus dvě chybějící schopnosti a jeden lživý test: `money(null)` s koncovou
+mezerou, přesnost měny řízená jejím *zápisem* (`'Kč'` vs `'CZK'`), a test jménem
+„formats money values correctly for CZK (0 decimals)", který asertoval
+`toContain('CZK')` a tvrdil opak reality.
 
 **Čísla:** `WithTable` 2880 → 2632 → **2486** ř. (99 → 95 metod, 1689 → 1580
 řádků v tělech) · `Table` 2935 → 2730 → 2061 → **1880** ř. (190 → **135** metod,
@@ -312,18 +331,47 @@ Po V2.1 následuje **V2.3** (owner vrstva), jejíž brána je rozhodnutí o vlas
 
 ```
 Pokračuj ve V2 podle architecture/plans/v2-progress.md.
-Přečti §2 (co měření změnilo na zadání) a §4 (co je na řadě), vezmi první
-položku ze §4 a jeď ji stejným postupem jako předchozí kroky: změř to nejdřív,
-extrahuj tělo k vlastníkovi, endpoint nech tenký, napiš testy na pravidla,
-která byla doteď pozorovatelná jen v prohlížeči, a ověř mutací, že ten test umí
-spadnout. Brány podle AI_CHANGE_PROTOCOL.md včetně verify:drivers.
-Na konci aktualizuj tenhle soubor.
+Přečti §2 (co měření změnilo na zadání) a §4 (co je na řadě) a vezmi první
+položku ze §4.
+
+Postup je pokaždé stejný a v tomhle pořadí:
+1. ZMĚŘ, než cokoli napíšeš. Zadání v plánech je starší než kód a bylo špatně
+   pětkrát ze sedmi — viz §2. U extrakce měř řádky v tělech, ne délku souboru;
+   u aditivní práce se ptej „kdo tuhle schopnost už vlastní?".
+2. Najdi, co není pokryté: grep metod s nula zmínkami v `tests/`, a `@php`
+   bloky ve views. Tam byly všechny čtyři defekty tohohle běhu.
+3. Mutuj PROTI STÁVAJÍCÍ SADĚ, než napíšeš test — to je důkaz, že pravidlo bylo
+   nepokryté, ne tvůj dojem. Pak napiš test a mutuj znovu.
+4. Tělo k vlastníkovi, endpoint tenký. Adaptér se extrahuje a deleguje, nikdy
+   nepíše vedle jako druhá kopie.
+5. Brány podle AI_CHANGE_PROTOCOL.md včetně verify:drivers a obou docs bran,
+   pokud jsi sáhl na veřejné API (EN i CS stránka v jednom commitu).
+
+Když měření řekne „nedělat", je to platný výsledek — napiš proč a dolož to.
+Na konci aktualizuj tenhle soubor a commitni.
 ```
 
-**Nepřeskakuj měření.** V tomhle běhu bylo pořadí kroků třikrát opraveno právě
-jím: query cache vypadala jako nejlevnější první krok a byla nejhorší,
-`updateTableCell` vypadal na 119 řádků k přesunu a byl už extrahovaný, a
-`Table.php` vypadal jako druhý monolit a je to fluent builder.
+Poznámka k `coverage:verify`: composer ho zabíjí na 300s. Pouštěj ho jako
+`COMPOSER_PROCESS_TIMEOUT=1200 composer coverage:verify`.
+
+**Nepřeskakuj měření — to je jediné pravidlo, které si z tohohle souboru odnes,
+když nemáš čas na zbytek.** Za dva běhy opravilo zadání osmkrát. V běhu
+2026-08-26: query cache vypadala jako nejlevnější první krok a byla nejhorší,
+`updateTableCell` vypadal na 119 řádků k přesunu a byl už extrahovaný,
+`Table.php` vypadal jako druhý monolit a je to fluent builder. V běhu
+2026-08-28/29 sedělo zadání ze §4 **dvakrát ze sedmi**:
+
+| Krok | §4 slibovala | Měření našlo |
+|---|---|---|
+| 12 stacked karty | 22 metod | **9** — zbytek odešel v kroku 11 |
+| 13 `WithTable` | tři jmenované metody | největší je `updateTableCell` (73) a v seznamu chyběl; 4 z 8 největších už doražené |
+| 14 `StatusColumn` | nový typ | `BadgeColumn` to už umí (barva + ikona + label) |
+| 15 `MetricColumn` | „sparkline nad existující infrastrukturou" | sparkline byl `@php` blok se **třemi** chybami |
+| 16 `RelationColumn` + B-1 | napsat typ, přesunout metody z base | obojí **nedělat** |
+
+Kroky 10–11 a 17 seděly. Pointa není, že plány jsou špatné — jsou to poctivé
+plány psané ke stavu kódu, který mezitím zestárl, mimo jiné o předchozí kroky
+téhle řady.
 
 **Pravidlo, které tenhle běh vynutil:** adaptér se **extrahuje a deleguje**,
 nikdy nepíše vedle jako druhá kopie — `AI_CODING_STANDARD.md` § Adapters.
