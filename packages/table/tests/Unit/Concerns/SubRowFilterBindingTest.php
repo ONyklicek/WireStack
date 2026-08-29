@@ -189,6 +189,35 @@ it('disables the eager-load fast path once a sub-row filter is active', function
     expect($component->getSubRows(SrfbInvoice::first()))->toHaveCount(1);
 });
 
+it('keeps the eager load when only a seeded multi-select slot is present', function () {
+    // The `null` slot above was pinned; the `[]` one a multi-select seeds was
+    // not, and it read as an active filter. Nothing showed: falling back to the
+    // per-parent query path is *correct*, only slow — so the table looked right
+    // while quietly paying one query per open parent plus a COUNT each, on every
+    // render, forever, for any table carrying one multi-select child column.
+    $component = new SrfbComponent;
+    $component->multiSelect = true;
+    $component->mountWithTable();
+    $component->tableState->set('rows.expandAll', true);
+
+    $parent = $component->getTableRecords()->first();
+
+    expect($component->hasActiveSubRowFilters())->toBeFalse()
+        ->and($parent->relationLoaded('items'))->toBeTrue()
+        ->and($component->getSubRows($parent))->toHaveCount(3);
+});
+
+it('still disables the eager load once a multi-select slot holds a choice', function () {
+    $component = new SrfbComponent;
+    $component->multiSelect = true;
+    $component->mountWithTable();
+    $component->tableState->set('rows.subRowFilters', ['product' => null, 'category' => ['office']]);
+
+    expect($component->hasActiveSubRowFilters())->toBeTrue()
+        ->and($component->getSubRows(SrfbInvoice::first())->pluck('product')->all())
+        ->toBe(['apple', 'avocado']);
+});
+
 // ─── Reset ───────────────────────────────────────────────────────────────────
 
 it('shows the reset control only when a real value is set, not the seeded slot', function () {
@@ -198,6 +227,20 @@ it('shows the reset control only when a real value is set, not the seeded slot',
     $test->assertDontSee('subrows-reset-filters', escape: false);
 
     $test->set('tableState.rows.subRowFilters.product', 'ap')
+        ->assertSee('subrows-reset-filters', escape: false);
+});
+
+it('shows no reset control for a seeded multi-select slot either', function () {
+    // The panel used to answer this from its own copy of the rule, written in
+    // Blade — the *correct* copy, while the service it should have asked still
+    // held the pre-seed version. Both now ask the service, so this and the
+    // eager-load test above are the same assertion at two depths.
+    $test = Livewire::test(SrfbComponent::class, ['multiSelect' => true])
+        ->call('toggleRowExpansion', '1');
+
+    $test->assertDontSee('subrows-reset-filters', escape: false);
+
+    $test->set('tableState.rows.subRowFilters.category', ['office'])
         ->assertSee('subrows-reset-filters', escape: false);
 });
 

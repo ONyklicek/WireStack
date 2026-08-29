@@ -77,9 +77,7 @@ final class ColumnRenderPlan
         // resolved here too — but only when the table has any.
         $hasSubRows = $table->hasSubRows();
         $subRow = $hasSubRows ? $table->getSubRowColumns() : [];
-        $visibleSubRow = $hasSubRows
-            ? array_filter($subRow, fn ($c) => $c->canView())
-            : [];
+        $visibleSubRow = $hasSubRows ? $table->getViewableSubRowColumns() : [];
 
         $toggleable = array_filter(
             $table->getColumns(),

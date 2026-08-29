@@ -1,7 +1,7 @@
 ---
 title: V2 — kde to stojí a čím pokračovat
 date: 2026-08-30
-scope: V2.0 (hotová), V2.1 (hotová), ADR 0025 (rozpracované), V2.3 (na řadě)
+scope: V2.0 (hotová), V2.1 (hotová), úklid views (hotový), ADR 0025 (rozpracované), V2.3 (na řadě)
 status: progress record — aktualizovat na konci každého běhu
 ---
 
@@ -54,6 +54,7 @@ Fáze B: uzavřená — dva nové typy sloupců, dva zamítnuté. Detaily níže
 | 13 | WithTable: grupování | 4 metody | `Concerns\CanGroupRecords` + `Support\GroupPartitions` — **našlo defekt**, viz §2 |
 | 14 | B-1: audit `Column` base | — | **žádný přesun**; audit našel defekt v responzivní buňce, viz §2 |
 | 15 | Tři zkompilované buňky | — | testy na zapečené podmínky; bez defektu, viz §2 |
+| 16 | `@php` bloky ve views | 3 views → 1 vlastník | `Support\SubRowPanel` — **našlo defekt**, viz §2; tři ze čtyř jmenovaných views „nedělat" |
 
 **Fáze B — ERP typy sloupců: uzavřená.** `MoneyColumn` a `MetricColumn` hotové
 (+ rozšířený kanonický `FormatsState::money()`, nový `Foundation\View\Sparkline`,
@@ -261,6 +262,72 @@ metody: schovej sloupec a karta se větví jinak. Stejně tak odsazení `pl-12`,
 kterým detailní mřížka a řádek akcí obcházejí sloupec s checkboxem; bez něj
 visí pod checkboxem a nikde to nepraskne.
 
+**`@php` bloky ve views: tři ze čtyř jmenovaných nemají co odevzdat, čtvrtý
+schovával rozjetou kopii pravidla.** §4 jmenovala čtyři hnízda podle *počtu*
+bloků. Počet bloků není ta metrika — obsah je. Změřeno:
+
+| View | Bloky | Co v nich je | Verdikt |
+|---|---|---|---|
+| `data-region.blade.php` | 6 | rozbalení `tableRenderPlan()` do lokálních proměnných | **nedělat** — žádné pravidlo, jen aliasy |
+| `tables/index.blade.php` | 4 | totéž | **nedělat** |
+| `forms/radio.blade.php` | 5 | gettery pole (`getOptions`, `getColors`, …) | **nedělat** |
+| `sub-rows.blade.php` | 5 | součty, colspan, výška patičky, **pravidlo „je filtr aktivní"** | udělat |
+
+Aritmetika v Blade je nepokrytý kód s vizuálním symptomem (pravidlo z kroku 15),
+ale *aliasing* v Blade je jen aliasing. Tři views vypadaly stejně jako sparkline
+a nebyly to ony.
+
+**Sub-row panel byl napsaný dvakrát a rozjel se — a rozjel se opačně, než by
+člověk čekal.** Panel expandovaného rodiče se renderuje dvakrát: desktopová
+`<table>` a seznam ve stacked kartě. Čtyři řádky, které počítají „Zobrazit ještě
+N", byly do obou zkopírované doslova. Vedle nich měl desktopový blok vlastní
+kopii pravidla *„je aktivní sub-row filtr?"* — a **ta kopie byla ta správná**:
+
+```php
+// sub-rows.blade.php — správně, počítá se seedovanými sloty
+fn ($v) => is_array($v) ? $v !== [] : ($v !== null && $v !== '')
+
+// SubRowFilters::hasActiveInteractive() — kanonický vlastník, zastaralé
+if ($value !== null && $value !== '') { return true; }
+```
+
+Sloty se **seedují při mountu** (`null` pro skalár, `[]` pro multi-select), aby
+měl select kam entanglovat. Vlastník o tom nevěděl, takže každá tabulka s jedním
+multi-select sub-row sloupcem četla `[]` jako „filtr je aktivní" — **trvale, od
+mountu, bez jediného uživatelského zásahu**. To vypíná `eagerLoadSubRows()`
+a rychlou cestu v `getSubRowsTotalCount()`: jeden dotaz na stránku se mění na
+jeden dotaz na otevřeného rodiče **plus COUNT ke každému**.
+
+Nikdo si nevšiml, protože fallback na per-parent dotaz je **správný, jen pomalý**.
+Tabulka vypadá přesně jak má. A `resetSubRowFilters()` seed obnovuje, takže se
+z toho stavu nedá vyjít.
+
+Mutace to potvrdila oběma směry: opravené pravidlo prošlo **všemi 2311 testy**
+balíčku `table` — nepokryté nebylo v jednom směru, bylo nepokryté úplně.
+Existující test `hasActiveInteractive` sice pokrýval `''`, `null` i prázdné pole
+*jako celek*, ale nikdy `['product' => []]` — seedovaný slot. A `SubRowFilterBindingTest`
+měl komponentu s přepínačem `multiSelect`, který se u pravidla o aktivitě
+filtru **nikdy nezapnul**.
+
+Oprava je jeden predikát (`SubRowFilters::isActiveValue()`), který používají
+všechny tři metody služby — `activeScoped()` ho měl inline a správně, zbylé dvě
+ne. Panel se přesunul do `Support\SubRowPanel` a **obě** views ho čtou; kontrakt
+`ExpandsTableRows` se rozšířil z jednoho predikátu na sedm metod ze stejného
+důvodu, který má `SummarisesTable` napsaný ve svém docbloku — je to jedna
+schopnost ptaná v různých hloubkách, a rozdělená by nechala panel ptát se čtyř
+rozhraní na jednu věc.
+
+**Co měření řeklo NEdělat:** `getSubRowsTotalCount()` čte `*_count` atribut až
+poté, co ověří `relationLoaded()`, zatímco mobilní blok ho četl rovnou — vypadá
+to jako třetí kopie téhož pravidla s tím, že vlastník je pozadu. Není. Atribut
+z uživatelského `->withCount('items')` **není omezený** `subRowQuery()` ani
+scoped sub-row filtry, kdežto `loadCount()` z frameworkového eager loadu ano.
+Ta `relationLoaded()` podmínka je tedy nosná: čte se jen ve stavu, který nechal
+za sebou vlastní omezený eager load. „Sjednotit" to by rozšířilo existující
+riziko špatného čísla. Sdílená je jen **znalost jména atributu**
+(`Str::snake($relation).'_count'`) a pořadí dvou zdrojů — to je teď
+`getLoadedSubRowCount()` a čtou ho všichni tři; kontrakty zůstávají dva.
+
 ---
 
 ## 3. Co je vědomě neudělané
@@ -285,13 +352,16 @@ Klesající výnos, seřazeno podle poměru:
 Zbytek §4 je prázdný — další na řadě je **V2.3** (owner vrstva), jejíž brána už
 padla (viz `v2.3-…` § R.1).
 
-Než se do V2.3 pustíš, stojí za zvážení dvě věci, které tenhle běh vyhodil a
-neřešil:
+Než se do V2.3 pustíš, obě věci, které předchozí běh vyhodil a neřešil, jsou
+dotažené:
 
-1. **`@php` bloky ve views** — sparkline byl jeden z nich a měl tři chyby.
-   Zbývající hnízda: `data-region.blade.php` (6), `sub-rows.blade.php` (5),
-   `forms/radio.blade.php` (5), `tables/index.blade.php` (4). Stejný vzorec:
-   nepokrytý kód s vizuálním symptomem.
+1. ~~**`@php` bloky ve views**~~ — **hotovo 2026-08-30.** Ze čtyř jmenovaných
+   hnízd mají tři jen rozbalení render plánu do aliasů (`data-region`,
+   `tables/index`, `forms/radio`) — **nedělat**, doloženo v §2. Čtvrté
+   (`sub-rows.blade.php`) drželo součty, colspan a **rozjetou kopii pravidla
+   „je filtr aktivní"**; vlastníkem je teď `Support\SubRowPanel` a obě
+   renderování panelu (desktop + stacked karta) ho čtou. Nález: **ostrý defekt**
+   ve `SubRowFilters::hasActiveInteractive()`, viz §2.
 2. ~~**`*Skeleton` bez testu zapečených podmínek**~~ — **hotovo 2026-08-29.**
    Všechny tři (`getSelectionCellSkeleton`, `getSubRowCell`,
    `getRowContextMenuSkeleton`) mají test na zapečené podmínky. Nález: **tvarové
@@ -373,7 +443,22 @@ Kroky 10–11 a 17 seděly. Pointa není, že plány jsou špatné — jsou to p
 plány psané ke stavu kódu, který mezitím zestárl, mimo jiné o předchozí kroky
 téhle řady.
 
-**Pravidlo, které tenhle běh vynutil:** adaptér se **extrahuje a deleguje**,
+**Pravidlo z běhu 2026-08-30:** když najdeš stejné pravidlo napsané dvakrát,
+**neopravuj tu kopii, která vypadá rozbitě — zjisti, která z nich je novější.**
+Zvyk říká „vlastník je pravda, kopie zestárla"; tady to bylo obráceně. Blade
+kopii někdo opravil, když se zaváděly seděné sloty, a `SubRowFilters` — službu,
+kterou se ptá dotazová cesta — nechal být. Kopie v Blade byla proto správně
+a vlastník špatně, a protože fallback na pomalejší cestu je *korektní*, nebylo
+to vidět ani okem, ani v testech. Dvě věci z toho: hledej ten commit, který
+kopii rozdělil, a ptej se **kdo z těch dvou míst reálně řídí chování** (tady
+dotaz, ne markup).
+
+Druhá půlka: **počet `@php` bloků není metrika, obsah je.** Ze čtyř views
+jmenovaných v §4 podle počtu bloků měly tři jen aliasy render plánu. Aritmetika
+v Blade je nebezpečná, aliasing ne — a když jsou aliasy tím, co drží tvar
+direktiv (morph markery), je jejich odstranění naopak riziko.
+
+**Pravidlo z běhu 2026-08-28/29:** adaptér se **extrahuje a deleguje**,
 nikdy nepíše vedle jako druhá kopie — `AI_CODING_STANDARD.md` § Adapters.
 Stálo to dva reálné defekty v jednom commitu.
 

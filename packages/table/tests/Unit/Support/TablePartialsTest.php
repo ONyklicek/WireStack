@@ -68,6 +68,37 @@ function tpFor(array $traits = []): TablePartials
             return false;
         }
 
+        public function getSubRows(mixed $record): Collection
+        {
+            return collect();
+        }
+
+        public function isSubRowsShowAll(string|int $parentKey): bool
+        {
+            return false;
+        }
+
+        public function getSubRowsTotalCount(mixed $record): int
+        {
+            return 0;
+        }
+
+        public function getLoadedSubRowCount(mixed $record): ?int
+        {
+            return null;
+        }
+
+        /** @return array<string, mixed> */
+        public function getSubRowFilterValues(): array
+        {
+            return [];
+        }
+
+        public function hasActiveSubRowFilters(): bool
+        {
+            return false;
+        }
+
         public function tableHasSummaries(): bool
         {
             return $this->traits['summaries'] ?? false;

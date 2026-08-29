@@ -28,40 +28,40 @@
 ])</div></td></tr>
 @else
 @php
+    // Every derived number this panel draws — the totals, the colspan, whether
+    // the filter bar has anything active in it — is decided by SubRowPanel and
+    // read here. The stacked card renders the same panel and asks the same
+    // owner; the four lines that computed the "show more" remainder used to be
+    // copied into both. The rule for "a filter is active" was worse: the copy
+    // here was the *correct* one, while SubRowFilters — the service the query
+    // path actually asks — still answered the version from before the slots
+    // were seeded.
+    //
+    // What is left below is aliasing, and it stays because the markup after it
+    // must not move: the morph markers an `@if`/`@foreach` emits are
+    // load-bearing, and a directive expression with NESTED parentheses —
+    // `@if($a && $b->c())` — sends Livewire's marker injector down its
+    // parenthesis-repair path, which can swallow a neighbouring directive's
+    // opening marker. Decide in PHP, let Blade consume. See TablePayloadFuseTest's
+    // marker-balance assertion.
+    $panel = \NyonCode\WireTable\Support\SubRowPanel::for(
+        $table, $component, $record, $recordKey, $subRows, $visibleSubRowColumns ?? null,
+    );
+
     $subColumns = $table->getSubRowColumns();
-    // canView() may hit the Gate — resolve visibility once per parent, not per cell.
-    $visibleSubRowColumns ??= array_filter($subColumns, fn ($c) => $c->canView());
+    $visibleSubRowColumns = $panel->columns;
     $subRowActions = $table->getSubRowActions();
-    $hasSubRowActions = $table->hasSubRowActions();
-    $isFilterable = $table->isSubRowsFilterable();
+    $hasSubRowActions = $panel->hasActions;
     $isSortable = $table->isSubRowsSortable();
     $activeSort = $component->getSubRowSort();
-    $subRowFilterValues = $component->tableState->get('rows.subRowFilters', []) ?? [];
-    // The slots are seeded (null / []) so select-type controls can entangle their
-    // path, so "not empty" no longer means "a filter is active" — a real value is
-    // a non-empty scalar or a non-empty array.
-    $hasActiveSubRowFilter = collect($subRowFilterValues)->contains(
-        fn ($v) => is_array($v) ? $v !== [] : ($v !== null && $v !== ''),
-    );
-    // Hoisted out of the directives below on purpose. A conditional whose expression
-    // contains NESTED parentheses — `@if($a && $b->c())` — sends Livewire's marker
-    // injector down its parenthesis-repair path, which can swallow a neighbouring
-    // directive's opening marker and leave the morph with an unbalanced block. Keeping
-    // every directive expression paren-free is also just the house rule: decide in PHP,
-    // let Blade consume. See TablePayloadFuseTest's marker-balance assertion.
-    $hasSubRowFilterBar = $isFilterable && count($subColumns) > 0;
-    $subRowSummaries = $component->computeTableSummaries('subRows', $record, $subRows);
-    $hasSubSummaries = !empty($subRowSummaries);
-
-    // "Show more" affordance: only when a limit is configured and more exist.
-    $subRowsLimit = $table->getSubRowsLimit();
-    $showAll = $component->isSubRowsShowAll($recordKey);
-    $totalSubRows = ($subRowsLimit && !$showAll) ? $component->getSubRowsTotalCount($record) : $subRows->count();
-    $remaining = max(0, $totalSubRows - $subRows->count());
-
-    // Visible column count for colspans (+1 indent spacer, +1 optional actions cell).
-    $totalColCount = count($visibleSubRowColumns) + 1 + ($hasSubRowActions ? 1 : 0);
-    $showSubSummaries = $hasSubSummaries && $subRows->isNotEmpty();
+    $subRowFilterValues = $panel->filterValues;
+    $hasActiveSubRowFilter = $panel->hasActiveFilter;
+    $hasSubRowFilterBar = $panel->hasFilterBar;
+    $subRowSummaries = $panel->summaries;
+    $remaining = $panel->remaining;
+    $totalColCount = $panel->columnCount;
+    $showSubSummaries = $panel->showsSummaries;
+    $maxRows = $panel->summaryRowCount;
 @endphp
 <tr wire:key="sub-rows-{{ $recordKey }}"><td colspan="{{ $colSpan }}" class="p-0"><div class="bg-gray-50/80 dark:bg-gray-800/50 border-t border-b border-gray-100 dark:border-gray-700/50">{{-- Sub-row filters --}}
 @if($hasSubRowFilterBar)<div
@@ -88,13 +88,7 @@
     data-testid="subrows-show-more"
     class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
 >{{ __('wire-table::messages.show_more_count', ['count' => $remaining]) }}</button></td></tr>@endif</tbody>{{-- Sub-row summaries --}}
-@if($showSubSummaries)<tfoot class="border-t-2 border-gray-200 dark:border-gray-600">@php
-    // Determine max summary rows needed
-    $maxRows = 0;
-    foreach ($subRowSummaries as $summaryList) {
-        $maxRows = max($maxRows, count($summaryList));
-    }
-@endphp @for($i = 0; $i < $maxRows; $i++)<tr class="text-xs font-medium text-gray-600 dark:text-gray-400"><td class="w-8"></td>@foreach($visibleSubRowColumns as $subCol)@php
+@if($showSubSummaries)<tfoot class="border-t-2 border-gray-200 dark:border-gray-600">@for($i = 0; $i < $maxRows; $i++)<tr class="text-xs font-medium text-gray-600 dark:text-gray-400"><td class="w-8"></td>@foreach($visibleSubRowColumns as $subCol)@php
     $colSummaries = $subRowSummaries[$subCol->getName()] ?? [];
     $entry = $colSummaries[$i] ?? null;
 @endphp<td class="px-3 py-1.5">@if($entry)<span class="text-gray-400">{{ $entry['label'] }}:</span> <span class="text-gray-700 dark:text-gray-200 font-semibold">{{ $entry['value'] }}</span>@endif</td>@endforeach @if($hasSubRowActions)<td class="px-3 py-1.5"></td>@endif</tr>@endfor</tfoot>@endif</table></div></td></tr>

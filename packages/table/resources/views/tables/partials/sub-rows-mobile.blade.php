@@ -21,24 +21,26 @@
     // "2 items" beats "Details" on a phone — it says whether expanding is worth a
     // tap. But only when the number is already in memory: a collapsed row has no
     // eager-loaded children, so asking for it would cost one COUNT per card. A
-    // base query with ->withCount('items') lights this up for free.
-    $collapsedCount = null;
-    if (! $isExpanded && ($relation = $table->getSubRowRelation()) !== null) {
-        $countAttribute = $record->getAttribute(\Illuminate\Support\Str::snake($relation).'_count');
-        $collapsedCount = $countAttribute !== null
-            ? (int) $countAttribute
-            : ($record->relationLoaded($relation) ? $record->getRelation($relation)->count() : null);
-    }
+    // base query with ->withCount('items') lights this up for free. Which of the
+    // two things in memory to believe, and in what order, is the host's rule —
+    // it was written out here as well until the third copy of it drifted.
+    $collapsedCount = $isExpanded ? null : $component->getLoadedSubRowCount($record);
 @endphp
 
 @if($isExpanded)
     @php
+        // The same panel the desktop draws as a table, so the same owner decides
+        // its numbers — the four lines that used to sit here were a verbatim
+        // copy of the four in tables/partials/sub-rows.blade.php.
         $subRows = $component->getSubRows($record);
-        $subRowSummaries = $component->computeTableSummaries('subRows', $record, $subRows);
-        $subRowsLimit = $table->getSubRowsLimit();
-        $showAll = $component->isSubRowsShowAll($recordKey);
-        $total = ($subRowsLimit && ! $showAll) ? $component->getSubRowsTotalCount($record) : $subRows->count();
-        $remaining = max(0, $total - $subRows->count());
+        $panel = \NyonCode\WireTable\Support\SubRowPanel::for(
+            $table, $component, $record, $recordKey, $subRows, $subColumns,
+        );
+
+        $subRowSummaries = $panel->summaries;
+        $total = $panel->total;
+        $remaining = $panel->remaining;
+        $showSubRowSummaries = $panel->showsSummaries;
     @endphp
 
     @if($isSubRowsExpandable)
@@ -112,7 +114,7 @@
         @endif
 
         {{-- Per-parent subtotals, on the same right edge as the rows above. --}}
-        @if(! empty($subRowSummaries) && $subRows->isNotEmpty())
+        @if($showSubRowSummaries)
             @foreach($subRowSummaries as $columnName => $entries)
                 @foreach($entries as $entry)
                     <div class="flex items-baseline gap-3 px-4 py-2 text-sm"

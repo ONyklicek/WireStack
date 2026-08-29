@@ -415,6 +415,22 @@ trait HasSubRows
         return $this->subRowColumns;
     }
 
+    /**
+     * The sub-row columns this viewer may actually see.
+     *
+     * canView() can hit the Gate, so it is resolved once per parent rather than
+     * once per cell — and it is resolved *here*, because every renderer that
+     * needs the list (the render plan, the desktop panel, the stacked card)
+     * would otherwise carry its own array_filter and drift the moment the rule
+     * grows a second clause.
+     *
+     * @return array<int, Column>
+     */
+    public function getViewableSubRowColumns(): array
+    {
+        return array_values(array_filter($this->subRowColumns, fn (Column $column) => $column->canView()));
+    }
+
     public function getSubRowQueryCallback(): ?Closure
     {
         return $this->subRowQueryCallback;

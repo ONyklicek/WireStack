@@ -122,6 +122,27 @@ test('an active interactive filter is what disables the eager-load fast path', f
         ->and($this->filters->hasActiveInteractive($table, []))->toBeFalse();
 });
 
+test('a seeded multi-select slot is not an active filter', function () {
+    // Every slot is seeded at mount so a select's entangled path exists before
+    // the user touches it — `null` for a scalar control, `[]` for a multi-select.
+    // Reading `[]` as "active" is not cosmetic: it permanently disables the
+    // page-wide eager load for every table carrying one multi-select sub-row
+    // column, and turns one query per page into one per open parent plus a COUNT.
+    $table = srfTable();
+
+    expect($this->filters->hasActiveInteractive($table, ['product' => []]))->toBeFalse()
+        ->and($this->filters->hasActiveInteractive($table, ['product' => [], 'amount' => null]))->toBeFalse()
+        ->and($this->filters->hasActiveInteractive($table, ['product' => ['Nut']]))->toBeTrue();
+});
+
+test('an empty multi-select slot constrains nothing', function () {
+    // The same rule from the other side: applying `[]` as a whereIn would hand
+    // back no children at all.
+    $query = $this->filters->applyInteractive(SrfItem::query(), srfTable(), ['product' => []]);
+
+    expect($query->count())->toBe(2);
+});
+
 test('a table without subRowsFilterable() has no active interactive filters', function () {
     $table = Table::make()->model(SrfInvoice::class)->columns([Column::make('number')])->subRows('items');
 

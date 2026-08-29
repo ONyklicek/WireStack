@@ -46,12 +46,12 @@ final class SubRowFilters
             }
 
             $raw = data_get($filterValues, $filter->getName());
-            if ($raw === null || $raw === '' || $raw === []) {
+            if (! self::isActiveValue($raw)) {
                 continue;
             }
 
             $value = $filter->extractValue($raw);
-            if ($value === null || $value === '' || $value === []) {
+            if (! self::isActiveValue($value)) {
                 continue;
             }
 
@@ -102,7 +102,7 @@ final class SubRowFilters
         foreach ($table->getSubRowColumns() as $column) {
             $value = $subRowFilters[$column->getName()] ?? null;
 
-            if ($value !== null && $value !== '' && $column->isFilterable()) {
+            if (self::isActiveValue($value) && $column->isFilterable()) {
                 $query = $column->applyFilter($query, $value);
             }
         }
@@ -126,11 +126,31 @@ final class SubRowFilters
         }
 
         foreach ($subRowFilters as $value) {
-            if ($value !== null && $value !== '') {
+            if (self::isActiveValue($value)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * Whether a filter slot holds a value the user actually chose.
+     *
+     * The one rule the three methods above share, and the reason it is written
+     * once: every sub-row filter slot is **seeded at mount** — `null` for a
+     * scalar control, `[]` for a multi-select — so that a select's entangled
+     * path exists before the user touches it. A seeded slot is therefore the
+     * normal state of an untouched filter bar, and "not empty" is not the same
+     * question as "active".
+     *
+     * Answering `[]` as active is not a cosmetic slip: it permanently disables
+     * the eager-load fast path for every table that has one multi-select
+     * sub-row column, turning one query for the page into one per open parent
+     * plus one COUNT each.
+     */
+    private static function isActiveValue(mixed $value): bool
+    {
+        return $value !== null && $value !== '' && $value !== [];
     }
 }
