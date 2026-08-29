@@ -16,6 +16,7 @@ any of them.
 | [TextColumn](text.md) | General-purpose text with date/money/number formatting presets |
 | [BadgeColumn](badge.md) | Status pills with color and icon, incl. enum self-coloring |
 | [MoneyColumn](money.md) | Amounts, right-aligned and tabular; the stacked card's metric |
+| [MetricColumn](metric.md) | A measurement: aggregate figure with an optional trend line |
 | [BooleanColumn](boolean.md) | True/false as an icon (check / cross) |
 | [IconColumn](icon.md) | State-based or dynamically resolved icons |
 | [ImageColumn](image.md) | Avatars and thumbnails |

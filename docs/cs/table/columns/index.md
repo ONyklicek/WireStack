@@ -16,6 +16,7 @@ sáhněte na kterýkoli z nich.
 | [TextColumn](text.md) | Univerzální text s presety formátování data/měny/čísel |
 | [BadgeColumn](badge.md) | Status pilulky s barvou a ikonou, vč. self-coloringu enumů |
 | [MoneyColumn](money.md) | Částky, doprava a tabulárně; metrika stacked karty |
+| [MetricColumn](metric.md) | Měření: agregované číslo s volitelnou čárou trendu |
 | [BooleanColumn](boolean.md) | True/false jako ikona (fajfka / křížek) |
 | [IconColumn](icon.md) | Ikony podle stavu nebo dynamicky resolvované |
 | [ImageColumn](image.md) | Avatary a náhledy |

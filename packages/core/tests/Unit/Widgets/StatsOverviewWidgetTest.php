@@ -105,3 +105,38 @@ it('collapses to one column by default on mobile for every configured count', fu
         expect($html)->toContain('grid-cols-1')->toContain($expected);
     }
 });
+
+// ─── Sparkline ───────────────────────────────────────────────────────────────
+
+it('draws a stat chart through the shared sparkline geometry', function () {
+    // The polyline used to be computed by an @php block in this template. It is
+    // Foundation\View\Sparkline now, and a table's MetricColumn draws the same
+    // curve — so this asserts the widget still emits it, and emits the geometry
+    // the owner produces rather than a second copy of the arithmetic.
+    $html = StatsOverviewWidget::make()
+        ->stats([Stat::make('Revenue', '45 231')->chart([1, 5, 3])])
+        ->toHtml();
+
+    expect($html)->toContain('<polyline')
+        ->toContain('viewBox="0 0 20 30"')
+        ->toContain('points="0,30 10,2 20,16"');
+});
+
+it('draws no chart for a stat that has no series', function () {
+    $html = StatsOverviewWidget::make()
+        ->stats([Stat::make('Revenue', '45 231')])
+        ->toHtml();
+
+    expect($html)->not->toContain('<polyline');
+});
+
+it('reaches the top of the box when a stat series tops out at zero', function () {
+    // The template guarded a maximum of 0 as if it were the divisor, which
+    // stretched the range and squashed the curve. A burndown hitting its target
+    // is exactly that series, and it now reaches the top.
+    $html = StatsOverviewWidget::make()
+        ->stats([Stat::make('Remaining', '0')->chart([-5, -2, 0])])
+        ->toHtml();
+
+    expect($html)->toContain('points="0,30 10,13.2 20,2"');
+});

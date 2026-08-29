@@ -75,6 +75,8 @@ Browser assets (the registry, the URL and the tag belong to the toolkit's
   `servedByRoute($package)` for the `hasAssetFallback()` resolver
 - `Foundation\View\FloatingAssets` — the dropdown bundle's URL, by the name a dozen
   partials already ask for it
+- `Foundation\View\Sparkline` — a numeric series as SVG polyline geometry (`of()` /
+  `points()` / `viewBox()`), shared by the stats widget and `WireTable\Columns\MetricColumn`
 
 Foundation Blade components:
 
@@ -375,7 +377,8 @@ Base:
 Columns:
 
 - `TextColumn`
-- `MoneyColumn` — `TextColumn` with money's defaults: right-aligned (so `MobileCard` picks it as the stacked card's metric), `tabular-nums`, no wrap. Formatting stays in `Foundation\Concerns\FormatsState::money()`; there is **no `StatusColumn`** — `BadgeColumn` already resolves an enum's color, icon and label through `EnumResolver`
+- `MoneyColumn` — `TextColumn` with money's defaults: right-aligned (so `MobileCard` picks it as the stacked card's metric), `tabular-nums`, no wrap. Formatting stays in `Foundation\Concerns\FormatsState::money()`; the figure defaults are `Concerns\RendersAsFigure`, shared with `MetricColumn`. There is **no `StatusColumn`** — `BadgeColumn` already resolves an enum's color, icon and label through `EnumResolver`
+- `MetricColumn` — an aggregate figure (dot notation already does the `withCount`/`withSum`) plus an optional per-record trend, drawn by `Foundation\View\Sparkline`
 - `BadgeColumn`
 - `BooleanColumn`
 - `IconColumn`

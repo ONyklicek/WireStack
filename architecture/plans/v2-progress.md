@@ -50,9 +50,10 @@ hran na 12, cyklus `Actions ↔ Modals` je pryč.
 | 12 | Table: stacked karty | 9 metod | `Concerns\StacksOnMobile` + `MobileCard::shapeSignature()` |
 | 13 | WithTable: grupování | 4 metody | `Concerns\CanGroupRecords` + `Support\GroupPartitions` — **našlo defekt**, viz §2 |
 
-**Fáze B — ERP typy sloupců.** `MoneyColumn` hotový (+ rozšířený kanonický
-`FormatsState::money()`, EN/CS docs). `StatusColumn` **se dělat nebude** —
-`BadgeColumn` ho už umí, ověřeno. Zbývá `RelationColumn` a `MetricColumn`, viz §4.
+**Fáze B — ERP typy sloupců.** `MoneyColumn` a `MetricColumn` hotové (+ rozšířený
+kanonický `FormatsState::money()`, nový `Foundation\View\Sparkline`, sdílený
+`Concerns\RendersAsFigure`, EN/CS docs). `StatusColumn` **se dělat nebude** —
+`BadgeColumn` ho už umí, ověřeno. Zbývá `RelationColumn`, viz §4.
 
 Plus **tři host kontrakty** — `Contracts\{ShowsTableColumns, ExpandsTableRows,
 SummarisesTable}` — které poprvé umožnily testovat render větev bez Livewire
@@ -102,6 +103,32 @@ jak už dělá pro data source, grouping, polling, sub-rows a gesta.
 je z nich nejhorší kandidát: `generateQueryCacheKey` je jednořádková delegace a
 `queryCacheScope` je **zdokumentovaný override hook**. Extrakce by odebrala
 rozšiřovací bod a nezmenšila nic.
+
+**Sparkline byl `@php` blok uvnitř Blade — a měl tři chyby, které nikdo nemohl
+vidět.** `MetricColumn` má podle plánu kreslit „agregace/sparkline nad existující
+infrastrukturou". Agregace existuje (tečková notace dělá `withCount`/`withSum`),
+sparkline taky — jenže jako výpočet min/max/rozsahu a mapování souřadnic přímo
+v šabloně `widgets/stats-overview.blade.php`. To je přesně proti
+`AI_CHANGE_PROTOCOL.md` („stav řeš v PHP, markup v Blade"), nedosažitelné
+z tabulky a netestovatelné.
+
+Po přesunu do `Foundation\View\Sparkline` (L0) vylezly tři defekty, všechny
+viditelné jen okem na grafu:
+
+1. **`$max = max($data) ?: 1`** — ochrana proti dělení nulou na hodnotě, která
+   není dělitel. Dělitel je *rozsah* a ten svoji ochranu měl. Jediné, co to
+   dělalo, bylo přepsat maximum `0` na `1` a natáhnout rozsah. Každá řada
+   končící přesně na nule — burndown k cíli, doplacený zůstatek — byla
+   zmáčknutá a nikdy nedosáhla na horní hranu. (`[-5,-2,0]` → poslední bod na
+   6.67 místo 2.)
+2. **Rovná řada se kreslila po dně**, takže stabilní číslo vypadalo jako spadlé
+   na nulu. Teď jde středem.
+3. **Jedno čtení** vygenerovalo `<polyline>` s jedním bodem, což prohlížeč
+   nenakreslí vůbec. Teď je z toho rovná čára.
+
+Widget kreslí přes stejného vlastníka (extrahovat a delegovat, ne druhá kopie),
+`MetricColumn` je druhý konzument — a teprve ten druhý konzument tu extrakci
+ospravedlňuje.
 
 **Plánovaný `StatusColumn` je prázdná podtřída — nedělat.** Plán (B-2, ADR 0018,
 a závislost z V2.4 WF-4) ho popisuje jako „enum status → barva/ikona přes
@@ -196,16 +223,17 @@ visí pod checkboxem a nikde to nepraskne.
 
 Klesající výnos, seřazeno podle poměru:
 
-1. **`MetricColumn`** (B-5). Jediný ze čtyř ERP typů, u kterého měření nenašlo
-   hotového vlastníka: `SummaryType` umí 12 agregací pro *patičku*, ale nic
-   nekreslí agregát ani sparkline **v buňce**. Změř přesto: nejdřív ověř, co
-   `Services\SummaryCalculator` a `->summarize*()` umí vrátit per řádek.
-2. **`RelationColumn`** (B-4) — **nejdřív změř, pravděpodobně další prázdná
+1. **`RelationColumn`** (B-4) — **nejdřív změř, pravděpodobně další prázdná
    podtřída.** Base už má `getRelation()`, `getRelationName()`, `hasRelation()`,
    `getRelationshipAttribute()` i `eagerLoadRelations()`, a tečková notace má
-   vlastní docs stránku (`docs/table/columns/relations.md`). Plán mluví
-   o „konsolidaci `->relationship()` roztroušeného v base" — což je přesun, ne
-   nový typ, a je otázka, jestli se vyplatí.
+   vlastní docs stránku (`docs/table/columns/relations.md`) včetně agregátů,
+   pivotů a morphů. Plán mluví o „konsolidaci `->relationship()` roztroušeného
+   v base" — což je přesun, ne nový typ. **Reálná otázka není „napsat typ", ale
+   „je v base něco, co patří do typu".** To je B-1 (audit 139 metod base), který
+   se nikdy neudělal — a je to jediný zbytek fáze B, co dává smysl.
+
+**Tím V2.1 v podstatě končí.** Fáze A doražená (13 extrakcí), fáze B hotová až
+na B-1/B-4. Další je **V2.3** (owner vrstva).
 
 **`Table.php` je hotová.** Nezbyla v ní metoda nad 19 řádků a každý soudržný
 shluk má concern. Další práce na ní by už byla přerovnávání, ne úklid.
@@ -262,6 +290,12 @@ uprostřed jinak hustě pokrytého clusteru — a v dalším kroku `getMobileCar
 úplně stejně. A mutuj **před** psaním testu i po něm: mutace zadrátovaného
 `justify-end` proti staré sadě je důkaz, že to pravidlo opravdu bylo nepokryté,
 ne jen tvůj dojem.
+
+**Pravidlo z kroku 15:** aritmetika v `@php` bloku uvnitř Blade je **nepokrytý
+kód s vizuálním symptomem** — nejhorší kombinace, jakou tenhle repozitář má.
+`AI_CHANGE_PROTOCOL.md` to říká („stav řeš v PHP, markup v Blade") a sparkline to
+porušoval tři chyby dlouho. **Grepni `@php` napříč views**, kdykoli hledáš další
+takové místo; a extrakci ospravedlňuje až druhý konzument, jinak je to spekulace.
 
 **Pravidlo z kroku 14:** u **aditivní** práce je měření to samé co u extrakce, jen
 se ptáš jinak: *kdo tuhle schopnost už vlastní?* Ze čtyř plánovaných ERP typů měl

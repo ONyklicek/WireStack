@@ -35,27 +35,18 @@
                     @endif
                 </div>
 
-                @if($stat->hasChart())
+                {{-- The geometry belongs to Foundation\View\Sparkline, not to this
+                     template: a table cell draws the same curve, and arithmetic in a
+                     view is arithmetic nothing can test. --}}
+                @if($sparkline = \NyonCode\WireCore\Foundation\View\Sparkline::of($stat->getChart() ?? []))
                     <div class="mt-3">
-                        <svg viewBox="0 0 {{ count($stat->getChart()) * 10 }} 30" class="h-8 w-full" preserveAspectRatio="none">
-                            @php
-                                $chartData = $stat->getChart();
-                                $max = max($chartData) ?: 1;
-                                $min = min($chartData);
-                                $range = $max - $min ?: 1;
-                                $points = [];
-                                foreach ($chartData as $i => $val) {
-                                    $x = $i * 10;
-                                    $y = 30 - (($val - $min) / $range * 28);
-                                    $points[] = "$x,$y";
-                                }
-                            @endphp
+                        <svg viewBox="{{ $sparkline->viewBox() }}" class="h-8 w-full" preserveAspectRatio="none">
                             <polyline
                                 fill="none"
                                 stroke="currentColor"
                                 stroke-width="1.5"
                                 class="{{ $stat->getChartColorClass() }}"
-                                points="{{ implode(' ', $points) }}"
+                                points="{{ $sparkline->points() }}"
                             />
                         </svg>
                     </div>
