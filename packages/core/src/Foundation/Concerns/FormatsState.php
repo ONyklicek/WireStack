@@ -26,6 +26,22 @@ trait FormatsState
 
     protected ?string $currency = null;
 
+    /**
+     * Money's own decimals/separators, deliberately not `numeric()`'s.
+     *
+     * The two modes are independent — money takes priority when both are set —
+     * and sharing the slots would make `->numeric(0)->money('EUR')` silently
+     * change the amount's precision. Each mode reads what it was told.
+     */
+    protected ?int $moneyDecimals = null;
+
+    protected ?string $moneyDecimalSeparator = null;
+
+    protected ?string $moneyThousandsSeparator = null;
+
+    /** Whether the currency reads before the amount ($1 234) or after (1 234 Kč). */
+    protected bool $currencyBefore = false;
+
     protected bool $numeric = false;
 
     protected ?int $decimals = null;
@@ -42,13 +58,69 @@ trait FormatsState
 
     protected bool $since = false;
 
-    /** Format the value as a currency amount (defaults to CZK). */
-    public function money(?string $currency = 'CZK'): static
-    {
+    /**
+     * Format the value as a currency amount (defaults to CZK).
+     *
+     * Precision and separators default to the Czech convention — two decimals,
+     * comma, thin-space thousands — with one inherited special case: the literal
+     * symbol `'Kč'` renders whole crowns, while the ISO code `'CZK'` renders
+     * hellers. That is keyed on how the currency is spelled rather than on what
+     * it is, which is not a rule worth inventing; it is kept because tables
+     * already depend on it, and any of it can now be stated outright instead.
+     *
+     * @param  int|null  $decimals  overrides the per-currency default
+     * @param  string|null  $decimalSeparator  overrides ','
+     * @param  string|null  $thousandsSeparator  overrides the thin space
+     */
+    public function money(
+        ?string $currency = 'CZK',
+        ?int $decimals = null,
+        ?string $decimalSeparator = null,
+        ?string $thousandsSeparator = null,
+    ): static {
         $this->money = true;
         $this->currency = $currency;
 
+        // Only what the caller stated: an omitted argument must not overwrite a
+        // setting made by an earlier call.
+        if ($decimals !== null) {
+            $this->moneyDecimals = $decimals;
+        }
+
+        if ($decimalSeparator !== null) {
+            $this->moneyDecimalSeparator = $decimalSeparator;
+        }
+
+        if ($thousandsSeparator !== null) {
+            $this->moneyThousandsSeparator = $thousandsSeparator;
+        }
+
         return $this;
+    }
+
+    /**
+     * Put the currency before the amount — `$1,234.50` rather than `1 234,50 $`.
+     *
+     * Placement is a property of the currency's convention, not of the number,
+     * so it is stated rather than derived: this concern has no locale table and
+     * guessing one from a three-letter code would be wrong more often than not.
+     */
+    public function currencyBefore(bool $before = true): static
+    {
+        $this->currencyBefore = $before;
+
+        return $this;
+    }
+
+    public function usesCurrencyBefore(): bool
+    {
+        return $this->currencyBefore;
+    }
+
+    /** The decimals money renders with — the stated one, or the currency's default. */
+    public function getMoneyDecimals(): int
+    {
+        return $this->moneyDecimals ?? ($this->currency === 'Kč' ? 0 : 2);
     }
 
     public function isMoney(): bool
@@ -133,9 +205,22 @@ trait FormatsState
 
         // 💰 Money (priority)
         if ($this->money && is_numeric($value)) {
-            $decimals = $this->currency === 'Kč' ? 0 : 2;
+            $amount = number_format(
+                (float) $value,
+                $this->getMoneyDecimals(),
+                $this->moneyDecimalSeparator ?? ',',
+                $this->moneyThousandsSeparator ?? ' ',
+            );
 
-            return number_format((float) $value, $decimals, ',', ' ').' '.$this->currency;
+            // `money(null)` means "a formatted amount, no currency" — it used to
+            // append the separator anyway and leave a trailing space on it.
+            if ((string) $this->currency === '') {
+                return $amount;
+            }
+
+            return $this->currencyBefore
+                ? $this->currency.' '.$amount
+                : $amount.' '.$this->currency;
         }
 
         // 🔢 Numeric

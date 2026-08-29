@@ -375,6 +375,7 @@ Base:
 Columns:
 
 - `TextColumn`
+- `MoneyColumn` — `TextColumn` with money's defaults: right-aligned (so `MobileCard` picks it as the stacked card's metric), `tabular-nums`, no wrap. Formatting stays in `Foundation\Concerns\FormatsState::money()`; there is **no `StatusColumn`** — `BadgeColumn` already resolves an enum's color, icon and label through `EnumResolver`
 - `BadgeColumn`
 - `BooleanColumn`
 - `IconColumn`

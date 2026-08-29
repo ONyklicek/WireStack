@@ -32,7 +32,7 @@ hran na 12, cyklus `Actions ↔ Modals` je pryč.
 
 **Nedokončené kroky 8 a 10** — viz §3.
 
-### V2.1 — třináct extrakcí
+### V2.1 — třináct extrakcí + fáze B (částečně)
 
 | # | Metoda | Bylo → je | Vlastník |
 |---|---|---|---|
@@ -49,6 +49,10 @@ hran na 12, cyklus `Actions ↔ Modals` je pryč.
 | 11 | Table: akce na telefonu | 19 metod | `Concerns\CollapsesActionsOnMobile` |
 | 12 | Table: stacked karty | 9 metod | `Concerns\StacksOnMobile` + `MobileCard::shapeSignature()` |
 | 13 | WithTable: grupování | 4 metody | `Concerns\CanGroupRecords` + `Support\GroupPartitions` — **našlo defekt**, viz §2 |
+
+**Fáze B — ERP typy sloupců.** `MoneyColumn` hotový (+ rozšířený kanonický
+`FormatsState::money()`, EN/CS docs). `StatusColumn` **se dělat nebude** —
+`BadgeColumn` ho už umí, ověřeno. Zbývá `RelationColumn` a `MetricColumn`, viz §4.
 
 Plus **tři host kontrakty** — `Contracts\{ShowsTableColumns, ExpandsTableRows,
 SummarisesTable}` — které poprvé umožnily testovat render větev bez Livewire
@@ -98,6 +102,31 @@ jak už dělá pro data source, grouping, polling, sub-rows a gesta.
 je z nich nejhorší kandidát: `generateQueryCacheKey` je jednořádková delegace a
 `queryCacheScope` je **zdokumentovaný override hook**. Extrakce by odebrala
 rozšiřovací bod a nezmenšila nic.
+
+**Plánovaný `StatusColumn` je prázdná podtřída — nedělat.** Plán (B-2, ADR 0018,
+a závislost z V2.4 WF-4) ho popisuje jako „enum status → barva/ikona přes
+`Enum\HasColor/HasLabel/HasIcon`". Změřeno na enumu implementujícím všechny tři
+kontrakty: `BadgeColumn` už vrací barvu ✓ ikonu ✓ **i label** ✓, přes
+`EnumResolver`. Zbylo by `class StatusColumn extends BadgeColumn {}` — přesně ten
+„druhý kolo" z `AI_CODING_STANDARD.md` § Adapters. **Závislost V2.4 WF-4 je tím
+splněná**: transition engine si má napojit `BadgeColumn`.
+
+**`MoneyColumn` naopak smysl má, ale ne ten, co plán psal.** `money()` už
+existuje v kanonickém `FormatsState` (sdíleném s infolist `TextEntry`), takže
+formátování se nepíše znovu. Co typ přidává, jsou **výchozí hodnoty**: pravé
+zarovnání, `tabular-nums`, nezalamování. A pravé zarovnání má v tomhle repu druhý
+význam — `MobileCard` z něj odvozuje metriku stacked karty. Komentář tam přitom
+tvrdil „což je to, co produkuje `money()` a `numeric()`", jenže `money()`
+**nezarovnával** (ověřeno: `getAlignment()` = `left`). Takže ten komentář popisoval
+záměr, který kód nikdy nesplnil; `MoneyColumn` ho teprve dělá pravdou.
+
+Ve formátovači byly při té příležitosti dva reálné defekty: `money(null)` vracelo
+`"1 234,50 "` s koncovou mezerou, a přesnost se řídí tím, **jak je měna napsaná**
+(`'Kč'` → 0 míst, `'CZK'` → 2). Druhé jsem nechal — tabulky na tom stojí — ale je
+to teď pojmenované, přebitelné (`->money('Kč', 2)`) a **zadokumentované**. Existující
+test se přitom jmenoval „formats money values correctly for CZK (0 decimals)",
+tvrdil v komentáři „CZK uses 0 decimals" a asertoval jen `toContain('CZK')` — takže
+dokumentoval opak reality a procházel.
 
 **Extrakce našla ostrý defekt, a našla ho tím, že se ptala „kdo tuhle memo
 zneplatňuje".** `cachedGroupPartitions` se nulovala ručně na pěti místech, která
@@ -167,9 +196,16 @@ visí pod checkboxem a nikde to nepraskne.
 
 Klesající výnos, seřazeno podle poměru:
 
-1. **V2.1 fáze B — chybějící ERP typy sloupců**: `StatusColumn`, `MoneyColumn`,
-   `RelationColumn`, `MetricColumn`. Aditivní, bez BC rizika, a **vidí to
-   uživatel** — na rozdíl od všeho výše. Revizí nedotčeno, ověřeno že chybí.
+1. **`MetricColumn`** (B-5). Jediný ze čtyř ERP typů, u kterého měření nenašlo
+   hotového vlastníka: `SummaryType` umí 12 agregací pro *patičku*, ale nic
+   nekreslí agregát ani sparkline **v buňce**. Změř přesto: nejdřív ověř, co
+   `Services\SummaryCalculator` a `->summarize*()` umí vrátit per řádek.
+2. **`RelationColumn`** (B-4) — **nejdřív změř, pravděpodobně další prázdná
+   podtřída.** Base už má `getRelation()`, `getRelationName()`, `hasRelation()`,
+   `getRelationshipAttribute()` i `eagerLoadRelations()`, a tečková notace má
+   vlastní docs stránku (`docs/table/columns/relations.md`). Plán mluví
+   o „konsolidaci `->relationship()` roztroušeného v base" — což je přesun, ne
+   nový typ, a je otázka, jestli se vyplatí.
 
 **`Table.php` je hotová.** Nezbyla v ní metoda nad 19 řádků a každý soudržný
 shluk má concern. Další práce na ní by už byla přerovnávání, ne úklid.
@@ -226,6 +262,12 @@ uprostřed jinak hustě pokrytého clusteru — a v dalším kroku `getMobileCar
 úplně stejně. A mutuj **před** psaním testu i po něm: mutace zadrátovaného
 `justify-end` proti staré sadě je důkaz, že to pravidlo opravdu bylo nepokryté,
 ne jen tvůj dojem.
+
+**Pravidlo z kroku 14:** u **aditivní** práce je měření to samé co u extrakce, jen
+se ptáš jinak: *kdo tuhle schopnost už vlastní?* Ze čtyř plánovaných ERP typů měl
+jeden (`StatusColumn`) hotového vlastníka úplně, druhý (`MoneyColumn`) měl hotové
+formátování a chyběly mu jen výchozí hodnoty, a třetí (`RelationColumn`) na tom
+je nejspíš stejně. Plán psaný před rokem počítá se stavem kódu před rokem.
 
 **Pravidlo z kroku 13:** u každé memoizace se ptej **kdo ji zneplatňuje**, ne
 jestli funguje. Zneplatnění rozsypané po volajících je duplicitní znalost a

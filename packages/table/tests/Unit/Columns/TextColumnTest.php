@@ -18,14 +18,15 @@ it('can format as money', function () {
         ->and($column->getCurrency())->toBe('CZK');
 });
 
-it('formats money values correctly for CZK (0 decimals)', function () {
-    $column = TextColumn::make('price')->money('CZK');
+it('formats CZK with hellers and the Kč symbol without', function () {
     $record = Mockery::mock(Model::class);
 
-    $result = $column->formatValue(1234.56, $record);
-
-    // CZK uses 0 decimals, rounds to 1 235
-    expect($result)->toContain('CZK');
+    // The precision is keyed on how the currency is spelled, not on what it is.
+    // This test used to be named "CZK (0 decimals)" and assert only that the
+    // output contained "CZK" — which it does either way, so the claim went
+    // unchecked and was backwards. See MoneyColumnTest for the full rule.
+    expect(TextColumn::make('price')->money('CZK')->formatValue(1234.56, $record))->toBe('1 234,56 CZK')
+        ->and(TextColumn::make('price')->money('Kč')->formatValue(1234.56, $record))->toBe('1 235 Kč');
 });
 
 it('formats money with two decimals for non-CZK', function () {
