@@ -273,9 +273,14 @@ neřešil:
    Zbývající hnízda: `data-region.blade.php` (6), `sub-rows.blade.php` (5),
    `forms/radio.blade.php` (5), `tables/index.blade.php` (4). Stejný vzorec:
    nepokrytý kód s vizuálním symptomem.
-2. **`*Skeleton` bez testu zapečených podmínek** — zbývají
-   `getSelectionCellSkeleton`, `getRowContextMenuSkeleton`,
-   `getSubRowCellSkeleton` (ověřeno greppem, nula zmínek v `tests/`).
+2. ~~**`*Skeleton` bez testu zapečených podmínek**~~ — **hotovo 2026-08-29.**
+   Všechny tři (`getSelectionCellSkeleton`, `getSubRowCell`,
+   `getRowContextMenuSkeleton`) mají test na zapečené podmínky. Nález: **tvarové
+   klíče byly hlídané** (plochá memoizace sub-row buňky shodí dva existující
+   testy), **zapečené podmínky ne** — zadrátovat `usesRangeSelection`, hustotu
+   nebo rámeček prošlo všemi 2302 testy. Bez defektu, ale ten range flag píše
+   `x-on:click`: špatně zapečený znamená, že Shift+klik na výběrovou buňku
+   odpoví **dvakrát** (rozšíří rozsah *a* přepne ten jeden řádek).
 
 **`Table.php` je hotová.** Nezbyla v ní metoda nad 19 řádků a každý soudržný
 shluk má concern. Další práce na ní by už byla přerovnávání, ne úklid.
@@ -361,5 +366,10 @@ identitu vstupu, ze kterého vzniklo.
 to, co Pest vidí jako řetězec a nikdo neasertuje, protože „to je jen markup" —
 jenže podmínky zapečené do tvaru (zarovnání, odsazení za checkboxem, klíč cache)
 jsou rozhodnutí v PHP se symptomem jen v prohlížeči. **Každý nový `Skeleton`
-chce test na svoje zapečené podmínky, hned s sebou.** Zbývající neotestované:
-`getSelectionCellSkeleton`, `getRowContextMenuSkeleton`, `getSubRowCellSkeleton`.
+chce test na svoje zapečené podmínky, hned s sebou.**
+
+Zbylé tři jsou dotažené (2026-08-29) a ukázaly, kde přesně je ta hranice:
+**tvarový klíč** si někdo pohlídal u všech (plochá memoizace sub-row buňky shodí
+dva existující testy), **zapečenou podmínku** u žádného. Tedy: klíč cache vypadá
+jako výkon a lidi ho testují; zapečená podmínka vypadá jako markup a netestuje ji
+nikdo — přestože to je ta, která píše `x-on:click`.
