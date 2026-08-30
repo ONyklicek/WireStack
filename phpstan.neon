@@ -49,3 +49,4 @@ parameters:
         - { identifier: trait.unused, path: packages/table/src/Concerns/CanSelectRecords.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTable.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTableQueryString.php }
+        - { identifier: trait.unused, path: packages/table/src/Resources/Concerns/DescribesRecords.php }

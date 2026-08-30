@@ -82,6 +82,30 @@ return [
     | Point an alias at your own class to use a custom store.
     |
     */
+    /*
+    |--------------------------------------------------------------------------
+    | Resources
+    |--------------------------------------------------------------------------
+    |
+    | Resource classes this application owns, as a plain list. Each one binds an
+    | entity to the surfaces it exposes (list / form / read-only view) in a
+    | single place, and implements at least
+    | NyonCode\WireTable\Resources\Contracts\DescribesResource.
+    |
+    | This is a registry, not a panel: it answers "which resources exist" and
+    | "which one owns this model", and owns no routing or URL shell. Resources
+    | can also be added in code by resolving ResourceRegistry and calling
+    | register(), which is the path an attribute-discovery scanner would use.
+    |
+    |   'resources' => [
+    |       App\Resources\OrderResource::class,
+    |   ],
+    |
+    */
+    'resources' => [
+        //
+    ],
+
     'preferences' => [
         'default' => env('WIRE_TABLE_PREFERENCES_DRIVER', 'null'),
         'guest' => env('WIRE_TABLE_PREFERENCES_GUEST_DRIVER', 'session'),

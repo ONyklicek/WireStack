@@ -7,6 +7,7 @@ namespace NyonCode\WireTable\Exceptions;
 use InvalidArgumentException;
 use NyonCode\WireCore\Core\Query\Search\SearchValueType;
 use NyonCode\WireCore\Foundation\Contracts\WireException;
+use NyonCode\WireTable\Resources\Contracts\DescribesResource;
 
 /**
  * Thrown when a table is handed an argument its definition cannot accept.
@@ -86,6 +87,25 @@ final class TableConfigurationException extends InvalidArgumentException impleme
     {
         return new self(
             "Unknown table gesture [{$capability}]. Valid gestures: ".implode(', ', $valid).'.'
+        );
+    }
+
+    public static function notAResource(string $class): self
+    {
+        return new self(
+            "[{$class}] cannot be registered as a resource: it does not implement ".
+            DescribesResource::class.'. A resource declares its key, model and labels '.
+            'through that contract, which is what the registry routes on.'
+        );
+    }
+
+    public static function duplicateResourceKey(string $key, string $existing, string $incoming): self
+    {
+        return new self(
+            "Two resources claim the key [{$key}]: [{$existing}] and [{$incoming}]. ".
+            'A key is the config handle, the route segment and the introspection '.
+            'name, so the second would silently take over routing for the first. '.
+            'Override key() on one of them.'
         );
     }
 

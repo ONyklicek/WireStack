@@ -118,6 +118,20 @@ neověřil.
 | S2 typed dispatch primární | zrušit dvojí dispatch na lifecycle bodech | **jinak** — dvojí dispatch stojí 0,163 µs a nechává se; skutečná redundance byla jinde a byl v ní **ostrý defekt**, viz §2 |
 | S3 hydration seamy | audit směru dat | **bez mezery** — oba směry mají kanonického vlastníka a pojmenovaný pár (ADR 0021). Audit ale našel **osiřelou dvojici** `Hydrator`/`MutationPipeline`, viz §2 a §3 |
 
+### V2.3 — owner vrstva 🟡 (R.1 + R.2 hotové)
+
+Kontrakty resource, odvozovací concern a registr. Pages (P), `Workspace` (W)
+a boost introspekce (I) zbývají.
+
+| Krok | Co vzniklo |
+|---|---|
+| R.1 | `Resources\Contracts\{DescribesResource, ProvidesResourceTable, ProvidesResourceForm, ProvidesResourceInfolist}` + `Resources\Concerns\DescribesRecords` |
+| R.2 | `Managers\ResourceRegistry` + `config('wire-table.resources')` + singleton binding |
+
+**Dvě rozhodnutí z plánu se změřením otočila** — obě v §2: umístění (Filament
+dává owner vrstvu nahoru, ne dolů) a tvar kontraktu (osmimetodový interface
+neprojde vlastním standardem repa).
+
 ---
 
 ## 2. Co měření změnilo na zadání
@@ -403,6 +417,44 @@ kontejneru. Takže **diagnostika chyby v hintu spadla místo aby ji nahlásila**
 přesně ve standalone kontextu, který má `CLAUDE.md` v požadavcích („testable in
 isolation, usable from other contexts"). Chybějící půlka je `app()->bound('config')`.
 
+**V2.3: „kam s `Resource`" má odpověď u Filamentu, a je opačná než naše.**
+Rozhodnutí z 2026-08-26 dalo kontrakt do `core`, tedy na **dno** grafu
+`sortable → table → forms → core`, a z toho plynulo omezení „nesmí jmenovat
+`Table`/`Form`/`Infolist`". Náčrt R.1 je ale všemi třemi psaný, takže **nešel
+napsat tak, jak stojí v plánu**.
+
+Ověřeno proti Filament docs 5.x: `Resource` tam bydlí v **panel balíčku**, který
+závisí na `filament/tables`, `filament/forms` i `filament/schemas`. Komponentové
+balíčky o `Resource` nevědí a jdou použít samostatně. Filament to omezení nemá,
+protože owner vrstvu dal **nahoru**. Řešení je tedy stejné: `packages/table` už
+na forms i core závisí, takže tam kontrakt smí povrchy jmenovat přímo — žádné tři
+nové dvojice kontrakt+factory po vzoru `ModalForm`, žádný cyklus. Global search
+z V2.5 patří ze stejného důvodu tamtéž, ne do `core/src/GlobalSearch/`.
+
+**A tvar kontraktu neprojde vlastním standardem repa.** Plán i ADR 0020 popisují
+`Resource` jako jednu třídu s osmi metodami. `AI_CODING_STANDARD.md` § Interfaces
+říká *„one interface represents exactly one capability. Never create large
+interfaces containing unrelated methods."* Takže ani „interface místo abstract
+class" nestačí — rozpadlo se to podle schopností:
+
+| Kontrakt | Kdo ho čte |
+|---|---|
+| `DescribesResource` (static: `key`, `modelClass`, `label`, `pluralLabel`) | registr, menu, introspekce — **bez instancování** |
+| `ProvidesResourceTable` | `ListPage` |
+| `ProvidesResourceForm` | `Create/EditPage` |
+| `ProvidesResourceInfolist` | `ViewPage` |
+
+Read-only audit log implementuje identitu a tabulku a nic dalšího; stránka, která
+chce formulář, nemůže dostat resource, který ho nemá. Hybrid static/instance
+z Q1 tím dostal mechanický důvod místo stylového: menu se ptá na popisek a
+`forModel()` směruje model **dřív, než se cokoli instancuje**.
+
+Odvození klíče a popisku z **modelu** (`DescribesRecords`) je taky pravidlo, ne
+úspora řádků: klíč je to, na čem registr směruje, popisek to, co ukazuje menu, a
+vzít je ze dvou míst znamená, že se rozejdou. Mutace to potvrdila — čtyři zásahy
+do registru (nezneplatněná memo mapa, neznormalizované lomítko, tichý přepis
+duplicitního klíče, model-less resource v mapě) shodily každý právě jeden test.
+
 **V2.2/S3: mezera tam není, zato je tam dvojice tříd, kterou nikdo nevolá.**
 Plán se ptal, jestli hydratační seamy netvoří díru („typ nehydratovaný před
 validací"). Netvoří — směr má v obou polovinách jednoho vlastníka a ten pár je
@@ -472,8 +524,22 @@ Klesající výnos, seřazeno podle poměru:
 
 **V2.1 i V2.2 jsou hotové.** V2.1: fáze A doražená (13 extrakcí), fáze B uzavřená
 včetně B-1. V2.2: S2 dotažená (a našla tři defekty), S1 změřená na „nedělat",
-S3 z poloviny — zbytek v §3. Další na řadě je **V2.3** (owner vrstva), jejíž brána
-už padla (viz `v2.3-…` § R.1).
+S3 uzavřená nálezem osiřelé dvojice (§3).
+
+**V2.3 je rozjetá: R.1 + R.2 hotové.** Kontrakty, `DescribesRecords` a
+`ResourceRegistry` stojí v `packages/table` (ne v core — viz §2), s docs EN/CS
+i boost guidelines. Na řadě je **P — Page owneři**:
+
+| Page | Host trait | Čte |
+|---|---|---|
+| `ListPage` | `WithTable` | `ProvidesResourceTable` |
+| `CreatePage` / `EditPage` | `WithForms` | `ProvidesResourceForm` |
+| `ViewPage` | Infolist render | `ProvidesResourceInfolist` |
+
+Vzor je `RelationManager` (Livewire komponenta + host trait) a všechny musí být
+použitelné i **bez** resource — ADR 0020 to vede jako invariant „dvě cesty
+first-class". Pak `RM` (zařadit `RelationManager` pod vrstvu), `W`
+(`Workspace`/`Navigation`) a `I` (boost `DescribeResource`).
 
 Obě věci, které běh 2026-08-29 vyhodil a neřešil, jsou dotažené:
 

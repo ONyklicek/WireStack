@@ -12,6 +12,7 @@ use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireTable\Livewire\TableStateSynthesizer;
+use NyonCode\WireTable\Managers\ResourceRegistry;
 use NyonCode\WireTable\Support\RecordAction;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -30,6 +31,12 @@ class WireTableServiceProvider extends PackageServiceProvider
         $packager
             ->name('WireTable')
             ->hasShortName('wire-table')
+            ->registeredPackage(function ($packager) {
+                // One registry per application: the menu, the model router and
+                // boost introspection must all see the same set, and a resource
+                // added in code has to survive the request that added it.
+                $this->app->singleton(ResourceRegistry::class);
+            })
             ->bootedPackage(function ($packager) {
                 // The manager, not `app(HandleComponents::class)`: Livewire 4 moved
                 // the synthesizer registry out of that mechanism into
@@ -43,6 +50,7 @@ class WireTableServiceProvider extends PackageServiceProvider
 
                 $this->registerRecordActionMacros();
                 $this->registerAssetRoutes();
+                $this->registerResources();
             })
             ->hasConfig()
             ->hasViews()
@@ -73,6 +81,32 @@ class WireTableServiceProvider extends PackageServiceProvider
      * the table exists. Registered here — the package's cross-package extension
      * seam — rather than in the core Action class.
      */
+    /**
+     * Register the resources declared in config into the {@see ResourceRegistry}.
+     *
+     * Booted rather than registered: a resource class is application code that
+     * may reference models and policies, so it is read after the application's
+     * own providers have run. The registry itself is a singleton bound in
+     * register(), so an application that prefers to add resources in code can
+     * resolve it and call register() without a config entry.
+     */
+    private function registerResources(): void
+    {
+        $resources = config('wire-table.resources', []);
+
+        if (! is_array($resources) || $resources === []) {
+            return;
+        }
+
+        $registry = app(ResourceRegistry::class);
+
+        foreach ($resources as $resource) {
+            if (is_string($resource) && $resource !== '') {
+                $registry->register($resource);
+            }
+        }
+    }
+
     protected function registerRecordActionMacros(): void
     {
         foreach (['onClick', 'onDoubleClick', 'onContextMenu'] as $trigger) {
