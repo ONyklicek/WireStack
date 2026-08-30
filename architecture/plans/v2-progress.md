@@ -724,6 +724,71 @@ A z těch `new`×6 v `SaveHandler` jsou **dva payload DTO** (payload se konstruo
 musí) a **jedna vyhozená výjimka**. Skutečné závislosti jsou dvě. Plán mířil na
 počet výskytů `new`, ne na to, co ty výskyty jsou.
 
+**`v2-deferred-items.md` §3: obě otevřené podpoložky měření zamítlo — a shodly se
+v tom, že obě chtěly postavit druhé kolo vedle hotového vlastníka.**
+
+§3.2 („`mutateDataBeforeSave()` se wrappne jako MutationPipeline before hook")
+není splnitelná, protože ty dva tvary nejsou převoditelné:
+
+| | `mutateDataBeforeSave` | `MutationPipeline::before()` |
+|---|---|---|
+| Signatura | `Closure(array $data): ?array` | `Closure(mixed $value, string $attribute): mixed` |
+| Vidí | **celá data najednou** (cross-field) | jednu hodnotu |
+| Umí zrušit save | ano — `null` ukončí `save()` | **ne**, žádný kanál |
+
+A per-atributové tvarování na zápisové straně už kanonického vlastníka má:
+`DehydratesState::dehydrateState()` (ADR 0021), čtyři implementace, krok 2.5
+v `SaveHandler`. `MutationPipeline` navíc nemá **žádné API na registraci**, takže
+zapojení do `dehydrate()` by přidalo smyčku přes trvale prázdné pole.
+
+§3.3 („`RelationshipSaveHandler` ručně iteruje → přenést do `Dehydrator`") stojí
+na premise, která neplatí. `RelationshipSaveHandler` **je** kanonický vlastník
+kaskády se **dvěma** konzumenty (`SaveHandler::save()` krok 6 a
+`BelongsToSelect::applyEditOptionUpdate()`) a zdokumentovanou maticí podle typu
+relace. Co by se stěhovalo, není dot-notation, ale sémantika Eloquent zápisu —
+kaskáda, která **načítá modely**, aby padly eventy a respektovaly se
+`SoftDeletes`, plus `sync()` pivotu. `Dehydrator` oproti tomu **jen setuje
+atributy a nikdy neukládá**, a `Repeater` je třída z `wire-forms`, tedy nad
+`wire-core` — přesun by obrátil graf balíčků.
+
+**A ten `Dehydrator` má nedosažitelnou větev, kterou docblok popisuje jako
+funkci.** Dot-notation půlka („traverses the relation path and sets the attribute
+on the related model") je nepokrytá — smazat ji celou projde **všemi 3300 testy**
+core + forms — a z jediného volajícího se **nedá dosáhnout**: dotted název pole
+přijde z Livewiru už zanořený (`company.name` → `['company' => ['name' => …]]`),
+takže klíč, který `persist()` vidí, tečku neobsahuje. Ověřeno prototypem na
+hostiteli se statePath: hlavní formulář s `TextInput::make('company.name')` skončí
+na `no such column: company`, ne v té větvi. A i kdyby se do ní dostal (callback
+v `mutateDataBeforeSave` vrátí dotted klíč), atribut se nastaví na relačním
+modelu, který nikdo neuloží — tichá ztráta zápisu. Schopnost „zapsat zpět přes
+dotted cestu" má přitom skutečného vlastníka s dokumentovanou maticí:
+`BelongsToSelect`. Docbloky i `unified-engine.md` to teď říkají; **smazání je
+rozhodnutí vlastníka repa** (`dehydrateAttribute()` je public API v publikovaném
+balíčku), a leží v §3 vedle `MutationPipeline`.
+
+**Audit ale našel to, co hledal — v půlce, která vypadala hotově.** Větev, kvůli
+které `saveRepeater()` načítá model místo query-builder `->update()`, je
+**nepokrytá**: záměna za přesně ten anti-pattern, před kterým komentář varuje,
+prošla všemi 1129 testy balíčku `forms` — **včetně testu jménem „editing an
+existing relation row applies casts (no cast bypass / corruption)"**, který je na
+tu regresi psaný jmenovitě.
+
+Důvod je poučnější než ten nález. Komentář tvrdil, že query-builder update
+zahodí i `array`/`json` cast a zapíše `Array to string conversion`. To už neplatí:
+**query grammar json_encoduje array binding sám**, takže právě ta půlka, kterou
+test asertoval, vyjde stejně oběma cestami. Framework mezitím pokryl přesně ten
+případ, na kterém test stál — a test tím přestal cokoli rozlišovat, aniž
+zčervenal. Skutečně bypassnuté zůstávají **model eventy, mutátory a casty, které
+něco dělají** (`encrypted`, enum, jakýkoli `CastsAttributes`). Dvě nové sady to
+drží: cast, jehož `set()` hodnotu mění, a `updating`/`updated` eventy — obojí
+zrcadlo testů, které delete větev měla a update větev ne. Komentář teď říká, co
+platí.
+
+**Diff brána pokrytí je červená z minulého běhu, ne z tohohle.** `verify-coverage
+--diff=origin/1.x` hlásí neposlouchané řádky jen v `packages/table/src/Export/*`,
+přidané v Q-3. Rozpadají se na dvě skupiny a ani jedna nejde pokrýt testem tak,
+jak repo teď stojí — viz §3.
+
 ---
 
 ## 3. Co je vědomě neudělané
@@ -738,8 +803,10 @@ počet výskytů `new`, ne na to, co ty výskyty jsou.
 | `ShellRenderPlan`, `InteractionRenderPlan` — host pořád `mixed` | Polling, live kanál, readiness, přístup ke stavu nemají pojmenovaný kontrakt | [`v2.1-…`](v2.1-monolith-split-implementation.md) §0a |
 | `resolveActionType()` — public static, **nula volajících v src** | Nález z kroku 9; plugin API, nebo mrtvý kód. Nerozhodnuto | — |
 | Tenancy nekryje non-Eloquent `DataSource` | Globální Eloquent scope nemá co scopovat u `CollectionDataSource` ani u zdroje nad API. Zdokumentované v `docs/authorization.md` jako „co scopované není"; správné místo je dekorátor nad `DataSource` (T-4 tak, jak ho plán psal). **Dokud to nevznikne, tenancy nezapínej nad non-Eloquent zdrojem** | [`v2.4-…`](v2.4-erp-execution-implementation.md) T-4 |
-| `Core\Hydration\MutationPipeline` — nula volajících, **ale zůstává** | Nález S3. Sourozenec `Hydrator` byl smazán (nula volajících, žádný plán); `MutationPipeline` **ne** — `v2-deferred-items.md` §3.2 je živý nedodělaný plán na jeho zapojení do `dehydrate()` (`mutateDataBeforeSave()` jako before-hook). Není zapomenutý, je postavený dopředu. **Rozhodnuto vlastníkem repa 2026-08-30: nechat.** Zapojit ho znamená dodělat §3.2 jako vlastní krok | [`v2-deferred-items.md`](v2-deferred-items.md) §3.2 |
-| `v2-deferred-items.md` §3 je hotová z jedné čtvrtiny, ne celá | V2.2 korekční tabulka ji označila za HOTOVOU. Hotová je **§3.1** (Dehydrator v `persist()`). §3.2 (MutationPipeline) a §3.3 (relation dehydrace) ne — `RelationshipSaveHandler` pořád ručně iteruje 174 řádků. §3.4 (BC) je bezpředmětná, dokud §3.2 nepadne | [`v2-deferred-items.md`](v2-deferred-items.md) §3 |
+| `Core\Hydration\MutationPipeline` — nula volajících, **zůstává jako stavební blok** | Nález S3. Sourozenec `Hydrator` byl smazán (nula volajících, žádný plán); `MutationPipeline` ne — vlastník repa 2026-08-30 rozhodl nechat. **Od 2026-08-30 už to ale není nedodělaný krok:** §3.2 měření zamítlo (tvar callbacku není převoditelný, per-atributového vlastníka má `dehydrateState()`, třída nemá API na registraci) — viz §2 | [`v2-deferred-items.md`](v2-deferred-items.md) §3.2 |
+| `Core\Hydration\Dehydrator` — dot-notation větev je nedosažitelná | Z jediného volajícího se do ní nedá dostat (Livewire dotted klíč zanoří dřív), smazání projde všemi 3300 testy, a kdyby se do ní dostal callback, atribut se nastaví na modelu, který nikdo neuloží. Vlastníka té schopnosti má `BelongsToSelect` s dokumentovanou maticí. Docbloky i `unified-engine.md` to říkají; **smazání `dehydrateAttribute()` je odstranění public API z publikovaného balíčku — rozhodnutí vlastníka repa**, stejná otázka jako `resolveActionType()` | §2 |
+| Export: optional-library cesty nikdy nespustil žádný test | `verify-coverage --diff=origin/1.x` je od Q-3 červená na `ExcelExporter`/`PdfExporter` (`writeTo()` za `isAvailable()`) a na třech defenzivních `false` větvích (`CsvExporter:40`, `TableExport:248,257`). První skupina je nedosažitelná, protože **`openspout` ani `dompdf` v repu vůbec nejsou** — ani v `require-dev`; druhá jsou selhání `fopen`/`tempnam`. Skript nemá ignore mechanismus a rozšiřovat ho by bylo widening baseline. Náprava je vlastní krok: přidat obě knihovny do `require-dev` a otestovat `writeTo()` na obou (headline featura, jejíž knihovní cesta nikdy neběžela). Ta `tichá` `return;` v `CsvExporter::writeTo()` při neotevřitelné cestě je navíc tentýž tvar jako „tichá nula" opravená na importu | — |
+| ~~`v2-deferred-items.md` §3 je hotová z jedné čtvrtiny~~ | **uzavřeno 2026-08-30.** §3.1 hotová, §3.2 i §3.3 **zamítnuté měřením** (viz §2), §3.4 tím bezpředmětná. Není to nedodělaná položka, je rozhodnutá — a `RelationshipSaveHandler` z toho čtení dostal dva chybějící testy | [`v2-deferred-items.md`](v2-deferred-items.md) §3 |
 | Tři workbench soubory drží pohromadě a **žádný z nich není commitnutý** | `workbench/routes/web.php` a `previews/index.blade.php` jsou rozdělaná práce vlastníka repa (refaktor preview rout), `workbench/scripts/verify-resource-pages.mjs` je driver z V2.3, který na těch routách závisí. Commitnout driver samotný znamená **rozbít `verify:drivers` v CI** — hledal by routy, které v repu nejsou. Proto přežily tři běhy mimo commit. Jdou jen všechny tři najednou, až bude refaktor rout hotový. Do té doby resource stránky v CI nikdo neprojíždí | — |
 | Boost guidelines neznají plugin hooky | `guidelines/` ani `skills/` nepopisují `PluginManager` vůbec — takže pravidlo „hint rozhoduje dispatcher" tam není a nemohlo zestárnout. Doplnit až s vlastní plugin sekcí, ne ad hoc | — |
 | ~~Boost docs mirror rozjetý~~ | **zavřeno 2026-08-30.** `packages/boost/resources/boost/docs/` je *commitnutá* kopie `docs/` (viz `scripts/sync-boost-docs.php`) a `composer boost:check-docs` je brána v `docs-check.yml`. Byla červená **už před tímhle během**: `money.md` a `metric.md` z V2.1 se do balíčku nikdy nedostaly. Po každé změně v `docs/` pouštěj `composer boost:sync-docs` | `.github/workflows/docs-check.yml` |
@@ -771,13 +838,18 @@ zvlášť dřív, než se pustíš do první.
 
 Tři věci z §3, které se samy nezmenší a každá je na půl dne:
 
-1. **`v2-deferred-items.md` §3 je hotová z jedné čtvrtiny**, ne celá, jak tvrdila
-   V2.2. §3.2 (zapojit `MutationPipeline` do `dehydrate()`) a §3.3 (relation
-   dehydrace) otevřené — `RelationshipSaveHandler` pořád ručně iteruje 174 řádků.
-2. **ADR 0025 kroky 8 a 10** — Blade coupling `callInfolistAction` a vyříznutí
+1. **ADR 0025 kroky 8 a 10** — Blade coupling `callInfolistAction` a vyříznutí
    `wireFillHandle` z 38 KB bundlu.
+2. **Export: knihovní cesty nikdy neběžely** a `verify-coverage --diff` je na nich
+   od Q-3 červená. `openspout` ani `dompdf` nejsou v repu ani jako `require-dev`,
+   takže `ExcelExporter::writeTo()` a `PdfExporter::writeTo()` za `isAvailable()`
+   nespustil žádný test. Přidat obě do `require-dev` a otestovat obě doručení.
 3. **`resolveActionType()`** — public static, nula volajících v `src`. Plugin API,
-   nebo mrtvý kód. Nerozhodnuto od kroku 9.
+   nebo mrtvý kód. Nerozhodnuto od kroku 9. Vedle něj teď leží stejná otázka na
+   `Dehydrator::dehydrateAttribute()` a jeho nedosažitelnou dot-notation větev.
+
+~~`v2-deferred-items.md` §3~~ — **uzavřená 2026-08-30**, §3.2 i §3.3 zamítnuté
+měřením; odůvodnění v §2, verdikty zapsané přímo do toho plánu.
 
 ### Co je uzavřené a nemá se otevírat
 
@@ -861,6 +933,8 @@ když nemáš čas na zbytek.** Za tři běhy opravilo zadání patnáctkrát. B
 | V2.2/S2 | zrušit dvojí dispatch (redundance) | stojí 0,163 µs → **nechat**; vedle byl **defekt**, nehintovaný callback běžel dvakrát |
 | V2.3 umístění | `Resource` do core (rozhodnuto 2026-08-26) | náčrt R.1 tak nejde napsat; Filament dává owner vrstvu **nad** komponenty → nový balíček `wire-panels` |
 | V2.3 tvar | jedna třída / jeden interface, osm metod | `AI_CODING_STANDARD.md` § Interfaces to zakazuje → rozpad na identitu + povrchy |
+| `v2-deferred-items` §3.2 | „`mutateDataBeforeSave()` se wrappne jako before hook" | tvary nejsou převoditelné (celá data + abort vs. jedna hodnota) a per-atributového vlastníka má `dehydrateState()` → **nedělat** |
+| `v2-deferred-items` §3.3 | „`RelationshipSaveHandler` ručně iteruje → do `Dehydrator`u" | je to kanonický vlastník se **dvěma** konzumenty; `Dehydrator` neukládá a sedí **pod** `Repeater`em v grafu → **nedělat**; audit místo toho našel nepokrytou update větev |
 
 A jeden nález, který měření **nenašlo a našel ho až prohlížeč**: V2.3 měla
 zelenou unit sadu a dva defekty, které server-side test vidět nemůže. Proto krok
@@ -928,6 +1002,25 @@ A druhá půlka: **měření samo je test.** Benchmark, který jsem psal jenom p
 abych rozhodl, jestli má smysl rušit dvojí dispatch, spadl na
 `BindingResolutionException` — a to byl třetí defekt toho běhu. Kdybych ten
 odhad vzal z plánu místo změření, nenajdu ho.
+
+**Pravidlo z běhu 2026-08-30 (druhá půlka dne): test pojmenovaný podle regrese
+není důkaz, že tu regresi chytá — mutuj i tam, kde správně pojmenovaný test už
+je.** `RelationshipSaveHandlerTest` měl test „editing an existing relation row
+applies casts (no cast bypass / corruption)", psaný jmenovitě na to, že update
+větev nesmí použít query-builder `->update()`. Ta záměna prošla — **včetně toho
+testu**. Důvod: komentář i test stály na tvrzení, že builder update zahodí
+`array` cast a zapíše `Array to string conversion`, jenže query grammar array
+binding json_encoduje sám. Framework mezitím pokryl přesně ten případ, na kterém
+test stál, takže test přestal cokoli rozlišovat a **nikdy kvůli tomu
+nezčervenal**. Rozlišuje až cast, jehož `set()` hodnotu mění, a model eventy.
+Obecně: **když se ptáš, jestli je pravidlo pokryté, ptej se mutací, ne názvem
+testu** — a když mutace projde testem, který je na ni psaný, je stará premisa, ne
+mrtvý test.
+
+**A druhá půlka, procedurální: ověř, že mutace vůbec sedla.** První běh té mutace
+„prošel" proto, že se vzor v souboru netrefil a nezměnilo se nic — false pass,
+který by celý nález schoval. Každá mutace přes skript musí selhat hlasitě, když
+vzor nenajde (`assert old in s`), a `git diff --stat` po ní je jeden příkaz.
 
 **Pravidlo z běhu 2026-08-30:** když najdeš stejné pravidlo napsané dvakrát,
 **neopravuj tu kopii, která vypadá rozbitě — zjisti, která z nich je novější.**

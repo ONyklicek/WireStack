@@ -545,6 +545,17 @@ $dehydrator->dehydrate($state, $model);
 // Applies mutations to $model attributes
 ```
 
+It **sets, it never saves.** That matters for its dot-notation branch, which walks
+already-loaded relations and sets the attribute on the related model: a caller that
+saves only the root model drops that write, and an unloaded segment discards the
+value silently. Verified 2026-08-30 that the branch is unreachable from its only
+caller — `SaveHandler::persist()` receives a dotted field name from Livewire
+already nested (`company.name` → `['company' => ['name' => …]]`), so no key it sees
+contains a dot — and that deleting the branch outright passes all 3300 core + forms
+tests. Writing back through a relation from a form has a real owner with a
+documented relation matrix: `BelongsToSelect`, `docs/forms/fields/belongs-to-select.md`.
+Whether the branch stays is the same open question as `MutationPipeline` below.
+
 ### Support Classes
 
 | Class | Description |

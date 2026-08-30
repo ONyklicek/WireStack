@@ -109,11 +109,14 @@ final class RelationshipSaveHandler
 
             if ($id && in_array($id, $existingIds)) {
                 // Fetch the model and fill+save so casts, mutators and model events
-                // fire — a query-builder `->update()` bypasses ALL of them, so an
-                // 'array'/'encrypted'/'json'-cast column bound to its PHP value writes
-                // corrupt data (e.g. `Array to string conversion`). This mirrors the
-                // create branch (casts via the model) and the delete branch (loads
-                // models to fire events / respect SoftDeletes).
+                // fire — a query-builder `->update()` runs none of them. A plain
+                // 'array'/'json' cast survives it by accident (the query grammar
+                // json_encodes an array binding on its own), which is why that half
+                // reads as safe; a cast whose set() transforms the value —
+                // 'encrypted', an enum, any CastsAttributes — and every model event
+                // do not. This mirrors the create branch (casts via the model) and
+                // the delete branch (loads models to fire events / respect
+                // SoftDeletes); both halves are pinned by their own tests.
                 $existing = $record->{$relationName}()->find($id);
                 if ($existing !== null) {
                     $existing->fill($itemData)->save();

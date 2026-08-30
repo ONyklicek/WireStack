@@ -249,6 +249,10 @@ Column::make('computed_score')
 
 ## 3. Core/Hydration integrace do SaveHandler
 
+> **Stav 2026-08-30: uzavřeno.** §3.1 hotová (Dehydrator v `persist()`), §3.2 a
+> §3.3 **zamítnuté měřením** (odůvodnění u každé z nich níže), §3.4 tím
+> bezpředmětná. Tahle položka už není nedodělaná — je rozhodnutá.
+
 ### Problém
 
 `SaveHandler` aktuálně volá `$model->update($data)` přímo. Nepoužívá `Core\Hydration\Dehydrator` pro:
@@ -274,7 +278,31 @@ $dehydrator->dehydrate($model, $data);
 $model->save();
 ```
 
-#### 3.2 MutationPipeline zapojení
+#### 3.2 MutationPipeline zapojení — **NEDĚLAT** (změřeno 2026-08-30)
+
+Premisa („callback se stane jednou z before mutations") není splnitelná, protože
+ty dva tvary nejsou převoditelné:
+
+| | `mutateDataBeforeSave` | `MutationPipeline::before()` |
+|---|---|---|
+| Signatura | `Closure(array $data): ?array` | `Closure(mixed $value, string $attribute): mixed` |
+| Vidí | **celá data najednou** (cross-field) | jednu hodnotu |
+| Umí zrušit save | ano — `null` ukončí `save()` a vrátí `null` | **ne**, žádný kanál |
+
+Per-atributové tvarování na zápisové straně navíc už **má kanonického vlastníka**:
+`Foundation\Contracts\DehydratesState::dehydrateState()` (ADR 0021), čtyři
+implementace, spouštěné v `SaveHandler::dehydrateFields()` v kroku 2.5. Zapojit
+vedle něj druhý per-atributový zápisový hook je „druhé kolo" z
+`AI_CODING_STANDARD.md` § Adapters. K tomu `MutationPipeline` nemá **žádné API na
+registraci** — nula volajících v celém repu — takže zapojení do `dehydrate()` by
+přidalo smyčku přes trvale prázdné pole.
+
+Zůstává jako stavební blok pro konzumenta (rozhodnutí vlastníka repa 2026-08-30),
+ale **ne** jako nedodělaný krok. Původní zadání níže je zachované jako historie.
+
+<details>
+<summary>Původní zadání 3.2</summary>
+
 
 `MutationPipeline` se spustí jako součást `dehydrate()`:
 1. Before mutations (user-defined transformace)
@@ -284,18 +312,56 @@ $model->save();
 
 To nahrazuje stávající `mutateDataBeforeSave` callback — ale zpětně kompatibilně (callback se stane jednou z before mutations).
 
-#### 3.3 Relation save přes Hydration
+</details>
+
+#### 3.3 Relation save přes Hydration — **NEDĚLAT tak, jak je napsané** (změřeno 2026-08-30)
+
+`RelationshipSaveHandler` není „ruční iterace čekající na abstrakci" — je to
+**kanonický vlastník kaskády** se **dvěma konzumenty**
+(`SaveHandler::save()` krok 6 a `BelongsToSelect::applyEditOptionUpdate()`,
+komentář tam říká „canonical cascade handler"), zdokumentovaný v
+`docs/forms/save-lifecycle.md` a v matici relací v
+`docs/forms/fields/belongs-to-select.md`.
+
+Co by se do `Dehydrator`u stěhovalo, není dot-notation: je to sémantika
+Eloquent zápisu — create/update/delete kaskáda, která **načítá modely**, aby
+padly eventy a respektovaly se `SoftDeletes`, a `sync()` pivotu. `Dehydrator`
+naproti tomu **jen setuje atributy a nikdy neukládá**. A `Repeater` je třída
+z `wire-forms`; `Dehydrator` sedí v `wire-core`, tedy pod ním — přesun by
+obrátil graf balíčků.
+
+Schopnost „zapsat zpět přes dotted cestu" navíc už vlastníka má, včetně
+zdokumentované matice podle typu relace (`belongsTo` → fill only, `hasOne`/
+`morphOne` → `updateOrCreate`, `hasMany` → repeater kaskáda). Psát ji podruhé
+v core je přesně to rozjetí, které §2 `v2-progress.md` popisuje.
+
+Nález z toho čtení je zapsaný v `v2-progress.md` §2: větev, kvůli které
+`saveRepeater()` načítá model, byla **nepokrytá** — záměna za
+query-builder `->update()` prošla všemi 1129 testy balíčku `forms`, včetně testu,
+který je na tu regresi jmenovitě psaný.
+
+<details>
+<summary>Původní zadání 3.3</summary>
+
 
 Aktuální `RelationshipSaveHandler` ručně iteruje fieldy a ukládá vztahy. V2 Dehydrator rozumí dot-notation cestám a umí:
 - `company.name` → najde/vytvoří BelongsTo related model
 - `tags` → sync BelongsToMany
 - `addresses.*.street` → HasMany create/update
 
-#### 3.4 Zpětná kompatibilita
+</details>
+
+#### 3.4 Zpětná kompatibilita — bezpředmětné (3.2 i 3.3 zamítnuté)
+
+<details>
+<summary>Původní zadání 3.4</summary>
+
 
 - `using()` callback stále funguje (bypass Dehydrator)
 - `mutateDataBeforeSave()` se wrappne jako MutationPipeline before hook
 - `beforeSave` / `afterSave` hooks beze změny
+
+</details>
 
 ### Soubory k úpravě
 

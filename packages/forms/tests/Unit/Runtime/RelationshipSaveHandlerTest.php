@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -28,6 +29,7 @@ beforeEach(function () {
         $table->string('label');
         $table->integer('sort_order')->default(0);
         $table->json('meta')->nullable();
+        $table->string('secret')->nullable();
         $table->timestamps();
     });
 });
@@ -97,6 +99,10 @@ test('editing an existing relation row applies casts (no cast bypass / corruptio
     // casts/mutators/events, so an 'array'-cast column bound to a PHP array wrote
     // corrupt data (Array to string conversion). Both create AND edit must persist
     // it as JSON via the model.
+    //
+    // Note what this test does NOT prove: the query grammar json_encodes an array
+    // binding on its own, so an 'array' cast comes out identical either way. The
+    // two tests below are the ones that tell the paths apart.
     $parent = createRshParent();
     $child = $parent->children()->create(['label' => 'C', 'sort_order' => 0, 'meta' => ['first']]);
 
@@ -112,6 +118,51 @@ test('editing an existing relation row applies casts (no cast bypass / corruptio
     $reloaded = RshChildModel::find($child->id);
     expect($reloaded->meta)->toBe(['a', 'b']);            // array cast survived the edit
     expect($reloaded->getRawOriginal('meta'))->toBeString(); // stored as JSON, not "Array"
+});
+
+test('editing an existing relation row runs casts that only the model applies', function () {
+    // The sibling test above uses an 'array' cast, which a query-builder update()
+    // survives by accident: the query grammar json_encodes an array binding on its
+    // own. A cast whose set() transforms the value is the one that tells the two
+    // paths apart — and it is the shape ('encrypted', an enum, any CastsAttributes)
+    // the update branch loads the model for.
+    $parent = createRshParent();
+    $child = $parent->children()->create(['label' => 'C', 'sort_order' => 0, 'secret' => 'old']);
+
+    $handler = new RelationshipSaveHandler;
+    $repeater = Repeater::make('children')->relationship('children');
+
+    $handler->save($parent, [$repeater], [
+        'children' => [
+            ['id' => $child->id, 'label' => 'C', 'sort_order' => 0, 'secret' => 'shh'],
+        ],
+    ]);
+
+    expect(DB::table('rsh_children')->where('id', $child->id)->value('secret'))->toBe('SHH');
+});
+
+test('editing an existing relation row fires model updating and updated events', function () {
+    // The delete branch has this test; the update branch did not, so a query-builder
+    // ->update() — which fires nothing — passed the whole suite.
+    $parent = createRshParent();
+    $child = $parent->children()->create(['label' => 'Before', 'sort_order' => 0]);
+
+    $updated = [];
+    RshChildModel::updating(function (RshChildModel $model) use (&$updated) {
+        $updated[] = $model->getKey();
+    });
+
+    $handler = new RelationshipSaveHandler;
+    $repeater = Repeater::make('children')->relationship('children');
+
+    $handler->save($parent, [$repeater], [
+        'children' => [
+            ['id' => $child->id, 'label' => 'After', 'sort_order' => 0],
+        ],
+    ]);
+
+    expect($updated)->toBe([$child->id])
+        ->and(RshChildModel::find($child->id)->label)->toBe('After');
 });
 
 test('handles mixed create update and delete', function () {
@@ -349,7 +400,27 @@ class RshChildModel extends Model
 
     protected $guarded = [];
 
-    protected $casts = ['meta' => 'array'];
+    protected $casts = ['meta' => 'array', 'secret' => RshUpperCast::class];
+}
+
+/**
+ * A cast whose set() actually transforms the value. Unlike an 'array' cast — which
+ * the query grammar happens to json_encode on an update() anyway — this one only
+ * runs when the value passes through the model.
+ *
+ * @implements CastsAttributes<string, string>
+ */
+class RshUpperCast implements CastsAttributes
+{
+    public function get(Model $model, string $key, mixed $value, array $attributes): mixed
+    {
+        return $value;
+    }
+
+    public function set(Model $model, string $key, mixed $value, array $attributes): mixed
+    {
+        return is_string($value) ? strtoupper($value) : $value;
+    }
 }
 
 class RshTag extends Model

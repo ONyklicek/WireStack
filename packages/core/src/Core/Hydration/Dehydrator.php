@@ -22,7 +22,8 @@ final class Dehydrator
     /**
      * Apply a full state array to a model.
      *
-     * Handles both flat attributes and dot-notation nested relation paths.
+     * Sets attributes; it never persists. Saving the model is the caller's job —
+     * see {@see dehydrateAttribute()} for what that means for a dot-notation key.
      *
      * @param  array<string, mixed>  $state
      */
@@ -36,8 +37,16 @@ final class Dehydrator
     /**
      * Apply a single attribute value to the model.
      *
-     * For dot-notation keys, traverses the relation path and sets
-     * the attribute on the related model.
+     * For a dot-notation key, walks the path over **already-loaded** relations and
+     * sets the attribute on the related model — it does not load, create or save
+     * anything, so a caller that saves only the root model drops that write. An
+     * unloaded or non-model segment ends the walk and the value is discarded.
+     *
+     * The only caller in this repository, `SaveHandler::persist()`, cannot reach
+     * that branch: a dotted field name arrives from Livewire already nested
+     * (`company.name` → `['company' => ['name' => …]]`), so the key it sees has no
+     * dot in it. Writing back through a relation from a form has its own owner and
+     * its own documented matrix — `BelongsToSelect`, `docs/forms/fields/belongs-to-select.md`.
      */
     public function dehydrateAttribute(string $attribute, mixed $value, Model $model): void
     {
@@ -58,6 +67,9 @@ final class Dehydrator
 
     /**
      * Dehydrate a nested relation attribute using dot-notation traversal.
+     *
+     * Sets only — the related model is left dirty and unsaved. See
+     * {@see dehydrateAttribute()}.
      */
     private function dehydrateRelation(string $path, mixed $value, Model $model): void
     {
