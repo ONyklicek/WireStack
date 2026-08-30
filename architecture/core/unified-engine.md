@@ -511,7 +511,7 @@ StatePathResolver::set($array, 'user.profile.age', 25);   // modifies in-place
 
 Converts between Eloquent models and flat state arrays.
 
-### Hydrator (Model → State)
+### Hydrator (Model → State) — **built, not wired**
 
 ```php
 use NyonCode\WireCore\Core\Hydration\Hydrator;
@@ -522,6 +522,31 @@ $state = $hydrator->hydrate($model, $components);
 ```
 
 Handles: attributes, relations, accessors, casts (dates, enums, JSON).
+
+> **Nothing in the framework calls this** (verified 2026-08-30: zero references
+> across `packages/*/src`, `workbench/` and `tests/` — only its own unit test).
+> Unlike `Dehydrator`, which `SaveHandler::persist()` really does use, its
+> read-direction mirror was never attached. The model → state path that actually
+> runs is the one below. Read this section as a building block a consumer *may*
+> use, not as a description of the engine's behaviour, and see
+> [`v2-progress.md`](../plans/v2-progress.md) §3 for the open keep-or-delete
+> decision.
+
+### The read path that actually runs
+
+Model → state is done by the forms runtime, in three named steps:
+
+| Step | Owner | Does |
+|---|---|---|
+| 1 | `FormRuntime::fill()` → `Core\State\StateHydrator::hydrate($data, $definitions)` | casts each value to the type its component declares (`getStateType()`) |
+| 2 | `FormRuntime::hydrateFields()` → `$component->hydrateState($value, $record)` | lets each field shape the cast value into its own state |
+| 3 | `StateManager::fill()` → `EnumResolver::scalarDeep()` | collapses enum instances a model filled to their scalar backing |
+
+Its write-direction counterpart is `SaveHandler::dehydrateFields()` →
+`$field->dehydrateState()` → `persist()` → `Dehydrator` (ADR 0021). Note the
+asymmetry that matters: the per-field conversion runs **after** validation on the
+write side, because validation rules describe user input rather than the
+persisted type.
 
 ### Dehydrator (State → Model)
 
@@ -539,7 +564,7 @@ $dehydrator->dehydrate($state, $model);
 |-------|-------------|
 | `ValueTransformer` | Converts values between PHP types and storage formats |
 | `CastResolver` | Resolves Eloquent cast definitions to transformation logic |
-| `MutationPipeline` | Chains multiple transformations (e.g., trim → cast → encrypt) |
+| `MutationPipeline` | Chains multiple transformations (e.g., trim → cast → encrypt). **No callers** — see the note under Hydrator |
 
 ---
 

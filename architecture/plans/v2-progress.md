@@ -1,7 +1,7 @@
 ---
 title: V2 — kde to stojí a čím pokračovat
 date: 2026-08-30
-scope: V2.0 (hotová), V2.1 (hotová), V2.2 (S1+S2 hotové, S3 z poloviny), ADR 0025 (rozpracované), V2.3 (na řadě)
+scope: V2.0 (hotová), V2.1 (hotová), V2.2 (hotová), ADR 0025 (rozpracované), V2.3 (na řadě)
 status: progress record — aktualizovat na konci každého běhu
 ---
 
@@ -104,7 +104,7 @@ Dvě vazby jsou vědomé a pojmenované v docblocích:
   Tvar je vlastnost karty; slot přidaný v `MobileCard` tak nemůže být zapomenut
   v cache klíči.
 
-### V2.2 — utažení execution seamů ✅ (S1 + S2; S3 z poloviny)
+### V2.2 — utažení execution seamů ✅
 
 **V tomhle souboru do 2026-08-30 vůbec nebyla** — §1 skákala z V2.1 rovnou na
 V2.3, přestože `v2-master-plan.md` ji má v sekvenci mezi nimi. Nebylo to
@@ -116,7 +116,7 @@ neověřil.
 |---|---|---|
 | S1 `app()`/`new` v execution seamech | injektovat deps do `SaveHandler` + `ActionPipeline` | **nedělat** — premisa („testy nemůžou mockovat") je nepravdivá, viz §2 |
 | S2 typed dispatch primární | zrušit dvojí dispatch na lifecycle bodech | **jinak** — dvojí dispatch stojí 0,163 µs a nechává se; skutečná redundance byla jinde a byl v ní **ostrý defekt**, viz §2 |
-| S3 hydration seamy | audit směru dat | forms směr má kanonického vlastníka v obou směrech; čtvrtý seam z plánu (`normaliseEnums`) **už neexistuje**. Table strana neověřená — viz §3 |
+| S3 hydration seamy | audit směru dat | **bez mezery** — oba směry mají kanonického vlastníka a pojmenovaný pár (ADR 0021). Audit ale našel **osiřelou dvojici** `Hydrator`/`MutationPipeline`, viz §2 a §3 |
 
 ---
 
@@ -403,6 +403,37 @@ kontejneru. Takže **diagnostika chyby v hintu spadla místo aby ji nahlásila**
 přesně ve standalone kontextu, který má `CLAUDE.md` v požadavcích („testable in
 isolation, usable from other contexts"). Chybějící půlka je `app()->bound('config')`.
 
+**V2.2/S3: mezera tam není, zato je tam dvojice tříd, kterou nikdo nevolá.**
+Plán se ptal, jestli hydratační seamy netvoří díru („typ nehydratovaný před
+validací"). Netvoří — směr má v obou polovinách jednoho vlastníka a ten pár je
+pojmenovaný v docblocích (ADR 0021):
+
+| Směr | Cesta |
+|---|---|
+| model → stav | `FormRuntime::fill()` → `StateHydrator::hydrate()` (typ podle `getStateType()`) → `hydrateFields()` → `$component->hydrateState()`; `StateManager::fill()` navíc sráží enum instance přes `EnumResolver::scalarDeep()` |
+| stav → model | `SaveHandler::dehydrateFields()` → `$field->dehydrateState()` → `persist()` → `Dehydrator(ValueTransformer, CastResolver)` |
+
+Ta asymetrie, která vypadá jako mezera, je záměr: per-pole konverze na zápisové
+straně běží **až po validaci**, protože validační pravidla popisují uživatelský
+vstup, ne perzistovaný typ. Čtvrtý seam, který plán jmenuje (`normaliseEnums`),
+už neexistuje — je z něj `EnumResolver::scalarDeep()`.
+
+Nález je jinde. `Core\Hydration\Hydrator` — třída pojmenovaná přesně pro směr
+model → stav — má **nula volajících** v `packages/*/src`, `workbench/` i
+`tests/`; totéž `MutationPipeline`. Přitom **obě mají unit testy** (takže vypadají
+živě a drží pokrytí zelené) a **obě jsou zdokumentované v
+`architecture/core/unified-engine.md` s příkladem použití**, jako by je engine
+používal. `Dehydrator` se používá doopravdy; jeho čtecí zrcadlo nikdo nikdy
+nepřipojil.
+
+To je ta samá třída doc-lži jako věta o array payloadech v `plugins.md` o odstavec
+výš, jen v interní dokumentaci: stránka popisuje zamýšlený engine, ne ten běžící.
+`unified-engine.md` teď říká, co se doopravdy spouští, a osiřelou dvojici označuje.
+Jestli se má smazat (2.0 je major, `AI_CODING_STANDARD.md` § Adapters mluví jasně
+o „druhém kole"), nebo nechat jako stavební blok pro konzumenta, je **odstranění
+tříd z publikovaného balíčku** — rozhodnutí lidské, ne moje. Leží v §3 vedle
+`resolveActionType()`, což je přesně stejná otázka.
+
 **V2.2/S1: nedělat, protože přínos, který plán slibuje, už existuje.** Plán píše
 *„unit testy injektují mock deps (dřív nešlo — to je hlavní přínos)"*. Změřeno:
 
@@ -429,7 +460,7 @@ počet výskytů `new`, ne na to, co ty výskyty jsou.
 | Systematické hledání duplicitních abstrakcí napříč V2 | Průřez auditu padl na session limit. `DataSourceCapabilities`/`CapabilitySet` byl nalezen mimo audit a nejspíš nezůstal sám | [`v2-audit-2026-08-26.md`](v2-audit-2026-08-26.md) §6 |
 | `ShellRenderPlan`, `InteractionRenderPlan` — host pořád `mixed` | Polling, live kanál, readiness, přístup ke stavu nemají pojmenovaný kontrakt | [`v2.1-…`](v2.1-monolith-split-implementation.md) §0a |
 | `resolveActionType()` — public static, **nula volajících v src** | Nález z kroku 9; plugin API, nebo mrtvý kód. Nerozhodnuto | — |
-| V2.2/S3 — hydration audit jen z poloviny | Forms směr ověřen (`fill()` → `StateHydrator` → `hydrateFields()`; `save()` → `dehydrateFields()` → `Dehydrator`), oba směry mají kanonického vlastníka a docblok, který ten pár pojmenovává. **Table strana (`StateManager`) neověřená** a čtvrtý seam z plánu (`normaliseEnums`) už neexistuje, takže plán S3 je zastaralý. Půl dne, samostatně | [`v2.2-…`](v2.2-execution-seams-implementation.md) S3 |
+| `Core\Hydration\{Hydrator, MutationPipeline}` — **nula volajících**, ale otestované a zdokumentované | Nález S3. `Dehydrator` se používá (`SaveHandler::persist()`), jeho čtecí zrcadlo `Hydrator` **nikdy nebylo zapojeno** — model → stav dělá `StateHydrator` + `hydrateState()` per pole. Smazat (2.0 je major) nebo nechat jako stavební blok pro konzumenta? Je to **odstranění tříd z publikovaného balíčku**, takže rozhodnutí je lidské, ne moje. Stejná třída otázky jako `resolveActionType()` o řádek výš | [`unified-engine.md`](../core/unified-engine.md) § Hydration System |
 | Boost guidelines neznají plugin hooky | `guidelines/` ani `skills/` nepopisují `PluginManager` vůbec — takže pravidlo „hint rozhoduje dispatcher" tam není a nemohlo zestárnout. Doplnit až s vlastní plugin sekcí, ne ad hoc | — |
 | ~~Boost docs mirror rozjetý~~ | **zavřeno 2026-08-30.** `packages/boost/resources/boost/docs/` je *commitnutá* kopie `docs/` (viz `scripts/sync-boost-docs.php`) a `composer boost:check-docs` je brána v `docs-check.yml`. Byla červená **už před tímhle během**: `money.md` a `metric.md` z V2.1 se do balíčku nikdy nedostaly. Po každé změně v `docs/` pouštěj `composer boost:sync-docs` | `.github/workflows/docs-check.yml` |
 
