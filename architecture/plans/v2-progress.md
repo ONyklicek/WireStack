@@ -740,6 +740,7 @@ počet výskytů `new`, ne na to, co ty výskyty jsou.
 | Tenancy nekryje non-Eloquent `DataSource` | Globální Eloquent scope nemá co scopovat u `CollectionDataSource` ani u zdroje nad API. Zdokumentované v `docs/authorization.md` jako „co scopované není"; správné místo je dekorátor nad `DataSource` (T-4 tak, jak ho plán psal). **Dokud to nevznikne, tenancy nezapínej nad non-Eloquent zdrojem** | [`v2.4-…`](v2.4-erp-execution-implementation.md) T-4 |
 | `Core\Hydration\MutationPipeline` — nula volajících, **ale zůstává** | Nález S3. Sourozenec `Hydrator` byl smazán (nula volajících, žádný plán); `MutationPipeline` **ne** — `v2-deferred-items.md` §3.2 je živý nedodělaný plán na jeho zapojení do `dehydrate()` (`mutateDataBeforeSave()` jako before-hook). Není zapomenutý, je postavený dopředu. **Rozhodnuto vlastníkem repa 2026-08-30: nechat.** Zapojit ho znamená dodělat §3.2 jako vlastní krok | [`v2-deferred-items.md`](v2-deferred-items.md) §3.2 |
 | `v2-deferred-items.md` §3 je hotová z jedné čtvrtiny, ne celá | V2.2 korekční tabulka ji označila za HOTOVOU. Hotová je **§3.1** (Dehydrator v `persist()`). §3.2 (MutationPipeline) a §3.3 (relation dehydrace) ne — `RelationshipSaveHandler` pořád ručně iteruje 174 řádků. §3.4 (BC) je bezpředmětná, dokud §3.2 nepadne | [`v2-deferred-items.md`](v2-deferred-items.md) §3 |
+| Tři workbench soubory drží pohromadě a **žádný z nich není commitnutý** | `workbench/routes/web.php` a `previews/index.blade.php` jsou rozdělaná práce vlastníka repa (refaktor preview rout), `workbench/scripts/verify-resource-pages.mjs` je driver z V2.3, který na těch routách závisí. Commitnout driver samotný znamená **rozbít `verify:drivers` v CI** — hledal by routy, které v repu nejsou. Proto přežily tři běhy mimo commit. Jdou jen všechny tři najednou, až bude refaktor rout hotový. Do té doby resource stránky v CI nikdo neprojíždí | — |
 | Boost guidelines neznají plugin hooky | `guidelines/` ani `skills/` nepopisují `PluginManager` vůbec — takže pravidlo „hint rozhoduje dispatcher" tam není a nemohlo zestárnout. Doplnit až s vlastní plugin sekcí, ne ad hoc | — |
 | ~~Boost docs mirror rozjetý~~ | **zavřeno 2026-08-30.** `packages/boost/resources/boost/docs/` je *commitnutá* kopie `docs/` (viz `scripts/sync-boost-docs.php`) a `composer boost:check-docs` je brána v `docs-check.yml`. Byla červená **už před tímhle během**: `money.md` a `metric.md` z V2.1 se do balíčku nikdy nedostaly. Po každé změně v `docs/` pouštěj `composer boost:sync-docs` | `.github/workflows/docs-check.yml` |
 
@@ -829,6 +830,11 @@ Na konci aktualizuj tenhle soubor a commitni.
 
 Poznámka k `coverage:verify`: composer ho zabíjí na 300s. Pouštěj ho jako
 `COMPOSER_PROCESS_TIMEOUT=1200 composer coverage:verify`.
+
+Poznámka k `verify:drivers`: běží přes dvacet minut a **výstup si přesměruj do
+souboru**, ne přes `| tail`. Roura drží všechno v bufferu do konce procesu, takže
+když se běh ukončí jinak, než čekáš, nezbude z něj ani jeden řádek a brána se
+musí pustit celá znovu.
 
 **Nový balíček se drátuje na osmi místech** a zapomenout kterékoli je tichá
 chyba: `composer.json` (repositories, require, autoload-dev), `phpunit.xml`
