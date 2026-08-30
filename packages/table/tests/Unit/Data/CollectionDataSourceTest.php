@@ -9,6 +9,7 @@ use NyonCode\WireCore\Core\Data\PagingRequest;
 use NyonCode\WireCore\Core\Data\RecordContract;
 use NyonCode\WireCore\Core\Query\AggregateClause;
 use NyonCode\WireCore\Core\Query\FilterClause;
+use NyonCode\WireCore\Core\Query\JoinClause;
 use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireCore\Core\Query\SortClause;
 use NyonCode\WireCore\Exceptions\UnsupportedQueryAspectException;
@@ -50,8 +51,23 @@ it('supports the operators a table actually emits', function () {
         ->and($of(new FilterClause('name', '!=', 'Ada')))->toBe(['Grace', 'Alan'])
         ->and($of(new FilterClause('score', '<', 80)))->toBe(['Grace'])
         ->and($of(new FilterClause('name', 'like', '%la%')))->toBe(['Alan'])
-        ->and($of(new FilterClause('id', 'in', [1, 3])))->toBe(['Ada', 'Alan']);
+        ->and($of(new FilterClause('id', 'in', [1, 3])))->toBe(['Ada', 'Alan'])
+        // The comparison arms a numeric column filter emits, each one its own
+        // branch: a wrong operator here silently returns the wrong rows.
+        ->and($of(new FilterClause('score', '>', 80)))->toBe(['Ada'])
+        ->and($of(new FilterClause('score', '>=', 80)))->toBe(['Ada', 'Alan'])
+        ->and($of(new FilterClause('score', '<=', 80)))->toBe(['Grace', 'Alan'])
+        ->and($of(new FilterClause('name', '<>', 'Ada')))->toBe(['Grace', 'Alan']);
 });
+
+it('refuses a plan carrying a join', function () {
+    // A collection has nothing to join to, and the capability is not declared —
+    // so this must say so rather than quietly ignoring the clause and handing
+    // back rows that look right.
+    $plan = new QueryPlan(joins: [new JoinClause('teams', 't', 'rows.team_id', '=', 't.id')]);
+
+    cds()->get($plan);
+})->throws(UnsupportedQueryAspectException::class, 'joinable');
 
 it('sorts, and sorts by the most significant clause first', function () {
     $plan = new QueryPlan(sortClauses: [
@@ -89,6 +105,12 @@ it('resolves records, as contracts that unwrap to the array', function () {
         ->and($record->get('name'))->toBe('Grace')
         ->and($record->get('team.name'))->toBe('red')
         ->and($record->unwrap())->toBeArray()
+        // toArray() is the contract's own accessor, distinct from unwrap():
+        // RecordContract promises it for every source, so an exporter or an
+        // audit entry can read a row without knowing what backs it.
+        ->and($record->toArray())->toBe([
+            'id' => 2, 'name' => 'Grace', 'score' => 70, 'team' => ['name' => 'red'],
+        ])
         ->and(cds()->resolveRecord(99))->toBeNull()
         ->and(cds()->resolveRecords([1, 3])->map(fn (RecordContract $r) => $r->getKey())->all())->toBe([1, 3]);
 });

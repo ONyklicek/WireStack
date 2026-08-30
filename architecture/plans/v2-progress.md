@@ -118,16 +118,17 @@ neověřil.
 | S2 typed dispatch primární | zrušit dvojí dispatch na lifecycle bodech | **jinak** — dvojí dispatch stojí 0,163 µs a nechává se; skutečná redundance byla jinde a byl v ní **ostrý defekt**, viz §2 |
 | S3 hydration seamy | audit směru dat | **bez mezery** — oba směry mají kanonického vlastníka a pojmenovaný pár (ADR 0021). Audit ale našel **osiřelou dvojici** `Hydrator`/`MutationPipeline`, viz §2 a §3 |
 
-### V2.3 — owner vrstva 🟡 (R.1 + R.2 hotové)
+### V2.3 — owner vrstva 🟡 (R + P hotové)
 
-Kontrakty resource, odvozovací concern a registr. Pages (P), `Workspace` (W)
-a boost introspekce (I) zbývají.
+Kontrakty resource, odvozovací concern, registr a všechny čtyři stránky.
+`RM` (zařadit `RelationManager`), `Workspace` (W) a boost introspekce (I) zbývají.
 
 | Krok | Co vzniklo |
 |---|---|
 | R.1 | `Resources\Contracts\{DescribesResource, ProvidesResourceTable, ProvidesResourceForm, ProvidesResourceInfolist}` + `Resources\Concerns\DescribesRecords` |
 | R.2 | `Managers\ResourceRegistry` + `config('wire-table.resources')` + singleton binding |
-| P (1/4) | `Resources\Pages\ListPage` + `ResourcePageException` + view; `Create/Edit/ViewPage` zbývají |
+| P (4/4) | `ListPage`, `CreatePage`, `EditPage`, `ViewPage` + `BelongsToResource` / `ResolvesOneRecord` concerny, `ResourcePageException`, views, EN/CS překlady |
+| — | **Přesun 2026-08-30**: vrstva rozmístěna podle typů, které kontrakty jmenují; `wire-panels` je nový top balíček. Viz §2 |
 
 **Dvě rozhodnutí z plánu se změřením otočila** — obě v §2: umístění (Filament
 dává owner vrstvu nahoru, ne dolů) a tvar kontraktu (osmimetodový interface
@@ -456,6 +457,53 @@ vzít je ze dvou míst znamená, že se rozejdou. Mutace to potvrdila — čtyř
 do registru (nezneplatněná memo mapa, neznormalizované lomítko, tichý přepis
 duplicitního klíče, model-less resource v mapě) shodily každý právě jeden test.
 
+**Owner vrstva: „nejmenší krok" obětoval přesně to, na čem záleželo.** Umístil
+jsem `Resource` do `packages/table` s odůvodněním „Filament dává owner vrstvu nad
+komponenty". To odvození bylo správné a aplikace špatná: `wire-table` **je** jedna
+z těch komponent — Filamentův protějšek je `filament/tables`, a `Resource` tam
+rozhodně není. Vlastník repa to poznal na konkrétním případu: **forms-only
+resource musel instalovat tabulkový balíček** s jeho assety, migracemi, konfigem
+a Livewire synthesizerem. Za nic.
+
+Oprava není přesun celku jinam, ale **rozmístění podle toho, co která smlouva
+jmenuje** — a umožnil ho ten rozpad na malé kontrakty, který už existoval; jen
+byly nesmyslně slepené v jednom balíčku:
+
+| Co | Kde | Protože jmenuje |
+|---|---|---|
+| `DescribesResource`, `DescribesRecords`, `ResourceRegistry` | `wire-core` (L1) | nic než skaláry |
+| `ProvidesResourceForm` | `wire-forms` | `Form` |
+| `ProvidesResourceInfolist` | `wire-core`, v `Infolists/Contracts/` | `Infolist` — a to je **L2**, takže do L1 `Core/Resources` nesmí |
+| `ProvidesResourceTable`, všechny Pages | `wire-panels` (nový, nad vším) | `Table`, `Form`, host traity |
+
+Původní rozhodnutí z 2026-08-26 („kontrakt do core") tedy nebylo špatně. Špatně
+byl náčrt R.1, který identitu a povrchy slepil do jednoho osmimetodového
+interface — a já z toho odvodil, že se musí stěhovat celek.
+
+Druhá podmínka od vlastníka: **table obsahuje table, owner vrstva je mimo.**
+Hlídá to `packages/table/tests/Unit/Architecture/TableOwnsTablesTest.php` —
+zakazuje owner namespace, owner import a page view v `packages/table`, a jmenuje
+i osy, které tam nemají přibýt (`Workflow`, `StateMachine`, `Workspace`,
+`Navigation`). Mutace: vrácení namespace, importu i view shodí každé právě jeden
+test.
+
+**Tři věci, které ten přesun vytáhl:**
+
+1. `ModuleLayersTest` zachytil **moji** chybu: `Exceptions/ResourceRegistrationException`
+   (L0) importovala `Core\Resources\Contracts\DescribesResource` (L1). L0 nesmí
+   jmenovat nic nad sebou. Jméno kontraktu teď přichází jako řetězec z L1
+   volajícího, takže reference zůstane compile-checked na konci, který ji smí
+   udělat.
+2. Filtrování konfigurační listiny („není pole → ignoruj, prázdný řetězec →
+   přeskoč") sedělo v service provideru, kde ho šlo otestovat jen nabootováním
+   balíčku. Je z něj `ResourceRegistry::registerMany()` — pravidlo u vlastníka,
+   endpoint tenký, testovatelné bez provideru.
+3. Nový balíček je potřeba zadrátovat na **osmi** místech: `composer.json`
+   (repositories, require, autoload-dev), `phpunit.xml` (testsuite **i** source
+   pro coverage), `tests/Pest.php`, `scripts/coverage-floors.json`, `phpstan.neon`
+   (paths + excludePaths pro `ListPage`), `.github/workflows/split.yml`. Zapomenout
+   `<source>` znamená, že se balíček tiše neměří.
+
 **V2.2/S3: mezera tam není, zato je tam dvojice tříd, kterou nikdo nevolá.**
 Plán se ptal, jestli hydratační seamy netvoří díru („typ nehydratovaný před
 validací"). Netvoří — směr má v obou polovinách jednoho vlastníka a ten pár je
@@ -538,19 +586,45 @@ i boost guidelines. Na řadě je **P — Page owneři**:
 | `CreatePage` / `EditPage` | `WithForms` | `ProvidesResourceForm` |
 | `ViewPage` | Infolist render | `ProvidesResourceInfolist` |
 
-`ListPage` **hotová**: skládá `WithTable`, takže polling, partialy, gesta i
-exporty přicházejí beze změny; obě cesty (s resource / vlastní `table()`) jsou
-plnohodnotné a **napůl deklarovaná stránka vyhodí výjimku** místo prázdné
-tabulky — prázdná se čte jako „žádné záznamy", ne jako chyba. Zbývají
-`Create/Edit/ViewPage`, které potřebují `WithForms` a Infolist render.
+**P je hotová — resource umí vykreslit všechno.** Čtyři stránky, každá
+použitelná i bez resource:
 
-Pak `RM` (zařadit `RelationManager` pod vrstvu), `W` (`Workspace`/`Navigation`)
+| Stránka | Host | Čte |
+|---|---|---|
+| `ListPage` | `WithTable` | `ProvidesResourceTable` |
+| `CreatePage`, `EditPage` | `WithForms` | `ProvidesResourceForm` — **jeden** `form()` slouží obojímu |
+| `ViewPage` | **žádný** | `ProvidesResourceInfolist` |
+
+`ViewPage` neskládá host traitu záměrně: read-only znamená žádný stav k navázání
+a nic k odeslání, takže `Infolist` je celý povrch — a je to zároveň test, jestli
+stránka patří do `phpstan.neon` `excludePaths` (ostatní tři ano, ona ne).
+
+Záznam cestuje jako **klíč**, ne model: mount argumenty končí v Livewire
+snapshotu, kde je hydratovaný model větší i zastaralý. `ResolvesOneRecord` to
+vlastní pro Edit i View — a **vzniklo to až po tom, co jsem tu metodu napsal
+dvakrát doslova**.
+
+Zbývá `RM` (zařadit `RelationManager` pod vrstvu), `W` (`Workspace`/`Navigation`)
 a `I` (boost `DescribeResource`).
 
 **Poznámka pro další běh:** každý nový konkrétní `WithTable` host se musí přidat
 do `phpstan.neon` `excludePaths` — je to zdokumentovaný důvod (runtime magie
 Livewire), stálo to 96 chyb u `ListPage` a bude to platit i pro `Create/EditPage`
-s `WithForms`.
+s `WithForms`. Ty dvě navíc patří do `wire-panels`, ne do `wire-forms` — hlídá to
+`TableOwnsTablesTest`, ale jen pro table; analogický test pro forms zatím není.
+
+**A pusť `--diff=origin/1.x`, ne jen `coverage:verify`.** Floory drží i s
+nepokrytým novým řádkem; diff brána, kterou pouští CI, ne. Tenhle běh na ní měl
+dva vlastní řádky (`registerResources()` a větev `getLoadedSubRowCount()`) a
+odbyl jsem to větou „žádný není z mé práce", což v tu chvíli přestalo platit.
+Teď je **zelená celá** — včetně sedmi řádků, které tam visely od starších běhů:
+
+| Řádek | Jak se zavřel |
+|---|---|
+| `WithTable:554` | Satelitní partialy na **pollovací** cestě neměly test — zápisová cesta ano. Přibyl polled summarised table; ta smyčka běžela v celé sadě nulakrát |
+| `CollectionDataSource:206,220,223` | Chyběly operátory `>`, `>=`, `<=`, `<>` a odmítnutí planu s joinem |
+| `EloquentDataSource:196` | **Nedosažitelné** — agregační select bez GROUP BY vždy vrátí řádek (prázdná tabulka odpoví `0|`). Označeno `@codeCoverageIgnore` s důvodem |
+| `ArrayRecord:48`, `StateWriter:46` | `toArray()` a třetí rameno walku |
 
 Obě věci, které běh 2026-08-29 vyhodil a neřešil, jsou dotažené:
 
@@ -644,6 +718,21 @@ když nemáš čas na zbytek.** Za dva běhy opravilo zadání osmkrát. V běhu
 Kroky 10–11 a 17 seděly. Pointa není, že plány jsou špatné — jsou to poctivé
 plány psané ke stavu kódu, který mezitím zestárl, mimo jiné o předchozí kroky
 téhle řady.
+
+**Pravidlo z V2.3/P: `@livewire` v dokumentaci je kód, ne text — a spálilo mě to
+dvakrát v jednom kroku.** Nejdřív v PHP docbloku (`@livewire(...)` se parsuje
+jako PHPDoc tag → `phpDoc.parseError`), pak v boost guidelines, což je
+`.blade.php`, takže se **zkompilovalo jako Blade direktiva** a shodilo šest
+boost testů na `Undefined variable $order`. V docbloku pomůže backtick, v Blade
+`@@livewire`. Obecně: než napíšeš `@něco` do souboru, zjisti, kdo ten soubor
+parsuje.
+
+**A druhé pravidlo z téhož kroku, tvrdší:** extrahoval jsem `resolveRecord()` do
+concernu regulárním výrazem a ten mi u `ViewPage` **sežral vedlejší metodu
+`infolist()`**. Prošlo to `php -l`, prošlo to lintem, spadlo to až na testu.
+Regex nad PHP je nástroj na jednorázový přejmenovací sweep, ne na vyřezávání
+metod; po každé takové úpravě si nech vypsat `grep -n "function "` a porovnej,
+co v souboru zbylo.
 
 **Pravidlo z V2.2:** u dvou predikátů, které mají dohromady **rozdělit** vstup,
 se ptej na případ, kde odpoví **stejně**. `callbackExpectsArray()` a

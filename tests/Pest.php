@@ -6,6 +6,7 @@ use NyonCode\Wire\Tests\TestCase;
 use NyonCode\WireBoost\Tests\TestCase as BoostTestCase;
 use NyonCode\WireCore\Tests\TestCase as CoreTestCase;
 use NyonCode\WireForms\Tests\TestCase as FormsTestCase;
+use NyonCode\WirePanels\Tests\TestCase as PanelsTestCase;
 use NyonCode\WireSortable\Tests\TestCase as SortableTestCase;
 use NyonCode\WireTable\Tests\TestCase as TableTestCase;
 
@@ -58,6 +59,11 @@ uses(FormsTestCase::class)->in(
     __DIR__.'/../packages/forms/tests/Unit',
     __DIR__.'/../packages/forms/tests/Feature',
     __DIR__.'/../packages/forms/tests/Standalone',
+);
+
+uses(PanelsTestCase::class)->in(
+    __DIR__.'/../packages/panels/tests/Unit',
+    __DIR__.'/../packages/panels/tests/Feature',
 );
 
 uses(TableTestCase::class)->in(

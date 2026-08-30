@@ -61,6 +61,28 @@ return [
 
     // Plugins
     // #TODO add auto discover
+    /*
+    |--------------------------------------------------------------------------
+    | Resources
+    |--------------------------------------------------------------------------
+    |
+    | Resource classes this application owns, as a plain list. A resource binds
+    | one entity to the surfaces it exposes and implements at least
+    | NyonCode\WireCore\Core\Resources\Contracts\DescribesResource.
+    |
+    | The key lives here rather than in a component package because identity is
+    | the half that needs no surface: a resource with only a form declares it
+    | through wire-forms and never installs a table package.
+    |
+    |   'resources' => [
+    |       App\Resources\OrderResource::class,
+    |   ],
+    |
+    */
+    'resources' => [
+        //
+    ],
+
     'plugins' => [
         // App\Wire\Plugins\ExamplePlugin::class,
     ],

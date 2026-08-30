@@ -15,6 +15,7 @@ jobs:
           - { local_path: 'packages/core', split_repository: 'wire-core' }
           - { local_path: 'packages/forms', split_repository: 'wire-forms' }
           - { local_path: 'packages/table', split_repository: 'wire-table' }
+          - { local_path: 'packages/panels', split_repository: 'wire-panels' }
           - { local_path: 'packages/sortable', split_repository: 'wire-sortable' }
           - { local_path: 'packages/boost', split_repository: 'wire-boost' }
 

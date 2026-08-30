@@ -4,6 +4,7 @@ parameters:
         - packages/core/src
         - packages/forms/src
         - packages/table/src
+        - packages/panels/src
         - packages/boost/src
     tmpDir: build/phpstan
     excludePaths:
@@ -14,10 +15,17 @@ parameters:
         # Every other concrete WithTable host (tests, workbench, wire-sortable) is
         # likewise outside the analysed paths; RelationManager is such a host base.
         - packages/table/src/RelationManagers/RelationManager.php
-        # ListPage is the same kind of host base: a concrete Livewire component
-        # composing WithTable, so analysing it as a class drags the trait in as
-        # one too and reproduces the 96 runtime-magic errors above.
-        - packages/table/src/Resources/Pages/ListPage.php
+        # The resource pages are the same kind of host base: a concrete Livewire
+        # component composing WithTable or WithForms, so analysing one as a class
+        # drags the trait in as one too and reproduces the runtime-magic errors
+        # above ($this->form comes from WithForms::__get, and so on).
+        # ViewPage is deliberately absent — it composes no host trait, because a
+        # read-only page has no state to bind and nothing to submit, so it stays
+        # analysable like any other class. That is the test of whether a page
+        # belongs on this list.
+        - packages/panels/src/Resources/Pages/ListPage.php
+        - packages/panels/src/Resources/Pages/CreatePage.php
+        - packages/panels/src/Resources/Pages/EditPage.php
         # PanelComponent is a concrete Livewire host composing WithEditablePanel;
         # like RelationManager it depends on Livewire runtime magic and is only
         # analysable via the trait's @phpstan-require-extends, not as a class.
@@ -53,4 +61,4 @@ parameters:
         - { identifier: trait.unused, path: packages/table/src/Concerns/CanSelectRecords.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTable.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTableQueryString.php }
-        - { identifier: trait.unused, path: packages/table/src/Resources/Concerns/DescribesRecords.php }
+        - { identifier: trait.unused, path: packages/core/src/Core/Resources/Concerns/DescribesRecords.php }

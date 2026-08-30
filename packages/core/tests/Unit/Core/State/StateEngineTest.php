@@ -9,6 +9,7 @@ use NyonCode\WireCore\Core\State\StateHydrator;
 use NyonCode\WireCore\Core\State\StatePathResolver;
 use NyonCode\WireCore\Core\State\StateSerializer;
 use NyonCode\WireCore\Foundation\Contracts\WritableStateBag;
+use NyonCode\WireCore\Foundation\Support\StateWriter;
 
 // ─── StatePathResolver ───────────────────────────────────────────────────────
 
@@ -406,6 +407,24 @@ it('writeInto coerces a non-array container replacement to an empty array', func
     StateContainer::writeInto($host, 'bag', 'not-an-array');
 
     expect($host->bag->all())->toBe([]);
+});
+
+it('writeInto walks past a segment that is neither object nor array', function () {
+    // The walk's third arm. A path that runs through a scalar has nothing to
+    // descend into, so the segment resolves to null and the write is dropped
+    // rather than fataling on `'string'->next`.
+    $host = new class
+    {
+        /** Untyped on purpose: a typed string would make the fallback below throw. */
+        public $tableState = 'not traversable';
+    };
+
+    StateWriter::write($host, 'tableState.modal.type', 'individual');
+
+    // No bag was found along the way, so the walk finishes and the plain
+    // data_set fallback writes the path — replacing the scalar it could not
+    // descend into.
+    expect($host->tableState)->toBe(['modal' => ['type' => 'individual']]);
 });
 
 it('writeInto stops at any WritableStateBag, not only a StateContainer', function () {

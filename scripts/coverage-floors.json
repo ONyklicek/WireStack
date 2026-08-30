@@ -2,6 +2,7 @@
     "boost": 100,
     "core": 95,
     "forms": 95,
+    "panels": 100,
     "sortable": 96,
     "table": 91
 }

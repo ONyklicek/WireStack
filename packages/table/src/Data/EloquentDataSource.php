@@ -192,9 +192,14 @@ final class EloquentDataSource implements DataSource
 
         $row = $base->first();
 
+        // Defensive only: an aggregate select with no GROUP BY always comes back
+        // with a row — an empty table answers `0|`, not nothing — so this arm is
+        // unreachable through Eloquent and exists for a driver that disagrees.
+        // @codeCoverageIgnoreStart
         if ($row === null) {
             return null;
         }
+        // @codeCoverageIgnoreEnd
 
         return ($row->wt_count ?? 0).'|'.($row->wt_max ?? '');
     }

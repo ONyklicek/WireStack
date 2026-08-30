@@ -140,6 +140,15 @@ it('answers a change token that moves when the data does', function () {
     expect(edsSource()->changeToken(new QueryPlan))->not->toBe($before);
 });
 
+it('still answers a token for a query that matches nothing', function () {
+    // Worth pinning because it is the opposite of what the guard below it
+    // suggests: an aggregate select always comes back with a row, so an empty
+    // result is the honest token "0 rows, no max", not the absence of one.
+    $none = new EloquentDataSource(EdsRow::query()->where('name', 'no such row'));
+
+    expect($none->changeToken(new QueryPlan))->toStartWith('0|');
+});
+
 it('scopes the token to the query, not the table', function () {
     $narrow = new EloquentDataSource(EdsRow::query()->where('name', 'row 1'));
 

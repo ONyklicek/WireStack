@@ -511,3 +511,43 @@ it('renders no child panel for a rejected parent even when everything starts exp
         ->and($html)->not->toContain('wire:key="sub-rows-2"')
         ->and($html)->toContain('Pen');
 });
+
+// ─── The child count already in memory ───────────────────────────────────────
+
+it('answers the loaded child count without asking the database', function () {
+    // Two things in memory can answer and the order between them is the rule: a
+    // *_count attribute is exact, while a loaded relation holds only as many
+    // rows as it was allowed to load — so under a subRowsLimit, counting the
+    // relation would always report the limit.
+    $component = new CeSubRowsComponent;
+    $component->mountWithTable();
+
+    $withAttribute = CeInvoice::withCount('items')->find(1);
+    expect($component->getLoadedSubRowCount($withAttribute))->toBe(2);
+
+    $loadedOnly = CeInvoice::with('items')->find(1);
+    expect($component->getLoadedSubRowCount($loadedOnly))->toBe(2);
+});
+
+it('answers null when nothing in memory can', function () {
+    // The caller that wants a cheap hint rather than a total — the stacked
+    // card's collapsed "N items" label — renders nothing on null instead of
+    // buying a COUNT per card.
+    $component = new CeSubRowsComponent;
+    $component->mountWithTable();
+
+    expect($component->getLoadedSubRowCount(CeInvoice::find(1)))->toBeNull();
+});
+
+it('answers null for a table with no relation, and for a non-model', function () {
+    // Detail-row mode has no relation to count, and the parameter is `mixed`
+    // because a DataSource record need not be an Eloquent model at all.
+    $detail = new CeDetailComponent;
+    $detail->mountWithTable();
+    expect($detail->getLoadedSubRowCount(CeInvoice::find(1)))->toBeNull();
+
+    $withRelation = new CeSubRowsComponent;
+    $withRelation->mountWithTable();
+    expect($withRelation->getLoadedSubRowCount(['not' => 'a model']))->toBeNull()
+        ->and($withRelation->getLoadedSubRowCount(null))->toBeNull();
+});

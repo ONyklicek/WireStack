@@ -1,11 +1,11 @@
 {
     "name": "nyoncode/wire",
-    "description": "Wire ecosystem monorepo – wire-core, wire-forms, wire-table.",
+    "description": "Wire ecosystem monorepo \u2013 wire-core, wire-forms, wire-table.",
     "type": "project",
     "license": "MIT",
     "authors": [
         {
-            "name": "Ondřej Nyklíček",
+            "name": "Ond\u0159ej Nykl\u00ed\u010dek",
             "role": "Developer"
         }
     ],
@@ -14,6 +14,7 @@
         "nyoncode/wire-core": "@dev",
         "nyoncode/wire-forms": "@dev",
         "nyoncode/wire-table": "@dev",
+        "nyoncode/wire-panels": "@dev",
         "nyoncode/wire-sortable": "@dev",
         "nyoncode/wire-boost": "@dev",
         "illuminate/support": "^12.0|^13.0",
@@ -52,6 +53,13 @@
         },
         {
             "type": "path",
+            "url": "packages/panels",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
             "url": "packages/sortable",
             "options": {
                 "symlink": true
@@ -74,7 +82,8 @@
             "NyonCode\\WireCore\\Tests\\": "packages/core/tests/",
             "NyonCode\\WireForms\\Tests\\": "packages/forms/tests/",
             "NyonCode\\WireTable\\Tests\\": "packages/table/tests/",
-            "NyonCode\\WireSortable\\Tests\\": "packages/sortable/tests/",
+            "NyonCode\\WirePanels\\Tests\\": "packages/panels/tests/",
+        "NyonCode\\WireSortable\\Tests\\": "packages/sortable/tests/",
             "NyonCode\\WireBoost\\Tests\\": "packages/boost/tests/"
         }
     },
@@ -94,6 +103,7 @@
         "test:core": "vendor/bin/pest --configuration packages/core/phpunit.xml",
         "test:forms": "vendor/bin/pest --configuration packages/forms/phpunit.xml",
         "test:table": "vendor/bin/pest --configuration packages/table/phpunit.xml",
+        "test:panels": "vendor/bin/pest --configuration packages/panels/phpunit.xml",
         "test:sortable": "vendor/bin/pest --configuration packages/sortable/phpunit.xml",
         "test:boost": "vendor/bin/pest --configuration packages/boost/phpunit.xml",
         "lint": "vendor/bin/pint",

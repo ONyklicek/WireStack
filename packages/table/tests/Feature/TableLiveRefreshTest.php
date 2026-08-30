@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
+use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Columns\TextInputColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Events\TableRecordsChanged;
@@ -37,6 +38,9 @@ class LiveHost extends Component
 
     public bool $broadcast = false;
 
+    /** Turns on the satellites a poll has to move alongside a changed row. */
+    public bool $summaries = false;
+
     /** Test probe: the poll skip decision is protected on the trait. */
     public function pollWouldSkipRender(): bool
     {
@@ -45,12 +49,20 @@ class LiveHost extends Component
 
     public function table(Table $table): Table
     {
+        $title = TextInputColumn::make('title');
+        $amount = TextColumn::make('amount');
+
+        if ($this->summaries) {
+            $amount->summarizeSum();
+        }
+
         return $table
             ->model(LivePost::class)
             ->paginated(false)
             ->live('2s', broadcast: $this->broadcast)
             ->fillHandle()
-            ->columns([TextInputColumn::make('title')]);
+            ->rowPartials($this->summaries)
+            ->columns($this->summaries ? [$title, $amount] : [$title]);
     }
 
     public function render()
@@ -68,10 +80,11 @@ beforeEach(function () {
     Schema::create('live_posts', function (Blueprint $table) {
         $table->id();
         $table->string('title');
+        $table->integer('amount')->default(0);
         $table->timestamps();
     });
 
-    LivePost::create(['id' => 1, 'title' => 'T1']);
+    LivePost::create(['id' => 1, 'title' => 'T1', 'amount' => 10]);
 });
 
 afterEach(function () {
@@ -298,4 +311,22 @@ it('only offers a channel to the view when broadcasting is on', function () {
     expect(Livewire::test(LiveHost::class)->instance()->getTableLiveChannel())->toBeNull()
         ->and(Livewire::test(LiveHost::class, ['broadcast' => true])->instance()->getTableLiveChannel())
         ->toBe('wire-table.LivePost');
+});
+
+it('moves the totals a polled row change carries with it', function () {
+    // The write path already sends a row's satellites; the *poll* path never had
+    // a table with any, so its loop ran zero times in the whole suite. This is
+    // the ERP case the concern's docblock describes — one session edits, another
+    // is polling — and a summarised table whose footer does not follow the row
+    // shows a total that disagrees with the rows above it.
+    $us = Livewire::test(LiveHost::class, ['summaries' => true]);
+    $us->call('refreshTable');
+
+    Livewire::test(LiveHost::class, ['summaries' => true])
+        ->call('updateTableCell', 1, 'title', 'Written elsewhere');
+
+    $partials = array_keys($us->call('refreshTable')->effects['wirePartials'] ?? []);
+
+    expect($partials)->toContain('row-1')
+        ->and($partials)->toContain('summary');
 });

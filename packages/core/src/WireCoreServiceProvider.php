@@ -24,6 +24,7 @@ use NyonCode\WireCore\Core\Actions\ActionRegistry;
 use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
 use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Core\Resources\ResourceRegistry;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireCore\Foundation\Components\Component;
@@ -65,6 +66,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
                 $this->registerCore();
                 $this->registerNotifications();
                 $this->registerPlugins();
+                $this->registerResources();
             })
             ->bootedPackage(function ($packager) {
                 $this->bootFoundation();
@@ -72,6 +74,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
                 $this->bootNotifications();
                 $this->bootModals();
                 $this->bootPlugins();
+                $this->bootResources();
                 $this->registerAssetRoutes();
             })
             ->hasConfig()
@@ -350,6 +353,30 @@ class WireCoreServiceProvider extends PackageServiceProvider
     }
 
     // ─── Plugins ────────────────────────────────────────────────
+
+    /**
+     * One registry per application.
+     *
+     * A singleton because the menu, the model router and boost introspection
+     * must see the same set, and a resource added in code has to survive the
+     * request that added it.
+     */
+    protected function registerResources(): void
+    {
+        $this->app->singleton(ResourceRegistry::class);
+    }
+
+    /**
+     * Put the configured resources in the registry.
+     *
+     * Booted rather than registered: a resource class is application code that
+     * may reference models and policies, so it is read once the application's
+     * own providers have run.
+     */
+    protected function bootResources(): void
+    {
+        $this->app->make(ResourceRegistry::class)->registerMany(config('wire-core.resources', []));
+    }
 
     protected function registerPlugins(): void
     {
