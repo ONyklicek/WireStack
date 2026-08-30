@@ -1,7 +1,7 @@
 ---
 title: V2 — kde to stojí a čím pokračovat
 date: 2026-08-30
-scope: V2.0–V2.3 (hotové), V2.4 (N+Q+T hotové, WF zbývá), ADR 0025 (rozpracované), V2.5/V2.6 (na řadě)
+scope: V2.0–V2.4 (hotové, mimo Q-3), ADR 0025 (rozpracované), V2.5/V2.6 (na řadě)
 status: progress record — aktualizovat na konci každého běhu
 ---
 
@@ -140,9 +140,9 @@ a `I` (boost `describe-resource`).
 dává owner vrstvu nahoru, ne dolů) a tvar kontraktu (osmimetodový interface
 neprojde vlastním standardem repa).
 
-### V2.4 — ERP execution 🟡 (N + Q + T hotové)
+### V2.4 — ERP execution ✅ (kromě Q-3)
 
-Čtyři nezávislé balíky. Zbývá **WF** (workflow) a **Q-3** (export/import na frontě).
+Čtyři nezávislé balíky, všechny hotové. Zbývá jen **Q-3** (export/import na frontě), a to s jiným zadáním, než plán psal — viz §2.
 
 | Balík | Co vzniklo |
 |---|---|
@@ -150,7 +150,7 @@ neprojde vlastním standardem repa).
 | **Q** ✅ (Q-1/2/4) | `Actions\Concerns\Queueable` na `BaseAction`, `Actions\Jobs\RunActionJob`, `Exceptions\QueuedActionException`, seamy `resolveActionByName()` / `resolveRecordsByKey()` na table hostiteli |
 | **Q-3** | **nedělat tak, jak plán psal** — viz §2 |
 | **T** ✅ | `Core\Tenancy\{Tenancy, TenantScope, NullTenantResolver}`, `Contracts\TenantResolver`, `Concerns\BelongsToTenant`, `Exceptions\TenancyException`, config. **Globální scope, ne plugin hook** — viz §2 |
-| **WF** | nezačaté |
+| **WF** ✅ | `Core\Workflow\WorkflowState`, `Actions\TransitionAction`, `Exceptions\IllegalTransitionException`. **Žádná barva/popisek/ikona** — enum kontrakty + `BadgeColumn` to už vlastní |
 
 **Plán poprvé v téhle sérii seděl na stavu kódu**: všechny čtyři balíky opravdu
 nula v `src`. Jediná korekce: WF-4 počítá se `StatusColumn` z V2.1 B-2, který byl
@@ -441,6 +441,26 @@ kontejneru. Takže **diagnostika chyby v hintu spadla místo aby ji nahlásila**
 přesně ve standalone kontextu, který má `CLAUDE.md` v požadavcích („testable in
 isolation, usable from other contexts"). Chybějící půlka je `app()->bound('config')`.
 
+**V2.4/WF: závislost, kterou plán vedl jako blokující, byla splněná dřív, než
+vznikla.** WF-4 zní „`StatusColumn` wiring — rendering typ vzniká ve V2.1 B-2".
+Jenže `StatusColumn` byl v kroku 14 zamítnut jako prázdná podtřída: `BadgeColumn`
+vrací barvu, ikonu **i** label přes `EnumResolver`. WF-4 tedy nemá co napojovat —
+a `WorkflowState` proto **žádnou barvu ani popisek nedrží**. Kdyby držel, byl by
+to přesně ten paralelní slovník, co se v tomhle repu pořád maže.
+
+`TransitionAction` bere label/barvu/ikonu z cílového enumu stejnou kanonickou
+cestou jako `BadgeColumn`, takže tlačítko a badge se nemůžou neshodnout.
+
+Dvě rozhodnutí ve stroji, která se liší záměrně: **nelegální hrana vyhodí
+výjimku** (mlčet znamená nechat záznam tam, kde uživatel věří, že se posunul),
+**guard veto vrátí false** (to je doménová odpověď, ne rozbitý stroj). A guardy
+na jednom stavu musí projít **všechny** — schvalovací limit a kontrola úplnosti
+jsou samostatná pravidla a `&&` do jedné closury ztratí, které z nich řeklo ne.
+
+Sedm mutací, sedm chycených. Dvě drobnosti při psaní: enum kontrakty se jmenují
+`getLabel/getColor/getIcon`, ne `label/color/icon`, a akce nemá `isVisible()`,
+má `isHidden()` — obojí chytila až první spuštěná sada, ne čtení.
+
 **V2.4/T: hook, který plán jmenuje, tenancy vynutit nemůže — a bezpečnost se
 nedá stavět na seamu, který se nemusí spustit.** T-2 chce registrovat
 `table.querying` hook na prioritě -100 a scopnout query. Změřeno:
@@ -675,18 +695,20 @@ počet výskytů `new`, ne na to, co ty výskyty jsou.
 
 ## 4. Co je na řadě
 
-**Čtyři fáze ze sedmi jsou hotové (V2.0–V2.3) a V2.4 je z poloviny.** Co je uvnitř nich a
+**Pět fází ze sedmi je hotových: V2.0–V2.4** (u V2.4 zbývá Q-3, viz níž). Co je uvnitř nich a
 co v nich měření změnilo, je v §1 a §2; tahle sekce je jen o tom, co dál.
 
 ### Další fáze
 
-| Fáze | Obsah | Poznámka před startem |
+| Na řadě | Obsah | Poznámka před startem |
 |---|---|---|
-| **V2.4** | 🟡 **N, Q a T hotové**; zbývá **WF** (workflow) a **Q-3** | T prošla svou go/no-go bránou (fail-safe: resolver=null → 0 řádků), ale **non-Eloquent `DataSource` scopovaný není** — globální scope nemá co scopovat, viz §3. `WF-4` má napojit `BadgeColumn`, ne nový `StatusColumn`. **Q-3** potřebuje nejdřív režim zápisu na disk v exportérech, viz §2 |
+| **Q-3** | export/import na frontě | Nejmenší otevřená věc a jediný zbytek V2.4. **Nezačíná přidáním `->queue()`**: `CsvExporter::export()` vrací `StreamedResponse`, takže jsou to dvě doručovací cesty a exportéry umí jen jednu. Krok je „režim zápisu na disk", viz §2 |
 | **V2.5** | saved views · global search · large-table UX | **Global search patří do `wire-panels`**, ne do `core/src/GlobalSearch/`, jak ho vede master plán. Staví nad `ResourceRegistry` a core na table nevidí — je to přesně ten cyklus, kvůli kterému se owner vrstva stěhovala, viz §2 |
 | **V2.6** | domain modules | `Workspace` je zamýšlený seam; grupuje resources a nevlastní routing |
 
-Nezačaté, žádná z nich není blokovaná.
+Žádná z nich není blokovaná. **V2.4 je jinak uzavřená** (N, Q, T, WF; ADR 0018 →
+ACCEPTED) s jedním pojmenovaným omezením: tenancy nekryje non-Eloquent
+`DataSource`, viz §3.
 
 ### Než se do nich pustíš
 
@@ -761,11 +783,14 @@ chyba: `composer.json` (repositories, require, autoload-dev), `phpunit.xml`
 workbench neuvidí.
 
 **Nepřeskakuj měření — to je jediné pravidlo, které si z tohohle souboru odnes,
-když nemáš čas na zbytek.** Za tři běhy opravilo zadání dvanáctkrát. Běh
-2026-08-30 přidal pět:
+když nemáš čas na zbytek.** Za tři běhy opravilo zadání patnáctkrát. Běh
+2026-08-30 přidal osm:
 
 | Krok | Plán / §4 slibovala | Měření našlo |
 |---|---|---|
+| V2.4/T tenancy | hook `table.querying` na prioritě -100 | hook query nedostane a pokryje jednu cestu z šesti → **globální Eloquent scope** |
+| V2.4/WF | čeká na `StatusColumn` z V2.1 | ten byl zamítnut; `BadgeColumn` to umí → závislost splněná, WF-4 nemá co napojovat |
+| V2.4/Q-3 | „přidat `->queue()` na `ExportAction`" | exportér vrací `StreamedResponse` → **dvě doručovací cesty**, potřebuje režim zápisu na disk |
 | `@php` bloky ve views | čtyři hnízda podle *počtu* bloků | tři z nich jsou jen aliasy render plánu → **nedělat**; čtvrté drželo rozjetou kopii pravidla a **ostrý defekt** |
 | V2.2/S1 | injektovat deps, „testy nemůžou mockovat" | `ActionPipeline` už stages konstruktorem bere, `SaveHandler` má 25 vlastních testů → **nedělat** |
 | V2.2/S2 | zrušit dvojí dispatch (redundance) | stojí 0,163 µs → **nechat**; vedle byl **defekt**, nehintovaný callback běžel dvakrát |
@@ -791,6 +816,24 @@ zelenou unit sadu a dva defekty, které server-side test vidět nemůže. Proto 
 Kroky 10–11 a 17 seděly. Pointa není, že plány jsou špatné — jsou to poctivé
 plány psané ke stavu kódu, který mezitím zestárl, mimo jiné o předchozí kroky
 téhle řady.
+
+**Pravidlo z V2.4/T — bezpečnost se nedá stavět na seamu, který se nemusí
+spustit.** Plán chtěl tenancy vynutit hookem. Hook běží jen když je navázaný
+`PluginManager`, pokrývá jednu čtecí cestu a v polové variantě query ani
+nedostane. Než něco takového použiješ na bezpečnostní invariant, projdi **všechny**
+cesty, které to má krýt — `SaveHandler`, relace, export, frontovaný job,
+`Model::find()` v aplikaci — a zeptej se, kolik z nich ten seam vidí. U tenancy
+to byla jedna ze šesti.
+
+Druhá půlka: **fail-safe napiš tak, aby šel asertovat přímo.**
+`Tenancy::shouldBlockEverything()` existuje proto, aby test netvrdil „vrátilo to
+nula řádků" (což může být pravda i omylem), ale „pravidlo říká zablokovat".
+
+**Pravidlo z V2.4/WF — než uvěříš blokující závislosti, zkontroluj, jestli
+nebyla splněná zamítnutím.** WF-4 čekal na `StatusColumn` z V2.1 B-2. Ten byl
+zamítnutý jako prázdná podtřída, protože `BadgeColumn` to už uměl — takže
+závislost byla splněná, ale plán o tom nevěděl a §2 to zapsané mělo. Číst §2
+před §4 není formalita.
 
 **Pravidlo z V2.3/P: `@livewire` v dokumentaci je kód, ne text — a spálilo mě to
 dvakrát v jednom kroku.** Nejdřív v PHP docbloku (`@livewire(...)` se parsuje

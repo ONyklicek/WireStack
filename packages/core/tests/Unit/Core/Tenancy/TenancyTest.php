@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Core\Tenancy\Concerns\BelongsToTenant;
 use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
+use NyonCode\WireCore\Core\Tenancy\NullTenantResolver;
 use NyonCode\WireCore\Core\Tenancy\Tenancy;
 use NyonCode\WireCore\Core\Tenancy\TenantScope;
 use NyonCode\WireCore\Exceptions\TenancyException;
@@ -200,4 +201,19 @@ it('can be stepped past deliberately, and that reads as deliberate', function ()
     // An admin report or a console command has a real need; the point is that
     // every place claiming it is greppable.
     expect(TnInvoice::acrossAllTenants()->count())->toBe(4);
+});
+
+it('answers no tenant until an application binds its own resolver', function () {
+    // The shipped default, and the reason tenancy-on-without-a-resolver is an
+    // empty page rather than a full one: the framework does not know which
+    // column holds a tenant, and guessing would be a guess about who may see
+    // what.
+    expect((new NullTenantResolver)->resolve())->toBeNull();
+
+    app()->forgetInstance(TenantResolver::class);
+    app()->bind(TenantResolver::class, NullTenantResolver::class);
+    app()->forgetInstance(Tenancy::class);
+
+    expect(app(Tenancy::class)->shouldBlockEverything())->toBeTrue()
+        ->and(TnInvoice::query()->count())->toBe(0);
 });

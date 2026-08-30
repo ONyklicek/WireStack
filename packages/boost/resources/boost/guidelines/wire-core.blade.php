@@ -103,6 +103,29 @@ Standalone Blade tags mirror them for plain views: `<x-wire::grid>`, `<x-wire::f
 The standalone tabs/wizard are client-side only (no per-step validation) — use action-modal wizards or
 form schema for validated flows.
 
+### Workflow / state machine
+
+`WorkflowState::for(StatusEnum::class)->column('status')->allow($from, $to)->guard($to, fn)->after($to, fn)`.
+A **seam, not an engine** (ADR 0018): it owns states, edges, guards and side effects, and delegates every
+meaning — no process definitions, no approval modelling, no scheduler. Transitions save through the ordinary
+path, so tenant scoping and audit come along without rewiring.
+
+**Never add colour/label/icon here.** The status is an enum implementing `Enum\HasColor`/`HasLabel`/`HasIcon`
+and `BadgeColumn` already renders it — a second map is a parallel vocabulary that drifts. (This is also why
+`StatusColumn` was never built: `BadgeColumn` covers it.)
+
+**Two refusals, deliberately different.** An illegal edge **throws** — silence leaves a record where the user
+believes it moved on. A guard veto returns **false** — "not yet" is a domain answer, not a broken machine.
+Guards on one state must *all* pass (separate rules; `&&`-ing them loses which said no). `after()` runs after
+persistence, so a hook cannot fire for a save that rolls back. `allow()` takes a list of origins because
+"anything up to here may be cancelled" is the common shape.
+
+`TransitionAction::to($state)->workflow($machine)` is an ordinary action plus `isAvailableFor($record, $user)`
+— true only when the edge exists *and* guards pass. Offer only `availableFrom()`; an action for a transition
+the user cannot complete exists to be refused, and an unpredictable refusal reads as an application bug. Label
+/ colour / icon come from the target enum via the same resolution BadgeColumn uses, so button and badge cannot
+disagree; `->visible()` and the machine's answer stay separate so neither overrules the other.
+
 ### Multi-tenancy
 
 Off by default (`wire-core.tenancy.enabled`), **strict once on**. Bind a `TenantResolver`; the shipped default

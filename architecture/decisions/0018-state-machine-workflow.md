@@ -2,10 +2,20 @@
 
 ## Status
 
-PROPOSED
+ACCEPTED — 2026-08-30.
 
-Design-only ADR (decision: "ADR now, implementation in V2"). Drafted as pre-V2
-item **N5** (`architecture/plans/ddd-enterprise-roadmap.md`); implementation is
+Implemented in V2.4/WF: `Core\Workflow\WorkflowState`,
+`Actions\TransitionAction`, `Exceptions\IllegalTransitionException`.
+
+One piece of this ADR was **not** built, and deliberately: §3's `StatusColumn`.
+Measured in V2.1 B-2, `BadgeColumn` already resolves an enum's colour, icon
+**and** label through `EnumResolver`, so a specialised subclass would have been
+an empty one. `TransitionAction` therefore reads its presentation off the target
+enum by the same canonical path, and `WorkflowState` holds no colour or label of
+its own — which is what this ADR's own "build on canonical owners, do not
+duplicate" asks for.
+
+Drafted as pre-V2 item **N5** (`architecture/plans/ddd-enterprise-roadmap.md`); implementation is
 **V2.4** (`architecture/plans/v2-master-plan.md`). Closes v1-gaps #3 (no
 first-class workflow/process layer).
 

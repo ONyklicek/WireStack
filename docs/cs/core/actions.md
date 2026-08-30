@@ -694,3 +694,80 @@ Override prezentace řádkové akce (`Action`), respektované pod `Table::action
 <x-wire-actions::group :group="$group" />
 <x-wire-actions::modal-host :component="$this" />  {{-- pro WithActions hostitele --}}
 ```
+
+## Workflow a přechody
+
+Záznam, který prochází stavy — draft, potvrzeno, odesláno — obvykle skončí
+s pravidly rozesetými po controllerech a `->update()` voláních, kde nikde není
+napsané, které přesuny jsou legální. `WorkflowState` ten tvar drží na jednom
+místě.
+
+```php
+use NyonCode\WireCore\Core\Workflow\WorkflowState;
+
+$orders = WorkflowState::for(OrderStatus::class)
+    ->column('status')                                              // [tl! focus:5]
+    ->allow(OrderStatus::Draft, OrderStatus::Confirmed)
+    ->allow(OrderStatus::Confirmed, OrderStatus::Shipped)
+    ->allow([OrderStatus::Draft, OrderStatus::Confirmed], OrderStatus::Cancelled)
+    ->guard(OrderStatus::Confirmed, fn ($order) => $order->lines()->exists())
+    ->after(OrderStatus::Shipped, fn ($order) => ShipmentJob::dispatch($order));
+```
+
+`allow()` bere seznam výchozích stavů, protože „cokoli až sem jde zrušit" je
+běžný tvar a napsat ho třikrát je způsob, jak na jeden ze tří zapomenout.
+
+**Seam, ne workflow engine.** Vlastní tvar a význam deleguje: žádné definice
+procesů, žádné modelování schvalování, žádný scheduler. Přechody ukládají
+obyčejnou cestou, takže tenant scope i audit přijdou s sebou, aniž by se
+drátovaly znovu.
+
+Barva, popisek ani ikona tu záměrně nejsou. Status je enum implementující
+`Enum\HasColor` / `HasLabel` / `HasIcon` a `BadgeColumn` to už vykresluje —
+druhá mapa by byla paralelní slovník, který se rozejde.
+
+### Dvě odmítnutí, která se chovají jinak
+
+```php
+$orders->transition($order, OrderStatus::Shipped);   // z draftu → výjimka
+$orders->transition($order, OrderStatus::Confirmed); // bez položek → false
+```
+
+**Nelegální** přechod vyhodí výjimku: stroj říká, že ta hrana neexistuje, a mlčet
+znamená nechat záznam tam, kde uživatel věří, že se posunul. **Guard veto** vrátí
+false, protože „ještě ne" je doménová odpověď, ne rozbitý stroj — volající ji
+ohlásí.
+
+Guardy na jednom stavu musí projít všechny. Schvalovací limit a kontrola
+úplnosti jsou samostatná pravidla a `&&` do jedné closury ztratí, které z nich
+řeklo ne.
+
+`after()` hooky běží až po uložení, takže hook, který dispatchne přepravu,
+nemůže vystřelit pro save, který se pak vrátí zpět.
+
+### Nabídnutí v UI
+
+```php
+use NyonCode\WireCore\Actions\TransitionAction;
+
+TransitionAction::to(OrderStatus::Confirmed)->workflow($orders)
+```
+
+Ve všem ostatním obyčejná akce — stejný pipeline, stejná autorizace, umí
+potvrzení i frontu. Přidává `isAvailableFor($record, $user)`: true jen když hrana
+existuje **a** její guardy projdou. Akce nabídnutá pro přechod, který uživatel
+nemůže dokončit, je akce, která existuje, aby byla odmítnuta — a odmítnutí, které
+nemohl předvídat, se čte jako chyba aplikace, ne jako pravidlo procesu.
+
+Popisek, barvu a ikonu bere z cílového enumu stejnou kanonickou cestou, jakou
+používá `BadgeColumn`, takže tlačítko a badge se neshodnou nemohou. Explicitní
+`->label()` dál vyhrává.
+
+Vlastní `->visible()` akce a odpověď stroje zůstávají oddělené otázky, takže
+jedna druhou tiše nepřebije.
+
+### Co má UI nabídnout
+
+```php
+$orders->availableFrom($order, auth()->user());   // jen přesuny, které by prošly
+```
