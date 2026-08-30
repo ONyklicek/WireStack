@@ -247,6 +247,58 @@ earlier steps — `->schema(fn (array $data) => [...])`. The Closure receives th
 form-data bag even for `HeaderAction` (which has no record). See
 [Multi-Step Wizard](modals.md#multi-step-wizard) for a worked example.
 
+## Running On A Queue
+
+Most actions should stay synchronous — a user who clicks Delete expects the row
+gone when the page comes back, and moving that to a worker buys nothing but a
+race. `->queue()` is for the long tail: a bulk action over ten thousand rows, a
+recalculation that would time out.
+
+```php
+Action::make('recalculate')
+    ->queue()                   // [tl! focus:3]
+    ->onQueue('reports')        // naming a queue implies ->queue()
+    ->onConnection('redis')
+    ->action(fn ($records) => Report::rebuild($records));
+```
+
+The click dispatches a job and returns immediately; the user gets a "running in
+the background" notification, and a second one when it finishes.
+
+### What crosses the boundary
+
+**Names and keys, never objects.** The job carries the host class, the action's
+name, the record keys and the submitted form data — all scalars. Not the action,
+which holds closures; not the models, which would be stale by the time a worker
+picks them up and would make a ten-thousand-row bulk action a megabyte of
+payload. The job rebuilds the host, asks it for the action by name, and reads the
+records fresh.
+
+That is worth knowing rather than hidden: a row edited between the click and the
+run is acted on **as it is when the job runs**, not as it looked when queued.
+
+### What does not cross it
+
+A queued action has **no browser**. The bindings a synchronous callback receives
+for the modal — `$set`, `$setParent`, `$close`, `$replace`, `$halt` — are bound
+to throw, not to no-op:
+
+```php
+Action::make('recalculate')->queue()->action(function ($records, $close) {
+    Report::rebuild($records);
+    $close();   // QueuedActionException: needs the browser it no longer has
+});
+```
+
+A no-op would look like it worked, and the developer would find out when a user
+reported that the modal never closed. Report back with a notification instead —
+which is what the [database driver](notifications.md)
+exists for, since by then the request that started the job is gone.
+
+An action renamed or removed between dispatch and run throws for the same
+reason: the job carries the name, so there is nothing left to execute and saying
+so beats failing silently.
+
 ## Footer Actions
 
 ```php

@@ -7,7 +7,27 @@ use NyonCode\WireCore\Foundation\Icons\DefaultIconSet;
 
 return [
     'notifications' => [
+        /*
+        | Which driver delivers a notification.
+        |
+        |   session  — flash + Livewire dispatch (the default, transient)
+        |   livewire — dispatch only
+        |   flasher  — hand off to a Flasher toast
+        |   database — write it down; survives the request that raised it
+        |   null     — deliver nothing
+        |
+        | A list picks several at once, which is usually what you want:
+        | ['session', 'database'] shows the toast now and keeps it in the bell
+        | for a user who was looking elsewhere.
+        */
         'default' => env('WIRE_NOTIFICATIONS_DRIVER', 'session'),
+
+        'database' => [
+            // Laravel's own notifications shape, so an application that already
+            // has that table can point this at it and read both through its own
+            // Notifiable::notifications() relation.
+            'table' => env('WIRE_NOTIFICATIONS_TABLE', 'wire_notifications'),
+        ],
     ],
 
     'icons' => [

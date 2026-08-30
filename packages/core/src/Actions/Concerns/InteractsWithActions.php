@@ -10,6 +10,7 @@ use NyonCode\WireCore\Actions\BaseAction;
 use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireCore\Actions\Contracts\ModalForm;
 use NyonCode\WireCore\Actions\HeaderAction;
+use NyonCode\WireCore\Actions\Jobs\RunActionJob;
 use NyonCode\WireCore\Actions\ModalFooterAction;
 use NyonCode\WireCore\Core\Actions\ActionContext;
 use NyonCode\WireCore\Core\Actions\ActionPipeline;
@@ -19,6 +20,7 @@ use NyonCode\WireCore\Core\Events\ActionExecuting;
 use NyonCode\WireCore\Core\Plugin\Hooks\ActionExecutedPayload;
 use NyonCode\WireCore\Core\Plugin\Hooks\ActionExecutingPayload;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 use NyonCode\WireCore\Foundation\Contracts\HasFieldActions;
 use NyonCode\WireCore\Foundation\Schema\Section;
@@ -306,6 +308,44 @@ trait InteractsWithActions
      *
      * @return array<string, mixed>
      */
+    /**
+     * Hand the action to a worker and tell the user it is on its way.
+     *
+     * Carries names and keys only — see {@see RunActionJob} for why. The
+     * "started" notification is immediate and transient; the one that matters
+     * arrives when the job finishes, which is what the database driver is for.
+     *
+     * @param  array<int, mixed>  $recordIds
+     * @param  array<string, mixed>  $data
+     */
+    protected function dispatchQueuedAction(object $action, array $recordIds, array $data): void
+    {
+        $job = new RunActionJob(
+            host: static::class,
+            actionName: $action->getName(),
+            recordKeys: $recordIds,
+            formData: $data,
+            completionMessage: $this->queuedActionCompletionMessage($action),
+        );
+
+        $connection = method_exists($action, 'getQueueConnection') ? $action->getQueueConnection() : null;
+        $queue = method_exists($action, 'getQueueName') ? $action->getQueueName() : null;
+
+        dispatch($job->onConnection($connection)->onQueue($queue));
+
+        $this->sendNotification(Notification::info(
+            Trans::get('wire-core::messages.action_queued', ['action' => $action->getLabel() ?? $action->getName()])
+        ));
+    }
+
+    /** What the completion notification says. Override to say something better. */
+    protected function queuedActionCompletionMessage(object $action): string
+    {
+        return Trans::get('wire-core::messages.action_queued_done', [
+            'action' => $action->getLabel() ?? $action->getName(),
+        ]);
+    }
+
     protected function actionCallbackBindings(): array
     {
         return [
@@ -526,6 +566,16 @@ trait InteractsWithActions
 
         // Dispatch ActionExecuting event (after hooks — reports final state)
         event(new ActionExecuting($sourceId, $action->getName(), $recordIds));
+
+        // A queued action leaves here and finishes on a worker. Checked before
+        // the context is built, because everything below it — the modal frames,
+        // the wrapped before/after callbacks, the halt plumbing — is browser
+        // work a job has no use for.
+        if (method_exists($action, 'isQueued') && $action->isQueued()) {
+            $this->dispatchQueuedAction($action, $recordIds, $data);
+
+            return;
+        }
 
         // Build ActionContext
         $context = $this->payloadToContext($payload, $action->getName());

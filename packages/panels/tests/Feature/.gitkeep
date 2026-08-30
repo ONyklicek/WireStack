@@ -1,0 +1,5 @@
+# Feature tests for wire-panels live here.
+#
+# Kept tracked because phpunit.xml and tests/Pest.php both name this directory,
+# and an empty one git does not carry makes `composer test:panels` fail on a
+# fresh checkout with "Test directory not found".

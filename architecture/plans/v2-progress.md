@@ -1,7 +1,7 @@
 ---
 title: V2 — kde to stojí a čím pokračovat
 date: 2026-08-30
-scope: V2.0–V2.3 (hotové), ADR 0025 (rozpracované), V2.4/V2.5/V2.6 (na řadě)
+scope: V2.0–V2.3 (hotové), V2.4 (N+Q hotové, T+WF zbývá), ADR 0025 (rozpracované), V2.5/V2.6 (na řadě)
 status: progress record — aktualizovat na konci každého běhu
 ---
 
@@ -139,6 +139,21 @@ a `I` (boost `describe-resource`).
 **Dvě rozhodnutí z plánu se změřením otočila** — obě v §2: umístění (Filament
 dává owner vrstvu nahoru, ne dolů) a tvar kontraktu (osmimetodový interface
 neprojde vlastním standardem repa).
+
+### V2.4 — ERP execution 🟡 (N + Q hotové)
+
+Čtyři nezávislé balíky. **T** (tenancy) a **WF** (workflow) zbývají.
+
+| Balík | Co vzniklo |
+|---|---|
+| **N** ✅ | `Notifications\{DatabaseNotification, NotificationCenter, NotificationBell}`, `Drivers\{DatabaseDriver, StackDriver}`, `Contracts\ResolvesNotifiable` + `AuthenticatedNotifiable`, migrace, EN/CS překlady. Config `default` bere **seznam** driverů |
+| **Q** ✅ (Q-1/2/4) | `Actions\Concerns\Queueable` na `BaseAction`, `Actions\Jobs\RunActionJob`, `Exceptions\QueuedActionException`, seamy `resolveActionByName()` / `resolveRecordsByKey()` na table hostiteli |
+| **Q-3** | **nedělat tak, jak plán psal** — viz §2 |
+| **T**, **WF** | nezačaté |
+
+**Plán poprvé v téhle sérii seděl na stavu kódu**: všechny čtyři balíky opravdu
+nula v `src`. Jediná korekce: WF-4 počítá se `StatusColumn` z V2.1 B-2, který byl
+zamítnut — `BadgeColumn` to už umí, závislost je splněná (§2, krok 14).
 
 ---
 
@@ -425,6 +440,29 @@ kontejneru. Takže **diagnostika chyby v hintu spadla místo aby ji nahlásila**
 přesně ve standalone kontextu, který má `CLAUDE.md` v požadavcích („testable in
 isolation, usable from other contexts"). Chybějící půlka je `app()->bound('config')`.
 
+**V2.4/Q: exekuční cesta akcí je stavěná pro živou komponentu s modálem, a to
+mění, co „queued action" vůbec může znamenat.** `actionCallbackBindings()` dává
+callbacku `set`, `setParent`, `setFrame`, `close`, `replace` — samé operace nad
+modálním zásobníkem. Job žádný nemá. Plán mluví o „spustí `ActionPipeline`
+v jobu", jenže spustit se dá jen *podmnožina*, a ta chybějící půlka se musí
+**ozvat**, ne degradovat na no-op: tichý `$close()` vypadá, že fungoval, a
+vývojář se to dozví, až uživatel nahlásí, že se modál nezavírá. Proto jsou ty
+bindingy navázané na výjimku.
+
+Druhá věc, kterou plán jmenuje správně a stojí za doložení: `ActionContext` drží
+`Model` a `Collection<Model>`. Job veze **jména a klíče**, hostitele znovu
+postaví a záznamy načte čerstvé — takže řádek změněný mezi kliknutím a během se
+zpracuje v podobě z běhu, ne ze zařazení. To je vlastnost, ne detail, a je
+zdokumentovaná.
+
+**Q-3 (export/import na frontě) se tak, jak plán psal, udělat nedá.**
+`CsvExporter::export()` vrací `StreamedResponse` — download, který v jobu
+vzniknout nemůže. Není to „přidat `->queue()` na `ExportAction`": jsou to **dvě
+různé doručovací cesty** (stream do response synchronně vs. zápis na disk +
+notifikace s odkazem), a exportéry dnes umí jen tu první. Q-3 tedy začíná tím, že
+exportéry dostanou režim zápisu na disk — a to je vlastní krok, ne dopsání
+jednoho volání.
+
 **Prototyp na reálné entitě našel dva defekty, které přežily celou unit sadu.**
 Plán V2.3 si sám uložil „prototyp R.1 na 1 reálné entitě před rozšířením" a měl
 pravdu. `workbench/app/Resources/InvoiceResource.php` deklaruje **všech pět
@@ -601,14 +639,14 @@ počet výskytů `new`, ne na to, co ty výskyty jsou.
 
 ## 4. Co je na řadě
 
-**Čtyři fáze ze sedmi jsou hotové: V2.0, V2.1, V2.2, V2.3.** Co je uvnitř nich a
+**Čtyři fáze ze sedmi jsou hotové (V2.0–V2.3) a V2.4 je z poloviny.** Co je uvnitř nich a
 co v nich měření změnilo, je v §1 a §2; tahle sekce je jen o tom, co dál.
 
 ### Další fáze
 
 | Fáze | Obsah | Poznámka před startem |
 |---|---|---|
-| **V2.4** | tenancy · workflow · queue · DB notifikace | Master plán ji vede jako 🔴 vysoké riziko. `WF-4` (transition engine) má napojit `BadgeColumn`, ne nový `StatusColumn` — ta závislost padla v kroku 14, viz §2 |
+| **V2.4** | 🟡 **N a Q hotové**; zbývá **T** (tenancy, 🔴 bezpečnost) a **WF** (workflow) | T má go/no-go na fail-safe testu: resolver=null → 0 řádků, žádný leak. `WF-4` má napojit `BadgeColumn`, ne nový `StatusColumn` — ta závislost padla v kroku 14. **Q-3** (export/import) potřebuje nejdřív režim zápisu na disk v exportérech, viz §2 |
 | **V2.5** | saved views · global search · large-table UX | **Global search patří do `wire-panels`**, ne do `core/src/GlobalSearch/`, jak ho vede master plán. Staví nad `ResourceRegistry` a core na table nevidí — je to přesně ten cyklus, kvůli kterému se owner vrstva stěhovala, viz §2 |
 | **V2.6** | domain modules | `Workspace` je zamýšlený seam; grupuje resources a nevlastní routing |
 

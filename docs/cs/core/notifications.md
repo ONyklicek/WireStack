@@ -14,6 +14,8 @@ Zásuvný notifikační systém s více drivery.
 | Session | `SessionDriver` | `session()->flash()` **+** Livewire událost nesoucí **plný** payload | Žádné |
 | Livewire | `LivewireEventDriver` | Livewire `$dispatch()` browser událost s **plným** payloadem | Frontend listener (toast kontejner) |
 | Flasher | `FlasherDriver` | Integrace [PHP Flasher](https://php-flasher.io) | `php-flasher/flasher-laravel` |
+| Database | `DatabaseDriver` | Zapíše notifikaci; přežije request, který ji vyvolal | Tabulka `wire_notifications` (migrace je součástí balíčku) |
+| Stack | `StackDriver` | Několik driverů naráz — obvyklá dvojice „toast **a** zvoneček" | Co potřebují obalené drivery |
 | Null | `NullDriver` | No-op — zahodí vše | Žádné |
 
 Vestavěný výchozí je **`CurrentComponentDriver`** obalující `SessionDriver`: sám resolvuje právě renderovanou Livewire komponentu, takže call-sites nikdy nemusí předávat `$this`. `SessionDriver` i `LivewireEventDriver` forwardují **plný** payload (`title`, `duration`, `icon`, `actions`, …), takže bohaté toasty přežijí server round-trip.
@@ -28,6 +30,80 @@ Vestavěný výchozí je **`CurrentComponentDriver`** obalující `SessionDriver
 | Chcete **vypnout notifikace** — testy, queued/background joby nebo jakýkoli kontext bez uživatele, kterého notifikovat. | `NullDriver` |
 
 > **Které drivery krmí toast kontejner?** `<x-wire-notifications::toast-container />` je Alpine listener na Livewire browser události, takže ho dosáhnou jen drivery odesílající události: výchozí **`CurrentComponentDriver`**, **`SessionDriver`** a **`LivewireEventDriver`** — všechny forwardují plný `title`/`duration`/`icon`/`actions` payload. `FlasherDriver` vykresluje **vlastní** UI a kontejner obchází; `NullDriver` nezobrazí nic.
+
+## Perzistentní notifikace
+
+Drivery výš doručují na právě renderovanou stránku, což je správná odpověď na
+„Uloženo" a špatná na frontovaný export, který doběhne za dvacet minut: to už
+není komu dispatchovat ani do čeho flashovat. `DatabaseDriver` notifikaci místo
+toho zapíše.
+
+```php
+// config/wire-core.php
+'notifications' => [
+    'default' => ['session', 'database'],
+],
+```
+
+**Seznam** vybere několik driverů naráz a obvykle je to přesně to, co chceš:
+toast hned a záznam ve zvonečku pro uživatele, který se zrovna díval jinam.
+Samotný řetězec dál funguje a zůstane jedním driverem.
+
+Perzistentní notifikace patří příjemci, kterého resolvuje `ResolvesNotifiable` —
+ve výchozím stavu přihlášený uživatel. Když není přihlášený nikdo, driver
+**nezapíše nic**: řádek uložený na nikoho si nemá kdo přečíst. Na queue workeru
+je to normální stav, takže když má job adresovat konkrétního uživatele, navaž
+vlastní resolver:
+
+```php
+use NyonCode\WireCore\Notifications\Contracts\ResolvesNotifiable;
+
+app()->bind(ResolvesNotifiable::class, fn () => new class implements ResolvesNotifiable {
+    public function resolve(): ?Model
+    {
+        return User::find(session('acting_as'));
+    }
+});
+```
+
+### Zvoneček
+
+```blade
+@livewire('wire-notification-bell')
+@livewire('wire-notification-bell', ['limit' => 5])
+```
+
+Počet nepřečtených, posledních pár a dva způsoby, jak je uklidit. Seznam řadí
+nepřečtené první — zvoneček je od toho, aby řekl, co jsi neviděl, a dávka
+přečtení by třídenní nepřečtenou položku jinak vytlačila pryč.
+
+Pod ním `NotificationCenter` odpovídá na totéž bez komponenty, třeba pro konzolový
+příkaz nebo JSON endpoint:
+
+```php
+$center = app(NotificationCenter::class);
+
+$center->unreadCount();          // číslo na zvonečku
+$center->latest(10);             // nepřečtené první, pak nejnovější
+$center->unread(10);
+$center->markAsRead($id);        // scopováno na příjemce
+$center->markAllAsRead();        // vrátí, kolik jich bylo nepřečtených
+```
+
+Všechno je scopované na resolvovaného příjemce, `markAsRead()` včetně — id
+přichází z Livewire akce, tedy je to uživatelský vstup, a nescopované vyhledání
+by nechalo jednoho uživatele označit notifikaci jiného.
+
+### Tabulka
+
+Migrace odpovídá Laravelovu tvaru `notifications` (id / type / notifiable / data
+/ read_at), takže aplikace, která tu tabulku už má, si na ni může
+`wire-core.notifications.database.table` nasměrovat a číst obojí přes vlastní
+`Notifiable::notifications()`.
+
+Id je v tom uuid sloupci **ULID**. Obojí je řetězec, který se vejde, ale ULID se
+řadí podle času vzniku — a pět notifikací z jedné dávkové úlohy padne do stejné
+sekundy, kde je `created_at` samo seřadí náhodně.
 
 ## Notification builder
 

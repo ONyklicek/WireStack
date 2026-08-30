@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Concerns;
 
+use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Actions\BulkAction;
@@ -164,6 +165,48 @@ trait InteractsWithTableActions
         }
 
         return [];
+    }
+
+    /**
+     * The action a queued job named, looked up the way the host does.
+     *
+     * A public seam over the protected {@see findAction()} rather than widening
+     * that one: the job needs exactly this question answered and nothing else,
+     * and delegating means grouped actions and behaviour-only record actions
+     * stay findable without a second copy of the search drifting from the first.
+     */
+    public function resolveActionByName(string $name): ?Action
+    {
+        return $this->findAction($name);
+    }
+
+    /**
+     * Records for a set of keys — what a queued action resolves them with.
+     *
+     * Fresh from the table's own query rather than carried in the job payload:
+     * a model serialized at dispatch is stale by the time a worker picks it up,
+     * and a bulk action over ten thousand of them would be a megabyte of
+     * payload. The keys travel; the rows are read here.
+     *
+     * Qualified because `getQuery()` may carry a belongs-to join whose table has
+     * its own `id`, exactly as the selection scope has to qualify it.
+     *
+     * @param  array<int, mixed>  $keys
+     * @return array<int, Model>
+     */
+    public function resolveRecordsByKey(array $keys): array
+    {
+        if ($keys === []) {
+            return [];
+        }
+
+        $table = $this->getTable();
+        $query = $table->getQuery();
+
+        return $query
+            ->whereIn($query->getModel()->qualifyColumn($table->getPrimaryKey()), $keys)
+            ->get()
+            ->all();
     }
 
     /**

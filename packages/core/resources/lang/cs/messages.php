@@ -17,4 +17,14 @@ return [
     // The copy-to-clipboard affordance ({@see Foundation\View\CopyButton}).
     'copy' => 'Kopírovat',
     'copied' => 'Zkopírováno!',
+
+    // Zvoneček notifikací ({@see Notifications\NotificationBell}).
+    'notifications' => 'Oznámení',
+    'no_notifications' => 'Zatím tu nic není.',
+    'mark_read' => 'Označit jako přečtené',
+    'mark_all_read' => 'Označit vše',
+
+    // Frontované akce ({@see Actions\Concerns\Queueable}).
+    'action_queued' => ':action běží na pozadí.',
+    'action_queued_done' => ':action doběhla.',
 ];

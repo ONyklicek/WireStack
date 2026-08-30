@@ -247,6 +247,57 @@ dřívějších krocích — `->schema(fn (array $data) => [...])`. Closura dost
 form-data bag i pro `HeaderAction` (která nemá záznam). Rozpracovaný příklad viz
 [Vícekrokový wizard](modals.md#vicekrokovy-wizard).
 
+## Běh na frontě
+
+Většina akcí má zůstat synchronní — kdo klikne na Smazat, čeká, že řádek bude po
+návratu stránky pryč, a přesunout to na workera nekoupí nic než race.
+`->queue()` je pro dlouhý ocas: hromadná akce nad deseti tisíci řádky,
+přepočet, který by vytimeoutoval.
+
+```php
+Action::make('recalculate')
+    ->queue()                   // [tl! focus:3]
+    ->onQueue('reports')        // pojmenovat frontu implikuje ->queue()
+    ->onConnection('redis')
+    ->action(fn ($records) => Report::rebuild($records));
+```
+
+Kliknutí dispatchne job a hned se vrátí; uživatel dostane notifikaci „běží na
+pozadí" a druhou, až to doběhne.
+
+### Co přes hranici jde
+
+**Jména a klíče, nikdy objekty.** Job veze třídu hostitele, jméno akce, klíče
+záznamů a odeslaná data formuláře — samé skaláry. Ne akci, ta drží closury; ne
+modely, ty by byly zastaralé, než je worker vezme, a u hromadné akce nad deseti
+tisíci řádky by to byl megabajt payloadu. Job hostitele znovu postaví, zeptá se
+ho na akci podle jména a záznamy načte čerstvé.
+
+Stojí za to o tom vědět, ne to schovávat: řádek změněný mezi kliknutím a během
+se zpracuje **v podobě, v jaké je při běhu jobu**, ne v jaké byl při zařazení.
+
+### Co přes ni nejde
+
+Frontovaná akce **nemá prohlížeč**. Bindingy, které synchronní callback dostane
+pro modál — `$set`, `$setParent`, `$close`, `$replace`, `$halt` — vyhazují
+výjimku, nejsou to no-opy:
+
+```php
+Action::make('recalculate')->queue()->action(function ($records, $close) {
+    Report::rebuild($records);
+    $close();   // QueuedActionException: potřebuje prohlížeč, který už nemá
+});
+```
+
+No-op by vypadal, že fungoval, a vývojář by se to dozvěděl, až by uživatel
+nahlásil, že se modál nezavřel. Hlas se místo toho notifikací — přesně na to je
+[databázový driver](notifications.md), protože request, který job spustil, už
+touhle dobou není.
+
+Akce přejmenovaná nebo smazaná mezi dispatchem a během vyhodí výjimku ze
+stejného důvodu: job veze jméno, takže není co spustit, a říct to je lepší než
+selhat potichu.
+
 ## Akce v patičce
 
 ```php

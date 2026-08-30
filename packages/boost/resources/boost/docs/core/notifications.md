@@ -14,6 +14,8 @@ Pluggable notification system with multiple drivers.
 | Session | `SessionDriver` | `session()->flash()` **+** a Livewire event carrying the **full** payload | None |
 | Livewire | `LivewireEventDriver` | Livewire `$dispatch()` browser event with the **full** payload | Frontend listener (toast container) |
 | Flasher | `FlasherDriver` | [PHP Flasher](https://php-flasher.io) integration | `php-flasher/flasher-laravel` |
+| Database | `DatabaseDriver` | Writes the notification down; it survives the request that raised it | A `wire_notifications` table (migration ships with the package) |
+| Stack | `StackDriver` | Several drivers at once — the ordinary "toast **and** bell" pairing | Whatever the wrapped drivers need |
 | Null | `NullDriver` | No-op — discards everything | None |
 
 The built-in default is **`CurrentComponentDriver`** wrapping `SessionDriver`: it resolves the currently rendering Livewire component itself, so call-sites never have to pass `$this`. Both `SessionDriver` and `LivewireEventDriver` forward the **full** payload (`title`, `duration`, `icon`, `actions`, …), so rich toasts survive the server round-trip.
@@ -28,6 +30,80 @@ The built-in default is **`CurrentComponentDriver`** wrapping `SessionDriver`: i
 | You want to **disable notifications** — tests, queued/background jobs, or any context with no user to notify. | `NullDriver` |
 
 > **Which drivers feed the toast container?** `<x-wire-notifications::toast-container />` is an Alpine listener on a Livewire browser event, so only event-dispatching drivers reach it: the default **`CurrentComponentDriver`**, **`SessionDriver`**, and **`LivewireEventDriver`** — all forward the full `title`/`duration`/`icon`/`actions` payload. `FlasherDriver` renders its **own** UI and bypasses the container; `NullDriver` shows nothing.
+
+## Persistent Notifications
+
+The drivers above deliver to the page being rendered, which is the right answer
+for "Saved" and the wrong one for a queued export finishing twenty minutes later:
+by then there is no component to dispatch to and no session to flash into.
+`DatabaseDriver` writes the notification down instead.
+
+```php
+// config/wire-core.php
+'notifications' => [
+    'default' => ['session', 'database'],
+],
+```
+
+A **list** picks several drivers at once, and that is usually what you want: the
+toast now, and the record in the bell for a user who was looking at another tab.
+A single string still works and stays a single driver.
+
+Persisted notifications belong to a recipient, resolved through
+`ResolvesNotifiable` — by default whoever is authenticated. With nobody logged
+in, the driver writes **nothing**: a row stored against no one cannot be read by
+anyone. That is the ordinary state on a queue worker, so bind your own resolver
+when a job needs to address a specific user:
+
+```php
+use NyonCode\WireCore\Notifications\Contracts\ResolvesNotifiable;
+
+app()->bind(ResolvesNotifiable::class, fn () => new class implements ResolvesNotifiable {
+    public function resolve(): ?Model
+    {
+        return User::find(session('acting_as'));
+    }
+});
+```
+
+### The bell
+
+```blade
+@livewire('wire-notification-bell')
+@livewire('wire-notification-bell', ['limit' => 5])
+```
+
+An unread count, the latest few, and two ways to clear them. The list shows
+unread first — the bell exists to say what has not been seen, and a burst of
+reads should not push a three-day-old unread item off it.
+
+Behind it, `NotificationCenter` answers the same questions without a component,
+for a console command or a JSON endpoint:
+
+```php
+$center = app(NotificationCenter::class);
+
+$center->unreadCount();          // the number on the bell
+$center->latest(10);             // unread first, then newest
+$center->unread(10);
+$center->markAsRead($id);        // scoped to the recipient
+$center->markAllAsRead();        // returns how many were unread
+```
+
+Every one is scoped to the resolved recipient, `markAsRead()` included — an id
+arriving from a Livewire action is user input, and an unscoped lookup would let
+one user mark another's notification read.
+
+### The table
+
+The migration matches Laravel's own `notifications` shape (id / type /
+notifiable / data / read_at), so an application that already has that table can
+point `wire-core.notifications.database.table` at it and read both through its
+own `Notifiable::notifications()` relation.
+
+The id is a **ULID** in that uuid column. Both are strings that fit, but a ULID
+sorts by the time it was made — and five notifications from one bulk job land in
+the same second, where `created_at` alone orders them arbitrarily.
 
 ## Notification Builder
 

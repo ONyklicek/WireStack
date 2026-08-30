@@ -103,14 +103,47 @@ Standalone Blade tags mirror them for plain views: `<x-wire::grid>`, `<x-wire::f
 The standalone tabs/wizard are client-side only (no per-step validation) — use action-modal wizards or
 form schema for validated flows.
 
+### Queued actions
+
+`->queue()` / `->onQueue('reports')` / `->onConnection('redis')` on any action (naming a queue or connection
+implies `->queue()`). **Default stays synchronous and should** — a user clicking Delete expects the row gone on
+return; this is for the long tail (bulk over ten thousand rows, an export that would time out).
+
+**The job carries names and keys, never objects**: host class, action name, record keys, form data — all
+scalars. Not the action (closures), not models (stale by the time a worker takes them; ten thousand would be a
+megabyte of payload). It rebuilds the host, calls `resolveActionByName()`, and reads records fresh via
+`resolveRecordsByKey()` — so a row edited between click and run is acted on **as it is at run time**. A single
+key still arrives as `$record`, a set as `$records`.
+
+**A queued action has no browser.** `$set` / `$setParent` / `$setFrame` / `$close` / `$replace` / `$halt` are
+bound to **throw** `QueuedActionException`, never to no-op — a silent `$close()` looks like it worked and
+surfaces weeks later as "the modal never closes". Report back with a notification; that is what the database
+driver is for, since the request that queued the job is gone by then. An action renamed or removed between
+dispatch and run throws too.
+
+`RunActionJob` reaches Notifications by class name, not import: both are L2 and ADR 0025 forbids L2→L2 — the
+same soft seam `HasLifecycle::resolveNotificationManagerClass()` uses.
+
 ### Notifications
 
 `Notification` is an immutable value object dispatched through a driver (current-component, session, livewire,
-flasher, null), selected by `wire-core.notifications.default`. The built-in default is `CurrentComponentDriver`
+flasher, **database**, null), selected by `wire-core.notifications.default` — which takes a **list** as well as
+a string, so `['session', 'database']` shows the toast *and* keeps it in the bell (a `StackDriver` fans out;
+one driver throwing does not silence the rest, and the failure is re-thrown after all have had their turn). The built-in default is `CurrentComponentDriver`
 (decorates `SessionDriver`): it resolves the active Livewire component via `Livewire::current()` itself, so
 `NotificationManager::send($notification)` and the `InteractsWithNotifications`/`sendNotification` helpers no
 longer thread `$this`. A custom per-component driver that needs the component must wrap itself in
 `CurrentComponentDriver`.
+
+**Persistent notifications.** The transient drivers deliver to the page being rendered — useless for a queued
+export finishing twenty minutes later, when there is no component to dispatch to. `DatabaseDriver` writes the
+row instead; `NotificationCenter` reads it and `@@livewire('wire-notification-bell')` renders it. Every read is
+scoped to the recipient resolved by `ResolvesNotifiable` (default: the authenticated user), **`markAsRead($id)`
+included** — the id comes from a Livewire action, so an unscoped lookup would let one user mark another's
+notification read. With no recipient the driver writes **nothing** rather than storing an unreachable row,
+which is the ordinary state on a queue worker; bind your own resolver when a job must address someone. The
+table matches Laravel's `notifications` shape so an app can share its own, and the id is a **ULID** in that
+uuid column: a bulk job puts five rows in one second, where `created_at` alone orders them arbitrarily.
 
 Fluent `Notification`: `->title()`, `->duration(ms)`, `->icon()`, `->position()`, `->persistent()` (sticky,
 duration 0, no countdown bar), and `->action('Undo', 'event')` / `->action(NotificationAction::make(...))` —

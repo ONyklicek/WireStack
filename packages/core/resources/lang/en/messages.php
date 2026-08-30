@@ -17,4 +17,14 @@ return [
     // The copy-to-clipboard affordance ({@see Foundation\View\CopyButton}).
     'copy' => 'Copy',
     'copied' => 'Copied!',
+
+    // The notification bell ({@see Notifications\NotificationBell}).
+    'notifications' => 'Notifications',
+    'no_notifications' => 'Nothing here yet.',
+    'mark_read' => 'Mark as read',
+    'mark_all_read' => 'Mark all read',
+
+    // Queued actions ({@see Actions\Concerns\Queueable}).
+    'action_queued' => ':action is running in the background.',
+    'action_queued_done' => ':action finished.',
 ];

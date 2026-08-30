@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Livewire\ComponentHookRegistry;
+use Livewire\Livewire;
 use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
@@ -41,10 +42,13 @@ use NyonCode\WireCore\Modals\View\ConfirmationComponent;
 use NyonCode\WireCore\Modals\View\ModalComponent;
 use NyonCode\WireCore\Modals\View\SlideOverComponent;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
+use NyonCode\WireCore\Notifications\Drivers\DatabaseDriver;
 use NyonCode\WireCore\Notifications\Drivers\FlasherDriver;
 use NyonCode\WireCore\Notifications\Drivers\LivewireEventDriver;
 use NyonCode\WireCore\Notifications\Drivers\NullDriver;
 use NyonCode\WireCore\Notifications\Drivers\SessionDriver;
+use NyonCode\WireCore\Notifications\Drivers\StackDriver;
+use NyonCode\WireCore\Notifications\NotificationBell;
 use NyonCode\WireCore\Notifications\NotificationManager;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -317,23 +321,40 @@ class WireCoreServiceProvider extends PackageServiceProvider
     protected function registerNotifications(): void
     {
         $this->app->singleton(NotificationDriver::class, function ($app) {
-            $driver = $app['config']->get('wire-core.notifications.default', 'session');
+            $configured = $app['config']->get('wire-core.notifications.default', 'session');
 
-            return match ($driver) {
-                'livewire' => new LivewireEventDriver,
-                'flasher' => new FlasherDriver,
-                'null' => new NullDriver,
-                default => new SessionDriver,
-            };
+            // A list is the ordinary case, not an edge one: showing the toast
+            // *and* keeping it in the bell is what an application usually wants,
+            // and neither driver needs to know about the other.
+            $names = is_array($configured) ? array_values($configured) : [$configured];
+            $drivers = array_map(fn (mixed $name): NotificationDriver => $this->makeNotificationDriver((string) $name), $names);
+
+            return count($drivers) === 1 ? $drivers[0] : new StackDriver(...$drivers);
         });
 
         $this->app->singleton(NotificationManager::class);
+    }
+
+    protected function makeNotificationDriver(string $name): NotificationDriver
+    {
+        return match ($name) {
+            'livewire' => new LivewireEventDriver,
+            'flasher' => new FlasherDriver,
+            'database' => new DatabaseDriver,
+            'null' => new NullDriver,
+            default => new SessionDriver,
+        };
     }
 
     protected function bootNotifications(): void
     {
         // Register <x-wire-notifications::toast-container /> etc.
         Blade::componentNamespace('NyonCode\\WireCore\\Notifications\\View', 'wire-notifications');
+
+        // The bell is a Livewire component, not a Blade one: everything it does
+        // is a round trip. Registered under a stable name so a layout can mount
+        // it without knowing the class.
+        Livewire::component('wire-notification-bell', NotificationBell::class);
     }
 
     // ─── Modals ─────────────────────────────────────────────────
