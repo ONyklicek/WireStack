@@ -1,7 +1,7 @@
 ---
 title: V2 — kde to stojí a čím pokračovat
 date: 2026-08-30
-scope: V2.0–V2.3 (hotové), V2.4 (N+Q hotové, T+WF zbývá), ADR 0025 (rozpracované), V2.5/V2.6 (na řadě)
+scope: V2.0–V2.3 (hotové), V2.4 (N+Q+T hotové, WF zbývá), ADR 0025 (rozpracované), V2.5/V2.6 (na řadě)
 status: progress record — aktualizovat na konci každého běhu
 ---
 
@@ -140,16 +140,17 @@ a `I` (boost `describe-resource`).
 dává owner vrstvu nahoru, ne dolů) a tvar kontraktu (osmimetodový interface
 neprojde vlastním standardem repa).
 
-### V2.4 — ERP execution 🟡 (N + Q hotové)
+### V2.4 — ERP execution 🟡 (N + Q + T hotové)
 
-Čtyři nezávislé balíky. **T** (tenancy) a **WF** (workflow) zbývají.
+Čtyři nezávislé balíky. Zbývá **WF** (workflow) a **Q-3** (export/import na frontě).
 
 | Balík | Co vzniklo |
 |---|---|
 | **N** ✅ | `Notifications\{DatabaseNotification, NotificationCenter, NotificationBell}`, `Drivers\{DatabaseDriver, StackDriver}`, `Contracts\ResolvesNotifiable` + `AuthenticatedNotifiable`, migrace, EN/CS překlady. Config `default` bere **seznam** driverů |
 | **Q** ✅ (Q-1/2/4) | `Actions\Concerns\Queueable` na `BaseAction`, `Actions\Jobs\RunActionJob`, `Exceptions\QueuedActionException`, seamy `resolveActionByName()` / `resolveRecordsByKey()` na table hostiteli |
 | **Q-3** | **nedělat tak, jak plán psal** — viz §2 |
-| **T**, **WF** | nezačaté |
+| **T** ✅ | `Core\Tenancy\{Tenancy, TenantScope, NullTenantResolver}`, `Contracts\TenantResolver`, `Concerns\BelongsToTenant`, `Exceptions\TenancyException`, config. **Globální scope, ne plugin hook** — viz §2 |
+| **WF** | nezačaté |
 
 **Plán poprvé v téhle sérii seděl na stavu kódu**: všechny čtyři balíky opravdu
 nula v `src`. Jediná korekce: WF-4 počítá se `StatusColumn` z V2.1 B-2, který byl
@@ -440,6 +441,40 @@ kontejneru. Takže **diagnostika chyby v hintu spadla místo aby ji nahlásila**
 přesně ve standalone kontextu, který má `CLAUDE.md` v požadavcích („testable in
 isolation, usable from other contexts"). Chybějící půlka je `app()->bound('config')`.
 
+**V2.4/T: hook, který plán jmenuje, tenancy vynutit nemůže — a bezpečnost se
+nedá stavět na seamu, který se nemusí spustit.** T-2 chce registrovat
+`table.querying` hook na prioritě -100 a scopnout query. Změřeno:
+
+- **polový** `table.querying` hook (krok 2.5 v `TableQueryService`) dostane
+  `table`, `columns`, `filters`, `sort_*`, `search` — **query vůbec ne**;
+- **typovaný** (krok 3.5) query má, ale jeho vlastní docblok ho vede jako
+  „read-only plan inspection or observation";
+- oba se spustí **jen když je navázaný `PluginManager`** (`if ($pluginManager !== null)`);
+- a i kdyby, pokryjí jednu čtecí cestu. Nic z toho neplatí pro `SaveHandler`,
+  relaci, export, frontovaný job ani `Model::find()` v controlleru aplikace.
+
+Tenancy, která drží na výpisu tabulky a nedrží na `find()`, není tenancy. T-4
+říká „scope se aplikuje na source" a míří správně, ale ještě dál sahá **globální
+Eloquent scope**: pokryje každý dotaz, který Eloquent postaví, včetně `update()`
+a `delete()`, které by hook nikdy neviděl. Proto `Core\Tenancy\TenantScope` +
+`Concerns\BelongsToTenant`, ne `TenancyPlugin`.
+
+**Fail-safe je zapsaný tak, aby šel asertovat přímo**, ne přes počet řádků:
+`Tenancy::shouldBlockEverything()`. Zapnutá tenancy bez tenanta emituje `0 = 1`.
+Záměrně **ne** `whereNull(sloupec)` — řádek, který nikdo nevlastní, by pak viděli
+všichni, což je tentýž únik v jiném kabátě; test na to je.
+
+**A test chytil ostrou chybu v mém vlastním návrhu.** `TenantScope` si držel
+`Tenancy` z konstruktoru. Globální scope se ale přidává **jednou na třídu na
+proces**, takže by odpovídal podle toho, kdo byl aktuální při prvním doteku toho
+modelu — špatně na druhém requestu pod Octane a u každého jobu po prvním. Teď se
+`Tenancy` resolvuje až v `apply()`.
+
+Sedm mutací, sedm chycených — až po tom, co jsem doplnil test s **joinem**:
+nekvalifikovaný sloupec jako jediný prošel, protože žádný test nejoinoval, a to
+je přesně tvar, který v produkci praskne (joinovaná tabulka mívá vlastní
+`tenant_id`).
+
 **V2.4/Q: exekuční cesta akcí je stavěná pro živou komponentu s modálem, a to
 mění, co „queued action" vůbec může znamenat.** `actionCallbackBindings()` dává
 callbacku `set`, `setParent`, `setFrame`, `close`, `replace` — samé operace nad
@@ -630,6 +665,7 @@ počet výskytů `new`, ne na to, co ty výskyty jsou.
 | Systematické hledání duplicitních abstrakcí napříč V2 | Průřez auditu padl na session limit. `DataSourceCapabilities`/`CapabilitySet` byl nalezen mimo audit a nejspíš nezůstal sám | [`v2-audit-2026-08-26.md`](v2-audit-2026-08-26.md) §6 |
 | `ShellRenderPlan`, `InteractionRenderPlan` — host pořád `mixed` | Polling, live kanál, readiness, přístup ke stavu nemají pojmenovaný kontrakt | [`v2.1-…`](v2.1-monolith-split-implementation.md) §0a |
 | `resolveActionType()` — public static, **nula volajících v src** | Nález z kroku 9; plugin API, nebo mrtvý kód. Nerozhodnuto | — |
+| Tenancy nekryje non-Eloquent `DataSource` | Globální Eloquent scope nemá co scopovat u `CollectionDataSource` ani u zdroje nad API. Zdokumentované v `docs/authorization.md` jako „co scopované není"; správné místo je dekorátor nad `DataSource` (T-4 tak, jak ho plán psal). **Dokud to nevznikne, tenancy nezapínej nad non-Eloquent zdrojem** | [`v2.4-…`](v2.4-erp-execution-implementation.md) T-4 |
 | `Core\Hydration\MutationPipeline` — nula volajících, **ale zůstává** | Nález S3. Sourozenec `Hydrator` byl smazán (nula volajících, žádný plán); `MutationPipeline` **ne** — `v2-deferred-items.md` §3.2 je živý nedodělaný plán na jeho zapojení do `dehydrate()` (`mutateDataBeforeSave()` jako before-hook). Není zapomenutý, je postavený dopředu. **Rozhodnuto vlastníkem repa 2026-08-30: nechat.** Zapojit ho znamená dodělat §3.2 jako vlastní krok | [`v2-deferred-items.md`](v2-deferred-items.md) §3.2 |
 | `v2-deferred-items.md` §3 je hotová z jedné čtvrtiny, ne celá | V2.2 korekční tabulka ji označila za HOTOVOU. Hotová je **§3.1** (Dehydrator v `persist()`). §3.2 (MutationPipeline) a §3.3 (relation dehydrace) ne — `RelationshipSaveHandler` pořád ručně iteruje 174 řádků. §3.4 (BC) je bezpředmětná, dokud §3.2 nepadne | [`v2-deferred-items.md`](v2-deferred-items.md) §3 |
 | Boost guidelines neznají plugin hooky | `guidelines/` ani `skills/` nepopisují `PluginManager` vůbec — takže pravidlo „hint rozhoduje dispatcher" tam není a nemohlo zestárnout. Doplnit až s vlastní plugin sekcí, ne ad hoc | — |
@@ -646,7 +682,7 @@ co v nich měření změnilo, je v §1 a §2; tahle sekce je jen o tom, co dál.
 
 | Fáze | Obsah | Poznámka před startem |
 |---|---|---|
-| **V2.4** | 🟡 **N a Q hotové**; zbývá **T** (tenancy, 🔴 bezpečnost) a **WF** (workflow) | T má go/no-go na fail-safe testu: resolver=null → 0 řádků, žádný leak. `WF-4` má napojit `BadgeColumn`, ne nový `StatusColumn` — ta závislost padla v kroku 14. **Q-3** (export/import) potřebuje nejdřív režim zápisu na disk v exportérech, viz §2 |
+| **V2.4** | 🟡 **N, Q a T hotové**; zbývá **WF** (workflow) a **Q-3** | T prošla svou go/no-go bránou (fail-safe: resolver=null → 0 řádků), ale **non-Eloquent `DataSource` scopovaný není** — globální scope nemá co scopovat, viz §3. `WF-4` má napojit `BadgeColumn`, ne nový `StatusColumn`. **Q-3** potřebuje nejdřív režim zápisu na disk v exportérech, viz §2 |
 | **V2.5** | saved views · global search · large-table UX | **Global search patří do `wire-panels`**, ne do `core/src/GlobalSearch/`, jak ho vede master plán. Staví nad `ResourceRegistry` a core na table nevidí — je to přesně ten cyklus, kvůli kterému se owner vrstva stěhovala, viz §2 |
 | **V2.6** | domain modules | `Workspace` je zamýšlený seam; grupuje resources a nevlastní routing |
 

@@ -103,6 +103,32 @@ return [
         //
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Multi-tenancy
+    |--------------------------------------------------------------------------
+    |
+    | Off by default: most applications have one tenant, and scoping them would
+    | be a WHERE clause bought for nothing. Once on it is strict — every model
+    | using BelongsToTenant is constrained, and when no tenant resolves, it is
+    | constrained to NOTHING rather than to everything.
+    |
+    | Bind your own resolver; the default answers null, which with tenancy on
+    | means an empty page until you do:
+    |
+    |   app()->bind(TenantResolver::class, fn () => new class implements TenantResolver {
+    |       public function resolve(): int|string|null
+    |       {
+    |           return auth()->user()?->tenant_id;
+    |       }
+    |   });
+    |
+    */
+    'tenancy' => [
+        'enabled' => env('WIRE_TENANCY', false),
+        'column' => env('WIRE_TENANCY_COLUMN', 'tenant_id'),
+    ],
+
     'plugins' => [
         // App\Wire\Plugins\ExamplePlugin::class,
     ],

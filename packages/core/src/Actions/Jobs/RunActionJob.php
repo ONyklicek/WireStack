@@ -189,9 +189,14 @@ class RunActionJob implements ShouldQueue
 
         $manager = 'NyonCode\\WireCore\\Notifications\\NotificationManager';
 
+        // Unreachable here — Notifications ships with wire-core — and present
+        // for the same reason HasLifecycle's resolver is: the seam has to
+        // degrade for a build that strips the module.
+        // @codeCoverageIgnoreStart
         if (! class_exists($manager)) {
             return;
         }
+        // @codeCoverageIgnoreEnd
 
         $manager::{$result->isSuccess() ? 'success' : 'error'}($this->completionMessage);
     }

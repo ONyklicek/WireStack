@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Facades\Schema;
+use NyonCode\WireCore\Notifications\AuthenticatedNotifiable;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireCore\Notifications\Contracts\ResolvesNotifiable;
 use NyonCode\WireCore\Notifications\DatabaseNotification;
 use NyonCode\WireCore\Notifications\Drivers\DatabaseDriver;
+use NyonCode\WireCore\Notifications\Drivers\FlasherDriver;
+use NyonCode\WireCore\Notifications\Drivers\LivewireEventDriver;
+use NyonCode\WireCore\Notifications\Drivers\NullDriver;
+use NyonCode\WireCore\Notifications\Drivers\SessionDriver;
 use NyonCode\WireCore\Notifications\Drivers\StackDriver;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationCenter;
@@ -21,6 +27,16 @@ use NyonCode\WireCore\Notifications\NotificationCenter;
  * twenty minutes later — by then there is no component to dispatch to and no
  * session to flash into.
  */
+/** A Model that is also Authenticatable — the shape an application's User has. */
+class DnAuthUser extends User
+{
+    protected $table = 'dn_users';
+
+    protected $guarded = [];
+
+    public $timestamps = false;
+}
+
 class DnUser extends Model
 {
     protected $table = 'dn_users';
@@ -242,4 +258,87 @@ it('answers empty for everything when there is no recipient', function () {
         ->and($center->unread())->toBeEmpty()
         ->and($center->markAsRead('any'))->toBeFalse()
         ->and($center->markAllAsRead())->toBe(0);
+});
+
+it('resolves the recipient it was stored against', function () {
+    // The morph relation is how an application reads a notification back to a
+    // user — the same shape Laravel's own Notifiable::notifications() uses.
+    (new DatabaseDriver(dnResolver($this->ada)))->send(Notification::success('one'));
+
+    expect(DatabaseNotification::query()->sole()->notifiable()->first()?->name)->toBe('Ada');
+});
+
+it('can be marked unread again', function () {
+    // The counterpart of markAsRead, and idempotent for the same reason: an
+    // already-unread notification has no timestamp to clear.
+    (new DatabaseDriver(dnResolver($this->ada)))->send(Notification::success('one'));
+
+    $row = DatabaseNotification::query()->sole();
+    $row->markAsRead();
+    expect($row->fresh()->isRead())->toBeTrue();
+
+    $row->fresh()->markAsUnread();
+    expect(DatabaseNotification::query()->sole()->isRead())->toBeFalse();
+
+    // Already unread: nothing to do, and nothing done.
+    DatabaseNotification::query()->sole()->markAsUnread();
+    expect(DatabaseNotification::query()->sole()->read_at)->toBeNull();
+});
+
+it('falls back to the authenticated user, and to nobody when there is none', function () {
+    // The bound default. It answers null rather than throwing outside an auth
+    // context — a worker, a console command — which is what makes the driver's
+    // "write nothing" branch the ordinary path there rather than an error.
+    expect((new AuthenticatedNotifiable)->resolve())->toBeNull();
+
+    // A model that is also Authenticatable, which is what an application's User
+    // is — the resolver returns it only when both hold.
+    auth()->setUser(new DnAuthUser(['id' => 1, 'name' => 'Ada']));
+
+    expect((new AuthenticatedNotifiable)->resolve()?->getKey())->toBe(1);
+});
+
+// ─── Choosing drivers from config ────────────────────────────────────────────
+
+it('builds the driver the config names', function () {
+    foreach ([
+        'session' => SessionDriver::class,
+        'livewire' => LivewireEventDriver::class,
+        'database' => DatabaseDriver::class,
+        'flasher' => FlasherDriver::class,
+        'null' => NullDriver::class,
+        'nonsense' => SessionDriver::class,   // an unknown name falls back, it does not fatal
+    ] as $name => $expected) {
+        config()->set('wire-core.notifications.default', $name);
+        app()->forgetInstance(NotificationDriver::class);
+
+        expect(app(NotificationDriver::class))->toBeInstanceOf($expected);
+    }
+});
+
+it('stacks the drivers a list names, and does not stack a single one', function () {
+    // The pairing the config comment recommends: toast now, record in the bell.
+    config()->set('wire-core.notifications.default', ['session', 'database']);
+    app()->forgetInstance(NotificationDriver::class);
+
+    expect(app(NotificationDriver::class))->toBeInstanceOf(StackDriver::class);
+
+    // A list of one is still just that one — no wrapper bought for nothing.
+    config()->set('wire-core.notifications.default', ['database']);
+    app()->forgetInstance(NotificationDriver::class);
+
+    expect(app(NotificationDriver::class))->toBeInstanceOf(DatabaseDriver::class);
+
+    config()->set('wire-core.notifications.default', 'session');
+});
+
+it('answers nobody when the auth guard itself cannot be resolved', function () {
+    // Not a defensive flourish: a console command or a misconfigured guard has
+    // no auth context at all, and the resolver has to answer rather than throw —
+    // the same fail-quiet choice HasAuthorization makes.
+    config()->set('auth.defaults.guard', 'no-such-guard');
+
+    expect((new AuthenticatedNotifiable)->resolve())->toBeNull();
+
+    config()->set('auth.defaults.guard', 'web');
 });

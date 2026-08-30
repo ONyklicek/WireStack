@@ -52,10 +52,4 @@ final class StackDriver implements NotificationDriver
             throw $failure;
         }
     }
-
-    /** @return array<int, NotificationDriver> */
-    public function drivers(): array
-    {
-        return $this->drivers;
-    }
 }

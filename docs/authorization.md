@@ -187,3 +187,94 @@ See [Sortable Row Reordering](sortable/row-sorting.md) for lifecycle hooks.
 | [Table Overview](table/overview.md) | Table setup and table-level API |
 | [Forms Overview](forms/overview.md) | Form setup and save behavior |
 | [Audit Log](core/audit.md) | Recording model changes after authorization succeeds |
+
+## Multi-tenancy
+
+Off by default — most applications have one tenant, and scoping them would be a
+`WHERE` clause bought for nothing. Once on it is **strict**.
+
+```php
+// config/wire-core.php
+'tenancy' => [
+    'enabled' => true,
+    'column' => 'tenant_id',
+],
+```
+
+Bind a resolver; the default answers null, which with tenancy on means an empty
+page until you do:
+
+```php
+use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
+
+app()->bind(TenantResolver::class, fn () => new class implements TenantResolver {
+    public function resolve(): int|string|null
+    {
+        return auth()->user()?->tenant_id;
+    }
+});
+```
+
+Then mark the models that belong to a tenant:
+
+```php
+use NyonCode\WireCore\Core\Tenancy\Concerns\BelongsToTenant;
+
+class Invoice extends Model
+{
+    use BelongsToTenant;   // [tl! focus]
+}
+```
+
+Opt-in per model, because the framework cannot know which of your tables are
+tenant-owned, and guessing would be a guess about who may see what.
+
+### The fail-safe
+
+**Tenancy on with no tenant resolved returns nothing, never everything.**
+
+That is the whole security story in one line. Every ordinary state produces a
+null tenant — before login, on a queue worker, in a console command — so a scope
+that read null as "no constraint" would hand every row to every one of them. The
+scope constrains to `0 = 1` instead.
+
+It is deliberately not `where tenant_id is null` either: a row nobody owns would
+then be visible to *everybody*, which is the same leak wearing a different shape.
+
+### What is scoped
+
+A **global scope**, not a plugin hook — and that choice is the point. A hook
+covers one read path, and only while a plugin manager happens to be bound. A
+global scope covers every query Eloquent builds:
+
+| | Scoped |
+| --- | --- |
+| `Invoice::query()`, a table listing, a relation | yes |
+| `Invoice::find($id)` in your own controller | yes |
+| `->update()` and `->delete()` | yes |
+| A queued job resolving records by key | yes |
+| `Invoice::create()` | attributed to the current tenant |
+
+A create with no tenant resolved **throws** rather than writing a row with a null
+tenant — that row would be invisible to every scoped query afterwards, so the
+user's work would be gone with nothing said. An explicitly set tenant column is
+left alone, for a seeder or a deliberate cross-tenant move.
+
+The column is qualified, because a scoped model is routinely joined and a joined
+table commonly has a `tenant_id` of its own.
+
+### Reading across tenants
+
+```php
+Invoice::acrossAllTenants()->count();
+```
+
+Verbose on purpose, and easy to grep for: an admin report or a console command
+has a real need, and a review should be able to find every place that claimed
+one.
+
+### What is not scoped
+
+A non-Eloquent `DataSource` — a `CollectionDataSource`, an API-backed source —
+is **not** covered by a global scope, because there is no Eloquent query to scope.
+Constrain those in the source itself.

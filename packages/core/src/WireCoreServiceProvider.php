@@ -26,6 +26,9 @@ use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
 use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
+use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
+use NyonCode\WireCore\Core\Tenancy\NullTenantResolver;
+use NyonCode\WireCore\Core\Tenancy\Tenancy;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireCore\Foundation\Components\Component;
@@ -71,6 +74,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
                 $this->registerNotifications();
                 $this->registerPlugins();
                 $this->registerResources();
+                $this->registerTenancy();
             })
             ->bootedPackage(function ($packager) {
                 $this->bootFoundation();
@@ -382,6 +386,22 @@ class WireCoreServiceProvider extends PackageServiceProvider
      * must see the same set, and a resource added in code has to survive the
      * request that added it.
      */
+    /**
+     * Bind the tenancy seam.
+     *
+     * The resolver defaults to "no tenant" rather than to the authenticated
+     * user: the framework does not know which column holds an application's
+     * tenant, and guessing would be a guess about who may see what. With
+     * tenancy off the default costs nothing; with it on, an application that
+     * has not bound its own resolver sees an empty page, which is the safe
+     * direction to fail in.
+     */
+    protected function registerTenancy(): void
+    {
+        $this->app->bindIf(TenantResolver::class, NullTenantResolver::class);
+        $this->app->singleton(Tenancy::class);
+    }
+
     protected function registerResources(): void
     {
         $this->app->singleton(ResourceRegistry::class);

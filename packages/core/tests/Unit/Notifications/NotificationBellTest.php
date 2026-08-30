@@ -133,3 +133,13 @@ it('caps the list without capping the count', function () {
         ->assertSee('note 4')
         ->assertDontSee('note 1');
 });
+
+it('re-reads when told a notification landed', function () {
+    // The listener exists so an application that knows one arrived can say so;
+    // re-rendering is the refresh, which is why the handler has no body.
+    $this->driver->send(Notification::success('Export ready'));
+
+    Livewire::test('wire-notification-bell')
+        ->dispatch('wire-notification-received')
+        ->assertSee('Export ready');
+});

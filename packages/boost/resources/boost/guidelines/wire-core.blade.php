@@ -103,6 +103,31 @@ Standalone Blade tags mirror them for plain views: `<x-wire::grid>`, `<x-wire::f
 The standalone tabs/wizard are client-side only (no per-step validation) — use action-modal wizards or
 form schema for validated flows.
 
+### Multi-tenancy
+
+Off by default (`wire-core.tenancy.enabled`), **strict once on**. Bind a `TenantResolver`; the shipped default
+answers null. Mark models with `BelongsToTenant` — opt-in per model, because the framework cannot know which
+tables are tenant-owned and guessing would be a guess about who may see what.
+
+**The fail-safe is the whole story: tenancy on with no tenant resolved returns NOTHING, never everything.**
+Every ordinary state produces a null tenant (before login, a worker, a console command), so reading null as "no
+constraint" hands every row to every one of them. The scope emits `0 = 1`. It is deliberately **not**
+`where tenant_id is null` either — an unowned row would then be visible to everybody.
+
+**A global scope, not a plugin hook.** A hook covers one read path and only while a PluginManager is bound; a
+global scope covers every query Eloquent builds — a listing, a relation, `find()` in the app's own controller,
+`update()`, `delete()`, and a queued job resolving by key. `create()` is attributed to the current tenant and
+**throws** when none resolves, because a row with a null tenant is invisible to every scoped query afterwards:
+the user's work is gone and nothing said so. An explicitly set column is left alone (seeder, deliberate move).
+The column is qualified — a scoped model is routinely joined and joined tables carry their own `tenant_id`.
+
+`Model::acrossAllTenants()` steps past it, verbosely and greppably, for admin reports and console commands.
+**Not covered:** a non-Eloquent `DataSource` has no Eloquent query to scope — constrain it in the source.
+
+Resolve `Tenancy` per query, never hold it: a global scope is added once per model class per process, so a
+captured instance answers with whoever was current the first time that model was touched — wrong on the second
+Octane request and every job after the first.
+
 ### Queued actions
 
 `->queue()` / `->onQueue('reports')` / `->onConnection('redis')` on any action (naming a queue or connection

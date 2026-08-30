@@ -62,3 +62,4 @@ parameters:
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTable.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTableQueryString.php }
         - { identifier: trait.unused, path: packages/core/src/Core/Resources/Concerns/DescribesRecords.php }
+        - { identifier: trait.unused, path: packages/core/src/Core/Tenancy/Concerns/BelongsToTenant.php }

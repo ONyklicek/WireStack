@@ -187,3 +187,92 @@ Lifecycle hooky viz [Sortable řazení řádků](sortable/row-sorting.md).
 | [Přehled tabulek](table/overview.md) | Nastavení tabulky a API na úrovni tabulky |
 | [Přehled formulářů](forms/overview.md) | Nastavení formuláře a chování ukládání |
 | [Audit Log](core/audit.md) | Záznam změn modelů po úspěšné autorizaci |
+
+## Multi-tenancy
+
+Ve výchozím stavu vypnutá — většina aplikací má jednoho tenanta a scopovat je by
+byla `WHERE` klauzule koupená za nic. Jakmile je zapnutá, je **striktní**.
+
+```php
+// config/wire-core.php
+'tenancy' => [
+    'enabled' => true,
+    'column' => 'tenant_id',
+],
+```
+
+Naváž resolver; výchozí odpovídá null, což se zapnutou tenancy znamená prázdnou
+stránku, dokud to neuděláš:
+
+```php
+use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
+
+app()->bind(TenantResolver::class, fn () => new class implements TenantResolver {
+    public function resolve(): int|string|null
+    {
+        return auth()->user()?->tenant_id;
+    }
+});
+```
+
+Pak označ modely, které tenantovi patří:
+
+```php
+use NyonCode\WireCore\Core\Tenancy\Concerns\BelongsToTenant;
+
+class Invoice extends Model
+{
+    use BelongsToTenant;   // [tl! focus]
+}
+```
+
+Opt-in per model, protože framework nemůže vědět, které z tvých tabulek tenant
+vlastní, a hádat by znamenalo hádat, kdo co smí vidět.
+
+### Fail-safe
+
+**Zapnutá tenancy bez resolvovaného tenanta vrací nic, nikdy vše.**
+
+To je celý bezpečnostní příběh v jedné větě. Každý běžný stav vyrobí null
+tenanta — před přihlášením, na queue workeru, v konzolovém příkazu — takže scope,
+který by null četl jako „bez omezení", by každému z nich podal všechny řádky.
+Místo toho omezí na `0 = 1`.
+
+Záměrně to není ani `where tenant_id is null`: řádek, který nikdo nevlastní, by
+pak viděli **všichni**, což je tentýž únik v jiném kabátě.
+
+### Co je scopované
+
+**Globální scope, ne plugin hook** — a ta volba je pointa. Hook pokryje jednu
+čtecí cestu, a jen když je zrovna navázaný plugin manager. Globální scope pokryje
+každý dotaz, který Eloquent postaví:
+
+| | Scopované |
+| --- | --- |
+| `Invoice::query()`, výpis tabulky, relace | ano |
+| `Invoice::find($id)` ve tvém vlastním controlleru | ano |
+| `->update()` a `->delete()` | ano |
+| Frontovaný job resolvující záznamy podle klíče | ano |
+| `Invoice::create()` | připíše se aktuálnímu tenantovi |
+
+Create bez resolvovaného tenanta **vyhodí výjimku** místo zápisu řádku s null
+tenantem — takový řádek by pak byl neviditelný pro každý scopovaný dotaz, takže
+by uživatelova práce byla pryč a nikdo by to neřekl. Explicitně nastavený sloupec
+se nechá být, kvůli seederu nebo záměrnému přesunu mezi tenanty.
+
+Sloupec je kvalifikovaný, protože scopovaný model se běžně joinuje a joinovaná
+tabulka mívá vlastní `tenant_id`.
+
+### Čtení napříč tenanty
+
+```php
+Invoice::acrossAllTenants()->count();
+```
+
+Záměrně upovídané a snadno greppovatelné: admin report nebo konzolový příkaz má
+reálnou potřebu a revize musí najít každé místo, které si ji nárokovalo.
+
+### Co scopované není
+
+Non-Eloquent `DataSource` — `CollectionDataSource`, zdroj nad API — globální
+scope **nepokrývá**, protože není co scopovat. Ty omez ve zdroji samotném.

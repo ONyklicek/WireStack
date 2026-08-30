@@ -35,6 +35,15 @@ class QaRow extends Model
     public $timestamps = false;
 }
 
+/** A host that is not an action host at all — no resolveActionByName(). */
+class QaNotAHost {}
+
+/** A host whose constructor a container cannot satisfy. */
+class QaUnbuildable
+{
+    public function __construct(private string $required) {}
+}
+
 class QaHost extends Component
 {
     use WithTable;
@@ -74,7 +83,12 @@ class QaHost extends Component
             ->model(QaRow::class)
             ->paginated(false)
             ->columns([TextColumn::make('name')])
-            ->actions([$recalculate]);
+            ->actions([
+                $recalculate,
+                // No ->action(): the job must treat "nothing to run" as success,
+                // not as a missing action.
+                Action::make('noop')->label('Noop'),
+            ]);
     }
 
     public function render()
@@ -229,4 +243,35 @@ it('says nothing when no completion message was asked for', function () {
     expect($sent)->toBe([]);
 
     NotificationManager::reset();
+});
+
+it('resolves nothing for an empty key set, without asking the database', function () {
+    // A job dispatched from a header action carries no records at all; the
+    // short-circuit is what stops that becoming `whereIn(pk, [])`.
+    expect((new QaHost)->resolveRecordsByKey([]))->toBe([]);
+
+    // And through the job, which is where a header action actually arrives.
+    (new RunActionJob(QaHost::class, 'recalculate', []))->handle();
+
+    expect(QaHost::$ran)->toBe(['records:']);
+});
+
+it('says so when the host cannot be constructed', function () {
+    // A component whose constructor needs a request cannot have its actions
+    // queued, and the job says which class rather than failing deep in the
+    // container.
+    expect(fn () => (new RunActionJob(QaUnbuildable::class, 'x', []))->handle())
+        ->toThrow(QueuedActionException::class, 'could not be built');
+});
+
+it('says so when the named host is not an action host', function () {
+    expect(fn () => (new RunActionJob(QaNotAHost::class, 'x', []))->handle())
+        ->toThrow(QueuedActionException::class, 'could not be built');
+});
+
+it('runs an action that has no callback of its own', function () {
+    // A behaviour-only action whose work is entirely in its after-callbacks.
+    (new RunActionJob(QaHost::class, 'noop', [1]))->handle();
+
+    expect(QaHost::$ran)->toBe([]);
 });
