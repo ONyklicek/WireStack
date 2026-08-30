@@ -84,6 +84,7 @@ return [
     'details_section' => 'Details',
     'expand_all_rows' => 'Expand on every row',
     'export_label' => 'Export',
+    'import_queued' => 'The import is running in the background.',
     'import_label' => 'Import',
     'import_result' => 'Imported :imported row(s), :failed failed.',
 
@@ -166,4 +167,8 @@ return [
     'shortcut_run_action' => 'Run “:action”',
     'shortcut_context_menu' => 'Open the row menu',
     'shortcut_show_help' => 'Show keyboard shortcuts',
+
+    // Queued exports ({@see Export\Jobs\RunExportJob}).
+    'export_queued' => 'The export is being prepared in the background.',
+    'export_ready' => 'Your export is ready: :file',
 ];

@@ -136,6 +136,39 @@ Importér zvládá UTF-8 BOM, prázdné řádky a řádky s méně/více buňkam
 | `rules(array)` | `ImportColumn` | Validační pravidla per buňka |
 | `castStateUsing(Closure)` | `ImportColumn` | Transformovat surovou hodnotu buňky |
 | `guess(array)` | `ImportColumn` | Alternativní názvy hlaviček |
+| `importTable(string)` | hostitel | Spustí import hned, z reálné cesty |
+| `queueTableImport(string, ?string)` | hostitel | Spustí ho na workeru, z cesty na disku |
+
+## Import na frontě
+
+Import byl už předtím cesta dovnitř, výsledek ven — přesun na frontu proto v jeho
+pipeline nemění nic. Job přidává ty tři věci, které si od requestu vypůjčit
+nemůže: soubor, který ho přežije, výsledek, který má kam jít, a selhání, které je
+vidět.
+
+```php
+public function importInBackground(): void
+{
+    $path = $this->file->store('imports', 's3'); // [tl! focus]
+
+    $this->queueTableImport($path, 's3'); // [tl! focus]
+}
+```
+
+**Nahraný soubor nejdřív ulož a předej to, co uložení vrátí.**
+`queueTableImport()` bere **cestu na disku**, ne reálnou cestu dočasného uploadu:
+worker může být klidně jiný stroj a dočasný soubor Livewire tam v tu chvíli
+nebude.
+
+Výsledek přijde jako notifikace — počet naimportovaných a odmítnutých řádků —
+protože import na frontě nemá návratovou hodnotu. Běh, který nějaké řádky
+odmítl, hlásí **varování**, ne úspěch: import, který potichu zahodil řádek, je
+přesně ten druh úspěchu, o kterém je lepší vědět.
+
+**Chybějící soubor job položí.** Čtečka CSV bere nečitelnou cestu jako „žádné
+řádky", což je správně, když se uživatel dívá, a lež, když běží fronta:
+„naimportováno 0 řádků, 0 chyb" se nedá odlišit od prázdného souboru. Worker,
+který upload nenajde, vyhodí `ImportException` a zkusí to znovu.
 
 ## Související dokumentace
 

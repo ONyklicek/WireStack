@@ -27,6 +27,7 @@ use NyonCode\WireCore\Core\Events\CellUpdating;
 use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\Support\Deprecation;
+use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Foundation\Concerns\InteractsWithPartials;
 use NyonCode\WireCore\Notifications\Notification;
@@ -43,10 +44,12 @@ use NyonCode\WireTable\Data\EloquentDataSource;
 use NyonCode\WireTable\Events\TableRecordsChanged;
 use NyonCode\WireTable\Export\ExportAction;
 use NyonCode\WireTable\Export\ExportFormat;
+use NyonCode\WireTable\Export\Jobs\RunExportJob;
 use NyonCode\WireTable\Export\TableExport;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Import\ImportAction;
 use NyonCode\WireTable\Import\ImportResult;
+use NyonCode\WireTable\Import\Jobs\RunImportJob;
 use NyonCode\WireTable\Import\TableImport;
 use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
 use NyonCode\WireTable\Preferences\TablePreferenceManager;
@@ -2402,7 +2405,25 @@ trait WithTable
      */
     public function exportTable(string $format = 'csv'): StreamedResponse
     {
-        $exportFormat = ExportFormat::from($format);
+        [$export, $query, $columns] = $this->buildTableExport(ExportFormat::from($format));
+
+        return $export->download($query, $columns);
+    }
+
+    /**
+     * The export this table would produce: its config, its filtered query and
+     * its visible columns.
+     *
+     * Public and separate because a queued export needs exactly this and cannot
+     * get it from a response. {@see RunExportJob}
+     * rebuilds the host and calls it, so a download and a queued file are the
+     * same export delivered two ways rather than two exports that happen to
+     * agree today.
+     *
+     * @return array{0: TableExport, 1: Builder<Model>, 2: array<int, Column>}
+     */
+    public function buildTableExport(ExportFormat $format): array
+    {
         $table = $this->getTable();
 
         // Find ExportAction config if defined
@@ -2414,7 +2435,7 @@ trait WithTable
             }
         }
 
-        $export = ($exportConfig ?? TableExport::make())->format($exportFormat);
+        $export = ($exportConfig ?? TableExport::make())->format($format);
 
         // Use current filtered query
         $query = $this->getFilteredTableQuery();
@@ -2425,7 +2446,47 @@ trait WithTable
             fn (Column $col) => $col->canView() && ! in_array($col->getName(), $this->tableState->get('columns.hidden', []), true),
         ));
 
-        return $export->download($query, $columns);
+        return [$export, $query, $columns];
+    }
+
+    /**
+     * Hand the export to a worker instead of streaming it now.
+     *
+     * For the case a download cannot serve: an export whose query would outlast
+     * the request. The file lands on a disk and a notification says where —
+     * which needs a notification that survives the request, hence the database
+     * driver.
+     */
+    public function queueTableExport(string $format = 'csv', ?string $disk = null, string $directory = 'exports'): void
+    {
+        // The state travels with it: without that the worker mounts fresh and a
+        // user who filtered to twenty rows would receive all ten thousand.
+        RunExportJob::dispatch(static::class, $format, $disk, $directory, $this->tableState->all());
+
+        $this->sendNotification(Notification::info(
+            Trans::get('wire-table::messages.export_queued')
+        ));
+    }
+
+    /**
+     * Hand an uploaded file to a worker and return immediately.
+     *
+     * Takes a **disk path**, not the temp upload's real path: the worker may be
+     * another machine, and a Livewire temp file will not be there when it looks.
+     * Store the upload first — `$file->store('imports')` — and pass what that
+     * returns.
+     *
+     * The import itself is unchanged; see
+     * {@see RunImportJob} for why this needed
+     * no second copy of anything, unlike the export.
+     */
+    public function queueTableImport(string $path, ?string $disk = null): void
+    {
+        RunImportJob::dispatch(static::class, $path, $disk);
+
+        $this->sendNotification(Notification::info(
+            Trans::get('wire-table::messages.import_queued')
+        ));
     }
 
     /**

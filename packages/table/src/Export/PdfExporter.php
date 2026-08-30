@@ -37,17 +37,67 @@ class PdfExporter implements Exporter
      * @param  array<int, Column>  $columns
      * @param  array<int, array<int, string>>  $summaryRows
      */
+    /**
+     * Correct a file name to the extension actually being written.
+     */
+    private function rename(string $fileName): string
+    {
+        return preg_replace('/\.[^.]+$/', '.'.$this->extension(), $fileName) ?? $fileName;
+    }
+
+    public function extension(): string
+    {
+        return static::isAvailable() ? 'pdf' : 'csv';
+    }
+
+    public function writeTo(string $path, Builder $query, array $columns, array $summaryRows = []): void
+    {
+        if (! static::isAvailable()) {
+            (new CsvExporter(withHeadings: $this->withHeadings))
+                ->writeTo($path, $query, $columns, $summaryRows);
+
+            return;
+        }
+
+        file_put_contents($path, $this->render($query, $columns, $summaryRows)->output());
+    }
+
     public function export(Builder $query, array $columns, string $fileName, array $summaryRows = []): StreamedResponse
     {
         if (! static::isAvailable()) {
-            // Fallback to CSV
-            $csvFileName = str_replace('.pdf', '.csv', $fileName);
+            // Fallback to CSV, filename included: the reader has to be told what
+            // they actually got.
+            $csvFileName = $this->rename($fileName);
 
             return (new CsvExporter(withHeadings: $this->withHeadings))
                 ->export($query, $columns, $csvFileName, $summaryRows);
         }
 
-        // Collect all records (PDF can't stream chunks)
+        $pdf = $this->render($query, $columns, $summaryRows);
+
+        return new StreamedResponse(function () use ($pdf) {
+            echo $pdf->output();
+        }, 200, [
+            'Content-Type' => ExportFormat::Pdf->mimeType(),
+            'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+        ]);
+    }
+
+    /**
+     * Build the document.
+     *
+     * Unlike the other two this one cannot stream: a PDF's layout depends on the
+     * whole set, so the rows are collected before anything is rendered. That is
+     * the reason a large PDF export belongs on a queue rather than in a request,
+     * and why the memory cost is stated here rather than discovered.
+     *
+     * @param  Builder<Model>  $query
+     * @param  array<int, Column>  $columns
+     * @param  array<int, array<int, string>>  $summaryRows
+     */
+    protected function render(Builder $query, array $columns, array $summaryRows): PDF
+    {
         $records = $query->get();
 
         $headings = $this->withHeadings
@@ -75,13 +125,7 @@ class PdfExporter implements Exporter
 
         $pdf->setPaper($this->paperSize, $this->orientation);
 
-        return new StreamedResponse(function () use ($pdf) {
-            echo $pdf->output();
-        }, 200, [
-            'Content-Type' => ExportFormat::Pdf->mimeType(),
-            'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
-            'Cache-Control' => 'no-cache, no-store, must-revalidate',
-        ]);
+        return $pdf;
     }
 
     protected function resolveColumnValue(Column $column, Model $record): string

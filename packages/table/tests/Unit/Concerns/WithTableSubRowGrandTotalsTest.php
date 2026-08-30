@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -31,6 +32,20 @@ class WtgtItem extends Model
     protected $table = 'wtgt_items';
 
     protected $guarded = [];
+}
+
+class WtgtUnsupportedInvoice extends Model
+{
+    protected $table = 'wtgt_invoices';
+
+    protected $guarded = [];
+
+    // A relation the grand total cannot be expressed over: totalling children
+    // through a pivot is not "parent_id in (…)".
+    public function items(): BelongsToMany
+    {
+        return $this->belongsToMany(WtgtItem::class, 'wtgt_pivot', 'invoice_id', 'item_id');
+    }
 }
 
 // ─── Test Component ──────────────────────────────────────────────────────────
@@ -169,6 +184,14 @@ it('respects the selection scope', function () {
     expect($totals['amount'][0]['value'])->toBe(60);
 });
 
+class WtgtUnsupportedComponent extends WtgtComponent
+{
+    public function table(Table $table): Table
+    {
+        return parent::table($table)->model(WtgtUnsupportedInvoice::class);
+    }
+}
+
 class WtgtSubtotalsOnlyComponent extends Component
 {
     use WithTable;
@@ -190,3 +213,11 @@ class WtgtSubtotalsOnlyComponent extends Component
         return $this->getTableProperty();
     }
 }
+
+it('reports no grand totals when the relation cannot express one', function () {
+    // The summaries are declared, so the footer asks; the relation is the thing
+    // that cannot answer. Returning nothing beats totalling the wrong rows —
+    // a grand total that silently counts through a pivot is a number nobody
+    // would question.
+    expect((new WtgtUnsupportedComponent)->computeSubRowGrandTotals())->toBe([]);
+});

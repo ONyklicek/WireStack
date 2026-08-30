@@ -136,6 +136,38 @@ The importer handles a UTF-8 BOM, blank lines, and rows with fewer/more cells th
 | `rules(array)` | `ImportColumn` | Per-cell validation rules |
 | `castStateUsing(Closure)` | `ImportColumn` | Transform the raw cell value |
 | `guess(array)` | `ImportColumn` | Alternative header names |
+| `importTable(string)` | host | Run the import now, from a real path |
+| `queueTableImport(string, ?string)` | host | Run it on a worker, from a disk path |
+
+## Queue a Large Import
+
+An import was already path-in, result-out, so nothing in the import pipeline
+changes when it moves to a queue. What a job adds is the three things it cannot
+borrow from a request: a file that outlives it, a result with somewhere to go,
+and a failure that is visible.
+
+```php
+public function importInBackground(): void
+{
+    $path = $this->file->store('imports', 's3'); // [tl! focus]
+
+    $this->queueTableImport($path, 's3'); // [tl! focus]
+}
+```
+
+**Store the upload first and pass what that returns.** `queueTableImport()` takes
+a **disk path**, not the temp upload's real path: the worker is entitled to be a
+different machine, and a Livewire temporary file will not be there when it looks.
+
+The result arrives as a notification — the imported and failed counts — because a
+queued import has no return value. A run that rejected rows notifies as a
+**warning**, not a success: an import that silently dropped a row is the kind of
+success worth being told about.
+
+**A missing file fails the job.** The CSV reader treats an unreadable path as "no
+rows", which is right for a run the user is watching and a lie for a queued one:
+"imported 0 row(s), 0 failed" is indistinguishable from an empty file. A worker
+that cannot find the upload throws `ImportException` and retries.
 
 ## Related Docs
 

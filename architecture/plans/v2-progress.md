@@ -1,7 +1,7 @@
 ---
 title: V2 — kde to stojí a čím pokračovat
 date: 2026-08-30
-scope: V2.0–V2.4 (hotové, mimo Q-3), ADR 0025 (rozpracované), V2.5/V2.6 (na řadě)
+scope: V2.0–V2.4 (hotové), ADR 0025 (rozpracované), V2.5/V2.6 (na řadě)
 status: progress record — aktualizovat na konci každého běhu
 ---
 
@@ -140,21 +140,22 @@ a `I` (boost `describe-resource`).
 dává owner vrstvu nahoru, ne dolů) a tvar kontraktu (osmimetodový interface
 neprojde vlastním standardem repa).
 
-### V2.4 — ERP execution ✅ (kromě Q-3)
+### V2.4 — ERP execution ✅
 
-Čtyři nezávislé balíky, všechny hotové. Zbývá jen **Q-3** (export/import na frontě), a to s jiným zadáním, než plán psal — viz §2.
+Čtyři nezávislé balíky, všechny hotové včetně Q-3 — to ale s jiným zadáním, než plán psal, a v obou půlkách jinak. Viz §2.
 
 | Balík | Co vzniklo |
 |---|---|
 | **N** ✅ | `Notifications\{DatabaseNotification, NotificationCenter, NotificationBell}`, `Drivers\{DatabaseDriver, StackDriver}`, `Contracts\ResolvesNotifiable` + `AuthenticatedNotifiable`, migrace, EN/CS překlady. Config `default` bere **seznam** driverů |
 | **Q** ✅ (Q-1/2/4) | `Actions\Concerns\Queueable` na `BaseAction`, `Actions\Jobs\RunActionJob`, `Exceptions\QueuedActionException`, seamy `resolveActionByName()` / `resolveRecordsByKey()` na table hostiteli |
-| **Q-3** | **nedělat tak, jak plán psal** — viz §2 |
+| **Q-3** ✅ | `Export\Contracts\Exporter::writeTo()` ve všech třech exportérech, `TableExport::store()`, `Export\Jobs\RunExportJob`, `Import\Jobs\RunImportJob`, `queueTableExport()` / `queueTableImport()`, `ImportException::fileNotFound()`. **Export potřeboval nový režim zápisu, import ani řádek** — viz §2 |
 | **T** ✅ | `Core\Tenancy\{Tenancy, TenantScope, NullTenantResolver}`, `Contracts\TenantResolver`, `Concerns\BelongsToTenant`, `Exceptions\TenancyException`, config. **Globální scope, ne plugin hook** — viz §2 |
 | **WF** ✅ | `Core\Workflow\WorkflowState`, `Actions\TransitionAction`, `Exceptions\IllegalTransitionException`. **Žádná barva/popisek/ikona** — enum kontrakty + `BadgeColumn` to už vlastní |
 
 **Plán poprvé v téhle sérii seděl na stavu kódu**: všechny čtyři balíky opravdu
-nula v `src`. Jediná korekce: WF-4 počítá se `StatusColumn` z V2.1 B-2, který byl
-zamítnut — `BadgeColumn` to už umí, závislost je splněná (§2, krok 14).
+nula v `src`. Dvě korekce: WF-4 počítá se `StatusColumn` z V2.1 B-2, který byl
+zamítnut — `BadgeColumn` to už umí, závislost je splněná (§2, krok 14) — a Q-3
+mělo jedno zadání pro dvě věci, které spolu nemají nic společného (§2, krok 15).
 
 ---
 
@@ -514,9 +515,60 @@ zdokumentovaná.
 `CsvExporter::export()` vrací `StreamedResponse` — download, který v jobu
 vzniknout nemůže. Není to „přidat `->queue()` na `ExportAction`": jsou to **dvě
 různé doručovací cesty** (stream do response synchronně vs. zápis na disk +
-notifikace s odkazem), a exportéry dnes umí jen tu první. Q-3 tedy začíná tím, že
-exportéry dostanou režim zápisu na disk — a to je vlastní krok, ne dopsání
-jednoho volání.
+notifikace s odkazem), a exportéry uměly jen tu první. Q-3 tedy začalo tím, že
+exportéry dostaly režim zápisu na disk — vlastní krok, ne dopsání jednoho volání.
+
+**A pak se ukázalo, že jedno zadání drželo pohromadě dvě nesouvisející věci.**
+Export musel dostat nový režim zápisu; import nepotřeboval **ani řádek** —
+`TableImport::import(string $path)` je cesta dovnitř, výsledek ven, žádná response
+v cestě. Plán je psal jako jednu položku („export/import na frontě"), protože se
+oba tak jmenují; měření říká, že jedna z nich byla nový mechanismus a druhá
+adaptér nad hotovým. Poučení pro §4: **položka pojmenovaná dvěma podstatnými jmény
+je skoro vždycky dvě položky s různou cenou.**
+
+`writeTo(string $path, …)` je v kontraktu proto, že `php://output` **je cesta**.
+Download je ta samá metoda v response obalu, ne druhá implementace — dvě kopie
+„udělej ze záznamů soubor" se rozejdou v okamžiku, kdy se jedna z nich dozví o
+novém typu sloupce. Mutace to potvrdila: vypnutí hlaviček ve `writeTo()` položí
+šest testů napříč oběma doručeními.
+
+**Nález, který zadání nepojmenovalo: export na frontě ztrácel filtry.**
+`RunExportJob` veze třídu komponenty (dotaz jsou closury a builder, serializaci
+nepřežije), takže worker hostitele mountuje čerstvého — a čerstvý hostitel má
+výchozí stav. Kdo si tabulku zúžil na dvacet řádků a dal export na frontu, dostal
+všech deset tisíc, v souboru natolik věrohodném, že to nikdo nezkontroluje. Job
+proto veze i `tableState->all()` a po mountu ho vrátí přes `replace()`. Mutace
+„stav do jobu necestuje" padá právě na jednom testu, tom, který porovnává obsah
+souboru — což je zároveň důkaz, že ostatních sedm by chybu nechytilo.
+
+**Zrcadlový nález na importu: tichá nula.** `CsvImporter::rows()` bere nečitelnou
+cestu jako „žádné řádky" a má na to test — správně, když u toho uživatel stojí.
+Na frontě je to lež: „naimportováno 0 řádků, 0 chyb" se nedá odlišit od prázdného
+souboru, a job by se tvářil jako úspěch. `RunImportJob` proto sahá na disk sám,
+a když soubor není, **vyhodí** `ImportException::fileNotFound()`, aby se běh
+opakoval. Zároveň bere cestu na disku, ne reálnou: worker smí být jiný stroj a
+`fopen()` neumí S3.
+
+**Třetí nález našel až důsledek prvního: uložený soubor lhal o svém obsahu.**
+`export()` u Excelu i PDF přejmenuje soubor na `.csv`, když příslušná knihovna
+chybí — s komentářem „the reader has to be told what they actually got".
+`store()` si jméno stavěl z formátu, takže na frontě by vznikl `.xlsx` s CSV
+uvnitř: lež, která vyplave až mnohem později, když ho někdo otevře. Sync cesta to
+pravidlo měla a queued cesta ho ztratila — přesně ta třída chyby, kvůli které se
+`writeTo()` dávalo do kontraktu. Vlastníkem je teď `Exporter::extension()`:
+exportér ví, jestli formát vůbec unesl, a `fullFileName()` se ptá jeho, ne
+formátu. Mimochodem to smazalo dva `str_replace('.xlsx', '.csv', …)`, každý s
+vlastní příponou natvrdo.
+
+**Dvě mutace mi na importu přežily a obě ukázaly na díru, ne na zbytečný kód.**
+`mountWithTable()` v jobu nebylo ničím podepřené — protože moje fixture v
+`table()` na stavový bag nesahala; hostitel, který na něj sáhne (filtr s výchozí
+hodnotou, řazení odvozené ze stavu), bez mountu fataluje na neinicializované
+typované property, což je běžnější tvar než ten můj. A rozlišení
+`warning` / `success` podle `hasFailures()` přežilo, protože jsem v testu
+kontroloval počty, ne typ notifikace. Obojí teď drží test; u prvního jsem
+odpověď **změřil** (`public StateContainer $tableState` se inicializuje až v
+`mountWithTable()`) místo aby hádal, jestli je mount potřeba.
 
 **Prototyp na reálné entitě našel dva defekty, které přežily celou unit sadu.**
 Plán V2.3 si sám uložil „prototyp R.1 na 1 reálné entitě před rozšířením" a měl
@@ -695,20 +747,24 @@ počet výskytů `new`, ne na to, co ty výskyty jsou.
 
 ## 4. Co je na řadě
 
-**Pět fází ze sedmi je hotových: V2.0–V2.4** (u V2.4 zbývá Q-3, viz níž). Co je uvnitř nich a
+**Pět fází ze sedmi je hotových: V2.0–V2.4**, teď včetně Q-3. Co je uvnitř nich a
 co v nich měření změnilo, je v §1 a §2; tahle sekce je jen o tom, co dál.
 
 ### Další fáze
 
 | Na řadě | Obsah | Poznámka před startem |
 |---|---|---|
-| **Q-3** | export/import na frontě | Nejmenší otevřená věc a jediný zbytek V2.4. **Nezačíná přidáním `->queue()`**: `CsvExporter::export()` vrací `StreamedResponse`, takže jsou to dvě doručovací cesty a exportéry umí jen jednu. Krok je „režim zápisu na disk", viz §2 |
 | **V2.5** | saved views · global search · large-table UX | **Global search patří do `wire-panels`**, ne do `core/src/GlobalSearch/`, jak ho vede master plán. Staví nad `ResourceRegistry` a core na table nevidí — je to přesně ten cyklus, kvůli kterému se owner vrstva stěhovala, viz §2 |
 | **V2.6** | domain modules | `Workspace` je zamýšlený seam; grupuje resources a nevlastní routing |
 
-Žádná z nich není blokovaná. **V2.4 je jinak uzavřená** (N, Q, T, WF; ADR 0018 →
-ACCEPTED) s jedním pojmenovaným omezením: tenancy nekryje non-Eloquent
+Žádná z nich není blokovaná. **V2.4 je uzavřená celá** (N, Q, T, WF včetně Q-3;
+ADR 0018 → ACCEPTED) s jedním pojmenovaným omezením: tenancy nekryje non-Eloquent
 `DataSource`, viz §3.
+
+Jedna věc z Q-3 se hodí vzít do V2.5 jako čtecí pravidlo: **položka pojmenovaná
+dvěma podstatnými jmény bývá dvě položky s různou cenou** („saved views · global
+search · large-table UX" jsou tři a skoro jistě tři různé velikosti). Změř je
+zvlášť dřív, než se pustíš do první.
 
 ### Než se do nich pustíš
 
@@ -784,13 +840,16 @@ workbench neuvidí.
 
 **Nepřeskakuj měření — to je jediné pravidlo, které si z tohohle souboru odnes,
 když nemáš čas na zbytek.** Za tři běhy opravilo zadání patnáctkrát. Běh
-2026-08-30 přidal osm:
+2026-08-30 přidal jedenáct:
 
 | Krok | Plán / §4 slibovala | Měření našlo |
 |---|---|---|
 | V2.4/T tenancy | hook `table.querying` na prioritě -100 | hook query nedostane a pokryje jednu cestu z šesti → **globální Eloquent scope** |
 | V2.4/WF | čeká na `StatusColumn` z V2.1 | ten byl zamítnut; `BadgeColumn` to umí → závislost splněná, WF-4 nemá co napojovat |
 | V2.4/Q-3 | „přidat `->queue()` na `ExportAction`" | exportér vrací `StreamedResponse` → **dvě doručovací cesty**, potřebuje režim zápisu na disk |
+| V2.4/Q-3 | „export/import na frontě" jako jedna položka | export = nový mechanismus, import = **ani řádek** změny v pipeline → dvě položky s různou cenou |
+| V2.4/Q-3 stav | job veze třídu komponenty, hotovo | čerstvě mountovaný hostitel **ztratí filtry** → kdo zúžil na 20 řádků, dostane 10 000 |
+| V2.4/Q-3 jméno | `store()` staví jméno z formátu | bez knihovny se zapisuje CSV → **`.xlsx` s CSV uvnitř**; příponu vlastní `Exporter::extension()` |
 | `@php` bloky ve views | čtyři hnízda podle *počtu* bloků | tři z nich jsou jen aliasy render plánu → **nedělat**; čtvrté drželo rozjetou kopii pravidla a **ostrý defekt** |
 | V2.2/S1 | injektovat deps, „testy nemůžou mockovat" | `ActionPipeline` už stages konstruktorem bere, `SaveHandler` má 25 vlastních testů → **nedělat** |
 | V2.2/S2 | zrušit dvojí dispatch (redundance) | stojí 0,163 µs → **nechat**; vedle byl **defekt**, nehintovaný callback běžel dvakrát |

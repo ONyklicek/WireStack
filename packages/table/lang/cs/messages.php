@@ -84,6 +84,7 @@ return [
     'details_section' => 'Detaily',
     'expand_all_rows' => 'Rozbalit u všech řádků',
     'export_label' => 'Export',
+    'import_queued' => 'Import běží na pozadí.',
     'import_label' => 'Import',
     'import_result' => 'Naimportováno :imported řádků, :failed selhalo.',
 
@@ -166,4 +167,8 @@ return [
     'shortcut_run_action' => 'Spustit „:action“',
     'shortcut_context_menu' => 'Otevřít nabídku řádku',
     'shortcut_show_help' => 'Zobrazit klávesové zkratky',
+
+    // Frontované exporty ({@see Export\Jobs\RunExportJob}).
+    'export_queued' => 'Export se připravuje na pozadí.',
+    'export_ready' => 'Export je hotový: :file',
 ];

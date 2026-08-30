@@ -181,3 +181,12 @@ it('reads a status the model casts to an enum', function () {
 
     expect(wfMachine()->isAllowed($this->order->fresh(), WfStatus::Shipped))->toBeTrue();
 });
+
+it('refuses to offer a state declared from another machine', function () {
+    // allow() takes any enum, so a machine can be mis-declared. Caught when the
+    // transitions are read rather than silently offering a state that does not
+    // exist in this workflow.
+    $machine = wfMachine()->allow(WfStatus::Draft, WfOther::Elsewhere);
+
+    $machine->availableFrom($this->order);
+})->throws(IllegalTransitionException::class, 'is not a case of');

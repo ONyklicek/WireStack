@@ -231,6 +231,74 @@ When using a custom PDF view, design it as a regular Blade export template. The 
 </table>
 ```
 
+## Queue a Large Export
+
+A download is a response, and a job has none to return. So a queued export is a
+different **delivery**, not the same one moved: it writes the file to a disk and
+tells the user where it is.
+
+```php
+public function exportInBackground(): void
+{
+    $this->queueTableExport('csv', 's3', 'exports/orders'); // [tl! focus]
+}
+```
+
+The user gets "the export is being prepared" immediately, and a second
+notification with the file name when the worker finishes — which is why the
+[database notification driver](../core/notifications.md) exists: by the time a
+large export completes there is no request left to flash into.
+
+**The state travels with the job.** Without it the worker would mount a fresh
+component and export the whole table, so someone who filtered down to twenty rows
+would receive all ten thousand — in a file plausible enough that nobody checks.
+
+```php
+$this->queueTableExport(
+    format: 'xlsx',
+    disk: 's3',              // null uses filesystems.default
+    directory: 'exports',    // [tl! focus]
+);
+```
+
+What the job carries is a **component class and a format**, never a query: a
+query is closures and a builder, and neither survives serialization. The host is
+rebuilt and asked for its filtered query, so the file reflects the data as it is
+when the job runs, not when the button was clicked.
+
+Every exporter writes through one method, `writeTo(string $path, ...)`, with
+`php://output` treated as the path it is — so a download and a queued file are
+the same rows, the same columns, and the same summaries. A custom exporter needs
+to implement it:
+
+```php
+class JsonExporter implements Exporter
+{
+    public function writeTo(string $path, Builder $query, array $columns, array $summaryRows = []): void // [tl! focus]
+    {
+        // ...
+    }
+
+    public function extension(): string // [tl! focus]
+    {
+        return 'json';
+    }
+
+    public function export(Builder $query, array $columns, string $fileName, array $summaryRows = []): StreamedResponse
+    {
+        return response()->streamDownload(
+            fn () => $this->writeTo('php://output', $query, $columns, $summaryRows), // [tl! focus]
+            $fileName,
+        );
+    }
+}
+```
+
+An exporter names its own extension, because the format is not always what gets
+written: `ExcelExporter` degrades to CSV when PhpSpreadsheet is absent, and a
+stored file called `.xlsx` holding CSV is a lie that surfaces much later, when
+someone finally opens it. The download path renames for the same reason.
+
 ## Related Docs
 
 | Document | What It Covers |

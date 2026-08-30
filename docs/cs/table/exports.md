@@ -231,6 +231,74 @@ Při použití vlastního PDF pohledu ho navrhněte jako běžnou Blade export �
 </table>
 ```
 
+## Export na frontě
+
+Download je response a job žádnou nevrací. Export na frontě je proto jiné
+**doručení**, ne totéž přesunuté jinam: zapíše soubor na disk a uživateli řekne,
+kde je.
+
+```php
+public function exportInBackground(): void
+{
+    $this->queueTableExport('csv', 's3', 'exports/orders'); // [tl! focus]
+}
+```
+
+Uživatel dostane „export se připravuje" hned a druhou notifikaci se jménem
+souboru, až worker doběhne — přesně proto existuje
+[databázový driver notifikací](../core/notifications.md): než velký export
+skončí, není už kam blikat, žádný request nezbyl.
+
+**Stav cestuje s jobem.** Bez toho by worker namountoval čerstvou komponentu a
+vyexportoval celou tabulku, takže kdo si ji vyfiltroval na dvacet řádků, dostane
+všech deset tisíc — v souboru natolik věrohodném, že to nikdo nezkontroluje.
+
+```php
+$this->queueTableExport(
+    format: 'xlsx',
+    disk: 's3',              // null použije filesystems.default
+    directory: 'exports',    // [tl! focus]
+);
+```
+
+Job veze **třídu komponenty a formát**, nikdy dotaz: dotaz jsou closury a
+builder a ani jedno serializaci nepřežije. Hostitel se postaví znovu a je
+požádán o svůj filtrovaný dotaz, takže soubor odpovídá datům v okamžiku běhu
+jobu, ne v okamžiku kliknutí.
+
+Každý exportér zapisuje jednou metodou, `writeTo(string $path, ...)`, kde
+`php://output` je cesta jako každá jiná — download a soubor na disku jsou proto
+tytéž řádky, tytéž sloupce a tytéž souhrny. Vlastní exportér ji musí
+implementovat:
+
+```php
+class JsonExporter implements Exporter
+{
+    public function writeTo(string $path, Builder $query, array $columns, array $summaryRows = []): void // [tl! focus]
+    {
+        // ...
+    }
+
+    public function extension(): string // [tl! focus]
+    {
+        return 'json';
+    }
+
+    public function export(Builder $query, array $columns, string $fileName, array $summaryRows = []): StreamedResponse
+    {
+        return response()->streamDownload(
+            fn () => $this->writeTo('php://output', $query, $columns, $summaryRows), // [tl! focus]
+            $fileName,
+        );
+    }
+}
+```
+
+Exportér si příponu pojmenuje sám, protože formát není vždycky to, co se
+opravdu zapíše: `ExcelExporter` bez PhpSpreadsheet degraduje na CSV a uložený
+soubor jménem `.xlsx` s CSV uvnitř je lež, která vyplave až mnohem později, když
+ho někdo konečně otevře. Download se přejmenovává ze stejného důvodu.
+
 ## Související dokumentace
 
 | Dokument | Co pokrývá |

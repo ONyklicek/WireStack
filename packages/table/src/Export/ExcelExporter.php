@@ -36,60 +36,88 @@ class ExcelExporter implements Exporter
      * @param  array<int, Column>  $columns
      * @param  array<int, array<int, string>>  $summaryRows
      */
+    /**
+     * Correct a file name to the extension actually being written.
+     */
+    private function rename(string $fileName): string
+    {
+        return preg_replace('/\.[^.]+$/', '.'.$this->extension(), $fileName) ?? $fileName;
+    }
+
+    public function extension(): string
+    {
+        return static::isAvailable() ? 'xlsx' : 'csv';
+    }
+
+    public function writeTo(string $path, Builder $query, array $columns, array $summaryRows = []): void
+    {
+        if (! static::isAvailable()) {
+            (new CsvExporter(withHeadings: $this->withHeadings))
+                ->writeTo($path, $query, $columns, $summaryRows);
+
+            return;
+        }
+
+        /** @var Writer $writer */
+        $writer = new Writer;
+        $writer->openToFile($path);
+
+        if ($this->withHeadings) {
+            $headerCells = array_map(
+                fn (Column $col) => Cell::fromValue(
+                    $col->getLabel()
+                ),
+                $columns
+            );
+            $writer->addRow(new Row($headerCells));
+        }
+
+        // Qualified key cursor: a relation-sorted export query carries a LEFT
+        // JOIN where chunkById's default unqualified `id` would be ambiguous.
+        $model = $query->getModel();
+
+        $query->chunkById(1000, function ($records) use ($writer, $columns) {
+            foreach ($records as $record) {
+                $cells = [];
+                foreach ($columns as $column) {
+                    $cells[] = Cell::fromValue(
+                        $this->resolveColumnValue($column, $record)
+                    );
+                }
+                $writer->addRow(new Row($cells));
+            }
+        }, $model->getQualifiedKeyName(), $model->getKeyName());
+
+        foreach ($summaryRows as $summaryRow) {
+            $writer->addRow(new Row(array_map(
+                fn (string $cell) => Cell::fromValue($cell),
+                $summaryRow,
+            )));
+        }
+
+        $writer->close();
+    }
+
     public function export(Builder $query, array $columns, string $fileName, array $summaryRows = []): StreamedResponse
     {
         if (! static::isAvailable()) {
-            // Fallback to CSV
-            $csvFileName = str_replace('.xlsx', '.csv', $fileName);
+            // Fallback to CSV, filename included: the reader has to be told what
+            // they actually got.
+            $csvFileName = $this->rename($fileName);
 
             return (new CsvExporter(withHeadings: $this->withHeadings))
                 ->export($query, $columns, $csvFileName, $summaryRows);
         }
 
-        return new StreamedResponse(function () use ($query, $columns, $summaryRows) {
-            /** @var Writer $writer */
-            $writer = new Writer;
-            $writer->openToFile('php://output');
-
-            if ($this->withHeadings) {
-                $headerCells = array_map(
-                    fn (Column $col) => Cell::fromValue(
-                        $col->getLabel()
-                    ),
-                    $columns
-                );
-                $writer->addRow(new Row($headerCells));
-            }
-
-            // Qualified key cursor: a relation-sorted export query carries a LEFT
-            // JOIN where chunkById's default unqualified `id` would be ambiguous.
-            $model = $query->getModel();
-
-            $query->chunkById(1000, function ($records) use ($writer, $columns) {
-                foreach ($records as $record) {
-                    $cells = [];
-                    foreach ($columns as $column) {
-                        $cells[] = Cell::fromValue(
-                            $this->resolveColumnValue($column, $record)
-                        );
-                    }
-                    $writer->addRow(new Row($cells));
-                }
-            }, $model->getQualifiedKeyName(), $model->getKeyName());
-
-            foreach ($summaryRows as $summaryRow) {
-                $writer->addRow(new Row(array_map(
-                    fn (string $cell) => Cell::fromValue($cell),
-                    $summaryRow,
-                )));
-            }
-
-            $writer->close();
-        }, 200, [
-            'Content-Type' => ExportFormat::Excel->mimeType(),
-            'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
-            'Cache-Control' => 'no-cache, no-store, must-revalidate',
-        ]);
+        return new StreamedResponse(
+            fn () => $this->writeTo('php://output', $query, $columns, $summaryRows),
+            200,
+            [
+                'Content-Type' => ExportFormat::Excel->mimeType(),
+                'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            ],
+        );
     }
 
     protected function resolveColumnValue(Column $column, Model $record): string|int|float|bool
