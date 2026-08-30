@@ -92,6 +92,11 @@ abstract class EditPage extends Component
     /** Seed the form once the record is known — {@see ResolvesOneRecord::mount()}. */
     protected function mountedRecord(): void
     {
+        // Blanks first, then the record over them: a field the record has no
+        // column for still needs its key in the bag, or its control entangles
+        // a path that is not there and silently never writes.
+        $this->data = $this->form->getInitialState();
+
         $this->form->fill($this->recordData());
     }
 

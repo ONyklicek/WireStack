@@ -60,6 +60,22 @@ abstract class CreatePage extends Component
      */
     public ?array $data = [];
 
+    /**
+     * Seed the state bag before anything binds to it.
+     *
+     * Not cosmetic: a select or a date picker entangles its own path, and
+     * entangling a key the bag does not have is a silent no-op — the control
+     * renders and never writes. `Form::getInitialState()` exists for exactly
+     * this, which is how the action modals seed theirs.
+     *
+     * The edit page seeds from the record instead, layering over the same
+     * blanks.
+     */
+    public function mount(): void
+    {
+        $this->data = $this->form->getInitialState();
+    }
+
     public function form(Form $form): Form
     {
         $resource = $this->requireResource(ProvidesResourceForm::class);

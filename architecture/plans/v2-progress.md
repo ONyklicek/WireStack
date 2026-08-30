@@ -132,6 +132,8 @@ a `I` (boost `describe-resource`).
 | RM | `Contracts\ProvidesRelationManagers` + `Concerns\EmbedsRelationManagers`; Edit/View je vkládají. **Žádný BC break** — přímý mount funguje beze změny |
 | W | `Core\Resources\Navigation\NavigationItem` (nad `HasLabel`/`HasIcon`/`HasVisibility`) + `Core\Resources\Workspace` |
 | I | boost `Support\ResourceReflector` + `Mcp\Tools\DescribeResource`, zaregistrovaný v `WireBoostServer` |
+| prototyp | workbench `InvoiceResource` (všech 5 kontraktů) + 4 stránky + relation manager + `verify-resource-pages.mjs` (14/14 v prohlížeči) — **našel 2 defekty**, viz §2 |
+| ADR 0020 | `PROPOSED` → **ACCEPTED**, všechny čtyři otevřené otázky zavřené |
 | — | **Přesun 2026-08-30**: vrstva rozmístěna podle typů, které kontrakty jmenují; `wire-panels` je nový top balíček. Viz §2 |
 
 **Dvě rozhodnutí z plánu se změřením otočila** — obě v §2: umístění (Filament
@@ -422,6 +424,28 @@ Composer viděl, nabootováno nebo ne, a `config()` pak resolvuje z prázdného
 kontejneru. Takže **diagnostika chyby v hintu spadla místo aby ji nahlásila**,
 přesně ve standalone kontextu, který má `CLAUDE.md` v požadavcích („testable in
 isolation, usable from other contexts"). Chybějící půlka je `app()->bound('config')`.
+
+**Prototyp na reálné entitě našel dva defekty, které přežily celou unit sadu.**
+Plán V2.3 si sám uložil „prototyp R.1 na 1 reálné entitě před rozšířením" a měl
+pravdu. `workbench/app/Resources/InvoiceResource.php` deklaruje **všech pět
+kontraktů** na jedné třídě, běží nad reálnou `Invoice` s daty a
+`verify-resource-pages.mjs` ho projíždí v prohlížeči přes skutečné stránky
+frameworku, ne přes něco, co si workbench vyrobil.
+
+| Defekt | Proč ho testy neviděly |
+|---|---|
+| `ListPage` **nenavazoval model**, který resource deklaruje — na rozdíl od formulářových stránek | každá fixture volala `->model()` uvnitř vlastního `table()`, takže to, že stránka model nenavazuje, bylo neviditelné |
+| `CreatePage` **neseedoval stavový bag**, takže select a datetime entanglovaly cestu, která v bagu není — kontrolka se vykreslí a nikdy nezapíše | Livewire to hlásí jen jako **konzolovou chybu v prohlížeči**; server-side test projde |
+
+Plus jeden nález v samotném workbenchi: `bootstrap/cache/packages.php` drží
+discovery cache, takže nový balíček se objeví až po jejím smazání — `No hint path
+defined for [wire-panels]`.
+
+Druhá chyba je ta poučnější. `Form::getInitialState()` existuje přesně proto
+(docblok: *„Hosts (e.g. action modals) use this to seed the Livewire state bag so
+array fields never start missing/null"*) a já ho na nové stránce nezavolal.
+Přesně ta samá třída chyby jako seedované sub-row sloty z prvního kroku téhle
+session — a i tady byl symptom pozorovatelný jen v prohlížeči.
 
 **V2.3: „kam s `Resource`" má odpověď u Filamentu, a je opačná než naše.**
 Rozhodnutí z 2026-08-26 dalo kontrakt do `core`, tedy na **dno** grafu

@@ -2,7 +2,22 @@
 
 ## Status
 
-PROPOSED
+ACCEPTED — 2026-08-30.
+
+Implemented and exercised on a real entity (workbench `InvoiceResource`, driven
+in a browser by `workbench/scripts/verify-resource-pages.mjs`). Two things landed
+differently from this ADR and from the V2.3 plan; both are recorded in
+[`v2-progress.md`](../plans/v2-progress.md) §2:
+
+- **Where it lives.** Not one package. Each contract ships with the type it
+  names — identity and the registry in `wire-core`, `ProvidesResourceForm` in
+  `wire-forms`, `ProvidesResourceInfolist` beside Infolists, and
+  `ProvidesResourceTable` plus every page in the new top package `wire-panels`.
+  A resource with a form and no list therefore installs no table package.
+- **What shape it is.** Not one class with eight methods, and not one interface
+  either: `AI_CODING_STANDARD.md` § Interfaces allows exactly one capability per
+  interface, so identity and each surface are separate contracts a resource
+  implements only where it has them.
 
 Gate for **V2.3** (`architecture/plans/v2-master-plan.md`). Realizes ADR 0017
 Application Surfaces (layer 4) and closes its gap #1 ("missing first-class
@@ -163,18 +178,33 @@ layer 5, V2.6) plugs into. `Dashboard` composes `Widget`s via `WithWidgets`.
 - **Two-path confusion.** Standalone vs owner-driven must both stay first-class;
   don't deprecate standalone usage.
 
-## Open questions
+## Open questions — all closed
 
-1. Is `Resource` a static declaration (Filament-style `public static function`)
-   or an instance owner (Nova-style)? Trait composition leans instance; Resource
-   metadata (model, navigation) leans static. Likely hybrid — decide in V2.3.a.
-2. Does `Infolist` (read-only view surface) already cover `ViewPage`, or does the
-   view page need its own owner concern? (Infolist exists in core — confirm scope.)
-3. How does a `Resource` bound to a **non-Eloquent `DataSource`** (V2.0) express
-   create/edit persistence — through `Form::using` only, or a `DataSource` write
-   contract? (Ties to ADR 0019 open question #4 and write-path scope.)
-4. Registration: config-array vs attribute-based discovery vs both? Keep it
-   thinner than a panel; align with `boost` `ComponentScanner`.
+1. ~~Static declaration or instance owner?~~ **Hybrid**, and the reason turned out
+   to be mechanical rather than stylistic: a menu asks for a label and
+   `ResourceRegistry::forModel()` routes a model to its owner *before anything is
+   instantiated*, so metadata cannot require an instance. Surfaces are instance
+   methods because they compose a builder the caller already wired to its host.
+2. ~~Does `Infolist` cover `ViewPage`?~~ **Yes.** `ViewPage` renders one and
+   composes no host trait at all — read-only means no state to bind and nothing
+   to submit.
+3. ~~Non-Eloquent persistence?~~ **Through `Form::using()`**, declared in the
+   resource's own `form()`; the pages are unchanged. A `DataSource` write
+   contract stays out of scope (ADR 0019 open question #4).
+4. ~~Registration?~~ **Config array** (`config('wire-core.resources')`), read by
+   `ResourceRegistry::registerMany()`. Attribute discovery remains the opt-in
+   second path and belongs with boost's `ComponentScanner`, not the registry.
+
+## What the prototype found
+
+The plan asked for one real entity before this was called finished, and that was
+right — two defects survived a full unit suite and died in the browser:
+
+- `ListPage` never bound the model the resource declares, while the form pages
+  did. Every fixture had set `->model()` inside its own `table()`, so the page
+  not doing it was invisible.
+- `CreatePage` did not seed its state bag, so a select or a date picker
+  entangled a path that was not there and silently never wrote.
 
 ## References
 

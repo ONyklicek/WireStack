@@ -19,6 +19,12 @@ use Workbench\App\Livewire\Previews\SpaPlainPreview;
 use Workbench\App\Livewire\Previews\SpaTablePreview;
 use Workbench\App\Livewire\Previews\TablePreview;
 use Workbench\App\Livewire\Previews\WidgetPreview;
+use Workbench\App\Livewire\Resources\CreateInvoice;
+use Workbench\App\Livewire\Resources\EditInvoice;
+use Workbench\App\Livewire\Resources\InvoiceItemsRelationManager;
+use Workbench\App\Livewire\Resources\ListInvoices;
+use Workbench\App\Livewire\Resources\ViewInvoice;
+use Workbench\App\Resources\InvoiceResource;
 
 class WorkbenchServiceProvider extends ServiceProvider
 {
@@ -27,7 +33,11 @@ class WorkbenchServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // The owner layer, exercised on a real entity — V2.3's own gate before
+        // the API counted as finished. Declared in config the way an application
+        // does, not registered by hand, so the config path is what the preview
+        // proves.
+        config()->set('wire-core.resources', [InvoiceResource::class]);
     }
 
     /**
@@ -53,6 +63,11 @@ class WorkbenchServiceProvider extends ServiceProvider
             SpaTablePreview::class,
             TablePreview::class,
             WidgetPreview::class,
+            ListInvoices::class,
+            CreateInvoice::class,
+            EditInvoice::class,
+            ViewInvoice::class,
+            InvoiceItemsRelationManager::class,
         ] as $component) {
             $name = collect(explode('\\', $component))
                 ->map(fn (string $part): string => Str::kebab($part))

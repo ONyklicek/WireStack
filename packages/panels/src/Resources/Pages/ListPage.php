@@ -65,7 +65,17 @@ abstract class ListPage extends Component
      */
     public function table(Table $table): Table
     {
-        return $this->requireResource(ProvidesResourceTable::class)->table($table);
+        $resource = $this->requireResource(ProvidesResourceTable::class);
+
+        // The model is bound here rather than left to the resource's table(),
+        // for the reason the form pages bind it: the resource already declares
+        // which entity it owns, and asking it to repeat that inside every
+        // surface is the duplication that only shows up when the two disagree.
+        // A resource over a non-Eloquent DataSource declares no model and points
+        // the table at its source itself.
+        $model = static::$resource::modelClass();
+
+        return $resource->table($model !== null ? $table->model($model) : $table);
     }
 
     /** A list is titled by the plural: "Orders", not "Order". */

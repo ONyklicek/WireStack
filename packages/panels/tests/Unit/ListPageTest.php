@@ -56,6 +56,31 @@ class LpReportResource implements DescribesResource
     }
 }
 
+/**
+ * Declares columns and no model — the shape a real resource takes, since it
+ * already says which entity it owns through modelClass(). Every fixture here
+ * used to bind the model inside table() and hid that the page never did.
+ */
+class LpModelFromResource implements DescribesResource, ProvidesResourceTable
+{
+    use DescribesRecords;
+
+    public static function modelClass(): ?string
+    {
+        return LpOrder::class;
+    }
+
+    public function table(Table $table): Table
+    {
+        return $table->columns([TextColumn::make('number')]);
+    }
+}
+
+class LpInheritedModelPage extends ListPage
+{
+    protected static ?string $resource = LpModelFromResource::class;
+}
+
 class LpOrdersPage extends ListPage
 {
     protected static ?string $resource = LpOrderResource::class;
@@ -122,6 +147,14 @@ it('prefers an explicit heading over the resource label', function () {
     Livewire::test(LpTitledOrdersPage::class)
         ->assertSee('Open orders')
         ->assertDontSee('Lp Orders');
+});
+
+it('binds the model the resource declares, so table() need not repeat it', function () {
+    // Caught by the workbench prototype, not by these tests: every fixture bound
+    // the model inside table(), so the page never having done it was invisible.
+    Livewire::test(LpInheritedModelPage::class)
+        ->assertSee('A-1')
+        ->assertSee('A-2');
 });
 
 // ─── The standalone path ─────────────────────────────────────────────────────
