@@ -47,7 +47,7 @@ tak instaluje jen to, co její resources opravdu používají:
 | `DescribesResource`, `DescribesRecords`, `ResourceRegistry` | `wire-core` | nic než skaláry |
 | `ProvidesResourceForm` | `wire-forms` | `Form` |
 | `ProvidesResourceInfolist` | `wire-core` (vedle Infolistů) | `Infolist` |
-| `ProvidesResourceTable` | `wire-panels` | `Table` |
+| `ProvidesResourceTable`, `ProvidesRelationManagers` | `wire-panels` | `Table`, `RelationManager` |
 | `ListPage` a ostatní stránky | `wire-panels` | `Table`, `Form`, host traity |
 
 Praktický důsledek: **resource s formulářem a bez seznamu potřebuje `wire-forms`
@@ -331,6 +331,85 @@ aby resource deklaroval dva.
 Perzistence zůstává formuláři: `Form` už vlastní save lifecycle a resource nad
 non-Eloquent zdrojem zapisuje přes `Form::using()`.
 
+## Navigace a Workspace
+
+Resource, který se má objevit v menu, implementuje `ProvidesNavigation`:
+
+```php
+use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
+
+public static function navigation(): NavigationItem   // [tl! focus:6]
+{
+    return NavigationItem::make('Objednávky')
+        ->icon('outline:shopping-cart')
+        ->group('Prodej')
+        ->sort(10)
+        ->badge(fn () => Order::whereNull('shipped_at')->count(), 'danger');
+}
+```
+
+Statické, jako identita, a ze stejného důvodu: menu se staví ze všech
+registrovaných resources naráz a instancovat každý jen kvůli tomu, jak se
+jmenuje, by znamenalo složit tabulku a formulář na každou položku. Resource,
+který tohle neimplementuje, je pořád registrovaný a routovatelný — jen se
+neobjeví, což je přesně to, co chce interní nebo vnořený resource.
+
+`NavigationItem` stojí na kanonických concernech `HasLabel` / `HasIcon` /
+`HasVisibility`, ne na vlastních properties, takže mluví stejným slovníkem jako
+každá jiná komponenta. Přidává jen to, co potřebuje *menu*: `group()`, `sort()`
+a `badge()`. Closure v badge se vyhodnocuje při každém čtení, nikdy se necachuje
+— počet neodeslaných objednávek je špatně v okamžiku, kdy se uloží.
+
+`Workspace` výsledek uspořádá:
+
+```php
+use NyonCode\WireCore\Core\Resources\Workspace;
+
+$nav = app(Workspace::class)->navigation();
+// ['Prodej' => [NavigationItem, …], '' => [NavigationItem, …]]
+```
+
+Skupiny drží pořadí, v jakém se objevila jejich první položka; uvnitř skupiny
+řadí `sort()` a shodné hodnoty si nechávají pořadí deklarace — proto je `sort()`
+volitelný. Skryté položky vypadnou. Stejně jako registr nevlastní routing ani
+layout — menu vykresluje aplikace.
+
+## Relation managery
+
+Resource může pojmenovat tabulky scopované na vztah, které patří vedle jeho
+záznamu:
+
+```php
+use NyonCode\WirePanels\Resources\Contracts\ProvidesRelationManagers;
+
+public function relationManagers(): array   // [tl! focus:3]
+{
+    return [OrderItemsRelationManager::class];
+}
+```
+
+`EditPage` a `ViewPage` je pak vloží pod formulář nebo infolist, namountované na
+záznam. Na [`RelationManager`](../table/relation-managers.md) se nic nemění —
+namountovat ho přímo funguje přesně jako dřív; tohle jen ruší nutnost opakovat to
+drátování na každé stránce. Resource, který žádné nedeklaruje, žádné nevykreslí,
+a to je normální stav, ne chyba.
+
+## Introspekce
+
+`describe-resource` hlásí, co resources aplikace deklarují — identitu, které
+povrchy mají a navigační položku:
+
+```text
+describe-resource                  # všechny registrované resources
+describe-resource orders           # jeden, podle klíče
+describe-resource App\Resources\OrderResource   # nebo podle třídy
+```
+
+Povrchy se hlásí jako *deklarované / nedeklarované*, ne svým obsahem: složit je
+by stálo přesně to, čemu se statická půlka vyhýbá, a `describe-table`
+a `describe-form` na to už odpovídají za stránky, které je vykreslují.
+
 ## DescribesResource API
 
 | Metoda | Vrací | Účel |
@@ -342,11 +421,13 @@ non-Eloquent zdrojem zapisuje přes `Form::using()`.
 
 ## API povrchových kontraktů
 
-| Kontrakt | Metoda |
-| --- | --- |
-| `ProvidesResourceTable` | `table(Table $table): Table` |
-| `ProvidesResourceForm` | `form(Form $form): Form` |
-| `ProvidesResourceInfolist` | `infolist(Infolist $infolist): Infolist` |
+| Kontrakt | Metoda | Veze balíček |
+| --- | --- | --- |
+| `ProvidesResourceTable` | `table(Table $table): Table` | `wire-panels` |
+| `ProvidesResourceForm` | `form(Form $form): Form` | `wire-forms` |
+| `ProvidesResourceInfolist` | `infolist(Infolist $infolist): Infolist` | `wire-core` |
+| `ProvidesRelationManagers` | `relationManagers(): array` | `wire-panels` |
+| `ProvidesNavigation` | `static navigation(): NavigationItem` | `wire-core` |
 
 ## ResourceRegistry API
 

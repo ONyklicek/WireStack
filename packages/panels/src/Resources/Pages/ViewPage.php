@@ -10,6 +10,7 @@ use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Infolists\Contracts\ProvidesResourceInfolist;
 use NyonCode\WireCore\Infolists\Infolist;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
+use NyonCode\WirePanels\Resources\Concerns\EmbedsRelationManagers;
 use NyonCode\WirePanels\Resources\Concerns\ResolvesOneRecord;
 
 /**
@@ -33,6 +34,7 @@ use NyonCode\WirePanels\Resources\Concerns\ResolvesOneRecord;
 abstract class ViewPage extends Component
 {
     use BelongsToResource;
+    use EmbedsRelationManagers;
     use ResolvesOneRecord;
 
     /**
@@ -70,6 +72,11 @@ abstract class ViewPage extends Component
     {
         return view('wire-panels::pages.view-page', [
             'title' => $this->getTitle(),
+            'relationManagers' => $this->relationManagers(),
+            // Not `record`: that is the public property holding the *key*, and
+            // Livewire injects public properties into the view scope, where it
+            // would shadow this.
+            'ownerRecord' => $this->resolveRecord(),
             'infolist' => $this->infolist(),
         ]);
     }

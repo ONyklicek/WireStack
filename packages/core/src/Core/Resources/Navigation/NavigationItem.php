@@ -1,0 +1,136 @@
+<?php
+
+declare(strict_types=1);
+
+namespace NyonCode\WireCore\Core\Resources\Navigation;
+
+use Closure;
+use NyonCode\WireCore\Foundation\Concerns\HasIcon;
+use NyonCode\WireCore\Foundation\Concerns\HasLabel;
+use NyonCode\WireCore\Foundation\Concerns\HasVisibility;
+use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
+
+/**
+ * One entry in an application's navigation.
+ *
+ * Built on the canonical Foundation concerns rather than on properties of its
+ * own: `HasLabel`, `HasIcon` and `HasVisibility` already own those words for
+ * every component in the framework, so a menu entry that re-declared them would
+ * be a second vocabulary for the same three questions — and the one that drifts,
+ * because nothing renders it beside the others.
+ *
+ * What it adds is only what a *menu* needs and a component does not: which group
+ * it sits in, where it sorts within that group, and an optional badge.
+ *
+ *   NavigationItem::make('Orders')
+ *       ->icon('outline:shopping-cart')
+ *       ->group('Sales')
+ *       ->sort(10)
+ *       ->badge(fn () => Order::whereNull('shipped_at')->count());
+ *
+ * Deliberately not a route. A registry that held URLs would be a panel, and this
+ * layer is not one — the entry names itself and the application decides where it
+ * points.
+ */
+final class NavigationItem
+{
+    use EvaluatesClosures;
+    use HasIcon;
+    use HasLabel;
+    use HasVisibility;
+
+    protected string|Closure|null $group = null;
+
+    protected int $sort = 0;
+
+    protected mixed $badge = null;
+
+    protected string|Closure|null $badgeColor = null;
+
+    public function __construct(string|Closure|null $label = null)
+    {
+        $this->label = $label;
+    }
+
+    public static function make(string|Closure|null $label = null): self
+    {
+        return new self($label);
+    }
+
+    /**
+     * The entry's own text.
+     *
+     * Overridden for one reason: {@see HasLabel::getLabel()} falls back to
+     * `Str::headline($this->getName())`, which assumes the using class is a
+     * named component — a column, a field. A menu entry has no name; the label
+     * *is* its identity. So the property, the setter and the closure evaluation
+     * all come from the concern and only the fallback is dropped, rather than
+     * declaring a second `label()` vocabulary beside the canonical one.
+     */
+    public function getLabel(): ?string
+    {
+        $label = $this->evaluate($this->label);
+
+        return is_string($label) ? $label : null;
+    }
+
+    /** The heading this entry sits under, or null for the top level. */
+    public function group(string|Closure|null $group): self
+    {
+        $this->group = $group;
+
+        return $this;
+    }
+
+    public function getGroup(): ?string
+    {
+        $value = $this->evaluate($this->group);
+
+        return is_string($value) ? $value : null;
+    }
+
+    /** Position within the group. Lower sorts first; equal sorts keep declaration order. */
+    public function sort(int $sort): self
+    {
+        $this->sort = $sort;
+
+        return $this;
+    }
+
+    public function getSort(): int
+    {
+        return $this->sort;
+    }
+
+    /**
+     * A count or short string shown beside the label.
+     *
+     * A Closure is resolved per read, not stored: a badge that says how many
+     * orders are unshipped is wrong the moment it is cached, and caching it is
+     * the mistake this signature is shaped to prevent.
+     */
+    public function badge(mixed $badge, string|Closure|null $color = null): self
+    {
+        $this->badge = $badge;
+
+        if ($color !== null) {
+            $this->badgeColor = $color;
+        }
+
+        return $this;
+    }
+
+    public function getBadge(): ?string
+    {
+        $value = $this->evaluate($this->badge);
+
+        return $value === null || $value === '' ? null : (string) $value;
+    }
+
+    public function getBadgeColor(): ?string
+    {
+        $value = $this->evaluate($this->badgeColor);
+
+        return is_string($value) ? $value : null;
+    }
+}

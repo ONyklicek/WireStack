@@ -269,6 +269,15 @@ suite zelená beze změny; `WithTable` adapter výrazně pod 3213 ř.; nové Col
 
 ---
 
+### V2.3 — Aplikační owner vrstva
+
+> **Stav 2026-08-30: uzavřená.** Všech pět kroků (R, P, RM, W, I). Owner vrstva
+> **není** v `core` ani v `packages/table`, jak plán psal — je rozmístěná podle
+> typů, které kontrakty jmenují, a to, co jmenuje `Table` nebo host traity, je
+> v novém top balíčku `wire-panels`. Důvod a Filamentův precedens:
+> [`v2-progress.md`](v2-progress.md) §2, rozhodnutí
+> [`v2.3-…`](v2.3-owner-layer-implementation.md) § R.1.
+
 ### V2.2 — Utažení execution seamů (engine integrace už hotová)
 
 > **Stav 2026-08-30: S1 + S2 uzavřené, S3 z poloviny.** Scope se změřením posunul

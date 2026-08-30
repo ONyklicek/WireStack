@@ -26,6 +26,7 @@
     "suggest": {
         "nyoncode/wire-forms": "Enables form introspection tools.",
         "nyoncode/wire-table": "Enables table introspection tools.",
+        "nyoncode/wire-panels": "Enables resource/page introspection (describe-resource reports their surfaces).",
         "nyoncode/wire-sortable": "Enables sortable guidelines and skills."
     },
     "autoload": {

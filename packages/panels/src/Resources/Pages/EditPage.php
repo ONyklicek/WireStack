@@ -12,6 +12,7 @@ use NyonCode\WireForms\Contracts\ProvidesResourceForm;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\WithForms;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
+use NyonCode\WirePanels\Resources\Concerns\EmbedsRelationManagers;
 use NyonCode\WirePanels\Resources\Concerns\ResolvesOneRecord;
 
 /**
@@ -36,6 +37,7 @@ use NyonCode\WirePanels\Resources\Concerns\ResolvesOneRecord;
 abstract class EditPage extends Component
 {
     use BelongsToResource;
+    use EmbedsRelationManagers;
     use ResolvesOneRecord;
     use WithForms;
 
@@ -107,6 +109,11 @@ abstract class EditPage extends Component
     {
         return view('wire-panels::pages.edit-page', [
             'title' => $this->getTitle(),
+            'relationManagers' => $this->relationManagers(),
+            // Not `record`: that is the public property holding the *key*, and
+            // Livewire injects public properties into the view scope, where it
+            // would shadow this.
+            'ownerRecord' => $this->resolveRecord(),
         ]);
     }
 }

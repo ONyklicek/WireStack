@@ -13,4 +13,8 @@
             </button>
         </div>
     </form>
+
+    @foreach($relationManagers as $manager)
+        @livewire($manager, ['ownerRecord' => $ownerRecord], key('rm-'.$loop->index))
+    @endforeach
 </div>

@@ -48,7 +48,7 @@ application installs only what its resources actually use:
 | `DescribesResource`, `DescribesRecords`, `ResourceRegistry` | `wire-core` | nothing but scalars |
 | `ProvidesResourceForm` | `wire-forms` | `Form` |
 | `ProvidesResourceInfolist` | `wire-core` (beside Infolists) | `Infolist` |
-| `ProvidesResourceTable` | `wire-panels` | `Table` |
+| `ProvidesResourceTable`, `ProvidesRelationManagers` | `wire-panels` | `Table`, `RelationManager` |
 | `ListPage` and the other pages | `wire-panels` | `Table`, `Form`, the host traits |
 
 The practical consequence: **a resource with a form and no list needs `wire-forms`
@@ -332,6 +332,85 @@ the resource declaring two.
 Persistence stays the form's: `Form` already owns the save lifecycle, and a
 resource over a non-Eloquent source writes through `Form::using()`.
 
+## Navigation And Workspace
+
+A resource that should appear in a menu implements `ProvidesNavigation`:
+
+```php
+use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
+
+public static function navigation(): NavigationItem   // [tl! focus:6]
+{
+    return NavigationItem::make('Orders')
+        ->icon('outline:shopping-cart')
+        ->group('Sales')
+        ->sort(10)
+        ->badge(fn () => Order::whereNull('shipped_at')->count(), 'danger');
+}
+```
+
+Static, like identity, and for the same reason: a menu is built from every
+registered resource at once, and instantiating each to ask what it is called
+would compose a table and a form per entry. A resource that does not implement it
+is still registered and routable — it just does not appear, which is what an
+internal or nested resource wants.
+
+`NavigationItem` is built on the canonical `HasLabel` / `HasIcon` /
+`HasVisibility` concerns rather than on properties of its own, so it speaks the
+same vocabulary as every other component. What it adds is only what a *menu*
+needs: `group()`, `sort()` and `badge()`. A badge closure is resolved on every
+read, never cached — a count of unshipped orders is wrong the moment it is.
+
+`Workspace` arranges the result:
+
+```php
+use NyonCode\WireCore\Core\Resources\Workspace;
+
+$nav = app(Workspace::class)->navigation();
+// ['Sales' => [NavigationItem, …], '' => [NavigationItem, …]]
+```
+
+Groups keep the order their first entry appeared in; within a group, `sort()`
+orders and equal values keep declaration order, which is what makes `sort()`
+optional. Hidden entries are dropped. Like the registry, it owns no routing and
+no layout — what renders the menu is the application's.
+
+## Relation Managers
+
+A resource can name the relation-scoped tables that belong beside its record:
+
+```php
+use NyonCode\WirePanels\Resources\Contracts\ProvidesRelationManagers;
+
+public function relationManagers(): array   // [tl! focus:3]
+{
+    return [OrderItemsRelationManager::class];
+}
+```
+
+`EditPage` and `ViewPage` then embed them under the form or infolist, mounted
+against the record. Nothing about
+[`RelationManager`](../table/relation-managers.md) changes — mounting one
+directly still works exactly as before; this only removes the need to repeat that
+wiring on every page. A resource declaring none renders none, which is ordinary
+rather than an error.
+
+## Introspection
+
+`describe-resource` reports what an application's resources declare — identity,
+which surfaces each has, and its navigation entry:
+
+```text
+describe-resource                  # every registered resource
+describe-resource orders           # one, by key
+describe-resource App\Resources\OrderResource   # or by class
+```
+
+Surfaces are reported as *declared or not*, not as their contents: composing them
+would cost exactly what the static half exists to avoid, and `describe-table` and
+`describe-form` already answer that for the pages that render them.
+
 ## DescribesResource API
 
 | Method | Returns | Purpose |
@@ -343,11 +422,13 @@ resource over a non-Eloquent source writes through `Form::using()`.
 
 ## Surface Contract API
 
-| Contract | Method |
-| --- | --- |
-| `ProvidesResourceTable` | `table(Table $table): Table` |
-| `ProvidesResourceForm` | `form(Form $form): Form` |
-| `ProvidesResourceInfolist` | `infolist(Infolist $infolist): Infolist` |
+| Contract | Method | Ships in |
+| --- | --- | --- |
+| `ProvidesResourceTable` | `table(Table $table): Table` | `wire-panels` |
+| `ProvidesResourceForm` | `form(Form $form): Form` | `wire-forms` |
+| `ProvidesResourceInfolist` | `infolist(Infolist $infolist): Infolist` | `wire-core` |
+| `ProvidesRelationManagers` | `relationManagers(): array` | `wire-panels` |
+| `ProvidesNavigation` | `static navigation(): NavigationItem` | `wire-core` |
 
 ## ResourceRegistry API
 

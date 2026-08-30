@@ -6,6 +6,7 @@ use NyonCode\WireBoost\Mcp\Tools\ApplicationInfo;
 use NyonCode\WireBoost\Mcp\Tools\DescribeComponentApi;
 use NyonCode\WireBoost\Mcp\Tools\DescribeForm;
 use NyonCode\WireBoost\Mcp\Tools\DescribeInfolist;
+use NyonCode\WireBoost\Mcp\Tools\DescribeResource;
 use NyonCode\WireBoost\Mcp\Tools\DescribeTable;
 use NyonCode\WireBoost\Mcp\Tools\ListComponentTypes;
 use NyonCode\WireBoost\Mcp\Tools\ListIcons;
@@ -16,7 +17,13 @@ use NyonCode\WireBoost\Mcp\WireBoostServer;
 use NyonCode\WireBoost\Tests\Fixtures\DemoForm;
 use NyonCode\WireBoost\Tests\Fixtures\DemoInfolist;
 use NyonCode\WireBoost\Tests\Fixtures\DemoTable;
+use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
+use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
+use NyonCode\WireCore\Core\Resources\ResourceRegistry;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
+use NyonCode\WireCore\Infolists\Components\TextEntry;
+use NyonCode\WireCore\Infolists\Contracts\ProvidesResourceInfolist;
+use NyonCode\WireCore\Infolists\Infolist;
 
 it('reports application info with wire package versions', function () {
     WireBoostServer::tool(ApplicationInfo::class)
@@ -50,6 +57,34 @@ it('describes an infolist component', function () {
     WireBoostServer::tool(DescribeInfolist::class, ['component' => DemoInfolist::class])
         ->assertOk()
         ->assertSee('IconEntry');
+});
+
+it('describes the registered resources', function () {
+    app(ResourceRegistry::class)->register(WtOrderResource::class);
+
+    WireBoostServer::tool(DescribeResource::class)
+        ->assertOk()
+        ->assertSee('wt-orders')
+        ->assertSee('infolist');
+});
+
+it('describes one resource by key', function () {
+    app(ResourceRegistry::class)->register(WtOrderResource::class);
+
+    WireBoostServer::tool(DescribeResource::class, ['resource' => 'wt-orders'])
+        ->assertOk()
+        ->assertSee('Wt Order');
+});
+
+it('says which resources exist when asked for one that does not', function () {
+    // Better than an empty answer: the developer is usually one typo away, and
+    // the registered keys are the shortest way to show it.
+    app(ResourceRegistry::class)->register(WtOrderResource::class);
+
+    WireBoostServer::tool(DescribeResource::class, ['resource' => 'nope'])
+        ->assertOk()
+        ->assertSee('No resource is registered')
+        ->assertSee('wt-orders');
 });
 
 it('lists component types for a category', function () {
@@ -132,3 +167,19 @@ it('searches the wire documentation corpus', function () {
     WireBoostServer::tool(SearchDocs::class, ['query' => '  '])
         ->assertOk();
 });
+
+/** A resource for the describe-resource tool: identity plus one surface. */
+class WtOrderResource implements DescribesResource, ProvidesResourceInfolist
+{
+    use DescribesRecords;
+
+    public static function modelClass(): ?string
+    {
+        return null;
+    }
+
+    public function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist->schema([TextEntry::make('number')]);
+    }
+}

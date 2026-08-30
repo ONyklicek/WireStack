@@ -118,16 +118,20 @@ neověřil.
 | S2 typed dispatch primární | zrušit dvojí dispatch na lifecycle bodech | **jinak** — dvojí dispatch stojí 0,163 µs a nechává se; skutečná redundance byla jinde a byl v ní **ostrý defekt**, viz §2 |
 | S3 hydration seamy | audit směru dat | **bez mezery** — oba směry mají kanonického vlastníka a pojmenovaný pár (ADR 0021). Audit ale našel **osiřelou dvojici** `Hydrator`/`MutationPipeline`, viz §2 a §3 |
 
-### V2.3 — owner vrstva 🟡 (R + P hotové)
+### V2.3 — owner vrstva ✅
 
-Kontrakty resource, odvozovací concern, registr a všechny čtyři stránky.
-`RM` (zařadit `RelationManager`), `Workspace` (W) a boost introspekce (I) zbývají.
+Všech pět kroků plánu: `R` (kontrakty + registr), `P` (čtyři stránky),
+`RM` (`RelationManager` pod vrstvou), `W` (`NavigationItem` + `Workspace`)
+a `I` (boost `describe-resource`).
 
 | Krok | Co vzniklo |
 |---|---|
 | R.1 | `Resources\Contracts\{DescribesResource, ProvidesResourceTable, ProvidesResourceForm, ProvidesResourceInfolist}` + `Resources\Concerns\DescribesRecords` |
 | R.2 | `Managers\ResourceRegistry` + `config('wire-table.resources')` + singleton binding |
 | P (4/4) | `ListPage`, `CreatePage`, `EditPage`, `ViewPage` + `BelongsToResource` / `ResolvesOneRecord` concerny, `ResourcePageException`, views, EN/CS překlady |
+| RM | `Contracts\ProvidesRelationManagers` + `Concerns\EmbedsRelationManagers`; Edit/View je vkládají. **Žádný BC break** — přímý mount funguje beze změny |
+| W | `Core\Resources\Navigation\NavigationItem` (nad `HasLabel`/`HasIcon`/`HasVisibility`) + `Core\Resources\Workspace` |
+| I | boost `Support\ResourceReflector` + `Mcp\Tools\DescribeResource`, zaregistrovaný v `WireBoostServer` |
 | — | **Přesun 2026-08-30**: vrstva rozmístěna podle typů, které kontrakty jmenují; `wire-panels` je nový top balíček. Viz §2 |
 
 **Dvě rozhodnutí z plánu se změřením otočila** — obě v §2: umístění (Filament
@@ -604,8 +608,19 @@ snapshotu, kde je hydratovaný model větší i zastaralý. `ResolvesOneRecord` 
 vlastní pro Edit i View — a **vzniklo to až po tom, co jsem tu metodu napsal
 dvakrát doslova**.
 
-Zbývá `RM` (zařadit `RelationManager` pod vrstvu), `W` (`Workspace`/`Navigation`)
-a `I` (boost `DescribeResource`).
+`RM`, `W` i `I` jsou taky hotové — **V2.3 je uzavřená**:
+
+- `RelationManager` je pod vrstvou bez BC breaku: resource ho jmenuje,
+  `Edit/ViewPage` ho vloží, přímý `@livewire` mount funguje beze změny.
+- `NavigationItem` stojí na kanonických `HasLabel`/`HasIcon`/`HasVisibility` —
+  žádný druhý slovník. `Workspace` jen grupuje a řadí; nevlastní routing.
+- boost `describe-resource` hlásí povrchy jako *deklarované*, ne jejich obsah:
+  složit je by stálo přesně to, čemu se statická půlka vyhýbá.
+
+Na řadě je **V2.4** (tenancy · workflow · queue · DB notifikace) nebo **V2.5**
+(saved views · global search · large-table UX). Pozor: global search patří do
+`wire-panels`, ne do `core/src/GlobalSearch/`, jak ho vede master plán — jinak se
+vrátí ten cyklus, viz §2.
 
 **Poznámka pro další běh:** každý nový konkrétní `WithTable` host se musí přidat
 do `phpstan.neon` `excludePaths` — je to zdokumentovaný důvod (runtime magie
