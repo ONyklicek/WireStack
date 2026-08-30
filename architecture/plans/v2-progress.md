@@ -127,6 +127,7 @@ a boost introspekce (I) zbývají.
 |---|---|
 | R.1 | `Resources\Contracts\{DescribesResource, ProvidesResourceTable, ProvidesResourceForm, ProvidesResourceInfolist}` + `Resources\Concerns\DescribesRecords` |
 | R.2 | `Managers\ResourceRegistry` + `config('wire-table.resources')` + singleton binding |
+| P (1/4) | `Resources\Pages\ListPage` + `ResourcePageException` + view; `Create/Edit/ViewPage` zbývají |
 
 **Dvě rozhodnutí z plánu se změřením otočila** — obě v §2: umístění (Filament
 dává owner vrstvu nahoru, ne dolů) a tvar kontraktu (osmimetodový interface
@@ -512,7 +513,8 @@ počet výskytů `new`, ne na to, co ty výskyty jsou.
 | Systematické hledání duplicitních abstrakcí napříč V2 | Průřez auditu padl na session limit. `DataSourceCapabilities`/`CapabilitySet` byl nalezen mimo audit a nejspíš nezůstal sám | [`v2-audit-2026-08-26.md`](v2-audit-2026-08-26.md) §6 |
 | `ShellRenderPlan`, `InteractionRenderPlan` — host pořád `mixed` | Polling, live kanál, readiness, přístup ke stavu nemají pojmenovaný kontrakt | [`v2.1-…`](v2.1-monolith-split-implementation.md) §0a |
 | `resolveActionType()` — public static, **nula volajících v src** | Nález z kroku 9; plugin API, nebo mrtvý kód. Nerozhodnuto | — |
-| `Core\Hydration\{Hydrator, MutationPipeline}` — **nula volajících**, ale otestované a zdokumentované | Nález S3. `Dehydrator` se používá (`SaveHandler::persist()`), jeho čtecí zrcadlo `Hydrator` **nikdy nebylo zapojeno** — model → stav dělá `StateHydrator` + `hydrateState()` per pole. Smazat (2.0 je major) nebo nechat jako stavební blok pro konzumenta? Je to **odstranění tříd z publikovaného balíčku**, takže rozhodnutí je lidské, ne moje. Stejná třída otázky jako `resolveActionType()` o řádek výš | [`unified-engine.md`](../core/unified-engine.md) § Hydration System |
+| `Core\Hydration\MutationPipeline` — nula volajících, **ale zůstává** | Nález S3. Sourozenec `Hydrator` byl smazán (nula volajících, žádný plán); `MutationPipeline` **ne** — `v2-deferred-items.md` §3.2 je živý nedodělaný plán na jeho zapojení do `dehydrate()` (`mutateDataBeforeSave()` jako before-hook). Není zapomenutý, je postavený dopředu. **Rozhodnuto vlastníkem repa 2026-08-30: nechat.** Zapojit ho znamená dodělat §3.2 jako vlastní krok | [`v2-deferred-items.md`](v2-deferred-items.md) §3.2 |
+| `v2-deferred-items.md` §3 je hotová z jedné čtvrtiny, ne celá | V2.2 korekční tabulka ji označila za HOTOVOU. Hotová je **§3.1** (Dehydrator v `persist()`). §3.2 (MutationPipeline) a §3.3 (relation dehydrace) ne — `RelationshipSaveHandler` pořád ručně iteruje 174 řádků. §3.4 (BC) je bezpředmětná, dokud §3.2 nepadne | [`v2-deferred-items.md`](v2-deferred-items.md) §3 |
 | Boost guidelines neznají plugin hooky | `guidelines/` ani `skills/` nepopisují `PluginManager` vůbec — takže pravidlo „hint rozhoduje dispatcher" tam není a nemohlo zestárnout. Doplnit až s vlastní plugin sekcí, ne ad hoc | — |
 | ~~Boost docs mirror rozjetý~~ | **zavřeno 2026-08-30.** `packages/boost/resources/boost/docs/` je *commitnutá* kopie `docs/` (viz `scripts/sync-boost-docs.php`) a `composer boost:check-docs` je brána v `docs-check.yml`. Byla červená **už před tímhle během**: `money.md` a `metric.md` z V2.1 se do balíčku nikdy nedostaly. Po každé změně v `docs/` pouštěj `composer boost:sync-docs` | `.github/workflows/docs-check.yml` |
 
@@ -536,10 +538,19 @@ i boost guidelines. Na řadě je **P — Page owneři**:
 | `CreatePage` / `EditPage` | `WithForms` | `ProvidesResourceForm` |
 | `ViewPage` | Infolist render | `ProvidesResourceInfolist` |
 
-Vzor je `RelationManager` (Livewire komponenta + host trait) a všechny musí být
-použitelné i **bez** resource — ADR 0020 to vede jako invariant „dvě cesty
-first-class". Pak `RM` (zařadit `RelationManager` pod vrstvu), `W`
-(`Workspace`/`Navigation`) a `I` (boost `DescribeResource`).
+`ListPage` **hotová**: skládá `WithTable`, takže polling, partialy, gesta i
+exporty přicházejí beze změny; obě cesty (s resource / vlastní `table()`) jsou
+plnohodnotné a **napůl deklarovaná stránka vyhodí výjimku** místo prázdné
+tabulky — prázdná se čte jako „žádné záznamy", ne jako chyba. Zbývají
+`Create/Edit/ViewPage`, které potřebují `WithForms` a Infolist render.
+
+Pak `RM` (zařadit `RelationManager` pod vrstvu), `W` (`Workspace`/`Navigation`)
+a `I` (boost `DescribeResource`).
+
+**Poznámka pro další běh:** každý nový konkrétní `WithTable` host se musí přidat
+do `phpstan.neon` `excludePaths` — je to zdokumentovaný důvod (runtime magie
+Livewire), stálo to 96 chyb u `ListPage` a bude to platit i pro `Create/EditPage`
+s `WithForms`.
 
 Obě věci, které běh 2026-08-29 vyhodil a neřešil, jsou dotažené:
 

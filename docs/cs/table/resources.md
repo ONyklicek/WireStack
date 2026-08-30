@@ -139,6 +139,49 @@ $registry->forModel(Order::class);      // OrderResource::class | null
 Každá z těch odpovědí vzniká jen ze statického kontraktu, takže sestavení menu
 z `all()` nikdy neskládá tabulku.
 
+## Stránky
+
+`ListPage` je Livewire komponenta, která vykreslí seznam jednoho resource.
+Skládá `WithTable`, takže je to obyčejný table host — polling, řádkové partialy,
+gesta, exporty i všechno ostatní přichází beze změny, protože žádná z těch věcí
+o resource neví.
+
+```php
+use NyonCode\WireTable\Resources\Pages\ListPage;
+
+final class ListOrders extends ListPage
+{
+    protected static ?string $resource = OrderResource::class;
+}
+```
+
+To je celá stránka. Nadpis se bere z množného označení resource — proto je ten
+popisek na *statickém* kontraktu: stránka ho ukáže, aniž by cokoli skládala.
+Přebij ho nastavením `$title`.
+
+Resource není povinný. Stránka si může tabulku napsat sama a žádný resource
+nepoužít, přesně jako každá `WithTable` komponenta:
+
+```php
+final class ListOrders extends ListPage
+{
+    public function table(Table $table): Table
+    {
+        return $table->model(Order::class)->columns([
+            TextColumn::make('number'),
+        ]);
+    }
+}
+```
+
+Obě cesty jsou plnohodnotné. Co ale stránka *napůl* deklarovaná udělá, je
+výjimka: stránka bez resource i bez `table()`, nebo mířící na resource, který
+seznam nedeklaruje, se ozve nahlas místo aby vykreslila prázdnou tabulku — ta by
+se totiž četla jako „žádné záznamy", ne jako chyba.
+
+Stránky nevlastní routing. Namountuj si ji, kam aplikace chce, jako každou
+Livewire komponentu.
+
 ## Rozšířený příklad
 
 Resource objednávky se všemi třemi povrchy — seznam, který stránka vykreslí,

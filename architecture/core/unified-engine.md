@@ -511,30 +511,17 @@ StatePathResolver::set($array, 'user.profile.age', 25);   // modifies in-place
 
 Converts between Eloquent models and flat state arrays.
 
-### Hydrator (Model → State) — **built, not wired**
+### Model → State — there is no `Hydrator` class
 
-```php
-use NyonCode\WireCore\Core\Hydration\Hydrator;
+There was one — `Core\Hydration\Hydrator`, the read-direction mirror of
+`Dehydrator` — and this page documented it with a worked example, but **nothing
+ever called it**: verified 2026-08-30 across
+`packages/*/src`, `workbench/` and `tests/`, where only its own unit test
+referenced it. `Dehydrator` is genuinely used by `SaveHandler::persist()`; its
+mirror was built and never attached, so it was removed rather than left here
+looking like the engine's behaviour.
 
-$hydrator = new Hydrator($valueTransformer, $castResolver);
-$state = $hydrator->hydrate($model, $components);
-// → ['name' => 'John', 'email' => 'john@example.com', ...]
-```
-
-Handles: attributes, relations, accessors, casts (dates, enums, JSON).
-
-> **Nothing in the framework calls this** (verified 2026-08-30: zero references
-> across `packages/*/src`, `workbench/` and `tests/` — only its own unit test).
-> Unlike `Dehydrator`, which `SaveHandler::persist()` really does use, its
-> read-direction mirror was never attached. The model → state path that actually
-> runs is the one below. Read this section as a building block a consumer *may*
-> use, not as a description of the engine's behaviour, and see
-> [`v2-progress.md`](../plans/v2-progress.md) §3 for the open keep-or-delete
-> decision.
-
-### The read path that actually runs
-
-Model → state is done by the forms runtime, in three named steps:
+The path that does run is the forms runtime's, in three named steps:
 
 | Step | Owner | Does |
 |---|---|---|
@@ -564,7 +551,7 @@ $dehydrator->dehydrate($state, $model);
 |-------|-------------|
 | `ValueTransformer` | Converts values between PHP types and storage formats |
 | `CastResolver` | Resolves Eloquent cast definitions to transformation logic |
-| `MutationPipeline` | Chains multiple transformations (e.g., trim → cast → encrypt). **No callers** — see the note under Hydrator |
+| `MutationPipeline` | Chains multiple transformations (e.g., trim → cast → encrypt). **No callers yet** — built ahead of [`v2-deferred-items.md`](../plans/v2-deferred-items.md) §3.2, which runs it inside `dehydrate()` and wraps `mutateDataBeforeSave()` as a before-hook. Kept deliberately |
 
 ---
 

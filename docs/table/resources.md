@@ -139,6 +139,49 @@ $registry->forModel(Order::class);      // OrderResource::class | null
 Every one of these answers from the static contract alone, so building a menu
 from `all()` never composes a table.
 
+## Pages
+
+A `ListPage` is a Livewire component that renders one resource's list. It
+composes `WithTable`, so it is an ordinary table host — polling, row partials,
+gestures, exports and everything else arrive unchanged, because none of them know
+a resource exists.
+
+```php
+use NyonCode\WireTable\Resources\Pages\ListPage;
+
+final class ListOrders extends ListPage
+{
+    protected static ?string $resource = OrderResource::class;
+}
+```
+
+That is the whole page. Its heading defaults to the resource's plural label —
+which is why that label is on the *static* contract: the page shows it without
+composing anything. Set `$title` to override it.
+
+Using a resource is not required. A page can write its own table and use no
+resource at all, exactly as any `WithTable` component does:
+
+```php
+final class ListOrders extends ListPage
+{
+    public function table(Table $table): Table
+    {
+        return $table->model(Order::class)->columns([
+            TextColumn::make('number'),
+        ]);
+    }
+}
+```
+
+Both paths are first class. What a page left *half* declared does is throw: a
+page with neither a resource nor a `table()`, or one pointed at a resource that
+declares no list, refuses loudly rather than rendering an empty table — which
+would read as "no records" rather than as a mistake.
+
+Pages own no routing. Mount one wherever the application wants it, the way any
+Livewire component is mounted.
+
 ## Extended Example
 
 An order resource with all three surfaces — the list a page renders, the form

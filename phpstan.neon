@@ -14,6 +14,10 @@ parameters:
         # Every other concrete WithTable host (tests, workbench, wire-sortable) is
         # likewise outside the analysed paths; RelationManager is such a host base.
         - packages/table/src/RelationManagers/RelationManager.php
+        # ListPage is the same kind of host base: a concrete Livewire component
+        # composing WithTable, so analysing it as a class drags the trait in as
+        # one too and reproduces the 96 runtime-magic errors above.
+        - packages/table/src/Resources/Pages/ListPage.php
         # PanelComponent is a concrete Livewire host composing WithEditablePanel;
         # like RelationManager it depends on Livewire runtime magic and is only
         # analysable via the trait's @phpstan-require-extends, not as a class.
