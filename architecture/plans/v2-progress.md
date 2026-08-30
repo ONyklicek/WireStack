@@ -1,7 +1,7 @@
 ---
 title: V2 — kde to stojí a čím pokračovat
 date: 2026-08-30
-scope: V2.0 (hotová), V2.1 (hotová), V2.2 (hotová), ADR 0025 (rozpracované), V2.3 (na řadě)
+scope: V2.0–V2.3 (hotové), ADR 0025 (rozpracované), V2.4/V2.5/V2.6 (na řadě)
 status: progress record — aktualizovat na konci každého běhu
 ---
 
@@ -456,10 +456,13 @@ napsat tak, jak stojí v plánu**.
 Ověřeno proti Filament docs 5.x: `Resource` tam bydlí v **panel balíčku**, který
 závisí na `filament/tables`, `filament/forms` i `filament/schemas`. Komponentové
 balíčky o `Resource` nevědí a jdou použít samostatně. Filament to omezení nemá,
-protože owner vrstvu dal **nahoru**. Řešení je tedy stejné: `packages/table` už
-na forms i core závisí, takže tam kontrakt smí povrchy jmenovat přímo — žádné tři
-nové dvojice kontrakt+factory po vzoru `ModalForm`, žádný cyklus. Global search
-z V2.5 patří ze stejného důvodu tamtéž, ne do `core/src/GlobalSearch/`.
+protože owner vrstvu dal **nahoru**.
+
+*(První oprava zněla „dát to do `packages/table`, které na forms i core závisí".
+To bylo správné odvození aplikované špatně — `wire-table` **je** jedna z těch
+komponent, Filamentův protějšek je `filament/tables`, a `Resource` tam
+rozhodně není. Vlastník repa to poznal na konkrétním případu; konečné
+rozmístění je o pár odstavců níž.)*
 
 **A tvar kontraktu neprojde vlastním standardem repa.** Plán i ADR 0020 popisují
 `Resource` jako jednu třídu s osmi metodami. `AI_CODING_STANDARD.md` § Interfaces
@@ -598,114 +601,40 @@ počet výskytů `new`, ne na to, co ty výskyty jsou.
 
 ## 4. Co je na řadě
 
-Klesající výnos, seřazeno podle poměru:
+**Čtyři fáze ze sedmi jsou hotové: V2.0, V2.1, V2.2, V2.3.** Co je uvnitř nich a
+co v nich měření změnilo, je v §1 a §2; tahle sekce je jen o tom, co dál.
 
-**V2.1 i V2.2 jsou hotové.** V2.1: fáze A doražená (13 extrakcí), fáze B uzavřená
-včetně B-1. V2.2: S2 dotažená (a našla tři defekty), S1 změřená na „nedělat",
-S3 uzavřená nálezem osiřelé dvojice (§3).
+### Další fáze
 
-**V2.3 je rozjetá: R.1 + R.2 hotové.** Kontrakty, `DescribesRecords` a
-`ResourceRegistry` stojí v `packages/table` (ne v core — viz §2), s docs EN/CS
-i boost guidelines. Na řadě je **P — Page owneři**:
-
-| Page | Host trait | Čte |
+| Fáze | Obsah | Poznámka před startem |
 |---|---|---|
-| `ListPage` | `WithTable` | `ProvidesResourceTable` |
-| `CreatePage` / `EditPage` | `WithForms` | `ProvidesResourceForm` |
-| `ViewPage` | Infolist render | `ProvidesResourceInfolist` |
+| **V2.4** | tenancy · workflow · queue · DB notifikace | Master plán ji vede jako 🔴 vysoké riziko. `WF-4` (transition engine) má napojit `BadgeColumn`, ne nový `StatusColumn` — ta závislost padla v kroku 14, viz §2 |
+| **V2.5** | saved views · global search · large-table UX | **Global search patří do `wire-panels`**, ne do `core/src/GlobalSearch/`, jak ho vede master plán. Staví nad `ResourceRegistry` a core na table nevidí — je to přesně ten cyklus, kvůli kterému se owner vrstva stěhovala, viz §2 |
+| **V2.6** | domain modules | `Workspace` je zamýšlený seam; grupuje resources a nevlastní routing |
 
-**P je hotová — resource umí vykreslit všechno.** Čtyři stránky, každá
-použitelná i bez resource:
+Nezačaté, žádná z nich není blokovaná.
 
-| Stránka | Host | Čte |
-|---|---|---|
-| `ListPage` | `WithTable` | `ProvidesResourceTable` |
-| `CreatePage`, `EditPage` | `WithForms` | `ProvidesResourceForm` — **jeden** `form()` slouží obojímu |
-| `ViewPage` | **žádný** | `ProvidesResourceInfolist` |
+### Než se do nich pustíš
 
-`ViewPage` neskládá host traitu záměrně: read-only znamená žádný stav k navázání
-a nic k odeslání, takže `Infolist` je celý povrch — a je to zároveň test, jestli
-stránka patří do `phpstan.neon` `excludePaths` (ostatní tři ano, ona ne).
+Tři věci z §3, které se samy nezmenší a každá je na půl dne:
 
-Záznam cestuje jako **klíč**, ne model: mount argumenty končí v Livewire
-snapshotu, kde je hydratovaný model větší i zastaralý. `ResolvesOneRecord` to
-vlastní pro Edit i View — a **vzniklo to až po tom, co jsem tu metodu napsal
-dvakrát doslova**.
+1. **`v2-deferred-items.md` §3 je hotová z jedné čtvrtiny**, ne celá, jak tvrdila
+   V2.2. §3.2 (zapojit `MutationPipeline` do `dehydrate()`) a §3.3 (relation
+   dehydrace) otevřené — `RelationshipSaveHandler` pořád ručně iteruje 174 řádků.
+2. **ADR 0025 kroky 8 a 10** — Blade coupling `callInfolistAction` a vyříznutí
+   `wireFillHandle` z 38 KB bundlu.
+3. **`resolveActionType()`** — public static, nula volajících v `src`. Plugin API,
+   nebo mrtvý kód. Nerozhodnuto od kroku 9.
 
-`RM`, `W` i `I` jsou taky hotové — **V2.3 je uzavřená**:
+### Co je uzavřené a nemá se otevírat
 
-- `RelationManager` je pod vrstvou bez BC breaku: resource ho jmenuje,
-  `Edit/ViewPage` ho vloží, přímý `@livewire` mount funguje beze změny.
-- `NavigationItem` stojí na kanonických `HasLabel`/`HasIcon`/`HasVisibility` —
-  žádný druhý slovník. `Workspace` jen grupuje a řadí; nevlastní routing.
-- boost `describe-resource` hlásí povrchy jako *deklarované*, ne jejich obsah:
-  složit je by stálo přesně to, čemu se statická půlka vyhýbá.
-
-Na řadě je **V2.4** (tenancy · workflow · queue · DB notifikace) nebo **V2.5**
-(saved views · global search · large-table UX). Pozor: global search patří do
-`wire-panels`, ne do `core/src/GlobalSearch/`, jak ho vede master plán — jinak se
-vrátí ten cyklus, viz §2.
-
-**Poznámka pro další běh:** každý nový konkrétní `WithTable` host se musí přidat
-do `phpstan.neon` `excludePaths` — je to zdokumentovaný důvod (runtime magie
-Livewire), stálo to 96 chyb u `ListPage` a bude to platit i pro `Create/EditPage`
-s `WithForms`. Ty dvě navíc patří do `wire-panels`, ne do `wire-forms` — hlídá to
-`TableOwnsTablesTest`, ale jen pro table; analogický test pro forms zatím není.
-
-**A pusť `--diff=origin/1.x`, ne jen `coverage:verify`.** Floory drží i s
-nepokrytým novým řádkem; diff brána, kterou pouští CI, ne. Tenhle běh na ní měl
-dva vlastní řádky (`registerResources()` a větev `getLoadedSubRowCount()`) a
-odbyl jsem to větou „žádný není z mé práce", což v tu chvíli přestalo platit.
-Teď je **zelená celá** — včetně sedmi řádků, které tam visely od starších běhů:
-
-| Řádek | Jak se zavřel |
-|---|---|
-| `WithTable:554` | Satelitní partialy na **pollovací** cestě neměly test — zápisová cesta ano. Přibyl polled summarised table; ta smyčka běžela v celé sadě nulakrát |
-| `CollectionDataSource:206,220,223` | Chyběly operátory `>`, `>=`, `<=`, `<>` a odmítnutí planu s joinem |
-| `EloquentDataSource:196` | **Nedosažitelné** — agregační select bez GROUP BY vždy vrátí řádek (prázdná tabulka odpoví `0|`). Označeno `@codeCoverageIgnore` s důvodem |
-| `ArrayRecord:48`, `StateWriter:46` | `toArray()` a třetí rameno walku |
-
-Obě věci, které běh 2026-08-29 vyhodil a neřešil, jsou dotažené:
-
-1. ~~**`@php` bloky ve views**~~ — **hotovo 2026-08-30.** Ze čtyř jmenovaných
-   hnízd mají tři jen rozbalení render plánu do aliasů (`data-region`,
-   `tables/index`, `forms/radio`) — **nedělat**, doloženo v §2. Čtvrté
-   (`sub-rows.blade.php`) drželo součty, colspan a **rozjetou kopii pravidla
-   „je filtr aktivní"**; vlastníkem je teď `Support\SubRowPanel` a obě
-   renderování panelu (desktop + stacked karta) ho čtou. Nález: **ostrý defekt**
-   ve `SubRowFilters::hasActiveInteractive()`, viz §2.
-2. ~~**`*Skeleton` bez testu zapečených podmínek**~~ — **hotovo 2026-08-29.**
-   Všechny tři (`getSelectionCellSkeleton`, `getSubRowCell`,
-   `getRowContextMenuSkeleton`) mají test na zapečené podmínky. Nález: **tvarové
-   klíče byly hlídané** (plochá memoizace sub-row buňky shodí dva existující
-   testy), **zapečené podmínky ne** — zadrátovat `usesRangeSelection`, hustotu
-   nebo rámeček prošlo všemi 2302 testy. Bez defektu, ale ten range flag píše
-   `x-on:click`: špatně zapečený znamená, že Shift+klik na výběrovou buňku
-   odpoví **dvakrát** (rozšíří rozsah *a* přepne ten jeden řádek).
-
-**`Table.php` je hotová.** Nezbyla v ní metoda nad 19 řádků a každý soudržný
-shluk má concern. Další práce na ní by už byla přerovnávání, ne úklid.
-
-**`WithTable` — přeměřeno 2026-08-28, seznam v §4 byl neúplný.** Největší metoda
-není žádná ze tří, které tam stály, ale `updateTableCell` (**73**), a hned za
-sebou `queueRowPartial` (43); obě v seznamu chyběly. Zbytek pořadí:
-
-| Metoda | ř. | Poznámka |
-|---|---|---|
-| `updateTableCell` | 73 | **Nechat.** `CellEditPipeline` má v docblocku napsáno, že transakci a zámek řádku vlastní *volající* — jedna řádka pod `lockForUpdate()` pro edit, množina pod jednou transakcí pro fill. Další extrakce jde proti doloženému rozhodnutí. |
-| `updatedTableState` | 53 | Krok 8, doražené vědomě (59 → 53). |
-| `submitHaltModal` | 52 | Čte halt kontext ze stavu a přeposílá podle typu akce. Kandidát na value object nad stavem. |
-| `getTableRecords` | 48 | Sekvence hostitelských volání: memo, plugin seam, lazy gate, rehome, eager load. Přesouvat není co. |
-| `queueChangedRowPartials` | 47 | Krok 5, hotovo. |
-| `queueRowPartial` | 43 | Vázané na `renderPartial()` / `skipIslandsRender()` — hostitelské. |
-| `buildTableQuery` | 42 | Krok 4, hotovo. |
-
-Čtyři z osmi největších jsou tedy **už doražené kroky**, které skončily v téhle
-velikosti záměrně. Zbývá `submitHaltModal` jako jediný nesporný kandidát, a to
-je jedna metoda, ne krok.
-
-Po V2.1 následuje **V2.3** (owner vrstva), jejíž brána je rozhodnutí o vlastníku
-`ResourceRegistry` — už padlo, viz `v2.3-…` § R.1.
+- **`Table.php`** — nezbyla metoda nad 19 řádků, každý soudržný shluk má concern.
+- **`WithTable`** — čtyři z osmi největších metod jsou doražené kroky, které
+  skončily v téhle velikosti záměrně (`updateTableCell` 73 ř. jde proti
+  doloženému rozhodnutí o vlastnictví transakce). Jediný nesporný kandidát je
+  `submitHaltModal` (52 ř.), a to je jedna metoda, ne krok.
+- **`@php` bloky ve views** a **`*Skeleton` bez testu zapečených podmínek** —
+  obojí dotažené, viz §1 a §2.
 
 ---
 
@@ -721,16 +650,26 @@ Postup je pokaždé stejný a v tomhle pořadí:
    pětkrát ze sedmi — viz §2. U extrakce měř řádky v tělech, ne délku souboru;
    u aditivní práce se ptej „kdo tuhle schopnost už vlastní?".
 2. Najdi, co není pokryté: grep metod s nula zmínkami v `tests/`, a `@php`
-   bloky ve views. Tam byly všechny čtyři defekty tohohle běhu.
+   bloky ve views. Když najdeš stejné pravidlo dvakrát, **nejdřív zjisti, která
+   kopie je novější** — ne která vypadá rozbitě.
 3. Mutuj PROTI STÁVAJÍCÍ SADĚ, než napíšeš test — to je důkaz, že pravidlo bylo
    nepokryté, ne tvůj dojem. Pak napiš test a mutuj znovu.
 4. Tělo k vlastníkovi, endpoint tenký. Adaptér se extrahuje a deleguje, nikdy
    nepíše vedle jako druhá kopie.
-5. Brány podle AI_CHANGE_PROTOCOL.md včetně verify:drivers a obou docs bran,
+5. **U nové UI vrstvy postav prototyp na reálné entitě ve workbenchi a projeď ho
+   driverem.** Fixture dokazuje kontrakt, ne zapojení: V2.3 měla zelenou unit
+   sadu a v prohlížeči spadla na dvou defektech, které žádný server-side test
+   vidět nemůže (nenavázaný model, neseedovaný stavový bag → tichý entangle
+   no-op).
+6. Brány podle AI_CHANGE_PROTOCOL.md včetně verify:drivers a obou docs bran,
    pokud jsi sáhl na veřejné API (EN i CS stránka v jednom commitu).
    **Když jsi sáhl na `docs/`, pusť i `composer boost:sync-docs`** — boost veze
    commitnutou kopii docs a `boost:check-docs` je CI brána; zapomnělo se na ni
    dvakrát po sobě.
+7. **Coverage pouštěj v obou režimech.** `coverage:verify` drží floory i s
+   nepokrytým novým řádkem; CI pouští navíc
+   `php scripts/verify-coverage.php build/clover.xml --diff=origin/1.x`, a ta
+   brána byla červená tři běhy, než ji někdo pustil.
 
 Když měření řekne „nedělat", je to platný výsledek — napiš proč a dolož to.
 Na konci aktualizuj tenhle soubor a commitni.
@@ -739,8 +678,29 @@ Na konci aktualizuj tenhle soubor a commitni.
 Poznámka k `coverage:verify`: composer ho zabíjí na 300s. Pouštěj ho jako
 `COMPOSER_PROCESS_TIMEOUT=1200 composer coverage:verify`.
 
+**Nový balíček se drátuje na osmi místech** a zapomenout kterékoli je tichá
+chyba: `composer.json` (repositories, require, autoload-dev), `phpunit.xml`
+(testsuite **i** `<source>` — bez něj se balíček neměří), `tests/Pest.php`,
+`scripts/coverage-floors.json`, `phpstan.neon` (paths + excludePaths pro
+`WithTable`/`WithForms` hosty), `.github/workflows/split.yml`, README, a
+`vendor/orchestra/testbench-core/laravel/bootstrap/cache/` smazat, jinak ho
+workbench neuvidí.
+
 **Nepřeskakuj měření — to je jediné pravidlo, které si z tohohle souboru odnes,
-když nemáš čas na zbytek.** Za dva běhy opravilo zadání osmkrát. V běhu
+když nemáš čas na zbytek.** Za tři běhy opravilo zadání dvanáctkrát. Běh
+2026-08-30 přidal pět:
+
+| Krok | Plán / §4 slibovala | Měření našlo |
+|---|---|---|
+| `@php` bloky ve views | čtyři hnízda podle *počtu* bloků | tři z nich jsou jen aliasy render plánu → **nedělat**; čtvrté drželo rozjetou kopii pravidla a **ostrý defekt** |
+| V2.2/S1 | injektovat deps, „testy nemůžou mockovat" | `ActionPipeline` už stages konstruktorem bere, `SaveHandler` má 25 vlastních testů → **nedělat** |
+| V2.2/S2 | zrušit dvojí dispatch (redundance) | stojí 0,163 µs → **nechat**; vedle byl **defekt**, nehintovaný callback běžel dvakrát |
+| V2.3 umístění | `Resource` do core (rozhodnuto 2026-08-26) | náčrt R.1 tak nejde napsat; Filament dává owner vrstvu **nad** komponenty → nový balíček `wire-panels` |
+| V2.3 tvar | jedna třída / jeden interface, osm metod | `AI_CODING_STANDARD.md` § Interfaces to zakazuje → rozpad na identitu + povrchy |
+
+A jeden nález, který měření **nenašlo a našel ho až prohlížeč**: V2.3 měla
+zelenou unit sadu a dva defekty, které server-side test vidět nemůže. Proto krok
+5 v postupu výš. V běhu
 2026-08-26: query cache vypadala jako nejlevnější první krok a byla nejhorší,
 `updateTableCell` vypadal na 119 řádků k přesunu a byl už extrahovaný,
 `Table.php` vypadal jako druhý monolit a je to fluent builder. V běhu
