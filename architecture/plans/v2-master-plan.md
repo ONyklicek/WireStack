@@ -271,6 +271,13 @@ suite zelená beze změny; `WithTable` adapter výrazně pod 3213 ř.; nové Col
 
 ### V2.2 — Utažení execution seamů (engine integrace už hotová)
 
+> **Stav 2026-08-30: S1 + S2 uzavřené, S3 z poloviny.** Scope se změřením posunul
+> potřetí — S1 se ukázala jako **už hotová** (`ActionPipeline` bere stages
+> konstruktorem, `SaveHandler` má 25 vlastních testů, které ho konstruují přímo),
+> a S2 mířila na redundanci za 0,163 µs, zatímco vedle ní seděl **ostrý defekt**:
+> nehintovaný hook callback patřil oběma dispatcherům a běžel dvakrát. Doložení,
+> čísla a co zbývá ze S3: [`v2-progress.md`](v2-progress.md) §1, §2 a §3.
+
 **⚠️ Korekce scope (ověřeno 2026-07-06):** engine integrace je **hotová** —
 **#3 Hydration** (`SaveHandler::persist` už používá `Dehydrator`), **#4 StateHydrator**
 (běží ve `FormRuntime`+`Field`), **#2 Capabilities auto-resolve** (`TableQueryService`

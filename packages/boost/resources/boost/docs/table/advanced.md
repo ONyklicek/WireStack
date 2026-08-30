@@ -1050,9 +1050,26 @@ TextColumn::make('metadata')->onlyOnLargeScreens()  // ≥xl
 
 ```php
 TextColumn::make('user')
-    ->mobileDisplayUsing(fn ($record) => $record->name)
-    ->desktopDisplayUsing(fn ($record) => "{$record->name} ({$record->email})")
+    ->mobileDisplayUsing(fn ($state, $record) => $record->name)
+    ->desktopDisplayUsing(fn ($state, $record) => "{$record->name} ({$record->email})")
 ```
+
+A variant closure supplies the cell's **content**, exactly as `displayUsing()`
+does. Everything else the column declares — the record link, the icon, the size
+and weight, the copy button, the description — still wraps it, so a column does
+not quietly lose its affordances at one width:
+
+```php
+TextColumn::make('user')
+    ->actionUrl(fn ($record) => route('users.show', $record))   // [tl! focus]
+    ->copyable()                                                // [tl! focus]
+    ->mobileDisplayUsing(fn ($state, $record) => $record->name)  // still a link, still copyable
+```
+
+Declaring only one variant is fine: the other width falls back to
+`displayUsing()` if there is one, and to the formatted state otherwise. When both
+widths render identically the cell is emitted once, without the breakpoint
+wrappers.
 
 ---
 

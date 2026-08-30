@@ -1,7 +1,7 @@
 ---
 title: V2 — kde to stojí a čím pokračovat
 date: 2026-08-30
-scope: V2.0 (hotová), V2.1 (hotová), úklid views (hotový), ADR 0025 (rozpracované), V2.3 (na řadě)
+scope: V2.0 (hotová), V2.1 (hotová), V2.2 (S1+S2 hotové, S3 z poloviny), ADR 0025 (rozpracované), V2.3 (na řadě)
 status: progress record — aktualizovat na konci každého běhu
 ---
 
@@ -103,6 +103,20 @@ Dvě vazby jsou vědomé a pojmenované v docblocích:
 - `StacksOnMobile` se ptá `MobileCard` na tvar karty místo aby si ho počítal.
   Tvar je vlastnost karty; slot přidaný v `MobileCard` tak nemůže být zapomenut
   v cache klíči.
+
+### V2.2 — utažení execution seamů ✅ (S1 + S2; S3 z poloviny)
+
+**V tomhle souboru do 2026-08-30 vůbec nebyla** — §1 skákala z V2.1 rovnou na
+V2.3, přestože `v2-master-plan.md` ji má v sekvenci mezi nimi. Nebylo to
+rozhodnutí „odložit"; vypadla z evidence. Odtud i to, že se dala z velké části
+zavřít za jeden běh: jedna ze tří částí byla hotová už předem a nikdo to
+neověřil.
+
+| Krok | Plán | Výsledek |
+|---|---|---|
+| S1 `app()`/`new` v execution seamech | injektovat deps do `SaveHandler` + `ActionPipeline` | **nedělat** — premisa („testy nemůžou mockovat") je nepravdivá, viz §2 |
+| S2 typed dispatch primární | zrušit dvojí dispatch na lifecycle bodech | **jinak** — dvojí dispatch stojí 0,163 µs a nechává se; skutečná redundance byla jinde a byl v ní **ostrý defekt**, viz §2 |
+| S3 hydration seamy | audit směru dat | forms směr má kanonického vlastníka v obou směrech; čtvrtý seam z plánu (`normaliseEnums`) **už neexistuje**. Table strana neověřená — viz §3 |
 
 ---
 
@@ -328,6 +342,80 @@ riziko špatného čísla. Sdílená je jen **znalost jména atributu**
 (`Str::snake($relation).'_count'`) a pořadí dvou zdrojů — to je teď
 `getLoadedSubRowCount()` a čtou ho všichni tři; kontrakty zůstávají dva.
 
+**V2.2/S2: plán mířil na redundanci, která nic nestojí, a minul defekt vedle
+ní.** Každý lifecycle bod (`table.configuring/querying/queried`,
+`form.saving/saved`, `action.executing/executed`) volá `runHook()` i
+`runTypedHook()` za sebou. Plán to označil za „dvojí průchod a dvě API pro totéž"
+a chtěl jeden z nich zrušit. Změřeno: **0,163 µs na lifecycle bod** bez
+registrovaných listenerů — a zrušení jednoho z těch dvou průchodů ušetří zhruba
+půlku, tedy ~0,08 µs na bod. Sedm bodů na request = **~0,6 µs** proti renderu,
+který má podle vlastního benchmarku repa 20,5 ms. **Nedělat** — a navíc by to rozbilo
+druhou skupinu listenerů, protože každý callback patří právě jednomu dispatcheru.
+
+Právě to „právě jednomu" byl ale ten defekt. Členství rozhodovaly **dvě nezávislé
+otázky**:
+
+```php
+callbackExpectsObject() => $type !== null && $type !== 'array';
+callbackExpectsArray()  => $type === 'array';
+```
+
+Pro callback **bez typového hintu** (`function ($payload)`, i `function ()`)
+odpověděly obě **ne** — takže nepatřil ani jednomu dispatcheru, a proto ho
+spustily **oba**. Důsledky:
+
+1. **Vedlejší efekty se zdvojily.** Počítadlo, audit řádek, log — dvakrát na
+   každý lifecycle bod.
+2. **Běžný tvar `$payload['data']` spadl.** Druhý průchod předá DTO
+   (`FormSavingPayload`), které není `ArrayAccess` → fatal *poté*, co callback
+   svou práci na prvním průchodu už udělal.
+
+Mutace: přepsání pravidla prošlo **všemi 5588 testy** (core 2083, forms 1129,
+table 2329, Integration 47). Nepokryté úplně — všechny testy i všechny příklady
+v docs mají první parametr otypovaný, takže na ten případ nikdo nesáhl.
+
+Oprava je jeden predikát a jeho negace, protože to **je** rozklad, ne dvě otázky.
+Nehintovaný callback padá na **array** stranu — tedy na tu deprecated. To je
+záměr: kdo psal callback bez hintu, psal ho v době, kdy array payload byl jediný
+(a `docs/core/plugins.md` to tvrdilo), takže poslat mu DTO by rozbilo přesně ty
+pluginy, které 2.x BC slib chrání.
+
+**A ta docs věta byla lež, která ten defekt vyráběla.** `docs/core/plugins.md`
+psalo: *„The current runtime hooks use array payloads, so these DTOs are most
+useful when building your own typed extension points."* Runtime přitom DTO
+dispatchuje na **každém** vestavěném bodě. Čtenář tedy neotypoval — a spadl do
+dvojího běhu. Opraveno v EN i CS, včetně tabulky „který hint kam patří".
+
+**Redundance, která opravdu stála, byla jinde: reflexe na každém dispatchi.**
+`getFirstParameterTypeName()` dělalo `new ReflectionFunction` pro **každý callback
+v každém dispatcheru na každém lifecycle bodě každého requestu** — kvůli odpovědi,
+která se po registraci nemůže změnit. Členství se teď rozhoduje v `hook()` a nese
+si ho záznam. K tomu `warnSkippedCallback()` sahalo na `config('app.debug')` při
+každém přeskočení (a přeskočen je **každý správně otypovaný** callback tím druhým
+dispatcherem) — resolvnuto jednou. Skip-pass: **0,94 → 0,50 → 0,24 µs**, bez
+změny chování a bez BC.
+
+**Třetí defekt spadl ze samotného měření.** Benchmark mimo nabootovanou aplikaci
+spadl na `BindingResolutionException`. Strážce `! function_exists('config')` se
+ptá „je framework autoloadnutý", což není ta otázka — helper existuje, jakmile ho
+Composer viděl, nabootováno nebo ne, a `config()` pak resolvuje z prázdného
+kontejneru. Takže **diagnostika chyby v hintu spadla místo aby ji nahlásila**,
+přesně ve standalone kontextu, který má `CLAUDE.md` v požadavcích („testable in
+isolation, usable from other contexts"). Chybějící půlka je `app()->bound('config')`.
+
+**V2.2/S1: nedělat, protože přínos, který plán slibuje, už existuje.** Plán píše
+*„unit testy injektují mock deps (dřív nešlo — to je hlavní přínos)"*. Změřeno:
+
+| Cíl | Plán | Skutečnost |
+|---|---|---|
+| `SaveHandler` | „nejde mockovat" | **25 vlastních testů**, které ho konstruují přímo (`new SaveHandler($config, $runtime)`) |
+| `ActionPipeline` | „stage instance přes injektovaný seznam" | **už to tak je** — `__construct(array $stages = [])`, `ActionPipelineTest:144` injektuje; ty čtyři `new` jsou *defaulty* v `resolveStages()`, dosažitelné jen když se nic neinjektovalo |
+| „hot path" | ADR 0017 gap #6 | ani jedno: `SaveHandler` je jeden na odeslání formuláře, `ActionPipeline` je bound transient, jeden na kliknutí |
+
+A z těch `new`×6 v `SaveHandler` jsou **dva payload DTO** (payload se konstruovat
+musí) a **jedna vyhozená výjimka**. Skutečné závislosti jsou dvě. Plán mířil na
+počet výskytů `new`, ne na to, co ty výskyty jsou.
+
 ---
 
 ## 3. Co je vědomě neudělané
@@ -341,6 +429,9 @@ riziko špatného čísla. Sdílená je jen **znalost jména atributu**
 | Systematické hledání duplicitních abstrakcí napříč V2 | Průřez auditu padl na session limit. `DataSourceCapabilities`/`CapabilitySet` byl nalezen mimo audit a nejspíš nezůstal sám | [`v2-audit-2026-08-26.md`](v2-audit-2026-08-26.md) §6 |
 | `ShellRenderPlan`, `InteractionRenderPlan` — host pořád `mixed` | Polling, live kanál, readiness, přístup ke stavu nemají pojmenovaný kontrakt | [`v2.1-…`](v2.1-monolith-split-implementation.md) §0a |
 | `resolveActionType()` — public static, **nula volajících v src** | Nález z kroku 9; plugin API, nebo mrtvý kód. Nerozhodnuto | — |
+| V2.2/S3 — hydration audit jen z poloviny | Forms směr ověřen (`fill()` → `StateHydrator` → `hydrateFields()`; `save()` → `dehydrateFields()` → `Dehydrator`), oba směry mají kanonického vlastníka a docblok, který ten pár pojmenovává. **Table strana (`StateManager`) neověřená** a čtvrtý seam z plánu (`normaliseEnums`) už neexistuje, takže plán S3 je zastaralý. Půl dne, samostatně | [`v2.2-…`](v2.2-execution-seams-implementation.md) S3 |
+| Boost guidelines neznají plugin hooky | `guidelines/` ani `skills/` nepopisují `PluginManager` vůbec — takže pravidlo „hint rozhoduje dispatcher" tam není a nemohlo zestárnout. Doplnit až s vlastní plugin sekcí, ne ad hoc | — |
+| ~~Boost docs mirror rozjetý~~ | **zavřeno 2026-08-30.** `packages/boost/resources/boost/docs/` je *commitnutá* kopie `docs/` (viz `scripts/sync-boost-docs.php`) a `composer boost:check-docs` je brána v `docs-check.yml`. Byla červená **už před tímhle během**: `money.md` a `metric.md` z V2.1 se do balíčku nikdy nedostaly. Po každé změně v `docs/` pouštěj `composer boost:sync-docs` | `.github/workflows/docs-check.yml` |
 
 ---
 
@@ -348,12 +439,12 @@ riziko špatného čísla. Sdílená je jen **znalost jména atributu**
 
 Klesající výnos, seřazeno podle poměru:
 
-**V2.1 je hotová.** Fáze A doražená (13 extrakcí), fáze B uzavřená včetně B-1.
-Zbytek §4 je prázdný — další na řadě je **V2.3** (owner vrstva), jejíž brána už
-padla (viz `v2.3-…` § R.1).
+**V2.1 i V2.2 jsou hotové.** V2.1: fáze A doražená (13 extrakcí), fáze B uzavřená
+včetně B-1. V2.2: S2 dotažená (a našla tři defekty), S1 změřená na „nedělat",
+S3 z poloviny — zbytek v §3. Další na řadě je **V2.3** (owner vrstva), jejíž brána
+už padla (viz `v2.3-…` § R.1).
 
-Než se do V2.3 pustíš, obě věci, které předchozí běh vyhodil a neřešil, jsou
-dotažené:
+Obě věci, které běh 2026-08-29 vyhodil a neřešil, jsou dotažené:
 
 1. ~~**`@php` bloky ve views**~~ — **hotovo 2026-08-30.** Ze čtyř jmenovaných
    hnízd mají tři jen rozbalení render plánu do aliasů (`data-region`,
@@ -416,6 +507,9 @@ Postup je pokaždé stejný a v tomhle pořadí:
    nepíše vedle jako druhá kopie.
 5. Brány podle AI_CHANGE_PROTOCOL.md včetně verify:drivers a obou docs bran,
    pokud jsi sáhl na veřejné API (EN i CS stránka v jednom commitu).
+   **Když jsi sáhl na `docs/`, pusť i `composer boost:sync-docs`** — boost veze
+   commitnutou kopii docs a `boost:check-docs` je CI brána; zapomnělo se na ni
+   dvakrát po sobě.
 
 Když měření řekne „nedělat", je to platný výsledek — napiš proč a dolož to.
 Na konci aktualizuj tenhle soubor a commitni.
@@ -442,6 +536,20 @@ když nemáš čas na zbytek.** Za dva běhy opravilo zadání osmkrát. V běhu
 Kroky 10–11 a 17 seděly. Pointa není, že plány jsou špatné — jsou to poctivé
 plány psané ke stavu kódu, který mezitím zestárl, mimo jiné o předchozí kroky
 téhle řady.
+
+**Pravidlo z V2.2:** u dvou predikátů, které mají dohromady **rozdělit** vstup,
+se ptej na případ, kde odpoví **stejně**. `callbackExpectsArray()` a
+`callbackExpectsObject()` byly napsané jako dvě nezávislé otázky a pro
+nehintovaný callback odpověděly obě „ne" — takže nepatřil nikam, a proto ho
+spustily obě větve. Rozklad se píše **jednou a jako negace**; dvě samostatné
+podmínky, které mají být komplementární, jsou vždycky čekající díra. Stejná věc
+pak platí i pro odhad: `phpstan` tenhle druh chyby nevidí (obě metody byly
+korektně otypované) a testy taky ne, dokud někdo nenapíše ten třetí případ.
+
+A druhá půlka: **měření samo je test.** Benchmark, který jsem psal jenom proto,
+abych rozhodl, jestli má smysl rušit dvojí dispatch, spadl na
+`BindingResolutionException` — a to byl třetí defekt toho běhu. Kdybych ten
+odhad vzal z plánu místo změření, nenajdu ho.
 
 **Pravidlo z běhu 2026-08-30:** když najdeš stejné pravidlo napsané dvakrát,
 **neopravuj tu kopii, která vypadá rozbitě — zjisti, která z nich je novější.**

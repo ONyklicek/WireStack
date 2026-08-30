@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Container\Container;
+use Illuminate\Contracts\Container\BindingResolutionException;
 use NyonCode\WireCore\Core\Plugin\Contracts\HasConfiguration;
 use NyonCode\WireCore\Core\Plugin\Contracts\HasDependencies;
 use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
@@ -258,6 +260,113 @@ it('keeps typed payload unchanged when callback returns a non-object', function 
     $manager->hook('typed.example', fn (object $payload): string => 'ignored');
 
     expect($manager->runTypedHook('typed.example', $payload))->toBe($payload);
+});
+
+it('routes an untyped callback to exactly one dispatcher', function () {
+    // Every runtime lifecycle point dispatches BOTH ways — TableQueryService,
+    // SaveHandler and InteractsWithActions each call runHook() and then
+    // runTypedHook() for the same hook name. That is correct only because a
+    // callback belongs to one of them: `array` goes left, anything else goes
+    // right. An UNTYPED callback matched neither test, so it belonged to both
+    // and ran twice per lifecycle point — doubling whatever it books.
+    $manager = new PluginManager;
+    $runs = [];
+
+    $manager->hook('form.saving', function ($payload) use (&$runs) {
+        $runs[] = get_debug_type($payload);
+    });
+
+    $manager->runHook('form.saving', ['data' => []]);
+    $manager->runTypedHook('form.saving', (object) ['data' => []]);
+
+    expect($runs)->toBe(['array']);
+});
+
+it('routes a callback that takes no payload to exactly one dispatcher', function () {
+    // Same rule with nothing to type-hint. `fn () => $count++` is the shape an
+    // audit or counter hook takes when it does not need the payload, and it is
+    // the one where running twice is silent.
+    $manager = new PluginManager;
+    $count = 0;
+
+    $manager->hook('form.saved', function () use (&$count) {
+        $count++;
+    });
+
+    $manager->runHook('form.saved');
+    $manager->runTypedHook('form.saved', (object) []);
+
+    expect($count)->toBe(1);
+});
+
+it('sends an unhinted callback the array payload, not the DTO', function () {
+    // Which side the ambiguous case falls to is the BC decision, not a detail:
+    // a callback written without a hint was written when the array payload was
+    // the only one, so handing it a DTO would break exactly the plugins 2.x
+    // promises to keep — and `$payload['data']` on a DTO is a fatal, not a
+    // warning.
+    $manager = new PluginManager;
+    $received = null;
+
+    $manager->hook('form.saving', function ($payload) use (&$received) {
+        $received = $payload;
+
+        return $payload;
+    });
+
+    $manager->runTypedHook('form.saving', (object) ['data' => ['from' => 'dto']]);
+    expect($received)->toBeNull();
+
+    $manager->runHook('form.saving', ['data' => ['from' => 'array']]);
+    expect($received)->toBe(['data' => ['from' => 'array']]);
+});
+
+it('still splits typed callbacks between the two dispatchers', function () {
+    // The half that already worked, kept honest by the fix: an `array` callback
+    // belongs to runHook, anything else to runTypedHook, and neither crosses.
+    $manager = new PluginManager;
+    $seen = [];
+
+    $manager->hook('form.saving', function (array $payload) use (&$seen) {
+        $seen[] = 'array';
+
+        return $payload;
+    });
+
+    $manager->hook('form.saving', function (object $payload) use (&$seen) {
+        $seen[] = 'object';
+
+        return $payload;
+    });
+
+    $manager->runHook('form.saving', ['data' => []]);
+    expect($seen)->toBe(['array']);
+
+    $manager->runTypedHook('form.saving', (object) ['data' => []]);
+    expect($seen)->toBe(['array', 'object']);
+});
+
+it('warns about a mis-hinted callback without needing a booted app', function () {
+    // The warning exists to tell a developer they hinted the wrong dispatcher —
+    // the exact mistake the routing rules above are about. Its guard reads
+    // `function_exists('config')`, which is true whenever the framework is
+    // autoloaded, booted or not; outside a booted app the next line then
+    // resolves `config` out of an empty container and throws. So the diagnostic
+    // for a hint mistake crashed instead of reporting it, in precisely the
+    // standalone context the manager is meant to survive.
+    $manager = new PluginManager;
+    $manager->hook('form.saving', fn (object $payload) => $payload);
+
+    $booted = Container::getInstance();
+
+    try {
+        Container::setInstance(new Container);
+
+        expect(fn () => $manager->runHook('form.saving', ['data' => []]))
+            ->not->toThrow(BindingResolutionException::class);
+    } finally {
+        Container::setInstance($booted);
+    }
 });
 
 // --- Dependencies ---

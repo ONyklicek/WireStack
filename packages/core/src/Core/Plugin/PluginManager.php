@@ -32,8 +32,18 @@ final class PluginManager
     /** @var array<string, class-string> */
     private array $filterTypes = [];
 
-    /** @var array<string, array<int, array{callback: callable, priority: int}>> */
+    /** @var array<string, array<int, array{callback: callable, priority: int, expectsArray: bool}>> */
     private array $hooks = [];
+
+    /**
+     * Whether the mis-hint warning should be produced at all, resolved once.
+     *
+     * Every correctly hinted callback is skipped by the *other* dispatcher, so
+     * this question is asked once per callback per lifecycle point — and the
+     * answer cannot change inside a request. Left unresolved it was two
+     * container lookups each time, to decide not to log.
+     */
+    private ?bool $warningsEnabled = null;
 
     /** @var array<string, class-string> */
     private array $actionTypes = [];
@@ -231,7 +241,16 @@ final class PluginManager
      */
     public function hook(string $name, callable $callback, int $priority = 0): void
     {
-        $this->hooks[$name][] = ['callback' => $callback, 'priority' => $priority];
+        // Which dispatcher owns this callback is a property of the callback, so
+        // it is decided once, here. Deciding it at dispatch meant a
+        // ReflectionFunction per callback per dispatcher on every lifecycle
+        // point of every request — for an answer that cannot change after
+        // registration.
+        $this->hooks[$name][] = [
+            'callback' => $callback,
+            'priority' => $priority,
+            'expectsArray' => $this->callbackExpectsArray($callback),
+        ];
 
         // Keep the list sorted by priority so runHook/runTypedHook never need to sort.
         usort(
@@ -259,7 +278,7 @@ final class PluginManager
         }
 
         foreach ($hooks as $hook) {
-            if ($this->callbackExpectsObject($hook['callback'])) {
+            if (! $hook['expectsArray']) {
                 $this->warnSkippedCallback($name, $hook['callback'], 'runHook', 'runTypedHook');
 
                 continue;
@@ -295,7 +314,7 @@ final class PluginManager
         }
 
         foreach ($hooks as $hook) {
-            if ($this->callbackExpectsArray($hook['callback'])) {
+            if ($hook['expectsArray']) {
                 $this->warnSkippedCallback($name, $hook['callback'], 'runTypedHook', 'runHook');
 
                 continue;
@@ -317,7 +336,7 @@ final class PluginManager
      */
     private function warnSkippedCallback(string $hook, callable $callback, string $calledVia, string $correctMethod): void
     {
-        if (! function_exists('config') || ! config('app.debug')) {
+        if (! $this->warningsEnabled()) {
             return;
         }
 
@@ -335,21 +354,51 @@ final class PluginManager
     }
 
     /**
-     * Check if a callback's first parameter type-hints an object (non-array).
-     */
-    private function callbackExpectsObject(callable $callback): bool
-    {
-        $type = $this->getFirstParameterTypeName($callback);
-
-        return $type !== null && $type !== 'array';
-    }
-
-    /**
-     * Check if a callback's first parameter type-hints 'array'.
+     * Which of the two dispatchers owns this callback.
+     *
+     * Every lifecycle point dispatches **both** ways — `runHook()` for the array
+     * payload and `runTypedHook()` for the DTO, back to back (TableQueryService,
+     * SaveHandler, InteractsWithActions). That is correct only while each
+     * callback belongs to exactly one of them, which is what this decides. It is
+     * a *partition*, not two independent questions, so it is written once and the
+     * other predicate is its negation — as two separate tests they answered "no"
+     * in unison for a case neither had considered.
+     *
+     * That case was the unhinted callback. `function ($payload)` — and
+     * `function ()` — matched neither "expects array" nor "expects object", so it
+     * belonged to both and ran **twice per lifecycle point**: a counter or an
+     * audit line booked double, and the ordinary `$payload['data']` shape died
+     * outright on the second pass, because the DTOs are not ArrayAccess.
+     *
+     * It resolves to the **array** side, which is the deprecated one, and that is
+     * deliberate rather than a concession. A callback written without a hint was
+     * written when the array payload was the only payload — `docs/core/plugins.md`
+     * said so — so handing it a DTO would break the very plugins the 2.x BC
+     * promise covers. A callback that wants the typed payload names its type, and
+     * naming it is what every documented example already does.
      */
     private function callbackExpectsArray(callable $callback): bool
     {
-        return $this->getFirstParameterTypeName($callback) === 'array';
+        $type = $this->getFirstParameterTypeName($callback);
+
+        return $type === null || $type === 'array';
+    }
+
+    /**
+     * Whether a mis-hint is worth reporting here — debug mode, in a booted app.
+     *
+     * `function_exists('config')` answers "is the framework autoloaded", which
+     * is not the question: the helper exists as soon as Composer has seen it,
+     * booted app or not, and reading through it then resolves out of an empty
+     * container and throws. So the diagnostic for a hint mistake crashed rather
+     * than reported it, in exactly the standalone context the manager is meant
+     * to survive. Asking whether `config` is *bound* is the missing half.
+     */
+    private function warningsEnabled(): bool
+    {
+        return $this->warningsEnabled ??= function_exists('config')
+            && app()->bound('config')
+            && (bool) config('app.debug');
     }
 
     /**

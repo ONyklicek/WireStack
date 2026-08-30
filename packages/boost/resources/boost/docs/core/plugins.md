@@ -420,7 +420,30 @@ $manager->hook('orders.exporting', function (ExportingOrders $payload): Exportin
 });
 ```
 
-Core also ships typed payload DTOs under `NyonCode\WireCore\Core\Plugin\Hooks` for common table, form, and action hook shapes. The current runtime hooks use array payloads, so these DTOs are most useful when building your own typed extension points or plugin-aware services.
+Core also ships typed payload DTOs under `NyonCode\WireCore\Core\Plugin\Hooks` for common table, form, and action hook shapes — and the runtime **already dispatches them**. Every built-in lifecycle point runs both dispatchers back to back: `table.configuring`, `table.querying` and `table.queried` from `TableQueryService`, `form.saving` and `form.saved` from the save handler, `action.executing` and `action.executed` from the action runtime. So a callback on any of those hooks can take `TableQueryingPayload`, `FormSavingPayload`, `ActionExecutingPayload` and the rest directly.
+
+### Which Dispatcher Gets Your Callback
+
+Because both dispatchers run at every lifecycle point, each callback must belong to exactly one of them, and **the first parameter's type hint is what decides**:
+
+| First parameter | Dispatcher | Payload |
+| --- | --- | --- |
+| `array $payload` | `runHook()` | the array |
+| a DTO, or any other type hint | `runTypedHook()` | the object |
+| **no type hint, or no parameter** | `runHook()` | the array |
+
+Type-hint it. An unhinted callback is treated as the array form for backwards compatibility, which means it silently never sees the typed payload:
+
+```php
+// Runs on the array dispatch only — $payload is an array.
+$manager->hook('form.saving', function ($payload) { /* … */ });   // [tl! --]
+// Says which payload it wants, and gets it.
+$manager->hook('form.saving', function (FormSavingPayload $payload): FormSavingPayload { // [tl! ++]
+    $payload->data['audited_at'] = now();                                                // [tl! ++]
+                                                                                          // [tl! ++]
+    return $payload;                                                                      // [tl! ++]
+});                                                                                       // [tl! ++]
+```
 
 ## Column, Filter, And Action Type Registries
 

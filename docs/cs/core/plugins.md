@@ -422,7 +422,30 @@ $manager->hook('orders.exporting', function (ExportingOrders $payload): Exportin
 });
 ```
 
-Core také dodává typované payload DTO pod `NyonCode\WireCore\Core\Plugin\Hooks` pro běžné tvary table, form a action hooků. Aktuální runtime hooky používají array payloady, takže tyto DTO jsou nejužitečnější při stavbě vlastních typovaných rozšiřovacích bodů nebo plugin-aware služeb.
+Core také dodává typované payload DTO pod `NyonCode\WireCore\Core\Plugin\Hooks` pro běžné tvary table, form a action hooků — a runtime je **už dispatchuje**. Každý vestavěný lifecycle bod spouští oba dispatchery za sebou: `table.configuring`, `table.querying` a `table.queried` z `TableQueryService`, `form.saving` a `form.saved` ze save handleru, `action.executing` a `action.executed` z action runtime. Callback na kterémkoli z těch hooků si tedy může vzít přímo `TableQueryingPayload`, `FormSavingPayload`, `ActionExecutingPayload` a další.
+
+### Který dispatcher dostane váš callback
+
+Protože na každém lifecycle bodě běží oba dispatchery, musí každý callback patřit právě jednomu z nich — a rozhoduje o tom **typový hint prvního parametru**:
+
+| První parametr | Dispatcher | Payload |
+| --- | --- | --- |
+| `array $payload` | `runHook()` | pole |
+| DTO nebo jakýkoli jiný typový hint | `runTypedHook()` | objekt |
+| **bez typového hintu nebo bez parametru** | `runHook()` | pole |
+
+Otypujte ho. Callback bez hintu se kvůli zpětné kompatibilitě považuje za array variantu, což znamená, že typovaný payload tiše nikdy neuvidí:
+
+```php
+// Běží jen na array dispatchi — $payload je pole.
+$manager->hook('form.saving', function ($payload) { /* … */ });   // [tl! --]
+// Řekne si, který payload chce, a dostane ho.
+$manager->hook('form.saving', function (FormSavingPayload $payload): FormSavingPayload { // [tl! ++]
+    $payload->data['audited_at'] = now();                                                // [tl! ++]
+                                                                                          // [tl! ++]
+    return $payload;                                                                      // [tl! ++]
+});                                                                                       // [tl! ++]
+```
 
 ## Registry typů sloupců, filtrů a akcí
 
