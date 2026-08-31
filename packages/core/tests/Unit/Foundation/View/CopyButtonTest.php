@@ -121,3 +121,13 @@ it('renders one feedback pill however many copyable surfaces a page has', functi
 
     expect(substr_count($html, 'data-copy-feedback-text'))->toBe(1);
 });
+
+it('keeps the feedback pill hidden until the controller places it', function () {
+    // `hidden` alone loses to the pill's own `inline-flex` utility — Tailwind's
+    // preflight rule for the attribute is wrapped in `:where()`, so it ties on
+    // specificity and loses on order. The pill then sat painted at the static
+    // position a `fixed` element falls back to: the table's top-left corner.
+    $html = Blade::render("@include('wire-core::partials.copy-assets')");
+
+    expect($html)->toContain('[data-copy-feedback][hidden] { display: none; }');
+});

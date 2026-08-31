@@ -184,6 +184,8 @@ Action::make('edit')
     ->action(fn ($record, array $data) => $record->update($data));
 ```
 
+Closura může vrátit případ enumu rovnou z castovaného atributu (`fn ($record) => ['role' => $record->role]`): naplněný bag každý enum srazí na jeho backing hodnotu, protože právě ta putuje ve stavu Livewiru do prohlížeče a právě proti ní `Select` porovnává hodnoty svých `<option>`. Uložení pak proběhne zpátky přes cast.
+
 Modal formuláře `HeaderAction` **nemá záznam**, takže jeho closura `fillFormUsing` nebere žádné argumenty. Použijte ji k naplnění počátečního stavu — a array-typovaná pole (`CheckboxList`, `Tags`, multiple `Select`) vždy naplňte prázdným polem, aby se správně navázala od první interakce:
 
 ```php

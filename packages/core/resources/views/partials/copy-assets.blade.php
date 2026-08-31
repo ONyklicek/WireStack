@@ -41,6 +41,14 @@
      `hidden` and the viewport coordinates are driven by the controller; the
      transition is the browser's, so no Alpine is involved in showing it. --}}
 @once
+{{-- `hidden` alone does not hide it: Tailwind's preflight rule for the attribute
+     is `[hidden]:where(:not([hidden="until-found"]))`, whose `:where()` counts for
+     nothing — so it ties with the `inline-flex` utility below on specificity and
+     loses on order. Without this the pill is painted from first render, at the
+     static position a `fixed` element falls back to, which is the table's corner.
+     Scoped to the pill's own attribute so it beats the utility (0,2,0) without
+     touching anything else on the page. --}}
+<style>[data-copy-feedback][hidden] { display: none; }</style>
 <span
     data-copy-feedback
     hidden
