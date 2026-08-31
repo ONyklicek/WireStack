@@ -184,6 +184,8 @@ Action::make('edit')
     ->action(fn ($record, array $data) => $record->update($data));
 ```
 
+The closure may hand back an enum case straight off a cast attribute (`fn ($record) => ['role' => $record->role]`): the seeded bag collapses every enum to its backing value, because that is what Livewire state carries to the browser and what a `Select` matches its `<option>` values against. The choice still saves back through the cast.
+
 A `HeaderAction` form modal has **no record**, so its `fillFormUsing` closure takes no arguments. Use it to seed initial state — and always seed array-typed fields (`CheckboxList`, `Tags`, multiple `Select`) with an empty array so they bind correctly from the first interaction:
 
 ```php
