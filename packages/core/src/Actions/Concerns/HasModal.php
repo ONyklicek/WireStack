@@ -16,6 +16,7 @@ use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Foundation\Enums\ModalWidth;
 use NyonCode\WireCore\Foundation\Icons\Icon;
+use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireCore\Infolists\Infolist;
 use NyonCode\WireCore\Modals\Contracts\ModalContract;
 use NyonCode\WireCore\Modals\Modal;
@@ -794,6 +795,14 @@ trait HasModal
      * fillFormUsing still runs for header actions (context null): its
      * zero-argument closure may seed keys the schema cannot know about.
      *
+     * The bag is collapsed to scalars on the way out ({@see EnumResolver::scalarDeep()}).
+     * A closure prefilling from a record hands back whatever the attribute holds,
+     * and on an enum-cast column that is the case object — but this bag is written
+     * straight into Livewire state, which has to round-trip to the browser and match
+     * the scalar keys a `<select>` compares its options against. A form runtime
+     * applies the same collapse when it fills its own state; this is the one seeding
+     * path that never goes through it.
+     *
      * @return array<string, mixed>
      */
     public function getFormDefaults(mixed $context = null): array
@@ -804,7 +813,10 @@ trait HasModal
 
         $seed = $this->resolveFormForSeeding($context)?->getInitialState() ?? [];
 
-        return $overrides + $seed;
+        /** @var array<string, mixed> $defaults */
+        $defaults = EnumResolver::scalarDeep($overrides + $seed);
+
+        return $defaults;
     }
 
     /**

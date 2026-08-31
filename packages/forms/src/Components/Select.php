@@ -473,11 +473,19 @@ class Select extends Field implements DehydratesState, ProvidesImplicitValidatio
      * Label map for the field's current selection, used to keep the trigger
      * readable when the option was never preloaded.
      *
+     * The state is normalised to scalar keys first. Options are keyed by the enum's
+     * backing value ({@see EnumResolver::normalizeOptions()}), so a case object
+     * handed in by a host that wrote the bag itself — an `$set`, a public property
+     * assigned from a cast model — has to collapse the same way before the lookup,
+     * which takes the scalar key alone.
+     *
      * @param  mixed  $value  The field's current bound state.
      * @return array<string|int, string>
      */
     public function getSelectedOptionLabels(mixed $value): array
     {
+        $value = EnumResolver::scalarDeep($value);
+
         if ($this->isMultiple()) {
             $values = array_values(array_filter(
                 is_array($value) ? $value : [],

@@ -9,6 +9,12 @@ use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Components\Toggle;
 use NyonCode\WireForms\Forms\Form;
 
+enum ModalDefaultsStatus: string
+{
+    case Draft = 'draft';
+    case Published = 'published';
+}
+
 // Using Action as a concrete class that uses HasModal trait
 
 // ─── Confirmation ───────────────────────────────────────────────────────────
@@ -275,6 +281,34 @@ it('lets fillFormUsing override the schema seed', function () {
     expect($action->getFormDefaults())->toBe([
         'permissions' => ['a'],
         'title' => 'Untitled',
+    ]);
+});
+
+it('collapses an enum handed back by fillFormUsing to its scalar key', function () {
+    // A record's enum-cast attribute arrives as the case object. The bag is
+    // written into Livewire state, which carries scalars only — and the field's
+    // options are keyed by the backing value, so the case object would match no
+    // option even if it survived the trip.
+    $action = Action::make('edit')
+        ->form([TextInput::make('status')])
+        ->fillFormUsing(fn () => ['status' => ModalDefaultsStatus::Published]);
+
+    expect($action->getFormDefaults())->toBe(['status' => 'published']);
+});
+
+it('collapses enums nested inside the seeded bag', function () {
+    // Repeater rows and multi-selects hand back arrays of cases, not one case.
+    $action = Action::make('edit')
+        ->form([TextInput::make('title')])
+        ->fillFormUsing(fn () => [
+            'tags' => [ModalDefaultsStatus::Draft, ModalDefaultsStatus::Published],
+            'rows' => [['status' => ModalDefaultsStatus::Draft]],
+        ]);
+
+    expect($action->getFormDefaults())->toBe([
+        'tags' => ['draft', 'published'],
+        'rows' => [['status' => 'draft']],
+        'title' => null,
     ]);
 });
 

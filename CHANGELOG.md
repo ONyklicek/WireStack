@@ -2,6 +2,11 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [1.17.4]
+
+### Fixed
+- **An action modal prefilled from an enum-cast column died on `Select::getOptionLabel(): Argument #1 ($value) must be of type string|int|null, App\Enums\Status given`.** `fillFormUsing(fn ($record) => ['status' => $record->status])` is the obvious way to write a prefill, and on a column with an enum cast the attribute is the case object, not its backing value. That object went into the modal's form-data bag untouched: `HasModal::getFormDefaults()` returned `$overrides + $seed` raw, and the bag is written **straight into Livewire state** by the host (`WithActions`, `InteractsWithTableActions`, `WithTable`) — the one seeding path that never passes through the form runtime, whose `StateManager::fill()` has collapsed enums to scalars all along. So the enum reached the field's own render, where `getSelectedOptionLabels()` handed it to a `string|int|null` parameter and PHP fataled — a 500 on opening the modal, before the user could touch anything. Two things were wrong with it beyond the crash: an enum instance cannot round-trip through Livewire state to the browser, and a `<select>` compares its `<option value>` against the scalar key, so even a field that survived the render would have shown nothing selected. `getFormDefaults()` now collapses the whole bag through the canonical `EnumResolver::scalarDeep()` — nested rows and multi-select arrays included — so the seeded state carries backing values, the option matches, and the choice still saves back through the cast. `Select::getSelectedOptionLabels()` normalises its own input the same way as a second line of defence, because its parameter is `mixed` and a host can also write the bag itself (an `$set`, a public property assigned from a model). Core gained no knowledge of `wire-forms` for it: `EnumResolver` is a Foundation resolver core already owns.
+
 ## [1.17.1]
 
 ### Fixed
