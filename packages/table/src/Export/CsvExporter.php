@@ -34,10 +34,17 @@ class CsvExporter implements Exporter
      */
     public function writeTo(string $path, Builder $query, array $columns, array $summaryRows = []): void
     {
-        $handle = fopen($path, 'w');
+        // Suppressed on purpose: an unopenable path raises a PHP warning, which
+        // Laravel's error handler turns into an ErrorException naming `fopen` —
+        // so the guard below never ran, and what reached the caller talked about
+        // a stream rather than about their export. The warning is replaced, not
+        // ignored: everything it said is in the exception, plus which export it
+        // was. Silence here would be worse than either — a caller that believes
+        // a file was written is the shape already fixed on the import side.
+        $handle = @fopen($path, 'w');
 
         if ($handle === false) {
-            return;
+            throw new \RuntimeException("Could not open [{$path}] to write the export to.");
         }
 
         // BOM for UTF-8 Excel compatibility

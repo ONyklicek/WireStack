@@ -74,6 +74,42 @@ it('falls back to csv when DomPDF is unavailable', function () {
         ->and($output)->toContain('Alice');
 });
 
+// The `writeTo()` half of the same degradation. It matters on its own because
+// `store()` — and therefore every queued export — goes through `writeTo()` and
+// never through `export()`: a queued PDF on a host without DomPDF has to end up
+// as a readable CSV under a renamed file, not as an empty one.
+//
+// These two are also the only tests of the fallback arm now that both libraries
+// are in require-dev. Before that they were covered by accident, because the
+// library was missing and every PDF test took this branch.
+it('writes csv to the path when OpenSpout is unavailable', function () {
+    $path = tempnam(sys_get_temp_dir(), 'wire-export-test');
+
+    (new UnavailableExcelExporter)->writeTo(
+        $path,
+        OptionalExporterRecord::query(),
+        [TextColumn::make('name')->label('Name')],
+    );
+
+    expect(file_get_contents($path))->toContain('Name')->toContain('Alice');
+
+    @unlink($path);
+});
+
+it('writes csv to the path when DomPDF is unavailable', function () {
+    $path = tempnam(sys_get_temp_dir(), 'wire-export-test');
+
+    (new UnavailablePdfExporter)->writeTo(
+        $path,
+        OptionalExporterRecord::query(),
+        [TextColumn::make('name')->label('Name')],
+    );
+
+    expect(file_get_contents($path))->toContain('Name')->toContain('Alice');
+
+    @unlink($path);
+});
+
 it('creates an xlsx response when OpenSpout is available', function () {
     if (! ExcelExporter::isAvailable()) {
         $this->markTestSkipped('OpenSpout is not installed.');

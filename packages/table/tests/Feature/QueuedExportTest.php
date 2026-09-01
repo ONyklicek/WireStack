@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Queue;
@@ -15,6 +16,7 @@ use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Export\Contracts\Exporter;
+use NyonCode\WireTable\Export\CsvExporter;
 use NyonCode\WireTable\Export\ExcelExporter;
 use NyonCode\WireTable\Export\ExportFormat;
 use NyonCode\WireTable\Export\Jobs\RunExportJob;
@@ -112,6 +114,35 @@ it('puts the file where it was told, under the configured name', function () {
         ->and(Storage::disk('local')->exists($path))->toBeTrue();
 });
 
+it('says so when the exporter left nothing to read back', function () {
+    // store() writes through a temp file because the disk may be S3, and
+    // everything after writeTo() assumes that file is still there. An exporter
+    // that wrote nothing used to surface as an ErrorException naming `fopen`;
+    // with warnings off it would have been a nought-byte upload under the right
+    // name, which nobody questions until they open it.
+    $export = new class extends TableExport
+    {
+        protected function resolveExporter(): Exporter
+        {
+            return new class extends CsvExporter
+            {
+                public function writeTo(string $path, Builder $query, array $columns, array $summaryRows = []): void
+                {
+                    @unlink($path);
+                }
+            };
+        }
+    };
+
+    $host = new QeHost;
+    $host->mountWithTable();
+
+    [, $query, $columns] = $host->buildTableExport(ExportFormat::Csv);
+
+    expect(fn () => $export->store($query, $columns, 'local'))
+        ->toThrow(RuntimeException::class, 'read back');
+});
+
 // ─── The queued delivery ─────────────────────────────────────────────────────
 
 it('dispatches instead of streaming, and says it is coming', function () {
@@ -206,7 +237,7 @@ it('exports what the user filtered, not the whole table', function () {
 });
 
 it('names the file after what it actually wrote, not what was asked for', function () {
-    // The download path renames an .xlsx to .csv when PhpSpreadsheet is absent —
+    // The download path renames an .xlsx to .csv when OpenSpout is absent —
     // "the reader has to be told what they actually got". A stored file has no
     // response to carry that in, so an .xlsx holding CSV is exactly the defect
     // the sync path avoids, and nobody opens it until much later.

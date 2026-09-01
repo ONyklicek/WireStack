@@ -27,9 +27,22 @@ class PdfExporter implements Exporter
         protected bool $withHeadings = true,
     ) {}
 
+    /**
+     * Whether a PDF can actually be produced.
+     *
+     * The class existing is not the question. This exporter renders through the
+     * facade, which resolves `dompdf.wrapper` out of the container, and that
+     * binding appears only once the package's service provider has registered.
+     * The two normally coincide, because Laravel auto-discovers it — but where
+     * they do not (a `dont-discover` entry, an explicit provider list, any
+     * context that registers providers by hand) the class alone said "available"
+     * and the export died on a BindingResolutionException instead of degrading
+     * to CSV the way the docs promise. Ask for what the render actually needs.
+     */
     public static function isAvailable(): bool
     {
-        return class_exists(\Barryvdh\DomPDF\Facade\Pdf::class);
+        return class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)
+            && app()->bound('dompdf.wrapper');
     }
 
     /**
@@ -59,7 +72,13 @@ class PdfExporter implements Exporter
             return;
         }
 
-        file_put_contents($path, $this->render($query, $columns, $summaryRows)->output());
+        // Same contract as the CSV writer: a path this cannot be written to is an
+        // exception naming the export, not a warning naming the filesystem call
+        // and not a silent no-op. `file_put_contents` reports failure by return
+        // value as well as by warning, so both halves are handled here.
+        if (@file_put_contents($path, $this->render($query, $columns, $summaryRows)->output()) === false) {
+            throw new \RuntimeException("Could not open [{$path}] to write the export to.");
+        }
     }
 
     public function export(Builder $query, array $columns, string $fileName, array $summaryRows = []): StreamedResponse

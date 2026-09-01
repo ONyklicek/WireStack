@@ -244,14 +244,28 @@ class TableExport
         // need a real stream. The upload is one put() afterwards.
         $temp = tempnam(sys_get_temp_dir(), 'wire-export');
 
+        // Marked rather than covered, on the same grounds as the notification
+        // guard in RunExportJob. tempnam() falls back to the system temp
+        // directory whenever the one it is handed is unusable — measured
+        // returning a path for `/nonexistent`, `/` and `/dev/null` alike — so
+        // `false` means the machine has no writable temp directory at all, and
+        // no test can put it there. The guard stays because the return type is
+        // `string|false` and because the day it does fire, this is the sentence
+        // that should reach the log.
+        // @codeCoverageIgnoreStart
         if ($temp === false) {
             throw new \RuntimeException('Could not open a temporary file for the export.');
         }
+        // @codeCoverageIgnoreEnd
 
         try {
             $exporter->writeTo($temp, $query, $columns, $summaryRows);
 
-            $handle = fopen($temp, 'r');
+            // Suppressed for the same reason as the writers: without it the
+            // warning becomes an ErrorException about `fopen` and the caller
+            // never learns which step of the export failed. An exporter that
+            // wrote nothing is the case this catches.
+            $handle = @fopen($temp, 'r');
 
             if ($handle === false) {
                 throw new \RuntimeException('Could not read back the export that was just written.');

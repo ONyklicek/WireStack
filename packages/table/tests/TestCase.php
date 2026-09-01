@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Tests;
 
+use Barryvdh\DomPDF\ServiceProvider;
 use Livewire\LivewireServiceProvider;
 use NyonCode\WireCore\WireCoreServiceProvider;
 use NyonCode\WireForms\WireFormsServiceProvider;
@@ -19,6 +20,15 @@ abstract class TestCase extends BaseTestCase
             WireCoreServiceProvider::class,
             WireFormsServiceProvider::class,
             WireTableServiceProvider::class,
+            // The optional export library that ships a provider. Testbench's
+            // explicit list replaces auto-discovery, so without this line
+            // PdfExporter::isAvailable() would be false here and every
+            // library-backed PDF assertion would silently test the CSV fallback
+            // instead — which is the whole thing the library is in require-dev
+            // to stop happening.
+            ...(class_exists(ServiceProvider::class)
+                ? [ServiceProvider::class]
+                : []),
         ];
     }
 

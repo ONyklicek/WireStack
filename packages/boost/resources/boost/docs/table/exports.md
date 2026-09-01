@@ -295,9 +295,27 @@ class JsonExporter implements Exporter
 ```
 
 An exporter names its own extension, because the format is not always what gets
-written: `ExcelExporter` degrades to CSV when PhpSpreadsheet is absent, and a
+written: `ExcelExporter` degrades to CSV when OpenSpout is absent, and a
 stored file called `.xlsx` holding CSV is a lie that surfaces much later, when
 someone finally opens it. The download path renames for the same reason.
+
+**A path that cannot be written to throws.** `writeTo()` answers a bad path with
+a `RuntimeException` naming it, and so does `store()` when the file it just wrote
+is not there to read back:
+
+```php
+try {
+    $path = TableExport::make()->format(ExportFormat::Excel)->store(disk: 's3'); // [tl! focus]
+} catch (RuntimeException $e) {
+    // "Could not open [/var/exports/orders.xlsx] to write the export to."
+    report($e); // [tl! focus]
+}
+```
+
+A custom exporter should do the same. The alternative is a nought-byte file under
+the right name and a notification saying the export is ready — a queued export has
+no response for the user to read, so "wrote nothing" and "wrote the file" are
+indistinguishable to them unless failure is thrown.
 
 ## Related Docs
 

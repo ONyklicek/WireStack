@@ -18,6 +18,13 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
+          # These jobs install dev dependencies, and composer refuses to
+          # install at all when a required extension is missing: openspout
+          # needs fileinfo and xmlreader, dompdf needs dom and mbstring. The
+          # first job also needs them present rather than merely resolvable —
+          # PHPStan analyses the exporters against the libraries' real
+          # signatures now that the hand-written stub file is gone.
+          extensions: dom, curl, libxml, mbstring, zip, fileinfo, xmlreader
           coverage: none
 
       - name: Install dependencies
@@ -41,6 +48,13 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
+          # These jobs install dev dependencies, and composer refuses to
+          # install at all when a required extension is missing: openspout
+          # needs fileinfo and xmlreader, dompdf needs dom and mbstring. The
+          # first job also needs them present rather than merely resolvable —
+          # PHPStan analyses the exporters against the libraries' real
+          # signatures now that the hand-written stub file is gone.
+          extensions: dom, curl, libxml, mbstring, zip, fileinfo, xmlreader
           coverage: none
 
       - name: Install dependencies
@@ -60,6 +74,13 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
+          # These jobs install dev dependencies, and composer refuses to
+          # install at all when a required extension is missing: openspout
+          # needs fileinfo and xmlreader, dompdf needs dom and mbstring. The
+          # first job also needs them present rather than merely resolvable —
+          # PHPStan analyses the exporters against the libraries' real
+          # signatures now that the hand-written stub file is gone.
+          extensions: dom, curl, libxml, mbstring, zip, fileinfo, xmlreader
           coverage: none
 
       - name: Install dependencies

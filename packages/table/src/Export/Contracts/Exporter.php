@@ -20,10 +20,17 @@ interface Exporter
      * return a download at all, and two copies of "turn records into a file"
      * drift the moment one of them learns about a column type.
      *
+     * A path that cannot be written to is a `RuntimeException` naming that path.
+     * It is not a silent return: the caller of a queued or stored export has no
+     * response to read, so "wrote nothing" and "wrote the file" have to be
+     * distinguishable, and they are only distinguishable if failure is thrown.
+     *
      * @param  string  $path  Any stream PHP can open: a file, `php://output`, a temp handle.
      * @param  Builder<Model>  $query
      * @param  array<int, Column>  $columns
      * @param  array<int, array<int, string>>  $summaryRows
+     *
+     * @throws \RuntimeException When the path cannot be opened for writing.
      */
     public function writeTo(string $path, Builder $query, array $columns, array $summaryRows = []): void;
 

@@ -27,7 +27,9 @@
         "phpstan/phpstan": "^2.0",
         "symplify/monorepo-builder": "^11.2",
         "laravel/mcp": "^0.8",
-        "laravel/boost": "^2.5"
+        "laravel/boost": "^2.5",
+        "openspout/openspout": "^4.0",
+        "barryvdh/laravel-dompdf": "^3.0"
     },
     "repositories": [
         {

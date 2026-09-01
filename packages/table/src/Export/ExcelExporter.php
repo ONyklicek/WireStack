@@ -10,6 +10,7 @@ use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Export\Contracts\Exporter;
 use OpenSpout\Common\Entity\Cell;
 use OpenSpout\Common\Entity\Row;
+use OpenSpout\Common\Exception\IOException;
 use OpenSpout\Writer\XLSX\Writer;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -60,7 +61,16 @@ class ExcelExporter implements Exporter
 
         /** @var Writer $writer */
         $writer = new Writer;
-        $writer->openToFile($path);
+
+        // Translated, not passed through: the contract says an unwritable path is
+        // a RuntimeException naming that path, and a caller should not have to
+        // know which optional library is under this exporter to catch it. The
+        // library's own exception is kept as the cause.
+        try {
+            $writer->openToFile($path);
+        } catch (IOException $e) {
+            throw new \RuntimeException("Could not open [{$path}] to write the export to.", previous: $e);
+        }
 
         if ($this->withHeadings) {
             $headerCells = array_map(

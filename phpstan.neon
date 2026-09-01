@@ -30,8 +30,6 @@ parameters:
         # like RelationManager it depends on Livewire runtime magic and is only
         # analysable via the trait's @phpstan-require-extends, not as a class.
         - packages/core/src/Panels/PanelComponent.php
-    scanFiles:
-        - stubs/phpstan/optional-exporters.php
     ignoreErrors:
         # Public-API traits meant for consumer code, not analyzed internally
         - { identifier: trait.unused, path: packages/core/src/Actions/Concerns/HasButtonStyles.php }

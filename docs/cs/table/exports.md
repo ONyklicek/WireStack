@@ -295,9 +295,27 @@ class JsonExporter implements Exporter
 ```
 
 Exportér si příponu pojmenuje sám, protože formát není vždycky to, co se
-opravdu zapíše: `ExcelExporter` bez PhpSpreadsheet degraduje na CSV a uložený
+opravdu zapíše: `ExcelExporter` bez OpenSpout degraduje na CSV a uložený
 soubor jménem `.xlsx` s CSV uvnitř je lež, která vyplave až mnohem později, když
 ho někdo konečně otevře. Download se přejmenovává ze stejného důvodu.
+
+**Cesta, do které se zapsat nedá, vyhodí výjimku.** `writeTo()` na špatnou cestu
+odpoví `RuntimeException` s jejím jménem, a stejně tak `store()`, když soubor,
+který právě zapsal, není čím přečíst zpátky:
+
+```php
+try {
+    $path = TableExport::make()->format(ExportFormat::Excel)->store(disk: 's3'); // [tl! focus]
+} catch (RuntimeException $e) {
+    // "Could not open [/var/exports/orders.xlsx] to write the export to."
+    report($e); // [tl! focus]
+}
+```
+
+Vlastní exportér má dělat totéž. Alternativou je nulabajtový soubor pod správným
+jménem a notifikace, že je export hotový — export na frontě nemá odpověď, kterou
+by si uživatel přečetl, takže „nezapsalo se nic" a „zapsal se soubor" jsou pro
+něj nerozlišitelné, pokud se selhání nevyhodí.
 
 ## Související dokumentace
 
