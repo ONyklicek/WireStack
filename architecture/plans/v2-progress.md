@@ -1,6 +1,6 @@
 ---
 title: V2 — kde to stojí a čím pokračovat
-date: 2026-08-30
+date: 2026-09-01
 scope: V2.0–V2.4 (hotové), ADR 0025 (rozpracované), V2.5/V2.6 (na řadě)
 status: progress record — aktualizovat na konci každého běhu
 ---
@@ -30,7 +30,13 @@ Odchylky od plánu a jejich důvody:
 balíčky, hranice modulů hlídá `ModuleLayersTest`. Dluh spadl z 19 zakázaných
 hran na 12, cyklus `Actions ↔ Modals` je pryč.
 
-**Nedokončené kroky 8 a 10** — viz §3.
+**Krok 10 hotový 2026-08-30, dodělaný 2026-09-01** — `wireFillHandle` je venku ze
+sdíleného bundlu (38 365 → **29 235 B**, −23,8 %), viz §2. Práce z 30. 8. ale
+nebyla commitnutá a **prohlížečová brána v ní našla defekt**: nový entry
+registroval jen na `alpine:init`, takže po `wire:navigate` neregistroval nic a
+Alpine umřel na celém datovém regionu (`wireFillHandle is not defined`). Opravené,
+zapsané v ADR i v `architecture/assets.md`, a nově chytané `FillHandleAssetTest`.
+**Nedokončený krok 8** — viz §3.
 
 ### V2.1 — hotová ✅
 
@@ -789,6 +795,61 @@ platí.
 přidané v Q-3. Rozpadají se na dvě skupiny a ani jedna nejde pokrýt testem tak,
 jak repo teď stojí — viz §3.
 
+**ADR 0025 krok 10: zadání mířilo na bajty a celá cena byla v jedné `import`
+řádce.** Plán ho vede jako „vyříznout `wireFillHandle` z 38 KB bundlu", tedy jako
+packaging úkol. Bajty vyšly a potvrdily, že to má smysl:
+
+| | bajtů |
+|---|---|
+| `wire-core-dropdown.js` dřív | 38 365 |
+| `wire-core-dropdown.js` teď | **29 235** (−9 130, −23,8 %) |
+| nový `wire-table-fill.js` | 9 230 |
+| součet pro konzumenta s tabulkou | 38 465 (**+100 B**) |
+
+Duplikace sdílených modulů (`editable/sync`, `support/autoscroll`, `support/rows`)
+stojí po minifikaci sto bajtů — tedy nic. Kdo tabulku nemá, přestal platit 9 KB za
+gesto, které nemůže spustit. To je tentýž argument, kterým se ve V2.3 stěhovala
+owner vrstva („forms-only resource musel instalovat tabulkový balíček").
+
+**Skutečná cena ale nebyla ve stěhování, byla v jedné hraně.** `support/partials.js`
+— klientská půlka `wire:partial`, která zůstává v core — importovala
+`isFillDragging()` **z fill controlleru**, aby cílený morph řádku neběžel přes
+probíhající drag. Ten guard není kosmetika: jeho vynechání je zapsaný defekt
+(„targeted fill wipe the cells it had just painted"). A bundly jsou samostatné
+IIFE, takže po rozdělení ten import **neexistuje** — a co hůř, `esbuild` by ho
+mlčky vyřešil ze zdrojů a **vrátil celý fill controller zpátky do core bundlu**,
+takže by rozdělení nic neušetřilo a nikdo by si nevšiml.
+
+Vlastníka toho signálu jsem nemusel vymýšlet — už existoval. Controller vedle
+`draggingControllers.add(this)` na **tomtéž řádku** píše `document.body.classList
+.add('wire-filling')`, ta třída už řídí CSS fill handle a **dva browser drivery ji
+už asertují**. Takže se nezaváděl nový protokol, jen se začal číst ten publikovaný.
+Fail-safe směr sedí: bez tabulkového bundlu třída nikdy nevznikne, odpověď je
+`false` — což je správně, protože pak není co táhnout.
+
+Obě půlky drží jeden test (`FillHandleAssetTest`), schválně v jednom souboru:
+každá zvlášť je tichá ztráta dat.
+
+**A ten přesun vytáhl tři věci, které měření nepředpovědělo:**
+
+1. `EditableCellVersionSourceTest` byl **cross-package invariant** psaný jako
+   core test — asertoval `editable/sync.js`, `dropdown.js` **a** `fill/*`. Po
+   přesunu se rozpadl na vlastníka (core, kde bydlí kanonický `versionOf`) a
+   konzumenta (`EditableCellVersionConsumerTest` v table). Nešlo o přejmenování:
+   `versionOf` je **jediný čtenář** té precedence a odešel s fillem, takže se
+   tree-shakingem ztratil z core bundlu — asertovat ho tam dál by znamenalo
+   asertovat něco, co v souboru není.
+2. `WireStackScriptsTest` počítá `<script>` tagy natvrdo. Osm → devět, a je to
+   správně: **nepřibyla devátá váha**, jen se 9 KB přesunulo z jednoho bundlu do
+   druhého.
+3. Cesta `/wire-table/assets/{asset}.js` je generická, takže nový bundle se
+   servíruje bez jediné změny v routách — jediné, co bylo potřeba, je
+   `Bundle::make()` v provideru a jeden esbuild příkaz v `package.json`.
+
+**Poučení pro zbývající kroky ADR 0025 a pro §5 té ADR: počítej běhové hrany, ne
+bajty.** Bajty se přesunuly za deset minut. Jeden import mezi bundly byl celá
+práce — a byl to zrovna ten, jehož selhání nemá žádný symptom kromě smazaných dat.
+
 ---
 
 ## 3. Co je vědomě neudělané
@@ -796,18 +857,17 @@ jak repo teď stojí — viz §3.
 | Věc | Proč | Kde |
 |---|---|---|
 | ADR 0025 krok 8 — Blade coupling (`callInfolistAction` natvrdo ve view) | Patří do [`action-render-unification.md`](action-render-unification.md), jehož fáze 0 je golden-master připnutí markupu; §6.2 tam označuje vizuální deltu za jediné reálné riziko regrese | ADR 0025 |
-| ADR 0025 krok 10 — vyříznout `wireFillHandle` z 38 KB bundlu | Samostatný, nezačatý | ADR 0025 |
 | ADR 0025 krok 4 — `Trans`/`Deprecation` do Foundation | Zdůvodnění padlo: vrstvy L2→L1 **povolují**, takže by to bylo 33 souborů za nulový přínos pro hranice. Zbývá argument kanonického vlastnictví, ale to je jiný důvod | ADR 0025 |
 | `modal-host.blade.php` instancuje `Modals\Html\*` | **Není defekt** — je to výsledek [`rule5-framework-wide-modal-sweep.md`](rule5-framework-wide-modal-sweep.md): framework nesmí záviset na `<x-*>` | — |
 | Systematické hledání duplicitních abstrakcí napříč V2 | Průřez auditu padl na session limit. `DataSourceCapabilities`/`CapabilitySet` byl nalezen mimo audit a nejspíš nezůstal sám | [`v2-audit-2026-08-26.md`](v2-audit-2026-08-26.md) §6 |
 | `ShellRenderPlan`, `InteractionRenderPlan` — host pořád `mixed` | Polling, live kanál, readiness, přístup ke stavu nemají pojmenovaný kontrakt | [`v2.1-…`](v2.1-monolith-split-implementation.md) §0a |
-| `resolveActionType()` — public static, **nula volajících v src** | Nález z kroku 9; plugin API, nebo mrtvý kód. Nerozhodnuto | — |
+| ~~`resolveActionType()` — public static, nula volajících v src~~ | **rozhodnuto 2026-09-01: ponechat.** Měření našlo, že to není jedna metoda, ale **tři** — `resolveColumnType()`, `resolveFilterType()` i `resolveActionType()`, identický tvar, všechny s nula volajícími. A nejsou to zapomenuté zbytky: vytvořilo je zapsané doporučení v [`v2-deferred-items.md`](v2-deferred-items.md) §7A.5 („ponechat registry pro introspekci, přidat `resolveColumnType()` / `resolveFilterType()` metody na Table pro budoucí config-driven use-case"). Nula volajících je tedy záměr. Smazat jednu ze tří by navíc rozbilo souměrnost plugin API. **Není to stejná otázka jako `Dehydrator::dehydrateAttribute()`** — tam jde o nedosažitelnou větev uvnitř používané metody, tady o nepoužitou, ale záměrně přidanou trojici | `Table.php:1780–1830` |
 | Tenancy nekryje non-Eloquent `DataSource` | Globální Eloquent scope nemá co scopovat u `CollectionDataSource` ani u zdroje nad API. Zdokumentované v `docs/authorization.md` jako „co scopované není"; správné místo je dekorátor nad `DataSource` (T-4 tak, jak ho plán psal). **Dokud to nevznikne, tenancy nezapínej nad non-Eloquent zdrojem** | [`v2.4-…`](v2.4-erp-execution-implementation.md) T-4 |
 | `Core\Hydration\MutationPipeline` — nula volajících, **zůstává jako stavební blok** | Nález S3. Sourozenec `Hydrator` byl smazán (nula volajících, žádný plán); `MutationPipeline` ne — vlastník repa 2026-08-30 rozhodl nechat. **Od 2026-08-30 už to ale není nedodělaný krok:** §3.2 měření zamítlo (tvar callbacku není převoditelný, per-atributového vlastníka má `dehydrateState()`, třída nemá API na registraci) — viz §2 | [`v2-deferred-items.md`](v2-deferred-items.md) §3.2 |
 | `Core\Hydration\Dehydrator` — dot-notation větev je nedosažitelná | Z jediného volajícího se do ní nedá dostat (Livewire dotted klíč zanoří dřív), smazání projde všemi 3300 testy, a kdyby se do ní dostal callback, atribut se nastaví na modelu, který nikdo neuloží. Vlastníka té schopnosti má `BelongsToSelect` s dokumentovanou maticí. Docbloky i `unified-engine.md` to říkají; **smazání `dehydrateAttribute()` je odstranění public API z publikovaného balíčku — rozhodnutí vlastníka repa**, stejná otázka jako `resolveActionType()` | §2 |
-| Export: optional-library cesty nikdy nespustil žádný test | `verify-coverage --diff=origin/1.x` je od Q-3 červená na `ExcelExporter`/`PdfExporter` (`writeTo()` za `isAvailable()`) a na třech defenzivních `false` větvích (`CsvExporter:40`, `TableExport:248,257`). První skupina je nedosažitelná, protože **`openspout` ani `dompdf` v repu vůbec nejsou** — ani v `require-dev`; druhá jsou selhání `fopen`/`tempnam`. Skript nemá ignore mechanismus a rozšiřovat ho by bylo widening baseline. Náprava je vlastní krok: přidat obě knihovny do `require-dev` a otestovat `writeTo()` na obou (headline featura, jejíž knihovní cesta nikdy neběžela). Ta `tichá` `return;` v `CsvExporter::writeTo()` při neotevřitelné cestě je navíc tentýž tvar jako „tichá nula" opravená na importu | — |
+| ~~Export: optional-library cesty nikdy nespustil žádný test~~ | **uzavřeno 2026-09-01.** `openspout ^4.0` a `barryvdh/laravel-dompdf ^3.0` jsou v `require-dev` (root i balíček) a v `suggest`; `ExporterLibraryTest` testuje `writeTo()` obou proti reálnému souboru (xlsx čte přes `ZipArchive`, PDF přes `%PDF-`). `verify-coverage --diff=origin/1.x` je **poprvé od Q-3 zelená**, pokrytí table 91,8 % → 92,9 %, floor 91 → 92. Měření cestou opravilo tři věci, viz §2. Dvě poznámky k prostředí: obě knihovny potřebují PHP rozšíření, která workflow nejmenovaly (`fileinfo`, `xmlreader` pro openspout), a composer bez nich odmítne nainstalovat cokoli — doplněno do `tests`, `coverage`, `database-tests` i `static-analysis`. A `openspout` v4.32 chce PHP `~8.3`, což je v pořádku jen proto, že `composer.lock` je v `.gitignore` — každé prostředí si resolvuje sám, takže na 8.2 spadne constraint `^4.0` na starší 4.x. Kdyby se lock někdy začal commitovat, tohle je první věc, která se o tom dozví | §2 |
 | ~~`v2-deferred-items.md` §3 je hotová z jedné čtvrtiny~~ | **uzavřeno 2026-08-30.** §3.1 hotová, §3.2 i §3.3 **zamítnuté měřením** (viz §2), §3.4 tím bezpředmětná. Není to nedodělaná položka, je rozhodnutá — a `RelationshipSaveHandler` z toho čtení dostal dva chybějící testy | [`v2-deferred-items.md`](v2-deferred-items.md) §3 |
-| Tři workbench soubory drží pohromadě a **žádný z nich není commitnutý** | `workbench/routes/web.php` a `previews/index.blade.php` jsou rozdělaná práce vlastníka repa (refaktor preview rout), `workbench/scripts/verify-resource-pages.mjs` je driver z V2.3, který na těch routách závisí. Commitnout driver samotný znamená **rozbít `verify:drivers` v CI** — hledal by routy, které v repu nejsou. Proto přežily tři běhy mimo commit. Jdou jen všechny tři najednou, až bude refaktor rout hotový. Do té doby resource stránky v CI nikdo neprojíždí | — |
+| ~~Tři workbench soubory drží pohromadě a žádný z nich není commitnutý~~ | **uzavřeno 2026-09-01.** Refaktor preview rout je hotový — `workbench/routes/web.php` má jednu tabulku `$screens`, ze které se generují routy **i** index, takže index už nemůže zaostat za routami. `verify-resource-pages` na něm projde, takže trojice šla konečně commitnout naráz a resource stránky jsou od teď v CI | — |
 | Boost guidelines neznají plugin hooky | `guidelines/` ani `skills/` nepopisují `PluginManager` vůbec — takže pravidlo „hint rozhoduje dispatcher" tam není a nemohlo zestárnout. Doplnit až s vlastní plugin sekcí, ne ad hoc | — |
 | ~~Boost docs mirror rozjetý~~ | **zavřeno 2026-08-30.** `packages/boost/resources/boost/docs/` je *commitnutá* kopie `docs/` (viz `scripts/sync-boost-docs.php`) a `composer boost:check-docs` je brána v `docs-check.yml`. Byla červená **už před tímhle během**: `money.md` a `metric.md` z V2.1 se do balíčku nikdy nedostaly. Po každé změně v `docs/` pouštěj `composer boost:sync-docs` | `.github/workflows/docs-check.yml` |
 
@@ -836,17 +896,21 @@ zvlášť dřív, než se pustíš do první.
 
 ### Než se do nich pustíš
 
-Tři věci z §3, které se samy nezmenší a každá je na půl dne:
+Ze tří věcí, které tu stály 2026-08-30, **zbyla jedna** (běh 2026-09-01 zavřel
+druhou a třetí rozhodl — viz §3):
 
-1. **ADR 0025 kroky 8 a 10** — Blade coupling `callInfolistAction` a vyříznutí
-   `wireFillHandle` z 38 KB bundlu.
-2. **Export: knihovní cesty nikdy neběžely** a `verify-coverage --diff` je na nich
-   od Q-3 červená. `openspout` ani `dompdf` nejsou v repu ani jako `require-dev`,
-   takže `ExcelExporter::writeTo()` a `PdfExporter::writeTo()` za `isAvailable()`
-   nespustil žádný test. Přidat obě do `require-dev` a otestovat obě doručení.
-3. **`resolveActionType()`** — public static, nula volajících v `src`. Plugin API,
-   nebo mrtvý kód. Nerozhodnuto od kroku 9. Vedle něj teď leží stejná otázka na
-   `Dehydrator::dehydrateAttribute()` a jeho nedosažitelnou dot-notation větev.
+1. **ADR 0025 krok 8** — Blade coupling `callInfolistAction`. Krok 10 je hotový
+   (2026-08-30, dodělaný 2026-09-01, viz §2); krok 8 zůstává vázaný na fázi 0
+   [`action-render-unification.md`](action-render-unification.md).
+
+~~Export: knihovní cesty nikdy neběžely~~ — **hotové 2026-09-01.** Obě knihovny
+jsou v `require-dev`, `writeTo()` obou je otestované proti reálnému souboru a
+`verify-coverage --diff=origin/1.x` je poprvé od Q-3 zelená.
+
+~~`resolveActionType()`~~ — **rozhodnuto 2026-09-01: ponechat.** Jsou to tři
+sourozenci se zapsaným důvodem, ne mrtvý kód; odůvodnění v §3. Otázka na
+`Dehydrator::dehydrateAttribute()` tím **nezaniká** — ta je jiného druhu
+(nedosažitelná větev uvnitř používané metody) a zůstává vlastníkovi repa.
 
 ~~`v2-deferred-items.md` §3~~ — **uzavřená 2026-08-30**, §3.2 i §3.3 zamítnuté
 měřením; odůvodnění v §2, verdikty zapsané přímo do toho plánu.
@@ -917,8 +981,18 @@ chyba: `composer.json` (repositories, require, autoload-dev), `phpunit.xml`
 workbench neuvidí.
 
 **Nepřeskakuj měření — to je jediné pravidlo, které si z tohohle souboru odnes,
-když nemáš čas na zbytek.** Za tři běhy opravilo zadání patnáctkrát. Běh
-2026-08-30 přidal jedenáct:
+když nemáš čas na zbytek.** Za čtyři běhy opravilo zadání dvacetkrát. Běh
+2026-09-01 přidal pět:
+
+| Krok | §3/§4 slibovala | Měření našlo |
+|---|---|---|
+| Export `CsvExporter:40` | „nepokrytá defenzivní větev, tichá `return`" | větev je **nedosažitelná**: Laravel převede warning z `fopen` na `ErrorException` dřív, než se na `=== false` dojde. Tichý return nikdy neběžel — volající dostával chybu o streamu, ne o svém exportu |
+| Export `TableExport:248` | „nepokrytá" | `tempnam()` **nikdy nevrátí `false`** — změřeno pro `/nonexistent`, `/` i `/dev/null`, vždycky spadne zpátky do systémového tempu. Není to k pokrytí, je to k označení |
+| Export — rozsah | dvě knihovní cesty (`Excel`, `Pdf`) | **čtyři zápisové cesty se třemi různými chováními**: `Csv` tichý return, `Pdf` nekontrolovaný `file_put_contents`, `Excel` cizí `IOException`, `store()` už házel. Jeden kontrakt místo tří |
+| `PdfExporter::isAvailable()` | — | ptá se `class_exists`, ale render jde přes fasádu, která tahá `dompdf.wrapper` **z kontejneru**. Bez registrovaného providera → `BindingResolutionException` místo dokumentovaného CSV fallbacku. Nalezeno až tím, že knihovna reálně přibyla |
+| ADR 0025 krok 10 | „hotové 2026-08-30" | prohlížečová brána našla **`wireFillHandle is not defined` po `wire:navigate`** — nový entry vzal registrační řádek a nechal za sebou idiom. Server-side to nevidí nikdo: tag je doručený, `alpine:init` v bundlu je, a test pojmenovaný „registers the fill-handle Alpine data" prochází |
+
+Běh 2026-08-30 přidal jedenáct:
 
 | Krok | Plán / §4 slibovala | Měření našlo |
 |---|---|---|
@@ -935,6 +1009,7 @@ když nemáš čas na zbytek.** Za tři běhy opravilo zadání patnáctkrát. B
 | V2.3 tvar | jedna třída / jeden interface, osm metod | `AI_CODING_STANDARD.md` § Interfaces to zakazuje → rozpad na identitu + povrchy |
 | `v2-deferred-items` §3.2 | „`mutateDataBeforeSave()` se wrappne jako before hook" | tvary nejsou převoditelné (celá data + abort vs. jedna hodnota) a per-atributového vlastníka má `dehydrateState()` → **nedělat** |
 | `v2-deferred-items` §3.3 | „`RelationshipSaveHandler` ručně iteruje → do `Dehydrator`u" | je to kanonický vlastník se **dvěma** konzumenty; `Dehydrator` neukládá a sedí **pod** `Repeater`em v grafu → **nedělat**; audit místo toho našel nepokrytou update větev |
+| ADR 0025 krok 10 | „vyříznout `wireFillHandle` z 38 KB bundlu" (packaging) | bajty seděly (−23,8 %, +100 B pro tabulku), ale cena byla **jeden import mezi bundly** u guardu, jehož selhání maže data — a esbuild by ho mlčky vyřešil zpátky |
 
 A jeden nález, který měření **nenašlo a našel ho až prohlížeč**: V2.3 měla
 zelenou unit sadu a dva defekty, které server-side test vidět nemůže. Proto krok
@@ -955,6 +1030,41 @@ zelenou unit sadu a dva defekty, které server-side test vidět nemůže. Proto 
 Kroky 10–11 a 17 seděly. Pointa není, že plány jsou špatné — jsou to poctivé
 plány psané ke stavu kódu, který mezitím zestárl, mimo jiné o předchozí kroky
 téhle řady.
+
+**Pravidlo z běhu 2026-09-01 — když něco vyřízneš, spočítej i to, co pro to
+dělal soubor, ze kterého to odchází.** Krok 10 poctivě spočítal *importy ven* z
+odcházejícího kódu a našel jeden (`support/partials.js` → fill controller).
+Nespočítal, co odcházející kód dostával zadarmo od svého okolí: `dropdown.js`
+registruje své controllery idiomem `window.Alpine` / `alpine:init`, a
+`wireFillHandle` byl jeden řádek uvnitř toho registrátoru. Nový entry vzal řádek a
+nechal idiom, takže po `wire:navigate` neregistroval nic a Alpine umřel na celém
+datovém regionu. **Hrany nejsou jen to, co kód importuje, ale i to, co za něj
+dělal soubor, ve kterém seděl.**
+
+A druhá půlka, ostřejší než minule: **test pojmenovaný podle pravidla znovu
+neprokázal nic.** `FillHandleAssetTest` měl pět asercí včetně „the shipped bundle
+registers the fill-handle Alpine data" a `toContain('alpine:init')` — a **všech pět
+prošlo i na rozbitém entry**, protože rozbitá verze `alpine:init` samozřejmě
+obsahuje. Mutace to ukázala za jeden běh. Rozlišuje až tvar idiomu, asertovaný ve
+zdroji i v minifikovaném distu — což `DropdownAssetTest` uměl už rok a nový soubor
+si to nepřenesl. **Když píšeš testy pro vyříznutou věc, přenes invarianty z testu
+původního vlastníka, ne jenom asercie na obsah.**
+
+**Pravidlo z téhož běhu — knihovna, která je jen v dokumentaci, je cesta, kterou
+nikdy nikdo nespustil.** `docs/table/exports.md` říká „composer require
+openspout/openspout", ale ani `require-dev`, ani `suggest` ji neměly, takže
+`ExcelExporter::writeTo()` za `isAvailable()` neběžel v žádném CI běhu — a dva
+testy, které ho měly krýt, se samy přeskakovaly přes `markTestSkipped`.
+**`markTestSkipped` na „knihovna není nainstalovaná" je zelená, která znamená
+nezměřeno.** Když se obě knihovny reálně nainstalovaly, spadly tři věci naráz:
+`PdfExporter::isAvailable()` se ptal na `class_exists`, ale render potřebuje
+binding `dompdf.wrapper` z kontejneru (bez registrovaného providera →
+`BindingResolutionException` místo dokumentovaného CSV fallbacku); OpenSpout píše
+XLSX buňky jako `inlineStr`, takže `xl/sharedStrings.xml` je prázdný a hodnoty jsou
+jen v `sheet1.xml`; a CSV fallback větev `writeTo()` byla do té doby pokrytá
+**omylem** — běžela jen proto, že knihovna chyběla, a s nainstalovanou knihovnou
+zůstala jako jediná nepokrytá. Obecně: **než uvěříš, že je volitelná závislost
+otestovaná, zjisti, jestli je vůbec v repu.**
 
 **Pravidlo z V2.4/T — bezpečnost se nedá stavět na seamu, který se nemusí
 spustit.** Plán chtěl tenancy vynutit hookem. Hook běží jen když je navázaný
@@ -1002,6 +1112,24 @@ A druhá půlka: **měření samo je test.** Benchmark, který jsem psal jenom p
 abych rozhodl, jestli má smysl rušit dvojí dispatch, spadl na
 `BindingResolutionException` — a to byl třetí defekt toho běhu. Kdybych ten
 odhad vzal z plánu místo změření, nenajdu ho.
+
+**Pravidlo z ADR 0025 kroku 10: u rozdělení bundlu počítej běhové hrany, ne
+bajty.** Zadání znělo „vyříznout 9 KB". Bajty byly deset minut práce; celá cena
+byla **jeden `import` mezi tím, co zůstává, a tím, co odchází** —
+`support/partials.js` se ptal fill controlleru, jestli běží drag, a bundly jsou
+samostatné IIFE, takže ten import po rozdělení neexistuje. Zákeřné na tom je, že
+**by to nespadlo**: esbuild import mlčky vyřeší ze zdrojů a vtáhne celý
+controller zpátky do core bundlu, takže by rozdělení neušetřilo nic a nikdo by
+si nevšiml. Než rozdělíš bundle, vypiš si `grep -rn "from '.*<co-odchází>'"` přes
+to, co zůstává — a u každé hrany se ptej, jestli má vlastník už **publikovaný**
+signál. Tady měl: `wire-filling` na `<body>`, psaný na tomtéž řádku jako interní
+registr, používaný CSS a asertovaný dvěma drivery. Nový protokol se nepsal.
+
+A druhá půlka: **když přesuneš jednu stranu cross-package invariantu, ten test se
+musí rozdělit taky.** `EditableCellVersionSourceTest` asertoval tři soubory ze
+dvou balíčků; po přesunu nešlo jen opravit cestu, protože jediný čtenář té
+precedence odešel a **tree-shaking ji z původního bundlu odstranil**. Vlastníkovi
+zůstává pravidlo o zdroji, konzumentovi pravidlo o jeho bundlu.
 
 **Pravidlo z běhu 2026-08-30 (druhá půlka dne): test pojmenovaný podle regrese
 není důkaz, že tu regresi chytá — mutuj i tam, kde správně pojmenovaný test už
