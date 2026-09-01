@@ -252,6 +252,11 @@ $resourcePages = [
     'resource-view' => ['Invoice (view)', 'ViewPage: a read-only infolist plus the same relation manager.', ViewInvoice::class, ['record' => 1]],
 ];
 
+// The command palette is mounted in a layout, not as a variant of a preview
+// component, so it gets a page of its own with the trigger an application would
+// write beside it.
+Route::get('/previews/global-search', fn () => view('previews.global-search'));
+
 foreach ($resourcePages as $slug => [$title, $subtitle, $component, $params]) {
     Route::get('/previews/'.$slug, fn () => view('previews.resource', [
         'title' => $title,

@@ -19,7 +19,8 @@ declare(strict_types=1);
  *
  *   L0  Foundation, Exceptions   — the base. Imports nothing above it.
  *   L1  Core                     — the headless engine. May see L0.
- *   L2  Actions, Modals, Notifications, Widgets, Infolists, Panels, Audit
+ *   L2  Actions, Modals, Notifications, Widgets, Infolists, Panels, Audit,
+ *       GlobalSearch
  *                                — surfaces. May see L0 and L1, but not each
  *                                  other.
  *
@@ -59,6 +60,7 @@ function coreModuleLayers(): array
         'Notifications' => 2,
         'Widgets' => 2,
         'Infolists' => 2,
+        'GlobalSearch' => 2,
         'Panels' => 2,
         'Audit' => 2,
     ];
@@ -247,7 +249,7 @@ it('lets no module import across a layer it may not see', function () {
         A new import crosses a module boundary in wire-core.
 
         Layers: L0 Foundation+Exceptions · L1 Core · L2 Actions, Modals,
-        Notifications, Widgets, Infolists, Panels, Audit. L2 may see L0 and L1,
+        Notifications, Widgets, Infolists, Panels, Audit, GlobalSearch. L2 may see L0 and L1,
         never another L2.
 
         Reach for a contract in Foundation, or the class_exists()/container seam

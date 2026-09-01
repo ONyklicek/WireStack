@@ -8,6 +8,8 @@ use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
+use NyonCode\WireCore\GlobalSearch\Contracts\GloballySearchable;
+use NyonCode\WireCore\GlobalSearch\GlobalSearchResult;
 use NyonCode\WireCore\Infolists\Components\TextEntry;
 use NyonCode\WireCore\Infolists\Contracts\ProvidesResourceInfolist;
 use NyonCode\WireCore\Infolists\Infolist;
@@ -35,13 +37,37 @@ use Workbench\App\Models\Invoice;
  * case most likely to expose a clash between them, and the previews render it
  * through the real pages rather than through anything the workbench invents.
  */
-final class InvoiceResource implements DescribesResource, ProvidesNavigation, ProvidesRelationManagers, ProvidesResourceForm, ProvidesResourceInfolist, ProvidesResourceTable
+final class InvoiceResource implements DescribesResource, GloballySearchable, ProvidesNavigation, ProvidesRelationManagers, ProvidesResourceForm, ProvidesResourceInfolist, ProvidesResourceTable
 {
     use DescribesRecords;
 
     public static function modelClass(): ?string
     {
         return Invoice::class;
+    }
+
+    /**
+     * V2.5 GS: what the command palette matches a term against.
+     *
+     * The same two columns the table marks searchable, and deliberately not the
+     * status — a palette that answered "overdue" with every overdue invoice is a
+     * report, not a jump-to.
+     */
+    public static function globallySearchableAttributes(): array
+    {
+        return ['number', 'customer'];
+    }
+
+    public static function toGlobalSearchResult(object $record): GlobalSearchResult
+    {
+        return new GlobalSearchResult(
+            resourceKey: self::key(),
+            recordKey: $record->getKey(),
+            title: $record->number,
+            subtitle: $record->customer.' · '.$record->status,
+            url: '/previews/resource-view',
+            icon: 'outline:document-text',
+        );
     }
 
     public static function navigation(): NavigationItem

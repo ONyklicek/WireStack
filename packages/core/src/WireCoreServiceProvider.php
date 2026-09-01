@@ -41,6 +41,7 @@ use NyonCode\WireCore\Foundation\View\CellSync;
 use NyonCode\WireCore\Foundation\View\CopyButton;
 use NyonCode\WireCore\Foundation\View\FloatingAssets;
 use NyonCode\WireCore\Foundation\View\Primitives;
+use NyonCode\WireCore\GlobalSearch\GlobalSearchPalette;
 use NyonCode\WireCore\Modals\View\ConfirmationComponent;
 use NyonCode\WireCore\Modals\View\ModalComponent;
 use NyonCode\WireCore\Modals\View\SlideOverComponent;
@@ -361,6 +362,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // is a round trip. Registered under a stable name so a layout can mount
         // it without knowing the class.
         Livewire::component('wire-notification-bell', NotificationBell::class);
+        Livewire::component('wire-global-search', GlobalSearchPalette::class);
     }
 
     // ─── Modals ─────────────────────────────────────────────────
