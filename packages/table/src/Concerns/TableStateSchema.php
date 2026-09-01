@@ -158,6 +158,10 @@ final class TableStateSchema
                 // subRowsDefaultExpanded() config, true/false is the user's own
                 // choice (master toggle / view menu) and outlives pagination.
                 'expandAll' => null,
+                // Group comparison keys the user has collapsed. Named groups
+                // rather than row keys, because a collapsed group stays
+                // collapsed when its rows change underneath it.
+                'collapsedGroups' => [],
                 'subRowFilters' => [],
                 'subRowSort' => null,
                 'subRowsShowAll' => [],

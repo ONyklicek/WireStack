@@ -46,6 +46,7 @@ final class TableViewPayload
         'columnFilters',
         'columns.hidden',
         'rows.expandAll',
+        'rows.collapsedGroups',
         'rows.subRowFilters',
         'rows.subRowSort',
         'summary.scope',

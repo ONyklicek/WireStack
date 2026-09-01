@@ -73,6 +73,37 @@ trait HasGrouping
         return $this;
     }
 
+    /** Whether a group header offers a collapse toggle. */
+    protected bool $collapsibleGroups = false;
+
+    /**
+     * Let a user collapse a group, hiding its rows.
+     *
+     * The large-table answer this framework can actually give. Windowing — the
+     * V2.5 plan's `virtual` pagination mode — was measured and rejected: four
+     * behaviours read their rows straight out of the DOM
+     * (`record-actions.js::navRows()`, the fill handle's grid, the live cell
+     * sync, and the keyboard range gestures), so rendering only the viewport
+     * needs a parallel path for each, and three of them fail silently — a fill
+     * that writes nothing, a range that skips rows.
+     *
+     * Collapsing has none of that shape, because a collapsed group's rows are
+     * never rendered: every gesture still sees one consistent list, which is the
+     * invariant those four rely on.
+     */
+    public function collapsibleGroups(bool $collapsible = true): static
+    {
+        $this->collapsibleGroups = $collapsible;
+
+        return $this;
+    }
+
+    /** Collapsing is only meaningful on a table that groups. */
+    public function hasCollapsibleGroups(): bool
+    {
+        return $this->collapsibleGroups && $this->hasGrouping();
+    }
+
     public function hasGrouping(): bool
     {
         return $this->groupColumn !== null;

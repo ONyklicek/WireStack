@@ -147,6 +147,10 @@ class TablePreview extends Component
             return $this->savedViewsTable($table);
         }
 
+        if ($this->variant === 'collapsible-groups') {
+            return $this->collapsibleGroupsTable($table);
+        }
+
         if ($this->variant === 'empty-state') {
             return $this->emptyStateTable($table);
         }
@@ -347,6 +351,27 @@ class TablePreview extends Component
      * toggleable columns — everything a view carries, so a saved one has
      * something to restore that a driver test cannot show.
      */
+    /**
+     * V2.5 LT: grouped rows a user can fold away.
+     *
+     * On a real grouping — invoices by customer — because the point is what
+     * happens to the rows under a header, and that needs more than one group
+     * with more than one row in it.
+     */
+    private function collapsibleGroupsTable(Table $table): Table
+    {
+        return $table
+            ->model(Invoice::class)
+            ->paginated(false)
+            ->defaultSort('number')
+            ->columns([
+                TextColumn::make('number')->label('Number')->sortable(),
+                BadgeColumn::make('status')->label('Status'),
+            ])
+            ->groupBy('customer')
+            ->collapsibleGroups();
+    }
+
     private function savedViewsTable(Table $table): Table
     {
         return $table

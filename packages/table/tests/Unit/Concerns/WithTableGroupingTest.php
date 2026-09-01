@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
+use Livewire\Livewire;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Table;
@@ -43,6 +44,35 @@ class WtgComponent extends Component
     {
         return $this->getTableProperty();
     }
+}
+
+class WtgCollapsibleComponent extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(WtgInvoice::class)
+            ->paginated(false)
+            ->defaultSort('number')
+            ->columns([Column::make('number'), Column::make('customer')])
+            ->groupBy('customer')
+            ->collapsibleGroups();
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+function wtgCollapsible(): WtgCollapsibleComponent
+{
+    $component = new WtgCollapsibleComponent;
+    $component->mountWithTable();
+
+    return $component;
 }
 
 // ─── Setup ───────────────────────────────────────────────────────────────────
@@ -305,4 +335,84 @@ it('buckets enum-cast rows by their scalar key into one subtotal per group', fun
     // Enum case normalises to its scalar value; both high rows share it.
     expect($table->getGroupComparisonKey($high))->toBe('high')
         ->and($component->computeGroupSummaries('high')['total'][0]['value'])->toBe(275);
+});
+
+// ─── Collapsible groups (V2.5 LT) ────────────────────────────────────────────
+
+it('is off until a table asks for it, and needs grouping to mean anything', function () {
+    expect(Table::make()->groupBy('customer')->hasCollapsibleGroups())->toBeFalse()
+        ->and(Table::make()->groupBy('customer')->collapsibleGroups()->hasCollapsibleGroups())->toBeTrue()
+        // Collapsing what is not grouped is not a state the view can render.
+        ->and(Table::make()->collapsibleGroups()->hasCollapsibleGroups())->toBeFalse();
+});
+
+it('renders a toggle per group only when collapsing is on', function () {
+    Livewire::test(WtgCollapsibleComponent::class)
+        ->assertSeeHtml('data-testid="group-toggle"')
+        ->assertSeeHtml('aria-expanded="true"');
+
+    Livewire::test(WtgComponent::class)
+        ->assertDontSeeHtml('data-testid="group-toggle"');
+});
+
+it('hides a collapsed group\'s rows instead of styling them away', function () {
+    // The whole reason collapsing is the large-table answer and windowing was
+    // not: the gestures that read rows out of the DOM still see one consistent
+    // list, because a hidden row is not there at all.
+    Livewire::test(WtgCollapsibleComponent::class)
+        ->assertSee('INV-2')
+        ->call('toggleGroup', 'Acme')
+        ->assertDontSee('INV-2')
+        // The header stays, or there would be no way back.
+        ->assertSee('Acme')
+        ->assertSeeHtml('aria-expanded="false"')
+        // Another group is untouched.
+        ->assertSee('INV-1');
+});
+
+it('toggles back open', function () {
+    $component = wtgCollapsible();
+
+    $component->toggleGroup('Acme');
+    expect($component->isGroupCollapsed('Acme'))->toBeTrue();
+
+    $component->toggleGroup('Acme');
+
+    expect($component->isGroupCollapsed('Acme'))->toBeFalse();
+
+    Livewire::test(WtgCollapsibleComponent::class)
+        ->call('toggleGroup', 'Acme')
+        ->call('toggleGroup', 'Acme')
+        ->assertSee('INV-2');
+});
+
+it('keys a collapsed group by its value, so it survives its rows changing', function () {
+    // A filter that swaps every row in "Acme" leaves "Acme" collapsed, which is
+    // what the user asked for — keying on row keys would have re-opened it.
+    $component = wtgCollapsible();
+    $component->toggleGroup('Acme');
+
+    WtgInvoice::where('customer', 'Acme')->delete();
+    WtgInvoice::create(['number' => 'INV-9', 'customer' => 'Acme', 'total' => 10]);
+
+    expect($component->isGroupCollapsed('Acme'))->toBeTrue();
+});
+
+it('ignores a toggle on a table that never opted in', function () {
+    $component = new WtgComponent;
+    $component->mountWithTable();
+
+    $component->toggleGroup('Acme');
+
+    expect($component->isGroupCollapsed('Acme'))->toBeFalse();
+});
+
+it('gates each group toggle on its own click', function () {
+    // Same rule as every other repeated control: a bare method name in
+    // wire:target disables and spins every group header at once.
+    Livewire::test(WtgCollapsibleComponent::class)
+        // Single-quoted: a skeleton slot splices in raw, so a JSON string's
+        // double quotes would close the attribute they sit in.
+        ->assertSeeHtml('wire:target="toggleGroup(&#039;Acme&#039;)"')
+        ->assertDontSeeHtml('wire:target="toggleGroup"');
 });

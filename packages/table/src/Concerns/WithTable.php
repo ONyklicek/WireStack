@@ -1801,6 +1801,44 @@ trait WithTable
         }
     }
 
+    /**
+     * Collapse a group, or open it again.
+     *
+     * Keyed by the group's comparison value rather than by the rows in it, so a
+     * group stays collapsed when its contents change — a filter that swaps every
+     * row in "Overdue" leaves "Overdue" collapsed, which is what the user asked
+     * for.
+     */
+    public function toggleGroup(string $group): void
+    {
+        if (! $this->getTable()->hasCollapsibleGroups()) {
+            return;
+        }
+
+        $collapsed = (array) $this->tableState->get('rows.collapsedGroups', []);
+
+        $this->tableState->set(
+            'rows.collapsedGroups',
+            in_array($group, $collapsed, true)
+                ? array_values(array_diff($collapsed, [$group]))
+                : [...$collapsed, $group],
+        );
+
+        $this->markTableViewChanged();
+    }
+
+    /**
+     * Whether this group's rows are hidden.
+     *
+     * Read by the row loop, so it is asked once per row rather than per group —
+     * hence the plain in_array over a list that is at most the number of groups
+     * a user has clicked.
+     */
+    public function isGroupCollapsed(string $group): bool
+    {
+        return in_array($group, (array) $this->tableState->get('rows.collapsedGroups', []), true);
+    }
+
     // ==========================================
     // Saved views
     // ==========================================

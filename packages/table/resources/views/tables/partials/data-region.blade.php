@@ -54,6 +54,17 @@
     $isSubRowsExpandable = $plan->shell()->isSubRowsExpandable;
     $allRowsExpanded = $plan->shell()->allRowsExpanded;
     $hasGrouping = $plan->shell()->hasGrouping;
+    // A collapsed group renders no rows at all, rather than hiding them with CSS.
+    // That is the whole reason collapsing is the large-table answer here and
+    // windowing was not: every gesture that reads its rows out of the DOM — the
+    // keyboard grid, the fill handle's range, the live cell sync — still sees one
+    // consistent list, because what is not shown is not there. Hidden-but-present
+    // rows would put arrow keys on invisible rows and let a fill drag paint them.
+    //
+    // Said here and not in the row loop: a Blade comment between two directives
+    // leaves its newlines behind, and inside the loop that is bytes on every row.
+    // TablePayloadFuseTest measures exactly that, and caught this comment.
+    $hasCollapsibleGroups = $table->hasCollapsibleGroups();
     $hasGroupSummaries = $plan->shell()->hasGroupSummaries;
 
     // What the header row's own filter inputs and sort indicators show.
@@ -363,15 +374,17 @@
                                         // chevron and panel only — the expander cell itself still
                                         // renders, empty, or the columns stop lining up.
                                         $recordHasSubRows = $hasSubRows && $table->hasSubRowsFor($record);
+                                        $isGroupCollapsed = $hasCollapsibleGroups
+                                            && $component->isGroupCollapsed((string) $groupValue);
                                     @endphp
 
-                                    {{-- Group header. Compiled once for the table; this group
-                                         supplies its label. --}}
-                                    @if($isGroupStart){!! $table->getGroupHeaderRow($record, $colSpan) !!}@endif
-                                    {!! $rowRenderer->render($record, $rowIndex) !!}
+                                    {{-- Group header. Compiled once per shape for the table;
+                                         this group supplies its label and its own key. --}}
+                                    @if($isGroupStart){!! $table->getGroupHeaderRow($record, $colSpan, $isGroupCollapsed) !!}@endif
+                                    @unless($isGroupCollapsed){!! $rowRenderer->render($record, $rowIndex) !!}@endunless
 
                                     {{-- Sub-rows --}}
-                                    @if($recordHasSubRows && $component->isRowExpanded($recordKey))
+                                    @if(! $isGroupCollapsed && $recordHasSubRows && $component->isRowExpanded($recordKey))
                                         @php
                                             $subRows = $component->getSubRows($record);
                                         @endphp

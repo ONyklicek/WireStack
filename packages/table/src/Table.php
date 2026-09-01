@@ -102,8 +102,14 @@ class Table implements Htmlable
      */
     protected array $subRowCellSkeletons = [];
 
-    /** The group header row's compiled markup — {@see getGroupHeaderRow()}. */
-    protected ?Skeleton $groupHeaderSkeleton = null;
+    /**
+     * The group header row's compiled markup, one per shape.
+     *
+     * {@see getGroupHeaderRow()}
+     *
+     * @var array<string, Skeleton>
+     */
+    protected array $groupHeaderSkeletons = [];
 
     // Policy-based authorization
     protected bool $usePolicy = false;
@@ -1364,18 +1370,55 @@ class Table implements Htmlable
      *
      * The label is escaped here, at the one place that knows it is text content.
      */
-    public function getGroupHeaderRow(Model $record, int $colSpan): string
+    public function getGroupHeaderRow(Model $record, int $colSpan, bool $isCollapsed = false): string
     {
-        $skeleton = $this->groupHeaderSkeleton ??= Skeleton::compile(
-            view('wire-table::tables.partials.group-header', [
+        if (! $this->hasCollapsibleGroups()) {
+            $skeleton = $this->groupHeaderSkeletons['-'] ??= Skeleton::compile(
+                view('wire-table::tables.partials.group-header', [
+                    'colSpan' => $colSpan,
+                    'cellPadding' => $this->getCellPadding(),
+                    'label' => Skeleton::slot('label'),
+                ])->render(),
+                'label',
+            );
+
+            return $skeleton->fill(['label' => e((string) $this->resolveGroupLabel($record))]);
+        }
+
+        // Two shapes, because the chevron's rotation and `aria-expanded` are
+        // baked into the compiled markup: every group is one of them, so this
+        // renders a view twice per table rather than once per group.
+        $shape = $isCollapsed ? 'c' : 'e';
+
+        $skeleton = $this->groupHeaderSkeletons[$shape] ??= Skeleton::compile(
+            view('wire-table::tables.partials.group-header-collapsible', [
                 'colSpan' => $colSpan,
                 'cellPadding' => $this->getCellPadding(),
+                'isCollapsed' => $isCollapsed,
                 'label' => Skeleton::slot('label'),
+                'group' => Skeleton::slot('group'),
+                'groupJs' => Skeleton::slot('groupJs'),
             ])->render(),
             'label',
+            'group',
+            'groupJs',
         );
 
-        return $skeleton->fill(['label' => e((string) $this->resolveGroupLabel($record))]);
+        $group = (string) $this->getGroupComparisonKey($record);
+
+        return $skeleton->fill([
+            'label' => e((string) $this->resolveGroupLabel($record)),
+            'group' => e($group),
+            // The toggle names its own group three times — the click, the
+            // loading gate and the spinner target — so it is encoded once here
+            // rather than spelled in the view three times.
+            //
+            // Single-quoted and HTML-escaped, not json_encode()'d: a skeleton
+            // slot is spliced in raw, so a JSON string's double quotes would end
+            // the `wire:target="…"` attribute they sit inside. Same spelling
+            // every other Livewire expression in the framework renders as.
+            'groupJs' => e("'".addslashes($group)."'"),
+        ]);
     }
 
     /**
