@@ -428,6 +428,7 @@ a `describe-form` na to už odpovídají za stránky, které je vykreslují.
 | `ProvidesResourceInfolist` | `infolist(Infolist $infolist): Infolist` | `wire-core` |
 | `ProvidesRelationManagers` | `relationManagers(): array` | `wire-panels` |
 | `ProvidesNavigation` | `static navigation(): NavigationItem` | `wire-core` |
+| `GloballySearchable` | `static globallySearchableAttributes(): array`, `static toGlobalSearchResult(object): GlobalSearchResult` | `wire-core` |
 
 ## ResourceRegistry API
 
@@ -441,6 +442,7 @@ a `describe-form` na to už odpovídají za stránky, které je vykreslují.
 
 ## Související
 
+- [Globální hledání](global-search.md) — příkazová paleta nad všemi registrovanými resources
 - [Relation Managers](../table/relation-managers.md) — tabulka scopovaná na vztah, vlastník, který tenhle vzor zobecňuje
 - [Tabulky](../table/overview.md) — seznamový povrch, který resource deklaruje
 - [Konfigurace](../configuration.md) — kde se `resources` deklaruje

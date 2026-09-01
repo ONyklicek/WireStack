@@ -67,6 +67,32 @@ class WtgCollapsibleComponent extends Component
     }
 }
 
+/** Collapsing plus subtotals, for what a collapsed group still shows. */
+class WtgCollapsibleSummaryComponent extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(WtgInvoice::class)
+            ->paginated(false)
+            ->defaultSort('number')
+            ->columns([
+                Column::make('number'),
+                Column::make('customer'),
+                Column::make('total')->summarizeSum('Sum'),
+            ])
+            ->groupBy('customer')
+            ->collapsibleGroups();
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
 function wtgCollapsible(): WtgCollapsibleComponent
 {
     $component = new WtgCollapsibleComponent;
@@ -368,6 +394,16 @@ it('hides a collapsed group\'s rows instead of styling them away', function () {
         ->assertSeeHtml('aria-expanded="false"')
         // Another group is untouched.
         ->assertSee('INV-1');
+});
+
+it('keeps a collapsed group\'s subtotal on screen', function () {
+    // What makes collapsing an answer for a long table rather than a way to
+    // lose information: the rows go, the number they add up to stays, so a
+    // reader folds away twenty invoices and still sees what the customer owes.
+    Livewire::test(WtgCollapsibleSummaryComponent::class)
+        ->call('toggleGroup', 'Acme')
+        ->assertDontSee('INV-2')
+        ->assertSee('275');
 });
 
 it('toggles back open', function () {

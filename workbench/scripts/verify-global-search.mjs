@@ -109,8 +109,25 @@ try {
   await shot('01-open');
 
   // ── 3. The input takes focus, so typing lands in it ──────────────────────
-  const focused = await eval_(`document.activeElement?.dataset?.testid === 'global-search-input'`);
-  check('the search input is focused on open', focused === true);
+  //
+  // Polled, not read once: the focus is an Alpine `x-effect` that runs on
+  // `$nextTick` after `open` flips, so asking the instant the dialog becomes
+  // visible is a race — and one that loses everything behind it, because the
+  // typing below goes to `document.activeElement`. An unfocused input turns a
+  // millisecond of timing into five failed checks about search results.
+  const focused = await until(
+    `document.activeElement?.dataset?.testid === 'global-search-input'`,
+    'the input to take focus',
+  );
+  check('the search input is focused on open', focused);
+
+  // Focus it anyway when that check failed, so the rest of this run still
+  // measures what it is about. Typing goes to `document.activeElement`, so an
+  // unfocused input turns one real failure into five about search results —
+  // which is how a slow preview server reads as a broken palette.
+  if (! focused) {
+    await eval_(`document.querySelector('[data-testid="global-search-input"]')?.focus()`);
+  }
 
   // ── 4. Typing searches, across the resource registry ─────────────────────
   await type('INV');

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\GlobalSearch\Contracts;
 
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
+use NyonCode\WireCore\GlobalSearch\GlobalSearch;
 use NyonCode\WireCore\GlobalSearch\GlobalSearchResult;
 
 /**
@@ -28,8 +29,13 @@ interface GloballySearchable
      *
      * Plain column names on the resource's own model. Relations are not walked:
      * a palette is a fast first guess, and a join per resource per keystroke is
-     * how it stops being one. A resource that needs more overrides
-     * {@see globalSearchQuery()}.
+     * how it stops being one.
+     *
+     * An application that needs more than this — a join, a full-text index, a
+     * search service — replaces the *search*, not the contract: bind its own
+     * subclass of {@see GlobalSearch} and override `searchResource()`. This
+     * method stays the plain-columns answer for every resource that is happy
+     * with one.
      *
      * @return array<int, string>
      */

@@ -30,6 +30,12 @@ use NyonCode\WireCore\Core\Resources\ResourceRegistry;
  * markup below. The component does not bind a global shortcut itself, because a
  * framework that claimed ⌘K on every page would be taking a key the application
  * may already use.
+ *
+ * @property-read array<string, array<int, GlobalSearchResult>> $results The
+ *   cached computed property behind {@see getResultsProperty()}. Declared so
+ *   that reading it — which every caller in here does, rather than calling the
+ *   method and paying for the whole search again — is a typed read instead of
+ *   magic static analysis has to take on trust.
  */
 class GlobalSearchPalette extends Component
 {
@@ -130,17 +136,51 @@ class GlobalSearchPalette extends Component
     }
 
     /**
+     * The heading each group of results is shown under, keyed by resource key.
+     *
+     * The key is an identifier — a config key, a route segment, a `wire:key` —
+     * and `pluralLabel()` is the plural human name; putting the first on screen
+     * would be a second vocabulary for the second, and wrong the moment a
+     * resource makes them differ on purpose (`orders` / `Sales Orders`).
+     *
+     * One static call per group, not per row, and only for the groups that
+     * actually matched. A key with no resource behind it keeps the key, which is
+     * what a registry emptied between the search and the render leaves.
+     *
+     * @return array<string, string>
+     */
+    public function groupLabels(): array
+    {
+        $registry = app(ResourceRegistry::class);
+
+        $labels = [];
+
+        foreach (array_keys($this->results) as $key) {
+            $resource = $registry->find($key);
+
+            $labels[$key] = $resource === null ? $key : $resource::pluralLabel();
+        }
+
+        return $labels;
+    }
+
+    /**
      * The same rows in one list, in the order they are rendered.
      *
      * The keyboard cursor is an index into this, so it and the markup have to
      * walk the groups the same way — which is why both read this method rather
      * than each flattening the groups themselves.
      *
+     * Reads `$this->results`, never `getResultsProperty()`. The property is the
+     * cached computed property; the method behind it caches nothing, so every
+     * caller that reaches for the method pays for the whole search again — one
+     * query per opted-in resource, per caller, per keystroke.
+     *
      * @return array<int, GlobalSearchResult>
      */
     public function flatResults(): array
     {
-        $groups = $this->getResultsProperty();
+        $groups = $this->results;
 
         return $groups === [] ? [] : array_merge(...array_values($groups));
     }
@@ -150,8 +190,17 @@ class GlobalSearchPalette extends Component
         return view('wire-core::global-search.palette');
     }
 
+    /**
+     * Resolved rather than constructed, so an application can bind its own.
+     *
+     * {@see GlobalSearch::searchResource()} and {@see GlobalSearch::matchAny()}
+     * are protected because a resource whose match needs a join, a full-text
+     * index or a search service has to replace them. Building the searcher with
+     * `new` made both unreachable from the only surface that renders them — the
+     * override would have been written and then silently never run.
+     */
     protected function searcher(): GlobalSearch
     {
-        return new GlobalSearch(app(ResourceRegistry::class));
+        return app(GlobalSearch::class);
     }
 }

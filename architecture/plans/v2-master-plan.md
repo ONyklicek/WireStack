@@ -414,7 +414,7 @@ selection/sort.
 
 ---
 
-### V2.6 / horizont — Domain module axis 🔶 kandidát na V3
+### V2.6 — Domain module axis ⏸️ **odloženo na V3 (rozhodnuto 2026-09-01)**
 
 ADR 0017 Phase 5 / layer 5: modulární skeleton pro ERP/CRM domény (`crm`/`sales`/
 `billing`/`inventory`/…) — moduly deklarují resources/workspaces/workflows/policies
@@ -424,10 +424,16 @@ nad sdílenými primitives. **Druhá osa** vedle technických packages.
 higher-order registration base; V2.3 owneři = co modul grupuje). Modul = kompozice,
 **nezavádí nový runtime**.
 
-**🔶 Rozhodovací bod (po V2.5):** V2.6 **vs V3**. „Teď" jen když existuje reálná
-potřeba **≥2 doménových modulů** / distribuce business balíčků. Jinak **default V3**
-— owner vrstva (V2.3) pokrývá single-domain aplikace sama; předčasná modularizace
-= náklady bez protihodnoty. Není blocker pro žádnou nižší fázi.
+**🔶 Rozhodovací bod (po V2.5): rozhodnut 2026-09-01 → V3.** Ani jedno kritérium
+pro „teď" není splněné (nikde nejsou ≥2 doménové moduly; cesta pro balíček třetí
+strany existuje a je zdokumentovaná), a měření navíc ukázalo, že **kontrakt
+`DomainModule` z detailního plánu se dnes napsat nedá**: tři z osmi metod
+pojmenovávají typy, které neexistují (`Dashboard`, `NavigationGroup`, `Workspace`
+jako bázová třída), jedna nemá kam registrovat (žádný registr workflow), dvě už
+jsou na `Plugin` a jedna je Laravelu. Doménový modul je dnes provider, který
+zavolá `registerMany()`, a resources se shodnou na `NavigationItem::group()`.
+Odůvodnění a podmínky pro znovuotevření: [`v2.6-…`](v2.6-domain-modules-implementation.md) §0a.
+Není blocker pro žádnou nižší fázi.
 
 **Tentýž test platí i pro technickou osu.** Otázka „rozpadnout `wire-core` na
 samostatné balíčky" byla položena a zodpovězena stejně:
@@ -459,7 +465,7 @@ V2.3 Resource/Page/Workspace owner vrstva
    ├─► V2.4 tenancy · workflow · queue · DB notifikace   (execution)
    └─► V2.5 saved views · global search · large-table UX (UX; global search ⟵ V2.3)
    │
-V2.6 domain module axis (nebo V3)
+V2.6 domain module axis → odloženo na V3 (rozhodnuto 2026-09-01)
 ```
 
 | Fáze | Páteř | Hodnota | Riziko | BC |
@@ -470,7 +476,7 @@ V2.6 domain module axis (nebo V3)
 | V2.3 | Resource/Page/Workspace | 🔴 vysoká (positioning) | nízké (návrh. stř.) | aditivní |
 | V2.4 | tenancy/workflow/queue/notifikace | 🔴 vysoká | nízké–stř. | aditivní |
 | V2.5 | saved views/global search/large-table | vysoká | nízké | aditivní |
-| V2.6 | domain modules | střední | střední | aditivní |
+| V2.6 | domain modules | střední | střední | **odloženo na V3** |
 
 ---
 

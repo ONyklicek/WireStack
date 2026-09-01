@@ -429,6 +429,7 @@ would cost exactly what the static half exists to avoid, and `describe-table` an
 | `ProvidesResourceInfolist` | `infolist(Infolist $infolist): Infolist` | `wire-core` |
 | `ProvidesRelationManagers` | `relationManagers(): array` | `wire-panels` |
 | `ProvidesNavigation` | `static navigation(): NavigationItem` | `wire-core` |
+| `GloballySearchable` | `static globallySearchableAttributes(): array`, `static toGlobalSearchResult(object): GlobalSearchResult` | `wire-core` |
 
 ## ResourceRegistry API
 
@@ -442,6 +443,7 @@ would cost exactly what the static half exists to avoid, and `describe-table` an
 
 ## Related
 
+- [Global Search](global-search.md) — the command palette over every registered resource
 - [Relation Managers](../table/relation-managers.md) — a relation-scoped table, the owner this pattern generalises
 - [Tables](../table/overview.md) — the list surface a resource declares
 - [Configuration](../configuration.md) — where `resources` is declared

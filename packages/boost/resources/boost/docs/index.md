@@ -67,6 +67,7 @@ User-facing documentation for the Wire ecosystem.
 | [Core Widgets](core/widgets.md) | Dashboard widgets and widget layout |
 | [Core Infolists](core/infolists.md) | Read-only, schema-driven display of a record |
 | [Core Plugins](core/plugins.md) | App and package extension points |
+| [Global Search](core/global-search.md) | One command palette over every registered resource |
 | [Audit Log](core/audit.md) | Record model changes and table-related events |
 
 ## wire-boost

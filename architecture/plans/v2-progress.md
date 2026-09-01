@@ -50,6 +50,24 @@ Všechny tři položky (SV, GS, LT), a měření změnilo zadání u všech tř�
 
 ---
 
+### V2.6 — domain modules ⏸️ odloženo na V3 (rozhodnuto 2026-09-01)
+
+Rozhodovací bod z [`v2.6-…`](v2.6-domain-modules-implementation.md) §7 padl na
+**„odložit"** — a měření k tomu přidalo tvrdší důvod než „není potřeba".
+**Kontrakt `DomainModule` se dnes napsat nedá:** ze osmi metod tři pojmenovávají
+typy, které v `packages/*/src` neexistují (`Dashboard`, `NavigationGroup`,
+`Workspace` jako bázová třída), jedna nemá kam registrovat (žádný registr
+workflow — `WorkflowState::for()` se staví na místě volání), dvě už jsou na
+`Plugin` a jedna je Laravelu. Celý verdikt po metodách: §0a toho plánu.
+
+**Co `Workspace` chybí: nic.** Existuje od V2.3, je otestovaný a zdokumentovaný
+(EN i CS), a jeho vlastní docblok už říká, že doménová osa má sedět nad ním. Plán
+je starší než ten soubor a zachází s ním jako s třídou k vyjmenování — to se řeší
+škrtnutím metody, ne prací na `Workspace`.
+
+**Tím je celá V2 roadmapa uzavřená** (V2.0–V2.5 hotové, V2.6 vědomě posunutá),
+`v2-master-plan.md` V2.6 vyřešen.
+
 ### V2.1 — hotová ✅
 
 Fáze A: čtrnáct kroků (třináct extrakcí + audit base, který skončil „nepřesouvat").
@@ -880,6 +898,7 @@ práce — a byl to zrovna ten, jehož selhání nemá žádný symptom kromě s
 | ~~Export: optional-library cesty nikdy nespustil žádný test~~ | **uzavřeno 2026-09-01.** `openspout ^4.0` a `barryvdh/laravel-dompdf ^3.0` jsou v `require-dev` (root i balíček) a v `suggest`; `ExporterLibraryTest` testuje `writeTo()` obou proti reálnému souboru (xlsx čte přes `ZipArchive`, PDF přes `%PDF-`). `verify-coverage --diff=origin/1.x` je **poprvé od Q-3 zelená**, pokrytí table 91,8 % → 92,9 %, floor 91 → 92. Měření cestou opravilo tři věci, viz §2. Dvě poznámky k prostředí: obě knihovny potřebují PHP rozšíření, která workflow nejmenovaly (`fileinfo`, `xmlreader` pro openspout), a composer bez nich odmítne nainstalovat cokoli — doplněno do `tests`, `coverage`, `database-tests` i `static-analysis`. A `openspout` v4.32 chce PHP `~8.3`, což je v pořádku jen proto, že `composer.lock` je v `.gitignore` — každé prostředí si resolvuje sám, takže na 8.2 spadne constraint `^4.0` na starší 4.x. Kdyby se lock někdy začal commitovat, tohle je první věc, která se o tom dozví | §2 |
 | ~~`v2-deferred-items.md` §3 je hotová z jedné čtvrtiny~~ | **uzavřeno 2026-08-30.** §3.1 hotová, §3.2 i §3.3 **zamítnuté měřením** (viz §2), §3.4 tím bezpředmětná. Není to nedodělaná položka, je rozhodnutá — a `RelationshipSaveHandler` z toho čtení dostal dva chybějící testy | [`v2-deferred-items.md`](v2-deferred-items.md) §3 |
 | ~~Tři workbench soubory drží pohromadě a žádný z nich není commitnutý~~ | **uzavřeno 2026-09-01.** Refaktor preview rout je hotový — `workbench/routes/web.php` má jednu tabulku `$screens`, ze které se generují routy **i** index, takže index už nemůže zaostat za routami. `verify-resource-pages` na něm projde, takže trojice šla konečně commitnout naráz a resource stránky jsou od teď v CI | — |
+| ~~V2.5 nemá dokumentaci~~ | **uzavřeno 2026-09-01.** `savedViews()` a `collapsibleGroups()` doplněné do stránek, které to téma už vlastní (`table/advanced.md` § Saved Views, `table/grouping.md` § Collapsible Groups); globální hledání má vlastní stránku `core/global-search.md`, protože kontrakt + služba + paleta se do sekce nevejdou. EN i CS, obě v jednom commitu; `docs:check`, `docs:standard` i `docs:api` zelené, boost mirror sesynchronizovaný. Psaní docs našlo tři defekty, viz §2 | — |
 | Boost guidelines neznají plugin hooky | `guidelines/` ani `skills/` nepopisují `PluginManager` vůbec — takže pravidlo „hint rozhoduje dispatcher" tam není a nemohlo zestárnout. Doplnit až s vlastní plugin sekcí, ne ad hoc | — |
 | ~~Boost docs mirror rozjetý~~ | **zavřeno 2026-08-30.** `packages/boost/resources/boost/docs/` je *commitnutá* kopie `docs/` (viz `scripts/sync-boost-docs.php`) a `composer boost:check-docs` je brána v `docs-check.yml`. Byla červená **už před tímhle během**: `money.md` a `metric.md` z V2.1 se do balíčku nikdy nedostaly. Po každé změně v `docs/` pouštěj `composer boost:sync-docs` | `.github/workflows/docs-check.yml` |
 
@@ -887,48 +906,24 @@ práce — a byl to zrovna ten, jehož selhání nemá žádný symptom kromě s
 
 ## 4. Co je na řadě
 
-**Šest fází ze sedmi je hotových: V2.0–V2.5.** Co je uvnitř nich a
-co v nich měření změnilo, je v §1 a §2; tahle sekce je jen o tom, co dál.
+**V2 je uzavřená.** Šest fází hotových (V2.0–V2.5), sedmá (V2.6) **vědomě
+posunutá na V3** rozhodnutím z 2026-09-01 — odůvodnění v §1 a v §0a jejího plánu,
+`v2-master-plan.md` to má zapsané. Ze §4 tedy nezbyla žádná fáze a žádná
+pre-flight položka.
 
-### Další fáze
+### Co zbývá otevřené
 
-| Na řadě | Obsah | Poznámka před startem |
-|---|---|---|
-| ~~**V2.5**~~ | ~~saved views · global search · large-table UX~~ | **hotová 2026-09-01.** Poznámka o `wire-panels` byla **zastaralá** — registr je v `core/src/Core/Resources/`, cyklus neexistuje. Detaily v §1 |
-| **V2.6** | domain modules | `Workspace` je zamýšlený seam; grupuje resources a nevlastní routing. **Už existuje** v `core/src/Core/Resources/Workspace.php` — začni tím, že změříš, co mu chybí, ne že ho napíšeš |
+Nic z toho není fáze; jsou to jmenované položky ze §3, které čekají na rozhodnutí
+vlastníka repa nebo na jmenovaného konzumenta:
 
-Zbývá **V2.6**, a není blokovaná. **V2.4 je uzavřená celá** (N, Q, T, WF včetně Q-3;
-ADR 0018 → ACCEPTED) s jedním pojmenovaným omezením: tenancy nekryje non-Eloquent
-`DataSource`, viz §3.
-
-Jedna věc z Q-3 se hodí vzít do V2.5 jako čtecí pravidlo: **položka pojmenovaná
-dvěma podstatnými jmény bývá dvě položky s různou cenou** („saved views · global
-search · large-table UX" jsou tři a skoro jistě tři různé velikosti). Změř je
-zvlášť dřív, než se pustíš do první.
-
-### Než se do nich pustíš
-
-Ze tří věcí, které tu stály 2026-08-30, **nezbyla žádná.** Běh 2026-09-01 zavřel
-druhou, třetí rozhodl a první zamítl měřením — všechny verdikty v §3.
-
-~~ADR 0025 krok 8~~ — **rozhodnuto 2026-09-01: nedělat.** Nesnížilo by dluh (test
-čte PHP importy, ne Blade), měřený dluh vede opačným směrem, a premisa padla s
-rozhodnutím core neštěpit. Vazba na fázi 0 byla mylná. Čtení ale našlo defekt,
-který se opravil — viz §2.
-
-**Takže dalším krokem je rovnou V2.5.**
-
-~~Export: knihovní cesty nikdy neběžely~~ — **hotové 2026-09-01.** Obě knihovny
-jsou v `require-dev`, `writeTo()` obou je otestované proti reálnému souboru a
-`verify-coverage --diff=origin/1.x` je poprvé od Q-3 zelená.
-
-~~`resolveActionType()`~~ — **rozhodnuto 2026-09-01: ponechat.** Jsou to tři
-sourozenci se zapsaným důvodem, ne mrtvý kód; odůvodnění v §3. Otázka na
-`Dehydrator::dehydrateAttribute()` tím **nezaniká** — ta je jiného druhu
-(nedosažitelná větev uvnitř používané metody) a zůstává vlastníkovi repa.
-
-~~`v2-deferred-items.md` §3~~ — **uzavřená 2026-08-30**, §3.2 i §3.3 zamítnuté
-měřením; odůvodnění v §2, verdikty zapsané přímo do toho plánu.
+| Věc | Čeká na |
+|---|---|
+| `Dehydrator::dehydrateAttribute()` — nedosažitelná větev | rozhodnutí vlastníka repa (smazání public API z publikovaného balíčku) |
+| Tenancy nad non-Eloquent `DataSource` | dekorátor nad `DataSource` (T-4); do té doby **tenancy nad non-Eloquent zdrojem nezapínej** |
+| `ShellRenderPlan` / `InteractionRenderPlan` — host pořád `mixed` | polling, live kanál a readiness nemají pojmenovaný kontrakt |
+| Systematické hledání duplicitních abstrakcí napříč V2 | průřez auditu padl na session limit; `DataSourceCapabilities`/`CapabilitySet` nejspíš nezůstal sám |
+| Boost guidelines neznají plugin hooky | doplnit s vlastní plugin sekcí, ne ad hoc |
+| Coverage floor `table` | 93,0 % proti flooru 92 — `composer coverage:floors` ho zvedne, až se ustálí |
 
 ### Co je uzavřené a nemá se otevírat
 
@@ -939,15 +934,22 @@ měřením; odůvodnění v §2, verdikty zapsané přímo do toho plánu.
   `submitHaltModal` (52 ř.), a to je jedna metoda, ne krok.
 - **`@php` bloky ve views** a **`*Skeleton` bez testu zapečených podmínek** —
   obojí dotažené, viz §1 a §2.
-
----
+- **ADR 0025 kroky 4, 8, 10** — 4 a 8 zamítnuté měřením, 10 hotový a dodělaný.
+- **`resolveActionType()` a jeho dva sourozenci** — nula volajících je zapsaný
+  záměr, ne mrtvý kód.
+- **V2.6 `DomainModule`** — otevírat až s **jmenovaným konzumentem** se dvěma
+  doménami v jedné aplikaci, a i pak začít měřením, ne §2 toho plánu.
 
 ## 5. Jak pokračovat
 
+**V2 je uzavřená, takže tenhle prompt už neposílá do fáze, ale na položku ze
+§4 „Co zbývá otevřené".** Postup se nemění.
+
 ```
-Pokračuj ve V2 podle architecture/plans/v2-progress.md.
-Přečti §2 (co měření změnilo na zadání) a §4 (co je na řadě) a vezmi první
-položku ze §4.
+Pokračuj podle architecture/plans/v2-progress.md.
+Přečti §2 (co měření změnilo na zadání) a §4 (co zbývá otevřené) a vezmi jednu
+položku ze §4. Žádná z nich není fáze — u každé nejdřív změř, jestli je pořád
+pravda.
 
 Postup je pokaždé stejný a v tomhle pořadí:
 1. ZMĚŘ, než cokoli napíšeš. Zadání v plánech je starší než kód a bylo špatně
@@ -982,8 +984,31 @@ Na konci aktualizuj tenhle soubor a commitni.
 Poznámka k `coverage:verify`: composer ho zabíjí na 300s. Pouštěj ho jako
 `COMPOSER_PROCESS_TIMEOUT=1200 composer coverage:verify`.
 
-Poznámka k `verify:drivers`: běží přes dvacet minut a **výstup si přesměruj do
-souboru**, ne přes `| tail`. Roura drží všechno v bufferu do konce procesu, takže
+**Poznámka k `verify:drivers`, doplněná 2026-09-01 měřením:** červený driver je
+napřed **podezření na prostředí**, ne na kód. `verify-global-search` spadl na
+pěti kontrolách uvnitř sady; bisekce ukázala, že **na commitnutém stromu bez
+jakékoli mé změny padal 3× ze 3**, a po **restartu preview serveru** prošel
+10/10 dvakrát za sebou. Příčina je degradace dlouho běžícího `testbench serve`
+(jednoprocesový PHP dev server, v sadě obslouží stovky requestů; skript ho
+restartuje jen když úplně přestane odpovídat) — pomalejší odpověď prohraje race
+a driver na ni nebyl odolný. Opraveno v driveru dvakrát: kontrola fokusu se
+**pollује** místo jednoho čtení, a když přesto selže, driver input zaostří sám,
+aby jedna prohraná race neshodila pět kontrol za sebou (psaní jde do
+`document.activeElement`, takže nezaostřený input čte jako rozbitá paleta).
+Postup bisekce, který to určil: pusť driver samotný → `git stash push -- <cesta>`
+→ pusť znovu → restartuj server → pusť znovu.
+
+Poznámka k `verify:drivers`: **nepouštěj u toho nic jiného.** Drivery sdílejí jeden
+preview server a jeden headless Chrome a jejich čekání má rozpočet pokusů
+(`until(…, tries = 40)` po 150 ms); souběžný `pest` nebo druhý běh driveru ten
+rozpočet vyčerpá a brána nahlásí defekt, který neexistuje. Stalo se to 2026-09-01:
+`verify-global-search` spadl na pěti kontrolách dvakrát za sebou vedle běžícího
+`pest`, a na klidném stroji **týž pracovní strom** prošel 10/10. Než takovému
+červenému driveru uvěříš, pusť ho samotného (`npm run verify:drivers -- <jméno>`)
+a pak `git stash push -- <cesta>` a znovu — ať je „moje změna vs. prostředí"
+změřené, ne odhadnuté.
+
+Běží přes dvacet minut a **výstup si přesměruj do souboru**, ne přes `| tail`. Roura drží všechno v bufferu do konce procesu, takže
 když se běh ukončí jinak, než čekáš, nezbude z něj ani jeden řádek a brána se
 musí pustit celá znovu.
 
@@ -1012,6 +1037,28 @@ když nemáš čas na zbytek.** Za čtyři běhy opravilo zadání šestadvacetk
 | ADR 0025 krok 8 | „patří do action-render-unification.md, fáze 0 blokuje" | vazba **mylná** — ten plán má v §1.1 čtyři třídy akcí a `component-action.blade.php` mezi nimi není, stejně jako v žádné z fází 0–5. A samotný krok by dluh nesnížil: `ModuleLayersTest` čte PHP `use`, ne Blade, a měřený dluh vede **opačně** (Actions → Infolists) |
 | ADR 0025 krok 8 — co za tím leželo | — | `wire:target` a spinner nesly **holé jméno metody**, které Livewire matchuje proti každému jeho volání → klik na jednu akci disabloval a rozsvítil **všechna** infolist tlačítka na stránce; u `RepeatableEntry` jedno na řádek. Týž tvar v obou footer partialech. Mutace prošla **4 581 testy** |
 | ADR 0025 krok 10 | „hotové 2026-08-30" | prohlížečová brána našla **`wireFillHandle is not defined` po `wire:navigate`** — nový entry vzal registrační řádek a nechal za sebou idiom. Server-side to nevidí nikdo: tag je doručený, `alpine:init` v bundlu je, a test pojmenovaný „registers the fill-handle Alpine data" prochází |
+
+Druhý běh 2026-09-01 (dokumentace V2.5 + verdikt V2.6) přidal pět:
+
+| Krok | Zadání / dojem | Měření našlo |
+|---|---|---|
+| V2.5 docs | „`docs:api` hlídá docs proti API" | hlídá **jen stránky, které existují** — porovnává deklarovaný fluent povrch třídy s její *referenční stránkou*. Tři veřejné schopnosti V2.5 (`savedViews()`, `collapsibleGroups()`, celé globální hledání) neměly stránku **žádnou**, takže brána byla zelená a neměla co ohlásit. Kontrola, která to najde, je grep jmen veřejného API proti `docs/`, ne `docs:api` |
+| SV — strážní klauzule | „uložené pohledy jsou pokryté, 44 testů" | `applyTableView()` a `deleteTableView()` měly strážní klauzuli **bez jediného testu**: smazání obou prošlo všemi **2 430** testy balíčku. Sourozenec `saveTableView()` měl na tutéž klauzuli dva testy — a to je ten mechanismus: **pokrytí jednoho ze sourozenců se čte jako pokrytí všech**. Našla to až `--diff=origin/1.x` brána, kterou předchozí běh nepustil |
+| SV — co ta klauzule drží | — | `''` není „prázdné jméno", je to **nepojmenovaný bag = živý layout**: `deleteTableView('')` by uživateli smazal layout, na kterém stojí, a `applyTableView('')` by mu ho „obnovil" i s resetem stránky. Druhá půlka (`$key === null`) drží fatal — jsou to public Livewire endpointy, takže je na tabulce bez uložených pohledů může zavolat cokoli na stránce |
+| GS — slíbený override | docblock `GloballySearchable`: „resource, který potřebuje víc, přebije `globalSearchQuery()`" | **taková metoda neexistuje nikde v repu** — ani v plánu V2.5, který ji nikdy nejmenoval. A únik, který slibovala, nebyl dosažitelný ani oklikou: `searchResource()`/`matchAny()` jsou `protected`, ale paleta si hledání stavěla `new GlobalSearch(...)`, takže binding v kontejneru ignorovala. **`{@see}` na jméno metody nekontroluje žádná brána**; slíbený override potřebuje test, který ho fakticky přebije |
+| GS — cena palety | docs jsem psal větu „jeden dotaz na přihlášený resource na úhoz" | **byly tři.** `$this->results` je cachovaná computed property, ale `flatResults()` i nový `groupLabels()` volaly `getResultsProperty()` **přímo**, což cache obchází a pustí celé hledání znovu. Render tedy hledal 2× ještě před tímhle během a 3× po něm. Chytila to až věta v dokumentaci a test, který počítá dotazy — žádná brána tuhle třídu chyby nevidí |
+| GS — hlavička skupiny | — | paleta psala do hlavičky skupiny **klíč resource** (`orders`), zatímco `pluralLabel()` je kanonický vlastník množného jména. Druhý slovník pro totéž slovo, špatný ve chvíli, kdy se klíč a popisek úmyslně liší (`orders` / `Sales Orders`). CSS `uppercase` to schovávalo jako „skoro popisek" |
+
+**A pravidlo, které z toho padá: napsat do dokumentace číslo je měření.** Věta
+„jeden dotaz na resource na úhoz" byla domněnka z čtení `search()`; test, který
+dotazy spočítal, vrátil tři. Číslo v dokumentaci je tvrzení o chování a patří
+k němu aserce, ne odhad z kódu.
+
+Plus jedno chování, které bylo správně a nikdo ho nedržel: **sbalená skupina si
+nechává svůj mezisoučet** (řádek subtotalu se vykresluje nezávisle na sbalení).
+Otázku vynutilo psaní dokumentace — „co uživatel po sbalení uvidí?" — a odpověď
+je teď v testu, protože to je celý důvod, proč je sbalování úleva a ne ztráta
+informace.
 
 Běh 2026-08-30 přidal jedenáct:
 
@@ -1254,6 +1301,31 @@ jestli funguje. Zneplatnění rozsypané po volajících je duplicitní znalost 
 rozjede se — tady se rozjelo na dvou z pěti míst a nikdo si nevšiml, protože
 cache samotná nebyla ničím pozorovaná. Oprava, která drží: ať si memo nese
 identitu vstupu, ze kterého vzniklo.
+
+**Pravidlo z druhého běhu 2026-09-01 — brána, která porovnává docs s kódem,
+nevidí to, co v docs vůbec není.** `docs:api` je zelená na 122 stránkách a
+nemohla ohlásit, že tři veřejné schopnosti V2.5 nemají stránku žádnou: porovnává
+deklarovaný povrch třídy s *její referenční stránkou*, takže neexistující
+stránka není nesoulad, je to prázdná množina. Totéž platí obecně — **gate na
+drift nehlídá absenci.** Kontrola po dokončení featury je grep jmen nového
+veřejného API proti `docs/`, ne zelená brána.
+
+**A druhá půlka: sourozenecké endpointy se čtou jako pokryté, když je pokrytý
+jeden z nich.** `saveTableView()` měl na svou strážní klauzuli dva testy;
+`applyTableView()` a `deleteTableView()` mají tutéž klauzuli a **žádný** —
+smazání obou prošlo všemi 2 430 testy. Vypadalo to jako pokrytá oblast (44 testů
+na uložené pohledy), protože pravidlo *bylo* otestované, jen na jiné metodě.
+Když najdeš tentýž guard na třech metodách, ověř všechny tři — a nejrychleji to
+udělá `verify-coverage --diff`, která ukazuje řádky, ne pocity.
+
+**Pravidlo z téhož běhu — `{@see}` na metodu nekontroluje nic.** Docblock
+kontraktu `GloballySearchable` posílal čtenáře přebít `globalSearchQuery()`,
+která v repu **neexistuje** a nikdy neexistovala; PHPStan ji nevidí (je to text),
+`docs:api` taky ne (není to docs). Slíbený rozšiřovací bod potřebuje test, který
+ho fakticky přebije — ten hned ukázal druhou půlku: únik byl nedosažitelný i
+kdyby metoda existovala, protože si paleta hledání stavěla `new`, a binding v
+kontejneru tím ignorovala. **Rozšiřovací bod bez testu, který ho použije, je
+komentář, ne API.**
 
 **Dvakrát to byl `*Skeleton`, a to není náhoda.** Zkompilovaný tvar je přesně
 to, co Pest vidí jako řetězec a nikdo neasertuje, protože „to je jen markup" —

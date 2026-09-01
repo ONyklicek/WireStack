@@ -17,11 +17,12 @@ order: 80
 7. [SQL debug](#sql-debug)
 8. [Responzivní layout](#responzivni-layout)
 9. [Přepínání sloupců](#prepinani-sloupcu)
-10. [Kontextové menu řádku](#kontextove-menu-radku)
-11. [Notifikace per tabulka](#notifikace-per-tabulka)
-12. [Perzistence stavu v URL](#perzistence-stavu-v-url)
-13. [Selektory pro browser testy](#selektory-pro-browser-testy)
-14. [Vlastní pohledy](#vlastni-pohledy)
+10. [Uložené pohledy](#ulozene-pohledy)
+11. [Kontextové menu řádku](#kontextove-menu-radku)
+12. [Notifikace per tabulka](#notifikace-per-tabulka)
+13. [Perzistence stavu v URL](#perzistence-stavu-v-url)
+14. [Selektory pro browser testy](#selektory-pro-browser-testy)
+15. [Vlastní pohledy](#vlastni-pohledy)
 
 ---
 
@@ -1146,6 +1147,134 @@ výchozí `session`), nebo zapojit vlastní úložiště implementující
 $table
     ->rememberColumns('reports')
     ->preferenceDriver(app(DatabasePreferenceDriver::class));
+```
+
+---
+
+<a id="saved-views"></a>
+## Uložené pohledy
+
+Uložený pohled **jsou preference téhle tabulky pod jménem** — a layout, na který
+se uživatel právě dívá, je ten nepojmenovaný. Proto uložené pohledy nejsou druhé
+úložiště: `savedViews()` jede po stejném driveru, pod stejným klíčem a se stejným
+scopováním na uživatele jako `rememberColumns()` výše, jen s jednou dimenzí navíc.
+
+```php
+$table
+    ->rememberColumns('orders-index')
+    ->savedViews();                   // sdílí klíč, který právě dostal
+```
+
+Klíč předávejte jen tehdy, když tabulka chce uložené pohledy **bez** pamatování
+aktuálního layoutu: `->savedViews('orders-index')`. Tabulka, která zavolá
+`savedViews()` bez argumentu a nikdy nezavolala `rememberColumns()`, má uložené
+pohledy **vypnuté** — potichu, protože alternativou je vymyslet klíč z názvu
+třídy komponenty, a ten by se pohnul v den, kdy třídu někdo přejmenuje, a vzal
+by s sebou všechny uložené pohledy.
+
+### Co pohled nese
+
+Pohled je seznam cest do stavu, ne snímek komponenty:
+
+| Nese | Nenese |
+| --- | --- |
+| Sloupec a směr řazení | **Výběr** — výběr je o záznamech a jeho obnovení zaškrtne políčka, která uživatel nikdy nezaškrtl; uložený režim `all` by navíc znamenal „všechno, co filtr matchuje" proti filtru, který se mezitím posunul |
+| Velikost stránky | **Otevřený modál** — to je místo, kde uživatel stojí, ne layout |
+| Hledaný výraz | **Kurzor** a rozbalení jednotlivých řádků — obojí pojmenovává záznamy, které už ve výsledku být nemusí |
+| Filtry a filtry sloupců | Latch lazy loadingu, který patří jednomu requestu |
+| Skryté sloupce | |
+| Rozbalit vše, sbalené skupiny, filtry a řazení podřádků | |
+| Rozsah souhrnů | |
+
+Obnovení není slepý zápis zpátky. Množina skrytých sloupců se protne se sloupci,
+které pořád existují a pořád jdou přepínat, takže rok starý pohled pojmenovávající
+přejmenovaný sloupec neskryje nic místo toho, aby skryl špatný; a uloženou cestu,
+kterou tahle verze frameworku nezná, ignoruje, místo aby ji nasadila do stavu.
+Aplikace pohledu taky resetuje stránku — záznamy na obrazovce se změnily, takže
+stránka, na které se pohled ukládal, není stránka tohohle pohledu.
+
+### V UI
+
+Přepínač žije **uvnitř existujícího menu nastavení pohledu**, vedle výběru
+sloupců, ne ve vlastním dropdownu: ovládací prvek už se jmenuje „nastavení
+pohledu" a druhý trigger by byly dvě místa, kde hledat jednu věc. Uložení se
+zeptá na jméno; každý uložený pohled má řádek, který ho aplikuje, a ovládací
+prvek, který ho smaže. Smazání pohledu se nikdy nedotkne layoutu, na kterém
+uživatel stojí.
+
+```php
+use Livewire\Component;
+use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\Concerns\WithTable;
+use NyonCode\WireTable\Filters\SelectFilter;
+use NyonCode\WireTable\Table;
+
+class ListOrders extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(Order::class)
+            ->searchable()
+            ->columns([
+                TextColumn::make('number')->sortable(),
+                TextColumn::make('customer')->toggleable(),
+                TextColumn::make('total')->toggleable(),
+            ])
+            ->filters([
+                SelectFilter::make('status')->options([
+                    'draft' => 'Draft',
+                    'paid' => 'Paid',
+                ]),
+            ])
+            ->rememberColumns('orders-index')   // [tl! focus:start]
+            ->savedViews();                     // [tl! focus:end]
+    }
+}
+```
+
+Uživatel si pak vyfiltruje `paid`, seřadí podle částky, skryje dva sloupce a
+uloží to jako „Unpaid this month" — a příští týden dostane všechny čtyři věci
+zpátky z menu.
+
+### Úložiště a sdílení
+
+Driver klíčuje pohled trojicí **(tabulka, uživatel, jméno pohledu)**, z čehož
+vypadnou dvě věci zadarmo. Pohledy uživatele jsou jeho vlastní, stejně jako jeho
+layout sloupců. A **sdílený pohled** — takový, který vidí celý tým — je řádek bez
+uživatele, takže sdílení nepotřebuje druhý mechanismus: zapište ho přes driver
+přímo.
+
+```php
+app(DatabasePreferenceDriver::class)->save(
+    'orders-index',
+    null,                     // bez uživatele — vidí ho každý
+    ['sort.column' => 'total', 'sort.direction' => 'desc'],
+    'Biggest first',
+);
+```
+
+Uložení pod jménem, které už existuje, ho nahradí místo duplikace, a prázdné
+jméno odmítnou všechny tři endpointy — nepojmenovaný bag je živý layout, takže
+přijmout `''` by znamenalo nechat „Uložit" přepsat layout sám sebou a „Smazat"
+ho zahodit.
+
+### API uložených pohledů
+
+```php
+->savedViews(?string $key = null)     // null použije klíč z rememberColumns(); bez něj vypnuto
+->getSavedViewsKey(): ?string         // null, když jsou uložené pohledy vypnuté
+```
+
+Endpointy komponenty, pro vlastní view nebo pro test:
+
+```php
+$this->saveTableView(string $name): void      // zachytí aktuální pohled pod jménem
+$this->applyTableView(string $name): void     // obnoví ho a resetuje stránku
+$this->deleteTableView(string $name): void    // smaže ho; živý layout zůstává
+$this->getTableViews(): array                 // jména, pro přepínač
 ```
 
 ---

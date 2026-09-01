@@ -67,6 +67,7 @@ Uživatelská dokumentace ekosystému Wire.
 | [Core Widgety](core/widgets.md) | Dashboardové widgety a layout widgetů |
 | [Core Infolisty](core/infolists.md) | Read-only, schématem řízené zobrazení záznamu |
 | [Core Pluginy](core/plugins.md) | Rozšiřovací body aplikace a balíčků |
+| [Globální hledání](core/global-search.md) | Jedna příkazová paleta nad všemi registrovanými resources |
 | [Audit Log](core/audit.md) | Záznam změn modelů a událostí spojených s tabulkami |
 
 ## wire-boost

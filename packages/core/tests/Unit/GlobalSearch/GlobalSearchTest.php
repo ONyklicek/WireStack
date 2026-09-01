@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Auth\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
@@ -240,6 +241,50 @@ class GsOrderPolicy
 
 // ─── The palette component ───────────────────────────────────────
 
+/** An application that needs more than "LIKE over these columns". */
+class GsWideningSearch extends GlobalSearch
+{
+    protected function searchResource(string $resource, string $term, int $perResource): array
+    {
+        return [new GlobalSearchResult($resource::key(), 0, 'widened: '.$term)];
+    }
+}
+
+it('searches once per render, not once per thing that asks for the results', function () {
+    // `$this->results` is a cached computed property; `getResultsProperty()` is
+    // the method behind it and caches nothing. Every caller that reaches for the
+    // method instead of the property pays for the whole search again — one query
+    // per opted-in resource, per caller, per keystroke.
+    app()->instance(ResourceRegistry::class, tap(new ResourceRegistry)->register(GsOrderResource::class));
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    Livewire::test(GlobalSearchPalette::class)->set('term', 'INV-100');
+
+    $searches = collect(DB::getQueryLog())
+        ->filter(fn (array $query): bool => str_contains($query['query'], 'gs_orders'))
+        ->count();
+
+    DB::disableQueryLog();
+
+    expect($searches)->toBe(1);
+});
+
+it('searches through whatever the container says a search is', function () {
+    // `searchResource()` and `matchAny()` are protected because an application
+    // is meant to override them — a resource whose match needs a join, a
+    // full-text index, or a search service. Building the searcher with `new`
+    // here would make both unreachable from the one surface that renders them,
+    // and the override would silently never run.
+    app()->instance(ResourceRegistry::class, tap(new ResourceRegistry)->register(GsOrderResource::class));
+    app()->bind(GlobalSearch::class, GsWideningSearch::class);
+
+    Livewire::test(GlobalSearchPalette::class)
+        ->set('term', 'anything')
+        ->assertSee('widened: anything');
+});
+
 it('renders the results it was asked for', function () {
     app()->instance(ResourceRegistry::class, tap(new ResourceRegistry)->register(GsOrderResource::class));
 
@@ -248,6 +293,19 @@ it('renders the results it was asked for', function () {
         ->assertSee('INV-1001')
         ->assertSee('INV-1002')
         ->assertDontSee('REF-2001');
+});
+
+it('heads each group with the resource\'s plural label, not its key', function () {
+    // `pluralLabel()` owns the plural human name of a resource; the key is what
+    // routes and configures it. A heading built from the key is a second
+    // vocabulary for the same word — and reads as the identifier it is the
+    // moment a resource makes the two differ.
+    app()->instance(ResourceRegistry::class, tap(new ResourceRegistry)->register(GsOrderResource::class));
+
+    Livewire::test(GlobalSearchPalette::class)
+        ->set('term', 'INV-100')
+        ->assertSee(GsOrderResource::pluralLabel())
+        ->assertDontSee('>'.GsOrderResource::key().'<', escape: false);
 });
 
 it('says nothing has been typed yet before it says nothing matched', function () {

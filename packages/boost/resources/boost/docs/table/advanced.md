@@ -17,11 +17,12 @@ order: 80
 7. [SQL Debug](#sql-debug)
 8. [Responsive Layout](#responsive-layout)
 9. [Column Toggling](#column-toggling)
-10. [Row Context Menu](#row-context-menu)
-11. [Notifications Per-Table](#notifications-per-table)
-12. [URL State Persistence](#url-state-persistence)
-13. [Browser Testing Selectors](#browser-testing-selectors)
-14. [Custom Views](#custom-views)
+10. [Saved Views](#saved-views)
+11. [Row Context Menu](#row-context-menu)
+12. [Notifications Per-Table](#notifications-per-table)
+13. [URL State Persistence](#url-state-persistence)
+14. [Browser Testing Selectors](#browser-testing-selectors)
+15. [Custom Views](#custom-views)
 
 ---
 
@@ -1144,6 +1145,130 @@ global default is `session`), or plug in your own store implementing
 $table
     ->rememberColumns('reports')
     ->preferenceDriver(app(DatabasePreferenceDriver::class));
+```
+
+---
+
+## Saved Views
+
+A saved view **is this table's preferences under a name** — and the layout the
+user is looking at right now is the unnamed one. That is why saved views are not
+a second store: `savedViews()` rides the same driver, the same key and the same
+per-user scoping as `rememberColumns()` above, with one dimension added.
+
+```php
+$table
+    ->rememberColumns('orders-index')
+    ->savedViews();                   // shares the key it was just given
+```
+
+Pass a key only when a table wants saved views **without** remembering the
+current layout: `->savedViews('orders-index')`. A table that calls
+`savedViews()` with no argument and never called `rememberColumns()` gets saved
+views **off** — silently, because the alternative is inventing a key from the
+component's class name, which would move the day anyone renamed the class and
+take every stored view with it.
+
+### What a view carries
+
+A view is a list of state paths, not a snapshot of the component:
+
+| Carried | Left out |
+| --- | --- |
+| Sort column and direction | The **selection** — a selection is about records, and restoring one ticks boxes the user never ticked; a saved `all` mode would mean "everything the filter matches" against a filter that has since moved on |
+| Page size | The **open modal** — where the user is standing, not a layout |
+| The search term | The **cursor** and per-row expansion — both name records that may not be in the result set any more |
+| Filters and per-column filters | The lazy-load latch, which belongs to one request |
+| Hidden columns | |
+| Expand-all, collapsed groups, sub-row filters and sub-row sort | |
+| The summary scope | |
+
+Restoring is not a blind write-back. The hidden-column set is intersected with
+the columns that still exist and are still toggleable, so a view saved a year ago
+that names a renamed column hides nothing rather than hiding the wrong thing; and
+a stored path this version of the framework does not know is ignored rather than
+seeded into state. Applying a view also resets the page — the records on screen
+have changed, so the page it was saved on is not this view's page.
+
+### In the UI
+
+The switcher lives **inside the existing view-options menu**, next to the column
+picker, rather than in a dropdown of its own: the control is already called "view
+options", and a second trigger would be two places to look for one idea. Saving
+prompts for a name; each stored view has a row that applies it and a control that
+deletes it. Deleting a view never touches the layout the user is standing in.
+
+```php
+use Livewire\Component;
+use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\Concerns\WithTable;
+use NyonCode\WireTable\Filters\SelectFilter;
+use NyonCode\WireTable\Table;
+
+class ListOrders extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(Order::class)
+            ->searchable()
+            ->columns([
+                TextColumn::make('number')->sortable(),
+                TextColumn::make('customer')->toggleable(),
+                TextColumn::make('total')->toggleable(),
+            ])
+            ->filters([
+                SelectFilter::make('status')->options([
+                    'draft' => 'Draft',
+                    'paid' => 'Paid',
+                ]),
+            ])
+            ->rememberColumns('orders-index')   // [tl! focus:start]
+            ->savedViews();                     // [tl! focus:end]
+    }
+}
+```
+
+A user then filters to `paid`, sorts by total, hides two columns, and saves it as
+"Unpaid this month" — and gets all four back next week from the menu.
+
+### Storage and sharing
+
+The driver keys a view on the triple **(table, user, view name)**, which makes
+two things fall out for free. A user's views are their own, like their column
+layout. And a **shared view** — one a whole team sees — is a row with no user, so
+sharing needs no second mechanism: write one through the driver directly.
+
+```php
+app(DatabasePreferenceDriver::class)->save(
+    'orders-index',
+    null,                     // no user — everyone sees it
+    ['sort.column' => 'total', 'sort.direction' => 'desc'],
+    'Biggest first',
+);
+```
+
+Saving a name that already exists replaces it rather than duplicating it, and an
+empty name is refused by all three endpoints — the unnamed bag is the live
+layout, so accepting `''` would let "Save" overwrite the layout with itself, and
+"Delete" throw it away.
+
+### Saved views API
+
+```php
+->savedViews(?string $key = null)     // null reuses the rememberColumns() key; off without one
+->getSavedViewsKey(): ?string         // null when saved views are off
+```
+
+The component endpoints, for a custom view or a test:
+
+```php
+$this->saveTableView(string $name): void      // capture the current view under a name
+$this->applyTableView(string $name): void     // restore it, and reset the page
+$this->deleteTableView(string $name): void    // drop it; the live layout is untouched
+$this->getTableViews(): array                 // the names, for a switcher
 ```
 
 ---

@@ -5,6 +5,7 @@
 @php
     $results = $this->results;
     $flat = $this->flatResults();
+    $groupLabels = $this->groupLabels();
     $flatIndex = 0;
 @endphp
 <div>
@@ -43,7 +44,7 @@
                     <div class="max-h-80 overflow-y-auto p-2" data-testid="global-search-results">
                         @forelse($results as $resourceKey => $rows)
                             <div class="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                                {{ $resourceKey }}
+                                {{ $groupLabels[$resourceKey] ?? $resourceKey }}
                             </div>
                             @foreach($rows as $row)
                                 @php $isActive = $flatIndex === $this->active; @endphp

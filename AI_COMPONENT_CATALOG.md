@@ -204,8 +204,23 @@ Main areas:
 - `Plugin/`: `PluginManager`
 - `Query/`: planner, executor, clauses, definitions, joins, aliases
 - `Relations/`: relation AST and graph builder
+- `Resources/`: `ResourceRegistry`, `Workspace`, `DescribesResource` /
+  `ProvidesNavigation` contracts, `NavigationItem`
+- `Workflow/`: `WorkflowState` (the transition seam, ADR 0018)
 - `State/`: state container, hydrator, serializer, dirty tracking, path resolver
 - `Validation/`: validation pipeline and result
+
+## Core Global Search
+
+Path: `packages/core/src/GlobalSearch`
+
+- `GlobalSearch`: the search over every registered resource (per-resource cap,
+  LIKE escaping, per-record policy check)
+- `GlobalSearchPalette`: the ⌘K Livewire component (`wire-global-search`)
+- `GlobalSearchResult`: one already-resolved row
+- `Contracts/GloballySearchable`: the per-resource opt-in
+
+Docs: `docs/core/global-search.md`.
 
 ## Core Widgets And Audit
 

@@ -742,6 +742,45 @@ it('applies nothing for a name that was never saved', function () {
     expect($component->tableState->get('search'))->toBe('live');
 });
 
+it('leaves the live layout standing when an empty name reaches apply or delete', function () {
+    // `saveTableView()` already refuses an empty name; the other two endpoints
+    // have to refuse it for a sharper reason. A driver keys the unnamed bag as
+    // the *current layout*, so `''` reaching one means "apply" restores the
+    // layout the user is already standing in — resetting their page on the way
+    // — and "delete" throws that layout away, neither of which names a view.
+    $driver = new ArrayPreferenceDriver;
+    TablePreferenceManager::swap($driver);
+
+    $component = savedViewComponent();
+    $component->toggleColumn('email'); // writes the unnamed layout
+    $stored = $driver->store;
+    $component->tableState->set('search', 'live');
+
+    $component->applyTableView('');
+    $component->deleteTableView('');
+
+    expect($driver->store)->toBe($stored)
+        ->and($component->tableState->get('search'))->toBe('live');
+});
+
+it('ignores apply and delete on a table that never opted into saved views', function () {
+    // Both are public Livewire endpoints, so anything on the page can call them
+    // on any table using the trait. With saved views off there is no key to
+    // store under, and handing the driver the missing one would fatal the
+    // request rather than do nothing.
+    $driver = new ArrayPreferenceDriver;
+    TablePreferenceManager::swap($driver);
+
+    $component = rememberingComponent();
+    $component->tableState->set('search', 'live');
+
+    $component->applyTableView('Unpaid');
+    $component->deleteTableView('Unpaid');
+
+    expect($component->tableState->get('search'))->toBe('live')
+        ->and($driver->store)->toBe([]);
+});
+
 // ─── Saved views: the switcher markup ────────────────────────────
 
 it('renders the saved views section inside the existing view menu', function () {

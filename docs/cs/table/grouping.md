@@ -55,6 +55,7 @@ public function table(Table $table): Table
 | `groupBy(string $column)`       | Seskupit řádky podle přímého sloupce na modelu          |
 | `groupLabel(string\|Closure)`   | Přizpůsobit popisek hlavičky skupiny                    |
 | `groupSummaries(bool)`          | Přepnout řádky mezisoučtů za skupinu (výchozí zapnuto)         |
+| `collapsibleGroups(bool)`       | Nechat uživatele skupinu sbalit (výchozí vypnuto)          |
 
 ### Popisky skupin
 
@@ -95,6 +96,68 @@ TextColumn::make('total')
 
 Řádky mezisoučtů (při zachování hlaviček a patičky) vypnete pomocí
 `->groupSummaries(false)`.
+
+## Sbalitelné skupiny
+
+`collapsibleGroups()` přidá na každou hlavičku skupiny šipku. Kliknutí sbalí
+řádky té skupiny a nechá na obrazovce hlavičku a mezisoučet skupiny:
+
+```php
+->groupBy('customer')
+->collapsibleGroups();
+```
+
+Řádky sbalené skupiny se **vůbec nevykreslí** — nejsou schované přes CSS ani
+odsunuté mimo obrazovku. To je celý smysl, ne implementační detail: několik
+chování tabulky čte své řádky přímo z DOM (klávesová navigace, výběr rozsahu,
+fill handle, živá synchronizace buněk) a přes sbalení fungují dál, protože
+seznam, po kterém chodí, zůstává v souladu s tím, co je na obrazovce. Je to
+zároveň důvod, proč tenhle framework nenabízí virtuální scrollování: vykreslovat
+jen viewport by vyžadovalo paralelní cestu pro každé z těch čtyř chování a tři
+z nich selhávají tiše — fill, který nic nezapíše, rozsah, který přeskočí řádky.
+
+Viditelné zůstane to, kvůli čemu má smysl sbalenou skupinu číst: její hlavička
+a řádek mezisoučtu. Dvacet faktur se sbalí a součet za zákazníka je pořád vidět.
+
+Sbalená množina je klíčovaná hodnotou skupiny, ne řádky v ní, takže skupina
+zůstane sbalená, i když se její obsah změní — filtr, který vymění všechny řádky
+ve skupině `Overdue`, ji nechá sbalenou, což je přesně to, o co uživatel žádal.
+Žije ve stavu tabulky pod `rows.collapsedGroups`, takže přežije Livewire round
+trip a je jednou z věcí, které nese [uložený pohled](advanced.md#ulozene-pohledy).
+
+```php
+use Livewire\Component;
+use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\Concerns\WithTable;
+use NyonCode\WireTable\Table;
+
+class ListInvoices extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(Invoice::class)
+            ->perPage(100)
+            ->columns([
+                TextColumn::make('number')->label('Invoice'),
+                TextColumn::make('issued_at')->date(),
+                TextColumn::make('total')
+                    ->summaryDecimals(0)
+                    ->summarizeSum('Sum'),
+            ])
+            ->groupBy('customer')      // [tl! focus:start]
+            ->collapsibleGroups();     // [tl! focus:end]
+    }
+}
+```
+
+Sbalování dává smysl jen na seskupené tabulce: `collapsibleGroups()` bez
+`groupBy()` nevykreslí žádné přepínače, místo aby chybovalo, a
+`hasCollapsibleGroups()` vrací `false`. Řízení z vlastního view jsou dvě metody
+na komponentě — `toggleGroup(string $group)` a `isGroupCollapsed(string $group)`
+— obě klíčované toutéž hodnotou skupiny, kterou ukazuje hlavička.
 
 ## Omezení
 
