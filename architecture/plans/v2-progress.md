@@ -50,7 +50,7 @@ Všechny tři položky (SV, GS, LT), a měření změnilo zadání u všech tř�
 
 ---
 
-### V2.6 — domain modules ⏸️ odloženo na V3 (rozhodnuto 2026-09-01)
+### V2.6 — domain modules 🔨 znovu otevřená (rozhodnutí vlastníka 2026-09-01)
 
 Rozhodovací bod z [`v2.6-…`](v2.6-domain-modules-implementation.md) §7 padl na
 **„odložit"** — a měření k tomu přidalo tvrdší důvod než „není potřeba".
@@ -65,8 +65,20 @@ workflow — `WorkflowState::for()` se staví na místě volání), dvě už jso
 je starší než ten soubor a zachází s ním jako s třídou k vyjmenování — to se řeší
 škrtnutím metody, ne prací na `Workspace`.
 
-**Tím je celá V2 roadmapa uzavřená** (V2.0–V2.5 hotové, V2.6 vědomě posunutá),
-`v2-master-plan.md` V2.6 vyřešen.
+**Vlastník repa pak rozhodl chybějící části doplnit** (§0b téhož plánu). Verdikt
+§0a se tím neruší — mění se na zadání: co v něm stálo jako „neexistuje", je teď
+seznam práce. Pořadí se ale kvůli jednomu nálezu obrátilo proti plánu:
+
+**`Workspace` nemá v celém repu jediného konzumenta.** Nic nevykresluje navigaci —
+ani `wire-panels`, ani jedno preview, ani jeden driver. Takže `NavigationGroup`
+i `DomainModule` by se dnes stavěly do prázdna: skupina s ikonou je vlastnost
+menu, které se nekreslí, a modul je vidět jen tím menu. **První krok je proto
+konzument navigace ve workbenchi**, ne kontrakt — a s ním druhý resource, protože
+s jedním (`InvoiceResource`) se skupiny nedají ukázat. Celé pořadí a co u každého
+kroku změřit: §0b.
+
+`v2-master-plan.md` má V2.6 vyřešenou jako odloženou; **až bude krok 5 hotový,
+přepiš ji tam** — do té doby ta věta popisuje rozhodnutí, které vlastník změnil.
 
 ### V2.1 — hotová ✅
 
@@ -906,10 +918,11 @@ práce — a byl to zrovna ten, jehož selhání nemá žádný symptom kromě s
 
 ## 4. Co je na řadě
 
-**V2 je uzavřená.** Šest fází hotových (V2.0–V2.5), sedmá (V2.6) **vědomě
-posunutá na V3** rozhodnutím z 2026-09-01 — odůvodnění v §1 a v §0a jejího plánu,
-`v2-master-plan.md` to má zapsané. Ze §4 tedy nezbyla žádná fáze a žádná
-pre-flight položka.
+**Šest fází hotových (V2.0–V2.5). Na řadě je V2.6** — měřením odložená (§0a jejího
+plánu), pak **znovu otevřená rozhodnutím vlastníka** (§0b): chybějící části se
+doplní. Pořadí je v §0b a **není to pořadí z §2 toho plánu**: začíná se
+konzumentem navigace, protože `Workspace` dnes žádného nemá, a bez vykresleného
+menu nemá `NavigationGroup` ani `DomainModule` kde selhat v prohlížeči.
 
 ### Co zbývá otevřené
 
