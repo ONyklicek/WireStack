@@ -71,7 +71,11 @@ it('renders as a dialog with forwarded wire bindings, body and buttons — no <x
         ->assertSeeHtml('data-testid="confirmation-cancel"')
         // additional footer action rendered via the Action API (Modal Rule 4)
         ->assertSeeHtml('data-testid="modal-footer-action-preview"')
-        ->assertSeeHtml("callModalFooterAction('preview')")
+        ->assertSeeHtml('callModalFooterAction(&#039;preview&#039;)')
+        // The disabled gate names that one action, not the method — a bare
+        // method name would gate every footer button beside it at once.
+        ->assertSeeHtml('wire:target="callModalFooterAction(&#039;preview&#039;)"')
+        ->assertDontSeeHtml('wire:target="callModalFooterAction"')
         ->assertDontSeeHtml('x-wire-modals::confirmation'); // never falls back to the component
 });
 

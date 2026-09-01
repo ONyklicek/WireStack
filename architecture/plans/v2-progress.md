@@ -856,7 +856,7 @@ práce — a byl to zrovna ten, jehož selhání nemá žádný symptom kromě s
 
 | Věc | Proč | Kde |
 |---|---|---|
-| ADR 0025 krok 8 — Blade coupling (`callInfolistAction` natvrdo ve view) | Patří do [`action-render-unification.md`](action-render-unification.md), jehož fáze 0 je golden-master připnutí markupu; §6.2 tam označuje vizuální deltu za jediné reálné riziko regrese | ADR 0025 |
+| ~~ADR 0025 krok 8 — Blade coupling (`callInfolistAction` natvrdo ve view)~~ | **rozhodnuto 2026-09-01: nedělat.** Tři důvody z měření: (1) `ModuleLayersTest` čte PHP `use`, Blade nevidí — číslo dluhu by se nezměnilo; (2) měřený dluh vede **opačně**, `InteractsWithActions` (Actions) importuje `Infolists\{Entry, RepeatableEntry, Infolist}`, a to zůstane; (3) premisa („wire-core bez Actions by nerenderoval") padla s §1 ADR, která rozhodla core neštěpit. Vazba na fázi 0 [`action-render-unification.md`](action-render-unification.md) byla navíc **mylná** — ten plán řeší `Action`/`HeaderAction`/`BulkAction`/`ActionGroup` a `component-action.blade.php` v něm není ani v §1.1, ani v žádné fázi. Čtení ale našlo **ostrý defekt**, viz §2 | ADR 0025 |
 | ADR 0025 krok 4 — `Trans`/`Deprecation` do Foundation | Zdůvodnění padlo: vrstvy L2→L1 **povolují**, takže by to bylo 33 souborů za nulový přínos pro hranice. Zbývá argument kanonického vlastnictví, ale to je jiný důvod | ADR 0025 |
 | `modal-host.blade.php` instancuje `Modals\Html\*` | **Není defekt** — je to výsledek [`rule5-framework-wide-modal-sweep.md`](rule5-framework-wide-modal-sweep.md): framework nesmí záviset na `<x-*>` | — |
 | Systematické hledání duplicitních abstrakcí napříč V2 | Průřez auditu padl na session limit. `DataSourceCapabilities`/`CapabilitySet` byl nalezen mimo audit a nejspíš nezůstal sám | [`v2-audit-2026-08-26.md`](v2-audit-2026-08-26.md) §6 |
@@ -896,12 +896,15 @@ zvlášť dřív, než se pustíš do první.
 
 ### Než se do nich pustíš
 
-Ze tří věcí, které tu stály 2026-08-30, **zbyla jedna** (běh 2026-09-01 zavřel
-druhou a třetí rozhodl — viz §3):
+Ze tří věcí, které tu stály 2026-08-30, **nezbyla žádná.** Běh 2026-09-01 zavřel
+druhou, třetí rozhodl a první zamítl měřením — všechny verdikty v §3.
 
-1. **ADR 0025 krok 8** — Blade coupling `callInfolistAction`. Krok 10 je hotový
-   (2026-08-30, dodělaný 2026-09-01, viz §2); krok 8 zůstává vázaný na fázi 0
-   [`action-render-unification.md`](action-render-unification.md).
+~~ADR 0025 krok 8~~ — **rozhodnuto 2026-09-01: nedělat.** Nesnížilo by dluh (test
+čte PHP importy, ne Blade), měřený dluh vede opačným směrem, a premisa padla s
+rozhodnutím core neštěpit. Vazba na fázi 0 byla mylná. Čtení ale našlo defekt,
+který se opravil — viz §2.
+
+**Takže dalším krokem je rovnou V2.5.**
 
 ~~Export: knihovní cesty nikdy neběžely~~ — **hotové 2026-09-01.** Obě knihovny
 jsou v `require-dev`, `writeTo()` obou je otestované proti reálnému souboru a
@@ -981,8 +984,8 @@ chyba: `composer.json` (repositories, require, autoload-dev), `phpunit.xml`
 workbench neuvidí.
 
 **Nepřeskakuj měření — to je jediné pravidlo, které si z tohohle souboru odnes,
-když nemáš čas na zbytek.** Za čtyři běhy opravilo zadání dvacetkrát. Běh
-2026-09-01 přidal pět:
+když nemáš čas na zbytek.** Za čtyři běhy opravilo zadání dvaadvacetkrát. Běh
+2026-09-01 přidal sedm:
 
 | Krok | §3/§4 slibovala | Měření našlo |
 |---|---|---|
@@ -990,6 +993,8 @@ když nemáš čas na zbytek.** Za čtyři běhy opravilo zadání dvacetkrát. 
 | Export `TableExport:248` | „nepokrytá" | `tempnam()` **nikdy nevrátí `false`** — změřeno pro `/nonexistent`, `/` i `/dev/null`, vždycky spadne zpátky do systémového tempu. Není to k pokrytí, je to k označení |
 | Export — rozsah | dvě knihovní cesty (`Excel`, `Pdf`) | **čtyři zápisové cesty se třemi různými chováními**: `Csv` tichý return, `Pdf` nekontrolovaný `file_put_contents`, `Excel` cizí `IOException`, `store()` už házel. Jeden kontrakt místo tří |
 | `PdfExporter::isAvailable()` | — | ptá se `class_exists`, ale render jde přes fasádu, která tahá `dompdf.wrapper` **z kontejneru**. Bez registrovaného providera → `BindingResolutionException` místo dokumentovaného CSV fallbacku. Nalezeno až tím, že knihovna reálně přibyla |
+| ADR 0025 krok 8 | „patří do action-render-unification.md, fáze 0 blokuje" | vazba **mylná** — ten plán má v §1.1 čtyři třídy akcí a `component-action.blade.php` mezi nimi není, stejně jako v žádné z fází 0–5. A samotný krok by dluh nesnížil: `ModuleLayersTest` čte PHP `use`, ne Blade, a měřený dluh vede **opačně** (Actions → Infolists) |
+| ADR 0025 krok 8 — co za tím leželo | — | `wire:target` a spinner nesly **holé jméno metody**, které Livewire matchuje proti každému jeho volání → klik na jednu akci disabloval a rozsvítil **všechna** infolist tlačítka na stránce; u `RepeatableEntry` jedno na řádek. Týž tvar v obou footer partialech. Mutace prošla **4 581 testy** |
 | ADR 0025 krok 10 | „hotové 2026-08-30" | prohlížečová brána našla **`wireFillHandle is not defined` po `wire:navigate`** — nový entry vzal registrační řádek a nechal za sebou idiom. Server-side to nevidí nikdo: tag je doručený, `alpine:init` v bundlu je, a test pojmenovaný „registers the fill-handle Alpine data" prochází |
 
 Běh 2026-08-30 přidal jedenáct:

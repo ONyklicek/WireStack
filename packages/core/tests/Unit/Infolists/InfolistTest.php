@@ -118,7 +118,7 @@ it('renders section header actions wired to callInfolistAction', function () {
         ->toHtml();
 
     expect($html)->toContain('Edit')
-        ->and($html)->toContain("callInfolistAction('edit')");
+        ->and($html)->toContain('callInfolistAction(&#039;edit&#039;)');
 });
 
 it('renders a header for a section that only has header actions', function () {
@@ -132,7 +132,7 @@ it('renders a header for a section that only has header actions', function () {
         ->toHtml();
 
     expect($html)->toContain('Refresh')
-        ->and($html)->toContain("callInfolistAction('refresh')");
+        ->and($html)->toContain('callInfolistAction(&#039;refresh&#039;)');
 });
 
 it('renders inline entry actions wired to callInfolistAction', function () {
@@ -144,7 +144,7 @@ it('renders inline entry actions wired to callInfolistAction', function () {
         ->toHtml();
 
     expect($html)->toContain('Copy')
-        ->and($html)->toContain("callInfolistAction('copy')");
+        ->and($html)->toContain('callInfolistAction(&#039;copy&#039;)');
 });
 
 // ─── ListEntry rendering ─────────────────────────────────────────────────────
@@ -201,10 +201,53 @@ it('renders repeatable per-row action buttons keyed by row index', function () {
         ])
         ->toHtml();
 
-    expect($html)->toContain("callInfolistAction('viewLine', 0)")
-        ->and($html)->toContain("callInfolistAction('viewLine', 1)")
+    expect($html)->toContain('callInfolistAction(&#039;viewLine&#039;, 0)')
+        ->and($html)->toContain('callInfolistAction(&#039;viewLine&#039;, 1)')
         ->and($html)->toContain('A1')
         ->and($html)->toContain('B2');
+});
+
+it('gates each row action\'s loading state on that row alone', function () {
+    // `wire:target` used to be the bare method name, which Livewire matches
+    // against every call to it — so clicking one row's action disabled and span
+    // the button on every other row. A repeatable entry is where that is worst,
+    // because the same action name appears once per row and nothing else
+    // distinguishes the buttons.
+    //
+    // The `wire:click`, the `wire:target` gating `wire:loading.attr="disabled"`,
+    // and the spinner's own target all have to carry the same full expression.
+    $html = Infolist::make()
+        ->record(['lines' => [['sku' => 'A1'], ['sku' => 'B2']]])
+        ->schema([
+            RepeatableEntry::make('lines')
+                ->schema([TextEntry::make('sku')])
+                ->actions([Action::make('viewLine')->label('View')]),
+        ])
+        ->toHtml();
+
+    foreach ([0, 1] as $row) {
+        expect($html)->toContain('wire:target="callInfolistAction(&#039;viewLine&#039;, '.$row.')"');
+    }
+
+    // Two rows, and each of them names its target twice: the button's disabled
+    // gate and the spinner inside it.
+    expect(substr_count($html, 'wire:target="callInfolistAction('))->toBe(4)
+        ->and($html)->not->toContain('wire:target="callInfolistAction"');
+});
+
+it('gates a section header action on its own click, not on every infolist action', function () {
+    $html = Infolist::make()
+        ->record(['name' => 'Ada'])
+        ->schema([
+            Section::make('Profile')
+                ->headerActions([Action::make('edit')->label('Edit')])
+                ->schema([TextEntry::make('name')->actions([Action::make('copy')->label('Copy')])]),
+        ])
+        ->toHtml();
+
+    expect($html)->toContain('wire:target="callInfolistAction(&#039;edit&#039;)"')
+        ->and($html)->toContain('wire:target="callInfolistAction(&#039;copy&#039;)"')
+        ->and($html)->not->toContain('wire:target="callInfolistAction"');
 });
 
 it('honors a custom flex breakpoint and hides invisible children', function () {

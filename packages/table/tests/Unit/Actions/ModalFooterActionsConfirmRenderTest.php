@@ -19,7 +19,7 @@ it('renders wire:confirm on a footer action that requires confirmation', functio
 
     expect($html)
         ->toContain('wire:confirm="Opravdu resetovat?"')
-        ->toContain("callModalFooterAction('reset')");
+        ->toContain('callModalFooterAction(&#039;reset&#039;)');
 });
 
 it('renders the translated default message for requiresConfirmation()', function () {
@@ -36,6 +36,21 @@ it('renders no wire:confirm without confirmation', function () {
     ]);
 
     expect($html)
-        ->toContain("callModalFooterAction('preview')")
+        ->toContain('callModalFooterAction(&#039;preview&#039;)')
         ->not->toContain('wire:confirm');
+});
+
+it('gates each footer action\'s loading state on that action alone', function () {
+    // modalFooterActions() is a list, and `wire:target` used to carry the bare
+    // method name — which Livewire matches against every call to it, so
+    // clicking one footer button disabled and span all of them. The click, the
+    // disabled gate and the spinner all have to name the same action.
+    $html = renderModalFooterActions([
+        ModalFooterAction::make('preview'),
+        ModalFooterAction::make('reset'),
+    ]);
+
+    expect($html)->toContain('wire:target="callModalFooterAction(&#039;preview&#039;)"')
+        ->and($html)->toContain('wire:target="callModalFooterAction(&#039;reset&#039;)"')
+        ->and($html)->not->toContain('wire:target="callModalFooterAction"');
 });

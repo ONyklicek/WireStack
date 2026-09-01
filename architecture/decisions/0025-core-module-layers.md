@@ -59,6 +59,26 @@ Add to that: `views/partials/component-action.blade.php` emits
 instantiates `Modals\Html\*` directly. A `wire-core` without Actions or Modals
 would not render. Blade compiles lazily, so no Pest run would have said so.
 
+**Measured 2026-09-01, and neither is being paid off.** The modal one was already
+ruled not-a-defect: framework views must not depend on `<x-*>`, so instantiating
+`Modals\Html\*` is the outcome of the modal sweep, not a lapse. The infolist one
+is real but buys nothing, for three reasons found by measuring it:
+
+- The layer test reads PHP `use` statements. Blade is invisible to it, so
+  removing the hardcoded call would not move the debt by one.
+- The debt that *is* measured runs the other way: `InteractsWithActions`
+  (Actions) imports `Infolists\{Entry, RepeatableEntry, Infolist}`. Cutting the
+  Blade edge leaves all three.
+- The premise was a `wire-core` shipped without Actions, and §1 decided the core
+  does not split. There is no such consumer, and ADR 0006's bar for making one
+  is still unmet.
+
+Making the host supply the expression — the way a table does, through
+`ResolvesActionClick` — would have to thread a resolver through six entry views,
+the repeatable entry and the section header, none of which have the host in
+scope; they are handed a `$field`. So the boundary stays as it is, and what the
+reading found instead is in Consequences.
+
 ADR 0006 itself sets the bar for extraction — "when a real use case arises (e.g.
 `wire-infolist` needing Actions without Table)". No such consumer exists.
 
@@ -177,6 +197,20 @@ bell. It is `Widgets/`.
   by `FillHandleAssetTest`, which asserts the idiom's shape in the source and in
   the shipped bundle; mutating the entry back to a bare listener leaves the five
   pre-existing assertions in that file green, which is why they were not enough.
+- **The Blade audit found a bug rather than a boundary (2026-09-01).** Reading
+  `component-action.blade.php` to classify its coupling showed the button naming
+  its Livewire method three times — `wire:click`, the `wire:target` gating
+  `wire:loading.attr="disabled"`, and the spinner's own target — and only the
+  first carried the arguments. Livewire matches a bare method name against every
+  call to it, so one click disabled and span every infolist button on the page;
+  on a `RepeatableEntry`, that is one per row, since the action name is identical
+  across rows and the index is all that separates them. The same shape was in
+  both modal-footer partials, where `modalFooterActions()` is a list. A mutation
+  of all three passed 4,581 tests, so nothing had ever asserted it. The
+  expression now has one owner per surface —
+  `Actions\Support\InfolistActionClickResolver` for the infolist, a local
+  variable in each footer partial — which is the same discipline
+  `wire-core::actions.button` already had.
 - **Cost recorded:** ADR 0006's "extraction is a 30-minute mechanical task" is
   not true today and its pre-extraction checklist is incomplete — it says
   nothing about translations, config keys, the shared JS bundle, or service

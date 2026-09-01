@@ -9,6 +9,10 @@
 @foreach($footerActions as $footerAction)
     @continue(($footerAction['position'] ?? 'before') !== $position)
     @php
+        // See the core partial this mirrors: the click expression has one owner
+        // so that wire:click, the disabled gate and the spinner name the same
+        // action. A bare method name gates every footer button at once.
+        $footerClick = "callModalFooterAction('".addslashes((string) $footerAction['name'])."')";
         $color = $footerAction['color'] ?? 'gray';
         $outlined = (bool) ($footerAction['outlined'] ?? false);
         $buttonClasses = $outlined
@@ -17,15 +21,15 @@
     @endphp
     <button
         type="button"
-        wire:click="callModalFooterAction('{{ $footerAction['name'] }}')"
+        wire:click="{{ $footerClick }}"
         @if(! empty($footerAction['confirmMessage']))
             wire:confirm="{{ $footerAction['confirmMessage'] }}"
         @endif
         wire:loading.attr="disabled"
-        wire:target="callModalFooterAction"
+        wire:target="{{ $footerClick }}"
         @class(['inline-flex items-center gap-2', $buttonClasses])
     >
-        @include('wire-core::partials.spinner', ['wireTarget' => 'callModalFooterAction', 'class' => 'h-4 w-4'])
+        @include('wire-core::partials.spinner', ['wireTarget' => $footerClick, 'class' => 'h-4 w-4'])
         @if(! empty($footerAction['icon']))
             {!! icon($footerAction['icon'], 'w-4 h-4', 'h-4 w-4') !!}
         @endif

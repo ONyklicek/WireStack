@@ -6,12 +6,21 @@
     $actionIcon = $action->getIcon();
     $actionLabel = $action->getLabel();
     $actionRowKey = $rowKey ?? null;
+
+    // One owner for the expression, because the button needs it three times and
+    // the three have to agree. `wire:target` and the spinner used to carry the
+    // bare method name, which Livewire matches against ANY call to it — so a
+    // click on one action disabled and span every infolist button on the page,
+    // and on a repeatable entry that is one per row. Same discipline as
+    // `wire-core::actions.button`, which gates its spinner on the exact click.
+    $actionClick = (new \NyonCode\WireCore\Actions\Support\InfolistActionClickResolver($actionRowKey))
+        ->clickHandler($action, null);
 @endphp
 <button
     type="button"
-    wire:click="callInfolistAction('{{ $action->getName() }}'@if($actionRowKey !== null), {{ $actionRowKey }}@endif)"
+    wire:click="{{ $actionClick }}"
     wire:loading.attr="disabled"
-    wire:target="callInfolistAction"
+    wire:target="{{ $actionClick }}"
     data-testid="infolist-action-{{ $action->getName() }}"
     @if($actionLabel) aria-label="{{ $actionLabel }}" @endif
     @if($action->getTooltip()) title="{{ $action->getTooltip() }}" @endif
@@ -20,7 +29,7 @@
         $action->getButtonColorClasses(),
     ])
 >
-    {!! app(\NyonCode\WireCore\Foundation\View\Primitives::class)->spinner('h-4 w-4', 'callInfolistAction') !!}
+    {!! app(\NyonCode\WireCore\Foundation\View\Primitives::class)->spinner('h-4 w-4', $actionClick) !!}
     @if($actionIcon)
         {!! icon($actionIcon, 'w-4 h-4', 'w-4 h-4') !!}
     @endif

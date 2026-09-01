@@ -7,6 +7,7 @@ use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\BaseAction;
 use NyonCode\WireCore\Actions\Contracts\RendersAsButton;
 use NyonCode\WireCore\Actions\Contracts\ResolvesActionClick;
+use NyonCode\WireCore\Actions\Support\InfolistActionClickResolver;
 use NyonCode\WireCore\Actions\Support\MountActionClickResolver;
 
 function clickResolverRecord(int $id = 1): Model
@@ -33,6 +34,35 @@ it('defaults an action render to mountAction when no resolver is supplied', func
 
     expect($data['wireClick'])->toBe("mountAction('publish')")
         ->and($data['loadingTarget'])->toBe("mountAction('publish')");
+});
+
+// ─── InfolistActionClickResolver (entries and section headers) ───────────────
+
+it('resolves a callInfolistAction click without a row key', function () {
+    $resolver = new InfolistActionClickResolver;
+
+    expect($resolver->clickHandler(Action::make('edit'), null))
+        ->toBe("callInfolistAction('edit')");
+});
+
+it('carries the row index when the action belongs to a repeatable row', function () {
+    // The same action name appears once per row, so the index is the only thing
+    // that tells two of these buttons apart — in the dispatch and, since the
+    // loading state gates on the same expression, in the spinner.
+    expect((new InfolistActionClickResolver(0))->clickHandler(Action::make('viewLine'), null))
+        ->toBe("callInfolistAction('viewLine', 0)")
+        ->and((new InfolistActionClickResolver(3))->clickHandler(Action::make('viewLine'), null))
+        ->toBe("callInfolistAction('viewLine', 3)");
+});
+
+it('keeps row zero, which is falsy but is still a row', function () {
+    expect((new InfolistActionClickResolver(0))->clickHandler(Action::make('x'), null))
+        ->toContain(', 0');
+});
+
+it('escapes a quote in an action name rather than closing the argument early', function () {
+    expect((new InfolistActionClickResolver)->clickHandler(Action::make("it's"), null))
+        ->toBe("callInfolistAction('it\\'s')");
 });
 
 // ─── Host-supplied resolver drives the click ─────────────────────────────────
