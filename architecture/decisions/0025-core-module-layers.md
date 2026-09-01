@@ -45,6 +45,9 @@ package together regardless of where the PHP lives:
   `modals`, `audit`, the last of which names `AuditEntry::class` directly.
 - `dist/wire-core-dropdown.js` is one 38 KB bundle carrying six Alpine
   controllers, one of which (`wireFillHandle`) has only a wire-table consumer.
+  **Done 2026-08-30:** that one is out — `wire-table-fill.js`, 9,230 bytes, and
+  the shared bundle is down to 29,235 (−23.8 %). A table pays 100 bytes more in
+  total; everyone else pays 9 KB less. See Consequences.
 - All four downstream packages require `nyoncode/wire-core` at `self.version`
   and `.github/workflows/split.yml` fires on every tag, so releases are
   lockstep. Seven packages that may only be released together are not seven
@@ -150,6 +153,30 @@ bell. It is `Widgets/`.
 - **Trade-off:** every future PR that wants to cross a boundary must either
   write a contract or argue for an entry in the list. That friction is the
   point, and it will occasionally be the wrong call for a small change.
+- **Good (2026-08-30):** the first item of the "shared JS bundle" readiness
+  condition in §5 is met. `wireFillHandle` and its `fill/` modules moved to
+  `wire-table`, which was cheap in bytes and revealed the real shape of the
+  problem: the bundles are separate IIFEs, so an import that crossed the line had
+  to become a published signal. There was one — `support/partials.js` asked the
+  fill controller whether a drag was in flight, and skipping that guard is a
+  known data-loss bug. The `wire-filling` body class the controller already
+  writes for its own CSS, and which two browser drivers already assert, is now
+  that seam, with both ends pinned in one test. **The lesson for the modules
+  still to split: count the runtime edges, not the bytes.** The bytes were
+  trivial to move; the single import was the whole cost.
+- **And a second edge, missed on the first pass (found 2026-09-01).** Counting
+  the *imports* out of the departing code found one. It did not find what the
+  departing code was relying on from the bundle it was leaving: `dropdown.js`
+  registers its controllers through the `window.Alpine`-or-`alpine:init` idiom,
+  and `wireFillHandle` had been one line inside that registrar. The new entry
+  took the line and left the idiom, so the bundle registered nothing on a
+  `wire:navigate` hop and Alpine died on the whole data region. Every
+  server-side test passed — the script tag is delivered either way — and it took
+  `verify-spa-navigate.mjs` to see it. **So the edges to count are not only what
+  the code imports, but what the surrounding file was doing for it.** Now pinned
+  by `FillHandleAssetTest`, which asserts the idiom's shape in the source and in
+  the shipped bundle; mutating the entry back to a bare listener leaves the five
+  pre-existing assertions in that file green, which is why they were not enough.
 - **Cost recorded:** ADR 0006's "extraction is a 30-minute mechanical task" is
   not true today and its pre-extraction checklist is incomplete — it says
   nothing about translations, config keys, the shared JS bundle, or service

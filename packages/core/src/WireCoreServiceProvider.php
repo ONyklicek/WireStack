@@ -98,9 +98,11 @@ class WireCoreServiceProvider extends PackageServiceProvider
             ->hasMigrations()
             ->hasTranslations('resources/lang')
             // `wire-core-dropdown.js` carries every shared Alpine controller
-            // (wireDropdown, wireContextMenu, wireTabs, wireWizard, wireEditableCell,
-            // wireFillHandle) — the interaction layer, which is exactly what must never
-            // arrive late.
+            // (wireDropdown, wireContextMenu, wireTabs, wireWizard, wireEditableCell)
+            // — the interaction layer, which is exactly what must never arrive late.
+            // `wireFillHandle` used to ride along and no longer does: it is a table
+            // gesture, so it ships in `wire-table-fill.js` and a forms-only app stops
+            // paying 9 KB for it (ADR 0025 § step 10).
             ->hasAssets('dist', entries: [
                 Bundle::make('wire-core-dropdown.js'),
                 // The delegated clipboard controller. In core because two packages ask

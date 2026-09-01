@@ -101,6 +101,16 @@ Every bundle registered exclusively inside `alpine:init`, except one:
 `tiptap-editor.js` is the in-repo precedent, and its comment names the bug:
 *"Alpine already started (e.g. script loaded after a Livewire navigation)."*
 
+Row one has since lost `wireFillHandle`, which ADR 0025 § step 10 moved into
+wire-table's own `record-fill.js`. Worth knowing here rather than only in the ADR,
+because the move reproduced this document's defect exactly: inside `dropdown.js`
+the handle's registration was one line in a registrar that already had the fix, so
+extracting the line to a new entry left the idiom behind and the new bundle
+registered on `alpine:init` alone. That is the state of the table above, four
+months after §3 was supposed to have ended it. **A split moves the factory; it does
+not move the registration idiom** — and only `verify-spa-navigate.mjs` could tell,
+because server-side the script tag is delivered either way.
+
 Two further defects surfaced while mapping this. **Both are now fixed** — kept
 here because they are the evidence for §3, not open work:
 

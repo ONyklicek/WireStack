@@ -42,7 +42,7 @@ export default {
 Wire Core uses Alpine.js (included via Livewire 4). No separate Alpine installation needed.
 
 Its interactive controllers — `wireDropdown`, `wireContextMenu`, `wireTabs`, `wireWizard`,
-`wireEditableCell`, `wireFillHandle` — ship as a pre-built bundle served from the package's
+`wireEditableCell` — ship as a pre-built bundle served from the package's
 own route: nothing to publish, no npm, no build step. Add one directive to your layout
 `<head>` so every installed Wire package's controllers are in the initial document:
 

@@ -50,6 +50,13 @@ class WireTableServiceProvider extends PackageServiceProvider
                 Bundle::make('wire-table-records.js'),
                 Bundle::make('wire-table-selection.js'),
                 Bundle::make('wire-table-live.js'),
+                // The Excel-style fill handle. It lived in `wire-core-dropdown.js`
+                // until ADR 0025 § step 10: every wire-core consumer shipped 9 KB of
+                // a gesture only a table can trigger. It ships with the rest rather
+                // than on request — ADR 0024 forbids delivering an interaction
+                // registrar late, and `x-data="wireFillHandle()"` is in the rendered
+                // row region, not behind a click.
+                Bundle::make('wire-table-fill.js'),
             ])
             ->hasAssetFallback(Bundle::servedByRoute('wire-table'))
             ->hasMigrations()

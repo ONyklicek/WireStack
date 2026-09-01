@@ -133,6 +133,18 @@
     $rangeTo = $plan->paging()->rangeTo;
     $headerRowCount = $plan->paging()->headerRowCount;
 @endphp
+                    {{-- Delivered here rather than beside the handle's own markup,
+                         because THIS is the element that names `wireFillHandle` —
+                         and it does so whether or not any column is visible, while
+                         the handle partial below renders only when one is. The two
+                         used to be allowed to disagree: the controller arrived
+                         inside `wire-core-dropdown.js`, which every page ships. It
+                         does not any more (ADR 0025 § step 10), so delivery has to
+                         track the reference exactly, or Alpine dies on the whole
+                         data region with `wireFillHandle is not defined`. --}}
+                    @if($isFillEnabled)
+                        @include('wire-table::tables.partials.fill-assets')
+                    @endif
                     <div class="relative overflow-x-auto {{ $tableHiddenClass }}"
                          @if($isFillEnabled)
                              {{-- Deliberately NOT island-targeted, unlike the editable

@@ -1,5 +1,5 @@
-import { syncNodeOf } from '../editable/sync'
-import { createAutoScroller } from '../support/autoscroll'
+import { syncNodeOf } from '../../../../core/resources/js/editable/sync'
+import { createAutoScroller } from '../../../../core/resources/js/support/autoscroll'
 import { createGrid, versionOf } from './grid'
 import { bounds, clampToColumn, isEmpty, makeRange, targets } from './range'
 
@@ -45,16 +45,6 @@ const HANDLE_INSET = 12
 // a table re-initialises.
 const draggingControllers = new Set()
 let morphGuardInstalled = false
-
-/**
- * Whether a fill drag is in flight, and therefore whether anything else is
- * allowed to morph the rows.
- *
- * Exported because the guard below only covers Livewire's OWN morph: an island
- * fragment and a partial are morphed by other paths that never reach
- * `morph.updating`. Anything that morphs rows out of band has to ask.
- */
-export const isFillDragging = () => draggingControllers.size > 0
 
 const installMorphGuard = () => {
     if (morphGuardInstalled || ! window.Livewire) return
@@ -248,6 +238,11 @@ const wireFillHandle = () => ({
         this.dragging = true
         this.range = makeRange(this.active)
         draggingControllers.add(this)
+        // Load-bearing, not decoration. The registry above is visible only inside
+        // this bundle; wire-core's partial morph runs in another IIFE and asks the
+        // document instead (`support/partials.js`). Skipping that guard is what
+        // made a targeted fill wipe the cells it had just painted, so this class
+        // and the line above it move together or not at all.
         document.body.classList.add('wire-filling')
         this.scroller.start()
 

@@ -3,7 +3,6 @@ import { computePosition, autoUpdate, flip, shift, offset, size } from '@floatin
 import { syncNodeOf } from './editable/sync'
 import { targeting } from './support/island'
 import './support/partials'
-import wireFillHandle from './fill/controller'
 import wireSearchableSelect from './select/controller'
 
 /**
@@ -809,7 +808,6 @@ const registerWireCoreDropdown = () => {
     window.Alpine.data('wireTabs', wireTabs)
     window.Alpine.data('wireWizard', wireWizard)
     window.Alpine.data('wireEditableCell', wireEditableCell)
-    window.Alpine.data('wireFillHandle', wireFillHandle)
     // The searchable-select combobox is core's because seven surfaces across
     // forms and table include `wire-core::partials.searchable-select`.
     window.Alpine.data('wireSearchableSelect', wireSearchableSelect)

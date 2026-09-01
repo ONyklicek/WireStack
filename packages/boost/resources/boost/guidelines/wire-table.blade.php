@@ -250,8 +250,8 @@ desktop table. General rule: **never render the same shortcut-carrying action on
 
 ### JavaScript assets
 
-The table's Alpine controllers (`wireRecordSelection`, `wireRecordActions`, plus core's
-`wireDropdown`/`wireContextMenu`/`wireEditableCell`/`wireFillHandle`) ship as pre-built bundles
+The table's Alpine controllers (`wireRecordSelection`, `wireRecordActions`, `wireFillHandle`,
+plus core's `wireDropdown`/`wireContextMenu`/`wireEditableCell`) ship as pre-built bundles
 served from each package's own asset route — nothing to publish, nothing to build.
 
 **The primary delivery path is `@@wireStackScripts` in the app's layout `<head>`.** The

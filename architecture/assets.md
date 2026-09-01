@@ -42,7 +42,7 @@ Committed IIFE bundles under each package's `dist/`, built with esbuild:
 
 | Package | `dist/` (also the entry key) | Source |
 |---|---|---|
-| core | `wire-core-dropdown.js` | `resources/js/dropdown.js` (+ `editable/`, `fill/`, `support/`) |
+| core | `wire-core-dropdown.js` | `resources/js/dropdown.js` (+ `editable/`, `support/`) |
 | core | `wire-core-chart.js` | `resources/js/chart.js` |
 | core | `wire-core-copy.js` | `resources/js/copy.js` |
 | forms | `wire-forms-image.js` | `resources/js/image-processor.js` |
@@ -51,17 +51,34 @@ Committed IIFE bundles under each package's `dist/`, built with esbuild:
 | table | `wire-table-records.js` | `resources/js/record-actions.js` |
 | table | `wire-table-selection.js` | `resources/js/record-selection.js` |
 | table | `wire-table-live.js` | `resources/js/record-live.js` |
+| table | `wire-table-fill.js` | `resources/js/record-fill.js` (+ `fill/`) |
 | sortable | `wire-sortable.js` | `resources/js/sortable.js` (SortableJS bundled in) |
 
 The copy affordance is core's, not table's (`2137b46`) — it is the one bundle that
 moved packages.
 
 `wire-core-dropdown.js` carries the whole shared interaction layer — `wireDropdown`,
-`wireContextMenu`, `wireTabs`, `wireWizard`, `wireEditableCell`, `wireFillHandle`,
+`wireContextMenu`, `wireTabs`, `wireWizard`, `wireEditableCell`,
 `wireSearchableSelect` — which is exactly the set that must never arrive late. The
 combobox is core's rather than forms' because
 `wire-core::partials.searchable-select` is included by seven surfaces across forms
 *and* table.
+
+`wireFillHandle` used to be in that list and is the second bundle to move packages
+(ADR 0025 § step 10). It is a table gesture, so every wire-core consumer was
+shipping it: measured at **9,148 of the bundle's 38,365 bytes**, or 23.8 %. Split
+out, a table pays 100 bytes more in total — `editable/sync`, `support/autoscroll`
+and `support/rows` are small enough that a second copy is noise — and a forms-only
+application pays none of it.
+
+That split created one contract, and it is the kind that fails silently. The
+partial morph below must not run over a fill drag; the two halves now live in
+separate IIFEs, which cannot import from each other. The seam is the
+`wire-filling` class on `<body>`: the controller writes it on the same line it
+joins its own drag registry, `support/partials.js` reads it, and both ends are
+asserted together in wire-table's `FillHandleAssetTest`. Absent the table bundle
+the class never appears, so the answer is `false` — correct, since there is then
+no fill handle to drag.
 
 `wire-core-dropdown.js` also carries `support/partials.js`, the client half of
 `wire:partial` — which is why any surface emitting an anchor has to deliver it.
@@ -301,6 +318,17 @@ condition, and Livewire does not gate its equivalent either.
   genuinely heavy case, simply is not an entry, and the field that needs it delivers
   it. `wire-core-chart.js` used to be filed here and was not heavy — 671 bytes of
   registrar — so it ships with the rest.
+- **A bundle split moves the factory; it does not move the registration idiom.**
+  When `wireFillHandle` left `wire-core-dropdown.js` (ADR 0025 § step 10), its
+  registration had been one line inside that bundle's registrar — which already
+  had the `window.Alpine` branch above. The new entry got the line and not the
+  branch, so it registered on `alpine:init` alone and every
+  `x-data="wireFillHandle()"` on a `wire:navigate` hop evaluated against an empty
+  registry, killing Alpine for the whole data region. Nothing server-side sees
+  it: the tag is delivered, the bundle contains `alpine:init`, and the asset
+  test that names the factory passes. `verify-spa-navigate.mjs` is the only gate
+  that catches it, so **run it whenever an entry point is added or split**, and
+  give the new entry a test on the idiom's shape, not just on its contents.
 - **`record-selection.js` must stay import-free.** `selection-assets.blade.php`
   inlines its source verbatim (wrapped in an IIFE, matching what `--format=iife`
   does) when `dist/` is missing, because the `x-data` on the table wrapper owns
@@ -343,7 +371,8 @@ condition, and Livewire does not gate its equivalent either.
 composer test:core        # PublishedAssetsTest, WireStackScriptsTest, DropdownAssetTest,
                           # ChartAssetTest, CopyAssetTest, FloatingAssetsTest,
                           # OctaneRequestTerminatedTest
-composer test:table       # SelectionAssetTest, RecordActionAssetTest, LazyTableAssetsTest
+composer test:table       # SelectionAssetTest, RecordActionAssetTest, LazyTableAssetsTest,
+                          # FillHandleAssetTest
 composer test:forms       # ImageAssetTest, TiptapAssetTest
 composer test:sortable    # SortableAssetTest
 ```

@@ -12,8 +12,8 @@
  * (later) horizontally.
  */
 
-import { serverValueOf, versionOf } from '../editable/sync'
-import { bodyRows, rowAtY } from '../support/rows'
+import { serverValueOf, versionOf } from '../../../../core/resources/js/editable/sync'
+import { bodyRows, rowAtY } from '../../../../core/resources/js/support/rows'
 
 // The value and the lock version are NOT on the cell root — `wire:ignore.self`
 // there means Livewire stops refreshing that element's attributes after the

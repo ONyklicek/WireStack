@@ -1,4 +1,19 @@
-import { isFillDragging } from '../fill/controller'
+/**
+ * Whether a fill drag is in flight, and therefore whether anything else is
+ * allowed to morph the rows.
+ *
+ * Read from the body class rather than imported, because the fill handle ships
+ * in wire-table's own bundle (ADR 0025 § step 10) and the bundles are separate
+ * IIFEs — this module cannot import across that line, and core must not learn
+ * that downstream packages exist. `wire-filling` is not a convenience: the
+ * controller sets and clears it on exactly the same two lines that add to and
+ * remove from its own drag registry, the fill handle's CSS already depends on
+ * it, and two browser drivers already assert it. Absent the table bundle the
+ * class never appears, so the answer is `false` — which is the correct answer
+ * when there is no fill handle on the page.
+ */
+const isFillDragging = () => document.body.classList.contains('wire-filling')
+
 
 /**
  * Apply the regions a write chose to re-render.

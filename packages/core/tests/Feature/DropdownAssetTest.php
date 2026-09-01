@@ -113,23 +113,17 @@ test('the shipped bundle registers the editable-cell Alpine data', function () {
         ->toContain('wire-editable-committed');
 });
 
-test('the shipped bundle registers the fill-handle Alpine data', function () {
+test('the shared bundle keeps the reader half of the fill-drag guard', function () {
     $bundle = WireCoreServiceProvider::ASSETS_PATH.'/wire-core-dropdown.js';
 
-    // The Excel-style fill handle lives in resources/js/fill/* and is bundled in
-    // through dropdown.js. Fails if the dist drifts from source.
+    // The fill handle itself moved to wire-table's own bundle (ADR 0025 § step 10),
+    // but the partial-morph guard did not: a targeted row write must not run over a
+    // drag. Separate IIFEs cannot import from each other, so this half reads the
+    // `wire-filling` body class the controller publishes. The writer half is
+    // asserted in wire-table's FillHandleAssetTest, which owns both ends.
     expect(file_get_contents($bundle))
-        ->toContain('wireFillHandle')
-        // One request for the whole range, sent only on pointer release.
-        ->toContain('fillTableCells')
-        // Pointer capture is what keeps the drag alive once it leaves the handle,
-        // and is why mouse, touch and pen need no separate code paths.
-        ->toContain('setPointerCapture')
-        // The preview class the drag paints on covered cells.
-        ->toContain('wire-fill-target')
-        // Auto-scroll runs on rAF, so holding still past the viewport edge keeps
-        // scrolling instead of stalling on the last pointermove.
-        ->toContain('requestAnimationFrame');
+        ->toContain('classList.contains("wire-filling")')
+        ->not->toContain('wireFillHandle');
 });
 
 test('the shipped bundle lifts a teleported panel above the surface that owns it', function () {
@@ -176,7 +170,6 @@ test('the source registers unconditionally so the bundle survives a wire:navigat
         ->toContain("data('wireTabs'")
         ->toContain("data('wireWizard'")
         ->toContain("data('wireEditableCell'")
-        ->toContain("data('wireFillHandle'")
         ->toContain('registerSheetDismiss(window.Alpine)')
         ->toContain('registerFocusTrap(window.Alpine)');
 });
