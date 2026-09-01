@@ -35,6 +35,7 @@ use NyonCode\WireTable\Exceptions\TableConfigurationException;
 use NyonCode\WireTable\Exceptions\TableHasNoHostException;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
+use NyonCode\WireTable\Preferences\TableViewPayload;
 use NyonCode\WireTable\Services\TableIntrospector;
 use NyonCode\WireTable\Support\ColumnSet;
 use NyonCode\WireTable\Support\TableShortcutLegend;
@@ -170,6 +171,9 @@ class Table implements Htmlable
 
     // Per-user column preferences: stable key (null = disabled) + optional driver.
     protected ?string $rememberColumnsKey = null;
+
+    /** Saved-views key; null = off, '' = opted in with nothing to key on. */
+    protected ?string $savedViewsKey = null;
 
     protected ?TablePreferenceDriver $preferenceDriver = null;
 
@@ -1244,6 +1248,40 @@ class Table implements Htmlable
     public function getRememberColumnsKey(): ?string
     {
         return $this->rememberColumnsKey;
+    }
+
+    /**
+     * Let a user save the current view under a name and switch between them.
+     *
+     * Saved views ride the same per-user preference store as
+     * {@see rememberColumns()} — a saved view IS this table's preferences under
+     * a name, and the layout being looked at right now is the unnamed one — so
+     * they share its key by default. Pass one only when a table wants saved
+     * views without remembering the current layout.
+     *
+     * What a view carries is {@see TableViewPayload::PATHS}: the sort, the page
+     * size, the search, the filters, the hidden columns. Not the selection and
+     * not an open modal.
+     */
+    public function savedViews(?string $key = null): static
+    {
+        $this->savedViewsKey = $key ?? $this->rememberColumnsKey ?? '';
+
+        return $this;
+    }
+
+    /**
+     * The key saved views are stored under, or null when they are off.
+     *
+     * Off is also what an opted-in table gets when it has no key to store them
+     * under — `savedViews()` with no argument on a table that never called
+     * `rememberColumns()`. Silently doing nothing beats inventing a key from the
+     * component class, which would move the moment anyone renamed it and take
+     * every saved view with it.
+     */
+    public function getSavedViewsKey(): ?string
+    {
+        return ($this->savedViewsKey ?? '') === '' ? null : $this->savedViewsKey;
     }
 
     /**

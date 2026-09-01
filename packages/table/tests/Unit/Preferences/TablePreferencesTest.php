@@ -111,6 +111,39 @@ class RememberingComponent extends Component
     use WithTable;
 }
 
+class SavedViewComponent extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(PrefTableRow::class)
+            ->paginated(false)
+            ->searchable()
+            ->columns([
+                TextColumn::make('name')->toggleable()->sortable(),
+                TextColumn::make('email')->toggleable(),
+                TextColumn::make('role')->toggleable()->hidden(),
+            ])
+            ->rememberColumns('orders-index')
+            ->savedViews();
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+function savedViewComponent(): SavedViewComponent
+{
+    $component = new SavedViewComponent;
+    $component->mountWithTable();
+
+    return $component;
+}
+
 function rememberingComponent(?string $key = 'users-index'): RememberingComponent
 {
     $component = new RememberingComponent;
@@ -572,4 +605,190 @@ it('the session driver survives a dot in a view name', function () {
     expect($driver->load('orders', null))->toBe(['columns' => ['hidden' => ['a']]])
         ->and($driver->load('orders', null, 'Q1.2026'))->toBe(['columns' => ['hidden' => ['b']]])
         ->and($driver->views('orders', null))->toBe(['Q1.2026']);
+});
+
+// ─── Saved views (SV) ────────────────────────────────────────────
+
+it('takes the remember key for saved views, and stays off without one', function () {
+    expect(Table::make()->rememberColumns('orders')->savedViews()->getSavedViewsKey())->toBe('orders')
+        ->and(Table::make()->savedViews('own-key')->getSavedViewsKey())->toBe('own-key')
+        // Opted in with nothing to key on: off, rather than a key invented from
+        // the component class that would move when anyone renamed it.
+        ->and(Table::make()->savedViews()->getSavedViewsKey())->toBeNull()
+        ->and(Table::make()->getSavedViewsKey())->toBeNull();
+});
+
+it('round-trips a view through save and apply', function () {
+    $driver = new ArrayPreferenceDriver;
+    TablePreferenceManager::swap($driver);
+
+    $component = savedViewComponent();
+    $component->tableState->set('search', 'ada');
+    $component->tableState->set('sort.column', 'name');
+    $component->tableState->set('sort.direction', 'desc');
+    $component->tableState->set('columns.hidden', ['email']);
+
+    $component->saveTableView('Unpaid');
+
+    // Move the live table somewhere else entirely.
+    $component->tableState->set('search', 'grace');
+    $component->tableState->set('sort.column', '');
+    $component->tableState->set('columns.hidden', []);
+
+    $component->applyTableView('Unpaid');
+
+    expect($component->tableState->get('search'))->toBe('ada')
+        ->and($component->tableState->get('sort.column'))->toBe('name')
+        ->and($component->tableState->get('sort.direction'))->toBe('desc')
+        ->and($component->tableState->get('columns.hidden'))->toBe(['email']);
+});
+
+it('keeps the selection and the open modal out of a saved view', function () {
+    // Restoring a selection would tick boxes the user never ticked this session,
+    // and a saved `mode: all` means "everything the filter matches" against a
+    // filter set that has since moved on.
+    $driver = new ArrayPreferenceDriver;
+    TablePreferenceManager::swap($driver);
+
+    $component = savedViewComponent();
+    $component->tableState->set('selection.records', [1, 2, 3]);
+    $component->tableState->set('selection.mode', 'all');
+    $component->tableState->set('modal.open', true);
+    $component->tableState->set('search', 'ada');
+
+    $component->saveTableView('Unpaid');
+
+    $stored = $driver->store['guest|orders-index|Unpaid'];
+
+    expect($stored)->toHaveKey('search')
+        ->and($stored)->not->toHaveKey('selection.records')
+        ->and($stored)->not->toHaveKey('selection.mode')
+        ->and($stored)->not->toHaveKey('modal.open');
+});
+
+it('drops a column a saved view names that no longer exists', function () {
+    $driver = new ArrayPreferenceDriver;
+    $driver->store['guest|orders-index|Stale'] = ['columns.hidden' => ['email', 'ghost-column']];
+    TablePreferenceManager::swap($driver);
+
+    $component = savedViewComponent();
+    $component->applyTableView('Stale');
+
+    expect($component->tableState->get('columns.hidden'))->toBe(['email']);
+});
+
+it('ignores a path a stored view carries that this version does not know', function () {
+    $driver = new ArrayPreferenceDriver;
+    $driver->store['guest|orders-index|Future'] = ['search' => 'ada', 'not.a.real.path' => 'x'];
+    TablePreferenceManager::swap($driver);
+
+    $component = savedViewComponent();
+    $component->applyTableView('Future');
+
+    expect($component->tableState->get('search'))->toBe('ada')
+        ->and($component->tableState->has('not.a.real.path'))->toBeFalse();
+});
+
+it('lists saved views and deletes one without touching the current layout', function () {
+    $driver = new ArrayPreferenceDriver;
+    TablePreferenceManager::swap($driver);
+
+    $component = savedViewComponent();
+    $component->tableState->set('search', 'live');
+    $component->saveTableView('Unpaid');
+    $component->saveTableView('Overdue');
+
+    expect($component->getTableViews())->toEqualCanonicalizing(['Unpaid', 'Overdue']);
+
+    $component->deleteTableView('Unpaid');
+
+    expect($component->getTableViews())->toBe(['Overdue'])
+        // The live table is where the user left it.
+        ->and($component->tableState->get('search'))->toBe('live');
+});
+
+it('refuses an unnamed view rather than overwriting the current layout', function () {
+    // The unnamed bag IS the current layout. Accepting an empty name here would
+    // let "Save" write the live layout over itself and put a blank entry in the
+    // switcher.
+    $driver = new ArrayPreferenceDriver;
+    TablePreferenceManager::swap($driver);
+
+    $component = savedViewComponent();
+    $component->saveTableView('   ');
+
+    expect($component->getTableViews())->toBe([])
+        ->and($driver->store)->toBe([]);
+});
+
+it('does nothing at all when the table never opted in', function () {
+    $driver = new ArrayPreferenceDriver;
+    TablePreferenceManager::swap($driver);
+
+    $component = rememberingComponent();
+    $component->saveTableView('Unpaid');
+
+    expect($component->getTableViews())->toBe([]);
+});
+
+it('applies nothing for a name that was never saved', function () {
+    $driver = new ArrayPreferenceDriver;
+    TablePreferenceManager::swap($driver);
+
+    $component = savedViewComponent();
+    $component->tableState->set('search', 'live');
+    $component->applyTableView('Nope');
+
+    expect($component->tableState->get('search'))->toBe('live');
+});
+
+// ─── Saved views: the switcher markup ────────────────────────────
+
+it('renders the saved views section inside the existing view menu', function () {
+    // One menu, not a second dropdown beside it: the control is already called
+    // "view options", and a switcher in its own trigger would be two places to
+    // look for the same idea.
+    $driver = new ArrayPreferenceDriver;
+    TablePreferenceManager::swap($driver);
+
+    $component = savedViewComponent();
+    $component->saveTableView('Unpaid');
+
+    $html = (string) $component->getTableProperty();
+
+    expect($html)->toContain('data-testid="table-view-save"')
+        ->toContain('data-testid="table-view-Unpaid"')
+        ->toContain('data-testid="table-view-delete-Unpaid"')
+        // Still the one trigger.
+        ->and(substr_count($html, 'data-testid="table-column-toggle"'))->toBe(1);
+});
+
+it('gates each saved view row on its own click', function () {
+    // Same rule as every other action button in the framework: a bare method
+    // name in wire:target would disable and spin every row in the list at once.
+    $driver = new ArrayPreferenceDriver;
+    TablePreferenceManager::swap($driver);
+
+    $component = savedViewComponent();
+    $component->saveTableView('Unpaid');
+    $component->saveTableView('Overdue');
+
+    $html = (string) $component->getTableProperty();
+
+    expect($html)->toContain('wire:target="applyTableView(\'Unpaid\')"')
+        ->toContain('wire:target="applyTableView(\'Overdue\')"')
+        ->and($html)->not->toContain('wire:target="applyTableView"');
+});
+
+it('opens the view menu for saved views even with nothing else in it', function () {
+    // hasViewMenu used to be "column toggles or sub-row expansion". A table that
+    // opted into saved views and neither of those would have had the trigger
+    // rendered away and no way to reach its own views.
+    $table = Table::make()
+        ->model(PrefTableRow::class)
+        ->columns([TextColumn::make('name')])
+        ->rememberColumns('orders')
+        ->savedViews();
+
+    expect($table->getSavedViewsKey())->toBe('orders');
 });

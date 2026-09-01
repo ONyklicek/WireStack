@@ -143,6 +143,10 @@ class TablePreview extends Component
             return $this->columnFiltersTable($table);
         }
 
+        if ($this->variant === 'saved-views') {
+            return $this->savedViewsTable($table);
+        }
+
         if ($this->variant === 'empty-state') {
             return $this->emptyStateTable($table);
         }
@@ -338,6 +342,27 @@ class TablePreview extends Component
      * new multi-select (checkbox dropdown), and a boolean filter — each rendered
      * inline in the header row.
      */
+    /**
+     * Saved views on a real table: searchable, sortable, filterable, with
+     * toggleable columns — everything a view carries, so a saved one has
+     * something to restore that a driver test cannot show.
+     */
+    private function savedViewsTable(Table $table): Table
+    {
+        return $table
+            ->model(User::class)
+            ->searchable()
+            ->paginated()
+            ->perPage(5)
+            ->columns([
+                TextColumn::make('name')->label('Name')->sortable()->toggleable(),
+                TextColumn::make('email')->label('Email')->toggleable(),
+                BadgeColumn::make('role')->label('Role')->sortable()->toggleable(),
+            ])
+            ->rememberColumns('preview-saved-views')
+            ->savedViews();
+    }
+
     private function columnFiltersTable(Table $table): Table
     {
         return $table

@@ -32,8 +32,8 @@ use NyonCode\WireTable\Table;
  * control for rows that cannot expand is exactly the bug the guard prevents.
  *
  * `$hasViewMenu` is the one value with an edge outside this group: the menu
- * holds column toggles, sub-row expansion, or both, so the columns group has to
- * have been resolved first. It is passed in rather than reached for — the same
+ * holds column toggles, sub-row expansion, saved views, or any mix, so the
+ * columns group has to have been resolved first. It is passed in rather than reached for — the same
  * shape {@see PagingRenderPlan} uses — which keeps the group's inputs visible in
  * its signature instead of hidden in its body.
  */
@@ -45,6 +45,7 @@ final class ShellRenderPlan
      * @param  ?string  $pollingAttribute  The literal `wire:poll…` value, or null when not polling.
      * @param  ?string  $liveChannel  The broadcast channel to listen on, or null without `live(broadcast: true)`.
      * @param  array<int, Filter>  $filters  The table-level filters (column filters live on the columns group).
+     * @param  array<int, string>  $savedViews  Names of this user's saved views, empty when the feature is off.
      * @param  string  $viewMenuLabel  Narrows to "toggle columns" when that is all the menu holds.
      */
     private function __construct(
@@ -61,6 +62,9 @@ final class ShellRenderPlan
         public readonly bool $allRowsExpanded,
         public readonly bool $hasGrouping,
         public readonly bool $hasGroupSummaries,
+        public readonly bool $hasSavedViews,
+        /** @var array<int, string> */
+        public readonly array $savedViews,
         public readonly bool $hasViewMenu,
         public readonly string $viewMenuLabel,
     ) {}
@@ -71,6 +75,7 @@ final class ShellRenderPlan
         $hasSubRows = $table->hasSubRows();
         $hasGrouping = $table->hasGrouping();
         $isSubRowsExpandable = $hasSubRows && $table->isSubRowsExpandable();
+        $hasSavedViews = $table->getSavedViewsKey() !== null;
 
         return new self(
             isLazy: $table->isLazy(),
@@ -86,8 +91,10 @@ final class ShellRenderPlan
             allRowsExpanded: $hasSubRows && $component->expandsSubRowsByDefault(),
             hasGrouping: $hasGrouping,
             hasGroupSummaries: $hasGrouping && $component->tableHasGroupSummaries(),
-            hasViewMenu: $hasColumnToggles || $isSubRowsExpandable,
-            viewMenuLabel: $hasColumnToggles && ! $isSubRowsExpandable
+            hasSavedViews: $hasSavedViews,
+            savedViews: $hasSavedViews ? $component->getTableViews() : [],
+            hasViewMenu: $hasColumnToggles || $isSubRowsExpandable || $hasSavedViews,
+            viewMenuLabel: $hasColumnToggles && ! $isSubRowsExpandable && ! $hasSavedViews
                 ? __('wire-table::messages.toggle_columns')
                 : __('wire-table::messages.view_options'),
         );

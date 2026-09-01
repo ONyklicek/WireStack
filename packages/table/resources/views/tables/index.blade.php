@@ -40,6 +40,8 @@
     $allRowsExpanded = $plan->shell()->allRowsExpanded;
     // The view menu earns its place from either section it can hold.
     $hasViewMenu = $plan->shell()->hasViewMenu;
+    $hasSavedViews = $plan->shell()->hasSavedViews;
+    $savedViews = $plan->shell()->savedViews;
     $viewMenuLabel = $plan->shell()->viewMenuLabel;
 
     // Table state. Which filters count as ACTIVE is a rule with a sharp edge (see
@@ -464,9 +466,57 @@
                                                     @include('wire-core::partials.sheet-grabber', ['dismiss' => 'close()', 'breakpoint' => $sheetBp])
                                                 @endif
                                                 <div class="p-2">
+                                                {{-- Saved views. First in the menu because switching view is
+                                                     the coarsest thing here: it replaces the sort, the search,
+                                                     the filters and the columns in one go, so reading the
+                                                     column checkboxes below it before choosing a view would be
+                                                     reading a layout that is about to be replaced. --}}
+                                                @if($hasSavedViews)
+                                                    <div class="px-3 py-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 mb-1">
+                                                        {{ __('wire-table::messages.views_section') }}
+                                                    </div>
+                                                    @foreach($savedViews as $savedView)
+                                                        <div class="flex items-center gap-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                                            <button
+                                                                    type="button"
+                                                                    wire:click="applyTableView(@js($savedView))"
+                                                                    wire:loading.attr="disabled"
+                                                                    wire:target="applyTableView(@js($savedView))"
+                                                                    data-testid="table-view-{{ $savedView }}"
+                                                                    class="flex-1 min-w-0 truncate px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300"
+                                                            >{{ $savedView }}</button>
+                                                            <button
+                                                                    type="button"
+                                                                    wire:click="deleteTableView(@js($savedView))"
+                                                                    wire:loading.attr="disabled"
+                                                                    wire:target="deleteTableView(@js($savedView))"
+                                                                    data-testid="table-view-delete-{{ $savedView }}"
+                                                                    title="{{ __('wire-table::messages.delete_view') }}"
+                                                                    aria-label="{{ __('wire-table::messages.delete_view') }}"
+                                                                    class="shrink-0 rounded-md p-1.5 mr-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                                                            >{!! icon('outline:trash', 'h-4 w-4') !!}</button>
+                                                        </div>
+                                                    @endforeach
+                                                    {{-- The name is asked for in the browser rather than with a
+                                                         field in this panel: the panel is teleported to <body>
+                                                         and closes on click-outside, so an input in it would
+                                                         lose what was typed to the first stray click. --}}
+                                                    <button
+                                                            type="button"
+                                                            x-on:click="$wire.saveTableView(window.prompt(@js(__('wire-table::messages.save_view_prompt'))) ?? '')"
+                                                            data-testid="table-view-save"
+                                                            @class([
+                                                                'mt-1 flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg',
+                                                                'border-t border-gray-100 dark:border-gray-700' => $savedViews !== [],
+                                                            ])
+                                                    >
+                                                        {!! icon('outline:bookmark', 'h-4 w-4') !!}
+                                                        {{ __('wire-table::messages.save_current_view') }}
+                                                    </button>
+                                                @endif
                                                 @if($hasColumnToggles)
                                                 <div
-                                                        class="px-3 py-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 mb-1">
+                                                        class="px-3 py-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 mb-1 {{ $hasSavedViews ? 'border-t mt-1' : '' }}">
                                                     {{ __('wire-table::messages.columns_section') }}
                                                 </div>
                                                 @endif

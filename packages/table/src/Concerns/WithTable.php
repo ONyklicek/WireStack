@@ -53,6 +53,7 @@ use NyonCode\WireTable\Import\Jobs\RunImportJob;
 use NyonCode\WireTable\Import\TableImport;
 use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
 use NyonCode\WireTable\Preferences\TablePreferenceManager;
+use NyonCode\WireTable\Preferences\TableViewPayload;
 use NyonCode\WireTable\Services\CellEditPipeline;
 use NyonCode\WireTable\Services\SubRowQuery;
 use NyonCode\WireTable\Services\SummaryBatch;
@@ -1798,6 +1799,94 @@ trait WithTable
         if (($key = $table->getRememberColumnsKey()) !== null) {
             $this->resolvePreferenceDriver($table)->forget($key, $this->preferenceUser());
         }
+    }
+
+    // ==========================================
+    // Saved views
+    // ==========================================
+
+    /**
+     * Save the current view under a name, replacing one of the same name.
+     *
+     * A Livewire endpoint, so the body lives in
+     * {@see TableViewPayload}: what a view is
+     * has to be one answer shared with {@see applyTableView()}, or a view would
+     * restore something other than what was saved.
+     */
+    public function saveTableView(string $name): void
+    {
+        $name = trim($name);
+        $key = $this->getTable()->getSavedViewsKey();
+
+        // An empty name is the unnamed current layout, which is not a saved view
+        // — accepting it here would let "Save" overwrite the live layout with
+        // itself and put an entry with no label in the switcher.
+        if ($key === null || $name === '') {
+            return;
+        }
+
+        $this->resolvePreferenceDriver($this->getTable())->save(
+            $key,
+            $this->preferenceUser(),
+            TableViewPayload::capture($this->tableState),
+            $name,
+        );
+    }
+
+    /**
+     * Restore a saved view onto the current table state.
+     */
+    public function applyTableView(string $name): void
+    {
+        $table = $this->getTable();
+        $key = $table->getSavedViewsKey();
+
+        if ($key === null || $name === '') {
+            return;
+        }
+
+        $payload = $this->resolvePreferenceDriver($table)->load($key, $this->preferenceUser(), $name);
+
+        if ($payload === []) {
+            return;
+        }
+
+        TableViewPayload::applyTo($payload, $this->tableState, $table);
+
+        // A restored view changes which records are on screen, so the page it
+        // was saved on is not this view's page any more.
+        $this->resetPage();
+        $this->markTableViewChanged();
+    }
+
+    /**
+     * Delete a saved view. The current layout is untouched.
+     */
+    public function deleteTableView(string $name): void
+    {
+        $key = $this->getTable()->getSavedViewsKey();
+
+        if ($key === null || $name === '') {
+            return;
+        }
+
+        $this->resolvePreferenceDriver($this->getTable())->forget($key, $this->preferenceUser(), $name);
+    }
+
+    /**
+     * The names of this user's saved views, for the switcher.
+     *
+     * @return array<int, string>
+     */
+    public function getTableViews(): array
+    {
+        $key = $this->getTable()->getSavedViewsKey();
+
+        if ($key === null) {
+            return [];
+        }
+
+        return $this->resolvePreferenceDriver($this->getTable())->views($key, $this->preferenceUser());
     }
 
     /**
