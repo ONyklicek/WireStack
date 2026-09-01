@@ -18,21 +18,71 @@ use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
  */
 class SessionPreferenceDriver implements TablePreferenceDriver
 {
-    public function load(string $tableKey, ?Authenticatable $user): array
+    public function load(string $tableKey, ?Authenticatable $user, ?string $view = null): array
     {
-        $stored = Session::get($this->key($tableKey, $user), []);
+        $stored = $view === null
+            ? Session::get($this->key($tableKey, $user), [])
+            : ($this->savedViews($tableKey, $user)[$view] ?? []);
 
         return is_array($stored) ? $stored : [];
     }
 
-    public function save(string $tableKey, ?Authenticatable $user, array $preferences): void
+    public function save(string $tableKey, ?Authenticatable $user, array $preferences, ?string $view = null): void
     {
-        Session::put($this->key($tableKey, $user), $preferences);
+        if ($view === null) {
+            Session::put($this->key($tableKey, $user), $preferences);
+
+            return;
+        }
+
+        $views = $this->savedViews($tableKey, $user);
+        $views[$view] = $preferences;
+
+        Session::put($this->viewsKey($tableKey, $user), $views);
     }
 
-    public function forget(string $tableKey, ?Authenticatable $user): void
+    public function forget(string $tableKey, ?Authenticatable $user, ?string $view = null): void
     {
-        Session::forget($this->key($tableKey, $user));
+        if ($view === null) {
+            Session::forget($this->key($tableKey, $user));
+
+            return;
+        }
+
+        $views = $this->savedViews($tableKey, $user);
+        unset($views[$view]);
+
+        Session::put($this->viewsKey($tableKey, $user), $views);
+    }
+
+    public function views(string $tableKey, ?Authenticatable $user): array
+    {
+        return array_keys($this->savedViews($tableKey, $user));
+    }
+
+    /**
+     * Every named view for a table + user, as `name => bag`.
+     *
+     * The names are array keys, never part of the session key, and the named
+     * views sit under a root of their own. Both halves of that are load-bearing,
+     * because Session::put() reads dots as nesting: hanging a view off the
+     * current layout's key wrote it INSIDE that layout's bag, and a view named
+     * "Q1.2026" would have done the same thing one level further down.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    protected function savedViews(string $tableKey, ?Authenticatable $user): array
+    {
+        $stored = Session::get($this->viewsKey($tableKey, $user), []);
+
+        return is_array($stored) ? $stored : [];
+    }
+
+    protected function viewsKey(string $tableKey, ?Authenticatable $user): string
+    {
+        $userId = $user?->getAuthIdentifier() ?? 'guest';
+
+        return "wire-table.savedViews.{$userId}.{$tableKey}";
     }
 
     /**

@@ -28,24 +28,38 @@ class ArrayPreferenceDriver implements TablePreferenceDriver
     /** @var array<string, array<string, mixed>> */
     public array $store = [];
 
-    public function load(string $tableKey, ?Authenticatable $user): array
+    public function load(string $tableKey, ?Authenticatable $user, ?string $view = null): array
     {
-        return $this->store[$this->composeKey($tableKey, $user)] ?? [];
+        return $this->store[$this->composeKey($tableKey, $user, $view)] ?? [];
     }
 
-    public function save(string $tableKey, ?Authenticatable $user, array $preferences): void
+    public function save(string $tableKey, ?Authenticatable $user, array $preferences, ?string $view = null): void
     {
-        $this->store[$this->composeKey($tableKey, $user)] = $preferences;
+        $this->store[$this->composeKey($tableKey, $user, $view)] = $preferences;
     }
 
-    public function forget(string $tableKey, ?Authenticatable $user): void
+    public function forget(string $tableKey, ?Authenticatable $user, ?string $view = null): void
     {
-        unset($this->store[$this->composeKey($tableKey, $user)]);
+        unset($this->store[$this->composeKey($tableKey, $user, $view)]);
     }
 
-    private function composeKey(string $tableKey, ?Authenticatable $user): string
+    public function views(string $tableKey, ?Authenticatable $user): array
     {
-        return ($user?->getAuthIdentifier() ?? 'guest').'|'.$tableKey;
+        $prefix = $this->composeKey($tableKey, $user, '');
+
+        $names = [];
+        foreach (array_keys($this->store) as $key) {
+            if ($key !== $prefix && str_starts_with($key, $prefix)) {
+                $names[] = substr($key, strlen($prefix));
+            }
+        }
+
+        return $names;
+    }
+
+    private function composeKey(string $tableKey, ?Authenticatable $user, ?string $view = null): string
+    {
+        return ($user?->getAuthIdentifier() ?? 'guest').'|'.$tableKey.'|'.($view ?? '');
     }
 }
 
@@ -267,17 +281,23 @@ it('the session driver ignores a non-array stored value', function () {
     expect((new SessionPreferenceDriver)->load('orders', null))->toBe([]);
 });
 
+/**
+ * The real migration, not a copy of it.
+ *
+ * This test used to declare the schema itself, so the day the migration grew a
+ * `view` column the copy stayed behind and every database-driver test failed on
+ * a column that was right there in the package. Loading the migration keeps one
+ * owner for the shape.
+ */
+function createTablePreferencesSchema(): void
+{
+    (require __DIR__.'/../../../database/migrations/create_table_preferences_table.php')->up();
+}
+
 // ─── Database driver ─────────────────────────────────────────────
 
 it('the database driver persists per (user, table) and is scoped', function () {
-    Schema::create('table_preferences', function (Blueprint $table) {
-        $table->id();
-        $table->string('user_id')->nullable()->index();
-        $table->string('table_key');
-        $table->json('preferences');
-        $table->timestamps();
-        $table->unique(['user_id', 'table_key']);
-    });
+    createTablePreferencesSchema();
 
     $driver = new DatabasePreferenceDriver;
     $alice = tap(new PrefUser)->forceFill(['id' => 1]);
@@ -310,7 +330,7 @@ it('keeps configured defaults when nothing is stored', function () {
 
 it('loads a stored hidden-column set over the defaults', function () {
     $driver = new ArrayPreferenceDriver;
-    $driver->store['guest|users-index'] = ['columns' => ['hidden' => ['email']]];
+    $driver->store['guest|users-index|'] = ['columns' => ['hidden' => ['email']]];
     TablePreferenceManager::swap($driver);
 
     $component = rememberingComponent();
@@ -321,7 +341,7 @@ it('loads a stored hidden-column set over the defaults', function () {
 
 it('drops stale column names from a stored set', function () {
     $driver = new ArrayPreferenceDriver;
-    $driver->store['guest|users-index'] = ['columns' => ['hidden' => ['email', 'ghost-column']]];
+    $driver->store['guest|users-index|'] = ['columns' => ['hidden' => ['email', 'ghost-column']]];
     TablePreferenceManager::swap($driver);
 
     $component = rememberingComponent();
@@ -336,14 +356,14 @@ it('persists the hidden set when a column is toggled', function () {
     $component = rememberingComponent();
     $component->toggleColumn('email'); // hide email (role already hidden)
 
-    expect($driver->store['guest|users-index']['columns']['hidden'])
+    expect($driver->store['guest|users-index|']['columns']['hidden'])
         ->toContain('email')
         ->toContain('role');
 });
 
 it('forgets the stored set when columns are reset', function () {
     $driver = new ArrayPreferenceDriver;
-    $driver->store['guest|users-index'] = ['columns' => ['hidden' => ['email']]];
+    $driver->store['guest|users-index|'] = ['columns' => ['hidden' => ['email']]];
     TablePreferenceManager::swap($driver);
 
     $component = rememberingComponent();
@@ -389,7 +409,7 @@ it('persists the sub-row expansion baseline for the user', function () {
     $component = rememberingSubRowComponent();
     $component->toggleAllRowExpansion();
 
-    expect($driver->store['guest|invoices-index']['rows']['expandAll'])->toBeTrue();
+    expect($driver->store['guest|invoices-index|']['rows']['expandAll'])->toBeTrue();
 });
 
 it('restores the expansion baseline on a fresh mount', function () {
@@ -406,7 +426,7 @@ it('restores the expansion baseline on a fresh mount', function () {
 
 it('ignores a stored baseline for a table without sub-rows', function () {
     $driver = new ArrayPreferenceDriver;
-    $driver->store['guest|users-index'] = ['rows' => ['expandAll' => true]];
+    $driver->store['guest|users-index|'] = ['rows' => ['expandAll' => true]];
     TablePreferenceManager::swap($driver);
 
     $component = rememberingComponent();
@@ -433,4 +453,123 @@ it('renders a reset-columns control only when remembering is enabled', function 
     Livewire::test(RememberingComponent::class)->assertSee('Reset columns');
 
     Livewire::test(PlainColumnsComponent::class)->assertDontSee('Reset columns');
+});
+
+// ─── Named views ─────────────────────────────────────────────────
+
+it('keeps a named view apart from the current layout', function () {
+    // The point of growing a dimension instead of a second store: the layout a
+    // user is looking at and the one they saved are the same shape under
+    // different names, and neither may overwrite the other.
+    createTablePreferencesSchema();
+
+    $driver = new DatabasePreferenceDriver;
+    $alice = tap(new PrefUser)->forceFill(['id' => 1]);
+
+    $driver->save('orders', $alice, ['columns' => ['hidden' => ['email']]]);
+    $driver->save('orders', $alice, ['columns' => ['hidden' => ['role']]], 'Unpaid');
+
+    expect($driver->load('orders', $alice))->toBe(['columns' => ['hidden' => ['email']]])
+        ->and($driver->load('orders', $alice, 'Unpaid'))->toBe(['columns' => ['hidden' => ['role']]]);
+});
+
+it('lists the saved names without offering the current layout as one', function () {
+    createTablePreferencesSchema();
+
+    $driver = new DatabasePreferenceDriver;
+    $alice = tap(new PrefUser)->forceFill(['id' => 1]);
+    $bob = tap(new PrefUser)->forceFill(['id' => 2]);
+
+    $driver->save('orders', $alice, ['columns' => ['hidden' => []]]);
+    $driver->save('orders', $alice, ['columns' => ['hidden' => []]], 'Unpaid');
+    $driver->save('orders', $alice, ['columns' => ['hidden' => []]], 'Overdue');
+    $driver->save('orders', $bob, ['columns' => ['hidden' => []]], 'Bob only');
+
+    // The unnamed layout has no name to show in a switcher, and offering it
+    // would let a user "restore" the state they are already in.
+    expect($driver->views('orders', $alice))->toEqualCanonicalizing(['Unpaid', 'Overdue'])
+        ->and($driver->views('orders', $bob))->toBe(['Bob only'])
+        ->and($driver->views('other-table', $alice))->toBe([]);
+});
+
+it('forgets one named view and leaves the rest standing', function () {
+    createTablePreferencesSchema();
+
+    $driver = new DatabasePreferenceDriver;
+    $alice = tap(new PrefUser)->forceFill(['id' => 1]);
+
+    $driver->save('orders', $alice, ['columns' => ['hidden' => ['a']]]);
+    $driver->save('orders', $alice, ['columns' => ['hidden' => ['b']]], 'Unpaid');
+
+    $driver->forget('orders', $alice, 'Unpaid');
+
+    expect($driver->views('orders', $alice))->toBe([])
+        ->and($driver->load('orders', $alice, 'Unpaid'))->toBe([])
+        // Resetting a saved view is not resetting the table.
+        ->and($driver->load('orders', $alice))->toBe(['columns' => ['hidden' => ['a']]]);
+});
+
+it('replaces a named view rather than duplicating it', function () {
+    createTablePreferencesSchema();
+
+    $driver = new DatabasePreferenceDriver;
+    $alice = tap(new PrefUser)->forceFill(['id' => 1]);
+
+    $driver->save('orders', $alice, ['columns' => ['hidden' => ['a']]], 'Unpaid');
+    $driver->save('orders', $alice, ['columns' => ['hidden' => ['b']]], 'Unpaid');
+
+    expect($driver->views('orders', $alice))->toBe(['Unpaid'])
+        ->and($driver->load('orders', $alice, 'Unpaid'))->toBe(['columns' => ['hidden' => ['b']]]);
+});
+
+it('gives a shared view no user, so sharing needs no second mechanism', function () {
+    createTablePreferencesSchema();
+
+    $driver = new DatabasePreferenceDriver;
+    $alice = tap(new PrefUser)->forceFill(['id' => 1]);
+
+    $driver->save('orders', null, ['columns' => ['hidden' => ['secret']]], 'Team view');
+
+    expect($driver->load('orders', null, 'Team view'))->toBe(['columns' => ['hidden' => ['secret']]])
+        // It is not Alice's, so it is not in her list — whoever shows a shared
+        // view asks for it, rather than finding it mixed into a personal one.
+        ->and($driver->views('orders', $alice))->toBe([]);
+});
+
+it('the session driver keeps named views apart and indexes their names', function () {
+    $driver = new SessionPreferenceDriver;
+
+    $driver->save('orders', null, ['columns' => ['hidden' => ['a']]]);
+    $driver->save('orders', null, ['columns' => ['hidden' => ['b']]], 'Unpaid');
+
+    expect($driver->load('orders', null))->toBe(['columns' => ['hidden' => ['a']]])
+        ->and($driver->load('orders', null, 'Unpaid'))->toBe(['columns' => ['hidden' => ['b']]])
+        ->and($driver->views('orders', null))->toBe(['Unpaid']);
+
+    $driver->forget('orders', null, 'Unpaid');
+
+    // The name goes with the bag: a name left in the index would offer a
+    // switcher entry that restores nothing.
+    expect($driver->views('orders', null))->toBe([])
+        ->and($driver->load('orders', null, 'Unpaid'))->toBe([]);
+});
+
+it('the null driver has no views to list', function () {
+    expect((new NullPreferenceDriver)->views('orders', null))->toBe([]);
+});
+
+it('the session driver survives a dot in a view name', function () {
+    // Session::put() reads dots as nesting. Hanging a named view off the current
+    // layout's key wrote it INSIDE that layout's bag — the current layout came
+    // back with a stray 'view' entry in it — and a name like this would have done
+    // the same thing one level deeper. Names are array keys now, not key
+    // fragments.
+    $driver = new SessionPreferenceDriver;
+
+    $driver->save('orders', null, ['columns' => ['hidden' => ['a']]]);
+    $driver->save('orders', null, ['columns' => ['hidden' => ['b']]], 'Q1.2026');
+
+    expect($driver->load('orders', null))->toBe(['columns' => ['hidden' => ['a']]])
+        ->and($driver->load('orders', null, 'Q1.2026'))->toBe(['columns' => ['hidden' => ['b']]])
+        ->and($driver->views('orders', null))->toBe(['Q1.2026']);
 });

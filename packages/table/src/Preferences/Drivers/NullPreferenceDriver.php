@@ -16,18 +16,23 @@ use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
  */
 class NullPreferenceDriver implements TablePreferenceDriver
 {
-    public function load(string $tableKey, ?Authenticatable $user): array
+    public function load(string $tableKey, ?Authenticatable $user, ?string $view = null): array
     {
         return [];
     }
 
-    public function save(string $tableKey, ?Authenticatable $user, array $preferences): void
+    public function save(string $tableKey, ?Authenticatable $user, array $preferences, ?string $view = null): void
     {
         // Intentionally does nothing.
     }
 
-    public function forget(string $tableKey, ?Authenticatable $user): void
+    public function forget(string $tableKey, ?Authenticatable $user, ?string $view = null): void
     {
         // Intentionally does nothing.
+    }
+
+    public function views(string $tableKey, ?Authenticatable $user): array
+    {
+        return [];
     }
 }
