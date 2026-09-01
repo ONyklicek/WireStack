@@ -38,6 +38,18 @@ Alpine umřel na celém datovém regionu (`wireFillHandle is not defined`). Opra
 zapsané v ADR i v `architecture/assets.md`, a nově chytané `FillHandleAssetTest`.
 **Nedokončený krok 8** — viz §3.
 
+### V2.5 — power-user & large-table UX ✅
+
+Všechny tři položky (SV, GS, LT), a měření změnilo zadání u všech tří.
+
+| | Plán / §4 slibovaly | Uděláno |
+|---|---|---|
+| **SV** saved views | „state je už serializovatelný, jen ho ulož" | tvar pohledu **neexistoval** — `persistViewPreferences()` skládá bag ze dvou klíčů. Vznikl `Preferences\TableViewPayload` jako jediný vlastník toho, co pohled nese; `TablePreferenceDriver` dostal dimenzi jména (BC změna kontraktu, `unique` na trojici); switcher je v **existujícím** view menu |
+| **GS** global search | „hard-dep na tom, kde žije registr" | `ResourceRegistry` je **už v `core/src/Core/Resources/` (L1)** → cyklus neexistuje. Nový L2 modul `GlobalSearch/`: kontrakt `GloballySearchable`, služba, `GlobalSearchPalette` (⌘K) |
+| **LT** large-table UX | virtual scrolling (windowing) | **zamítnuto měřením** — čtyři chování čtou řádky z DOM. Místo toho `Table::collapsibleGroups()`: sbalená skupina se nerenderuje vůbec, takže gesta vidí konzistentní seznam |
+
+---
+
 ### V2.1 — hotová ✅
 
 Fáze A: čtrnáct kroků (třináct extrakcí + audit base, který skončil „nepřesouvat").
@@ -875,17 +887,17 @@ práce — a byl to zrovna ten, jehož selhání nemá žádný symptom kromě s
 
 ## 4. Co je na řadě
 
-**Pět fází ze sedmi je hotových: V2.0–V2.4**, teď včetně Q-3. Co je uvnitř nich a
+**Šest fází ze sedmi je hotových: V2.0–V2.5.** Co je uvnitř nich a
 co v nich měření změnilo, je v §1 a §2; tahle sekce je jen o tom, co dál.
 
 ### Další fáze
 
 | Na řadě | Obsah | Poznámka před startem |
 |---|---|---|
-| **V2.5** | saved views · global search · large-table UX | **Global search patří do `wire-panels`**, ne do `core/src/GlobalSearch/`, jak ho vede master plán. Staví nad `ResourceRegistry` a core na table nevidí — je to přesně ten cyklus, kvůli kterému se owner vrstva stěhovala, viz §2 |
-| **V2.6** | domain modules | `Workspace` je zamýšlený seam; grupuje resources a nevlastní routing |
+| ~~**V2.5**~~ | ~~saved views · global search · large-table UX~~ | **hotová 2026-09-01.** Poznámka o `wire-panels` byla **zastaralá** — registr je v `core/src/Core/Resources/`, cyklus neexistuje. Detaily v §1 |
+| **V2.6** | domain modules | `Workspace` je zamýšlený seam; grupuje resources a nevlastní routing. **Už existuje** v `core/src/Core/Resources/Workspace.php` — začni tím, že změříš, co mu chybí, ne že ho napíšeš |
 
-Žádná z nich není blokovaná. **V2.4 je uzavřená celá** (N, Q, T, WF včetně Q-3;
+Zbývá **V2.6**, a není blokovaná. **V2.4 je uzavřená celá** (N, Q, T, WF včetně Q-3;
 ADR 0018 → ACCEPTED) s jedním pojmenovaným omezením: tenancy nekryje non-Eloquent
 `DataSource`, viz §3.
 
@@ -984,8 +996,8 @@ chyba: `composer.json` (repositories, require, autoload-dev), `phpunit.xml`
 workbench neuvidí.
 
 **Nepřeskakuj měření — to je jediné pravidlo, které si z tohohle souboru odnes,
-když nemáš čas na zbytek.** Za čtyři běhy opravilo zadání dvaadvacetkrát. Běh
-2026-09-01 přidal sedm:
+když nemáš čas na zbytek.** Za čtyři běhy opravilo zadání šestadvacetkrát. Běh
+2026-09-01 přidal jedenáct:
 
 | Krok | §3/§4 slibovala | Měření našlo |
 |---|---|---|
@@ -993,6 +1005,10 @@ když nemáš čas na zbytek.** Za čtyři běhy opravilo zadání dvaadvacetkr�
 | Export `TableExport:248` | „nepokrytá" | `tempnam()` **nikdy nevrátí `false`** — změřeno pro `/nonexistent`, `/` i `/dev/null`, vždycky spadne zpátky do systémového tempu. Není to k pokrytí, je to k označení |
 | Export — rozsah | dvě knihovní cesty (`Excel`, `Pdf`) | **čtyři zápisové cesty se třemi různými chováními**: `Csv` tichý return, `Pdf` nekontrolovaný `file_put_contents`, `Excel` cizí `IOException`, `store()` už házel. Jeden kontrakt místo tří |
 | `PdfExporter::isAvailable()` | — | ptá se `class_exists`, ale render jde přes fasádu, která tahá `dompdf.wrapper` **z kontejneru**. Bez registrovaného providera → `BindingResolutionException` místo dokumentovaného CSV fallbacku. Nalezeno až tím, že knihovna reálně přibyla |
+| V2.5/SV | „state je serializovatelný, saved view = uložit tentýž blob" | žádný takový blob se neukládá — preferenční cesta skládá **dva klíče ručně**. Co pohled nese, se muselo rozhodnout: nový vlastník `TableViewPayload`, a `selection`/`modal`/kurzor do něj **nepatří** |
+| V2.5/GS | „core na table nevidí, registr je v `packages/table`" (plán) · „patří do `wire-panels`" (§4) | `ResourceRegistry` je **už v core L1** → obě zapsaná umístění zastaralá, cyklus neexistuje, `core/src/GlobalSearch/` je správně |
+| V2.5/GS | „delegovat hledání na `DataSource`/`QueryPlan`" | `QueryPlan` staví search klauzule z **table komponenty**; paleta žádnou nemá. Fiktivní tabulka per resource per úhoz by byla ta druhá kopie, které planner brání → resource jmenuje atributy |
+| V2.5/LT | virtual scrolling (windowing) | **čtyři chování čtou řádky z DOM** (`navRows()`, fill grid, live sync, range gesta) → windowing chce paralelní cestu pro každé a tři selhávají tiše. Místo toho sbalitelné skupiny: co je skryté, tam **není** |
 | ADR 0025 krok 8 | „patří do action-render-unification.md, fáze 0 blokuje" | vazba **mylná** — ten plán má v §1.1 čtyři třídy akcí a `component-action.blade.php` mezi nimi není, stejně jako v žádné z fází 0–5. A samotný krok by dluh nesnížil: `ModuleLayersTest` čte PHP `use`, ne Blade, a měřený dluh vede **opačně** (Actions → Infolists) |
 | ADR 0025 krok 8 — co za tím leželo | — | `wire:target` a spinner nesly **holé jméno metody**, které Livewire matchuje proti každému jeho volání → klik na jednu akci disabloval a rozsvítil **všechna** infolist tlačítka na stránce; u `RepeatableEntry` jedno na řádek. Týž tvar v obou footer partialech. Mutace prošla **4 581 testy** |
 | ADR 0025 krok 10 | „hotové 2026-08-30" | prohlížečová brána našla **`wireFillHandle is not defined` po `wire:navigate`** — nový entry vzal registrační řádek a nechal za sebou idiom. Server-side to nevidí nikdo: tag je doručený, `alpine:init` v bundlu je, a test pojmenovaný „registers the fill-handle Alpine data" prochází |
@@ -1035,6 +1051,38 @@ zelenou unit sadu a dva defekty, které server-side test vidět nemůže. Proto 
 Kroky 10–11 a 17 seděly. Pointa není, že plány jsou špatné — jsou to poctivé
 plány psané ke stavu kódu, který mezitím zestárl, mimo jiné o předchozí kroky
 téhle řady.
+
+**Pravidlo z V2.5 — „už to jde serializovat" není totéž co „to někdo ukládá".**
+SV stál na větě, že saved view je jen ten blob, co už se ukládá do URL. Ukázalo
+se, že perzistentní cesta ukládá **dva ručně vybrané klíče**, ne serializovaný
+state — takže co pohled *je*, se muselo rozhodnout, a to je ta práce. Otázka,
+která to odhalí, zní: *kdo přesně ten tvar dnes zapisuje, a kde je ta metoda?*
+Ne: *existuje serializér?*
+
+A druhá půlka, na kterou se dá spolehnout: **u ukládaného stavu se ptej, co tam
+nepatří.** Do pohledu nepatří výběr (obnovil by zaškrtnutí, které uživatel
+neudělal, a `mode: all` znamená „všechno, co filtr matchuje" proti filtru, který
+se mezitím pohnul), otevřený modal, kurzor stránkování ani per-record expanze.
+Tři z těch čtyř by nebylo vidět, dokud by někdo neobnovil starý pohled.
+
+**Pravidlo z V2.5/LT — než postavíš „rychlejší render", spočítej, kdo čte DOM.**
+Plán chtěl virtual scrolling. Čtyři chování si berou řádky přímo z DOM
+(`record-actions.js::navRows()`, fill grid, live sync buněk, klávesová rozsahová
+gesta), takže windowing potřebuje paralelní cestu pro každé — a tři z nich
+selhávají **tiše**: fill nezapíše přes řádek, který není vykreslený, rozsah ho
+přeskočí. Sbalitelné skupiny dávají stejnou úlevu a ten tvar nemají, protože
+sbalená skupina se **nerenderuje**; co není vidět, tam opravdu není. Driver to
+kontroluje počítáním `tr[data-row-key]` a asercí, že žádný přeživší řádek není
+jen schovaný CSS.
+
+**Pravidlo z V2.5 — skeleton měří i větev, která se nevykreslí.**
+`TablePayloadFuseTest` hlídá bajty group headeru na skupinu. Přidání `@if` do
+toho jednoho partialu to číslo posunulo, **přestože se ta větev nikdy
+nevykreslila**. Chytilo to dvakrát: nejdřív komentář, který jsem dal dovnitř
+řádkové smyčky (Blade komentář zmizí, jeho newliny ne — a ve smyčce jsou to
+bajty na každý řádek), pak samotnou větev. Řešení je druhá šablona, ne chytřejší
+podmínka: dva tvary, dva soubory, a tabulka bez té featury platí přesně to co
+dřív.
 
 **Pravidlo z běhu 2026-09-01 — když něco vyřízneš, spočítej i to, co pro to
 dělal soubor, ze kterého to odchází.** Krok 10 poctivě spočítal *importy ven* z
