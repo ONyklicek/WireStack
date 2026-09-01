@@ -71,6 +71,11 @@ try {
     return JSON.stringify({
       present: true,
       hidden: p.hidden,
+      // The attribute alone does not hide it: the pill also carries inline-flex,
+      // which ties with Tailwind's preflight rule for the attribute on
+      // specificity and wins on order. Reading p.hidden only would report a
+      // pill parked, painted, in the table's corner as hidden.
+      display: getComputedStyle(p).display,
       text: p.querySelector('[data-copy-feedback-text]')?.textContent ?? '',
       left: p.style.left,
     });
@@ -101,12 +106,14 @@ try {
 
   const before = JSON.parse(await pillState());
   check('pill starts hidden', before.present && before.hidden === true);
+  check('pill starts unpainted, not just flagged hidden', before.display === 'none', `display ${before.display}`);
 
   // ── 2. A copy actually copies ────────────────────────────────────────
   await clickCopy(0);
 
   const after = JSON.parse(await pillState());
   check('pill shows after a copy', after.hidden === false, `text "${after.text}"`);
+  check('pill is actually painted once shown', after.display !== 'none', `display ${after.display}`);
   check('pill carries the column message', after.text.length > 0, `"${after.text}"`);
   check('pill is positioned at the button', after.left !== '' && after.left !== undefined, `left ${after.left}`);
   await shot('01-copied');
