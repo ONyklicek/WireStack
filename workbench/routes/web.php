@@ -17,374 +17,15 @@ use Workbench\App\Livewire\Previews\SpaPlainPreview;
 use Workbench\App\Livewire\Previews\SpaTablePreview;
 use Workbench\App\Livewire\Previews\TablePreview;
 use Workbench\App\Livewire\Previews\WidgetPreview;
+use Workbench\App\Livewire\Resources\CreateInvoice;
+use Workbench\App\Livewire\Resources\EditInvoice;
+use Workbench\App\Livewire\Resources\ListInvoices;
+use Workbench\App\Livewire\Resources\ViewInvoice;
 
-Route::get('/', function (): RedirectResponse {
-    return redirect('/previews');
-});
-
-Route::get('/previews', function () {
-    $screens = [
-        [
-            'slug' => 'forms-overview',
-            'title' => 'Wire Forms',
-            'label' => 'Forms overview',
-            'copy' => 'Full schema-driven form layout with sections, grid, toggle, and repeater.',
-            'component' => FormPreview::class,
-            'variant' => 'overview',
-        ],
-        [
-            'slug' => 'forms-repeater',
-            'title' => 'Wire Forms',
-            'label' => 'Forms repeater',
-            'copy' => 'Focused repeater surface with nested items, ordering controls, and add action.',
-            'component' => FormPreview::class,
-            'variant' => 'repeater',
-        ],
-        [
-            'slug' => 'table-column-surfaces',
-            'title' => 'Wire Table',
-            'label' => 'Column surfaces',
-            'copy' => 'Color swatch, star rating, tag chips, and an inline-editable checkbox.',
-            'component' => TablePreview::class,
-            'variant' => 'column-surfaces',
-        ],
-        [
-            'slug' => 'table-trashed-filter',
-            'title' => 'Wire Table',
-            'label' => 'Trashed filter',
-            'copy' => 'Soft deletes: live records, live + deleted, or deleted only.',
-            'component' => TablePreview::class,
-            'variant' => 'trashed-filter',
-        ],
-        [
-            'slug' => 'forms-repeater-table',
-            'title' => 'Wire Forms',
-            'label' => 'Repeater (table layout)',
-            'copy' => 'Repeated rows under one header instead of a card per item.',
-            'component' => FormPreview::class,
-            'variant' => 'repeater-table',
-        ],
-        [
-            'slug' => 'forms-builder',
-            'title' => 'Wire Forms',
-            'label' => 'Builder',
-            'copy' => 'Block builder: each item picks its own type from the add picker.',
-            'component' => FormPreview::class,
-            'variant' => 'builder',
-        ],
-        [
-            'slug' => 'table-overview',
-            'title' => 'Wire Table',
-            'label' => 'Table overview',
-            'copy' => 'Search, filters, row actions, pagination, and responsive table chrome.',
-            'component' => TablePreview::class,
-            'variant' => 'overview',
-        ],
-        [
-            'slug' => 'table-actions-quiet',
-            'title' => 'Wire Table',
-            'label' => 'Table quiet actions',
-            'copy' => 'Quiet row actions: neutral at rest, colour on hover/focus, a solid "Approve", and a legible Delete.',
-            'component' => TablePreview::class,
-            'variant' => 'actions-quiet',
-        ],
-        [
-            'slug' => 'table-record-actions',
-            'title' => 'Wire Table',
-            'label' => 'Table record actions',
-            'copy' => 'Whole-row interaction: double-click a row to open it, right-click for the context menu — one delegated controller, no per-row listeners.',
-            'component' => TablePreview::class,
-            'variant' => 'record-actions',
-        ],
-        [
-            'slug' => 'table-record-actions-dual',
-            'title' => 'Wire Table',
-            'label' => 'Table record actions (click + double-click)',
-            'copy' => 'Both a single-click and a double-click record action are bound: a double-click must run only the double-click action, never the deferred single-click one.',
-            'component' => TablePreview::class,
-            'variant' => 'record-actions-dual',
-        ],
-        [
-            'slug' => 'table-record-actions-keyboard',
-            'title' => 'Wire Table',
-            'label' => 'Table record actions (keyboard)',
-            'copy' => 'Arrow-key navigation over the rows: ↑/↓ move the active row, Enter / Shift+Enter run the primary and secondary record action, Space and Shift+↑/↓ select, Delete fires an onKey() binding.',
-            'component' => TablePreview::class,
-            'variant' => 'record-actions-keyboard',
-        ],
-        [
-            'slug' => 'table-selection',
-            'title' => 'Wire Table',
-            'label' => 'Table selection',
-            'copy' => 'Bulk selection state with active filter and selected-record toolbar.',
-            'component' => TablePreview::class,
-            'variant' => 'selection',
-        ],
-        [
-            'slug' => 'table-stacked-selection',
-            'title' => 'Wire Table',
-            'label' => 'Stacked selection',
-            'copy' => 'Card layout with the select-all strip, the select-all-matching escalation and mobile sorting.',
-            'component' => TablePreview::class,
-            'variant' => 'stacked-selection',
-        ],
-        [
-            'slug' => 'table-subrows',
-            'title' => 'Wire Table',
-            'label' => 'Table sub-rows',
-            'copy' => 'Expandable invoice line items with sortable headers, row actions, and a subtotal.',
-            'component' => TablePreview::class,
-            'variant' => 'subrows',
-        ],
-        [
-            'slug' => 'table-summary',
-            'title' => 'Wire Table',
-            'label' => 'Table summary',
-            'copy' => 'Rollup totals per row, a multi-aggregate footer, and the page/all scope toggle.',
-            'component' => TablePreview::class,
-            'variant' => 'summary',
-        ],
-        [
-            'slug' => 'table-column-filters',
-            'title' => 'Wire Table',
-            'label' => 'Table column filters',
-            'copy' => 'Per-column header filters: text, single-select, multi-select, and boolean.',
-            'component' => TablePreview::class,
-            'variant' => 'column-filters',
-        ],
-        [
-            'slug' => 'table-empty-state',
-            'title' => 'Wire Table',
-            'label' => 'Table empty state',
-            'copy' => 'The empty state with a way out of it: a link, an inline action, and one that opens a modal form.',
-            'component' => TablePreview::class,
-            'variant' => 'empty-state',
-        ],
-        [
-            'slug' => 'table-image-gallery',
-            'title' => 'Wire Table',
-            'label' => 'Table image gallery',
-            'copy' => 'ImageColumn: a single image, an array rendered as a gallery, and a stacked one capped with a "+N" chip.',
-            'component' => TablePreview::class,
-            'variant' => 'image-gallery',
-        ],
-        [
-            'slug' => 'table-editable-fill',
-            'title' => 'Wire Table',
-            'label' => 'Table editable + fill',
-            'copy' => 'Inline-editable text, select and toggle cells with the Excel-style fill handle.',
-            'component' => TablePreview::class,
-            'variant' => 'editable-fill',
-        ],
-        [
-            'slug' => 'table-editable-fill-selectable',
-            'title' => 'Wire Table',
-            'label' => 'Table editable + fill + selection',
-            'copy' => 'The same editable table with selectable() on: checkboxes, the sweep and the range gestures share the rows the fill handle drags over.',
-            'component' => TablePreview::class,
-            'variant' => 'editable-fill-selectable',
-        ],
-        [
-            'slug' => 'table-row-color',
-            'title' => 'Wire Table',
-            'label' => 'Table row color',
-            'copy' => 'Whole-row tint driven by a per-record condition, plus an emphasised row class.',
-            'component' => TablePreview::class,
-            'variant' => 'row-color',
-        ],
-        [
-            'slug' => 'table-subrows-flatten',
-            'title' => 'Wire Table',
-            'label' => 'Sub-rows flatten',
-            'copy' => 'Flatten mode rendering every child record as a regular table row.',
-            'component' => TablePreview::class,
-            'variant' => 'subrows-flatten',
-        ],
-        [
-            'slug' => 'table-subrows-limit',
-            'title' => 'Wire Table',
-            'label' => 'Sub-rows show more',
-            'copy' => 'Limited child rows with the per-parent "show more" affordance.',
-            'component' => TablePreview::class,
-            'variant' => 'subrows-limit',
-        ],
-        [
-            'slug' => 'table-subrows-filter',
-            'title' => 'Wire Table',
-            'label' => 'Sub-row filters',
-            'copy' => 'Per-child interactive filter bar above the sub-row table.',
-            'component' => TablePreview::class,
-            'variant' => 'subrows-filter',
-        ],
-        [
-            'slug' => 'sortable-overview',
-            'title' => 'Wire Sortable',
-            'label' => 'Sortable overview',
-            'copy' => 'Full reorderable task table rendered through the sortable runtime.',
-            'component' => SortablePreview::class,
-            'variant' => 'overview',
-        ],
-        [
-            'slug' => 'sortable-detail',
-            'title' => 'Wire Sortable',
-            'label' => 'Sortable detail',
-            'copy' => 'Closer reorder surface focused on rows, handles, and ordering affordances.',
-            'component' => SortablePreview::class,
-            'variant' => 'detail',
-        ],
-        [
-            'slug' => 'sortable-everything',
-            'title' => 'Wire Sortable',
-            'label' => 'Sortable + every control',
-            'copy' => 'Row handles, draggable headers, search, pagination and a 3s poll on one table — each of them something reordering could quietly break.',
-            'component' => SortablePreview::class,
-            'variant' => 'everything',
-        ],
-        [
-            'slug' => 'sortable-columns',
-            'title' => 'Wire Sortable',
-            'label' => 'Sortable columns',
-            'copy' => 'Drag a header to reorder columns, on a table that also has a selection column and row handles.',
-            'component' => SortablePreview::class,
-            'variant' => 'columns',
-        ],
-        [
-            'slug' => 'sortable-morph',
-            'title' => 'Wire Sortable',
-            'label' => 'Sortable morph guards',
-            'copy' => 'A column-reorderable table with a search box and an editable cell — what the drag controller is allowed to keep a Livewire morph from doing.',
-            'component' => SortablePreview::class,
-            'variant' => 'morph',
-        ],
-        [
-            'slug' => 'forms-field-partials',
-            'title' => 'Wire Forms',
-            'label' => 'Field partials',
-            'copy' => 'A live field under Form::fieldPartials(): a plain commit answers with nothing, a dependent sibling comes back as a region, and a field appearing falls back to a full render.',
-            'component' => FormPreview::class,
-            'variant' => 'field-partials',
-        ],
-        [
-            'slug' => 'sortable-partials',
-            'title' => 'Wire Sortable',
-            'label' => 'Sortable row partials',
-            'copy' => 'Row reordering and rowPartials() on one table: an inline save answers with the row alone, which is morphed by a path that never reaches the hook the drag handles are rebuilt from.',
-            'component' => SortablePreview::class,
-            'variant' => 'partials',
-        ],
-        [
-            'slug' => 'actions-modal-stacking',
-            'title' => 'Wire Actions',
-            'label' => 'Nested modal stacking',
-            'copy' => 'Six live configurations of the nested-modal frame stack: create-and-select, deep $setFrame, inline registerActions, slide-over, and a stacked wizard.',
-            'component' => ModalStackingPreview::class,
-            'variant' => 'gallery',
-        ],
-        [
-            'slug' => 'core-overview',
-            'title' => 'Wire Core',
-            'label' => 'Core overview',
-            'copy' => 'Stats, actions, and shared runtime building blocks without docs chrome.',
-            'component' => CorePreview::class,
-            'variant' => 'overview',
-        ],
-        [
-            'slug' => 'core-modal',
-            'title' => 'Wire Core',
-            'label' => 'Core modal',
-            'copy' => 'Real modal surface captured from the shared core component set.',
-            'component' => CorePreview::class,
-            'variant' => 'modal',
-        ],
-        [
-            'slug' => 'core-toasts',
-            'title' => 'Wire Core',
-            'label' => 'Core toasts',
-            'copy' => 'Toast notifications: countdown bar, actions, collapsible stack, max-visible cap, a11y.',
-            'component' => CorePreview::class,
-            'variant' => 'toasts',
-        ],
-        [
-            'slug' => 'widgets-overview',
-            'title' => 'Wire Core',
-            'label' => 'Widgets dashboard',
-            'copy' => 'Stats overview cards with sparklines and a Chart.js chart widget composed in a grid.',
-            'component' => WidgetPreview::class,
-            'variant' => 'overview',
-        ],
-        [
-            'slug' => 'widgets-polling',
-            'title' => 'Wire Core Widgets',
-            'label' => 'Polling widget',
-            'copy' => 'A four-widget dashboard where one widget polls: the tick must answer with that widget alone, not with the grid around it.',
-            'component' => WidgetPreview::class,
-            'variant' => 'polling',
-        ],
-        [
-            'slug' => 'widgets-chart',
-            'title' => 'Wire Core',
-            'label' => 'Chart widget',
-            'copy' => 'A single interactive chart widget with heading, description, and a quarter filter.',
-            'component' => WidgetPreview::class,
-            'variant' => 'chart',
-        ],
-        [
-            'slug' => 'widgets-bar-chart',
-            'title' => 'Wire Core',
-            'label' => 'Bar chart widget',
-            'copy' => 'Pure-CSS bar chart: vertical finance bars, vertical system metrics with grid lines, and horizontal progress.',
-            'component' => WidgetPreview::class,
-            'variant' => 'bar-chart',
-        ],
-        [
-            'slug' => 'infolists-overview',
-            'title' => 'Wire Core',
-            'label' => 'Infolist overview',
-            'copy' => 'Read-only record display with sections, a column grid, and formatted text/icon/badge entries.',
-            'component' => InfolistPreview::class,
-            'variant' => 'overview',
-        ],
-        [
-            'slug' => 'infolists-entries',
-            'title' => 'Wire Core',
-            'label' => 'Infolist entries',
-            'copy' => 'Gallery of every built-in entry: text, badge, list, boolean icon, color, key-value, and repeatable.',
-            'component' => InfolistPreview::class,
-            'variant' => 'entries',
-        ],
-        [
-            'slug' => 'infolists-order',
-            'title' => 'Wire Core',
-            'label' => 'Infolist order detail',
-            'copy' => 'A real order detail: Flex layout, badge/boolean/list entries, and header/entry/per-row actions doing real work.',
-            'component' => InfolistPreview::class,
-            'variant' => 'order',
-        ],
-    ];
-
-    return view('previews.index', ['screens' => $screens]);
-});
-
-// Curated live index of every mobile/tablet preview (open on a phone via LAN).
-Route::get('/previews/mobile', fn () => view('previews.mobile-index', [
-    'lanUrl' => 'http://192.168.0.218:8085/previews/mobile',
-]));
-
-// Standalone layout Blade tags (<x-wire::grid|split|section|fieldset|callout|empty-state>).
-Route::get('/previews/layout-tags', fn () => view('previews.layout-tags'));
-
-// Full Tailwind palette rendered through the canonical HasColor resolvers.
-Route::get('/previews/palette', fn () => view('previews.palette'));
-
-// Interactive standalone Tabs + Wizard (Livewire host → Alpine + core JS bundle).
-Route::get('/previews/layout-live', fn () => view('previews.capture', [
-    'component' => LayoutPreview::class,
-    'variant' => 'tabs-wizard',
-    'title' => 'Layout tags · live',
-    'subtitle' => 'Standalone Tabs + Wizard',
-]));
-
-foreach ([
+// One source of truth for the preview surface: every entry below registers its
+// own route *and* is listed on the /previews index. A new variant needs a line
+// here and nothing else — the index cannot fall behind the routes again.
+$screens = [
     'forms-overview' => ['title' => 'Wire Forms', 'subtitle' => 'Schema-driven form layout preview.', 'component' => FormPreview::class, 'variant' => 'overview'],
     'forms-tabs' => ['title' => 'Wire Forms Tabs', 'subtitle' => 'Tabbed form layout.', 'component' => FormPreview::class, 'variant' => 'tabs'],
     'forms-wizard' => ['title' => 'Wire Forms Wizard', 'subtitle' => 'Standalone multi-step wizard layout.', 'component' => FormPreview::class, 'variant' => 'wizard'],
@@ -468,9 +109,7 @@ foreach ([
     'infolists-entries' => ['title' => 'Wire Core Infolist Entries', 'subtitle' => 'Gallery of every built-in infolist entry type bound to one record.', 'component' => InfolistPreview::class, 'variant' => 'entries'],
     'infolists-order' => ['title' => 'Wire Core Infolist Order Detail', 'subtitle' => 'A real order detail: Flex layout, badge/boolean/list entries, and header/entry/per-row actions.', 'component' => InfolistPreview::class, 'variant' => 'order'],
     'panels-editable' => ['title' => 'Wire Core Editable Panel', 'subtitle' => 'A Model-backed record panel: toggle, select, and text edits write straight to the row with optimistic UI. Read-only email entry mixed in.', 'component' => PanelPreview::class, 'variant' => 'default'],
-] as $slug => $screen) {
-    Route::get('/previews/'.$slug, fn () => view('previews.capture', $screen));
-}
+];
 
 $fieldPreviews = [
     'text-input' => 'Text Input',
@@ -505,6 +144,121 @@ $fieldPreviews = [
     'file-upload' => 'File Upload',
     'file-upload-auto' => 'File Upload (centre crop)',
 ];
+
+// Pages that are not a captured component preview but still belong on the index.
+$utilityPages = [
+    'mobile' => ['Live mobile index', 'Curated phone/tablet walkthrough — open it over the LAN on a real device.'],
+    'palette' => ['Colour palette', 'The full Tailwind palette rendered through the canonical HasColor resolvers.'],
+    'layout-tags' => ['Layout Blade tags', 'Standalone <x-wire::grid|split|section|fieldset|callout|empty-state>.'],
+    'layout-live' => ['Layout tags · live', 'Interactive standalone Tabs + Wizard on a Livewire host.'],
+];
+
+// Index sections in display order. A screen lands in the first section whose
+// prefix its slug matches, so new slugs group themselves.
+$previewSections = [
+    'forms-' => 'Wire Forms',
+    'field-' => 'Form fields',
+    'table-' => 'Wire Table',
+    'sortable-' => 'Wire Sortable',
+    'gesture-lab' => 'Gesture lab',
+    'spa-' => 'SPA navigation',
+    'actions-' => 'Actions & modals',
+    'core-' => 'Wire Core',
+    'widgets-' => 'Widgets',
+    'infolists-' => 'Infolists',
+    'panels-' => 'Panels',
+    'resource-' => 'Resources (owner layer)',
+    'layout-' => 'Utility pages',
+    'palette' => 'Utility pages',
+    'mobile' => 'Utility pages',
+];
+
+Route::get('/', function (): RedirectResponse {
+    return redirect('/previews');
+});
+
+Route::get('/previews', function () use ($screens, $fieldPreviews, $utilityPages, $previewSections) {
+    $rows = [];
+
+    foreach ($screens as $slug => $screen) {
+        $rows[$slug] = ['label' => $screen['title'], 'copy' => $screen['subtitle']];
+    }
+
+    foreach ($fieldPreviews as $field => $label) {
+        $rows['field-'.$field] = [
+            'label' => $label,
+            'copy' => 'Single '.$label.' field rendered through the Wire Forms runtime.',
+        ];
+    }
+
+    foreach ($utilityPages as $slug => [$label, $copy]) {
+        $rows[$slug] = ['label' => $label, 'copy' => $copy];
+    }
+
+    $sections = array_fill_keys([...array_values($previewSections), 'Other'], []);
+
+    foreach ($rows as $slug => $row) {
+        $section = 'Other';
+
+        foreach ($previewSections as $prefix => $candidate) {
+            if (str_starts_with($slug, $prefix)) {
+                $section = $candidate;
+
+                break;
+            }
+        }
+
+        $sections[$section][] = $row + ['slug' => $slug];
+    }
+
+    return view('previews.index', [
+        'sections' => array_filter($sections),
+        'total' => count($rows),
+    ]);
+});
+
+// Curated live index of every mobile/tablet preview (open on a phone via LAN).
+Route::get('/previews/mobile', fn () => view('previews.mobile-index', [
+    'lanUrl' => 'http://192.168.0.218:8085/previews/mobile',
+]));
+
+// Standalone layout Blade tags (<x-wire::grid|split|section|fieldset|callout|empty-state>).
+Route::get('/previews/layout-tags', fn () => view('previews.layout-tags'));
+
+// Full Tailwind palette rendered through the canonical HasColor resolvers.
+Route::get('/previews/palette', fn () => view('previews.palette'));
+
+// Interactive standalone Tabs + Wizard (Livewire host → Alpine + core JS bundle).
+Route::get('/previews/layout-live', fn () => view('previews.capture', [
+    'component' => LayoutPreview::class,
+    'variant' => 'tabs-wizard',
+    'title' => 'Layout tags · live',
+    'subtitle' => 'Standalone Tabs + Wizard',
+]));
+
+foreach ($screens as $slug => $screen) {
+    Route::get('/previews/'.$slug, fn () => view('previews.capture', $screen));
+}
+
+// The owner layer on a real entity. Their own routes rather than a $screens
+// entry because the capture view mounts every preview with `['variant' => …]`,
+// and an edit or view page takes a record key instead — which is the point:
+// these are the framework's real pages, not something the workbench wraps.
+$resourcePages = [
+    'resource-list' => ['Invoices (list)', 'A resource\'s ListPage: columns, search and sort declared once on the resource.', ListInvoices::class, []],
+    'resource-create' => ['Invoice (create)', 'CreatePage over the same form() the edit page uses.', CreateInvoice::class, []],
+    'resource-edit' => ['Invoice (edit)', 'EditPage seeded from the record, with the line-items relation manager embedded.', EditInvoice::class, ['record' => 1]],
+    'resource-view' => ['Invoice (view)', 'ViewPage: a read-only infolist plus the same relation manager.', ViewInvoice::class, ['record' => 1]],
+];
+
+foreach ($resourcePages as $slug => [$title, $subtitle, $component, $params]) {
+    Route::get('/previews/'.$slug, fn () => view('previews.resource', [
+        'title' => $title,
+        'subtitle' => $subtitle,
+        'component' => $component,
+        'params' => $params,
+    ]));
+}
 
 foreach ($fieldPreviews as $field => $label) {
     Route::get('/previews/field-'.$field, fn () => view('previews.capture', [
