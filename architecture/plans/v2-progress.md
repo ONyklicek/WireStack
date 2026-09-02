@@ -864,6 +864,26 @@ dotted cestu" má přitom skutečného vlastníka s dokumentovanou maticí:
 rozhodnutí vlastníka repa** (`dehydrateAttribute()` je public API v publikovaném
 balíčku), a leží v §3 vedle `MutationPipeline`.
 
+**Rozhodnuto 2026-09-02: smazat.** Vlastník repa rozhodl metodu odstranit celou.
+Měření u toho opravilo dvě věci v samotném zadání:
+
+1. **„Smazat metodu" nešlo doslova.** `dehydrateAttribute()` **měla volajícího** —
+   `dehydrate()`, tedy hlavní vstup, kterým jde každé uložení formuláře. Smazat
+   se dala až po přesunu skalární poloviny těla (cast → `reverseTransform` →
+   `setAttribute`) do `dehydrate()`; nedosažitelná zůstala jen ta relační, a
+   s ní zmizela i privátní `dehydrateRelation()`, jejíž jediný volající to byl.
+2. **Celý `Dehydrator` neměl jediný přímý test.** Grep přes `packages/*/tests`
+   i `tests/` nenašel ani zmínku jména třídy — pokrytá byla jen nepřímo, cestou
+   ukládání formuláře. To je přesně důvod, proč tam celá public metoda mohla
+   nedosažitelná sedět: nikdo se jí nikdy nezeptal přímo. Testy má od teď.
+
+**A první verze toho testu byla lživá** — přesně ten druh, který tenhle soubor
+popisuje o kus výš u měny. Asertoval `getAttribute('amount') === 12.5`, jenže
+Eloquent skalární cast aplikuje **při čtení**, takže to platí i s vymazanou
+konverzí: mutace prošla. Rozdíl, který ta konverze dělá, je vidět jen na **raw**
+atributech (`getAttributes()`) — tedy na tom, co půjde do databáze: float, ne
+string, který poslal formulář. Po přepsání na raw mutace padá.
+
 **Audit ale našel to, co hledal — v půlce, která vypadala hotově.** Větev, kvůli
 které `saveRepeater()` načítá model místo query-builder `->update()`, je
 **nepokrytá**: záměna za přesně ten anti-pattern, před kterým komentář varuje,
@@ -1021,7 +1041,7 @@ dostat žádný řádek. Opraveno tím, že index bere všechny kolekce, ne tři
 | ~~`resolveActionType()` — public static, nula volajících v src~~ | **rozhodnuto 2026-09-01: ponechat.** Měření našlo, že to není jedna metoda, ale **tři** — `resolveColumnType()`, `resolveFilterType()` i `resolveActionType()`, identický tvar, všechny s nula volajícími. A nejsou to zapomenuté zbytky: vytvořilo je zapsané doporučení v [`v2-deferred-items.md`](v2-deferred-items.md) §7A.5 („ponechat registry pro introspekci, přidat `resolveColumnType()` / `resolveFilterType()` metody na Table pro budoucí config-driven use-case"). Nula volajících je tedy záměr. Smazat jednu ze tří by navíc rozbilo souměrnost plugin API. **Není to stejná otázka jako `Dehydrator::dehydrateAttribute()`** — tam jde o nedosažitelnou větev uvnitř používané metody, tady o nepoužitou, ale záměrně přidanou trojici | `Table.php:1780–1830` |
 | Tenancy nekryje non-Eloquent `DataSource` | Globální Eloquent scope nemá co scopovat u `CollectionDataSource` ani u zdroje nad API. Zdokumentované v `docs/authorization.md` jako „co scopované není"; správné místo je dekorátor nad `DataSource` (T-4 tak, jak ho plán psal). **Dokud to nevznikne, tenancy nezapínej nad non-Eloquent zdrojem** | [`v2.4-…`](v2.4-erp-execution-implementation.md) T-4 |
 | `Core\Hydration\MutationPipeline` — nula volajících, **zůstává jako stavební blok** | Nález S3. Sourozenec `Hydrator` byl smazán (nula volajících, žádný plán); `MutationPipeline` ne — vlastník repa 2026-08-30 rozhodl nechat. **Od 2026-08-30 už to ale není nedodělaný krok:** §3.2 měření zamítlo (tvar callbacku není převoditelný, per-atributového vlastníka má `dehydrateState()`, třída nemá API na registraci) — viz §2 | [`v2-deferred-items.md`](v2-deferred-items.md) §3.2 |
-| `Core\Hydration\Dehydrator` — dot-notation větev je nedosažitelná | Z jediného volajícího se do ní nedá dostat (Livewire dotted klíč zanoří dřív), smazání projde všemi 3300 testy, a kdyby se do ní dostal callback, atribut se nastaví na modelu, který nikdo neuloží. Vlastníka té schopnosti má `BelongsToSelect` s dokumentovanou maticí. Docbloky i `unified-engine.md` to říkají; **smazání `dehydrateAttribute()` je odstranění public API z publikovaného balíčku — rozhodnutí vlastníka repa**, stejná otázka jako `resolveActionType()` | §2 |
+| ~~`Core\Hydration\Dehydrator` — dot-notation větev je nedosažitelná~~ | **uzavřeno 2026-09-02: smazáno** rozhodnutím vlastníka repa. `dehydrateAttribute()` i privátní `dehydrateRelation()` jsou pryč, skalární půlka těla se přesunula do `dehydrate()`. Měření cestou opravilo zadání dvakrát a odhalilo, že třída neměla **jediný přímý test** — viz §2 | §2 |
 | ~~Export: optional-library cesty nikdy nespustil žádný test~~ | **uzavřeno 2026-09-01.** `openspout ^4.0` a `barryvdh/laravel-dompdf ^3.0` jsou v `require-dev` (root i balíček) a v `suggest`; `ExporterLibraryTest` testuje `writeTo()` obou proti reálnému souboru (xlsx čte přes `ZipArchive`, PDF přes `%PDF-`). `verify-coverage --diff=origin/1.x` je **poprvé od Q-3 zelená**, pokrytí table 91,8 % → 92,9 %, floor 91 → 92. Měření cestou opravilo tři věci, viz §2. Dvě poznámky k prostředí: obě knihovny potřebují PHP rozšíření, která workflow nejmenovaly (`fileinfo`, `xmlreader` pro openspout), a composer bez nich odmítne nainstalovat cokoli — doplněno do `tests`, `coverage`, `database-tests` i `static-analysis`. A `openspout` v4.32 chce PHP `~8.3`, což je v pořádku jen proto, že `composer.lock` je v `.gitignore` — každé prostředí si resolvuje sám, takže na 8.2 spadne constraint `^4.0` na starší 4.x. Kdyby se lock někdy začal commitovat, tohle je první věc, která se o tom dozví | §2 |
 | ~~`v2-deferred-items.md` §3 je hotová z jedné čtvrtiny~~ | **uzavřeno 2026-08-30.** §3.1 hotová, §3.2 i §3.3 **zamítnuté měřením** (viz §2), §3.4 tím bezpředmětná. Není to nedodělaná položka, je rozhodnutá — a `RelationshipSaveHandler` z toho čtení dostal dva chybějící testy | [`v2-deferred-items.md`](v2-deferred-items.md) §3 |
 | ~~Tři workbench soubory drží pohromadě a žádný z nich není commitnutý~~ | **uzavřeno 2026-09-01.** Refaktor preview rout je hotový — `workbench/routes/web.php` má jednu tabulku `$screens`, ze které se generují routy **i** index, takže index už nemůže zaostat za routami. `verify-resource-pages` na něm projde, takže trojice šla konečně commitnout naráz a resource stránky jsou od teď v CI | — |
@@ -1057,7 +1077,6 @@ vlastníka repa nebo na jmenovaného konzumenta:
 
 | Věc | Čeká na |
 |---|---|
-| `Dehydrator::dehydrateAttribute()` — nedosažitelná větev | rozhodnutí vlastníka repa (smazání public API z publikovaného balíčku) |
 | Tenancy nad non-Eloquent `DataSource` | dekorátor nad `DataSource` (T-4); do té doby **tenancy nad non-Eloquent zdrojem nezapínej** |
 | `ShellRenderPlan` / `InteractionRenderPlan` — host pořád `mixed` | polling, live kanál a readiness nemají pojmenovaný kontrakt |
 | Systematické hledání duplicitních abstrakcí napříč V2 | průřez auditu padl na session limit; `DataSourceCapabilities`/`CapabilitySet` nejspíš nezůstal sám |

@@ -22,77 +22,33 @@ final class Dehydrator
     /**
      * Apply a full state array to a model.
      *
-     * Sets attributes; it never persists. Saving the model is the caller's job —
-     * see {@see dehydrateAttribute()} for what that means for a dot-notation key.
+     * **Sets attributes; it never persists.** Saving is the caller's job, which is
+     * what lets a caller apply state, run its own hooks and then decide whether
+     * the write happens at all.
+     *
+     * Deliberately flat: a key is an attribute name on *this* model. Writing back
+     * through a relation is not this class's job and has a real owner with a
+     * documented matrix — `BelongsToSelect`, `docs/forms/fields/belongs-to-select.md`.
+     * A dot-notation branch used to live here, walking already-loaded relations
+     * and setting attributes on the related model; it was removed 2026-09-02
+     * because nothing could reach it — a dotted field name arrives from Livewire
+     * already nested (`company.name` → `['company' => ['name' => …]]`), so no key
+     * the only caller passes ever contained a dot — and because what it did was
+     * wrong for anyone who did reach it: it left the related model dirty and
+     * unsaved, so a caller saving only the root silently dropped the write.
      *
      * @param  array<string, mixed>  $state
      */
     public function dehydrate(array $state, Model $model): void
     {
         foreach ($state as $attribute => $value) {
-            $this->dehydrateAttribute($attribute, $value, $model);
-        }
-    }
+            $cast = $this->castResolver->resolve($model::class, $attribute);
 
-    /**
-     * Apply a single attribute value to the model.
-     *
-     * For a dot-notation key, walks the path over **already-loaded** relations and
-     * sets the attribute on the related model — it does not load, create or save
-     * anything, so a caller that saves only the root model drops that write. An
-     * unloaded or non-model segment ends the walk and the value is discarded.
-     *
-     * The only caller in this repository, `SaveHandler::persist()`, cannot reach
-     * that branch: a dotted field name arrives from Livewire already nested
-     * (`company.name` → `['company' => ['name' => …]]`), so the key it sees has no
-     * dot in it. Writing back through a relation from a form has its own owner and
-     * its own documented matrix — `BelongsToSelect`, `docs/forms/fields/belongs-to-select.md`.
-     */
-    public function dehydrateAttribute(string $attribute, mixed $value, Model $model): void
-    {
-        if (str_contains($attribute, '.')) {
-            $this->dehydrateRelation($attribute, $value, $model);
-
-            return;
-        }
-
-        $cast = $this->castResolver->resolve($model::class, $attribute);
-
-        if ($cast !== null) {
-            $value = $this->transformer->reverseTransform($value, $cast);
-        }
-
-        $model->setAttribute($attribute, $value);
-    }
-
-    /**
-     * Dehydrate a nested relation attribute using dot-notation traversal.
-     *
-     * Sets only — the related model is left dirty and unsaved. See
-     * {@see dehydrateAttribute()}.
-     */
-    private function dehydrateRelation(string $path, mixed $value, Model $model): void
-    {
-        $segments = explode('.', $path);
-        $attribute = array_pop($segments);
-        $current = $model;
-
-        foreach ($segments as $segment) {
-            $related = $current->getRelationValue($segment);
-
-            if ($related === null || ! $related instanceof Model) {
-                return;
+            if ($cast !== null) {
+                $value = $this->transformer->reverseTransform($value, $cast);
             }
 
-            $current = $related;
+            $model->setAttribute($attribute, $value);
         }
-
-        $cast = $this->castResolver->resolve($current::class, $attribute);
-
-        if ($cast !== null) {
-            $value = $this->transformer->reverseTransform($value, $cast);
-        }
-
-        $current->setAttribute($attribute, $value);
     }
 }

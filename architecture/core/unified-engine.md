@@ -545,17 +545,25 @@ $dehydrator->dehydrate($state, $model);
 // Applies mutations to $model attributes
 ```
 
-It **sets, it never saves.** That matters for its dot-notation branch, which walks
-already-loaded relations and sets the attribute on the related model: a caller that
-saves only the root model drops that write, and an unloaded segment discards the
-value silently. Verified 2026-08-30 that the branch is unreachable from its only
-caller — `SaveHandler::persist()` receives a dotted field name from Livewire
-already nested (`company.name` → `['company' => ['name' => …]]`), so no key it sees
-contains a dot — and that deleting the branch outright passes all 3300 core + forms
-tests. Writing back through a relation from a form has a real owner with a
-documented relation matrix: `BelongsToSelect`, `docs/forms/fields/belongs-to-select.md`.
-Whether the branch stays is the same open question as `MutationPipeline` below.
+It **sets, it never saves** — a caller applies state, runs its own hooks and
+decides whether the write happens at all.
 
+It is also **flat**: a key is an attribute name on this model, and a dotted key
+is just an attribute name that contains a dot. A dot-notation branch used to live
+here, walking already-loaded relations and setting the attribute on the related
+model, together with the public `dehydrateAttribute()` that reached it. Both were
+removed **2026-09-02** by the repo owner's decision, for two measured reasons:
+nothing could reach the branch — `SaveHandler::persist()` receives a dotted field
+name from Livewire already nested (`company.name` → `['company' => ['name' => …]]`),
+so no key it sees contains a dot — and what the branch did was wrong for anyone
+who did reach it, leaving the related model dirty and unsaved so a caller saving
+only the root silently dropped the write. Writing back through a relation from a
+form has a real owner with a documented relation matrix: `BelongsToSelect`,
+`docs/forms/fields/belongs-to-select.md`.
+
+The class had no direct test until that removal — it was covered through the
+forms save path and nowhere else, which is what let a whole public method sit
+here unreachable. It has one now.
 ### Support Classes
 
 | Class | Description |

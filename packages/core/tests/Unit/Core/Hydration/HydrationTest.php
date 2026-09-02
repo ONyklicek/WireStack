@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use NyonCode\WireCore\Core\Hydration\CastResolver;
+use NyonCode\WireCore\Core\Hydration\Dehydrator;
 use NyonCode\WireCore\Core\Hydration\MutationPipeline;
 use NyonCode\WireCore\Core\Hydration\ValueTransformer;
 
@@ -380,4 +381,74 @@ it('keeps before and after mutations independent', function () {
 
     expect($pipeline->applyBefore('x', 'f'))->toBe('x_before');
     expect($pipeline->applyAfter('x', 'f'))->toBe('x_after');
+});
+
+// =============================================================================
+// Dehydrator (state → model)
+//
+// The write direction of the engine, and until 2026-09-02 the only part of
+// Hydration/ with no test of its own: it was reached through the forms save
+// path and nowhere else. That is what let a whole public method sit here
+// unreachable — see the class docblock.
+// =============================================================================
+
+it('applies a state array to a model, through the attribute casts', function () {
+    $model = new class extends Model
+    {
+        protected $casts = ['is_active' => 'boolean', 'amount' => 'float'];
+    };
+
+    $dehydrator = new Dehydrator(new ValueTransformer, new CastResolver);
+    $dehydrator->dehydrate(['name' => 'Amelia', 'is_active' => '1', 'amount' => '12.5'], $model);
+
+    // Read the RAW attributes, not getAttribute(): Eloquent applies a scalar
+    // cast when reading, so `getAttribute('amount') === 12.5` is true whether or
+    // not this class converted anything — a test asserting that would pass with
+    // the conversion deleted. What the conversion decides is the value that goes
+    // to the database: a float, not the string the form sent.
+    $raw = $model->getAttributes();
+
+    expect($raw['name'])->toBe('Amelia')
+        ->and($raw['is_active'])->toBeTrue()
+        ->and($raw['amount'])->toBe(12.5)
+        ->and($model->getAttribute('amount'))->toBe(12.5);
+});
+
+it('sets and never saves', function () {
+    // The property the whole class is shaped around: a caller applies state,
+    // runs its own hooks, and decides whether the write happens at all.
+    $model = new class extends Model
+    {
+        public bool $saved = false;
+
+        public function save(array $options = []): bool
+        {
+            return $this->saved = true;
+        }
+    };
+
+    (new Dehydrator(new ValueTransformer, new CastResolver))->dehydrate(['name' => 'Amelia'], $model);
+
+    expect($model->saved)->toBeFalse()
+        ->and($model->isDirty('name'))->toBeTrue();
+});
+
+it('leaves a key it has no cast for exactly as it arrived', function () {
+    $model = new class extends Model {};
+
+    (new Dehydrator(new ValueTransformer, new CastResolver))->dehydrate(['tags' => ['a', 'b']], $model);
+
+    expect($model->getAttribute('tags'))->toBe(['a', 'b']);
+});
+
+it('treats a dotted key as an attribute name, not a relation path', function () {
+    // Deliberate, and the reason a branch was removed here: writing back through
+    // a relation is BelongsToSelect's job, with a documented matrix. This class
+    // used to walk the path, set the attribute on the related model and leave it
+    // unsaved — a silent lost write for anyone who reached it.
+    $model = new class extends Model {};
+
+    (new Dehydrator(new ValueTransformer, new CastResolver))->dehydrate(['company.name' => 'Globex'], $model);
+
+    expect($model->getAttribute('company.name'))->toBe('Globex');
 });
