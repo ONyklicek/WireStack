@@ -74,6 +74,31 @@ class WsSettingResource implements DescribesResource, ProvidesNavigation
     }
 }
 
+/**
+ * Names no menu label of its own — the shape every real resource in this
+ * repository had written before anything rendered a menu, and the one no
+ * fixture here used to cover.
+ */
+class WsUnnamedResource implements DescribesResource, ProvidesNavigation
+{
+    use DescribesRecords;
+
+    public static function modelClass(): ?string
+    {
+        return null;
+    }
+
+    public static function pluralLabel(): string
+    {
+        return 'Invoices';
+    }
+
+    public static function navigation(): NavigationItem
+    {
+        return NavigationItem::make()->group('Billing');
+    }
+}
+
 class WsHiddenResource implements DescribesResource, ProvidesNavigation
 {
     use DescribesRecords;
@@ -116,10 +141,43 @@ it('groups entries under their heading and orders them within it', function () {
         ->navigation();
 
     expect(array_keys($nav))->toBe(['Sales', ''])
-        ->and(array_map(fn (NavigationItem $i) => $i->getLabel(), $nav['Sales']))
+        ->and(array_values(array_map(fn (NavigationItem $i) => $i->getLabel(), $nav['Sales'])))
         ->toBe(['Customers', 'Orders'])   // sort 10 before sort 20, not declaration order
-        ->and(array_map(fn (NavigationItem $i) => $i->getLabel(), $nav['']))
+        ->and(array_values(array_map(fn (NavigationItem $i) => $i->getLabel(), $nav[''])))
         ->toBe(['Settings']);
+});
+
+it('keys every entry by its resource key, through the grouping and the sort', function () {
+    // What a menu row needs beside the label: which resource it stands for.
+    // NavigationItem holds no URL on purpose, so this key is the only thing a
+    // consumer can turn into a link — and it has to survive both the grouping
+    // and the sort, which is why the sort is `uasort`.
+    $nav = wsWorkspace(WsOrderResource::class, WsCustomerResource::class, WsSettingResource::class)
+        ->navigation();
+
+    expect(array_keys($nav['Sales']))->toBe(['ws-customers', 'orders'])
+        ->and(array_keys($nav['']))->toBe(['ws-settings'])
+        ->and(array_keys(wsWorkspace(WsOrderResource::class)->items()))->toBe(['orders']);
+});
+
+it('names an entry after its resource when the entry did not name itself', function () {
+    // The case every consumer in this repository actually wrote: a resource
+    // declares an icon, a group and a badge, and leaves the label to the thing
+    // that already owns its name. Without this the menu rendered blank rows.
+    $items = wsWorkspace(WsUnnamedResource::class)->items();
+
+    expect($items[WsUnnamedResource::key()]->getLabel())->toBe('Invoices');
+});
+
+it('leaves an entry that named itself alone', function () {
+    $items = wsWorkspace(WsOrderResource::class)->items();
+
+    // WsOrderResource::pluralLabel() says "Orders" too, so name it something
+    // else first — a fallback that quietly overwrote would pass otherwise.
+    expect($items['orders']->getLabel())->toBe('Orders')
+        ->and(wsWorkspace(WsCustomerResource::class)->items()['ws-customers']->getLabel())
+        ->toBe('Customers')
+        ->and(WsCustomerResource::pluralLabel())->toBe('Ws Customers');
 });
 
 it('keeps declaration order where sort values tie', function () {

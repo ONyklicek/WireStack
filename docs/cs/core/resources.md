@@ -361,19 +361,45 @@ každá jiná komponenta. Přidává jen to, co potřebuje *menu*: `group()`, `s
 a `badge()`. Closure v badge se vyhodnocuje při každém čtení, nikdy se necachuje
 — počet neodeslaných objednávek je špatně v okamžiku, kdy se uloží.
 
+Položka, která si sama nepojmenuje label, se jmenuje po svém resource:
+`NavigationItem::make()` vedle `->icon()` a `->group()` je běžný tvar a menu
+ukáže `pluralLabel()` — „Objednávky". Resource, který chce v menu jiný název než
+svůj plurál, ho předá a ten vyhraje.
+
 `Workspace` výsledek uspořádá:
 
 ```php
 use NyonCode\WireCore\Core\Resources\Workspace;
 
 $nav = app(Workspace::class)->navigation();
-// ['Prodej' => [NavigationItem, …], '' => [NavigationItem, …]]
+// ['Prodej' => ['orders' => NavigationItem, …], '' => […]]
 ```
 
 Skupiny drží pořadí, v jakém se objevila jejich první položka; uvnitř skupiny
 řadí `sort()` a shodné hodnoty si nechávají pořadí deklarace — proto je `sort()`
-volitelný. Skryté položky vypadnou. Stejně jako registr nevlastní routing ani
-layout — menu vykresluje aplikace.
+volitelný. Skryté položky vypadnou.
+
+Položky zůstávají klíčované **klíčem resource**, přes seskupení i přes řazení.
+Ten klíč je druhá polovina řádku v menu: `NavigationItem` záměrně nedrží URL —
+registr, který by držel URL, by byl panel — takže aplikace si klíč namapuje na
+to, kam daný resource routuje:
+
+```blade
+@foreach($nav as $group => $items)
+    <p>{{ $group }}</p>
+
+    @foreach($items as $key => $item)
+        <a href="{{ route('admin.'.$key) }}" wire:navigate>   {{-- [tl! focus] --}}
+            {!! icon($item->getIcon()) !!}
+            {{ $item->getLabel() }}
+            <x-wire::badge :color="$item->getBadgeColor() ?? 'gray'">{{ $item->getBadge() }}</x-wire::badge>
+        </a>
+    @endforeach
+@endforeach
+```
+
+Stejně jako registr nevlastní `Workspace` routing ani layout — menu vykresluje
+aplikace.
 
 ## Relation managery
 

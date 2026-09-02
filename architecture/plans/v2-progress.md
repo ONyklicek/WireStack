@@ -1,7 +1,7 @@
 ---
 title: V2 — kde to stojí a čím pokračovat
-date: 2026-09-01
-scope: V2.0–V2.4 (hotové), ADR 0025 (rozpracované), V2.5/V2.6 (na řadě)
+date: 2026-09-02
+scope: V2.0–V2.5 (hotové), ADR 0025 (rozpracované), V2.6 (běží — krok 1 hotový)
 status: progress record — aktualizovat na konci každého běhu
 ---
 
@@ -79,6 +79,30 @@ kroku změřit: §0b.
 
 `v2-master-plan.md` má V2.6 vyřešenou jako odloženou; **až bude krok 5 hotový,
 přepiš ji tam** — do té doby ta věta popisuje rozhodnutí, které vlastník změnil.
+
+#### Krok 1 hotový 2026-09-02: konzument navigace
+
+Workbench registruje **tři** resources místo jednoho — `InvoiceResource`
+(`Billing`), nový `TaskResource` a `DocumentResource` (oba `Operations`) — a nad
+nimi stojí shell `/previews/workspace/{resource?}`: sidebar z
+`app(Workspace::class)->navigation()` vedle seznamu vybraného resource, s
+`wire:navigate` mezi nimi. Driver `verify-workspace-nav.mjs` je **24/24**.
+
+**První nakreslené menu okamžitě našlo dvě věci, které žádná brána vidět
+nemohla** — obě v §2:
+
+1. **položka bez vlastního labelu se nejmenovala nijak** (`NavigationItem::make()`
+   je tvar, který napsali oba reální konzumenti, a `getLabel()` na něm vracel
+   `null`);
+2. **položky neměly identitu** — `navigation()` vracela `array<int, …>`, takže
+   menu nešlo na nic nalinkovat, a `NavigationItem` záměrně nedrží URL.
+
+Obojí opravené v jediném vlastníkovi (`Workspace::items()`), s testy, mutací
+oběma směry a docs v EN i CS.
+
+**Co to řeklo o kroku 2** (`NavigationGroup`) je v §0c toho plánu: pořadí skupin
+se nedá deklarovat, skupina nemá label oddělený od klíče, nemá viditelnost ani
+ikonu, a sbalení nemá vlastníka. To jsou vstupy pro krok 2, ne hotová práce.
 
 ### V2.1 — hotová ✅
 
@@ -892,6 +916,53 @@ každá zvlášť je tichá ztráta dat.
 bajty.** Bajty se přesunuly za deset minut. Jeden import mezi bundly byl celá
 práce — a byl to zrovna ten, jehož selhání nemá žádný symptom kromě smazaných dat.
 
+**V2.6/krok 1: `Workspace` neměl konzumenta — a první nakreslené menu bylo
+prázdné.** §0a plánu i tenhle soubor psaly, že `Workspace` **nechybí nic**:
+existuje od V2.3, je otestovaný (`WorkspaceTest`, pět testů) a zdokumentovaný
+v obou jazycích. Bylo to změřené správně a přesto to bylo špatně, protože se to
+měřilo proti *testům a docs*, ne proti konzumentovi. Ten do 2026-09-02
+neexistoval — a v okamžiku, kdy vznikl, menu vyrenderovalo **dva prázdné řádky
+ze tří**:
+
+| Co se rozbilo | Proč to nikdo neviděl |
+|---|---|
+| `NavigationItem::make()` bez labelu → `getLabel()` vrací `null` | **všech pět** fixtur ve `WorkspaceTest` a **všechny** příklady v docs label předávají. Přitom oba skuteční konzumenti v repu — workbench `InvoiceResource` a boost `describe-resource`, který `navigation.label` reportuje — ho **nepředávají**. Testovaný byl tvar z docs, ne tvar z kódu |
+| položky bez identity: `array<int, NavigationItem>` na skupinu | dokud nic nekreslí menu, „na co ta položka odkazuje" není otázka. `NavigationItem` **záměrně** URL nedrží (registr s URL je panel), takže bez klíče resource se položka nedá nalinkovat — a menu, které nikam nevede, není menu |
+
+Mutace oběma směry: doplnění label fallbacku neshodilo **ani jeden** z 21 testů
+na `Workspace`/`NavigationItem`/`ResourceRegistry`, zatímco klíčování jeden test
+shodilo (asertoval `array_map` přes položky skupiny, a ten klíče zachovává) —
+takže půlka téhle změny byla nepokrytá úplně a půlka jen v jednom směru.
+
+Oprava je na **jednom** místě a v tom vlastníkovi, který má obě poloviny naráz:
+`Workspace::items()` klíčuje položky klíčem resource a jméno bere z
+`pluralLabel()`, když si ho položka neurčila sama. Jméno resource už vlastní
+`DescribesRecords`; menu, které by ho nutilo napsat podruhé, je ten druhý
+slovník, co se v tomhle repu pořád maže. `usort` → `uasort`, aby klíče přežily
+řazení.
+
+**A ten sidebar je nakreslený v aplikaci, ne v balíčku** — `Workspace` ve svém
+docbloku říká „what renders the result is the application's", takže konzument je
+workbench shell `/previews/workspace/{resource?}`, ne nová view vrstva v core.
+Krok 1 tedy nezavedl žádný runtime, přesně jak §0b pro celou řadu chce.
+
+**Vedlejší nález, provozní: workbench databáze driftuje.** Drivery do ní zapisují
+a zůstane to tam — `Task` číslo 1 se dnes jmenuje `sortable-partial-1788287606465`,
+protože ho kdysi přepsal `verify-sortable-partials`. Aserce na obsah řádku je
+proto v driverech **fixture v přestrojení**; nový driver tvrdí strukturu (sloupce,
+které deklaruje resource; klíče položek menu) a rozdíly (hledání → 0 řádků →
+zpět), ne konkrétní data. Seeder u některých tabulek slibuje „deterministic on
+purpose — the CDP drivers address rows by name"; pro `tasks` a `documents` to
+už neplatí.
+
+**Druhý vedlejší nález: index previews zaostal za routami, přestože komentář
+tvrdil, že to nemůže.** `workbench/routes/web.php` má nad indexem komentář „the
+index cannot fall behind the routes again", ale řádky indexu se skládaly ze tří
+kolekcí a routy se registrovaly ze **čtyř** — čtyři resource stránky (V2.3) a
+paleta globálního hledání (V2.5) na indexu nikdy nebyly. Prozradilo to mapování
+sekcí: `'resource-' => 'Resources (owner layer)'` je sekce, do které se nemohl
+dostat žádný řádek. Opraveno tím, že index bere všechny kolekce, ne tři ze čtyř.
+
 ---
 
 ## 3. Co je vědomě neudělané
@@ -918,11 +989,19 @@ práce — a byl to zrovna ten, jehož selhání nemá žádný symptom kromě s
 
 ## 4. Co je na řadě
 
-**Šest fází hotových (V2.0–V2.5). Na řadě je V2.6** — měřením odložená (§0a jejího
+**Šest fází hotových (V2.0–V2.5). Běží V2.6** — měřením odložená (§0a jejího
 plánu), pak **znovu otevřená rozhodnutím vlastníka** (§0b): chybějící části se
-doplní. Pořadí je v §0b a **není to pořadí z §2 toho plánu**: začíná se
-konzumentem navigace, protože `Workspace` dnes žádného nemá, a bez vykresleného
-menu nemá `NavigationGroup` ani `DomainModule` kde selhat v prohlížeči.
+doplní. Pořadí je v §0b a **není to pořadí z §2 toho plánu**: začalo se
+konzumentem navigace, protože `Workspace` žádného neměl, a bez vykresleného menu
+nemá `NavigationGroup` ani `DomainModule` kde selhat v prohlížeči.
+
+**Krok 1 je hotový (2026-09-02)** — sidebar ve workbenchi nad třemi resources,
+driver 24/24, a dva defekty ve `Workspace`, které se objevily až tím vykreslením
+(§2). **Na řadě je krok 2, `NavigationGroup`** — a jeho zadání už není odhad:
+co holý `string` neumí, je vyjmenované v §0c toho plánu (pořadí skupin se nedá
+deklarovat, label není oddělený od klíče, chybí viditelnost a ikona, sbalení
+nemá vlastníka). Platí ale totéž pravidlo: přidat jen to, co má konzumenta, a
+přes kanonické `HasIcon`/`HasLabel`/`HasVisibility`.
 
 ### Co zbývá otevřené
 
@@ -950,8 +1029,9 @@ vlastníka repa nebo na jmenovaného konzumenta:
 - **ADR 0025 kroky 4, 8, 10** — 4 a 8 zamítnuté měřením, 10 hotový a dodělaný.
 - **`resolveActionType()` a jeho dva sourozenci** — nula volajících je zapsaný
   záměr, ne mrtvý kód.
-- **V2.6 `DomainModule`** — otevírat až s **jmenovaným konzumentem** se dvěma
-  doménami v jedné aplikaci, a i pak začít měřením, ne §2 toho plánu.
+- **V2.6 `DomainModule`** — vlastník repa V2.6 znovu otevřel (§0b jejího plánu),
+  ale `DomainModule` sám je pořád krok **5**: otevírat ho až po krocích 2–4, a
+  i pak začít měřením, ne §2 toho plánu.
 
 ## 5. Jak pokračovat
 

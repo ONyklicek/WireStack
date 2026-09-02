@@ -362,19 +362,45 @@ same vocabulary as every other component. What it adds is only what a *menu*
 needs: `group()`, `sort()` and `badge()`. A badge closure is resolved on every
 read, never cached — a count of unshipped orders is wrong the moment it is.
 
+An entry that names no label of its own is named by its resource:
+`NavigationItem::make()` beside `->icon()` and `->group()` is the ordinary shape,
+and the menu shows `pluralLabel()` — "Orders". A resource that wants a menu
+label different from its plural passes one, and that one wins.
+
 `Workspace` arranges the result:
 
 ```php
 use NyonCode\WireCore\Core\Resources\Workspace;
 
 $nav = app(Workspace::class)->navigation();
-// ['Sales' => [NavigationItem, …], '' => [NavigationItem, …]]
+// ['Sales' => ['orders' => NavigationItem, …], '' => […]]
 ```
 
 Groups keep the order their first entry appeared in; within a group, `sort()`
 orders and equal values keep declaration order, which is what makes `sort()`
-optional. Hidden entries are dropped. Like the registry, it owns no routing and
-no layout — what renders the menu is the application's.
+optional. Hidden entries are dropped.
+
+Entries stay keyed by **resource key**, through the grouping and through the
+sort. That key is the other half of a menu row: `NavigationItem` deliberately
+holds no URL — a registry that held URLs would be a panel — so the application
+maps the key to whatever it routes that resource to:
+
+```blade
+@foreach($nav as $group => $items)
+    <p>{{ $group }}</p>
+
+    @foreach($items as $key => $item)
+        <a href="{{ route('admin.'.$key) }}" wire:navigate>   {{-- [tl! focus] --}}
+            {!! icon($item->getIcon()) !!}
+            {{ $item->getLabel() }}
+            <x-wire::badge :color="$item->getBadgeColor() ?? 'gray'">{{ $item->getBadge() }}</x-wire::badge>
+        </a>
+    @endforeach
+@endforeach
+```
+
+Like the registry, `Workspace` owns no routing and no layout — what renders the
+menu is the application's.
 
 ## Relation Managers
 

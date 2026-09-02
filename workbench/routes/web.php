@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Route;
+use NyonCode\WireCore\Core\Resources\Workspace;
 use Workbench\App\Livewire\Previews\CorePreview;
 use Workbench\App\Livewire\Previews\FieldPreview;
 use Workbench\App\Livewire\Previews\FormPreview;
@@ -19,7 +20,9 @@ use Workbench\App\Livewire\Previews\TablePreview;
 use Workbench\App\Livewire\Previews\WidgetPreview;
 use Workbench\App\Livewire\Resources\CreateInvoice;
 use Workbench\App\Livewire\Resources\EditInvoice;
+use Workbench\App\Livewire\Resources\ListDocuments;
 use Workbench\App\Livewire\Resources\ListInvoices;
+use Workbench\App\Livewire\Resources\ListTasks;
 use Workbench\App\Livewire\Resources\ViewInvoice;
 
 // One source of truth for the preview surface: every entry below registers its
@@ -155,6 +158,37 @@ $utilityPages = [
     'layout-live' => ['Layout tags · live', 'Interactive standalone Tabs + Wizard on a Livewire host.'],
 ];
 
+// The owner layer on a real entity. Their own routes rather than a $screens
+// entry because the capture view mounts every preview with `['variant' => …]`,
+// and an edit or view page takes a record key instead — which is the point:
+// these are the framework's real pages, not something the workbench wraps.
+$resourcePages = [
+    'resource-list' => ['Invoices (list)', 'A resource\'s ListPage: columns, search and sort declared once on the resource.', ListInvoices::class, []],
+    'resource-create' => ['Invoice (create)', 'CreatePage over the same form() the edit page uses.', CreateInvoice::class, []],
+    'resource-edit' => ['Invoice (edit)', 'EditPage seeded from the record, with the line-items relation manager embedded.', EditInvoice::class, ['record' => 1]],
+    'resource-view' => ['Invoice (view)', 'ViewPage: a read-only infolist plus the same relation manager.', ViewInvoice::class, ['record' => 1]],
+];
+
+// The workspace shell: one sidebar built from Workspace::navigation() over every
+// registered resource, and the selected resource's list page beside it. Keyed by
+// resource key, because that is what the navigation entries are keyed by and
+// what the sidebar turns into a link.
+$workspacePages = [
+    'invoices' => ListInvoices::class,
+    'tasks' => ListTasks::class,
+    'documents' => ListDocuments::class,
+];
+
+// Pages the workbench serves that are neither a captured component preview nor a
+// resource page. They were missing from the index for as long as they existed —
+// the palette and all four resource pages — while the index page claimed "every
+// route registered by the workbench is listed here", so they are collected here
+// rather than left to a route call further down.
+$standalonePages = [
+    'workspace' => ['Workspace navigation', 'The sidebar an application builds from Workspace::navigation(): two groups, sorted entries, badges, and wire:navigate between the resources.'],
+    'global-search' => ['Global search palette', 'The ⌘K command palette over every registered resource.'],
+];
+
 // Index sections in display order. A screen lands in the first section whose
 // prefix its slug matches, so new slugs group themselves.
 $previewSections = [
@@ -170,6 +204,8 @@ $previewSections = [
     'infolists-' => 'Infolists',
     'panels-' => 'Panels',
     'resource-' => 'Resources (owner layer)',
+    'workspace' => 'Resources (owner layer)',
+    'global-search' => 'Wire Core',
     'layout-' => 'Utility pages',
     'palette' => 'Utility pages',
     'mobile' => 'Utility pages',
@@ -179,7 +215,7 @@ Route::get('/', function (): RedirectResponse {
     return redirect('/previews');
 });
 
-Route::get('/previews', function () use ($screens, $fieldPreviews, $utilityPages, $previewSections) {
+Route::get('/previews', function () use ($screens, $fieldPreviews, $utilityPages, $resourcePages, $standalonePages, $previewSections) {
     $rows = [];
 
     foreach ($screens as $slug => $screen) {
@@ -193,7 +229,11 @@ Route::get('/previews', function () use ($screens, $fieldPreviews, $utilityPages
         ];
     }
 
-    foreach ($utilityPages as $slug => [$label, $copy]) {
+    foreach ($resourcePages as $slug => [$label, $copy]) {
+        $rows[$slug] = ['label' => $label, 'copy' => $copy];
+    }
+
+    foreach ([...$standalonePages, ...$utilityPages] as $slug => [$label, $copy]) {
         $rows[$slug] = ['label' => $label, 'copy' => $copy];
     }
 
@@ -242,21 +282,31 @@ foreach ($screens as $slug => $screen) {
     Route::get('/previews/'.$slug, fn () => view('previews.capture', $screen));
 }
 
-// The owner layer on a real entity. Their own routes rather than a $screens
-// entry because the capture view mounts every preview with `['variant' => …]`,
-// and an edit or view page takes a record key instead — which is the point:
-// these are the framework's real pages, not something the workbench wraps.
-$resourcePages = [
-    'resource-list' => ['Invoices (list)', 'A resource\'s ListPage: columns, search and sort declared once on the resource.', ListInvoices::class, []],
-    'resource-create' => ['Invoice (create)', 'CreatePage over the same form() the edit page uses.', CreateInvoice::class, []],
-    'resource-edit' => ['Invoice (edit)', 'EditPage seeded from the record, with the line-items relation manager embedded.', EditInvoice::class, ['record' => 1]],
-    'resource-view' => ['Invoice (view)', 'ViewPage: a read-only infolist plus the same relation manager.', ViewInvoice::class, ['record' => 1]],
-];
-
 // The command palette is mounted in a layout, not as a variant of a preview
 // component, so it gets a page of its own with the trigger an application would
 // write beside it.
 Route::get('/previews/global-search', fn () => view('previews.global-search'));
+
+// One route for every resource in the shell, plus the bare /previews/workspace
+// the index links to. The key→page map is the application's: the registry routes
+// nothing, so this array is where a menu entry becomes a URL.
+Route::get('/previews/workspace/{resource?}', function (?string $resource = null) use ($workspacePages, $standalonePages) {
+    $resource ??= array_key_first($workspacePages);
+
+    abort_unless(isset($workspacePages[$resource]), 404);
+
+    return view('previews.workspace', [
+        'title' => $standalonePages['workspace'][0],
+        'subtitle' => $standalonePages['workspace'][1],
+        'groups' => app(Workspace::class)->navigation(),
+        'urls' => array_combine(
+            array_keys($workspacePages),
+            array_map(fn (string $key): string => '/previews/workspace/'.$key, array_keys($workspacePages)),
+        ),
+        'active' => $resource,
+        'component' => $workspacePages[$resource],
+    ]);
+});
 
 foreach ($resourcePages as $slug => [$title, $subtitle, $component, $params]) {
     Route::get('/previews/'.$slug, fn () => view('previews.resource', [

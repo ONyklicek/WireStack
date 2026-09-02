@@ -22,9 +22,13 @@ use Workbench\App\Livewire\Previews\WidgetPreview;
 use Workbench\App\Livewire\Resources\CreateInvoice;
 use Workbench\App\Livewire\Resources\EditInvoice;
 use Workbench\App\Livewire\Resources\InvoiceItemsRelationManager;
+use Workbench\App\Livewire\Resources\ListDocuments;
 use Workbench\App\Livewire\Resources\ListInvoices;
+use Workbench\App\Livewire\Resources\ListTasks;
 use Workbench\App\Livewire\Resources\ViewInvoice;
+use Workbench\App\Resources\DocumentResource;
 use Workbench\App\Resources\InvoiceResource;
+use Workbench\App\Resources\TaskResource;
 
 class WorkbenchServiceProvider extends ServiceProvider
 {
@@ -37,7 +41,15 @@ class WorkbenchServiceProvider extends ServiceProvider
         // the API counted as finished. Declared in config the way an application
         // does, not registered by hand, so the config path is what the preview
         // proves.
-        config()->set('wire-core.resources', [InvoiceResource::class]);
+        // Three of them, in an order the menu deliberately does not keep:
+        // Documents is registered last and sorts first inside its group, so the
+        // sidebar and this array disagree — which is what makes a rendered menu
+        // provable rather than merely present.
+        config()->set('wire-core.resources', [
+            InvoiceResource::class,
+            TaskResource::class,
+            DocumentResource::class,
+        ]);
     }
 
     /**
@@ -64,6 +76,8 @@ class WorkbenchServiceProvider extends ServiceProvider
             TablePreview::class,
             WidgetPreview::class,
             ListInvoices::class,
+            ListTasks::class,
+            ListDocuments::class,
             CreateInvoice::class,
             EditInvoice::class,
             ViewInvoice::class,
