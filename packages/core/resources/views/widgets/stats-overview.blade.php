@@ -1,4 +1,23 @@
 <div class="wire-stats-overview">
+    {{-- The widget's own heading. Every other widget view draws one and this one
+         did not, so `StatsOverviewWidget::make()->heading(…)` was API that did
+         nothing — found by building a dashboard out of them (V2.6 step 3), and
+         invisible to the existing test, which asserted the getter rather than
+         the markup. Not extracted into a shared partial: the four surfaces wrap
+         these two lines differently on purpose (a chart's sits beside its
+         filter, a table's above a border), and collapsing distinct surfaces into
+         one helper is what CLAUDE.md forbids. --}}
+    @if($widget->getHeading() || $widget->getDescription())
+        <div class="mb-4">
+            @if($widget->getHeading())
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ $widget->getHeading() }}</h3>
+            @endif
+            @if($widget->getDescription())
+                <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{{ $widget->getDescription() }}</p>
+            @endif
+        </div>
+    @endif
+
     {{-- Responsive: 1 col on mobile, growing toward the configured count (an
          inline repeat() ignored the viewport and crushed the cards on phones). --}}
     <div @class([

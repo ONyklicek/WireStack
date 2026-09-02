@@ -670,6 +670,117 @@ interface HasWidgets
 
 ---
 
+## Dashboard (declared, not a component)
+
+`WithWidgets` above puts a dashboard *inside* a Livewire component, which is
+fine until something else needs it: a component cannot be registered, listed in
+a menu, or reused on a second page, and its widgets are unreachable from
+anywhere but itself.
+
+`Dashboard` holds the declaration on its own, the way a `Resource` holds a
+table's:
+
+```php
+use NyonCode\WireCore\Widgets\Dashboard;   // [tl! focus:start]
+
+final class SalesDashboard extends Dashboard
+{
+    public function widgets(): array
+    {
+        return [
+            StatsOverviewWidget::make()->stats([Stat::make('Revenue', '1.2M')]),
+            ChartWidget::make()->heading('Last 30 days')->type('line'),
+        ];
+    }
+
+    public function columns(): int
+    {
+        return 3;
+    }
+}   // [tl! focus:end]
+```
+
+`php artisan make:wire-dashboard Sales` generates exactly that — into
+`app/Dashboards/`, from a stub you can publish and change:
+
+```bash
+php artisan vendor:publish --tag=wire-core::stubs
+```
+
+A published `stubs/dashboard.stub` wins over the package's, the way Laravel's
+own `stub:publish` works.
+
+Register it the way resources are registered:
+
+```php
+// config/wire-core.php
+'dashboards' => [
+    App\Dashboards\SalesDashboard::class,
+],
+```
+
+### Where an application registers them
+
+Dashboards and navigation groups belong to neither a resource nor a dashboard —
+they are what an application composes. wire-core ships a provider for exactly
+that, the way Cashier and Fortify do:
+
+```bash
+php artisan vendor:publish --tag=wire-core::providers
+```
+
+That writes `app/Providers/WireDashboardServiceProvider.php`, which is yours to
+edit: register it in `bootstrap/providers.php` and declare your dashboards and
+your menu's groups in one place.
+
+### Rendering it
+
+`WirePanels\Resources\Pages\DashboardPage` renders one, exactly as `ListPage`
+renders a resource's table — it composes `WithWidgets`, so the grid, the
+visibility rules and the per-widget polling above are unchanged:
+
+```php
+use NyonCode\WirePanels\Resources\Pages\DashboardPage;
+
+class SalesDashboardPage extends DashboardPage
+{
+    protected static ?string $dashboard = SalesDashboard::class;
+}
+```
+
+Both paths stay first class: a page that declares its own `getWidgets()` and
+names no dashboard works exactly as before. A page that declares neither refuses
+to render rather than showing an empty grid, because empty reads as "no widgets"
+rather than as a mistake.
+
+### Putting it in the menu
+
+A dashboard reaches a menu the same way a resource does — by implementing
+`ProvidesNavigation`:
+
+```php
+public static function navigation(): NavigationItem
+{
+    return NavigationItem::make('Sales')->icon('outline:chart-bar')->group('insights');
+}
+```
+
+Nothing about `Workspace` knows what a dashboard is. `DashboardRegistry` is a
+`NavigationSource`, and a workspace lists whatever its sources hand it — which
+is what lets a menu mix resources, dashboards and anything an application
+registers later. See [Resources](resources.md#navigation-and-workspace).
+
+### Dashboard API
+
+| Method | Returns | Purpose |
+| --- | --- | --- |
+| `widgets(): array` | `array<int, Widget>` | The widgets, in layout order. Required |
+| `columns(): int` | `int` | Grid columns; defaults to 2 |
+| `static key(): string` | `string` | Identity, derived from the class name minus `Dashboard` |
+| `static label(): string` | `string` | Human name; the page's default heading |
+
+---
+
 ## Authorization
 
 Widgets inherit authorization from `HasVisibility` which uses the `HasAuthorization` trait. See [Authorization](#authorization) for details.

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WirePanels\Tests;
 
+use Livewire\Livewire;
 use Livewire\LivewireServiceProvider;
 use NyonCode\WireCore\WireCoreServiceProvider;
 use NyonCode\WireForms\WireFormsServiceProvider;
@@ -22,6 +23,29 @@ abstract class TestCase extends BaseTestCase
             WireTableServiceProvider::class,
             WirePanelsServiceProvider::class,
         ];
+    }
+
+    /**
+     * The message a page refuses with.
+     *
+     * A page's refusal is thrown while Livewire renders it, so it arrives
+     * wrapped in a ViewException rather than as the ResourcePageException it
+     * started as. The wrapper keeps the full message, which is what a developer
+     * reads, so the tests assert on that rather than on the class.
+     *
+     * Here rather than copied into each test file: two page tests needed it and
+     * a third will, which is the point at which a copied try/catch starts
+     * disagreeing with itself.
+     */
+    protected function refusalMessage(string $page): string
+    {
+        try {
+            Livewire::test($page);
+        } catch (\Throwable $e) {
+            return $e->getMessage();
+        }
+
+        return '';
     }
 
     protected function getEnvironmentSetUp($app): void

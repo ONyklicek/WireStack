@@ -30,7 +30,15 @@ import { openPage, checker, sleep } from './lib/cdp.mjs';
 const base = process.env.PREVIEW_BASE ?? `${process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085'}/previews`;
 const { check, finish } = checker();
 
-const page_ = await openPage({ url: `${base}/workspace`, shotPrefix: 'workspace-nav', width: 1400, height: 1000 });
+// The menu the workbench declares, in the order it must be drawn in. One copy:
+// this driver asserted it twice for a while, and the second copy is what went
+// stale the moment a third group appeared.
+const GROUP_KEYS = ['insights', 'operations', 'billing'];
+const GROUP_HEADINGS = ['Insights', 'Operations', 'Billing & invoicing'];
+
+// Enter on a resource, not on the shell's default page — the default is the
+// dashboard, and section 7 needs somewhere to navigate *to*.
+const page_ = await openPage({ url: `${base}/workspace/invoices`, shotPrefix: 'workspace-nav', width: 1400, height: 1000 });
 const { page, eval_, waitFor, shot, shotDir, consoleErrors, badResponses, close } = page_;
 
 try {
@@ -72,14 +80,21 @@ try {
   // billing resource is the FIRST one registered. So this order can only come
   // from the declared group sort — an implicit menu would read the other way.
   const drawnKeys = await groupKeys();
-  check('groups are drawn in their declared order, against registration order', JSON.stringify(drawnKeys) === JSON.stringify(['operations', 'billing']), drawnKeys.join(' → '));
+  check('groups are drawn in their declared order, against registration order', JSON.stringify(drawnKeys) === JSON.stringify(GROUP_KEYS), drawnKeys.join(' → '));
 
   const drawnHeadings = await headings();
-  check('the heading is the group\'s label, not its key', JSON.stringify(drawnHeadings) === JSON.stringify(['Operations', 'Billing & invoicing']), drawnHeadings.join(' → '));
-  check('a declared group draws its icon', (await groupIcons()) === 2, `${await groupIcons()} icon(s)`);
+  check('the heading is the group\'s label, not its key', JSON.stringify(drawnHeadings) === JSON.stringify(GROUP_HEADINGS), drawnHeadings.join(' → '));
+  check('a declared group draws its icon', (await groupIcons()) === GROUP_KEYS.length, `${await groupIcons()} icon(s)`);
 
   const drawnLabels = await labels();
-  check('every entry is named', drawnLabels.length === 3 && drawnLabels.every((l) => l.length > 0), JSON.stringify(drawnLabels));
+  check('every entry is named', drawnLabels.length === 4 && drawnLabels.every((l) => l.length > 0), JSON.stringify(drawnLabels));
+
+  // An entry whose key the application has no page for renders as plain text
+  // rather than a link — silent, and exactly what a mismatched key produces.
+  // Caught this during step 3: a dashboard keyed itself `operations` from its
+  // class name and the url map said something else.
+  const unlinked = await eval_(`JSON.stringify([...document.querySelectorAll('[data-testid="workspace-nav-item"]')].filter(a => ! a.getAttribute('href')).map(a => a.dataset.resource))`).then(JSON.parse);
+  check('every entry links somewhere', unlinked.length === 0, unlinked.join(', ') || 'none unlinked');
 
   // Two of the three resources name no menu label of their own; the workspace
   // names them after the resource. Before that fallback existed these rendered
@@ -99,6 +114,13 @@ try {
   check('badge(…, \'danger\') reaches the canonical badge surface', (await badgeClassOf('invoices')).includes('bg-red-100'), await badgeClassOf('invoices'));
   check('the tasks entry carries its own count', /^\d+$/.test(await badgeOf('tasks')), await badgeOf('tasks'));
   check('an entry that declared no badge draws none', (await badgeOf('documents')) === '');
+
+  // ── 2b. A menu entry that is not a resource at all ───────────────────────
+  //
+  // The dashboard reaches this menu through NavigationSource, from its own
+  // registry, without Workspace (L1) ever importing Widgets (L2).
+  const insights = await inGroup('insights');
+  check('a dashboard sits in the menu beside the resources', JSON.stringify(insights) === JSON.stringify(['Overview']), insights.join(', '));
 
   // ── 3. The page you are on is the entry that is marked ───────────────────
   check('the current resource is the active entry', (await activeKey()) === 'invoices', await activeKey());
@@ -147,8 +169,24 @@ try {
   check('a second hop reaches the third resource', !! onDocuments, `${await eval_('location.pathname')}, ${await rowCount()} rows`);
   check('the menu still names every entry after two hops', (await labels()).every((l) => l.length > 0), JSON.stringify(await labels()));
   check('the badges survived the hops', /^\d+$/.test(await badgeOf('invoices')) && /^\d+$/.test(await badgeOf('tasks')), `${await badgeOf('invoices')} / ${await badgeOf('tasks')}`);
-  check('so did the group order and the headings', JSON.stringify(await groupKeys()) === JSON.stringify(['operations', 'billing']) && JSON.stringify(await headings()) === JSON.stringify(['Operations', 'Billing & invoicing']), (await headings()).join(' → '));
+  check('so did the group order and the headings', JSON.stringify(await groupKeys()) === JSON.stringify(GROUP_KEYS) && JSON.stringify(await headings()) === JSON.stringify(GROUP_HEADINGS), (await headings()).join(' → '));
   await shot('03-documents');
+
+  // ── 7. And the dashboard renders, from a declaration, not a component ────
+  await clickEntry('overview');
+  const onDashboard = await waitFor(`location.pathname === '/previews/workspace/overview' && !! document.querySelector('.wire-widget-grid')`);
+  check('the dashboard entry opens the dashboard', !! onDashboard, await eval_('location.pathname'));
+
+  const statLabels = await eval_(`JSON.stringify([...document.querySelectorAll('.wire-widget-grid')].map(g => g.innerText).join(' ').match(/Invoices|Overdue|Open tasks|Documents/g) ?? [])`).then(JSON.parse);
+  check('its widgets are the ones the dashboard declared', ['Invoices', 'Overdue', 'Open tasks', 'Documents'].every((l) => statLabels.includes(l)), statLabels.join(', '));
+
+  // Real counts, not fixed text: a dashboard of constants would render the same
+  // whether or not the declaration was ever reached.
+  const numbers = await eval_(`JSON.stringify((document.querySelector('.wire-widget-grid')?.innerText ?? '').match(/\\b\\d+\\b/g) ?? [])`).then(JSON.parse);
+  check('and they carry counts from the database', numbers.length >= 4, numbers.join(', '));
+
+  check('the menu still marks where you are', (await activeKey()) === 'overview', await activeKey());
+  await shot('04-dashboard');
 
   await sleep(200);
   finish({ consoleErrors, badResponses, shotDir });

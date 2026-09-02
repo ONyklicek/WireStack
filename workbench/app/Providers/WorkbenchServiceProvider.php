@@ -9,6 +9,8 @@ use Illuminate\Support\Str;
 use Livewire\Livewire;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
+use Workbench\App\Dashboards\OverviewDashboard;
+use Workbench\App\Livewire\Dashboards\ShowOverview;
 use Workbench\App\Livewire\Previews\CorePreview;
 use Workbench\App\Livewire\Previews\FieldPreview;
 use Workbench\App\Livewire\Previews\FormPreview;
@@ -52,6 +54,10 @@ class WorkbenchServiceProvider extends ServiceProvider
             TaskResource::class,
             DocumentResource::class,
         ]);
+
+        // Dashboards are their own registry and their own config key: they are a
+        // different kind of thing that a menu happens to list beside resources.
+        config()->set('wire-core.dashboards', [OverviewDashboard::class]);
     }
 
     /**
@@ -65,6 +71,12 @@ class WorkbenchServiceProvider extends ServiceProvider
         // registration order disagree on purpose: a menu that ignored the
         // declared sort would render visibly wrong instead of identical.
         $this->app->make(NavigationGroups::class)->registerMany([
+            // The dashboard's group, above both resource groups — a heading with
+            // nothing in it but an entry that is not a resource.
+            NavigationGroup::make('insights')
+                ->label('Insights')
+                ->icon('outline:chart-bar')
+                ->sort(5),
             NavigationGroup::make('operations')
                 ->label('Operations')
                 ->icon('outline:wrench-screwdriver')
@@ -99,6 +111,7 @@ class WorkbenchServiceProvider extends ServiceProvider
             ListInvoices::class,
             ListTasks::class,
             ListDocuments::class,
+            ShowOverview::class,
             CreateInvoice::class,
             EditInvoice::class,
             ViewInvoice::class,

@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
+use NyonCode\WireCore\Core\Resources\Contracts\NavigationSource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
 use NyonCode\WireCore\Core\Resources\Workspace;
+use NyonCode\WireCore\Exceptions\ResourceRegistrationException;
 
 /*
  * The registered resources, arranged the way a menu shows them.
@@ -146,7 +148,7 @@ function wsWorkspaceWith(array $groups, string ...$resources): Workspace
     $declared = new NavigationGroups;
     $declared->registerMany($groups);
 
-    return new Workspace($registry, $declared);
+    return new Workspace([$registry], $declared);
 }
 
 /** @return array<int, string> */
@@ -213,7 +215,7 @@ it('leaves out a resource that declares no navigation', function () {
     $workspace = wsWorkspace(WsInternalResource::class, WsSettingResource::class);
 
     expect($workspace->items())->toHaveCount(1)
-        ->and($workspace->resources())->toHaveCount(2);
+        ->and($workspace->registered())->toHaveCount(2);
 });
 
 it('leaves out an entry hidden by its own condition', function () {
@@ -287,7 +289,7 @@ it('takes a hidden group out of the menu, entries and all', function () {
         // that answered it differently would be a second answer.
         ->and(array_keys($workspace->items()))->toBe(['ws-settings'])
         // Still registered and still routable — hidden is not unregistered.
-        ->and($workspace->resources())->toHaveCount(3);
+        ->and($workspace->registered())->toHaveCount(3);
 });
 
 it('never fills the registered group itself', function () {
@@ -312,4 +314,97 @@ it('returns the flat list in sort order, not registration order', function () {
     $items = wsWorkspace(WsOrderResource::class, WsCustomerResource::class)->items();
 
     expect(array_keys($items))->toBe(['ws-customers', 'orders']);
+});
+
+// =============================================================================
+// A menu made of more than resources (V2.6 step 3)
+// =============================================================================
+
+/** A second source, standing in for the dashboard registry without importing L2. */
+final class WsExtraSource implements NavigationSource
+{
+    /** @param array<string, class-string> $classes */
+    public function __construct(private array $classes) {}
+
+    public function navigableClasses(): array
+    {
+        return $this->classes;
+    }
+}
+
+/** Not a resource at all — it only declares a menu entry, as a dashboard does. */
+class WsReportPage implements ProvidesNavigation
+{
+    public static function navigation(): NavigationItem
+    {
+        return NavigationItem::make('Weekly report')->group('Sales')->sort(5);
+    }
+}
+
+/** And one that names no entry label, having no plural to fall back to. */
+class WsUnnamedPage implements ProvidesNavigation
+{
+    public static function navigation(): NavigationItem
+    {
+        return NavigationItem::make()->group('Sales');
+    }
+}
+
+it('lists entries from a source that holds no resources at all', function () {
+    // The whole point of NavigationSource: Workspace lives in L1 and a dashboard
+    // is L2, so the menu cannot be built by teaching it what a dashboard is.
+    $registry = new ResourceRegistry;
+    $registry->register(WsOrderResource::class);
+
+    $workspace = new Workspace(
+        [$registry, new WsExtraSource(['weekly-report' => WsReportPage::class])],
+        new NavigationGroups,
+    );
+
+    $nav = $workspace->navigation();
+
+    expect(array_keys($nav['Sales']->getItems()))->toBe(['weekly-report', 'orders'])
+        ->and(wsLabels($nav['Sales']))->toBe(['Weekly report', 'Orders'])
+        ->and(array_keys($workspace->registered()))->toBe(['orders', 'weekly-report']);
+});
+
+it('leaves an entry unnamed when its class has no plural to fall back to', function () {
+    // The fallback is a resource's, because `pluralLabel()` is a resource's word.
+    // Anything else in a menu names its own entry rather than reaching for a
+    // general "what is this class called", which would be a third vocabulary.
+    $workspace = new Workspace(
+        [new WsExtraSource(['unnamed' => WsUnnamedPage::class])],
+        new NavigationGroups,
+    );
+
+    expect($workspace->items()['unnamed']->getLabel())->toBeNull();
+});
+
+it('refuses two sources claiming one key', function () {
+    // Whichever way it were resolved, one entry would take the other's place —
+    // and a menu that quietly lost a row is noticed on the day that row mattered.
+    $registry = new ResourceRegistry;
+    $registry->register(WsOrderResource::class);
+
+    $workspace = new Workspace(
+        [$registry, new WsExtraSource(['orders' => WsReportPage::class])],
+        new NavigationGroups,
+    );
+
+    expect(fn () => $workspace->navigation())
+        ->toThrow(ResourceRegistrationException::class);
+});
+
+it('reads sources in the order it was given them', function () {
+    $registry = new ResourceRegistry;
+    $registry->register(WsSettingResource::class);
+
+    $workspace = new Workspace(
+        [new WsExtraSource(['weekly-report' => WsReportPage::class]), $registry],
+        new NavigationGroups,
+    );
+
+    // Sales first because the extra source came first: group order is
+    // first-appearance, and that is now a property of the source order.
+    expect(array_keys($workspace->navigation()))->toBe(['Sales', '']);
 });

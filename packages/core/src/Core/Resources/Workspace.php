@@ -5,17 +5,24 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Core\Resources;
 
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
+use NyonCode\WireCore\Core\Resources\Contracts\NavigationSource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
+use NyonCode\WireCore\Exceptions\ResourceRegistrationException;
 
 /**
- * The registered resources, arranged the way a menu shows them.
+ * Everything registered for a menu, arranged the way a menu shows it.
  *
- * Reads the two registries and nothing else, so it never instantiates a
- * resource: {@see ProvidesNavigation} is static for exactly this, and a sidebar
- * built from fifty resources composes no table and no form.
+ * Reads its sources and the declared groups and nothing else, so it never
+ * instantiates anything: {@see ProvidesNavigation} is static for exactly this,
+ * and a sidebar built from fifty resources composes no table and no form.
+ *
+ * It does not know what a resource is, and since V2.6 step 3 that is the point.
+ * A dashboard belongs in a menu too, and `Widgets/` is a layer above this one —
+ * so the classes arrive through {@see NavigationSource}, and whoever registers
+ * them decides what they are.
  *
  * Deliberately small. It groups and orders entries; it owns no routing, no URL
  * shell and no layout, because a registry that held those would be a panel and
@@ -24,8 +31,11 @@ use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
  */
 final readonly class Workspace
 {
+    /**
+     * @param  array<int, NavigationSource>  $sources  Where the menu's classes come from, in the order they are read.
+     */
     public function __construct(
-        private ResourceRegistry $registry,
+        private array $sources,
         private NavigationGroups $groups,
     ) {}
 
@@ -96,24 +106,45 @@ final readonly class Workspace
     }
 
     /**
-     * The resource classes behind the menu, in registration order.
+     * Every class behind the menu, in registration order — whatever kind it is.
      *
-     * @return array<string, class-string<DescribesResource>>
+     * Includes the ones that declare no entry: registered and listed are two
+     * different questions, and this answers the first.
+     *
+     * @return array<string, class-string>
      */
-    public function resources(): array
+    public function registered(): array
     {
-        return $this->registry->all();
+        $classes = [];
+
+        foreach ($this->sources as $source) {
+            foreach ($source->navigableClasses() as $key => $class) {
+                $existing = $classes[$key] ?? null;
+
+                // Two sources claiming one key is refused rather than resolved.
+                // Whichever way it were resolved, one entry would take another's
+                // place in the menu — and a menu that quietly lost a row is
+                // noticed on the day the row was the one someone needed.
+                if ($existing !== null && $existing !== $class) {
+                    throw ResourceRegistrationException::duplicateResourceKey($key, $existing, $class);
+                }
+
+                $classes[$key] = $class;
+            }
+        }
+
+        return $classes;
     }
 
     /**
      * Every entry that belongs in the menu, in registration order.
      *
-     * Keyed by resource key, because an entry is only half of what a menu row
-     * needs: the other half is which resource it stands for, and that is what a
-     * consumer turns into a link. {@see NavigationItem} deliberately holds no
-     * URL — a registry that held URLs would be a panel — so identity has to
-     * arrive some other way, and the key the registry already routes on is that
-     * way.
+     * Keyed by the key its class was registered under, because an entry is only
+     * half of what a menu row needs: the other half is what it stands for, and
+     * that is what a consumer turns into a link. {@see NavigationItem}
+     * deliberately holds no URL — a registry that held URLs would be a panel —
+     * so identity has to arrive some other way, and the key a source already
+     * addresses the class by is that way.
      *
      * @return array<string, NavigationItem>
      */
@@ -121,14 +152,14 @@ final readonly class Workspace
     {
         $items = [];
 
-        foreach ($this->registry->all() as $key => $resource) {
-            if (! is_subclass_of($resource, ProvidesNavigation::class)) {
-                // Registered and routable, just not in the menu — what an
+        foreach ($this->registered() as $key => $class) {
+            if (! is_subclass_of($class, ProvidesNavigation::class)) {
+                // Registered and reachable, just not in the menu — what an
                 // internal or nested resource wants.
                 continue;
             }
 
-            $item = $resource::navigation();
+            $item = $class::navigation();
 
             if (! $item->isVisible() || ! $this->groupIsVisible($item)) {
                 continue;
@@ -142,8 +173,13 @@ final readonly class Workspace
             // for the same question — and the copy that drifts, because nothing
             // renders the two side by side. Here the entry stays free to
             // override, and one that does not is still named.
-            if ($item->getLabel() === null) {
-                $item->label($resource::pluralLabel());
+            //
+            // Only a resource has a plural to fall back to. Anything else in a
+            // menu names its own entry, which is the honest division: there is
+            // no general "what is this class called" to reach for, and inventing
+            // one would be a third vocabulary beside `HasLabel` and this.
+            if ($item->getLabel() === null && is_subclass_of($class, DescribesResource::class)) {
+                $item->label($class::pluralLabel());
             }
 
             $items[$key] = $item;

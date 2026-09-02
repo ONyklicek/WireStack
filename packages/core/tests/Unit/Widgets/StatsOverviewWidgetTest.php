@@ -57,6 +57,28 @@ it('supports heading and description', function () {
         ->and($widget->getDescription())->toBe('Key metrics');
 });
 
+it('draws the heading and description it was given', function () {
+    // Asserted on the markup, not on the getters above: this view drew neither
+    // for as long as it existed, and the getter test passed the whole time —
+    // `->heading()` was API that did nothing. Found by composing a dashboard out
+    // of these widgets (V2.6 step 3), where the headings simply were not there.
+    $html = StatsOverviewWidget::make()
+        ->heading('Overview')
+        ->description('Key metrics')
+        ->stats([Stat::make('Revenue', '1.2M')])
+        ->toHtml();
+
+    expect($html)->toContain('Overview')
+        ->toContain('Key metrics')
+        ->toContain('Revenue');
+});
+
+it('draws no heading block when it was given neither', function () {
+    $html = StatsOverviewWidget::make()->stats([Stat::make('Revenue', '1.2M')])->toHtml();
+
+    expect($html)->not->toContain('<h3');
+});
+
 it('supports column span', function () {
     $widget = StatsOverviewWidget::make()->columnSpanFull();
 

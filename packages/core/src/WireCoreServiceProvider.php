@@ -27,6 +27,7 @@ use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
+use NyonCode\WireCore\Core\Resources\Workspace;
 use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
 use NyonCode\WireCore\Core\Tenancy\NullTenantResolver;
 use NyonCode\WireCore\Core\Tenancy\Tenancy;
@@ -55,6 +56,8 @@ use NyonCode\WireCore\Notifications\Drivers\SessionDriver;
 use NyonCode\WireCore\Notifications\Drivers\StackDriver;
 use NyonCode\WireCore\Notifications\NotificationBell;
 use NyonCode\WireCore\Notifications\NotificationManager;
+use NyonCode\WireCore\Widgets\Console\MakeDashboardCommand;
+use NyonCode\WireCore\Widgets\DashboardRegistry;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class WireCoreServiceProvider extends PackageServiceProvider
@@ -89,6 +92,18 @@ class WireCoreServiceProvider extends PackageServiceProvider
             })
             ->hasConfig()
             ->hasCommand(PruneAuditEntriesCommand::class)
+            ->hasCommand(MakeDashboardCommand::class)
+            // The dashboard generator's template, publishable so an application
+            // can change what it produces — Laravel's own `stub:publish`
+            // convention, which the command honours by preferring
+            // `base_path('stubs/dashboard.stub')` over this one.
+            ->hasStubs(['../stubs/dashboard.stub'])
+            // A provider the consumer owns, the way Cashier and Fortify ship
+            // one: where an application registers its dashboards and declares
+            // its navigation groups. Shipped as a .stub so the package's own
+            // test suite, PHPStan and coverage never load a template that
+            // references App\ classes.
+            ->hasProviders(['../stubs/WireDashboardServiceProvider.stub'])
             // Wire the audit pipeline: HasAuditable models fire AuditableEvents and
             // this subscriber persists them through AuditLogger. Declared rather than
             // subscribed by hand — the toolkit subscribes it in the same boot pass —
@@ -410,12 +425,22 @@ class WireCoreServiceProvider extends PackageServiceProvider
     protected function registerResources(): void
     {
         $this->app->singleton(ResourceRegistry::class);
+        $this->app->singleton(DashboardRegistry::class);
 
         // The menu's headings. A singleton for the reason the resource registry
         // is one: an application declares them once at boot and every request
         // asks the same object, so a fresh instance per resolve would answer
         // with an empty menu on the request that renders it.
         $this->app->singleton(NavigationGroups::class);
+
+        // Assembled here rather than autowired, because what a menu is made of
+        // is this provider's decision and not the Workspace's: it takes a list
+        // of sources and never learns what kind of thing any of them holds.
+        // An application adding a source of its own binds its own list.
+        $this->app->bind(Workspace::class, fn ($app): Workspace => new Workspace(
+            [$app->make(ResourceRegistry::class), $app->make(DashboardRegistry::class)],
+            $app->make(NavigationGroups::class),
+        ));
     }
 
     /**
@@ -428,6 +453,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
     protected function bootResources(): void
     {
         $this->app->make(ResourceRegistry::class)->registerMany(config('wire-core.resources', []));
+        $this->app->make(DashboardRegistry::class)->registerMany(config('wire-core.dashboards', []));
     }
 
     protected function registerPlugins(): void

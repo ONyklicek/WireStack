@@ -36,11 +36,18 @@ final class ResourcePageException extends RuntimeException implements WireExcept
         );
     }
 
-    public static function notAResource(string $page, string $resource): self
+    /**
+     * @param  string  $expected  The contract or base class the page needed. Defaults to
+     *                            the resource contract; a dashboard page names its own,
+     *                            because a message that says DescribesResource to someone
+     *                            who pointed at the wrong dashboard sends them looking in
+     *                            the wrong place.
+     */
+    public static function notAResource(string $page, string $resource, string $expected = DescribesResource::class): self
     {
         return new self(
             "[{$page}] points \$resource at [{$resource}], which does not implement ".
-            DescribesResource::class.'.'
+            $expected.'.'
         );
     }
 

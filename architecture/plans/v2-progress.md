@@ -1,7 +1,7 @@
 ---
 title: V2 — kde to stojí a čím pokračovat
 date: 2026-09-02
-scope: V2.0–V2.5 (hotové), ADR 0025 (rozpracované), V2.6 (běží — kroky 1 a 2 hotové)
+scope: V2.0–V2.5 (hotové), ADR 0025 (rozpracované), V2.6 (běží — kroky 1–3 hotové)
 status: progress record — aktualizovat na konci každého běhu
 ---
 
@@ -129,6 +129,29 @@ Tři věci stojí za zapamatování:
 
 **Vstup pro krok 3:** `Workspace` iteruje jen `ResourceRegistry`, takže dashboard
 se dnes do menu nemá jak dostat. To je první otázka kroku 3, ne poslední.
+
+#### Krok 3 hotový 2026-09-02: `Dashboard`
+
+`Dashboard` (deklarace widgetů mimo komponentu) + `DashboardPage` (Livewire
+stránka nad **existujícím** `WithWidgets`) + `DashboardRegistry` + kontrakt
+`NavigationSource`, přes který `Workspace` čte zdroje místo registru resources.
+K tomu generátor `php artisan make:wire-dashboard` s publikovatelným stubem
+a publikovatelný `WireDashboardServiceProvider` — jedno místo, kde aplikace
+registruje dashboardy i skupiny menu. Driver 33/33.
+
+**Zadání kroku bylo v jedné věci špatně** (§0e plánu): §0b psala „složení
+widgetů do stránky dnes nevlastní nikdo". Vlastníka to má — `WithWidgets` —
+a chybějící byla **deklarace mimo Livewire komponentu**. Bez toho se dashboard
+nedal zaregistrovat, vypsat ani dát do menu.
+
+**Vrstvy určily architekturu.** `Workspace` je L1, `Widgets` L2, takže
+„`Workspace` bude znát `Dashboard`" je hrana, kterou `ModuleLayersTest` shodí.
+Obecný zdroj nebyl estetická volba, ale jediná varianta, která projde branou —
+a vedlejším efektem je, že **další typ položky menu už `Workspace` měnit
+nebude**, což je přesně to, co bude chtít krok 5.
+
+**Dva defekty** (§2): `StatsOverviewWidget::heading()` nic nekreslilo, a
+`parent::` na metodu z traitu.
 
 ### V2.1 — hotová ✅
 
@@ -1001,6 +1024,32 @@ zpět), ne konkrétní data. Seeder u některých tabulek slibuje „determinist
 purpose — the CDP drivers address rows by name"; pro `tasks` a `documents` to
 už neplatí.
 
+**V2.6/krok 3: `->heading()` na jednom widgetu nekreslilo nic — a test na to
+existoval.** `Widget::heading()`/`description()` je API základní třídy a **čtyři
+z pěti** widget views ho vykreslí; `stats-overview.blade.php` ne, od svého
+vzniku. Test `it('supports heading and description')` přitom existoval — jenže
+asertoval **getter** (`getHeading() === 'Overview'`), což platí bez ohledu na to,
+jestli to někdo nakreslí. Je to tentýž tvar jako lživý test na CZK měnu níž
+v tomhle souboru: pojmenovaný podle schopnosti, tvrdící něco, co se schopností
+nesouvisí.
+
+Našlo se to tím, že dashboard ve workbenchi složil čtyři `StatsOverviewWidget`y
+s nadpisy — a v prohlížeči tam žádné nadpisy nebyly. Symptom má jen oko.
+
+**A nesloučil jsem to do sdíleného partialu, i když to na první pohled volá po
+extrakci.** Čtyři views ten blok „mají", ale každý jinak: chart ho staví vedle
+filtru, bar-chart vedle menu, table nad oddělovač. Sdílené jsou dvě podmínky nad
+dvěma gettery, ne markup — a `CLAUDE.md` slévání různých povrchů do jednoho
+helperu výslovně zakazuje. Doplněno tedy jen tam, kde chybělo, a test je na
+markupu.
+
+**Druhý defekt jsem si vyrobil sám a spadl až v prohlížeči:**
+`parent::getWidgetColumns()` v `DashboardPage`. Ta metoda je z **traitu**, ne
+z rodiče — rodičem je `Livewire\Component`, který ji nemá — takže to prošlo
+kompilací i PHPStanem a shodilo se až při renderu přes Livewire `__call`.
+Správně je alias při `use`. Užitečné pravidlo pro každý další host trait v tomhle
+repu: **přebíjíš-li metodu traitu, `parent::` není cesta zpět.**
+
 **V2.6/krok 2: obě kopie jednoho pravidla jsem napsal ve stejné hodině — a ta
 nedosažitelná vypadala jako ta hlavní.** `Workspace::navigation()` dostalo
 `if (! $group->isVisible()) { continue; }`, což se čte jako místo, kde pravidlo
@@ -1059,16 +1108,15 @@ doplní. Pořadí je v §0b a **není to pořadí z §2 toho plánu**: začalo s
 konzumentem navigace, protože `Workspace` žádného neměl, a bez vykresleného menu
 nemá `NavigationGroup` ani `DomainModule` kde selhat v prohlížeči.
 
-**Kroky 1 a 2 jsou hotové (2026-09-02)** — sidebar ve workbenchi nad třemi
+**Kroky 1–3 jsou hotové (2026-09-02)** — sidebar ve workbenchi nad třemi
 resources (driver 24/24), a na něm postavená `NavigationGroup`: klíč oddělený od
 nadpisu, ikona, deklarované pořadí skupin, viditelnost celé skupiny (driver
 27/27). Sbalení se vědomě nedoplnilo. Detaily v §0c a §0d plánu.
 
-**Na řadě je krok 3, `Dashboard`** — owner nad hotovými widgety
-(`packages/core/src/Widgets/`), které dnes skládá ručně preview. První otázka je
-změřená už teď: `Workspace` iteruje **jen `ResourceRegistry`**, takže dashboard
-se do menu nemá jak dostat, dokud se nerozhodne, jestli je to resource, nebo
-druhý zdroj položek navigace.
+**Na řadě je krok 4, registr workflow** — a plán u něj sám říká, že se přidává
+**jen když ho modul reálně potřebuje**. Bez kroku 5 se to poctivě změřit nedá,
+takže nejpravděpodobnější výsledek je „nedělat, `workflows()` z kontraktu
+vypustit" — ale i to se má doložit měřením, ne odhadnout.
 
 ### Co zbývá otevřené
 

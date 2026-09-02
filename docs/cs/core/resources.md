@@ -443,6 +443,17 @@ to, kam daný resource routuje:
 položka, plochý seznam v pořadí `sort()`, klíčovaný klíčem resource — to, co
 ukáže menu, které skupiny nekreslí. Položky ze skryté skupiny v něm taky nejsou.
 
+`Workspace` neví, co je resource, a to je záměr. Jeho položky přicházejí
+z libovolného počtu zdrojů `NavigationSource` — jedním je `ResourceRegistry`,
+druhým `Widgets\DashboardRegistry` — takže menu míchá resources, dashboardy
+a cokoli, co aplikace zaregistruje později, aniž by se o nich `Workspace`
+dozvěděl. Dva zdroje hlásící se k jednomu klíči jsou odmítnuty, ne smířeny:
+jedna položka by jinak zabrala místo druhé a menu, kterému tiše zmizel řádek, se
+pozná až v den, kdy ten řádek byl potřeba.
+
+Fallback labelu výše je resourcový, protože `pluralLabel()` je slovo resource.
+Cokoli jiného v menu si položku pojmenuje samo.
+
 Stejně jako registr nevlastní `Workspace` routing ani layout — menu vykresluje
 aplikace.
 

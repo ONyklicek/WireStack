@@ -1,0 +1,47 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
+use NyonCode\WireCore\Widgets\Dashboard;
+use NyonCode\WireCore\Widgets\Stat;
+use NyonCode\WireCore\Widgets\StatsOverviewWidget;
+
+class {{ class }} extends Dashboard implements ProvidesNavigation
+{
+    /**
+     * The widgets on this dashboard, in the order they are laid out.
+     */
+    public function widgets(): array
+    {
+        return [
+            StatsOverviewWidget::make()
+                ->heading('{{ class }}')
+                ->stats([
+                    Stat::make('Records', '0'),
+                ]),
+        ];
+    }
+
+    /**
+     * Columns in the grid.
+     */
+    public function columns(): int
+    {
+        return 2;
+    }
+
+    /**
+     * The menu entry. Drop this method (and the interface) for a dashboard that
+     * should not appear in navigation.
+     */
+    public static function navigation(): NavigationItem
+    {
+        return NavigationItem::make()
+            ->icon('outline:chart-bar')
+            ->group('insights');
+    }
+}

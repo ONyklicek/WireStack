@@ -672,6 +672,116 @@ interface HasWidgets
 
 ---
 
+## Dashboard (deklarovaný, ne komponenta)
+
+`WithWidgets` výše dává dashboard *dovnitř* Livewire komponenty, což stačí,
+dokud ho nepotřebuje něco dalšího: komponenta se nedá zaregistrovat, vypsat
+v menu ani použít na druhé stránce a její widgety nejsou odnikud jinud
+dosažitelné.
+
+`Dashboard` drží deklaraci sám, stejně jako `Resource` drží tabulku:
+
+```php
+use NyonCode\WireCore\Widgets\Dashboard;   // [tl! focus:start]
+
+final class SalesDashboard extends Dashboard
+{
+    public function widgets(): array
+    {
+        return [
+            StatsOverviewWidget::make()->stats([Stat::make('Tržby', '1.2M')]),
+            ChartWidget::make()->heading('Posledních 30 dní')->type('line'),
+        ];
+    }
+
+    public function columns(): int
+    {
+        return 3;
+    }
+}   // [tl! focus:end]
+```
+
+`php artisan make:wire-dashboard Sales` přesně tohle vygeneruje — do
+`app/Dashboards/`, ze stubu, který jde publikovat a upravit:
+
+```bash
+php artisan vendor:publish --tag=wire-core::stubs
+```
+
+Publikovaný `stubs/dashboard.stub` má přednost před balíčkovým, stejně jako to
+dělá Laravelí `stub:publish`.
+
+Registruje se stejně jako resources:
+
+```php
+// config/wire-core.php
+'dashboards' => [
+    App\Dashboards\SalesDashboard::class,
+],
+```
+
+### Kde je aplikace registruje
+
+Dashboardy ani navigační skupiny nepatří žádnému resource ani dashboardu — jsou
+to věci, které skládá aplikace. wire-core na to dodává provider, stejně jako to
+dělá Cashier a Fortify:
+
+```bash
+php artisan vendor:publish --tag=wire-core::providers
+```
+
+Publikuje se jako `app/Providers/WireDashboardServiceProvider.php` a je tvůj
+k úpravám: zaregistruj ho v `bootstrap/providers.php` a deklaruj v něm své
+dashboardy i skupiny menu na jednom místě.
+
+### Jak se vykresluje
+
+`WirePanels\Resources\Pages\DashboardPage` ho vykreslí přesně tak, jako
+`ListPage` vykresluje tabulku resource — skládá `WithWidgets`, takže mřížka,
+pravidla viditelnosti i polling jednotlivých widgetů výše zůstávají beze změny:
+
+```php
+use NyonCode\WirePanels\Resources\Pages\DashboardPage;
+
+class SalesDashboardPage extends DashboardPage
+{
+    protected static ?string $dashboard = SalesDashboard::class;
+}
+```
+
+Obě cesty zůstávají rovnocenné: stránka, která si deklaruje vlastní
+`getWidgets()` a žádný dashboard nejmenuje, funguje jako dřív. Stránka, která
+nedeklaruje ani jedno, se odmítne vykreslit místo prázdné mřížky — prázdná se
+čte jako „žádné widgety", ne jako chyba.
+
+### Jak se dostane do menu
+
+Dashboard se do menu dostane stejně jako resource — implementací
+`ProvidesNavigation`:
+
+```php
+public static function navigation(): NavigationItem
+{
+    return NavigationItem::make('Prodej')->icon('outline:chart-bar')->group('insights');
+}
+```
+
+`Workspace` přitom vůbec neví, co je dashboard. `DashboardRegistry` je
+`NavigationSource` a workspace vypisuje to, co mu zdroje podají — díky tomu může
+menu míchat resources, dashboardy a cokoli, co aplikace zaregistruje později.
+Viz [Resources](resources.md#navigace-a-workspace).
+
+### Dashboard API
+
+| Metoda | Vrací | K čemu |
+| --- | --- | --- |
+| `widgets(): array` | `array<int, Widget>` | Widgety v pořadí rozložení. Povinné |
+| `columns(): int` | `int` | Sloupce mřížky; výchozí 2 |
+| `static key(): string` | `string` | Identita, odvozená z názvu třídy bez `Dashboard` |
+| `static label(): string` | `string` | Lidský název; výchozí nadpis stránky |
+
+---
+
 <a id="authorization"></a>
 ## Autorizace
 

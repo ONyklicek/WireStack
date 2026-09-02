@@ -444,6 +444,17 @@ maps the key to whatever it routes that resource to:
 visible entry, flat, in `sort()` order, keyed by resource key — what a menu that
 draws no groups shows. Entries whose group is hidden are not in it either.
 
+`Workspace` does not know what a resource is, and that is deliberate. Its
+entries come from any number of `NavigationSource`s — `ResourceRegistry` is one,
+`Widgets\DashboardRegistry` is another — so a menu mixes resources, dashboards
+and anything an application registers later without `Workspace` learning about
+any of them. Two sources claiming one key is refused rather than resolved: one
+entry would otherwise take the other's place, and a menu that quietly lost a row
+is noticed on the day that row mattered.
+
+The label fallback above is a resource's, because `pluralLabel()` is a resource's
+word. Anything else in a menu names its own entry.
+
 Like the registry, `Workspace` owns no routing and no layout — what renders the
 menu is the application's.
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Route;
 use NyonCode\WireCore\Core\Resources\Workspace;
+use Workbench\App\Livewire\Dashboards\ShowOverview;
 use Workbench\App\Livewire\Previews\CorePreview;
 use Workbench\App\Livewire\Previews\FieldPreview;
 use Workbench\App\Livewire\Previews\FormPreview;
@@ -174,6 +175,10 @@ $resourcePages = [
 // resource key, because that is what the navigation entries are keyed by and
 // what the sidebar turns into a link.
 $workspacePages = [
+    // Keyed by what the menu keys its entries by — which since V2.6 step 3 is
+    // not only resource keys: a dashboard is registered in its own registry and
+    // reaches the same menu through the same contract.
+    'overview' => ShowOverview::class,
     'invoices' => ListInvoices::class,
     'tasks' => ListTasks::class,
     'documents' => ListDocuments::class,
@@ -185,7 +190,7 @@ $workspacePages = [
 // route registered by the workbench is listed here", so they are collected here
 // rather than left to a route call further down.
 $standalonePages = [
-    'workspace' => ['Workspace navigation', 'The sidebar an application builds from Workspace::navigation(): declared groups with their own heading, icon and order, sorted entries, badges, and wire:navigate between the resources.'],
+    'workspace' => ['Workspace navigation', 'The sidebar an application builds from Workspace::navigation(): declared groups with their own heading, icon and order, sorted entries, badges, and wire:navigate between three resources and a dashboard.'],
     'global-search' => ['Global search palette', 'The ⌘K command palette over every registered resource.'],
 ];
 

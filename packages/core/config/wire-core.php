@@ -105,6 +105,29 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Dashboards
+    |--------------------------------------------------------------------------
+    |
+    | Dashboard classes this application owns, as a plain list. A dashboard
+    | declares a page's worth of widgets and extends
+    | NyonCode\WireCore\Widgets\Dashboard; `php artisan wire:dashboard Sales`
+    | generates one.
+    |
+    | Registered separately from resources because they are different things
+    | that a menu happens to list side by side — the menu reads both through the
+    | same NavigationSource contract, and neither registry knows about the other.
+    |
+    |   'dashboards' => [
+    |       App\Dashboards\SalesDashboard::class,
+    |   ],
+    |
+    */
+    'dashboards' => [
+        //
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Multi-tenancy
     |--------------------------------------------------------------------------
     |

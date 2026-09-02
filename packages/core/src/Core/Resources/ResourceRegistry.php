@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Core\Resources;
 
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
+use NyonCode\WireCore\Core\Resources\Contracts\NavigationSource;
+use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Exceptions\ResourceRegistrationException;
 
 /**
@@ -21,7 +23,7 @@ use NyonCode\WireCore\Exceptions\ResourceRegistrationException;
  * attribute discovery is the opt-in second path and belongs with boost's
  * `ComponentScanner`, not here.
  */
-final class ResourceRegistry
+final class ResourceRegistry implements NavigationSource
 {
     /** @var array<string, class-string<DescribesResource>> Keyed by resource key. */
     private array $resources = [];
@@ -100,6 +102,21 @@ final class ResourceRegistry
     public function all(): array
     {
         return $this->resources;
+    }
+
+    /**
+     * The resources a menu may list — every registered one.
+     *
+     * The same answer as {@see all()} and deliberately a separate method: this
+     * one is the promise a menu depends on, and `all()` is free to grow other
+     * callers without becoming that promise. Which of them actually appear is
+     * still decided by {@see ProvidesNavigation}.
+     *
+     * @return array<string, class-string>
+     */
+    public function navigableClasses(): array
+    {
+        return $this->all();
     }
 
     /** @return class-string<DescribesResource>|null */

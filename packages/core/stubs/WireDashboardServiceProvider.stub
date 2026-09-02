@@ -1,0 +1,47 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
+use NyonCode\WireCore\Widgets\DashboardRegistry;
+
+/**
+ * Where this application composes its navigation.
+ *
+ * Published from wire-core with:
+ *
+ *   php artisan vendor:publish --tag=wire-core::providers
+ *
+ * and then it is yours to edit. Register it in bootstrap/providers.php.
+ *
+ * Two things live here because neither belongs to any single resource or
+ * dashboard: which dashboards exist, and what the menu's groups are called,
+ * ordered and gated by. A resource says which group it sits in by key; the
+ * group's heading, icon, order and visibility are declared once, here.
+ */
+class WireDashboardServiceProvider extends ServiceProvider
+{
+    public function boot(): void
+    {
+        $this->app->make(DashboardRegistry::class)->registerMany([
+            // App\Dashboards\SalesDashboard::class,
+        ]);
+
+        $this->app->make(NavigationGroups::class)->registerMany([
+            NavigationGroup::make('insights')
+                ->label(__('Insights'))
+                ->icon('outline:chart-bar')
+                ->sort(10),
+
+            // A group hidden here is hidden with everything in it — one rule
+            // instead of the same condition on every resource in the group.
+            // NavigationGroup::make('admin')
+            //     ->sort(90)
+            //     ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false),
+        ]);
+    }
+}

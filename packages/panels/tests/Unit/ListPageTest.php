@@ -182,13 +182,7 @@ it('has no heading when nothing supplies one', function () {
  */
 function lpRefusal(string $page): string
 {
-    try {
-        Livewire::test($page);
-    } catch (Throwable $e) {
-        return $e->getMessage();
-    }
-
-    return '';
+    return test()->refusalMessage($page);
 }
 
 it('refuses a page that declares neither a resource nor a table', function () {
