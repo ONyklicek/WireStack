@@ -185,7 +185,7 @@ $workspacePages = [
 // route registered by the workbench is listed here", so they are collected here
 // rather than left to a route call further down.
 $standalonePages = [
-    'workspace' => ['Workspace navigation', 'The sidebar an application builds from Workspace::navigation(): two groups, sorted entries, badges, and wire:navigate between the resources.'],
+    'workspace' => ['Workspace navigation', 'The sidebar an application builds from Workspace::navigation(): declared groups with their own heading, icon and order, sorted entries, badges, and wire:navigate between the resources.'],
     'global-search' => ['Global search palette', 'The ⌘K command palette over every registered resource.'],
 ];
 

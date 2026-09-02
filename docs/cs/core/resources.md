@@ -343,7 +343,7 @@ public static function navigation(): NavigationItem   // [tl! focus:6]
 {
     return NavigationItem::make('Objednávky')
         ->icon('outline:shopping-cart')
-        ->group('Prodej')
+        ->group('sales')
         ->sort(10)
         ->badge(fn () => Order::whereNull('shipped_at')->count(), 'danger');
 }
@@ -366,18 +366,57 @@ Položka, která si sama nepojmenuje label, se jmenuje po svém resource:
 ukáže `pluralLabel()` — „Objednávky". Resource, který chce v menu jiný název než
 svůj plurál, ho předá a ten vyhraje.
 
+`group()` bere **klíč**, ne nadpis. Skupinu nevlastní žádný resource — sdílí ji
+jich několik — takže co nadpis říká, jakou nese ikonu, kde sedí mezi ostatními
+skupinami a jestli je vůbec vidět, patří `NavigationGroup`, deklarované tam, kde
+si aplikace tuhle svou část skládá:
+
+```php
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
+
+public function boot(): void
+{
+    $this->app->make(NavigationGroups::class)->registerMany([   // [tl! focus:start]
+        NavigationGroup::make('sales')
+            ->label(__('nav.sales'))
+            ->icon('outline:banknotes')
+            ->sort(10),
+        NavigationGroup::make('admin')
+            ->sort(90)
+            ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false),
+    ]);                                                          // [tl! focus:end]
+}
+```
+
+**Skupina, kterou nikdo nedeklaruje, funguje dál.** `Workspace` si z klíče udělá
+implicitní, takže `->group('sales')` žádnou registraci nepotřebuje a nadpis
+spadne na `Str::headline()` klíče. Registrace říká to, co holý klíč neumí:
+
+| Metoda | K čemu |
+| --- | --- |
+| `NavigationGroup::make(string $key)` | Klíč, na který položky míří přes `group()` |
+| `label(string\|Closure\|null)` | Nadpis. Oddělený od klíče schválně: přeložený nadpis se nesmí stát klíčem pole |
+| `icon(string\|Icon\|Closure\|null)` | Ikona vedle nadpisu |
+| `sort(int)` | Pořadí mezi skupinami; shody drží pořadí prvního výskytu |
+| `visible(bool\|Closure)` / `hidden(bool\|Closure)` | Zobrazí nebo skryje **celou** skupinu — jedna podmínka místo téže podmínky na každém resource v ní |
+| `getItems(): array<string, NavigationItem>` | Položky pod ní, klíčované klíčem resource |
+
+Registrace téhož klíče podruhé přepíše, což je způsob, jak aplikace upraví
+skupinu dodanou balíčkem, aniž by ten balíček editovala.
+
 `Workspace` výsledek uspořádá:
 
 ```php
 use NyonCode\WireCore\Core\Resources\Workspace;
 
 $nav = app(Workspace::class)->navigation();
-// ['Prodej' => ['orders' => NavigationItem, …], '' => […]]
+// ['sales' => NavigationGroup, '' => NavigationGroup]   bez skupiny je klíč ''
 ```
 
-Skupiny drží pořadí, v jakém se objevila jejich první položka; uvnitř skupiny
-řadí `sort()` a shodné hodnoty si nechávají pořadí deklarace — proto je `sort()`
-volitelný. Skryté položky vypadnou.
+Skupiny se vrací v pořadí `sort()` a shodné drží pořadí, v jakém se registrovala
+jejich první položka; uvnitř skupiny platí totéž pro položky. Skryté položky
+vypadnou a skrytá skupina si své položky vezme s sebou.
 
 Položky zůstávají klíčované **klíčem resource**, přes seskupení i přes řazení.
 Ten klíč je druhá polovina řádku v menu: `NavigationItem` záměrně nedrží URL —
@@ -385,10 +424,12 @@ registr, který by držel URL, by byl panel — takže aplikace si klíč namapu
 to, kam daný resource routuje:
 
 ```blade
-@foreach($nav as $group => $items)
-    <p>{{ $group }}</p>
+@foreach($nav as $group)
+    @if($group->hasVisibleLabel())
+        <p>{!! icon($group->getIcon()) !!} {{ $group->getLabel() }}</p>
+    @endif
 
-    @foreach($items as $key => $item)
+    @foreach($group->getItems() as $key => $item)
         <a href="{{ route('admin.'.$key) }}" wire:navigate>   {{-- [tl! focus] --}}
             {!! icon($item->getIcon()) !!}
             {{ $item->getLabel() }}
@@ -397,6 +438,10 @@ to, kam daný resource routuje:
     @endforeach
 @endforeach
 ```
+
+`Workspace::items()` odpovídá na tutéž otázku bez nadpisů: každá viditelná
+položka, plochý seznam v pořadí `sort()`, klíčovaný klíčem resource — to, co
+ukáže menu, které skupiny nekreslí. Položky ze skryté skupiny v něm taky nejsou.
 
 Stejně jako registr nevlastní `Workspace` routing ani layout — menu vykresluje
 aplikace.

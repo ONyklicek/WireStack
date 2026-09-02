@@ -7,6 +7,8 @@ namespace Workbench\App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
 use Workbench\App\Livewire\Previews\CorePreview;
 use Workbench\App\Livewire\Previews\FieldPreview;
 use Workbench\App\Livewire\Previews\FormPreview;
@@ -57,6 +59,25 @@ class WorkbenchServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // The menu's headings, declared where an application declares them —
+        // no resource owns the group it sits in. Operations sorts first while
+        // the Billing resource is registered first, so the sidebar and the
+        // registration order disagree on purpose: a menu that ignored the
+        // declared sort would render visibly wrong instead of identical.
+        $this->app->make(NavigationGroups::class)->registerMany([
+            NavigationGroup::make('operations')
+                ->label('Operations')
+                ->icon('outline:wrench-screwdriver')
+                ->sort(10),
+            // The heading is not the key: the slug stays 'billing' whatever the
+            // heading says, which is what keeps a translated menu keyed the same
+            // way in every locale.
+            NavigationGroup::make('billing')
+                ->label('Billing & invoicing')
+                ->icon('outline:banknotes')
+                ->sort(20),
+        ]);
+
         // Workbench components live outside the default App\Livewire namespace,
         // so Livewire cannot resolve their auto-generated names on the update
         // roundtrip ("Unable to find component"). Register them explicitly under

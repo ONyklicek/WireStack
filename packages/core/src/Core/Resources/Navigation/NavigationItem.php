@@ -7,6 +7,7 @@ namespace NyonCode\WireCore\Core\Resources\Navigation;
 use Closure;
 use NyonCode\WireCore\Foundation\Concerns\HasIcon;
 use NyonCode\WireCore\Foundation\Concerns\HasLabel;
+use NyonCode\WireCore\Foundation\Concerns\HasSortOrder;
 use NyonCode\WireCore\Foundation\Concerns\HasVisibility;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 
@@ -37,11 +38,10 @@ final class NavigationItem
     use EvaluatesClosures;
     use HasIcon;
     use HasLabel;
+    use HasSortOrder;
     use HasVisibility;
 
     protected string|Closure|null $group = null;
-
-    protected int $sort = 0;
 
     protected mixed $badge = null;
 
@@ -74,7 +74,14 @@ final class NavigationItem
         return is_string($label) ? $label : null;
     }
 
-    /** The heading this entry sits under, or null for the top level. */
+    /**
+     * The group this entry sits under, by key, or null for the top level.
+     *
+     * A key, not a heading: {@see NavigationGroup} owns what the heading says,
+     * so a translated menu does not end up keyed by its own translation.
+     * An undeclared key still groups — it simply carries no icon, order or
+     * visibility of its own.
+     */
     public function group(string|Closure|null $group): self
     {
         $this->group = $group;
@@ -87,19 +94,6 @@ final class NavigationItem
         $value = $this->evaluate($this->group);
 
         return is_string($value) ? $value : null;
-    }
-
-    /** Position within the group. Lower sorts first; equal sorts keep declaration order. */
-    public function sort(int $sort): self
-    {
-        $this->sort = $sort;
-
-        return $this;
-    }
-
-    public function getSort(): int
-    {
-        return $this->sort;
     }
 
     /**

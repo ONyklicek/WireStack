@@ -25,6 +25,7 @@ use NyonCode\WireCore\Core\Actions\ActionRegistry;
 use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
 use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
 use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
 use NyonCode\WireCore\Core\Tenancy\NullTenantResolver;
@@ -409,6 +410,12 @@ class WireCoreServiceProvider extends PackageServiceProvider
     protected function registerResources(): void
     {
         $this->app->singleton(ResourceRegistry::class);
+
+        // The menu's headings. A singleton for the reason the resource registry
+        // is one: an application declares them once at boot and every request
+        // asks the same object, so a fresh instance per resolve would answer
+        // with an empty menu on the request that renders it.
+        $this->app->singleton(NavigationGroups::class);
     }
 
     /**

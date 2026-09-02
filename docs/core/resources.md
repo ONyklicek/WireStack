@@ -344,7 +344,7 @@ public static function navigation(): NavigationItem   // [tl! focus:6]
 {
     return NavigationItem::make('Orders')
         ->icon('outline:shopping-cart')
-        ->group('Sales')
+        ->group('sales')
         ->sort(10)
         ->badge(fn () => Order::whereNull('shipped_at')->count(), 'danger');
 }
@@ -367,18 +367,57 @@ An entry that names no label of its own is named by its resource:
 and the menu shows `pluralLabel()` — "Orders". A resource that wants a menu
 label different from its plural passes one, and that one wins.
 
+`group()` takes a **key**, not a heading. No resource owns the group it sits in —
+several share it — so what the heading says, which icon it carries, where it sits
+among the other groups and whether it is shown at all belong to a
+`NavigationGroup`, declared where the application composes that part of itself:
+
+```php
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
+
+public function boot(): void
+{
+    $this->app->make(NavigationGroups::class)->registerMany([   // [tl! focus:start]
+        NavigationGroup::make('sales')
+            ->label(__('nav.sales'))
+            ->icon('outline:banknotes')
+            ->sort(10),
+        NavigationGroup::make('admin')
+            ->sort(90)
+            ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false),
+    ]);                                                          // [tl! focus:end]
+}
+```
+
+**A group nothing declares still works.** `Workspace` makes an implicit one from
+the key, so `->group('sales')` needs no registration; the heading falls back to
+`Str::headline()` of the key. Registering says the things a bare key cannot:
+
+| Method | Purpose |
+| --- | --- |
+| `NavigationGroup::make(string $key)` | The key entries point at with `group()` |
+| `label(string\|Closure\|null)` | The heading. Separate from the key on purpose: a translated heading must not become the array key |
+| `icon(string\|Icon\|Closure\|null)` | Icon beside the heading |
+| `sort(int)` | Order among the other groups; ties keep first-appearance order |
+| `visible(bool\|Closure)` / `hidden(bool\|Closure)` | Shows or hides the **whole** group — one condition instead of the same one on every resource in it |
+| `getItems(): array<string, NavigationItem>` | The entries under it, keyed by resource key |
+
+Registering the same key twice replaces, which is how an application adjusts a
+group that a package shipped without editing the package.
+
 `Workspace` arranges the result:
 
 ```php
 use NyonCode\WireCore\Core\Resources\Workspace;
 
 $nav = app(Workspace::class)->navigation();
-// ['Sales' => ['orders' => NavigationItem, …], '' => […]]
+// ['sales' => NavigationGroup, '' => NavigationGroup]   ungrouped is the '' key
 ```
 
-Groups keep the order their first entry appeared in; within a group, `sort()`
-orders and equal values keep declaration order, which is what makes `sort()`
-optional. Hidden entries are dropped.
+Groups come back in `sort()` order, and groups that tie keep the order their
+first entry was registered in; within a group, entries follow the same rule.
+Hidden entries are dropped, and a hidden group takes its entries with it.
 
 Entries stay keyed by **resource key**, through the grouping and through the
 sort. That key is the other half of a menu row: `NavigationItem` deliberately
@@ -386,10 +425,12 @@ holds no URL — a registry that held URLs would be a panel — so the applicati
 maps the key to whatever it routes that resource to:
 
 ```blade
-@foreach($nav as $group => $items)
-    <p>{{ $group }}</p>
+@foreach($nav as $group)
+    @if($group->hasVisibleLabel())
+        <p>{!! icon($group->getIcon()) !!} {{ $group->getLabel() }}</p>
+    @endif
 
-    @foreach($items as $key => $item)
+    @foreach($group->getItems() as $key => $item)
         <a href="{{ route('admin.'.$key) }}" wire:navigate>   {{-- [tl! focus] --}}
             {!! icon($item->getIcon()) !!}
             {{ $item->getLabel() }}
@@ -398,6 +439,10 @@ maps the key to whatever it routes that resource to:
     @endforeach
 @endforeach
 ```
+
+`Workspace::items()` answers the same question without the headings: every
+visible entry, flat, in `sort()` order, keyed by resource key — what a menu that
+draws no groups shows. Entries whose group is hidden are not in it either.
 
 Like the registry, `Workspace` owns no routing and no layout — what renders the
 menu is the application's.

@@ -5,6 +5,8 @@ declare(strict_types=1);
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
 use NyonCode\WireCore\Core\Resources\Workspace;
@@ -127,13 +129,30 @@ class WsInternalResource implements DescribesResource
 
 function wsWorkspace(string ...$resources): Workspace
 {
+    return wsWorkspaceWith([], ...$resources);
+}
+
+/**
+ * @param  array<int, NavigationGroup>  $groups  The groups an application declared, if any.
+ */
+function wsWorkspaceWith(array $groups, string ...$resources): Workspace
+{
     $registry = new ResourceRegistry;
 
     foreach ($resources as $resource) {
         $registry->register($resource);
     }
 
-    return new Workspace($registry);
+    $declared = new NavigationGroups;
+    $declared->registerMany($groups);
+
+    return new Workspace($registry, $declared);
+}
+
+/** @return array<int, string> */
+function wsLabels(NavigationGroup $group): array
+{
+    return array_values(array_map(fn (NavigationItem $i): ?string => $i->getLabel(), $group->getItems()));
 }
 
 it('groups entries under their heading and orders them within it', function () {
@@ -141,9 +160,9 @@ it('groups entries under their heading and orders them within it', function () {
         ->navigation();
 
     expect(array_keys($nav))->toBe(['Sales', ''])
-        ->and(array_values(array_map(fn (NavigationItem $i) => $i->getLabel(), $nav['Sales'])))
+        ->and(wsLabels($nav['Sales']))
         ->toBe(['Customers', 'Orders'])   // sort 10 before sort 20, not declaration order
-        ->and(array_values(array_map(fn (NavigationItem $i) => $i->getLabel(), $nav[''])))
+        ->and(wsLabels($nav['']))
         ->toBe(['Settings']);
 });
 
@@ -155,8 +174,8 @@ it('keys every entry by its resource key, through the grouping and the sort', fu
     $nav = wsWorkspace(WsOrderResource::class, WsCustomerResource::class, WsSettingResource::class)
         ->navigation();
 
-    expect(array_keys($nav['Sales']))->toBe(['ws-customers', 'orders'])
-        ->and(array_keys($nav['']))->toBe(['ws-settings'])
+    expect(array_keys($nav['Sales']->getItems()))->toBe(['ws-customers', 'orders'])
+        ->and(array_keys($nav['']->getItems()))->toBe(['ws-settings'])
         ->and(array_keys(wsWorkspace(WsOrderResource::class)->items()))->toBe(['orders']);
 });
 
@@ -185,7 +204,7 @@ it('keeps declaration order where sort values tie', function () {
     // reads that way without anyone numbering it.
     $nav = wsWorkspace(WsSettingResource::class, WsHiddenResource::class)->navigation();
 
-    expect($nav[''] ?? [])->toHaveCount(1);
+    expect($nav['']->getItems())->toHaveCount(1);
 });
 
 it('leaves out a resource that declares no navigation', function () {
@@ -204,4 +223,93 @@ it('leaves out an entry hidden by its own condition', function () {
 it('is empty when nothing is registered', function () {
     expect(wsWorkspace()->navigation())->toBe([])
         ->and(wsWorkspace()->items())->toBe([]);
+});
+
+it('makes an implicit group for a key nothing declared', function () {
+    // Grouping must never require registration: `->group('sales')` on one
+    // resource is a whole menu, and the heading reads from the key.
+    $nav = wsWorkspace(WsOrderResource::class)->navigation();
+
+    expect($nav['Sales']->getKey())->toBe('Sales')
+        ->and($nav['Sales']->getLabel())->toBe('Sales')
+        ->and($nav['Sales']->getIcon())->toBeNull()
+        ->and($nav['Sales']->getSort())->toBe(0);
+});
+
+it('takes the heading, the icon and the order from a declared group', function () {
+    // The heading is not the key: `->group(__('nav.sales'))` used to make the
+    // translation the array key, so the same menu was keyed differently per
+    // locale.
+    $nav = wsWorkspaceWith(
+        [NavigationGroup::make('Sales')->label('Revenue')->icon('outline:banknotes')],
+        WsOrderResource::class,
+    )->navigation();
+
+    expect($nav['Sales']->getLabel())->toBe('Revenue')
+        ->and($nav['Sales']->getIcon())->toBe('outline:banknotes')
+        ->and(array_keys($nav['Sales']->getItems()))->toBe(['orders']);
+});
+
+it('orders groups by their declared sort, against registration order', function () {
+    // WsOrderResource (Sales) is registered first and WsSettingResource ('')
+    // second, so without the declared sort the menu reads Sales → ungrouped.
+    $nav = wsWorkspaceWith(
+        [NavigationGroup::make('Sales')->sort(10), NavigationGroup::make('')->sort(-10)],
+        WsOrderResource::class,
+        WsSettingResource::class,
+    )->navigation();
+
+    expect(array_keys($nav))->toBe(['', 'Sales']);
+});
+
+it('keeps first-appearance order where group sorts tie', function () {
+    $nav = wsWorkspaceWith(
+        [NavigationGroup::make('Sales'), NavigationGroup::make('')],
+        WsOrderResource::class,
+        WsSettingResource::class,
+    )->navigation();
+
+    expect(array_keys($nav))->toBe(['Sales', '']);
+});
+
+it('takes a hidden group out of the menu, entries and all', function () {
+    // The reason a group owns visibility: the alternative is the same condition
+    // on every resource in the group, and the n+1st resource is where it drifts.
+    $workspace = wsWorkspaceWith(
+        [NavigationGroup::make('Sales')->visible(false)],
+        WsOrderResource::class,
+        WsCustomerResource::class,
+        WsSettingResource::class,
+    );
+
+    expect(array_keys($workspace->navigation()))->toBe([''])
+        // items() has to agree: "in the menu" is one question, and a flat list
+        // that answered it differently would be a second answer.
+        ->and(array_keys($workspace->items()))->toBe(['ws-settings'])
+        // Still registered and still routable — hidden is not unregistered.
+        ->and($workspace->resources())->toHaveCount(3);
+});
+
+it('never fills the registered group itself', function () {
+    // The declared group is a singleton in the registry. Filling it would make
+    // a second call to navigation() answer differently from the first — the bug
+    // that only shows up on a page rendering a menu twice.
+    $group = NavigationGroup::make('Sales');
+    $workspace = wsWorkspaceWith([$group], WsOrderResource::class, WsCustomerResource::class);
+
+    $first = $workspace->navigation();
+    $second = $workspace->navigation();
+
+    expect($group->getItems())->toBe([])
+        ->and($group->hasItems())->toBeFalse()
+        ->and($first['Sales']->getItems())->toHaveCount(2)
+        ->and($second['Sales']->getItems())->toHaveCount(2);
+});
+
+it('returns the flat list in sort order, not registration order', function () {
+    // What the docblock promised before anything read it: WsOrderResource is
+    // registered first and sorts 20, WsCustomerResource second and sorts 10.
+    $items = wsWorkspace(WsOrderResource::class, WsCustomerResource::class)->items();
+
+    expect(array_keys($items))->toBe(['ws-customers', 'orders']);
 });

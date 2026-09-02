@@ -1,7 +1,7 @@
 ---
 title: V2 — kde to stojí a čím pokračovat
 date: 2026-09-02
-scope: V2.0–V2.5 (hotové), ADR 0025 (rozpracované), V2.6 (běží — krok 1 hotový)
+scope: V2.0–V2.5 (hotové), ADR 0025 (rozpracované), V2.6 (běží — kroky 1 a 2 hotové)
 status: progress record — aktualizovat na konci každého běhu
 ---
 
@@ -102,7 +102,33 @@ oběma směry a docs v EN i CS.
 
 **Co to řeklo o kroku 2** (`NavigationGroup`) je v §0c toho plánu: pořadí skupin
 se nedá deklarovat, skupina nemá label oddělený od klíče, nemá viditelnost ani
-ikonu, a sbalení nemá vlastníka. To jsou vstupy pro krok 2, ne hotová práce.
+ikonu, a sbalení nemá vlastníka.
+
+#### Krok 2 hotový 2026-09-02: `NavigationGroup`
+
+`Core\Resources\Navigation\NavigationGroup` (klíč + kanonické `HasName`/
+`HasLabel`/`HasIcon`/`HasVisibility`/`HasSortOrder`), registr `NavigationGroups`
+jako singleton, a `Workspace::navigation()` vrací
+`array<string, NavigationGroup>` — skupina si nese své položky. Sidebar ve
+workbenchi kreslí nadpis s ikonou a pořadí skupin je **deklarované**, ne pořadí
+registrace; driver 27/27. Celý rozklad „co ten string neuměl" je v §0d plánu.
+
+Tři věci stojí za zapamatování:
+
+- **Sbalení se vědomě nedoplnilo.** Nikdo nekreslí sbalitelné menu a slovník
+  `collapsible`/`collapsed` v repu **už existuje dvakrát** (`Section`, tabulkové
+  `collapsibleGroups()`). Třetí kopie před konzumentem je přesně to, co §2 tohoto
+  souboru popisuje jinde jako druhé kolo.
+- **`sort()` je od teď kanonický `HasSortOrder`** — extrahovaný z `NavigationItem`,
+  ne napsaný podruhé na skupině. Docblok explicitně říká, že to **není** řazení
+  dotazu (`Column::sortable()`, `SortClause`), protože to je jediné slovo, kde
+  tahle dvě témata kolidují. Pint na tom mimochodem ukázal past: `{@see}` na
+  `SortClause` si `fully_qualified_strict_types` přepsal na `use`, což by z L0
+  souboru udělalo import do L1 — `ModuleLayersTest` by to chytil až v CI.
+- **Nedosažitelnou větev jsem si napsal sám a našla ji brána, ne čtení** — viz §2.
+
+**Vstup pro krok 3:** `Workspace` iteruje jen `ResourceRegistry`, takže dashboard
+se dnes do menu nemá jak dostat. To je první otázka kroku 3, ne poslední.
 
 ### V2.1 — hotová ✅
 
@@ -955,6 +981,24 @@ zpět), ne konkrétní data. Seeder u některých tabulek slibuje „determinist
 purpose — the CDP drivers address rows by name"; pro `tasks` a `documents` to
 už neplatí.
 
+**V2.6/krok 2: obě kopie jednoho pravidla jsem napsal ve stejné hodině — a ta
+nedosažitelná vypadala jako ta hlavní.** `Workspace::navigation()` dostalo
+`if (! $group->isVisible()) { continue; }`, což se čte jako místo, kde pravidlo
+„skrytá skupina není v menu" bydlí. Bydlí jinde: `entries()` položky skryté
+skupiny zahodí dřív, takže bucket pro takovou skupinu **nikdy nevznikne** a ten
+guard nemůže proběhnout. Nenašlo to čtení ani code review — našla to
+`verify-coverage --diff`, která hlásí přidané řádky bez testu, a jediný takový
+řádek v celé změně byl ten `continue`. Poučení není „psát míň guardů", ale to,
+co §2 opakuje od V2.1: **u každého pravidla se ptej, kdo ho vlastní, i když obě
+kopie píšeš ty sám** — o hodinu později už to vypadá jako dvě různá pravidla.
+
+**A druhý nález ze stejného souboru: `items()` slibovalo v docbloku pořadí,
+které nedělalo.** „Every visible entry, flat and ordered" — vracelo pořadí
+registrace. Test na `items()` počítal položky, takže na pořadí se nikdy nikdo
+nezeptal. Teď řadí podle `sort()` **a** shoduje se s `navigation()` v tom, co je
+v menu (položky skryté skupiny v něm nejsou) — „je to v menu" musí být jedna
+otázka, ne dvě odpovědi.
+
 **Druhý vedlejší nález: index previews zaostal za routami, přestože komentář
 tvrdil, že to nemůže.** `workbench/routes/web.php` má nad indexem komentář „the
 index cannot fall behind the routes again", ale řádky indexu se skládaly ze tří
@@ -995,13 +1039,16 @@ doplní. Pořadí je v §0b a **není to pořadí z §2 toho plánu**: začalo s
 konzumentem navigace, protože `Workspace` žádného neměl, a bez vykresleného menu
 nemá `NavigationGroup` ani `DomainModule` kde selhat v prohlížeči.
 
-**Krok 1 je hotový (2026-09-02)** — sidebar ve workbenchi nad třemi resources,
-driver 24/24, a dva defekty ve `Workspace`, které se objevily až tím vykreslením
-(§2). **Na řadě je krok 2, `NavigationGroup`** — a jeho zadání už není odhad:
-co holý `string` neumí, je vyjmenované v §0c toho plánu (pořadí skupin se nedá
-deklarovat, label není oddělený od klíče, chybí viditelnost a ikona, sbalení
-nemá vlastníka). Platí ale totéž pravidlo: přidat jen to, co má konzumenta, a
-přes kanonické `HasIcon`/`HasLabel`/`HasVisibility`.
+**Kroky 1 a 2 jsou hotové (2026-09-02)** — sidebar ve workbenchi nad třemi
+resources (driver 24/24), a na něm postavená `NavigationGroup`: klíč oddělený od
+nadpisu, ikona, deklarované pořadí skupin, viditelnost celé skupiny (driver
+27/27). Sbalení se vědomě nedoplnilo. Detaily v §0c a §0d plánu.
+
+**Na řadě je krok 3, `Dashboard`** — owner nad hotovými widgety
+(`packages/core/src/Widgets/`), které dnes skládá ručně preview. První otázka je
+změřená už teď: `Workspace` iteruje **jen `ResourceRegistry`**, takže dashboard
+se do menu nemá jak dostat, dokud se nerozhodne, jestli je to resource, nebo
+druhý zdroj položek navigace.
 
 ### Co zbývá otevřené
 

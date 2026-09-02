@@ -23,6 +23,7 @@ Foundation je trvalé jádro `wire-core`. Poskytuje sdílené traity, základní
 | `HasSize` | `size($size)`, `getSize()` | Varianta velikosti (sm/md/lg/xl) |
 | `HasColumns` | `columnSpan($span)`, `columnStart($start)` | Layout sloupců gridu |
 | `HasExtraAttributes` | `extraAttributes(array $attrs)` | Libovolné HTML atributy |
+| `HasSortOrder` | `sort($position)`, `getSort()` | Pozice ve vykreslovaném seznamu — položka menu, skupina menu. Ne řazení dotazu (`Column::sortable()`) |
 
 ### Stav a chování
 

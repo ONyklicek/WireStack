@@ -17,17 +17,24 @@
             data-testid="workspace-nav"
             class="h-max rounded-3xl border border-slate-200 bg-white p-3 shadow-sm"
         >
-            @foreach ($groups as $group => $items)
-                <div class="mb-4 last:mb-0" data-testid="workspace-group" data-group="{{ $group }}">
-                    @if ($group !== '')
+            @foreach ($groups as $group)
+                <div class="mb-4 last:mb-0" data-testid="workspace-group" data-group="{{ $group->getKey() }}">
+                    {{-- The heading is the group's, not its key: the slug stays
+                         stable while the text is free to be translated. --}}
+                    @if ($group->hasVisibleLabel())
                         <p
                             data-testid="workspace-group-heading"
-                            class="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-slate-400"
-                        >{{ $group }}</p>
+                            class="flex items-center gap-2 px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-slate-400"
+                        >
+                            @if ($group->getIcon())
+                                {!! icon($group->getIcon(), 'h-4 w-4') !!}
+                            @endif
+                            {{ $group->getLabel() }}
+                        </p>
                     @endif
 
                     <ul class="space-y-1">
-                        @foreach ($items as $key => $item)
+                        @foreach ($group->getItems() as $key => $item)
                             @php($url = $urls[$key] ?? null)
                             <li>
                                 {{-- A registered resource with no page of its own still

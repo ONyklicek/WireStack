@@ -6,14 +6,16 @@ namespace NyonCode\WireCore\Core\Resources;
 
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 
 /**
  * The registered resources, arranged the way a menu shows them.
  *
- * Reads the registry and nothing else, so it never instantiates a resource:
- * {@see ProvidesNavigation} is static for exactly this, and a sidebar built from
- * fifty resources composes no table and no form.
+ * Reads the two registries and nothing else, so it never instantiates a
+ * resource: {@see ProvidesNavigation} is static for exactly this, and a sidebar
+ * built from fifty resources composes no table and no form.
  *
  * Deliberately small. It groups and orders entries; it owns no routing, no URL
  * shell and no layout, because a registry that held those would be a panel and
@@ -22,42 +24,89 @@ use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
  */
 final readonly class Workspace
 {
-    public function __construct(private ResourceRegistry $registry) {}
+    public function __construct(
+        private ResourceRegistry $registry,
+        private NavigationGroups $groups,
+    ) {}
 
     /**
-     * Every visible entry, grouped by heading and ordered within each group.
+     * The menu: its groups in order, each carrying its own entries in order.
      *
-     * Groups keep the order their first entry appeared in, so a declaration
-     * order that reads sensibly in config reads the same way in the menu; the
-     * ungrouped top level comes first under an empty key. Inside a group the
-     * entries stay keyed by resource key, exactly as {@see items()} hands them
-     * over.
+     * A {@see NavigationGroup} rather than the bare key it used to be, because a
+     * heading needs to say more than its own identity — see that class for what
+     * a string could not do. A key nothing declared still appears, as an
+     * implicit group, so grouping never requires registration.
      *
-     * @return array<string, array<string, NavigationItem>>
+     * Group order is the declared `sort()`, and groups that tie keep the order
+     * their first entry was registered in — the same rule entries follow inside
+     * a group, so an application that numbers nothing still reads in the order
+     * it declared things.
+     *
+     * A hidden group takes its entries with it, and is therefore not a heading
+     * with nothing under it — it is absent. That is the whole reason the group
+     * owns visibility: the alternative is the same condition repeated on every
+     * resource in the group, which drifts the first time someone adds the n+1st
+     * resource and forgets. The dropping happens once, in `entries()`.
+     *
+     * @return array<string, NavigationGroup> Keyed by group key; the ungrouped top level is `''`.
      */
     public function navigation(): array
     {
+        $buckets = [];
+
+        // Registration order, deliberately: it decides which group came first,
+        // and sorting the entries beforehand would make that depend on the
+        // entry numbering instead.
+        foreach ($this->entries() as $key => $item) {
+            $buckets[$item->getGroup() ?? ''][$key] = $item;
+        }
+
         $groups = [];
 
-        foreach ($this->items() as $key => $item) {
-            $groups[$item->getGroup() ?? ''][$key] = $item;
+        foreach ($buckets as $key => $items) {
+            // No visibility check here on purpose. A hidden group's entries were
+            // already dropped by entries(), so no bucket for one can exist —
+            // a guard here would be a second copy of the rule, and an
+            // unreachable one, which is worse than a missing one: it reads like
+            // the place the rule lives.
+            $group = $this->groups->find($key) ?? NavigationGroup::make($key);
+
+            $groups[$key] = $group->withItems($this->sorted($items));
         }
 
-        foreach ($groups as $group => $items) {
-            // Stable within a group: equal sort values keep declaration order,
-            // which is what makes `sort()` optional rather than mandatory.
-            // Sorted by `uasort`, not `usort`, so the resource keys survive the
-            // sort — a menu that has been ordered but can no longer say which
-            // resource an entry belongs to cannot link it anywhere.
-            uasort($items, static fn (NavigationItem $a, NavigationItem $b): int => $a->getSort() <=> $b->getSort());
-            $groups[$group] = $items;
-        }
+        uasort($groups, static fn (NavigationGroup $a, NavigationGroup $b): int => $a->getSort() <=> $b->getSort());
 
         return $groups;
     }
 
     /**
-     * Every visible entry, flat and ordered — the menu without its headings.
+     * Every visible entry, flat and in `sort()` order — the menu without its
+     * headings.
+     *
+     * What a menu that draws no groups shows. Entries whose group is hidden are
+     * not here either: "in the menu" has to mean one thing, and a flat list that
+     * disagreed with {@see navigation()} about it would be two answers to one
+     * question.
+     *
+     * @return array<string, NavigationItem> Keyed by resource key.
+     */
+    public function items(): array
+    {
+        return $this->sorted($this->entries());
+    }
+
+    /**
+     * The resource classes behind the menu, in registration order.
+     *
+     * @return array<string, class-string<DescribesResource>>
+     */
+    public function resources(): array
+    {
+        return $this->registry->all();
+    }
+
+    /**
+     * Every entry that belongs in the menu, in registration order.
      *
      * Keyed by resource key, because an entry is only half of what a menu row
      * needs: the other half is which resource it stands for, and that is what a
@@ -68,7 +117,7 @@ final readonly class Workspace
      *
      * @return array<string, NavigationItem>
      */
-    public function items(): array
+    private function entries(): array
     {
         $items = [];
 
@@ -81,7 +130,7 @@ final readonly class Workspace
 
             $item = $resource::navigation();
 
-            if (! $item->isVisible()) {
+            if (! $item->isVisible() || ! $this->groupIsVisible($item)) {
                 continue;
             }
 
@@ -103,13 +152,25 @@ final readonly class Workspace
         return $items;
     }
 
-    /**
-     * The resource classes behind the menu, in registration order.
-     *
-     * @return array<string, class-string<DescribesResource>>
-     */
-    public function resources(): array
+    private function groupIsVisible(NavigationItem $item): bool
     {
-        return $this->registry->all();
+        $group = $this->groups->find($item->getGroup() ?? '');
+
+        return $group === null || $group->isVisible();
+    }
+
+    /**
+     * @param  array<string, NavigationItem>  $items
+     * @return array<string, NavigationItem>
+     */
+    private function sorted(array $items): array
+    {
+        // Stable: equal sort values keep declaration order, which is what makes
+        // `sort()` optional rather than mandatory. `uasort`, not `usort`, so the
+        // resource keys survive — a menu that has been ordered but can no longer
+        // say which resource an entry belongs to cannot link it anywhere.
+        uasort($items, static fn (NavigationItem $a, NavigationItem $b): int => $a->getSort() <=> $b->getSort());
+
+        return $items;
     }
 }

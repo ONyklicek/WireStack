@@ -36,6 +36,8 @@ const { page, eval_, waitFor, shot, shotDir, consoleErrors, badResponses, close 
 try {
   const labels = () => eval_(`JSON.stringify([...document.querySelectorAll('[data-testid="workspace-nav-label"]')].map(e => e.textContent.trim()))`).then(JSON.parse);
   const headings = () => eval_(`JSON.stringify([...document.querySelectorAll('[data-testid="workspace-group-heading"]')].map(e => e.textContent.trim()))`).then(JSON.parse);
+  const groupKeys = () => eval_(`JSON.stringify([...document.querySelectorAll('[data-testid="workspace-group"]')].map(e => e.dataset.group))`).then(JSON.parse);
+  const groupIcons = () => eval_(`document.querySelectorAll('[data-testid="workspace-group-heading"] svg').length`);
   const inGroup = (group) => eval_(`JSON.stringify([...document.querySelector('[data-group="${group}"]').querySelectorAll('[data-testid="workspace-nav-label"]')].map(e => e.textContent.trim()))`).then(JSON.parse);
   const activeKey = () => eval_(`document.querySelector('[data-testid="workspace-nav-item"][data-active="true"]')?.dataset?.resource ?? ''`);
   const badgeOf = (key) => eval_(`document.querySelector('[data-resource="${key}"] [data-testid="workspace-nav-badge"]')?.textContent?.trim() ?? ''`);
@@ -65,8 +67,16 @@ try {
   await waitFor(`!! window.Alpine && !! document.querySelector('[data-testid="workspace-nav"]')`);
 
   // ── 1. The arrangement, drawn ────────────────────────────────────────────
+  //
+  // Operations is declared with sort(10) and Billing with sort(20), while the
+  // billing resource is the FIRST one registered. So this order can only come
+  // from the declared group sort — an implicit menu would read the other way.
+  const drawnKeys = await groupKeys();
+  check('groups are drawn in their declared order, against registration order', JSON.stringify(drawnKeys) === JSON.stringify(['operations', 'billing']), drawnKeys.join(' → '));
+
   const drawnHeadings = await headings();
-  check('groups are drawn in the order their first entry appeared', JSON.stringify(drawnHeadings) === JSON.stringify(['Billing', 'Operations']), drawnHeadings.join(' → '));
+  check('the heading is the group\'s label, not its key', JSON.stringify(drawnHeadings) === JSON.stringify(['Operations', 'Billing & invoicing']), drawnHeadings.join(' → '));
+  check('a declared group draws its icon', (await groupIcons()) === 2, `${await groupIcons()} icon(s)`);
 
   const drawnLabels = await labels();
   check('every entry is named', drawnLabels.length === 3 && drawnLabels.every((l) => l.length > 0), JSON.stringify(drawnLabels));
@@ -77,7 +87,7 @@ try {
   check('an entry that named no label is named by its resource', drawnLabels.includes('Invoices') && drawnLabels.includes('Tasks'), JSON.stringify(drawnLabels));
   check('an entry that named itself keeps its own name', drawnLabels.includes('Files'), JSON.stringify(drawnLabels));
 
-  const operations = await inGroup('Operations');
+  const operations = await inGroup('operations');
   check('sort() orders inside a group, against the registration order', JSON.stringify(operations) === JSON.stringify(['Files', 'Tasks']), operations.join(' → '));
 
   // ── 2. Badges, and the colour a badge was declared with ──────────────────
@@ -137,6 +147,7 @@ try {
   check('a second hop reaches the third resource', !! onDocuments, `${await eval_('location.pathname')}, ${await rowCount()} rows`);
   check('the menu still names every entry after two hops', (await labels()).every((l) => l.length > 0), JSON.stringify(await labels()));
   check('the badges survived the hops', /^\d+$/.test(await badgeOf('invoices')) && /^\d+$/.test(await badgeOf('tasks')), `${await badgeOf('invoices')} / ${await badgeOf('tasks')}`);
+  check('so did the group order and the headings', JSON.stringify(await groupKeys()) === JSON.stringify(['operations', 'billing']) && JSON.stringify(await headings()) === JSON.stringify(['Operations', 'Billing & invoicing']), (await headings()).join(' → '));
   await shot('03-documents');
 
   await sleep(200);

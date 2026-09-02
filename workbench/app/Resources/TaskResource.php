@@ -65,7 +65,7 @@ final class TaskResource implements DescribesResource, GloballySearchable, Provi
     {
         return NavigationItem::make()
             ->icon('outline:check-circle')
-            ->group('Operations')
+            ->group('operations')
             ->sort(20)
             ->badge(fn (): int => Task::query()->where('completed', false)->count());
     }

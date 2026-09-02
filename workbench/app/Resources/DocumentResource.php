@@ -40,7 +40,7 @@ final class DocumentResource implements DescribesResource, ProvidesNavigation, P
     {
         return NavigationItem::make('Files')
             ->icon('outline:document-duplicate')
-            ->group('Operations')
+            ->group('operations')
             ->sort(10);
     }
 

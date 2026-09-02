@@ -23,6 +23,7 @@ Foundation is the permanent core of `wire-core`. It provides shared traits, base
 | `HasSize` | `size($size)`, `getSize()` | Size variant (sm/md/lg/xl) |
 | `HasColumns` | `columnSpan($span)`, `columnStart($start)` | Grid column layout |
 | `HasExtraAttributes` | `extraAttributes(array $attrs)` | Arbitrary HTML attributes |
+| `HasSortOrder` | `sort($position)`, `getSort()` | Position in a rendered list — a menu entry, a menu group. Not query sorting (`Column::sortable()`) |
 
 ### State & Behavior
 

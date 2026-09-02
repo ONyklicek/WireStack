@@ -74,7 +74,7 @@ final class InvoiceResource implements DescribesResource, GloballySearchable, Pr
     {
         return NavigationItem::make()
             ->icon('outline:document-text')
-            ->group('Billing')
+            ->group('billing')
             ->sort(10)
             ->badge(fn (): int => Invoice::where('status', 'overdue')->count(), 'danger');
     }
