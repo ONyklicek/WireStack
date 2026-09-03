@@ -1333,7 +1333,33 @@ vlastníka repa nebo na jmenovaného konzumenta:
 | `Filter` má vlastní kopii viditelnosti z akční vrstvy | tři mechanismy na jednu otázku (Foundation `evaluate()`, Actions kontext+arita, Filtrova kopie druhého). Sjednocení je rozhodnutí o vlastníkovi, ne mechanická de-duplikace — viz §4 níž |
 | `relationship()` v forms a v table | stejné pravidlo, dvě signatury a dva názvy getteru; kanonickým vlastníkem by mělo být core, ne forms |
 | Opt-in discovery modulů | `config('wire-core.plugins')` stačí a discovery nemá konzumenta; přidat, až někdo bude chtít moduly hledat skenováním (§10 plánu V2.6 ji jmenuje) |
-| Routované stránky v menu | `ResourceRoutes::urls()` existuje a je otestovaná, ale workbench shell pořád mapuje klíč→URL sám, protože má vlastní URL schéma. Až bude preview nad `Route::wireResources()`, sidebar může brát URL odtud |
+
+**Vyřešeno 2026-09-03: routované stránky v menu — a podmínka, na kterou §4
+čekala, byla splněná už když ji psala.** Ta položka zněla „až bude preview nad
+`Route::wireResources()`, sidebar může brát URL odtud". To preview **existuje**
+(`workbench/routes/web.php`, skupina `previews/routed`, driver `resource-routes`
+9/9) a `ResourceRoutes::urls()`/`urlFor()` jsou otestované včetně obou hraničních
+případů (nerutovaný resource → `null`, `urls()` vrací jen rutované klíče). Přesto
+je verdikt **nedělat**, a to ze dvou důvodů, které §4 nejmenovala:
+
+1. **Ten registr by dnes nasvítil jednu položku ze čtyř.** `route:list` říká, že
+   `wireResources()` registruje **jen `invoices`** — jediný resource, který
+   implementuje `ProvidesResourcePages`. `TaskResource` a `DocumentResource` žádné
+   stránky nedeklarují (macro je záměrně přeskočí) a `overview` **není resource**,
+   je to dashboard z `DashboardRegistry`, kam `ResourceRoutes::urls()` vůbec
+   nekouká, protože iteruje `ResourceRegistry`. Sidebar to sice umí — nerutovaný
+   klíč kreslí bez `href` a s `opacity-60` — takže by nespadl; jen by ze tří
+   položek udělal mrtvé řádky, což je přesně ta vada, kterou našel krok 1.
+2. **Ta dvě URL schémata nejsou nedodělek, jsou to dvě různé stránky.**
+   `/previews/workspace/{resource?}` **je** ten shell: parametr vybírá, co se
+   kreslí vedle sidebaru. `wire.{key}.index` je samostatná full-page komponenta
+   v layoutu aplikace, bez sidebaru. Kliknutí, které by vzalo URL z registru, by
+   tedy z shellu odešlo a navigaci za sebou zavřelo — a smíšený sidebar (jedna
+   položka odchází, tři zůstávají) je horší, ne lepší.
+
+Otevřít znovu má smysl jen s konzumentem, který ty dva režimy sloučí — tedy až
+shell sám poběží nad rutovanými stránkami. Do té doby je ruční mapa v routách
+správná odpověď a její komentář to říká.
 
 **Vyřešeno 2026-09-03 (druhý běh): systematické hledání duplicitních abstrakcí.**
 Neudělalo se čtením — sken tokenizuje `src/` a seskupí identická těla metod (viz
