@@ -1,7 +1,7 @@
 ---
 title: V2 — kde to stojí a čím pokračovat
 date: 2026-09-03
-scope: V2.0–V2.6 (hotové), ADR 0025 (rozpracované)
+scope: V2.0–V2.6 (hotové), ADR 0025 (rozpracované), průřez duplicit (hotový)
 status: progress record — aktualizovat na konci každého běhu
 ---
 
@@ -1133,6 +1133,83 @@ paleta globálního hledání (V2.5) na indexu nikdy nebyly. Prozradilo to mapov
 sekcí: `'resource-' => 'Resources (owner layer)'` je sekce, do které se nemohl
 dostat žádný řádek. Opraveno tím, že index bere všechny kolekce, ne tři ze čtyř.
 
+**Průřezové hledání duplicit (§4): mechanický sken našel deset skupin a čtyři
+z nich stály za sloučení.** Zadání ho vedlo jako „průřez, který padl na session
+limit". Nepadl znovu, protože se nedělal čtením — sken tokenizuje `src/`, vytáhne
+těla metod, zahodí bílé znaky a komentáře a seskupí identická (práh 3 příkazy /
+60 znaků). Deset skupin, plus druhý běh s normalizovanými proměnnými a řetězci
+(práh 4 / 220), který přidal jednu, kterou by první minul. Celý sken trvá vteřiny
+a je opakovatelný; **`DataSourceCapabilities`/`CapabilitySet`, kterou §4 jmenovala
+jako stopu, už neexistuje** — je sloučená.
+
+**Nejdražší nález byl ten, který nejmíň vypadal jako duplicita: čtyři providery
+psaly stejnou asset routu.** `Bundle` už vlastnil druhý směr téhož mapování
+(`servedByRoute()` čte id z názvu souboru), ale routu, která id vrací zpátky na
+soubor, si psal každý balíček sám — a **kopie se už rozešly**: tři stavěly
+`{package}-{id}.js`, wire-sortable `wire-{id}.js`. Co se v nich opakovalo, nebyl
+`Route::get`, ale kontrakt kolem něj, a **mutace ukázala, že tři ze čtyř kopií ho
+neměly pokrytý vůbec**: smazání `abort_unless`, `where()` i cache hlaviček prošlo
+sadám wire-table i wire-forms; hlavičku `public, max-age=31536000` neasertoval
+nikdo ze čtyř.
+
+**A traversal nehlídalo to, co všechny čtyři kopie tvrdily.** Každá pouštěla
+segment přes `basename()`. Změřeno: Symfony kompiluje parametr routy jako
+`[^/]++` — posesivně, takže nemůže vracet znaky zpátky — a literál `.js` za ním
+znamená, že segment s lomítkem **nebo s tečkou** routu nematchne vůbec.
+`../../composer.js`, zakódované i ne, je 404 dřív, než se spustí jakákoli closure.
+Ten `basename()` nemohl proběhnout, takže je pryč. `where()` si své místo drží a
+teď to má čím doložit: bez něj jsou `a~b`, `a b` a `á` id, se kterými se jde na
+disk — a test, který to tvrdí, musel dostat **nastražený soubor**, protože
+chybějící soubor je 404 tak jako tak a neasertoval by nic.
+
+**Dvě pravidla v query plánu byla napsaná třikrát každé.** Kvalifikace sloupce
+(`sqlExpression` vyhrává, alias kvalifikuje, holý sloupec stojí sám za sebe)
+žila ve třech clause objektech → `ColumnReference::qualify()`. A tři search
+strategie: MySQL a SQLite byly bajt po bajtu stejné, Postgres se lišil operátorem
+a castem. To, co opakovaly, bylo pravidlo pro operand — `sqlExpression` je SQL a
+splice se syrově, sloupec je identifikátor a jde přes grammar — plus escape znak,
+který musí deklarovat každý predikát. → `LikePredicate::orWhereMatches()`.
+
+**A tam mutace našla dva lživé testy — oba lhaly tím, jak byly napsané.**
+`expect($sql)->toContain('LIKE')` projde i pro `ILIKE`, protože „ILIKE" obsahuje
+„LIKE": přepnutí MySQL strategie na postgresí syntaxi (na MySQL syntaktická
+chyba) prošlo všem 2273 testům core. A `toContain('CONCAT')` projde i tehdy, když
+je výraz obalený jako jeden citovaný identifikátor, takže smazání větve pro
+`sqlExpression` z MySQL i SQLite strategie prošlo taky. Aserce teď tvrdí operátor
+proti `ILIKE` a operand proti následujícímu tokenu; obě mutace padají.
+
+**Čtvrtý nález: jeden slovník, dvě pravidla, a starší kopie byla ta hlučnější.**
+`danger()` na `ConfirmationDialog` a `ActionHalt` přepisovalo barvu vždycky,
+zatímco `Modals\Html\Confirmation` a `Modals\View\ConfirmationComponent` ji
+nechají být, když nějaká je. Takže `->color('primary')->danger()` a
+`->danger()->color('primary')` odpovídaly různě a Blade tag nesouhlasil ani
+s jedním. §5 na to má pravidlo — **nejdřív zjisti, která kopie je novější** — a
+`git log -S` odpovědělo: hlídaná verze je z 2026-07-18, přepisující z 2026-04-30.
+Sjednoceno na hlídanou. Chování to mění a **nepinoval ho žádný test**; jediná
+aserce na `danger()` v celé sadě byla `Callout`ova, jiná třída.
+
+**Co sken našel a měření řeklo nedělat** (detaily v §4, ať se to nemusí hledat
+znovu): `Schema/*` × `View/*` dvojice (záměrné — deklarace vs. `<x-*>` tag),
+`HasPolling` v table a widgets (změřené a zdokumentované už dřív, sdílí jen
+atribut přes `PollDirective`), obě konfirmační třídy (sdílených je 6 řádků
+pravidel, zbytek je seznam parametrů, který je veřejné API Blade komponenty),
+`Repeater::collapsed()` × `Section::collapsed()` (známé z V2.6/kroku 2 —
+„slovník už existuje dvakrát", rozhodnuto tehdy) a dvojice v `boost` (5 řádků,
+jeden balíček, a wrappery obou volajících se liší).
+
+Sken po tomhle běhu hlásí **osm skupin místo deseti** a normalizovaný běh
+**nula** — asset routy byly jediné, co viděl jen on. Zbylých osm je ta tabulka
+v §4, včetně dvou, které tam zůstávají schválně: `danger()` na `ActionHalt`
+a `ConfirmationDialog` jsou teď dvě identické kopie *správného* pravidla, což je
+o kopii lepší než dvě různá, a nadále čekají na vlastníka. Skript je
+`scripts/find-duplicate-bodies.php` a je v repu, ne v mé hlavě.
+
+**Limit skenu si zapiš spolu s výsledkem: vidí jen *identická* těla.** Filtrova
+kopie viditelnosti z akční vrstvy se chytila jen proto, že `visible()` i
+`hidden()` jsou opsané doslova; `isHidden()`, které je totéž pravidlo napsané
+jinak, sken neviděl a našlo ho až čtení vedle. Sken je síto na to, co už drift
+nezakryl, ne důkaz, že víc duplicit není.
+
 ---
 
 ## 3. Co je vědomě neudělané
@@ -1142,7 +1219,7 @@ dostat žádný řádek. Opraveno tím, že index bere všechny kolekce, ne tři
 | ~~ADR 0025 krok 8 — Blade coupling (`callInfolistAction` natvrdo ve view)~~ | **rozhodnuto 2026-09-01: nedělat.** Tři důvody z měření: (1) `ModuleLayersTest` čte PHP `use`, Blade nevidí — číslo dluhu by se nezměnilo; (2) měřený dluh vede **opačně**, `InteractsWithActions` (Actions) importuje `Infolists\{Entry, RepeatableEntry, Infolist}`, a to zůstane; (3) premisa („wire-core bez Actions by nerenderoval") padla s §1 ADR, která rozhodla core neštěpit. Vazba na fázi 0 [`action-render-unification.md`](action-render-unification.md) byla navíc **mylná** — ten plán řeší `Action`/`HeaderAction`/`BulkAction`/`ActionGroup` a `component-action.blade.php` v něm není ani v §1.1, ani v žádné fázi. Čtení ale našlo **ostrý defekt**, viz §2 | ADR 0025 |
 | ADR 0025 krok 4 — `Trans`/`Deprecation` do Foundation | Zdůvodnění padlo: vrstvy L2→L1 **povolují**, takže by to bylo 33 souborů za nulový přínos pro hranice. Zbývá argument kanonického vlastnictví, ale to je jiný důvod | ADR 0025 |
 | `modal-host.blade.php` instancuje `Modals\Html\*` | **Není defekt** — je to výsledek [`rule5-framework-wide-modal-sweep.md`](rule5-framework-wide-modal-sweep.md): framework nesmí záviset na `<x-*>` | — |
-| Systematické hledání duplicitních abstrakcí napříč V2 | Průřez auditu padl na session limit. `DataSourceCapabilities`/`CapabilitySet` byl nalezen mimo audit a nejspíš nezůstal sám | [`v2-audit-2026-08-26.md`](v2-audit-2026-08-26.md) §6 |
+| ~~Systematické hledání duplicitních abstrakcí napříč V2~~ | **uzavřeno 2026-09-03.** Neudělalo se čtením — sken tokenizuje `src/` a seskupí identická těla metod, což trvá vteřiny a je opakovatelné (skript v §2). Deset skupin: čtyři sloučené, pět zamítnutých s důvodem, dvě čekají na rozhodnutí (§4). `DataSourceCapabilities` už neexistuje. Sken má zapsaný limit: vidí jen *identická* těla | §2, §4 |
 | `ShellRenderPlan`, `InteractionRenderPlan` — host pořád `mixed` | Polling, live kanál, readiness, přístup ke stavu nemají pojmenovaný kontrakt | [`v2.1-…`](v2.1-monolith-split-implementation.md) §0a |
 | ~~`resolveActionType()` — public static, nula volajících v src~~ | **rozhodnuto 2026-09-01: ponechat.** Měření našlo, že to není jedna metoda, ale **tři** — `resolveColumnType()`, `resolveFilterType()` i `resolveActionType()`, identický tvar, všechny s nula volajícími. A nejsou to zapomenuté zbytky: vytvořilo je zapsané doporučení v [`v2-deferred-items.md`](v2-deferred-items.md) §7A.5 („ponechat registry pro introspekci, přidat `resolveColumnType()` / `resolveFilterType()` metody na Table pro budoucí config-driven use-case"). Nula volajících je tedy záměr. Smazat jednu ze tří by navíc rozbilo souměrnost plugin API. **Není to stejná otázka jako `Dehydrator::dehydrateAttribute()`** — tam jde o nedosažitelnou větev uvnitř používané metody, tady o nepoužitou, ale záměrně přidanou trojici | `Table.php:1780–1830` |
 | Tenancy nekryje non-Eloquent `DataSource` | Globální Eloquent scope nemá co scopovat u `CollectionDataSource` ani u zdroje nad API. Zdokumentované v `docs/authorization.md` jako „co scopované není"; správné místo je dekorátor nad `DataSource` (T-4 tak, jak ho plán psal). **Dokud to nevznikne, tenancy nezapínej nad non-Eloquent zdrojem** | [`v2.4-…`](v2.4-erp-execution-implementation.md) T-4 |
@@ -1188,9 +1265,39 @@ vlastníka repa nebo na jmenovaného konzumenta:
 | Věc | Čeká na |
 |---|---|
 | `ShellRenderPlan` / `InteractionRenderPlan` — host pořád `mixed` | polling, live kanál a readiness nemají pojmenovaný kontrakt |
-| Systematické hledání duplicitních abstrakcí napříč V2 | průřez auditu padl na session limit; `DataSourceCapabilities`/`CapabilitySet` nejspíš nezůstal sám |
+| `Filter` má vlastní kopii viditelnosti z akční vrstvy | tři mechanismy na jednu otázku (Foundation `evaluate()`, Actions kontext+arita, Filtrova kopie druhého). Sjednocení je rozhodnutí o vlastníkovi, ne mechanická de-duplikace — viz §4 níž |
+| `relationship()` v forms a v table | stejné pravidlo, dvě signatury a dva názvy getteru; kanonickým vlastníkem by mělo být core, ne forms |
 | Opt-in discovery modulů | `config('wire-core.plugins')` stačí a discovery nemá konzumenta; přidat, až někdo bude chtít moduly hledat skenováním (§10 plánu V2.6 ji jmenuje) |
 | Routované stránky v menu | `ResourceRoutes::urls()` existuje a je otestovaná, ale workbench shell pořád mapuje klíč→URL sám, protože má vlastní URL schéma. Až bude preview nad `Route::wireResources()`, sidebar může brát URL odtud |
+
+**Vyřešeno 2026-09-03 (druhý běh): systematické hledání duplicitních abstrakcí.**
+Neudělalo se čtením — sken tokenizuje `src/` a seskupí identická těla metod (viz
+§2). Deset skupin, z toho **čtyři sloučené**: asset routa ve čtyřech providerech
+→ `Bundle::serve()`, kvalifikace sloupce ve třech clause objektech →
+`ColumnReference`, tři search strategie → `LikePredicate`, a `danger()` proti
+barvě, kde jeden slovník měl dvě pravidla. Pět skupin měření zamítlo s důvodem
+(§2, poslední odstavec). Stopa, kterou §4 jmenovala — `DataSourceCapabilities` —
+už neexistuje.
+
+**Sken cestou našel tři věci, které duplicity nebyly:** dvě lživé aserce
+(`toContain('LIKE')` projde i pro `ILIKE`; `toContain('CONCAT')` projde i pro
+obalený identifikátor), nepokrytý kontrakt asset routy ve třech balíčcích ze
+čtyř, a `basename()`, který v té routě nemohl proběhnout. Všechno tři jsou
+v §2.
+
+**Co ze skenu zbylo otevřené a proč**, ať to nikdo nehledá znovu:
+
+| Skupina | Verdikt |
+|---|---|
+| `Filter::visible()/hidden()` = doslovná kopie `Actions\Concerns\HasVisibility` | **čeká na rozhodnutí.** Přímé použití traitu nejde: `Filter::$hidden` je `public`, trait ho má `protected` (fatal při `use`), trait vyžaduje `shouldInvokeDynamicCallback()` z `HasDynamicProperties` a přinesl by `disabled()`/`canExecute()` do veřejného API filtru. Správný tvar je vlastník ve Foundation — jenže tam `HasVisibility` **už je**, s jiným mechanismem (`evaluate()` přes `app()->call()`). Tři mechanismy na jednu otázku; sjednotit je návrhové rozhodnutí, ne přesun |
+| `relationship()` — forms `HasRelationship` × `SelectColumn` | **čeká na konzumenta rozhodnutí o umístění.** Trait je ve forms, table na něj dosáhne, ale CLAUDE.md chce vlastníka v nejnižší vrstvě → core. K tomu se liší signatura (nullable × povinné) i getter (`getRelationship()` × `getRelationshipName()`), takže je to změna veřejného API dvou balíčků a docs stránek |
+| `Modals\Html\Confirmation` × `Modals\View\ConfirmationComponent` | **nedělat.** Opakuje se 19 parametrů, ale to je veřejné API Blade komponenty a přesunout se nedá. Sdílených *pravidel* je šest řádků (dva `??=` a guard na danger), a ten guard je od tohohle běhu jediné pravidlo napříč všemi čtyřmi místy. Dvojice je navíc záměr rule-5 sweepu, stejně jako `modal-host.blade.php` v §3 |
+| `Schema/*` × `View/*` (Callout, Section, Grid, Flex, Step, Tab, Tabs, Wizard, Fieldset, EmptyState) | **nedělat.** Ne duplicita: `Schema` je deklarace uvnitř schématu, `View` je `<x-wire::…>` tag, oba renderují týž partial. Zapsané v docblocích („slot-based counterpart") |
+| `HasPolling` v `WireTable\Concerns` × `WireCore\Widgets\Concerns` | **nedělat, změřeno dřív.** Docblok table verze to říká: widget pollује, když má interval, tabulka když jí to někdo řekl. Co je společné, je atribut, a ten vlastní `Foundation\ValueObjects\PollDirective` |
+| `Repeater::collapsed()` × `Section::collapsed()` | **nedělat, rozhodnuto ve V2.6/kroku 2** („sbalení vědomě ne — slovník už existuje dvakrát") |
+| `ActionHalt` × `ConfirmationDialog` — `danger()`, `icon()`, `informative()`, `isDanger()`… | **čeká na rozhodnutí.** Nejsou to jednotlivé metody, je to celá sdílená plocha „konfigurace potvrzovacího modálu", kterou obě třídy nesou zvlášť. Tenhle běh je aspoň srovnal v tom, co dělají (§2); sloučit je znamená pojmenovat tu plochu, ne přesunout tři settery. Sken je proto pořád hlásí — a je to správně |
+| `ActionHalt::icon()` × `HasModal::modalIcon()` | **nedělat.** Dva řádky normalizace (`Icon` → `string`, `Color` → `string`), kde kanonickými vlastníky jsou už `Icon::value()` a `Color->value`. Vlastník navíc nad dvěma řádky by byl větší než ony |
+| `ComponentReflector::callValue()` × `ComponentValidator::call()` (boost) | **nedělat.** Pět řádků, jeden balíček, a `callArray()` wrappery obou se liší (jeden filtruje objekty). Vlastník by byl větší než to, co vlastní |
 
 **Vyřešeno 2026-09-03: tenancy nad non-Eloquent `DataSource`.** Vznikl
 `Core\Tenancy\TenantScopedDataSource` a s ním pravidlo „tenancy nad
@@ -1233,6 +1340,12 @@ píšící plugin na to spadl znovu.
 - **ADR 0025 kroky 4, 8, 10** — 4 a 8 zamítnuté měřením, 10 hotový a dodělaný.
 - **`resolveActionType()` a jeho dva sourozenci** — nula volajících je zapsaný
   záměr, ne mrtvý kód.
+- **Asset routa** — čtyři kopie sloučené do `Bundle::serve()` 2026-09-03. Nový
+  balíček ji nepíše, zavolá ji; ruční `Route::get` na bundle je od teď regrese,
+  ne volba (`architecture/assets.md` § Typical Changes).
+- **Kvalifikace sloupce a LIKE predikát** — `ColumnReference` a `LikePredicate`.
+  Strategie vlastní operátor a cast, nic víc; kdo píše predikát znovu, píše buď
+  injection point, nebo rozbitý dotaz.
 - **Celá V2.6** — hotová 2026-09-03, všech pět kroků (§0c–§0g jejího plánu).
   `ModuleRegistry` a registr workflow jsou **zamítnuté měřením**, ne odložené:
   `PluginManager` drží moduly, resource drží workflow. Otevírat je znovu jen
@@ -1255,7 +1368,12 @@ Postup je pokaždé stejný a v tomhle pořadí:
    u aditivní práce se ptej „kdo tuhle schopnost už vlastní?".
 2. Najdi, co není pokryté: grep metod s nula zmínkami v `tests/`, a `@php`
    bloky ve views. Když najdeš stejné pravidlo dvakrát, **nejdřív zjisti, která
-   kopie je novější** — ne která vypadá rozbitě.
+   kopie je novější** — ne která vypadá rozbitě. (`git log -S` na to odpoví za
+   vteřinu a v běhu 2026-09-03 to otočilo verdikt: hlučnější kopie byla starší.)
+   Na duplicity nečti — **skenuj**: tokenizuj `src/`, vytáhni těla metod, zahoď
+   bílé znaky a komentáře, seskup identická. Celý repo za vteřiny, a druhý běh
+   s normalizovanými proměnnými a řetězci najde, co první minul. Vidí ale jen
+   *identická* těla; totéž pravidlo napsané jinak najde až čtení vedle.
 3. Mutuj PROTI STÁVAJÍCÍ SADĚ, než napíšeš test — to je důkaz, že pravidlo bylo
    nepokryté, ne tvůj dojem. Pak napiš test a mutuj znovu.
 4. Tělo k vlastníkovi, endpoint tenký. Adaptér se extrahuje a deleguje, nikdy

@@ -111,6 +111,7 @@
         "lint": "vendor/bin/pint",
         "analyse": "vendor/bin/phpstan analyse --ansi",
         "api:dead": "php scripts/verify-dead-api.php .",
+        "duplicates": "php scripts/find-duplicate-bodies.php .",
         "api:instanceof": "php scripts/verify-instanceof-imports.php .",
         "boost:sync-docs": "php scripts/sync-boost-docs.php .",
         "boost:check-docs": "php scripts/sync-boost-docs.php . --check"

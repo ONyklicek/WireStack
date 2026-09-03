@@ -190,6 +190,12 @@ vendor/bin/pest --configuration phpunit.xml --testsuite "Integration"
 composer lint
 composer analyse
 
+# Duplicate-abstraction sweep: groups identical method bodies across every
+# package's src/. Report only, not a gate. `--normalize` ignores names and
+# literals. See architecture/plans/v2-progress.md § 2 for what it has found.
+composer duplicates
+composer duplicates -- --normalize
+
 # Module-layer gate for wire-core (part of test:core; run it alone while
 # refactoring across modules). See ADR 0025.
 vendor/bin/pest --filter ModuleLayers
