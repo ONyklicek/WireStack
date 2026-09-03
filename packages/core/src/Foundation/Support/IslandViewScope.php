@@ -40,12 +40,28 @@ final class IslandViewScope
     public static function register(): void
     {
         on('renderIsland', function ($component, $name, $view, $properties) {
-            $revertLivewire = Utils::shareWithViews('__livewire', $component);
-            $revertInstance = Utils::shareWithViews('_instance', $component); // @deprecated, mirrors the full render
+            // Only what is not already there. Livewire v4.4.3 took this fix
+            // upstream for `__livewire` and shares it around the island's own
+            // render — but it reverts *before* calling this hook's finisher, so a
+            // second share layered on top would hand back the component instead of
+            // what was there first, and leave it shared with every view for the
+            // rest of the request. Skipping the key that is already ours keeps
+            // this working on the versions that share nothing, without fighting
+            // the ones that do.
+            $reverts = [];
 
-            return function ($html, $replaceHtml) use ($revertLivewire, $revertInstance): void {
-                $revertLivewire();
-                $revertInstance();
+            foreach (['__livewire', '_instance'] as $key) { // `_instance` is deprecated, and mirrors the full render
+                if ((app('view')->getShared()[$key] ?? null) === $component) {
+                    continue;
+                }
+
+                $reverts[] = Utils::shareWithViews($key, $component);
+            }
+
+            return function ($html, $replaceHtml) use ($reverts): void {
+                foreach (array_reverse($reverts) as $revert) {
+                    $revert();
+                }
             };
         });
     }

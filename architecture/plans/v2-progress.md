@@ -1210,6 +1210,71 @@ kopie viditelnosti z akční vrstvy se chytila jen proto, že `visible()` i
 jinak, sken neviděl a našlo ho až čtení vedle. Sken je síto na to, co už drift
 nezakryl, ne důkaz, že víc duplicit není.
 
+**Livewire 4.4.3 odebral kapabilitu v patch releasu — a CI to viděla dřív než
+kdokoli jiný.** `composer.lock` je v `.gitignore` (§2 to zapsala už u openspoutu),
+takže si každé prostředí resolvuje samo: lokálně bylo **v4.4.0**, CI dostala
+**v4.4.3** a spadlo 15 testů. Reprodukce je jednořádková — `composer update
+livewire/livewire` — a pak sedí přesně, 1 core + 13 table + 1 sortable.
+
+Odebrané je `skipIslandsRender()` / `shouldSkipIslandsRender()`. Existovaly kvůli
+`#[Renderless]`, které teď čte atribut z metody (`isRenderlessMethod()`), a
+**náhrada neexistuje**: jediné, co ještě umí implicitní island render zastavit, je
+ten atribut, a ten zároveň skipne celý render — což tahle cesta mít nesmí, protože
+zápis, který přesune záznam mezi skupinami, render potřebuje.
+
+Dvě volající místa a dva různé závěry:
+
+- `CanExpandSubRows::toggleAllRowExpansion()` → `forceRender()`. Ta přebíjí
+  `skipRender()`, který island cesta volá, a je veřejné API v obou verzích. Test
+  to teď pinuje **přes efekt, ne přes flag** — zavolá `skipRender()` a tvrdí, že
+  se neprojevil. Mutace to chytá.
+- `WithTable::queueChangedRowPartials()` → **nic**, a to je měřený závěr.
+  `forceRender()` tam vypadá jako port a není: odskipovala by render, který
+  `PartialRenderHook` stejně skipne zápisem do store, a přitom by zablokovala
+  záměrný skip v `skipTableRenderAfterWrite()` o pár řádků výš. Mutace to
+  potvrdila — smazání toho volání neshodilo nic.
+
+**Druhá půlka byla naše oprava, kterou Livewire převzal — a tím ji rozbil.**
+`renderIslandView()` teď sdílí `__livewire` sám a **reverzuje před** zavoláním
+finisheru z hooku `renderIsland`. Naše druhé sdílení navrch tedy vracelo
+komponentu místo původní hodnoty a nechalo ji nasdílenou všem view do konce
+requestu. `IslandViewScope::register()` teď sdílí jen klíč, který tam ještě není —
+funguje na verzích, co nesdílejí nic, i na těch, co sdílejí.
+
+**A pak nález, který neuviděl žádný server-side test, protože nemohl.** Ta
+odebraná kapabilita byla to, čím server přebíjel klienta: buňka si přes
+`$wire.$island('data-region')` cílí island sama a `skipIslandsRender()` byl způsob,
+jak říct „ne, tenhle zápis odpovím řádkovým partialem". Bez ní přišel **island
+fragment i `wirePartials`** — obojí správně vyrenderované, ale zaplatil se celý
+region (42 kB) místo řádku (26 kB), tedy přesně to, kvůli čemu partials vznikly.
+Serverové testy to vidět nemohou: island se do hry dostane jen tehdy, když volání
+má DOM origin, a `Livewire::test()->call()` ho nemá. **Uviděl to
+`verify-row-partials.mjs`**, který měří tvar odpovědi na drátě:
+`{"hasHtml":false,"hasIslands":true,"partials":["row-1","card-1","summary","summary-mobile"]}`.
+
+Volba se proto přesunula tam, kde ta informace už je — do DOM. Řádek, který nese
+`wire:partial`, je řádek, na který server odpoví partialem, takže buňka uvnitř něj
+svůj island zahazuje. Tabulka bez `rowPartials()` anchor nemá a island si nechává,
+takže se nic dalšího nemění.
+
+**Pravidlo, které z toho padá: gitignorovaný lock znamená, že CI je první, kdo
+uvidí patch release závislosti.** Tady to nebyl regres z našeho commitu — červené
+byly i tři pushe předtím a nikdo se na ně nepodíval. Reprodukce stojí jeden
+`composer update <balíček>` a bez ní se hádá.
+
+**A při té příležitosti: `refreshRow()` nikdy nikdo nezavolal — ani test.** Diff
+brána na pokrytí ukázala nula spuštění na jediném příkazu, který ta metoda má.
+`PollColumn` do markupu kompiluje `wire:poll` na `refreshRow('<klíč>')` a jediný
+test nad tou dvojicí tvrdil, že se v markupu **objeví ten string** — takže metoda,
+kterou jmenuje, mohla mít prázdné tělo a celá tabulková sada byla zelená. Změřeno,
+ne odhadnuto: po smazání toho příkazu **2433 testů prošlo**.
+
+`RefreshRowTest` teď drží obě půlky kontraktu, který má metoda v docbloku, a každá
+padá na svém směru mutace: záznamy se zahodí (jinak po pollu doběhne spinner a
+stará hodnota zůstane), **a plán dotazu ne** (přeplánovat pro každou pollující
+buňku je práce pro nic). Druhá půlka je aserce přes reflexi, protože nemá jiný
+vnější projev.
+
 ---
 
 ## 3. Co je vědomě neudělané
@@ -1346,6 +1411,13 @@ píšící plugin na to spadl znovu.
 - **Kvalifikace sloupce a LIKE predikát** — `ColumnReference` a `LikePredicate`.
   Strategie vlastní operátor a cast, nic víc; kdo píše predikát znovu, píše buď
   injection point, nebo rozbitý dotaz.
+- **Volba island × partial patří do DOM.** Livewire v4.4.3 odebral
+  `skipIslandsRender()`, kterým server odmítal island za buňku, a náhradu nemá.
+  Buňka si proto island zahazuje sama, když sedí v `wire:partial` anchoru —
+  `dropdown.js` `init()`. Kdo tu podmínku smaže, zaplatí celý region místo řádku
+  (42 kB × 26 kB) a **žádný server-side test to nechytí**: island se do hry
+  dostane jen u volání s DOM originem, který `Livewire::test()->call()` nemá.
+  Vidí to `verify-row-partials.mjs`.
 - **Celá V2.6** — hotová 2026-09-03, všech pět kroků (§0c–§0g jejího plánu).
   `ModuleRegistry` a registr workflow jsou **zamítnuté měřením**, ne odložené:
   `PluginManager` drží moduly, resource drží workflow. Otevírat je znovu jen

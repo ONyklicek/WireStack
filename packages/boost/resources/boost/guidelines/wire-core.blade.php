@@ -317,6 +317,7 @@ declares its own bundles in its own `configure()`; core never learns about downs
 
 ```php
 $packager
+    ->bootedPackage(fn () => Bundle::serve('wire-table', self::ASSETS_PATH))
     ->hasAssets('dist', entries: [
         Bundle::make('wire-table-records.js'),
     ])
@@ -333,6 +334,14 @@ Entries are keyed by the **shipped filename**, not a short id. Delivery is the t
 copies `dist/` into `public/vendor/{package}` on first resolve — no `vendor:publish`, no build step
 for consumers — and `hasAssetFallback()` points at the package's own `{package}.asset` route for the
 app whose `public/` cannot be written. Without that fallback the renderer drops the tag silently.
+
+**`Bundle::serve()` registers that route — never hand-write it.** It is the other half of the same
+mapping: `servedByRoute()` reads a bundle id off a shipped filename to build the URL, `serve()`
+turns that id back into the file, and one class owning both is what keeps them from drifting. It
+carries the parts a hand-written `Route::get` gets wrong — a 404 rather than a 500 for a bundle the
+package does not ship, an `[A-Za-z0-9_-]+` id pattern, and the immutable cache header that stops a
+fallback the renderer reaches on every page from costing a request every page. Name the bundle
+`{package}-{id}.js`, after the package itself, or anything else: all three round-trip.
 
 **Register Alpine components unconditionally, never only inside `alpine:init`.** That event fires
 exactly once per document, so a bundle arriving later (SPA navigation, a lazily rendered table, an

@@ -106,7 +106,14 @@ trait CanExpandSubRows
         // So this write opts out of island rendering and takes the full render.
         // It is a once-in-a-while table-wide switch, not a per-row or per-keystroke
         // path, and the two controls agreeing is worth more than the saving.
-        $this->skipIslandsRender();
+        //
+        // `forceRender()` rather than the `skipIslandsRender()` this used to call:
+        // Livewire removed that pair in v4.4.1 along with the store flag behind it
+        // (it existed to serve `#[Renderless]`, which now reads the attribute off
+        // the method instead). What is left is the switch that outranks the
+        // `skipRender()` the island path takes — set before the method returns, so
+        // it is already there when that path runs.
+        $this->forceRender();
 
         $this->setSubRowsExpandAll(! $this->expandsSubRowsByDefault());
     }

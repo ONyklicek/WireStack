@@ -2314,7 +2314,21 @@ trait WithTable
 
             $renderer = RowRenderer::for($table, $this, $this->tableRenderPlan());
 
-            $this->skipIslandsRender();
+            // This used to call `skipIslandsRender()` so the partials answered the
+            // write instead of the island the cell's own `$wire.$island('data-region')`
+            // targets. Livewire removed that switch in v4.4.1 and left no
+            // replacement: `#[Renderless]` is the only remaining way to stop an
+            // implicit island render, and it skips the whole render with it —
+            // which this path cannot have, because a write that moves a record
+            // between groups needs one.
+            //
+            // Nothing is put in its place here. `forceRender()` looks like the
+            // port and is not: it would only un-skip a render `PartialRenderHook`
+            // skips again by writing the store key directly, while blocking the
+            // deliberate skip in `skipTableRenderAfterWrite()` above. The cost of
+            // the loss is real but is not this method's to pay — the island a
+            // cell targets is chosen in the cell's own view, which is where the
+            // table already knows whether partials will answer instead.
             $this->renderPartial(
                 'row-'.$recordKey,
                 fn (): string => $renderer->render($record, (int) $index),

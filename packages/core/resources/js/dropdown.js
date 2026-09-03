@@ -503,6 +503,10 @@ const wireEditableCell = (config = {}) => ({
     // The island this cell's writes belong to, or null for a surface that has
     // none (an editable panel entry). See support/island.js: a $wire call from
     // Alpine has no DOM origin, so Livewire cannot work this out for itself.
+    //
+    // Dropped in init() when the server is going to answer with a partial
+    // instead — the two are alternative answers to the same write, and asking
+    // for both gets both.
     island: config.island ?? null,
     validateMethod: config.validateMethod ?? 'validateTableCell',
     recordKey: null,
@@ -544,6 +548,17 @@ const wireEditableCell = (config = {}) => ({
         // the event target instead).
         this.recordKey = this.$el.dataset.recordKey
         this.columnName = this.$el.dataset.columnName
+
+        // A row that carries a partial anchor is one the server will answer with
+        // that row alone, which is cheaper than the island this cell would
+        // otherwise target — 26 kB against 42 kB on the measured grid — and the
+        // two are not additive: a call targeting an island gets the island
+        // fragment *and* the partials, because the server can no longer decline
+        // the island on the cell's behalf. Livewire had a switch for that
+        // (`skipIslandsRender()`, which `WithTable::queueChangedRowPartials()`
+        // called) and removed it in v4.4.1 with no replacement. So the choice
+        // moves here, where the anchor says which answer is coming.
+        if (this.island && this.$el.closest('[wire\\:partial]')) this.island = null
         // Off the DOM, not off `this.messages` — reading the property back into
         // itself left all three undefined, so a save that failed without a server
         // reply (offline, a 500) set `error` to undefined and the cell reported

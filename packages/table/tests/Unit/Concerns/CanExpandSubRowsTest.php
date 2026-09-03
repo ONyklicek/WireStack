@@ -257,7 +257,15 @@ it('takes the full render, because the setting is shown outside the island', fun
     // could, which is why the opt-out is pinned rather than left to a comment.
     $test = Livewire::test(CeSubRowsComponent::class)->call('toggleAllRowExpansion');
 
-    expect($test->instance()->shouldSkipIslandsRender())->toBeTrue();
+    $instance = $test->instance();
+
+    // Asserted through the effect, not the flag. The island path answers a click
+    // inside a region by calling `skipRender()`, and this write's whole job is to
+    // make that call a no-op. `shouldSkipIslandsRender()`, which this used to
+    // read, was Livewire's own switch until v4.4.1 removed the pair.
+    $instance->skipRender();
+
+    expect($instance->shouldSkipRender())->toBeFalse();
 });
 
 it('keeps toggleFlattenMode working as an alias of the master toggle', function () {

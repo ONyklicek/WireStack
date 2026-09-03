@@ -25,6 +25,16 @@
  * Worth knowing, but not worth relying on — pass the name only where the island
  * is.
  *
+ * **Not where the server is going to answer with a partial.** A partial and an
+ * island fragment are two answers to the same write, and asking for the island
+ * gets both: Livewire had a switch for the server to decline the island
+ * (`skipIslandsRender()`, which `WithTable::queueChangedRowPartials()` called)
+ * and removed it in v4.4.1 with no replacement. So the caller decides, and the
+ * DOM already says which answer is coming — an editable cell drops its island
+ * when it sits inside a `wire:partial` anchor. `verify-row-partials.mjs` is what
+ * sees this; no server-side test can, because the island only enters the picture
+ * when the call carries a DOM origin.
+ *
  * **Not for a controller that guards itself against morphs.** The fill handle
  * suppresses rendering while a drag is in flight through Livewire's
  * `morph.updating` hook, and an island fragment is morphed by `morphFragment`,
