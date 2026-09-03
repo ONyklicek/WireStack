@@ -64,6 +64,18 @@ it('declares its widgets without a component in sight', function () {
         ->and($dashboard->columns())->toBe(3);
 });
 
+it('falls back to the whole class name when the suffix is all there is', function () {
+    // A class named exactly `Dashboard`: stripping the suffix leaves nothing, so
+    // the name itself has to serve. Its own namespace because the name collides
+    // with the base class anywhere else.
+    require_once __DIR__.'/../../Fixtures/PlainDashboard.php';
+
+    $class = NyonCode\WireCore\Tests\Fixtures\Dashboards\Dashboard::class;
+
+    expect($class::key())->toBe('dashboard')
+        ->and($class::label())->toBe('Dashboard');
+});
+
 it('derives a key and a label from its class name', function () {
     // Same rule as DescribesRecords, for the same reason: a key and a label
     // taken from two different places drift the moment someone renames one.

@@ -756,17 +756,29 @@ TransitionAction::to(OrderStatus::Confirmed)->workflow($orders)
 ```
 
 Ve všem ostatním obyčejná akce — stejný pipeline, stejná autorizace, umí
-potvrzení i frontu. Přidává `isAvailableFor($record, $user)`: true jen když hrana
-existuje **a** její guardy projdou. Akce nabídnutá pro přechod, který uživatel
-nemůže dokončit, je akce, která existuje, aby byla odmítnuta — a odmítnutí, které
-nemohl předvídat, se čte jako chyba aplikace, ne jako pravidlo procesu.
+potvrzení i frontu. Přidává dvě věci, a obě fungují, aniž by povrch, který ji
+kreslí, o nějakém workflow věděl:
 
-Popisek, barvu a ikonu bere z cílového enumu stejnou kanonickou cestou, jakou
-používá `BadgeColumn`, takže tlačítko a badge se neshodnou nemohou. Explicitní
-`->label()` dál vyhrává.
+**Sama se skryje tam, kde by přechod neprošel.** `isHidden($record)` — na což se
+každý povrch akcí ptá před vykreslením a `canExecute($record)` před spuštěním —
+skryje akci, dokud hrana neexistuje **nebo** neprojdou její guardy pro tenhle
+záznam a tohohle uživatele. Akce nabídnutá k přechodu, který uživatel nemůže
+dokončit, je akce existující proto, aby byla odmítnuta, a odmítnutí, které nešlo
+předvídat, se čte jako chyba aplikace, ne jako pravidlo procesu.
+`isAvailableFor($record, $user)` odpoví na půlku toho stroje samostatně, pro UI,
+které se chce zeptat přímo.
 
-Vlastní `->visible()` akce a odpověď stroje zůstávají oddělené otázky, takže
-jedna druhou tiše nepřebije.
+**Stisk provede přechod.** Připojení workflow nastaví akci callback na přechod,
+takže tlačítko nepotřebuje vlastní `->action()`. Explicitní `->action()` pořád
+vyhraje, v libovolném pořadí.
+
+Label, barvu i ikonu bere z cílového enumu stejnou kanonickou cestou jako
+`BadgeColumn`, takže se tlačítko a badge nemůžou neshodnout na tom, jak vypadá
+„Confirmed". Explicitní `->label()` pořád vyhraje.
+
+Vlastní `->visible()` akce a odpověď stroje zůstávají oddělené otázky — musí
+platit obě a ani jedna tiše nepřebíjí druhou. Kontrola bez záznamu (header akce,
+view ptající se naprázdno) stroj vynechá.
 
 ### Co má UI nabídnout
 

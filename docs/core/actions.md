@@ -758,18 +758,29 @@ TransitionAction::to(OrderStatus::Confirmed)->workflow($orders)
 ```
 
 An ordinary action in every other respect — same pipeline, same authorization,
-can confirm, can queue. What it adds is `isAvailableFor($record, $user)`: true
-only when the edge exists **and** its guards pass. An action offered for a
-transition the user cannot complete is an action that exists to be refused, and a
-refusal they could not have predicted reads as an application bug rather than a
-rule of the process.
+can confirm, can queue. What it adds is two things, and both happen without the
+surface drawing it knowing a workflow exists:
+
+**It hides itself where the move would not work.** `isHidden($record)` — what
+every action surface already asks before rendering, and `canExecute($record)`
+before running — is true unless the edge exists **and** its guards pass for this
+record and this user. An action offered for a transition the user cannot complete
+is an action that exists to be refused, and a refusal they could not have
+predicted reads as an application bug rather than a rule of the process.
+`isAvailableFor($record, $user)` answers the machine's half alone, for a UI that
+wants to ask directly.
+
+**Pressing it performs the move.** Attaching a workflow sets the action's
+callback to the transition, so a button needs no `->action()` of its own. An
+explicit `->action()` still wins, in either order.
 
 Its label, colour and icon come from the target enum through the same canonical
 resolution `BadgeColumn` uses, so the button and the badge cannot disagree about
 what "Confirmed" looks like. An explicit `->label()` still wins.
 
-The action's own `->visible()` and the machine's answer stay separate questions,
-so neither quietly overrules the other.
+The action's own `->visible()` and the machine's answer stay separate questions —
+both must hold, and neither quietly overrules the other. A check with no record
+(a header action, a view asking bare) leaves the machine out of it.
 
 ### What a UI should offer
 

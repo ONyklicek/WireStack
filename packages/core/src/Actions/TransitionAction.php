@@ -65,10 +65,31 @@ class TransitionAction extends Action
         return $action;
     }
 
-    /** The machine that decides whether this transition is on offer. */
+    /**
+     * The machine that decides whether this transition is on offer — and, unless
+     * the caller said otherwise, what pressing the button does.
+     *
+     * The default callback is the other half of the defect V2.6 step 4 found: an
+     * action runs whatever `getActionCallback()` returns, `TransitionAction` set
+     * none, so a transition button rendered, was clicked, and did nothing at all
+     * — quieter than an error and harder to notice. Attaching a machine is the
+     * moment the intent is unambiguous, so that is where the default is set.
+     *
+     * An explicit `->action()` still wins whichever order the two are called in:
+     * one written before this leaves the callback set, and one written after
+     * replaces it, which is how every other action behaves.
+     */
     public function workflow(WorkflowState $workflow): static
     {
         $this->workflow = $workflow;
+
+        if ($this->actionCallback === null) {
+            $this->action(function (mixed $record = null): void {
+                if ($record instanceof Model) {
+                    $this->transition($record);
+                }
+            });
+        }
 
         return $this;
     }
@@ -81,11 +102,11 @@ class TransitionAction extends Action
     /**
      * Whether to offer this transition for a record.
      *
-     * Separate from `isHidden()` because they answer different questions:
-     * visibility is the action's own `->visible()` condition, and this is the
-     * machine's. Both must hold, and keeping them apart means a `->visible()`
-     * a developer wrote is never quietly overruled by the workflow, nor the
-     * other way round.
+     * Separate from the action's own `->visible()` because they answer different
+     * questions: that one is the developer's condition, this is the machine's.
+     * Both must hold, which is what {@see isHidden()} composes below — keeping
+     * them apart means a `->visible()` a developer wrote is never quietly
+     * overruled by the workflow, nor the other way round.
      */
     public function isAvailableFor(Model $record, mixed $user = null): bool
     {
@@ -95,6 +116,32 @@ class TransitionAction extends Action
         }
 
         return $this->workflow->canTransition($record, $this->target, $user);
+    }
+
+    /**
+     * The machine's answer, joined to the action's own.
+     *
+     * This override is what makes the absence above real. Until V2.6 step 4
+     * nothing called `isAvailableFor()` outside its own tests: every surface
+     * that draws an action asks `isHidden($record)` — `actions/button.blade.php`
+     * before rendering, `canExecute($record)` before running — and neither knew
+     * about a workflow. So a table offered every transition on every row, and a
+     * user who clicked one the machine forbids got an exception where the docs
+     * promised a button that was simply not there. Found by putting a real
+     * workflow on a real table in the workbench; no unit test could see it,
+     * because the method under test was the one nothing called.
+     *
+     * A record-less context (a header action, a view asking bare) leaves the
+     * machine out of it: there is no record to ask about, and hiding on that
+     * basis would remove buttons that have nothing to do with a workflow.
+     */
+    public function isHidden(mixed $context = null): bool
+    {
+        if (parent::isHidden($context)) {
+            return true;
+        }
+
+        return $context instanceof Model && ! $this->isAvailableFor($context);
     }
 
     /**

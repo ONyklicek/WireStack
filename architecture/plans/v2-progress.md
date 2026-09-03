@@ -1,7 +1,7 @@
 ---
 title: V2 — kde to stojí a čím pokračovat
-date: 2026-09-02
-scope: V2.0–V2.5 (hotové), ADR 0025 (rozpracované), V2.6 (běží — kroky 1–3 hotové)
+date: 2026-09-03
+scope: V2.0–V2.5 (hotové), ADR 0025 (rozpracované), V2.6 (běží — kroky 1–4 hotové)
 status: progress record — aktualizovat na konci každého běhu
 ---
 
@@ -1024,6 +1024,30 @@ zpět), ne konkrétní data. Seeder u některých tabulek slibuje „determinist
 purpose — the CDP drivers address rows by name"; pro `tasks` a `documents` to
 už neplatí.
 
+**V2.6/krok 4: V2.4 dodala workflow, které v prohlížeči nefungovalo ani jednou
+půlkou — a zjistilo se to až tím, že ho někdo poprvé nakreslil.**
+`WorkflowState` a `TransitionAction` byly hotové, otestované a zdokumentované;
+`v2-progress.md` je vede jako ✅. Prototyp na faktuře ukázal dvě věci:
+
+| Defekt | Proč to prošlo vším |
+|---|---|
+| Tabulka nabízela **všechna** přechodová tlačítka na **všech** řádcích — i na faktuře v koncovém stavu, kde by klik vyhodil `IllegalTransitionException` | Povrch akcí se ptá `isHidden($record)`, spuštění `canExecute($record)`. `TransitionAction` uměl jen `isAvailableFor()`, **které nevolalo nic než jeho vlastní testy a docs**. Unit test třídy to vidět nemůže: pokrytá byla metoda, kterou nic nevolá |
+| Stisk tlačítka **neudělal nic** | Akce spouští `getActionCallback()`; `TransitionAction` žádný nenastavoval. Tiché selhání — bez výjimky, bez logu |
+
+Docblok té třídy přitom slibuje pravý opak („That absence is the point"). Absence
+byla **slíbená, ne implementovaná** — a je to stejná třída chyby jako
+`StatsOverviewWidget::heading()` o odstavec výš: API, které existuje, je
+otestované v izolaci a v renderu se ho nikdo nezeptá.
+
+Oprava respektuje původní záměr, že `->visible()` vývojáře a odpověď stroje jsou
+dvě otázky: `isHidden()` je **skládá** (musí platit obě; bez záznamu se stroj
+vynechá) a `workflow()` nastaví výchozí callback, který explicitní `->action()`
+přebije v libovolném pořadí. Mutace obou oprav testy shodí.
+
+**A driver je záměrně vratný.** Workbench databáze je sdílená se 79 drivery
+a jednosměrný přechod by ji každým během posunul o stav dál — proto má workflow
+faktury „reopen" hranu a driver vrací, co posunul. Ověřeno dvěma běhy za sebou.
+
 **V2.6/krok 3: `->heading()` na jednom widgetu nekreslilo nic — a test na to
 existoval.** `Widget::heading()`/`description()` je API základní třídy a **čtyři
 z pěti** widget views ho vykreslí; `stats-overview.blade.php` ne, od svého
@@ -1108,15 +1132,26 @@ doplní. Pořadí je v §0b a **není to pořadí z §2 toho plánu**: začalo s
 konzumentem navigace, protože `Workspace` žádného neměl, a bez vykresleného menu
 nemá `NavigationGroup` ani `DomainModule` kde selhat v prohlížeči.
 
-**Kroky 1–3 jsou hotové (2026-09-02)** — sidebar ve workbenchi nad třemi
+**Kroky 1–4 jsou hotové (2026-09-02 a 03)** — sidebar ve workbenchi nad třemi
 resources (driver 24/24), a na něm postavená `NavigationGroup`: klíč oddělený od
 nadpisu, ikona, deklarované pořadí skupin, viditelnost celé skupiny (driver
 27/27). Sbalení se vědomě nedoplnilo. Detaily v §0c a §0d plánu.
 
-**Na řadě je krok 4, registr workflow** — a plán u něj sám říká, že se přidává
-**jen když ho modul reálně potřebuje**. Bez kroku 5 se to poctivě změřit nedá,
-takže nejpravděpodobnější výsledek je „nedělat, `workflows()` z kontraktu
-vypustit" — ale i to se má doložit měřením, ne odhadnout.
+**Krok 4 rozhodnut 2026-09-03: registr NEdělat**, `workflows()` z kontraktu
+vypustit (§0f plánu). Doloženo prototypem: workflow na reálné faktuře má jednu
+skupinu konzumentů a resource je už adresovatelný klíčem, takže registr by byl
+druhý vlastník odpovědi, kterou `ResourceRegistry` dává.
+
+Ten prototyp ale našel **dva ostré defekty ve V2.4** — viz §2. Krátce:
+`TransitionAction` v tabulce nabízel všechna tlačítka na všech řádcích a stisk
+neudělal nic. Obojí opravené, `verify-workflow-transitions` (11/11) je nová
+brána.
+
+**Na řadě je krok 5, `DomainModule` + `ModuleRegistry`** — capstone. Teprve teď
+má kontrakt z §2 co vyjmenovat: `NavigationGroup` i `Dashboard` existují,
+`workflows()` je škrtnuté, `workspaces()` bylo škrtnuté už v §0a, a `id()` /
+`dependencies()` se berou z `Plugin`. §7 chce **dva** referenční moduly, ne
+jeden.
 
 ### Co zbývá otevřené
 

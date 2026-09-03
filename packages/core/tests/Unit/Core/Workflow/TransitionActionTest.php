@@ -131,6 +131,93 @@ it('is an ordinary action when no workflow is attached', function () {
     expect(TransitionAction::to(TaStatus::Confirmed)->isAvailableFor($this->order))->toBeTrue();
 });
 
+// ─── …and every surface actually asks ────────────────────────────────────────
+//
+// The section above tested `isAvailableFor()`, which until 2026-09-03 nothing
+// outside these tests called. What draws an action asks `isHidden($record)`
+// (actions/button.blade.php) and what runs one asks `canExecute($record)`, so a
+// table offered every transition on every row and clicking one the machine
+// forbids threw instead of the button simply not being there. Found by putting a
+// real workflow on a real table in the workbench.
+
+it('hides itself for a record whose machine forbids the edge', function () {
+    $action = TransitionAction::to(TaStatus::Shipped)->workflow(taWorkflow());
+
+    expect($action->isHidden($this->order))->toBeTrue()
+        ->and($action->canExecute($this->order))->toBeFalse();
+});
+
+it('hides itself while a guard would veto, and reappears when it passes', function () {
+    $action = TransitionAction::to(TaStatus::Confirmed)->workflow(taWorkflow());
+
+    expect($action->isHidden($this->order))->toBeTrue();
+
+    $this->order->update(['lines' => 1]);
+
+    expect($action->isHidden($this->order->fresh()))->toBeFalse()
+        ->and($action->canExecute($this->order->fresh()))->toBeTrue();
+});
+
+it('leaves a record-less check to the action-s own condition', function () {
+    // A header action, or a view asking bare: there is no record to ask the
+    // machine about, and hiding on that basis would remove buttons that have
+    // nothing to do with a workflow.
+    $action = TransitionAction::to(TaStatus::Shipped)->workflow(taWorkflow());
+
+    expect($action->isHidden())->toBeFalse();
+});
+
+it('still lets the developer-s own visible(false) hide it', function () {
+    $this->order->update(['lines' => 1]);
+
+    $action = TransitionAction::to(TaStatus::Confirmed)->workflow(taWorkflow())->visible(false);
+
+    expect($action->isHidden($this->order->fresh()))->toBeTrue();
+});
+
+it('does not hide an ordinary action that carries no machine', function () {
+    expect(TransitionAction::to(TaStatus::Confirmed)->isHidden($this->order))->toBeFalse();
+});
+
+it('runs the transition when the button is pressed', function () {
+    // The other half of the same defect: an action runs whatever
+    // getActionCallback() returns, and this type set none — so the button
+    // rendered, was clicked, and did nothing.
+    $this->order->update(['lines' => 1]);
+
+    $action = TransitionAction::to(TaStatus::Confirmed)->workflow(taWorkflow());
+    $callback = $action->getActionCallback();
+
+    expect($callback)->not->toBeNull();
+
+    $callback($this->order);
+
+    expect($this->order->fresh()->status)->toBe(TaStatus::Confirmed->value);
+});
+
+it('lets an explicit action() win over the default, in either order', function () {
+    $ran = 0;
+    $custom = function () use (&$ran): void {
+        $ran++;
+    };
+
+    $before = TransitionAction::to(TaStatus::Confirmed)->action($custom)->workflow(taWorkflow());
+    $after = TransitionAction::to(TaStatus::Confirmed)->workflow(taWorkflow())->action($custom);
+
+    ($before->getActionCallback())($this->order);
+    ($after->getActionCallback())($this->order);
+
+    // Neither moved the record: both ran the caller's callback instead.
+    expect($ran)->toBe(2)
+        ->and($this->order->fresh()->status)->toBe(TaStatus::Draft->value);
+});
+
+it('attaches no callback without a machine', function () {
+    // Without a workflow there is no transition to run, and inventing one would
+    // make a plain action silently do something.
+    expect(TransitionAction::to(TaStatus::Confirmed)->getActionCallback())->toBeNull();
+});
+
 // ─── Performing it ───────────────────────────────────────────────────────────
 
 it('moves the record', function () {

@@ -81,18 +81,34 @@ abstract class Dashboard implements HasWidgets
      */
     public static function key(): string
     {
-        $base = Str::of(class_basename(static::class))->beforeLast('Dashboard')->value()
-            ?: class_basename(static::class);
-
-        return Str::kebab($base);
+        return Str::kebab(self::baseName());
     }
 
     /** Human name for the page and, unless the entry says otherwise, for its menu row. */
     public static function label(): string
     {
-        return Str::headline(
-            Str::of(class_basename(static::class))->beforeLast('Dashboard')->value()
-                ?: class_basename(static::class)
-        );
+        return Str::headline(self::baseName());
+    }
+
+    /**
+     * The class name without its namespace and without a trailing "Dashboard".
+     *
+     * One owner for the two derivations above, which is not tidiness: they have
+     * to agree. A key derived one way and a label derived another drift the
+     * moment someone renames the class, and the pair is what the menu shows and
+     * what the application routes on.
+     *
+     * The fallback covers a class named exactly `Dashboard`, where stripping the
+     * suffix leaves nothing to call it.
+     *
+     * Called as `self::`, not `static::`: this is the derivation, not an
+     * extension point — a subclass that wants a different key or label overrides
+     * the two public methods above, where the intent is visible.
+     */
+    private static function baseName(): string
+    {
+        $base = class_basename(static::class);
+
+        return Str::of($base)->beforeLast('Dashboard')->value() ?: $base;
     }
 }

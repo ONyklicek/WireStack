@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Workbench\App\Resources;
 
+use NyonCode\WireCore\Actions\TransitionAction;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
+use NyonCode\WireCore\Core\Workflow\WorkflowState;
 use NyonCode\WireCore\GlobalSearch\Contracts\GloballySearchable;
 use NyonCode\WireCore\GlobalSearch\GlobalSearchResult;
 use NyonCode\WireCore\Infolists\Components\TextEntry;
@@ -23,6 +25,7 @@ use NyonCode\WirePanels\Resources\Contracts\ProvidesResourceTable;
 use NyonCode\WireTable\Columns\BadgeColumn;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Table;
+use Workbench\App\Enums\InvoiceStatus;
 use Workbench\App\Livewire\Resources\InvoiceItemsRelationManager;
 use Workbench\App\Models\Invoice;
 
@@ -79,6 +82,33 @@ final class InvoiceResource implements DescribesResource, GloballySearchable, Pr
             ->badge(fn (): int => Invoice::where('status', 'overdue')->count(), 'danger');
     }
 
+    /**
+     * V2.6 step 4's measurement, on a real entity: what an application does with
+     * a workflow, and how many places need the same machine.
+     *
+     * A static method on the resource, because that is where the answer already
+     * lives — the resource is what says which entity this is and what its
+     * surfaces are, and a machine over its status column is one more of those.
+     * Whether the framework should instead hold a registry of these is exactly
+     * what building this was meant to answer.
+     */
+    public static function workflow(): WorkflowState
+    {
+        return WorkflowState::for(InvoiceStatus::class)
+            ->column('status')
+            ->allow(InvoiceStatus::Draft, InvoiceStatus::Pending)
+            ->allow([InvoiceStatus::Pending, InvoiceStatus::Overdue], InvoiceStatus::Paid)
+            ->allow(InvoiceStatus::Pending, InvoiceStatus::Overdue)
+            // Reopening a paid invoice is a real thing (a payment posted in
+            // error), and it is also what keeps the graph a cycle — a driver
+            // that could only move an invoice forward would leave the shared
+            // workbench database one state further along on every run.
+            ->allow(InvoiceStatus::Paid, InvoiceStatus::Pending)
+            // An invoice with no lines cannot be paid — the domain's rule, which
+            // is why the machine takes a closure rather than modelling it.
+            ->guard(InvoiceStatus::Paid, fn (Invoice $record): bool => $record->items()->exists());
+    }
+
     public function table(Table $table): Table
     {
         return $table
@@ -87,6 +117,11 @@ final class InvoiceResource implements DescribesResource, GloballySearchable, Pr
                 TextColumn::make('customer')->searchable(),
                 BadgeColumn::make('status'),
                 TextColumn::make('issued_at')->dateTime('d.m.Y'),
+            ])
+            ->actions([
+                TransitionAction::to(InvoiceStatus::Paid)->workflow(self::workflow()),
+                TransitionAction::to(InvoiceStatus::Overdue)->workflow(self::workflow()),
+                TransitionAction::to(InvoiceStatus::Pending)->workflow(self::workflow()),
             ])
             ->defaultSort('number');
     }

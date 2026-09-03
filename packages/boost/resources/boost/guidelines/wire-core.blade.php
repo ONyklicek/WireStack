@@ -120,11 +120,15 @@ Guards on one state must *all* pass (separate rules; `&&`-ing them loses which s
 persistence, so a hook cannot fire for a save that rolls back. `allow()` takes a list of origins because
 "anything up to here may be cancelled" is the common shape.
 
-`TransitionAction::to($state)->workflow($machine)` is an ordinary action plus `isAvailableFor($record, $user)`
-— true only when the edge exists *and* guards pass. Offer only `availableFrom()`; an action for a transition
-the user cannot complete exists to be refused, and an unpredictable refusal reads as an application bug. Label
-/ colour / icon come from the target enum via the same resolution BadgeColumn uses, so button and badge cannot
-disagree; `->visible()` and the machine's answer stay separate so neither overrules the other.
+`TransitionAction::to($state)->workflow($machine)` is an ordinary action that does two more things by itself,
+so **no surface needs to know a workflow exists**: it hides where the move would not work (`isHidden($record)`,
+which every action surface already asks, and `canExecute($record)` before running), and pressing it performs
+the transition (attaching a machine sets the action callback; an explicit `->action()` still wins, either
+order). `isAvailableFor($record, $user)` answers the machine's half alone. An action for a transition the user
+cannot complete exists to be refused, and an unpredictable refusal reads as an application bug. Label / colour
+/ icon come from the target enum via the same resolution BadgeColumn uses, so button and badge cannot
+disagree; `->visible()` and the machine's answer stay separate so neither overrules the other, and a
+record-less check leaves the machine out of it.
 
 ### Multi-tenancy
 
