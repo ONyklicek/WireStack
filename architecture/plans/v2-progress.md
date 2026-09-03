@@ -1331,7 +1331,6 @@ vlastníka repa nebo na jmenovaného konzumenta:
 |---|---|
 | `ShellRenderPlan` / `InteractionRenderPlan` — host pořád `mixed` | polling, live kanál a readiness nemají pojmenovaný kontrakt |
 | `Filter` má vlastní kopii viditelnosti z akční vrstvy | tři mechanismy na jednu otázku (Foundation `evaluate()`, Actions kontext+arita, Filtrova kopie druhého). Sjednocení je rozhodnutí o vlastníkovi, ne mechanická de-duplikace — viz §4 níž |
-| `relationship()` v forms a v table | stejné pravidlo, dvě signatury a dva názvy getteru; kanonickým vlastníkem by mělo být core, ne forms |
 | Opt-in discovery modulů | `config('wire-core.plugins')` stačí a discovery nemá konzumenta; přidat, až někdo bude chtít moduly hledat skenováním (§10 plánu V2.6 ji jmenuje) |
 
 **Vyřešeno 2026-09-03: routované stránky v menu — a podmínka, na kterou §4
@@ -1381,7 +1380,7 @@ v §2.
 | Skupina | Verdikt |
 |---|---|
 | `Filter::visible()/hidden()` = doslovná kopie `Actions\Concerns\HasVisibility` | **čeká na rozhodnutí.** Přímé použití traitu nejde: `Filter::$hidden` je `public`, trait ho má `protected` (fatal při `use`), trait vyžaduje `shouldInvokeDynamicCallback()` z `HasDynamicProperties` a přinesl by `disabled()`/`canExecute()` do veřejného API filtru. Správný tvar je vlastník ve Foundation — jenže tam `HasVisibility` **už je**, s jiným mechanismem (`evaluate()` přes `app()->call()`). Tři mechanismy na jednu otázku; sjednotit je návrhové rozhodnutí, ne přesun |
-| `relationship()` — forms `HasRelationship` × `SelectColumn` | **čeká na konzumenta rozhodnutí o umístění.** Trait je ve forms, table na něj dosáhne, ale CLAUDE.md chce vlastníka v nejnižší vrstvě → core. K tomu se liší signatura (nullable × povinné) i getter (`getRelationship()` × `getRelationshipName()`), takže je to změna veřejného API dvou balíčků a docs stránek |
+| `relationship()` — forms `HasRelationship` × `SelectColumn` | **hotovo 2026-09-03** — vlastník je `Foundation\Concerns\HasRelationship` v core, viz odstavec pod tabulkou |
 | `Modals\Html\Confirmation` × `Modals\View\ConfirmationComponent` | **nedělat.** Opakuje se 19 parametrů, ale to je veřejné API Blade komponenty a přesunout se nedá. Sdílených *pravidel* je šest řádků (dva `??=` a guard na danger), a ten guard je od tohohle běhu jediné pravidlo napříč všemi čtyřmi místy. Dvojice je navíc záměr rule-5 sweepu, stejně jako `modal-host.blade.php` v §3 |
 | `Schema/*` × `View/*` (Callout, Section, Grid, Flex, Step, Tab, Tabs, Wizard, Fieldset, EmptyState) | **nedělat.** Ne duplicita: `Schema` je deklarace uvnitř schématu, `View` je `<x-wire::…>` tag, oba renderují týž partial. Zapsané v docblocích („slot-based counterpart") |
 | `HasPolling` v `WireTable\Concerns` × `WireCore\Widgets\Concerns` | **nedělat, změřeno dřív.** Docblok table verze to říká: widget pollује, když má interval, tabulka když jí to někdo řekl. Co je společné, je atribut, a ten vlastní `Foundation\ValueObjects\PollDirective` |
@@ -1389,6 +1388,25 @@ v §2.
 | `ActionHalt` × `ConfirmationDialog` — `danger()`, `icon()`, `informative()`, `isDanger()`… | **čeká na rozhodnutí.** Nejsou to jednotlivé metody, je to celá sdílená plocha „konfigurace potvrzovacího modálu", kterou obě třídy nesou zvlášť. Tenhle běh je aspoň srovnal v tom, co dělají (§2); sloučit je znamená pojmenovat tu plochu, ne přesunout tři settery. Sken je proto pořád hlásí — a je to správně |
 | `ActionHalt::icon()` × `HasModal::modalIcon()` | **nedělat.** Dva řádky normalizace (`Icon` → `string`, `Color` → `string`), kde kanonickými vlastníky jsou už `Icon::value()` a `Color->value`. Vlastník navíc nad dvěma řádky by byl větší než ony |
 | `ComponentReflector::callValue()` × `ComponentValidator::call()` (boost) | **nedělat.** Pět řádků, jeden balíček, a `callArray()` wrappery obou se liší (jeden filtruje objekty). Vlastník by byl větší než to, co vlastní |
+
+**Vyřešeno 2026-09-03: `relationship()` má vlastníka v core.** Pár
+„název relace + title atribut" byl dvakrát — trait ve forms (`Select`, `Tags`)
+a ručně v `SelectColumn`. Vlastníkem je teď
+`packages/core/src/Foundation/Concerns/HasRelationship.php`, tedy nejnižší
+vrstva, která ho unese, a oba balíčky ho jen konzumují. Sjednotila se i obě
+odchylky, které tuhle položku držely: signatura je nullable
+(`relationship(?string $name, ?string $titleAttribute = null)`, takže z table
+verze zmizela povinnost obou argumentů) a getter má jedno jméno —
+`SelectColumn::getRelationshipName()` **zmizel** ve prospěch
+`getRelationship()`, protože forms slovník byl ten rozšířenější. `RelationManager`
+si svůj pár `getRelationshipName()`/`getRelationship(): Relation` nechává: ten
+nekonfiguruje seznam options, ale celou tabulku kolem rodičovského záznamu — a
+docblok traitu to říká, ať to nikdo neslučuje potřetí.
+
+**Mimo záběr, a je to v docbloku:** `Repeater::relationship()` (váže řádky
+k hasMany kvůli ukládání, žádný title atribut — dostal by mrtvý getter) a
+`MorphToSelect\Type::titleAttribute()` (jeden typ na morph target, jméno relace
+tam zastupuje třída modelu). Stejný verdikt měl už audit z 2026-07-23.
 
 **Vyřešeno 2026-09-03: tenancy nad non-Eloquent `DataSource`.** Vznikl
 `Core\Tenancy\TenantScopedDataSource` a s ním pravidlo „tenancy nad

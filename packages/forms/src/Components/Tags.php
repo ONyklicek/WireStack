@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Closure;
+use NyonCode\WireCore\Foundation\Concerns\HasRelationship;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireForms\Concerns\HasItemLimits;
-use NyonCode\WireForms\Concerns\HasRelationship;
 
 /**
  * Free-form tag input with optional suggestions, limits, and relationship support.

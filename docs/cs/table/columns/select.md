@@ -77,6 +77,6 @@ SelectColumn::make('role')
 ->options(array|string|Closure $options) // ['value' => 'Label', ...] nebo třída enumu
 ->disabled(bool|Closure $disabled = true)
 ->isDisabled(Model $record): bool
-->relationship(string $name, string $titleAttribute)  // options z relace, načtené jednou za render
-->loadRelationshipOptions(Model $record)             // naplnit seznam explicitně
+->relationship(?string $name, ?string $titleAttribute = null) // options z relace, načtené jednou za render
+->loadRelationshipOptions(Model $record)                      // naplnit seznam explicitně
 ```

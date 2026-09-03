@@ -63,7 +63,7 @@ Tags::make('tags')
 | `maxItems(int\|null)` | int | Maximum tag count |
 | `allowNew(bool)` | bool | Allow tags not in suggestions (default `true`) |
 | `allowDuplicates(bool)` | bool | Allow the same tag twice (default `false`) |
-| `relationship(string, string)` | — | Many-to-many relationship name and title attribute |
+| `relationship(?string, ?string)` | — | Many-to-many relationship name and title attribute |
 | `placeholder(string\|Closure)` | string | Input placeholder |
 | `disabled(bool\|Closure)` | bool | Disable the input |
 | `readOnly(bool\|Closure)` | bool | Read-only mode |

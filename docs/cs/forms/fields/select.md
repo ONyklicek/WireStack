@@ -325,7 +325,7 @@ Select::make('tier')
 | `loadingMessage(string\|null)` | string | Zpráva během načítání options |
 | `searchPrompt(string\|null)` | string | Prompt zobrazený v hledacím boxu |
 | `boolean()` | — | Zkratka pro Yes/No options |
-| `relationship(string, string)` | — | Načíst options z relace |
+| `relationship(?string, ?string)` | — | Načíst options z relace |
 | `getSearchResultsUsing(Closure)` | — | Remote hledání: resolvovat shody na serveru (implikuje `searchable()`) |
 | `getOptionLabelUsing(Closure)` / `getOptionLabelsUsing(Closure)` | — | Resolvovat label(y) pro aktuální výběr |
 | `preload()` | bool | Dychtivě naplnit remote seznam options při renderu |

@@ -63,7 +63,7 @@ Tags::make('tags')
 | `maxItems(int\|null)` | int | Maximální počet tagů |
 | `allowNew(bool)` | bool | Povolit tagy, které nejsou v návrzích (výchozí `true`) |
 | `allowDuplicates(bool)` | bool | Povolit stejný tag dvakrát (výchozí `false`) |
-| `relationship(string, string)` | — | Název many-to-many relace a title atribut |
+| `relationship(?string, ?string)` | — | Název many-to-many relace a title atribut |
 | `placeholder(string\|Closure)` | string | Placeholder inputu |
 | `disabled(bool\|Closure)` | bool | Znepřístupnit input |
 | `readOnly(bool\|Closure)` | bool | Read-only režim |

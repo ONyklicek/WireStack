@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use NyonCode\WireForms\Concerns\HasRelationship;
+use NyonCode\WireCore\Foundation\Concerns\HasRelationship;
 
 class HasRelationshipHost
 {

@@ -322,7 +322,7 @@ Select::make('tier')
 | `loadingMessage(string\|null)` | string | Message while options are loading |
 | `searchPrompt(string\|null)` | string | Prompt shown in the search box |
 | `boolean()` | — | Shorthand for Yes/No options |
-| `relationship(string, string)` | — | Load options from a relationship |
+| `relationship(?string, ?string)` | — | Load options from a relationship |
 | `getSearchResultsUsing(Closure)` | — | Remote search: resolve matches on the server (implies `searchable()`) |
 | `getOptionLabelUsing(Closure)` / `getOptionLabelsUsing(Closure)` | — | Resolve label(s) for the current selection |
 | `preload()` | bool | Eagerly seed the remote option list on render |

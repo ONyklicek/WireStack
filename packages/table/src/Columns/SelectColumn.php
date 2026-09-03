@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireCore\Foundation\Concerns\HasRelationship;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireCore\Foundation\View\CellSync;
 use NyonCode\WireTable\Concerns\HasRecordVersion;
@@ -26,17 +27,12 @@ use NyonCode\WireTable\Concerns\InteractsWithRecordDisabledState;
 class SelectColumn extends Column
 {
     use HasRecordVersion;
+    use HasRelationship;
     use HasView;
     use InteractsWithRecordDisabledState;
 
     /** @var array<string, string> */
     protected array $options = [];
-
-    /** @var string|null Relationship name for auto-loading options */
-    protected ?string $relationship = null;
-
-    /** @var string|null Display attribute on the related model */
-    protected ?string $titleAttribute = null;
 
     /** Guards the one relationship query per render — the list is the same for every row. */
     protected bool $relationshipOptionsLoaded = false;
@@ -107,29 +103,6 @@ class SelectColumn extends Column
             'recordVersion' => $version,
             'syncHtml' => $this->cellSync()->node((string) ($state ?? ''), $version),
         ]);
-    }
-
-    /**
-     * Configure relationship for auto-loading options from related model.
-     *
-     * Usage: SelectColumn::make('category_id')->relationship('category', 'name')
-     */
-    public function relationship(string $name, string $titleAttribute): static
-    {
-        $this->relationship = $name;
-        $this->titleAttribute = $titleAttribute;
-
-        return $this;
-    }
-
-    public function getRelationshipName(): ?string
-    {
-        return $this->relationship;
-    }
-
-    public function getTitleAttribute(): ?string
-    {
-        return $this->titleAttribute;
     }
 
     /**

@@ -9,14 +9,14 @@ test('relationship sets relation name and title attribute', function () {
     $column = SelectColumn::make('category_id')
         ->relationship('category', 'name');
 
-    expect($column->getRelationshipName())->toBe('category')
+    expect($column->getRelationship())->toBe('category')
         ->and($column->getTitleAttribute())->toBe('name');
 });
 
 test('relationship name is null by default', function () {
     $column = SelectColumn::make('status');
 
-    expect($column->getRelationshipName())->toBeNull()
+    expect($column->getRelationship())->toBeNull()
         ->and($column->getTitleAttribute())->toBeNull();
 });
 
@@ -25,7 +25,7 @@ test('relationship is chainable with options', function () {
         ->relationship('category', 'name')
         ->options(['1' => 'Tech', '2' => 'Science']);
 
-    expect($column->getRelationshipName())->toBe('category')
+    expect($column->getRelationship())->toBe('category')
         ->and($column->getOptions())->toBe(['1' => 'Tech', '2' => 'Science']);
 });
 
