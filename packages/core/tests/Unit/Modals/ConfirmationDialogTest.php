@@ -174,3 +174,14 @@ it('serializes informative dialog correctly', function () {
         ->and($array['isInformative'])->toBeTrue()
         ->and($array['cancelLabel'])->toBe('Close');
 });
+
+it('lets danger fill the colour slot, and lets an explicit colour keep it', function () {
+    // One vocabulary, one rule, whichever surface expresses it. The guarded
+    // version is the newer of the two that existed: `Modals\Html\Confirmation`
+    // and the Blade component both honour a colour passed alongside `isDanger`,
+    // while these fluent setters used to overwrite it — so the same declaration
+    // answered differently depending on how it was written, and on the order.
+    expect(ConfirmationDialog::make()->danger()->getColor())->toBe('danger')
+        ->and(ConfirmationDialog::make()->color('primary')->danger()->getColor())->toBe('primary')
+        ->and(ConfirmationDialog::make()->danger()->color('primary')->getColor())->toBe('primary');
+});

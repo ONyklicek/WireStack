@@ -227,3 +227,11 @@ it('deprecated formValidation works as alias for validation', function () {
 
     expect($halt->getModalFormValidation())->toBe(['name' => 'required']);
 });
+
+it('lets danger fill the colour slot, and lets an explicit colour keep it', function () {
+    // Same rule as the confirmation surfaces — see ConfirmationDialogTest. The
+    // icon colour is a separate slot and still derives from danger on its own.
+    expect(ActionHalt::make()->danger()->getColor())->toBe('danger')
+        ->and(ActionHalt::make()->color('primary')->danger()->getColor())->toBe('primary')
+        ->and(ActionHalt::make()->color('primary')->danger()->getModalIconColor())->toBe('danger');
+});

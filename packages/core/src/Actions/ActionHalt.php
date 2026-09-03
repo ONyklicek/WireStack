@@ -271,7 +271,14 @@ final class ActionHalt
     public function danger(bool $danger = true): static
     {
         $this->isDanger = $danger;
-        if ($danger) {
+
+        // `danger()` names the intent, not the hue: it fills the colour slot only
+        // when nothing has chosen one. The same rule already guards the two
+        // confirmation constructors (`Modals\Html\Confirmation`,
+        // `Modals\View\ConfirmationComponent`), and they are the newer copies —
+        // without the guard, `->color('primary')->danger()` and
+        // `->danger()->color('primary')` disagree, and so does the Blade tag.
+        if ($danger && $this->color === null) {
             $this->color = Color::Danger->value;
         }
 
