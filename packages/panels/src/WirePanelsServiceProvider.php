@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace NyonCode\WirePanels;
 
+use Illuminate\Support\Facades\Route;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
+use NyonCode\WirePanels\Routing\ResourceRoutes;
 
 /**
  * The application owner layer.
@@ -33,9 +35,32 @@ class WirePanelsServiceProvider extends PackageServiceProvider
         $packager
             ->name('WirePanels')
             ->hasShortName('wire-panels')
+            ->registeredPackage(fn () => $this->registerRouteMacros())
             ->hasViews()
             ->hasTranslations()
             ->hasAbout();
+    }
+
+    /**
+     * `Route::wireResources()` and friends, for an application's own route file.
+     *
+     * Macros rather than a facade of our own, for the reason wire-sortable's
+     * `Table::macro()` calls give: the thing being extended is Laravel's, the
+     * call reads beside `Route::resource()`, and the surrounding
+     * `prefix`/`middleware`/`domain` group applies for free — which is what
+     * keeps routing the application's while removing only the repetition.
+     *
+     * The bodies stay in {@see ResourceRoutes}; these are endpoints.
+     */
+    protected function registerRouteMacros(): void
+    {
+        Route::macro('wireResources', function (array $only = [], array $except = []): array {
+            return ResourceRoutes::all($only, $except);
+        });
+
+        Route::macro('wireResource', function (string $resource): array {
+            return ResourceRoutes::for($resource);
+        });
     }
 
     /**

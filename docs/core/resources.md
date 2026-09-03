@@ -458,6 +458,100 @@ word. Anything else in a menu names its own entry.
 Like the registry, `Workspace` owns no routing and no layout — what renders the
 menu is the application's.
 
+## Routing
+
+The registry holds no URL shell and no route (ADR 0020 §5), and that has not
+changed: routes stay the application's. What the framework removes is the
+repetition — four `Route::get()` lines per resource, and a hand-written key→URL
+map beside them for the menu.
+
+A resource says which pages render it:
+
+```php
+use NyonCode\WirePanels\Resources\Contracts\ProvidesResourcePages;
+use NyonCode\WirePanels\Routing\RoutePage;
+
+public static function pages(): array   // [tl! focus:start]
+{
+    return [
+        'index' => ListOrders::class,
+        'create' => CreateOrder::class,
+        'view' => ViewOrder::class,
+        'edit' => RoutePage::make(EditOrder::class)->permission('orders.update'),
+    ];
+}   // [tl! focus:end]
+```
+
+and the application registers them **inside its own group**:
+
+```php
+// routes/web.php
+Route::prefix('admin')
+    ->middleware(['auth', 'verified'])
+    ->domain(config('app.admin_domain'))
+    ->group(function () {
+        Route::wireResources();                        // [tl! focus]
+        Route::wireResource(OrderResource::class);     // or one at a time
+    });
+```
+
+The prefix, the middleware and the domain are yours — these are ordinary Laravel
+routes registered in the group you called the macro in. A resource that declares
+no pages is skipped, which is how an internal or nested resource stays unrouted;
+naming one explicitly that declares none throws instead, because that is a
+mistake rather than a choice.
+
+### The URL shape
+
+| Page kind | URL | Route name |
+| --- | --- | --- |
+| `index` | `{prefix}` | `wire.{key}.index` |
+| `create` | `{prefix}/create` | `wire.{key}.create` |
+| `view` | `{prefix}/{record}` | `wire.{key}.view` |
+| `edit` | `{prefix}/{record}/edit` | `wire.{key}.edit` |
+| anything else | `{prefix}/{kind}` | `wire.{key}.{kind}` |
+
+`{prefix}` is the resource key, so the menu key and the URL agree without either
+being repeated. `{record}` is a **key**, not a bound model: the pages resolve
+their own record, which is what keeps a soft-delete scope, a tenant guard or a
+non-Eloquent source the page's decision rather than the router's.
+
+### Authorization, middleware and domains
+
+`RoutePage::permission()` lands on the route as Laravel's own `can:` middleware.
+Nothing here re-implements an authorization check — Gate answers it, exactly as
+it does for actions, columns and widgets, so `spatie/laravel-permission` and
+`nyoncode/laravel-permission-extended` keep working unchanged. A refusal happens
+in the router, before the page renders or a query runs.
+
+Per resource, `ConfiguresResourceRoutes` adds the three things that belong to one
+resource rather than to the whole group:
+
+```php
+public static function routeMiddleware(): array { return ['can:tenants.view']; }
+public static function routeDomain(): ?string { return '{tenant}.example.com'; }
+public static function routePrefix(): ?string { return 'billing/tenants'; }
+```
+
+The domain parameter reaches your `TenantResolver` like any other route
+parameter. Tenancy itself stays where it is — a global scope over every query,
+not a routing concern; see [Authorization](../authorization.md).
+
+### Linking to them
+
+`ResourceRoutes::urlFor()` turns a key from the menu into a link, and answers
+`null` for a resource that is not routed:
+
+```php
+ResourceRoutes::urlFor('orders');                          // /admin/orders
+ResourceRoutes::urlFor('orders', 'edit', ['record' => 7]); // /admin/orders/7/edit
+ResourceRoutes::urls();                                    // ['orders' => '/admin/orders', …]
+```
+
+A full-page Livewire component needs a layout, and the framework does not supply
+one — set `livewire.component_layout` to your own.
+
+
 ## Relation Managers
 
 A resource can name the relation-scoped tables that belong beside its record:

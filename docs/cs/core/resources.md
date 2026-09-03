@@ -457,6 +457,99 @@ Cokoli jiného v menu si položku pojmenuje samo.
 Stejně jako registr nevlastní `Workspace` routing ani layout — menu vykresluje
 aplikace.
 
+## Routování
+
+Registr nedrží žádný URL shell ani routu (ADR 0020 §5) a to se nemění: routy
+zůstávají aplikaci. Co framework odebírá, je opakování — čtyři `Route::get()`
+řádky na resource a vedle nich ručně psaná mapa klíč→URL pro menu.
+
+Resource řekne, které stránky ho vykreslují:
+
+```php
+use NyonCode\WirePanels\Resources\Contracts\ProvidesResourcePages;
+use NyonCode\WirePanels\Routing\RoutePage;
+
+public static function pages(): array   // [tl! focus:start]
+{
+    return [
+        'index' => ListOrders::class,
+        'create' => CreateOrder::class,
+        'view' => ViewOrder::class,
+        'edit' => RoutePage::make(EditOrder::class)->permission('orders.update'),
+    ];
+}   // [tl! focus:end]
+```
+
+a aplikace je zaregistruje **uvnitř své vlastní skupiny**:
+
+```php
+// routes/web.php
+Route::prefix('admin')
+    ->middleware(['auth', 'verified'])
+    ->domain(config('app.admin_domain'))
+    ->group(function () {
+        Route::wireResources();                        // [tl! focus]
+        Route::wireResource(OrderResource::class);     // nebo po jednom
+    });
+```
+
+Prefix, middleware i doména jsou tvoje — jsou to obyčejné Laravelí routy
+registrované ve skupině, ve které jsi macro zavolal. Resource, který nedeklaruje
+stránky, se přeskočí; tak zůstane interní nebo vnořený resource neroutovaný.
+Jmenovat takový resource explicitně naopak vyhodí výjimku, protože to je chyba,
+ne volba.
+
+### Tvar URL
+
+| Druh stránky | URL | Jméno routy |
+| --- | --- | --- |
+| `index` | `{prefix}` | `wire.{key}.index` |
+| `create` | `{prefix}/create` | `wire.{key}.create` |
+| `view` | `{prefix}/{record}` | `wire.{key}.view` |
+| `edit` | `{prefix}/{record}/edit` | `wire.{key}.edit` |
+| cokoli dalšího | `{prefix}/{druh}` | `wire.{key}.{druh}` |
+
+`{prefix}` je klíč resource, takže klíč v menu a URL se shodují, aniž by se
+kterýkoli z nich opakoval. `{record}` je **klíč**, ne navázaný model: stránky si
+záznam resolvují samy, což nechává soft-delete scope, tenant guard i
+non-Eloquent zdroj rozhodnutím stránky, ne routeru.
+
+### Oprávnění, middleware a domény
+
+`RoutePage::permission()` dosedne na routu jako Laravelí `can:` middleware. Nic
+tady autorizaci neimplementuje znovu — odpovídá na ni Gate, přesně jako
+u akcí, sloupců a widgetů, takže `spatie/laravel-permission`
+i `nyoncode/laravel-permission-extended` fungují beze změny. Odmítnutí se stane
+v routeru, dřív než se stránka vykreslí nebo padne dotaz.
+
+Na úrovni resource přidává `ConfiguresResourceRoutes` tři věci, které patří
+jednomu resource a ne celé skupině:
+
+```php
+public static function routeMiddleware(): array { return ['can:tenants.view']; }
+public static function routeDomain(): ?string { return '{tenant}.example.com'; }
+public static function routePrefix(): ?string { return 'billing/tenants'; }
+```
+
+Parametr domény se dostane do tvého `TenantResolver`u jako každý jiný parametr
+routy. Samotná tenancy zůstává, kde je — globální scope nad každým dotazem, ne
+záležitost routování; viz [Autorizace](../authorization.md).
+
+### Jak na ně odkazovat
+
+`ResourceRoutes::urlFor()` udělá z klíče v menu odkaz a vrátí `null` pro
+resource, který routovaný není:
+
+```php
+ResourceRoutes::urlFor('orders');                          // /admin/orders
+ResourceRoutes::urlFor('orders', 'edit', ['record' => 7]); // /admin/orders/7/edit
+ResourceRoutes::urls();                                    // ['orders' => '/admin/orders', …]
+```
+
+Full-page Livewire komponenta potřebuje layout a framework ho nedodává — nastav
+si `livewire.component_layout` na svůj vlastní.
+
+
 ## Relation managery
 
 Resource může pojmenovat tabulky scopované na vztah, které patří vedle jeho

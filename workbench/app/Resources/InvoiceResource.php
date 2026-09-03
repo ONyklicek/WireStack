@@ -20,13 +20,20 @@ use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Contracts\ProvidesResourceForm;
 use NyonCode\WireForms\Forms\Form;
+use NyonCode\WirePanels\Resources\Contracts\ConfiguresResourceRoutes;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesRelationManagers;
+use NyonCode\WirePanels\Resources\Contracts\ProvidesResourcePages;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesResourceTable;
+use NyonCode\WirePanels\Routing\RoutePage;
 use NyonCode\WireTable\Columns\BadgeColumn;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Table;
 use Workbench\App\Enums\InvoiceStatus;
+use Workbench\App\Livewire\Resources\CreateInvoice;
+use Workbench\App\Livewire\Resources\EditInvoice;
 use Workbench\App\Livewire\Resources\InvoiceItemsRelationManager;
+use Workbench\App\Livewire\Resources\ListInvoices;
+use Workbench\App\Livewire\Resources\ViewInvoice;
 use Workbench\App\Models\Invoice;
 
 /**
@@ -40,9 +47,50 @@ use Workbench\App\Models\Invoice;
  * case most likely to expose a clash between them, and the previews render it
  * through the real pages rather than through anything the workbench invents.
  */
-final class InvoiceResource implements DescribesResource, GloballySearchable, ProvidesNavigation, ProvidesRelationManagers, ProvidesResourceForm, ProvidesResourceInfolist, ProvidesResourceTable
+final class InvoiceResource implements ConfiguresResourceRoutes, DescribesResource, GloballySearchable, ProvidesNavigation, ProvidesRelationManagers, ProvidesResourceForm, ProvidesResourceInfolist, ProvidesResourcePages, ProvidesResourceTable
 {
     use DescribesRecords;
+
+    /**
+     * The pages that render this resource, and therefore its routes.
+     *
+     * Four `Route::get()` lines and a hand-written key→URL map used to live in
+     * the workbench's route file for exactly this. The edit page carries a
+     * permission the others do not, which is the case the per-page shape exists
+     * for — and it lands as Laravel's own `can:` middleware, so Gate answers it
+     * the way it answers every other surface here.
+     */
+    public static function pages(): array
+    {
+        return [
+            'index' => ListInvoices::class,
+            'create' => CreateInvoice::class,
+            'view' => ViewInvoice::class,
+            'edit' => RoutePage::make(EditInvoice::class)->permission('invoices.update'),
+        ];
+    }
+
+    /**
+     * Nothing unusual: the defaults are the resource key as the prefix and the
+     * surrounding group's middleware and domain. Declared anyway because this is
+     * the prototype — an application with a tenant-per-domain setup puts
+     * `'{tenant}.example.test'` here and the parameter reaches its own
+     * TenantResolver like any other route parameter.
+     */
+    public static function routeMiddleware(): array
+    {
+        return [];
+    }
+
+    public static function routeDomain(): ?string
+    {
+        return null;
+    }
+
+    public static function routePrefix(): ?string
+    {
+        return null;
+    }
 
     public static function modelClass(): ?string
     {

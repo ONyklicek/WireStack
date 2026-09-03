@@ -52,6 +52,7 @@ class WorkbenchServiceProvider extends ServiceProvider
             BillingModule::class,
             OperationsModule::class,
         ]);
+
     }
 
     /**
@@ -59,6 +60,17 @@ class WorkbenchServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // What a full-page Livewire component is wrapped in. The framework does
+        // not supply this on purpose: the shell around a routed page belongs to
+        // the application, exactly as the routes do.
+        //
+        // The key is `component_layout`, not `layout`: Livewire 4 reads the
+        // former (PageComponentConfig), and the latter is the Livewire 2/3 name
+        // that silently does nothing here. Setting the wrong one fails as
+        // "No hint path defined for [layouts]", which reads like a missing view
+        // rather than a wrong key — worth the note, since every guide still
+        // shows the old one.
+        config()->set('livewire.component_layout', 'components.layouts.wire');
         // What is left for the application to declare: the one group no single
         // module owns. The dashboard lives in operations, but "Insights" is the
         // application's own heading above everything, which is exactly the split

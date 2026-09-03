@@ -322,6 +322,19 @@ foreach ($resourcePages as $slug => [$title, $subtitle, $component, $params]) {
     ]));
 }
 
+// The route helper, on the real thing. Four Route::get() lines per resource used
+// to be written by hand here; a resource now declares its pages and this
+// registers them inside whatever group it is called in — the prefix, and any
+// middleware or domain an application adds, stay the application's.
+//
+//   GET previews/routed/invoices                → wire.invoices.index
+//   GET previews/routed/invoices/create         → wire.invoices.create
+//   GET previews/routed/invoices/{record}       → wire.invoices.view
+//   GET previews/routed/invoices/{record}/edit  → wire.invoices.edit  (can:invoices.update)
+Route::prefix('previews/routed')->group(function (): void {
+    Route::wireResources();
+});
+
 foreach ($fieldPreviews as $field => $label) {
     Route::get('/previews/field-'.$field, fn () => view('previews.capture', [
         'title' => $label.' field',
