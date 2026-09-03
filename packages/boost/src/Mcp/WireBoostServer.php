@@ -14,6 +14,7 @@ use NyonCode\WireBoost\Mcp\Tools\DatabaseSchema;
 use NyonCode\WireBoost\Mcp\Tools\DescribeComponentApi;
 use NyonCode\WireBoost\Mcp\Tools\DescribeForm;
 use NyonCode\WireBoost\Mcp\Tools\DescribeInfolist;
+use NyonCode\WireBoost\Mcp\Tools\DescribeModule;
 use NyonCode\WireBoost\Mcp\Tools\DescribeResource;
 use NyonCode\WireBoost\Mcp\Tools\DescribeTable;
 use NyonCode\WireBoost\Mcp\Tools\FetchDoc;
@@ -69,6 +70,7 @@ class WireBoostServer extends Server
         DescribeForm::class,
         DescribeInfolist::class,
         DescribeResource::class,
+        DescribeModule::class,
         ValidateComponent::class,
         ListComponentTypes::class,
         DescribeComponentApi::class,

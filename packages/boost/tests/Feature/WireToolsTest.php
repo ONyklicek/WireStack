@@ -6,6 +6,7 @@ use NyonCode\WireBoost\Mcp\Tools\ApplicationInfo;
 use NyonCode\WireBoost\Mcp\Tools\DescribeComponentApi;
 use NyonCode\WireBoost\Mcp\Tools\DescribeForm;
 use NyonCode\WireBoost\Mcp\Tools\DescribeInfolist;
+use NyonCode\WireBoost\Mcp\Tools\DescribeModule;
 use NyonCode\WireBoost\Mcp\Tools\DescribeResource;
 use NyonCode\WireBoost\Mcp\Tools\DescribeTable;
 use NyonCode\WireBoost\Mcp\Tools\ListComponentTypes;
@@ -17,8 +18,12 @@ use NyonCode\WireBoost\Mcp\WireBoostServer;
 use NyonCode\WireBoost\Tests\Fixtures\DemoForm;
 use NyonCode\WireBoost\Tests\Fixtures\DemoInfolist;
 use NyonCode\WireBoost\Tests\Fixtures\DemoTable;
+use NyonCode\WireCore\Core\Modules\DomainModule;
+use NyonCode\WireCore\Core\Plugin\Contracts\HasDependencies;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Infolists\Components\TextEntry;
@@ -74,6 +79,35 @@ it('describes one resource by key', function () {
     WireBoostServer::tool(DescribeResource::class, ['resource' => 'wt-orders'])
         ->assertOk()
         ->assertSee('Wt Order');
+});
+
+it('describes the registered domain modules', function () {
+    // The one thing no other tool can show: which business area a resource
+    // belongs to. describe-resource lists resources and knows nothing about it.
+    app(PluginManager::class)->register(new WtBillingModule);
+
+    WireBoostServer::tool(DescribeModule::class)
+        ->assertOk()
+        ->assertSee('wt-billing')
+        ->assertSee('Billing')
+        ->assertSee(WtOrderResource::class);
+});
+
+it('describes one module by id, with what it depends on', function () {
+    app(PluginManager::class)->register(new WtBillingModule);
+    app(PluginManager::class)->register(new WtOperationsModule);
+
+    WireBoostServer::tool(DescribeModule::class, ['module' => 'wt-operations'])
+        ->assertOk()
+        ->assertSee('wt-billing');
+});
+
+it('says which modules exist when asked for one that does not', function () {
+    app(PluginManager::class)->register(new WtBillingModule);
+
+    WireBoostServer::tool(DescribeModule::class, ['module' => 'nope'])
+        ->assertOk()
+        ->assertSee('wt-billing');
 });
 
 it('says which resources exist when asked for one that does not', function () {
@@ -181,5 +215,36 @@ class WtOrderResource implements DescribesResource, ProvidesResourceInfolist
     public function infolist(Infolist $infolist): Infolist
     {
         return $infolist->schema([TextEntry::make('number')]);
+    }
+}
+
+final class WtBillingModule extends DomainModule
+{
+    public function getId(): string
+    {
+        return 'wt-billing';
+    }
+
+    public function resources(): array
+    {
+        return [WtOrderResource::class];
+    }
+
+    public function navigation(): ?NavigationGroup
+    {
+        return NavigationGroup::make('wt-billing')->label('Billing')->sort(10);
+    }
+}
+
+final class WtOperationsModule extends DomainModule implements HasDependencies
+{
+    public function getId(): string
+    {
+        return 'wt-operations';
+    }
+
+    public function dependencies(): array
+    {
+        return ['wt-billing'];
     }
 }

@@ -414,26 +414,30 @@ selection/sort.
 
 ---
 
-### V2.6 — Domain module axis ⏸️ **odloženo na V3 (rozhodnuto 2026-09-01)**
+### V2.6 — Domain module axis ✅ **hotová (2026-09-03)**
 
 ADR 0017 Phase 5 / layer 5: modulární skeleton pro ERP/CRM domény (`crm`/`sales`/
-`billing`/`inventory`/…) — moduly deklarují resources/workspaces/workflows/policies
-nad sdílenými primitives. **Druhá osa** vedle technických packages.
+`billing`/`inventory`/…) — moduly deklarují resources/dashboardy/navigaci nad
+sdílenými primitives. **Druhá osa** vedle technických packages.
 
-**Stav:** greenfield, ale registrační základ hotový (`Plugin` systém =
-higher-order registration base; V2.3 owneři = co modul grupuje). Modul = kompozice,
-**nezavádí nový runtime**.
+**Co vzniklo:** `Core\Modules\DomainModule` (deklarace: `resources()`,
+`dashboards()`, `navigation(): ?NavigationGroup`), rozvoz v
+`WireCoreServiceProvider::bootModules()`, dva referenční moduly ve workbenchi
+(`BillingModule`, `OperationsModule` se závislostí na prvním) a boost
+`describe-module`. K tomu tři vrstvy, které si to vyžádalo cestou:
+`NavigationGroup` + registr, `Dashboard`/`DashboardPage` + `NavigationSource`,
+a konzument navigace ve workbenchi. Modul = kompozice, **nový runtime žádný**.
 
-**🔶 Rozhodovací bod (po V2.5): rozhodnut 2026-09-01 → V3.** Ani jedno kritérium
-pro „teď" není splněné (nikde nejsou ≥2 doménové moduly; cesta pro balíček třetí
-strany existuje a je zdokumentovaná), a měření navíc ukázalo, že **kontrakt
-`DomainModule` z detailního plánu se dnes napsat nedá**: tři z osmi metod
-pojmenovávají typy, které neexistují (`Dashboard`, `NavigationGroup`, `Workspace`
-jako bázová třída), jedna nemá kam registrovat (žádný registr workflow), dvě už
-jsou na `Plugin` a jedna je Laravelu. Doménový modul je dnes provider, který
-zavolá `registerMany()`, a resources se shodnou na `NavigationItem::group()`.
-Odůvodnění a podmínky pro znovuotevření: [`v2.6-…`](v2.6-domain-modules-implementation.md) §0a.
-Není blocker pro žádnou nižší fázi.
+**🔶 Rozhodovací bod (po V2.5) měl 2026-09-01 výsledek „odložit na V3"** — a to
+rozhodnutí vlastník repa téhož dne otočil s tím, že chybějící části se doplní.
+Měření, které k odložení vedlo, zůstalo platné jako **zadání**: co v něm stálo
+jako „typ neexistuje", se stalo seznamem práce. Z osmi metod původního kontraktu
+zůstaly čtyři: `id()` a `dependencies()` jsou z `Plugin`, `workspaces()`,
+`workflows()` a `policies()` jsou **škrtnuté měřením** (`Workspace` je služba nad
+registry; workflow nese resource, který vlastní entitu; policies vlastní Laravel),
+a `ModuleRegistry` **nevznikl** — `PluginManager` ten seznam už drží. Průběh krok
+po kroku, včetně čtyř ostrých defektů, které to našlo:
+[`v2.6-…`](v2.6-domain-modules-implementation.md) §0b–§0g.
 
 **Tentýž test platí i pro technickou osu.** Otázka „rozpadnout `wire-core` na
 samostatné balíčky" byla položena a zodpovězena stejně:
@@ -444,8 +448,7 @@ uvnitř core arch testem. Detaily, proč by rozpad dnes nedodal nezávislost
 jsou v ADR.
 
 **Detailní plán:** [`v2.6-domain-modules-implementation.md`](v2.6-domain-modules-implementation.md)
-(`DomainModule` nad plugin lifecyclem, dvě osy architektury, referenční modul,
-rozhodovací kritéria V2.6/V3). ~6–9 d *pokud poběží*.
+(`DomainModule` nad plugin lifecyclem, dvě osy architektury, referenční moduly).
 
 ---
 
@@ -465,7 +468,7 @@ V2.3 Resource/Page/Workspace owner vrstva
    ├─► V2.4 tenancy · workflow · queue · DB notifikace   (execution)
    └─► V2.5 saved views · global search · large-table UX (UX; global search ⟵ V2.3)
    │
-V2.6 domain module axis → odloženo na V3 (rozhodnuto 2026-09-01)
+V2.6 domain module axis → hotová 2026-09-03 (navigace · dashboardy · moduly)
 ```
 
 | Fáze | Páteř | Hodnota | Riziko | BC |
@@ -476,7 +479,7 @@ V2.6 domain module axis → odloženo na V3 (rozhodnuto 2026-09-01)
 | V2.3 | Resource/Page/Workspace | 🔴 vysoká (positioning) | nízké (návrh. stř.) | aditivní |
 | V2.4 | tenancy/workflow/queue/notifikace | 🔴 vysoká | nízké–stř. | aditivní |
 | V2.5 | saved views/global search/large-table | vysoká | nízké | aditivní |
-| V2.6 | domain modules | střední | střední | **odloženo na V3** |
+| V2.6 | domain modules | střední | střední | aditivní |
 
 ---
 

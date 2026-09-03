@@ -1,7 +1,7 @@
 ---
 title: V2 — kde to stojí a čím pokračovat
 date: 2026-09-03
-scope: V2.0–V2.5 (hotové), ADR 0025 (rozpracované), V2.6 (běží — kroky 1–4 hotové)
+scope: V2.0–V2.6 (hotové), ADR 0025 (rozpracované)
 status: progress record — aktualizovat na konci každého běhu
 ---
 
@@ -1126,32 +1126,26 @@ dostat žádný řádek. Opraveno tím, že index bere všechny kolekce, ne tři
 
 ## 4. Co je na řadě
 
-**Šest fází hotových (V2.0–V2.5). Běží V2.6** — měřením odložená (§0a jejího
-plánu), pak **znovu otevřená rozhodnutím vlastníka** (§0b): chybějící části se
-doplní. Pořadí je v §0b a **není to pořadí z §2 toho plánu**: začalo se
-konzumentem navigace, protože `Workspace` žádného neměl, a bez vykresleného menu
-nemá `NavigationGroup` ani `DomainModule` kde selhat v prohlížeči.
+**Celá V2 je hotová (V2.0–V2.6).** `v2-master-plan.md` je přepsaný — V2.6 v něm
+byla vedená jako odložená na V3, což přestalo platit rozhodnutím vlastníka repa
+2026-09-01 a doplněním pěti kroků §0b.
 
-**Kroky 1–4 jsou hotové (2026-09-02 a 03)** — sidebar ve workbenchi nad třemi
-resources (driver 24/24), a na něm postavená `NavigationGroup`: klíč oddělený od
-nadpisu, ikona, deklarované pořadí skupin, viditelnost celé skupiny (driver
-27/27). Sbalení se vědomě nedoplnilo. Detaily v §0c a §0d plánu.
+Jak V2.6 dopadla proti svému zadání, v jedné tabulce — protože ta odchylka je to
+podstatné, co si z ní odnést:
 
-**Krok 4 rozhodnut 2026-09-03: registr NEdělat**, `workflows()` z kontraktu
-vypustit (§0f plánu). Doloženo prototypem: workflow na reálné faktuře má jednu
-skupinu konzumentů a resource je už adresovatelný klíčem, takže registr by byl
-druhý vlastník odpovědi, kterou `ResourceRegistry` dává.
+| Krok | Zadání | Výsledek |
+|---|---|---|
+| 1 · konzument navigace | „workbench + druhý resource" | tři resources, shell `/previews/workspace`, driver. Menu poprvé vykreslené — a **dva prázdné řádky ze tří** |
+| 2 · `NavigationGroup` | „přidat, co krok 1 ukázal jako chybějící" | klíč ≠ nadpis, ikona, pořadí skupin, viditelnost. **Sbalení vědomě ne** — slovník už existuje dvakrát |
+| 3 · `Dashboard` | „složení widgetů nevlastní nikdo" | **premisa špatně**: vlastní ho `WithWidgets`. Chyběla deklarace mimo komponentu. Vrstvy si vynutily `NavigationSource` |
+| 4 · registr workflow | „přidat, jen když ho modul potřebuje" | **nedělat** — a prototyp našel, že `TransitionAction` v UI nefungoval ani jednou půlkou |
+| 5 · `DomainModule` + `ModuleRegistry` | oboje | `DomainModule` ano, **`ModuleRegistry` ne** — `PluginManager` ten seznam drží |
 
-Ten prototyp ale našel **dva ostré defekty ve V2.4** — viz §2. Krátce:
-`TransitionAction` v tabulce nabízel všechna tlačítka na všech řádcích a stisk
-neudělal nic. Obojí opravené, `verify-workflow-transitions` (11/11) je nová
-brána.
-
-**Na řadě je krok 5, `DomainModule` + `ModuleRegistry`** — capstone. Teprve teď
-má kontrakt z §2 co vyjmenovat: `NavigationGroup` i `Dashboard` existují,
-`workflows()` je škrtnuté, `workspaces()` bylo škrtnuté už v §0a, a `id()` /
-`dependencies()` se berou z `Plugin`. §7 chce **dva** referenční moduly, ne
-jeden.
+**Čtyři ostré defekty**, všechny se symptomem jen v prohlížeči a všechny nalezené
+tím, že něco poprvé dostalo konzumenta: prázdné labely v menu, němé
+`StatsOverviewWidget::heading()`, a obě půlky `TransitionAction` (nabízel vše,
+stisk nedělal nic). K tomu dvě nedosažitelné větve, které našla coverage brána,
+a jeden lživý test, který jsem si napsal sám.
 
 ### Co zbývá otevřené
 
@@ -1164,7 +1158,9 @@ vlastníka repa nebo na jmenovaného konzumenta:
 | `ShellRenderPlan` / `InteractionRenderPlan` — host pořád `mixed` | polling, live kanál a readiness nemají pojmenovaný kontrakt |
 | Systematické hledání duplicitních abstrakcí napříč V2 | průřez auditu padl na session limit; `DataSourceCapabilities`/`CapabilitySet` nejspíš nezůstal sám |
 | Boost guidelines neznají plugin hooky | doplnit s vlastní plugin sekcí, ne ad hoc |
-| Coverage floor `table` | 93,0 % proti flooru 92 — `composer coverage:floors` ho zvedne, až se ustálí |
+| Coverage floor `table` | ustálený na 93,1 % proti flooru 93 — zvednutý, položka je hotová |
+| Opt-in discovery modulů | `config('wire-core.plugins')` stačí a discovery nemá konzumenta; přidat, až někdo bude chtít moduly hledat skenováním (§10 plánu V2.6 ji jmenuje) |
+| `verify-global-search` padá **v sweepu**, ne samostatně | brána, ne kód: 2× ze 3 sweepů selhala jen kontrola fokusu, samostatně 10/10 třikrát. Opravit driver, ne framework |
 
 ### Co je uzavřené a nemá se otevírat
 
@@ -1178,9 +1174,10 @@ vlastníka repa nebo na jmenovaného konzumenta:
 - **ADR 0025 kroky 4, 8, 10** — 4 a 8 zamítnuté měřením, 10 hotový a dodělaný.
 - **`resolveActionType()` a jeho dva sourozenci** — nula volajících je zapsaný
   záměr, ne mrtvý kód.
-- **V2.6 `DomainModule`** — vlastník repa V2.6 znovu otevřel (§0b jejího plánu),
-  ale `DomainModule` sám je pořád krok **5**: otevírat ho až po krocích 2–4, a
-  i pak začít měřením, ne §2 toho plánu.
+- **Celá V2.6** — hotová 2026-09-03, všech pět kroků (§0c–§0g jejího plánu).
+  `ModuleRegistry` a registr workflow jsou **zamítnuté měřením**, ne odložené:
+  `PluginManager` drží moduly, resource drží workflow. Otevírat je znovu jen
+  s konzumentem, který ukáže, co by vlastnily.
 
 ## 5. Jak pokračovat
 

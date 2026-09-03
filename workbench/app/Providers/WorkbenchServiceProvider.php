@@ -9,7 +9,6 @@ use Illuminate\Support\Str;
 use Livewire\Livewire;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
-use Workbench\App\Dashboards\OverviewDashboard;
 use Workbench\App\Livewire\Dashboards\ShowOverview;
 use Workbench\App\Livewire\Previews\CorePreview;
 use Workbench\App\Livewire\Previews\FieldPreview;
@@ -30,9 +29,8 @@ use Workbench\App\Livewire\Resources\ListDocuments;
 use Workbench\App\Livewire\Resources\ListInvoices;
 use Workbench\App\Livewire\Resources\ListTasks;
 use Workbench\App\Livewire\Resources\ViewInvoice;
-use Workbench\App\Resources\DocumentResource;
-use Workbench\App\Resources\InvoiceResource;
-use Workbench\App\Resources\TaskResource;
+use Workbench\App\Modules\BillingModule;
+use Workbench\App\Modules\OperationsModule;
 
 class WorkbenchServiceProvider extends ServiceProvider
 {
@@ -41,23 +39,19 @@ class WorkbenchServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // The owner layer, exercised on a real entity — V2.3's own gate before
-        // the API counted as finished. Declared in config the way an application
-        // does, not registered by hand, so the config path is what the preview
-        // proves.
-        // Three of them, in an order the menu deliberately does not keep:
-        // Documents is registered last and sorts first inside its group, so the
-        // sidebar and this array disagree — which is what makes a rendered menu
-        // provable rather than merely present.
-        config()->set('wire-core.resources', [
-            InvoiceResource::class,
-            TaskResource::class,
-            DocumentResource::class,
+        // Two domain modules, and nothing else. V2.6 step 5: what used to be
+        // three arrays here — resources, dashboards, navigation groups, each
+        // listing things this provider had to know about individually — is now
+        // two areas that each name their own. Billing is listed first because
+        // operations declares a dependency on it, and the plugin manager refuses
+        // a module whose dependency is not registered yet.
+        //
+        // Note what stayed true: operations sorts its group above billing's, so
+        // the sidebar still disagrees with this order on purpose.
+        config()->set('wire-core.plugins', [
+            BillingModule::class,
+            OperationsModule::class,
         ]);
-
-        // Dashboards are their own registry and their own config key: they are a
-        // different kind of thing that a menu happens to list beside resources.
-        config()->set('wire-core.dashboards', [OverviewDashboard::class]);
     }
 
     /**
@@ -65,30 +59,16 @@ class WorkbenchServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // The menu's headings, declared where an application declares them —
-        // no resource owns the group it sits in. Operations sorts first while
-        // the Billing resource is registered first, so the sidebar and the
-        // registration order disagree on purpose: a menu that ignored the
-        // declared sort would render visibly wrong instead of identical.
-        $this->app->make(NavigationGroups::class)->registerMany([
-            // The dashboard's group, above both resource groups — a heading with
-            // nothing in it but an entry that is not a resource.
+        // What is left for the application to declare: the one group no single
+        // module owns. The dashboard lives in operations, but "Insights" is the
+        // application's own heading above everything, which is exactly the split
+        // a module axis is supposed to leave behind.
+        $this->app->make(NavigationGroups::class)->register(
             NavigationGroup::make('insights')
                 ->label('Insights')
                 ->icon('outline:chart-bar')
                 ->sort(5),
-            NavigationGroup::make('operations')
-                ->label('Operations')
-                ->icon('outline:wrench-screwdriver')
-                ->sort(10),
-            // The heading is not the key: the slug stays 'billing' whatever the
-            // heading says, which is what keeps a translated menu keyed the same
-            // way in every locale.
-            NavigationGroup::make('billing')
-                ->label('Billing & invoicing')
-                ->icon('outline:banknotes')
-                ->sort(20),
-        ]);
+        );
 
         // Workbench components live outside the default App\Livewire namespace,
         // so Livewire cannot resolve their auto-generated names on the update

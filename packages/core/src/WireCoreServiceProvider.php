@@ -23,6 +23,7 @@ use NyonCode\WireCore\Audit\Console\PruneAuditEntriesCommand;
 use NyonCode\WireCore\Core\Actions\ActionPipeline;
 use NyonCode\WireCore\Core\Actions\ActionRegistry;
 use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
+use NyonCode\WireCore\Core\Modules\DomainModule;
 use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
@@ -454,6 +455,49 @@ class WireCoreServiceProvider extends PackageServiceProvider
     {
         $this->app->make(ResourceRegistry::class)->registerMany(config('wire-core.resources', []));
         $this->app->make(DashboardRegistry::class)->registerMany(config('wire-core.dashboards', []));
+
+        $this->bootModules();
+    }
+
+    /**
+     * Spread every registered domain module's declarations into the registries
+     * that own them.
+     *
+     * Here rather than inside the module for a reason the layer test enforces: a
+     * dashboard is `Widgets/` (L2) and a module that reached for
+     * `DashboardRegistry` itself would be an L2→L2 import. A provider is outside
+     * the layer map and already holds both registries, so this is the one place
+     * that can see all three at once.
+     *
+     * Modules come from the plugin manager because a module *is* a plugin —
+     * registered from `config('wire-core.plugins')`, dependency-checked by the
+     * same rule, booted by the same lifecycle. There is no second registry, and
+     * nothing for one to hold.
+     *
+     * Ordering follows registration, so a module listed after the one it depends
+     * on sees that module's groups already declared. A group registered twice
+     * replaces, which is how an application adjusts a heading a module shipped.
+     */
+    protected function bootModules(): void
+    {
+        $resources = $this->app->make(ResourceRegistry::class);
+        $dashboards = $this->app->make(DashboardRegistry::class);
+        $groups = $this->app->make(NavigationGroups::class);
+
+        foreach ($this->app->make(PluginManager::class)->all() as $plugin) {
+            if (! $plugin instanceof DomainModule) {
+                continue;
+            }
+
+            $resources->registerMany($plugin->resources());
+            $dashboards->registerMany($plugin->dashboards());
+
+            $group = $plugin->navigation();
+
+            if ($group !== null) {
+                $groups->register($group);
+            }
+        }
     }
 
     protected function registerPlugins(): void

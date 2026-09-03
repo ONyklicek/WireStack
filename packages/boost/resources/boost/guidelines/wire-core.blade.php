@@ -130,6 +130,18 @@ cannot complete exists to be refused, and an unpredictable refusal reads as an a
 disagree; `->visible()` and the machine's answer stay separate so neither overrules the other, and a
 record-less check leaves the machine out of it.
 
+## Domain modules
+
+A **domain module** is the second axis — `billing` beside `operations` — and it is a **plugin**, not a parallel
+registration system: it registers from `config('wire-core.plugins')`, `PluginManager` gives it one id, the
+register-then-boot lifecycle and `dependencies()` checking, and **there is deliberately no ModuleRegistry**
+(that list already exists). `DomainModule` only *declares* — `resources()`, `dashboards()`,
+`navigation(): ?NavigationGroup` — and `WireCoreServiceProvider::bootModules()` spreads those into the three
+registries. **Never make a module reach for `DashboardRegistry` itself**: a dashboard is L2 and the module
+contract is L1, so naming classes is what keeps the layer test green. Not a module's job: workflows (the
+resource carries one), policies (Laravel's Gate), workspaces (a service over the registries). `describe-module`
+reports what each declares.
+
 ### Multi-tenancy
 
 Off by default (`wire-core.tenancy.enabled`), **strict once on**. Bind a `TenantResolver`; the shipped default
