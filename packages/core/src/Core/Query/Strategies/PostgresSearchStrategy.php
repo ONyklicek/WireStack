@@ -6,7 +6,7 @@ namespace NyonCode\WireCore\Core\Query\Strategies;
 
 use Illuminate\Database\Eloquent\Builder;
 use NyonCode\WireCore\Core\Query\Contracts\SearchStrategy;
-use NyonCode\WireCore\Core\Query\Search\LikePattern;
+use NyonCode\WireCore\Core\Query\Search\LikePredicate;
 use NyonCode\WireCore\Core\Query\SearchClause;
 
 /**
@@ -30,16 +30,6 @@ final class PostgresSearchStrategy implements SearchStrategy
     /** {@inheritDoc} */
     public function apply(Builder $builder, SearchClause $clause, string $pattern): void
     {
-        $escape = LikePattern::escapeClause();
-
-        if ($clause->sqlExpression !== null) {
-            $builder->orWhereRaw("CAST({$clause->sqlExpression} AS TEXT) ILIKE ?{$escape}", [$pattern]);
-
-            return;
-        }
-
-        $column = $builder->getQuery()->getGrammar()->wrap($clause->getQualifiedColumn());
-
-        $builder->orWhereRaw("CAST({$column} AS TEXT) ILIKE ?{$escape}", [$pattern]);
+        LikePredicate::orWhereMatches($builder, $clause, $pattern, 'ILIKE', castToText: true);
     }
 }

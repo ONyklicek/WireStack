@@ -7,6 +7,7 @@ namespace NyonCode\WireCore\Core\Query\Contracts;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Query\Search\LikePattern;
+use NyonCode\WireCore\Core\Query\Search\LikePredicate;
 use NyonCode\WireCore\Core\Query\SearchClause;
 
 /**
@@ -24,8 +25,11 @@ interface SearchStrategy
      * group the caller has opened.
      *
      * The pattern arrives finished — already wrapped in `%…%` and with its LIKE
-     * metacharacters escaped by {@see LikePattern},
-     * whose escape character every implementation must declare on the predicate.
+     * metacharacters escaped by {@see LikePattern}, whose escape character the
+     * predicate must declare. An implementation states its operator and calls
+     * {@see LikePredicate::orWhereMatches()} rather than writing the predicate out:
+     * a strategy that splices a column raw, or wraps a `sqlExpression` as if it
+     * were an identifier, is an injection point or a broken query respectively.
      *
      * @param  Builder<Model>  $builder
      * @param  string  $pattern  A LIKE pattern, not a raw search term

@@ -39,7 +39,11 @@ it('sqlite strategy applies LIKE with wildcards', function () {
 
     $sql = $builder->toRawSql();
 
+    // `not->toContain('ILIKE')` is the half that matters: 'ILIKE' contains
+    // 'LIKE', so the positive assertion alone passes for a strategy emitting
+    // Postgres syntax — which is a syntax error on the engine this one is for.
     expect($sql)->toContain('LIKE')
+        ->and($sql)->not->toContain('ILIKE')
         ->and($sql)->toContain('%john%');
 });
 
@@ -52,8 +56,12 @@ it('sqlite strategy handles sql expression', function () {
 
     $sql = $builder->toRawSql();
 
-    expect($sql)->toContain("name || ' ' || email")
-        ->and($sql)->toContain('LIKE');
+    // Spliced raw, not wrapped: the grammar would quote it as one identifier
+    // ("name || ' ' || email"), which is not a column and not valid SQL. Asserting
+    // the expression alone cannot tell the two apart — the operator has to sit
+    // straight after it.
+    expect($sql)->toContain("name || ' ' || email LIKE")
+        ->and($sql)->not->toContain('ILIKE');
 });
 
 // ── MySQL Strategy (tested against SQLite for SQL generation) ──
@@ -68,6 +76,7 @@ it('mysql strategy applies LIKE with wildcards', function () {
     $sql = $builder->toRawSql();
 
     expect($sql)->toContain('LIKE')
+        ->and($sql)->not->toContain('ILIKE')
         ->and($sql)->toContain('%john%');
 });
 
@@ -80,8 +89,8 @@ it('mysql strategy handles sql expression', function () {
 
     $sql = $builder->toRawSql();
 
-    expect($sql)->toContain('CONCAT')
-        ->and($sql)->toContain('LIKE');
+    expect($sql)->toContain("CONCAT(first_name, ' ', last_name) LIKE")
+        ->and($sql)->not->toContain('ILIKE');
 });
 
 // ── PostgreSQL Strategy (tested against SQLite for SQL generation) ──
@@ -108,8 +117,7 @@ it('postgres strategy handles sql expression', function () {
 
     $sql = $builder->toRawSql();
 
-    expect($sql)->toContain("first_name || ' ' || last_name")
-        ->and($sql)->toContain('ILIKE');
+    expect($sql)->toContain("CAST(first_name || ' ' || last_name AS TEXT) ILIKE");
 });
 
 // ── The escape clause ───────────────────────────────────────

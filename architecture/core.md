@@ -478,6 +478,8 @@ For the full engine rationale, read **[`architecture/core/unified-engine.md`](co
 - `Actions`, `Modals`, and `Notifications` should not grow hard dependencies on each other; coordinate through the container or explicit runtime abstractions, not ad-hoc imports.
 - New shared trait vocabulary belongs in `Foundation/Concerns/`, not duplicated per package.
 - Anything touching SQL identifiers must go through `Core/Support/SqlSafety` — never interpolate column/operator/direction strings directly. It owns the keyword allow-lists (`normalizeDirection`/`normalizeNullsPosition`, `assertValidOperator`, `assertValidQualifiedColumn`) and is wired into the raw-SQL paths: `SortClause` (direction/NULLS), `ApplyFilters` (operator before `whereRaw`), and `ApplySorting` (column before a `NULLS orderByRaw`).
+- A query plan names a column through `Core/Query/ColumnReference::qualify()` — a raw expression wins, an alias qualifies, a bare column stands for itself. `SortClause`, `FilterClause` and `SearchClause` each held their own copy of that; they delegate now.
+- A search strategy owns its engine's operator and whether the operand needs a cast, nothing else. The predicate itself — raw expression spliced, column wrapped by the grammar, escape character declared — is `Core/Query/Search/LikePredicate`. Splicing a column raw is an injection point; wrapping an expression asks for a column literally named `CONCAT(...)`.
 - Dynamic (`string|Closure`) properties resolve through `EvaluatesClosures::evaluate()`; follow that pattern instead of inventing a second closure mechanism.
 
 ---

@@ -6,7 +6,7 @@ namespace NyonCode\WireCore\Core\Query\Strategies;
 
 use Illuminate\Database\Eloquent\Builder;
 use NyonCode\WireCore\Core\Query\Contracts\SearchStrategy;
-use NyonCode\WireCore\Core\Query\Search\LikePattern;
+use NyonCode\WireCore\Core\Query\Search\LikePredicate;
 use NyonCode\WireCore\Core\Query\SearchClause;
 
 /**
@@ -21,16 +21,6 @@ final class SqliteSearchStrategy implements SearchStrategy
     /** {@inheritDoc} */
     public function apply(Builder $builder, SearchClause $clause, string $pattern): void
     {
-        $escape = LikePattern::escapeClause();
-
-        if ($clause->sqlExpression !== null) {
-            $builder->orWhereRaw("{$clause->sqlExpression} LIKE ?{$escape}", [$pattern]);
-
-            return;
-        }
-
-        $column = $builder->getQuery()->getGrammar()->wrap($clause->getQualifiedColumn());
-
-        $builder->orWhereRaw("{$column} LIKE ?{$escape}", [$pattern]);
+        LikePredicate::orWhereMatches($builder, $clause, $pattern, 'LIKE');
     }
 }
