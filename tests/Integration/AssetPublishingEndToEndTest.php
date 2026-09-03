@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\ServiceProvider;
+use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireCore\WireCoreServiceProvider;
 use NyonCode\WireForms\WireFormsServiceProvider;
 use NyonCode\WireSortable\WireSortableServiceProvider;
@@ -156,3 +157,30 @@ it('keeps assets out of the per-package install commands', function () {
         }
     }
 });
+
+it('serves every shipped bundle back through the route its own fallback names', function (string $package, string $dist) {
+    // The route behind the static files, with all four providers booted. Each of
+    // them used to register its own copy of it, and the copies had drifted: three
+    // built `{package}-{id}.js` and wire-sortable built `wire-{id}.js`, a split
+    // only its own suite covered. The invariant is one sentence — for every file
+    // a package ships, the URL `hasAssetFallback()` hands the renderer is one the
+    // route resolves back to that same file — and it is now one implementation.
+    $files = glob($dist.'/*.js') ?: [];
+
+    expect($files)->not->toBeEmpty();
+
+    foreach ($files as $file) {
+        $url = (Bundle::servedByRoute($package))(basename($file), 'ignored');
+
+        expect($url)->not->toBeNull("no fallback URL for {$file}");
+
+        $served = $this->get((string) parse_url((string) $url, PHP_URL_PATH))->baseResponse;
+
+        expect($served->getFile()->getPathname())->toBe($file);
+    }
+})->with([
+    'wire-core' => ['wire-core', WireCoreServiceProvider::ASSETS_PATH],
+    'wire-forms' => ['wire-forms', WireFormsServiceProvider::ASSETS_PATH],
+    'wire-table' => ['wire-table', WireTableServiceProvider::ASSETS_PATH],
+    'wire-sortable' => ['wire-sortable', WireSortableServiceProvider::ASSETS_PATH],
+]);

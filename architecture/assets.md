@@ -147,7 +147,7 @@ registry, the URL, the tag, the memo — is `nyoncode/laravel-package-toolkit`'s
 
 ```text
 Foundation/Assets/
-└─ Bundle.php   how a wireStack bundle is declared, and where its route is
+└─ Bundle.php   how a wireStack bundle is declared, and the route that serves it
 ```
 
 Each provider declares its own bundles in `configure()`. **Core never learns that
@@ -155,6 +155,7 @@ downstream packages exist**; the registry is assembled by whoever is installed:
 
 ```php
 $packager
+    ->bootedPackage(fn () => Bundle::serve('wire-table', self::ASSETS_PATH))
     ->hasAssets('dist', entries: [
         Bundle::make('wire-table-selection.js'),
     ])
@@ -179,11 +180,30 @@ saying them in four providers:
 `data-navigate-track="reload"` is the toolkit's own default and is kept — Livewire
 tests it with `hasAttribute`, so the value it gained is immaterial.
 
-`Bundle::servedByRoute($package)` is the other half: the `hasAssetFallback()`
-resolver pointing at the `{package}.asset` route each provider registers. It reads
-the route's id back off the filename (`wire-core-dropdown.js` → `dropdown`, and
-`wire-sortable.js` → `sortable`), because the routes take an id and the toolkit
-speaks filenames.
+`Bundle::servedByRoute($package)` and `Bundle::serve($package, $dist)` are the two
+halves of the fallback, and they are in one class because they are one mapping read
+in opposite directions. `servedByRoute()` reads the route's id back off the filename
+(`wire-core-dropdown.js` → `dropdown`, `wire-sortable.js` → `sortable`), because the
+route takes an id and the toolkit speaks filenames; `serve()` registers the route
+that turns that id back into the file.
+
+Each provider used to write that route out itself, and the four copies had already
+split: three built `{package}-{id}.js`, wire-sortable built `wire-{id}.js`. What they
+were repeating was not `Route::get` but the contract around it — the `404` that keeps
+a missing bundle from surfacing as a `500`, the `[A-Za-z0-9_-]+` id pattern, and the
+`public, max-age=31536000` that stops a fallback the renderer reaches on every page
+from costing a request every page. Deleting any one of those three from the wire-table
+or wire-forms copy passed both suites; the pair is now covered in
+`packages/core/tests/Feature/BundleRouteTest.php`, and the round trip over every
+shipped bundle in `tests/Integration/AssetPublishingEndToEndTest.php`.
+
+Traversal is barred by the route pattern rather than by the `basename()` each copy
+carried: Symfony compiles a route parameter as `[^/]++` — possessive, so it cannot
+give characters back — and the literal `.js` after it means a segment holding a slash
+*or a dot* never matches. `../../composer.js`, encoded or not, is a 404 before any
+closure runs, so that `basename()` call could not fire and is gone. The `where()`
+still earns its place: without it `a~b`, `a b` and `á` are ids the lookup would go to
+disk with.
 
 ### The directive
 
@@ -358,7 +378,7 @@ condition, and Livewire does not gate its equivalent either.
 |---|---|
 | change a controller's behaviour | `packages/<pkg>/resources/js/*.js` **+ its `npm run build:<pkg>-assets`** |
 | ship a new bundle | source + build script + `Bundle::make('file.js')` in the provider's `hasAssets(entries: [...])` |
-| new package joining the stack | `hasAssets('dist', entries: [...])` with `Bundle::make()`, `hasAssetFallback(Bundle::servedByRoute(...))`, and a route named `{package}.asset` |
+| new package joining the stack | `hasAssets('dist', entries: [...])` with `Bundle::make()`, `hasAssetFallback(Bundle::servedByRoute(...))`, and `Bundle::serve($package, self::ASSETS_PATH)` from `bootedPackage()` — never a hand-written route |
 | a surface needs a tag | `@packageScripts('wire-table', 'wire-table-live.js')` — never hand-write the `<script>`, which drops the attributes and the nonce |
 | make a bundle lazy | leave it out of `entries:` and have the surface deliver it, as the TipTap field does. Bodies only, never registrators |
 | change delivery/mirroring | the toolkit (`PublishedAssets`, `MirrorsPackageAssets`), not wire-core |

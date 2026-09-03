@@ -52,7 +52,8 @@ class WireFormsServiceProvider extends PackageServiceProvider
                 Blade::componentNamespace('NyonCode\\WireForms\\Components', 'wire-forms');
                 ActionMacros::register();
 
-                $this->registerAssetRoutes();
+                Bundle::serve('wire-forms', self::ASSETS_PATH);
+                $this->registerTiptapRoute();
             })
             ->hasConfig()
             ->hasViews()
@@ -77,24 +78,15 @@ class WireFormsServiceProvider extends PackageServiceProvider
     }
 
     /**
-     * Serve the package's pre-bundled JS directly so field views can inject it
-     * without the consumer running npm, a build step, or `vendor:publish`.
+     * Serve the TipTap editor's code-split ESM bundle by filename.
+     *
+     * Not `Bundle::serve()`: that route takes a bundle id and answers with one
+     * IIFE, while these are ESM entries whose relative `import "./chunk-<hash>.js"`
+     * has to resolve against the same directory. Same delivery decision (ADR 0024),
+     * different shape.
      */
-    protected function registerAssetRoutes(): void
+    protected function registerTiptapRoute(): void
     {
-        Route::get('/wire-forms/assets/{asset}.js', function (string $asset): BinaryFileResponse {
-            $file = self::ASSETS_PATH.'/wire-forms-'.basename($asset).'.js';
-
-            abort_unless(is_file($file), 404);
-
-            return response()
-                ->file($file, ['Content-Type' => 'application/javascript; charset=utf-8'])
-                ->setPublic()
-                ->setMaxAge(31536000);
-        })
-            ->where('asset', '[A-Za-z0-9_-]+')
-            ->name('wire-forms.asset');
-
         // The TipTap editor ships as an ESM code-split bundle (entry + shared core
         // chunk + opt-in addon entry); serve any .js from dist/tiptap by filename so
         // an entry's relative `import "./chunk-<hash>.js"` resolves. basename() bars

@@ -72,7 +72,9 @@ Browser assets (the registry, the URL and the tag belong to the toolkit's
 
 - `Foundation\Assets\Bundle` — `make($shippedFile)` for a declaration every package
   shares (classic/IIFE, no `defer`, `data-navigate-once`) and
-  `servedByRoute($package)` for the `hasAssetFallback()` resolver
+  `servedByRoute($package)` for the `hasAssetFallback()` resolver, plus
+  `serve($package, $dist)` — the `{package}.asset` route that answers it, owned once
+  instead of copied into each provider
 - `Foundation\View\FloatingAssets` — the dropdown bundle's URL, by the name a dozen
   partials already ask for it
 - `Foundation\View\Sparkline` — a numeric series as SVG polyline geometry (`of()` /

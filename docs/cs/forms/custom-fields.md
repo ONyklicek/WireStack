@@ -747,20 +747,41 @@ Pokud váš balíček dodává víc než občasné těžké pole, deklarujte bun
 
 ```php
 use NyonCode\WireCore\Foundation\Assets\Bundle;
+use NyonCode\LaravelPackageToolkit\Packager;
+use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 
-$packager
-    ->hasAssets('dist', entries: [
-        Bundle::make('my-field.js'),
-    ])
-    ->hasAssetFallback(Bundle::servedByRoute('my-package'));
+class MyPackageServiceProvider extends PackageServiceProvider
+{
+    public const ASSETS_PATH = __DIR__.'/../dist';
+
+    public function configure(Packager $packager): void
+    {
+        $packager
+            ->bootedPackage(function () {
+                Bundle::serve('my-package', self::ASSETS_PATH); // [tl! focus]
+            })
+            ->hasAssets('dist', entries: [
+                Bundle::make('my-field.js'),                    // [tl! focus]
+            ])
+            ->hasAssetFallback(Bundle::servedByRoute('my-package')); // [tl! focus]
+    }
+}
 ```
 
-Entries se klíčují **jménem dodávaného souboru** relativně k adresáři assetů.
-`Bundle::make()` deklaruje to, čím každý bundle Wire je — klasický (nemodulový)
-skript, protože top-level deklarace ES modulu se nikdy nedostanou na `window` a
-vaše registrace by tiše neudělala nic. `hasAssetFallback()` udrží tag naživu tam,
-kde do `public/` nejde zapisovat, tím že ukáže na vlastní routu
-`{package}.asset` vašeho balíčku.
+Tři volání, jedno mapování. `Bundle::make()` deklaruje to, čím každý bundle Wire
+je — klasický (nemodulový) skript, protože top-level deklarace ES modulu se nikdy
+nedostanou na `window` a vaše registrace by tiše neudělala nic. Entries se klíčují
+**jménem dodávaného souboru** relativně k adresáři assetů.
+
+Zbylá dvě volání jsou dvě půlky fallbacku, tedy cesty, která se použije tam, kde
+do `public/` nejde zapisovat a nic se nepublikovalo. `Bundle::serve()` registruje
+routu — jmenuje se `{package}.asset`, odpovídá na `/{package}/assets/{id}.js` a
+posílá s ní dlouhou cache hlavičku, kterou fallback potřebuje — a
+`Bundle::servedByRoute()` je to, co na ni namíří vykreslený tag. Protože obě
+strany vlastní jedna třída, id, které se dostane do URL, je totéž, které routa
+přeloží zpátky na váš soubor: pojmenujte bundle `my-field.js`,
+`my-package-field.js` nebo po samotném balíčku a všechny tři cesty tam a zpátky
+sedí.
 
 Těžká těla držte mimo stránky, které je nepotřebují, tak že je vynecháte z
 `entries:` a necháte je dodat pole per-surface — ale nikdy ne malý controller,

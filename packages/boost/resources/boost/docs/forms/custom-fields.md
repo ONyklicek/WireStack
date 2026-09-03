@@ -745,20 +745,40 @@ your own package's `configure()` instead of only including it per surface, and
 
 ```php
 use NyonCode\WireCore\Foundation\Assets\Bundle;
+use NyonCode\LaravelPackageToolkit\Packager;
+use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 
-$packager
-    ->hasAssets('dist', entries: [
-        Bundle::make('my-field.js'),
-    ])
-    ->hasAssetFallback(Bundle::servedByRoute('my-package'));
+class MyPackageServiceProvider extends PackageServiceProvider
+{
+    public const ASSETS_PATH = __DIR__.'/../dist';
+
+    public function configure(Packager $packager): void
+    {
+        $packager
+            ->bootedPackage(function () {
+                Bundle::serve('my-package', self::ASSETS_PATH); // [tl! focus]
+            })
+            ->hasAssets('dist', entries: [
+                Bundle::make('my-field.js'),                    // [tl! focus]
+            ])
+            ->hasAssetFallback(Bundle::servedByRoute('my-package')); // [tl! focus]
+    }
+}
 ```
 
-Entries are keyed by the **shipped filename**, relative to the asset directory.
-`Bundle::make()` declares what every Wire bundle is — a classic (non-module)
-script, because an ES module's top-level declarations never reach `window` and
-your registration would silently do nothing. `hasAssetFallback()` keeps the tag
-alive where `public/` cannot be written, by pointing at your package's own
-`{package}.asset` route.
+Three calls, one mapping. `Bundle::make()` declares what every Wire bundle is —
+a classic (non-module) script, because an ES module's top-level declarations
+never reach `window` and your registration would silently do nothing. Entries are
+keyed by the **shipped filename**, relative to the asset directory.
+
+The other two are the halves of the fallback, the path taken where `public/`
+cannot be written and nothing was published. `Bundle::serve()` registers the
+route — named `{package}.asset`, answering `/{package}/assets/{id}.js` with the
+long-lived cache header the fallback needs — and `Bundle::servedByRoute()` is
+what points the rendered tag at it. Because one class owns both directions, the
+id it puts in the URL is one the route resolves back to your file: name the
+bundle `my-field.js`, `my-package-field.js` or after the package itself, and all
+three round-trip.
 
 Keep heavy bodies off pages that do not need them by leaving them out of
 `entries:` and having the field deliver them per surface — but never the small

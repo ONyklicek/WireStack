@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable;
 
-use Illuminate\Support\Facades\Route;
 use Livewire\LivewireManager;
 use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
@@ -13,7 +12,6 @@ use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireTable\Livewire\TableStateSynthesizer;
 use NyonCode\WireTable\Support\RecordAction;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class WireTableServiceProvider extends PackageServiceProvider
 {
@@ -42,7 +40,7 @@ class WireTableServiceProvider extends PackageServiceProvider
                 app(LivewireManager::class)->propertySynthesizer(TableStateSynthesizer::class);
 
                 $this->registerRecordActionMacros();
-                $this->registerAssetRoutes();
+                Bundle::serve('wire-table', self::ASSETS_PATH);
             })
             ->hasConfig()
             ->hasViews()
@@ -98,27 +96,6 @@ class WireTableServiceProvider extends PackageServiceProvider
             /** @var Action $this */
             return RecordAction::make($this)->on($type);
         });
-    }
-
-    /**
-     * Serve the package's pre-bundled record-action JS directly so the table view
-     * can inject it via `@assets` without the consumer running npm or publishing
-     * assets. Mirrors the wire-forms delivery.
-     */
-    protected function registerAssetRoutes(): void
-    {
-        Route::get('/wire-table/assets/{asset}.js', function (string $asset): BinaryFileResponse {
-            $file = self::ASSETS_PATH.'/wire-table-'.basename($asset).'.js';
-
-            abort_unless(is_file($file), 404);
-
-            return response()
-                ->file($file, ['Content-Type' => 'application/javascript; charset=utf-8'])
-                ->setPublic()
-                ->setMaxAge(31536000);
-        })
-            ->where('asset', '[A-Za-z0-9_-]+')
-            ->name('wire-table.asset');
     }
 
     /**

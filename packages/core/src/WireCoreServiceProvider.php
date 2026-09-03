@@ -6,7 +6,6 @@ namespace NyonCode\WireCore;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Route;
 use Livewire\ComponentHookRegistry;
 use Livewire\Livewire;
 use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
@@ -59,7 +58,6 @@ use NyonCode\WireCore\Notifications\NotificationBell;
 use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireCore\Widgets\Console\MakeDashboardCommand;
 use NyonCode\WireCore\Widgets\DashboardRegistry;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class WireCoreServiceProvider extends PackageServiceProvider
 {
@@ -89,7 +87,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
                 $this->bootModals();
                 $this->bootPlugins();
                 $this->bootResources();
-                $this->registerAssetRoutes();
+                Bundle::serve('wire-core', self::ASSETS_PATH);
             })
             ->hasConfig()
             ->hasCommand(PruneAuditEntriesCommand::class)
@@ -527,24 +525,4 @@ class WireCoreServiceProvider extends PackageServiceProvider
     }
 
     // ─── Assets ─────────────────────────────────────────────────
-
-    /**
-     * Serve the package's pre-bundled JS directly so consumers get the floating
-     * dropdown behaviour without running npm, a build step, or `vendor:publish`.
-     */
-    protected function registerAssetRoutes(): void
-    {
-        Route::get('/wire-core/assets/{asset}.js', function (string $asset): BinaryFileResponse {
-            $file = self::ASSETS_PATH.'/wire-core-'.basename($asset).'.js';
-
-            abort_unless(is_file($file), 404);
-
-            return response()
-                ->file($file, ['Content-Type' => 'application/javascript; charset=utf-8'])
-                ->setPublic()
-                ->setMaxAge(31536000);
-        })
-            ->where('asset', '[A-Za-z0-9_-]+')
-            ->name('wire-core.asset');
-    }
 }

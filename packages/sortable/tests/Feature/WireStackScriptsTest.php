@@ -48,10 +48,12 @@ it('cache-busts the bundle by the mirrored copy\'s mtime', function () {
 });
 
 it('falls back to a URL its own route actually serves', function () {
-    // The route maps `{asset}` to `wire-{asset}.js`, unlike core's `wire-core-{asset}.js`,
-    // so the registered id and the route's file map have to agree. That only matters on
-    // the fallback path now, where public/ cannot be written — and fetching it proves
-    // they agree, since a mismatched id 404s rather than failing a string comparison.
+    // This package's bundle is named after the package itself, so its id resolves
+    // `wire-sortable.js` where the others resolve `{package}-{id}.js` — one branch
+    // of `Bundle::serve()`, since the route stopped being per-provider. That only
+    // matters on the fallback path, where public/ cannot be written — and fetching
+    // it proves the id and the file agree, since a mismatch 404s rather than
+    // failing a string comparison.
     //
     // public/ is pointed *below a regular file*, so every mkdir under it fails with
     // ENOTDIR — a chmod would not hold when the suite runs as root in a container.

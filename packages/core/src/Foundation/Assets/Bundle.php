@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Foundation\Assets;
 
 use Closure;
+use Illuminate\Support\Facades\Route;
 use NyonCode\LaravelPackageToolkit\Support\Asset;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * How a wireStack package declares a browser bundle to the toolkit's renderer.
@@ -58,6 +60,83 @@ final class Bundle
     }
 
     /**
+     * Prefixes a package's built bundle may carry, most specific first.
+     *
+     * One list for both directions of the same mapping: {@see servedByRoute()}
+     * strips a prefix off a filename to get the route's id, {@see serve()} puts
+     * one back on to find the file. Split across two owners they drift, and the
+     * drift is invisible — the route 404s for a bundle that is right there.
+     *
+     * The stack's own three shapes are `wire-core-dropdown.js` (package prefix),
+     * `wire-sortable.js` (the package is the bundle) and, for a package outside
+     * this repo, whatever it chose to call the file — hence the empty prefix
+     * last. It is inert on the stripping side, where an earlier prefix always
+     * matches first, and on the serving side it is what makes the pair total:
+     * every name `servedByRoute()` can turn into an id, `serve()` can turn back.
+     *
+     * @return list<string>
+     */
+    private static function prefixes(string $package): array
+    {
+        return [$package.'-', 'wire-', ''];
+    }
+
+    /**
+     * Register the route that answers {@see servedByRoute()}.
+     *
+     * The four providers each wrote this out, and what they were repeating was
+     * not the route — it was the contract behind it: `basename()` and the id
+     * pattern are the only things between the URL and the filesystem, the 404
+     * is what keeps a missing bundle from surfacing as a 500, and the immutable
+     * cache header is what stops a fallback the renderer reaches on every page
+     * from costing a request every page. Three of those four copies had no test
+     * over any of it.
+     *
+     * @param  string  $package  short package name, e.g. `wire-core`
+     * @param  string  $assetsPath  absolute path to the package's `dist/`
+     */
+    public static function serve(string $package, string $assetsPath): void
+    {
+        Route::get("/{$package}/assets/{asset}.js", static function (string $asset) use ($package, $assetsPath): BinaryFileResponse {
+            $file = self::fileFor($package, $assetsPath, $asset);
+
+            abort_unless($file !== null, 404);
+
+            return response()
+                ->file($file, ['Content-Type' => 'application/javascript; charset=utf-8'])
+                ->setPublic()
+                ->setMaxAge(31536000);
+        })
+            ->where('asset', '[A-Za-z0-9_-]+')
+            ->name($package.'.asset');
+    }
+
+    /**
+     * The built file a route id names, or null when the package ships no such bundle.
+     *
+     * The id reaches here already unable to carry a path. Every copy of this
+     * route ran the segment through `basename()` first, and measuring it says
+     * that call could never fire: Symfony compiles a route parameter as
+     * `[^/]++` — possessive, so it cannot give characters back — and the literal
+     * `.js` after it means a segment holding a slash *or a dot* fails to match
+     * the route at all. `../../composer.js`, encoded or not, is a 404 before any
+     * closure runs. What the `where()` on the route does add is the alphabet:
+     * without it `a~b`, `a b` and `á` are ids the lookup would go to disk with.
+     */
+    private static function fileFor(string $package, string $assetsPath, string $id): ?string
+    {
+        foreach (self::prefixes($package) as $prefix) {
+            $file = $assetsPath.'/'.$prefix.$id.'.js';
+
+            if (is_file($file)) {
+                return $file;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * The package's own asset route, as the toolkit's `hasAssetFallback()` resolver.
      *
      * Reached only where `public/` cannot be written and nothing was published —
@@ -80,7 +159,7 @@ final class Bundle
         return static function (string $file) use ($package): ?string {
             $id = basename($file, '.js');
 
-            foreach ([$package.'-', 'wire-'] as $prefix) {
+            foreach (self::prefixes($package) as $prefix) {
                 if (str_starts_with($id, $prefix)) {
                     $id = substr($id, strlen($prefix));
 
