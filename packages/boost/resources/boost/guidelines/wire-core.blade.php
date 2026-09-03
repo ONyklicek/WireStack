@@ -142,6 +142,38 @@ contract is L1, so naming classes is what keeps the layer test green. Not a modu
 resource carries one), policies (Laravel's Gate), workspaces (a service over the registries). `describe-module`
 reports what each declares.
 
+### Plugins and hooks
+
+A plugin is `getId()` + `register(PluginManager)` + `boot(PluginManager)`, registered from
+`config('wire-core.plugins')`. `register()` must not resolve services (they may not be bound yet); `boot()` runs
+after every plugin is registered. `HasDependencies::dependencies()` lists ids that must already be registered —
+checked at registration, so **list a dependency before its dependant in config** or registration throws.
+`HasConfiguration` merges `defaultConfig()` under `wire-core.plugins.config.{id}`.
+
+**A hook does nothing until something runs it.** `hook('name', $cb)` stores a callback; behaviour changes only
+where a `runHook()` / `runTypedHook()` call exists. Callbacks run by ascending priority; an array-hook callback
+returning an array replaces the payload, anything else leaves it unchanged.
+
+**The rule that cost this repo a defect: the first parameter's type hint decides which dispatcher a callback
+belongs to.** Every built-in lifecycle point (`table.configuring|querying|queried`, `form.saving|saved`,
+`action.executing|executed`) runs **both** dispatchers back to back, so each callback must belong to exactly
+one:
+
+| First parameter | Dispatcher | Receives |
+|---|---|---|
+| `array` | `runHook()` | the payload array |
+| a DTO (`TableQueryingPayload`, `FormSavingPayload`, …) | `runTypedHook()` | the object |
+| **no type hint, or no parameter** | `runHook()` | the array — **never the DTO** |
+
+**Always type-hint the first parameter.** An unhinted `function ($payload)` used to answer "no" to both
+questions, so *both* dispatchers ran it: every side effect happened twice, and the second pass handed it a DTO
+where `$payload['data']` fatals — after the callback had already done its work. Unhinted now falls to the array
+side deliberately, because that is what a callback written before DTOs existed expects.
+
+**Do not reach for a hook to enforce something.** A hook covers one path and only while a PluginManager is
+bound. Security-shaped behaviour belongs lower: tenancy is a global scope, not a `table.querying` hook — see
+below.
+
 ### Multi-tenancy
 
 Off by default (`wire-core.tenancy.enabled`), **strict once on**. Bind a `TenantResolver`; the shipped default
@@ -152,6 +184,8 @@ tables are tenant-owned and guessing would be a guess about who may see what.
 Every ordinary state produces a null tenant (before login, a worker, a console command), so reading null as "no
 constraint" hands every row to every one of them. The scope emits `0 = 1`. It is deliberately **not**
 `where tenant_id is null` either — an unowned row would then be visible to everybody.
+
+**A non-Eloquent source builds no query, so no scope reaches it** — wrap it: `new TenantScopedDataSource($source, app(Tenancy::class))`. It constrains the **plan**, not the returned rows, which is what makes it safe on `count()` and `paginate()` too (those answer without handing rows over) and lets a source that cannot honour the filter refuse out loud. `resolveRecord()` takes a key rather than a plan, so there the record is fetched and checked — without that a tenant reaches another tenant's row by typing its id into a URL. Same fail-safe, and tenancy off delegates untouched.
 
 **A global scope, not a plugin hook.** A hook covers one read path and only while a PluginManager is bound; a
 global scope covers every query Eloquent builds — a listing, a relation, `find()` in the app's own controller,

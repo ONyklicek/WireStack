@@ -119,7 +119,28 @@ try {
     `document.activeElement?.dataset?.testid === 'global-search-input'`,
     'the input to take focus',
   );
-  check('the search input is focused on open', focused);
+
+  // Diagnostics on failure, because the cause is not known yet.
+  //
+  // This check fails in a *full* sweep (three of five on 2026-09-02/03) and in
+  // no other circumstance: alone it passes every time, and so does a 15-driver
+  // sweep with this one last. Two hypotheses are already dead — it is not
+  // slowness (six seconds is the budget, and every other check then passes),
+  // and it is not a Livewire morph replacing the input (measured: focus
+  // survives `$refresh`). Rather than harden the driver until the symptom goes
+  // away, which is how a gate stops meaning anything, the failing run now says
+  // what it saw. The next red sweep is the measurement.
+  const diagnosis = focused ? '' : await eval_(`JSON.stringify({
+    active: document.activeElement?.dataset?.testid ?? document.activeElement?.tagName ?? null,
+    inputs: document.querySelectorAll('[data-testid="global-search-input"]').length,
+    visible: (() => { const el = document.querySelector('[data-testid="global-search"]');
+      return !! el && getComputedStyle(el).display !== 'none'; })(),
+    open: (() => { try { return !! Livewire.find(document.querySelector('[wire\\:id]')?.getAttribute('wire:id'))?.open; } catch (e) { return 'err'; } })(),
+    hasFocus: document.hasFocus(),
+    alpine: !! window.Alpine,
+  })`);
+
+  check('the search input is focused on open', focused, diagnosis);
 
   // Focus it anyway when that check failed, so the rest of this run still
   // measures what it is about. Typing goes to `document.activeElement`, so an

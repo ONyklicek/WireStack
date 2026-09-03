@@ -11,7 +11,36 @@
 <div>
     <template x-teleport="body">
         <div
-                x-data="{ get open() { return $wire.open } }"
+                x-data="{
+                    get open() { return $wire.open },
+                    // Focus once the input is actually on screen.
+                    //
+                    // `$nextTick(() => $el.focus())` alone loses the race under
+                    // load: x-show has not flipped `display` yet, and focus() on
+                    // a hidden element is a no-op that reports nothing. The
+                    // symptom is a palette that opens and swallows what you
+                    // type — measured in a driver sweep, where the focus stayed
+                    // on the button that opened it while the dialog was already
+                    // visible a moment later.
+                    //
+                    // Retried per animation frame rather than on a timer: the
+                    // frame is exactly when the browser has finished laying the
+                    // dialog out, and giving up after ~20 of them keeps a
+                    // permanently hidden palette from spinning.
+                    focusInput(tries = 20) {
+                        const input = $el.querySelector('[data-testid=global-search-input]');
+
+                        if (! input) return;
+
+                        if (input.offsetParent === null && tries > 0) {
+                            requestAnimationFrame(() => this.focusInput(tries - 1));
+
+                            return;
+                        }
+
+                        input.focus();
+                    },
+                }"
                 x-show="open"
                 x-cloak
                 @keydown.escape.window="$wire.close()"
@@ -31,7 +60,7 @@
                         <input
                                 type="text"
                                 wire:model.live.debounce.250ms="term"
-                                x-effect="open && $nextTick(() => $el.focus())"
+                                x-effect="open && $nextTick(() => focusInput())"
                                 @keydown.down.prevent="$wire.moveDown()"
                                 @keydown.up.prevent="$wire.moveUp()"
                                 @keydown.enter.prevent="$wire.select()"

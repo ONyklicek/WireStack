@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Core\Query;
 
 use NyonCode\WireCore\Core\Relations\RelationGraph;
+use NyonCode\WireCore\Core\Tenancy\TenantScopedDataSource;
 
 /**
  * Immutable representation of a planned query.
@@ -94,6 +95,32 @@ final readonly class QueryPlan
             eagerLoads: $this->eagerLoads,
             aggregates: $this->aggregates,
             filters: $this->filters,
+            searchClauses: $this->searchClauses,
+            sortClauses: $this->sortClauses,
+            scopes: $this->scopes,
+            relationGraph: $this->relationGraph,
+            withSoftDeletes: $this->withSoftDeletes,
+        );
+    }
+
+    /**
+     * Create a new QueryPlan with additional filters merged in.
+     *
+     * The sibling of `withJoins()` and `withAggregates()`, added when tenancy
+     * needed to constrain a plan it did not build
+     * ({@see TenantScopedDataSource}).
+     * Merged rather than replaced, so a decorator narrows a plan and can never
+     * widen one by dropping what was already there.
+     *
+     * @param  array<int, FilterClause>  $filters
+     */
+    public function withFilters(array $filters): self
+    {
+        return new self(
+            joins: $this->joins,
+            eagerLoads: $this->eagerLoads,
+            aggregates: $this->aggregates,
+            filters: [...$this->filters, ...$filters],
             searchClauses: $this->searchClauses,
             sortClauses: $this->sortClauses,
             scopes: $this->scopes,

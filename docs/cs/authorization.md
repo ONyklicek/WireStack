@@ -272,7 +272,29 @@ Invoice::acrossAllTenants()->count();
 Záměrně upovídané a snadno greppovatelné: admin report nebo konzolový příkaz má
 reálnou potřebu a revize musí najít každé místo, které si ji nárokovalo.
 
-### Co scopované není
+### Zdroj, na který Eloquent nedosáhne
 
-Non-Eloquent `DataSource` — `CollectionDataSource`, zdroj nad API — globální
-scope **nepokrývá**, protože není co scopovat. Ty omez ve zdroji samotném.
+Non-Eloquent `DataSource` — `CollectionDataSource`, zdroj nad API — nestaví
+žádný Eloquent dotaz, takže na něj globální scope nedosáhne. Obal ho:
+
+```php
+use NyonCode\WireCore\Core\Tenancy\TenantScopedDataSource;
+
+$source = new TenantScopedDataSource(new CollectionDataSource($rows), app(Tenancy::class));
+```
+
+Omezuje **plán**, ne řádky, které se vrátí — a právě proto je bezpečný na všech
+metodách, ne jen na té, která řádky vrací: `count()` a `paginate()` odpovídá
+zdroj, aniž by řádky vůbec vydal, a zdroj, který ten filtr neumí, ho hlasitě
+odmítne (`UnsupportedQueryAspectException`) místo aby vrátil řádky, které nikdo
+neomezil.
+
+`resolveRecord()` bere klíč, ne plán, takže tam se záznam načte a zkontroluje —
+bez toho se tenant dostane na cizí řádek tím, že si do URL napíše jeho id.
+
+Fail-safe je tentýž, jaký má `TenantScope`: tenancy zapnutá a žádný tenant
+rozpoznaný znamená **nic**. Vypnutá tenancy deleguje beze změny, takže obalení
+zdroje jednotenantovou aplikaci nic nestojí.
+
+Třetím argumentem předáš sloupec tam, kde si ho zdroj pojmenoval jinak než
+konfigurace.

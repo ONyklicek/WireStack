@@ -1024,6 +1024,39 @@ zpět), ne konkrétní data. Seeder u některých tabulek slibuje „determinist
 purpose — the CDP drivers address rows by name"; pro `tasks` a `documents` to
 už neplatí.
 
+**Tenancy nad non-Eloquent zdrojem: měření našlo, že dekorátor nemusí obalovat
+osm metod — stačí obohatit plán.** §3 to vedla jako „dekorátor nad `DataSource`
+(T-4)" s pravidlem *tenancy nad non-Eloquent zdrojem nezapínej*. Kontrakt má
+osm metod a naivní dekorátor by musel scopovat každou zvlášť, přičemž u
+`CollectionDataSource` „scopovat" znamená něco jiného než u zdroje nad API.
+
+Změřeno: **každý zdroj už umí `QueryPlan::$filters`** — to je, co dělá filtr
+filtrem — a `CollectionDataSource` navíc to, co neumí, **hlasitě odmítne**
+(`guard()` → `UnsupportedQueryAspectException`). Takže tenant je obyčejný
+`FilterClause` v plánu a dekorátor je jedno pravidlo aplikované na osmi tenkých
+metodách, ne osm pravidel.
+
+**A ta volba je bezpečnostní, ne estetická.** Dekorátor, který by filtroval
+**vrácené řádky**, by byl správný pro `get()` a tiše špatný pro `count()`
+a `paginate()` — ty odpovídá zdroj, aniž by řádky vůbec vydal. Omezení plánu
+platí na všechny tři.
+
+`resolveRecord()` je výjimka, která si o kontrolu řekla sama: bere **klíč**, ne
+plán, takže není kam filtr přidat — záznam se načte a zkontroluje. Bez toho se
+tenant dostane na cizí řádek tím, že si do URL napíše jeho id, což je nejstarší
+díra svého druhu. Mutace obou půlek (fail-open a vynechaná kontrola vlastnictví)
+testy shodí.
+
+**Cestou se ukázalo, že `QueryPlan::withFilters()` neexistoval**, přestože
+`withJoins()`, `withEagerLoads()` i `withAggregates()` ano — plán se dal
+rozšířit o všechno kromě toho, co tenancy potřebuje. Doplněno se stejnou
+sémantikou: **merguje**, takže dekorátor plán zužuje a nemůže ho rozšířit
+zahozením toho, co v něm bylo.
+
+Důkaz je v `tests/Integration/TenantScopedSourceEndToEndTest.php` nad **reálnou**
+`CollectionDataSource`, ne nad fake: „plán nese tenant filtr" nestojí za nic,
+když ho zdroj ignoruje.
+
 **V2.6/krok 4: V2.4 dodala workflow, které v prohlížeči nefungovalo ani jednou
 půlkou — a zjistilo se to až tím, že ho někdo poprvé nakreslil.**
 `WorkflowState` a `TransitionAction` byly hotové, otestované a zdokumentované;
@@ -1154,13 +1187,39 @@ vlastníka repa nebo na jmenovaného konzumenta:
 
 | Věc | Čeká na |
 |---|---|
-| Tenancy nad non-Eloquent `DataSource` | dekorátor nad `DataSource` (T-4); do té doby **tenancy nad non-Eloquent zdrojem nezapínej** |
 | `ShellRenderPlan` / `InteractionRenderPlan` — host pořád `mixed` | polling, live kanál a readiness nemají pojmenovaný kontrakt |
 | Systematické hledání duplicitních abstrakcí napříč V2 | průřez auditu padl na session limit; `DataSourceCapabilities`/`CapabilitySet` nejspíš nezůstal sám |
-| Boost guidelines neznají plugin hooky | doplnit s vlastní plugin sekcí, ne ad hoc |
-| Coverage floor `table` | ustálený na 93,1 % proti flooru 93 — zvednutý, položka je hotová |
 | Opt-in discovery modulů | `config('wire-core.plugins')` stačí a discovery nemá konzumenta; přidat, až někdo bude chtít moduly hledat skenováním (§10 plánu V2.6 ji jmenuje) |
-| `verify-global-search` padá **v sweepu**, ne samostatně | brána, ne kód: 2× ze 3 sweepů selhala jen kontrola fokusu, samostatně 10/10 třikrát. Opravit driver, ne framework |
+| Routované stránky v menu | `ResourceRoutes::urls()` existuje a je otestovaná, ale workbench shell pořád mapuje klíč→URL sám, protože má vlastní URL schéma. Až bude preview nad `Route::wireResources()`, sidebar může brát URL odtud |
+
+**Vyřešeno 2026-09-03: tenancy nad non-Eloquent `DataSource`.** Vznikl
+`Core\Tenancy\TenantScopedDataSource` a s ním pravidlo „tenancy nad
+non-Eloquent zdrojem nezapínej" **padá** — viz §2.
+
+**Vyřešeno 2026-09-03: `verify-global-search` — a nebyla to vada brány.** Šest
+sweepů to hlásilo jako flaky driver a §4 to tak vedla. Příčinu našla až
+**diagnostika dopsaná do driveru**, která při selhání vypíše, co viděla:
+`{"active":"global-search-trigger","visible":true,"inputs":1,"hasFocus":true}` —
+fokus zůstal na tlačítku, které paletu otevřelo, zatímco dialog už byl viditelný
+a input existoval. Jediné vysvětlení: `focus()` proběhl, dokud `x-show` ještě
+nepřepnul `display`, a **`focus()` na skrytém elementu je no-op, který nic
+nehlásí**. Rychlý stroj pořadí stihne, zatížený ne.
+
+Byl to tedy **ostrý defekt paletky**, ne driveru: uživatel stiskne ⌘K na pomalém
+spojení a to, co začne psát, zmizí. `focusInput()` teď zkouší zaostřit po
+animačních rámcích, dokud input není vykreslený (max 20) — rámec je přesně
+okamžik, kdy prohlížeč dokončil layout.
+
+**Poučení, které stojí za zapamatování: „flaky driver" byla tři sezení hypotéza,
+kterou nikdo neověřil.** Levné bylo přestat hádat a nechat padající běh říct, co
+vidí — diagnostika stála deset řádků a odpověděla na první pokus.
+
+**Vyřešeno 2026-09-03: boost guidelines znají plugin hooky.** `wire-core.blade.php`
+má vlastní sekci *Plugins and hooks* — lifecycle, `dependencies()` kontrolované
+při registraci, a hlavně pravidlo, které tenhle repo stálo defekt: **typový hint
+prvního parametru rozhoduje, kterému dispatcheru callback patří**, a nehintovaný
+padá na array stranu. Dřív to bylo jen v `docs/core/plugins.md`, takže agent
+píšící plugin na to spadl znovu.
 
 ### Co je uzavřené a nemá se otevírat
 

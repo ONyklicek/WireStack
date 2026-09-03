@@ -273,8 +273,30 @@ Verbose on purpose, and easy to grep for: an admin report or a console command
 has a real need, and a review should be able to find every place that claimed
 one.
 
-### What is not scoped
+### A source Eloquent cannot scope
 
 A non-Eloquent `DataSource` — a `CollectionDataSource`, an API-backed source —
-is **not** covered by a global scope, because there is no Eloquent query to scope.
-Constrain those in the source itself.
+builds no Eloquent query, so no global scope reaches it. Wrap it instead:
+
+```php
+use NyonCode\WireCore\Core\Tenancy\TenantScopedDataSource;
+
+$source = new TenantScopedDataSource(new CollectionDataSource($rows), app(Tenancy::class));
+```
+
+It constrains the **plan**, not the rows that come back, which is what makes it
+safe on every method rather than only on the one that returns rows: `count()`
+and `paginate()` are answered by the source without ever handing rows over, and
+a source that cannot honour the filter refuses out loud
+(`UnsupportedQueryAspectException`) instead of returning rows nobody constrained.
+
+`resolveRecord()` takes a key rather than a plan, so there the record is fetched
+and then checked — without which a tenant reaches another tenant's row by typing
+its id into a URL.
+
+The fail-safe is the one `TenantScope` has: tenancy on with no tenant resolved
+answers with **nothing**. Tenancy off delegates untouched, so wrapping a source
+costs a single-tenant application nothing.
+
+Pass a column as the third argument where the source names its tenant something
+other than the configured column.
