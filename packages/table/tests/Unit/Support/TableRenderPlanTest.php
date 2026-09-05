@@ -417,9 +417,19 @@ class TrpLayoutComponent extends Component
 
     public bool $dense = false;
 
+    public bool $sticky = false;
+
+    public ?string $stickyMaxHeight = null;
+
     public function table(Table $table): Table
     {
         $table->model(TrpRow::class)->columns([TextColumn::make('name')]);
+
+        if ($this->sticky) {
+            $this->stickyMaxHeight === null
+                ? $table->stickyHeader()
+                : $table->stickyHeader(maxHeight: $this->stickyMaxHeight);
+        }
 
         return $this->dense
             ? $table->compact()->bordered()->stackedOnMobile(true, 'lg')->sheetOnMobile()->mobileBreakpoint('lg')
@@ -441,6 +451,16 @@ function trpLayoutPlan(bool $dense): TableRenderPlan
     return TableRenderPlan::build($component->getTable(), $component, collect());
 }
 
+function trpStickyPlan(?string $maxHeight = null): TableRenderPlan
+{
+    $component = new TrpLayoutComponent;
+    $component->sticky = true;
+    $component->stickyMaxHeight = $maxHeight;
+    $component->mountWithTable();
+
+    return TableRenderPlan::build($component->getTable(), $component, collect());
+}
+
 it('resolves the density and border a render uses', function () {
     // The padding maps are the Table's, so a cell rendered outside the main view
     // — the selection cell has its own partial — cannot drift from the rest.
@@ -451,6 +471,30 @@ it('resolves the density and border a render uses', function () {
         ->and($roomy->isBordered)->toBeFalse()
         ->and($dense->cellPadding)->not->toBe($roomy->cellPadding)
         ->and($dense->headerPadding)->not->toBe($roomy->headerPadding);
+});
+
+it('resolves the sticky header and its cap together, or neither', function () {
+    // One decision, two strings. The header pins to the table's own scrollport,
+    // not the page — `overflow-x: auto` computes the other axis to `auto` too —
+    // and a scrollport the size of its content never scrolls, so a class without
+    // a cap would pin the header to a place that never moves.
+    $off = trpLayoutPlan(dense: false)->layout();
+    $on = trpStickyPlan()->layout();
+
+    expect($off->stickyHeaderClass)->toBe('')
+        ->and($off->scrollRegionStyle)->toBe('')
+        ->and($on->stickyHeaderClass)->toContain('sticky top-0')
+        ->and($on->scrollRegionStyle)->toBe('max-height: '.Table::DEFAULT_STICKY_MAX_HEIGHT);
+});
+
+it('writes the cap as an inline style, where no extractor has to see it', function () {
+    // Every other value here is a literal Tailwind utility so the class survives
+    // static extraction. An author-supplied CSS length cannot be, which is why
+    // this one is a style and not an arbitrary-value class.
+    $layout = trpStickyPlan('32rem')->layout();
+
+    expect($layout->scrollRegionStyle)->toBe('max-height: 32rem')
+        ->and($layout->stickyHeaderClass)->not->toContain('32rem');
 });
 
 it('carries both halves of the stacked-on-mobile swap', function () {

@@ -60,7 +60,7 @@ class TablePreview extends Component
     private const MODAL_VARIANTS = ['modal-form', 'modal-slideover-mobile', 'modal-slideover-compose', 'modal-fullscreen-mobile', 'modal-wizard', 'modal-nested'];
 
     /** Variants backed by the GestureRow selection-gesture fixtures. */
-    private const GESTURE_VARIANTS = ['selection-gestures', 'selection-gestures-paged', 'selection-only', 'gestures-poll', 'gestures-live', 'gestures-live-broadcast', 'gestures-poll-url'];
+    private const GESTURE_VARIANTS = ['selection-gestures', 'selection-gestures-paged', 'selection-only', 'gestures-poll', 'gestures-live', 'gestures-live-broadcast', 'gestures-poll-url', 'sticky-header'];
 
     /**
      * Variants of the users table that exist to show whole-row interaction, and
@@ -665,6 +665,13 @@ class TablePreview extends Component
         // inside it.
         if ($this->variant === 'gestures-live-broadcast') {
             $table->live('1s', broadcast: true);
+        }
+
+        // 40 rows under a pinned header, in a region short enough to have to
+        // scroll for them: the header pins to the table's own scrollport, so a
+        // preview that fits on screen would prove nothing.
+        if ($this->variant === 'sticky-header') {
+            return $table->stickyHeader(maxHeight: '20rem');
         }
 
         if ($this->variant === 'selection-only') {

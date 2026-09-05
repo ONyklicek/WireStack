@@ -482,6 +482,9 @@ selection-scope totals stay live.
 // Table/cell borders
 ->bordered(bool $bordered = true)
 
+// Keep the column headers in view while the rows scroll under them // [tl! focus:1]
+->stickyHeader(bool $sticky = true, string $maxHeight = '70vh')
+
 // Custom CSS class on <table> element
 ->tableClass(string $class)
 
@@ -494,6 +497,39 @@ selection-scope totals stay live.
 // Tint the whole row with a semantic color, static or computed per record
 ->rowColor(string|Closure|null $color)
 ```
+
+**Sticky header.** `stickyHeader()` pins the `<thead>` so the column labels stay
+readable through a long list. It also caps the height of the region the rows
+scroll in, and that is not a second, separable option — it is what makes the
+first one work. A sticky element pins to its nearest scrolling ancestor, and the
+table already has one: the wrapper carries `overflow-x: auto` for the horizontal
+case, and CSS computes the other axis to `auto` alongside it. A scrollport the
+size of its content never scrolls, so a header pinned inside an uncapped one has
+nothing to stay behind and never moves. Name your own cap when `70vh` does not
+suit the page:
+
+```php
+->stickyHeader()                    // 70vh of rows under a pinned header
+->stickyHeader(maxHeight: '32rem')  // any CSS length
+```
+
+The cap is written as an inline `max-height`, not a class, so an arbitrary
+length needs nothing from Tailwind's extractor. Turning the header off with
+`stickyHeader(false)` lifts the cap with it, whatever height was named.
+
+**Scroll edges.** A region that clips does it in silence — `overflow` draws
+nothing at the edge it cuts, so on a phone a whole actions column sits off-screen
+with no sign that it is there, and under a sticky header the last visible row is
+sliced through the middle with nothing to say more follow. Every table therefore
+frames its scroll region with a gradient on each edge there is more content past:
+left, right, and the bottom. They appear and disappear from the region's own
+scroll offsets, in the browser, and take no configuration — a table that fits
+shows none of them.
+
+There is deliberately no gradient on the top edge. An uncapped region cannot
+scroll vertically at all, and a capped one is capped because its header is pinned
+there: the header is already the marker for what is above, and a fourth gradient
+would only dim it.
 
 **Conditional row color.** `rowColor()` tints an entire row using the same
 semantic palette as badges and every other surface (`success`, `warning`,

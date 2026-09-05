@@ -480,6 +480,9 @@ v rozsahu výběru zůstaly živé.
 // Ohraničení tabulky/buněk
 ->bordered(bool $bordered = true)
 
+// Hlavička zůstane v obraze, zatímco řádky pod ní scrollují // [tl! focus:1]
+->stickyHeader(bool $sticky = true, string $maxHeight = '70vh')
+
 // Vlastní CSS třída na elementu <table>
 ->tableClass(string $class)
 
@@ -492,6 +495,38 @@ v rozsahu výběru zůstaly živé.
 // Obarvení celého řádku sémantickou barvou, staticky nebo per záznam
 ->rowColor(string|Closure|null $color)
 ```
+
+**Přišpendlená hlavička.** `stickyHeader()` připne `<thead>`, takže názvy sloupců
+zůstanou čitelné i uprostřed dlouhého seznamu. Zároveň omezí výšku oblasti, ve
+které řádky scrollují — a to není druhá, oddělitelná volba, ale právě to, co
+dělá tu první funkční. Sticky element se přišpendlí ke svému nejbližšímu
+scrollujícímu předkovi a tabulka už jednoho má: wrapper nese `overflow-x: auto`
+kvůli vodorovnému scrollu a CSS dopočítá druhou osu na `auto` s ním. Scrollport
+velký přesně jako jeho obsah nikdy nescrolluje, takže hlavička přišpendlená
+uvnitř neomezeného scrollportu nemá za čím zůstat a nikdy se nepohne. Když
+`70vh` stránce nesedí, pojmenuj vlastní strop:
+
+```php
+->stickyHeader()                    // 70vh řádků pod připnutou hlavičkou
+->stickyHeader(maxHeight: '32rem')  // libovolná CSS délka
+```
+
+Strop se zapisuje jako inline `max-height`, ne jako třída, takže libovolná délka
+nepotřebuje nic od Tailwind extraktoru. Vypnutí přes `stickyHeader(false)` zvedne
+i strop, ať už byla zadaná jakákoli výška.
+
+**Okraje scrollu.** Oblast, která ořezává, to dělá potichu — `overflow` na hraně,
+kterou uřízne, nenakreslí nic. Na telefonu tak celý sloupec s akcemi sedí mimo
+obrazovku, aniž by cokoli naznačovalo, že tam je, a pod přišpendlenou hlavičkou
+je poslední viditelný řádek přeříznutý v půlce, aniž by cokoli řeklo, že
+pokračují další. Každá tabulka proto svou scroll oblast rámuje gradientem na
+každé hraně, za kterou je obsahu víc: vlevo, vpravo a dole. Objevují se a mizí
+podle scroll pozice té oblasti, v prohlížeči, a nepotřebují žádnou konfiguraci —
+tabulka, která se vejde, neukáže ani jeden.
+
+Na horní hraně gradient záměrně není. Neomezená oblast svisle scrollovat vůbec
+nemůže a omezená je omezená právě proto, že je tam připnutá hlavička: ta už sama
+je značkou toho, co je nad ní, a čtvrtý gradient by ji jen ztmavil.
 
 **Podmíněná barva řádku.** `rowColor()` obarví celý řádek stejnou sémantickou
 paletou jako odznaky a všechny ostatní plochy (`success`, `warning`, `danger`,

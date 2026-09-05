@@ -39,6 +39,8 @@ it('has correct default values', function () {
         ->and($table->isHoverable())->toBeTrue()
         ->and($table->isCompact())->toBeFalse()
         ->and($table->isBordered())->toBeFalse()
+        ->and($table->hasStickyHeader())->toBeFalse()
+        ->and($table->getStickyHeaderMaxHeight())->toBeNull()
         ->and($table->isLazy())->toBeFalse()
         ->and($table->isPolling())->toBeFalse()
         ->and($table->isStackedOnMobile())->toBeFalse()
@@ -63,6 +65,7 @@ it('supports fluent chaining for all setters', function () {
         ->hoverable(false)
         ->compact()
         ->bordered()
+        ->stickyHeader(maxHeight: '32rem')
         ->lazy()
         ->lazyPlaceholder('Načítání...')
         ->stackedOnMobile(true, 'lg')
@@ -86,6 +89,8 @@ it('supports fluent chaining for all setters', function () {
         ->and($table->isHoverable())->toBeFalse()
         ->and($table->isCompact())->toBeTrue()
         ->and($table->isBordered())->toBeTrue()
+        ->and($table->hasStickyHeader())->toBeTrue()
+        ->and($table->getStickyHeaderMaxHeight())->toBe('32rem')
         ->and($table->isLazy())->toBeTrue()
         ->and($table->getLazyPlaceholder())->toBe('Načítání...')
         ->and($table->isStackedOnMobile())->toBeTrue()
@@ -100,6 +105,17 @@ it('supports fluent chaining for all setters', function () {
         ->and($table->getTableClass())->toBe('custom-table')
         ->and($table->getHeaderClass())->toBe('custom-header')
         ->and($table->getRowClass())->toBe('custom-row');
+});
+
+it('reports no cap on the scroll region once the header stops pinning', function () {
+    // The cap exists only to give the header something to stay behind, so it is
+    // reported through the flag rather than beside it: a table that stops
+    // pinning stops capping, whatever height was named on the way in.
+    $table = Table::make()->stickyHeader(maxHeight: '32rem');
+
+    expect($table->getStickyHeaderMaxHeight())->toBe('32rem')
+        ->and($table->stickyHeader(false)->getStickyHeaderMaxHeight())->toBeNull()
+        ->and($table->hasStickyHeader())->toBeFalse();
 });
 
 it('resolves responsive stacked layout classes from the breakpoint', function () {

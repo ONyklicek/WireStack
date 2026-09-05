@@ -129,6 +129,8 @@
     $isBordered = $plan->layout()->isBordered;
     $cellPadding = $plan->layout()->cellPadding;
     $headerPadding = $plan->layout()->headerPadding;
+    $stickyHeaderClass = $plan->layout()->stickyHeaderClass;
+    $scrollRegionStyle = $plan->layout()->scrollRegionStyle;
     $isStackedOnMobile = $plan->layout()->isStackedOnMobile;
     $tableHiddenClass = $plan->layout()->tableHiddenClass;
     $cardsVisibleClass = $plan->layout()->cardsVisibleClass;
@@ -156,7 +158,55 @@
                     @if($isFillEnabled)
                         @include('wire-table::tables.partials.fill-assets')
                     @endif
-                    <div class="relative overflow-x-auto {{ $tableHiddenClass }}"
+                    {{-- The scroll region, inside a frame that says when it is scrolled.
+                         A region that clips is clipped silently: `overflow` draws nothing
+                         at the edge it cuts, so on a phone a whole actions column sits
+                         off-screen, and under a sticky header the last visible row is
+                         sliced through the middle with nothing to say more follow. The
+                         gradients are that sign, and each appears only on an edge there
+                         is more content past.
+
+                         Alpine on THIS element, never on the scroller: the scroller
+                         already names `wireFillHandle` on an editable table, and one
+                         element takes one `x-data`. The literal is constant, so a morph
+                         cannot change the attribute text and re-initialise the
+                         component underneath a drag. --}}
+                    <div
+                            class="relative {{ $tableHiddenClass }}"
+                            x-data="{
+                                atStart: true,
+                                atEnd: true,
+                                atBottom: true,
+                                syncScrollEdges() {
+                                    const el = $refs.scroller
+                                    if (! el) return
+                                    this.atStart = el.scrollLeft <= 1
+                                    this.atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1
+                                    this.atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1
+                                },
+                            }"
+                            {{-- Deferred: `x-init` runs while THIS element is being
+                                 initialised, and `x-ref` on a child is registered only
+                                 when Alpine walks down to it — so `$refs.scroller` is
+                                 still undefined here without the tick, and ResizeObserver
+                                 throws on the whole data region.
+
+                                 Both the frame and the table are observed: the frame
+                                 resizes with the viewport, the table with a column
+                                 toggled off. --}}
+                            x-init="$nextTick(() => {
+                                        const el = $refs.scroller
+                                        if (! el) return
+                                        syncScrollEdges()
+                                        const ro = new ResizeObserver(() => syncScrollEdges())
+                                        ro.observe(el)
+                                        if (el.firstElementChild) ro.observe(el.firstElementChild)
+                                    })"
+                    >
+                    <div class="relative overflow-x-auto"
+                         x-ref="scroller"
+                         x-on:scroll.passive="syncScrollEdges()"
+                         @if($scrollRegionStyle) style="{{ $scrollRegionStyle }}" @endif
                          @if($isFillEnabled)
                              {{-- Deliberately NOT island-targeted, unlike the editable
                                   cells inside it: the fill suppresses morphs while a drag
@@ -183,7 +233,7 @@
                                     @endif
                                     class="w-full {{ $isBordered ? 'border-collapse' : '' }} {{ $table->getTableClass() }}">
                                 <thead
-                                        class="bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-500 dark:text-gray-400 uppercase {{ $table->getHeaderClass() }}">
+                                        class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider {{ $stickyHeaderClass ?: 'bg-gray-50 dark:bg-gray-800/50' }} {{ $table->getHeaderClass() }}">
                                 <tr @if($tableRole) aria-rowindex="1" @endif>
                                     {{-- Select All Checkbox --}}
                                     @if($isSelectable)
@@ -251,7 +301,13 @@
                                                         type="button"
                                                         wire:click="sortTable('{{ $column->getName() }}')"
                                                         data-testid="table-sort-{{ $column->getName() }}"
-                                                        class="group inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200"
+                                                        {{-- `uppercase` is restated here, not inherited. The `<thead>`
+                                                             above carries it, but a `<button>` is a form control: the UA
+                                                             stylesheet sets `text-transform: none` on it and Tailwind's
+                                                             preflight resets font family, size and weight without
+                                                             touching that one. So a sortable header quietly rendered
+                                                             "Name" beside a non-sortable "ROLE" in the same row. --}}
+                                                        class="group inline-flex items-center gap-1 uppercase hover:text-gray-700 dark:hover:text-gray-200"
                                                 >
                                                     <span>{{ $column->getLabel() }}</span>
                                                     <span class="flex-none">
@@ -470,7 +526,41 @@
                                 </div>
                             </div>
                         @endif
-                    </div>
+                    </div>{{-- /scroll region --}}
+                        {{-- Pointer-events-none, so the edge a finger lands on is still
+                             the scroller's. Inset from the top by the header's own
+                             height would need a measurement; overlaying it instead is
+                             what every scroll shadow does, and at this opacity the
+                             header reads through unchanged.
+
+                             Three edges, not four. The top one is the one edge a table
+                             does not need: an uncapped region cannot scroll vertically
+                             at all, and a capped one is capped because its header is
+                             pinned there — the header IS the marker for what is above,
+                             and a gradient would have to be offset by its measured
+                             height to avoid simply dimming it. --}}
+                        <div
+                                x-show="! atStart"
+                                x-cloak
+                                aria-hidden="true"
+                                data-testid="table-scroll-shadow-start"
+                                class="pointer-events-none absolute inset-y-0 left-0 w-5 bg-gradient-to-r from-gray-900/10 to-transparent dark:from-black/40"
+                        ></div>
+                        <div
+                                x-show="! atEnd"
+                                x-cloak
+                                aria-hidden="true"
+                                data-testid="table-scroll-shadow-end"
+                                class="pointer-events-none absolute inset-y-0 right-0 w-5 bg-gradient-to-l from-gray-900/10 to-transparent dark:from-black/40"
+                        ></div>
+                        <div
+                                x-show="! atBottom"
+                                x-cloak
+                                aria-hidden="true"
+                                data-testid="table-scroll-shadow-bottom"
+                                class="pointer-events-none absolute inset-x-0 bottom-0 h-5 bg-gradient-to-t from-gray-900/10 to-transparent dark:from-black/40"
+                        ></div>
+                    </div>{{-- /scroll frame --}}
 
                     {{-- Mobile Cards (Stacked Layout) --}}
                     @if($isStackedOnMobile && $hasVisibleColumns)

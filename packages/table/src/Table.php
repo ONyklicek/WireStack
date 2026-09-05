@@ -66,6 +66,15 @@ class Table implements Htmlable
      */
     public const PER_PAGE_ALL = -1;
 
+    /**
+     * How tall the scroll region gets when {@see stickyHeader()} is on and no
+     * height was named. A sticky `<thead>` pins against the nearest scrolling
+     * ancestor, and the table's own wrapper is already one — `overflow-x: auto`
+     * computes `overflow-y: auto` — so without a cap the region never scrolls
+     * vertically and the header has nothing to pin to.
+     */
+    public const DEFAULT_STICKY_MAX_HEIGHT = '70vh';
+
     protected ?ColumnSet $columns = null;
 
     /** @var array<int, Filter> */
@@ -149,6 +158,11 @@ class Table implements Htmlable
     protected bool $compact = false;
 
     protected bool $bordered = false;
+
+    protected bool $stickyHeader = false;
+
+    /** @var string A CSS length capping the scroll region {@see stickyHeader()} pins against. */
+    protected string $stickyHeaderMaxHeight = self::DEFAULT_STICKY_MAX_HEIGHT;
 
     protected ?string $tableClass = null;
 
@@ -973,6 +987,43 @@ class Table implements Htmlable
     public function getHeaderPadding(): string
     {
         return $this->compact ? 'px-4 py-2' : 'px-6 py-3';
+    }
+
+    /**
+     * Keep the column headers in view while the rows scroll under them.
+     *
+     * The header pins to the top of the table's own scroll region, not the page,
+     * because that region is already a scrolling ancestor: the wrapper carries
+     * `overflow-x: auto`, and CSS computes the other axis to `auto` alongside it.
+     * That is why turning this on also caps the region's height — a scrollport
+     * the size of its content never scrolls, and a header pinned inside one never
+     * moves. Name your own cap when the default does not suit the page:
+     *
+     * ```php
+     * ->stickyHeader()                 // 70vh of rows under a pinned header
+     * ->stickyHeader(maxHeight: '32rem')
+     * ```
+     *
+     * Any CSS length works; it is written as an inline style, not a class, so it
+     * needs nothing from Tailwind's extractor.
+     */
+    public function stickyHeader(bool $sticky = true, string $maxHeight = self::DEFAULT_STICKY_MAX_HEIGHT): static
+    {
+        $this->stickyHeader = $sticky;
+        $this->stickyHeaderMaxHeight = $maxHeight;
+
+        return $this;
+    }
+
+    public function hasStickyHeader(): bool
+    {
+        return $this->stickyHeader;
+    }
+
+    /** The cap on the scroll region, or null when the header is not sticky. */
+    public function getStickyHeaderMaxHeight(): ?string
+    {
+        return $this->stickyHeader ? $this->stickyHeaderMaxHeight : null;
     }
 
     /**
