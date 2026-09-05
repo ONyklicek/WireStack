@@ -6,6 +6,7 @@ namespace NyonCode\WireTable\Services;
 
 use Illuminate\Database\Connection;
 use NyonCode\WireTable\Concerns\HasSqlDebug;
+use NyonCode\WireTable\Exceptions\TableIntrospectionException;
 use NyonCode\WireTable\Table;
 
 /**
@@ -130,6 +131,9 @@ final class TableIntrospector
      *
      * @param  array<string, mixed>  $filterValues
      * @return array<string, mixed>
+     *
+     * @throws TableIntrospectionException When the query service produced no plan
+     *                                     to report on.
      */
     public function queryPlan(
         Table $table,
@@ -152,7 +156,7 @@ final class TableIntrospector
         $plan = $service->getLastPlan();
 
         if ($plan === null) {
-            return ['error' => 'No QueryPlan generated'];
+            throw TableIntrospectionException::noQueryPlan();
         }
 
         return [

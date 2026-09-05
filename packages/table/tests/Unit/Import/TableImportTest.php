@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use NyonCode\WireTable\Exceptions\ImportException;
 use NyonCode\WireTable\Import\ImportColumn;
 use NyonCode\WireTable\Import\TableImport;
 
@@ -175,6 +176,27 @@ test('createUsing runs a custom persistence handler', function () {
     expect($result->getImported())->toBe(1)
         ->and($captured)->toBe(['name' => 'John', 'email' => 'john@example.com'])
         ->and(ImportTestContact::count())->toBe(0);
+});
+
+test('a synchronous import of a missing file fails instead of reporting zero rows', function () {
+    // Previously this returned an ImportResult of 0 imported / 0 failed — the
+    // same answer an empty file gives — so a lost upload read as a clean import.
+    // Only the queued path guarded it; this is the one the user watches.
+    TableImport::make()
+        ->model(ImportTestContact::class)
+        ->columns([ImportColumn::make('name')])
+        ->import('/no/such/file-'.uniqid().'.csv');
+})->throws(ImportException::class, 'could not be opened for reading');
+
+test('an empty file is still a successful import of nothing', function () {
+    // The other side of the distinction: this one really is zero rows.
+    $result = TableImport::make()
+        ->model(ImportTestContact::class)
+        ->columns([ImportColumn::make('name')])
+        ->import(tableImportTempCsv(''));
+
+    expect($result->getImported())->toBe(0)
+        ->and($result->getFailures())->toBe([]);
 });
 
 test('a required column missing from the file throws', function () {

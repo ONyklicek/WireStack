@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Data\EloquentDataSource;
+use NyonCode\WireTable\Exceptions\ExportException;
 use NyonCode\WireTable\Export\Contracts\Exporter;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -34,17 +35,12 @@ class CsvExporter implements Exporter
      */
     public function writeTo(string $path, Builder $query, array $columns, array $summaryRows = []): void
     {
-        // Suppressed on purpose: an unopenable path raises a PHP warning, which
-        // Laravel's error handler turns into an ErrorException naming `fopen` —
-        // so the guard below never ran, and what reached the caller talked about
-        // a stream rather than about their export. The warning is replaced, not
-        // ignored: everything it said is in the exception, plus which export it
-        // was. Silence here would be worse than either — a caller that believes
-        // a file was written is the shape already fixed on the import side.
+        // Suppressed on purpose; {@see ExportException} says why the warning is
+        // replaced rather than ignored.
         $handle = @fopen($path, 'w');
 
         if ($handle === false) {
-            throw new \RuntimeException("Could not open [{$path}] to write the export to.");
+            throw ExportException::destinationNotWritable($path);
         }
 
         // BOM for UTF-8 Excel compatibility

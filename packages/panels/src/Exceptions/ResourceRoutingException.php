@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WirePanels\Exceptions;
 
+use NyonCode\WireCore\Foundation\Contracts\WireException;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
 use RuntimeException;
 
@@ -18,7 +19,7 @@ use RuntimeException;
  * saying out loud. `Route::wireResources()` skips such a resource instead —
  * there, having none is the ordinary way an internal resource stays unrouted.
  */
-class ResourceRoutingException extends RuntimeException
+final class ResourceRoutingException extends RuntimeException implements WireException
 {
     /**
      * @param  class-string  $resource
@@ -32,14 +33,6 @@ class ResourceRoutingException extends RuntimeException
         );
     }
 
-    /**
-     * Both registration paths were used at once (ADR 0026 §5).
-     *
-     * Refused rather than resolved, for the reason a duplicate registry key is:
-     * every page would be registered twice under one route name, the second
-     * quietly winning the name lookup, and the fix is deleting one line — which
-     * nobody can do while nothing says so.
-     */
     /**
      * Two registered things claimed the root of one group (ADR 0027).
      *
@@ -62,6 +55,14 @@ class ResourceRoutingException extends RuntimeException
         );
     }
 
+    /**
+     * Both registration paths were used at once (ADR 0026 §5).
+     *
+     * Refused rather than resolved, for the reason a duplicate registry key is:
+     * every page would be registered twice under one route name, the second
+     * quietly winning the name lookup, and the fix is deleting one line — which
+     * nobody can do while nothing says so.
+     */
     public static function alreadyRegisteredFromConfig(): self
     {
         return new self(

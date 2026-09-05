@@ -509,6 +509,12 @@ final class TableQueryService
 
                 $current = $relatedModel;
             } catch (\Throwable) {
+                // A probe, not a call that must succeed: this walks a dot path
+                // segment by segment to learn what it can join, and a segment
+                // that is not a real relation (or needs state to resolve) simply
+                // ends the walk. The registry keeps whatever the earlier
+                // segments taught it and the planner falls back to eager loading
+                // for the rest — nothing the caller asked for is discarded.
                 return;
             }
         }

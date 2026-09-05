@@ -323,6 +323,9 @@ class Select extends Field implements DehydratesState, ProvidesImplicitValidatio
                 $yes = trans('wire-forms::fields.yes');
                 $no = trans('wire-forms::fields.no');
             } catch (\Throwable) {
+                // Standalone use, with no translator bound — the same case the
+                // modals guard. English is the shipped default, so the fallback
+                // is what the translation would have returned anyway.
                 $yes = 'Yes';
                 $no = 'No';
             }

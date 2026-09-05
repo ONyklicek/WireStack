@@ -156,6 +156,9 @@ final class ApplyFilters implements QueryPipe
             try {
                 $relation = $current->{$method}();
             } catch (\Throwable) {
+                // A probe, and the method is named for its answer: a segment
+                // that will not resolve is not whereHas-safe. The caller's
+                // fallback path handles false; there is nothing to report.
                 return false;
             }
 

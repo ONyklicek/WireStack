@@ -6,7 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
+use NyonCode\WireCore\Foundation\Contracts\WireException;
 use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\Exceptions\ExportException;
 use NyonCode\WireTable\Export\CsvExporter;
 use NyonCode\WireTable\Export\ExcelExporter;
 use NyonCode\WireTable\Export\ExportFormat;
@@ -228,6 +230,48 @@ it('refuses a path it cannot write the csv to, instead of returning silently', f
         ExporterLibraryRecord::query(),
         exporterLibraryColumns(),
     ))->toThrow(RuntimeException::class, 'report.csv');
+});
+
+it('gives every writer the same catchable class, without changing the SPL base', function () {
+    // The three tests above catch RuntimeException and still pass, which is the
+    // backwards-compatibility half. This is the other half: one clause now
+    // catches an export failure by meaning rather than by base, and it does not
+    // matter which of the three writers — or which optional library — raised it.
+    $writers = [
+        [new CsvExporter, 'report.csv'],
+        [new PdfExporter, 'report.pdf'],
+        [new ExcelExporter, 'report.xlsx'],
+    ];
+
+    foreach ($writers as [$exporter, $file]) {
+        try {
+            $exporter->writeTo(
+                '/nonexistent-directory-for-exports/'.$file,
+                ExporterLibraryRecord::query(),
+                exporterLibraryColumns(),
+            );
+            $this->fail('Expected '.$exporter::class.' to refuse an unwritable path.');
+        } catch (ExportException $e) {
+            expect($e)->toBeInstanceOf(RuntimeException::class)
+                ->and($e)->toBeInstanceOf(WireException::class)
+                ->and($e->getMessage())->toContain($file);
+        }
+    }
+});
+
+it('keeps the writer library\'s own failure as previous rather than flattening it', function () {
+    // OpenSpout's IOException names the step it failed at; a handler needs that,
+    // not only the path this adds to it.
+    try {
+        (new ExcelExporter)->writeTo(
+            '/nonexistent-directory-for-exports/report.xlsx',
+            ExporterLibraryRecord::query(),
+            exporterLibraryColumns(),
+        );
+        $this->fail('Expected the workbook writer to refuse an unwritable path.');
+    } catch (ExportException $e) {
+        expect($e->getPrevious())->toBeInstanceOf(Throwable::class);
+    }
 });
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

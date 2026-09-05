@@ -7,6 +7,7 @@ namespace NyonCode\WireTable\Export;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Exceptions\ExportException;
 use NyonCode\WireTable\Export\Contracts\Exporter;
 use OpenSpout\Common\Entity\Cell;
 use OpenSpout\Common\Entity\Row;
@@ -69,7 +70,7 @@ class ExcelExporter implements Exporter
         try {
             $writer->openToFile($path);
         } catch (IOException $e) {
-            throw new \RuntimeException("Could not open [{$path}] to write the export to.", previous: $e);
+            throw ExportException::destinationNotWritable($path, previous: $e);
         }
 
         if ($this->withHeadings) {

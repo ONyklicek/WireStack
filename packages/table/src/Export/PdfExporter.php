@@ -8,6 +8,7 @@ use Barryvdh\DomPDF\PDF;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Exceptions\ExportException;
 use NyonCode\WireTable\Export\Contracts\Exporter;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -77,7 +78,7 @@ class PdfExporter implements Exporter
         // and not a silent no-op. `file_put_contents` reports failure by return
         // value as well as by warning, so both halves are handled here.
         if (@file_put_contents($path, $this->render($query, $columns, $summaryRows)->output()) === false) {
-            throw new \RuntimeException("Could not open [{$path}] to write the export to.");
+            throw ExportException::destinationNotWritable($path);
         }
     }
 

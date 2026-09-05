@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Import;
 
+use NyonCode\WireTable\Exceptions\ImportException;
 use NyonCode\WireTable\Import\Contracts\Importer;
 
 /**
@@ -22,20 +23,31 @@ class CsvImporter implements Importer
 
     /**
      * @return iterable<int, array<string, string>>
+     *
+     * @throws ImportException When the path cannot be opened for reading.
      */
     public function rows(string $filePath): iterable
     {
-        // Suppress the open warning; an unreadable path simply yields no rows.
+        // Suppressed on purpose, the same trade the exporters make: an
+        // unopenable path raises a warning naming `fopen`, and what should reach
+        // the caller names the import. Nothing is lost — the path is in the
+        // exception.
         $handle = @fopen($filePath, 'r');
 
         if ($handle === false) {
-            return;
+            // Not "no rows". An ImportResult of 0 imported and 0 failed is what
+            // an empty file legitimately produces, so answering it here makes a
+            // missing upload indistinguishable from one that held nothing —
+            // reported to the user as a clean, successful import of nothing.
+            throw ImportException::fileNotReadable($filePath);
         }
 
         try {
             $headerRow = fgetcsv($handle, 0, $this->delimiter, $this->enclosure);
 
             if (! is_array($headerRow)) {
+                // A genuinely empty file, which is a real (if useless) import of
+                // zero rows rather than a failure — unlike the case above.
                 return;
             }
 

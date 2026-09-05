@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use NyonCode\WireBoost\Exceptions\McpConfigException;
 use NyonCode\WireBoost\Install\AgentRegistry;
 use NyonCode\WireBoost\Install\Agents\ClaudeCode;
 use NyonCode\WireBoost\Install\Agents\Cursor;
@@ -76,6 +77,37 @@ it('preserves existing mcp config when merging', function () {
 
     expect($config['mcpServers'])->toHaveKeys(['other', 'wire-boost']);
 });
+
+it('refuses to merge into a config file it cannot parse, instead of replacing it', function () {
+    // The regression this exists for: a read that answered `[]` for an
+    // unparseable file turned the merge into a replacement, and every other
+    // server in it was gone with a tick printed beside it.
+    $path = $this->base.'/.mcp.json';
+    file_put_contents($path, '{"mcpServers": {"other": {"command": "node"},}}');
+
+    try {
+        (new McpInstaller)->install(new ClaudeCode, $this->base);
+        $this->fail('Expected a malformed config to stop the install.');
+    } catch (McpConfigException $e) {
+        expect($e->getMessage())->toContain($path)
+            ->and(file_get_contents($path))->toContain('"other"');
+    }
+});
+
+it('refuses a config whose root is not an object', function () {
+    file_put_contents($this->base.'/.mcp.json', '"just a string"');
+
+    (new McpInstaller)->install(new ClaudeCode, $this->base);
+})->throws(McpConfigException::class, 'its root is string');
+
+it('says which file could not be written', function () {
+    // A directory where the config file should be: `file_put_contents` cannot
+    // write it, and without the guard it returned false and the caller believed
+    // the server had been configured.
+    mkdir($this->base.'/.mcp.json');
+
+    (new McpInstaller)->install(new ClaudeCode, $this->base);
+})->throws(McpConfigException::class, 'could not be written');
 
 it('uses the agent specific servers key', function () {
     $path = (new McpInstaller)->install(new Vscode, $this->base);
@@ -169,4 +201,42 @@ it('copies the shipped skill modules', function () {
 
 it('returns no skills when the source is missing', function () {
     expect((new SkillInstaller('/no/such/source'))->install($this->base.'/skills'))->toBe([]);
+});
+
+it('refuses a config file it cannot open, rather than replacing it', function () {
+    // Unreadable is not the same as absent: writing anyway would drop every
+    // server already configured there, which is the one outcome a developer
+    // cannot undo from the message.
+    //
+    // Skipped when the suite runs as root, because root can read a 0000 file and
+    // the branch then cannot be reached at all — which is a property of the
+    // environment rather than of the code.
+    if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+        expect(true)->toBeTrue();
+
+        return;
+    }
+
+    $agent = new ClaudeCode;
+    $path = $agent->mcpConfigPath($this->base);
+
+    file_put_contents($path, '{"mcpServers":{}}');
+    chmod($path, 0000);
+
+    try {
+        expect(fn () => (new McpInstaller)->install($agent, $this->base))
+            ->toThrow(McpConfigException::class, 'could not be read');
+    } finally {
+        chmod($path, 0644);
+    }
+});
+
+it('refuses when the configuration directory cannot be created', function () {
+    // A file where the directory has to go: mkdir() fails and cannot be retried
+    // into existence, which is the one case the retry after it does not cover.
+    $base = $this->base.'/not-a-directory';
+    file_put_contents($base, 'a file');
+
+    expect(fn () => (new McpInstaller)->install(new ClaudeCode, $base))
+        ->toThrow(McpConfigException::class, 'cannot be created');
 });

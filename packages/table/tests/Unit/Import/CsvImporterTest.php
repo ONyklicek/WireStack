@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use NyonCode\WireTable\Exceptions\ImportException;
 use NyonCode\WireTable\Import\CsvImporter;
 
 /**
@@ -87,6 +88,8 @@ test('it honours a custom delimiter', function () {
     expect($rows[0])->toBe(['a' => '1', 'b' => '2']);
 });
 
-test('rows() yields nothing for an unreadable path', function () {
-    expect(iterator_to_array((new CsvImporter)->rows('/no/such/file-'.uniqid().'.csv')))->toBe([]);
-});
+test('rows() refuses an unreadable path instead of reporting no rows', function () {
+    // The distinction the whole exception exists for: an empty file above yields
+    // [] and that is true, while this one used to yield [] and was not.
+    iterator_to_array((new CsvImporter)->rows('/no/such/file-'.uniqid().'.csv'));
+})->throws(ImportException::class, 'could not be opened for reading');

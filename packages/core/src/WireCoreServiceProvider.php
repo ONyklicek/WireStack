@@ -32,6 +32,7 @@ use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
 use NyonCode\WireCore\Core\Tenancy\NullTenantResolver;
 use NyonCode\WireCore\Core\Tenancy\Tenancy;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
+use NyonCode\WireCore\Exceptions\IconSetRegistrationException;
 use NyonCode\WireCore\Exceptions\PluginRegistrationException;
 use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireCore\Foundation\Components\Component;
@@ -195,8 +196,11 @@ class WireCoreServiceProvider extends PackageServiceProvider
             $sets = config('wire-core.icons.sets', []);
 
             foreach ($sets as $prefix => $class) {
+                // Refused rather than skipped. A typo here used to cost every
+                // icon addressed through this prefix — each one rendering the
+                // missing-icon placeholder, with nothing connecting the two.
                 if (! is_string($class) || ! is_a($class, IconSet::class, true)) {
-                    continue;
+                    throw IconSetRegistrationException::notAnIconSet($class, IconSet::class);
                 }
 
                 if ($prefix === $defaultKey) {
@@ -206,10 +210,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
                 }
 
                 if (! is_string($prefix) || $prefix === '') {
-                    throw new \InvalidArgumentException(
-                        "Icon set [{$class}] must be configured under a string prefix key in "
-                        .'wire-core.icons.sets (e.g. \'lucide\' => LucideIconSet::class).'
-                    );
+                    throw IconSetRegistrationException::prefixNotAString($class);
                 }
 
                 $manager->registerIconSet($app->make($class), $prefix);
@@ -223,9 +224,12 @@ class WireCoreServiceProvider extends PackageServiceProvider
             $paths = config('wire-core.icons.paths', []);
 
             foreach ($paths as $prefix => $path) {
-                if (is_string($path) && is_dir($path)) {
-                    $manager->registerIconsFromDirectory($path, is_string($prefix) ? $prefix : '');
+                // As above: a mistyped directory silently registered nothing.
+                if (! is_string($path) || ! is_dir($path)) {
+                    throw IconSetRegistrationException::iconDirectoryUnreadable($path);
                 }
+
+                $manager->registerIconsFromDirectory($path, is_string($prefix) ? $prefix : '');
             }
 
             return $manager;

@@ -60,6 +60,9 @@ final readonly class SearchDateRange
         try {
             $start = Carbon::create($year, $month ?? 1, $day ?? 1, 0, 0, 0);
         } catch (Throwable) {
+            // This parses a search box. "31 February" is not a date, and the
+            // answer to "is this typing a date range?" is simply no — the term
+            // goes on to be searched as text like any other.
             return null;
         }
 

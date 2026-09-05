@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Components;
 
+use NyonCode\WireForms\Exceptions\FormConfigurationException;
+use NyonCode\WireForms\Support\FieldBounds;
+
 /**
  * Star rating field with optional half-star precision.
  */
@@ -17,9 +20,16 @@ class Rating extends Field
 
     protected bool $clearable = true;
 
-    /** Total number of stars/icons. */
+    /**
+     * Total number of stars/icons.
+     *
+     * @throws FormConfigurationException When not at least 1 — a rating with no
+     *                                    stars renders an empty row.
+     */
     public function max(int $max): static
     {
+        FieldBounds::assertPositive(static::class, 'max', $max);
+
         $this->max = $max;
 
         return $this;

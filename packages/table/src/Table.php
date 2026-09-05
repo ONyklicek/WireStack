@@ -33,6 +33,7 @@ use NyonCode\WireTable\Concerns\HasSqlDebug;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Exceptions\TableConfigurationException;
 use NyonCode\WireTable\Exceptions\TableHasNoHostException;
+use NyonCode\WireTable\Exceptions\TableIntrospectionException;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
 use NyonCode\WireTable\Preferences\TableViewPayload;
@@ -372,6 +373,10 @@ class Table implements Htmlable
      * @param  string|null  $sortColumn  Simulated sort column
      * @param  string  $sortDirection  Simulated sort direction
      * @return array<string, mixed> QueryPlan debug info
+     *
+     * @throws TableIntrospectionException When the query service produced no plan
+     *                                     to report on — see that class; it cannot
+     *                                     happen with the bundled service.
      */
     public function debugQueryPlan(
         ?string $search = null,

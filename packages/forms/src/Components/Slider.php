@@ -6,6 +6,8 @@ namespace NyonCode\WireForms\Components;
 
 use Closure;
 use NyonCode\WireCore\Foundation\Concerns\HasExtraInputAttributes;
+use NyonCode\WireForms\Exceptions\FormConfigurationException;
+use NyonCode\WireForms\Support\FieldBounds;
 
 /**
  * Range slider field for numeric values.
@@ -24,25 +26,60 @@ class Slider extends Field
 
     protected ?string $color = null;
 
-    /** Set the minimum selectable value. */
+    /**
+     * Set the minimum selectable value.
+     *
+     * @throws FormConfigurationException When it exceeds a max() already set.
+     */
     public function min(int|float $min): static
     {
+        // A Closure max cannot be compared without a record to evaluate it
+        // against, so the pair is only checked when both ends are literal. The
+        // dynamic case is the caller's to keep consistent.
+        FieldBounds::assertOrdered(
+            static::class,
+            'min',
+            $min,
+            'max',
+            $this->max instanceof Closure ? null : $this->max,
+        );
+
         $this->min = $min;
 
         return $this;
     }
 
-    /** Set the maximum selectable value. */
+    /**
+     * Set the maximum selectable value.
+     *
+     * @throws FormConfigurationException When it falls below a min() already set.
+     */
     public function max(int|float|Closure $max): static
     {
+        FieldBounds::assertOrdered(
+            static::class,
+            'min',
+            $max instanceof Closure ? null : $this->min,
+            'max',
+            $max instanceof Closure ? null : $max,
+        );
+
         $this->max = $max;
 
         return $this;
     }
 
-    /** Set the increment between selectable values (default 1). */
+    /**
+     * Set the increment between selectable values (default 1).
+     *
+     * @throws FormConfigurationException When not greater than 0 — the browser
+     *                                    rejects `step="0"` and the thumb stops
+     *                                    moving, which reads as a broken slider.
+     */
     public function step(int|float $step): static
     {
+        FieldBounds::assertPositive(static::class, 'step', $step);
+
         $this->step = $step;
 
         return $this;

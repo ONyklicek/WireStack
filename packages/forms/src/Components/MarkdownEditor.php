@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Components;
 
+use NyonCode\WireForms\Exceptions\FormConfigurationException;
+use NyonCode\WireForms\Support\FieldBounds;
+
 /**
  * Markdown editor with optional live preview tab.
  */
@@ -42,8 +45,15 @@ class MarkdownEditor extends Field
     }
 
     /** Allow at most this many characters. */
+    /**
+     * Cap the character count (adds the `max` validation rule).
+     *
+     * @throws FormConfigurationException When negative.
+     */
     public function maxLength(?int $length): static
     {
+        FieldBounds::assertNotNegative(static::class, 'maxLength', $length);
+
         $this->maxLength = $length;
 
         return $this;

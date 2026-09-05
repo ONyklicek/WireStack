@@ -575,6 +575,9 @@ class BelongsToSelect extends Select
 
             return $relation->getRelated();
         } catch (\Throwable) {
+            // A probe: `method_exists()` above says the name is a method, not
+            // that it is a relation, and calling it is the only way to find out.
+            // "Not a relation" is the answer, not a failure.
             return null;
         }
     }

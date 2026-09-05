@@ -244,6 +244,9 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
                 default => config('wire-forms.datetime_format', 'Y-m-d H:i'),
             };
         } catch (\Throwable) {
+            // Standalone use, with no container to read config from — the same
+            // case the modals guard. These literals are the shipped defaults,
+            // so the fallback answers exactly what config() would have.
             return match ($this->mode) {
                 'date' => 'Y-m-d',
                 'month' => 'Y-m',
@@ -321,6 +324,7 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
         try {
             return (int) config('wire-forms.first_day_of_week', 1);
         } catch (\Throwable) {
+            // As above: no container, and 1 (Monday) is the shipped default.
             return 1;
         }
     }
@@ -456,6 +460,11 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
         try {
             return Carbon::parse((string) $value, $timezone);
         } catch (\Throwable) {
+            // A probe over whatever the model or the request handed over: an
+            // empty string, a half-typed date, a column holding something else.
+            // "Not a date" is the answer every caller here is asking for, and
+            // each has its own empty state for it — a picker that throws while
+            // the user is still typing is the worse failure.
             return null;
         }
     }

@@ -7,6 +7,7 @@ use NyonCode\WireCore\Exceptions\UnsafeSqlException;
 use NyonCode\WireCore\Foundation\Contracts\WireException;
 use NyonCode\WireForms\Exceptions\FormConfigurationException;
 use NyonCode\WireForms\Forms\Runtime\StaleModelException;
+use NyonCode\WireTable\Exceptions\ExportException;
 use NyonCode\WireTable\Exceptions\ImportException;
 use NyonCode\WireTable\Exceptions\RelationManagerException;
 use NyonCode\WireTable\Exceptions\TableConfigurationException;
@@ -22,7 +23,18 @@ it('lets one clause catch a failure from anywhere in the stack', function (Throw
     // is catchable with the rest of the stack all the same (ADR 0022).
     'forms (pre-existing)' => fn () => new StaleModelException(new class extends Model {}, 'updated_at'),
     'table' => fn () => TableHasNoDataSourceException::make(),
+    'table (export)' => fn () => ExportException::noQuery(),
 ]);
+
+it('names the whole-monorepo sweep that now enforces what this file samples', function () {
+    // This file names a handful of exceptions by hand, which is why
+    // ResourceRoutingException could ship without WireException and stay that
+    // way. tests/Integration/ExceptionContractTest.php reads the filesystem and
+    // holds every class, present and future, to the same three rules — that is
+    // the gate; this file stays as the readable illustration of what they mean.
+    expect(dirname(__DIR__, 5).'/tests/Integration/ExceptionContractTest.php')
+        ->toBeReadableFile();
+});
 
 it('keeps the SPL base each site has always thrown', function () {
     // This is the backwards-compatibility guarantee: an application already

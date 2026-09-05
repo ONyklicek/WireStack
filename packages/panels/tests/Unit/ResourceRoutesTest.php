@@ -7,6 +7,7 @@ use Livewire\Component;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
+use NyonCode\WireCore\Foundation\Contracts\WireException;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ConfiguresRoutes;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
 use NyonCode\WireCore\Foundation\Routing\RoutePage;
@@ -254,6 +255,20 @@ it('refuses two pages claiming the root of one group', function () {
 
     expect(fn () => Route::prefix('business')->group(fn () => Route::wireResources()))
         ->toThrow(ResourceRoutingException::class, 'rt-landing');
+});
+
+it('marks a routing failure as a wire failure, catchable with the rest of the stack', function () {
+    // It was not, and nothing noticed: this is the one clause WireException
+    // exists for, and resource routing was the only part of the stack outside
+    // it. The SPL base is unchanged, so an application catching RuntimeException
+    // is unaffected (ADR 0022).
+    try {
+        Route::wireResource(RtInternalResource::class);
+        $this->fail('Expected a resource with no pages to be refused.');
+    } catch (ResourceRoutingException $e) {
+        expect($e)->toBeInstanceOf(WireException::class)
+            ->and($e)->toBeInstanceOf(RuntimeException::class);
+    }
 });
 
 it('lets each zone have a landing page of its own', function () {

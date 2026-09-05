@@ -7,8 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Core\Query\QueryPlan;
+use NyonCode\WireCore\Foundation\Contracts\WireException;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Columns\TextInputColumn;
+use NyonCode\WireTable\Exceptions\TableIntrospectionException;
 use NyonCode\WireTable\Filters\TextFilter;
 use NyonCode\WireTable\Services\TableIntrospector;
 use NyonCode\WireTable\Services\TableQueryService;
@@ -134,10 +136,11 @@ it('falls back to the table\'s default sort column but not its direction', funct
         ->and($plan['query_plan']['sort_clauses'][0]['direction'])->toBe('asc');
 });
 
-it('says so rather than fataling when no plan came back', function () {
+it('throws rather than reporting a table that plans nothing, when no plan came back', function () {
     // buildQuery() assigns the plan unconditionally, so this branch is
     // unreachable through the real service — it guards the nullable return of
-    // getLastPlan(), and a stub is the only way to walk it.
+    // getLastPlan(), and a stub is the only way to walk it. Which is also what
+    // the message names, because a bound replacement is the one way to get here.
     app()->bind(TableQueryService::class, fn () => new class
     {
         public function buildQuery(mixed ...$args): Builder
@@ -151,7 +154,35 @@ it('says so rather than fataling when no plan came back', function () {
         }
     });
 
-    expect($this->introspector->queryPlan(tinsTable()))->toBe(['error' => 'No QueryPlan generated']);
+    $this->introspector->queryPlan(tinsTable());
+})->throws(TableIntrospectionException::class, 'produced no QueryPlan');
+
+it('does not hand back an error shape the caller has no way to check for', function () {
+    // The regression: `['error' => …]` was returned from a Services class, which
+    // AI_CODING_STANDARD.md bans and which nothing downstream inspected. Every
+    // other return from this method carries `query_plan`, so an absent key read
+    // as "this table plans nothing" — the exact wrong conclusion for a helper
+    // someone opened to find out why a query does what it does.
+    app()->bind(TableQueryService::class, fn () => new class
+    {
+        public function buildQuery(mixed ...$args): Builder
+        {
+            return TinsProduct::query();
+        }
+
+        public function getLastPlan(): ?QueryPlan
+        {
+            return null;
+        }
+    });
+
+    try {
+        $this->introspector->queryPlan(tinsTable());
+        $this->fail('Expected a missing plan to be refused.');
+    } catch (TableIntrospectionException $e) {
+        expect($e)->toBeInstanceOf(WireException::class)
+            ->and($e)->toBeInstanceOf(RuntimeException::class);
+    }
 });
 
 it('interpolates the bindings into the final sql', function () {

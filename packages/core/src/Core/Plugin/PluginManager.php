@@ -381,6 +381,9 @@ final class PluginManager
             $ref = new ReflectionFunction($callback(...));
             $location = $ref->getFileName().':'.$ref->getStartLine();
         } catch (\ReflectionException) {
+            // This whole method builds a debug log line. A callback reflection
+            // cannot see is worth saying "unknown" about; it is not worth
+            // turning a warning into a failure.
             $location = 'unknown';
         }
 
@@ -446,6 +449,8 @@ final class PluginManager
         try {
             $ref = new ReflectionFunction($callback(...));
         } catch (\ReflectionException) {
+            // A probe: the answer is "no first-parameter type", and a callable
+            // that cannot be reflected has none as surely as an untyped one.
             return null;
         }
 

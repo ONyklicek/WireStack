@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Exceptions\ExportException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TableExport
@@ -254,7 +255,7 @@ class TableExport
         // that should reach the log.
         // @codeCoverageIgnoreStart
         if ($temp === false) {
-            throw new \RuntimeException('Could not open a temporary file for the export.');
+            throw ExportException::noTemporaryFile();
         }
         // @codeCoverageIgnoreEnd
 
@@ -268,7 +269,7 @@ class TableExport
             $handle = @fopen($temp, 'r');
 
             if ($handle === false) {
-                throw new \RuntimeException('Could not read back the export that was just written.');
+                throw ExportException::unreadableTemporaryFile($temp);
             }
 
             $storage->put($path, $handle);
@@ -307,7 +308,7 @@ class TableExport
         $columns = $columns ?? $this->columns ?? [];
 
         if ($query === null) {
-            throw new \RuntimeException('No query defined for export.');
+            throw ExportException::noQuery();
         }
 
         if ($this->modifyQueryCallback) {

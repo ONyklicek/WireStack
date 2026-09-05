@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use NyonCode\WireCore\Foundation\Concerns\HasExtraInputAttributes;
-/**
- * Textarea field with autosize and row/col configuration.
- */
 use NyonCode\WireForms\Concerns\HasCharacterLimits;
+use NyonCode\WireForms\Exceptions\FormConfigurationException;
+use NyonCode\WireForms\Support\FieldBounds;
 
 class Textarea extends Field
 {
@@ -23,17 +22,29 @@ class Textarea extends Field
 
     protected ?bool $spellcheck = null;
 
-    /** Set the visible number of text rows. */
+    /**
+     * Set the visible number of text rows.
+     *
+     * @throws FormConfigurationException When not at least 1.
+     */
     public function rows(int $rows): static
     {
+        FieldBounds::assertPositive(static::class, 'rows', $rows);
+
         $this->rows = $rows;
 
         return $this;
     }
 
-    /** Set the visible width of the textarea in character columns. */
+    /**
+     * Set the visible width of the textarea in character columns.
+     *
+     * @throws FormConfigurationException When not at least 1.
+     */
     public function cols(?int $cols): static
     {
+        FieldBounds::assertPositive(static::class, 'cols', $cols);
+
         $this->cols = $cols;
 
         return $this;

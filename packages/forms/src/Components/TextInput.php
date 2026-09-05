@@ -7,12 +7,9 @@ namespace NyonCode\WireForms\Components;
 use Closure;
 use NyonCode\WireCore\Foundation\Concerns\HasExtraInputAttributes;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
-/**
- * Text input field with type variants (email, password, tel, url, numeric, integer).
- *
- * Supports prefix/suffix, mask, datalist, input mode, autocomplete.
- */
 use NyonCode\WireForms\Concerns\HasCharacterLimits;
+use NyonCode\WireForms\Exceptions\FormConfigurationException;
+use NyonCode\WireForms\Support\FieldBounds;
 
 class TextInput extends Field
 {
@@ -112,28 +109,78 @@ class TextInput extends Field
 
     // ─── Constraints ───────────────────────────────────────────────
 
-    /** Set the minimum numeric value (a value or a `$get`-aware Closure). */
+    /**
+     * Set the minimum numeric value (a value or a `$get`-aware Closure).
+     *
+     * @throws FormConfigurationException When it exceeds a literal maxValue().
+     */
     public function minValue(int|float|string|Closure|null $value): static
     {
+        // Only a pair of literal numbers can be compared here. A Closure needs a
+        // record to evaluate against and a string may be a date or a datetime-local
+        // bound, which this does not try to parse — those stay the caller's to keep
+        // consistent, and the browser rejects the obvious cases anyway.
+        FieldBounds::assertOrdered(
+            static::class,
+            'minValue',
+            self::comparableBound($value),
+            'maxValue',
+            self::comparableBound($this->maxValue),
+        );
+
         $this->minValue = $value;
 
         return $this;
     }
 
-    /** Set the maximum numeric value (a value or a `$get`-aware Closure). */
+    /**
+     * Set the maximum numeric value (a value or a `$get`-aware Closure).
+     *
+     * @throws FormConfigurationException When it falls below a literal minValue().
+     */
     public function maxValue(int|float|string|Closure|null $value): static
     {
+        FieldBounds::assertOrdered(
+            static::class,
+            'minValue',
+            self::comparableBound($this->minValue),
+            'maxValue',
+            self::comparableBound($value),
+        );
+
         $this->maxValue = $value;
 
         return $this;
     }
 
-    /** Set the numeric step increment. */
+    /**
+     * Set the numeric step increment.
+     *
+     * @throws FormConfigurationException When a numeric step is not greater than 0.
+     */
     public function step(int|float|string|null $step): static
     {
+        // `'any'` is the one non-numeric step HTML defines, and it is the reason
+        // this setter takes a string at all — so only a numeric one is checked.
+        if (is_int($step) || is_float($step)) {
+            FieldBounds::assertPositive(static::class, 'step', $step);
+        }
+
         $this->step = $step;
 
         return $this;
+    }
+
+    /**
+     * The bound as a number, or null when it is not one this can compare.
+     */
+    private static function comparableBound(int|float|string|Closure|null $value): int|float|null
+    {
+        if (is_int($value) || is_float($value)) {
+            return $value;
+        }
+
+        return null;
     }
 
     // ─── Extras ────────────────────────────────────────────────────

@@ -141,6 +141,34 @@ The test: if the `catch` block is *deciding* something, it is a probe and the
 decision gets a comment. If it is discarding information the caller needed, it is
 a bug.
 
+### 6. The rules are enforced by a test, not by review
+
+`tests/Integration/ExceptionContractTest.php` reads the filesystem and holds
+every class under any package's `Exceptions/` to §1 and §2 — implements
+`WireException`, is `final`, extends `RuntimeException` or `LogicException` — and
+refuses any bare SPL `throw new` in package source.
+
+This is here because review did not hold. `ResourceRoutingException` shipped
+without the marker and stayed that way: the one clause this ADR exists for did
+not catch resource routing failures, and nothing said so. The per-package
+`ExceptionContractTest` in wire-table could not notice, because it names four
+exceptions by hand — it stays as the readable illustration of what the rules
+mean, and the sweep is the gate. Same shape as `ModuleLayersTest` for ADR 0025,
+and for the same reason: nobody was ignoring the rule, there was simply nothing
+to notice the drift.
+
+A fifth check covers §4 from the other side: no class may `return ['error' => …]`
+instead of throwing. `TableIntrospector::queryPlan()` is why it is a test rather
+than a rule — every other return from that method carried a `query_plan` key, so
+the error shape read as "this table plans nothing", and nothing checked for it
+because no other return had an `error` key to compare against. A boundary that
+must not throw still formats there (`Response::error()` in an MCP tool, a Livewire
+host's `['success' => false, 'message' => …]`); the difference is that those are
+shapes the caller can act on.
+
+A class added tomorrow is held to the rules on the day it is added. Both the
+bare-SPL and error-shape lists are empty and may not grow silently.
+
 ## Consequences
 
 - Consumers can catch `WireException`, a package's domain class, or the SPL base

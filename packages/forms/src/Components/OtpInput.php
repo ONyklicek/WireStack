@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Components;
 
+use NyonCode\WireForms\Exceptions\FormConfigurationException;
+use NyonCode\WireForms\Support\FieldBounds;
+
 /**
  * OTP / PIN input — N individual character boxes with automatic focus advance.
  */
@@ -17,9 +20,16 @@ class OtpInput extends Field
 
     protected ?int $separator = null;
 
-    /** Number of individual input boxes. */
+    /**
+     * Number of individual input boxes.
+     *
+     * @throws FormConfigurationException When not at least 1 — a zero-length OTP
+     *                                    renders no boxes at all.
+     */
     public function length(int $length): static
     {
+        FieldBounds::assertPositive(static::class, 'length', $length);
+
         $this->length = $length;
 
         return $this;
@@ -41,9 +51,16 @@ class OtpInput extends Field
         return $this;
     }
 
-    /** Show a visual separator (e.g. dash) after every N characters. */
+    /**
+     * Show a visual separator (e.g. dash) after every N characters.
+     *
+     * @throws FormConfigurationException When not at least 1 — "after every 0
+     *                                    characters" has no rendering.
+     */
     public function separator(int $after): static
     {
+        FieldBounds::assertPositive(static::class, 'separator', $after);
+
         $this->separator = $after;
 
         return $this;

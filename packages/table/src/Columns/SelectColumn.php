@@ -150,6 +150,11 @@ class SelectColumn extends Column
 
             return $this->options($options);
         } catch (\Throwable) {
+            // Options left as they were, deliberately. This runs per rendered
+            // row to fill a dropdown from a relation, so the failure modes are a
+            // name that is not a relation and a related table that cannot be
+            // queried — neither of which should take the table down. The cell
+            // renders with whatever options were declared by hand.
             return $this;
         }
     }

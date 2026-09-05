@@ -14,6 +14,8 @@ use NyonCode\WireCore\Foundation\Support\StoredFileUrlResolver;
 use NyonCode\WireForms\Concerns\CanBeMultiple;
 use NyonCode\WireForms\Contracts\ProvidesImplicitValidationRules;
 use NyonCode\WireForms\Contracts\ProvidesItemValidationRules;
+use NyonCode\WireForms\Exceptions\FormConfigurationException;
+use NyonCode\WireForms\Support\FieldBounds;
 
 /**
  * File upload field with image mode, multiple files, disk/directory configuration.
@@ -83,33 +85,61 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
         return $this;
     }
 
-    /** Set the maximum size per file, in kilobytes. */
+    /**
+     * Set the maximum size per file, in kilobytes.
+     *
+     * @throws FormConfigurationException When negative, or below minSize().
+     */
     public function maxSize(?int $kilobytes): static
     {
+        FieldBounds::assertNotNegative(static::class, 'maxSize', $kilobytes);
+        FieldBounds::assertOrdered(static::class, 'minSize', $this->minSize, 'maxSize', $kilobytes);
+
         $this->maxSize = $kilobytes;
 
         return $this;
     }
 
-    /** Set the minimum size per file, in kilobytes. */
+    /**
+     * Set the minimum size per file, in kilobytes.
+     *
+     * @throws FormConfigurationException When negative, or above maxSize().
+     */
     public function minSize(?int $kilobytes): static
     {
+        FieldBounds::assertNotNegative(static::class, 'minSize', $kilobytes);
+        FieldBounds::assertOrdered(static::class, 'minSize', $kilobytes, 'maxSize', $this->maxSize);
+
         $this->minSize = $kilobytes;
 
         return $this;
     }
 
-    /** Set the maximum number of files (multiple mode). */
+    /**
+     * Set the maximum number of files (multiple mode).
+     *
+     * @throws FormConfigurationException When not at least 1, or below minFiles().
+     */
     public function maxFiles(?int $count): static
     {
+        FieldBounds::assertPositive(static::class, 'maxFiles', $count);
+        FieldBounds::assertOrdered(static::class, 'minFiles', $this->minFiles, 'maxFiles', $count);
+
         $this->maxFiles = $count;
 
         return $this;
     }
 
-    /** Set the minimum number of files (multiple mode). */
+    /**
+     * Set the minimum number of files (multiple mode).
+     *
+     * @throws FormConfigurationException When negative, or above maxFiles().
+     */
     public function minFiles(?int $count): static
     {
+        FieldBounds::assertNotNegative(static::class, 'minFiles', $count);
+        FieldBounds::assertOrdered(static::class, 'minFiles', $count, 'maxFiles', $this->maxFiles);
+
         $this->minFiles = $count;
 
         return $this;
@@ -713,6 +743,11 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
                 $this->urlExpiryMinutes,
             );
         } catch (\Throwable) {
+            // No preview rather than no page. The resolver reaches the
+            // filesystem driver — a temporary URL an adapter will not sign, a
+            // remote disk that is down — and the file itself is still uploaded
+            // and still saved. Failing the whole form's render over a thumbnail
+            // would be the larger bug; the field renders its no-preview state.
             return null;
         }
     }

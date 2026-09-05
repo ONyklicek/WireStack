@@ -9,6 +9,7 @@ use NyonCode\WireCore\Foundation\Concerns\HasSize;
 use NyonCode\WireForms\Concerns\CanBeSearchable;
 use NyonCode\WireForms\Concerns\HasChoiceVariants;
 use NyonCode\WireForms\Concerns\HasOptions;
+use NyonCode\WireForms\Support\FieldBounds;
 
 /**
  * Multiple checkbox list with search, bulk toggle, grouped options, and column layout.
@@ -51,6 +52,10 @@ class CheckboxList extends Field
      */
     public function columns(int|array $columns): static
     {
+        if (is_int($columns)) {
+            FieldBounds::assertPositive(static::class, 'columns', $columns);
+        }
+
         $this->columns = $columns;
 
         return $this;

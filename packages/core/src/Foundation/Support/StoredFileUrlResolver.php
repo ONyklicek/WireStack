@@ -80,6 +80,10 @@ final class StoredFileUrlResolver
         try {
             return $disk->temporaryUrl($path, now()->addMinutes($expiryMinutes));
         } catch (Throwable) {
+            // Documented in this method's own name: the local driver and several
+            // adapters throw rather than sign, so this is a capability check by
+            // the only means the contract offers. The plain URL is a working
+            // answer, not a degraded one — it just does not expire.
             return $disk->url($path);
         }
     }
