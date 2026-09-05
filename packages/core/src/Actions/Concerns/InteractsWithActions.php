@@ -19,6 +19,7 @@ use NyonCode\WireCore\Core\Events\ActionExecuted;
 use NyonCode\WireCore\Core\Events\ActionExecuting;
 use NyonCode\WireCore\Core\Plugin\Hooks\ActionExecutedPayload;
 use NyonCode\WireCore\Core\Plugin\Hooks\ActionExecutingPayload;
+use NyonCode\WireCore\Core\Plugin\HookTarget;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
@@ -543,6 +544,10 @@ trait InteractsWithActions
         if (app()->bound(PluginManager::class)) {
             $manager = app(PluginManager::class);
 
+            // The host is this component, which is what a scoped callback is
+            // addressed by — its class, or the registry key it declares.
+            $hookTarget = HookTarget::for('action', $this);
+
             $manager->runHook('action.executing', [
                 'action' => $action,
                 'actionName' => $action->getName(),
@@ -550,7 +555,7 @@ trait InteractsWithActions
                 'recordIds' => $recordIds,
                 'data' => $data,
                 'component' => $this,
-            ]);
+            ], $hookTarget);
 
             $preContext = $this->payloadToContext($payload, $action->getName());
             $manager->runTypedHook(
@@ -560,6 +565,7 @@ trait InteractsWithActions
                     context: $preContext,
                     actionType: $actionType,
                     component: $this,
+                    target: $hookTarget,
                 ),
             );
         }
@@ -713,6 +719,8 @@ trait InteractsWithActions
         if (app()->bound(PluginManager::class)) {
             $manager = app(PluginManager::class);
 
+            $hookTarget = HookTarget::for('action', $this);
+
             $manager->runHook('action.executed', [
                 'action' => $action,
                 'actionName' => $action->getName(),
@@ -720,7 +728,7 @@ trait InteractsWithActions
                 'recordIds' => $recordIds,
                 'result' => $pipelineResult,
                 'component' => $this,
-            ]);
+            ], $hookTarget);
 
             $manager->runTypedHook(
                 'action.executed',
@@ -730,6 +738,7 @@ trait InteractsWithActions
                     result: $pipelineResult,
                     actionType: $actionType,
                     component: $this,
+                    target: $hookTarget,
                 ),
             );
         }

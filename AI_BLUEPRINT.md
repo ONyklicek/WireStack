@@ -36,10 +36,11 @@ Read the recipe, catalog, and protocol files only when the task requires them.
 `nyoncode/wire` is a Laravel/Livewire monorepo for enterprise-grade UI
 components.
 
-It contains four runtime packages plus one companion tooling package:
+It contains six runtime packages plus one companion tooling package:
 
 ```text
-wire-sortable -> wire-table -> wire-forms -> wire-core
+wire-admin -> wire-panels -> wire-table -> wire-forms -> wire-core
+wire-sortable -> wire-table
 wire-boost ----> wire-core   (companion AI tooling; suggests the rest)
 ```
 
@@ -51,6 +52,10 @@ Dependency direction matters:
 - `wire-table` consumes `wire-core` and `wire-forms`.
 - `wire-sortable` consumes `wire-table` and extends it with plugin/macro
   behavior.
+- `wire-panels` consumes core, forms and table: it is the application owner layer
+  (resources, their pages, routing), and nothing may depend on it but the shell.
+- `wire-admin` consumes `wire-panels` and sits at the top: the optional shell.
+  Nothing requires it, which is what makes installing it the opt-in (ADR 0028).
 - `wire-boost` is companion AI tooling that requires only `wire-core` and
   *suggests* `wire-forms`/`wire-table`/`wire-sortable`; it introspects whichever
   packages are installed and never participates in the runtime UI graph.
@@ -197,6 +202,46 @@ Start files:
 - `packages/sortable/src/SortableTable.php`
 - `packages/sortable/src/Concerns/WithSortable.php`
 - `packages/sortable/src/Models/ReorderableColumnOrder.php`
+
+### wire-panels
+
+Path: `packages/panels`
+
+Owns the application owner layer:
+
+- resource pages (`ListPage`, `CreatePage`, `EditPage`, `ViewPage`, `DashboardPage`)
+- the table and relation-manager halves of a resource declaration
+- routing: `Route::wireResources()`, config-driven registration, zones
+- the URL answer core asks for (`ResolvesPageUrls`)
+
+Start files:
+
+- `packages/panels/src/WirePanelsServiceProvider.php`
+- `packages/panels/src/Routing/ResourceRoutes.php`
+- `packages/panels/src/Routing/ConfiguredRoutes.php`
+- `packages/panels/src/Resources/Pages/ListPage.php`
+- `packages/panels/src/Resources/Concerns/BelongsToResource.php`
+
+### wire-admin
+
+Path: `packages/admin`
+
+Owns the optional shell, and only markup:
+
+- `<x-wire-admin::layout>` — the page frame, with slots for head/brand/topbar/user
+- `<x-wire-admin::sidebar>` — the menu over `Workspace`, with active state and a
+  mobile handle
+
+It owns no registry, no URL scheme and no `Panel` object, and no provider sets
+`livewire.component_layout` — installing it is not the same act as adopting it.
+
+Start files:
+
+- `packages/admin/src/WireAdminServiceProvider.php`
+- `packages/admin/src/View/Layout.php`
+- `packages/admin/src/View/Sidebar.php`
+- `packages/admin/resources/views/layout.blade.php`
+- `packages/admin/resources/views/sidebar.blade.php`
 
 ### wire-boost
 

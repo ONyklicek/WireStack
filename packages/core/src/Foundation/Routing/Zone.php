@@ -42,15 +42,30 @@ final class Zone
     /**
      * The zone of the route being rendered, or null when there is none.
      *
-     * Matched rather than searched for, because the obvious `str_contains($name,
-     * 'wire.')` is a trap with a name: **`livewire.update` contains `wire.`**, so
-     * a substring search finds a zone called `li` on exactly the request where
-     * there is no zone to find. The shape has to be anchored — an optional
-     * prefix, then `wire.`, then a key and a page and nothing else.
+     * Matched rather than searched for; {@see parse()} owns the shape and the
+     * trap behind it.
      */
     public static function current(): ?string
     {
         return self::of(Route::currentRouteName());
+    }
+
+    /**
+     * The registered key of the route being rendered, or null when the current
+     * route is not a page of one.
+     *
+     * What a menu needs to mark its active entry, and the reason it lives here
+     * rather than in whatever draws the menu: the shape being read is this
+     * class's — one anchored pattern, one owner. A second copy in a shell would
+     * be the same regex with the same trap one edit away from disagreeing.
+     *
+     * Carries the same warning as {@see current()}: read it while the **page**
+     * renders, not inside a Livewire update, where the route name is
+     * `livewire.update` and every answer here is null.
+     */
+    public static function currentKey(): ?string
+    {
+        return self::keyOf(Route::currentRouteName());
     }
 
     /**
@@ -61,15 +76,43 @@ final class Zone
      */
     public static function of(?string $routeName): ?string
     {
+        $parts = self::parse($routeName);
+
+        return ($parts['zone'] ?? '') === '' ? null : $parts['zone'];
+    }
+
+    /**
+     * The registered key inside a route name, or null for a name that is not a
+     * page's.
+     */
+    public static function keyOf(?string $routeName): ?string
+    {
+        $key = self::parse($routeName)['key'] ?? '';
+
+        return $key === '' ? null : $key;
+    }
+
+    /**
+     * The one place the page-route name shape is written.
+     *
+     * Anchored rather than searched for, because the obvious
+     * `str_contains($name, 'wire.')` is a trap with a name: **`livewire.update`
+     * contains `wire.`**. Both readers below get their answer from this match,
+     * so neither can drift from the other.
+     *
+     * @return array{zone?: string, key?: string}
+     */
+    private static function parse(?string $routeName): array
+    {
         if ($routeName === null) {
-            return null;
+            return [];
         }
 
-        if (preg_match('/^(?<zone>.+\.)?wire\.[^.]+\.[^.]+$/', $routeName, $m) !== 1) {
-            return null;
+        if (preg_match('/^(?<zone>.+\.)?wire\.(?<key>[^.]+)\.[^.]+$/', $routeName, $m) !== 1) {
+            return [];
         }
 
-        return ($m['zone'] ?? '') === '' ? null : $m['zone'];
+        return ['zone' => $m['zone'], 'key' => $m['key']];
     }
 
     /**

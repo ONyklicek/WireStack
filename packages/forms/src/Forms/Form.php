@@ -12,6 +12,10 @@ use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 use Livewire\Drawer\Utils;
 use NyonCode\WireCore\Actions\Contracts\ModalForm;
+use NyonCode\WireCore\Core\Plugin\Hooks\FormConfiguringPayload;
+use NyonCode\WireCore\Core\Plugin\HookTarget;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Foundation\Schema\Wizard;
 use NyonCode\WireForms\Forms\Config\ConfigBuilder;
 use NyonCode\WireForms\Forms\Config\FormConfig;
@@ -506,10 +510,44 @@ class Form implements Htmlable, ModalForm
     private function getConfig(): FormConfig
     {
         if ($this->config === null) {
+            $this->configBuilder->schema($this->configuredSchema());
             $this->config = $this->configBuilder->build();
         }
 
         return $this->config;
+    }
+
+    /**
+     * The schema, after anything installed has had its say.
+     *
+     * The counterpart of `table.configuring`, and the reason it exists: a plugin
+     * — or a domain module's installer — could add a column to a list it does not
+     * own and could not add a field to the form beside it. Dispatched here
+     * because this is the one place a schema becomes a config, and the config is
+     * memoized, so it runs once per form rather than once per render.
+     *
+     * @return array<int, mixed>
+     */
+    private function configuredSchema(): array
+    {
+        $schema = $this->configBuilder->getSchema();
+
+        if (! app()->bound(PluginManager::class)) {
+            return $schema;
+        }
+
+        return app(PluginManager::class)->runTypedHook(
+            Hook::FormConfiguring,
+            new FormConfiguringPayload(
+                form: $this,
+                schema: $schema,
+                target: HookTarget::for(
+                    'form',
+                    $this->stateManager->getLivewire(),
+                    $this->configBuilder->getModel(),
+                ),
+            ),
+        )->schema;
     }
 
     private function getRuntime(): FormRuntime

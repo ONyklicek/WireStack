@@ -7,6 +7,7 @@ namespace Workbench\App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
 use Workbench\App\Livewire\Dashboards\ShowOverview;
@@ -42,17 +43,38 @@ class WorkbenchServiceProvider extends ServiceProvider
         // Two domain modules, and nothing else. V2.6 step 5: what used to be
         // three arrays here — resources, dashboards, navigation groups, each
         // listing things this provider had to know about individually — is now
-        // two areas that each name their own. Billing is listed first because
-        // operations declares a dependency on it, and the plugin manager refuses
-        // a module whose dependency is not registered yet.
+        // two areas that each name their own, arriving by the two routes a
+        // module has.
+        // Billing arrives the way a *package* ships a module — the workbench
+        // standing in for `nyoncode/wire-module-billing`, which no application
+        // could add to its own config file. `resolving` rather than `boot()`:
+        // the callback runs while the container builds the manager, so the
+        // module is in the list before `PluginManager::boot()` and before the
+        // provider spreads declarations into the registries. Registering any
+        // later is refused outright, because it would look installed and do
+        // nothing. The `has()` guard is what makes a provider that boots twice
+        // (tests do) idempotent.
+        $this->app->resolving(PluginManager::class, function (PluginManager $manager): void {
+            if (! $manager->has('billing')) {
+                $manager->register(new BillingModule);
+            }
+        });
+
+        // Operations arrives the way an *application* installs one. Both paths
+        // are exercised on purpose: this is the only place in the repository
+        // where a module reaches the registries through a provider, and a path
+        // with no consumer is the kind that breaks unnoticed.
+        //
+        // Ordering still holds: operations declares a dependency on billing, and
+        // `resolving` callbacks run before `afterResolving` ones — which is where
+        // config is read — so billing is registered first without anyone
+        // sequencing it by hand.
         //
         // Note what stayed true: operations sorts its group above billing's, so
         // the sidebar still disagrees with this order on purpose.
         config()->set('wire-core.plugins', [
-            BillingModule::class,
             OperationsModule::class,
         ]);
-
     }
 
     /**

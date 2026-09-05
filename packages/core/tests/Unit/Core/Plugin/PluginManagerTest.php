@@ -6,9 +6,31 @@ use Illuminate\Container\Container;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use NyonCode\WireCore\Core\Plugin\Contracts\HasConfiguration;
 use NyonCode\WireCore\Core\Plugin\Contracts\HasDependencies;
+use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
 use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
+use NyonCode\WireCore\Core\Plugin\Hooks\TableConfiguringPayload;
+use NyonCode\WireCore\Core\Plugin\HookTarget;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Query\Contracts\QueryPipe;
+use NyonCode\WireCore\Exceptions\PluginRegistrationException;
+use NyonCode\WireCore\Foundation\Enums\Hook;
+
+/** A host that shows a registered entry, the way a resource page does. */
+class PmInvoicesPage implements IdentifiesHookTarget
+{
+    public function hookKey(): ?string
+    {
+        return 'invoices';
+    }
+}
+
+class PmTasksPage implements IdentifiesHookTarget
+{
+    public function hookKey(): ?string
+    {
+        return 'tasks';
+    }
+}
 
 // --- Plugin Registration ---
 
@@ -28,6 +50,42 @@ it('prevents duplicate plugin registration', function () {
 
     $manager->register(createTestPlugin('duplicate'));
 })->throws(RuntimeException::class, "Plugin 'duplicate' is already registered.");
+
+it('refuses a plugin that arrives after the manager booted', function () {
+    // The failure this replaces was silent and looked like success: register()
+    // accepted the plugin, has() answered true, and the two passes that read the
+    // list — boot(), and the provider spreading a domain module's declarations —
+    // had both already run. So the assertion that matters is not only that it
+    // throws: it is that nothing was kept.
+    $manager = new PluginManager;
+    $manager->boot();
+
+    expect(fn () => $manager->register(createTestPlugin('late')))
+        ->toThrow(PluginRegistrationException::class)
+        ->and($manager->has('late'))->toBeFalse()
+        ->and($manager->all())->toBe([]);
+});
+
+it('names the phase to register in when it refuses a late plugin', function () {
+    // The message is the whole remedy — a package author reading it has to learn
+    // where the call belongs, not just that this one was wrong.
+    $manager = new PluginManager;
+    $manager->boot();
+
+    expect(fn () => $manager->register(createTestPlugin('late')))
+        ->toThrow(PluginRegistrationException::class, 'register phase');
+});
+
+it('still registers a plugin while the manager has not booted', function () {
+    // The other half of the guard: it must not make registration conditional on
+    // anything but the boot flag, or every ordinary registration would depend on
+    // whatever ran first.
+    $manager = new PluginManager;
+    $manager->register(createTestPlugin('early'));
+    $manager->boot();
+
+    expect($manager->has('early'))->toBeTrue();
+});
 
 it('returns null for unregistered plugin', function () {
     $manager = new PluginManager;
@@ -367,6 +425,125 @@ it('warns about a mis-hinted callback without needing a booted app', function ()
     } finally {
         Container::setInstance($booted);
     }
+});
+
+// --- Scoped Hooks ---
+
+it('runs a scoped callback only where the target says it belongs', function () {
+    // The reason scoping exists: without it, a callback written for one
+    // installed module runs for every table in the application, and the author
+    // writes the same guard by hand once per module.
+    $manager = new PluginManager;
+    $ran = [];
+
+    $manager->hook('table.configuring', function (array $payload) use (&$ran): array {
+        $ran[] = 'invoices';
+
+        return $payload;
+    }, for: 'invoices');
+
+    $manager->hook('table.configuring', function (array $payload) use (&$ran): array {
+        $ran[] = 'everywhere';
+
+        return $payload;
+    });
+
+    $manager->runHook('table.configuring', [], HookTarget::for('table', new PmInvoicesPage));
+    $manager->runHook('table.configuring', [], HookTarget::for('table', new PmTasksPage));
+
+    expect($ran)->toBe(['invoices', 'everywhere', 'everywhere']);
+});
+
+it('skips a scoped callback when the dispatch carries no target', function () {
+    // The safe direction. Running a callback written for one module against a
+    // component it has never seen is a mutation nobody would go looking for.
+    $manager = new PluginManager;
+    $ran = false;
+
+    $manager->hook('table.configuring', function (array $payload) use (&$ran): array {
+        $ran = true;
+
+        return $payload;
+    }, for: 'invoices');
+
+    $manager->runHook('table.configuring', []);
+
+    expect($ran)->toBeFalse();
+});
+
+it('scopes a typed callback from the payload itself', function () {
+    // A typed payload carries its own origin, so the dispatch site passes
+    // nothing extra.
+    $manager = new PluginManager;
+    $seen = [];
+
+    $manager->hook('table.configuring', function (TableConfiguringPayload $payload) use (&$seen) {
+        $seen[] = $payload->target?->key;
+
+        return $payload;
+    }, for: 'invoices');
+
+    $manager->runTypedHook('table.configuring', new TableConfiguringPayload(
+        table: new stdClass,
+        columns: [],
+        filters: [],
+        target: HookTarget::for('table', new PmInvoicesPage),
+    ));
+
+    $manager->runTypedHook('table.configuring', new TableConfiguringPayload(
+        table: new stdClass,
+        columns: [],
+        filters: [],
+        target: HookTarget::for('table', new PmTasksPage),
+    ));
+
+    expect($seen)->toBe(['invoices']);
+});
+
+it('leaves an unscoped callback alone when a payload has no target at all', function () {
+    // Every 2.x plugin is this callback, and every payload built before the
+    // target existed is this payload.
+    $manager = new PluginManager;
+    $ran = false;
+
+    $manager->hook('form.saving', function (object $payload) use (&$ran) {
+        $ran = true;
+
+        return $payload;
+    });
+
+    $manager->runTypedHook('form.saving', new stdClass);
+
+    expect($ran)->toBeTrue();
+});
+
+it('accepts a Hook case anywhere a hook name is taken', function () {
+    $manager = new PluginManager;
+
+    $manager->hook(Hook::TableConfiguring, fn (array $payload): array => ['ran' => true]);
+
+    expect($manager->hasHook(Hook::TableConfiguring))->toBeTrue()
+        ->and($manager->hasHook('table.configuring'))->toBeTrue()
+        ->and($manager->runHook(Hook::TableConfiguring, []))->toBe(['ran' => true])
+        ->and($manager->runHook('table.configuring', []))->toBe(['ran' => true]);
+});
+
+it('resolves an enum and its string to one list, not two', function () {
+    // Registering with the case and dispatching with the string has to reach the
+    // same callbacks, or the enum would be a second namespace instead of a name.
+    $manager = new PluginManager;
+    $calls = 0;
+
+    $manager->hook(Hook::FormConfiguring, function (object $payload) use (&$calls) {
+        $calls++;
+
+        return $payload;
+    });
+
+    $manager->runTypedHook('form.configuring', new stdClass);
+    $manager->runTypedHook(Hook::FormConfiguring, new stdClass);
+
+    expect($calls)->toBe(2);
 });
 
 // --- Dependencies ---

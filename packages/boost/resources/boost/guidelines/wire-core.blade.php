@@ -133,26 +133,39 @@ record-less check leaves the machine out of it.
 ## Domain modules
 
 A **domain module** is the second axis — `billing` beside `operations` — and it is a **plugin**, not a parallel
-registration system: it registers from `config('wire-core.plugins')`, `PluginManager` gives it one id, the
+registration system: it registers from `config('wire-core.plugins')` when an application declares it, or from a
+package provider's `$this->app->resolving(PluginManager::class, …)` when a package ships one; `PluginManager` gives it one id, the
 register-then-boot lifecycle and `dependencies()` checking, and **there is deliberately no ModuleRegistry**
 (that list already exists). `DomainModule` only *declares* — `resources()`, `dashboards()`,
 `navigation(): ?NavigationGroup` — and `WireCoreServiceProvider::bootModules()` spreads those into the three
 registries. **Never make a module reach for `DashboardRegistry` itself**: a dashboard is L2 and the module
 contract is L1, so naming classes is what keeps the layer test green. Not a module's job: workflows (the
 resource carries one), policies (Laravel's Gate), workspaces (a service over the registries). `describe-module`
-reports what each declares.
+reports what each declares. **A package adds, it never overwrites**: two classes on one key are refused, so an
+application adjusts a shipped module through a **`table.composing`** / **`form.configuring`** hook scoped with
+`for: '<key>'`, never by subclassing its resource (a subclass keeps the parent's key).
 
 ### Plugins and hooks
 
 A plugin is `getId()` + `register(PluginManager)` + `boot(PluginManager)`, registered from
-`config('wire-core.plugins')`. `register()` must not resolve services (they may not be bound yet); `boot()` runs
-after every plugin is registered. `HasDependencies::dependencies()` lists ids that must already be registered —
+`config('wire-core.plugins')` or from a package provider's **register** phase. `register()` must not resolve
+services (they may not be bound yet); `boot()` runs after every plugin is registered — and **closes
+registration**: `PluginManager::register()` after `boot()` throws `PluginRegistrationException`, because a
+plugin arriving then is never booted and a module's declarations never reach the registries. Never register a
+plugin in a provider's `boot()`, and never defer a provider that registers one. A config entry that cannot be a
+plugin is refused too (blank strings excepted), rather than skipped. `HasDependencies::dependencies()` lists ids that must already be registered —
 checked at registration, so **list a dependency before its dependant in config** or registration throws.
 `HasConfiguration` merges `defaultConfig()` under `wire-core.plugins.config.{id}`.
 
 **A hook does nothing until something runs it.** `hook('name', $cb)` stores a callback; behaviour changes only
 where a `runHook()` / `runTypedHook()` call exists. Callbacks run by ascending priority; an array-hook callback
-returning an array replaces the payload, anything else leaves it unchanged.
+returning an array replaces the payload, anything else leaves it unchanged. Names come from the `Hook` enum
+(strings still accepted). **`table.composing` ≠ `table.configuring`**: composing runs once on the table instance
+the host built (a column added there renders), configuring runs in `TableQueryService` on arrays the planner
+consumes (a column added there is searched and sorted on and never drawn). `form.configuring` is the form's
+composing hook. Both new ones are **typed-only** — no array counterpart, and new hooks stay that way.
+`hook(..., for: 'invoices' | Model::class | Page::class)` scopes a callback to one component through the
+payload's `HookTarget`; a scoped callback is skipped when a dispatch carries no target.
 
 **The rule that cost this repo a defect: the first parameter's type hint decides which dispatcher a callback
 belongs to.** Every built-in lifecycle point (`table.configuring|querying|queried`, `form.saving|saved`,

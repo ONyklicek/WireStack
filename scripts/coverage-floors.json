@@ -1,7 +1,8 @@
 {
+    "admin": 100,
     "boost": 100,
     "core": 96,
-    "forms": 95,
+    "forms": 96,
     "panels": 100,
     "sortable": 96,
     "table": 93

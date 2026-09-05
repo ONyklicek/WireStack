@@ -34,7 +34,14 @@ try {
 
   // ── 1. The route renders the page, inside the application's layout ───────
   check('the index route renders the resource table', (await rows()) > 0, `${await rows()} rows`);
-  check('it came up inside the application layout', await eval_(`!! document.querySelector('body.min-h-screen')`));
+  // The layout the workbench names is `wire-admin`'s shell, so "inside the
+  // application's layout" now means the chrome around the page is really there:
+  // the sidebar over Workspace and the brand the application put in a slot. It
+  // used to assert a body class, which stopped meaning anything the moment the
+  // frame moved into a package.
+  check('it came up inside the application shell', await eval_(`!! document.querySelector('[data-testid="admin-sidebar"]')`));
+  check('the shell shows what the application put in its slots', (await eval_(`document.querySelector('[data-testid="admin-brand"]')?.innerText?.trim() ?? ''`)) === 'Wire Workbench');
+  check('the menu entry for the page being shown is the active one', await eval_(`!! document.querySelector('[data-testid="admin-nav-item"][data-resource="invoices"][data-active="true"]')`));
   check('the heading is the resource plural', (await eval_(`document.querySelector('h1')?.innerText?.trim() ?? ''`)) === 'Invoices');
   await shot('01-index');
 

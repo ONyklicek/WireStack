@@ -32,6 +32,12 @@
         <testsuite name="Panels Feature">
             <directory>packages/panels/tests/Feature</directory>
         </testsuite>
+        <testsuite name="Admin Unit">
+            <directory>packages/admin/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Admin Feature">
+            <directory>packages/admin/tests/Feature</directory>
+        </testsuite>
         <testsuite name="Sortable Unit">
             <directory>packages/sortable/tests/Unit</directory>
         </testsuite>
@@ -57,6 +63,7 @@
             <directory>packages/forms/src</directory>
             <directory>packages/table/src</directory>
             <directory>packages/panels/src</directory>
+            <directory>packages/admin/src</directory>
             <directory>packages/sortable/src</directory>
             <directory>packages/boost/src</directory>
         </include>

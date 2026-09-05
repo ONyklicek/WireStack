@@ -15,6 +15,7 @@
         "nyoncode/wire-forms": "@dev",
         "nyoncode/wire-table": "@dev",
         "nyoncode/wire-panels": "@dev",
+        "nyoncode/wire-admin": "@dev",
         "nyoncode/wire-sortable": "@dev",
         "nyoncode/wire-boost": "@dev",
         "illuminate/support": "^12.0|^13.0",
@@ -55,6 +56,13 @@
         },
         {
             "type": "path",
+            "url": "packages/admin",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
             "url": "packages/panels",
             "options": {
                 "symlink": true
@@ -85,6 +93,7 @@
             "NyonCode\\WireForms\\Tests\\": "packages/forms/tests/",
             "NyonCode\\WireTable\\Tests\\": "packages/table/tests/",
             "NyonCode\\WirePanels\\Tests\\": "packages/panels/tests/",
+            "NyonCode\\WireAdmin\\Tests\\": "packages/admin/tests/",
         "NyonCode\\WireSortable\\Tests\\": "packages/sortable/tests/",
             "NyonCode\\WireBoost\\Tests\\": "packages/boost/tests/"
         }
@@ -106,6 +115,7 @@
         "test:forms": "vendor/bin/pest --configuration packages/forms/phpunit.xml",
         "test:table": "vendor/bin/pest --configuration packages/table/phpunit.xml",
         "test:panels": "vendor/bin/pest --configuration packages/panels/phpunit.xml",
+        "test:admin": "vendor/bin/pest --configuration packages/admin/phpunit.xml",
         "test:sortable": "vendor/bin/pest --configuration packages/sortable/phpunit.xml",
         "test:boost": "vendor/bin/pest --configuration packages/boost/phpunit.xml",
         "lint": "vendor/bin/pint",

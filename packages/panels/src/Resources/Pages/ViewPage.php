@@ -6,6 +6,7 @@ namespace NyonCode\WirePanels\Resources\Pages;
 
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
+use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Infolists\Contracts\ProvidesResourceInfolist;
 use NyonCode\WireCore\Infolists\Infolist;
@@ -31,7 +32,7 @@ use NyonCode\WirePanels\Resources\Concerns\ResolvesOneRecord;
  *
  * The record travels as a key, for the reason {@see EditPage} gives.
  */
-abstract class ViewPage extends Component
+abstract class ViewPage extends Component implements IdentifiesHookTarget
 {
     use BelongsToResource;
     use EmbedsRelationManagers;

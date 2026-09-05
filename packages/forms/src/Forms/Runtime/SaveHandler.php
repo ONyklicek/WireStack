@@ -13,6 +13,7 @@ use NyonCode\WireCore\Core\Hydration\Dehydrator;
 use NyonCode\WireCore\Core\Hydration\ValueTransformer;
 use NyonCode\WireCore\Core\Plugin\Hooks\FormSavedPayload;
 use NyonCode\WireCore\Core\Plugin\Hooks\FormSavingPayload;
+use NyonCode\WireCore\Core\Plugin\HookTarget;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
@@ -65,16 +66,18 @@ final class SaveHandler
         if (app()->bound(PluginManager::class)) {
             $manager = app(PluginManager::class);
 
+            $target = $this->hookTarget();
+
             $payload = $manager->runHook('form.saving', [
                 'config' => $this->config,
                 'data' => $data,
-            ]);
+            ], $target);
             $hookData = $payload['data'] ?? $data;
             $data = is_array($hookData) ? $hookData : $data;
 
             $typedPayload = $manager->runTypedHook(
                 'form.saving',
-                new FormSavingPayload($this->config, $data),
+                new FormSavingPayload($this->config, $data, $target),
             );
             $data = $typedPayload->data;
         }
@@ -109,14 +112,16 @@ final class SaveHandler
         if (app()->bound(PluginManager::class)) {
             $manager = app(PluginManager::class);
 
+            $target = $this->hookTarget();
+
             $manager->runHook('form.saved', [
                 'config' => $this->config,
                 'record' => $record,
-            ]);
+            ], $target);
 
             $manager->runTypedHook(
                 'form.saved',
-                new FormSavedPayload($this->config, $record),
+                new FormSavedPayload($this->config, $record, $target),
             );
         }
 
@@ -534,5 +539,22 @@ final class SaveHandler
         }
 
         return $message;
+    }
+
+    /**
+     * Where a save hook's callbacks are being run.
+     *
+     * The host is asked of the runtime rather than held here: a form may be
+     * saved from a Livewire component, from a modal action or from nothing at
+     * all, and only the state manager knows which. A form with no host is still
+     * addressable by its model.
+     */
+    private function hookTarget(): HookTarget
+    {
+        return HookTarget::for(
+            'form',
+            $this->runtime->getStateManager()->getLivewire(),
+            $this->config->model,
+        );
     }
 }

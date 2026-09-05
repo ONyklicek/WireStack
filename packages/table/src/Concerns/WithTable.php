@@ -24,12 +24,16 @@ use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\Concerns\InteractsWithActions;
 use NyonCode\WireCore\Core\Data\PagingRequest;
 use NyonCode\WireCore\Core\Events\CellUpdating;
+use NyonCode\WireCore\Core\Plugin\Hooks\TableComposingPayload;
+use NyonCode\WireCore\Core\Plugin\HookTarget;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Foundation\Concerns\InteractsWithPartials;
+use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
 use NyonCode\WireForms\Concerns\InteractsWithActionForms;
@@ -414,9 +418,46 @@ trait WithTable
         if ($this->tableInstance === null) {
             $this->tableInstance = $this->table(($this->wireTableClass)::make());
             $this->tableInstance->livewireComponent($this);
+            $this->composeTableThroughPlugins($this->tableInstance);
         }
 
         return $this->tableInstance;
+    }
+
+    /**
+     * Let anything installed change this table before anything reads it.
+     *
+     * Here rather than in the query service, and that placement is the whole
+     * point: `table.configuring` runs inside `TableQueryService` on the arrays
+     * the planner is about to consume, so a column added there is searched and
+     * sorted on and never rendered. This runs on the composed instance, once,
+     * next to the line that gives it its host — so a column added by a plugin is
+     * a column the user sees.
+     *
+     * Guarded by `hasHook()` rather than by the payload's own early return: the
+     * two setters below would otherwise re-wrap the column set on every table in
+     * an application that installs no plugins at all.
+     */
+    private function composeTableThroughPlugins(Table $table): void
+    {
+        if (! app()->bound(PluginManager::class)) {
+            return;
+        }
+
+        $manager = app(PluginManager::class);
+
+        if (! $manager->hasHook(Hook::TableComposing)) {
+            return;
+        }
+
+        $payload = $manager->runTypedHook(Hook::TableComposing, new TableComposingPayload(
+            table: $table,
+            columns: $table->getColumns(),
+            filters: $table->getFilters(),
+            target: HookTarget::for('table', $this, $table->getModelClass()),
+        ));
+
+        $table->columns($payload->columns)->filters($payload->filters);
     }
 
     /**

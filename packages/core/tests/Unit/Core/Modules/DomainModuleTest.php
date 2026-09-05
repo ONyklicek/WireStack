@@ -175,10 +175,17 @@ it('refuses a module whose dependency is not registered yet', function () {
  * application: config set inside a test does not survive `refreshApplication()`,
  * and the half that would prove — config reaching PluginManager — is the plugin
  * system's own and already covered. What is new here is the spreading.
+ *
+ * A *fresh* manager is bound first, because the application's own has already
+ * booted by the time a test body runs, and registering into a booted manager is
+ * refused (`PluginRegistrationException::registeredAfterBoot()`) — precisely so
+ * that a module arriving too late to be spread cannot look installed. Binding a
+ * new one puts the test back in the phase a package provider registers in.
  */
 function dmDistribute(Plugin ...$modules): void
 {
-    $manager = app(PluginManager::class);
+    $manager = new PluginManager;
+    app()->instance(PluginManager::class, $manager);
 
     foreach ($modules as $module) {
         $manager->register($module);

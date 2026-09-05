@@ -18,9 +18,26 @@ Pro jednu tabulku, formulář nebo akci nejdřív preferujte veřejné fluent AP
 | Znovupoužít table/action makro všude | Plugin `boot()` |
 | Přidat stejné tlačítko tabulky do mnoha tabulek | Plugin table makro, které sloučí akce |
 | Přidat query pravidlo do mnoha tabulek | Plugin query pipe nebo hook `table.querying` |
+| Přidat sloupec nebo filtr do tabulky, kterou nevlastníte | hook `table.composing`, zúžený přes `for:` |
+| Přidat pole do formuláře, který nevlastníte | hook `form.configuring`, zúžený přes `for:` |
 | Sdílet vlastní třídu sloupce/filtru/akce podle názvu | Plugin registr typů |
 | Postavit doprovodný balíček | Plugin plus package service provider |
 | Přidat audit, telemetrii, tenant scope nebo policy integraci | Plugin hooky |
+
+## Hook, event, makro nebo callback
+
+Tenhle stack má čtyři způsoby, jak změnit chování, a který z nich sáhnout rozhoduje jediná otázka: **kdo drží referenci na komponentu?**
+
+| Vy… | Sáhněte po | Umí to změnit hodnotu? |
+|---|---|---|
+| stavíte komponentu sami | fluent API — `modifyQueryUsing()`, `beforeSave()`, `afterSave()`, callbacky akce | ano |
+| chcete nový slovník na třídě, kterou jste nepsali, použitý tam, kde stavíte | **makro** na `Table` nebo `Action` | ano |
+| musíte změnit komponentu, kterou nikdy neuvidíte — každou tabulku v aplikaci, nebo tu, kterou dodává balíček | **hook** | ano |
+| potřebujete jen vědět, že se něco stalo | Laravel **event** — `TableSearched`, `CellUpdated`, `ActionExecuted`, `RecordCreated` | **ne**, záměrně |
+
+Kde pro jeden okamžik existuje hook i event — `action.executing` a `ActionExecuting` se spouští deset řádků od sebe — je event ta pozorovací půlka. Audit, telemetrie a metriky patří tam; změna toho, co se provede, patří do hooku.
+
+Praktický případ třetího řádku je [doménový modul](modules.md) nainstalovaný z balíčku: jeho list se staví uvnitř kódu, který aplikace nevlastní, takže sloupec se přidá hookem `table.composing`, ne poděděním resource — to by stejně kolidovalo na klíči.
 
 ## Co plugin může dělat
 
@@ -34,6 +51,7 @@ Pro jednu tabulku, formulář nebo akci nejdřív preferujte veřejné fluent AP
 | Zaregistrovat třídy filtrů podle názvu | `PluginManager::addFilterType()` |
 | Zaregistrovat třídy akcí podle názvu | `PluginManager::addActionType()` |
 | Zaregistrovat hook callbacky | `PluginManager::hook()` |
+| Zúžit hook callback na jednu komponentu | `PluginManager::hook(..., for: 'invoices')` |
 | Spustit array payload hooky | `PluginManager::runHook()` |
 | Spustit object payload hooky | `PluginManager::runTypedHook()` |
 | Číst sloučenou konfiguraci pluginu | `PluginManager::getPluginConfig()` |
@@ -139,7 +157,7 @@ Hodnota `getId()` musí být unikátní. Registrace dvou pluginů se stejným ID
 | Registrace | `register(PluginManager $manager)` | Hooky, query pipes, column/filter/action typy, lehká metadata |
 | Boot | `boot(PluginManager $manager)` | Makra, resolvované služby, pohledy, package setup závislý na Laravel containeru |
 
-`PluginManager::register()` volá metodu `register()` pluginu okamžitě. `PluginManager::boot()` spustí metodu `boot()` každého pluginu jednou.
+`PluginManager::register()` volá metodu `register()` pluginu okamžitě. `PluginManager::boot()` spustí metodu `boot()` každého pluginu jednou a uzavře registraci: plugin nabídnutý potom se odmítne, místo aby se přijal do seznamu, který už nikdo nečte.
 
 Držte `register()` lehké. Neresolvujte request-scoped služby ani nepředpokládejte, že už každá Laravel služba bootla. `boot()` použijte pro práci, která potřebuje container, pohledy, makra nebo jiné registrované pluginy.
 
@@ -160,7 +178,18 @@ Přidejte třídy pluginů do `config/wire-core.php`:
 ],
 ```
 
-Wire resolvuje config-registrované pluginy přes Laravel container, když se resolvuje plugin manager. Neplatné položky se ignorují, takže se zaregistrují jen názvy tříd implementujících `Plugin`.
+Wire resolvuje config-registrované pluginy přes Laravel container, když se resolvuje plugin manager.
+
+Položka, která pluginem být nemůže, se odmítne, nepřeskočí:
+
+| V `plugins` | Co se stane |
+|---|---|
+| Třída implementující `Plugin` | Zaregistruje se |
+| `''` — to, co po sobě nechá koncová čárka | Přeskočí se |
+| Název třídy, která neexistuje, nebo třída bez kontraktu | `PluginRegistrationException` se jménem třídy a tím, o který z těch dvou případů jde |
+| Cokoli, co není pole | `PluginRegistrationException` |
+
+Přeskakování, které tohle nahrazuje, bylo to drahé: překlep v názvu třídy znamenal, že plugin — a pro osu, která se registruje takhle, celý [doménový modul](modules.md) — prostě neexistoval, bez položky v menu a bez čehokoli, co by řeklo proč. Config se čte při bootu, takže odmítnutí se do requestu nedostane.
 
 <a id="register-plugins-from-a-package"></a>
 ## Registrace pluginů z balíčku
@@ -185,6 +214,20 @@ final class AcmeWireServiceProvider extends ServiceProvider
 ```
 
 Guard `has()` předchází duplicitní registraci, pokud aplikace plugin také uvádí v configu.
+
+**`register()`, nikdy `boot()`.** `resolving` se spustí ve chvíli, kdy container manager staví, takže plugin je v seznamu dřív, než proběhne `PluginManager::boot()`, a dřív, než core provider rozprostře deklarace modulu do registrů. Pozdější registrace hodí `PluginRegistrationException`:
+
+```php
+public function boot(): void
+{
+    // Pozdě — a dřív to bylo tiché.
+    $this->app->make(PluginManager::class)->register(new AcmePlugin);
+}
+```
+
+Samotná registrace by proběhla a `has('acme')` by odpovědělo `true`, a právě proto stojí za odmítnutí: pluginu, který přijde takhle pozdě, se `boot()` nikdy nezavolá a resources, dashboardy ani navigační skupina modulu se do registrů nedostanou. Nespraví to ani to, že by se pozdní plugin rovnou nabootoval — routy stránek se registrují uvnitř `boot()` provideru, protože Laravel po něm instaluje cachovanou kolekci rout, takže modul, který dorazí později, nejde zaroutovat vůbec.
+
+Provider, který registruje plugin, nedeferujte. Deferovaný provider se spustí, až se resolvuje něco, co poskytuje — a to už je manager postavený, takže se `resolving` callback nikdy nespustí a plugin se nezaregistruje nikdy.
 
 ## Konfigurace pluginu
 
@@ -321,6 +364,40 @@ $query = $payload['query'];
 ```
 
 Hook ovlivní runtime chování jen když nějaký kód zavolá `runHook()` nebo `runTypedHook()` pro ten název hooku. Registrace hooku uloží callback; automaticky nepatchuje chování tabulky, formuláře ani akce.
+
+### Dodávané hooky
+
+`Hook` je kanonický zápis každého jména níže a prostý řetězec je vždy přijat místo něj — `Hook::TableComposing` a `'table.composing'` je totéž jméno.
+
+| Hook | Kdy běží | Co mění |
+|---|---|---|
+| `Hook::TableComposing` | jednou, když hostitel složí svou tabulku | samotnou tabulku — sloupce a filtry tak, jak se vykreslují, hledá a řadí |
+| `Hook::TableConfiguring` | uvnitř query service, při každém dotazu | to, co se chystá přečíst planner |
+| `Hook::TableQuerying` | po sestavení plánu, před jeho během | dotaz a vynucené řazení |
+| `Hook::TableQueried` | po aplikaci všech pipes | nic — pozorování |
+| `Hook::FormConfiguring` | jednou, když se ze schématu stává config | schéma |
+| `Hook::FormSaving` | před uložením zvalidovaných dat | data |
+| `Hook::FormSaved` | až záznam existuje | nic — pozorování |
+| `Hook::ActionExecuting` | před pipeline akce | kontext |
+| `Hook::ActionExecuted` | po jejím dokončení | nic — pozorování |
+
+**`table.composing` a `table.configuring` nejsou dvě jména pro jeden okamžik.** Configuring běží uvnitř `TableQueryService` nad poli, která se chystá spotřebovat planner, takže sloupec přidaný tam se hledá a řadí, ale **nikdy se nevykreslí**. Composing běží nad instancí tabulky, kterou hostitel složil, takže sloupec přidaný tam je sloupec, který uživatel vidí. Chcete přidat sloupec — `TableComposing`; chcete ovlivnit dotaz — `TableConfiguring` nebo `TableQuerying`.
+
+`FormConfiguring` a `TableComposing` jsou typed-only: berou objekt payloadu přes `runTypedHook()` a nemají pole jako protějšek. Sedm starších hooků se kvůli zpětné kompatibilitě dispatchuje oběma způsoby a každý callback patří právě jednomu dispatcheru — viz [Který dispatcher dostane váš callback](#ktery-dispatcher-dostane-vas-callback).
+
+### Zúžení hooku na jednu komponentu
+
+Callback bez zúžení běží pro každou tabulku, formulář i akci v aplikaci. `for:` ho zúží na jednu — podle registrovaného klíče resource, který stránka ukazuje, podle třídy hostitelské komponenty, nebo podle modelu:
+
+```php
+$manager->hook(Hook::TableComposing, $addColumn, for: 'invoices');            // jeden resource
+$manager->hook(Hook::FormConfiguring, $addField, for: Invoice::class);        // jeden model
+$manager->hook(Hook::TableComposing, $addColumn, for: ListInvoices::class);   // jedna stránka
+```
+
+Právě tohle dělá z nainstalovaného [doménového modulu](modules.md) něco upravitelného: jeho list se staví uvnitř kódu, který nevlastníte, takže klíč, pod kterým se zaregistroval, je jediné držadlo, které máte. Stránka svůj klíč zná, protože implementuje `IdentifiesHookTarget` — každá resource stránka ho implementuje; samostatná komponenta žádný nemá a zúží se podle třídy nebo modelu.
+
+Zúžený callback se přeskočí tam, kde dispatch žádný cíl nenese — včetně hooků, které dispatchuje váš vlastní kód bez něj. Pustit callback napsaný pro jeden modul na komponentu, kterou nikdy neviděl, je ta horší ze dvou chyb.
 
 ### Návratové hodnoty hooku
 
@@ -763,10 +840,10 @@ final class FormAuditPlugin implements Plugin
 | `getFilterTypes(): array` | Vrátit aliasy filtrů |
 | `addActionType(string $name, string $actionClass): void` | Zaregistrovat alias třídy akce |
 | `getActionTypes(): array` | Vrátit aliasy akcí |
-| `hook(string $name, callable $callback, int $priority = 0): void` | Zaregistrovat hook callback |
-| `runHook(string $name, array $payload = []): array` | Spustit array hook callbacky a vrátit finální payload |
-| `runTypedHook(string $name, object $payload): object` | Spustit object hook callbacky a vrátit finální payload |
-| `hasHook(string $name): bool` | Zkontrolovat, zda hook má callbacky |
+| `hook(Hook\|string $name, callable $callback, int $priority = 0, ?string $for = null): void` | Zaregistrovat hook callback |
+| `runHook(Hook\|string $name, array $payload = [], ?HookTarget $target = null): array` | Spustit array hook callbacky a vrátit finální payload |
+| `runTypedHook(Hook\|string $name, object $payload): object` | Spustit object hook callbacky a vrátit finální payload |
+| `hasHook(Hook\|string $name): bool` | Zkontrolovat, zda hook má callbacky |
 
 <a id="testing-plugins"></a>
 ## Testování pluginů

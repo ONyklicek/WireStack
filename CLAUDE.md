@@ -30,8 +30,13 @@ Use the smallest useful context first.
 ## Repo Graph
 
 ```text
-wire-sortable -> wire-table -> wire-forms -> wire-core
+wire-admin -> wire-panels -> wire-table -> wire-forms -> wire-core
+wire-sortable -> wire-table
 ```
+
+`wire-admin` is the optional shell (layout + sidebar) and `wire-panels` the owner
+layer (resources, pages, routing). Nothing requires either — installing is the
+opt-in, and naming the layout is a second one.
 
 Monorepo packages are loaded from root `composer.json` as local path repositories with symlinks.
 
@@ -116,6 +121,14 @@ Before changing shared behavior, ask:
   `architecture/assets.md` for the current state (what ships, what the toolkit
   owns, the traps), then `architecture/plans/js-asset-registration.md` and ADR
   `architecture/decisions/0024-js-asset-delivery-and-registration.md` for why
+- The admin shell itself — the layout, the sidebar, what a page renders inside:
+  `packages/admin/`, then `docs/core/admin-shell.md` and ADR
+  `architecture/decisions/0028-optional-panel-shell.md`
+- Making the admin optional, shipping a shell, or adding ready-made parts as
+  installable packages:
+  `architecture/plans/v3-optional-admin-and-module-packages.md`, then ADRs
+  `architecture/decisions/0028-optional-panel-shell.md`,
+  `0029-modules-as-installable-packages.md` and `0030-hook-surface.md`
 - Full analysis, inconsistency review, bug-hunting, or audit:
   `architecture/audit.md`
 - Writing or changing any page under `docs/`:
@@ -183,6 +196,8 @@ composer test
 composer test:core
 composer test:forms
 composer test:table
+composer test:panels
+composer test:admin
 composer test:sortable
 
 vendor/bin/pest --configuration phpunit.xml --testsuite "Integration"

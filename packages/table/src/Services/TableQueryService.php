@@ -15,6 +15,7 @@ use NyonCode\WireCore\Core\Metadata\RelationMetadata;
 use NyonCode\WireCore\Core\Plugin\Hooks\TableConfiguringPayload;
 use NyonCode\WireCore\Core\Plugin\Hooks\TableQueriedPayload;
 use NyonCode\WireCore\Core\Plugin\Hooks\TableQueryingPayload;
+use NyonCode\WireCore\Core\Plugin\HookTarget;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Query\FilterDefinition;
 use NyonCode\WireCore\Core\Query\JoinRegistry;
@@ -80,6 +81,11 @@ final class TableQueryService
         $this->registry = $this->buildMetadataRegistry($baseQuery, $modelClass, $table);
         $pluginManager = $this->resolvePluginManager();
 
+        // Built once and handed to every dispatch below: it is what lets a
+        // callback be scoped to one table — a resource key, the host component,
+        // or the model — instead of running for every table in the application.
+        $hookTarget = HookTarget::for('table', $table->getLivewireComponent(), $modelClass);
+
         $columns = $table->getColumns();
         $filters = $table->getFilters();
 
@@ -89,14 +95,14 @@ final class TableQueryService
                 'table' => $table,
                 'columns' => $columns,
                 'filters' => $filters,
-            ]);
+            ], $hookTarget);
             $columns = $payload['columns'] ?? $columns;
             $filters = $payload['filters'] ?? $filters;
 
             // Typed hook (parallel API — both array and typed hooks run)
             $typedPayload = $pluginManager->runTypedHook(
                 'table.configuring',
-                new TableConfiguringPayload($table, $columns, $filters),
+                new TableConfiguringPayload($table, $columns, $filters, target: $hookTarget),
             );
             $columns = $typedPayload->columns;
             $filters = $typedPayload->filters;
@@ -216,7 +222,7 @@ final class TableQueryService
                 'sort_column' => $sortColumn,
                 'sort_direction' => $sortDirection,
                 'search' => $search,
-            ]);
+            ], $hookTarget);
 
             // Plugins can force sort override (e.g. SortablePlugin in reorder mode)
             if (isset($queryingPayload['force_sort_column'])) {
@@ -251,7 +257,7 @@ final class TableQueryService
         if ($pluginManager !== null) {
             $pluginManager->runTypedHook(
                 'table.querying',
-                new TableQueryingPayload($table, $this->lastPlan, $baseQuery),
+                new TableQueryingPayload($table, $this->lastPlan, $baseQuery, target: $hookTarget),
             );
         }
 
@@ -364,11 +370,11 @@ final class TableQueryService
                 'table' => $table,
                 'query' => $query,
                 'plan' => $this->lastPlan,
-            ]);
+            ], $hookTarget);
 
             $pluginManager->runTypedHook(
                 'table.queried',
-                new TableQueriedPayload($table, $query, $this->lastPlan),
+                new TableQueriedPayload($table, $query, $this->lastPlan, target: $hookTarget),
             );
         }
 

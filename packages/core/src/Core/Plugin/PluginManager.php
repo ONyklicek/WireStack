@@ -6,9 +6,11 @@ namespace NyonCode\WireCore\Core\Plugin;
 
 use NyonCode\WireCore\Core\Plugin\Contracts\HasConfiguration;
 use NyonCode\WireCore\Core\Plugin\Contracts\HasDependencies;
+use NyonCode\WireCore\Core\Plugin\Contracts\HasHookTarget;
 use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
 use NyonCode\WireCore\Core\Query\Contracts\QueryPipe;
 use NyonCode\WireCore\Exceptions\PluginRegistrationException;
+use NyonCode\WireCore\Foundation\Enums\Hook;
 use ReflectionFunction;
 
 /**
@@ -32,7 +34,7 @@ final class PluginManager
     /** @var array<string, class-string> */
     private array $filterTypes = [];
 
-    /** @var array<string, array<int, array{callback: callable, priority: int, expectsArray: bool}>> */
+    /** @var array<string, array<int, array{callback: callable, priority: int, expectsArray: bool, for: string|null}>> */
     private array $hooks = [];
 
     /**
@@ -56,11 +58,21 @@ final class PluginManager
     /**
      * Register a plugin.
      *
-     * @throws PluginRegistrationException If the ID is taken or a dependency is missing
+     * @throws PluginRegistrationException If the manager has booted, the ID is taken,
+     *                                     or a dependency is missing
      */
     public function register(Plugin $plugin): void
     {
         $id = $plugin->getId();
+
+        // Refused rather than accepted quietly, and checked before anything else
+        // because it is the one failure that leaves the registry looking correct:
+        // the plugin would be in the list, `has()` would answer true, and none of
+        // the passes that read the list — boot(), and the provider spreading a
+        // module's declarations into the registries — would ever see it again.
+        if ($this->booted) {
+            throw PluginRegistrationException::registeredAfterBoot($id);
+        }
 
         if (isset($this->plugins[$id])) {
             throw PluginRegistrationException::alreadyRegistered($id);
@@ -230,17 +242,27 @@ final class PluginManager
      * -    0: default
      * +  100: audit/logging
      *
-     * Available hooks:
-     * - 'table.configuring'  — before table config is finalized
-     * - 'table.querying'     — before query execution
-     * - 'table.queried'      — after query execution
-     * - 'form.saving'        — before form save
-     * - 'form.saved'         — after form save
-     * - 'action.executing'   — before action execution
-     * - 'action.executed'    — after action execution
+     * Available hooks: every case of {@see Hook}, which is also the canonical
+     * spelling — `Hook::TableConfiguring` and `'table.configuring'` are the same
+     * name, and a package may dispatch a name of its own that the enum does not
+     * carry.
+     *
+     * `$for` scopes the callback to one component. It is matched against the
+     * payload's {@see HookTarget} — a registered key, the host component's class,
+     * or the model — so a callback written for one installed module does not run
+     * for every table in the application:
+     *
+     * ```php
+     * $manager->hook(Hook::TableComposing, $addColumn, for: 'invoices');
+     * ```
+     *
+     * A scoped callback is skipped where the dispatch carries no target at all;
+     * see `outOfScope()` for why that direction is the safe one.
      */
-    public function hook(string $name, callable $callback, int $priority = 0): void
+    public function hook(Hook|string $name, callable $callback, int $priority = 0, ?string $for = null): void
     {
+        $name = Hook::name($name);
+
         // Which dispatcher owns this callback is a property of the callback, so
         // it is decided once, here. Deciding it at dispatch meant a
         // ReflectionFunction per callback per dispatcher on every lifecycle
@@ -250,6 +272,7 @@ final class PluginManager
             'callback' => $callback,
             'priority' => $priority,
             'expectsArray' => $this->callbackExpectsArray($callback),
+            'for' => $for,
         ];
 
         // Keep the list sorted by priority so runHook/runTypedHook never need to sort.
@@ -269,8 +292,9 @@ final class PluginManager
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed> Modified payload
      */
-    public function runHook(string $name, array $payload = []): array
+    public function runHook(Hook|string $name, array $payload = [], ?HookTarget $target = null): array
     {
+        $name = Hook::name($name);
         $hooks = $this->hooks[$name] ?? [];
 
         if ($hooks === []) {
@@ -278,6 +302,10 @@ final class PluginManager
         }
 
         foreach ($hooks as $hook) {
+            if ($this->outOfScope($hook['for'], $target)) {
+                continue;
+            }
+
             if (! $hook['expectsArray']) {
                 $this->warnSkippedCallback($name, $hook['callback'], 'runHook', 'runTypedHook');
 
@@ -305,15 +333,24 @@ final class PluginManager
      * @param  T  $payload
      * @return T
      */
-    public function runTypedHook(string $name, object $payload): object
+    public function runTypedHook(Hook|string $name, object $payload): object
     {
+        $name = Hook::name($name);
         $hooks = $this->hooks[$name] ?? [];
 
         if ($hooks === []) {
             return $payload;
         }
 
+        // A typed payload carries its own origin, so a scoped callback needs
+        // nothing from the dispatch site beyond the payload it already builds.
+        $target = $payload instanceof HasHookTarget ? $payload->hookTarget() : null;
+
         foreach ($hooks as $hook) {
+            if ($this->outOfScope($hook['for'], $target)) {
+                continue;
+            }
+
             if ($hook['expectsArray']) {
                 $this->warnSkippedCallback($name, $hook['callback'], 'runTypedHook', 'runHook');
 
@@ -428,8 +465,27 @@ final class PluginManager
     /**
      * Check if any callbacks are registered for a hook.
      */
-    public function hasHook(string $name): bool
+    public function hasHook(Hook|string $name): bool
     {
-        return ! empty($this->hooks[$name]);
+        return ! empty($this->hooks[Hook::name($name)]);
+    }
+
+    /**
+     * Whether a scoped callback should sit this dispatch out.
+     *
+     * An unscoped callback always runs — that is every 2.x plugin, and the
+     * default. A scoped one runs only where the target says it belongs, and a
+     * dispatch that carries **no** target is not a match: the alternative is
+     * running a callback written for one module against a component it has never
+     * seen, which is the mutation nobody would look for. A dispatch site that
+     * wants scoped callbacks to reach it passes a target; the shipped ones all do.
+     */
+    private function outOfScope(?string $for, ?HookTarget $target): bool
+    {
+        if ($for === null) {
+            return false;
+        }
+
+        return $target === null || ! $target->matches($for);
     }
 }

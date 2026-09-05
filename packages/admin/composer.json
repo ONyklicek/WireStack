@@ -1,0 +1,49 @@
+{
+    "name": "nyoncode/wire-admin",
+    "description": "The optional admin shell for wire: a layout and a sidebar over the registered catalogue.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Ondrej Nyklicek",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "nyoncode/wire-core": "self.version",
+        "nyoncode/wire-panels": "self.version",
+        "illuminate/support": "^12.0|^13.0",
+        "livewire/livewire": "^4.0",
+        "nyoncode/laravel-package-toolkit": "^2.4.2"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^10.0|^11.0",
+        "laravel/pint": "^1.29",
+        "pestphp/pest": "^4.0|^5.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "NyonCode\\WireAdmin\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "NyonCode\\WireAdmin\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "NyonCode\\WireAdmin\\WireAdminServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}

@@ -32,6 +32,7 @@ use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
 use NyonCode\WireCore\Core\Tenancy\NullTenantResolver;
 use NyonCode\WireCore\Core\Tenancy\Tenancy;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
+use NyonCode\WireCore\Exceptions\PluginRegistrationException;
 use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
@@ -535,12 +536,31 @@ class WireCoreServiceProvider extends PackageServiceProvider
 
         // Register plugins from config
         $this->app->afterResolving(PluginManager::class, function (PluginManager $manager) {
-            /** @var list<mixed> $plugins */
             $plugins = $this->app['config']->get('wire-core.plugins', []);
 
+            // Named rather than fatal. Without this the foreach below dies inside
+            // a package provider on a mistake that lives in the application's own
+            // config file, and the stack trace points anywhere but at the line
+            // that has to change.
+            if (! is_array($plugins)) {
+                throw PluginRegistrationException::invalidPluginList($plugins);
+            }
+
             foreach ($plugins as $pluginClass) {
-                if (! is_string($pluginClass) || ! is_subclass_of($pluginClass, Plugin::class)) {
+                // A blank entry is a trailing comma in a published config file,
+                // not a declaration, and skipping it is the same tolerance
+                // ResourceRegistry::registerMany() extends to the same mistake.
+                if (! is_string($pluginClass) || $pluginClass === '') {
                     continue;
+                }
+
+                // Anything else that is named and cannot be a plugin is refused.
+                // It used to be skipped, and that is the silence this replaces: a
+                // typo in a class name meant the plugin — a whole domain module,
+                // for the axis that registers this way — simply did not exist, with
+                // no menu entry and no error to say why.
+                if (! is_subclass_of($pluginClass, Plugin::class)) {
+                    throw PluginRegistrationException::notAPlugin($pluginClass, Plugin::class);
                 }
 
                 $manager->register($this->app->make($pluginClass));

@@ -1333,6 +1333,47 @@ vlastníka repa nebo na jmenovaného konzumenta:
 | `Filter` má vlastní kopii viditelnosti z akční vrstvy | tři mechanismy na jednu otázku (Foundation `evaluate()`, Actions kontext+arita, Filtrova kopie druhého). Sjednocení je rozhodnutí o vlastníkovi, ne mechanická de-duplikace — viz §4 níž |
 | Opt-in discovery modulů | `config('wire-core.plugins')` stačí a discovery nemá konzumenta; přidat, až někdo bude chtít moduly hledat skenováním (§10 plánu V2.6 ji jmenuje) |
 
+**Zadání vlastníka 2026-09-05 → V3, zatím jako návrh:** volitelná administrace
+a hotové části jako balíčky. Změřeno a rozepsané v
+[`v3-optional-admin-and-module-packages.md`](v3-optional-admin-and-module-packages.md)
+(ADR [0028](../decisions/0028-optional-panel-shell.md) shell jako samostatný
+balíček `wire-admin`, ADR [0029](../decisions/0029-modules-as-installable-packages.md)
+moduly jako balíčky — „přidávat, ne přepisovat", ADR
+[0030](../decisions/0030-hook-surface.md) plocha háčků, na které ten invariant
+stojí). Dvě věci k téhle tabulce:
+**discovery zůstává zavřená** (balíček se registruje vlastním providerem, který
+composer objeví), a **shell je ten jmenovaný konzument**, na který čekala
+položka „routované stránky v menu" — jakmile bude shell layoutem routovaných
+stránek, ruční mapa klíč→URL ve workbenchi zmizí. **Fáze A, B i C implementované 2026-09-05** (guard proti pozdní registraci
+a odmítání neplatných položek configu; `Hook` enum, `HookTarget` se zúžením
+`for:`, `table.composing`, `form.configuring`, resource stránky hlásí svůj klíč;
+a **nový balíček `wire-admin`** — layout + sidebar nad `Workspace`, driver
+`admin-shell`).
+
+**Položka „routované stránky v menu" je tím zavřená.** Shell je layout
+routovaných stránek, takže `wire.{key}.index` *je* shell a sidebar bere URL
+z `ResolvesPageUrls`; dva URL režimy, kvůli kterým se to odkládalo, splynuly.
+`/previews/workspace` zůstává schválně jako druhá, pořád první-třídní cesta —
+aplikace, která si menu kreslí sama.
+Dvě věci, které při tom měření našlo a §4 je neměla:
+
+1. `PluginManager::register()` neměl guard proti `$this->booted` — registrace
+   v `boot()` tiše zahodila modulu resources i `boot()`. Guard odhalil, že
+   **registrace do nabootovaného manageru byla běžná i v testech** (čtyři místa).
+2. **`table.configuring` sloupec do tabulky přidat neumí.** Běží v query service
+   nad poli pro planner: sloupec se hledá a řadí, ale nevykreslí. Aditivní slib
+   („uprav modul hookem, nepřepisuj ho") tedy pro tabulky neměl mechanismus
+   vůbec. Doplněn `table.composing` nad složenou instancí ve `WithTable::getTable()`.
+   Našel to první test, který místo dotazu **vykreslil stránku** — a ten samý
+   test ukázal, že chybějící `use` v `WithTable` neohlásí ani PHPStan.
+3. **Mobilní menu shellu se neschovalo**, protože stav řídil `resize` handler,
+   zatímco `lg:` třídy se matchují na media query. Našel driver, ne Pest —
+   markup byl celou dobu správný. Teď poslouchá přímo ten dotaz.
+4. **Integrační test kompiluje všechny dodávané Blade views**, takže view, který
+   používá tag jiného balíčku, potřebuje jeho provider v root `TestCase` —
+   jinak selže jako „Unable to locate a class or view for component", což čte
+   jako rozbitý view, ne jako chybějící provider.
+
 **Vyřešeno 2026-09-03: routované stránky v menu — a podmínka, na kterou §4
 čekala, byla splněná už když ji psala.** Ta položka zněla „až bude preview nad
 `Route::wireResources()`, sidebar může brát URL odtud". To preview **existuje**

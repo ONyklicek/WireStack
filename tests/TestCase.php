@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace NyonCode\Wire\Tests;
 
 use Livewire\LivewireServiceProvider;
+use NyonCode\WireAdmin\WireAdminServiceProvider;
 use NyonCode\WireCore\WireCoreServiceProvider;
 use NyonCode\WireForms\WireFormsServiceProvider;
+use NyonCode\WirePanels\WirePanelsServiceProvider;
 use NyonCode\WireSortable\WireSortableServiceProvider;
 use NyonCode\WireTable\WireTableServiceProvider;
 use Orchestra\Testbench\TestCase as BaseTestCase;
@@ -18,11 +20,20 @@ abstract class TestCase extends BaseTestCase
         // Every package boots together so Integration tests can exercise the whole
         // stack end to end — a Livewire table (table + forms + core) or a
         // reorderable table (sortable on top) through the real component lifecycle.
+        //
+        // Panels and admin are here for a narrower reason too: the Blade
+        // integrity test compiles every shipped view, and a view that uses
+        // another package's component tag cannot compile unless that package's
+        // namespace is registered. Leaving them out made the shell's layout fail
+        // with "Unable to locate a class or view for component" — which reads
+        // like a broken view rather than a missing provider.
         return [
             LivewireServiceProvider::class,
             WireCoreServiceProvider::class,
             WireFormsServiceProvider::class,
             WireTableServiceProvider::class,
+            WirePanelsServiceProvider::class,
+            WireAdminServiceProvider::class,
             WireSortableServiceProvider::class,
         ];
     }

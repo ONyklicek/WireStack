@@ -6,6 +6,8 @@ namespace NyonCode\WireCore\Core\Plugin\Hooks;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Plugin\Contracts\HasHookTarget;
+use NyonCode\WireCore\Core\Plugin\HookTarget;
 use NyonCode\WireCore\Core\Query\QueryPlan;
 
 /**
@@ -18,7 +20,7 @@ use NyonCode\WireCore\Core\Query\QueryPlan;
  * and set 'force_sort_column' in the returned payload. That hook runs before
  * QueryPlanner, so the sort is applied in a single planning pass.
  */
-final class TableQueryingPayload
+final class TableQueryingPayload implements HasHookTarget
 {
     /**
      * @param  object  $table  The table configuration object
@@ -34,6 +36,7 @@ final class TableQueryingPayload
         public readonly Builder $query,
         public ?string $forceSortColumn = null,
         public ?string $forceSortDirection = null,
+        public readonly ?HookTarget $target = null,
     ) {}
 
     /**
@@ -48,5 +51,10 @@ final class TableQueryingPayload
             'force_sort_column' => $this->forceSortColumn,
             'force_sort_direction' => $this->forceSortDirection,
         ];
+    }
+
+    public function hookTarget(): ?HookTarget
+    {
+        return $this->target;
     }
 }

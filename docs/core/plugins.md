@@ -18,9 +18,26 @@ For a single table, form, or action, prefer the public fluent API first. Use a p
 | Reuse a table/action macro everywhere | Plugin `boot()` |
 | Add the same table button to many tables | Plugin table macro that merges actions |
 | Add a query rule to many tables | Plugin query pipe or `table.querying` hook |
+| Add a column or filter to a table you do not own | `table.composing` hook, scoped with `for:` |
+| Add a field to a form you do not own | `form.configuring` hook, scoped with `for:` |
 | Share a custom column/filter/action class by name | Plugin type registry |
 | Build a companion package | Plugin plus package service provider |
 | Add audit, telemetry, tenant scope, or policy integration | Plugin hooks |
+
+## Hook, Event, Macro Or Callback
+
+Four ways to change behaviour exist in this stack, and the one to reach for is decided by a single question: **who holds the reference to the component?**
+
+| You… | Reach for | Can it change the value? |
+|---|---|---|
+| build the component yourself | the fluent API — `modifyQueryUsing()`, `beforeSave()`, `afterSave()`, an action's callbacks | yes |
+| want new vocabulary on a class you did not write, used where you build | a **macro** on `Table` or `Action` | yes |
+| must change a component you never see — every table in an application, or one a package ships | a **hook** | yes |
+| only need to know something happened | a Laravel **event** — `TableSearched`, `CellUpdated`, `ActionExecuted`, `RecordCreated` | **no**, by design |
+
+Where both a hook and an event exist for one moment — `action.executing` and `ActionExecuting` fire ten lines apart — the event is the observation half. Audit trails, telemetry and metrics belong there; changing what runs belongs in the hook.
+
+The practical case for the third row is a [domain module](modules.md) installed from a package: its list is built inside code the application does not own, so a column is added by a `table.composing` hook rather than by subclassing the resource — which would collide on its key anyway.
 
 ## What A Plugin Can Do
 
@@ -34,6 +51,7 @@ For a single table, form, or action, prefer the public fluent API first. Use a p
 | Register filter classes by name | `PluginManager::addFilterType()` |
 | Register action classes by name | `PluginManager::addActionType()` |
 | Register hook callbacks | `PluginManager::hook()` |
+| Scope a hook callback to one component | `PluginManager::hook(..., for: 'invoices')` |
 | Run array payload hooks | `PluginManager::runHook()` |
 | Run object payload hooks | `PluginManager::runTypedHook()` |
 | Read merged plugin config | `PluginManager::getPluginConfig()` |
@@ -139,7 +157,7 @@ The `getId()` value must be unique. Registering two plugins with the same ID thr
 | Registration | `register(PluginManager $manager)` | Hooks, query pipes, column/filter/action types, lightweight metadata |
 | Boot | `boot(PluginManager $manager)` | Macros, resolved services, views, package setup that depends on the Laravel container |
 
-`PluginManager::register()` calls the plugin's `register()` method immediately. `PluginManager::boot()` runs each plugin's `boot()` method once.
+`PluginManager::register()` calls the plugin's `register()` method immediately. `PluginManager::boot()` runs each plugin's `boot()` method once, and closes registration: a plugin offered afterwards is refused rather than accepted into a list nothing reads again.
 
 Keep `register()` lightweight. Do not resolve request-scoped services or assume every Laravel service has already booted. Use `boot()` for work that needs the container, views, macros, or other registered plugins.
 
@@ -160,7 +178,18 @@ Add plugin classes to `config/wire-core.php`:
 ],
 ```
 
-Wire resolves config-registered plugins through Laravel's container when the plugin manager is resolved. Invalid entries are ignored, so only class names implementing `Plugin` are registered.
+Wire resolves config-registered plugins through Laravel's container when the plugin manager is resolved.
+
+An entry that cannot be a plugin is refused, not skipped:
+
+| In `plugins` | What happens |
+|---|---|
+| A class implementing `Plugin` | Registered |
+| `''` — what a trailing comma leaves behind | Skipped |
+| A class name that does not exist, or a class without the contract | `PluginRegistrationException`, naming the class and which of the two it is |
+| Anything that is not an array | `PluginRegistrationException` |
+
+The skip these replace was the expensive one: a typo in a class name meant the plugin — a whole [domain module](modules.md), for the axis that registers this way — simply did not exist, with no menu entry and nothing anywhere saying why. The config is read at boot, so a refusal cannot reach a request.
 
 ## Register Plugins From A Package
 
@@ -184,6 +213,20 @@ final class AcmeWireServiceProvider extends ServiceProvider
 ```
 
 The `has()` guard prevents duplicate registration if the application also lists the plugin in config.
+
+**`register()`, never `boot()`.** `resolving` fires while the container builds the manager, so the plugin is in the list before `PluginManager::boot()` runs and before the core provider spreads a module's declarations into the registries. Registering later throws `PluginRegistrationException`:
+
+```php
+public function boot(): void
+{
+    // Too late — and it used to be silent.
+    $this->app->make(PluginManager::class)->register(new AcmePlugin);
+}
+```
+
+The registration itself would have succeeded and `has('acme')` would answer `true`, which is what made it worth refusing: `boot()` is never called on a plugin that arrives then, and a module's resources, dashboards and navigation group never reach the registries. It cannot be fixed by booting the late plugin either — page routes are registered inside the provider's `boot()`, because Laravel installs a cached route collection after that, so a module arriving later cannot be routed at all.
+
+Do not defer a provider that registers a plugin. A deferred provider runs when something it provides is resolved, and by then the manager is built, so the `resolving` callback never fires and the plugin is never registered.
 
 ## Plugin Configuration
 
@@ -319,6 +362,40 @@ $query = $payload['query'];
 ```
 
 A hook only affects runtime behavior when some code calls `runHook()` or `runTypedHook()` for that hook name. Registering a hook stores the callback; it does not automatically patch table, form, or action behavior.
+
+### Shipped Hooks
+
+`Hook` is the canonical spelling of every name below, and a plain string is always accepted in its place — `Hook::TableComposing` and `'table.composing'` are the same name.
+
+| Hook | Runs | Changes |
+|---|---|---|
+| `Hook::TableComposing` | once, when a host has composed its table | the table itself — columns and filters as rendered, searched and sorted |
+| `Hook::TableConfiguring` | inside the query service, per query | what the planner is about to read |
+| `Hook::TableQuerying` | after the plan is built, before it runs | the query, and a forced sort |
+| `Hook::TableQueried` | after every pipe has applied | nothing — observation |
+| `Hook::FormConfiguring` | once, when a schema becomes a config | the schema |
+| `Hook::FormSaving` | before validated data is persisted | the data |
+| `Hook::FormSaved` | after the record exists | nothing — observation |
+| `Hook::ActionExecuting` | before the action pipeline | the context |
+| `Hook::ActionExecuted` | after it completes | nothing — observation |
+
+**`table.composing` and `table.configuring` are not two names for one moment.** Configuring runs inside `TableQueryService`, on the arrays the planner is about to consume, so a column added there is searched and sorted on and **never rendered**. Composing runs on the table instance the host built, so a column added there is a column the user sees. To add a column, reach for `TableComposing`; to steer a query, `TableConfiguring` or `TableQuerying`.
+
+`FormConfiguring` and `TableComposing` are typed-only: they take a payload object through `runTypedHook()` and have no array counterpart. The seven older hooks are dispatched both ways for backwards compatibility, and each callback belongs to exactly one dispatcher — see [Which Dispatcher Gets Your Callback](#which-dispatcher-gets-your-callback).
+
+### Scoping A Hook To One Component
+
+An unscoped callback runs for every table, form or action in the application. `for:` narrows it to one — by the registered key of the resource a page shows, by the host component's class, or by the model:
+
+```php
+$manager->hook(Hook::TableComposing, $addColumn, for: 'invoices');            // one resource
+$manager->hook(Hook::FormConfiguring, $addField, for: Invoice::class);        // one model
+$manager->hook(Hook::TableComposing, $addColumn, for: ListInvoices::class);   // one page
+```
+
+This is what makes an installed [domain module](modules.md) adjustable: its list is built inside code you do not own, so the key it registered under is the handle you have on it. A page shows its key because it implements `IdentifiesHookTarget` — every resource page does; a standalone component shows none and is scoped by class or model instead.
+
+A scoped callback is skipped where a dispatch carries no target at all, including hooks your own code dispatches without one. Running a callback written for one module against a component it has never seen is the worse of the two mistakes.
 
 ### Hook Return Values
 
@@ -759,10 +836,10 @@ final class FormAuditPlugin implements Plugin
 | `getFilterTypes(): array` | Return filter aliases |
 | `addActionType(string $name, string $actionClass): void` | Register an action class alias |
 | `getActionTypes(): array` | Return action aliases |
-| `hook(string $name, callable $callback, int $priority = 0): void` | Register a hook callback |
-| `runHook(string $name, array $payload = []): array` | Run array hook callbacks and return the final payload |
-| `runTypedHook(string $name, object $payload): object` | Run object hook callbacks and return the final payload |
-| `hasHook(string $name): bool` | Check whether a hook has callbacks |
+| `hook(Hook\|string $name, callable $callback, int $priority = 0, ?string $for = null): void` | Register a hook callback, optionally scoped to one component |
+| `runHook(Hook\|string $name, array $payload = [], ?HookTarget $target = null): array` | Run array hook callbacks and return the final payload |
+| `runTypedHook(Hook\|string $name, object $payload): object` | Run object hook callbacks and return the final payload; a payload implementing `HasHookTarget` scopes them |
+| `hasHook(Hook\|string $name): bool` | Check whether a hook has callbacks |
 
 ## Testing Plugins
 

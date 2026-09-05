@@ -81,10 +81,29 @@ it('describes one resource by key', function () {
         ->assertSee('Wt Order');
 });
 
+/**
+ * Register modules into a manager that has not booted yet.
+ *
+ * The application's own booted while its providers did, and registering into a
+ * booted manager is refused — a plugin arriving that late is never booted and
+ * its declarations never reach the registries, so it would look installed and
+ * do nothing. Binding a fresh one puts these tests in the phase a package
+ * provider registers from.
+ */
+function wtRegisterModules(object ...$modules): void
+{
+    $manager = new PluginManager;
+    app()->instance(PluginManager::class, $manager);
+
+    foreach ($modules as $module) {
+        $manager->register($module);
+    }
+}
+
 it('describes the registered domain modules', function () {
     // The one thing no other tool can show: which business area a resource
     // belongs to. describe-resource lists resources and knows nothing about it.
-    app(PluginManager::class)->register(new WtBillingModule);
+    wtRegisterModules(new WtBillingModule);
 
     WireBoostServer::tool(DescribeModule::class)
         ->assertOk()
@@ -94,8 +113,7 @@ it('describes the registered domain modules', function () {
 });
 
 it('describes one module by id, with what it depends on', function () {
-    app(PluginManager::class)->register(new WtBillingModule);
-    app(PluginManager::class)->register(new WtOperationsModule);
+    wtRegisterModules(new WtBillingModule, new WtOperationsModule);
 
     WireBoostServer::tool(DescribeModule::class, ['module' => 'wt-operations'])
         ->assertOk()
@@ -103,7 +121,7 @@ it('describes one module by id, with what it depends on', function () {
 });
 
 it('says which modules exist when asked for one that does not', function () {
-    app(PluginManager::class)->register(new WtBillingModule);
+    wtRegisterModules(new WtBillingModule);
 
     WireBoostServer::tool(DescribeModule::class, ['module' => 'nope'])
         ->assertOk()

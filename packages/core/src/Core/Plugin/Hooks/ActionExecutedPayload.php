@@ -6,6 +6,8 @@ namespace NyonCode\WireCore\Core\Plugin\Hooks;
 
 use NyonCode\WireCore\Core\Actions\ActionContext;
 use NyonCode\WireCore\Core\Actions\ActionResult;
+use NyonCode\WireCore\Core\Plugin\Contracts\HasHookTarget;
+use NyonCode\WireCore\Core\Plugin\HookTarget;
 
 /**
  * Typed payload for the 'action.executed' hook.
@@ -13,7 +15,7 @@ use NyonCode\WireCore\Core\Actions\ActionResult;
  * Dispatched after the ActionPipeline completes.
  * Plugins can observe the result (e.g. for audit logging).
  */
-final class ActionExecutedPayload
+final class ActionExecutedPayload implements HasHookTarget
 {
     /**
      * @param  string  $actionName  The name of the action that was executed
@@ -21,6 +23,7 @@ final class ActionExecutedPayload
      * @param  ActionResult  $result  The result of the action pipeline
      * @param  string  $actionType  The action type: 'row', 'bulk', or 'header'
      * @param  object|null  $component  The Livewire component that executed the action
+     * @param  HookTarget|null  $target  Which component this came from, for scoped callbacks
      */
     public function __construct(
         public readonly string $actionName,
@@ -28,6 +31,7 @@ final class ActionExecutedPayload
         public readonly ActionResult $result,
         public readonly string $actionType,
         public readonly ?object $component = null,
+        public readonly ?HookTarget $target = null,
     ) {}
 
     /**
@@ -42,5 +46,10 @@ final class ActionExecutedPayload
             'actionType' => $this->actionType,
             'component' => $this->component,
         ];
+    }
+
+    public function hookTarget(): ?HookTarget
+    {
+        return $this->target;
     }
 }

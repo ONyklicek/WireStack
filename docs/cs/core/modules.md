@@ -18,8 +18,9 @@ skládá; vrstvy, které ty věci už vlastní, je vlastní dál.
 Modul je **plugin**, ne paralelní registrační systém. To je celé to designové
 rozhodnutí a je to ono, co drží lifecycle poctivý:
 
-1. Registruje se z `config('wire-core.plugins')` jako každý jiný plugin, takže
-   se modul instaluje stejnou cestou jako všechno ostatní.
+1. Registruje se jako každý jiný plugin — z `config('wire-core.plugins')`, když
+   ho deklaruje aplikace, nebo z vlastního service provideru balíčku, když ho
+   dodává balíček — takže se modul instaluje stejnou cestou jako všechno ostatní.
 2. `PluginManager` mu dá záruky, které modul potřebuje a už je měl: jedno id na
    modul, všechny moduly zaregistrované dřív, než se kterýkoli bootne, a
    závislost, která musí být zaregistrovaná první, jinak se registrace odmítne.
@@ -110,6 +111,80 @@ final class OperationsModule extends DomainModule implements HasDependencies
 
 Registrace `operations` před `billing` vyhodí výjimku místo bootu do napůl
 postavené aplikace — pořadí se kontroluje, ne doufá.
+
+## Modul jako balíček
+
+Modul je plugin, takže balíček ho dodává stejně jako kterýkoli jiný plugin: jeho
+vlastní service provider ho zaregistruje a aplikace balíček nainstaluje. Do
+`config/wire-core.php` se nepřidává nic — balíček ten soubor upravit nemůže,
+a nepotřebuje to.
+
+```php
+use Illuminate\Support\ServiceProvider;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+
+final class BillingModuleServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        // `resolving`, v register() — callback běží ve chvíli, kdy container   // [tl! focus:start]
+        // staví manager, takže modul je v seznamu dřív než boot() a dřív, než
+        // ho core provider rozprostře do registrů.
+        $this->app->resolving(PluginManager::class, function (PluginManager $manager) {
+            if (! $manager->has('billing')) {                 // idempotentní, i když ho aplikace uvádí taky
+                $manager->register(new BillingModule);
+            }
+        });                                                   // [tl! focus:end]
+    }
+
+    public function boot(): void
+    {
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'billing');
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+    }
+}
+```
+
+Registrace v `boot()` místo toho hodí výjimku — pravidlo o fázi a důvod, proč
+pozdní příchod nejde zachránit, je v
+[Registrace pluginů z balíčku](plugins.md#registrace-pluginu-z-balicku).
+
+Dvě cesty a co je čí:
+
+| Cesta | Kdo ji používá |
+| --- | --- |
+| `config('wire-core.plugins')` | Aplikace, která deklaruje své vlastní moduly |
+| `$this->app->resolving(PluginManager::class, …)` | Balíček, který modul dodává aplikacím, do kterých nevidí |
+
+Obě končí ve stejném seznamu, takže modul z balíčku se rozprostře do registru
+resources, registru dashboardů a navigačních skupin přesně jako lokální a do
+menu, routeru i vyhledávací palety se dostane přes stejný
+[`Catalog`](resources.md#catalog-api).
+
+Všechno ostatní, co balíček s modulem nese — config, views, překlady, migrace
+a assety — je běžná práce balíčku a patří jeho vlastnímu service provideru.
+
+### Balíček přidává, nepřepisuje
+
+Modul registruje klíče, na které si nikdo jiný nedělá nárok. Dvě různé třídy na
+jednom klíči se odmítnou, místo aby se rozsoudily, takže nainstalovaný balíček
+nikdy nemůže převzít resource, routu ani položku menu, kterou už vlastní
+aplikace.
+
+Platí to i opačným směrem: aplikace, která chce upravit, co modul dodává, mění
+**komponentu, ne třídu**:
+
+```php
+$manager->hook(Hook::TableComposing, function (TableComposingPayload $payload) {
+    $payload->columns = [...$payload->columns, TextColumn::make('internal_note')];
+
+    return $payload;
+}, for: 'invoices');   // klíč, pod kterým se modul zaregistroval
+```
+
+[Hook](plugins.md#zuzeni-hooku-na-jednu-komponentu) dosáhne na list toho modulu
+a na nic jiného, a přežije jeho další vydání — což fork ne. Podědit resource
+z modulu nefunguje: potomek si nese klíč rodiče a koliduje s ním.
 
 ## Co modul nedělá
 

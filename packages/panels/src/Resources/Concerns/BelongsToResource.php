@@ -31,6 +31,31 @@ trait BelongsToResource
     }
 
     /**
+     * The registered key a plugin hook can address this page's surfaces by.
+     *
+     * This is what turns `hook(Hook::TableConfiguring, $cb, for: 'invoices')`
+     * into something an application can actually write: the table and the form
+     * on this page are built inside code the application may not own — a module
+     * shipped as a package — so the only handle it has on them is the key that
+     * module registered.
+     *
+     * Deliberately tolerant of a page that declares nothing. A page mid-write,
+     * or one that renders its own table with no resource at all, is scoped by
+     * class instead; throwing here would turn a hook's *absence* of scope into a
+     * render failure.
+     */
+    public function hookKey(): ?string
+    {
+        $resource = static::$resource;
+
+        if ($resource === null || ! in_array(DescribesResource::class, class_implements($resource) ?: [], true)) {
+            return null;
+        }
+
+        return $resource::key();
+    }
+
+    /**
      * The declared resource, checked.
      *
      * @param  class-string  $surface  The contract this page needs it to implement.

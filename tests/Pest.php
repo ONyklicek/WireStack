@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use NyonCode\Wire\Tests\TestCase;
+use NyonCode\WireAdmin\Tests\TestCase as AdminTestCase;
 use NyonCode\WireBoost\Tests\TestCase as BoostTestCase;
 use NyonCode\WireCore\Tests\TestCase as CoreTestCase;
 use NyonCode\WireForms\Tests\TestCase as FormsTestCase;
@@ -64,6 +65,11 @@ uses(FormsTestCase::class)->in(
 uses(PanelsTestCase::class)->in(
     __DIR__.'/../packages/panels/tests/Unit',
     __DIR__.'/../packages/panels/tests/Feature',
+);
+
+uses(AdminTestCase::class)->in(
+    __DIR__.'/../packages/admin/tests/Unit',
+    __DIR__.'/../packages/admin/tests/Feature',
 );
 
 uses(TableTestCase::class)->in(

@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
+use NyonCode\WireCore\Core\Plugin\Hooks\TableConfiguringPayload;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Query\Contracts\QueryPipe;
 use NyonCode\WireCore\Core\Query\QueryPlan;
@@ -43,6 +45,15 @@ class TqsUser extends Model
     public function profile(): HasOne
     {
         return $this->hasOne(TqsProfile::class, 'user_id');
+    }
+}
+
+/** A host that shows a registered entry, the way a resource page does. */
+class TqsHostComponent implements IdentifiesHookTarget
+{
+    public function hookKey(): ?string
+    {
+        return 'tqs-users';
     }
 }
 
@@ -749,6 +760,64 @@ it('lets table.configuring hooks modify columns before planning', function () {
         ->and($service->getLastPlan()?->hasSearch())->toBeTrue();
 });
 
+it('scopes a table hook to one table, by model and by host', function () {
+    // Before the payload carried a target, every callback ran for every table in
+    // the application and the author wrote this guard by hand, once per installed
+    // module, against untyped objects.
+    $manager = app(PluginManager::class);
+    $ran = [];
+
+    $manager->hook('table.configuring', function (array $payload) use (&$ran): array {
+        $ran[] = 'by-model';
+
+        return $payload;
+    }, for: TqsUser::class);
+
+    $manager->hook('table.configuring', function (array $payload) use (&$ran): array {
+        $ran[] = 'by-host';
+
+        return $payload;
+    }, for: TqsHostComponent::class);
+
+    $manager->hook('table.configuring', function (array $payload) use (&$ran): array {
+        $ran[] = 'elsewhere';
+
+        return $payload;
+    }, for: 'invoices');
+
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->livewireComponent(new TqsHostComponent)
+        ->columns([Column::make('name')]);
+
+    (new TableQueryService)->buildQuery(baseQuery: TqsUser::query(), table: $table);
+
+    expect($ran)->toBe(['by-model', 'by-host']);
+});
+
+it('hands a typed table hook the component the table renders in', function () {
+    $manager = app(PluginManager::class);
+    $seen = null;
+
+    $manager->hook('table.configuring', function (TableConfiguringPayload $payload) use (&$seen) {
+        $seen = $payload->target;
+
+        return $payload;
+    });
+
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->livewireComponent(new TqsHostComponent)
+        ->columns([Column::make('name')]);
+
+    (new TableQueryService)->buildQuery(baseQuery: TqsUser::query(), table: $table);
+
+    expect($seen?->surface)->toBe('table')
+        ->and($seen?->model)->toBe(TqsUser::class)
+        ->and($seen?->host)->toBeInstanceOf(TqsHostComponent::class)
+        ->and($seen?->key)->toBe('tqs-users');
+});
+
 it('lets table.querying hooks force sort before the query is planned', function () {
     $manager = app(PluginManager::class);
     $manager->hook('table.querying', function (array $payload) {
@@ -836,7 +905,13 @@ it('dispatches table.queried hooks with the built query and plan', function () {
 });
 
 it('uses SortablePlugin force sort overrides while a table is reordering', function () {
-    $manager = app(PluginManager::class);
+    // A *fresh* manager: the application's own has booted by the time a test
+    // body runs, and registering into a booted manager is refused — a plugin
+    // arriving then is never booted and its declarations reach no registry.
+    // Binding a new one puts this back in the phase a package provider
+    // registers from, which is where SortablePlugin really arrives.
+    $manager = new PluginManager;
+    app()->instance(PluginManager::class, $manager);
     $manager->register(new SortablePlugin);
 
     $component = new class

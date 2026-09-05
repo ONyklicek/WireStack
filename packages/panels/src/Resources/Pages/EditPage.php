@@ -7,6 +7,7 @@ namespace NyonCode\WirePanels\Resources\Pages;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Model;
 use Livewire\Component;
+use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireForms\Contracts\ProvidesResourceForm;
 use NyonCode\WireForms\Forms\Form;
@@ -34,7 +35,7 @@ use NyonCode\WirePanels\Resources\Concerns\ResolvesOneRecord;
  * than the key and stale by the time the next request lands — so the key is what
  * travels and the record is resolved per request.
  */
-abstract class EditPage extends Component
+abstract class EditPage extends Component implements IdentifiesHookTarget
 {
     use BelongsToResource;
     use EmbedsRelationManagers;
