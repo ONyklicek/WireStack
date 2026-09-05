@@ -384,7 +384,8 @@ konvence nedosáhne.
 **Routing je pořád opt-in** a `Route::wireResources()` ve tvém route souboru
 zůstává referenční cestou. Novinka vedle ní je
 [`wire-panels.routes`](configuration.md#panels) — tytéž argumenty skupiny předané
-jednou — a je vypnutá, dokud to nezapneš.
+jednou — a [zóny](core/resources.md#zony), víc mount pointů nad jedním katalogem.
+Obojí je vypnuté, dokud to nezapneš.
 
 ---
 

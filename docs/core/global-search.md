@@ -107,7 +107,8 @@ renders many rows at once and must never call back into a resource per row:
 
 **Note what the example does not pass.** A row already carries the two halves of
 its own URL — the resource key and the record key — so the framework builds it:
-`urlFor($resourceKey, 'view', ['record' => $recordKey])`. Writing a path here is
+`urlFor($resourceKey, 'view', ['record' => $recordKey])`, in the
+[zone](resources.md#zones) the palette was opened in. Writing a path here is
 copying what the router already knows, and the copy is the one that goes stale:
 before this was derived, this repository's own workbench carried two literal
 paths and both were wrong — one pointed at a shell, the other at a page with no
@@ -119,7 +120,8 @@ explicit URL always wins.
 
 A row with a `null` url still renders and is still arrowed through; Enter on it
 does nothing rather than navigating somewhere invented. That is the answer for a
-resource that declares no pages.
+resource that declares no pages, and for one routed in a different zone than the
+palette was opened in.
 
 ## Mounting The Palette
 
@@ -157,6 +159,20 @@ from a result set the user was no longer looking at.
 
 The dialog is teleported to `<body>`, like every modal in the framework, so it is
 never clipped by a positioned ancestor.
+
+**In a zoned application it needs no configuration.** The palette reads its
+[zone](resources.md#zones) from the page it was rendered on and keeps it in a
+public property, so results point back into the zone the user is in — the same
+layout mounted under `/admin` and `/business` links into each. Set it explicitly
+only when the palette sits in a shell that is not itself a resource route:
+
+```blade
+@livewire('wire-global-search', ['zone' => 'business'])
+```
+
+It has to be a property rather than a lookup: the search runs on a Livewire
+request, where the current route is Livewire's own endpoint and the zone can no
+longer be asked for. See [Zones](resources.md#zones).
 
 ## Authorization And Tenancy
 
@@ -212,12 +228,15 @@ $groups = app(GlobalSearch::class)->search('INV-100');
 // ['orders' => [GlobalSearchResult, …], 'customers' => [GlobalSearchResult, …]]
 
 $more = app(GlobalSearch::class)->search('INV-100', perResource: 20);
+
+// Results linked into one zone rather than the unzoned mount point.
+$zoned = app(GlobalSearch::class)->search('INV-100', zone: 'business');
 ```
 
 ## API
 
 ```php
-GlobalSearch::search(string $term, int $perResource = 5): array   // [key => GlobalSearchResult[]]
+GlobalSearch::search(string $term, int $perResource = 5, ?string $zone = null): array
 GlobalSearch::PER_RESOURCE_LIMIT                                  // 5
 
 GlobalSearchResult::withUrl(?string $url): GlobalSearchResult     // the same row, pointed somewhere
@@ -246,6 +265,7 @@ $palette->select(): mixed              // navigates to the active row, or null
 $palette->selectedUrl(): ?string       // where the active row goes
 $palette->flatResults(): array         // every row, in render order
 $palette->groupLabels(): array         // [resource key => plural label]
+$palette->zone                         // ?string — the zone it was opened in
 ```
 
 ## Related

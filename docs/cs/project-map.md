@@ -47,7 +47,7 @@ Wire je ekosystém balíčků pro Laravel Livewire rozdělený do čtyř Compose
 | `packages/core/src/Foundation/Support` | Sdílené helpery — `ResponsiveGrid` (sloupce per breakpoint), `MobileSheet`, `EnumResolver` |
 | `packages/core/src/Foundation/Concerns` | Kanonické sdílené traity — `HasColor`, `HasIcon`, `HasSize`, `HasVisibility`, `HasActions`, `HasSheetOnMobile`, … |
 | `packages/core/src/Foundation/Registration` | `Catalog` — všechno, co aplikace zaregistrovala, ať je to cokoli — plus kontrakty `RegistrySource` / `HasRegistryKey`, kterými se k němu registr připojí |
-| `packages/core/src/Foundation/Routing` | Co nese deklarace stránky (`ProvidesPages`, `RoutePage`, `ConfiguresRoutes`) a seamy `ResolvesPageUrls` / `RegistersPageRoutes`, na které odpovídá URL konvence |
+| `packages/core/src/Foundation/Routing` | Co nese deklarace stránky (`ProvidesPages`, `RoutePage`, `ConfiguresRoutes`), `Zone` a seamy `ResolvesPageUrls` / `RegistersPageRoutes`, na které odpovídá URL konvence |
 | `packages/core/src/GlobalSearch` | ⌘K paleta, její vyhledávací služba a hodnotový objekt výsledku |
 | `packages/core/src/Core/Resources` | Identita resource, registr, `Workspace` a navigační slovník |
 | `packages/core/src/Modals` | Modal, potvrzení, slide-over, wizard třídy |

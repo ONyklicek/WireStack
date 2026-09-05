@@ -29,7 +29,8 @@ rozhodnutí a je to ono, co drží lifecycle poctivý:
 
 Oba registry jsou zdroje jednoho [`Catalog`u](resources.md#catalog-api), takže se
 resources a dashboardy modulu z téhle jediné deklarace dostanou do menu, do
-routeru i do palety globálního hledání.
+routeru i do palety globálního hledání — včetně [zón](resources.md#zony), které
+si ze stejného katalogu vybírají podle klíče.
 
 Krok 3 dělá provider, ne modul, a to schválně. Dashboard bydlí ve widgetové
 vrstvě a kontrakt modulu, který by sáhl na `DashboardRegistry`, by byl import,

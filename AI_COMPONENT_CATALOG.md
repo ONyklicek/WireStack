@@ -66,6 +66,10 @@ search palette; **never inject a registry into a new surface**):
   `UnroutedPageUrls` answers null, `wire-panels` answers for real
 - `Foundation\Routing\Contracts\RegistersPageRoutes` — called by core once the
   registries are full, so config-driven routing cannot read an empty catalogue
+- `Foundation\Routing\Zone` — which mount point a page is in, as a route-name
+  prefix (ADR 0027). `current()` is a **full-page-render** call: it answers
+  nothing during a Livewire update, so read it in `mount()` and keep it in a
+  public property rather than asking again
 
 Support:
 

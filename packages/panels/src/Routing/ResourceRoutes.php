@@ -11,6 +11,7 @@ use NyonCode\WireCore\Foundation\Registration\Catalog;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ConfiguresRoutes;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
 use NyonCode\WireCore\Foundation\Routing\RoutePage;
+use NyonCode\WireCore\Foundation\Routing\Zone;
 use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
 
 /**
@@ -77,6 +78,7 @@ final class ResourceRoutes
     public static function all(array $only = [], array $except = []): array
     {
         $routes = [];
+        $atRoot = null;
 
         foreach (app(Catalog::class)->implementing(ProvidesPages::class) as $key => $class) {
             if ($only !== [] && ! in_array($key, $only, true)) {
@@ -87,10 +89,42 @@ final class ResourceRoutes
                 continue;
             }
 
+            $prefix = self::prefixFor($class, $key);
+
+            // A landing page — `routePrefix()` of `ConfiguresRoutes::ROOT` — sits
+            // on the group's own path, and only one thing can. Refused rather
+            // than resolved, and for a sharper reason than tidiness: Laravel
+            // keys its route collection by method and URI, so the second
+            // registration *replaces* the first and takes its name with it. The
+            // first key then looks routed, answers null, and its menu entry dies
+            // without a word.
+            if ($prefix === '') {
+                if ($atRoot !== null) {
+                    throw ResourceRoutingException::twoAtTheRoot($atRoot, $key, self::groupPrefix());
+                }
+
+                $atRoot = $key;
+            }
+
             $routes = [...$routes, ...self::for($class)];
         }
 
         return $routes;
+    }
+
+    /**
+     * The prefix of the group this is being registered inside, for a message.
+     *
+     * Read off the router's group stack rather than passed in, because the group
+     * is the application's and this deliberately never knew about it — which is
+     * the whole point of the macro. Best effort, and used only to name the zone
+     * in an error.
+     */
+    private static function groupPrefix(): string
+    {
+        $stack = RouteFacade::getFacadeRoot()->getGroupStack();
+
+        return trim(implode('/', array_filter(array_column($stack, 'prefix'))), '/');
     }
 
     /**
@@ -152,11 +186,18 @@ final class ResourceRoutes
      * that, and a menu asking every key what its URL is would take the page down
      * over one entry it would have rendered without an href anyway.
      *
+     * `$zone` is the route-name prefix of the mount point to answer for
+     * (ADR 0027): `null` is the unzoned name every single-zone application has,
+     * `'business'` and `'business.'` both mean the group registered with
+     * `Route::name('business.')`. A key routed in another zone and not this one
+     * answers null, which is the same answer an unrouted key gives and renders
+     * the same way.
+     *
      * @param  array<string, mixed>  $parameters
      */
-    public static function urlFor(string $key, string $page = 'index', array $parameters = []): ?string
+    public static function urlFor(string $key, string $page = 'index', array $parameters = [], ?string $zone = null): ?string
     {
-        $name = "wire.{$key}.{$page}";
+        $name = Zone::prefix($zone)."wire.{$key}.{$page}";
 
         if (! RouteFacade::has($name)) {
             return null;
@@ -170,16 +211,20 @@ final class ResourceRoutes
     }
 
     /**
-     * Every routed key mapped to its index URL.
+     * Every key this zone routes, mapped to its URL.
+     *
+     * Scoped to one mount point, because "every routed key" is a question that
+     * only has an answer inside a zone: the same key may be routed in three of
+     * them at three URLs, and a menu asks on behalf of the one it is drawn in.
      *
      * @return array<string, string>
      */
-    public static function urls(string $page = 'index'): array
+    public static function urls(string $page = 'index', ?string $zone = null): array
     {
         $urls = [];
 
         foreach (array_keys(app(Catalog::class)->all()) as $key) {
-            $url = self::urlFor($key, $page);
+            $url = self::urlFor($key, $page, [], $zone);
 
             if ($url !== null) {
                 $urls[$key] = $url;

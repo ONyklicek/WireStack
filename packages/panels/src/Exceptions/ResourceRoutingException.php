@@ -40,6 +40,28 @@ class ResourceRoutingException extends RuntimeException
      * quietly winning the name lookup, and the fix is deleting one line — which
      * nobody can do while nothing says so.
      */
+    /**
+     * Two registered things claimed the root of one group (ADR 0027).
+     *
+     * Refused because Laravel's route collection is keyed by method and URI, so
+     * the second registration does not shadow the first — it **replaces** it,
+     * name and all. `urlFor()` then answers null for a key that looks routed,
+     * the menu entry goes quietly dead, and nothing anywhere says why. Measured,
+     * not feared: `route('…ls-overview.index')` threw RouteNotFoundException for
+     * a route the same call had just registered.
+     */
+    public static function twoAtTheRoot(string $existing, string $incoming, string $prefix): self
+    {
+        $where = $prefix === '' ? 'this route group' : "the `{$prefix}` group";
+
+        return new self(
+            "[{$incoming}] and [{$existing}] both route their index page at the root of {$where}. ".
+            'Laravel keys routes by URI, so the second would replace the first and take its route '.
+            'name with it — a menu entry that silently stops linking anywhere. Give one of them a '.
+            'routePrefix() of its own, or keep only one in this zone with only()/except().'
+        );
+    }
+
     public static function alreadyRegisteredFromConfig(): self
     {
         return new self(

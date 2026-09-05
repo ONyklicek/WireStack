@@ -9,6 +9,7 @@ use NyonCode\WireCore\Foundation\Routing\Contracts\RegistersPageRoutes;
 use NyonCode\WireCore\WireCoreServiceProvider;
 use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
 use NyonCode\WirePanels\Routing\ConfiguredRoutes;
+use NyonCode\WirePanels\Routing\ResourceRoutes;
 
 /*
  * Routes an application declared in config instead of in a route file
@@ -125,6 +126,86 @@ it('ships the config it reads, merged and publishable', function () {
         ->and(config('wire-panels.routes.middleware'))->toBe(['web'])
         ->and(array_keys(ServiceProvider::$publishGroups))
         ->toContain('wire-panels::config');
+});
+
+it('mounts one group per zone, named after the zone key', function () {
+    // ADR 0027: several mount points over one catalogue. The array key becomes
+    // the route-name prefix, so the same resource in two zones is two routes
+    // with two names rather than two routes fighting over one.
+    app(ResourceRegistry::class)->register(RtOrderResource::class);
+
+    crBoot(['zones' => [
+        'admin' => ['prefix' => 'admin', 'middleware' => ['web', 'can:admin']],
+        'business' => ['prefix' => 'business', 'middleware' => ['web', 'can:business']],
+    ]]);
+
+    $admin = Route::getRoutes()->getByName('admin.wire.rt-orders.index');
+    $business = Route::getRoutes()->getByName('business.wire.rt-orders.index');
+
+    expect($admin?->uri())->toBe('admin/rt-orders')
+        ->and($admin?->gatherMiddleware())->toContain('can:admin')
+        ->and($business?->uri())->toBe('business/rt-orders')
+        ->and($business?->gatherMiddleware())->toContain('can:business')
+        // And nothing is left at the unzoned name, which is what a link built
+        // without a zone would ask for.
+        ->and(Route::getRoutes()->getByName('wire.rt-orders.index'))->toBeNull();
+});
+
+it('lets a zone carve out its own membership', function () {
+    // Membership is what you routed (ADR 0027 §4) — `only`/`except` per zone,
+    // never a second list to keep in step.
+    app(ResourceRegistry::class)->register(RtOrderResource::class);
+    app(ResourceRegistry::class)->register(RtTenantResource::class);
+
+    crBoot(['zones' => [
+        'admin' => ['prefix' => 'admin'],
+        'business' => ['prefix' => 'business', 'only' => ['rt-orders']],
+    ]]);
+
+    expect(Route::getRoutes()->getByName('admin.wire.rt-tenants.index'))->not->toBeNull()
+        ->and(Route::getRoutes()->getByName('business.wire.rt-orders.index'))->not->toBeNull()
+        ->and(Route::getRoutes()->getByName('business.wire.rt-tenants.index'))->toBeNull();
+});
+
+it('lets a zone inherit the shared values and override only what it names', function () {
+    // `middleware => ['web']` written once for every zone is the ordinary case;
+    // a zone that needs more says only that.
+    app(ResourceRegistry::class)->register(RtOrderResource::class);
+
+    crBoot([
+        'middleware' => ['web', 'auth'],
+        'zones' => [
+            'admin' => ['prefix' => 'admin'],
+            'ops' => ['prefix' => 'ops', 'domain' => 'ops.example.test'],
+        ],
+    ]);
+
+    $admin = Route::getRoutes()->getByName('admin.wire.rt-orders.index');
+    $ops = Route::getRoutes()->getByName('ops.wire.rt-orders.index');
+
+    expect($admin?->gatherMiddleware())->toContain('auth')
+        ->and($admin?->getDomain())->toBeNull()
+        ->and($ops?->gatherMiddleware())->toContain('auth')
+        ->and($ops?->getDomain())->toBe('ops.example.test');
+});
+
+it('answers a url in the zone that was asked for', function () {
+    // The one method ADR 0027 had to change: a link is always "where is this key
+    // in THIS zone", and a zone that does not route the key answers null — the
+    // same answer, and the same rendering, an unrouted key already gets.
+    app(ResourceRegistry::class)->register(RtOrderResource::class);
+    app(ResourceRegistry::class)->register(RtTenantResource::class);
+
+    crBoot(['zones' => [
+        'admin' => ['prefix' => 'admin'],
+        'business' => ['prefix' => 'business', 'only' => ['rt-orders']],
+    ]]);
+
+    expect(ResourceRoutes::urlFor('rt-orders', zone: 'admin'))->toEndWith('/admin/rt-orders')
+        ->and(ResourceRoutes::urlFor('rt-orders', zone: 'business.'))->toEndWith('/business/rt-orders')
+        ->and(ResourceRoutes::urlFor('rt-orders'))->toBeNull()
+        ->and(ResourceRoutes::urlFor('rt-tenants', zone: 'business'))->toBeNull()
+        ->and(array_keys(ResourceRoutes::urls(zone: 'business')))->toBe(['rt-orders']);
 });
 
 it('is bound during register, so core sees it before core boots', function () {

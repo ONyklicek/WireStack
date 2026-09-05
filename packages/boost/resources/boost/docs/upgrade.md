@@ -388,7 +388,8 @@ convention does not reach.
 **Routing is still opt-in**, and `Route::wireResources()` in your own route file
 is still the reference path. What is new beside it is
 [`wire-panels.routes`](configuration.md#panels) — the same group arguments handed
-over once — and it is off until you turn it on.
+over once — and [zones](core/resources.md#zones), several mount points over one
+catalogue. Both are off until you turn them on.
 
 ---
 

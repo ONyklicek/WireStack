@@ -192,6 +192,7 @@ $workspacePages = [
 $standalonePages = [
     'workspace' => ['Workspace navigation', 'The sidebar an application builds from Workspace::navigation(): declared groups with their own heading, icon and order, sorted entries, badges, and wire:navigate between three resources and a dashboard.'],
     'global-search' => ['Global search palette', 'The ⌘K command palette over every registered resource.'],
+    'zones' => ['Zones · one menu, two mount points', 'The same navigation resolved in two zones, each shown as registered and with linkedOnly — what a zone routes is what it links, and what it cannot reach is either greyed out or gone.'],
 ];
 
 // Index sections in display order. A screen lands in the first section whose
@@ -211,6 +212,7 @@ $previewSections = [
     'resource-' => 'Resources (owner layer)',
     'workspace' => 'Resources (owner layer)',
     'global-search' => 'Wire Core',
+    'zones' => 'Resources (owner layer)',
     'layout-' => 'Utility pages',
     'palette' => 'Utility pages',
     'mobile' => 'Utility pages',
@@ -341,6 +343,57 @@ foreach ($resourcePages as $slug => [$title, $subtitle, $component, $params]) {
 Route::prefix('previews/routed')->group(function (): void {
     Route::wireResources();
 });
+
+// Zones (ADR 0027), on the one resource that has pages. The same invoices
+// mounted twice, and the only thing that makes them two mount points instead of
+// one collision is `Route::name()`:
+//
+//   GET previews/zoned/business/invoices  → business.wire.invoices.index
+//   GET previews/zoned/admin/invoices     → admin.wire.invoices.index
+//
+// What the driver is here to see is not the routes — a unit test reads those —
+// but the palette in the layout above. It derives its zone while the page
+// renders, keeps it across the Livewire search request, and must still send the
+// user back into the zone they were in. `Zone::current()` answers nothing on
+// that request, so a version that re-derived would land in the wrong zone while
+// looking identical.
+// Deliberately different membership, because that is the whole question a menu
+// asks in a zone: `business` reaches invoices, `admin` reaches invoices and
+// tasks, and neither reaches documents, which declares no pages at all. So the
+// same four menu entries have a different number of live links in each.
+//
+// `overview` is in both, and it is each zone's landing page: the dashboard
+// declares `routePrefix()` of ROOT, so its index adds no segment and lands on
+// `previews/zoned/{zone}` itself rather than leaving the bare prefix a 404.
+$zoneMembership = [
+    'business' => ['overview', 'invoices'],
+    'admin' => ['overview', 'invoices', 'tasks'],
+];
+
+foreach ($zoneMembership as $zone => $only) {
+    Route::name($zone.'.')->prefix('previews/zoned/'.$zone)->group(function () use ($only): void {
+        Route::wireResources(only: $only);
+    });
+}
+
+// The menu of both zones, side by side (ADR 0027 open question 2). One catalogue,
+// one set of entries, and the only difference is where each one points — which is
+// what makes "should a zone hide what it cannot reach?" a question you can look
+// at rather than argue about.
+Route::get('/previews/zones', fn () => view('previews.zones', [
+    'title' => $standalonePages['zones'][0],
+    'subtitle' => $standalonePages['zones'][1],
+    // Both zones in both modes, because the flag is the subject: the left column
+    // is every registered entry with the ones this zone cannot reach greyed
+    // out, the right is `linkedOnly` — the menu Filament would have shown,
+    // reached without registering the resource twice.
+    'menus' => collect(array_keys($zoneMembership))
+        ->flatMap(fn (string $zone): array => [
+            $zone.' · as registered' => app(Workspace::class)->navigation(zone: $zone),
+            $zone.' · linkedOnly' => app(Workspace::class)->navigation(zone: $zone, linkedOnly: true),
+        ])
+        ->all(),
+]));
 
 foreach ($fieldPreviews as $field => $label) {
     Route::get('/previews/field-'.$field, fn () => view('previews.capture', [

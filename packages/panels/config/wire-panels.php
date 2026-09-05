@@ -27,6 +27,36 @@ return [
     | `only` / `except` take registered keys — a resource key or a dashboard key,
     | the same key the menu and `ResourceRoutes::urlFor()` address it by.
     |
+    | ZONES. Several mount points over one set of resources — `admin`,
+    | `business`, `production` — each its own group, and a resource may be in
+    | one, several or all of them. Add a `zones` key and each entry becomes a
+    | group of its own:
+    |
+    |   'zones' => [
+    |       'admin' => [
+    |           'prefix' => 'admin',
+    |           'middleware' => ['web', 'auth', 'can:admin'],
+    |           'only' => ['invoices', 'users'],
+    |       ],
+    |       'business' => [
+    |           'prefix' => 'business',
+    |           'middleware' => ['web', 'auth', 'can:business'],
+    |           'except' => ['users'],
+    |       ],
+    |   ],
+    |
+    | The array key IS the zone: it becomes the route-name prefix, so the same
+    | resource in two zones gets `admin.wire.invoices.index` and
+    | `business.wire.invoices.index` rather than colliding. That is the reason to
+    | prefer this over hand-written groups — in a route file the `->name()` call
+    | is a line someone forgets, and forgetting it makes the second zone silently
+    | take over the first's links. Here it cannot be forgotten or repeated.
+    |
+    | Keys outside a zone (`prefix`, `middleware`, `domain`, `only`, `except`)
+    | are the defaults every zone inherits and overrides. With no `zones` key at
+    | all they are one unnamed group, which is what a single-zone application
+    | wants and what these values already do.
+    |
     */
     'routes' => [
         'enabled' => false,
@@ -35,6 +65,7 @@ return [
         'domain' => null,
         'only' => [],
         'except' => [],
+        'zones' => [],
     ],
 
 ];

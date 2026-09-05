@@ -9,6 +9,7 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
+use NyonCode\WireCore\Foundation\Routing\Zone;
 
 /**
  * The command palette: one search box over every registered resource.
@@ -54,12 +55,30 @@ class GlobalSearchPalette extends Component
     public int $active = 0;
 
     /**
+     * The zone this palette was opened in, so results point back into it.
+     *
+     * A public property because it has to survive the round trip: the search runs
+     * on a Livewire request, where {@see Zone::current()} answers nothing — so it
+     * is read once while the page renders and carried from there (ADR 0027 §3),
+     * the same way the record key travels on the resource pages.
+     *
+     * Public also means an application can set it: a palette mounted inside a
+     * shell that is not itself a wire route says which zone it belongs to.
+     */
+    public ?string $zone = null;
+
+    /**
      * Opened by the application, on whatever it decides the shortcut is.
      *
      * A listener rather than a bound key: a framework that claimed ⌘K on every
      * page would be taking a combination the application may already use, so the
      * page dispatches `open-global-search` and this answers it.
      */
+    public function mount(?string $zone = null): void
+    {
+        $this->zone = $zone ?? Zone::current();
+    }
+
     #[On('open-global-search')]
     public function open(): void
     {
@@ -133,7 +152,7 @@ class GlobalSearchPalette extends Component
      */
     public function getResultsProperty(): array
     {
-        return $this->searcher()->search($this->term);
+        return $this->searcher()->search($this->term, zone: $this->zone);
     }
 
     /**

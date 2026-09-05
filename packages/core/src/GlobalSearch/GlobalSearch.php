@@ -12,6 +12,7 @@ use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Routing\UnroutedPageUrls;
+use NyonCode\WireCore\Foundation\Routing\Zone;
 use NyonCode\WireCore\GlobalSearch\Contracts\GloballySearchable;
 
 /**
@@ -57,9 +58,14 @@ class GlobalSearch
      * A resource with no matches is left out rather than mapped to an empty
      * list, so a caller can render group headings by iterating the result.
      *
+     * `$zone` decides where a result points ({@see Zone}). It is the palette's to
+     * pass, because only the palette knows which page it was opened on — and it
+     * has to have kept that, since this runs on a Livewire request where asking
+     * again answers nothing.
+     *
      * @return array<string, array<int, GlobalSearchResult>>
      */
-    public function search(string $term, int $perResource = self::PER_RESOURCE_LIMIT): array
+    public function search(string $term, int $perResource = self::PER_RESOURCE_LIMIT, ?string $zone = null): array
     {
         $term = trim($term);
 
@@ -87,7 +93,7 @@ class GlobalSearch
                 // every other surface addresses this by, and they are only ever
                 // the same by agreement.
                 $results[$key] = array_map(
-                    fn (GlobalSearchResult $result): GlobalSearchResult => $this->linked($result, $key),
+                    fn (GlobalSearchResult $result): GlobalSearchResult => $this->linked($result, $key, $zone),
                     $found,
                 );
             }
@@ -108,13 +114,13 @@ class GlobalSearch
      * overrides the query still gets it, and after the resource has spoken so an
      * explicit URL always wins.
      */
-    protected function linked(GlobalSearchResult $result, string $key): GlobalSearchResult
+    protected function linked(GlobalSearchResult $result, string $key, ?string $zone = null): GlobalSearchResult
     {
         if ($result->url !== null) {
             return $result;
         }
 
-        return $result->withUrl($this->urls->urlFor($key, 'view', ['record' => $result->recordKey]));
+        return $result->withUrl($this->urls->urlFor($key, 'view', ['record' => $result->recordKey], $zone));
     }
 
     /**

@@ -29,7 +29,8 @@ design decision, and it is what keeps the lifecycle honest:
 
 Both registries are sources of one [`Catalog`](resources.md#catalog-api), so a
 module's resources and dashboards reach the menu, the router and the global
-search palette from that single declaration.
+search palette from that single declaration — including
+[zones](resources.md#zones), which pick from the same catalogue by key.
 
 Step 3 is the provider's rather than the module's on purpose. A dashboard lives
 in the widgets layer and a module contract reaching for `DashboardRegistry`

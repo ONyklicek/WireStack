@@ -1390,6 +1390,80 @@ Navíc přibyla volitelná registrace z configu (`wire-panels.routes.enabled`,
 default `false`) — tytéž tři argumenty skupiny, jen předané jednou; obě cesty
 naráz jsou odmítnuty.
 
+**Zóny 2026-09-05 (ADR 0027): dvě třetiny už existovaly.** Zadání znělo víc mount
+pointů (`admin`, `business`, `production`) nad jednou sadou resources, sdílení
+povolené i nepovinné. Změřeno dřív, než se cokoli navrhlo, a dvě měření návrh
+změnila:
+
+1. **Disjunktní zóny fungovaly bez jediného řádku** — `only`/`except` uvnitř
+   route skupin, a protože jsou množiny disjunktní, žádné jméno routy se
+   neopakuje.
+2. **Sdílený resource taky routoval** — `Route::name('business.')` na skupině dá
+   `business.wire.invoices.index`. Otevřená otázka 3 z ADR 0026 („`wire.{key}.`
+   je natvrdo, dvě instalace kolidují") měla odpověď ve frameworku celou dobu,
+   takže přidat makru argument `name:` by byl druhý způsob, jak říct to, co říká
+   route group.
+
+Rozbité místo bylo **jedno**: `ResourceRoutes::urlFor()` staví `wire.{key}.{page}`
+a name prefix skupiny nevidí, takže menu i paleta odkazovaly na jméno, které ve
+dvouzónové aplikaci nepatří žádné routě. Přibyl tedy volitelný `?string $zone`
+napříč `urlFor()`/`urls()`/`ResolvesPageUrls`/`Workspace::navigation()`.
+
+**A past pod tou samozřejmou opravou, kvůli které se to celé mohlo tiše
+rozbít.** Zónu odvodit z aktuální routy je zjevné řešení a je špatně:
+`Route::currentRouteName()` během Livewire updatu odpoví `livewire.update`.
+Paleta hledá při každém stisku klávesy. Odvozovalo by se to správně na prvním
+renderu a špatně navždycky potom, a vykreslovalo by se to bezvadně. Zóna se proto
+čte jednou při renderu stránky a jede ve snapshotu (`public ?string $zone`) —
+stejné pravidlo, jaké drží `ResolvesOneRecord`.
+
+**Druhá past, o patro níž:** `str_contains('livewire.update', 'wire.')` je
+**true**. Substringové hledání by tedy hlásilo zónu `li` přesně na tom requestu,
+kde žádná není. `Zone::of()` je proto kotvený regex, ne `str_contains`, a má na to
+vlastní test.
+
+Ověřeno driverem `zone-links` (8/8): tytéž faktury pod `previews/zoned/business`
+i `previews/zoned/admin`, paleta v layoutu shellu, napsat `INV` (Livewire
+request), Enter — a přistát ve své vlastní zóně. Obě zóny, protože jedna sama
+tuhle vadu chytit nemůže.
+
+Zóny jdou i z configu (`wire-panels.routes.zones`) a je to **bezpečnější** než
+ruční route soubor: klíč pole *je* zóna, takže se prefix nedá zapomenout ani
+zopakovat, zatímco `->name('business.')` je řádek, který se vynechat dá — a
+vynechání znamená, že jedna zóna tiše převezme odkazy druhé.
+
+**Otevřená otázka 2 uzavřena nad preview, ne od stolu.** `previews/zones` kreslí
+obě zóny v obou režimech a nefiltrované `business` menu jsou tři mrtvé řádky ze
+čtyř — přesně tvar, který commit 51d7d5a označil za vadu. Přibyl tedy
+`navigation(zone: …, linkedOnly: true)`, a je **volitelný, ne pravidlo**, ze dvou
+důvodů, které to preview taky ukázalo: `Workspace` nerozliší „routované v jiné
+zóně" (`tasks`) od „neroutované nikde" (`documents`, dashboard), a shell
+s vlastním URL schématem tady nemá odkaz na ničem a stejně chce všechno.
+
+Ověřeno proti Filamentu, který tuhle otázku nemá: resources se registrují **per
+panel** (`$panel->resources([…])`), takže co v panelu není, není v jeho katalogu
+a do jeho menu se nedostane. Cena je deklarovat sdílený resource v každém panelu
+— přesně to, čemu jeden globální katalog předchází. `linkedOnly` dá stejné menu
+při jedné registraci. Mimochodem `getUrl(…, panel: 'marketing')` má stejný tvar
+jako naše `urlFor(…, zone: 'business')`, dobrané nezávisle.
+
+**Otevřená otázka 1 uzavřena taky, a zase měřením místo návrhu.** „Má config umět
+pojmenovat landing page zóny?" Ne — šlo to vyjádřit už předtím:
+`routePrefix()` vracející `''` nepřidá segment, takže dashboard, který deklaruje
+stránky a prázdný prefix, přistane svým `index`em na vlastní cestě skupiny
+(`business.wire.ls-overview.index → business`). Klíč `landing` by byl asymetrický
+(zóny z route souboru by ho neměly), duplikoval by členství, které už říká `only`,
+a byl by to první klíč, co není argumentem `Route::group()`.
+
+**Opravit se ale musela kolize.** Dvě stránky nárokující kořen jedné skupiny se
+nestínily — Laravel klíčuje kolekci rout podle metody a URI, takže druhá
+registrace tu první **nahradí i se jménem routy**. Změřeno:
+`route('…ls-overview.index')` hodilo `RouteNotFoundException` pro routu, kterou
+totéž volání právě zaregistrovalo. K uživateli by to dorazilo jako položka menu,
+která tiše přestane odkazovat. `ResourceRoutes::all()` to teď odmítne a pojmenuje
+oba klíče. `ConfiguresRoutes::ROOT` je čitelný zápis toho `''` — slabina toho
+návrhu byla čitelnost, ne správnost.
+
 **Vyřešeno 2026-09-03 (druhý běh): systematické hledání duplicitních abstrakcí.**
 Neudělalo se čtením — sken tokenizuje `src/` a seskupí identická těla metod (viz
 §2). Deset skupin, z toho **čtyři sloučené**: asset routa ve čtyřech providerech

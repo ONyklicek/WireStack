@@ -17,8 +17,8 @@ use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
  */
 final class RegisteredPageUrls implements ResolvesPageUrls
 {
-    public function urlFor(string $key, string $page = 'index', array $parameters = []): ?string
+    public function urlFor(string $key, string $page = 'index', array $parameters = [], ?string $zone = null): ?string
     {
-        return ResourceRoutes::urlFor($key, $page, $parameters);
+        return ResourceRoutes::urlFor($key, $page, $parameters, $zone);
     }
 }

@@ -450,6 +450,15 @@ vlastní URL schéma.
 položka, plochý seznam v pořadí `sort()`, klíčovaný registrovaným klíčem — to, co
 ukáže menu, které skupiny nekreslí. Položky ze skryté skupiny v něm taky nejsou.
 
+Obojí bere [zónu](#zony), a `linkedOnly: true`, když má menu obsahovat jen to, na
+co ta zóna dosáhne:
+
+```php
+app(Workspace::class)->navigation();                                    // všechny položky, bez zóny
+app(Workspace::class)->navigation(zone: 'business');                    // odkazující do business
+app(Workspace::class)->navigation(zone: 'business', linkedOnly: true);  // [tl! focus]
+```
+
 `Workspace` neví, co je resource, a to je záměr. Jeho položky přicházejí
 z `Catalog`u, který čte libovolný počet zdrojů `RegistrySource` — jedním je
 `ResourceRegistry`, druhým `Widgets\DashboardRegistry` — takže menu míchá
@@ -467,8 +476,8 @@ aplikace. Ptá se, kam je klíč routovaný; nerozhoduje o tom.
 
 | Metoda | Vrací | Účel |
 | --- | --- | --- |
-| `navigation()` | `array<string, NavigationGroup>` | Menu: skupiny v pořadí, každá se svými položkami |
-| `items()` | `array<string, NavigationItem>` | Totéž menu ploše, bez nadpisů |
+| `navigation(?string $zone = null, bool $linkedOnly = false)` | `array<string, NavigationGroup>` | Menu: skupiny v pořadí, každá se svými položkami |
+| `items(?string $zone = null, bool $linkedOnly = false)` | `array<string, NavigationItem>` | Totéž menu ploše, bez nadpisů |
 | `registered()` | `array<string, class-string>` | Každá třída za menu, ať má položku nebo ne |
 
 ## Routování
@@ -551,6 +560,108 @@ Parametr domény se dostane do tvého `TenantResolver`u jako každý jiný param
 routy. Samotná tenancy zůstává, kde je — globální scope nad každým dotazem, ne
 záležitost routování; viz [Autorizace](../authorization.md).
 
+### Zóny
+
+Víc mount pointů nad jednou sadou resources — `admin`, `business`, `production`.
+Resource může být v jedné z nich, ve víc, nebo ve všech: zóna násobí, kde je
+stránka dosažitelná, ne kolikrát je zaregistrovaná.
+
+Zóna je **jméno** route skupiny a nic víc:
+
+```php
+Route::name('admin.')->prefix('admin')->middleware(['web','auth','can:admin'])
+    ->group(fn () => Route::wireResources());                        // [tl! focus]
+
+Route::name('business.')->prefix('business')->middleware(['web','auth','can:business'])
+    ->group(fn () => Route::wireResources(only: ['orders']));        // [tl! focus]
+```
+
+```
+admin.wire.orders.index      →  admin/orders
+business.wire.orders.index   →  business/orders
+```
+
+Rozděluje je to volání `name()`. Vynech ho na druhé skupině a obě zóny
+zaregistrují `wire.orders.index`, kde pozdější tiše vyhraje každý lookup — proto
+je [cesta přes config](#registrace-z-configu-misto-route-souboru) níž bezpečnější
+způsob, jak zóny deklarovat: tam je zóna klíčem pole a zapomenout se nedá.
+
+Které resources zóna obsahuje, říká `only` / `except` a nic jiného — žádný druhý
+seznam, který by se musel držet v souladu s routami.
+
+**Odkazování uvnitř zóny.** Každá otázka na URL zní „kde je tenhle klíč *v téhle
+zóně*", takže zóna cestuje s ní:
+
+```php
+ResourceRoutes::urlFor('orders', zone: 'business');   // /business/orders
+ResourceRoutes::urls(zone: 'business');               // jen to, co business routuje
+app(Workspace::class)->navigation(zone: 'business');  // položky odkazující do business
+```
+
+Klíč, který zóna neroutuje, odpoví `null` a vykreslí se bez odkazu — přesně jako
+neroutovaný resource. Když má menu obsahovat jen to, na co tahle zóna opravdu
+dosáhne, řekni si o to:
+
+```php
+app(Workspace::class)->navigation(zone: 'business', linkedOnly: true);
+```
+
+Volitelné, ne pravidlo, protože důvody, proč položka nemá URL, jsou dva různé
+a `Workspace` je nerozliší: jedna může být routovaná v *jiné* zóně, druhá nikde.
+A shell s vlastním URL schématem má tady bez odkazu úplně všechno a stejně chce
+všechny položky — je to volající, kdo ví, ve kterém případě je. Skupina, které
+vypadnou všechny položky, zmizí celá místo prázdného nadpisu.
+
+**Landing page zóny.** `/business` samo neroutuje nic, dokud si to něco
+nenárokuje — a nárokuje se to jednou metodou: prázdný prefix nepřidá segment,
+takže `index` té stránky sedne na vlastní cestu skupiny:
+
+```php
+final class BusinessOverview extends Dashboard implements ConfiguresRoutes, ProvidesPages
+{
+    public static function pages(): array { return ['index' => ShowBusinessOverview::class]; }
+
+    public static function routePrefix(): ?string { return self::ROOT; }   // [tl! focus]
+}
+```
+
+```
+business.wire.business-overview.index   →  business
+business.wire.orders.index              →  business/orders
+```
+
+Která zóna přistane kde, říká `only` / `except` — jako každá jiná otázka na
+členství: dej každé zóně vlastní dashboard a vypiš ho tam. Dvě stránky, které si
+nárokují kořen **jedné** skupiny, jsou odmítnuty — Laravel klíčuje routy podle
+URI, takže by druhá tu první nahradila i se jménem routy a zůstala by položka
+menu, která vypadá zaroutovaně a tiše nikam neodkazuje.
+
+Zóna, která chce cíl a ne vlastní stránku, napíše vedle skupiny obyčejný
+redirect:
+
+```php
+Route::redirect('business', 'business/orders');
+```
+
+**Odkud se zóna bere.** `Zone::current()` ji přečte z routy, která se právě
+vykresluje, a je to volání **pro plný render stránky**:
+
+```php
+public ?string $zone = null;      // [tl! focus:start]
+
+public function mount(): void
+{
+    $this->zone = Zone::current();
+}                                 // [tl! focus:end]
+```
+
+`Route::currentRouteName()` během Livewire round tripu odpoví `livewire.update`,
+takže komponenta, která se zeptá znovu uprostřed updatu, nedostane nic — a paleta,
+která hledá při každém stisku klávesy, by odkazovala mimo svoji zónu a přitom
+vypadala bezvadně. Přečti to jednou, ulož do public property a nech to Livewire
+přenášet. Command paleta to přesně tak dělá, takže paleta v zónovaném layoutu
+nepotřebuje žádnou konfiguraci.
+
 ### Registrace z configu místo route souboru
 
 Macro výše zůstává referenční cestou. Aplikace, která chce konvenci a nechce si
@@ -567,6 +678,34 @@ kvůli ní držet route soubor, předá tytéž argumenty skupiny jednou:
     'except' => [],
 ],
 ```
+
+Zóny jsou klíč `zones` a klíč pole je ta zóna:
+
+```php
+'routes' => [
+    'enabled' => true,
+    'middleware' => ['web', 'auth'],          // dědí každá zóna
+    'zones' => [                              // [tl! focus:start]
+        'admin' => [
+            'prefix' => 'admin',
+            'middleware' => ['web', 'auth', 'can:admin'],
+        ],
+        'business' => [
+            'prefix' => 'business',
+            'only' => ['orders', 'customers'],
+        ],
+    ],                                        // [tl! focus:end]
+],
+```
+
+Každá zóna zdědí hodnoty mimo `zones` a přepíše to, co pojmenuje. **Klíč se stane
+prefixem jména routy**, což je důvod dát tomuhle přednost před ručně psanými
+skupinami, ne jen alternativa k nim: v route souboru je `->name('business.')`
+řádek, který se dá vynechat, a vynechání znamená, že jedna zóna tiše převezme
+odkazy druhé. Klíč pole vynechat nejde a opakovat se nemůže.
+
+Bez klíče `zones` je to jedna nepojmenovaná skupina, což je to, co chce
+jednozónová aplikace.
 
 Ve výchozím stavu vypnuté, a to záměrně: providery balíčků bootují dřív než tvoje
 vlastní, takže tyhle routy se matchují **před** vším v `routes/web.php`. Aplikace
@@ -686,8 +825,12 @@ rozšiřuje, protože stránce, kterou nelze adresovat, nejde dát URL.
 ```php
 ResourceRoutes::all(array $only = [], array $except = []): array   // každý klíč, který deklaruje
 ResourceRoutes::for(string $class): array                          // jeden, nebo vyhodí výjimku
-ResourceRoutes::urlFor(string $key, string $page = 'index', array $parameters = []): ?string
-ResourceRoutes::urls(string $page = 'index'): array
+ResourceRoutes::urlFor(string $key, string $page = 'index', array $parameters = [], ?string $zone = null): ?string
+ResourceRoutes::urls(string $page = 'index', ?string $zone = null): array
+
+Zone::current(): ?string          // zóna právě vykreslované stránky — jen při plném renderu
+Zone::of(?string $routeName): ?string
+Zone::prefix(?string $zone): string
 ```
 
 `urlFor()` odpoví `null` ve dvou případech: když klíč nic neroutuje, a když routa

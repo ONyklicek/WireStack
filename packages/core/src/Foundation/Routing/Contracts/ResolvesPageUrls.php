@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Foundation\Routing\Contracts;
 
 use NyonCode\WireCore\Foundation\Registration\Contracts\RegistrySource;
+use NyonCode\WireCore\Foundation\Routing\Zone;
 
 /**
  * Where a registered key's page lives, for the surfaces that may not ask.
@@ -20,6 +21,10 @@ use NyonCode\WireCore\Foundation\Registration\Contracts\RegistrySource;
  * consumer already renders without a link — a menu entry with no href, a search
  * result that only reads. Nothing here may make routing mandatory.
  *
+ * An application may mount the same key in several zones (ADR 0027), so the
+ * question is always "where is this key's page **in this zone**" — with `null`
+ * meaning the unzoned mount point, which is what a single-zone application has.
+ *
  * The signature is `ResourceRoutes::urlFor()`'s, deliberately: the binding in
  * `wire-panels` is an adapter over the method that already exists and is already
  * tested, not a second implementation of it.
@@ -32,6 +37,7 @@ interface ResolvesPageUrls
      * @param  string  $key  The key its source registered it under.
      * @param  string  $page  A page kind — `index`, `view`, `edit`, or one of the application's own.
      * @param  array<string, mixed>  $parameters  Route parameters; `['record' => …]` for the record pages.
+     * @param  string|null  $zone  Which mount point to answer for ({@see Zone}); null is the unzoned one.
      */
-    public function urlFor(string $key, string $page = 'index', array $parameters = []): ?string;
+    public function urlFor(string $key, string $page = 'index', array $parameters = [], ?string $zone = null): ?string;
 }

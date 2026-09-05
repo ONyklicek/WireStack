@@ -17,7 +17,7 @@ use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
  */
 final class UnroutedPageUrls implements ResolvesPageUrls
 {
-    public function urlFor(string $key, string $page = 'index', array $parameters = []): ?string
+    public function urlFor(string $key, string $page = 'index', array $parameters = [], ?string $zone = null): ?string
     {
         return null;
     }

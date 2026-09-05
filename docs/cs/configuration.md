@@ -338,7 +338,20 @@ smířeno — zaregistrovalo by to každou stránku dvakrát pod jedním jménem
 `only` / `except` berou registrované klíče: klíč resource nebo klíč dashboardu,
 tentýž, kterým je adresuje menu a `ResourceRoutes::urlFor()`.
 
-Viz [Resources](core/resources.md#routovani).
+Pro víc mount pointů — `admin`, `business`, `production` — přidej klíč `zones`,
+jednu položku na zónu; každá zdědí hodnoty nad sebou a přepíše to, co pojmenuje.
+Klíč pole se stane prefixem jména routy, takže tentýž resource ve dvou zónách
+dostane dvě jména rout místo dvou rout, které se perou o jedno.
+
+```php
+'zones' => [
+    'admin' => ['prefix' => 'admin', 'middleware' => ['web', 'auth', 'can:admin']],
+    'business' => ['prefix' => 'business', 'only' => ['orders']],
+],
+```
+
+Zóny viz [Resources](core/resources.md#zony), zbytek
+[Routování](core/resources.md#routovani).
 
 ## Boost
 

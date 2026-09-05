@@ -103,6 +103,55 @@ class RtOverviewDashboard extends Dashboard implements ProvidesPages
     }
 }
 
+/**
+ * A zone's landing page: an index at the root of whatever group it is in.
+ *
+ * `ConfiguresRoutes::ROOT` is not a special case in the router — an empty prefix
+ * adds no segment, so the index page lands on the group's own path. Which zone
+ * gets which landing is `only`/`except`, like every other membership question.
+ */
+class RtOverviewLanding extends Dashboard implements ConfiguresRoutes, ProvidesPages
+{
+    public static function key(): string
+    {
+        return 'rt-landing';
+    }
+
+    public function widgets(): array
+    {
+        return [];
+    }
+
+    public static function pages(): array
+    {
+        return ['index' => RtListPage::class];
+    }
+
+    public static function routePrefix(): ?string
+    {
+        return self::ROOT;
+    }
+
+    public static function routeMiddleware(): array
+    {
+        return [];
+    }
+
+    public static function routeDomain(): ?string
+    {
+        return null;
+    }
+}
+
+/** A second one, to prove one group cannot have two. */
+class RtSecondLanding extends RtOverviewLanding
+{
+    public static function key(): string
+    {
+        return 'rt-landing-2';
+    }
+}
+
 /** Registered and routable by hand, deliberately not routed here. */
 class RtInternalResource implements DescribesResource
 {
@@ -179,6 +228,48 @@ it('lists a dashboard among the urls a menu turns into links', function () {
 
     expect(ResourceRoutes::urls())->toHaveKey('rt-overview')
         ->and(ResourceRoutes::urlFor('rt-overview'))->toEndWith('/rt-overview');
+});
+
+it('lands a zone on the group root when a page claims no prefix of its own', function () {
+    rtRegistry(RtOrderResource::class);
+    app(DashboardRegistry::class)->register(RtOverviewLanding::class);
+
+    Route::name('business.')->prefix('business')->group(function (): void {
+        Route::wireResources();
+    });
+
+    expect(rtRoute('business.wire.rt-landing.index')?->uri())->toBe('business')
+        ->and(rtRoute('business.wire.rt-orders.index')?->uri())->toBe('business/rt-orders')
+        ->and(ResourceRoutes::urlFor('rt-landing', zone: 'business'))->toEndWith('/business');
+});
+
+it('refuses two pages claiming the root of one group', function () {
+    // Not tidiness: Laravel keys routes by URI, so the second registration
+    // REPLACES the first and takes its route name with it. The first key then
+    // looks routed, `urlFor()` answers null, and its menu entry dies silently —
+    // measured, `route()` threw RouteNotFoundException for a route the same call
+    // had just registered.
+    app(DashboardRegistry::class)->register(RtOverviewLanding::class);
+    app(DashboardRegistry::class)->register(RtSecondLanding::class);
+
+    expect(fn () => Route::prefix('business')->group(fn () => Route::wireResources()))
+        ->toThrow(ResourceRoutingException::class, 'rt-landing');
+});
+
+it('lets each zone have a landing page of its own', function () {
+    // Membership decides it, like everything else: both declare the root, and
+    // only()/except() says which zone lands on which.
+    app(DashboardRegistry::class)->register(RtOverviewLanding::class);
+    app(DashboardRegistry::class)->register(RtSecondLanding::class);
+
+    Route::name('business.')->prefix('business')
+        ->group(fn () => Route::wireResources(only: ['rt-landing']));
+    Route::name('admin.')->prefix('admin')
+        ->group(fn () => Route::wireResources(only: ['rt-landing-2']));
+
+    expect(rtRoute('business.wire.rt-landing.index')?->uri())->toBe('business')
+        ->and(rtRoute('admin.wire.rt-landing-2.index')?->uri())->toBe('admin')
+        ->and(rtRoute('business.wire.rt-landing-2.index'))->toBeNull();
 });
 
 it('registers the four known page kinds at the shape a menu can predict', function () {

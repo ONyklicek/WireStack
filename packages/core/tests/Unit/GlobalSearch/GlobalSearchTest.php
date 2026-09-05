@@ -293,7 +293,7 @@ it('searches through whatever the container says a search is', function () {
 /** Results under a key nothing in the catalogue stands behind. */
 class GsStrayKeySearch extends GlobalSearch
 {
-    public function search(string $term, int $perResource = self::PER_RESOURCE_LIMIT): array
+    public function search(string $term, int $perResource = self::PER_RESOURCE_LIMIT, ?string $zone = null): array
     {
         return ['gs-stray' => [new GlobalSearchResult('gs-stray', 1, 'orphan row')]];
     }
@@ -449,7 +449,7 @@ it('points a result at the record page, without the resource writing a path', fu
 
     $urls = new class implements ResolvesPageUrls
     {
-        public function urlFor(string $key, string $page = 'index', array $parameters = []): ?string
+        public function urlFor(string $key, string $page = 'index', array $parameters = [], ?string $zone = null): ?string
         {
             return '/admin/'.$key.'/'.$page.'/'.$parameters['record'];
         }
@@ -470,7 +470,7 @@ it('leaves a result that named its own url alone', function () {
 
     $urls = new class implements ResolvesPageUrls
     {
-        public function urlFor(string $key, string $page = 'index', array $parameters = []): ?string
+        public function urlFor(string $key, string $page = 'index', array $parameters = [], ?string $zone = null): ?string
         {
             return '/should-not-win';
         }

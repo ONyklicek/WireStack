@@ -12,6 +12,7 @@ use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Routing\UnroutedPageUrls;
+use NyonCode\WireCore\Foundation\Routing\Zone;
 
 /**
  * Everything registered for a menu, arranged the way a menu shows it.
@@ -29,9 +30,18 @@ use NyonCode\WireCore\Foundation\Routing\UnroutedPageUrls;
  * shell and no layout, because a registry that held those would be a panel and
  * this layer is not one. It does *ask* where a key's page is — {@see ResolvesPageUrls},
  * answered by whoever owns routing and by nothing at all otherwise (ADR 0026) —
- * which is the difference between holding a URL scheme and reading one. What
- * renders the result is the application's, and V2.6's domain-module axis is
- * expected to sit on top of this rather than replace it.
+ * which is the difference between holding a URL scheme and reading one.
+ *
+ * The menu is the same in every zone; only where its entries point differs, so
+ * `navigation()` and `items()` take one — and `linkedOnly: true` when the menu
+ * should hold only what this zone can actually reach. A group whose entries all
+ * drop away is absent rather than an empty heading, by the rule hidden groups
+ * already follow. Pass {@see Zone::current()} when the
+ * menu is drawn during a full page render, or a zone the host component kept —
+ * never `Zone::current()` from inside a Livewire re-render, for the reason that
+ * class documents. An entry whose key this zone does not route carries no URL,
+ * which is what an unrouted resource already looks like. What renders the result is the application's, and V2.6's
+ * domain-module axis is expected to sit on top of this rather than replace it.
  */
 final readonly class Workspace
 {
@@ -66,14 +76,14 @@ final readonly class Workspace
      *
      * @return array<string, NavigationGroup> Keyed by group key; the ungrouped top level is `''`.
      */
-    public function navigation(): array
+    public function navigation(?string $zone = null, bool $linkedOnly = false): array
     {
         $buckets = [];
 
         // Registration order, deliberately: it decides which group came first,
         // and sorting the entries beforehand would make that depend on the
         // entry numbering instead.
-        foreach ($this->entries() as $key => $item) {
+        foreach ($this->entries($zone, $linkedOnly) as $key => $item) {
             $buckets[$item->getGroup() ?? ''][$key] = $item;
         }
 
@@ -106,9 +116,9 @@ final readonly class Workspace
      *
      * @return array<string, NavigationItem> Keyed by resource key.
      */
-    public function items(): array
+    public function items(?string $zone = null, bool $linkedOnly = false): array
     {
-        return $this->sorted($this->entries());
+        return $this->sorted($this->entries($zone, $linkedOnly));
     }
 
     /**
@@ -139,9 +149,11 @@ final readonly class Workspace
      * so identity has to arrive some other way, and the key a source already
      * addresses the class by is that way.
      *
+     * @param  string|null  $zone  Which mount point to link into ({@see Zone}).
+     * @param  bool  $linkedOnly  Drop entries this zone cannot reach.
      * @return array<string, NavigationItem>
      */
-    private function entries(): array
+    private function entries(?string $zone = null, bool $linkedOnly = false): array
     {
         $items = [];
 
@@ -184,7 +196,18 @@ final readonly class Workspace
             // application with no page package at all — and a menu entry without
             // an href already renders.
             if ($item->getUrl() === null) {
-                $item->url($this->urls->urlFor($key));
+                $item->url($this->urls->urlFor($key, 'index', [], $zone));
+            }
+
+            // A menu is a list of places you can go, so a zone that cannot reach
+            // an entry may ask not to be given it. Opt-in rather than the rule,
+            // because the two reasons an entry has no URL are different and this
+            // cannot tell them apart: `tasks` may be routed in another zone,
+            // while `documents` is routed nowhere — and a shell that supplies
+            // its own URLs has every entry unlinked here and still wants them
+            // all. The caller knows which of those it is.
+            if ($linkedOnly && $item->getUrl() === null) {
+                continue;
             }
 
             $items[$key] = $item;

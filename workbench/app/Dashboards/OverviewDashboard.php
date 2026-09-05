@@ -6,9 +6,12 @@ namespace Workbench\App\Dashboards;
 
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ConfiguresRoutes;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
 use NyonCode\WireCore\Widgets\Dashboard;
 use NyonCode\WireCore\Widgets\Stat;
 use NyonCode\WireCore\Widgets\StatsOverviewWidget;
+use Workbench\App\Livewire\Dashboards\ShowOverview;
 use Workbench\App\Models\Document;
 use Workbench\App\Models\Invoice;
 use Workbench\App\Models\Task;
@@ -21,9 +24,37 @@ use Workbench\App\Models\Task;
  * widgets over the three workbench models is enough to show that, and every one
  * of them counts real rows — a dashboard of fixed numbers would render
  * identically whether or not the declaration was ever reached.
+ *
+ * It is also each zone's landing page (ADR 0027): declaring pages makes it
+ * routable by the same macro a resource is, and `routePrefix()` of
+ * `ConfiguresRoutes::ROOT` adds no segment — so its index lands on the group's
+ * own path, and `/previews/zoned/business` is a page rather than a 404. Which
+ * zone lands where is `only`/`except`, like every other membership question;
+ * an application wanting a different landing per zone gives each one its own
+ * dashboard rather than a second declaration.
  */
-final class OverviewDashboard extends Dashboard implements ProvidesNavigation
+final class OverviewDashboard extends Dashboard implements ConfiguresRoutes, ProvidesNavigation, ProvidesPages
 {
+    public static function pages(): array
+    {
+        return ['index' => ShowOverview::class];
+    }
+
+    public static function routePrefix(): ?string
+    {
+        return self::ROOT;
+    }
+
+    public static function routeMiddleware(): array
+    {
+        return [];
+    }
+
+    public static function routeDomain(): ?string
+    {
+        return null;
+    }
+
     public function widgets(): array
     {
         return [

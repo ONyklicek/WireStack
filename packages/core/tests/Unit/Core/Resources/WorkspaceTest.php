@@ -419,7 +419,7 @@ it('points an entry at its key page, and leaves an unrouted one unlinked', funct
         new NavigationGroups,
         new class implements ResolvesPageUrls
         {
-            public function urlFor(string $key, string $page = 'index', array $parameters = []): ?string
+            public function urlFor(string $key, string $page = 'index', array $parameters = [], ?string $zone = null): ?string
             {
                 return $key === 'orders' ? '/admin/orders' : null;
             }
@@ -440,7 +440,7 @@ it('leaves an entry that named its own url alone', function () {
         new NavigationGroups,
         new class implements ResolvesPageUrls
         {
-            public function urlFor(string $key, string $page = 'index', array $parameters = []): ?string
+            public function urlFor(string $key, string $page = 'index', array $parameters = [], ?string $zone = null): ?string
             {
                 return '/should-not-win';
             }
@@ -459,6 +459,56 @@ it('links nothing when no package owns routing', function () {
     $workspace = new Workspace(new Catalog([$registry]), new NavigationGroups);
 
     expect($workspace->items()['orders']->getUrl())->toBeNull();
+});
+
+it('drops what the zone cannot reach when asked for linked entries only', function () {
+    // ADR 0027 open question 2, decided over a two-zone preview: three of four
+    // entries went dead in one zone, which is the shape commit 51d7d5a called a
+    // defect. Opt-in rather than the rule — a shell that supplies its own URLs
+    // has every entry unlinked here and still wants all of them.
+    $registry = new ResourceRegistry;
+    $registry->register(WsOrderResource::class);
+
+    $workspace = new Workspace(
+        new Catalog([$registry, new WsExtraSource(['weekly-report' => WsReportPage::class])]),
+        new NavigationGroups,
+        new class implements ResolvesPageUrls
+        {
+            public function urlFor(string $key, string $page = 'index', array $parameters = [], ?string $zone = null): ?string
+            {
+                return $key === 'orders' ? '/business/orders' : null;
+            }
+        },
+    );
+
+    // `items()` is in sort() order, and the report declares sort(5).
+    expect(array_keys($workspace->items(zone: 'business')))
+        ->toBe(['weekly-report', 'orders'])
+        ->and(array_keys($workspace->items(zone: 'business', linkedOnly: true)))
+        ->toBe(['orders']);
+});
+
+it('leaves no empty heading behind when a whole group drops away', function () {
+    // The rule a hidden group already follows: a heading with nothing under it
+    // is worse than an absent one, and dropping happens in one place.
+    $workspace = new Workspace(
+        new Catalog([new WsExtraSource(['weekly-report' => WsReportPage::class])]),
+        new NavigationGroups,
+    );
+
+    expect(array_keys($workspace->navigation()))->toBe(['Sales'])
+        ->and($workspace->navigation(linkedOnly: true))->toBe([]);
+});
+
+it('keeps an entry that named its own url, whatever the zone routes', function () {
+    // An external link is reachable from everywhere, so `linkedOnly` must not
+    // read "routed here" as "has a URL".
+    $workspace = new Workspace(
+        new Catalog([new WsExtraSource(['linked' => WsLinkedPage::class])]),
+        new NavigationGroups,
+    );
+
+    expect(array_keys($workspace->items(zone: 'business', linkedOnly: true)))->toBe(['linked']);
 });
 
 it('reads sources in the order it was given them', function () {

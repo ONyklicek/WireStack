@@ -341,7 +341,20 @@ name.
 `only` / `except` take registered keys: a resource key or a dashboard key, the
 same key the menu and `ResourceRoutes::urlFor()` use.
 
-See [Resources](core/resources.md#routing).
+For several mount points — `admin`, `business`, `production` — add a `zones` key,
+one entry per zone; each inherits the values above it and overrides what it
+names. The array key becomes the route-name prefix, so the same resource in two
+zones gets two route names instead of two routes fighting over one.
+
+```php
+'zones' => [
+    'admin' => ['prefix' => 'admin', 'middleware' => ['web', 'auth', 'can:admin']],
+    'business' => ['prefix' => 'business', 'only' => ['orders']],
+],
+```
+
+See [Resources](core/resources.md#zones) for zones and
+[Routing](core/resources.md#routing) for the rest.
 
 ## Boost
 

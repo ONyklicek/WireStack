@@ -107,8 +107,8 @@ final class OrderResource implements DescribesResource, GloballySearchable
 
 **Všimni si, co příklad nepředává.** Řádek už obě půlky své URL nese — klíč
 resource a klíč záznamu — takže ji framework sestaví:
-`urlFor($resourceKey, 'view', ['record' => $recordKey])`. Napsat sem cestu
-znamená kopírovat to, co router
+`urlFor($resourceKey, 'view', ['record' => $recordKey])`, v [zóně](resources.md#zony),
+ve které byla paleta otevřená. Napsat sem cestu znamená kopírovat to, co router
 už ví, a je to ta kopie, která zastará: než se URL začala odvozovat, měl tenhle
 repozitář ve vlastním workbenchi dvě natvrdo psané cesty a obě byly špatně —
 jedna mířila do shellu, druhá na stránku bez záznamu, a nic neselhalo.
@@ -119,7 +119,8 @@ URL vždycky vyhraje.
 
 Řádek s `null` url se pořád vykreslí a pořád se přes něj dá projít šipkami; Enter
 na něm neudělá nic, místo aby navigoval někam vymyšleným. To je odpověď pro
-resource, který nedeklaruje stránky.
+resource, který nedeklaruje stránky, i pro ten routovaný v jiné zóně, než ve které
+byla paleta otevřená.
 
 ## Připojení palety
 
@@ -157,6 +158,21 @@ nedíval.
 
 Dialog je teleportovaný do `<body>`, jako každý modál ve frameworku, takže ho
 nikdy neořízne polohovaný předek.
+
+**V zónované aplikaci nepotřebuje žádnou konfiguraci.** Paleta si přečte svoji
+[zónu](resources.md#zony) ze stránky, na které se vykreslila, a drží si ji
+v public property, takže výsledky míří zpátky do zóny, ve které uživatel je —
+tentýž layout připojený pod `/admin` a `/business` odkazuje do každé z nich.
+Nastav ji výslovně jen tehdy, když paleta sedí v shellu, který sám resource routa
+není:
+
+```blade
+@livewire('wire-global-search', ['zone' => 'business'])
+```
+
+Musí to být property, ne dotaz: hledání běží na Livewire requestu, kde je aktuální
+routa Livewirový endpoint a na zónu už se není koho zeptat. Viz
+[Zóny](resources.md#zony).
 
 ## Autorizace a tenancy
 
@@ -210,12 +226,15 @@ $groups = app(GlobalSearch::class)->search('INV-100');
 // ['orders' => [GlobalSearchResult, …], 'customers' => [GlobalSearchResult, …]]
 
 $more = app(GlobalSearch::class)->search('INV-100', perResource: 20);
+
+// Výsledky odkazující do jedné zóny místo do nezónovaného mount pointu.
+$zoned = app(GlobalSearch::class)->search('INV-100', zone: 'business');
 ```
 
 ## API
 
 ```php
-GlobalSearch::search(string $term, int $perResource = 5): array   // [klíč => GlobalSearchResult[]]
+GlobalSearch::search(string $term, int $perResource = 5, ?string $zone = null): array
 GlobalSearch::PER_RESOURCE_LIMIT                                  // 5
 
 GlobalSearchResult::withUrl(?string $url): GlobalSearchResult     // tentýž řádek, namířený
@@ -244,6 +263,7 @@ $palette->select(): mixed              // naviguje na aktivní řádek, nebo nul
 $palette->selectedUrl(): ?string       // kam aktivní řádek vede
 $palette->flatResults(): array         // všechny řádky, v pořadí vykreslení
 $palette->groupLabels(): array         // [klíč resource => popisek v množném čísle]
+$palette->zone                         // ?string — zóna, ve které byla otevřená
 ```
 
 ## Související
