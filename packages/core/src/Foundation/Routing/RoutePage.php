@@ -2,12 +2,19 @@
 
 declare(strict_types=1);
 
-namespace NyonCode\WirePanels\Routing;
+namespace NyonCode\WireCore\Foundation\Routing;
 
 use NyonCode\WireCore\Foundation\Concerns\HasAuthorization;
 
 /**
- * One page of a resource, with what its route needs beyond the component.
+ * One page of a registered thing, with what its route needs beyond the component.
+ *
+ * Lives here rather than with the router that reads it (ADR 0026): a `Dashboard`
+ * is `Widgets/` and cannot see `wire-panels`, so a page declaration reachable
+ * only from the top package would have made "which components render me" a
+ * question only a resource is allowed to answer. The URL *convention* is still
+ * the panel layer's — `ResourceRoutes` owns the shape and the route names; this
+ * owns only what a declaration carries.
  *
  * `pages()` may name a component and nothing else — that is the common case and
  * stays a one-liner. This is for the page that differs: an edit screen behind a

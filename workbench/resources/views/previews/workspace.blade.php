@@ -35,7 +35,14 @@
 
                     <ul class="space-y-1">
                         @foreach ($group->getItems() as $key => $item)
-                            @php($url = $urls[$key] ?? null)
+                            {{-- The shell's own scheme first, the entry's resolved page
+                                 second. This preview *is* the application that keeps a URL
+                                 scheme of its own: `/previews/workspace/{key}` chooses what
+                                 renders beside the sidebar, and taking the entry's URL here
+                                 would navigate out of the shell and close the navigation
+                                 behind it. Since ADR 0026 an entry carries a URL anyway, so
+                                 an application without a shell writes no map at all. --}}
+                            @php($url = $urls[$key] ?? $item->getUrl())
                             <li>
                                 {{-- A registered resource with no page of its own still
                                      belongs in the menu; it simply is not a link. --}}

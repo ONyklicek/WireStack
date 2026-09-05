@@ -87,7 +87,6 @@ final class OrderResource implements DescribesResource, GloballySearchable
             recordKey: $record->getKey(),
             title: $record->number,
             subtitle: $record->customer.' · '.$record->status,
-            url: route('orders.show', $record),
             icon: 'outline:document-text',
         );
     }                                                              // [tl! focus:end]
@@ -103,11 +102,24 @@ final class OrderResource implements DescribesResource, GloballySearchable
 | `recordKey` | `int\|string` | Klíč záznamu, pro `wire:key` a pro kliknutí |
 | `title` | `string` | Řádek, který uživatel čte první |
 | `subtitle` | `?string` | Kontext pod ním — stav, e-mail, datum |
-| `url` | `?string` | Kam výběr vede; `null`, když resource pro záznam nemá stránku |
+| `url` | `?string` | Kam výběr vede; odvozené, když se vynechá, `null`, když záznam nic neroutuje |
 | `icon` | `?string` | Jméno ikony, resolvované jako každá jiná ikona ve frameworku |
 
+**Všimni si, co příklad nepředává.** Řádek už obě půlky své URL nese — klíč
+resource a klíč záznamu — takže ji framework sestaví:
+`urlFor($resourceKey, 'view', ['record' => $recordKey])`. Napsat sem cestu
+znamená kopírovat to, co router
+už ví, a je to ta kopie, která zastará: než se URL začala odvozovat, měl tenhle
+repozitář ve vlastním workbenchi dvě natvrdo psané cesty a obě byly špatně —
+jedna mířila do shellu, druhá na stránku bez záznamu, a nic neselhalo.
+
+`url:` předávej výslovně jen tehdy, když řádek vede někam, kam konvence nedosáhne
+— do externího systému, na report, na stránku mimo vlastní resource. Explicitní
+URL vždycky vyhraje.
+
 Řádek s `null` url se pořád vykreslí a pořád se přes něj dá projít šipkami; Enter
-na něm neudělá nic, místo aby navigoval někam vymyšleným.
+na něm neudělá nic, místo aby navigoval někam vymyšleným. To je odpověď pro
+resource, který nedeklaruje stránky.
 
 ## Připojení palety
 
@@ -205,7 +217,14 @@ $more = app(GlobalSearch::class)->search('INV-100', perResource: 20);
 ```php
 GlobalSearch::search(string $term, int $perResource = 5): array   // [klíč => GlobalSearchResult[]]
 GlobalSearch::PER_RESOURCE_LIMIT                                  // 5
+
+GlobalSearchResult::withUrl(?string $url): GlobalSearchResult     // tentýž řádek, namířený
 ```
+
+`search()` čte [`Catalog`](resources.md#catalog-api), takže paleta získá resource
+ve chvíli, kdy je zaregistrovaný, a nikdy si nedrží vlastní seznam. Registrovaná
+věc, která se přihlásí k hledání a nemá model — dashboard — se přeskočí, místo aby
+se jí ptalo.
 
 Kontrakt, který resource implementuje:
 

@@ -27,6 +27,10 @@ rozhodnutí a je to ono, co drží lifecycle poctivý:
    [registr resources](resources.md), [registr dashboardů](widgets.md) a
    [navigační skupiny](resources.md#navigace-a-workspace).
 
+Oba registry jsou zdroje jednoho [`Catalog`u](resources.md#catalog-api), takže se
+resources a dashboardy modulu z téhle jediné deklarace dostanou do menu, do
+routeru i do palety globálního hledání.
+
 Krok 3 dělá provider, ne modul, a to schválně. Dashboard bydlí ve widgetové
 vrstvě a kontrakt modulu, který by sáhl na `DashboardRegistry`, by byl import,
 který architektonický test odmítá; pojmenovat třídu žádný import nestojí, takže

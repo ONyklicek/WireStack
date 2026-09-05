@@ -2,13 +2,20 @@
 
 declare(strict_types=1);
 
-namespace NyonCode\WirePanels\Resources\Contracts;
+namespace NyonCode\WireCore\Foundation\Routing\Contracts;
 
-use NyonCode\WirePanels\Routing\ResourceRoutes;
-use NyonCode\WirePanels\Routing\RoutePage;
+use NyonCode\WireCore\Foundation\Registration\Contracts\HasRegistryKey;
+use NyonCode\WireCore\Foundation\Routing\RoutePage;
 
 /**
- * A resource that names the pages which render it.
+ * A registered class that names the pages which render it.
+ *
+ * A resource, a dashboard, or anything else a `RegistrySource` holds: the router
+ * reads the catalogue and asks each class for this, so what may be routed is
+ * decided by declaring pages rather than by being a particular kind of thing
+ * (ADR 0026). It extends {@see HasRegistryKey} because a page that cannot be
+ * addressed cannot be given a URL — which is the one thing a declaration here
+ * is for.
  *
  * Opt-in like every other surface contract, and for the same reason: a resource
  * that is registered for routing but reached only from inside another one — a
@@ -34,12 +41,12 @@ use NyonCode\WirePanels\Routing\RoutePage;
  * permission the others do not have, an extra middleware — it is a
  * {@see RoutePage} instead, which carries the same class plus that.
  *
- * The keys are the page *kinds* the router knows how to shape a URL for; see
- * {@see ResourceRoutes}. A key it does not know is
- * registered as a plain segment under the resource, so an application can add
+ * The keys are the page *kinds* the router knows how to shape a URL for —
+ * `index`, `create`, `view`, `edit`. A key it does not know is registered as a
+ * plain segment underneath, so an application can add
  * `'archive' => ArchivedInvoices::class` without asking for anything.
  */
-interface ProvidesResourcePages
+interface ProvidesPages extends HasRegistryKey
 {
     /**
      * @return array<string, class-string|RoutePage> Page kind => component class,

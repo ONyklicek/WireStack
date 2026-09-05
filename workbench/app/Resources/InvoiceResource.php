@@ -10,6 +10,9 @@ use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Core\Workflow\WorkflowState;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ConfiguresRoutes;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
+use NyonCode\WireCore\Foundation\Routing\RoutePage;
 use NyonCode\WireCore\GlobalSearch\Contracts\GloballySearchable;
 use NyonCode\WireCore\GlobalSearch\GlobalSearchResult;
 use NyonCode\WireCore\Infolists\Components\TextEntry;
@@ -20,11 +23,8 @@ use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Contracts\ProvidesResourceForm;
 use NyonCode\WireForms\Forms\Form;
-use NyonCode\WirePanels\Resources\Contracts\ConfiguresResourceRoutes;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesRelationManagers;
-use NyonCode\WirePanels\Resources\Contracts\ProvidesResourcePages;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesResourceTable;
-use NyonCode\WirePanels\Routing\RoutePage;
 use NyonCode\WireTable\Columns\BadgeColumn;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Table;
@@ -47,7 +47,7 @@ use Workbench\App\Models\Invoice;
  * case most likely to expose a clash between them, and the previews render it
  * through the real pages rather than through anything the workbench invents.
  */
-final class InvoiceResource implements ConfiguresResourceRoutes, DescribesResource, GloballySearchable, ProvidesNavigation, ProvidesRelationManagers, ProvidesResourceForm, ProvidesResourceInfolist, ProvidesResourcePages, ProvidesResourceTable
+final class InvoiceResource implements ConfiguresRoutes, DescribesResource, GloballySearchable, ProvidesNavigation, ProvidesPages, ProvidesRelationManagers, ProvidesResourceForm, ProvidesResourceInfolist, ProvidesResourceTable
 {
     use DescribesRecords;
 
@@ -116,7 +116,6 @@ final class InvoiceResource implements ConfiguresResourceRoutes, DescribesResour
             recordKey: $record->getKey(),
             title: $record->number,
             subtitle: $record->customer.' · '.$record->status,
-            url: '/previews/resource-view',
             icon: 'outline:document-text',
         );
     }

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Widgets;
 
 use Illuminate\Support\Str;
-use NyonCode\WireCore\Core\Resources\Contracts\NavigationSource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
+use NyonCode\WireCore\Foundation\Registration\Contracts\RegistrySource;
 use NyonCode\WireCore\Widgets\Contracts\HasWidgets;
 
 /**
@@ -42,8 +42,10 @@ use NyonCode\WireCore\Widgets\Contracts\HasWidgets;
  * {@see ProvidesNavigation},
  * the same contract a resource uses, and is registered into
  * {@see DashboardRegistry} — which is a
- * {@see NavigationSource}, so
- * `Workspace` lists it without ever knowing what a dashboard is.
+ * {@see RegistrySource}, so `Workspace` lists it without ever knowing what a
+ * dashboard is, and since ADR 0026 the router and the search palette read the
+ * same catalogue. A dashboard that also declares `ProvidesPages::pages()` is
+ * routed by `Route::wireResources()` like any resource.
  */
 abstract class Dashboard implements HasWidgets
 {

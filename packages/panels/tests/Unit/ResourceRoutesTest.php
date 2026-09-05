@@ -7,11 +7,13 @@ use Livewire\Component;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ConfiguresRoutes;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
+use NyonCode\WireCore\Foundation\Routing\RoutePage;
+use NyonCode\WireCore\Widgets\Dashboard;
+use NyonCode\WireCore\Widgets\DashboardRegistry;
 use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
-use NyonCode\WirePanels\Resources\Contracts\ConfiguresResourceRoutes;
-use NyonCode\WirePanels\Resources\Contracts\ProvidesResourcePages;
 use NyonCode\WirePanels\Routing\ResourceRoutes;
-use NyonCode\WirePanels\Routing\RoutePage;
 
 /*
  * Registering a resource's pages as routes.
@@ -23,7 +25,7 @@ use NyonCode\WirePanels\Routing\RoutePage;
  * per-page configuration reaches the route.
  */
 
-class RtOrderResource implements DescribesResource, ProvidesResourcePages
+class RtOrderResource implements DescribesResource, ProvidesPages
 {
     use DescribesRecords;
 
@@ -44,7 +46,7 @@ class RtOrderResource implements DescribesResource, ProvidesResourcePages
 }
 
 /** Configures its own prefix, domain and middleware. */
-class RtTenantResource implements ConfiguresResourceRoutes, DescribesResource, ProvidesResourcePages
+class RtTenantResource implements ConfiguresRoutes, DescribesResource, ProvidesPages
 {
     use DescribesRecords;
 
@@ -71,6 +73,33 @@ class RtTenantResource implements ConfiguresResourceRoutes, DescribesResource, P
     public static function routePrefix(): ?string
     {
         return 'billing/tenants';
+    }
+}
+
+/**
+ * A dashboard that names a page — not a resource, and routed by the same helper.
+ *
+ * The reason `ProvidesPages` moved to `Foundation/` (ADR 0026): a dashboard is
+ * `Widgets/` and cannot see `wire-panels`, so a declaration reachable only from
+ * the top package made "which components render me" a question only a resource
+ * was allowed to answer. Until this, three of four entries in a real menu could
+ * be listed and none of them linked.
+ */
+class RtOverviewDashboard extends Dashboard implements ProvidesPages
+{
+    public static function key(): string
+    {
+        return 'rt-overview';
+    }
+
+    public function widgets(): array
+    {
+        return [];
+    }
+
+    public static function pages(): array
+    {
+        return ['index' => RtListPage::class];
     }
 }
 
@@ -127,6 +156,30 @@ function rtRegistry(string ...$resources): ResourceRegistry
 
     return $registry;
 }
+
+it('routes a dashboard through the same helper as a resource', function () {
+    // Both registries are sources of one catalogue, so the router does not learn
+    // what a dashboard is — it asks who declares pages, and a dashboard may.
+    rtRegistry(RtOrderResource::class);
+    app(DashboardRegistry::class)->register(RtOverviewDashboard::class);
+
+    Route::wireResources();
+
+    expect(rtRoute('wire.rt-overview.index')?->uri())->toBe('rt-overview')
+        ->and(rtRoute('wire.rt-orders.index')?->uri())->toBe('rt-orders');
+});
+
+it('lists a dashboard among the urls a menu turns into links', function () {
+    // What the sidebar could not do before: `urls()` read the resource registry,
+    // so a dashboard was in the menu and had nowhere to point.
+    app(DashboardRegistry::class)->register(RtOverviewDashboard::class);
+
+    Route::wireResources();
+    Route::getRoutes()->refreshNameLookups();
+
+    expect(ResourceRoutes::urls())->toHaveKey('rt-overview')
+        ->and(ResourceRoutes::urlFor('rt-overview'))->toEndWith('/rt-overview');
+});
 
 it('registers the four known page kinds at the shape a menu can predict', function () {
     rtRegistry(RtOrderResource::class);
@@ -223,7 +276,7 @@ it('honours except', function () {
 it('lets a page add middleware and sit at a uri of its own', function () {
     // The rest of RoutePage: a page that needs an extra middleware, and one
     // whose segment is not its kind — an "archive" that lives at /old, say.
-    $resource = new class implements DescribesResource, ProvidesResourcePages
+    $resource = new class implements DescribesResource, ProvidesPages
     {
         use DescribesRecords;
 
@@ -274,10 +327,30 @@ it('hands a menu the url for a routed key, and null for an unrouted one', functi
         ->and(array_keys(ResourceRoutes::urls()))->toBe(['rt-orders']);
 });
 
+it('answers null for a route it cannot finish, rather than taking the page down', function () {
+    // A resource on a `{tenant}.example.test` domain has a route that cannot be
+    // built without that parameter. Laravel throws `UrlGenerationException` for
+    // it, and `urls()` asks every registered key at once — so one tenant-scoped
+    // resource used to take down any menu that built its links from here, over
+    // an entry that would have rendered without an href anyway.
+    rtRegistry(RtOrderResource::class);
+    rtRegistry(RtTenantResource::class);
+
+    Route::wireResources();
+    Route::getRoutes()->refreshNameLookups();
+
+    expect(ResourceRoutes::urlFor('rt-tenants'))->toBeNull()
+        ->and(ResourceRoutes::urls())->toHaveKey('rt-orders')
+        ->and(ResourceRoutes::urls())->not->toHaveKey('rt-tenants')
+        // Given the parameter, it is an ordinary URL again.
+        ->and(ResourceRoutes::urlFor('rt-tenants', 'index', ['tenant' => 'acme']))
+        ->toContain('acme.example.test');
+});
+
 it('registers an unknown page kind as its own segment', function () {
     // An application adding 'archive' => ArchivedOrders::class should not have
     // to ask anyone: the kind becomes the segment and the route name.
-    $resource = new class implements DescribesResource, ProvidesResourcePages
+    $resource = new class implements DescribesResource, ProvidesPages
     {
         use DescribesRecords;
 

@@ -13,6 +13,7 @@ php artisan vendor:publish --tag=wire-core::config
 php artisan vendor:publish --tag=wire-forms::config
 php artisan vendor:publish --tag=wire-table::config
 php artisan vendor:publish --tag=wire-sortable::config
+php artisan vendor:publish --tag=wire-panels::config
 php artisan vendor:publish --tag=wire-boost::config
 ```
 
@@ -307,6 +308,40 @@ the bundled copy either way.
 Set `user_key_type` to `uuid` or `ulid` (before running the column-order migration) when your user model uses a non-integer primary key.
 
 See [Sortable Installation](sortable/installation.md).
+
+## Panels
+
+The `wire-panels` config decides whether the framework registers a resource's
+pages as routes for you.
+
+```php
+return [
+    'routes' => [
+        'enabled' => false,
+        'prefix' => 'admin',
+        'middleware' => ['web', 'auth'],
+        'domain' => null,
+        'only' => [],
+        'except' => [],
+    ],
+];
+```
+
+`enabled` is `false` because `Route::wireResources()` in your own route file is
+the reference path — these are the same group arguments, handed over once, for an
+application that would rather not keep a route file for them.
+
+Two things to know before turning it on. Package providers boot before your own,
+so these routes are matched **before** everything in `routes/web.php`; an
+application with a catch-all under the same prefix wins today and would stop
+winning. And enabling this *and* calling `Route::wireResources()` yourself is
+refused rather than resolved — it would register every page twice under one route
+name.
+
+`only` / `except` take registered keys: a resource key or a dashboard key, the
+same key the menu and `ResourceRoutes::urlFor()` use.
+
+See [Resources](core/resources.md#routing).
 
 ## Boost
 

@@ -418,10 +418,11 @@ Skupiny se vrací v pořadí `sort()` a shodné drží pořadí, v jakém se reg
 jejich první položka; uvnitř skupiny platí totéž pro položky. Skryté položky
 vypadnou a skrytá skupina si své položky vezme s sebou.
 
-Položky zůstávají klíčované **klíčem resource**, přes seskupení i přes řazení.
-Ten klíč je druhá polovina řádku v menu: `NavigationItem` záměrně nedrží URL —
-registr, který by držel URL, by byl panel — takže aplikace si klíč namapuje na
-to, kam daný resource routuje:
+Položky zůstávají klíčované **registrovaným klíčem**, přes seskupení i přes
+řazení, a každá nese URL stránky svého klíče. Nic ji nedeklaruje: *registr* URL
+pořád nedrží — ten, který by ji držel, by byl panel — ale menu se zeptá, kam je
+klíč routovaný, a odpověď doplní; `null` pro resource, který nedeklaruje stránky,
+i pro aplikaci, která neroutuje nic.
 
 ```blade
 @foreach($nav as $group)
@@ -430,7 +431,9 @@ to, kam daný resource routuje:
     @endif
 
     @foreach($group->getItems() as $key => $item)
-        <a href="{{ route('admin.'.$key) }}" wire:navigate>   {{-- [tl! focus] --}}
+        {{-- Registrovaná položka bez vlastní stránky do menu pořád patří;
+             jen to není odkaz. --}}
+        <a @if($item->getUrl()) href="{{ $item->getUrl() }}" wire:navigate @endif>   {{-- [tl! focus] --}}
             {!! icon($item->getIcon()) !!}
             {{ $item->getLabel() }}
             <x-wire::badge :color="$item->getBadgeColor() ?? 'gray'">{{ $item->getBadge() }}</x-wire::badge>
@@ -439,15 +442,20 @@ to, kam daný resource routuje:
 @endforeach
 ```
 
+Položka může svůj cíl pojmenovat sama přes `->url('https://status.example.com')`
+a to, co pojmenuje, vždycky vyhraje — externí odkaz nebo aplikace, jejíž shell má
+vlastní URL schéma.
+
 `Workspace::items()` odpovídá na tutéž otázku bez nadpisů: každá viditelná
-položka, plochý seznam v pořadí `sort()`, klíčovaný klíčem resource — to, co
+položka, plochý seznam v pořadí `sort()`, klíčovaný registrovaným klíčem — to, co
 ukáže menu, které skupiny nekreslí. Položky ze skryté skupiny v něm taky nejsou.
 
 `Workspace` neví, co je resource, a to je záměr. Jeho položky přicházejí
-z libovolného počtu zdrojů `NavigationSource` — jedním je `ResourceRegistry`,
-druhým `Widgets\DashboardRegistry` — takže menu míchá resources, dashboardy
-a cokoli, co aplikace zaregistruje později, aniž by se o nich `Workspace`
-dozvěděl. Dva zdroje hlásící se k jednomu klíči jsou odmítnuty, ne smířeny:
+z `Catalog`u, který čte libovolný počet zdrojů `RegistrySource` — jedním je
+`ResourceRegistry`, druhým `Widgets\DashboardRegistry` — takže menu míchá
+resources, dashboardy a cokoli, co aplikace zaregistruje později, aniž by se
+o nich `Workspace` dozvěděl. Router i paleta globálního hledání čtou tentýž
+katalog, takže jedna registrace obslouží všechny tři. Dva zdroje hlásící se k jednomu klíči jsou odmítnuty, ne smířeny:
 jedna položka by jinak zabrala místo druhé a menu, kterému tiše zmizel řádek, se
 pozná až v den, kdy ten řádek byl potřeba.
 
@@ -455,7 +463,13 @@ Fallback labelu výše je resourcový, protože `pluralLabel()` je slovo resourc
 Cokoli jiného v menu si položku pojmenuje samo.
 
 Stejně jako registr nevlastní `Workspace` routing ani layout — menu vykresluje
-aplikace.
+aplikace. Ptá se, kam je klíč routovaný; nerozhoduje o tom.
+
+| Metoda | Vrací | Účel |
+| --- | --- | --- |
+| `navigation()` | `array<string, NavigationGroup>` | Menu: skupiny v pořadí, každá se svými položkami |
+| `items()` | `array<string, NavigationItem>` | Totéž menu ploše, bez nadpisů |
+| `registered()` | `array<string, class-string>` | Každá třída za menu, ať má položku nebo ne |
 
 ## Routování
 
@@ -463,11 +477,13 @@ Registr nedrží žádný URL shell ani routu (ADR 0020 §5) a to se nemění: r
 zůstávají aplikaci. Co framework odebírá, je opakování — čtyři `Route::get()`
 řádky na resource a vedle nich ručně psaná mapa klíč→URL pro menu.
 
-Resource řekne, které stránky ho vykreslují:
+Resource řekne, které stránky ho vykreslují — a stejně tak cokoli dalšího, co
+aplikace zaregistrovala, včetně dashboardu: router čte tentýž katalog jako menu,
+takže routovatelnost je věcí deklarace stránek, ne toho, jaký druh věci to je.
 
 ```php
-use NyonCode\WirePanels\Resources\Contracts\ProvidesResourcePages;
-use NyonCode\WirePanels\Routing\RoutePage;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
+use NyonCode\WireCore\Foundation\Routing\RoutePage;
 
 public static function pages(): array   // [tl! focus:start]
 {
@@ -509,7 +525,7 @@ ne volba.
 | `edit` | `{prefix}/{record}/edit` | `wire.{key}.edit` |
 | cokoli dalšího | `{prefix}/{druh}` | `wire.{key}.{druh}` |
 
-`{prefix}` je klíč resource, takže klíč v menu a URL se shodují, aniž by se
+`{prefix}` je registrovaný klíč, takže klíč v menu a URL se shodují, aniž by se
 kterýkoli z nich opakoval. `{record}` je **klíč**, ne navázaný model: stránky si
 záznam resolvují samy, což nechává soft-delete scope, tenant guard i
 non-Eloquent zdroj rozhodnutím stránky, ne routeru.
@@ -522,7 +538,7 @@ u akcí, sloupců a widgetů, takže `spatie/laravel-permission`
 i `nyoncode/laravel-permission-extended` fungují beze změny. Odmítnutí se stane
 v routeru, dřív než se stránka vykreslí nebo padne dotaz.
 
-Na úrovni resource přidává `ConfiguresResourceRoutes` tři věci, které patří
+Na úrovni resource přidává `ConfiguresRoutes` tři věci, které patří
 jednomu resource a ne celé skupině:
 
 ```php
@@ -535,10 +551,50 @@ Parametr domény se dostane do tvého `TenantResolver`u jako každý jiný param
 routy. Samotná tenancy zůstává, kde je — globální scope nad každým dotazem, ne
 záležitost routování; viz [Autorizace](../authorization.md).
 
+### Registrace z configu místo route souboru
+
+Macro výše zůstává referenční cestou. Aplikace, která chce konvenci a nechce si
+kvůli ní držet route soubor, předá tytéž argumenty skupiny jednou:
+
+```php
+// config/wire-panels.php
+'routes' => [
+    'enabled' => true,                    // [tl! focus]
+    'prefix' => 'admin',
+    'middleware' => ['web', 'auth'],
+    'domain' => null,
+    'only' => [],
+    'except' => [],
+],
+```
+
+Ve výchozím stavu vypnuté, a to záměrně: providery balíčků bootují dřív než tvoje
+vlastní, takže tyhle routy se matchují **před** vším v `routes/web.php`. Aplikace
+s catch-all routou pod stejným prefixem dnes vyhraje a přestala by — to je
+rozhodnutí, které se dělá, ne default, který se zdědí.
+
+Zapnout tohle *a zároveň* volat `Route::wireResources()` by zaregistrovalo každou
+stránku dvakrát pod jedním jménem routy; je to odmítnuto, ne smířeno, se zprávou,
+která pojmenuje obě místa, kde stačí smazat řádek.
+
 ### Jak na ně odkazovat
 
-`ResourceRoutes::urlFor()` udělá z klíče v menu odkaz a vrátí `null` pro
-resource, který routovaný není:
+URL už nemusí nikdo psát ručně. Položka menu nese URL stránky svého klíče
+a výsledek hledání nese URL svého záznamu:
+
+```php
+$item->getUrl();          // /admin/orders — doplní Workspace, null když neroutováno
+$result->url;             // /admin/orders/7 — z klíče a klíče záznamu
+```
+
+Obojí přichází z `ResolvesPageUrls`, na které odpovídá `wire-panels` a na které
+`wire-core` odpovídá `null`, když routing nevlastní žádný balíček. `null` je
+plnohodnotná odpověď: položka menu bez `href` se vykreslí a resource, který
+nedeklaruje stránky, je neodkazovaný záměrně. Položka nebo výsledek, který si URL
+pojmenuje sám, vždy vyhraje — externí odkaz nebo aplikace s vlastním URL schématem
+shellu.
+
+Sáhnout po tom přímo je totéž volání:
 
 ```php
 ResourceRoutes::urlFor('orders');                          // /admin/orders
@@ -603,7 +659,46 @@ a `describe-form` na to už odpovídají za stránky, které je vykreslují.
 | `ProvidesResourceInfolist` | `infolist(Infolist $infolist): Infolist` | `wire-core` |
 | `ProvidesRelationManagers` | `relationManagers(): array` | `wire-panels` |
 | `ProvidesNavigation` | `static navigation(): NavigationItem` | `wire-core` |
+| `ProvidesPages` | `static pages(): array` | `wire-core` |
+| `ConfiguresRoutes` | `static routeMiddleware(): array`, `static routeDomain(): ?string`, `static routePrefix(): ?string` | `wire-core` |
 | `GloballySearchable` | `static globallySearchableAttributes(): array`, `static toGlobalSearchResult(object): GlobalSearchResult` | `wire-core` |
+
+## Catalog API
+
+Všechno, co aplikace zaregistrovala, ať je to cokoli — jeden seznam, ze kterého
+čte menu, router i vyhledávací paleta.
+
+| Metoda | Vrací | Účel |
+| --- | --- | --- |
+| `all(): array` | `array<string, class-string>` | Každá registrovaná třída, klíčovaná, v pořadí registrace; dva zdroje hlásící se k jednomu klíči odmítne |
+| `implementing(string $capability): array` | `array<string, class-string>` | Jen ty, které implementují daný kontrakt — `ProvidesNavigation`, `ProvidesPages`, `GloballySearchable` |
+| `find(string $key): ?string` | `class-string\|null` | Třída s tímto klíčem |
+| `has(string $key): bool` | `bool` | Jestli je klíč registrovaný |
+
+Registr se stane jedním z jeho zdrojů tím, že implementuje `RegistrySource`
+(`registeredClasses(): array`) — tak se dashboard registr dostane ke všem třem
+povrchům, aniž by ho kterýkoli z nich importoval. Cokoli, co smí adresovat router,
+implementuje navíc `HasRegistryKey` (`static key(): string`) — `ProvidesPages` ho
+rozšiřuje, protože stránce, kterou nelze adresovat, nejde dát URL.
+
+## Routing API
+
+```php
+ResourceRoutes::all(array $only = [], array $except = []): array   // každý klíč, který deklaruje
+ResourceRoutes::for(string $class): array                          // jeden, nebo vyhodí výjimku
+ResourceRoutes::urlFor(string $key, string $page = 'index', array $parameters = []): ?string
+ResourceRoutes::urls(string $page = 'index'): array
+```
+
+`urlFor()` odpoví `null` ve dvou případech: když klíč nic neroutuje, a když routa
+potřebuje parametr, který tohle volání nedalo — třeba resource na doméně
+`{tenant}`. Obojí se vykreslí jako „bez odkazu", místo aby to shodilo menu.
+
+Z `wire-core` na to sáhni přes `ResolvesPageUrls`, na které odpovídá `wire-panels`
+a které odpoví `null`, když routing nevlastní žádný balíček. `RegistersPageRoutes`
+je druhá půlka toho seamu: `wire-core` ho zavolá ve chvíli, kdy jsou registry plné,
+což je jediný okamžik, kdy [routy z configu](#registrace-z-configu-misto-route-souboru)
+můžou přečíst kompletní katalog.
 
 ## ResourceRegistry API
 

@@ -52,6 +52,21 @@ Contracts:
 - `Foundation\Contracts\HasLabel`
 - `Foundation\Contracts\HasVisibility`
 
+Registration and routing (ADR 0026 — one seam for the menu, the router and the
+search palette; **never inject a registry into a new surface**):
+
+- `Foundation\Registration\Catalog` — everything registered, whatever kind it is;
+  `implementing($contract)` is how each surface filters to its own opt-in
+- `Foundation\Registration\Contracts\RegistrySource` — how a registry joins it
+- `Foundation\Registration\Contracts\HasRegistryKey` — the key everything is addressed by
+- `Foundation\Routing\Contracts\ProvidesPages` — which components render this
+- `Foundation\Routing\Contracts\ConfiguresRoutes` — its own prefix/domain/middleware
+- `Foundation\Routing\RoutePage` — one page's permission, middleware or URI
+- `Foundation\Routing\Contracts\ResolvesPageUrls` — where a key's page is;
+  `UnroutedPageUrls` answers null, `wire-panels` answers for real
+- `Foundation\Routing\Contracts\RegistersPageRoutes` — called by core once the
+  registries are full, so config-driven routing cannot read an empty catalogue
+
 Support:
 
 - `Foundation\Support\EvaluatesClosures`
@@ -207,7 +222,8 @@ Main areas:
 - `Query/`: planner, executor, clauses, definitions, joins, aliases
 - `Relations/`: relation AST and graph builder
 - `Resources/`: `ResourceRegistry`, `Workspace`, `DescribesResource` /
-  `ProvidesNavigation` contracts, `NavigationItem`
+  `ProvidesNavigation` contracts, `NavigationItem` (which carries a `url()`,
+  filled by `Workspace` from `ResolvesPageUrls`)
 - `Workflow/`: `WorkflowState` (the transition seam, ADR 0018)
 - `State/`: state container, hydrator, serializer, dirty tracking, path resolver
 - `Validation/`: validation pipeline and result

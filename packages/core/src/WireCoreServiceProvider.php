@@ -36,6 +36,10 @@ use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Icons\IconSet;
+use NyonCode\WireCore\Foundation\Registration\Catalog;
+use NyonCode\WireCore\Foundation\Routing\Contracts\RegistersPageRoutes;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
+use NyonCode\WireCore\Foundation\Routing\UnroutedPageUrls;
 use NyonCode\WireCore\Foundation\Support\IslandViewScope;
 use NyonCode\WireCore\Foundation\Support\PartialRenderHook;
 use NyonCode\WireCore\Foundation\Support\RecordVersion;
@@ -432,13 +436,27 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // with an empty menu on the request that renders it.
         $this->app->singleton(NavigationGroups::class);
 
-        // Assembled here rather than autowired, because what a menu is made of
-        // is this provider's decision and not the Workspace's: it takes a list
-        // of sources and never learns what kind of thing any of them holds.
-        // An application adding a source of its own binds its own list.
+        // Assembled here rather than autowired, because what an application is
+        // made of is this provider's decision and not the catalogue's: it takes
+        // a list of sources and never learns what kind of thing any of them
+        // holds. An application adding a source of its own binds its own list —
+        // one binding, read by the menu, the router and the search palette
+        // alike, which is the whole of ADR 0026.
+        $this->app->bind(Catalog::class, fn ($app): Catalog => new Catalog([
+            $app->make(ResourceRegistry::class),
+            $app->make(DashboardRegistry::class),
+        ]));
+
+        // Null by default, rebound by whoever owns routing. A menu and a search
+        // palette both need a URL and both are core, while the URL convention is
+        // `wire-panels` — so core declares the question and answers it with
+        // "nothing is routed" until a package that routes says otherwise.
+        $this->app->bindIf(ResolvesPageUrls::class, UnroutedPageUrls::class);
+
         $this->app->bind(Workspace::class, fn ($app): Workspace => new Workspace(
-            [$app->make(ResourceRegistry::class), $app->make(DashboardRegistry::class)],
+            $app->make(Catalog::class),
             $app->make(NavigationGroups::class),
+            $app->make(ResolvesPageUrls::class),
         ));
     }
 
@@ -455,6 +473,19 @@ class WireCoreServiceProvider extends PackageServiceProvider
         $this->app->make(DashboardRegistry::class)->registerMany(config('wire-core.dashboards', []));
 
         $this->bootModules();
+
+        // Last, and only if a package owns routing: this is the first moment the
+        // catalogue is complete, and an application that asked for its routes in
+        // config gets them from here rather than from a route file. Core does not
+        // learn how to route — it knows when, which is the half that cannot live
+        // in the routing package (ADR 0026 §5).
+        //
+        // In boot(), never in a booted() callback: Laravel installs a cached
+        // route collection from one of those, and a route registered after that
+        // either vanishes or is applied twice depending on callback order.
+        if ($this->app->bound(RegistersPageRoutes::class)) {
+            $this->app->make(RegistersPageRoutes::class)->register();
+        }
     }
 
     /**

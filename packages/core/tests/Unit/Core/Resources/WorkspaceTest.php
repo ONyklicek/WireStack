@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
-use NyonCode\WireCore\Core\Resources\Contracts\NavigationSource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
@@ -12,6 +11,9 @@ use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
 use NyonCode\WireCore\Core\Resources\Workspace;
 use NyonCode\WireCore\Exceptions\ResourceRegistrationException;
+use NyonCode\WireCore\Foundation\Registration\Catalog;
+use NyonCode\WireCore\Foundation\Registration\Contracts\RegistrySource;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 
 /*
  * The registered resources, arranged the way a menu shows them.
@@ -148,7 +150,7 @@ function wsWorkspaceWith(array $groups, string ...$resources): Workspace
     $declared = new NavigationGroups;
     $declared->registerMany($groups);
 
-    return new Workspace([$registry], $declared);
+    return new Workspace(new Catalog([$registry]), $declared);
 }
 
 /** @return array<int, string> */
@@ -321,12 +323,12 @@ it('returns the flat list in sort order, not registration order', function () {
 // =============================================================================
 
 /** A second source, standing in for the dashboard registry without importing L2. */
-final class WsExtraSource implements NavigationSource
+final class WsExtraSource implements RegistrySource
 {
     /** @param array<string, class-string> $classes */
     public function __construct(private array $classes) {}
 
-    public function navigableClasses(): array
+    public function registeredClasses(): array
     {
         return $this->classes;
     }
@@ -341,6 +343,15 @@ class WsReportPage implements ProvidesNavigation
     }
 }
 
+/** One that points somewhere of its own, which the fallback must not overwrite. */
+class WsLinkedPage implements ProvidesNavigation
+{
+    public static function navigation(): NavigationItem
+    {
+        return NavigationItem::make('Status')->url('https://status.example.com');
+    }
+}
+
 /** And one that names no entry label, having no plural to fall back to. */
 class WsUnnamedPage implements ProvidesNavigation
 {
@@ -351,13 +362,13 @@ class WsUnnamedPage implements ProvidesNavigation
 }
 
 it('lists entries from a source that holds no resources at all', function () {
-    // The whole point of NavigationSource: Workspace lives in L1 and a dashboard
+    // The whole point of RegistrySource: Workspace lives in L1 and a dashboard
     // is L2, so the menu cannot be built by teaching it what a dashboard is.
     $registry = new ResourceRegistry;
     $registry->register(WsOrderResource::class);
 
     $workspace = new Workspace(
-        [$registry, new WsExtraSource(['weekly-report' => WsReportPage::class])],
+        new Catalog([$registry, new WsExtraSource(['weekly-report' => WsReportPage::class])]),
         new NavigationGroups,
     );
 
@@ -373,7 +384,7 @@ it('leaves an entry unnamed when its class has no plural to fall back to', funct
     // Anything else in a menu names its own entry rather than reaching for a
     // general "what is this class called", which would be a third vocabulary.
     $workspace = new Workspace(
-        [new WsExtraSource(['unnamed' => WsUnnamedPage::class])],
+        new Catalog([new WsExtraSource(['unnamed' => WsUnnamedPage::class])]),
         new NavigationGroups,
     );
 
@@ -387,7 +398,7 @@ it('refuses two sources claiming one key', function () {
     $registry->register(WsOrderResource::class);
 
     $workspace = new Workspace(
-        [$registry, new WsExtraSource(['orders' => WsReportPage::class])],
+        new Catalog([$registry, new WsExtraSource(['orders' => WsReportPage::class])]),
         new NavigationGroups,
     );
 
@@ -395,12 +406,67 @@ it('refuses two sources claiming one key', function () {
         ->toThrow(ResourceRegistrationException::class);
 });
 
+it('points an entry at its key page, and leaves an unrouted one unlinked', function () {
+    // ADR 0026: the key is already what a router builds a URL from, so an
+    // application asked to repeat it in a hand-written map is maintaining the
+    // copy that drifts. Null stays null — an unrouted resource, or an
+    // application with no page package at all, still renders its menu.
+    $registry = new ResourceRegistry;
+    $registry->register(WsOrderResource::class);
+
+    $workspace = new Workspace(
+        new Catalog([$registry, new WsExtraSource(['weekly-report' => WsReportPage::class])]),
+        new NavigationGroups,
+        new class implements ResolvesPageUrls
+        {
+            public function urlFor(string $key, string $page = 'index', array $parameters = []): ?string
+            {
+                return $key === 'orders' ? '/admin/orders' : null;
+            }
+        },
+    );
+
+    $items = $workspace->items();
+
+    expect($items['orders']->getUrl())->toBe('/admin/orders')
+        ->and($items['weekly-report']->getUrl())->toBeNull();
+});
+
+it('leaves an entry that named its own url alone', function () {
+    // An external link, or a shell with a URL scheme of its own — the fallback
+    // only fills an entry that named nowhere, so this never overrides.
+    $workspace = new Workspace(
+        new Catalog([new WsExtraSource(['linked' => WsLinkedPage::class])]),
+        new NavigationGroups,
+        new class implements ResolvesPageUrls
+        {
+            public function urlFor(string $key, string $page = 'index', array $parameters = []): ?string
+            {
+                return '/should-not-win';
+            }
+        },
+    );
+
+    expect($workspace->items()['linked']->getUrl())->toBe('https://status.example.com');
+});
+
+it('links nothing when no package owns routing', function () {
+    // The default: core answers "nothing is routed" until something rebinds it,
+    // and a menu entry without an href already renders.
+    $registry = new ResourceRegistry;
+    $registry->register(WsOrderResource::class);
+
+    $workspace = new Workspace(new Catalog([$registry]), new NavigationGroups);
+
+    expect($workspace->items()['orders']->getUrl())->toBeNull();
+});
+
 it('reads sources in the order it was given them', function () {
     $registry = new ResourceRegistry;
     $registry->register(WsSettingResource::class);
 
     $workspace = new Workspace(
-        [new WsExtraSource(['weekly-report' => WsReportPage::class]), $registry],
+        new Catalog([new WsExtraSource(['weekly-report' => WsReportPage::class]), $registry]),
         new NavigationGroups,
     );
 

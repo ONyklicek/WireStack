@@ -114,8 +114,9 @@ return [
     | generates one.
     |
     | Registered separately from resources because they are different things
-    | that a menu happens to list side by side — the menu reads both through the
-    | same NavigationSource contract, and neither registry knows about the other.
+    | that a menu happens to list side by side — the menu, the router and the
+    | search palette all read both registries through the same Catalog, and
+    | neither registry knows about the other.
     |
     |   'dashboards' => [
     |       App\Dashboards\SalesDashboard::class,

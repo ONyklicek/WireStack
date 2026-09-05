@@ -8,6 +8,11 @@ use Illuminate\Support\Facades\Route;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
+use NyonCode\WireCore\Foundation\Routing\Contracts\RegistersPageRoutes;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
+use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
+use NyonCode\WirePanels\Routing\ConfiguredRoutes;
+use NyonCode\WirePanels\Routing\RegisteredPageUrls;
 use NyonCode\WirePanels\Routing\ResourceRoutes;
 
 /**
@@ -35,7 +40,21 @@ class WirePanelsServiceProvider extends PackageServiceProvider
         $packager
             ->name('WirePanels')
             ->hasShortName('wire-panels')
-            ->registeredPackage(fn () => $this->registerRouteMacros())
+            ->registeredPackage(function (): void {
+                $this->registerRouteMacros();
+
+                // Core asks "where does this key live?" and answers null until
+                // something owns routing. This package does, so it answers.
+                $this->app->bind(ResolvesPageUrls::class, RegisteredPageUrls::class);
+
+                // And core calls this once the registries are full, which is the
+                // only moment auto-registration can read a complete catalogue.
+                // Bound during register() so it is there before core boots,
+                // rather than depending on which provider the manifest lists
+                // first — see ConfiguredRoutes.
+                $this->app->bind(RegistersPageRoutes::class, ConfiguredRoutes::class);
+            })
+            ->hasConfig()
             ->hasViews()
             ->hasTranslations()
             ->hasAbout();
@@ -55,6 +74,12 @@ class WirePanelsServiceProvider extends PackageServiceProvider
     protected function registerRouteMacros(): void
     {
         Route::macro('wireResources', function (array $only = [], array $except = []): array {
+            // Both paths at once registers every page twice under one route
+            // name. Refused rather than resolved — see the exception for why.
+            if (app()->bound(ConfiguredRoutes::MARKER)) {
+                throw ResourceRoutingException::alreadyRegisteredFromConfig();
+            }
+
             return ResourceRoutes::all($only, $except);
         });
 

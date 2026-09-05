@@ -27,6 +27,10 @@ design decision, and it is what keeps the lifecycle honest:
    [resource registry](resources.md), the [dashboard registry](widgets.md) and
    the [navigation groups](resources.md#navigation-and-workspace).
 
+Both registries are sources of one [`Catalog`](resources.md#catalog-api), so a
+module's resources and dashboards reach the menu, the router and the global
+search palette from that single declaration.
+
 Step 3 is the provider's rather than the module's on purpose. A dashboard lives
 in the widgets layer and a module contract reaching for `DashboardRegistry`
 would be an import the architecture test refuses; naming a class costs no

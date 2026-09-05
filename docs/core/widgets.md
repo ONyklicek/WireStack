@@ -766,9 +766,10 @@ public static function navigation(): NavigationItem
 ```
 
 Nothing about `Workspace` knows what a dashboard is. `DashboardRegistry` is a
-`NavigationSource`, and a workspace lists whatever its sources hand it — which
+`RegistrySource`, and a workspace lists whatever the catalogue hands it — which
 is what lets a menu mix resources, dashboards and anything an application
-registers later. See [Resources](resources.md#navigation-and-workspace).
+registers later. The router reads the same catalogue, so a dashboard that
+declares `pages()` is routed by `Route::wireResources()` like any resource. See [Resources](resources.md#navigation-and-workspace).
 
 ### Dashboard API
 

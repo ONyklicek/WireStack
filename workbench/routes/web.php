@@ -293,8 +293,15 @@ foreach ($screens as $slug => $screen) {
 Route::get('/previews/global-search', fn () => view('previews.global-search'));
 
 // One route for every resource in the shell, plus the bare /previews/workspace
-// the index links to. The key→page map is the application's: the registry routes
-// nothing, so this array is where a menu entry becomes a URL.
+// the index links to.
+//
+// The key→page map above is the *shell's*, and stays hand-written for the reason
+// it always had: this URL scheme chooses what renders beside the sidebar, while
+// `wire.{key}.index` is a standalone page in the application's own layout, so
+// taking the menu's URLs from the router here would navigate out of the shell.
+// What changed with ADR 0026 is that an application without a shell needs no map
+// at all — `Workspace` fills each entry's URL from `ResolvesPageUrls`, which the
+// blade falls back to for any key this array does not cover.
 Route::get('/previews/workspace/{resource?}', function (?string $resource = null) use ($workspacePages, $standalonePages) {
     $resource ??= array_key_first($workspacePages);
 

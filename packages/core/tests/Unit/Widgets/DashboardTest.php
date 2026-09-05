@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-use NyonCode\WireCore\Core\Resources\Contracts\NavigationSource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Core\Resources\Workspace;
 use NyonCode\WireCore\Exceptions\ResourceRegistrationException;
+use NyonCode\WireCore\Foundation\Registration\Catalog;
+use NyonCode\WireCore\Foundation\Registration\Contracts\RegistrySource;
 use NyonCode\WireCore\Widgets\Dashboard;
 use NyonCode\WireCore\Widgets\DashboardRegistry;
 use NyonCode\WireCore\Widgets\Stat;
@@ -135,16 +136,16 @@ it('ignores config entries it cannot use', function () {
 
 it('is a navigation source, so a menu lists a dashboard beside a resource', function () {
     // The layer rule made visible: Workspace is L1 and this is L2, so the menu
-    // reads the registry through NavigationSource and never learns what a
+    // reads the registry through RegistrySource and never learns what a
     // dashboard is.
     $registry = new DashboardRegistry;
     $registry->register(DashSalesDashboard::class);
     $registry->register(DashOpsDashboard::class);
 
-    expect($registry)->toBeInstanceOf(NavigationSource::class)
-        ->and(array_keys($registry->navigableClasses()))->toBe(['dash-sales', 'dash-ops']);
+    expect($registry)->toBeInstanceOf(RegistrySource::class)
+        ->and(array_keys($registry->registeredClasses()))->toBe(['dash-sales', 'dash-ops']);
 
-    $nav = (new Workspace([$registry], new NavigationGroups))->navigation();
+    $nav = (new Workspace(new Catalog([$registry]), new NavigationGroups))->navigation();
 
     // Only the one declaring an entry is in the menu; the other is registered
     // and reachable, just not listed.

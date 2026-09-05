@@ -13,6 +13,7 @@ php artisan vendor:publish --tag=wire-core::config
 php artisan vendor:publish --tag=wire-forms::config
 php artisan vendor:publish --tag=wire-table::config
 php artisan vendor:publish --tag=wire-sortable::config
+php artisan vendor:publish --tag=wire-panels::config
 php artisan vendor:publish --tag=wire-boost::config
 ```
 
@@ -305,6 +306,39 @@ controller používá zabundlovanou kopii tak jako tak.
 Nastavte `user_key_type` na `uuid` nebo `ulid` (před spuštěním migrace pořadí sloupců), když váš model uživatele používá neceločíselný primární klíč.
 
 Viz [Instalace Sortable](sortable/installation.md).
+
+## Panels
+
+Konfigurace `wire-panels` rozhoduje, jestli framework zaregistruje stránky
+resource jako routy za tebe.
+
+```php
+return [
+    'routes' => [
+        'enabled' => false,
+        'prefix' => 'admin',
+        'middleware' => ['web', 'auth'],
+        'domain' => null,
+        'only' => [],
+        'except' => [],
+    ],
+];
+```
+
+`enabled` je `false`, protože referenční cestou zůstává `Route::wireResources()`
+ve tvém vlastním route souboru — tohle jsou tytéž argumenty skupiny, předané
+jednou, pro aplikaci, která si kvůli nim nechce držet route soubor.
+
+Dvě věci, které je dobré vědět, než to zapneš. Providery balíčků bootují dřív než
+tvoje vlastní, takže tyhle routy se matchují **před** vším v `routes/web.php`;
+aplikace s catch-all routou pod stejným prefixem dnes vyhraje a přestala by.
+A zapnout tohle *a zároveň* volat `Route::wireResources()` je odmítnuto, ne
+smířeno — zaregistrovalo by to každou stránku dvakrát pod jedním jménem routy.
+
+`only` / `except` berou registrované klíče: klíč resource nebo klíč dashboardu,
+tentýž, kterým je adresuje menu a `ResourceRoutes::urlFor()`.
+
+Viz [Resources](core/resources.md#routovani).
 
 ## Boost
 

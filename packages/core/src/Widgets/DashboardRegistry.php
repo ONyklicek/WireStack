@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Widgets;
 
-use NyonCode\WireCore\Core\Resources\Contracts\NavigationSource;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
 use NyonCode\WireCore\Exceptions\ResourceRegistrationException;
+use NyonCode\WireCore\Foundation\Registration\Contracts\RegistrySource;
 
 /**
  * Which dashboards this application has.
@@ -17,10 +17,12 @@ use NyonCode\WireCore\Exceptions\ResourceRegistrationException;
  * `Widgets/` (L2) and the resource registry is `Core/` (L1), so one registry
  * holding both would drag L2 into L1.
  *
- * What lets a menu list both anyway is {@see NavigationSource}: `Workspace`
- * reads sources, not registries, so it lists a dashboard without importing one.
+ * What lets a menu list both anyway is {@see RegistrySource}: `Workspace` reads
+ * the catalogue, not registries, so it lists a dashboard without importing one —
+ * and since ADR 0026 the router and the search palette read the same catalogue,
+ * so a dashboard is routable by the same helper a resource is.
  */
-final class DashboardRegistry implements NavigationSource
+final class DashboardRegistry implements RegistrySource
 {
     /** @var array<string, class-string<Dashboard>> Keyed by dashboard key. */
     private array $dashboards = [];
@@ -87,12 +89,13 @@ final class DashboardRegistry implements NavigationSource
     }
 
     /**
-     * The dashboards a menu may list — every registered one. Which of them
-     * appear is decided by `ProvidesNavigation`, as it is for resources.
+     * The dashboards this source offers — every registered one. Which of them
+     * are listed or routed is decided by `ProvidesNavigation` and
+     * `ProvidesPages`, as it is for resources.
      *
      * @return array<string, class-string>
      */
-    public function navigableClasses(): array
+    public function registeredClasses(): array
     {
         return $this->all();
     }

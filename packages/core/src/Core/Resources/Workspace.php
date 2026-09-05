@@ -5,38 +5,44 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Core\Resources;
 
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
-use NyonCode\WireCore\Core\Resources\Contracts\NavigationSource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
-use NyonCode\WireCore\Exceptions\ResourceRegistrationException;
+use NyonCode\WireCore\Foundation\Registration\Catalog;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
+use NyonCode\WireCore\Foundation\Routing\UnroutedPageUrls;
 
 /**
  * Everything registered for a menu, arranged the way a menu shows it.
  *
- * Reads its sources and the declared groups and nothing else, so it never
+ * Reads the catalogue and the declared groups and nothing else, so it never
  * instantiates anything: {@see ProvidesNavigation} is static for exactly this,
  * and a sidebar built from fifty resources composes no table and no form.
  *
  * It does not know what a resource is, and since V2.6 step 3 that is the point.
  * A dashboard belongs in a menu too, and `Widgets/` is a layer above this one —
- * so the classes arrive through {@see NavigationSource}, and whoever registers
- * them decides what they are.
+ * so the classes arrive through {@see Catalog}, and whoever registers them
+ * decides what they are.
  *
  * Deliberately small. It groups and orders entries; it owns no routing, no URL
  * shell and no layout, because a registry that held those would be a panel and
- * this layer is not one. What renders the result is the application's, and V2.6's
- * domain-module axis is expected to sit on top of this rather than replace it.
+ * this layer is not one. It does *ask* where a key's page is — {@see ResolvesPageUrls},
+ * answered by whoever owns routing and by nothing at all otherwise (ADR 0026) —
+ * which is the difference between holding a URL scheme and reading one. What
+ * renders the result is the application's, and V2.6's domain-module axis is
+ * expected to sit on top of this rather than replace it.
  */
 final readonly class Workspace
 {
     /**
-     * @param  array<int, NavigationSource>  $sources  Where the menu's classes come from, in the order they are read.
+     * @param  Catalog  $catalog  Everything registered, whatever kind it is.
+     * @param  ResolvesPageUrls  $urls  Where a key's page lives; answers null when nothing routes.
      */
     public function __construct(
-        private array $sources,
+        private Catalog $catalog,
         private NavigationGroups $groups,
+        private ResolvesPageUrls $urls = new UnroutedPageUrls,
     ) {}
 
     /**
@@ -111,29 +117,16 @@ final readonly class Workspace
      * Includes the ones that declare no entry: registered and listed are two
      * different questions, and this answers the first.
      *
+     * Delegated since ADR 0026, including the collision rule that used to be
+     * written out here. It was the right rule in the wrong place: it only ran
+     * when something rendered a menu, so an application that routes and searches
+     * while drawing its own navigation was the one case it could not protect.
+     *
      * @return array<string, class-string>
      */
     public function registered(): array
     {
-        $classes = [];
-
-        foreach ($this->sources as $source) {
-            foreach ($source->navigableClasses() as $key => $class) {
-                $existing = $classes[$key] ?? null;
-
-                // Two sources claiming one key is refused rather than resolved.
-                // Whichever way it were resolved, one entry would take another's
-                // place in the menu — and a menu that quietly lost a row is
-                // noticed on the day the row was the one someone needed.
-                if ($existing !== null && $existing !== $class) {
-                    throw ResourceRegistrationException::duplicateResourceKey($key, $existing, $class);
-                }
-
-                $classes[$key] = $class;
-            }
-        }
-
-        return $classes;
+        return $this->catalog->all();
     }
 
     /**
@@ -180,6 +173,18 @@ final readonly class Workspace
             // one would be a third vocabulary beside `HasLabel` and this.
             if ($item->getLabel() === null && is_subclass_of($class, DescribesResource::class)) {
                 $item->label($class::pluralLabel());
+            }
+
+            // And an entry that named nowhere is pointed at its key's own page,
+            // by the same rule and for the same reason: the key is already what
+            // the router builds a URL from, so an application asked to repeat it
+            // in a hand-written map is maintaining the copy that drifts.
+            //
+            // Still null for a key nothing routes — an unrouted resource, or an
+            // application with no page package at all — and a menu entry without
+            // an href already renders.
+            if ($item->getUrl() === null) {
+                $item->url($this->urls->urlFor($key));
             }
 
             $items[$key] = $item;

@@ -1360,6 +1360,36 @@ Otevřít znovu má smysl jen s konzumentem, který ty dva režimy sloučí — 
 shell sám poběží nad rutovanými stránkami. Do té doby je ruční mapa v routách
 správná odpověď a její komentář to říká.
 
+**Přepsáno 2026-09-04 (ADR 0026): důvod 1 byl vada, ne fakt.** Verdikt výše měl
+dvě půlky a jen jedna přežila. Druhá — dvě URL schémata jsou dvě různé stránky —
+platí dál a shell si mapu nechává. První ale nepopisovala vlastnost registru,
+popisovala **defekt**: `ResourceRoutes::urls()` nasvítilo jednu položku ze čtyř
+proto, že iterovalo `ResourceRegistry`, zatímco menu čte zdroje. Tři čtenáři,
+jeden se ptal seamu a dva sahaly přímo do jednoho registru
+(`ResourceRoutes.php:69`, `GlobalSearch.php:45`), takže dashboard šel vypsat
+a nešel ani zaroutovat, ani najít.
+
+Co se změnilo: `NavigationSource` → `Foundation\Registration\Contracts\RegistrySource`
+a nad ním `Catalog`, ze kterého čtou všichni tři; `ProvidesPages`, `RoutePage`
+a `ConfiguresRoutes` sestoupily do `Foundation/Routing/`, aby je mohl deklarovat
+i `Dashboard` (L2); `ResolvesPageUrls` jako měkký seam, kterým `Workspace`
+a `GlobalSearch` dostanou URL, aniž by core jmenoval panels. Pravidlo o unikátnosti
+klíče se přestěhovalo z `Workspace::registered()` do `Catalog` — dřív běželo, jen
+když někdo vykreslil menu, takže aplikace s vlastní navigací byla ta jediná, kterou
+nechránilo.
+
+**A našlo se, na co §4 neukázala: obě URL v `toGlobalSearchResult()` workbenche
+byly ručně psané řetězce a obě špatně** — `/previews/resource-view` bez záznamu
+a `/previews/workspace/tasks` mířící do shellu. `urlFor()` existovalo, bylo
+otestované a nešlo z `wire-core` dosáhnout, což je celý důvod, proč ho nepoužil
+ani autor. Teď se URL odvozuje z klíče a klíče záznamu; driver `global-search`
+(11/11) na to má krok, protože redirect na URL, která neexistuje, nevypadá jako
+nic, dokud někdo nestiskne Enter.
+
+Navíc přibyla volitelná registrace z configu (`wire-panels.routes.enabled`,
+default `false`) — tytéž tři argumenty skupiny, jen předané jednou; obě cesty
+naráz jsou odmítnuty.
+
 **Vyřešeno 2026-09-03 (druhý běh): systematické hledání duplicitních abstrakcí.**
 Neudělalo se čtením — sken tokenizuje `src/` a seskupí identická těla metod (viz
 §2). Deset skupin, z toho **čtyři sloučené**: asset routa ve čtyřech providerech

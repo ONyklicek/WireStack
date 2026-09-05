@@ -87,7 +87,6 @@ final class OrderResource implements DescribesResource, GloballySearchable
             recordKey: $record->getKey(),
             title: $record->number,
             subtitle: $record->customer.' · '.$record->status,
-            url: route('orders.show', $record),
             icon: 'outline:document-text',
         );
     }                                                              // [tl! focus:end]
@@ -103,11 +102,24 @@ renders many rows at once and must never call back into a resource per row:
 | `recordKey` | `int\|string` | The record's key, for `wire:key` and for the click |
 | `title` | `string` | The line a user reads first |
 | `subtitle` | `?string` | Context under it — a status, an email, a date |
-| `url` | `?string` | Where selecting it goes; `null` when a resource has no page for the record |
+| `url` | `?string` | Where selecting it goes; derived when omitted, `null` when nothing routes the record |
 | `icon` | `?string` | Icon name, resolved like every other icon in the framework |
 
+**Note what the example does not pass.** A row already carries the two halves of
+its own URL — the resource key and the record key — so the framework builds it:
+`urlFor($resourceKey, 'view', ['record' => $recordKey])`. Writing a path here is
+copying what the router already knows, and the copy is the one that goes stale:
+before this was derived, this repository's own workbench carried two literal
+paths and both were wrong — one pointed at a shell, the other at a page with no
+record in it, and nothing failed.
+
+Pass `url:` explicitly only when the row goes somewhere the convention does not
+reach — an external system, a report, a page outside the resource's own. An
+explicit URL always wins.
+
 A row with a `null` url still renders and is still arrowed through; Enter on it
-does nothing rather than navigating somewhere invented.
+does nothing rather than navigating somewhere invented. That is the answer for a
+resource that declares no pages.
 
 ## Mounting The Palette
 
@@ -207,7 +219,14 @@ $more = app(GlobalSearch::class)->search('INV-100', perResource: 20);
 ```php
 GlobalSearch::search(string $term, int $perResource = 5): array   // [key => GlobalSearchResult[]]
 GlobalSearch::PER_RESOURCE_LIMIT                                  // 5
+
+GlobalSearchResult::withUrl(?string $url): GlobalSearchResult     // the same row, pointed somewhere
 ```
+
+`search()` reads the [`Catalog`](resources.md#catalog-api), so the palette gains a
+resource the moment one is registered and never keeps a list of its own. A
+registered thing that opts into searching but has no model — a dashboard — is
+skipped rather than asked.
 
 The contract a resource implements:
 

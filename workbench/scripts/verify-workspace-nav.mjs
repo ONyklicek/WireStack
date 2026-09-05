@@ -117,7 +117,7 @@ try {
 
   // ── 2b. A menu entry that is not a resource at all ───────────────────────
   //
-  // The dashboard reaches this menu through NavigationSource, from its own
+  // The dashboard reaches this menu through RegistrySource, from its own
   // registry, without Workspace (L1) ever importing Widgets (L2).
   const insights = await inGroup('insights');
   check('a dashboard sits in the menu beside the resources', JSON.stringify(insights) === JSON.stringify(['Overview']), insights.join(', '));

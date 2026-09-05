@@ -9,15 +9,20 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
-use NyonCode\WireCore\Core\Resources\ResourceRegistry;
+use NyonCode\WireCore\Foundation\Registration\Catalog;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
+use NyonCode\WireCore\Foundation\Routing\UnroutedPageUrls;
 use NyonCode\WireCore\GlobalSearch\Contracts\GloballySearchable;
 
 /**
  * Searching every registered resource at once.
  *
- * Reads the {@see ResourceRegistry} and nothing else about the application, so
- * the palette gains a resource the moment one is registered and never has a list
- * of its own to fall out of date.
+ * Reads the {@see Catalog} and nothing else about the application, so the palette
+ * gains a resource the moment one is registered and never has a list of its own
+ * to fall out of date. The catalogue rather than a `ResourceRegistry` since ADR
+ * 0026: three surfaces read what an application registered, and two of them —
+ * this and the router — used to hold one registry each, which is how a thing
+ * could be in a menu and findable by neither.
  *
  * ## What it does not do
  *
@@ -42,7 +47,8 @@ class GlobalSearch
     public const PER_RESOURCE_LIMIT = 5;
 
     public function __construct(
-        private readonly ResourceRegistry $registry,
+        private readonly Catalog $catalog,
+        private readonly ResolvesPageUrls $urls = new UnroutedPageUrls,
     ) {}
 
     /**
@@ -65,22 +71,50 @@ class GlobalSearch
 
         $results = [];
 
-        foreach ($this->registry->all() as $resource) {
-            // The registry only holds DescribesResource, so this is the other
-            // half: identity and searchability are separate opt-ins, and a
-            // resource that never opted in is skipped rather than asked.
-            if (! is_subclass_of($resource, GloballySearchable::class)) {
+        foreach ($this->catalog->implementing(GloballySearchable::class) as $key => $resource) {
+            // Searchability is an opt-in; something to search is identity. The
+            // catalogue holds both resources and dashboards, and a dashboard has
+            // no records — so the model half is required here rather than
+            // assumed from the registry this list used to come from.
+            if (! is_subclass_of($resource, DescribesResource::class)) {
                 continue;
             }
 
             $found = $this->searchResource($resource, $term, $perResource);
 
             if ($found !== []) {
-                $results[$resource::key()] = $found;
+                // The catalogue's key, not the class's: one of them is what
+                // every other surface addresses this by, and they are only ever
+                // the same by agreement.
+                $results[$key] = array_map(
+                    fn (GlobalSearchResult $result): GlobalSearchResult => $this->linked($result, $key),
+                    $found,
+                );
             }
         }
 
         return $results;
+    }
+
+    /**
+     * A result pointed at the record's own page, unless it named somewhere else.
+     *
+     * The two halves of the URL are already on the row — the key and the record
+     * — so a resource that hand-wrote one was repeating what the router already
+     * knows, and this repository's own workbench proved how that ends: two
+     * literal paths, one of them carrying no record at all (ADR 0026).
+     *
+     * Applied here rather than inside `searchResource()` so a subclass that
+     * overrides the query still gets it, and after the resource has spoken so an
+     * explicit URL always wins.
+     */
+    protected function linked(GlobalSearchResult $result, string $key): GlobalSearchResult
+    {
+        if ($result->url !== null) {
+            return $result;
+        }
+
+        return $result->withUrl($this->urls->urlFor($key, 'view', ['record' => $result->recordKey]));
     }
 
     /**

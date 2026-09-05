@@ -342,6 +342,56 @@ there is nothing to do. It only becomes visible in two shapes:
 
 ---
 
+## Registration, routing and the menu
+
+One seam replaced three direct reads: the menu, the router and the ⌘K palette all
+read a [`Catalog`](core/resources.md#catalog-api) now, so registering something
+once reaches all three. Four names moved with it, and none of them kept an alias
+— this line has not shipped, and a compatibility shim for a rename nobody has
+depended on is cost without a reader.
+
+| Before | Now |
+| --- | --- |
+| `Core\Resources\Contracts\NavigationSource` | `Foundation\Registration\Contracts\RegistrySource` |
+| `NavigationSource::navigableClasses()` | `RegistrySource::registeredClasses()` |
+| `WirePanels\Resources\Contracts\ProvidesResourcePages` | `WireCore\Foundation\Routing\Contracts\ProvidesPages` |
+| `WirePanels\Resources\Contracts\ConfiguresResourceRoutes` | `WireCore\Foundation\Routing\Contracts\ConfiguresRoutes` |
+| `WirePanels\Routing\RoutePage` | `WireCore\Foundation\Routing\RoutePage` |
+
+The three routing names moved **down**, into `wire-core`, so that a `Dashboard`
+can declare pages too — a dashboard is routed by `Route::wireResources()` like any
+resource now. The URL convention did not move: `ResourceRoutes`, the URL shape and
+the `wire.{key}.{page}` names are still `wire-panels`.
+
+Two constructors changed, and both are resolved from the container, so only code
+that built them by hand is affected: `Workspace` takes a `Catalog`, its navigation
+groups and a `ResolvesPageUrls`; `GlobalSearch` takes a `Catalog` instead of a
+`ResourceRegistry`.
+
+**What you can now delete.** A menu entry carries the URL of its key's page and a
+search result carries the URL of its record, both filled from the key, so the
+hand-written `key => url` map every application kept can go:
+
+```php
+// before — a map beside the routes, and the copy that drifts
+<a href="{{ $urls[$key] }}">                                  // [tl! --]
+url: route('orders.show', $record),                           // [tl! --]
+
+// now
+<a @if($item->getUrl()) href="{{ $item->getUrl() }}" @endif>  // [tl! ++]
+// toGlobalSearchResult() passes no url at all                   [tl! ++]
+```
+
+An explicit `url:` or `->url()` still wins, for a row that goes somewhere the
+convention does not reach.
+
+**Routing is still opt-in**, and `Route::wireResources()` in your own route file
+is still the reference path. What is new beside it is
+[`wire-panels.routes`](configuration.md#panels) — the same group arguments handed
+over once — and it is off until you turn it on.
+
+---
+
 ## Selection and keyboard gestures
 
 A table's selection grew from a column of checkboxes into a full gesture surface

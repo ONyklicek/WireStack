@@ -7,7 +7,8 @@ namespace NyonCode\WireCore\GlobalSearch;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use NyonCode\WireCore\Core\Resources\ResourceRegistry;
+use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
+use NyonCode\WireCore\Foundation\Registration\Catalog;
 
 /**
  * The command palette: one search box over every registered resource.
@@ -144,21 +145,23 @@ class GlobalSearchPalette extends Component
      * resource makes them differ on purpose (`orders` / `Sales Orders`).
      *
      * One static call per group, not per row, and only for the groups that
-     * actually matched. A key with no resource behind it keeps the key, which is
-     * what a registry emptied between the search and the render leaves.
+     * actually matched. A key with nothing behind it keeps the key, which is
+     * what a catalogue emptied between the search and the render leaves.
      *
      * @return array<string, string>
      */
     public function groupLabels(): array
     {
-        $registry = app(ResourceRegistry::class);
+        $catalog = app(Catalog::class);
 
         $labels = [];
 
         foreach (array_keys($this->results) as $key) {
-            $resource = $registry->find($key);
+            $resource = $catalog->find($key);
 
-            $labels[$key] = $resource === null ? $key : $resource::pluralLabel();
+            $labels[$key] = is_subclass_of($resource, DescribesResource::class)
+                ? $resource::pluralLabel()
+                : $key;
         }
 
         return $labels;

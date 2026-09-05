@@ -419,10 +419,11 @@ Groups come back in `sort()` order, and groups that tie keep the order their
 first entry was registered in; within a group, entries follow the same rule.
 Hidden entries are dropped, and a hidden group takes its entries with it.
 
-Entries stay keyed by **resource key**, through the grouping and through the
-sort. That key is the other half of a menu row: `NavigationItem` deliberately
-holds no URL — a registry that held URLs would be a panel — so the application
-maps the key to whatever it routes that resource to:
+Entries stay keyed by **registered key**, through the grouping and through the
+sort, and each one carries the URL of that key's page. Nothing declares it: the
+*registry* still holds no URL — one that did would be a panel — but the menu asks
+where the key is routed and fills in the answer, which is `null` for a resource
+that declares no pages and for an application that routes nothing.
 
 ```blade
 @foreach($nav as $group)
@@ -431,7 +432,9 @@ maps the key to whatever it routes that resource to:
     @endif
 
     @foreach($group->getItems() as $key => $item)
-        <a href="{{ route('admin.'.$key) }}" wire:navigate>   {{-- [tl! focus] --}}
+        {{-- A registered entry with no page of its own still belongs in the
+             menu; it simply is not a link. --}}
+        <a @if($item->getUrl()) href="{{ $item->getUrl() }}" wire:navigate @endif>   {{-- [tl! focus] --}}
             {!! icon($item->getIcon()) !!}
             {{ $item->getLabel() }}
             <x-wire::badge :color="$item->getBadgeColor() ?? 'gray'">{{ $item->getBadge() }}</x-wire::badge>
@@ -440,15 +443,20 @@ maps the key to whatever it routes that resource to:
 @endforeach
 ```
 
+An entry may name its own destination with `->url('https://status.example.com')`,
+and what it names always wins — an external link, or an application whose shell
+has a URL scheme of its own.
+
 `Workspace::items()` answers the same question without the headings: every
-visible entry, flat, in `sort()` order, keyed by resource key — what a menu that
-draws no groups shows. Entries whose group is hidden are not in it either.
+visible entry, flat, in `sort()` order, keyed by registered key — what a menu
+that draws no groups shows. Entries whose group is hidden are not in it either.
 
 `Workspace` does not know what a resource is, and that is deliberate. Its
-entries come from any number of `NavigationSource`s — `ResourceRegistry` is one,
-`Widgets\DashboardRegistry` is another — so a menu mixes resources, dashboards
-and anything an application registers later without `Workspace` learning about
-any of them. Two sources claiming one key is refused rather than resolved: one
+entries come from the `Catalog`, which reads any number of `RegistrySource`s —
+`ResourceRegistry` is one, `Widgets\DashboardRegistry` is another — so a menu
+mixes resources, dashboards and anything an application registers later without
+`Workspace` learning about any of them. The router and the global search palette
+read the same catalogue, so registering something once reaches all three. Two sources claiming one key is refused rather than resolved: one
 entry would otherwise take the other's place, and a menu that quietly lost a row
 is noticed on the day that row mattered.
 
@@ -456,7 +464,13 @@ The label fallback above is a resource's, because `pluralLabel()` is a resource'
 word. Anything else in a menu names its own entry.
 
 Like the registry, `Workspace` owns no routing and no layout — what renders the
-menu is the application's.
+menu is the application's. It asks where a key is routed; it does not decide.
+
+| Method | Returns | Purpose |
+| --- | --- | --- |
+| `navigation()` | `array<string, NavigationGroup>` | The menu: groups in order, each carrying its entries |
+| `items()` | `array<string, NavigationItem>` | The same menu flat, without headings |
+| `registered()` | `array<string, class-string>` | Every class behind the menu, entry or not |
 
 ## Routing
 
@@ -465,11 +479,14 @@ changed: routes stay the application's. What the framework removes is the
 repetition — four `Route::get()` lines per resource, and a hand-written key→URL
 map beside them for the menu.
 
-A resource says which pages render it:
+A resource says which pages render it — and so may anything else the application
+registered, a dashboard included: the router reads the same catalogue the menu
+does, so being routable is a matter of declaring pages rather than of being a
+particular kind of thing.
 
 ```php
-use NyonCode\WirePanels\Resources\Contracts\ProvidesResourcePages;
-use NyonCode\WirePanels\Routing\RoutePage;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
+use NyonCode\WireCore\Foundation\Routing\RoutePage;
 
 public static function pages(): array   // [tl! focus:start]
 {
@@ -511,8 +528,8 @@ mistake rather than a choice.
 | `edit` | `{prefix}/{record}/edit` | `wire.{key}.edit` |
 | anything else | `{prefix}/{kind}` | `wire.{key}.{kind}` |
 
-`{prefix}` is the resource key, so the menu key and the URL agree without either
-being repeated. `{record}` is a **key**, not a bound model: the pages resolve
+`{prefix}` is the registered key, so the menu key and the URL agree without
+either being repeated. `{record}` is a **key**, not a bound model: the pages resolve
 their own record, which is what keeps a soft-delete scope, a tenant guard or a
 non-Eloquent source the page's decision rather than the router's.
 
@@ -524,7 +541,7 @@ it does for actions, columns and widgets, so `spatie/laravel-permission` and
 `nyoncode/laravel-permission-extended` keep working unchanged. A refusal happens
 in the router, before the page renders or a query runs.
 
-Per resource, `ConfiguresResourceRoutes` adds the three things that belong to one
+Per resource, `ConfiguresRoutes` adds the three things that belong to one
 resource rather than to the whole group:
 
 ```php
@@ -537,10 +554,50 @@ The domain parameter reaches your `TenantResolver` like any other route
 parameter. Tenancy itself stays where it is — a global scope over every query,
 not a routing concern; see [Authorization](../authorization.md).
 
+### Registering them from config instead
+
+The macro above stays the reference path. An application that wants the
+convention and would rather not keep a route file for it hands the same group
+arguments over once:
+
+```php
+// config/wire-panels.php
+'routes' => [
+    'enabled' => true,                    // [tl! focus]
+    'prefix' => 'admin',
+    'middleware' => ['web', 'auth'],
+    'domain' => null,
+    'only' => [],
+    'except' => [],
+],
+```
+
+Off by default, and deliberately so: package providers boot before your own, so
+these routes are matched **before** everything in `routes/web.php`. An
+application with a catch-all under the same prefix wins today and would stop
+winning, which is a decision to make rather than a default to inherit.
+
+Enabling this *and* calling `Route::wireResources()` yourself would register
+every page twice under one route name; that is refused rather than resolved, with
+a message naming both lines you could delete.
+
 ### Linking to them
 
-`ResourceRoutes::urlFor()` turns a key from the menu into a link, and answers
-`null` for a resource that is not routed:
+Nothing needs to write a URL by hand any more. A menu entry carries the URL of
+its key's page, and a search result carries the URL of its record's:
+
+```php
+$item->getUrl();          // /admin/orders — filled by Workspace, null when unrouted
+$result->url;             // /admin/orders/7 — from the key and the record key
+```
+
+Both come from `ResolvesPageUrls`, which `wire-panels` answers and `wire-core`
+answers with `null` when no package owns routing. Null is a real answer: a menu
+entry without an href still renders, and a resource that declares no pages is
+deliberately unlinked. An entry or a result that names its own URL always wins —
+an external link, or an application with a shell URL scheme of its own.
+
+Reaching for it directly is the same call:
 
 ```php
 ResourceRoutes::urlFor('orders');                          // /admin/orders
@@ -605,7 +662,46 @@ would cost exactly what the static half exists to avoid, and `describe-table` an
 | `ProvidesResourceInfolist` | `infolist(Infolist $infolist): Infolist` | `wire-core` |
 | `ProvidesRelationManagers` | `relationManagers(): array` | `wire-panels` |
 | `ProvidesNavigation` | `static navigation(): NavigationItem` | `wire-core` |
+| `ProvidesPages` | `static pages(): array` | `wire-core` |
+| `ConfiguresRoutes` | `static routeMiddleware(): array`, `static routeDomain(): ?string`, `static routePrefix(): ?string` | `wire-core` |
 | `GloballySearchable` | `static globallySearchableAttributes(): array`, `static toGlobalSearchResult(object): GlobalSearchResult` | `wire-core` |
+
+## Catalog API
+
+Everything an application registered, whatever kind it is — the one list the
+menu, the router and the search palette read.
+
+| Method | Returns | Purpose |
+| --- | --- | --- |
+| `all(): array` | `array<string, class-string>` | Every registered class, keyed, in registration order; refuses two sources claiming one key |
+| `implementing(string $capability): array` | `array<string, class-string>` | Only those implementing one contract — `ProvidesNavigation`, `ProvidesPages`, `GloballySearchable` |
+| `find(string $key): ?string` | `class-string\|null` | The class with this key |
+| `has(string $key): bool` | `bool` | Whether a key is registered |
+
+A registry becomes one of its sources by implementing `RegistrySource`
+(`registeredClasses(): array`), which is how a dashboard registry reaches all
+three surfaces without any of them importing it. Anything the router may address
+also implements `HasRegistryKey` (`static key(): string`) — `ProvidesPages`
+extends it, because a page that cannot be addressed cannot be given a URL.
+
+## Routing API
+
+```php
+ResourceRoutes::all(array $only = [], array $except = []): array   // every declaring key
+ResourceRoutes::for(string $class): array                          // one, or throws
+ResourceRoutes::urlFor(string $key, string $page = 'index', array $parameters = []): ?string
+ResourceRoutes::urls(string $page = 'index'): array
+```
+
+`urlFor()` answers `null` twice over: when nothing routes the key, and when the
+route needs a parameter this call did not give — a resource on a `{tenant}`
+domain, say. Both render as "no link" rather than taking a menu down.
+
+From `wire-core`, reach it through `ResolvesPageUrls` instead, which `wire-panels`
+answers and which answers `null` when no package owns routing. `RegistersPageRoutes`
+is the other half of that seam: `wire-core` calls it once the registries are full,
+which is the only moment [config-declared routes](#registering-them-from-config-instead)
+can read a complete catalogue.
 
 ## ResourceRegistry API
 

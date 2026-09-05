@@ -196,7 +196,32 @@ try {
   check('escape closes the palette', closed);
   await shot('04-closed');
 
-  // ── 8. Nothing threw ─────────────────────────────────────────────────────
+  // ── 8. Enter follows the URL nothing wrote by hand ───────────────────────
+  //
+  // The one thing only a browser answers about ADR 0026: a result's URL is now
+  // derived from the resource key and the record key through `ResolvesPageUrls`,
+  // instead of being a literal path typed into `toGlobalSearchResult()`. Both
+  // literals this workbench used to carry were wrong in a way no test saw — one
+  // pointed at a preview shell, the other at a page with no record in it — and a
+  // redirect to a URL that does not exist looks like nothing at all until
+  // someone presses Enter.
+  await eval_(`document.querySelector('[data-testid="global-search-trigger"]').click()`);
+  await until(`(() => {
+    const el = document.querySelector('[data-testid="global-search"]');
+    return !! el && getComputedStyle(el).display !== 'none';
+  })()`, 'the palette to reopen');
+  await type('INV');
+  await until(`document.querySelectorAll('[data-testid="global-search-result"]').length > 0`, 'results');
+  await key('Enter', 'Enter', 13);
+
+  const landed = await until(
+    `/\\/routed\\/invoices\\/\\d+$/.test(location.pathname)`,
+    'the record page the palette resolved',
+  );
+  check('Enter follows a URL derived from the record, not a literal', landed, await eval_('location.pathname'));
+  await shot('05-followed');
+
+  // ── 9. Nothing threw ─────────────────────────────────────────────────────
   const alive = await eval_(`(() => { try { return typeof window.Alpine.$data(document.body) === 'object' ? 'ok' : 'ok'; } catch (e) { return String(e.message ?? e); } })()`);
   check('Alpine is still alive', alive === 'ok', alive);
 

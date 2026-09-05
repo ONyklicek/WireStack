@@ -339,6 +339,55 @@ případě ho `composer update "nyoncode/wire-*"` posune se vším ostatním a n
 
 ---
 
+## Registrace, routing a menu
+
+Jeden seam nahradil tři přímá čtení: menu, router i ⌘K paleta teď čtou
+[`Catalog`](core/resources.md#catalog-api), takže jedna registrace obslouží
+všechny tři. Čtyři jména se s tím přesunula a žádné si nenechalo alias — tahle
+linie ještě nevyšla a compat vrstva pro přejmenování, na kterém nikdo nevisel,
+je náklad bez čtenáře.
+
+| Dřív | Teď |
+| --- | --- |
+| `Core\Resources\Contracts\NavigationSource` | `Foundation\Registration\Contracts\RegistrySource` |
+| `NavigationSource::navigableClasses()` | `RegistrySource::registeredClasses()` |
+| `WirePanels\Resources\Contracts\ProvidesResourcePages` | `WireCore\Foundation\Routing\Contracts\ProvidesPages` |
+| `WirePanels\Resources\Contracts\ConfiguresResourceRoutes` | `WireCore\Foundation\Routing\Contracts\ConfiguresRoutes` |
+| `WirePanels\Routing\RoutePage` | `WireCore\Foundation\Routing\RoutePage` |
+
+Ta tři routovací jména se přesunula **dolů**, do `wire-core`, aby stránky mohl
+deklarovat i `Dashboard` — dashboard teď `Route::wireResources()` zaroutuje stejně
+jako resource. URL konvence se nepřesunula: `ResourceRoutes`, tvar URL i jména
+`wire.{key}.{page}` zůstávají ve `wire-panels`.
+
+Změnily se dva konstruktory a oba se resolvují z kontejneru, takže se to týká jen
+kódu, který si je stavěl ručně: `Workspace` bere `Catalog`, své navigační skupiny
+a `ResolvesPageUrls`; `GlobalSearch` bere `Catalog` místo `ResourceRegistry`.
+
+**Co teď můžeš smazat.** Položka menu nese URL stránky svého klíče a výsledek
+hledání URL svého záznamu, obojí doplněné z klíče — takže ručně psaná mapa
+`klíč => url`, kterou si držela každá aplikace, může pryč:
+
+```php
+// dřív — mapa vedle rout, a ta kopie, co zastará
+<a href="{{ $urls[$key] }}">                                  // [tl! --]
+url: route('orders.show', $record),                           // [tl! --]
+
+// teď
+<a @if($item->getUrl()) href="{{ $item->getUrl() }}" @endif>  // [tl! ++]
+// toGlobalSearchResult() nepředává url vůbec                    [tl! ++]
+```
+
+Explicitní `url:` nebo `->url()` pořád vyhraje — pro řádek, který vede někam, kam
+konvence nedosáhne.
+
+**Routing je pořád opt-in** a `Route::wireResources()` ve tvém route souboru
+zůstává referenční cestou. Novinka vedle ní je
+[`wire-panels.routes`](configuration.md#panels) — tytéž argumenty skupiny předané
+jednou — a je vypnutá, dokud to nezapneš.
+
+---
+
 ## Výběr a klávesová gesta
 
 Z výběru v tabulce se stala plnohodnotná sada gest, ne jen sloupec zaškrtávátek

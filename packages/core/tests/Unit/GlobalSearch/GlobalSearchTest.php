@@ -12,6 +12,9 @@ use Livewire\Livewire;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
+use NyonCode\WireCore\Foundation\Registration\Catalog;
+use NyonCode\WireCore\Foundation\Registration\Contracts\RegistrySource;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\GlobalSearch\Contracts\GloballySearchable;
 use NyonCode\WireCore\GlobalSearch\GlobalSearch;
 use NyonCode\WireCore\GlobalSearch\GlobalSearchPalette;
@@ -94,12 +97,14 @@ class GsModellessResource implements DescribesResource, GloballySearchable
     }
 }
 
-function gsSearch(array $resources = [GsOrderResource::class]): GlobalSearch
+function gsSearch(array $resources = [GsOrderResource::class], ?ResolvesPageUrls $urls = null): GlobalSearch
 {
     $registry = new ResourceRegistry;
     $registry->registerMany($resources);
 
-    return new GlobalSearch($registry);
+    return $urls === null
+        ? new GlobalSearch(new Catalog([$registry]))
+        : new GlobalSearch(new Catalog([$registry]), $urls);
 }
 
 beforeEach(function () {
@@ -285,6 +290,28 @@ it('searches through whatever the container says a search is', function () {
         ->assertSee('widened: anything');
 });
 
+/** Results under a key nothing in the catalogue stands behind. */
+class GsStrayKeySearch extends GlobalSearch
+{
+    public function search(string $term, int $perResource = self::PER_RESOURCE_LIMIT): array
+    {
+        return ['gs-stray' => [new GlobalSearchResult('gs-stray', 1, 'orphan row')]];
+    }
+}
+
+it('keeps the raw key as a heading when nothing in the catalogue answers for it', function () {
+    // `pluralLabel()` is the plural human name and the key is an identifier, so
+    // the heading is the label whenever there is one. A catalogue emptied
+    // between the search and the render leaves neither — and a heading is not
+    // worth a crash, so the key stands in.
+    app()->bind(GlobalSearch::class, GsStrayKeySearch::class);
+
+    Livewire::test(GlobalSearchPalette::class)
+        ->set('term', 'anything')
+        ->assertSee('gs-stray')
+        ->assertSee('orphan row');
+});
+
 it('renders the results it was asked for', function () {
     app()->instance(ResourceRegistry::class, tap(new ResourceRegistry)->register(GsOrderResource::class));
 
@@ -411,3 +438,86 @@ class GsUrllessResource implements DescribesResource, GloballySearchable
         return new GlobalSearchResult('gs-urlless', $record->getKey(), $record->reference);
     }
 }
+
+it('points a result at the record page, without the resource writing a path', function () {
+    // The defect ADR 0026 was written from: a resource carries the two halves of
+    // the URL already — its key and the record's key — so hand-writing the path
+    // is copying what the router knows. Both literals this repository's own
+    // workbench carried were wrong: one pointed at a preview shell, the other at
+    // a page with no record in it, and nothing failed.
+    DB::table('gs_orders')->insert(['reference' => 'INV-9', 'status' => 'open']);
+
+    $urls = new class implements ResolvesPageUrls
+    {
+        public function urlFor(string $key, string $page = 'index', array $parameters = []): ?string
+        {
+            return '/admin/'.$key.'/'.$page.'/'.$parameters['record'];
+        }
+    };
+
+    $results = gsSearch([GsUrllessResource::class], $urls)->search('INV-9');
+    $record = DB::table('gs_orders')->where('reference', 'INV-9')->first();
+
+    // Keyed by the catalogue's key, which is what every other surface addresses
+    // this by — not by whatever the result claims for itself.
+    expect($results['gs-orders'][0]->url)->toBe('/admin/gs-orders/view/'.$record->id);
+});
+
+it('leaves a result that named its own url alone', function () {
+    // An explicit URL always wins: a resource pointing somewhere outside the
+    // convention is a decision, not an omission.
+    DB::table('gs_orders')->insert(['reference' => 'INV-8', 'status' => 'open']);
+
+    $urls = new class implements ResolvesPageUrls
+    {
+        public function urlFor(string $key, string $page = 'index', array $parameters = []): ?string
+        {
+            return '/should-not-win';
+        }
+    };
+
+    $results = gsSearch([GsOrderResource::class], $urls)->search('INV-8');
+
+    expect($results['gs-orders'][0]->url)->not->toBe('/should-not-win');
+});
+
+/** Registered, searchable by declaration, and with no records to search. */
+class GsRecordlessThing implements GloballySearchable
+{
+    public static function key(): string
+    {
+        return 'gs-recordless';
+    }
+
+    public static function globallySearchableAttributes(): array
+    {
+        return ['title'];
+    }
+
+    public static function toGlobalSearchResult(object $record): GlobalSearchResult
+    {
+        return new GlobalSearchResult('gs-recordless', 1, 'never');
+    }
+}
+
+it('skips a searchable thing that has no records to search', function () {
+    // The catalogue holds dashboards too, and a dashboard has no model. Before
+    // ADR 0026 this list came from the resource registry and the question could
+    // not arise; now searchability is an opt-in anything may declare, so having
+    // something to search has to be checked rather than assumed.
+    $source = new class implements RegistrySource
+    {
+        public function registeredClasses(): array
+        {
+            return ['gs-recordless' => GsRecordlessThing::class];
+        }
+    };
+
+    expect((new GlobalSearch(new Catalog([$source])))->search('never'))->toBe([]);
+});
+
+it('leaves a result unlinked when nothing owns routing', function () {
+    DB::table('gs_orders')->insert(['reference' => 'INV-7', 'status' => 'open']);
+
+    expect(gsSearch([GsUrllessResource::class])->search('INV-7')['gs-orders'][0]->url)->toBeNull();
+});

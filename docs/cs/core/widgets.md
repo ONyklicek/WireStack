@@ -767,8 +767,10 @@ public static function navigation(): NavigationItem
 ```
 
 `Workspace` přitom vůbec neví, co je dashboard. `DashboardRegistry` je
-`NavigationSource` a workspace vypisuje to, co mu zdroje podají — díky tomu může
+`RegistrySource` a workspace vypisuje to, co mu katalog podá — díky tomu může
 menu míchat resources, dashboardy a cokoli, co aplikace zaregistruje později.
+Router čte tentýž katalog, takže dashboard, který deklaruje `pages()`, zaroutuje
+`Route::wireResources()` stejně jako resource.
 Viz [Resources](resources.md#navigace-a-workspace).
 
 ### Dashboard API

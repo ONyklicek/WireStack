@@ -8,12 +8,14 @@ use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
 use NyonCode\WireCore\GlobalSearch\Contracts\GloballySearchable;
 use NyonCode\WireCore\GlobalSearch\GlobalSearchResult;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesResourceTable;
 use NyonCode\WireTable\Columns\BadgeColumn;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Table;
+use Workbench\App\Livewire\Resources\ListTasks;
 use Workbench\App\Models\Task;
 
 /**
@@ -30,7 +32,7 @@ use Workbench\App\Models\Task;
  * form, no infolist, no relation manager. A resource declaring only the surfaces
  * it has is the ordinary case, and the list page must not care.
  */
-final class TaskResource implements DescribesResource, GloballySearchable, ProvidesNavigation, ProvidesResourceTable
+final class TaskResource implements DescribesResource, GloballySearchable, ProvidesNavigation, ProvidesPages, ProvidesResourceTable
 {
     use DescribesRecords;
 
@@ -44,6 +46,19 @@ final class TaskResource implements DescribesResource, GloballySearchable, Provi
         return ['title', 'owner_name'];
     }
 
+    /**
+     * A list and nothing else — which is the point of declaring pages at all.
+     *
+     * The URL a search result and a menu entry carry is built from this: neither
+     * names a path, `ResolvesPageUrls` answers from the route this registers, and
+     * a resource that declares nothing here (see {@see DocumentResource}) simply
+     * has no link anywhere. That is the whole of ADR 0026 on one resource.
+     */
+    public static function pages(): array
+    {
+        return ['index' => ListTasks::class];
+    }
+
     public static function toGlobalSearchResult(object $record): GlobalSearchResult
     {
         return new GlobalSearchResult(
@@ -51,7 +66,6 @@ final class TaskResource implements DescribesResource, GloballySearchable, Provi
             recordKey: $record->getKey(),
             title: $record->title,
             subtitle: $record->owner_name.' · '.$record->status,
-            url: '/previews/workspace/tasks',
             icon: 'outline:check-circle',
         );
     }

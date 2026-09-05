@@ -9,6 +9,7 @@ use NyonCode\WireCore\Foundation\Concerns\HasIcon;
 use NyonCode\WireCore\Foundation\Concerns\HasLabel;
 use NyonCode\WireCore\Foundation\Concerns\HasSortOrder;
 use NyonCode\WireCore\Foundation\Concerns\HasVisibility;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 
 /**
@@ -29,9 +30,20 @@ use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
  *       ->sort(10)
  *       ->badge(fn () => Order::whereNull('shipped_at')->count());
  *
- * Deliberately not a route. A registry that held URLs would be a panel, and this
- * layer is not one — the entry names itself and the application decides where it
- * points.
+ * ## Where it points
+ *
+ * This used to say "deliberately not a route", and the reason behind that is
+ * unchanged: a *registry* that held URLs would be a panel, and this layer is not
+ * one. What changed in ADR 0026 is who fills the URL in. Nothing declares one
+ * here unless it wants to — `Workspace` asks {@see ResolvesPageUrls} for the
+ * key's page and fills what it gets, which is `null` in an application that
+ * routes nothing and stays null for a resource that declares no pages.
+ *
+ * So the entry still names itself and still declares no route. It simply stops
+ * making every application write the key→URL map by hand, which is what the
+ * absence actually cost — this repository's own workbench wrote three of them.
+ *
+ *   ->url('https://status.example.com')   // an entry that is not a page at all
  */
 final class NavigationItem
 {
@@ -42,6 +54,8 @@ final class NavigationItem
     use HasVisibility;
 
     protected string|Closure|null $group = null;
+
+    protected string|Closure|null $url = null;
 
     protected mixed $badge = null;
 
@@ -94,6 +108,27 @@ final class NavigationItem
         $value = $this->evaluate($this->group);
 
         return is_string($value) ? $value : null;
+    }
+
+    /**
+     * Where this entry goes, when it is not the registered key's own page.
+     *
+     * An external link, a page outside the convention, or a shell that renders
+     * its own URL scheme beside the menu. What is set here wins: the fallback
+     * only fills an entry that named nowhere.
+     */
+    public function url(string|Closure|null $url): self
+    {
+        $this->url = $url;
+
+        return $this;
+    }
+
+    public function getUrl(): ?string
+    {
+        $value = $this->evaluate($this->url);
+
+        return is_string($value) && $value !== '' ? $value : null;
     }
 
     /**

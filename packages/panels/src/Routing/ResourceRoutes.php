@@ -4,18 +4,25 @@ declare(strict_types=1);
 
 namespace NyonCode\WirePanels\Routing;
 
+use Illuminate\Routing\Exceptions\UrlGenerationException;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Route as RouteFacade;
-use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
-use NyonCode\WireCore\Core\Resources\ResourceRegistry;
+use NyonCode\WireCore\Foundation\Registration\Catalog;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ConfiguresRoutes;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
+use NyonCode\WireCore\Foundation\Routing\RoutePage;
 use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
-use NyonCode\WirePanels\Resources\Contracts\ConfiguresResourceRoutes;
-use NyonCode\WirePanels\Resources\Contracts\ProvidesResourcePages;
 
 /**
- * Turns a resource's declared pages into routes — and owns nothing else.
+ * Turns declared pages into routes — and owns nothing else.
  *
- * The registry deliberately holds no URL shell (ADR 0020 §5), and that stays
+ * Reads the {@see Catalog}, not a registry, so what it can route is whatever an
+ * application registered: a resource, a dashboard, or the next kind of thing a
+ * source holds. Before ADR 0026 it held a `ResourceRegistry`, which is why three
+ * of four entries in a real menu could not be linked anywhere — they were
+ * registered, and this could not see them.
+ *
+ * The catalogue deliberately holds no URL shell (ADR 0020 §5), and that stays
  * true: this does not route anything by itself, it registers what an application
  * asks it to, inside whatever group the application put it in. A
  * `Route::domain(…)->middleware(…)->prefix(…)->group()` wrapping the call still
@@ -33,7 +40,7 @@ use NyonCode\WirePanels\Resources\Contracts\ProvidesResourcePages;
  *   GET  {prefix}/{record}/edit      → edit     named wire.{key}.edit
  *   GET  {prefix}/{anything-else}    → that page, at its own name
  *
- * `{prefix}` is the resource key unless {@see ConfiguresResourceRoutes} says
+ * `{prefix}` is the registered key unless {@see ConfiguresRoutes} says
  * otherwise, so the menu key and the URL agree without anyone repeating either.
  *
  * The record parameter is a **key**, not a bound model: the pages resolve their
@@ -56,17 +63,22 @@ final class ResourceRoutes
     ];
 
     /**
-     * Register every registered resource that declares pages.
+     * Register everything in the catalogue that declares pages.
      *
-     * @param  array<int, string>  $only  Resource keys to include; empty means all.
-     * @param  array<int, string>  $except  Resource keys to skip.
+     * A class that names no pages is registered and routable by hand, just not
+     * routed here — what an internal or nested resource wants, and the same
+     * opt-in rule the menu follows. {@see Catalog::implementing()} is that
+     * filter, so this method never repeats it.
+     *
+     * @param  array<int, string>  $only  Keys to include; empty means all.
+     * @param  array<int, string>  $except  Keys to skip.
      * @return array<int, Route>
      */
     public static function all(array $only = [], array $except = []): array
     {
         $routes = [];
 
-        foreach (app(ResourceRegistry::class)->all() as $key => $resource) {
+        foreach (app(Catalog::class)->implementing(ProvidesPages::class) as $key => $class) {
             if ($only !== [] && ! in_array($key, $only, true)) {
                 continue;
             }
@@ -75,28 +87,21 @@ final class ResourceRoutes
                 continue;
             }
 
-            // A resource that names no pages is registered and routable by hand,
-            // just not routed here — what an internal or nested resource wants,
-            // and the same opt-in rule the menu follows.
-            if (! is_subclass_of($resource, ProvidesResourcePages::class)) {
-                continue;
-            }
-
-            $routes = [...$routes, ...self::for($resource)];
+            $routes = [...$routes, ...self::for($class)];
         }
 
         return $routes;
     }
 
     /**
-     * Register one resource's pages.
+     * Register one registered class's pages.
      *
-     * @param  class-string<DescribesResource>  $resource
+     * @param  class-string  $resource
      * @return array<int, Route>
      */
     public static function for(string $resource): array
     {
-        if (! is_subclass_of($resource, ProvidesResourcePages::class)) {
+        if (! is_subclass_of($resource, ProvidesPages::class)) {
             throw ResourceRoutingException::declaresNoPages($resource);
         }
 
@@ -131,11 +136,21 @@ final class ResourceRoutes
     }
 
     /**
-     * The URL of a resource's page, or null when it is not routed here.
+     * The URL of a registered class's page, or null when it is not routed here.
      *
      * What a menu needs and what used to be a hand-written map in every
-     * application: the workspace keys its entries by resource key, and this
+     * application: the workspace keys its entries by the same key, and this
      * turns that key into a link when — and only when — a route exists for it.
+     * Reached from `wire-core` through `ResolvesPageUrls`, which is what lets a
+     * menu entry and a search result carry a URL without core naming this class.
+     *
+     * Null covers both ways a key can fail to be a link: nothing routes it, and
+     * nothing here can finish the URL. The second is not hypothetical — a
+     * resource on a `{tenant}.example.com` domain, or a page at a `uri()` with a
+     * segment of its own, has a route that cannot be built without a parameter
+     * this caller did not give. Laravel throws `UrlGenerationException` for
+     * that, and a menu asking every key what its URL is would take the page down
+     * over one entry it would have rendered without an href anyway.
      *
      * @param  array<string, mixed>  $parameters
      */
@@ -143,11 +158,19 @@ final class ResourceRoutes
     {
         $name = "wire.{$key}.{$page}";
 
-        return RouteFacade::has($name) ? route($name, $parameters) : null;
+        if (! RouteFacade::has($name)) {
+            return null;
+        }
+
+        try {
+            return route($name, $parameters);
+        } catch (UrlGenerationException) {
+            return null;
+        }
     }
 
     /**
-     * Every routed resource key mapped to its index URL.
+     * Every routed key mapped to its index URL.
      *
      * @return array<string, string>
      */
@@ -155,7 +178,7 @@ final class ResourceRoutes
     {
         $urls = [];
 
-        foreach (app(ResourceRegistry::class)->all() as $key => $resource) {
+        foreach (array_keys(app(Catalog::class)->all()) as $key) {
             $url = self::urlFor($key, $page);
 
             if ($url !== null) {
@@ -171,7 +194,7 @@ final class ResourceRoutes
      */
     private static function prefixFor(string $resource, string $key): string
     {
-        return is_subclass_of($resource, ConfiguresResourceRoutes::class)
+        return is_subclass_of($resource, ConfiguresRoutes::class)
             ? ($resource::routePrefix() ?? $key)
             : $key;
     }
@@ -182,7 +205,7 @@ final class ResourceRoutes
      */
     private static function middlewareFor(string $resource): array
     {
-        return is_subclass_of($resource, ConfiguresResourceRoutes::class)
+        return is_subclass_of($resource, ConfiguresRoutes::class)
             ? $resource::routeMiddleware()
             : [];
     }
@@ -192,7 +215,7 @@ final class ResourceRoutes
      */
     private static function domainFor(string $resource): ?string
     {
-        return is_subclass_of($resource, ConfiguresResourceRoutes::class)
+        return is_subclass_of($resource, ConfiguresRoutes::class)
             ? $resource::routeDomain()
             : null;
     }
