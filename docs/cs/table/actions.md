@@ -261,6 +261,50 @@ use NyonCode\WireCore\Actions\ActionGroup;
 ])
 ```
 
+## Jak sloupec udržet v zorném poli
+
+Tabulka dost široká na vodorovný scroll odsune ze zorného pole nejdřív sloupec
+akcí — protože ten stojí na konci řádku. `stickyActions()` ho připne k hraně
+tabulky, takže tlačítka zůstanou dosažitelná, ať je čtenář odscrollovaný jakkoli
+daleko:
+
+```php
+use Livewire\Component;
+use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Actions\DeleteAction;
+use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\Concerns\WithTable;
+use NyonCode\WireTable\Table;
+
+class ListInvoices extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(Invoice::class)
+            ->columns([
+                TextColumn::make('number')->sortable(),
+                TextColumn::make('customer.name')->label('Zákazník'),
+                TextColumn::make('issued_at')->date(),
+                TextColumn::make('due_at')->date(),
+                TextColumn::make('total')->money('CZK'),
+            ])
+            ->actions([
+                Action::make('edit')->icon('pencil')->url(fn (Invoice $record) => route('invoices.edit', $record)),
+                DeleteAction::make(),
+            ])
+            ->striped()
+            ->stickyActions(); // [tl! focus]
+    }
+}
+```
+
+Připnutý sloupec se řídí `actionsPosition()`, místo aby si bral vlastní hranu, a
+nese si s sebou zebrování, hover i výběr řádku — mechanismus za tím a jediný
+případ, který nepokrývá, jsou v [Přehledu tabulek](overview.md#akce).
+
 ## Související dokumentace
 
 - [Přehled tabulek](overview.md)

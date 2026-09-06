@@ -59,6 +59,29 @@ two surfaces must not share an action name — both render when the table is
 empty, duplicating the `data-testid` and any `keyboardShortcut()` window
 listener. A table emptied by a *filter* shows the reset button instead.
 
+### `Support/StickyColumn.php`
+
+Canonical owner of "this column stays put while the rest scrolls sideways".
+`Table::stickyActions()` is its only consumer today; `Column::sticky()` is meant
+to be its second, which is why `on(string $side)` knows nothing about actions.
+
+Two things about it are load-bearing. **Every string it returns is a literal
+Tailwind utility** — a class only ever produced by string manipulation is in no
+source file, so the extractor never emits it and the pinning silently does
+nothing in a built stylesheet. And a pinned cell is **transparent**, which is
+what `layers()` exists for: the cell takes `bg-inherit` (the row's own colour,
+including a hover or an Alpine-applied selection), an opaque surface is painted
+over it, and the row's colour is inherited back on top of that. Three layers
+rather than an opaque row palette, because the palette would have been the
+invisible-to-Tailwind kind.
+
+Five surfaces draw the actions column and all five have to pin identically —
+the header, the column-filter row, the row (through the compiled
+`getActionCellSkeleton()`), a group subtotal and the summary footer.
+`ActionRenderPlan` resolves the strings once so that stays structural. Rows that
+span the full width have no cell in the column and are deliberately not pinned:
+`architecture/plans/v1/sticky-actions-column.md` § "Co se z toho stalo".
+
 ### `Concerns/HasGestures.php` + `Support/TableGestures.php`
 
 Canonical owner of "which desktop gestures does this table offer" — keyboard

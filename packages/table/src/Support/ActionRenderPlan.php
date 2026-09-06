@@ -30,6 +30,13 @@ use NyonCode\WireTable\Table;
  * The **click resolvers** are the seam that keeps `wire-core`'s action views host
  * agnostic: they are the single place that maps an action to this table's
  * `executeTableAction` / `openActionModal`.
+ *
+ * The `sticky*` strings are the column's fifth surface, in a sense: with
+ * `Table::stickyActions()` the same column is drawn in the header, the column
+ * filter row, the body, a group subtotal and the summary footer, and all five
+ * have to pin identically or the pane comes apart at one row. Resolving them
+ * once here is what makes that structural rather than a habit — see
+ * {@see StickyColumn} for what the strings do.
  */
 final class ActionRenderPlan
 {
@@ -43,6 +50,11 @@ final class ActionRenderPlan
      * @param  string  $alignment  'left', 'center' or 'right'.
      * @param  string  $alignmentClass  A literal `text-*` utility.
      * @param  string  $justifyClass  A literal `justify-*` utility.
+     * @param  string  $stickyCellClass  Pins a body or footer cell; empty when the
+     *                                   column is not pinned.
+     * @param  string  $stickyHeaderCellClass  The same for a header cell, one z tier up.
+     * @param  string  $stickyLayers  The pinned cell's opaque surface and its two
+     *                                inheriting layers, rendered once.
      */
     private function __construct(
         public readonly array $row,
@@ -65,6 +77,10 @@ final class ActionRenderPlan
         public readonly string $justifyClass,
         public readonly string $columnLabel,
         public readonly ?string $columnWidth,
+        public readonly bool $isSticky,
+        public readonly string $stickyCellClass,
+        public readonly string $stickyHeaderCellClass,
+        public readonly string $stickyLayers,
     ) {}
 
     public static function resolve(Table $table): self
@@ -75,6 +91,7 @@ final class ActionRenderPlan
 
         $collapseMobile = $table->shouldCollapseActionsOnMobile();
         $collapseHeader = $table->shouldCollapseHeaderActionsOnMobile();
+        $sticky = StickyColumn::forActions($table);
 
         return new self(
             row: $table->getRowActionsForDisplay(),
@@ -97,6 +114,10 @@ final class ActionRenderPlan
             justifyClass: $table->getActionsJustifyClass(),
             columnLabel: $table->getActionsColumnLabel() ?? __('wire-table::messages.actions_label'),
             columnWidth: $table->getActionsColumnWidth(),
+            isSticky: $sticky->isPinned,
+            stickyCellClass: $sticky->cellClass,
+            stickyHeaderCellClass: $sticky->headerCellClass,
+            stickyLayers: $sticky->layers(),
         );
     }
 }

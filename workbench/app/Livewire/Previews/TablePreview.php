@@ -61,7 +61,7 @@ class TablePreview extends Component
     private const MODAL_VARIANTS = ['modal-form', 'modal-slideover-mobile', 'modal-slideover-compose', 'modal-fullscreen-mobile', 'modal-wizard', 'modal-nested'];
 
     /** Variants backed by the GestureRow selection-gesture fixtures. */
-    private const GESTURE_VARIANTS = ['selection-gestures', 'selection-gestures-paged', 'selection-only', 'gestures-poll', 'gestures-live', 'gestures-live-broadcast', 'gestures-poll-url', 'sticky-header'];
+    private const GESTURE_VARIANTS = ['selection-gestures', 'selection-gestures-paged', 'selection-only', 'gestures-poll', 'gestures-live', 'gestures-live-broadcast', 'gestures-poll-url', 'sticky-header', 'sticky-actions'];
 
     /**
      * Variants of the users table that exist to show whole-row interaction, and
@@ -706,6 +706,49 @@ class TablePreview extends Component
         // preview that fits on screen would prove nothing.
         if ($this->variant === 'sticky-header') {
             return $table->stickyHeader(maxHeight: '20rem');
+        }
+
+        // The same argument on the other axis, and the reason the widths are
+        // declared rather than left to the viewport: a pinned actions column is
+        // invisible until the table is wider than the region holding it, and a
+        // driver that has to guess whether there is anything to scroll proves
+        // nothing. Striped, selectable and summarised on purpose — the pane has
+        // to stay opaque over every one of those, and pinned on both axes at
+        // once is where the two z tiers are decided.
+        if ($this->variant === 'sticky-actions') {
+            return $table
+                ->columns([
+                    TextColumn::make('name')->label('Name')->width('20rem')->searchable()->sortable(),
+                    BadgeColumn::make('status')
+                        ->label('Status')
+                        ->width('20rem')
+                        ->colors([
+                            'new' => 'info',
+                            'active' => 'success',
+                            'paused' => 'warning',
+                            'archived' => 'gray',
+                        ]),
+                    TextColumn::make('amount')->label('Amount')->width('20rem')->sortable()->summarizeSum('Total'),
+                ])
+                ->actions([
+                    Action::make('open')->label('Open')->icon('outline:eye')->action(fn () => null),
+                    // A dropdown inside the pinned cell, because pinning creates a
+                    // stacking context and the panel is teleported out of it: this
+                    // is the combination the layering floor in dropdown.js exists
+                    // for, and the one a driver has to open to believe.
+                    ActionGroup::make([
+                        Action::make('duplicate')->label('Duplicate')->icon('outline:document-duplicate')->action(fn () => null),
+                        Action::make('archive')->label('Archive')->icon('outline:archive-box')->color('danger')->action(fn () => null),
+                    ]),
+                ])
+                ->striped()
+                // A declared minimum, not a hope: column widths are a suggestion
+                // to `table-layout: auto`, which shrinks them back to fit the
+                // region rather than overflowing it — so a preview built on
+                // widths alone has nothing to scroll and proves nothing.
+                ->tableClass('min-w-[1600px]')
+                ->stickyHeader(maxHeight: '20rem')
+                ->stickyActions();
         }
 
         if ($this->variant === 'selection-only') {

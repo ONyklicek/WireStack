@@ -257,7 +257,36 @@ Všechny typy filtrů viz [Reference filtrů](filters/index.md).
 
 // Pevná šířka sloupce akcí
 ->actionsColumnWidth(string $width)          // např. '120px'
+
+// Nechat sloupec akcí u hrany tabulky, zatímco zbytek scrolluje do stran // [tl! focus:1]
+->stickyActions(bool $sticky = true)
 ```
+
+**Připnutý sloupec akcí.** `stickyActions()` je vodorovné dvojče
+`stickyHeader()`: sloupec akcí zůstane u hrany tabulky, zatímco sloupce vedle něj
+pod ním projíždějí. Která hrana to bude, není druhá volba — sloupec se připne na
+tu stranu, kde už stojí, takže se řídí `actionsPosition()`, a projeví se jedině
+na tabulce dost široké na to, aby scrollovala.
+
+Zajímavá část je, že připnutá buňka je ve výchozím stavu **průhledná**, takže by
+jí sloupce, před kterými má stát, projely rovnou skrz. Kreslí se proto ze tří
+vrstev: buňka převezme barvu pozadí svého řádku, přes ni se natře neprůhledný
+podklad a nad ním se barva řádku zdědí zpátky. To je to, co uvnitř připnutého
+sloupce udrží zebrování, hover i výběr, zatímco všechno ostatní za ním mizí —
+plocha je součástí řádku, ne panel přilepený vedle něj.
+
+```php
+->actions([Action::make('edit'), DeleteAction::make()])
+->stickyActions()                            // připnuto vpravo, podle actionsPosition()
+
+->actionsPosition('start')
+->stickyActions()                            // teď vlevo, oddělovač na druhé straně
+```
+
+Jedna věc, kterou záměrně nepokrývá: **řádek přes celou šířku** — hlavička
+skupiny, rozbalený panel podřádků, prázdný stav, řádek s celkovým součtem — nemá
+ve sloupci akcí žádnou buňku, takže na něm není co připnout a jeho obsah stopou
+plochy projede.
 
 Kompletní API akcí viz [Akce](../core/actions.md).
 
@@ -527,6 +556,9 @@ tabulka, která se vejde, neukáže ani jeden.
 Na horní hraně gradient záměrně není. Neomezená oblast svisle scrollovat vůbec
 nemůže a omezená je omezená právě proto, že je tam připnutá hlavička: ta už sama
 je značkou toho, co je nad ní, a čtvrtý gradient by ji jen ztmavil.
+
+Tabulka useknutá na téhle ose si navíc může jeden sloupec podržet v zorném poli,
+ne jen označit řez — viz `stickyActions()` v sekci [Akce](#akce).
 
 **Podmíněná barva řádku.** `rowColor()` obarví celý řádek stejnou sémantickou
 paletou jako odznaky a všechny ostatní plochy (`success`, `warning`, `danger`,

@@ -88,6 +88,11 @@
     $actionsJustifyClass = $plan->actions()->justifyClass; // literal justify-* utility
     $actionsColumnLabel = $plan->actions()->columnLabel;
     $actionsColumnWidth = $plan->actions()->columnWidth;
+    // Empty strings unless Table::stickyActions() pinned the column, so every
+    // cell below carries the same shape whether or not anything is pinned.
+    $stickyCellClass = $plan->actions()->stickyCellClass;
+    $stickyHeaderCellClass = $plan->actions()->stickyHeaderCellClass;
+    $stickyLayers = $plan->actions()->stickyLayers;
 
     // Row interaction — the pointer bindings, the two independently switchable
     // halves of the gesture layer, and the active-row marker.
@@ -234,7 +239,11 @@
                                     class="w-full {{ $isBordered ? 'border-collapse' : '' }} {{ $table->getTableClass() }}">
                                 <thead
                                         class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider {{ $stickyHeaderClass ?: 'bg-gray-50 dark:bg-gray-800/50' }} {{ $table->getHeaderClass() }}">
-                                <tr @if($tableRole) aria-rowindex="1" @endif>
+                                {{-- `bg-inherit`: the header's colour sits on the <thead>, and a
+                                     pinned <th> gets its opaque backdrop by inheriting down the
+                                     chain (Support\StickyColumn) — which stops at a <tr> that
+                                     declares nothing. Painted identically to before. --}}
+                                <tr class="bg-inherit" @if($tableRole) aria-rowindex="1" @endif>
                                     {{-- Select All Checkbox --}}
                                     @if($isSelectable)
                                         <th scope="col" class="w-12 {{ $headerPadding }}">
@@ -279,11 +288,9 @@
                                     @if($hasActions && $actionsPosition === 'start')
                                         <th
                                                 scope="col"
-                                                class="{{ $headerPadding }} font-semibold {{ $actionsAlignmentClass }}"
+                                                class="{{ $headerPadding }} font-semibold {{ $actionsAlignmentClass }} {{ $stickyHeaderCellClass }}"
                                                 @if($actionsColumnWidth) style="width: {{ $actionsColumnWidth }}" @endif
-                                        >
-                                            {{ $actionsColumnLabel }}
-                                        </th>
+                                        >{!! $stickyLayers !!}<span class="relative">{{ $actionsColumnLabel }}</span></th>
                                     @endif
 
                                     {{-- Column Headers --}}
@@ -332,11 +339,9 @@
                                     @if($hasActions && $actionsPosition === 'end')
                                         <th
                                                 scope="col"
-                                                class="{{ $headerPadding }} font-semibold {{ $actionsAlignmentClass }}"
+                                                class="{{ $headerPadding }} font-semibold {{ $actionsAlignmentClass }} {{ $stickyHeaderCellClass }}"
                                                 @if($actionsColumnWidth) style="width: {{ $actionsColumnWidth }}" @endif
-                                        >
-                                            {{ $actionsColumnLabel }}
-                                        </th>
+                                        >{!! $stickyLayers !!}<span class="relative">{{ $actionsColumnLabel }}</span></th>
                                     @endif
                                 </tr>
 
@@ -355,7 +360,7 @@
 
                                         {{-- Actions Filter Cell (Start Position) --}}
                                         @if($hasActions && $actionsPosition === 'start')
-                                            <th class="{{ $headerPadding }}"></th>
+                                            <th class="{{ $headerPadding }} {{ $stickyHeaderCellClass }}">{!! $stickyLayers !!}</th>
                                         @endif
 
                                         @foreach($visibleColumns as $column)
@@ -368,12 +373,12 @@
 
                                         {{-- Actions Filter Cell (End Position) --}}
                                         @if($hasActions && $actionsPosition === 'end')
-                                            <th class="{{ $headerPadding }} text-right">
+                                            <th class="{{ $headerPadding }} text-right {{ $stickyHeaderCellClass }}">{!! $stickyLayers !!}
                                                 @if($activeColumnFilters !== [])
                                                     <button
                                                             type="button"
                                                             wire:click="resetColumnFilters"
-                                                            class="inline-flex items-center justify-center p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                            class="relative inline-flex items-center justify-center p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                                                             title="{{ __('wire-table::messages.filter_reset_column') }}"
                                                     >
                                                         {!! icon('outline:x-mark', 'w-4 h-4') !!}

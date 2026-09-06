@@ -57,6 +57,8 @@ final class SummaryRenderer
             'isBordered' => $layout->isBordered,
             'visibleColumns' => $columns->visible,
             'colSpan' => $columns->colSpan,
+            'stickyCellClass' => $actions->stickyCellClass,
+            'stickyLayers' => $actions->stickyLayers,
         ])->render();
     }
 
@@ -120,6 +122,8 @@ final class SummaryRenderer
             'isSelectable' => $this->plan->row()->isSelectable,
             'hasActions' => $actions->hasAny,
             'actionsPosition' => $actions->position,
+            'stickyCellClass' => $actions->stickyCellClass,
+            'stickyLayers' => $actions->stickyLayers,
             'partialAnchors' => $this->groupAnchors($groupValue),
         ])->render();
 

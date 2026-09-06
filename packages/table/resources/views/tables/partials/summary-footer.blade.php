@@ -9,7 +9,13 @@
      queued alongside it. See Support\SummaryRenderer. --}}
 {{-- Variables: $table, $component, $summaries, $summaryScope, $summaryScopeOptions,
      $isSelectable, $hasActions, $actionsPosition, $cellPadding, $isBordered, $visibleColumns, $colSpan,
-     $subRowGrandTotals (optional) --}}
+     $stickyCellClass, $stickyLayers, $subRowGrandTotals (optional) --}}
+{{-- The two sticky strings are empty unless Table::stickyActions() pinned the
+     actions column, in which case the footer's copy of that column has to pin
+     with the same offsets as the body's, or the pane stops one row short. The
+     summary rows take `bg-inherit` for the same reason the header row does: the
+     colour is on the <tfoot>, and a pinned cell inherits its opaque backdrop
+     down that chain. See Support\StickyColumn. --}}
 @php
     // Determine how many summary rows we need
     $maxRows = 0;
@@ -51,7 +57,7 @@
         @endif
 
         @for($i = 0; $i < $maxRows; $i++)
-            <tr>
+            <tr class="bg-inherit">
                 {{-- Selection spacer — carries data-select-cell so the selection
                      column stays one addressable track through the footer rows. --}}
                 @if($isSelectable)
@@ -65,9 +71,9 @@
 
                 {{-- Actions (start position) --}}
                 @if($hasActions && $actionsPosition === 'start')
-                    <td class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }}">
+                    <td class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $stickyCellClass }}">{!! $stickyLayers !!}
                         @if($i === 0)
-                            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('wire-table::messages.summary_total') }}</span>
+                            <span class="relative text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('wire-table::messages.summary_total') }}</span>
                         @endif
                     </td>
                 @endif
@@ -91,7 +97,7 @@
 
                 {{-- Actions (end position) --}}
                 @if($hasActions && $actionsPosition === 'end')
-                    <td class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }}"></td>
+                    <td class="{{ $cellPadding }} {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $stickyCellClass }}">{!! $stickyLayers !!}</td>
                 @endif
             </tr>
         @endfor

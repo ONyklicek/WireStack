@@ -13,6 +13,7 @@ use NyonCode\WireCore\Foundation\View\Skeleton;
 use NyonCode\WireTable\Actions\EmptyStateActionClickResolver;
 use NyonCode\WireTable\Exceptions\TableConfigurationException;
 use NyonCode\WireTable\Support\RecordAction;
+use NyonCode\WireTable\Support\StickyColumn;
 use NyonCode\WireTable\Table;
 
 /**
@@ -61,6 +62,9 @@ trait HasTableActions
 
     /** Which side of the row the actions column sits on: 'start' or 'end'. */
     protected string $actionsPosition = 'end';
+
+    /** Whether that column stays put while the rest of the row scrolls sideways. */
+    protected bool $stickyActions = false;
 
     /** Horizontal alignment inside the actions column: 'left', 'center' or 'right'. */
     protected string $actionsAlignment = 'right';
@@ -254,6 +258,42 @@ trait HasTableActions
     }
 
     /**
+     * Keep the actions column against the table's edge while the rest scrolls
+     * sideways.
+     *
+     * ```php
+     * Table::make()->actions([...])->stickyActions()
+     * ```
+     *
+     * Which edge is not a second option: the column pins to the side it already
+     * sits on, so `actionsPosition('start')` pins left and the default `'end'`
+     * pins right. A table wide enough to scroll is the only one where this shows
+     * at all — the pane, its divider and the columns disappearing behind it are
+     * all invisible until there is something to scroll past.
+     *
+     * How a transparent cell is made opaque without a second colour vocabulary,
+     * and the two z tiers that keep the pinned header above the pinned cells:
+     * {@see StickyColumn}.
+     *
+     * What it does **not** cover: a full-width row — a group header, an expanded
+     * sub-row panel, the empty state, the grand-total line — has no cell in the
+     * actions column, so nothing is pinned on it and its content scrolls through
+     * the pane's track. Documented rather than worked around, because pinning
+     * those means reserving a spacer cell in seven whitespace-critical partials.
+     */
+    public function stickyActions(bool $sticky = true): static
+    {
+        $this->stickyActions = $sticky;
+
+        return $this;
+    }
+
+    public function hasStickyActions(): bool
+    {
+        return $this->stickyActions;
+    }
+
+    /**
      * Set actions alignment ('left', 'center', 'right')
      */
     public function actionsAlignment(string|Alignment $alignment): static
@@ -387,11 +427,17 @@ trait HasTableActions
 
     public function getActionCellSkeleton(): Skeleton
     {
+        $sticky = StickyColumn::forActions($this);
+
         return $this->actionCellSkeleton ??= Skeleton::compile(
             view('wire-table::tables.partials.action-cell', [
                 'cellPadding' => $this->getCellPadding(),
                 'borderClass' => $this->isBordered() ? 'border border-gray-200 dark:border-gray-700' : '',
                 'justifyClass' => $this->getActionsJustifyClass(),
+                // Both table-level, so the pinned cell's layers are baked into the
+                // skeleton once and cost the row nothing but the bytes.
+                'stickyCellClass' => $sticky->cellClass,
+                'stickyLayers' => $sticky->layers(),
                 'actions' => Skeleton::slot('actions'),
             ])->render(),
             'actions',

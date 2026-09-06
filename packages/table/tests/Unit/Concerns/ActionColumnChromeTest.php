@@ -157,6 +157,10 @@ it('carries the table density and border through to the rendered action cell', f
     $plain = Livewire::test(ActionChromeHost::class)->html();
     $dense = Livewire::test(ActionChromeHost::class, ['compact' => true, 'bordered' => true])->html();
 
-    expect($plain)->toContain('px-6 py-4 "><div class="flex flex-wrap items-center gap-1')
-        ->and($dense)->toContain('px-4 py-2 border border-gray-200 dark:border-gray-700"><div class="flex flex-wrap items-center gap-1');
+    // Matched with the tags touching, which is the other half of what this cell
+    // promises: it is emitted once per row, so a whitespace run between them
+    // would be a DOM text node the morph walks on every commit. The empty
+    // stretches are the border and the pinning classes, neither in play here.
+    expect($plain)->toContain('px-6 py-4  "><div class="relative flex flex-wrap items-center gap-1')
+        ->and($dense)->toContain('px-4 py-2 border border-gray-200 dark:border-gray-700 "><div class="relative flex flex-wrap items-center gap-1');
 });

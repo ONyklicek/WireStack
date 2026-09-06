@@ -262,6 +262,51 @@ use NyonCode\WireCore\Actions\ActionGroup;
 ])
 ```
 
+## Keeping the Column in View
+
+A table wide enough to scroll sideways takes its actions column off screen first,
+because that column is at the end of the row. `stickyActions()` pins it to the
+table's edge, so the buttons stay reachable however far across the reader has
+scrolled:
+
+```php
+use Livewire\Component;
+use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Actions\DeleteAction;
+use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\Concerns\WithTable;
+use NyonCode\WireTable\Table;
+
+class ListInvoices extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(Invoice::class)
+            ->columns([
+                TextColumn::make('number')->sortable(),
+                TextColumn::make('customer.name')->label('Customer'),
+                TextColumn::make('issued_at')->date(),
+                TextColumn::make('due_at')->date(),
+                TextColumn::make('total')->money('CZK'),
+            ])
+            ->actions([
+                Action::make('edit')->icon('pencil')->url(fn (Invoice $record) => route('invoices.edit', $record)),
+                DeleteAction::make(),
+            ])
+            ->striped()
+            ->stickyActions(); // [tl! focus]
+    }
+}
+```
+
+The pinned column follows `actionsPosition()` rather than taking an edge of its
+own, and it carries the row's stripe, hover tint and selection with it — the
+mechanism behind that, and the one case it does not cover, are in
+[Table Overview](overview.md#actions).
+
 ## Related Docs
 
 - [Table Overview](overview.md)

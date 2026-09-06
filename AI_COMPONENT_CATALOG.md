@@ -547,7 +547,8 @@ Main concerns:
 - `Concerns\HasResponsive`
 - `Concerns\HasSqlDebug`
 - `Concerns\HasSubRows`
-- `Concerns\HasTableActions` — which actions a table carries (row, bulk, header, empty state) and how the actions column presents them: position, alignment, label, width, `solid`/`quiet` style, the composition rule in `composeRowActions()`, and the compiled `getActionCellSkeleton()`
+- `Concerns\HasTableActions` — which actions a table carries (row, bulk, header, empty state) and how the actions column presents them: position, alignment, label, width, `solid`/`quiet` style, `stickyActions()`, the composition rule in `composeRowActions()`, and the compiled `getActionCellSkeleton()`
+- `Support\StickyColumn` — the canonical owner of a column pinned against the horizontal scroll: `on(string $side)` / `none()` / `forActions(Table)`, the two z tiers (`z-[1]` body, `z-10` header), and `layers()` — the opaque surface plus the two `bg-inherit` layers that carry the row's stripe, hover and selection into the pinned cell without a second colour vocabulary. Consumed by five surfaces through `Support\ActionRenderPlan`; `Column::sticky()` is its intended second consumer
 - `Concerns\CollapsesActionsOnMobile` — the phone's half of the same feature: the row, header and sub-row folds into one `ActionGroup` dropdown, the counting rules that decide whether to fold, and the breakpoint classes that swap the two halves
 - `Concerns\StacksOnMobile` — `stackedOnMobile()`, the `mobileCard()` override hook, the per-column-set memo of `getMobileCard()`, the two literal breakpoint classes that swap table for cards, `getRowCardClasses()`, and `getMobileCardSkeleton()` (compiled per shape, keyed by `MobileCard::shapeSignature()`). The slot vocabulary itself lives in `Support\MobileCard` / `Support\MobileCardConfig`; the fill in `Support\CardRenderer`
 - `Concerns\HasRecordActions` — whole-row interaction (see *Record actions* below)

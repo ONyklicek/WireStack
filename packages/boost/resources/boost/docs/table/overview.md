@@ -257,7 +257,38 @@ See [Filters Reference](filters/index.md) for all filter types.
 
 // Actions column fixed width
 ->actionsColumnWidth(string $width)          // e.g., '120px'
+
+// Keep the actions column at the table's edge while the rest scrolls sideways // [tl! focus:1]
+->stickyActions(bool $sticky = true)
 ```
+
+**Pinned actions column.** `stickyActions()` is the horizontal twin of
+`stickyHeader()`: the actions column stays against the edge of the table while
+the columns beside it travel underneath it. Which edge is not a second option —
+the column pins to the side it already sits on, so it follows
+`actionsPosition()`, and a table wide enough to scroll is the only one where any
+of it shows.
+
+The interesting part is that a pinned cell is **transparent** by default, so the
+columns it is meant to stay in front of would scroll straight through it. It is
+drawn as three layers instead: the cell takes the row's own background colour,
+an opaque surface is painted over that, and the row's colour is inherited back
+on top of the surface. That is what keeps the stripe, the hover tint and the
+selection visible inside the pinned column while everything else disappears
+behind it — the pane is part of the row, not a panel stuck beside it.
+
+```php
+->actions([Action::make('edit'), DeleteAction::make()])
+->stickyActions()                            // pinned right, following actionsPosition()
+
+->actionsPosition('start')
+->stickyActions()                            // now pinned left, divider on the other side
+```
+
+One thing it deliberately does not cover: a **full-width row** — a group header,
+an expanded sub-row panel, the empty state, a grand-total line — has no cell in
+the actions column, so nothing is pinned on it and its content scrolls through
+the pane's track.
 
 See [Actions](../core/actions.md) for the full Actions API.
 
@@ -530,6 +561,9 @@ There is deliberately no gradient on the top edge. An uncapped region cannot
 scroll vertically at all, and a capped one is capped because its header is pinned
 there: the header is already the marker for what is above, and a fourth gradient
 would only dim it.
+
+A table cut on that axis can also keep one column in view rather than only
+marking the cut — see `stickyActions()` under [Actions](#actions).
 
 **Conditional row color.** `rowColor()` tints an entire row using the same
 semantic palette as badges and every other surface (`success`, `warning`,

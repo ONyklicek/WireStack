@@ -1,8 +1,9 @@
 ---
 title: Sticky actions column (frozen column, v1 = akce)
 date: 2026-07-14
+updated: 2026-09-06
 scope: packages/table (+ ověření proti packages/core/resources/js/dropdown.js)
-status: plan (nezahájeno)
+status: hotovo (2026-09-06) — `Table::stickyActions()`, driver 21/21
 related:
   - architecture/table.md
   - architecture/plans/v1-gaps.md
@@ -13,6 +14,63 @@ related:
 
 Sloupec s akcemi zůstane přilepený k hraně tabulky při vodorovném scrollu.
 Volitelná funkce, defaultně vypnutá.
+
+---
+
+## Co se z toho stalo (2026-09-06)
+
+Hotové jako `Table::stickyActions()`. Plán níž zůstává, jak byl napsaný —
+tahle sekce říká, ve kterých třech věcech ho měření přepsalo, protože to je to
+podstatné, co si z něj odnést.
+
+**1. Výchozí stav v plánu už neplatí, a nová infrastruktura práci ubrala.**
+Scroll kontejner není `index.blade.php:531`, ale
+`partials/data-region.blade.php` — a od commitu `073a56e` kolem něj stojí rám
+s Alpinem a `ResizeObserver`em nad scrollerem. Kumulativní offsety, kvůli kterým
+plán odkládal `Column::sticky()` na v2 („potřebují měřit šířky za běhu"), mají
+od té chvíle kde měřit. Bespoke `<td>` s akcemi taky zmizel: buňka je
+zkompilovaná kostra (`getActionCellSkeleton()`), takže se pinning zapéká jednou
+za tabulku a řádek nestojí nic.
+
+**2. „Nejtěžší část: pozadí" byla těžší, než plán čekal — a řešení je jinde.**
+Plán chtěl `background: inherit` na `<td>` a garantované neprůhledné pozadí na
+`<tr>` přes rozšíření `getRowClasses()`. Změřeno: netintovaný, nezebrovaný řádek
+nemá pozadí **žádné**, zebra je `bg-gray-50/50`, tmavé tinty `/20` a výběr
+přichází z Alpine až za běhu. Neprůhledná verze by znamenala **opaque dvojče dvou
+25ramenných barevných map** — a ta dvojčata by byla **pro Tailwind neviditelná**:
+utilita, která vznikne jen skládáním stringu, není v žádném zdrojovém souboru,
+takže ji extraktor nevygeneruje a třída tiše nedělá nic. Stejná námitka platí na
+přepis `hover:` → `group-hover:` pro overlay.
+
+Buňka se místo toho **skládá ze tří vrstev** ze dvou literálů a dědičnosti:
+`<td>` vezme `bg-inherit` (barvu řádku, ať je jakákoli), přes ni jde neprůhledný
+podklad a nad podklad se ta samá barva zdědí podruhé. Zebra, hover i výběr
+projdou živě, bez druhé slovní zásoby a bez vlastního Alpine bindingu.
+`getRowClasses()` se nemuselo dotknout vůbec. Vlastník je
+`Support\StickyColumn`, `Column::sticky()` na něj půjde napojit beze změny —
+`on()` o akcích neví.
+
+**3. Otevřené otázky zodpovězeny.** (1) Hlavička i footer **ano** — pinují se
+všechny čtyři plochy sloupce plus hlavička filtrů, protože plocha, které chybí
+jeden řádek, je horší než žádná. (2) Hrana je **statický oddělovač** (`border-l`
+/ `border-r`) nezávisle na `bordered()`; scroll stín už na obou hranách oblasti
+kreslí `073a56e`. (3) RTL se neřešilo — `start`/`end` se mapují na `left`/`right`
+napevno.
+
+**Co se vědomě neudělalo:** řádek přes celou šířku (hlavička skupiny, panel
+podřádků, prázdný stav, řádek celkového součtu) nemá ve sloupci akcí buňku,
+takže se na něm nepinuje nic a jeho obsah stopou plochy projede. Pinovat je
+znamená rezervovat spacer buňku v **sedmi** partialech citlivých na whitespace;
+zapsáno v docs (EN i CS) jako to, co funkce nepokrývá.
+
+**Vrstvení dropdownu vyšlo tak, jak odstavec níž předpokládal** — panel drží
+`z-50` nad podlahou, kterou `floorZ()` najde na připnuté buňce. Driver to
+otevírá a hit-testuje, takže to už není důvěra v odstavec.
+
+**Dvě z-patra místo jednoho:** `z-[1]` na tělové buňce a `z-10` na hlavičkové.
+Bez toho by editovatelná buňka (`relative`) přebila připnutý sloupec na pozici
+`start`, a připnuté řádky by při scrollu na obou osách přejely připnutou
+hlavičku.
 
 Dnes v repu **neexistuje** — `Column` nemá `sticky()` / `frozen()` / `pinned()`
 a jediné výskyty „sticky" v `packages/table` jsou `stickyHeader` / `stickyFooter`

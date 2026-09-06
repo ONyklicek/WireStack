@@ -1,8 +1,14 @@
 {{--
     The row's action cell — compiled once for the table, filled per row.
 
-    Variables: $cellPadding, $borderClass (both table-level, baked at compile
-    time) and $actions (a slot: this row's buttons, already rendered).
+    Variables: $cellPadding, $borderClass, $stickyCellClass and $stickyLayers
+    (all table-level, baked at compile time) and $actions (a slot: this row's
+    buttons, already rendered).
+
+    The layers and the `relative` on the button row are what a pinned actions
+    column needs and an ordinary one does not notice: with `stickyActions()` off
+    both strings are empty and this is the same cell it always was. Why a pinned
+    cell takes three layers rather than an opaque background: Support\StickyColumn.
 
     It lived inline in the row loop until the loop's conditionals moved into PHP.
     The buttons themselves stay per record — an action can be non-executable for
@@ -14,4 +20,4 @@
     two tags is a DOM text node that the morph walks on every commit, and this
     cell is emitted once per row. Whitespace between attributes is free.
 --}}
-<td class="{{ $cellPadding }} {{ $borderClass }}"><div class="flex flex-wrap items-center gap-1 {{ $justifyClass }}">{!! $actions !!}</div></td>
+<td class="{{ $cellPadding }} {{ $borderClass }} {{ $stickyCellClass }}">{!! $stickyLayers !!}<div class="relative flex flex-wrap items-center gap-1 {{ $justifyClass }}">{!! $actions !!}</div></td>
