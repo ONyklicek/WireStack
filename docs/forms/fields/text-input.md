@@ -31,6 +31,24 @@ TextInput::make('age')->integer()
 | `search()` | `search` | Search input |
 | `type(string)` | Custom | Set HTML input type directly |
 
+## Cleared Values
+
+A cleared number input submits `''`, and no numeric column can hold that: MySQL
+in strict mode refuses the write outright (`Incorrect decimal value: ''`) and a
+lenient driver silently stores `0`. So a field whose HTML type is `number` —
+`numeric()`, `integer()`, `type('number')` — **stores `null` when it is left
+empty**, on every write path: `Form::save()`, an
+[action modal](../../core/actions.md#form-modal) submit, an editable cell.
+
+Every other type is left alone. `''` is a legitimate string value, and a
+non-nullable text column holds one; turning it into `null` would break the write
+rather than save it.
+
+```php
+TextInput::make('discount')->numeric()  // cleared → null
+TextInput::make('note')                 // cleared → ''
+```
+
 ## Constraints
 
 ```php

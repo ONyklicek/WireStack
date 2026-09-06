@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Closure;
+use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Concerns\HasExtraInputAttributes;
+use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 /**
  * Text input field with type variants (email, password, tel, url, numeric, integer).
@@ -14,7 +16,7 @@ use NyonCode\WireCore\Foundation\Support\EnumResolver;
  */
 use NyonCode\WireForms\Concerns\HasCharacterLimits;
 
-class TextInput extends Field
+class TextInput extends Field implements DehydratesState
 {
     use HasCharacterLimits;
     use HasExtraInputAttributes;
@@ -108,6 +110,29 @@ class TextInput extends Field
         $this->inputType = 'search';
 
         return $this;
+    }
+
+    // ─── State ─────────────────────────────────────────────────────
+
+    /**
+     * A cleared number input stores null, not an empty string.
+     *
+     * An emptied `<input type="number">` submits `''`, and no numeric column can
+     * hold that: MySQL in strict mode rejects the write outright ("Incorrect
+     * decimal value: ''") and a lenient driver silently stores 0. Neither is
+     * what an author who left an optional amount blank asked for. This is the
+     * same rule Select already applies to its placeholder choice.
+     *
+     * Text is deliberately untouched: `''` is a legitimate string value, and
+     * turning it into null would break a non-nullable column that holds one.
+     */
+    public function dehydrateState(mixed $state, ?Model $record = null): mixed
+    {
+        if ($this->inputType !== 'number') {
+            return $state;
+        }
+
+        return (is_string($state) && trim($state) === '') ? null : $state;
     }
 
     // ─── Constraints ───────────────────────────────────────────────

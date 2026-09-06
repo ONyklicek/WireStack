@@ -335,7 +335,7 @@ nezávislé — implementujte jen ten, který potřebujete:
 | Kontrakt | Metoda | Kdy běží |
 |---|---|---|
 | `HydratesState` | `hydrateState($value, ?Model $record)` | hodnota z modelu → stav, po přetypování dle `getStateType()` |
-| `DehydratesState` | `dehydrateState($state, ?Model $record)` | stav → ukládaná hodnota, při ukládání |
+| `DehydratesState` | `dehydrateState($state, ?Model $record)` | stav → ukládaná hodnota, na každé zápisové cestě |
 
 Všimněte si, že [`MoneyInput`](#stavba-vlastniho-pole) výše nepotřebuje *ani jeden*:
 jeho stav už je ten integer, který ukládá, což plně vyjádří `getStateType(): 'int'`.
@@ -377,6 +377,16 @@ Stejné dva kontrakty pohánějí i [editovatelné sloupce tabulky](../table/col
 `TextInputColumn` je používá pro svůj trim/velikost písmen/čísla pipeline — takže
 komponenta, která je implementuje, se chová stejně ve formuláři i v inline
 editované buňce.
+
+**Zápisovou cestu spouštějí tři hostitelé a musí se shodnout.** `Form::save()` ji
+pouští přes `SaveHandler`, editovatelná buňka v `updateTableCell()` a
+[modal akce](../core/actions.md#modal-s-formularem) při odeslání — `$data`, která callback
+akce dostane, jsou tedy hodnoty, jaké by formulář uložil, ne syrový stav Livewiru.
+Hostitel, který by ji přeskočil, by ze stejného schématu zapsal jednou `null`
+a jindy `''`. Jediná záměrná výjimka je [akce v patičce](../core/actions.md#akce-v-paticce):
+čte formulář rozdělaný a zapisuje zpátky do stejného bagu, takže dehydratace by
+callbacku podala hodnotu, kterou už formulář nedrží — a spustila by uložení
+`FileUpload`u nad formulářem, který uživatel neodeslal.
 
 > **Oba směry, nebo žádný.** Pokud transformace hodnotu posouvá (převod timezone,
 > změna jednotek), implementovat jen `hydrateState()` znamená, že se posunutý stav

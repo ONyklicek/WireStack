@@ -802,6 +802,26 @@ trait InteractsWithActions
     }
 
     /**
+     * Let the active modal's fields shape their own values before the action
+     * callback sees them — the write-path seam of ADR 0021, applied to the one
+     * bag an action submits. No-op in core; the wire-forms layer overrides this
+     * to walk the schema for DehydratesState.
+     *
+     * A submit is the only place it runs. A footer action reads the form
+     * mid-edit and writes back into the same bag, so dehydrating there would
+     * hand the callback a value the form no longer holds — and would run a
+     * FileUpload's store on a form the user has not submitted yet.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function dehydrateMountedActionFormData(array $data): array
+    {
+        // No-op — the form-hosting layer knows the schema behind the bag.
+        return $data;
+    }
+
+    /**
      * Close the currently mounted action. When a parent modal is suspended behind
      * it, the parent is resumed into the active slot instead of clearing (modal
      * stacking). Hosts override with their concrete teardown (clearing meta bag,
