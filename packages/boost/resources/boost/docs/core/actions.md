@@ -186,6 +186,8 @@ Action::make('edit')
 
 The closure may hand back an enum case straight off a cast attribute (`fn ($record) => ['role' => $record->role]`): the seeded bag collapses every enum to its backing value, because that is what Livewire state carries to the browser and what a `Select` matches its `<option>` values against. The choice still saves back through the cast.
 
+The `$data` the callback receives is what the form **would have persisted**, not the raw widget state: on submit the modal runs the same field-level dehydration as `Form::save()` (see [Custom fields](../forms/custom-fields.md#shaping-the-value-a-field-stores)). A cleared `Select` arrives as `null` rather than `''`, a cleared `numeric()` `TextInput` as `null`, a `DateTimePicker` in its storage format and zone, and a `FileUpload` as its stored path. A wizard dehydrates every step, not only the one on screen at submit. Footer actions are deliberately excluded — they read the form mid-edit, before it is submitted.
+
 A `HeaderAction` form modal has **no record**, so its `fillFormUsing` closure takes no arguments. Use it to seed initial state — and always seed array-typed fields (`CheckboxList`, `Tags`, multiple `Select`) with an empty array so they bind correctly from the first interaction:
 
 ```php
