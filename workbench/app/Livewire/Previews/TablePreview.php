@@ -24,6 +24,7 @@ use NyonCode\WireTable\Columns\ColorColumn;
 use NyonCode\WireTable\Columns\ImageColumn;
 use NyonCode\WireTable\Columns\RatingColumn;
 use NyonCode\WireTable\Columns\SelectColumn;
+use NyonCode\WireTable\Columns\SplitColumn;
 use NyonCode\WireTable\Columns\TagsColumn;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Columns\TextInputColumn;
@@ -141,6 +142,10 @@ class TablePreview extends Component
 
         if ($this->variant === 'column-filters') {
             return $this->columnFiltersTable($table);
+        }
+
+        if ($this->variant === 'split-columns') {
+            return $this->splitColumnsTable($table);
         }
 
         if ($this->variant === 'saved-views') {
@@ -386,6 +391,35 @@ class TablePreview extends Component
             ])
             ->rememberColumns('preview-saved-views')
             ->savedViews();
+    }
+
+    /**
+     * A split column registered under a name for the group it draws.
+     *
+     * `identity` is not an attribute of User, which is the whole point: the
+     * header is clickable because a *child* is sortable, so the click has to
+     * order by that child. Ordering by the header's own name reached SQL as
+     * `order by users.identity` and raised "no such column" — with no preview
+     * for a split anywhere in the workbench, only a unit test could see it.
+     *
+     * It also carries the two settings a vertical split could not previously
+     * express: `gap('sm')` used to build `gap-sm`, a class Tailwind never
+     * generates, and `alignStart()` was dropped entirely by the partial's
+     * vertical branch.
+     */
+    private function splitColumnsTable(Table $table): Table
+    {
+        return $table
+            ->model(User::class)
+            ->columns([
+                SplitColumn::split([
+                    TextColumn::make('name')->label('Name')->sortable(),
+                    TextColumn::make('email')->label('Email')->textSize('sm')->textColor('muted'),
+                ], 'identity')->vertical()->gap('sm')->alignStart()->label('Identity'),
+                BadgeColumn::make('role')->label('Role'),
+            ])
+            ->searchable(false)
+            ->paginated(false);
     }
 
     private function columnFiltersTable(Table $table): Table

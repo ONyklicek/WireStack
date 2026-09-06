@@ -17,6 +17,7 @@ any of them.
 | [BadgeColumn](badge.md) | Status pills with color and icon, incl. enum self-coloring |
 | [MoneyColumn](money.md) | Amounts, right-aligned and tabular; the stacked card's metric |
 | [MetricColumn](metric.md) | A measurement: aggregate figure with an optional trend line |
+| [PhoneColumn](phone.md) | A phone number, written to be read and linked to be dialled |
 | [BooleanColumn](boolean.md) | True/false as an icon (check / cross) |
 | [IconColumn](icon.md) | State-based or dynamically resolved icons |
 | [ImageColumn](image.md) | Avatars and thumbnails |
@@ -58,10 +59,19 @@ Column::make(string $name)           // static factory — $name is dot-notation
 ```php
 ->sortable(bool $sortable = true, ?Closure $query = null)
 ->isSortable(): bool
+->getSortColumn(): ?string           // the attribute the header orders by
 
 // Custom sort logic
 ->sortUsing(Closure $fn)
 ```
+
+`isSortable()` decides whether the header is clickable; `getSortColumn()` decides
+what the click orders by. For an ordinary column the two are the same string — its
+own name, dotted relation path included — so you never call it. A **composite**
+column is where they part: a `SplitColumn` is registered under a name for the
+group it draws, and answers with the first sortable child it holds. The query
+seam asks the column rather than reusing the clicked name, which is what keeps a
+composite header from ordering by an attribute that does not exist.
 
 ```php
 TextColumn::make('full_name')

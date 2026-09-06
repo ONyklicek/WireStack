@@ -676,8 +676,18 @@ final class TableQueryService
             return [];
         }
 
+        // Ask the column what it orders by rather than reusing the name the
+        // header was clicked under. For an ordinary column the two are the same
+        // string; for a composite one they are not, and a SplitColumn named for
+        // the group it draws would otherwise reach SQL as a column that does
+        // not exist.
+        $sortTarget = $columnObj->getSortColumn();
+        if ($sortTarget === null) {
+            return [];
+        }
+
         return [SortDefinition::make(
-            column: $columnObj->getName(),
+            column: $sortTarget,
             direction: $sortDirection,
         )];
     }

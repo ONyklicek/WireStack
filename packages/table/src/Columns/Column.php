@@ -6,18 +6,15 @@ namespace NyonCode\WireTable\Columns;
 
 use Closure;
 use Illuminate\Contracts\Support\Htmlable;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Pivot;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
-use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Core\Components\DataComponent;
 use NyonCode\WireCore\Core\Query\Contracts\HasSearchColumns;
 use NyonCode\WireCore\Core\Query\Contracts\HasSearchValueType;
-use NyonCode\WireCore\Core\Query\Search\SearchValueType;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Concerns\CanBeCopyable;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Concerns\HasDefault;
 use NyonCode\WireCore\Foundation\Concerns\HasFontWeight;
@@ -26,21 +23,27 @@ use NyonCode\WireCore\Foundation\Concerns\HasPlaceholder;
 use NyonCode\WireCore\Foundation\Concerns\HasSize;
 use NyonCode\WireCore\Foundation\Concerns\HasTooltip;
 use NyonCode\WireCore\Foundation\Concerns\HasVisibility;
-use NyonCode\WireCore\Foundation\Enums\Alignment;
 use NyonCode\WireCore\Foundation\Enums\Breakpoint;
-use NyonCode\WireCore\Foundation\Enums\FontWeight;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireCore\Foundation\View\Skeleton;
+use NyonCode\WireTable\Concerns\CanBeEdited;
 use NyonCode\WireTable\Concerns\CanBeFiltered;
+use NyonCode\WireTable\Concerns\CanBeSearchable;
+use NyonCode\WireTable\Concerns\CanBeSorted;
 use NyonCode\WireTable\Concerns\CanBeSummarized;
+use NyonCode\WireTable\Concerns\CanBeTruncated;
+use NyonCode\WireTable\Concerns\HasAggregate;
+use NyonCode\WireTable\Concerns\HasAlignment;
+use NyonCode\WireTable\Concerns\HasDescription;
+use NyonCode\WireTable\Concerns\HasMobileSlot;
 use NyonCode\WireTable\Concerns\HasResponsive;
+use NyonCode\WireTable\Concerns\HasTextStyling;
 use NyonCode\WireTable\Concerns\HasView;
-use NyonCode\WireTable\Exceptions\TableConfigurationException;
+use NyonCode\WireTable\Concerns\HasWidth;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Support\FilterControl;
-use NyonCode\WireTable\Support\MobileSlot;
 
 /** @phpstan-consistent-constructor */
 class Column extends DataComponent implements HasSearchColumns, HasSearchValueType, Htmlable
@@ -48,57 +51,39 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
     // HasVisibility composes HasAuthorization — an unauthorized column is not a
     // visible one — so it is not listed separately, matching core's Component.
     // A column is never *disabled*, so CanBeDisabled is deliberately not here.
+    use CanBeCopyable;
+    use CanBeEdited;
     use CanBeFiltered;
+    use CanBeSearchable;
+    use CanBeSorted;
     use CanBeSummarized;
+    use CanBeTruncated;
+    use HasAggregate;
+    use HasAlignment;
     use HasColor;
     use HasDefault;
+    use HasDescription;
     use HasFontWeight;
     use HasIcon;
+    use HasMobileSlot;
     use HasPlaceholder;
     use HasResponsive;
     use HasSize;
+    use HasTextStyling;
     use HasTooltip;
     use HasView;
     use HasVisibility;
+    use HasWidth;
 
-    // Note: $sortable and $searchable booleans removed in v2.
-    // Use capabilities as single source of truth via isSortable()/isSearchable().
+    // Note: $sortable and $searchable booleans removed in v2. Capabilities are the
+    // single source of truth, read through CanBeSorted / CanBeSearchable.
 
-    /** @var array<int, string> Explicit DB columns to search (Filament-style: searchable(['first_name', 'last_name'])) */
-    protected array $searchColumns = [];
-
-    /** What the column holds for search purposes (null = infer from the model's casts). */
-    protected ?SearchValueType $searchValueType = null;
-
-    /** @var Closure|null Custom search query callback: fn(Builder, string) => */
-    protected ?Closure $searchCallback = null;
-
-    /** @var Closure|null Custom sort query callback: fn(Builder, string) => */
-    protected ?Closure $sortCallback = null;
-
-    // Responsive visibility ($visibleFrom/$hiddenFrom, visibleFrom()/hiddenFrom(),
-    // getResponsiveClasses()) is owned by the HasResponsive trait.
-
-    /** @var Closure|null Custom display for mobile view */
-    protected ?Closure $mobileDisplayUsing = null;
-
-    /** @var Closure|null Custom display for desktop view */
-    protected ?Closure $desktopDisplayUsing = null;
-
-    /** @var string Mobile breakpoint for display switching */
-    protected string $mobileBreakpoint = 'md';
-
-    /** Explicit stacked-card slot; null lets MobileCard derive one. */
-    protected ?MobileSlot $mobileSlot = null;
+    // Everything about this column across viewport widths — the breakpoint
+    // visibility, the named shortcuts, and the per-width content closures the
+    // render methods below read — is owned by the HasResponsive trait.
 
     /** @var bool Whether the column can be toggled in the UI */
     protected bool $toggleable = true;
-
-    /** @var string|null Fixed width of the column (e.g., '100px', '20%') */
-    protected ?string $width = null;
-
-    /** @var string|null Text alignment within the column ('left', 'center', 'right') */
-    protected ?string $alignment = null;
 
     /** @var Closure|null Custom formatter for the cell value */
     protected ?Closure $formatStateUsing = null;
@@ -109,9 +94,9 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
     // $default comes from Foundation\Concerns\HasDefault.
     // $tooltip comes from Foundation\Concerns\HasTooltip.
 
-    /** @var bool Whether the cell content is copyable */
-    protected bool $copyable = false;
-
+    // $copyable and copyable()/isCopyable() come from Foundation's CanBeCopyable;
+    // only the confirmation message stays here, because its default names a
+    // wire-table translation key.
     /** @var string|null Message shown when content is copied */
     protected ?string $copyMessage = null;
 
@@ -120,12 +105,6 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
 
     /** @var array<string, string> Additional HTML attributes for the column header */
     protected array $extraHeaderAttributes = [];
-
-    /** @var bool Whether to wrap text in the cell */
-    protected bool $wrap = false;
-
-    /** @var int|null Maximum number of characters to show before truncating */
-    protected ?int $limit = null;
 
     /** @var string|null Text to prepend to the cell content */
     protected ?string $prefix = null;
@@ -152,52 +131,17 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
     /** @var Closure|null Per-record cell visibility (redact a single cell by row) */
     protected ?Closure $visibleForRecordCallback = null;
 
-    /** @var string|null Gate ability for inline editing */
-    protected ?string $inlineEditAbility = null;
-
     /** @var bool Whether this column is for a pivot table */
     protected bool $isPivot = false;
 
-    // ── Aggregate support ─────────────────────────────────────────
-    /** @var string|null Aggregate function: 'count', 'sum', 'avg', 'min', 'max' */
-    protected ?string $aggregateFunction = null;
+    // The aggregate triple ($aggregateFunction/$aggregateRelation/$aggregateColumn)
+    // and the counts()/sums()/averages()/mins()/maxes() API come from HasAggregate.
 
-    /** @var string|null Relation name for aggregate (e.g., 'orders') */
-    protected ?string $aggregateRelation = null;
-
-    /** @var string|null Column to aggregate on (e.g., 'total' for sum) */
-    protected ?string $aggregateColumn = null;
-
-    // Inline editing properties
-    // Note: $editable boolean removed in v2. Use capabilities.
-
-    /** @var Closure|null Validation rules for inline editing */
-    protected ?Closure $editableRules = null;
-
-    /** @var Closure|null Callback to handle the edit action */
-    protected ?Closure $editableCallback = null;
-
-    /** @var bool Whether a fill handle drag may write this column (editable columns only) */
-    protected bool $fillable = true;
+    // Inline editing ($inlineEditAbility/$editableRules/$editableCallback/$fillable,
+    // editable()/fillable()/authorizeInline() and their accessors) comes from CanBeEdited.
 
     // $filter and the filterable()/filterAs*() API come from CanBeFiltered.
     // Note: the $filterable boolean was removed in v2 — use capabilities.
-
-    // Text styling properties
-    /** @var string|null Text size class or value (e.g., 'sm', 'lg', '1.2rem') */
-    protected ?string $textSize = null;
-
-    /** @var string|null Font weight (e.g., 'bold', '500') */
-    protected ?string $textWeight = null;
-
-    /** @var string|null Text color (e.g., 'red-500', '#FF0000') */
-    protected ?string $textColor = null;
-
-    /** @var string|Closure|null Additional description text shown below/above the cell content */
-    protected string|Closure|null $description = null;
-
-    /** @var string Position of the description relative to the cell content ('below' or 'above') */
-    protected string $descriptionPosition = 'below';
 
     /** @var Closure|null Callback to determine the state of the column */
     protected ?Closure $stateCallback = null;
@@ -267,110 +211,6 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
         return $this->isPivot;
     }
 
-    // ── Aggregate methods ─────────────────────────────────────────
-
-    /**
-     * Count related records.
-     *
-     * Usage: Column::make('orders_count')->counts('orders')
-     */
-    public function counts(string $relationship): static
-    {
-        $this->aggregateFunction = 'count';
-        $this->aggregateRelation = $relationship;
-
-        return $this;
-    }
-
-    /**
-     * Sum a column on related records.
-     *
-     * Usage: Column::make('orders_total')->sums('orders', 'total')
-     */
-    public function sums(string $relationship, string $column): static
-    {
-        $this->aggregateFunction = 'sum';
-        $this->aggregateRelation = $relationship;
-        $this->aggregateColumn = $column;
-
-        return $this;
-    }
-
-    /**
-     * Average a column on related records.
-     *
-     * Usage: Column::make('avg_rating')->averages('reviews', 'rating')
-     */
-    public function averages(string $relationship, string $column): static
-    {
-        $this->aggregateFunction = 'avg';
-        $this->aggregateRelation = $relationship;
-        $this->aggregateColumn = $column;
-
-        return $this;
-    }
-
-    /**
-     * Min of a column on related records.
-     */
-    public function mins(string $relationship, string $column): static
-    {
-        $this->aggregateFunction = 'min';
-        $this->aggregateRelation = $relationship;
-        $this->aggregateColumn = $column;
-
-        return $this;
-    }
-
-    /**
-     * Max of a column on related records.
-     */
-    public function maxes(string $relationship, string $column): static
-    {
-        $this->aggregateFunction = 'max';
-        $this->aggregateRelation = $relationship;
-        $this->aggregateColumn = $column;
-
-        return $this;
-    }
-
-    public function isAggregate(): bool
-    {
-        return $this->aggregateFunction !== null;
-    }
-
-    public function getAggregateFunction(): ?string
-    {
-        return $this->aggregateFunction;
-    }
-
-    public function getAggregateRelation(): ?string
-    {
-        return $this->aggregateRelation;
-    }
-
-    public function getAggregateColumn(): ?string
-    {
-        return $this->aggregateColumn;
-    }
-
-    /**
-     * Get the attribute name that Eloquent uses for withCount/withSum.
-     * E.g., withCount('orders') → 'orders_count', withSum('orders', 'total') → 'orders_sum_total'
-     */
-    public function getAggregateAttribute(): ?string
-    {
-        if ($this->aggregateFunction === null || $this->aggregateRelation === null) {
-            return null;
-        }
-
-        if ($this->aggregateFunction === 'count') {
-            return "{$this->aggregateRelation}_count";
-        }
-
-        return "{$this->aggregateRelation}_{$this->aggregateFunction}_{$this->aggregateColumn}";
-    }
-
     /**
      * Set the label of the column.
      */
@@ -387,299 +227,6 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
     public function state(Closure $callback): static
     {
         $this->stateCallback = $callback;
-
-        return $this;
-    }
-
-    public function isSortable(): bool
-    {
-        return $this->hasCapability(Capability::Sortable);
-    }
-
-    /**
-     * Set whether the column is searchable.
-     *
-     * Filament-style API:
-     *   ->searchable()                                    // auto-detect
-     *   ->searchable(['first_name', 'last_name'])         // explicit DB columns
-     *   ->searchable(query: fn($query, $search) => ...)   // custom query callback
-     *
-     * @param  bool|array<int, string>  $searchable
-     */
-    public function searchable(bool|array $searchable = true, ?Closure $query = null): static
-    {
-        if (is_array($searchable)) {
-            $this->searchColumns = $searchable;
-            $this->capabilities = $this->capabilities->add(Capability::Searchable);
-        } else {
-            $this->capabilities = $searchable
-                ? $this->capabilities->add(Capability::Searchable)
-                : $this->capabilities->remove(Capability::Searchable);
-        }
-
-        if ($query !== null) {
-            $this->searchCallback = $query;
-        }
-
-        return $this;
-    }
-
-    /**
-     * Check if the column is searchable.
-     */
-    public function isSearchable(): bool
-    {
-        return $this->hasCapability(Capability::Searchable);
-    }
-
-    /**
-     * Get explicit search columns (empty = use auto-detection).
-     *
-     * @return array<int, string>
-     */
-    public function getSearchColumns(): array
-    {
-        return $this->searchColumns;
-    }
-
-    /**
-     * Declare what this column holds for search purposes.
-     *
-     * Only needed when nothing can be inferred — no cast on the model and no
-     * usable database type — and only matters once the table opts into
-     * comparison syntax.
-     */
-    public function searchAs(SearchValueType|string $type): static
-    {
-        $this->searchValueType = $type instanceof SearchValueType
-            ? $type
-            : SearchValueType::tryFrom($type) ?? throw TableConfigurationException::unknownSearchValueType(
-                $type,
-                array_map(static fn (SearchValueType $c): string => $c->value, SearchValueType::cases()),
-            );
-
-        return $this;
-    }
-
-    public function getSearchValueType(): ?SearchValueType
-    {
-        return $this->searchValueType;
-    }
-
-    /**
-     * Set a custom search query callback.
-     *
-     * @param  Closure  $callback  fn(Builder $query, string $search): Builder
-     */
-    public function searchUsing(Closure $callback): static
-    {
-        $this->capabilities = $this->capabilities->add(Capability::Searchable);
-        $this->searchCallback = $callback;
-
-        return $this;
-    }
-
-    /**
-     * Get the custom search callback.
-     */
-    public function getSearchCallback(): ?Closure
-    {
-        return $this->searchCallback;
-    }
-
-    /**
-     * Set whether the column is sortable.
-     *
-     * Supports custom sort callback:
-     *   ->sortable()
-     *   ->sortable(query: fn($query, $direction) => ...)
-     */
-    public function sortable(bool $sortable = true, ?Closure $query = null): static
-    {
-        $this->capabilities = $sortable
-            ? $this->capabilities->add(Capability::Sortable)
-            : $this->capabilities->remove(Capability::Sortable);
-
-        if ($query !== null) {
-            $this->sortCallback = $query;
-        }
-
-        return $this;
-    }
-
-    /**
-     * Set a custom sort query callback.
-     *
-     * @param  Closure  $callback  fn(Builder $query, string $direction): Builder
-     */
-    public function sortUsing(Closure $callback): static
-    {
-        $this->capabilities = $this->capabilities->add(Capability::Sortable);
-        $this->sortCallback = $callback;
-
-        return $this;
-    }
-
-    /**
-     * Get the custom sort callback.
-     */
-    public function getSortCallback(): ?Closure
-    {
-        return $this->sortCallback;
-    }
-
-    /**
-     * Set whether the column is hidden.
-     */
-    /**
-     * Check if the column is hidden.
-     */
-    /**
-     * Show column only on tablet and up (hidden below sm).
-     */
-    public function onlyOnTabletAndUp(): static
-    {
-        $this->visibleFrom = 'sm';
-
-        return $this;
-    }
-
-    /**
-     * Show column only on large screens (hidden below lg).
-     */
-    public function onlyOnLargeScreens(): static
-    {
-        $this->visibleFrom = 'lg';
-
-        return $this;
-    }
-
-    /**
-     * Alias for onlyOnMobile - shorter syntax.
-     */
-    public function mobileOnly(): static
-    {
-        return $this->onlyOnMobile();
-    }
-
-    /**
-     * Show column only on mobile (hidden on md and up).
-     */
-    public function onlyOnMobile(): static
-    {
-        $this->hiddenFrom = 'md';
-
-        return $this;
-    }
-
-    /**
-     * Alias for onlyOnDesktop - shorter syntax.
-     */
-    public function desktopOnly(): static
-    {
-        return $this->onlyOnDesktop();
-    }
-
-    /**
-     * Show column only on desktop (hidden below md).
-     */
-    public function onlyOnDesktop(): static
-    {
-        $this->visibleFrom = 'md';
-
-        return $this;
-    }
-
-    /**
-     * Place this column in a named slot of the stacked mobile card, instead of
-     * letting {@see MobileCard} derive one from column order and alignment.
-     */
-    public function mobileSlot(MobileSlot|string $slot): static
-    {
-        $this->mobileSlot = MobileSlot::resolve($slot);
-
-        return $this;
-    }
-
-    /**
-     * The identifier the card is recognised by.
-     */
-    public function mobileTitle(): static
-    {
-        return $this->mobileSlot(MobileSlot::Title);
-    }
-
-    /**
-     * The supporting line under the title.
-     */
-    public function mobileSubtitle(): static
-    {
-        return $this->mobileSlot(MobileSlot::Subtitle);
-    }
-
-    /**
-     * The figure the list is read for — set right on the title line.
-     */
-    public function mobileMetric(): static
-    {
-        return $this->mobileSlot(MobileSlot::Metric);
-    }
-
-    /**
-     * A status or qualifier, shown beside the title block rather than as a
-     * label/value pair.
-     */
-    public function mobileMeta(): static
-    {
-        return $this->mobileSlot(MobileSlot::Meta);
-    }
-
-    /**
-     * Keep this column in the label/value grid, whatever derivation would pick.
-     */
-    public function mobileDetail(): static
-    {
-        return $this->mobileSlot(MobileSlot::Detail);
-    }
-
-    public function getMobileSlot(): ?MobileSlot
-    {
-        return $this->mobileSlot;
-    }
-
-    /**
-     * Set custom display for mobile devices.
-     * Use this when you want different content on mobile vs desktop.
-     *
-     * @param  Closure  $callback  fn($record, $column) => string
-     */
-    public function mobileDisplayUsing(Closure $callback): static
-    {
-        $this->mobileDisplayUsing = $callback;
-
-        return $this;
-    }
-
-    /**
-     * Set custom display for desktop devices.
-     *
-     * @param  Closure  $callback  fn($record, $column) => string
-     */
-    public function desktopDisplayUsing(Closure $callback): static
-    {
-        $this->desktopDisplayUsing = $callback;
-
-        return $this;
-    }
-
-    /**
-     * Set the breakpoint that separates mobile from desktop.
-     *
-     * @param  string|Breakpoint  $breakpoint  sm, md, lg, xl, 2xl
-     */
-    public function mobileBreakpoint(string|Breakpoint $breakpoint): static
-    {
-        $this->mobileBreakpoint = $breakpoint instanceof Breakpoint ? $breakpoint->value : $breakpoint;
 
         return $this;
     }
@@ -708,14 +255,6 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
             'mobileContent' => $mobileContent,
             'desktopContent' => $desktopContent,
         ]));
-    }
-
-    /**
-     * Check if column has separate mobile/desktop displays.
-     */
-    public function hasResponsiveDisplay(): bool
-    {
-        return $this->mobileDisplayUsing !== null || $this->desktopDisplayUsing !== null;
     }
 
     public function renderCell(Model $record): string
@@ -1074,49 +613,6 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
         return $formatted;
     }
 
-    /** Truncate the displayed text to at most N characters (adds an ellipsis); null removes the limit. */
-    public function limit(?int $limit): static
-    {
-        $this->limit = $limit;
-
-        return $this;
-    }
-
-    /**
-     * Get CSS classes for text styling
-     */
-    public function getTextClasses(): string
-    {
-        $classes = [];
-
-        if ($this->textSize) {
-            $classes[] = match ($this->textSize) {
-                'xs' => 'text-xs',
-                'sm' => 'text-sm',
-                'base', 'md' => 'text-base',
-                'lg' => 'text-lg',
-                'xl' => 'text-xl',
-                '2xl' => 'text-2xl',
-                default => "text-$this->textSize",
-            };
-        }
-
-        if ($this->textWeight) {
-            $classes[] = HasFontWeight::getFontWeightClasses($this->textWeight);
-        }
-
-        if ($this->textColor) {
-            // 'muted' is a text treatment (lighter gray), not a palette color, so
-            // it keeps its dedicated shade; every real color goes through the
-            // canonical Foundation palette so hues stay consistent everywhere.
-            $classes[] = $this->textColor === 'muted'
-                ? 'text-gray-400 dark:text-gray-500'
-                : self::getTextColorClasses($this->textColor);
-        }
-
-        return implode(' ', $classes);
-    }
-
     /**
      * Resolve the column icon to its rendered SVG for a given record.
      *
@@ -1201,75 +697,6 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
         return $this->toggleable;
     }
 
-    /**
-     * Set the width of the column.
-     */
-    public function width(string $width): static
-    {
-        $this->width = $width;
-
-        return $this;
-    }
-
-    /**
-     * Get the width of the column.
-     */
-    public function getWidth(): ?string
-    {
-        return $this->width;
-    }
-
-    /**
-     * Align the column text to the left.
-     */
-    public function alignLeft(): static
-    {
-        return $this->alignment('left');
-    }
-
-    /**
-     * Set the text alignment of the column.
-     */
-    public function alignment(string|Alignment $alignment): static
-    {
-        $this->alignment = $alignment instanceof Alignment ? $alignment->value : $alignment;
-
-        return $this;
-    }
-
-    /**
-     * Center-align the column text.
-     */
-    public function alignCenter(): static
-    {
-        return $this->alignment('center');
-    }
-
-    /**
-     * Align the column text to the right.
-     */
-    public function alignRight(): static
-    {
-        return $this->alignment('right');
-    }
-
-    /**
-     * Get the current text alignment of the column.
-     */
-    public function getAlignment(): string
-    {
-        return $this->alignment ?? 'left';
-    }
-
-    /**
-     * Canonical literal Tailwind text-alignment class for this column, so the
-     * view consumes a scannable utility instead of interpolating `text-{$align}`.
-     */
-    public function getAlignmentClass(): string
-    {
-        return Alignment::resolve($this->alignment ?? 'left')->textClass();
-    }
-
     /** Transform the raw cell value before display; the Closure receives the state and returns the formatted value. */
     public function formatStateUsing(Closure $callback): static
     {
@@ -1286,7 +713,17 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
         return $this;
     }
 
-    /** Make the cell click-to-copy, with an optional confirmation message. */
+    /**
+     * Make the cell click-to-copy, with an optional confirmation message.
+     *
+     * Widens Foundation's `CanBeCopyable::copyable()` with the second argument,
+     * which is why the concern's own docblock says a surface carrying a message
+     * keeps its setter local: defaulting it means naming a `wire-table::`
+     * translation key, and a shared Foundation trait must not know one. The
+     * parameter keeps its own name — a class override is not signature-checked
+     * against the trait it replaces, and renaming it would break
+     * `copyable(copyable: false)`.
+     */
     public function copyable(bool $copyable = true, ?string $copyMessage = null): static
     {
         $this->copyable = $copyable;
@@ -1301,11 +738,6 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
         $this->copyMessage = $copyMessage;
 
         return $this;
-    }
-
-    public function isCopyable(): bool
-    {
-        return $this->copyable;
     }
 
     public function getCopyMessage(): ?string
@@ -1344,24 +776,6 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
     public function getExtraHeaderAttributes(): array
     {
         return $this->extraHeaderAttributes;
-    }
-
-    /** Let the cell text wrap onto multiple lines instead of truncating to one. */
-    public function wrap(bool $wrap = true): static
-    {
-        $this->wrap = $wrap;
-
-        return $this;
-    }
-
-    public function shouldWrap(): bool
-    {
-        return $this->wrap;
-    }
-
-    public function getLimit(): ?int
-    {
-        return $this->limit;
     }
 
     /** Prepend static text before the cell value. */
@@ -1427,194 +841,14 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
         return $this;
     }
 
-    // Inline editing methods
-
     public function isHtml(): bool
     {
         return $this->html;
     }
 
-    /**
-     * Set a Gate ability required for inline editing of this column.
-     */
-    public function authorizeInline(?string $ability): static
-    {
-        $this->inlineEditAbility = $ability;
-
-        return $this;
-    }
-
-    public function getInlineEditAbility(): ?string
-    {
-        return $this->inlineEditAbility;
-    }
-
-    /**
-     * Check if the current user can inline-edit this column.
-     */
-    public function canInlineEdit(): bool
-    {
-        if (! $this->inlineEditAbility) {
-            return true;
-        }
-
-        return Gate::allows($this->inlineEditAbility);
-    }
-
-    /**
-     * Allow this column's cells to be written.
-     *
-     * On a dedicated editable column (TextInputColumn, SelectColumn,
-     * ToggleColumn, CheckboxColumn) this is the switch that turns its editor on
-     * and off: `->editable(false)` renders the plain value and makes the server
-     * refuse a write for that column.
-     *
-     * It does **not** render an editor on an ordinary column — no view has read
-     * an editor type in any revision since the first commit — so the old
-     * `$type` / `$options` arguments are gone.
-     *
-     * They are swallowed by a variadic and refused rather than simply dropped
-     * from the signature: PHP ignores surplus *positional* arguments without a
-     * word, so `editable(true, 'select', [...])` — the form the docs taught —
-     * would otherwise keep doing exactly the silent nothing this removed.
-     * A named `type:` argument lands in that same variadic, so both call styles
-     * get the same message.
-     */
-    public function editable(bool $editable = true, mixed ...$removedEditorArguments): static
-    {
-        if ($removedEditorArguments !== []) {
-            throw TableConfigurationException::genericEditorNotRendered($this->getName());
-        }
-
-        $this->capabilities = $editable
-            ? $this->capabilities->add(Capability::Editable)
-            : $this->capabilities->remove(Capability::Editable);
-
-        return $this;
-    }
-
-    public function isEditable(): bool
-    {
-        return $this->hasCapability(Capability::Editable);
-    }
-
-    /**
-     * Whether a fill may write this column, when the table offers a fill handle.
-     *
-     * Editable columns are fillable by default — a cell you can type into is one
-     * you can drag down. Turn it off for a column where repeating one value is
-     * meaningless or dangerous (a unique code, an invoice number).
-     *
-     * Example:
-     *   TextInputColumn::make('invoice_number')->fillable(false);
-     */
-    public function fillable(bool $condition = true): static
-    {
-        $this->fillable = $condition;
-
-        return $this;
-    }
-
-    public function isFillable(): bool
-    {
-        return $this->isEditable() && $this->fillable;
-    }
-
-    // Text styling methods
-
-    /** Validation rules for the inline-editable cell; the Closure receives `$record` and returns a rules array. */
-    public function editableRules(Closure $callback): static
-    {
-        $this->editableRules = $callback;
-
-        return $this;
-    }
-
-    /**
-     * @return array<int, mixed>
-     */
-    public function getEditableRules(?Model $record): array
-    {
-        if ($this->editableRules) {
-            return ($this->editableRules)($record);
-        }
-
-        return [];
-    }
-
-    /** Persist an inline edit with a custom callback (`$record, $value`) instead of the default attribute write. */
-    public function editableUsing(Closure $callback): static
-    {
-        $this->editableCallback = $callback;
-
-        return $this;
-    }
-
-    public function getEditableCallback(): ?Closure
-    {
-        return $this->editableCallback;
-    }
-
     // size()/sm()/md()/lg()/getSize() come from Foundation\Concerns\HasSize and
     // now control the column's structural size. Text font-size moved to the
     // dedicated textSize() setter below (breaking change in v2).
-
-    /** Set the cell text size on the Tailwind text scale (distinct from `size()`, which is the structural size). */
-    public function textSize(string $size): static
-    {
-        $this->textSize = $size;
-
-        return $this;
-    }
-
-    public function getTextSize(): ?string
-    {
-        return $this->textSize;
-    }
-
-    /** Set the cell font weight (a `FontWeight` enum or keyword like `semibold`). */
-    public function weight(string|FontWeight $weight): static
-    {
-        $this->textWeight = $weight instanceof FontWeight ? $weight->value : $weight;
-
-        return $this;
-    }
-
-    public function getTextWeight(): ?string
-    {
-        return $this->textWeight;
-    }
-
-    // Column filtering methods
-
-    /** Set the cell text color (a palette name or `Color` enum). */
-    public function textColor(string|Color $color): static
-    {
-        $this->textColor = $color instanceof Color ? $color->value : $color;
-
-        return $this;
-    }
-
-    public function getTextColor(): ?string
-    {
-        return $this->textColor;
-    }
-
-    /**
-     * Add description text below or above the main content
-     */
-    public function description(string|Closure $description, string $position = 'below'): static
-    {
-        $this->description = $description;
-        $this->descriptionPosition = $position;
-
-        return $this;
-    }
-
-    public function getDescription(): string|Closure|null
-    {
-        return $this->description;
-    }
 
     /**
      * Get the relationship attribute of the column.

@@ -6,17 +6,28 @@ namespace NyonCode\WireTable\Columns;
 
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Query\Contracts\HasSearchColumns;
+use NyonCode\WireCore\Foundation\Support\GapScale;
 
 class SplitColumn extends Column implements HasSearchColumns
 {
+    /** A split cell sits tighter than a page-level Flex, whose default is 4. */
+    private const DEFAULT_GAP = 3;
+
     /** @var array<int, Column> */
     protected array $columns = [];
 
     protected string $layout = 'horizontal'; // horizontal, vertical
 
-    protected string $gap = '3';
+    /** Step on the shared gap scale; a name ('sm') or a number, resolved by GapScale. */
+    protected string|int $gap = self::DEFAULT_GAP;
 
-    protected bool $alignCenter = true;
+    /**
+     * Cross-axis alignment, or null while the author has not asked for one.
+     *
+     * Null is not "centre" — it is *unset*, and the two render differently in a
+     * column. See {@see getAlignClass()}.
+     */
+    protected ?bool $alignCenter = null;
 
     /**
      * Create with array of columns
@@ -72,17 +83,35 @@ class SplitColumn extends Column implements HasSearchColumns
     }
 
     /**
-     * Set gap between items
+     * Space between the split's children.
+     *
+     * Takes a design-system name ('none', 'xs', 'sm', 'md', 'lg', 'xl') or a step
+     * on Tailwind's 0–12 gap scale, either as an int or as a numeric string.
+     * {@see GapScale} resolves all three to a literal utility — the class used to
+     * be built by interpolation here, which Tailwind's scanner cannot see, so
+     * every value but the one another file happened to spell out rendered with
+     * no gap at all. The names the docs have always taught ('sm') work for the
+     * first time.
      */
-    public function gap(string $gap): static
+    public function gap(string|int $gap): static
     {
         $this->gap = $gap;
 
         return $this;
     }
 
+    /** The literal gap utility for the configured spacing. */
+    public function getGapClass(): string
+    {
+        return GapScale::classFor($this->gap, self::DEFAULT_GAP);
+    }
+
     /**
-     * Align items to center (default)
+     * Align the children on the cross axis — centred.
+     *
+     * Which direction that is depends on the layout, because that is what the
+     * cross axis means: in the default row it centres them vertically, in a
+     * `vertical()` column it centres them horizontally.
      */
     public function alignCenter(bool $align = true): static
     {
@@ -92,13 +121,34 @@ class SplitColumn extends Column implements HasSearchColumns
     }
 
     /**
-     * Align items to start
+     * Align the children at the start of the cross axis — top in a row, leading
+     * edge in a column.
      */
     public function alignStart(): static
     {
         $this->alignCenter = false;
 
         return $this;
+    }
+
+    /**
+     * The literal cross-axis utility, or '' when the author never asked.
+     *
+     * The distinction is load-bearing in a column and invisible in a row. A row
+     * has always centred by default, so an unset alignment resolves to
+     * `items-center` there. A column has always *stretched* — the vertical branch
+     * of the partial simply never printed this class, so `alignStart()` was inert
+     * after `vertical()` — and printing the row's default into it would have
+     * re-laid-out every existing vertical split. Unset therefore stays stretch,
+     * and only an explicit call emits anything.
+     */
+    public function getAlignClass(): string
+    {
+        if ($this->alignCenter === null) {
+            return $this->layout === 'vertical' ? '' : 'items-center';
+        }
+
+        return $this->alignCenter ? 'items-center' : 'items-start';
     }
 
     /**
@@ -141,17 +191,24 @@ class SplitColumn extends Column implements HasSearchColumns
     }
 
     /**
-     * Get first sortable column name
+     * The attribute the split header orders by: the first sortable child.
+     *
+     * Falls back to the column's own name, mirroring {@see isSortable()} — a
+     * split registered under a real attribute and marked `->sortable()` itself
+     * still sorts by it. Until 2.0 nothing called this method, so the header
+     * ordered by the split's own name; where that name was a label rather than
+     * an attribute (`SplitColumn::split([...], 'identity')`, the documented
+     * form) clicking it raised `no such column`.
      */
     public function getSortColumn(): ?string
     {
         foreach ($this->columns as $column) {
             if ($column->isSortable()) {
-                return $column->getName();
+                return $column->getSortColumn();
             }
         }
 
-        return null;
+        return parent::getSortColumn();
     }
 
     /**
@@ -196,8 +253,8 @@ class SplitColumn extends Column implements HasSearchColumns
         // State/layout decisions stay here; markup lives in the partial.
         return $this->renderView('tables.columns.split', [
             'layout' => $this->layout,
-            'alignClass' => $this->alignCenter ? 'items-center' : 'items-start',
-            'gapClass' => "gap-$this->gap",
+            'alignClass' => $this->getAlignClass(),
+            'gapClass' => $this->getGapClass(),
             'imageHtml' => $imageHtml,
             'textColumns' => $textColumns,
         ]);

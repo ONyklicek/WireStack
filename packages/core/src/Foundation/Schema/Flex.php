@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Foundation\Schema;
 
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
+use NyonCode\WireCore\Foundation\Support\GapScale;
 
 /**
  * Canonical flex layout — arranges child components side by side on a single
@@ -117,12 +118,7 @@ class Flex extends LayoutComponent
     /** Literal gap utility for the configured spacing. */
     public function getGapClass(): string
     {
-        return match (max(0, min($this->gap, 12))) {
-            0 => 'gap-0', 1 => 'gap-1', 2 => 'gap-2', 3 => 'gap-3',
-            5 => 'gap-5', 6 => 'gap-6', 7 => 'gap-7', 8 => 'gap-8',
-            9 => 'gap-9', 10 => 'gap-10', 11 => 'gap-11', 12 => 'gap-12',
-            default => 'gap-4',
-        };
+        return GapScale::classFor($this->gap);
     }
 
     /** Literal justify-content utility, or '' when unset. */

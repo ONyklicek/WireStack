@@ -17,6 +17,7 @@ sáhněte na kterýkoli z nich.
 | [BadgeColumn](badge.md) | Status pilulky s barvou a ikonou, vč. self-coloringu enumů |
 | [MoneyColumn](money.md) | Částky, doprava a tabulárně; metrika stacked karty |
 | [MetricColumn](metric.md) | Měření: agregované číslo s volitelnou čárou trendu |
+| [PhoneColumn](phone.md) | Telefonní číslo zapsané ke čtení a odkázané k vytáčení |
 | [BooleanColumn](boolean.md) | True/false jako ikona (fajfka / křížek) |
 | [IconColumn](icon.md) | Ikony podle stavu nebo dynamicky resolvované |
 | [ImageColumn](image.md) | Avatary a náhledy |
@@ -58,10 +59,19 @@ Column::make(string $name)           // statická factory — $name je cesta v t
 ```php
 ->sortable(bool $sortable = true, ?Closure $query = null)
 ->isSortable(): bool
+->getSortColumn(): ?string           // atribut, podle kterého hlavička řadí
 
 // Vlastní logika řazení
 ->sortUsing(Closure $fn)
 ```
+
+`isSortable()` rozhoduje, jestli je hlavička klikací; `getSortColumn()` rozhoduje,
+podle čeho ten klik řadí. U běžného sloupce jsou to tytéž řetězce — jeho vlastní
+jméno včetně tečkové cesty přes relaci — takže ho nikdy nevoláte. Rozejdou se u
+**složeného** sloupce: `SplitColumn` je zaregistrovaný pod jménem skupiny, kterou
+kreslí, a odpovídá prvním řaditelným dítětem, které drží. Dotazový šev se ptá
+sloupce místo toho, aby použil jméno z kliknutí — a to je to, co složené hlavičce
+brání řadit podle atributu, který neexistuje.
 
 ```php
 TextColumn::make('full_name')

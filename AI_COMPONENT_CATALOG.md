@@ -18,6 +18,12 @@ Prefer the lowest package that can own the reusable behavior.
 
 Path: `packages/core/src/Foundation`
 
+### Value Objects
+
+- `MoneyFormat` — the currency vocabulary (precision, separators, placement) plus `format()`/`parse()`/minor units. Read by `FormatsState::money()` (every `TextColumn`, `MoneyColumn`, `TextEntry`), `WireForms\Components\MoneyInput` and `TextInputColumn::money()`
+- `DialingCodes` / `DialingCode` — the dialling-code table, prefix matching and how a number is written. Read by `WireForms\Components\PhoneInput`, `WireTable\Columns\PhoneColumn` and the phone rule
+- `PollDirective`, `ShortcutHint`
+
 ### Concerns
 
 Use these before creating local field/column/action helpers:
@@ -295,19 +301,23 @@ Fields:
 - `CheckboxList`
 - `CodeEditor`
 - `ColorPicker`
+- `DateRangePicker` (a LayoutComponent composing two `DateTimePicker`s over two columns)
 - `DateTimePicker`
 - `FileUpload`
 - `Hidden`
 - `KeyValue`
 - `MarkdownEditor`
+- `MoneyInput` (extends `TextInput`; currency vocabulary from `Foundation\ValueObjects\MoneyFormat`)
 - `MorphToSelect`
 - `OtpInput`
+- `PhoneInput` (dialling-code select + national number over one E.164 value; `Foundation\ValueObjects\DialingCodes`)
 - `Radio`
 - `Rating`
 - `Repeater` (card layout, or `table()` for row layout)
 - `Builder` (extends `Repeater`; per-item `Block` type) + `Block`
 - `RichEditor`
 - `Select`
+- `SignaturePad` (pointer-drawn canvas; data URI, or a PNG on a disk via `storeOn()`)
 - `Slider`
 - `Tags`
 - `TextInput`
@@ -409,13 +419,38 @@ Path: `packages/table/src/Columns`
 
 Base:
 
-- `Column`
+- `Column` — cell rendering, state resolution and per-record visibility. Every
+  other capability is a named concern it composes, listed below.
+
+Column capabilities (`packages/table/src/Concerns`, each `@phpstan-require-extends Column`):
+
+- `CanBeSearchable` · `CanBeSorted` — what the search box and the header sort
+  reach, read by `Services\TableQueryService`
+- `CanBeFiltered` (+ `Services\ColumnFilterFactory`) — column-level filters
+- `HasAggregate` — the `counts()`/`sums()`/`averages()`/`mins()`/`maxes()`
+  rollup triple; applied by `Services\AggregateSubqueries`
+- `CanBeEdited` — inline-edit config and its two gates; the write itself is
+  `Services\CellEditPipeline` + `Services\CellValueWriter`
+- `HasResponsive` — everything about the column across viewport widths:
+  breakpoint visibility, the `onlyOn*` shortcuts, per-width content closures
+- `HasMobileSlot` — the column's slot in the stacked mobile card
+  (`Support\MobileCard`; host side is `Concerns\StacksOnMobile`)
+- `HasAlignment` · `HasWidth` · `CanBeTruncated` · `HasTextStyling` ·
+  `HasDescription` — cell presentation
+- `CanBeSummarized` — see Summaries below
+
+Composed from core Foundation rather than re-implemented: `HasColor`,
+`HasDefault`, `HasFontWeight`, `HasIcon`, `HasPlaceholder`, `HasSize`,
+`HasTooltip`, `HasVisibility` (which brings `HasAuthorization`), `CanBeCopyable`
+(the column widens only `copyable()`, to carry a confirmation message).
+`CanBeDisabled` is deliberately absent — a column is never disabled.
 
 Columns:
 
 - `TextColumn`
 - `MoneyColumn` — `TextColumn` with money's defaults: right-aligned (so `MobileCard` picks it as the stacked card's metric), `tabular-nums`, no wrap. Formatting stays in `Foundation\Concerns\FormatsState::money()`; the figure defaults are `Concerns\RendersAsFigure`, shared with `MetricColumn`. There is **no `StatusColumn`** — `BadgeColumn` already resolves an enum's color, icon and label through `EnumResolver`
 - `MetricColumn` — an aggregate figure (dot notation already does the `withCount`/`withSum`) plus an optional per-record trend, drawn by `Foundation\View\Sparkline`
+- `PhoneColumn` — `TextColumn` that writes a stored E.164 number the way `PhoneInput` does and links it as `tel:`; the grammar is `Foundation\ValueObjects\DialingCodes`, shared by both
 - `BadgeColumn`
 - `BooleanColumn`
 - `IconColumn`

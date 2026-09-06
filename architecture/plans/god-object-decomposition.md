@@ -192,6 +192,94 @@ are covered by `WithTableSubRowGrandTotalsTest` (real `Schema::create`),
 `WithTableSubRows*` and `ExportSummariesTest`. A green `HasSummaryTest` says
 nothing about aggregation.
 
+### 1b — the rest of the table, done (2026-09-05)
+
+Re-measured before starting: `Column` was **1,685 lines / 124 methods**, not the
+1,639 this plan recorded on 1.10.4. Afterwards it is **919 lines / 53 methods**,
+and eleven capabilities have names.
+
+| Concern | Lines | What moved |
+| --- | --- | --- |
+| `CanBeSearchable` | 130 | `searchable()`, `searchAs()`, `searchUsing()` + accessors |
+| `CanBeSorted` | 75 | `sortable()`, `sortUsing()`, `isSortable()`, `getSortCallback()` |
+| `HasAggregate` | 142 | the rollup triple and its five setters |
+| `CanBeEdited` | 168 | inline-edit config and its two gates |
+| `HasResponsive` | 66 → 181 | the six `onlyOn*` shortcuts and the per-width content closures joined the breakpoint visibility already there |
+| `HasMobileSlot` | 87 | the stacked-card slot declaration |
+| `HasAlignment` | 81 | alignment |
+| `HasTextStyling` | 113 | `textSize`/`weight`/`textColor` + `getTextClasses()` |
+| `CanBeTruncated` | 52 | `wrap()` + `limit()` |
+| `HasWidth` | 41 | `width()` |
+| `HasDescription` | 46 | `description()` |
+
+Plus the copy flag: `Column` hand-rolled `$copyable` + `isCopyable()` while
+Foundation's `CanBeCopyable` already owned them — and that concern's own docblock
+named the table column as the surface keeping the *message* half local. It now
+composes the concern and widens only `copyable()`. The parameter deliberately
+keeps the name `$copyable` rather than the concern's `$condition`: a class
+override is not signature-checked against the trait it replaces, so renaming it
+would break `copyable(copyable: false)` for no gain.
+
+**`Column`'s public surface is byte-identical before and after** — checked by
+diffing every `public function` signature across the class and its concerns.
+
+**Four things the work found that the plan did not have:**
+
+1. **`InlineEditPolicy` should not be built.** This plan proposed it for "the
+   ability/authorize half" of inline editing. Measured, that half is one
+   `Gate::allows()` and one closure call, while the *write* — five save
+   strategies, validation, dehydration, optimistic locking, events — already has
+   two owners in `Services\CellEditPipeline` and `Services\CellValueWriter`. A
+   third service over eight lines would name a responsibility that is taken.
+   `CanBeEdited` is configuration only, and says so.
+
+2. **The responsive "bypass" was worse than a bypass, and it was a latent bug.**
+   The entry above records only that "Column bypasses `HasResponsive`". What it
+   actually did: the six `onlyOn*` shortcuts sat on `Column` and assigned
+   `$visibleFrom` / `$hiddenFrom` — *the trait's* properties — directly, so the
+   trait held the state while the class wrote it. The two writers had already
+   drifted: `hiddenFrom()` normalizes a `Breakpoint` enum, `onlyOnMobile()` wrote
+   the raw string `'md'`. The shortcuts now go through the setters.
+
+3. **A stale aggregate column survived a type switch.** The five aggregate
+   setters each assigned only the fields they needed, so
+   `->sums('orders', 'total')->counts('orders')` left the sum's column behind.
+   `getAggregateAttribute()` special-cased `count` and hid it;
+   `getAggregateColumn()` answered `'total'` to anyone who asked — and
+   `Services\AggregateSubqueries` asks. One private writer now assigns all three
+   on every call, `getAggregateAttribute()` drops the special case, and two tests
+   cover the switch (verified to fail against the old shape).
+
+   The alias convention `{relation}_{function}[_{column}]` is written in **three**
+   places — here, `Core\Query\AggregateClause::getAlias()` and
+   `Core\Relations\AggregateSegment::getName()` — and they agree. It was left
+   at three: neither core copy is reachable from a column without pointing
+   `Core\Relations` at `Core\Query`, which today depends the other way. Giving
+   the convention one owner in core is a real change, not a line item here.
+
+4. **The extraction reproduced this plan's own trap, live.** A slip in the
+   cutting left `limit()` declared on `Column` *and* on `CanBeTruncated`. PHP said
+   nothing — a class method beats a trait's with no diagnostic — the full table
+   suite stayed green, and only a signature diff of the class against its concerns
+   found it. Slice 3 of `WithTable` recorded exactly this failure mode; it is
+   worth re-reading before the next extraction, and the signature diff is worth
+   running after one.
+
+Also removed on the way: three stale section markers (`// Inline editing
+methods` above `isHtml()`, `// Column filtering methods` between two text-styling
+setters, `// Text styling methods` in the middle of the inline-edit block) and two
+orphaned docblocks left over from the `HasVisibility` adoption, sitting above an
+unrelated method with nothing between them.
+
+**Still blocked, unchanged:** `HasExtraAttributes` (type-incompatible) and
+`HasPrefixAndSuffix` (167 lines for the two strings a column wants — splitting
+that concern in core is the real task, and it changes forms fields).
+
+**Not attempted:** the remaining mass in `Column` is the cell engine —
+`renderCell`, `renderCellFast`, `renderCellContent`, `buildCellSkeleton`,
+`getState`, `resolveValue`, `formatValue`. That is one responsibility, it is what
+a column *is*, and moving it is a different question from naming capabilities.
+
 ### Naming
 
 Pick the prefix by **semantics**, not by whether the thing is a trait or an
@@ -384,7 +472,9 @@ re-litigate where its service belongs.
    delegating to the same action.
 5. **`CanBeFiltered` + `ColumnFilterFactory`** — needs a design decision first.
 6. **The remaining `Column` concerns** (search, sort, copy, alignment, …) —
-   mechanical once 1–2 land.
+   **done 2026-09-05**, and not mechanical: see § 1b for the four findings, one of
+   which was a latent bug and one of which this plan predicted and the work hit
+   anyway.
 7. **`Table` config objects** — last, highest BC exposure.
 
 Stages 1–4 are internal. Nothing here requires a rename, and nothing here is a

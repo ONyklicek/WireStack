@@ -284,6 +284,64 @@ mělo jedno zadání pro dvě věci, které spolu nemají nic společného (§2,
 
 Tohle je ta část, kvůli které se plán nedá číst bez tohohle souboru.
 
+### Ostrý defekt 2026-09-06: řazení `SplitColumn` shazovalo request
+
+Našla ho **analýza pokrytí po souborech**, ne čtení kódu: `SplitColumn` byl na
+33,3 % a všechny čtyři jeho overridy search/sort byly nepokryté. `getSortColumn()`
+měl navíc **nula volajících v celém repu** — a přitom je dokumentovaný
+(`docs/table/columns/split.md`).
+
+Řetěz byl tenhle. `SplitColumn::isSortable()` vrací true, jakmile je řaditelné
+kterékoli dítě, takže `data-region.blade.php:299` vykreslí klikací hlavičku.
+`TableQueryService::buildPlannerSorts()` pak ale řadil podle
+`$columnObj->getName()` — jména **skupiny**, ne dítěte. Pro dokumentovaný tvar
+`SplitColumn::split([...], 'identity')` to došlo do SQL jako
+`order by users.identity` → `QueryException: no such column`. V prohlížeči se to
+projeví tak, že klik nic neseřadí a vyskočí Livewire error overlay.
+
+Oprava má jednoho vlastníka: kanonické `CanBeSorted::getSortColumn()` (výchozí =
+vlastní jméno, včetně tečkové cesty), `SplitColumn` ho přepisuje na první
+řaditelné dítě s pádem zpět na vlastní jméno — souměrně s tím, co `isSortable()`
+dělal už předtím — a dotazový šev se ptá sloupce místo toho, aby použil jméno
+z kliknutí.
+
+Tři věci, které stojí za zapamatování:
+
+1. **`api:dead` to chytit nemohl.** Brána je zelená a kontroluje **jen fluent
+   settery** (586 na 65 třídách); dokumentovaný *getter* bez konzumenta jí projde.
+2. **`SplitColumn` nebyl ve workbenchi vůbec** — žádný náhled, žádný driver.
+   Doplněno: preview `table-split-columns` a driver `verify-split-sort`
+   (11/11, ověřený sabotáží — bez opravy padnou 4 kontroly).
+3. **Workbench DB drží stav po jiných driverech.** `verify-cell-island` píše do
+   e‑mailů těchhle uživatelů a jiný běh je i přejmenoval, takže první verze
+   driveru padala na vlastních očekávaných řetězcích, ne na chování. Driver proto
+   tvrdí **relativní pořadí** (je seznam setříděný podle jména, a nebyl setříděný
+   předtím), ne konkrétní jména — to je vzor pro každý další driver nad `User`.
+
+Cestou se našly ještě dvě věci, obě **dodělané týž den** na pokyn vlastníka repa:
+
+**Mezera měla druhého vlastníka a jeden z nich ji interpoloval.**
+`SplitColumn::gap()` skládal třídu jako `"gap-$this->gap"`, kterou Tailwind
+nenaskenuje — takže *žádná* hodnota nekreslila mezeru, pokud tutéž utilitu
+náhodou nevypsal jiný soubor; a docs k ní nabízely `'xs'|'sm'|'md'|'lg'`, pro
+které utilita neexistuje vůbec. Přitom `Foundation\Schema\Flex::getGapClass()`
+tu mapu **už vlastnil**, a to správně, literálně. Vznikl kanonický
+`Foundation\Support\GapScale` (0–12 literálně, plus jména `none|xs|sm|md|lg|xl`
+mapovaná na tutéž škálu, s fallbackem, který volající volí — `Flex` 4, split 3),
+a oba volající delegují. Je to přesně ten `text-{$align}`, kvůli kterému vznikl
+enum `Alignment`, jen o dvě řady dál.
+
+**Svislý split zahazoval zarovnání**, protože větev `@else` v `split.blade.php`
+`$alignClass` nikdy nevypsala. Opravené, ale ne tím, že by se ta třída prostě
+začala tisknout: řádek se odjakživa zarovnává na střed, sloupec odjakživa
+roztahuje, takže vytisknout do sloupce výchozí hodnotu řádku by přeskládalo
+každý existující svislý split. `$alignCenter` je proto nově `?bool` a `''` se
+vrací, dokud si autor o zarovnání neřekne — nastavená hodnota se projeví v obou
+směrech, na příčné ose, jak flexbox funguje.
+
+Obojí je pod prohlížečovou branou: preview `table-split-columns` je svislý
+a nese `gap('sm')->alignStart()`, driver `verify-split-sort` je **13/13**.
+
 **`WithTable` není tenká delegační vrstva.** Jen 20 z 99 metod je do pěti
 řádků; 12 metod nad 40 řádků drželo 37 % kódu v tělech. Ale **65 metod je
 public a jsou to Livewire endpointy** — `updateTableCell` volá Alpine jako

@@ -19,6 +19,7 @@ use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireSortable\SortablePlugin;
 use NyonCode\WireSortable\SortableTable;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Columns\SplitColumn;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Services\TableQueryService;
@@ -710,6 +711,57 @@ it('filters by a hasMany relation column, which a join could not express', funct
 
     // Only Bob has an order (50) over 40.
     expect($query->get()->pluck('name')->all())->toBe(['Bob']);
+});
+
+// A composite column is registered under a name for the group it draws, not an
+// attribute — so the name the header is clicked under and the attribute the
+// query must order by are two different strings. Before the seam asked
+// getSortColumn(), it ordered by the group's name and SQLite answered
+// "no such column: tqs_users.identity".
+it('sorts a split column by its first sortable child, not by its own name', function () {
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->columns([
+            SplitColumn::split([
+                Column::make('name')->sortable(),
+                Column::make('email'),
+            ], 'identity'),
+        ]);
+
+    $service = new TableQueryService;
+    $query = $service->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+        sortColumn: 'identity',
+        sortDirection: 'desc',
+    );
+
+    expect($query->toSql())->toContain('"tqs_users"."name" desc')
+        ->and($query->toSql())->not->toContain('identity');
+
+    $results = $query->get();
+    expect($results->first()->name)->toBe('Charlie')
+        ->and($results->last()->name)->toBe('Alice');
+});
+
+it('sorts a split column by its own name when no child is sortable', function () {
+    $table = Table::make()
+        ->model(TqsUser::class)
+        ->columns([
+            SplitColumn::split([
+                Column::make('email'),
+            ], 'name')->sortable(),
+        ]);
+
+    $service = new TableQueryService;
+    $query = $service->buildQuery(
+        baseQuery: TqsUser::query(),
+        table: $table,
+        sortColumn: 'name',
+        sortDirection: 'asc',
+    );
+
+    expect($query->get()->first()->name)->toBe('Alice');
 });
 
 it('ignores sort for non-sortable columns', function () {

@@ -105,3 +105,31 @@ test('regular column getAggregateColumn returns null', function () {
 
     expect($column->getAggregateColumn())->toBeNull();
 });
+
+// ─── Aggregate: switching type ─────────────────────────────────────
+
+// Every setter writes all three fields, so the last call is the whole
+// configuration. Before HasAggregate owned the triple, each setter wrote only
+// what it needed: counts() left the previous sum's column in place, which
+// getAggregateAttribute() special-cased away while getAggregateColumn() kept
+// answering with it.
+test('switching aggregate type clears the column the previous type set', function () {
+    $column = Column::make('orders')
+        ->sums('orders', 'total')
+        ->counts('orders');
+
+    expect($column->getAggregateFunction())->toBe('count')
+        ->and($column->getAggregateColumn())->toBeNull()
+        ->and($column->getAggregateAttribute())->toBe('orders_count');
+});
+
+test('switching aggregate type replaces relation and column together', function () {
+    $column = Column::make('metric')
+        ->sums('orders', 'total')
+        ->averages('reviews', 'rating');
+
+    expect($column->getAggregateFunction())->toBe('avg')
+        ->and($column->getAggregateRelation())->toBe('reviews')
+        ->and($column->getAggregateColumn())->toBe('rating')
+        ->and($column->getAggregateAttribute())->toBe('reviews_avg_rating');
+});
