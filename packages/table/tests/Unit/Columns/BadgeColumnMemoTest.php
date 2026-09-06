@@ -16,7 +16,8 @@ use NyonCode\WireTable\Columns\IconColumn;
  * icon derived from it), so `renderCell` memoises the view render by its data payload:
  * rows sharing a status reuse one render. Keying on the actual data (not a "pure
  * function" assumption) keeps it byte-identical; the win is O(distinct states), not
- * O(rows). This proves correctness, the render count, and the wall-clock.
+ * O(rows). This proves correctness and the render count — see the last test for why
+ * the wall-clock is reported rather than asserted.
  */
 function badgeRecord(string $status): Model
 {
@@ -122,35 +123,51 @@ it('icon and boolean columns adopt the same data memo — render once per state'
 it('is far cheaper for low-cardinality state than a per-cell render', function () {
     $rows = 2000;
 
-    $time = function (callable $fn): float {
-        $t = microtime(true);
-        $fn();
+    // Counted, not clocked — and that is a correction, not a shortcut. This test
+    // used to assert `memoisedMs < defeatedMs`, and it failed inside a full-suite
+    // coverage run at 489 ms against 478 ms. Measured afterwards on a quiet
+    // machine, the real margin is only about 3x (54 ms against 174 ms): the memo
+    // saves the view render, but the per-cell work around it — resolving the
+    // state, its colour and its icon, then building the payload key — is paid by
+    // every row either way and is most of what is left. A 3x margin is not a gate
+    // anywhere, and under a whole suite it inverted.
+    //
+    // The render count is what the claim was ever about. The engine's cost model
+    // (AI_CODING_STANDARD.md) is written in view renders, so counting them states
+    // "far cheaper" exactly rather than sampling a proxy for it. The clock is
+    // still printed, because the figure is worth seeing; it is no longer asserted.
+    $measure = function (BadgeColumn $col, array $records): array {
+        $started = microtime(true);
 
-        return (microtime(true) - $t) * 1000;
+        $renders = badgeViewRenders(function () use ($col, $records) {
+            foreach ($records as $record) {
+                $col->renderCell($record);
+            }
+        });
+
+        // The counting composer is one trivial closure per render, so it is a
+        // rounding error against the render it counts — one pass can report both.
+        return ['ms' => (microtime(true) - $started) * 1000, 'renders' => $renders];
     };
 
-    // Realistic: 4 distinct statuses across 2000 rows → 4 renders.
+    // Realistic: three distinct statuses across 2000 rows.
     $realStates = ['active', 'inactive', 'pending', 'active'];
-    $realCol = badgeColumn();
-    $realRecords = array_map(fn ($i) => badgeRecord($realStates[$i % 4]), range(1, $rows));
-    $realMs = $time(function () use ($realCol, $realRecords) {
-        foreach ($realRecords as $r) {
-            $realCol->renderCell($r);
-        }
-    });
+    $real = $measure(
+        badgeColumn(),
+        array_map(fn ($i) => badgeRecord($realStates[$i % 4]), range(1, $rows)),
+    );
 
     // Worst case: a unique status per row → the memo never hits (≈ old per-cell cost).
-    $uniqueCol = badgeColumn();
-    $uniqueRecords = array_map(fn ($i) => badgeRecord('s'.$i), range(1, $rows));
-    $uniqueMs = $time(function () use ($uniqueCol, $uniqueRecords) {
-        foreach ($uniqueRecords as $r) {
-            $uniqueCol->renderCell($r);
-        }
-    });
+    $defeated = $measure(
+        badgeColumn(),
+        array_map(fn ($i) => badgeRecord('s'.$i), range(1, $rows)),
+    );
 
     fwrite(STDERR, "\n=== §7 BadgeColumn data-memo — {$rows} cells ===\n");
-    fwrite(STDERR, sprintf("  4 distinct states (memoised): %.1f ms\n", $realMs));
-    fwrite(STDERR, sprintf("  2000 unique states (memo defeated ≈ old): %.1f ms   (%.1f× faster)\n\n", $uniqueMs, $uniqueMs / max($realMs, 0.001)));
+    fwrite(STDERR, sprintf("  3 distinct states (memoised):            %6.1f ms, %d renders\n", $real['ms'], $real['renders']));
+    fwrite(STDERR, sprintf("  2000 unique states (memo defeated ≈ old): %6.1f ms, %d renders\n\n", $defeated['ms'], $defeated['renders']));
 
-    expect($realMs)->toBeLessThan($uniqueMs);
+    // O(distinct states) against O(rows) — the whole point of keying on the data.
+    expect($real['renders'])->toBe(3)
+        ->and($defeated['renders'])->toBe($rows);
 });
