@@ -5,19 +5,27 @@ declare(strict_types=1);
 namespace Workbench\App\Livewire\Previews;
 
 use Livewire\Component;
+use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 use NyonCode\WireForms\Components\Checkbox;
 use NyonCode\WireForms\Components\CheckboxList;
+use NyonCode\WireForms\Components\CodeEditor;
 use NyonCode\WireForms\Components\ColorPicker;
+use NyonCode\WireForms\Components\DateRangePicker;
 use NyonCode\WireForms\Components\DateTimePicker;
 use NyonCode\WireForms\Components\Field;
 use NyonCode\WireForms\Components\FileUpload;
 use NyonCode\WireForms\Components\KeyValue;
 use NyonCode\WireForms\Components\MarkdownEditor;
+use NyonCode\WireForms\Components\MoneyInput;
+use NyonCode\WireForms\Components\MorphToSelect;
+use NyonCode\WireForms\Components\MorphToSelect\Type as MorphType;
 use NyonCode\WireForms\Components\OtpInput;
+use NyonCode\WireForms\Components\PhoneInput;
 use NyonCode\WireForms\Components\Radio;
 use NyonCode\WireForms\Components\Rating;
 use NyonCode\WireForms\Components\RichEditor;
 use NyonCode\WireForms\Components\Select;
+use NyonCode\WireForms\Components\SignaturePad;
 use NyonCode\WireForms\Components\Slider;
 use NyonCode\WireForms\Components\Tags;
 use NyonCode\WireForms\Components\Textarea;
@@ -27,6 +35,8 @@ use NyonCode\WireForms\Components\TiptapEditor;
 use NyonCode\WireForms\Components\Toggle;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\WithForms;
+use Workbench\App\Models\Document;
+use Workbench\App\Models\Task;
 
 class FieldPreview extends Component
 {
@@ -41,6 +51,9 @@ class FieldPreview extends Component
         $this->field = $variant;
         $this->data = [
             'name' => 'Amelia Stone',
+            'snippet' => "public function handle(): void\n{\n    // Tab indents here.\n}",
+            'subject_type' => null,
+            'subject_id' => null,
             'bio' => 'Owns product configuration, release notes, and customer rollouts across the workspace.',
             'role' => 'admin',
             'agree' => true,
@@ -59,7 +72,20 @@ class FieldPreview extends Component
             'skills' => ['PHP', 'Laravel', 'Livewire'],
             'score' => 4,
             'code' => '283041',
-            'metadata' => ['plan' => 'pro', 'seats' => '12', 'region' => 'eu-central'],
+            // KeyValue's state is a list of rows, not a map — the field edits
+            // pairs and saves them in that shape.
+            'metadata' => [
+                ['key' => 'plan', 'value' => 'pro'],
+                ['key' => 'seats', 'value' => '12'],
+                ['key' => 'region', 'value' => 'eu-central'],
+            ],
+            'price' => '1 234,50',
+            'phone' => '+420 123 456 789',
+            // Left empty: the pad has to come up blank, so a driver can prove a
+            // stroke is what fills it.
+            'signature' => null,
+            'valid_from' => '2026-06-01',
+            'valid_to' => '2026-06-30',
             'event_at' => '2026-06-15 14:30',
             // Left empty on purpose: the bounds preview has to show where an
             // unset picker opens. The key still has to exist — entangle() is a
@@ -87,10 +113,22 @@ class FieldPreview extends Component
      * Schema for a preview key. Most previews render a single field; a few compose
      * several fields to showcase one axis (e.g. the size scale).
      *
-     * @return array<int, Field>
+     * @return array<int, Field|LayoutComponent>
      */
     protected function schemaFor(string $field): array
     {
+        // Not a Field: a range is a layout composing two DateTimePickers over
+        // two columns, so it is returned before the single-field match below.
+        if ($field === 'date-range-picker') {
+            return [
+                DateRangePicker::make('validity')
+                    ->label('Validity')
+                    ->from('valid_from')
+                    ->until('valid_to')
+                    ->presets(),
+            ];
+        }
+
         if ($field === 'radio-sizes') {
             return [
                 Radio::make('size_sm')->label('Small')->options(['a' => 'Left', 'b' => 'Center', 'c' => 'Right'])
@@ -336,13 +374,45 @@ class FieldPreview extends Component
                 ->label('Verification code')
                 ->helperText('Enter the 6-digit code we sent you.')
                 ->length(6)
+                ->numericOnly()
                 ->separator(3),
+
+            'code-editor' => CodeEditor::make('snippet')
+                ->label('Snippet')
+                ->helperText('Tab indents by four spaces instead of leaving the field.')
+                ->language('php')
+                ->withLineNumbers(),
+
+            'morph-to-select' => MorphToSelect::make('subject')
+                ->label('Related record')
+                ->helperText('The record list follows the type.')
+                ->types([
+                    MorphType::make(Task::class)->titleAttribute('title')->label('Tasks'),
+                    MorphType::make(Document::class)->titleAttribute('title')->label('Documents'),
+                ]),
 
             'key-value' => KeyValue::make('metadata')
                 ->label('Metadata')
                 ->helperText('Arbitrary key / value pairs stored as JSON.')
                 ->keyLabel('Key')
                 ->valueLabel('Value'),
+
+            'money-input' => MoneyInput::make('price')
+                ->label('Unit price')
+                ->helperText('Grouped as it is typed; the column keeps a number.')
+                ->currency('CZK')
+                ->minValue(0),
+
+            'phone-input' => PhoneInput::make('phone')
+                ->label('Phone')
+                ->helperText('The prefix and the number are one value.')
+                ->countries(['CZ', 'SK', 'DE'])
+                ->defaultCountry('CZ'),
+
+            'signature-pad' => SignaturePad::make('signature')
+                ->label('Signature')
+                ->helperText('Draw with a pointer; the canvas answers with a PNG data URI.')
+                ->height(200),
 
             'date-time-picker' => DateTimePicker::make('event_at')
                 ->label('Event start')

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use NyonCode\WireCore\Core\Modules\DomainModule;
+use NyonCode\WireCore\Core\Modules\Module;
 use NyonCode\WireCore\Core\Plugin\Contracts\HasDependencies;
 use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
@@ -78,7 +78,7 @@ final class DmSalesDashboard extends Dashboard
     }
 }
 
-final class DmBillingModule extends DomainModule
+final class DmBillingModule extends Module
 {
     public function getId(): string
     {
@@ -96,7 +96,7 @@ final class DmBillingModule extends DomainModule
     }
 }
 
-final class DmOperationsModule extends DomainModule implements HasDependencies
+final class DmOperationsModule extends Module implements HasDependencies
 {
     public function getId(): string
     {
@@ -125,7 +125,7 @@ final class DmOperationsModule extends DomainModule implements HasDependencies
 }
 
 /** Declares nothing at all, which has to be ordinary rather than an error. */
-final class DmEmptyModule extends DomainModule
+final class DmEmptyModule extends Module
 {
     public function getId(): string
     {
@@ -224,7 +224,7 @@ it('draws no heading for a group whose module put nothing in it', function () {
     // A module may ship a group and register only internal resources under it.
     // An empty heading is worse than no heading: it reads as a menu that lost
     // its rows.
-    $module = new class extends DomainModule
+    $module = new class extends Module
     {
         public function getId(): string
         {

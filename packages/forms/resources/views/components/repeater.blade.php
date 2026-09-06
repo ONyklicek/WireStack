@@ -9,21 +9,18 @@
     $itemCount = count($items);
 @endphp
 
+@include('wire-forms::partials.field-assets')
+
 <div
     {{-- x-data must stay byte-identical across Livewire morphs: baking a
          per-item collapsed array (length = item count) meant adding/removing a
          row changed the attribute text, so Alpine re-initialised and reset every
          row's collapse state. Key collapse state by index in an object instead;
          the only interpolated value now is the static default. --}}
-    x-data="{
-        collapsed: {},
-        isCollapsed(index) {
-            return this.collapsed[index] ?? {{ $field->isCollapsed() ? 'true' : 'false' }};
-        },
-        toggleCollapse(index) {
-            this.collapsed[index] = !this.isCollapsed(index);
-        }
-    }"
+    {{-- Body registered as `wireCollapsibleItems`; only per-instance config here. --}}
+    x-data="wireCollapsibleItems({
+        collapsedByDefault: @js($field->isCollapsed()),
+    })"
     @if($field->isReorderable())
         x-sortable
         x-on:sort-end.camel="

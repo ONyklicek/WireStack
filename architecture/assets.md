@@ -90,9 +90,18 @@ receives it, and nothing on the page changes — no error, no warning, and only
 `npm run verify:drivers` sees it.
 
 `wire-forms-fields.js` carries the field controllers whose bodies used to be
-inlined per instance — `wireDateTimePicker`, `wireTimePicker`, `wireTagsInput`,
-`wireRating`, `wireRichEditor`, `wireMarkdownEditor` — and is delivered to views
-that do not have `@wireStackScripts` by `wire-forms::partials.field-assets`.
+inlined per instance, and is delivered to views that do not have
+`@wireStackScripts` by `wire-forms::partials.field-assets`. **Every wire-forms
+field body now lives here** — `wireDateTimePicker`, `wireTimePicker`,
+`wireTagsInput`, `wireRating`, `wireRichEditor`, `wireMarkdownEditor`,
+`wireColorPicker`, `wireOtpInput`, `wireKeyValue`, `wireSlider`,
+`wireCodeEditor`, `wireCheckboxList`, `wireMorphToSelect`, `wireFileDropzone`,
+`wireCollapsibleItems` (Repeater) and `wireBuilderBlocks`, plus
+`wirePhoneInput` and `wireSignaturePad` — so a field view carries per-instance
+config and nothing else. A new field's body belongs in `resources/js/fields/`
+from the start; the check is that no `x-data` attribute in
+`packages/forms/resources/views/components/` spans more than a few lines of
+config.
 
 **`dist/` is committed and is not rebuilt for you.** After editing anything under
 a package's `resources/js/`, run its build script:

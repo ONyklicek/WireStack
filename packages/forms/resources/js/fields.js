@@ -4,6 +4,18 @@ import wireTagsInput from './fields/tags'
 import wireRating from './fields/rating'
 import wireRichEditor from './fields/rich-editor'
 import wireMarkdownEditor from './fields/markdown-editor'
+import wireBuilderBlocks from './fields/builder'
+import wireCheckboxList from './fields/checkbox-list'
+import wireCodeEditor from './fields/code-editor'
+import wireCollapsibleItems from './fields/collapsible-items'
+import wireColorPicker from './fields/color-picker'
+import wireFileDropzone from './fields/file-dropzone'
+import wireKeyValue from './fields/key-value'
+import wireMorphToSelect from './fields/morph-to-select'
+import wireOtpInput from './fields/otp-input'
+import wirePhoneInput from './fields/phone-input'
+import wireSignaturePad from './fields/signature-pad'
+import wireSlider from './fields/slider'
 
 /**
  * The wire-forms field controllers.
@@ -38,6 +50,18 @@ const registerWireFormsFields = () => {
     window.Alpine.data('wireRating', wireRating)
     window.Alpine.data('wireRichEditor', wireRichEditor)
     window.Alpine.data('wireMarkdownEditor', wireMarkdownEditor)
+    window.Alpine.data('wireBuilderBlocks', wireBuilderBlocks)
+    window.Alpine.data('wireCheckboxList', wireCheckboxList)
+    window.Alpine.data('wireCodeEditor', wireCodeEditor)
+    window.Alpine.data('wireCollapsibleItems', wireCollapsibleItems)
+    window.Alpine.data('wireColorPicker', wireColorPicker)
+    window.Alpine.data('wireFileDropzone', wireFileDropzone)
+    window.Alpine.data('wireKeyValue', wireKeyValue)
+    window.Alpine.data('wireMorphToSelect', wireMorphToSelect)
+    window.Alpine.data('wireOtpInput', wireOtpInput)
+    window.Alpine.data('wirePhoneInput', wirePhoneInput)
+    window.Alpine.data('wireSignaturePad', wireSignaturePad)
+    window.Alpine.data('wireSlider', wireSlider)
 }
 
 if (window.Alpine) registerWireFormsFields()

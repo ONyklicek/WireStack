@@ -85,7 +85,9 @@
         @if($field->getDatalistOptions())
             list="{{ $field->getId() }}-datalist"
         @endif
-        @if($field->getMask())
+        @if($field->getDynamicMask())
+            x-mask:dynamic="{{ $field->getDynamicMask() }}"
+        @elseif($field->getMask())
             x-mask="{{ $field->getMask() }}"
         @endif
         @class([

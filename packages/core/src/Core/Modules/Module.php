@@ -9,15 +9,23 @@ use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 
 /**
- * One business area, declared in one place.
+ * One business area's declarations, in one place.
  *
- * The second axis of this architecture (ADR 0017 layer 5): packages are the
- * technical axis — core, forms, table, sortable — and modules are the domain
- * one, `billing` beside `operations` beside `crm`. A module owns no primitives
- * and forks none. It names the things a business area consists of and lets the
- * layers that already own them do the owning.
+ * The second axis beside packages: packages are the technical one — core,
+ * forms, table, sortable — and a module is `billing` beside `operations` beside
+ * `crm`. It names the things an area consists of and lets the layers that
+ * already own them do the owning.
  *
- *   final class BillingModule extends DomainModule
+ * **It is a manifest, not a domain layer.** The name was `DomainModule` and that
+ * oversold it: this holds three lists of class names and a menu heading, and it
+ * is not a bounded context, an aggregate boundary or a place to model anything.
+ * A module has no behaviour of its own — the resources it names carry it, the
+ * models carry the data, and Laravel's Gate carries the policies. Nothing here
+ * isolates one area's code from another's; if that is what an application needs,
+ * it needs it in its own namespaces and its own tests, and this list will not
+ * provide it.
+ *
+ *   final class BillingModule extends Module
  *   {
  *       public function getId(): string { return 'billing'; }
  *
@@ -54,7 +62,7 @@ use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
  *  - **workspaces.** `Workspace` is a service over the registries, not a class
  *    a module enumerates.
  */
-abstract class DomainModule implements Plugin
+abstract class Module implements Plugin
 {
     /**
      * The resource classes this business area consists of.

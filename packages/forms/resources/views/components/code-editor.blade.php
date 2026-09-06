@@ -5,27 +5,15 @@
     $entangleModifier = $field->getEntangleModifier();
 @endphp
 
+@include('wire-forms::partials.field-assets')
+
 @include('wire-forms::partials.field-wrapper-start')
 
 <div
-    x-data="{
-        content: @entangle($field->getWireModelAttribute()){{ $entangleModifier ? '.' . $entangleModifier : '' }},
-
-        get lines() {
-            return (this.content || '').split('\n');
-        },
-
-        onTab(event) {
-            event.preventDefault();
-            const el = event.target;
-            const start = el.selectionStart;
-            const end = el.selectionEnd;
-            this.content = this.content.substring(0, start) + '    ' + this.content.substring(end);
-            this.$nextTick(() => {
-                el.selectionStart = el.selectionEnd = start + 4;
-            });
-        }
-    }"
+    {{-- Body registered as `wireCodeEditor`; only per-instance config here. --}}
+    x-data="wireCodeEditor({
+        state: @entangle($field->getWireModelAttribute()){{ $entangleModifier ? '.' . $entangleModifier : '' }},
+    })"
     @class([
         'rounded-md border overflow-hidden font-mono text-sm',
         'border-gray-300 dark:border-gray-600',

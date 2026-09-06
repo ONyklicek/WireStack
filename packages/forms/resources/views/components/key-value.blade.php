@@ -5,36 +5,15 @@
     $entangleModifier = $field->getEntangleModifier();
 @endphp
 
+@include('wire-forms::partials.field-assets')
+
 @include('wire-forms::partials.field-wrapper-start')
 
 <div
-    x-data="{
-        pairs: @entangle($field->getWireModelAttribute()){{ $entangleModifier ? '.' . $entangleModifier : '' }},
-
-        init() {
-            if (!Array.isArray(this.pairs)) this.pairs = [];
-        },
-
-        addPair() {
-            this.pairs = [...this.pairs, { key: '', value: '' }];
-        },
-
-        removePair(index) {
-            this.pairs = this.pairs.filter((_, i) => i !== index);
-        },
-
-        updateKey(index, val) {
-            const updated = [...this.pairs];
-            updated[index] = { ...updated[index], key: val };
-            this.pairs = updated;
-        },
-
-        updateValue(index, val) {
-            const updated = [...this.pairs];
-            updated[index] = { ...updated[index], value: val };
-            this.pairs = updated;
-        }
-    }"
+    {{-- Body registered as `wireKeyValue`; only per-instance config here. --}}
+    x-data="wireKeyValue({
+        state: @entangle($field->getWireModelAttribute()){{ $entangleModifier ? '.' . $entangleModifier : '' }},
+    })"
     class="rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden"
 >
     {{-- Column headers --}}

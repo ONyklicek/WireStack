@@ -220,7 +220,8 @@ Priorita: per-komponenta (`->sheetOnMobile()` / `->mobileBreakpoint()`) > search
 
 ## Forms
 
-Konfigurace `wire-forms` řídí výchozí hodnoty data a času, uploady a toolbar rich editoru.
+Konfigurace `wire-forms` řídí výchozí hodnoty data a času, zápis částek a telefonních
+čísel, uploady a toolbar rich editoru.
 
 ```php
 return [
@@ -228,6 +229,17 @@ return [
     'time_format' => 'H:i',
     'datetime_format' => 'd.m.Y H:i',
     'first_day_of_week' => 1,
+
+    'money' => [                                            // [tl! focus:start]
+        'currency' => 'CZK',
+        'decimal_separator' => ',',
+        'thousands_separator' => ' ',
+    ],
+
+    'phone' => [
+        'countries' => [],
+        'default_country' => null,
+    ],                                                      // [tl! focus:end]
 
     'file_upload' => [
         'disk' => env('WIRE_FORMS_UPLOAD_DISK', 'public'),
@@ -244,6 +256,10 @@ return [
     ],
 ];
 ```
+
+`money` říká, jak [MoneyInput](forms/fields/money-input.md) zapíše částku, pokud pole neurčí jinak,
+a `phone` je nabídka [PhoneInputu](forms/fields/phone-input.md) — prázdný seznam `countries` nabídne
+celou tabulku předvoleb a seznam je zároveň validací.
 
 Pro přesun uploadů na jiný filesystem disk použijte `WIRE_FORMS_UPLOAD_DISK`:
 

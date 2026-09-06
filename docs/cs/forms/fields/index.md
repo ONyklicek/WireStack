@@ -18,12 +18,16 @@ Reference pro vestavěné Wire Forms field a layoutové komponenty.
 | Vybrat jednu viditelnou možnost | [Radio](radio.md) |
 | Volné tagy / chipy | [Tags](tags.md) |
 | Slider číselného rozsahu | [Slider](slider.md) |
+| Zadat částku v měně | [MoneyInput](money-input.md) |
+| Zadat mezinárodní telefonní číslo | [PhoneInput](phone-input.md) |
 | Editor párů klíč-hodnota | [KeyValue](key-value.md) |
 | Hvězdičkové hodnocení | [Rating](rating.md) |
 | Vybrat datum nebo datum/čas | [DateTimePicker](date-time-picker.md) |
 | Vybrat čas ze slotů | [TimePicker](time-picker.md) |
+| Vybrat období — dvě data najednou | [DateRangePicker](date-range-picker.md) |
 | Vybrat barvu | [ColorPicker](color-picker.md) |
 | Nahrát soubory | [FileUpload](file-upload.md) |
+| Zachytit ručně psaný podpis | [SignaturePad](signature-pad.md) |
 | Rich text editace | [RichEditor](rich-editor.md) nebo [TiptapEditor](tiptap-editor.md) |
 | Markdown editace | [MarkdownEditor](markdown-editor.md) |
 | Vstup kódu / skriptu | [CodeEditor](code-editor.md) |

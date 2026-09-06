@@ -1,5 +1,6 @@
 {{-- The wire-forms field controllers (date/time pickers, tags, rating, the rich
-     and markdown editors), registered as Alpine.data() factories.
+     and markdown editors, the colour picker, the OTP boxes, the phone input and
+     the signature pad), registered as Alpine.data() factories.
 
      Every field whose body moved out of its `x-data` includes this, because
      `@wireStackScripts` is additive rather than required: an app that never adds

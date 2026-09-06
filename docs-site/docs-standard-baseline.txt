@@ -1,5 +1,4 @@
 docs/configuration.md#e02a0449
-docs/configuration.md#66dd1a76
 docs/configuration.md#2d761f4d
 docs/configuration.md#f86e97ff
 docs/cookbook.md#42f703d1

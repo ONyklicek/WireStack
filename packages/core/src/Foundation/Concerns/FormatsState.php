@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Foundation\Concerns;
 
 use Carbon\Carbon;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireCore\Foundation\ValueObjects\MoneyFormat;
 
 /**
  * Canonical numeric / money / date state formatting.
@@ -120,7 +121,23 @@ trait FormatsState
     /** The decimals money renders with — the stated one, or the currency's default. */
     public function getMoneyDecimals(): int
     {
-        return $this->moneyDecimals ?? ($this->currency === 'Kč' ? 0 : 2);
+        return $this->getMoneyFormat()->getDecimals();
+    }
+
+    /**
+     * This surface's currency vocabulary as the value object that owns writing
+     * an amount down. The separators fall back here rather than in `money()`,
+     * so a caller that passed none still reads the canonical defaults.
+     */
+    protected function getMoneyFormat(): MoneyFormat
+    {
+        return new MoneyFormat(
+            $this->currency,
+            $this->moneyDecimals,
+            $this->moneyDecimalSeparator ?? ',',
+            $this->moneyThousandsSeparator ?? ' ',
+            $this->currencyBefore,
+        );
     }
 
     public function isMoney(): bool
@@ -205,22 +222,7 @@ trait FormatsState
 
         // 💰 Money (priority)
         if ($this->money && is_numeric($value)) {
-            $amount = number_format(
-                (float) $value,
-                $this->getMoneyDecimals(),
-                $this->moneyDecimalSeparator ?? ',',
-                $this->moneyThousandsSeparator ?? ' ',
-            );
-
-            // `money(null)` means "a formatted amount, no currency" — it used to
-            // append the separator anyway and leave a trailing space on it.
-            if ((string) $this->currency === '') {
-                return $amount;
-            }
-
-            return $this->currencyBefore
-                ? $this->currency.' '.$amount
-                : $amount.' '.$this->currency;
+            return $this->getMoneyFormat()->format($value);
         }
 
         // 🔢 Numeric

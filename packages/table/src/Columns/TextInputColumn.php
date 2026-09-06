@@ -13,6 +13,7 @@ use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
 use NyonCode\WireCore\Foundation\Contracts\HydratesState;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireCore\Foundation\ValueObjects\MoneyFormat;
 use NyonCode\WireCore\Foundation\View\CellSync;
 use NyonCode\WireCore\Foundation\View\Primitives;
 use NyonCode\WireTable\Concerns\HasRecordVersion;
@@ -170,6 +171,25 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         $this->decimalSeparator = $decimalSeparator;
 
         return $this;
+    }
+
+    /**
+     * This column's number vocabulary, as the value object that owns writing an
+     * amount down and reading it back.
+     *
+     * The currency is deliberately null: an inline cell edits a figure and the
+     * unit belongs to the column's prefix/suffix, so the value never carries it.
+     * Built per call rather than held — four scalars — so a `money()` set after
+     * the first render still takes effect.
+     */
+    private function numberFormat(): MoneyFormat
+    {
+        return new MoneyFormat(
+            currency: null,
+            decimals: $this->decimals,
+            decimalSeparator: $this->decimalSeparator,
+            thousandsSeparator: $this->thousandsSeparator,
+        );
     }
 
     /** Use an email input. */
@@ -490,14 +510,13 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
             $value = null;
         }
 
-        // Parse formatted number back to numeric value
+        // Read the written figure back as a number, through the owner of that
+        // grammar. Its own attempt stripped the thousands separator by name and
+        // left every other one standing, so a value grouped the other way round
+        // — `1.234,50`, which is what a Czech keyboard and a paste from Excel
+        // both produce — became `1.234.50` and saved as 1.234.
         if ($this->decimals !== null && is_string($value) && $value !== '') {
-            // Remove thousands separator and convert decimal separator to dot
-            $value = str_replace($this->thousandsSeparator, '', $value);
-            $value = str_replace($this->decimalSeparator, '.', $value);
-            // Remove any remaining non-numeric characters except dot and minus
-            $value = preg_replace("/[^0-9.\-]/", '', $value);
-            $value = $value !== '' ? (float) $value : null;
+            $value = $this->numberFormat()->parse($value);
         }
 
         if ($this->uppercase && is_string($value)) {
@@ -625,9 +644,9 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
 
     public function hydrateState(mixed $value, ?Model $record = null): mixed
     {
-        // Format number for display
+        // Write the stored number the way the cell reads it.
         if ($this->decimals !== null && $value !== null && $value !== '') {
-            $value = number_format((float) $value, $this->decimals, $this->decimalSeparator, $this->thousandsSeparator);
+            $value = $this->numberFormat()->amount($value);
         }
 
         if ($this->afterLoadFormatter) {
@@ -698,9 +717,10 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
             return (string) ($this->displayFormatter)($value, $record);
         }
 
-        // Format number for readonly display
+        // Same grammar as the editable cell — a column must not read one way
+        // when it is editable and another when it is not.
         if ($this->decimals !== null && $value !== null && $value !== '') {
-            return number_format((float) $value, $this->decimals, $this->decimalSeparator, $this->thousandsSeparator);
+            return $this->numberFormat()->amount($value);
         }
 
         return (string) (EnumResolver::display($value) ?? '');

@@ -60,8 +60,9 @@ class WireFormsServiceProvider extends PackageServiceProvider
             ->hasAssets('dist', entries: [
                 Bundle::make('wire-forms-image.js'),
                 // The field controllers (date/time pickers, tags, rating, the
-                // editors). A registrar, so it ships with the document rather
-                // than being delivered per field — see architecture/assets.md.
+                // editors, the colour picker, OTP, phone, signature). A
+                // registrar, so it ships with the document rather than being
+                // delivered per field — see architecture/assets.md.
                 Bundle::make('wire-forms-fields.js'),
             ])
             ->hasAssetFallback(Bundle::servedByRoute('wire-forms'))

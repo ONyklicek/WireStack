@@ -45,6 +45,20 @@ TextInput::make('code')
     ->autocomplete('off')
 ```
 
+### Dynamic mask
+
+A pattern that changes as the value does is written as the Alpine expression
+`x-mask:dynamic` evaluates. It is recomputed on every keystroke, and takes
+precedence over `mask()`:
+
+```php
+TextInput::make('card')
+    ->dynamicMask("$input.startsWith('34') ? '9999 999999 99999' : '9999 9999 9999 9999'")
+```
+
+For an amount, reach for [MoneyInput](money-input.md) instead — it sets the same
+kind of mask from a currency, and reads the typed figure back as a number.
+
 ## Decorators
 
 ```php

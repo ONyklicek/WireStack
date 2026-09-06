@@ -49,4 +49,39 @@ return [
         'link_url' => 'URL odkazu',
         'image_url' => 'URL obrázku',
     ],
+
+    // Vlastní validační hlášky MoneyInputu: částka se skrývá za oddělovači
+    // skupin, takže se meze hlásí ve stejném formátu, v jakém je uživatel
+    // napsal, ne jako holé číslo.
+    'money' => [
+        'invalid' => 'Pole :attribute musí být částka.',
+        'min' => 'Pole :attribute musí být alespoň :min.',
+        'max' => 'Pole :attribute nesmí být větší než :max.',
+    ],
+
+    // Validační hlášky PhoneInputu. Číslo se kontroluje ve třech krocích — je
+    // vůbec mezinárodní, je jeho předvolba mezi nabízenými, má národní část
+    // tolik číslic, kolik daná země vydává — a každý má vlastní hlášku.
+    'phone' => [
+        'invalid' => 'Pole :attribute musí být platné mezinárodní telefonní číslo.',
+        'country' => 'Pole :attribute musí být číslo z některé z nabízených zemí.',
+        'length' => 'Pole :attribute musí mít za předvolbou :min až :max číslic.',
+    ],
+
+    // Popisky přímo na plátně SignaturePadu.
+    'signature' => [
+        'hint' => 'Podepište se zde',
+        'clear' => 'Vymazat',
+    ],
+
+    // DateRangePicker: oba konce období a nabídka období na jedno kliknutí.
+    'range' => [
+        'from' => 'Od',
+        'to' => 'Do',
+        'today' => 'Dnes',
+        'this_week' => 'Tento týden',
+        'this_month' => 'Tento měsíc',
+        'last_30_days' => 'Posledních 30 dní',
+        'this_year' => 'Tento rok',
+    ],
 ];

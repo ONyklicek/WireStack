@@ -12,20 +12,16 @@
     $blocks = $field->getBlocks();
 @endphp
 
+@include('wire-forms::partials.field-assets')
+
 <div
     {{-- x-data must stay byte-identical across Livewire morphs — see the repeater
          view: keying collapse state by index keeps the attribute text static as
          items are added and removed. `adding` drives the block picker. --}}
-    x-data="{
-        adding: false,
-        collapsed: {},
-        isCollapsed(index) {
-            return this.collapsed[index] ?? {{ $field->isCollapsed() ? 'true' : 'false' }};
-        },
-        toggleCollapse(index) {
-            this.collapsed[index] = !this.isCollapsed(index);
-        }
-    }"
+    {{-- Body registered as `wireBuilderBlocks`; only per-instance config here. --}}
+    x-data="wireBuilderBlocks({
+        collapsedByDefault: @js($field->isCollapsed()),
+    })"
     @if($field->isReorderable())
         x-sortable
         x-on:sort-end.camel="

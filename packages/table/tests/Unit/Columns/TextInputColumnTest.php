@@ -244,6 +244,28 @@ it('parses formatted numbers back to floats on save', function () {
         ->and($column->formatForSave('', ticRecord()))->toBe('');
 });
 
+it('reads an amount grouped the other way round', function () {
+    // The column used to strip the thousands separator by name and leave every
+    // other one standing: '1.234,50' became '1.234.50' and saved as 1.234 — a
+    // thousandfold loss, on the value a paste from a spreadsheet produces.
+    $column = TextInputColumn::make('price')->money(2, ' ', ',');
+
+    expect($column->formatForSave('1.234,50', ticRecord()))->toBe(1234.5)
+        // A lone dot in a comma format is the decimal point — the numeric keypad.
+        ->and($column->formatForSave('1234.50', ticRecord()))->toBe(1234.5)
+        ->and($column->formatForSave('-1 234,50', ticRecord()))->toBe(-1234.5)
+        ->and($column->formatForSave('nonsense', ticRecord()))->toBeNull();
+});
+
+it('writes the same figure whether the cell is editable or read-only', function () {
+    // Both paths go through the one owner now; they used to be two calls that
+    // could drift apart.
+    $column = TextInputColumn::make('price')->money(2, ' ', ',');
+
+    expect($column->formatForDisplay(1234.5, ticRecord()))
+        ->toBe($column->formatAfterLoad(1234.5, ticRecord()));
+});
+
 it('applies case transforms and before-save formatter', function () {
     expect(TextInputColumn::make('a')->uppercase()->formatForSave('abc', ticRecord()))->toBe('ABC')
         ->and(TextInputColumn::make('a')->lowercase()->formatForSave('ABC', ticRecord()))->toBe('abc')

@@ -26,6 +26,8 @@ class TextInput extends Field
 
     protected ?string $mask = null;
 
+    protected ?string $dynamicMask = null;
+
     protected ?string $inputMode = null;
 
     protected ?string $autocomplete = null;
@@ -193,6 +195,21 @@ class TextInput extends Field
         return $this;
     }
 
+    /**
+     * Apply a mask that is recomputed on every keystroke, written as the Alpine
+     * expression `x-mask:dynamic` evaluates — `$money($input, ',', ' ')`,
+     * `$input.startsWith('34') ? '9999 999999 99999' : '9999 9999 9999 9999'`.
+     *
+     * A pattern that never changes belongs in {@see mask()}; this one costs an
+     * evaluation per keypress and takes precedence when both are set.
+     */
+    public function dynamicMask(?string $expression): static
+    {
+        $this->dynamicMask = $expression;
+
+        return $this;
+    }
+
     /** Set the HTML `inputmode` (the virtual-keyboard hint on mobile). */
     public function inputMode(?string $mode): static
     {
@@ -261,6 +278,11 @@ class TextInput extends Field
     public function getMask(): ?string
     {
         return $this->mask;
+    }
+
+    public function getDynamicMask(): ?string
+    {
+        return $this->dynamicMask;
     }
 
     public function getInputMode(): ?string

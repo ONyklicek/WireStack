@@ -1,69 +1,19 @@
 @php
     use NyonCode\WireForms\Components\OtpInput;
     assert($field instanceof OtpInput);
-    $wireModifier = $field->getWireModelModifier();
 @endphp
+
+@include('wire-forms::partials.field-assets')
 
 @include('wire-forms::partials.field-wrapper-start')
 
 <div
-    x-data="{
-        length: {{ $field->getLength() }},
-        digits: Array({{ $field->getLength() }}).fill(''),
-        separator: @js($field->getSeparator()),
-
-        init() {
-            const existing = $wire.get('{{ $field->getWireModelAttribute() }}');
-            if (existing) {
-                const chars = String(existing).split('').slice(0, this.length);
-                chars.forEach((c, i) => { this.digits[i] = c; });
-            }
-            this.$watch('digits', () => {
-                $wire.set('{{ $field->getWireModelAttribute() }}', this.digits.join(''));
-            });
-        },
-
-        onInput(index, event) {
-            const val = event.target.value.replace(/\s/g, '');
-            if (val.length > 1) {
-                // Handle paste into single box
-                const chars = val.split('').slice(0, this.length - index);
-                chars.forEach((c, i) => {
-                    if (index + i < this.length) this.digits[index + i] = c;
-                });
-                const next = Math.min(index + chars.length, this.length - 1);
-                this.$nextTick(() => this.$refs['digit-' + next]?.focus());
-            } else {
-                this.digits[index] = val.slice(-1);
-                if (val && index < this.length - 1) {
-                    this.$nextTick(() => this.$refs['digit-' + (index + 1)]?.focus());
-                }
-            }
-        },
-
-        onKeydown(index, event) {
-            if (event.key === 'Backspace') {
-                if (!this.digits[index] && index > 0) {
-                    this.digits[index - 1] = '';
-                    this.$nextTick(() => this.$refs['digit-' + (index - 1)]?.focus());
-                } else {
-                    this.digits[index] = '';
-                }
-            } else if (event.key === 'ArrowLeft' && index > 0) {
-                this.$refs['digit-' + (index - 1)]?.focus();
-            } else if (event.key === 'ArrowRight' && index < this.length - 1) {
-                this.$refs['digit-' + (index + 1)]?.focus();
-            }
-        },
-
-        onPaste(event) {
-            event.preventDefault();
-            const pasted = event.clipboardData.getData('text').replace(/\s/g, '').slice(0, this.length);
-            pasted.split('').forEach((c, i) => { this.digits[i] = c; });
-            const next = Math.min(pasted.length, this.length - 1);
-            this.$nextTick(() => this.$refs['digit-' + next]?.focus());
-        }
-    }"
+    {{-- Body registered as `wireOtpInput`; only per-instance config here. --}}
+    x-data="wireOtpInput({
+        length: @js($field->getLength()),
+        statePath: @js($field->getWireModelAttribute()),
+        numericOnly: @js($field->isNumericOnly()),
+    })"
     class="flex items-center gap-2"
 >
     @for($i = 0; $i < $field->getLength(); $i++)

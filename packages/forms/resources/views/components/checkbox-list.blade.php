@@ -12,17 +12,19 @@
     $groups = $field->isGrouped() ? $field->getGroups() : [];
 @endphp
 
+@include('wire-forms::partials.field-assets')
+
 @include('wire-forms::partials.field-wrapper-start')
 
 @if($field->isSegmented() || $field->isButtons())
     @include('wire-forms::partials.checkbox-list-choices', ['field' => $field, 'wireAttr' => $wireAttr, 'options' => $options])
 @else
     <div
-        x-data="{
-            search: '',
-            selectAll() { @this.set('{{ $field->getWireModelAttribute() }}', {{ json_encode(array_keys($options)) }}) },
-            deselectAll() { @this.set('{{ $field->getWireModelAttribute() }}', []) },
-        }"
+        {{-- Body registered as `wireCheckboxList`; only per-instance config here. --}}
+        x-data="wireCheckboxList({
+            statePath: @js($field->getWireModelAttribute()),
+            values: @js(array_keys($options)),
+        })"
         class="border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden"
     >
         @if($field->isSearchable())

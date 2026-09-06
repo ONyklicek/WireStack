@@ -10,17 +10,18 @@
     $idStatePath = $field->getIdStatePath();
 @endphp
 
+@include('wire-forms::partials.field-assets')
+
 @include('wire-forms::partials.field-wrapper-start')
 
 <div
-    x-data="{
+    {{-- Body registered as `wireMorphToSelect`; only per-instance config here.
+         The "clear the id when the type changes" watcher lives in its init(). --}}
+    x-data="wireMorphToSelect({
         selectedType: $wire.entangle('{{ $typeStatePath }}'),
+        idStatePath: @js($idStatePath),
         typeOptions: @js(collect($field->getTypes())->mapWithKeys(fn ($type) => [$type->getModelClass() => $type->getOptions()])->all()),
-        get idOptions() {
-            return this.typeOptions[this.selectedType] || {};
-        }
-    }"
-    x-init="$watch('selectedType', () => { $wire.set('{{ $idStatePath }}', null) })"
+    })"
     class="grid grid-cols-2 gap-3"
 >
     {{-- Type selector --}}

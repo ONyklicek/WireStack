@@ -222,7 +222,8 @@ padding, a drag-to-dismiss grabber and a focus trap automatically.
 
 ## Forms
 
-The `wire-forms` config controls date and time defaults, uploads, and the rich editor toolbar.
+The `wire-forms` config controls date and time defaults, how money and phone numbers are
+written, uploads, and the rich editor toolbar.
 
 ```php
 return [
@@ -230,6 +231,17 @@ return [
     'time_format' => 'H:i',
     'datetime_format' => 'd.m.Y H:i',
     'first_day_of_week' => 1,
+
+    'money' => [                                            // [tl! focus:start]
+        'currency' => 'CZK',
+        'decimal_separator' => ',',
+        'thousands_separator' => ' ',
+    ],
+
+    'phone' => [
+        'countries' => [],
+        'default_country' => null,
+    ],                                                      // [tl! focus:end]
 
     'file_upload' => [
         'disk' => env('WIRE_FORMS_UPLOAD_DISK', 'public'),
@@ -246,6 +258,10 @@ return [
     ],
 ];
 ```
+
+`money` is what [MoneyInput](forms/fields/money-input.md) writes an amount with when a field does
+not say otherwise, and `phone` is [PhoneInput](forms/fields/phone-input.md)'s offer — an empty
+`countries` list offers the whole dialling-code table, and the list is also the validation.
 
 Use `WIRE_FORMS_UPLOAD_DISK` to move uploads to a different filesystem disk:
 

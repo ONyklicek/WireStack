@@ -35,6 +35,8 @@
     @endassets
 @endif
 
+@include('wire-forms::partials.field-assets')
+
 @include('wire-forms::partials.field-wrapper-start')
 
 <div
@@ -43,22 +45,9 @@
                  picker → process → hand to wire:model flow. --}}
             x-data="wireImageUpload(@js($imageConfig))"
         @else
-            x-data="{
-            isDragging: false,
-            handleDrop(e) {
-                this.isDragging = false;
-                const dropped = e.dataTransfer?.files;
-                if (! dropped || ! dropped.length) return;
-                // Feed the dropped files into the wire:model input so Livewire uploads them.
-                const dt = new DataTransfer();
-                Array.from(dropped).forEach(f => dt.items.add(f));
-                this.$refs.fileInput.files = dt.files;
-                this.$refs.fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-            },
-            openPicker() {
-                this.$refs.fileInput.click();
-            }
-        }"
+            {{-- Body registered as `wireFileDropzone`; see image-processor.js for
+                 the processing counterpart above. --}}
+            x-data="wireFileDropzone()"
         @endif
         class="space-y-2"
 >
