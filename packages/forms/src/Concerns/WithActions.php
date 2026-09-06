@@ -48,6 +48,7 @@ trait WithActions
     // (no-op in core so a form-free host still works standalone).
     use InteractsWithActionForms, InteractsWithActions {
         InteractsWithActionForms::validateMountedActionForm insteadof InteractsWithActions;
+        InteractsWithActionForms::dehydrateMountedActionFormData insteadof InteractsWithActions;
         InteractsWithActionForms::resolveHaltModalForm insteadof InteractsWithActions;
         InteractsWithActionForms::getActionModalFormInstance insteadof InteractsWithActions;
         InteractsWithActionForms::getActionModalFormInstanceForDepth insteadof InteractsWithActions;
@@ -209,7 +210,9 @@ trait WithActions
         $this->runStandaloneAction(
             $action,
             $record instanceof Model ? $record : null,
-            $this->getMountedActionFormData(),
+            // The callback gets what the form would have persisted, not the raw
+            // widget state — the same seam Form::save() runs (ADR 0021).
+            $this->dehydrateMountedActionFormData($this->getMountedActionFormData()),
             (array) $this->getMountedActionState('arguments', []),
         );
 

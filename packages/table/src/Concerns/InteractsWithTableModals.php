@@ -84,6 +84,10 @@ trait InteractsWithTableModals
 
         $this->validateMountedActionForm();
 
+        // The callback gets what the form would have persisted, not the raw
+        // widget state — the same seam Form::save() runs (ADR 0021).
+        $formData = $this->dehydrateMountedActionFormData($formData);
+
         $stackVersionBefore = $this->actionStackVersion;
 
         // Execute action

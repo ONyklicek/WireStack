@@ -202,6 +202,18 @@ class CoreActionsHost extends Component
         $this->actionModalConfigCache = $this->catalog()[$name]->getModalConfig();
     }
 
+    /**
+     * Runs the engine's dehydration seam. A form-free host has no schema behind
+     * the bag, so the engine's own answer must be "hand it back untouched".
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public function dehydrateBag(array $data): array
+    {
+        return $this->dehydrateMountedActionFormData($data);
+    }
+
     /** Mounts a name that resolves to no action, then reads the modal config. */
     public function peekGhostConfig(): void
     {
@@ -226,6 +238,16 @@ class CoreActionsHost extends Component
         BLADE;
     }
 }
+
+it('leaves the submitted bag untouched without a form bridge', function () {
+    // The wire-forms bridge overrides this seam to walk the schema for
+    // DehydratesState; the engine itself knows of no schema and must not guess.
+    $bag = Livewire::test(CoreActionsHost::class)
+        ->instance()
+        ->dehydrateBag(['amount' => '', 'note' => 'kept']);
+
+    expect($bag)->toBe(['amount' => '', 'note' => 'kept']);
+});
 
 it('runs a form-free action host with no wire-forms bridge and fires after hooks', function () {
     Livewire::test(CoreActionsHost::class)

@@ -186,6 +186,8 @@ Action::make('edit')
 
 Closura může vrátit případ enumu rovnou z castovaného atributu (`fn ($record) => ['role' => $record->role]`): naplněný bag každý enum srazí na jeho backing hodnotu, protože právě ta putuje ve stavu Livewiru do prohlížeče a právě proti ní `Select` porovnává hodnoty svých `<option>`. Uložení pak proběhne zpátky přes cast.
 
+`$data`, která callback dostane, je to, co by formulář **uložil** — ne syrový stav widgetu: při odeslání proběhne nad modalem stejná dehydratace polí jako u `Form::save()` (viz [Vlastní pole](../forms/custom-fields.md#transformace-stavu-pole)). Vyprázdněný `Select` přijde jako `null` místo `''`, vyprázdněný `numeric()` `TextInput` jako `null`, `DateTimePicker` ve svém úložném formátu a zóně a `FileUpload` jako uložená cesta. Wizard dehydratuje každý krok, ne jen ten, který je při odeslání na obrazovce. Akce v patičce jsou záměrně vynechány — čtou formulář rozdělaný, ještě před odesláním.
+
 Modal formuláře `HeaderAction` **nemá záznam**, takže jeho closura `fillFormUsing` nebere žádné argumenty. Použijte ji k naplnění počátečního stavu — a array-typovaná pole (`CheckboxList`, `Tags`, multiple `Select`) vždy naplňte prázdným polem, aby se správně navázala od první interakce:
 
 ```php

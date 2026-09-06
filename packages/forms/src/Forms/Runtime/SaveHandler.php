@@ -15,8 +15,6 @@ use NyonCode\WireCore\Core\Plugin\Hooks\FormSavedPayload;
 use NyonCode\WireCore\Core\Plugin\Hooks\FormSavingPayload;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
-use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
-use NyonCode\WireForms\Components\Field;
 use NyonCode\WireForms\Components\MorphToSelect;
 use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Components\Tags;
@@ -59,7 +57,11 @@ final class SaveHandler
         // FileUpload moves validated temporary uploads to permanent storage (so
         // an abandoned form leaves no orphan) and how a date field applies its
         // storage format and timezone.
-        $data = $this->dehydrateFields($data);
+        $data = StateDehydrator::dehydrate(
+            $this->config->schema,
+            $data,
+            $this->config->model instanceof Model ? $this->config->model : null,
+        );
 
         // 3. Plugin hook: form.saving (can modify data)
         if (app()->bound(PluginManager::class)) {
@@ -184,113 +186,6 @@ final class SaveHandler
         $instance->save();
 
         return $instance;
-    }
-
-    /**
-     * Move any pending file uploads in the data to permanent storage and replace
-     * them with their stored paths, keeping already-stored paths as-is (merge).
-     *
-     * @param  array<string, mixed>  $data
-     * @return array<string, mixed>
-     */
-    /**
-     * Apply every field's own dehydration to the data about to be persisted.
-     *
-     * @param  array<string, mixed>  $data
-     * @return array<string, mixed>
-     */
-    private function dehydrateFields(array $data): array
-    {
-        $model = $this->config->model instanceof Model ? $this->config->model : null;
-
-        // Top-level fields (not nested inside a repeater).
-        foreach ($this->collectDehydratingFields($this->config->schema) as $field) {
-            $name = $field->getName();
-
-            if (! array_key_exists($name, $data)) {
-                continue;
-            }
-
-            $data[$name] = $field->dehydrateState($data[$name], $model);
-        }
-
-        // Repeater children: a DehydratesState child (FileUpload storing its
-        // upload, DateTimePicker applying format/timezone) lives under the
-        // repeater key as an array of items, so the top-level pass never reaches
-        // it. Without this a nested file is never moved to permanent storage and a
-        // nested date keeps its raw wire value.
-        foreach ($this->dehydratingRepeaters($this->config->schema) as $repeater) {
-            $name = $repeater->getName();
-
-            if (! isset($data[$name]) || ! is_array($data[$name])) {
-                continue;
-            }
-
-            $childFields = $this->collectDehydratingFields($repeater->getSchema());
-
-            foreach ($data[$name] as $index => $item) {
-                if (! is_array($item)) {
-                    continue;
-                }
-
-                foreach ($childFields as $child) {
-                    $childName = $child->getName();
-
-                    if (array_key_exists($childName, $item)) {
-                        $data[$name][$index][$childName] = $child->dehydrateState($item[$childName], $model);
-                    }
-                }
-            }
-        }
-
-        return $data;
-    }
-
-    /**
-     * Repeaters anywhere in the schema (used to dehydrate their child fields).
-     *
-     * @param  array<int, mixed>  $schema
-     * @return array<int, Repeater>
-     */
-    private function dehydratingRepeaters(array $schema): array
-    {
-        $repeaters = [];
-
-        foreach ($schema as $component) {
-            if ($component instanceof Repeater) {
-                $repeaters[] = $component;
-            } elseif ($component instanceof LayoutComponent) {
-                $repeaters = array_merge($repeaters, $this->dehydratingRepeaters($component->getSchema()));
-            }
-        }
-
-        return $repeaters;
-    }
-
-    /**
-     * Collect every field that dehydrates its own state, traversing nested layouts.
-     *
-     * Only a Field carries the name that keys the data array — a layout could
-     * implement the contract without one.
-     *
-     * @param  array<int, mixed>  $schema
-     * @return array<int, Field&DehydratesState>
-     */
-    private function collectDehydratingFields(array $schema): array
-    {
-        $fields = [];
-
-        foreach ($schema as $component) {
-            if ($component instanceof DehydratesState && $component instanceof Field) {
-                $fields[] = $component;
-            } elseif ($component instanceof LayoutComponent && ! $component instanceof Repeater) {
-                // Repeaters are handled per-item by dehydratingRepeaters(); their
-                // children must not be flattened into the top-level key match.
-                $fields = array_merge($fields, $this->collectDehydratingFields($component->getSchema()));
-            }
-        }
-
-        return $fields;
     }
 
     /**

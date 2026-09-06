@@ -85,6 +85,7 @@ trait WithTable
     // engine's defaults.
     use InteractsWithActionForms, InteractsWithActions, InteractsWithTableActions {
         InteractsWithActionForms::validateMountedActionForm insteadof InteractsWithActions;
+        InteractsWithActionForms::dehydrateMountedActionFormData insteadof InteractsWithActions;
         InteractsWithActionForms::resolveHaltModalForm insteadof InteractsWithActions;
         InteractsWithActionForms::getActionModalFormInstance insteadof InteractsWithActions;
         InteractsWithActionForms::getActionModalFormInstanceForDepth insteadof InteractsWithActions;

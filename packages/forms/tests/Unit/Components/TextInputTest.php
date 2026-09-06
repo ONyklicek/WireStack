@@ -334,3 +334,24 @@ test('the type presets and input attributes reach the rendered input', function 
 test('the search preset sets the search input type', function () {
     expect(TextInput::make('q')->search()->getInputType())->toBe('search');
 });
+
+/*
+ * Dehydration (ADR 0021). An emptied `<input type="number">` submits '', which
+ * no numeric column can hold: MySQL in strict mode refuses the write and a
+ * lenient driver stores 0. Text is left alone — '' is a value a string column
+ * legitimately holds, and nulling it would break a non-nullable one.
+ */
+test('a cleared numeric input dehydrates to null', function (TextInput $field, mixed $state, mixed $expected) {
+    expect($field->dehydrateState($state))->toBe($expected);
+})->with([
+    'numeric, cleared' => [fn () => TextInput::make('amount')->numeric(), '', null],
+    'numeric, whitespace only' => [fn () => TextInput::make('amount')->numeric(), '  ', null],
+    'integer, cleared' => [fn () => TextInput::make('count')->integer(), '', null],
+    'type(number), cleared' => [fn () => TextInput::make('amount')->type('number'), '', null],
+    'numeric, entered' => [fn () => TextInput::make('amount')->numeric(), '12.5', '12.5'],
+    'numeric, zero' => [fn () => TextInput::make('amount')->numeric(), '0', '0'],
+    'numeric, already null' => [fn () => TextInput::make('amount')->numeric(), null, null],
+    // '' survives on every non-number type, including the ones that look numeric.
+    'text, cleared' => [fn () => TextInput::make('name'), '', ''],
+    'tel, cleared' => [fn () => TextInput::make('phone')->tel(), '', ''],
+]);

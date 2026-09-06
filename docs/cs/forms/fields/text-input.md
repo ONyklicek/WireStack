@@ -31,6 +31,23 @@ TextInput::make('age')->integer()
 | `search()` | `search` | Search input |
 | `type(string)` | Vlastní | Nastavit HTML input typ přímo |
 
+## Vyprázdněné hodnoty
+
+Vyprázdněný číselný input odešle `''` a takovou hodnotu neunese žádný číselný
+sloupec: MySQL ve strict modu zápis rovnou odmítne (`Incorrect decimal value: ''`)
+a benevolentní driver tiše uloží `0`. Pole, jehož HTML typ je `number` —
+`numeric()`, `integer()`, `type('number')` — proto **uloží `null`, když zůstane
+prázdné**, a to na každé zápisové cestě: `Form::save()`, odeslání
+[modalu akce](../../core/actions.md#modal-s-formularem) i editovatelná buňka.
+
+Ostatních typů se to netýká. `''` je legitimní řetězcová hodnota a not-null
+textový sloupec ji unese; převod na `null` by zápis rozbil, ne zachránil.
+
+```php
+TextInput::make('discount')->numeric()  // vyprázdněno → null
+TextInput::make('note')                 // vyprázdněno → ''
+```
+
 ## Omezení
 
 ```php

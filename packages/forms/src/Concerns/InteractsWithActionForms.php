@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Concerns;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Validator;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionHalt;
@@ -11,6 +12,7 @@ use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Actions\ModalStep;
 use NyonCode\WireForms\Forms\Form;
+use NyonCode\WireForms\Forms\Runtime\StateDehydrator;
 use Throwable;
 
 /**
@@ -182,6 +184,58 @@ trait InteractsWithActionForms
         }
 
         $this->actionModalFormInstance?->validate();
+    }
+
+    /**
+     * Dehydrate the submitted bag through the active modal's own schema, so an
+     * action callback receives what the form would have persisted — a cleared
+     * Select as null rather than '', a date in its storage format and zone, a
+     * FileUpload as its stored path.
+     *
+     * Without this the two write paths disagree: the same schema saved through
+     * Form::save() goes through {@see StateDehydrator}, while an action modal
+     * handed the raw Livewire state straight to the callback.
+     *
+     * A wizard shares one bag across its steps, so every step's schema gets a
+     * pass — the fields of a step that is not on screen at submit time still
+     * own their values.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function dehydrateMountedActionFormData(array $data): array
+    {
+        [$action, $context] = $this->resolveCurrentActionForm();
+
+        // Defensive: submit paths resolve a non-null action before they get here.
+        // @codeCoverageIgnoreStart
+        if ($action === null) {
+            return $data;
+        }
+        // @codeCoverageIgnoreEnd
+
+        $record = $context instanceof Model ? $context : null;
+        $statePath = $this->actionFrameStatePath($this->topActionFrameIndex());
+
+        if ($action->hasMultipleSteps()) {
+            for ($step = 0; $step < $action->getStepCount(); $step++) {
+                $form = $action->getStepFormInstance($this, $context, $step, $statePath);
+
+                if ($form instanceof Form) {
+                    $data = StateDehydrator::dehydrate($form->getSchema(), $data, $record);
+                }
+            }
+
+            return $data;
+        }
+
+        // Reuse the instance validation already resolved for this frame.
+        $form = $this->actionModalFormInstance
+            ?? $this->buildModalActionFormInstance($action, $context);
+
+        return $form instanceof Form
+            ? StateDehydrator::dehydrate($form->getSchema(), $data, $record)
+            : $data;
     }
 
     // ==========================================
