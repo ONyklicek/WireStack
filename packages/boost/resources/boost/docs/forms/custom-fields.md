@@ -334,7 +334,7 @@ directions. They are independent — implement only the one you need:
 | Contract | Method | Runs |
 |---|---|---|
 | `HydratesState` | `hydrateState($value, ?Model $record)` | model value → state, after the `getStateType()` cast |
-| `DehydratesState` | `dehydrateState($state, ?Model $record)` | state → stored value, during save |
+| `DehydratesState` | `dehydrateState($state, ?Model $record)` | state → stored value, on every write path |
 
 Note that the [`MoneyInput`](#building-a-custom-field) above needs *neither*: its
 state is already the integer it stores, which `getStateType(): 'int'` is enough to
@@ -375,6 +375,17 @@ class EncryptedInput extends Field implements DehydratesState, HydratesState
 The same two contracts drive [editable table columns](../table/columns/editing.md) —
 `TextInputColumn` uses them for its trim/case/number pipeline — so a component
 that implements them behaves the same in a form and in an inline-edited cell.
+
+**Three hosts run the write path, and they must agree.** `Form::save()` runs it
+through `SaveHandler`; an editable cell runs it in `updateTableCell()`; an
+[action modal](../core/actions.md#form-modal) runs it on submit, so the `$data`
+an action callback receives is what the form would have persisted rather than
+raw Livewire state. A host that skipped it would make the same schema write
+`null` through one path and `''` through another. The one deliberate exception
+is a [footer action](../core/actions.md#footer-actions): it reads the form
+mid-edit and writes back into the same bag, so dehydrating there would hand the
+callback a value the form no longer holds — and would run a `FileUpload`'s store
+on a form the user has not submitted.
 
 > **Both directions, or neither.** If a transform moves the value (a timezone
 > conversion, a unit change), implementing only `hydrateState()` means the shifted
