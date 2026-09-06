@@ -366,8 +366,17 @@ Every field inherits:
 ->debounce(int $ms = 500)              // adds .debounce.{ms}ms to the binding
 ->afterStateUpdated(Closure $callback)  // react to value changes (auto-enables live)
 ->rules(string|array $rules)            // Laravel validation rules
+->unique(?string $table, ?string $column, bool $ignoreRecord = true, ?Closure $modifyRuleUsing) // [tl! focus]
 ->validationMessages(array $messages)   // custom validation messages
+->formatStateUsing(Closure $fn)         // fn ($state, $record) — shape a stored value into field state [tl! focus:start]
+->dehydrated(bool|Closure $condition = true)  // false keeps the value out of the record
+->dehydrateStateUsing(Closure $fn)      // fn ($state, $record) — shape the value on its way out [tl! focus:end]
 ```
+
+`formatStateUsing()` runs as the form is filled, `dehydrateStateUsing()` as it is
+saved, each after the field type's own transform. See
+[Save Lifecycle](save-lifecycle.md#what-reaches-the-record) for what a field
+writes, and [Validation](validation.md#unique-values) for `unique()`.
 
 `visible()`, `hidden()`, `disabled()` and `afterStateUpdated()` closures receive live state
 accessors (`$get`, `$set`, `$state`). See [Reactive Fields](reactive-fields.md).

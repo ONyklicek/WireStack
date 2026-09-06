@@ -22,8 +22,9 @@ Form::save()
 │   └── Throw ValidationException on failure ← STOP
 │
 ├── 2. MUTATE
-│   └── mutateDataBeforeSave(Closure $fn)
-│       Transform validated data before persistence
+│   ├── mutateDataBeforeSave(Closure $fn)
+│   │   Transform validated data before persistence
+│   └── Each field's own dehydration, then its dehydrateStateUsing(Closure $fn)
 │
 ├── 3. PLUGIN HOOK: form.saving
 │   └── Plugins may inspect or modify $data
@@ -33,6 +34,7 @@ Form::save()
 │       Void hook — side effects, external calls
 │
 ├── 5. PERSIST
+│   ├── Drop what is not a column: dehydrated(false), relations, morph pairs
 │   ├── Default: Model::create($data) or $model->update($data)
 │   └── Custom: using(Closure $fn)
 │
@@ -144,6 +146,46 @@ $form->model(User::class);
 $form->model($user);
 // → $user->update($data)
 ```
+
+### What Reaches The Record
+
+Between the validated data and the write, each field says whether its value is a
+column at all, and what that value should be. Two hooks, both on any field:
+
+```php
+TextInput::make('password_confirmation')->dehydrated(false);
+TextInput::make('password')->dehydrateStateUsing(fn (string $state) => Hash::make($state));
+```
+
+- **`dehydrated(false)`** keeps the key out of the write. A field with a rule and
+  no column behind it — a password confirmation, a "same as billing" toggle, a
+  value that only drives a sibling — would otherwise be set as an attribute and
+  fail on the missing column.
+- **`dehydrateStateUsing()`** replaces the value on its way out. It receives
+  `$state` and the record (`null` in create mode).
+
+Order matters and is fixed: the field type shapes the value first — a
+`FileUpload` moves its temporary upload to permanent storage, a `DateTimePicker`
+applies its storage format and timezone — and your callback then sees that
+result, not the raw value from the browser. Both hooks also apply to fields
+inside a `Repeater`, per item.
+
+The condition may be a Closure over live sibling state, resolved at save time:
+
+```php
+Toggle::make('has_nickname'),
+TextInput::make('nickname')->dehydrated(fn (callable $get) => (bool) $get('has_nickname')),
+```
+
+Some fields answer this question for themselves, because their name is not a
+column to begin with: a `Repeater` or `Tags` bound with `->relationship()`, and
+a `MorphToSelect` (whose value becomes the `{name}_type` / `{name}_id` pair).
+They are dropped from the parent write and handled by their own path — nothing
+to configure.
+
+Everything is dropped **only at the write**. `mutateDataBeforeSave()`, the
+`form.saving` hook and `beforeSave()` all still see the full data array, and so
+does the relationship cascade in Step 6.
 
 ### Custom Persistence
 

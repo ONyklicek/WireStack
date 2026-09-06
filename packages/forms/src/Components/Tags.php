@@ -68,6 +68,16 @@ class Tags extends Field
         return $this;
     }
 
+    /**
+     * A relationship-bound Tags field is keyed by a relation name, not a column;
+     * its rows are synced against that relation, so the key itself must never
+     * reach the record. A plain, column-backed Tags field keeps its array value.
+     */
+    public function isDehydrated(): bool
+    {
+        return $this->relationship === null && parent::isDehydrated();
+    }
+
     // ─── Getters ───────────────────────────────────────────────────
 
     /**

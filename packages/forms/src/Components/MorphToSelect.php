@@ -53,6 +53,16 @@ class MorphToSelect extends Field
         return $this;
     }
 
+    /**
+     * The field's own name is a morph relation, never a column. What it manages
+     * are the two columns it names — `{name}_type` and `{name}_id` — which the
+     * save handler substitutes in its place.
+     */
+    public function isDehydrated(): bool
+    {
+        return false;
+    }
+
     // ─── Getters ───────────────────────────────────────────────────
 
     /**

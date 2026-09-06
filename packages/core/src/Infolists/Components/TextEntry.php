@@ -174,11 +174,10 @@ class TextEntry extends Entry
 
     protected function formatScalar(mixed $value): string
     {
-        $value = $this->applyNumericAndDateFormatting($value);
-
-        if ($this->formatStateUsing !== null) {
-            $value = ($this->formatStateUsing)($value, $this->record);
-        }
+        $value = $this->applyStateFormatter(
+            $this->applyNumericAndDateFormatting($value),
+            $this->record,
+        );
 
         if ($value === null || $value === '') {
             return $this->getPlaceholder() ?? '-';

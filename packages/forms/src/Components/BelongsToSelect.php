@@ -25,6 +25,9 @@ use NyonCode\WireForms\Forms\Runtime\RelationshipSaveHandler;
  */
 class BelongsToSelect extends Select
 {
+    // The parent record it introspects the belongsTo relationship from arrives
+    // through the shared setter every field now carries; see BelongsToRecord.
+
     protected bool $preload = false;
 
     /** @var Closure|null fn(Builder) => Builder — modify the options query */
@@ -32,9 +35,6 @@ class BelongsToSelect extends Select
 
     /** @var Closure|null fn(array) => Model — custom create handler */
     protected ?Closure $createOptionUsing = null;
-
-    /** @var Model|null Resolved parent model instance (set by form runtime) */
-    protected ?Model $record = null;
 
     /** Eager-load all related options up front instead of searching on demand. */
     public function preload(bool $condition = true): static
@@ -56,23 +56,6 @@ class BelongsToSelect extends Select
     public function createOptionUsing(?Closure $callback): static
     {
         $this->createOptionUsing = $callback;
-
-        return $this;
-    }
-
-    /**
-     * The parent record this select hangs off, used to introspect the belongsTo
-     * relationship.
-     *
-     * Runtime wiring, not user API: FormRuntime::prepare() propagates the form's
-     * ->model() into every field exposing this setter, so an owner configures
-     * the record on the form, never here.
-     *
-     * @docs-ignore
-     */
-    public function record(?Model $record): static
-    {
-        $this->record = $record;
 
         return $this;
     }

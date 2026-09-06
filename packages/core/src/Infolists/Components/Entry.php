@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Infolists\Components;
 
 use Closure;
+use NyonCode\WireCore\Core\Data\RecordContract;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Components\ViewComponent;
+use NyonCode\WireCore\Foundation\Concerns\FormatsStateUsing;
 use NyonCode\WireCore\Foundation\Concerns\HasActions;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Concerns\HasIcon;
@@ -29,6 +31,7 @@ use NyonCode\WireCore\Foundation\Support\EnumResolver;
  */
 abstract class Entry extends ViewComponent implements HasFieldActions
 {
+    use FormatsStateUsing;
     use HasActions;
     use HasColor;
     use HasIcon;
@@ -40,8 +43,6 @@ abstract class Entry extends ViewComponent implements HasFieldActions
     protected string|Color|Closure|null $color = null;
 
     protected ?Closure $stateUsing = null;
-
-    protected ?Closure $formatStateUsing = null;
 
     /**
      * Bind the record this entry reads its value from.
@@ -75,16 +76,6 @@ abstract class Entry extends ViewComponent implements HasFieldActions
         return $this->getStateUsing($callback);
     }
 
-    /**
-     * Transform the resolved state for display. Receives ($state, $record).
-     */
-    public function formatStateUsing(Closure $callback): static
-    {
-        $this->formatStateUsing = $callback;
-
-        return $this;
-    }
-
     /** Set the entry's color (a palette name, a `Color` enum, or a Closure). */
     public function color(string|Color|Closure|null $color): static
     {
@@ -102,11 +93,20 @@ abstract class Entry extends ViewComponent implements HasFieldActions
 
     /**
      * Resolve the raw (unformatted) state from the record.
+     *
+     * A {@see RecordContract} is asked rather than reached into: `data_get()`
+     * reads properties and array keys, and a record that is a *contract* has
+     * neither — it has `get()`, which is the whole point of the abstraction.
+     * Without this branch a page over a read model, a DTO or an API source
+     * rendered every entry empty, which reads as "no data" rather than as a
+     * missing translation between two layers that both already existed.
      */
     public function getState(): mixed
     {
         if ($this->stateUsing instanceof Closure) {
             $value = ($this->stateUsing)($this->record);
+        } elseif ($this->record instanceof RecordContract) {
+            $value = $this->record->get($this->getName());
         } else {
             $value = data_get($this->record, $this->getName());
         }
@@ -123,11 +123,7 @@ abstract class Entry extends ViewComponent implements HasFieldActions
      */
     public function getFormattedState(): string
     {
-        $state = $this->getState();
-
-        if ($this->formatStateUsing instanceof Closure) {
-            $state = ($this->formatStateUsing)($state, $this->record);
-        }
+        $state = $this->applyStateFormatter($this->getState(), $this->record);
 
         // Enum- and array/JSON-cast attributes arrive as raw instances; render a display-safe value.
         $state = EnumResolver::display($state);

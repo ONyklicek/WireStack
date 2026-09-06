@@ -395,7 +395,8 @@ final class FormRuntime
      * @return array<string, string>
      */
     /**
-     * Apply every field's own hydration to the state about to be filled.
+     * Apply every field's own hydration, then the owner's formatStateUsing(), to
+     * the state about to be filled.
      *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
@@ -405,7 +406,7 @@ final class FormRuntime
         $record = $this->config->model instanceof Model ? $this->config->model : null;
 
         foreach ($this->getFlatComponents() as $component) {
-            if (! $component instanceof HydratesState || ! $component instanceof Field) {
+            if (! $component instanceof Field) {
                 continue;
             }
 
@@ -415,7 +416,16 @@ final class FormRuntime
                 continue;
             }
 
-            $data[$name] = $component->hydrateState($data[$name], $record);
+            $value = $data[$name];
+
+            if ($component instanceof HydratesState) {
+                $value = $component->hydrateState($value, $record);
+            }
+
+            // The owner's callback last, over the value the field type already
+            // shaped — the mirror image of the save path, where its counterpart
+            // dehydrateStateUsing() also has the final say.
+            $data[$name] = $component->applyStateFormatter($value, $record);
         }
 
         return $data;

@@ -21,6 +21,18 @@ final class FormConfigurationException extends InvalidArgumentException implemen
         return new self('Form has no model configured. Call ->model() or ->using() before save().');
     }
 
+    /**
+     * `unique()` had no table to check and no record to take one from — a form
+     * with no `->model()`, or a standalone field validated on its own.
+     */
+    public static function uniqueWithoutTable(string $field): self
+    {
+        return new self(
+            "Field [{$field}] uses unique() but the form has no model to take a table ".
+            'from. Pass the table explicitly: ->unique(table: \'users\').'
+        );
+    }
+
     public static function unknownFormMethod(string $method, string $component): self
     {
         return new self("Form method [{$method}()] does not exist on ".$component);

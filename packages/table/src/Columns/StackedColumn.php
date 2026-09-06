@@ -213,8 +213,8 @@ class StackedColumn extends Column implements HasSearchColumns
         $secondaryValue = $this->secondaryColumn ? $this->resolveColumnValue($record, $this->secondaryColumn) : null;
 
         // Apply formatters if set
-        if ($primaryValue !== null && $this->formatStateUsing) {
-            $primaryValue = ($this->formatStateUsing)($primaryValue, $record);
+        if ($primaryValue !== null) {
+            $primaryValue = $this->applyStateFormatter($primaryValue, $record);
         }
 
         $customStack = ! empty($this->stack);

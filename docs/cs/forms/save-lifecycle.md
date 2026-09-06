@@ -22,8 +22,9 @@ Form::save()
 │   └── Při selhání vyhodit ValidationException ← STOP
 │
 ├── 2. MUTACE
-│   └── mutateDataBeforeSave(Closure $fn)
-│       Transformovat zvalidovaná data před perzistencí
+│   ├── mutateDataBeforeSave(Closure $fn)
+│   │   Transformovat zvalidovaná data před perzistencí
+│   └── Vlastní dehydratace každého pole, pak jeho dehydrateStateUsing(Closure $fn)
 │
 ├── 3. PLUGIN HOOK: form.saving
 │   └── Pluginy mohou prohlédnout nebo upravit $data
@@ -33,6 +34,7 @@ Form::save()
 │       Void hook — side efekty, externí volání
 │
 ├── 5. PERZISTENCE
+│   ├── Zahodit, co není sloupec: dehydrated(false), relace, morph dvojice
 │   ├── Výchozí: Model::create($data) nebo $model->update($data)
 │   └── Vlastní: using(Closure $fn)
 │
@@ -146,6 +148,46 @@ $form->model($user);
 ```
 
 <a id="custom-persistence"></a>
+### Co se zapíše do záznamu
+
+Mezi zvalidovanými daty a zápisem každé pole říká, jestli je jeho hodnota vůbec
+sloupec a jaká ta hodnota má být. Dva háčky, oba na libovolném poli:
+
+```php
+TextInput::make('password_confirmation')->dehydrated(false);
+TextInput::make('password')->dehydrateStateUsing(fn (string $state) => Hash::make($state));
+```
+
+- **`dehydrated(false)`** nechá klíč mimo zápis. Pole s pravidlem a bez sloupce
+  za sebou — potvrzení hesla, přepínač „stejné jako fakturační adresa“, hodnota,
+  která jen řídí sousední pole — by se jinak nastavilo jako atribut a selhalo na
+  chybějícím sloupci.
+- **`dehydrateStateUsing()`** nahradí hodnotu na cestě ven. Dostane `$state` a
+  záznam (`null` v režimu vytváření).
+
+Pořadí je pevné a záleží na něm: nejdřív hodnotu tvaruje typ pole — `FileUpload`
+přesune dočasný upload do trvalého úložiště, `DateTimePicker` aplikuje svůj
+formát a časovou zónu — a vaše callback pak vidí ten výsledek, ne surovou
+hodnotu z prohlížeče. Oba háčky platí i pro pole uvnitř `Repeateru`, pro každou
+položku.
+
+Podmínka může být Closure nad živým stavem sousedních polí, vyhodnocená při
+uložení:
+
+```php
+Toggle::make('has_nickname'),
+TextInput::make('nickname')->dehydrated(fn (callable $get) => (bool) $get('has_nickname')),
+```
+
+Některá pole si na tuhle otázku odpovídají sama, protože jejich název od začátku
+není sloupec: `Repeater` nebo `Tags` navázané přes `->relationship()` a
+`MorphToSelect` (jehož hodnotou je dvojice `{name}_type` / `{name}_id`). Z
+rodičovského zápisu vypadnou a jdou vlastní cestou — není co nastavovat.
+
+Všechno vypadává **až u zápisu**. `mutateDataBeforeSave()`, hook `form.saving`
+i `beforeSave()` pořád vidí kompletní pole dat a stejně tak kaskáda relací
+v kroku 6.
+
 ### Vlastní perzistence
 
 Přepište výchozí pomocí `using()`:

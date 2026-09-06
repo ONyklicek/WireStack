@@ -16,11 +16,12 @@ use NyonCode\WireCore\Core\Plugin\Hooks\FormSavingPayload;
 use NyonCode\WireCore\Core\Plugin\HookTarget;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
+use NyonCode\WireCore\Foundation\Contracts\CanBeDehydrated;
 use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
 use NyonCode\WireForms\Components\Field;
 use NyonCode\WireForms\Components\MorphToSelect;
 use NyonCode\WireForms\Components\Repeater;
-use NyonCode\WireForms\Components\Tags;
+use NyonCode\WireForms\Contracts\SavesAfterRecord;
 use NyonCode\WireForms\Exceptions\FormConfigurationException;
 use NyonCode\WireForms\Forms\Config\FormConfig;
 
@@ -103,6 +104,16 @@ final class SaveHandler
             $relationHandler->save($record, $this->config->schema, $data);
         }
 
+        // 6b. Fields that persist themselves against the saved record.
+        //
+        // After the record, never before: a new one has no key until it is
+        // written, and a pivot row needs that key. Given the raw state rather
+        // than the validated data, because these fields carry no rule of their
+        // own and validate() drops what it was not asked about.
+        foreach ($this->afterRecordFields() as $field) {
+            $field->saveAfterRecord($record, $this->runtime->getStateManager()->getState()[$field->getName()] ?? null);
+        }
+
         // 7. afterSave hook (void)
         if ($this->config->afterSave) {
             ($this->config->afterSave)($record);
@@ -147,23 +158,24 @@ final class SaveHandler
             throw FormConfigurationException::noModel();
         }
 
-        // Relationship-backed repeaters hold has-many rows, not parent columns;
-        // they are persisted separately by RelationshipSaveHandler after the parent
-        // save. A relationship-bound Tags field is likewise not a parent column
-        // (its key names a relation, not an attribute). Left in place either would
-        // dehydrate a non-existent column and fatal.
-        foreach ([...$this->relationshipRepeaterNames(), ...$this->tagsRelationshipNames()] as $name) {
+        // Whatever the schema says is not a column on this record: a relationship
+        // repeater's has-many rows (written by RelationshipSaveHandler after the
+        // parent), a relationship-bound Tags field, a morph select, a password
+        // confirmation, anything an owner switched off with dehydrated(false).
+        // Left in place, each would dehydrate a column that does not exist and
+        // fatal. Only the payload is stripped — $data keeps every key for the
+        // relationship pass and the after-record fields further down.
+        foreach ($this->nonDehydratedNames() as $name) {
             unset($data[$name]);
         }
 
-        // A MorphToSelect's own name is a morph relation, never a column — writing
-        // it fatals. Replace it with the two real columns it manages
-        // (`{name}_type` / `{name}_id`), read from raw state: those sub-fields carry
-        // no validation rule of their own, so validate() dropped them from $data.
+        // A MorphToSelect is dropped by the sweep above with everything else that
+        // is not a column; what is particular to it is the replacement. The two
+        // real columns it manages (`{name}_type` / `{name}_id`) are read from raw
+        // state: those sub-fields carry no validation rule of their own, so
+        // validate() dropped them from $data.
         $rawState = $this->runtime->getStateManager()->getState();
         foreach ($this->morphToSelectFields() as $field) {
-            unset($data[$field->getName()]);
-
             foreach ([$field->getTypeColumn(), $field->getIdColumn()] as $column) {
                 if (array_key_exists($column, $rawState)) {
                     $data[$column] = $rawState[$column];
@@ -209,29 +221,37 @@ final class SaveHandler
         $model = $this->config->model instanceof Model ? $this->config->model : null;
 
         // Top-level fields (not nested inside a repeater).
-        foreach ($this->collectDehydratingFields($this->config->schema) as $field) {
-            $name = $field->getName();
+        foreach ($this->payloadComponents($this->config->schema) as $component) {
+            if (! $component instanceof Field) {
+                continue;
+            }
+
+            $name = $component->getName();
 
             if (! array_key_exists($name, $data)) {
                 continue;
             }
 
-            $data[$name] = $field->dehydrateState($data[$name], $model);
+            $data[$name] = $this->dehydrateValue($component, $data[$name], $model);
         }
 
-        // Repeater children: a DehydratesState child (FileUpload storing its
-        // upload, DateTimePicker applying format/timezone) lives under the
-        // repeater key as an array of items, so the top-level pass never reaches
-        // it. Without this a nested file is never moved to permanent storage and a
-        // nested date keeps its raw wire value.
-        foreach ($this->dehydratingRepeaters($this->config->schema) as $repeater) {
+        // Repeater children: a child that shapes its own state (FileUpload storing
+        // its upload, DateTimePicker applying format/timezone) or carries an
+        // owner's dehydrateStateUsing() lives under the repeater key as an array
+        // of items, so the top-level pass never reaches it. Without this a nested
+        // file is never moved to permanent storage and a nested date keeps its raw
+        // wire value.
+        foreach ($this->payloadRepeaters($this->config->schema) as $repeater) {
             $name = $repeater->getName();
 
             if (! isset($data[$name]) || ! is_array($data[$name])) {
                 continue;
             }
 
-            $childFields = $this->collectDehydratingFields($repeater->getSchema());
+            $childFields = array_filter(
+                $this->payloadComponents($repeater->getSchema()),
+                static fn (Field|Repeater $child): bool => $child instanceof Field,
+            );
 
             foreach ($data[$name] as $index => $item) {
                 if (! is_array($item)) {
@@ -242,7 +262,7 @@ final class SaveHandler
                     $childName = $child->getName();
 
                     if (array_key_exists($childName, $item)) {
-                        $data[$name][$index][$childName] = $child->dehydrateState($item[$childName], $model);
+                        $data[$name][$index][$childName] = $this->dehydrateValue($child, $item[$childName], $model);
                     }
                 }
             }
@@ -252,73 +272,93 @@ final class SaveHandler
     }
 
     /**
+     * One field's value on the way out: the field's own transform first, the
+     * owner's callback last.
+     *
+     * That order is the point of having both. The field type states how its
+     * value is stored at all — an upload moved to permanent storage, a date in
+     * its storage format and timezone — and the owner then shapes the value that
+     * is actually about to be written, rather than racing the field type over a
+     * raw wire value it would have replaced anyway.
+     */
+    private function dehydrateValue(Field $field, mixed $value, ?Model $model): mixed
+    {
+        if ($field instanceof DehydratesState) {
+            $value = $field->dehydrateState($value, $model);
+        }
+
+        return $field->applyStateDehydration($value, $model);
+    }
+
+    /**
+     * Names of schema components whose state must not be written to the record.
+     *
+     * Asked of the schema rather than enumerated here: a component says whether
+     * it is a column, and the ones that are not say so for their own reasons —
+     * a relation name, a morph pair, an owner's `dehydrated(false)`.
+     * Both hosts of the payload — a field and a repeater — answer the
+     * {@see CanBeDehydrated} contract, so the question is asked without a type
+     * check.
+     * {@see SavesAfterRecord} is the one implication left in this layer: a field
+     * that writes itself against the saved record is by definition not a column
+     * on it, so the contract answers for it and no field has to declare both.
+     *
+     * @return array<int, string>
+     */
+    private function nonDehydratedNames(): array
+    {
+        $names = [];
+
+        foreach ($this->payloadComponents($this->config->schema) as $component) {
+            if ($component instanceof SavesAfterRecord || ! $component->isDehydrated()) {
+                $names[] = $component->getName();
+            }
+        }
+
+        return $names;
+    }
+
+    /**
+     * Every component that keys the top-level save payload: fields anywhere in
+     * the layout tree, plus repeaters themselves.
+     *
+     * A repeater is a leaf here. Its children are keyed inside its own array
+     * value, never at the top level, so flattening them in would match a child's
+     * name against a parent column that happens to share it.
+     *
+     * @param  array<int, mixed>  $schema
+     * @return array<int, Field|Repeater>
+     */
+    private function payloadComponents(array $schema): array
+    {
+        /** @var array<int, Field|Repeater> $components */
+        $components = [];
+
+        foreach ($schema as $component) {
+            if ($component instanceof Repeater) {
+                $components[] = $component;
+            } elseif ($component instanceof LayoutComponent) {
+                $components = array_merge($components, $this->payloadComponents($component->getSchema()));
+            } elseif ($component instanceof Field) {
+                $components[] = $component;
+            }
+        }
+
+        return $components;
+    }
+
+    /**
      * Repeaters anywhere in the schema (used to dehydrate their child fields).
      *
      * @param  array<int, mixed>  $schema
      * @return array<int, Repeater>
      */
-    private function dehydratingRepeaters(array $schema): array
+    private function payloadRepeaters(array $schema): array
     {
-        $repeaters = [];
-
-        foreach ($schema as $component) {
-            if ($component instanceof Repeater) {
-                $repeaters[] = $component;
-            } elseif ($component instanceof LayoutComponent) {
-                $repeaters = array_merge($repeaters, $this->dehydratingRepeaters($component->getSchema()));
-            }
-        }
-
-        return $repeaters;
-    }
-
-    /**
-     * Collect every field that dehydrates its own state, traversing nested layouts.
-     *
-     * Only a Field carries the name that keys the data array — a layout could
-     * implement the contract without one.
-     *
-     * @param  array<int, mixed>  $schema
-     * @return array<int, Field&DehydratesState>
-     */
-    private function collectDehydratingFields(array $schema): array
-    {
-        $fields = [];
-
-        foreach ($schema as $component) {
-            if ($component instanceof DehydratesState && $component instanceof Field) {
-                $fields[] = $component;
-            } elseif ($component instanceof LayoutComponent && ! $component instanceof Repeater) {
-                // Repeaters are handled per-item by dehydratingRepeaters(); their
-                // children must not be flattened into the top-level key match.
-                $fields = array_merge($fields, $this->collectDehydratingFields($component->getSchema()));
-            }
-        }
-
-        return $fields;
-    }
-
-    /**
-     * Collect the field names of all relationship-backed repeaters in the schema,
-     * traversing nested layout components.
-     *
-     * @return array<int, string>
-     */
-    private function relationshipRepeaterNames(): array
-    {
-        return $this->collectRelationshipRepeaterNames($this->config->schema);
-    }
-
-    /**
-     * @param  array<int, mixed>  $schema
-     * @return array<int, string>
-     */
-    private function collectRelationshipRepeaterNames(array $schema): array
-    {
-        return array_map(
-            static fn (Repeater $repeater): string => $repeater->getName(),
-            $this->collectRelationshipRepeaterFields($schema),
-        );
+        return array_values(array_filter(
+            $this->payloadComponents($schema),
+            static fn (Field|Repeater $component): bool => $component instanceof Repeater,
+        ));
     }
 
     /**
@@ -388,38 +428,6 @@ final class SaveHandler
     }
 
     /**
-     * Names of relationship-bound Tags fields anywhere in the schema. Their key
-     * names a relation (not a column), so it must be stripped before dehydration
-     * to avoid a "no such column" fatal. A plain (column-backed) Tags field keeps
-     * its array value.
-     *
-     * @return array<int, string>
-     */
-    private function tagsRelationshipNames(): array
-    {
-        return $this->collectTagsRelationshipNames($this->config->schema);
-    }
-
-    /**
-     * @param  array<int, mixed>  $schema
-     * @return array<int, string>
-     */
-    private function collectTagsRelationshipNames(array $schema): array
-    {
-        $names = [];
-
-        foreach ($schema as $component) {
-            if ($component instanceof Tags && $component->getRelationship() !== null) {
-                $names[] = $component->getName();
-            } elseif ($component instanceof LayoutComponent) {
-                $names = array_merge($names, $this->collectTagsRelationshipNames($component->getSchema()));
-            }
-        }
-
-        return $names;
-    }
-
-    /**
      * MorphToSelect fields anywhere in the schema. Their own key is a morph
      * relation, not a column, and their `{name}_type` / `{name}_id` sub-fields
      * carry no validation rule — so the save payload needs both rewriting.
@@ -429,6 +437,38 @@ final class SaveHandler
     private function morphToSelectFields(): array
     {
         return $this->collectMorphToSelectFields($this->config->schema);
+    }
+
+    /**
+     * Every field in the schema that saves itself after the record.
+     *
+     * @return array<int, Field&SavesAfterRecord>
+     */
+    private function afterRecordFields(): array
+    {
+        return $this->collectAfterRecordFields($this->config->schema);
+    }
+
+    /**
+     * @param  array<int, mixed>  $schema
+     * @return array<int, Field&SavesAfterRecord>
+     */
+    private function collectAfterRecordFields(array $schema): array
+    {
+        $fields = [];
+
+        foreach ($schema as $component) {
+            // Both, because the name comes from the field and the behaviour
+            // from the contract: something that implements one without the other
+            // is not a form field and has no name to remove from the data.
+            if ($component instanceof Field && $component instanceof SavesAfterRecord) {
+                $fields[] = $component;
+            } elseif ($component instanceof LayoutComponent) {
+                $fields = array_merge($fields, $this->collectAfterRecordFields($component->getSchema()));
+            }
+        }
+
+        return $fields;
     }
 
     /**

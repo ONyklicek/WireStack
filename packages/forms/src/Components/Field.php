@@ -4,17 +4,22 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Components;
 
+use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Components\Component;
+use NyonCode\WireCore\Foundation\Concerns\CanBeDehydrated;
 use NyonCode\WireCore\Foundation\Concerns\CanBeLive;
 use NyonCode\WireCore\Foundation\Concerns\CanBeReadOnly;
+use NyonCode\WireCore\Foundation\Concerns\FormatsStateUsing;
 use NyonCode\WireCore\Foundation\Concerns\HasAfterStateUpdated;
 use NyonCode\WireCore\Foundation\Concerns\HasDebounce;
 use NyonCode\WireCore\Foundation\Concerns\HasPlaceholder;
 use NyonCode\WireCore\Foundation\Concerns\HasPrefixAndSuffix;
 use NyonCode\WireCore\Foundation\Concerns\HasTooltip;
+use NyonCode\WireCore\Foundation\Contracts\CanBeDehydrated as CanBeDehydratedContract;
 use NyonCode\WireCore\Foundation\Contracts\HasFieldActions;
 use NyonCode\WireCore\Foundation\Contracts\HasStateAccessors;
 use NyonCode\WireCore\Foundation\Contracts\HasStateUpdatedCallback;
+use NyonCode\WireForms\Concerns\BelongsToRecord;
 use NyonCode\WireForms\Concerns\CanBeAutofocused;
 use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
 use NyonCode\WireForms\Concerns\HasFormValidation;
@@ -24,14 +29,19 @@ use NyonCode\WireForms\Contracts\HasValidation;
 /**
  * Base class for all wire-forms input field components.
  *
- * Extends core Component with validation, live bindings,
- * prefix/suffix, placeholder, read-only, and autofocus.
+ * Extends core Component with validation, live bindings, prefix/suffix,
+ * placeholder, read-only, autofocus, and the two owner-facing state hooks that
+ * bracket a save: {@see FormatsStateUsing} on the way in from the record and
+ * {@see CanBeDehydrated} on the way back out to it.
  */
-abstract class Field extends Component implements HasFieldActions, HasStateAccessors, HasStateUpdatedCallback, HasValidation
+abstract class Field extends Component implements CanBeDehydratedContract, HasFieldActions, HasStateAccessors, HasStateUpdatedCallback, HasValidation
 {
+    use BelongsToRecord;
     use CanBeAutofocused;
+    use CanBeDehydrated;
     use CanBeLive;
     use CanBeReadOnly;
+    use FormatsStateUsing;
     use HasAfterStateUpdated;
     use HasDebounce;
     use HasFormValidation;
@@ -103,6 +113,15 @@ abstract class Field extends Component implements HasFieldActions, HasStateAcces
     protected function defaultLiveDebounce(): ?int
     {
         return $this->defaultLiveDebounce;
+    }
+
+    /**
+     * A field validates against the record the form runtime handed it, so
+     * `unique()` can exclude the row an edit form is editing.
+     */
+    protected function validationRecord(): ?Model
+    {
+        return $this->getRecord();
     }
 
     /**

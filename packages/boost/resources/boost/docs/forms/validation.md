@@ -18,10 +18,10 @@ TextInput::make('name')
     ->maxLength(255)
     ->rules(['string', 'regex:/^[a-zA-Z\s]+$/']);
 
-TextInput::make('email')
+TextInput::make('email')      // [tl! focus:start]
     ->email()
     ->required()
-    ->rules('unique:users,email');
+    ->unique();                // [tl! focus:end]
 
 TextInput::make('age')
     ->numeric()
@@ -47,6 +47,34 @@ Some fields provide fluent helpers that map to Laravel rules:
 | `->url()` | `url` |
 | `->tel()` | sets `tel` HTML input type (no validation rule) |
 
+### Unique Values
+
+`unique()` builds Laravel's `Rule::unique()` from what the form already knows:
+the table from the bound model, the column from the field's name, and — in edit
+mode — the record being edited is excluded from its own check.
+
+```php
+TextInput::make('email')->unique();                      // unique:users,email, ignoring this user
+TextInput::make('email')->unique(ignoreRecord: false);   // every row counts, including this one
+TextInput::make('tax_id')->unique(column: 'vat_number'); // a field whose name is not the column
+TextInput::make('name')->unique(table: 'companies');     // a form with no ->model()
+```
+
+The rule is built when validation runs, not when the schema is declared. That
+matters because the record arrives from the form runtime after your `form()`
+method has returned — a rule resolved at declaration time would ignore nothing
+on the very form it was written for.
+
+Scope the check further with `modifyRuleUsing`, which receives the `Unique` rule:
+
+```php
+TextInput::make('email')
+    ->unique(modifyRuleUsing: fn (Unique $rule) => $rule->where('team_id', $this->teamId));
+```
+
+A form with no `->model()` has no table to infer, so pass one: without either,
+`unique()` throws a `FormConfigurationException` naming the field.
+
 ### Custom Validation Messages
 
 ```php
@@ -67,13 +95,19 @@ Add rules at the form level that span multiple fields:
 ```php
 Form::make()
     ->schema([
-        TextInput::make('password')->password()->required(),
-        TextInput::make('password_confirmation')->password()->required(),
+        TextInput::make('password')->password()->required()->rules(['confirmed']),
+        TextInput::make('password_confirmation')->password()->required()->dehydrated(false),
     ])
     ->validationMessages([
         'password.confirmed' => 'Passwords do not match.',
     ]);
 ```
+
+The confirmation field has a rule and no column behind it, so it is marked
+`dehydrated(false)`: it takes part in validation and is dropped before the record
+is written. Without that the save would try to set a `password_confirmation`
+attribute on the model and fail on the missing column — see
+[Save Lifecycle](save-lifecycle.md#what-reaches-the-record).
 
 ---
 
@@ -153,9 +187,7 @@ entry:
 ```php
 TextInput::make('company_name')
     ->required(fn (callable $get) => $get('type') === 'business')
-    ->rules(fn () => $this->isEditing()
-        ? 'unique:companies,name,' . $this->getModel()->id
-        : 'unique:companies,name');
+    ->rules(fn (callable $get) => $get('type') === 'business' ? ['min:2'] : []);
 
 // Closures may also be individual entries in a rules array:
 TextInput::make('slug')->rules([

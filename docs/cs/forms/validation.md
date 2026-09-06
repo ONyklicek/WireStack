@@ -18,10 +18,10 @@ TextInput::make('name')
     ->maxLength(255)
     ->rules(['string', 'regex:/^[a-zA-Z\s]+$/']);
 
-TextInput::make('email')
+TextInput::make('email')      // [tl! focus:start]
     ->email()
     ->required()
-    ->rules('unique:users,email');
+    ->unique();                // [tl! focus:end]
 
 TextInput::make('age')
     ->numeric()
@@ -47,6 +47,35 @@ Některá pole poskytují fluent helpery mapující na Laravel pravidla:
 | `->url()` | `url` |
 | `->tel()` | nastaví HTML input typ `tel` (žádné validační pravidlo) |
 
+### Unikátní hodnoty
+
+`unique()` sestaví laravelovské `Rule::unique()` z toho, co formulář už zná:
+tabulku z navázaného modelu, sloupec z názvu pole a — v režimu editace —
+vyloučí editovaný záznam z jeho vlastní kontroly.
+
+```php
+TextInput::make('email')->unique();                      // unique:users,email, ignoruje tohoto uživatele
+TextInput::make('email')->unique(ignoreRecord: false);   // počítá se každý řádek, včetně tohoto
+TextInput::make('tax_id')->unique(column: 'vat_number'); // pole, jehož název není sloupec
+TextInput::make('name')->unique(table: 'companies');     // formulář bez ->model()
+```
+
+Pravidlo vzniká až při validaci, ne při deklaraci schématu. To je podstatné,
+protože záznam předává formulářový runtime až poté, co vaše metoda `form()`
+skončila — pravidlo vyhodnocené při deklaraci by neignorovalo nic právě na tom
+formuláři, pro který bylo napsáno.
+
+Kontrolu dále zúžíte přes `modifyRuleUsing`, které dostane pravidlo `Unique`:
+
+```php
+TextInput::make('email')
+    ->unique(modifyRuleUsing: fn (Unique $rule) => $rule->where('team_id', $this->teamId));
+```
+
+Formulář bez `->model()` nemá z čeho tabulku odvodit, takže ji předejte: bez
+jednoho i druhého vyhodí `unique()` výjimku `FormConfigurationException` s
+názvem pole.
+
 ### Vlastní validační zprávy
 
 ```php
@@ -67,13 +96,19 @@ Přidejte pravidla na úrovni formuláře, která zahrnují více polí:
 ```php
 Form::make()
     ->schema([
-        TextInput::make('password')->password()->required(),
-        TextInput::make('password_confirmation')->password()->required(),
+        TextInput::make('password')->password()->required()->rules(['confirmed']),
+        TextInput::make('password_confirmation')->password()->required()->dehydrated(false),
     ])
     ->validationMessages([
         'password.confirmed' => 'Passwords do not match.',
     ]);
 ```
+
+Potvrzovací pole má pravidlo, ale žádný sloupec za sebou, proto je označené
+`dehydrated(false)`: účastní se validace a před zápisem záznamu vypadne. Bez
+toho by uložení zkusilo nastavit na modelu atribut `password_confirmation` a
+selhalo na chybějícím sloupci — viz
+[Životní cyklus uložení](save-lifecycle.md#co-se-zapise-do-zaznamu).
 
 ---
 
@@ -153,9 +188,7 @@ jako jedna položka:
 ```php
 TextInput::make('company_name')
     ->required(fn (callable $get) => $get('type') === 'business')
-    ->rules(fn () => $this->isEditing()
-        ? 'unique:companies,name,' . $this->getModel()->id
-        : 'unique:companies,name');
+    ->rules(fn (callable $get) => $get('type') === 'business' ? ['min:2'] : []);
 
 // Closury mohou být i jednotlivé položky v poli pravidel:
 TextInput::make('slug')->rules([

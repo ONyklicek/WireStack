@@ -15,6 +15,7 @@ use NyonCode\WireCore\Core\Query\Contracts\HasSearchValueType;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\CanBeCopyable;
+use NyonCode\WireCore\Foundation\Concerns\FormatsStateUsing;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Concerns\HasDefault;
 use NyonCode\WireCore\Foundation\Concerns\HasFontWeight;
@@ -58,6 +59,7 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
     use CanBeSorted;
     use CanBeSummarized;
     use CanBeTruncated;
+    use FormatsStateUsing;
     use HasAggregate;
     use HasAlignment;
     use HasColor;
@@ -86,7 +88,6 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
     protected bool $toggleable = true;
 
     /** @var Closure|null Custom formatter for the cell value */
-    protected ?Closure $formatStateUsing = null;
 
     /** @var Closure|null Custom display logic for the cell */
     protected ?Closure $displayUsing = null;
@@ -500,21 +501,16 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
         // Aggregate columns: read from withCount/withSum attribute
         if ($this->isAggregate()) {
             $attr = $this->getAggregateAttribute();
-            $value = $attr !== null ? $record->getAttribute($attr) : null;
-
-            if ($this->formatStateUsing) {
-                $value = ($this->formatStateUsing)($value, $record);
-            }
+            $value = $this->applyStateFormatter(
+                $attr !== null ? $record->getAttribute($attr) : null,
+                $record,
+            );
 
             return $value ?? $this->default;
         }
 
         // fallback: resolveValue + formatStateUsing
-        $value = $this->resolveValue($record);
-
-        if ($this->formatStateUsing) {
-            $value = ($this->formatStateUsing)($value, $record);
-        }
+        $value = $this->applyStateFormatter($this->resolveValue($record), $record);
 
         if ($value === null || $value === '') {
             return $this->default;
@@ -695,14 +691,6 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
     public function isToggleable(): bool
     {
         return $this->toggleable;
-    }
-
-    /** Transform the raw cell value before display; the Closure receives the state and returns the formatted value. */
-    public function formatStateUsing(Closure $callback): static
-    {
-        $this->formatStateUsing = $callback;
-
-        return $this;
     }
 
     /** Replace the rendered cell entirely; the Closure receives `$state, $record` and returns the display value (string or Htmlable). */

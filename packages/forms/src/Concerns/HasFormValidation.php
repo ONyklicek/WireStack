@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Concerns;
 
 use Closure;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 use Illuminate\Validation\Rules\In;
 use NyonCode\WireCore\Foundation\Support\StateMatcher;
 use NyonCode\WireForms\Contracts\ProvidesImplicitValidationRules;
+use NyonCode\WireForms\Exceptions\FormConfigurationException;
 
 /**
  * Validation support for form field components.
@@ -23,6 +26,9 @@ trait HasFormValidation
     protected bool|Closure $isRequired = false;
 
     protected bool $validatesLive = false;
+
+    /** @var Closure|null fn(): mixed — builds the unique rule at validation time */
+    protected ?Closure $uniqueRule = null;
 
     /** @var array<string, string> */
     protected array $validationMessages = [];
@@ -73,6 +79,62 @@ trait HasFormValidation
     }
 
     /**
+     * Constrain the value to be unique in a database table.
+     *
+     * Everything defaults to what the form already knows: the table from the
+     * bound model, the column from the field name, and — on an edit form — the
+     * row being edited is excluded from the check. That last part is the reason
+     * this method exists rather than a documented string: `unique:companies,name`
+     * fails its own record on every edit, and the fix, appending the id, is
+     * wrong the other way round in create mode, where there is no id to append.
+     * Both halves are one question the form can answer for itself.
+     *
+     * @param  string|null  $table  defaults to the bound model's table
+     * @param  string|null  $column  defaults to the field's name
+     * @param  bool  $ignoreRecord  exclude the record being edited (a create form has none to exclude)
+     * @param  Closure|null  $modifyRuleUsing  receives the `Unique` rule to scope it further
+     */
+    public function unique(
+        ?string $table = null,
+        ?string $column = null,
+        bool $ignoreRecord = true,
+        ?Closure $modifyRuleUsing = null,
+    ): static {
+        // Built at validation time, not here: the record arrives from the form
+        // runtime after the schema is declared, so a rule resolved now would
+        // ignore nothing on the very form it was written for.
+        $this->uniqueRule = function () use ($table, $column, $ignoreRecord, $modifyRuleUsing): mixed {
+            $record = $this->validationRecord();
+            $table ??= $record?->getTable();
+
+            if ($table === null) {
+                throw FormConfigurationException::uniqueWithoutTable($this->getName());
+            }
+
+            $rule = Rule::unique($table, $column ?? $this->getName());
+
+            if ($ignoreRecord && $record !== null && $record->exists) {
+                $rule->ignore($record->getKey(), $record->getKeyName());
+            }
+
+            return $modifyRuleUsing === null ? $rule : ($modifyRuleUsing($rule) ?? $rule);
+        };
+
+        return $this;
+    }
+
+    /**
+     * The record a rule may need to know about — the row an edit form is editing.
+     *
+     * Null here because this trait's other host, a Repeater, is not bound to
+     * one; a field overrides it with the record the form runtime handed it.
+     */
+    protected function validationRecord(): ?Model
+    {
+        return null;
+    }
+
+    /**
      * Require this field whenever another field has a non-empty value. Resolved
      * reactively against live sibling state.
      */
@@ -114,6 +176,10 @@ trait HasFormValidation
             foreach ($this->implicitValidationRules() as $rule) {
                 $rules[] = $rule;
             }
+        }
+
+        if ($this->uniqueRule instanceof Closure) {
+            $rules[] = ($this->uniqueRule)();
         }
 
         if ($this->isRequired() && ! in_array('required', $rules)) {

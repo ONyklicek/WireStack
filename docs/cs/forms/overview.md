@@ -367,8 +367,17 @@ Každé pole dědí:
 ->debounce(int $ms = 500)              // přidá .debounce.{ms}ms k vazbě
 ->afterStateUpdated(Closure $callback)  // reagovat na změny hodnoty (auto-zapne live)
 ->rules(string|array $rules)            // Laravel validační pravidla
+->unique(?string $table, ?string $column, bool $ignoreRecord = true, ?Closure $modifyRuleUsing) // [tl! focus]
 ->validationMessages(array $messages)   // vlastní validační zprávy
+->formatStateUsing(Closure $fn)         // fn ($state, $record) — uložená hodnota do stavu pole [tl! focus:start]
+->dehydrated(bool|Closure $condition = true)  // false nechá hodnotu mimo záznam
+->dehydrateStateUsing(Closure $fn)      // fn ($state, $record) — hodnota na cestě ven [tl! focus:end]
 ```
+
+`formatStateUsing()` běží při plnění formuláře, `dehydrateStateUsing()` při
+ukládání, obojí až po vlastní transformaci typu pole. Co pole zapíše, popisuje
+[Životní cyklus uložení](save-lifecycle.md#co-se-zapise-do-zaznamu), `unique()`
+pak [Validace](validation.md#unikatni-hodnoty).
 
 Closury `visible()`, `hidden()`, `disabled()` a `afterStateUpdated()` dostávají live state
 accessory (`$get`, `$set`, `$state`). Viz [Reaktivní pole](reactive-fields.md).

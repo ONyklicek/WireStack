@@ -8,12 +8,16 @@ use Closure;
 use Illuminate\Contracts\View\View;
 use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
+use NyonCode\WireCore\Foundation\Concerns\CanBeCollapsed;
+use NyonCode\WireCore\Foundation\Concerns\CanBeDehydrated;
 use NyonCode\WireCore\Foundation\Concerns\HasDefault;
+use NyonCode\WireCore\Foundation\Contracts\CanBeDehydrated as CanBeDehydratedContract;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 use NyonCode\WireForms\Concerns\ClonesItemSchema;
 use NyonCode\WireForms\Concerns\HasFormValidation;
 use NyonCode\WireForms\Concerns\HasItemLimits;
 use NyonCode\WireForms\Contracts\HasValidation;
+use NyonCode\WireForms\Forms\Runtime\RelationshipSaveHandler;
 
 /**
  * Repeater field for HasMany / array data with inline add/remove/reorder.
@@ -28,8 +32,12 @@ use NyonCode\WireForms\Contracts\HasValidation;
  *       ->minItems(1)
  *       ->maxItems(10)
  */
-class Repeater extends LayoutComponent implements HasValidation
+class Repeater extends LayoutComponent implements CanBeDehydratedContract, HasValidation
 {
+    use CanBeCollapsed;
+    use CanBeDehydrated {
+        isDehydrated as isDehydratedByDeclaration;
+    }
     use ClonesItemSchema;
     use EvaluatesClosures;
     use HasDefault;
@@ -43,10 +51,6 @@ class Repeater extends LayoutComponent implements HasValidation
     protected bool $deletable = true;
 
     protected bool $reorderable = false;
-
-    protected bool $collapsible = false;
-
-    protected bool $collapsed = false;
 
     protected bool $table = false;
 
@@ -75,6 +79,18 @@ class Repeater extends LayoutComponent implements HasValidation
         return $this;
     }
 
+    /**
+     * A relationship repeater's key names a relation, not a column: its rows are
+     * written by {@see RelationshipSaveHandler} after the parent record, and
+     * writing the key itself would fatal on a column that does not exist. Stated
+     * here rather than enumerated by the save handler, and still overridable —
+     * an owner may switch a column-backed repeater off as well.
+     */
+    public function isDehydrated(): bool
+    {
+        return $this->relationship === null && $this->isDehydratedByDeclaration();
+    }
+
     /** Whether the user can add rows. */
     public function addable(bool $condition = true): static
     {
@@ -95,25 +111,6 @@ class Repeater extends LayoutComponent implements HasValidation
     public function reorderable(bool $condition = true): static
     {
         $this->reorderable = $condition;
-
-        return $this;
-    }
-
-    /** Whether rows can be collapsed. */
-    public function collapsible(bool $condition = true): static
-    {
-        $this->collapsible = $condition;
-
-        return $this;
-    }
-
-    /** Start rows collapsed. */
-    public function collapsed(bool $condition = true): static
-    {
-        $this->collapsed = $condition;
-        if ($condition) {
-            $this->collapsible = true;
-        }
 
         return $this;
     }
@@ -181,16 +178,6 @@ class Repeater extends LayoutComponent implements HasValidation
     public function isReorderable(): bool
     {
         return $this->reorderable && ! $this->isDisabled();
-    }
-
-    public function isCollapsible(): bool
-    {
-        return $this->collapsible;
-    }
-
-    public function isCollapsed(): bool
-    {
-        return $this->collapsed;
     }
 
     /**
