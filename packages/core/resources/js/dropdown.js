@@ -313,6 +313,165 @@ const wireDropdown = (config = {}, items = null) => ({
 })
 
 /**
+ * A floating panel opened by *pointing* at its trigger rather than clicking it —
+ * the collapsed sidebar's tooltip and its submenu popover, and any other surface
+ * where hovering has to reveal what a narrow column had no room to draw.
+ *
+ * Where the panel goes is entirely {@see wireDropdown}'s: same teleport to
+ * `<body>`, same Floating UI anchor, same layer resolution. What hover needs on
+ * top of that is four things, and none of them can be written as attributes:
+ *
+ *   - opening is deferred, so a pointer merely *crossing* the trigger on its way
+ *     somewhere else never opens anything. Without it, reaching past a collapsed
+ *     sidebar for the edge of the page throws a panel over the page every time.
+ *   - closing is deferred, so the crossing to the panel has a moment to land —
+ *     the panel is teleported, so the pointer travelling from trigger to panel
+ *     *leaves the trigger's subtree*, and a bare `mouseleave → close()` shuts the
+ *     panel the user is reaching for, every time.
+ *   - the panel's own `enter()` **cancels** that pending close.
+ *   - `dismiss()` closes and means it. This is the one that is easy to leave out
+ *     until Escape appears to do nothing: on a hover surface, closing and handing
+ *     focus back to the trigger is closing and immediately reopening.
+ *
+ * Alpine's `.debounce` modifier can express the delays and cannot express the
+ * cancellation — a debounced close still fires after the panel says it was
+ * entered — which is why this is a controller and not four attributes.
+ *
+ * The wait is charged **once per visit to the surface, not once per trigger**:
+ * with one panel already open, moving to the next trigger is a deliberate walk
+ * along a menu, and re-earning the delay at every row is what makes a menu feel
+ * like it is resisting. `openFlyout` also keeps that walk to one open panel,
+ * rather than leaving the one behind showing for the length of its close delay.
+ *
+ * `enter()` takes the condition rather than reading one: whether hover should do
+ * anything at all belongs to the surface (the sidebar asks its own rail store),
+ * and a controller that reached for that store would only work in a sidebar.
+ *
+ *     <div x-data="wireFlyout({ placement: 'right-start', offset: 0 })"
+ *          x-on:mouseenter="enter($store.wireAdmin?.railed)"
+ *          x-on:mouseleave="leave()">
+ *         <button x-ref="trigger">…</button>
+ *         <template x-teleport="body">
+ *             <div x-ref="panel" x-show="open"
+ *                  x-on:mouseenter="enter()" x-on:mouseleave="leave()">…</div>
+ *         </template>
+ *     </div>
+ */
+
+/** How long a pointer must rest on a trigger before its panel appears. */
+const HOVER_OPEN_DELAY = 220
+
+/** How long a panel outlives the pointer, so the crossing to it can land. */
+const HOVER_CLOSE_DELAY = 160
+
+// The one flyout currently showing, across every instance on the page. Two of
+// them open at once is not a state any surface wants, and it is the state a
+// close delay produces on its own.
+let openFlyout = null
+
+const wireFlyout = (config = {}) => {
+    const base = wireDropdown(config)
+    const openDelay = config.openDelay ?? HOVER_OPEN_DELAY
+    const closeDelay = config.closeDelay ?? HOVER_CLOSE_DELAY
+
+    return {
+        ...base,
+
+        _hoverTimer: null,
+
+        // Set by dismiss(), cleared only when the pointer or the focus really
+        // does go away. See dismiss() for what it is for.
+        _dismissed: false,
+
+        /**
+         * Point at it. A pending close is cancelled first, which is what makes
+         * the trigger→panel crossing survivable; `when` false leaves the panel
+         * shut, so the same markup is a flyout in a collapsed menu and inert in
+         * an expanded one instead of being written twice.
+         */
+        enter(when = true) {
+            this._cancelHover()
+
+            if (! when || this.open || this._dismissed) {
+                return
+            }
+
+            // Already inside the surface — the wait was paid on the way in.
+            const wait = openFlyout && openFlyout !== this ? 0 : openDelay
+
+            this._hoverTimer = setTimeout(() => {
+                this._hoverTimer = null
+                this.show()
+            }, wait)
+        },
+
+        /**
+         * Stop pointing at it — after a moment, in case the panel is next.
+         *
+         * The delay is also where a dismissal is forgiven: reaching the end of
+         * it means the pointer (or the focus) genuinely left, rather than
+         * crossing to the panel. `enter()` cancels this timer, so coming back
+         * inside the window keeps a dismissal standing.
+         */
+        leave() {
+            this._cancelHover()
+
+            this._hoverTimer = setTimeout(() => {
+                this._dismissed = false
+                this.close()
+            }, closeDelay)
+        },
+
+        /** Close it, and mean it — Escape, rather than the pointer moving on. */
+        dismiss() {
+            this._dismissed = true
+            this.close()
+        },
+
+        // Cancels a pending open as well as a pending close: leaving a trigger
+        // during the wait must call the visit off, not merely postpone it.
+        _cancelHover() {
+            if (this._hoverTimer) {
+                clearTimeout(this._hoverTimer)
+                this._hoverTimer = null
+            }
+        },
+
+        show() {
+            if (openFlyout && openFlyout !== this) {
+                openFlyout.close()
+            }
+
+            openFlyout = this
+            base.show.call(this)
+        },
+
+        // Closing for any other reason — a click, a link being followed — must
+        // also drop the pending timer, or it fires into a closed panel and the
+        // next open is undone a fifth of a second later.
+        close() {
+            this._cancelHover()
+
+            if (openFlyout === this) {
+                openFlyout = null
+            }
+
+            base.close.call(this)
+        },
+
+        destroy() {
+            this._cancelHover()
+
+            if (openFlyout === this) {
+                openFlyout = null
+            }
+
+            base.destroy.call(this)
+        },
+    }
+}
+
+/**
  * `x-sheet-dismiss="<closeExpression>"` — drag-to-dismiss for a mobile bottom
  * sheet. Placed on the sheet's grabber handle; dragging the panel down past a
  * threshold runs the expression (the component's own close). Only active below
@@ -819,6 +978,7 @@ const registerWireCoreDropdown = () => {
     window.Alpine.magic('clickedInside', (el) => (event) => containsThroughTeleports(el, event?.target))
 
     window.Alpine.data('wireDropdown', wireDropdown)
+    window.Alpine.data('wireFlyout', wireFlyout)
     window.Alpine.data('wireContextMenu', wireContextMenu)
     window.Alpine.data('wireTabs', wireTabs)
     window.Alpine.data('wireWizard', wireWizard)

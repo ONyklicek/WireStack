@@ -1,10 +1,12 @@
 @php
     use NyonCode\WireCore\Foundation\Schema\Section;
+    use NyonCode\WireCore\Foundation\Support\ResponsiveGrid;
 
     assert($layout instanceof Section);
 
-    $columns = $layout->getColumns();
-    $columnsClass = is_array($columns) ? \NyonCode\WireCore\Foundation\Support\ResponsiveGrid::cols($columns) : '';
+    // Int and per-breakpoint map alike resolve through the canonical owner —
+    // see the note in schema/grid.blade.php for what the local `match` did.
+    $columnsClass = ResponsiveGrid::cols($layout->getColumns());
     $isCollapsible = $layout->isCollapsible();
     $isCollapsed = $layout->isCollapsed();
     $headerActions = $layout->getHeaderActions();
@@ -24,7 +26,10 @@
 >
     @if($layout->getLabel() || $layout->getDescription() || $headerActions !== [])
         <div @class([
-            'flex items-start justify-between',
+            // Stacked on a phone, side by side from `sm`: a heading, a
+            // description and two header actions do not share 360px, and the
+            // actions were the half that got squeezed to nothing.
+            'flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between',
             // Beside the fields the heading needs no bottom margin — the grid gap
             // already separates them on md+, and it still stacks below that.
             'mb-4' => (! $isCollapsible || ! $isCollapsed) && ! $isAside,
@@ -47,19 +52,23 @@
                 @endif
             </div>
 
-            <div class="ml-4 flex items-center gap-2">
-                @foreach($headerActions as $headerAction)
-                    <div @click.stop>
-                        @include('wire-core::partials.component-action', ['action' => $headerAction])
-                    </div>
-                @endforeach
+            {{-- Only where there is something to put in it: stacked on a
+                 phone, an empty div is a 12px gap under the heading. --}}
+            @if($headerActions !== [] || $isCollapsible)
+                <div class="flex items-center gap-2 sm:ml-4 sm:shrink-0">
+                    @foreach($headerActions as $headerAction)
+                        <div @click.stop>
+                            @include('wire-core::partials.component-action', ['action' => $headerAction])
+                        </div>
+                    @endforeach
 
-                @if($isCollapsible)
-                    <button type="button" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                        {!! icon('outline:chevron-down', 'w-4 h-4', 'w-5 h-5 transition-transform', '', ['x-bind:class' => "{ 'rotate-180': open }"]) !!}
-                    </button>
-                @endif
-            </div>
+                    @if($isCollapsible)
+                        <button type="button" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                            {!! icon('outline:chevron-down', 'w-4 h-4', 'w-5 h-5 transition-transform', '', ['x-bind:class' => "{ 'rotate-180': open }"]) !!}
+                        </button>
+                    @endif
+                </div>
+            @endif
         </div>
     @endif
 
@@ -69,10 +78,6 @@
                 'grid gap-4',
                 'md:col-span-2' => $isAside,
                 $columnsClass,
-                'sm:grid-cols-1' => $columns === 1,
-                'sm:grid-cols-2' => $columns === 2,
-                'sm:grid-cols-2 md:grid-cols-3' => $columns === 3,
-                'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' => $columns === 4,
             ])
     >
         @foreach($layout->getSchema() as $component)

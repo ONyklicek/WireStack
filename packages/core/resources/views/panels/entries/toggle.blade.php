@@ -3,14 +3,10 @@
 
     assert($field instanceof ToggleEntry);
 
-    $span = $field->getColumnSpan();
-    $spanClass = match (true) {
-        $span === 'full' => 'col-span-full',
-        $span === 2 => 'sm:col-span-2',
-        $span === 3 => 'sm:col-span-3',
-        $span === 4 => 'sm:col-span-4',
-        default => '',
-    };
+    // The canonical owner, not a sixth copy of its `match`: HasColumnSpan
+    // exists so a span means the same thing on every grid surface, and five
+    // views had quietly kept their own.
+    $spanClass = $field->getColumnSpanClass();
 
     $name = $field->getName();
     $state = (bool) $field->getState();

@@ -834,7 +834,14 @@ trait InteractsWithActions
         $stackVersionBefore = $this->actionStackVersion;
 
         if ($callback !== null) {
-            $formData = $this->getMountedActionFormData();
+            // Dehydrated for a footer action that submits the form — the same
+            // condition that decides whether it is validated, because both mark
+            // the click as a hand-over rather than a helper. A footer action that
+            // does not submit works on live state ($get/$set see the raw bag),
+            // and must not trigger a transform with a side effect on the way.
+            $formData = $footer->shouldSubmitForm()
+                ? $this->dehydrateMountedActionFormData($this->getMountedActionFormData())
+                : $this->getMountedActionFormData();
             $isBulk = (bool) $this->getMountedActionState('isBulk');
             $isHeader = (bool) $this->getMountedActionState('isHeaderAction');
 
@@ -858,6 +865,29 @@ trait InteractsWithActions
     protected function validateMountedActionForm(): void
     {
         // No-op — the form-hosting layer validates the wire-forms Form.
+    }
+
+    /**
+     * The active modal's form data on its way to an action callback.
+     *
+     * The write-path counterpart of {@see validateMountedActionForm()}, and the
+     * same seam: no-op in core, because only the form-hosting layer knows what a
+     * field is. It exists so a modal form and a saved form agree — a cleared
+     * select reaches the callback as null rather than '', a date in its storage
+     * format, an upload as a stored path.
+     *
+     * Applied once, where the data is handed over — never written back into the
+     * frame's state bag, which still holds what the browser is bound to. A footer
+     * action that does not submit the form is not a hand-over and does not get
+     * it: it works on live state, like `$get`/`$set` do.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function dehydrateMountedActionFormData(array $data): array
+    {
+        // No-op — the form-hosting layer applies each field's dehydration.
+        return $data;
     }
 
     /**

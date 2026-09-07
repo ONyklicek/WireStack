@@ -34,7 +34,7 @@ final class PluginRegistrationException extends RuntimeException implements Wire
      * The registration itself would succeed — `has()` answers true afterwards,
      * which is what makes this worth an exception. What silently does not happen
      * is everything that reads the list once, during boot: `Plugin::boot()` is
-     * never called, and a `DomainModule`'s resources, dashboards and navigation
+     * never called, and a `Module`'s resources, dashboards and navigation
      * group are spread by the provider in a pass that has already run. A module can be "installed" and have no menu
      * entry, no route and no dashboard.
      *

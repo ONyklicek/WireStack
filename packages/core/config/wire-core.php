@@ -13,12 +13,19 @@ return [
         |   session  — flash + Livewire dispatch (the default, transient)
         |   livewire — dispatch only
         |   flasher  — hand off to a Flasher toast
-        |   database — write it down; survives the request that raised it
-        |   null     — deliver nothing
+        |   database  — write it down; survives the request that raised it
+        |   broadcast — tell the recipient's other open pages, over websockets
+        |   null      — deliver nothing
         |
         | A list picks several at once, which is usually what you want:
         | ['session', 'database'] shows the toast now and keeps it in the bell
         | for a user who was looking elsewhere.
+        |
+        | ['session', 'database', 'broadcast'] adds the live half: the bell on
+        | every other tab and device updates as the notification is raised,
+        | instead of at whatever the next round trip happens to be. `broadcast`
+        | alone announces something that was never stored — pair it with
+        | `database`.
         */
         'default' => env('WIRE_NOTIFICATIONS_DRIVER', 'session'),
 
@@ -27,6 +34,44 @@ return [
             // has that table can point this at it and read both through its own
             // Notifiable::notifications() relation.
             'table' => env('WIRE_NOTIFICATIONS_TABLE', 'wire_notifications'),
+
+            /*
+            | How long a stored notification is kept. `null` = forever.
+            |
+            | A notification is the one kind of row designed to stop mattering,
+            | and without a period this table grows for the life of the app.
+            | Two windows, because "read" and "never looked at" are different
+            | claims: `read_retention_days` may clear what the user has already
+            | seen sooner than the rest.
+            |
+            |   Schedule::command('wire-core:notifications-prune')->daily();
+            */
+            'retention_days' => env('WIRE_NOTIFICATIONS_RETENTION_DAYS'),
+            'read_retention_days' => env('WIRE_NOTIFICATIONS_READ_RETENTION_DAYS'),
+        ],
+
+        'broadcast' => [
+            /*
+            | Authorize `wire-notifications.{notifiable}.{key}` for us.
+            |
+            | The rule is the strict one — a viewer may subscribe to their own
+            | channel and to nobody else's — and it is registered only when the
+            | `broadcast` driver above is actually in use, so an app that does
+            | not broadcast never resolves a broadcaster at boot.
+            |
+            | Turn this off to write the callback yourself in routes/channels.php
+            | (supervisors watching a queue, a tenancy rule of your own):
+            |
+            |   NotificationChannel::authorize(fn ($user, $notifiable, $key) => …);
+            */
+            'authorize' => env('WIRE_NOTIFICATIONS_AUTHORIZE_CHANNEL', true),
+        ],
+
+        'bell' => [
+            /*
+            | How many the bell's panel lists. The badge always counts them all.
+            */
+            'limit' => 10,
         ],
     ],
 

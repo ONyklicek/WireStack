@@ -1,20 +1,18 @@
 @php
     use NyonCode\WireCore\Foundation\Schema\Grid;
+    use NyonCode\WireCore\Foundation\Support\ResponsiveGrid;
 
     assert($layout instanceof Grid);
 
-    $columns = $layout->getColumns();
-    $columnsClass = is_array($columns) ? \NyonCode\WireCore\Foundation\Support\ResponsiveGrid::cols($columns) : '';
+    // Both shapes through the canonical owner. The int case used to be a local
+    // `match` that reflowed at `sm` and stopped at four columns, while the
+    // standalone <x-wire::grid> tag over the same class already delegated and
+    // reflowed at `md` — one Grid, two layouts, depending on which surface drew
+    // it.
+    $columnsClass = ResponsiveGrid::cols($layout->getColumns());
 @endphp
 
-<div @class([
-    'grid gap-4',
-    $columnsClass,
-    'sm:grid-cols-1' => $columns === 1,
-    'sm:grid-cols-2' => $columns === 2,
-    'sm:grid-cols-2 md:grid-cols-3' => $columns === 3,
-    'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' => $columns === 4,
-])>
+<div class="grid gap-4 {{ $columnsClass }}">
     @foreach($layout->getSchema() as $component)
         @if($component->isVisible())
             {{ $component }}

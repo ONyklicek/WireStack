@@ -196,6 +196,17 @@ class CoreActionsHost extends Component
         $this->actionModalConfigCache = $this->catalog()['footer']->getModalConfig();
     }
 
+    /**
+     * Reaches the protected write-path seam, which is a no-op in core.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public function dehydrateModalData(array $data): array
+    {
+        return $this->dehydrateMountedActionFormData($data);
+    }
+
     public function openModal(string $name): void
     {
         $this->mountedActions = [['name' => $name, 'show' => true, 'data' => []]];
@@ -314,6 +325,15 @@ it('runs a modal footer action validating through the no-op form seam', function
         ->call('openFooter')
         ->call('callModalFooterAction', 'touch')
         ->assertSet('mountedActions.0.data.touched', true);
+});
+
+it('hands a form-free host its modal bag unchanged (the wire-forms bridge overrides the seam)', function () {
+    // The write-path counterpart of the validation seam: core cannot dehydrate,
+    // because it has no idea what a field is. It must not mangle the bag either.
+    $host = new CoreActionsHost;
+
+    expect($host->dehydrateModalData(['status' => '', 'price' => '10.5']))
+        ->toBe(['status' => '', 'price' => '10.5']);
 });
 
 it('reports modal visibility and step index from the engine', function () {

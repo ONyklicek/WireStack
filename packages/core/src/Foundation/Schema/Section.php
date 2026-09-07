@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Foundation\Schema;
 
 use Closure;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
+use NyonCode\WireCore\Foundation\Concerns\CanBeCollapsed;
 use NyonCode\WireCore\Foundation\Concerns\HasActions;
 use NyonCode\WireCore\Foundation\Contracts\ActionContract;
 use NyonCode\WireCore\Foundation\Contracts\HasFieldActions;
@@ -21,6 +22,9 @@ use NyonCode\WireCore\Foundation\Icons\Icon;
  */
 class Section extends LayoutComponent implements HasFieldActions
 {
+    // Folding is one vocabulary with three hosts (this, Repeater, NavigationGroup);
+    // the concern owns it, including the rule that collapsed implies collapsible.
+    use CanBeCollapsed;
     use HasActions;
 
     protected string|Closure|null $description = null;
@@ -29,10 +33,6 @@ class Section extends LayoutComponent implements HasFieldActions
 
     /** @var int|array<string|int, int|string> */
     protected int|array $columns = 1;
-
-    protected bool $collapsible = false;
-
-    protected bool $collapsed = false;
 
     protected bool $compact = false;
 
@@ -62,26 +62,6 @@ class Section extends LayoutComponent implements HasFieldActions
     public function columns(int|array $columns): static
     {
         $this->columns = $columns;
-
-        return $this;
-    }
-
-    /** Allow the section to be collapsed and expanded. */
-    public function collapsible(bool $condition = true): static
-    {
-        $this->collapsible = $condition;
-
-        return $this;
-    }
-
-    /** Start the section collapsed (implies {@see collapsible()}). */
-    public function collapsed(bool $condition = true): static
-    {
-        $this->collapsed = $condition;
-
-        if ($condition) {
-            $this->collapsible = true;
-        }
 
         return $this;
     }
@@ -139,16 +119,6 @@ class Section extends LayoutComponent implements HasFieldActions
     public function getColumns(): int|array
     {
         return $this->columns;
-    }
-
-    public function isCollapsible(): bool
-    {
-        return $this->collapsible;
-    }
-
-    public function isCollapsed(): bool
-    {
-        return $this->collapsed;
     }
 
     public function isCompact(): bool

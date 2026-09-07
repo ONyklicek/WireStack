@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore;
 
+use Illuminate\Notifications\ChannelManager;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Livewire\ComponentHookRegistry;
@@ -22,11 +23,13 @@ use NyonCode\WireCore\Audit\Console\PruneAuditEntriesCommand;
 use NyonCode\WireCore\Core\Actions\ActionPipeline;
 use NyonCode\WireCore\Core\Actions\ActionRegistry;
 use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
-use NyonCode\WireCore\Core\Modules\DomainModule;
+use NyonCode\WireCore\Core\Modules\Module;
 use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
+use NyonCode\WireCore\Core\Resources\ResourceRecordUrls;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
+use NyonCode\WireCore\Core\Resources\View\Breadcrumbs;
 use NyonCode\WireCore\Core\Resources\Workspace;
 use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
 use NyonCode\WireCore\Core\Tenancy\NullTenantResolver;
@@ -36,8 +39,11 @@ use NyonCode\WireCore\Exceptions\IconSetRegistrationException;
 use NyonCode\WireCore\Exceptions\PluginRegistrationException;
 use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireCore\Foundation\Components\Component;
+use NyonCode\WireCore\Foundation\Contracts\ResolvesRecordUrls;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Icons\IconSet;
+use NyonCode\WireCore\Foundation\Mentions\MentionRegistry;
+use NyonCode\WireCore\Foundation\Mentions\MentionRenderer;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
 use NyonCode\WireCore\Foundation\Routing\Contracts\RegistersPageRoutes;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
@@ -48,12 +54,18 @@ use NyonCode\WireCore\Foundation\Support\RecordVersion;
 use NyonCode\WireCore\Foundation\View\CellSync;
 use NyonCode\WireCore\Foundation\View\CopyButton;
 use NyonCode\WireCore\Foundation\View\FloatingAssets;
+use NyonCode\WireCore\Foundation\View\PageChrome;
 use NyonCode\WireCore\Foundation\View\Primitives;
 use NyonCode\WireCore\GlobalSearch\GlobalSearchPalette;
 use NyonCode\WireCore\Modals\View\ConfirmationComponent;
 use NyonCode\WireCore\Modals\View\ModalComponent;
 use NyonCode\WireCore\Modals\View\SlideOverComponent;
+use NyonCode\WireCore\Notifications\AuthenticatedNotifiable;
+use NyonCode\WireCore\Notifications\Channels\WireChannel;
+use NyonCode\WireCore\Notifications\Console\PruneNotificationsCommand;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
+use NyonCode\WireCore\Notifications\Contracts\ResolvesNotifiable;
+use NyonCode\WireCore\Notifications\Drivers\BroadcastDriver;
 use NyonCode\WireCore\Notifications\Drivers\DatabaseDriver;
 use NyonCode\WireCore\Notifications\Drivers\FlasherDriver;
 use NyonCode\WireCore\Notifications\Drivers\LivewireEventDriver;
@@ -62,6 +74,7 @@ use NyonCode\WireCore\Notifications\Drivers\SessionDriver;
 use NyonCode\WireCore\Notifications\Drivers\StackDriver;
 use NyonCode\WireCore\Notifications\NotificationBell;
 use NyonCode\WireCore\Notifications\NotificationManager;
+use NyonCode\WireCore\Notifications\Support\NotificationChannel;
 use NyonCode\WireCore\Widgets\Console\MakeDashboardCommand;
 use NyonCode\WireCore\Widgets\DashboardRegistry;
 
@@ -97,6 +110,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
             })
             ->hasConfig()
             ->hasCommand(PruneAuditEntriesCommand::class)
+            ->hasCommand(PruneNotificationsCommand::class)
             ->hasCommand(MakeDashboardCommand::class)
             // The dashboard generator's template, publishable so an application
             // can change what it produces — Laravel's own `stub:publish`
@@ -137,6 +151,23 @@ class WireCoreServiceProvider extends PackageServiceProvider
                 // app's own dependency and is not shipped here. Delivering a registrar
                 // late is the one thing ADR 0024 forbids, so it ships with the rest.
                 Bundle::make('wire-core-chart.js'),
+                // The notification bell's live bridge (`wireNotificationLive`).
+                // 1.2 kB of Alpine around `window.Echo`, which is the consuming
+                // app's own dependency and is not shipped here — the same shape
+                // as the chart registrar above, and declared for the same
+                // reason: ADR 0024 forbids delivering an interaction registrar
+                // late, and the bell can arrive on a `wire:navigate` visit.
+                Bundle::make('wire-core-notifications.js'),
+                // `wire-core-sortable-list.js` is deliberately NOT declared here.
+                // `@wireStackScripts` renders every declared entry, so declaring it
+                // would put 38 kB of compiled SortableJS into the <head> of every
+                // page of every wire-core application — which is exactly the cost
+                // giving it its own bundle was meant to avoid. It ships through
+                // `Bundle::serve()`'s route instead, emitted per surface by
+                // `wire-core::partials.sortable-list-assets`, which only a
+                // reorderable list includes. The toolkit has no "declared but not
+                // aggregated" flag (`loadedOnRequest()` went away with the old
+                // registry), so the route is the whole mechanism.
             ])
             ->hasAssetFallback(Bundle::servedByRoute('wire-core'))
             ->hasAbout()
@@ -258,6 +289,11 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // Thin facade over the toolkit's renderer for the floating-dropdown bundle
         // URL, kept because a dozen partials already resolve it by that name.
         $this->app->singleton(FloatingAssets::class);
+
+        // Where a package puts a view the shell has to render once per page.
+        // Singleton because that is the whole contract: two instances would mean
+        // two copies of a modal in one document, both listening for one event.
+        $this->app->singleton(PageChrome::class);
     }
 
     protected function bootFoundation(): void
@@ -273,6 +309,11 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // returns the memoised IconManager <svg> string (zero view renders) and can
         // forward Alpine/data-* attributes via its $attributes argument.
         Blade::componentNamespace('NyonCode\\WireCore\\Foundation\\View', 'wire');
+
+        // Registered by hand because it lives in `Core/` rather than in
+        // `Foundation/View`: it names NavigationItem, which is L1, and the layer
+        // test refuses that import from L0. The tag is the same either way.
+        Blade::component('wire::breadcrumbs', Breadcrumbs::class);
 
         // `@wireStackScripts` — the one tag an app puts in its layout <head> to get
         // every wireStack Alpine controller into the initial document (which is what
@@ -351,6 +392,13 @@ class WireCoreServiceProvider extends PackageServiceProvider
 
     protected function registerNotifications(): void
     {
+        // Who a notification is for. Bound rather than left to each driver's
+        // `new AuthenticatedNotifiable` default so that an application with its
+        // own answer — a tenant, an impersonated user — replaces it once and
+        // every reader agrees: the drivers on the write side, NotificationCenter
+        // and the bell on the read side, and the channel they broadcast on.
+        $this->app->bindIf(ResolvesNotifiable::class, AuthenticatedNotifiable::class);
+
         $this->app->singleton(NotificationDriver::class, function ($app) {
             $configured = $app['config']->get('wire-core.notifications.default', 'session');
 
@@ -371,7 +419,13 @@ class WireCoreServiceProvider extends PackageServiceProvider
         return match ($name) {
             'livewire' => new LivewireEventDriver,
             'flasher' => new FlasherDriver,
-            'database' => new DatabaseDriver,
+            // The two recipient-aware drivers take the bound resolver rather
+            // than their own default, so the row is written against — and the
+            // channel named after — whoever the application says the recipient
+            // is. The bell resolves the same binding, and a broadcast to a
+            // channel nobody is subscribed to is a failure nothing reports.
+            'database' => new DatabaseDriver($this->app->make(ResolvesNotifiable::class)),
+            'broadcast' => new BroadcastDriver($this->app->make(ResolvesNotifiable::class)),
             'null' => new NullDriver,
             default => new SessionDriver,
         };
@@ -387,6 +441,58 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // it without knowing the class.
         Livewire::component('wire-notification-bell', NotificationBell::class);
         Livewire::component('wire-global-search', GlobalSearchPalette::class);
+
+        $this->authorizeNotificationChannel();
+        $this->registerLaravelNotificationChannel();
+    }
+
+    /**
+     * Let `$user->notify(...)` deliver here, via `via() => ['wire']`.
+     *
+     * Guarded on the class, not required in composer.json: `illuminate/notifications`
+     * ships with the framework and every application has it, but this package
+     * requires `illuminate/support` and `illuminate/database` and nothing else —
+     * and a bridge to an ecosystem is not a reason to make that ecosystem
+     * mandatory. Registered through `resolving()` so an application that never
+     * sends a Laravel notification never builds the manager.
+     */
+    protected function registerLaravelNotificationChannel(): void
+    {
+        if (! class_exists(ChannelManager::class)) {
+            return; // @codeCoverageIgnore — the suite runs on the full framework.
+        }
+
+        $this->app->resolving(ChannelManager::class, function (ChannelManager $manager): void {
+            $manager->extend(
+                WireChannel::NAME,
+                fn ($app): WireChannel => new WireChannel($app->make(NotificationDriver::class)),
+            );
+        });
+    }
+
+    /**
+     * Authorize the recipient's own notification channel, for an app that
+     * configured the `broadcast` driver and said nothing further.
+     *
+     * Gated on that driver being in use, and the gate is not a nicety:
+     * `Broadcast::channel()` resolves the default broadcaster, so registering
+     * this unconditionally would construct a connection in every wire-core
+     * application — including the ones that broadcast nothing and may have no
+     * credentials for the driver their config names.
+     */
+    protected function authorizeNotificationChannel(): void
+    {
+        $configured = (array) config('wire-core.notifications.default', 'session');
+
+        if (! in_array('broadcast', $configured, true)) {
+            return;
+        }
+
+        if (! (bool) config('wire-core.notifications.broadcast.authorize', true)) {
+            return;
+        }
+
+        NotificationChannel::authorize();
     }
 
     // ─── Modals ─────────────────────────────────────────────────
@@ -463,6 +569,25 @@ class WireCoreServiceProvider extends PackageServiceProvider
             $app->make(NavigationGroups::class),
             $app->make(ResolvesPageUrls::class),
         ));
+
+        // Mentions are stored as identities and read back on every render, so
+        // both halves are one binding: the registry an application declares its
+        // non-Mentionable models in at boot, and the renderer every display
+        // surface resolves through. Singleton — the registry is filled once.
+        $this->app->singleton(MentionRegistry::class);
+
+        // Foundation asks "where can this record be read"; `Core/` answers it from
+        // the resource registry. bindIf, so an application that routes its own
+        // public pages can answer differently without touching the asker.
+        $this->app->bindIf(ResolvesRecordUrls::class, fn ($app): ResourceRecordUrls => new ResourceRecordUrls(
+            $app->make(ResourceRegistry::class),
+            $app->make(ResolvesPageUrls::class),
+        ));
+
+        $this->app->bind(MentionRenderer::class, fn ($app): MentionRenderer => new MentionRenderer(
+            $app->make(MentionRegistry::class),
+            $app->make(ResolvesRecordUrls::class),
+        ));
     }
 
     /**
@@ -519,7 +644,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
         $groups = $this->app->make(NavigationGroups::class);
 
         foreach ($this->app->make(PluginManager::class)->all() as $plugin) {
-            if (! $plugin instanceof DomainModule) {
+            if (! $plugin instanceof Module) {
                 continue;
             }
 

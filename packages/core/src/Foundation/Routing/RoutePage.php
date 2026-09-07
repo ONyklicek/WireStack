@@ -89,6 +89,20 @@ final class RoutePage
     }
 
     /**
+     * The ability this page requires, before it becomes middleware.
+     *
+     * The route reads {@see getMiddleware()}; a *screen* needs the ability
+     * itself, so a button that leads here can be hidden by the same rule the
+     * route enforces. Without it a list either shows an Edit button that lands
+     * on a 403, or repeats the permission string next to the one declared here
+     * and drifts from it.
+     */
+    public function getPermission(): ?string
+    {
+        return $this->permission;
+    }
+
+    /**
      * Every middleware this page's route carries, permission included.
      *
      * @return array<int, string>
