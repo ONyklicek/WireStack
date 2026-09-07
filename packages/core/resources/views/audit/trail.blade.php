@@ -67,42 +67,18 @@
                     </time>
                 </div>
 
-                {{-- Changes diff --}}
-                @php($changes = $entry->getChangeDiff())
-                @if(!empty($changes))
-                    <div class="mt-2 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                        <table class="min-w-full text-xs">
-                            <thead>
-                                <tr class="bg-gray-50 dark:bg-gray-800">
-                                    <th class="px-3 py-1.5 text-left font-medium text-gray-500 dark:text-gray-400">{{ __('wire-core::audit.field') }}</th>
-                                    <th class="px-3 py-1.5 text-left font-medium text-gray-500 dark:text-gray-400">{{ __('wire-core::audit.old_value') }}</th>
-                                    <th class="px-3 py-1.5 text-left font-medium text-gray-500 dark:text-gray-400">{{ __('wire-core::audit.new_value') }}</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                @foreach($changes as $field => $diff)
-                                    <tr>
-                                        <td class="px-3 py-1.5 font-medium text-gray-700 dark:text-gray-300">{{ $field }}</td>
-                                        <td class="px-3 py-1.5 text-red-600 dark:text-red-400">
-                                            @if($diff['old'] !== null)
-                                                <span class="bg-red-50 dark:bg-red-900/20 px-1 rounded">{{ is_array($diff['old']) ? json_encode($diff['old']) : $diff['old'] }}</span>
-                                            @else
-                                                <span class="text-gray-400 italic">{{ __('wire-core::audit.empty') }}</span>
-                                            @endif
-                                        </td>
-                                        <td class="px-3 py-1.5 text-emerald-600 dark:text-emerald-400">
-                                            @if($diff['new'] !== null)
-                                                <span class="bg-emerald-50 dark:bg-emerald-900/20 px-1 rounded">{{ is_array($diff['new']) ? json_encode($diff['new']) : $diff['new'] }}</span>
-                                            @else
-                                                <span class="text-gray-400 italic">{{ __('wire-core::audit.empty') }}</span>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
+                {{-- Changes diff, from the one partial that draws a diff in this
+                     stack. It used to be this table written out here as well as
+                     on the audit entry's own page, and the two had already
+                     drifted: this copy printed a boolean `true` as `1`, because
+                     the value rule lived in a Blade ternary rather than in
+                     ChangeSet. --}}
+                @php($changes = \NyonCode\WireCore\Foundation\ValueObjects\ChangeSet::fromDiff($entry->getChangeDiff()))
+                @unless($changes->isEmpty())
+                    <div class="mt-2">
+                        @include('wire-core::partials.change-table', ['rows' => $changes->rows, 'dense' => true])
                     </div>
-                @endif
+                @endunless
 
                 {{-- Metadata (IP) --}}
                 @if(!empty($entry->metadata['ip']))

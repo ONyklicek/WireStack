@@ -1,15 +1,17 @@
 @php
+    use NyonCode\WireCore\Foundation\Support\ResponsiveGrid;
+
     /** @var array<int, mixed> $components */
-    /** @var int $columns */
+    /** @var int|array<string|int, int|string> $columns */
+
+    // The canonical owner resolves the grid, rather than a fifth copy of the
+    // same match: this view used to stop at four columns and start reflowing at
+    // `sm`, so an infolist asking for six got two and a phone got the desktop
+    // layout at 640px. Sections and grids already went through ResponsiveGrid.
+    $columnsClass = ResponsiveGrid::cols($columns);
 @endphp
 
-<div @class([
-    'wire-infolist grid gap-4',
-    'sm:grid-cols-1' => $columns === 1,
-    'sm:grid-cols-2' => $columns === 2,
-    'sm:grid-cols-2 md:grid-cols-3' => $columns === 3,
-    'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' => $columns === 4,
-])>
+<div class="wire-infolist grid gap-4 sm:gap-6 {{ $columnsClass }}">
     @foreach($components as $component)
         @if($component->isVisible())
             {{ $component }}

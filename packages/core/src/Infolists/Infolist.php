@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Infolists;
 
 use Illuminate\Contracts\Support\Htmlable;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
+use NyonCode\WireCore\Foundation\Schema\Grid;
 use NyonCode\WireCore\Infolists\Components\Entry;
 
 /**
@@ -25,7 +26,8 @@ class Infolist implements Htmlable
     /** @var array<int, Entry|LayoutComponent> */
     protected array $schema = [];
 
-    protected int $columns = 1;
+    /** @var int|array<string|int, int|string> */
+    protected int|array $columns = 1;
 
     public static function make(): static
     {
@@ -72,14 +74,27 @@ class Infolist implements Htmlable
         return $this->schema;
     }
 
-    public function columns(int $columns): static
+    /**
+     * Set the column grid the infolist lays its top-level components out in.
+     *
+     * An int reflows mobile-first; a per-breakpoint map — `['default' => 1,
+     * 'md' => 2, 'xl' => 4]` — says it exactly. The same vocabulary
+     * {@see Grid} and Section take,
+     * because an author who learned it once should not learn it twice.
+     *
+     * @param  int|array<string|int, int|string>  $columns
+     */
+    public function columns(int|array $columns): static
     {
         $this->columns = $columns;
 
         return $this;
     }
 
-    public function getColumns(): int
+    /**
+     * @return int|array<string|int, int|string>
+     */
+    public function getColumns(): int|array
     {
         return $this->columns;
     }
