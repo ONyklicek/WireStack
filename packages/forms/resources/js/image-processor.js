@@ -1,16 +1,22 @@
 /*
- * Client-side image processing for FileUpload: crop to an aspect ratio and/or
- * downscale, before Livewire uploads the file.
+ * Client-side image processing: crop, rotate, flip and downscale, before
+ * Livewire uploads the file.
+ *
+ * Two callers, one implementation. FileUpload uses it to avoid shipping a 12 MP
+ * phone photo over the wire; the media library's editor uses it to cut and
+ * straighten a picture that is already stored (ADR 0035). The editor is why
+ * `crop`, `rotate` and `flip` exist here rather than in a second module of its
+ * own — a parallel copy of canvas resampling would diverge inside one release.
  *
  * Why here and not on the server: the point of imageResizeTargetWidth() is to
  * not ship a 12 MP phone photo over the wire in the first place. Once the upload
  * has happened, resizing it has already cost the user the upload.
  *
- * Deliberately dependency-free. A canvas can crop to a ratio and downscale in a
- * few lines; a *interactive* cropper — drag the frame, pick the region — is what
- * needs a library, and nothing in this API asks the user to pick a region:
- * imageCropAspectRatio('16:9') names a ratio, and this delivers exactly that,
- * from the centre of the image.
+ * Deliberately dependency-free. A canvas does all of this in a few lines; what
+ * would need a library is the *interactive* frame, and that is markup and
+ * pointer events rather than image maths — `wireImageUpload()` below and the
+ * media editor each own their own, and both hand the result to `processImage()`
+ * as numbers.
  */
 
 /** "16:9" | "1.5" | 1.5 → 1.777… ; anything unparseable → null (leave the image alone). */
@@ -73,6 +79,106 @@ function scaledSize(width, height, targetWidth, targetHeight) {
     return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
 }
 
+/**
+ * Draw a region of `source` at `width`×`height`, halving until it gets there.
+ *
+ * One `drawImage()` from 6000px to 400px is where canvas resampling visibly
+ * falls apart: the browser samples a handful of source pixels per output pixel
+ * and the result is aliased and mushy. Halving repeatedly averages the whole
+ * image on the way down, which is what every image library does internally, and
+ * costs a handful of draws.
+ */
+function drawStepped(source, region, width, height) {
+    let canvas = document.createElement('canvas');
+    let currentWidth = region.width;
+    let currentHeight = region.height;
+
+    canvas.width = currentWidth;
+    canvas.height = currentHeight;
+    canvas.getContext('2d').drawImage(
+        source, region.x, region.y, region.width, region.height, 0, 0, currentWidth, currentHeight,
+    );
+
+    // Only on the way down, and never past the target.
+    while (currentWidth > width * 2 && currentHeight > height * 2) {
+        const nextWidth = Math.max(width, Math.round(currentWidth / 2));
+        const nextHeight = Math.max(height, Math.round(currentHeight / 2));
+
+        const step = document.createElement('canvas');
+        step.width = nextWidth;
+        step.height = nextHeight;
+
+        const context = step.getContext('2d');
+        context.imageSmoothingQuality = 'high';
+        context.drawImage(canvas, 0, 0, currentWidth, currentHeight, 0, 0, nextWidth, nextHeight);
+
+        canvas = step;
+        currentWidth = nextWidth;
+        currentHeight = nextHeight;
+    }
+
+    if (currentWidth === width && currentHeight === height) return canvas;
+
+    const out = document.createElement('canvas');
+    out.width = width;
+    out.height = height;
+
+    const context = out.getContext('2d');
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(canvas, 0, 0, currentWidth, currentHeight, 0, 0, width, height);
+
+    return out;
+}
+
+/**
+ * Turn `canvas` by a quarter-turn multiple and/or mirror it.
+ *
+ * A quarter turn swaps the axes, so the destination canvas is the source's
+ * height by its width — getting that the wrong way round is how a rotated
+ * picture comes back with its edges cut off.
+ */
+function orient(canvas, rotate, flip) {
+    const turn = ((Math.round((Number(rotate) || 0) / 90) * 90) % 360 + 360) % 360;
+
+    if (turn === 0 && !flip) return canvas;
+
+    const swapped = turn === 90 || turn === 270;
+    const out = document.createElement('canvas');
+
+    out.width = swapped ? canvas.height : canvas.width;
+    out.height = swapped ? canvas.width : canvas.height;
+
+    const context = out.getContext('2d');
+
+    context.translate(out.width / 2, out.height / 2);
+    context.rotate((turn * Math.PI) / 180);
+    if (flip) context.scale(-1, 1);
+    context.drawImage(canvas, -canvas.width / 2, -canvas.height / 2);
+
+    return out;
+}
+
+/**
+ * An explicit crop rectangle, given as fractions of the source.
+ *
+ * What an interactive frame produces: the user placed a box on the picture and
+ * the numbers describe where. Clamped rather than trusted, because a frame
+ * dragged past the edge is an ordinary thing to do with a mouse.
+ */
+function fractionalCrop(width, height, crop) {
+    const clamp = (v) => Math.min(1, Math.max(0, Number(v) || 0));
+
+    const x = clamp(crop.x);
+    const y = clamp(crop.y);
+
+    return {
+        x: Math.round(width * x),
+        y: Math.round(height * y),
+        width: Math.max(1, Math.round(width * Math.min(clamp(crop.width), 1 - x))),
+        height: Math.max(1, Math.round(height * Math.min(clamp(crop.height), 1 - y))),
+    };
+}
+
 const loadImage = (file) => new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
@@ -86,47 +192,66 @@ const loadImage = (file) => new Promise((resolve, reject) => {
  * do, when it is not a raster image (an SVG has no pixels to resample), or when
  * anything goes wrong — a failed resize must never lose the user's file.
  */
-export async function processImage(file, { aspectRatio = null, targetWidth = null, targetHeight = null, offset = null } = {}) {
+export async function processImage(file, {
+    aspectRatio = null,
+    targetWidth = null,
+    targetHeight = null,
+    offset = null,
+    crop = null,
+    rotate = 0,
+    flip = false,
+    format = null,
+    quality = 0.9,
+} = {}) {
     const ratio = parseAspectRatio(aspectRatio);
+    const turn = ((Math.round((Number(rotate) || 0) / 90) * 90) % 360 + 360) % 360;
 
-    if (!ratio && !targetWidth && !targetHeight) return file;
+    if (!ratio && !crop && !targetWidth && !targetHeight && !turn && !flip && !format) return file;
     if (!file?.type?.startsWith('image/') || file.type === 'image/svg+xml') return file;
 
     try {
         const img = await loadImage(file);
-        // The centre is the default; `offset` (0..1 of the slack) is what an
-        // interactive frame supplies once the user has moved it.
-        const crop = placedCrop(img.naturalWidth, img.naturalHeight, ratio, offset);
-        const out = scaledSize(crop.width, crop.height, targetWidth, targetHeight);
+
+        // Three ways to say which part of the picture is wanted, in order of how
+        // explicit they are: a frame the user placed, a ratio with an offset, or
+        // a ratio taken from the centre.
+        const region = crop
+            ? fractionalCrop(img.naturalWidth, img.naturalHeight, crop)
+            : placedCrop(img.naturalWidth, img.naturalHeight, ratio, offset);
+
+        // Measured against the region, before any quarter turn: asking for 800px
+        // wide means 800 across the picture the user is looking at.
+        const out = scaledSize(region.width, region.height, targetWidth, targetHeight);
+
+        const untouched = region.width === img.naturalWidth && region.height === img.naturalHeight
+            && out.width === region.width && out.height === region.height
+            && !turn && !flip;
 
         // Nothing would change: don't re-encode, which would only lose quality.
-        if (crop.width === img.naturalWidth && crop.height === img.naturalHeight
-            && out.width === crop.width && out.height === crop.height) {
-            return file;
-        }
+        if (untouched && (!format || format === file.type)) return file;
 
-        const canvas = document.createElement('canvas');
-        canvas.width = out.width;
-        canvas.height = out.height;
-        canvas.getContext('2d').drawImage(
-            img, crop.x, crop.y, crop.width, crop.height, 0, 0, out.width, out.height,
-        );
+        const canvas = orient(drawStepped(img, region, out.width, out.height), turn, flip);
 
         // Keep PNG lossless; everything else re-encodes as JPEG, where quality
-        // is a knob and transparency was not on the table anyway.
-        const type = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
-        const blob = await new Promise((resolve) => canvas.toBlob(resolve, type, 0.9));
+        // is a knob and transparency was not on the table anyway. `format` lets
+        // a caller overrule that — the media editor offers WebP, which is
+        // smaller than both and is the point of offering it.
+        const type = format || (file.type === 'image/png' ? 'image/png' : 'image/jpeg');
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, type, quality));
 
         if (!blob) return file;
 
+        const extension = { 'image/png': 'png', 'image/webp': 'webp' }[type] || 'jpg';
         const name = type === file.type
             ? file.name
-            : file.name.replace(/\.[^.]+$/, '') + '.jpg';
+            : file.name.replace(/\.[^.]+$/, '') + '.' + extension;
 
         return new File([blob], name, { type, lastModified: Date.now() });
     } catch {
         // A corrupt or exotic image is the server's problem to report, not a
-        // reason to drop the upload here.
+        // reason to drop the upload here. A tainted canvas — a cross-origin
+        // source with no CORS headers — raises here too, and the editor tells
+        // the person rather than shipping a file that is silently the original.
         return file;
     }
 }
