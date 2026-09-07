@@ -37,7 +37,10 @@ class DatabaseDriver implements NotificationDriver
 
     public function send(Notification $notification, mixed $livewireComponent = null): void
     {
-        $recipient = $this->notifiable->resolve();
+        // The notification's own answer first: a queued job addressing three
+        // people in a loop has one authenticated user (none) and three
+        // recipients, so the resolver cannot be the only way to say who.
+        $recipient = $notification->notifiable ?? $this->notifiable->resolve();
 
         if (! $recipient instanceof Model) {
             return;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Notifications;
 
+use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireCore\Notifications\Drivers\CurrentComponentDriver;
 use NyonCode\WireCore\Notifications\Drivers\SessionDriver;
@@ -51,6 +52,28 @@ final class NotificationManager
         mixed $livewireComponent = null
     ): void {
         self::send(Notification::success($message), $driver, $livewireComponent);
+    }
+
+    /**
+     * Send a notification to a specific recipient.
+     *
+     * The queue-worker case, said in one line: there is nobody authenticated at
+     * three in the morning, and the user this concerns was an argument the job
+     * was given. Equivalent to `send($notification->to($user))` — sugar, because
+     * the ordinary shape of the call is a loop over recipients and putting the
+     * `to()` inside it reads as an afterthought.
+     *
+     * The transient drivers ignore the recipient, as they must: they deliver to
+     * the page being rendered, and that page belongs to whoever is looking at
+     * it. Pair `database` (and `broadcast`) with this.
+     */
+    public static function sendTo(
+        Model $notifiable,
+        Notification $notification,
+        ?NotificationDriver $driver = null,
+        mixed $livewireComponent = null,
+    ): void {
+        self::send($notification->to($notifiable), $driver, $livewireComponent);
     }
 
     /**

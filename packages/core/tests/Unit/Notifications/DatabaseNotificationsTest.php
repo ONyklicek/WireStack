@@ -192,7 +192,13 @@ it('counts and lists only this recipient', function () {
         ->and($center->unread()->pluck('data.message')->all())->not->toContain('Grace 1');
 });
 
-it('puts unread first, so a burst of reads cannot bury an old one', function () {
+it('reads newest first, and leaves "what is unread" to the question that asks it', function () {
+    // This used to float unread to the top, so that a burst of reads could not
+    // push a three-day-old unread item off a ten-row list. The panel's **Unread
+    // tab** answers that directly and for every row, where the ordering only
+    // ever answered it for the first ten — and what the ordering cost was a list
+    // nobody could read as a timeline: Monday above Thursday, day headings
+    // repeating.
     $driver = new DatabaseDriver(dnResolver($this->ada));
     $driver->send(Notification::success('old unread'));
     $old = DatabaseNotification::query()->sole();
@@ -203,7 +209,10 @@ it('puts unread first, so a burst of reads cannot bury an old one', function () 
 
     $center = new NotificationCenter(dnResolver($this->ada));
 
-    expect($center->latest()->first()->data['message'])->toBe('old unread');
+    expect($center->latest()->first()->data['message'])->toBe('new read')
+        // Nothing was lost: the old unread one is still one question away, and
+        // that question returns every one of them rather than the first ten.
+        ->and($center->unread()->pluck('data.message')->all())->toBe(['old unread']);
 });
 
 it('marks one read, and refuses an id belonging to someone else', function () {

@@ -27,6 +27,8 @@ use Illuminate\Support\Carbon;
  * @property string $type
  * @property array<string, mixed> $data
  * @property Carbon|null $read_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class DatabaseNotification extends Model
 {
@@ -134,12 +136,33 @@ class DatabaseNotification extends Model
 
         // Reassigned, not called for effect: Notification is immutable and every
         // modifier hands back a new instance.
-        foreach (['title', 'icon', 'duration', 'position'] as $key) {
+        //
+        // `url` is in this list and that is the point of the list existing: the
+        // driver writes the whole payload, so anything missing here is written
+        // and then unreadable — which is what happened to the actions below for
+        // as long as they were not restored. A stored notification has to come
+        // back as the notification it was raised as, or the bell is showing a
+        // lossy copy of something the database has in full.
+        foreach (['title', 'icon', 'duration', 'position', 'url'] as $key) {
             if (isset($data[$key])) {
                 $notification = $notification->{$key}($data[$key]);
             }
         }
 
-        return $notification;
+        if (isset($data['extra']) && is_array($data['extra'])) {
+            $notification = $notification->extra($data['extra']);
+        }
+
+        // Each one filtered rather than the set rejected: a row carrying three
+        // good actions and one written by hand should show three buttons, not
+        // none.
+        $actions = array_filter(array_map(
+            static fn (mixed $action): ?NotificationAction => is_array($action)
+                ? NotificationAction::fromArray($action)
+                : null,
+            is_array($data['actions'] ?? null) ? $data['actions'] : [],
+        ));
+
+        return $actions === [] ? $notification : $notification->actions($actions);
     }
 }
