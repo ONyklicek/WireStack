@@ -504,6 +504,53 @@ klíčuje přes `scalar()` a labeluje přes stejné kanonické `label()` resolvo
 identicky jako odpovídající display buňka. Jednohodnotové form pole, jehož options pocházejí z enumu,
 také získá automatické `in:` validační pravidlo (viz [Formuláře → Select](../forms/fields/select.md#options-z-enumu)).
 
+### Čím soubor je — rodina, ne formát
+
+Každá plocha, která ukazuje soubor, musí nejdřív odpovědět na jednu otázku: je
+tu obrázek, a když ne, co to vlastně je? Šest míst si na to odpovídalo samo a
+všech šest odpovídalo stejně chudě — obrázek, nebo jedna šedá ikona dokumentu —
+takže katalog, ceník, smlouva a archiv pro tiskárnu vypadaly jako čtyři totožné
+šedé obdélníky.
+
+`FileKind` je jediný vlastník té odpovědi. Jeho případy jsou **rodiny**, ne
+formáty, a každý si nese odstín ze sdílené palety a ikonu ze sdílené sady —
+takže do žádného z těch dvou slovníků nepřibývá nic nového.
+
+```php
+use NyonCode\WireCore\Foundation\Enums\FileKind;
+
+FileKind::for('application/pdf');                  // FileKind::Document // [tl! focus:5]
+FileKind::for(null, 'cenik-q1.xlsx');              // Spreadsheet — z názvu, když MIME chybí
+FileKind::for('application/octet-stream', 'a.zip');// Archive — z názvu, když MIME nic neříká
+FileKind::for('text/plain', 'export.csv');         // Spreadsheet — co by řekl každý, kdo to otevře
+
+FileKind::extensionOf('cenik.ods');                // 'ODS' — nápis, z názvu samotného souboru
+FileKind::extensionOf('report.final version');     // null — tohle není přípona, tak ji nevypisuj
+```
+
+Rozhoduje MIME typ, protože se čte z uloženého souboru, ne z toho, co o něm
+tvrdil prohlížeč. Název se použije přesně ve dvou případech, oba skutečné: MIME
+typ je **null** — řádky zapsané dřív, než se zaznamenával — nebo je to jeden z té
+hrstky, co platí skoro na cokoli (`application/octet-stream`, `text/plain`), a
+tedy nerozhoduje nic.
+
+**Rodina není nápis.** `XLSX` a `ODS` jsou obojí `Spreadsheet` a nesmí obě hlásit
+„XLSX“, takže písmena na dlaždici jsou z názvu souboru. Název bez použitelné
+přípony spadne zpátky na název rodiny.
+
+| Případ | Barva | Případ | Barva |
+|--------|-------|--------|-------|
+| `Image` | violet | `Presentation` | orange |
+| `Video` | pink | `Archive` | yellow |
+| `Audio` | teal | `Code` | slate |
+| `Document` | blue | `Other` | gray |
+| `Spreadsheet` | green | | |
+
+Slovník je **uzavřený**. Takový, který si aplikace může přepsat, je takový, na
+který se žádný balíček nemůže spolehnout — `Spreadsheet` musí znamenat tabulku —
+takže co se netrefí, je `Other`, a vykreslí se jako vlastní přípona souboru na
+neutrálním podkladu.
+
 ### Opt-in enum kontrakty
 
 Enum použitý jako cast může implementovat kterýkoli z těchto pro řízení bohatšího vykreslení. Žijí pod
@@ -546,7 +593,11 @@ Použití na úrovni sloupce viz [Table → Enum a JSON casty](../table/columns/
 
 ## Blade komponenty
 
-Foundation poskytuje základní komponenty pod namespace `wire::`:
+Foundation poskytuje základní komponenty pod namespace `wire::`. `color` a `size`
+mluví všude stejným slovníkem — `primary`, `danger`, `success`, `warning`, `info`
+a názvy odstínů vedle nich — protože každá z nich se rozhoduje přes kanonické
+vlastníky (`HasColor`, `HasSize`), místo aby si nesla vlastní paletu. `outlined`
+vymění plnou výplň za obrys.
 
 ```blade
 {{-- Ikona --}}
@@ -564,7 +615,19 @@ Foundation poskytuje základní komponenty pod namespace `wire::`:
     <x-wire::dropdown.item>Edit</x-wire::dropdown.item>
     <x-wire::dropdown.item>Delete</x-wire::dropdown.item>
 </x-wire::dropdown>
+
+{{-- Soubor: obrázek, když je co ukázat, jinak přípona na barvě své rodiny --}}  {{-- [tl! focus:start] --}}
+<span class="flex h-10 w-10 overflow-hidden rounded-lg">
+    <x-wire::file-thumb :name="$file->name" :mime="$file->mime_type" :url="$file->previewUrl()" size="md" />
+</span>                                                          {{-- [tl! focus:end] --}}
 ```
+
+`file-thumb` vyplní jakýkoli box, do kterého ho dáte — stejná komponenta je
+32pixelový náhled v řádku i dlaždice přes celou šířku — a `size` (`sm`, `md`,
+`lg`) škáluje, co se kreslí uvnitř. Obrázek vykreslí jen tehdy, když soubor je
+obrázek **a** dostal `url`; PDF s naprosto platnou URL dostane kartu, protože PDF
+protažené přes `<img>` je ikona rozbitého obrázku tvrdící, že je soubor
+poškozený.
 
 ## Layoutové komponenty
 

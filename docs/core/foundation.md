@@ -500,6 +500,52 @@ keys by `scalar()` and labels through the same canonical `label()` resolution, s
 identically to the matching display cell. A single-value form field whose options come from an enum
 also gains an automatic `in:` validation rule (see [Forms → Select](../forms/fields/select.md#enum-options)).
 
+### What a file is, as a family
+
+A surface that shows a file has to answer one question before it can draw
+anything: is there a picture, and if not, what is this? Six places used to answer
+it on their own and all six answered the same impoverished thing — an image, or
+one grey document icon — so a catalogue, a price list, a contract and a print
+archive rendered as four identical grey rectangles.
+
+`FileKind` is the single owner of that answer. Its cases are **families**, not
+formats, and each carries a hue from the shared palette and an icon from the
+shared set, so nothing new enters either vocabulary.
+
+```php
+use NyonCode\WireCore\Foundation\Enums\FileKind;
+
+FileKind::for('application/pdf');                  // FileKind::Document // [tl! focus:5]
+FileKind::for(null, 'cenik-q1.xlsx');              // Spreadsheet — the name, when there is no mime type
+FileKind::for('application/octet-stream', 'a.zip');// Archive — the name, when the mime type means nothing
+FileKind::for('text/plain', 'export.csv');         // Spreadsheet — what a person opening it would say
+
+FileKind::extensionOf('cenik.ods');                // 'ODS' — the wordmark, from the file's own name
+FileKind::extensionOf('report.final version');     // null — not an extension, so don't print one
+```
+
+The mime type decides, because it is read from the stored file rather than from
+what a browser claimed about it. The file's name is consulted in exactly two
+cases, both real: a **null** mime type — rows written before it was recorded —
+and one of the handful that are true of almost anything (`application/octet-stream`,
+`text/plain`) and so decide nothing.
+
+**The family is not the wordmark.** `XLSX` and `ODS` are both `Spreadsheet` and
+must not both read "XLSX", so the letters on a tile come from the file's own name.
+A name with no usable extension falls back to the family's label.
+
+| Case | Colour | Case | Colour |
+|------|--------|------|--------|
+| `Image` | violet | `Presentation` | orange |
+| `Video` | pink | `Archive` | yellow |
+| `Audio` | teal | `Code` | slate |
+| `Document` | blue | `Other` | gray |
+| `Spreadsheet` | green | | |
+
+The vocabulary is **closed**. One an application could rewrite is one no package
+could rely on — `Spreadsheet` has to mean a spreadsheet — so anything unmatched is
+`Other`, which renders as the file's own extension on a neutral ground.
+
 ### Opt-in enum contracts
 
 An enum used as a cast may implement any of these to drive richer rendering. They live under
@@ -542,7 +588,11 @@ See [Table → Enum & JSON Casts](../table/columns/casts.md) for column-level us
 
 ## Blade Components
 
-Foundation provides base components under the `wire::` namespace:
+Foundation provides base components under the `wire::` namespace. `color` and
+`size` speak the same vocabulary everywhere — `primary`, `danger`, `success`,
+`warning`, `info` and the hue names beside them — because every one of these
+resolves through the canonical owners (`HasColor`, `HasSize`) rather than
+carrying a palette of its own. `outlined` swaps the solid fill for a border.
 
 ```blade
 {{-- Icon --}}
@@ -560,7 +610,19 @@ Foundation provides base components under the `wire::` namespace:
     <x-wire::dropdown.item>Edit</x-wire::dropdown.item>
     <x-wire::dropdown.item>Delete</x-wire::dropdown.item>
 </x-wire::dropdown>
+
+{{-- A file: the picture when there is one, its extension over its family's colour otherwise --}}  {{-- [tl! focus:start] --}}
+<span class="flex h-10 w-10 overflow-hidden rounded-lg">
+    <x-wire::file-thumb :name="$file->name" :mime="$file->mime_type" :url="$file->previewUrl()" size="md" />
+</span>                                                          {{-- [tl! focus:end] --}}
 ```
+
+`file-thumb` fills whatever box it is put in — the same component is a 32-pixel
+row thumbnail and a full-bleed grid tile — and `size` (`sm`, `md`, `lg`) scales
+what is drawn inside it. It renders the picture only when the file is an image
+**and** a `url` was given; a PDF handed a perfectly good URL still gets the card,
+because a PDF drawn through `<img>` is a broken-image icon claiming the file is
+damaged.
 
 ## Layout Components
 
