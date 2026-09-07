@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Core\Resources\Navigation;
 
+use NyonCode\WireCore\Foundation\Concerns\CanBeCollapsed;
 use NyonCode\WireCore\Foundation\Concerns\HasIcon;
 use NyonCode\WireCore\Foundation\Concerns\HasLabel;
 use NyonCode\WireCore\Foundation\Concerns\HasName;
@@ -41,13 +42,18 @@ use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
  *       ->sort(10)
  *       ->visible(fn (): bool => auth()->user()?->can('viewBilling') ?? false);
  *
- * Collapsing is deliberately absent: nothing renders a collapsible menu yet, and
- * the vocabulary for it already exists twice (`Section::collapsible()`, table
- * `collapsibleGroups()`). A third copy would be written before anything could
- * use it; when a consumer appears, that vocabulary gets a canonical owner first.
+ * Collapsing arrived the way this docblock said it would have to. It used to end
+ * "the vocabulary already exists twice — when a consumer appears, it gets a
+ * canonical owner first", and `wire-admin`'s sidebar is that consumer: the pair
+ * now lives in {@see CanBeCollapsed}, which `Section` and `Repeater` were
+ * migrated onto in the same change, so `->collapsible()` / `->collapsed()` mean
+ * one thing across the framework rather than three.
+ *
+ *   NavigationGroup::make('billing')->collapsed();   // folded until the user opens it
  */
 final class NavigationGroup
 {
+    use CanBeCollapsed;
     use EvaluatesClosures;
     use HasIcon;
     use HasLabel;

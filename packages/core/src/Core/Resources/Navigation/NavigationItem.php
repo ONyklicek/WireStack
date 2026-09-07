@@ -61,6 +61,9 @@ final class NavigationItem
 
     protected string|Closure|null $badgeColor = null;
 
+    /** @var array<int, self>|Closure */
+    protected array|Closure $children = [];
+
     public function __construct(string|Closure|null $label = null)
     {
         $this->label = $label;
@@ -161,5 +164,73 @@ final class NavigationItem
         $value = $this->evaluate($this->badgeColor);
 
         return is_string($value) ? $value : null;
+    }
+
+    /**
+     * Entries that belong under this one.
+     *
+     *   NavigationItem::make('Catalogue')
+     *       ->icon('outline:squares-2x2')
+     *       ->children([
+     *           NavigationItem::make('Products')->url(route('products.index')),
+     *           NavigationItem::make('Categories')->url(route('categories.index')),
+     *       ]);
+     *
+     * **One level, and that is on purpose.** A child's own children are not read
+     * by anything that draws a menu, because a sidebar that nests three deep is
+     * a sidebar nobody can hit with a mouse — the third level belongs on the
+     * page, as tabs or as a secondary nav. Nesting further is not rejected, it
+     * is simply not drawn, so a caller who does it sees it immediately.
+     *
+     * A Closure is resolved per read for the same reason a badge is: children
+     * that depend on what the current user may see must not be decided once, at
+     * registration, and remembered for everybody.
+     *
+     * @param  array<int, self>|Closure  $children
+     */
+    public function children(array|Closure $children): self
+    {
+        $this->children = $children;
+
+        return $this;
+    }
+
+    /**
+     * The visible children, in `sort()` order.
+     *
+     * Hidden ones are dropped here rather than in the view, so every surface
+     * that draws a submenu agrees about what is in it without repeating the
+     * rule — the same reason `Workspace` filters entries instead of the sidebar.
+     *
+     * @return array<int, self>
+     */
+    public function getChildren(): array
+    {
+        $children = $this->evaluate($this->children);
+
+        if (! is_array($children)) {
+            return [];
+        }
+
+        $visible = array_values(array_filter(
+            $children,
+            static fn (mixed $child): bool => $child instanceof self && $child->isVisible(),
+        ));
+
+        usort($visible, static fn (self $a, self $b): int => $a->getSort() <=> $b->getSort());
+
+        return $visible;
+    }
+
+    /**
+     * Whether anything would be drawn under this entry.
+     *
+     * Asked rather than `count(getChildren())` at every call site, because the
+     * children may be a Closure and the answer decides whether a row is a link
+     * or a disclosure — a distinction a view should be able to make in one word.
+     */
+    public function hasChildren(): bool
+    {
+        return $this->getChildren() !== [];
     }
 }

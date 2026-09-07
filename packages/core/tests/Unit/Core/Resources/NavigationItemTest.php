@@ -64,3 +64,44 @@ it('can be hidden by a condition', function () {
     expect(NavigationItem::make('Audit')->visible(false)->isVisible())->toBeFalse()
         ->and(NavigationItem::make('Audit')->hidden(fn () => true)->isVisible())->toBeFalse();
 });
+
+it('carries children, visible ones only and in sort order', function () {
+    $item = NavigationItem::make('Catalogue')->children([
+        NavigationItem::make('Categories')->sort(20),
+        NavigationItem::make('Archived')->sort(5)->visible(false),
+        NavigationItem::make('Products')->sort(10),
+    ]);
+
+    expect($item->hasChildren())->toBeTrue()
+        // Filtered here rather than in whatever draws the menu, so every surface
+        // agrees about what is in a submenu without repeating the rule.
+        ->and(array_map(fn (NavigationItem $c): ?string => $c->getLabel(), $item->getChildren()))
+        ->toBe(['Products', 'Categories']);
+});
+
+it('resolves children per read, so what a user may see is never decided once', function () {
+    $allowed = false;
+
+    // By reference, because an arrow function would capture the flag's value at
+    // the moment the entry was declared — which is the very thing this asserts
+    // does not decide the answer.
+    $item = NavigationItem::make('Billing')->children(function () use (&$allowed): array {
+        return $allowed ? [NavigationItem::make('Invoices')] : [];
+    });
+
+    expect($item->hasChildren())->toBeFalse();
+
+    $allowed = true;
+
+    expect($item->hasChildren())->toBeTrue();
+});
+
+it('has no children until it is given some, and ignores what is not one', function () {
+    expect(NavigationItem::make('Orders')->hasChildren())->toBeFalse()
+        ->and(NavigationItem::make('Orders')->children([])->getChildren())->toBe([])
+        // A Closure that answers with something else is a caller's mistake, and
+        // an empty submenu is a better answer to it than a fatal while a menu
+        // renders.
+        ->and(NavigationItem::make('Orders')->children(fn (): ?array => null)->getChildren())->toBe([])
+        ->and(NavigationItem::make('Orders')->children(['not an item'])->getChildren())->toBe([]);
+});
