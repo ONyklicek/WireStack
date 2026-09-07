@@ -36,6 +36,10 @@
     $assetUrl   = $tiptapUrl('tiptap-editor.js');
     $needsAddon = $field->needsExtensionAddon();
     $addonUrl   = $needsAddon ? $tiptapUrl('tiptap-editor-addons.js') : null;
+    // Third entry, same deal: an editor with no ->mentions() never downloads the
+    // mention node or the suggestion engine behind it.
+    $needsMentions = $field->needsMentionAddon();
+    $mentionsUrl   = $needsMentions ? $tiptapUrl('tiptap-editor-mentions.js') : null;
 
     // Button icon SVGs + Alpine expressions, keyed by button name. Titles come
     // from the package's shared editor vocabulary (resources/lang/*/fields.php),
@@ -106,6 +110,35 @@
     .dark .tiptap-content .ProseMirror td, .dark .tiptap-content .ProseMirror th { border-color: #4b5563; }
     .dark .tiptap-content .ProseMirror th { background: #374151; }
     .dark .tiptap-content .ProseMirror .selectedCell { background: #1e3a5f; }
+
+    /* A mention reads as one object, so it is styled as a pill and made
+       atomic — the node is already atom:true in TipTap, this only says so. */
+    .tiptap-content .ProseMirror .wire-mention {
+        background: #eff6ff; color: #1d4ed8; border-radius: .25rem;
+        padding: .0625rem .25rem; white-space: nowrap;
+    }
+    .dark .tiptap-content .ProseMirror .wire-mention { background: #1e3a5f; color: #93c5fd; }
+
+    /* The suggestion list is appended to <body> (it follows the caret, not an
+       element), so it carries its own box rather than inheriting the field's. */
+    .wire-mention-suggestions {
+        position: absolute; z-index: 60; min-width: 12rem; max-width: 20rem; max-height: 15rem;
+        overflow-y: auto; padding: .25rem; border-radius: .375rem;
+        background: #fff; border: 1px solid #d1d5db; box-shadow: 0 10px 15px -3px rgb(0 0 0 / .1);
+        font-size: .875rem;
+    }
+    .wire-mention-group {
+        padding: .25rem .5rem; font-size: .6875rem; font-weight: 600; text-transform: uppercase;
+        letter-spacing: .05em; color: #9ca3af;
+    }
+    .wire-mention-item {
+        display: block; width: 100%; text-align: left; padding: .3125rem .5rem;
+        border-radius: .25rem; color: #111827; background: none; border: 0; cursor: pointer;
+    }
+    .wire-mention-item.is-selected, .wire-mention-item:hover { background: #eff6ff; }
+    .dark .wire-mention-suggestions { background: #1f2937; border-color: #4b5563; }
+    .dark .wire-mention-item { color: #f9fafb; }
+    .dark .wire-mention-item.is-selected, .dark .wire-mention-item:hover { background: #374151; }
 </style>
 @endonce
 
@@ -118,6 +151,9 @@
 @assets
 @if($needsAddon)
 <script type="module" src="{{ $addonUrl }}"></script>
+@endif
+@if($needsMentions)
+<script type="module" src="{{ $mentionsUrl }}"></script>
 @endif
 <script type="module" src="{{ $assetUrl }}"></script>
 @endassets

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use NyonCode\WireCore\Foundation\Concerns\HasDefault;
+use NyonCode\WireCore\Foundation\Mentions\MentionRenderer;
 use NyonCode\WireForms\Exceptions\FormConfigurationException;
 use NyonCode\WireForms\Support\FieldBounds;
 
@@ -36,6 +37,9 @@ class TiptapEditor extends Field
     protected bool $withTextAlign = false;
 
     protected bool $withHighlight = false;
+
+    /** @var array<int, Mention> */
+    protected array $mentions = [];
 
     /** Default toolbar shown when no override is given. */
     public const DEFAULT_TOOLBAR = [
@@ -155,6 +159,38 @@ class TiptapEditor extends Field
         return $this;
     }
 
+    /**
+     * Offer mention triggers — `@` for people, `#` for anything the site
+     * publishes.
+     *
+     * A trigger may stand for several models at once ({@see Mention::sources()}),
+     * so what lands in the document is a morph type beside the id and never a
+     * finished link:
+     *
+     * ```html
+     * <span data-type="mention" data-mention-trigger="#"
+     *       data-mention-type="article" data-id="12">#Ceník 2026</span>
+     * ```
+     *
+     * Which means stored content is no longer displayed by echoing it. It is
+     * read back through {@see MentionRenderer}
+     * — `<x-wire::rich-content>` in Blade, `HtmlEntry` in an infolist,
+     * `TextColumn::asHtml()` in a table — which looks every mention up again, so
+     * a renamed record reads renamed everywhere it was ever named.
+     *
+     * @param  Mention|array<int, Mention>  ...$mentions
+     */
+    public function mentions(Mention|array ...$mentions): static
+    {
+        foreach ($mentions as $mention) {
+            foreach (is_array($mention) ? $mention : [$mention] as $one) {
+                $this->mentions[] = $one;
+            }
+        }
+
+        return $this;
+    }
+
     /** Set the minimum editor height in pixels. */
     public function minHeight(int $pixels): static
     {
@@ -229,6 +265,31 @@ class TiptapEditor extends Field
     }
 
     /**
+     * @return array<int, Mention>
+     */
+    public function getMentions(): array
+    {
+        return $this->mentions;
+    }
+
+    public function hasMentions(): bool
+    {
+        return $this->mentions !== [];
+    }
+
+    /** The trigger a search request names, or null when this editor has no such trigger. */
+    public function findMention(string $trigger): ?Mention
+    {
+        foreach ($this->mentions as $mention) {
+            if ($mention->getTrigger() === $trigger) {
+                return $mention;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * The canonical {@see HasDefault::default()} value as editor content.
      *
      * The default is pre-formatted markup, not plain text: `->default('<p>Draft
@@ -272,12 +333,26 @@ class TiptapEditor extends Field
     }
 
     /**
+     * Whether this editor needs the mention chunk (the Mention node plus TipTap's
+     * suggestion utility). A third split entry rather than a flag on the existing
+     * addon: an editor with tables and no mentions should not pay for a
+     * suggestion engine it never opens.
+     */
+    public function needsMentionAddon(): bool
+    {
+        return $this->hasMentions();
+    }
+
+    /**
      * @return array<string, mixed> Config passed to the Alpine tiptapEditor() component.
      */
     public function getAlpineConfig(): array
     {
         return [
             'wireAttribute' => $this->getWireModelAttribute(),
+            // Mention search re-resolves the field server-side by state path, the
+            // same lookup a remote select uses.
+            'statePath' => $this->getStatePath(),
             'outputFormat' => $this->outputFormat,
             'disabled' => $this->isDisabled(),
             'readOnly' => $this->isReadOnly(),
@@ -289,6 +364,10 @@ class TiptapEditor extends Field
             'withTables' => $this->withTables,
             'withTextAlign' => $this->withTextAlign,
             'withHighlight' => $this->withHighlight,
+            'mentions' => array_map(
+                static fn (Mention $mention): array => $mention->toAlpineConfig(),
+                $this->mentions,
+            ),
         ];
     }
 
