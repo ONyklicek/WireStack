@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -211,3 +212,83 @@ it('refuses a model that has not said which attributes hold content', function (
 it('refuses a model class that does not exist', function () {
     expect(Artisan::call('wire-module-media:usage', ['--model' => 'App\\Nope']))->toBe(1);
 });
+
+it('refuses a model that uses the trait and names no attributes', function () {
+    // The trait is what says which attributes hold content; using it and naming
+    // nothing is a half-finished declaration rather than "scan everything".
+    expect(Artisan::call('wire-module-media:usage', ['--model' => MuSilentArticle::class]))->toBe(1);
+});
+
+it('says the library is empty rather than scanning for nothing', function () {
+    MuArticle::create(['body' => '<img src="/storage/media/2026/hero.jpg">']);
+
+    $code = Artisan::call('wire-module-media:usage', ['--model' => MuArticle::class]);
+
+    expect($code)->toBe(0)
+        ->and(Artisan::output())->toContain('library is empty');
+});
+
+it('counts the records that pointed at nothing it holds, and says so', function () {
+    $hero = muFile();
+
+    MuArticle::create(['body' => '<img src="/storage/media/2026/hero.jpg">']);
+    // A body with pictures this library has never held — the ordinary case in
+    // an application whose articles predate it.
+    MuArticle::create(['body' => '<p>Text</p><img src="https://example.com/elsewhere.jpg">']);
+
+    Artisan::call('wire-module-media:usage', ['--model' => MuArticle::class]);
+    $output = Artisan::output();
+
+    expect(MediaUsage::countFor($hero))->toBe(1)
+        ->and($output)->toContain('across 1 of 2')
+        // Said out loud: it is not a bug to chase.
+        ->and($output)->toContain('1 record(s) pointed at nothing');
+});
+
+it('matches a URL that carries the stored path inside it', function () {
+    $sprite = muFile('sprite.svg');
+
+    // The last segment is not the stored name — a sprite is referenced by
+    // fragment — so neither the exact path nor the basename answers, and the
+    // slower containment check is the only one left that can.
+    $ids = ContentMedia::idsByUrl(
+        '<img src="https://cdn.example.com/storage/media/2026/sprite.svg#logo">',
+        ContentMedia::lookup(),
+    );
+
+    expect($ids)->toBe([$sprite->id]);
+});
+
+it('names a use whose model class is gone, without pretending to link to it', function () {
+    $hero = muFile();
+
+    DB::table('wire_mediables')->insert([
+        'media_id' => $hero->id,
+        'mediable_type' => 'App\\Models\\Deleted',
+        'mediable_id' => 7,
+        'collection' => 'default',
+    ]);
+
+    // Knowing *something* still uses this file is the point, and a class that no
+    // longer exists is not a reason to hide the row.
+    expect(MediaUsage::for($hero))->toBe([[
+        'type' => 'Deleted',
+        'label' => 'Deleted #7',
+        'collection' => 'default',
+        'url' => null,
+    ]]);
+});
+
+/** Uses the trait and names nothing, which is a declaration that is not finished. */
+class MuSilentArticle extends Model
+{
+    use HasMedia;
+    use SyncsMediaUsage;
+
+    protected $table = 'mu_articles';
+
+    protected $guarded = [];
+
+    /** @var array<int, string> */
+    protected array $mediaContent = [];
+}

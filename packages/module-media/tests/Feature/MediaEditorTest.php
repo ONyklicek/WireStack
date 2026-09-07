@@ -239,6 +239,136 @@ it('refuses a replacement the policy refused', function () {
     expect($media->fresh()->width)->toBe(60);
 });
 
+/* ── When it cannot be done ───────────────────────────────────────────────── */
+
+it('will not open the editor for somebody who may not change the file', function () {
+    $media = edFile();
+
+    Gate::policy(Media::class, MediaRefusesUpdatePolicy::class);
+
+    Livewire::test(MediaManager::class)
+        ->call('openEditor', $media->id)
+        ->assertSet('editingId', null);
+});
+
+it('closes itself when the upload arrives with nothing to apply it to', function () {
+    edFile();
+
+    // No editor was opened, so there is no row for the file to be applied to.
+    // The hook has to put everything away rather than reach for a null.
+    Livewire::test(MediaManager::class)
+        ->set('editorUpload', UploadedFile::fake()->image('x.jpg', 20, 20))
+        ->assertSet('editingId', null)
+        ->assertSet('editorUpload', null);
+
+    // And nothing was written on the way past.
+    expect(Media::query()->count())->toBe(1);
+});
+
+it('leaves the original alone when a replacement answers false', function () {
+    $media = edFile('hero.jpg', 60, 40);
+
+    app()->bind(ReplaceOriginal::class, fn (): object => new MediaReplacementThatFails);
+
+    Livewire::test(MediaManager::class)
+        ->call('openEditor', $media->id)
+        ->set('editorIntent', 'replace')
+        ->set('editorUpload', UploadedFile::fake()->image('hero.jpg', 120, 80));
+
+    // The old file is still there and the row still describes it: a failed
+    // replacement must not read as a lost original, and must not quietly become
+    // the other outcome by writing a derivative instead.
+    expect($media->fresh()->width)->toBe(60)
+        ->and(Media::query()->count())->toBe(1);
+});
+
+it('will not write a derivative for somebody who may not add files', function () {
+    $media = edFile('hero.jpg', 60, 40);
+
+    Gate::policy(Media::class, MediaRefusesCreatePolicy::class);
+
+    Livewire::test(MediaManager::class)
+        ->call('openEditor', $media->id)
+        ->set('editorIntent', 'new')
+        ->set('editorUpload', UploadedFile::fake()->image('hero.jpg', 30, 30));
+
+    expect(Media::query()->count())->toBe(1);
+});
+
+it('says so when the disk will not take the edited copy', function () {
+    $media = edFile('hero.jpg', 60, 40);
+
+    // A disk nothing may write into: the store answers null and the editor has
+    // a failure to report rather than a row to point at.
+    $readonly = storage_path('framework/testing/readonly');
+    @mkdir($readonly, 0777, true);
+    chmod($readonly, 0555);
+    config()->set('filesystems.disks.readonly', ['driver' => 'local', 'root' => $readonly]);
+    config()->set('wire-module-media.disk', 'readonly');
+
+    Livewire::test(MediaManager::class)
+        ->call('openEditor', $media->id)
+        ->set('editorIntent', 'new')
+        ->set('editorUpload', UploadedFile::fake()->image('hero.jpg', 30, 30));
+
+    chmod($readonly, 0755);
+
+    expect(Media::query()->count())->toBe(1);
+})->skip(fn (): bool => function_exists('posix_geteuid') && posix_geteuid() === 0, 'root writes into a read-only directory anyway');
+
+it('hands back the row it has when the same crop is made twice', function () {
+    $original = edFile('hero.jpg', 60, 40);
+    $first = (new StoreUpload)(UploadedFile::fake()->image('crop.jpg', 30, 30));
+
+    // The same bytes again, which is what making one crop twice produces.
+    $again = UploadedFile::fake()->createWithContent(
+        'crop.jpg',
+        (string) Storage::disk('public')->get((string) $first->path),
+    );
+
+    Livewire::test(MediaManager::class)
+        ->call('openEditor', $original->id)
+        ->set('editorIntent', 'new')
+        ->set('editorUpload', $again);
+
+    // Two rows, not three — and the one that already existed is not quietly
+    // re-pointed at the original this editor happened to be open on.
+    expect(Media::query()->count())->toBe(2)
+        ->and($first->fresh()->derived_from_id)->toBeNull();
+});
+
+/* ── The action's own edges ───────────────────────────────────────────────── */
+
+it('changes nothing when the upload cannot be opened for reading', function () {
+    $media = edFile();
+    $checksum = $media->checksum;
+
+    $upload = UploadedFile::fake()->image('x.jpg', 20, 20);
+    chmod((string) $upload->getRealPath(), 0000);
+
+    expect(app(ReplaceOriginal::class)($media, $upload))->toBeFalse()
+        ->and($media->fresh()->checksum)->toBe($checksum);
+
+    chmod((string) $upload->getRealPath(), 0644);
+})->skip(fn (): bool => function_exists('posix_geteuid') && posix_geteuid() === 0, 'root can read a file with no permissions');
+
+it('changes nothing when the disk raises rather than answers', function () {
+    // `throw` is a disk setting an application may well have on, and it turns
+    // every failed write in here into an exception instead of a false. Catching
+    // it is what keeps a refused replacement from taking the request down.
+    Storage::fake('public', ['throw' => true]);
+
+    $media = edFile();
+    $checksum = $media->checksum;
+
+    $storage = Storage::disk('public');
+    $storage->delete((string) $media->path);
+    $storage->makeDirectory((string) $media->path);
+
+    expect(app(ReplaceOriginal::class)($media, UploadedFile::fake()->image('x.jpg', 20, 20)))->toBeFalse()
+        ->and($media->fresh()->checksum)->toBe($checksum);
+});
+
 class MediaEditorUser extends User
 {
     protected $table = 'users';
@@ -260,6 +390,36 @@ class MediaRefusesReplacePolicy
     }
 
     public function replace(): bool
+    {
+        return false;
+    }
+}
+
+class MediaRefusesUpdatePolicy
+{
+    public function update(): bool
+    {
+        return false;
+    }
+}
+
+class MediaRefusesCreatePolicy
+{
+    public function create(): bool
+    {
+        return false;
+    }
+
+    public function update(): bool
+    {
+        return true;
+    }
+}
+
+/** Stands in for the action so the screen's answer to a false can be asserted. */
+class MediaReplacementThatFails
+{
+    public function __invoke(Media $media, mixed $upload): bool
     {
         return false;
     }

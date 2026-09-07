@@ -308,3 +308,51 @@ it('follows a notification to what it is about, marking it read on the way', fun
 
     expect(DatabaseNotification::query()->find($n->id)->isRead())->toBeTrue();
 });
+
+it('goes nowhere, and marks nothing, for an id that is not the viewer s', function () {
+    Auth::setUser(NmUser::find(1));
+    $theirs = nmNotification('2');
+
+    Livewire::test(ListNotifications::class)
+        ->call('open', $theirs->id)
+        ->assertNoRedirect();
+
+    // `open()` is *read* and *go* as one action, so the scoped find() answering
+    // null has to stop both halves — not mark it read and then decline to move.
+    expect(DatabaseNotification::query()->find($theirs->id)->isRead())->toBeFalse();
+});
+
+it('prints one sentence once when the title and the message are the same', function () {
+    Auth::setUser(NmUser::find(1));
+    nmPayload(['title' => 'Invoice paid', 'message' => 'Invoice paid']);
+    nmPayload(['message' => 'No title at all']);
+
+    $html = Livewire::test(ListNotifications::class)->html();
+
+    // An application that passes one string twice, and one that passes only a
+    // message, are the same case: the row has a heading and nothing under it.
+    expect(substr_count($html, 'Invoice paid'))->toBe(1)
+        ->and(substr_count($html, 'No title at all'))->toBe(1);
+});
+
+it('tints the tile for the other roles in the vocabulary', function () {
+    Auth::setUser(NmUser::find(1));
+    nmPayload(['type' => 'success', 'title' => 'Paid']);
+    nmPayload(['type' => 'warning', 'title' => 'Expiring']);
+
+    $html = Livewire::test(ListNotifications::class)->html();
+
+    expect($html)->toContain('bg-emerald-100')
+        ->and($html)->toContain('bg-amber-100');
+});
+
+it('files a row with no timestamp under Earlier rather than dropping it', function () {
+    Auth::setUser(NmUser::find(1));
+    $undated = nmPayload(['title' => 'Undated']);
+    DatabaseNotification::query()->whereKey($undated->id)->update(['created_at' => null]);
+
+    $html = Livewire::test(ListNotifications::class)->html();
+
+    expect($html)->toContain('Earlier')
+        ->and($html)->toContain('Undated');
+});

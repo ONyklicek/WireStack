@@ -271,3 +271,100 @@ it('stops asking about a file that has been waiting for months', function () {
     // until the tab was closed.
     expect(Livewire::test(MediaManager::class)->html())->not->toContain('wire:poll');
 });
+
+/* ── The edges of making one ──────────────────────────────────────────────── */
+
+it('keeps the copy it already has when one later size is asked for', function () {
+    config()->set('wire-module-media.thumbnails.sizes', ['tile' => 400, 'preview' => 900]);
+
+    $media = (new StoreUpload)(UploadedFile::fake()->image('wide.jpg', 1600, 900));
+
+    if ($media?->thumb_path === null) {
+        // No GD on this build; there is nothing to keep.
+        expect(true)->toBeTrue();
+
+        return;
+    }
+
+    $before = $media->fresh()->thumb_variants;
+
+    // What `--size=…` on the backfill is for: fill in a name that was added to
+    // the config later without remaking the ones already on the disk.
+    expect(app(MakeThumbnail::class)($media->fresh(), false, 'tile'))->toBeTrue()
+        ->and($media->fresh()->thumb_variants['tile'])->toBe($before['tile']);
+});
+
+it('leaves the placeholder empty when the copy was never written', function () {
+    app()->bind(MakesThumbnails::class, fn (): MakesThumbnails => new MtSilentThumbnailer(write: null));
+
+    $media = mtRowWithFile();
+
+    // A thumbnailer that reports success and writes nothing is a broken one, and
+    // the average colour is still only a convenience: no file, no colour, no
+    // exception reaching the upload that asked.
+    expect(app(MakeThumbnail::class)($media))->toBeTrue()
+        ->and($media->fresh()->placeholder)->toBeNull();
+});
+
+it('leaves the placeholder empty when the copy is not a picture', function () {
+    app()->bind(MakesThumbnails::class, fn (): MakesThumbnails => new MtSilentThumbnailer(write: 'not an image'));
+
+    $media = mtRowWithFile();
+
+    // Same answer one step further in: the file is there and GD cannot read it.
+    expect(app(MakeThumbnail::class)($media))->toBeTrue()
+        ->and($media->fresh()->placeholder)->toBeNull();
+});
+
+it('names the size in the address of a private file s thumbnail', function () {
+    // No `url` key, so the disk is not published and every address is the route.
+    config()->set('filesystems.disks.vault', ['driver' => 'local', 'root' => storage_path('framework/testing/vault')]);
+
+    $media = Media::create([
+        'disk' => 'vault',
+        'path' => 'media/private.jpg',
+        'name' => 'private.jpg',
+        'mime_type' => 'image/jpeg',
+        'thumb_path' => 'thumbnails/private.webp',
+        'thumb_variants' => ['tile' => 'thumbnails/private.webp', 'preview' => 'thumbnails/private-preview.webp'],
+    ]);
+
+    // Without the size the route could only ever stream the original, which is
+    // the full-size photograph thumbnails exist to avoid.
+    expect($media->previewUrl('preview'))->toContain('variant=preview')
+        ->and($media->previewUrl())->not->toContain('variant=');
+});
+
+/** One row whose original really is on the fake disk, so the action gets that far. */
+function mtRowWithFile(): Media
+{
+    Storage::disk('public')->put('media/a.jpg', 'original bytes');
+
+    return Media::create([
+        'disk' => 'public',
+        'path' => 'media/a.jpg',
+        'name' => 'a.jpg',
+        'mime_type' => 'image/jpeg',
+    ]);
+}
+
+/** Reports success, and writes whatever it was told to — including nothing. */
+final class MtSilentThumbnailer implements MakesThumbnails
+{
+    public function __construct(private ?string $write) {}
+
+    public function supports(string $mime): bool
+    {
+        return true;
+    }
+
+    public function make(string $source, string $destination, int $max): bool
+    {
+        if ($this->write !== null) {
+            @mkdir(dirname($destination), 0777, true);
+            file_put_contents($destination, $this->write);
+        }
+
+        return true;
+    }
+}

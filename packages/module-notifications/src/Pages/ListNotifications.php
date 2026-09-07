@@ -230,14 +230,18 @@ class ListNotifications extends Component implements IdentifiesHookTarget, Provi
             $payload = $record->toNotification();
             $style = NotificationStyle::for($payload->type);
 
+            // Not both when they are the same sentence: an application that
+            // passes one string twice should not get it printed twice. Decided
+            // here rather than inside the array literal, where a constant arm
+            // compiles to no opcode of its own and so can never be shown covered.
+            $body = $payload->title === null || $payload->title === $payload->message
+                ? null
+                : $payload->message;
+
             $groups[$this->heading($record)][] = [
                 'id' => (string) $record->id,
                 'title' => $payload->title ?? $payload->message,
-                // Not both when they are the same sentence: an application that
-                // passes one string twice should not get it printed twice.
-                'message' => $payload->title === null || $payload->title === $payload->message
-                    ? null
-                    : $payload->message,
+                'message' => $body,
                 'icon' => $style->iconOr($payload->icon),
                 'tile' => $this->tile($style->color),
                 'when' => (string) $record->created_at?->diffForHumans(),

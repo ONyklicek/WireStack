@@ -741,6 +741,32 @@ it('says which files landed, which were already here and which were refused', fu
         ->and(collect($tray)->firstWhere('name', 'copy.png')['media'])->toBe($existing->getKey());
 });
 
+it('cuts nothing when nothing is selected', function () {
+    // The keyboard reaches this with no selection far more easily than the
+    // menu does, and a clipboard holding an empty cut pastes nothing loudly.
+    Livewire::test(MediaManager::class)
+        ->call('cutSelection')
+        ->assertSet('clipboard', []);
+});
+
+it('forgets one failed row so a retry does not read as two attempts', function () {
+    $component = Livewire::test(MediaManager::class)->set('tray', [
+        ['name' => 'a.png', 'state' => 'failed', 'media' => null],
+        ['name' => 'a.png', 'state' => 'stored', 'media' => 1],
+        ['name' => 'b.png', 'state' => 'failed', 'media' => null],
+    ]);
+
+    $component->call('forgetTrayEntry', 'a.png');
+
+    // Only the failed row of that name goes: the file that did land is still
+    // something the tray has to account for, and the other failure is not
+    // this retry's business.
+    expect($component->get('tray'))->toBe([
+        ['name' => 'a.png', 'state' => 'stored', 'media' => 1],
+        ['name' => 'b.png', 'state' => 'failed', 'media' => null],
+    ]);
+});
+
 it('keeps the tray while another folder is opened', function () {
     Storage::fake('public');
 
