@@ -1,0 +1,52 @@
+{
+    "name": "nyoncode/wire-module-media",
+    "description": "A media library for wire: uploads, a browsable list and a picker for forms.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Ondrej Nyklicek",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "nyoncode/wire-core": "self.version",
+        "nyoncode/wire-forms": "self.version",
+        "nyoncode/wire-table": "self.version",
+        "nyoncode/wire-panels": "self.version",
+        "illuminate/support": "^12.0|^13.0",
+        "illuminate/database": "^12.0|^13.0",
+        "livewire/livewire": "^4.0",
+        "nyoncode/laravel-package-toolkit": "^2.4.2"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^10.0|^11.0",
+        "laravel/pint": "^1.29",
+        "pestphp/pest": "^4.0|^5.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "NyonCode\\WireModuleMedia\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "NyonCode\\WireModuleMedia\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "NyonCode\\WireModuleMedia\\WireModuleMediaServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}
