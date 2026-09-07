@@ -10,6 +10,8 @@
     // Without an explicit map, grouped() alone has nothing to group by, so the
     // list stays flat rather than inventing a grouping.
     $groups = $field->isGrouped() ? $field->getGroups() : [];
+    // @entangle takes no wire:model modifiers — see CanBeLive::getEntangleModifier().
+    $entangleModifier = $field->getEntangleModifier();
 @endphp
 
 @include('wire-forms::partials.field-assets')
@@ -24,9 +26,50 @@
         x-data="wireCheckboxList({
             statePath: @js($field->getWireModelAttribute()),
             values: @js(array_keys($options)),
+            labels: @js($options),
+            {{-- Entangled only where the chips need it. `@entangle` compiles to
+                 a `$__livewire` lookup, so emitting it unconditionally would
+                 make every checkbox list — including the ones with no chips —
+                 renderable only inside a Livewire component. --}}
+            @if($field->isShowingSelected())
+                state: @entangle($field->getWireModelAttribute()){{ $entangleModifier ? '.'.$entangleModifier : '' }},
+            @endif
         })"
         class="border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden"
     >
+        @if($field->isShowingSelected())
+            {{-- What is chosen, above the list that hides it. A long list only
+                 shows the rows near the scroll position and a searched one only
+                 the matches, so "what have I actually picked" is otherwise off
+                 screen — which is the one thing a multi-select did better.
+                 Absent entirely while nothing is selected: an empty bar is a
+                 row of chrome that never says anything. --}}
+            <div
+                x-show="selected.length"
+                x-cloak
+                class="flex flex-wrap gap-1.5 border-b border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800"
+                data-testid="form-checklist-{{ $field->getStatePath() }}-selected"
+            >
+                <template x-for="chosen in selected" :key="chosen.value">
+                    <span class="inline-flex items-center gap-1 rounded-full border border-gray-300 bg-white py-0.5 ps-2.5 pe-1 text-xs font-medium text-gray-800 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100">
+                        <span x-text="chosen.label" class="leading-none"></span>
+
+                        @unless($field->isDisabled())
+                            <button
+                                type="button"
+                                x-on:click="remove(chosen.value)"
+                                :data-testid="'form-checklist-{{ $field->getStatePath() }}-unpick-' + chosen.value"
+                                :aria-label="'{{ __('wire-forms::fields.deselect') }} ' + chosen.label"
+                                class="flex h-4 w-4 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-600 dark:hover:text-gray-100"
+                            >
+                                {!! icon('outline:x-mark', 'h-3 w-3', 'h-3 w-3') !!}
+                            </button>
+                        @endunless
+                    </span>
+                </template>
+            </div>
+        @endif
+
         @if($field->isSearchable())
             <div class="p-2 border-b border-gray-200 dark:border-gray-700">
                 <input
@@ -67,7 +110,19 @@
 
             @if($groups !== [])
                 @foreach($groups as $groupLabel => $groupOptions)
-                    <div class="mb-3 last:mb-0" data-testid="form-checklist-{{ $field->getStatePath() }}-group">
+                    {{-- The heading goes with its options. Filtering hides each
+                         option row on its own, so without this a search left
+                         every group's heading standing over nothing — visible
+                         only once something combined grouping with search, which
+                         is what a permission list does. The labels are lowercased
+                         in PHP: the comparison runs on every keystroke. --}}
+                    <div
+                        class="mb-3 last:mb-0"
+                        data-testid="form-checklist-{{ $field->getStatePath() }}-group"
+                        @if($field->isSearchable())
+                            x-show="!search || @js(array_values(array_map('mb_strtolower', $groupOptions))).some(label => label.includes(search.toLowerCase()))"
+                        @endif
+                    >
                         <p class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                             {{ $groupLabel }}
                         </p>

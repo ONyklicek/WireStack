@@ -68,6 +68,58 @@ it('keeps the mobile-first int reflow for a plain integer', function () {
     expect(renderCheckboxList($field))->toContain('grid-cols-2 sm:grid-cols-4');
 });
 
+it('draws a heading per group, and only for groups it was given', function () {
+    // `grouped()` alone has nothing to group by, so the list stays flat rather
+    // than inventing a grouping out of the option keys.
+    $grouped = renderCheckboxList(
+        CheckboxList::make('perms')
+            ->options(['invoices.view' => 'invoices.view', 'users.view' => 'users.view'])
+            ->grouped()
+            ->groups([
+                'invoices' => ['invoices.view' => 'invoices.view'],
+                'users' => ['users.view' => 'users.view'],
+            ])
+    );
+
+    expect($grouped)->toContain('invoices')->toContain('users')
+        ->and(substr_count($grouped, 'data-testid="form-checklist-perms-group"'))->toBe(2)
+        ->and(renderCheckboxList(CheckboxList::make('perms')->options(['a' => 'A'])->grouped()))
+        ->not->toContain('form-checklist-perms-group');
+});
+
+it('takes a filtered-out group heading with it', function () {
+    // The bug that only appears once grouping and search are combined — which is
+    // what a permission list does. Each option row hides itself, so a search
+    // used to leave every heading standing over nothing.
+    $html = renderCheckboxList(
+        CheckboxList::make('perms')
+            ->options(['invoices.view' => 'invoices.view'])
+            ->searchable()
+            ->grouped()
+            ->groups(['invoices' => ['invoices.view' => 'invoices.view']])
+    );
+
+    // Two conditions on one option: the row hides itself, and the group hides
+    // with it. `@js` escapes the labels, so the group's list is matched on the
+    // shape it is actually emitted in.
+    expect(substr_count($html, 'x-show="!search ||'))->toBe(2)
+        ->and($html)->toContain('.some(label => label.includes(search.toLowerCase()))')
+        ->and($html)->toContain('invoices.view');
+});
+
+it('leaves the group headings alone where there is nothing to search with', function () {
+    // No search box, no condition: an `x-show` that can never be false is markup
+    // Alpine has to evaluate on every render for nothing.
+    $html = renderCheckboxList(
+        CheckboxList::make('perms')
+            ->options(['invoices.view' => 'invoices.view'])
+            ->grouped()
+            ->groups(['invoices' => ['invoices.view' => 'invoices.view']])
+    );
+
+    expect($html)->not->toContain('x-show');
+});
+
 it('labels the bulk toggles from the translations by default', function () {
     $html = renderCheckboxList(
         CheckboxList::make('perms')->options(['a' => 'A', 'b' => 'B'])->bulkToggleable()
